@@ -1,5 +1,7 @@
 # 🏁 Gajjala's Track record — every alert that rang, graded by GG's trade math (2026-10-16)
 
+> 2026-10-16 (night): 🕰️ entries timeline + ⏪ replayed line — docs/gajjala/entry_timeline_2026_10_16.md.
+
 Code: `backend/chart_maps/gajjala/ledger.py` (rows, grader, nightly step, today read, every served string), numbers in
 `backend/chart_maps/gajjala/constants.py` (the `LEDGER_*` block), storage `gajjala_ledger` (`store.py`), the sub in
 `tab.py`, the `span` param in `chart_maps/api.py`, the panel `TrackRecordPanel` in `frontend/src/components/GajjalaBoard.tsx`.

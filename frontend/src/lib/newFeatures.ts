@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-16 (verbatim below). DECISIONS11 D1–D10. The 10 sessions = LEDGER_SPAN_SESSIONS_LONG,
+  // 5-minute = LEDGER_TAPE_TF_MIN, +1R = LEDGER_R_MULT, 20:15 = LEDGER_GRADE_AT_ET — pinned by scripts/contracts.mjs ("🕰️
+  // Gajjala entry tape + replay"). UNMEASURED.
+  { id: 'chart-maps-gajjala-entry-timeline-2026-10-16', addedAt: '2026-10-16', route: '/chart-maps?tab=gajjala&sub=track_record&view=timeline',
+    label: "🕰️ Gajjala A+ entries on the Promo Circuit tape. You said: “We have a Promo Circuit tab in Catalyst tab.” and “Can you use the graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria satisfier. One you alert it from the alert system you built please”. On Gajjala’s 🏁 Track record, the new 🕰️ entries timeline view lists only the A+ entries — every rule met and the entry bar traded through the trigger and closed: the ones the alert system rang (🎯) and the ones it recorded before the switch (shadow, never sent) — newest day first, each with the Promo Circuit’s 5-minute tape inline; 📈 opens the full tape: the alert as a solid line, the fill as a dashed one, the trigger, stop and +1R levels, and dots where it filled and where it reached +1R or the stop. The words under it are the Track record’s own grade (GG’s trade math, graded nightly at 20:15 ET). 📋 all alerts stays the default view; the day picker gains the last 10 sessions. Prices as traded; today’s tape is the one the Track record already read. UNMEASURED — a record of what each alert did, not a study; the 2026-10-14 study read no edge. Not advice." },
   // Ajay 2026-10-16 (verbatim below). DECISIONS10 D1–D11 + AMENDMENTS10 F1–F11. 09:45 = data.py ET_RTH_OPEN +
   // constants.NO_TRADE_AFTER_OPEN_MIN, 16:00 / 20:00 = data.py ET_RTH_CLOSE / ET_AFTERHOURS_CLOSE, the 15 =
   // NO_TRADE_AFTER_OPEN_MIN, the 9 = orderflow/signals.EMA_FAST, the 5 = PASS_CADENCE_SEC, the "2+ sources" =

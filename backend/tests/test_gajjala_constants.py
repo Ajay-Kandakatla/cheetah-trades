@@ -285,9 +285,12 @@ def test_NEGATIVE_no_on_open_number_is_filed_as_ggs():
 # not. Like XLAB today was a winner I made good money on it"
 CRONTAB = pathlib.Path(__file__).resolve().parents[1] / "crontab"
 LEDGER_HIS = ("LEDGER_SUB", "LEDGER_R_MULT", "LEDGER_HORIZONS", "LEDGER_FILL_FROM_ET")
+# WIDENED 2026-10-16 (night): DECISIONS11 D2 / D3 — the 🕰️ entry tape's numbers and the "10d" span are MINE too
 LEDGER_MINE = ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGER_SPAN_SESSIONS", "LEDGER_TODAY_MEMO_SEC",
                "LEDGER_TODAY_MAX", "LEDGER_TODAY_MAX_NAMES", "LEDGER_TODAY_BUDGET_SEC", "LEDGER_GRADE_LOOKBACK_SESSIONS",
-               "LEDGER_BACKFILL_MAX_SYMBOL_DAYS", "LEDGER_GRADE_MAX_LOADS", "LEDGER_ROWS_MAX")
+               "LEDGER_BACKFILL_MAX_SYMBOL_DAYS", "LEDGER_GRADE_MAX_LOADS", "LEDGER_ROWS_MAX",
+               "LEDGER_SPAN_SESSIONS_LONG", "LEDGER_TAPE_TF_MIN", "LEDGER_TAPE_SESSIONS", "LEDGER_TAPE_BARS_MAX",
+               "LEDGER_TAPE_MEMO_SEC")
 MINE_TAGS = ("TRANSPORT — MINE", "derived — MINE", "Cheetah default (MINE")
 
 
@@ -321,15 +324,18 @@ def test_ledger_fill_window_is_derived_from_his_15_minutes_and_the_house_clock()
 
 
 def test_ledger_spans_default_and_the_derived_numbers():
-    assert GC.LEDGER_SPANS == ("today", "yesterday", "5d", "all")
+    # WIDENED 2026-10-16 (night): DECISIONS11 D3 — the "10d" span (the whole past week + fits), default unchanged
+    assert GC.LEDGER_SPANS == ("today", "yesterday", "5d", "10d", "all")
     assert GC.LEDGER_SPAN_DEFAULT == "5d" and GC.LEDGER_SPAN_DEFAULT in GC.LEDGER_SPANS      # AMENDMENTS9 E2
     assert GC.LEDGER_SPAN_SESSIONS == 5
+    assert GC.LEDGER_SPAN_SESSIONS_LONG == 10 and f"{GC.LEDGER_SPAN_SESSIONS_LONG}d" in GC.LEDGER_SPANS   # DECISIONS11 D3
     assert GC.LEDGER_TODAY_MEMO_SEC == GC.PASS_CADENCE_SEC
     assert GC.LEDGER_MIN_R_PCT == 0.5                                                       # AMENDMENTS9 E4
     assert GC.LEDGER_TODAY_MAX == 60 and GC.LEDGER_TODAY_MAX_NAMES == GC.LEDGER_TODAY_MAX     # AMENDMENTS9 E8
     assert GC.LEDGER_BACKFILL_MAX_SYMBOL_DAYS == 120                                        # AMENDMENTS9 E9
     assert GC.LEDGER_GRADE_MAX_LOADS == GC.LEDGER_BACKFILL_MAX_SYMBOL_DAYS
-    assert (GC.LEDGER_TODAY_BUDGET_SEC, GC.LEDGER_GRADE_LOOKBACK_SESSIONS, GC.LEDGER_ROWS_MAX) == (15, 10, 200)
+    # WIDENED 2026-10-16 (night): AMENDMENTS11 F6 — LEDGER_ROWS_MAX 200 → 400 for the 10d span (the counts cover all)
+    assert (GC.LEDGER_TODAY_BUDGET_SEC, GC.LEDGER_GRADE_LOOKBACK_SESSIONS, GC.LEDGER_ROWS_MAX) == (15, 10, 400)
     assert GC.LEDGER_GRADE_VERSION == 1
     assert GC.LEDGER_TTL_DAYS == 30                      # NAME TRAP: the 30-day TTL of gajjala_scan & co. — untouched
 
@@ -338,7 +344,8 @@ def test_ledger_aliases_carry_no_second_number():
     """One number per cap: the BUILD_SPEC9 §3.1 names are bound to the AMENDMENTS9 names, never retyped."""
     for alias, src in (("LEDGER_TODAY_MAX_NAMES", "LEDGER_TODAY_MAX"),
                        ("LEDGER_GRADE_MAX_LOADS", "LEDGER_BACKFILL_MAX_SYMBOL_DAYS"),
-                       ("LEDGER_TODAY_MEMO_SEC", "PASS_CADENCE_SEC")):
+                       ("LEDGER_TODAY_MEMO_SEC", "PASS_CADENCE_SEC"),
+                       ("LEDGER_TAPE_MEMO_SEC", "PASS_CADENCE_SEC")):          # WIDENED 2026-10-16 (night): DECISIONS11 D2
         node = {n: v for n, v, _ln in _assigns()}[alias]
         assert isinstance(node, ast.Name) and node.id == src, alias
 
@@ -356,7 +363,9 @@ def test_ledger_mine_numbers_carry_the_mine_tags():
     for n in LEDGER_MINE:
         c = _comment(lines[n])
         assert c.startswith(MINE_TAGS), (n, c)
-    for n in ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGER_SPAN_SESSIONS"):
+    # WIDENED 2026-10-16 (night): DECISIONS11 D3 — the "10d" span's session count is a Cheetah default, not GG's
+    for n in ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGER_SPAN_SESSIONS",
+              "LEDGER_SPAN_SESSIONS_LONG"):
         assert "not GG" in _comment(lines[n]), n
 
 
@@ -391,3 +400,50 @@ def test_NEGATIVE_a_second_nightly_line_or_a_steps_flag_fails_the_cron_pin(monke
 def test_NEGATIVE_the_constants_import_only_the_stdlib_datetime_besides_the_ema_pair():
     mods = {a.name for node in ast.walk(TREE) if isinstance(node, ast.Import) for a in node.names}
     assert mods == {"datetime"}, mods
+
+
+# ── 🕰️ the entry tape (2026-10-16 night, DECISIONS11 D2 / D3, BUILD_SPEC11 §3.1) ─────────────────────────────────────
+# Ajay 2026-10-16 ~22:00 ET: "Can you use the graph component from  that to show what happened to Entries alert of
+# Gajjala with all the 100% criteria satisfier." — the Promo Circuit tape's own frame, the cap derived, the memo aliased.
+def test_tape_frame_is_the_promo_tapes_own_5_minutes():
+    import inspect
+
+    from catalysts import promo_tape as PROMO
+    assert GC.LEDGER_TAPE_TF_MIN == 5
+    assert f'"{GC.LEDGER_TAPE_TF_MIN}min"' in inspect.getsource(PROMO.bars_for)
+
+
+def test_tape_bar_cap_is_derived_from_the_house_session_clock():
+    from daytrading.data import ET_AFTERHOURS_CLOSE, ET_PREMARKET_OPEN
+    day = date(2026, 10, 16)
+    hours = (datetime.combine(day, ET_AFTERHOURS_CLOSE) - datetime.combine(day, ET_PREMARKET_OPEN)) / timedelta(hours=1)
+    assert hours == 16
+    assert GC.LEDGER_TAPE_SESSIONS == 3
+    assert GC.LEDGER_TAPE_BARS_MAX == GC.LEDGER_TAPE_SESSIONS * (int(hours) * 60 // GC.LEDGER_TAPE_TF_MIN) == 3 * 192
+    node = {n: v for n, v, _ln in _assigns()}["LEDGER_TAPE_BARS_MAX"]
+    names = {x.id for x in ast.walk(node) if isinstance(x, ast.Name)}
+    assert names == {"LEDGER_TAPE_SESSIONS", "LEDGER_TAPE_TF_MIN"}, names                  # built, never retyped
+    assert GC.LEDGER_TAPE_MEMO_SEC == GC.PASS_CADENCE_SEC
+
+
+def test_the_tape_lines_carry_their_tags():
+    lines = _ledger_lines()
+    assert _comment(lines["LEDGER_SPAN_SESSIONS_LONG"]).startswith("Cheetah default (MINE")
+    for n in ("LEDGER_TAPE_TF_MIN", "LEDGER_TAPE_SESSIONS"):
+        assert _comment(lines[n]).startswith("TRANSPORT — MINE"), n
+    for n in ("LEDGER_TAPE_BARS_MAX", "LEDGER_TAPE_MEMO_SEC"):
+        assert _comment(lines[n]).startswith("derived — MINE"), n
+
+
+def test_NEGATIVE_the_mine_tag_guard_bites_on_a_tape_line_filed_as_ggs(monkeypatch):
+    import sys
+    ln = _ledger_lines()["LEDGER_TAPE_SESSIONS"]
+    mutated = list(LINES)
+    mutated[ln - 1] = "LEDGER_TAPE_SESSIONS = 3                 # GG S8 he watches three sessions"
+    monkeypatch.setattr(sys.modules[__name__], "LINES", mutated)
+    with pytest.raises(AssertionError):
+        test_ledger_mine_numbers_carry_the_mine_tags()
+    with pytest.raises(AssertionError):
+        test_NEGATIVE_no_ledger_comment_is_filed_as_ggs()
+    with pytest.raises(AssertionError):
+        test_the_tape_lines_carry_their_tags()

@@ -188,9 +188,14 @@ LEDGER_HORIZONS = ("same", "next")       # Ajay 2026-10-16 ("Both columns")
 LEDGER_FILL_FROM_ET = (_dt.datetime(2000, 1, 3, 9, 30) + _dt.timedelta(minutes=NO_TRADE_AFTER_OPEN_MIN)).time()   # Ajay 2026-10-16 ("From 09:45 ET only") = 09:30 (daytrading.data.ET_RTH_OPEN, test pins equality) + NO_TRADE_AFTER_OPEN_MIN — AMENDMENTS9 E1
 LEDGER_FILL_TO_ET = _dt.time(16, 0)      # Cheetah default (regular session) — = daytrading.data.ET_RTH_CLOSE (test pins equality); AMENDMENTS9 E1
 LEDGER_MIN_R_PCT = 0.5                   # Cheetah default (MINE, not GG — AMENDMENTS9 E4; HIS CALL Q16): R < 0.5% of the trigger = "thin R", graded, out of the %
-LEDGER_SPANS = ("today", "yesterday", "5d", "all")   # Cheetah default (MINE, not GG — DECISIONS9 D7 day picker; HIS CALL Q9)
+LEDGER_SPANS = ("today", "yesterday", "5d", "10d", "all")   # Cheetah default (MINE, not GG — DECISIONS9 D7 day picker; HIS CALL Q9; "10d" DECISIONS11 D3, HIS CALL Q3 of docs/gajjala/entry_timeline_2026_10_16.md)
 LEDGER_SPAN_DEFAULT = "5d"               # Cheetah default (MINE, not GG — AMENDMENTS9 E2 "5 sessions"; HIS CALL Q9)
 LEDGER_SPAN_SESSIONS = 5                 # Cheetah default (MINE, not GG — DECISIONS9 D7 "last 5 sessions"; HIS CALL Q9)
+LEDGER_SPAN_SESSIONS_LONG = 10           # Cheetah default (MINE, not GG — DECISIONS11 D3 "the whole past week + fits": the "10d" span; HIS CALL Q3)
+LEDGER_TAPE_TF_MIN = 5                   # TRANSPORT — MINE (DECISIONS11 D2): the Promo Circuit tape's 5-minute closes (catalysts/promo_tape.bars_for "5min", test pins equality)
+LEDGER_TAPE_SESSIONS = 3                 # TRANSPORT — MINE (DECISIONS11 D2, BUILD_SPEC11 C3): the alert's day + its same session + the next (an after-close alert's same session is the next market day)
+LEDGER_TAPE_BARS_MAX = LEDGER_TAPE_SESSIONS * (16 * 60 // LEDGER_TAPE_TF_MIN)   # derived — MINE: 16 h = daytrading.data ET_PREMARKET_OPEN → ET_AFTERHOURS_CLOSE (test pins equality) → 576
+LEDGER_TAPE_MEMO_SEC = PASS_CADENCE_SEC  # derived — MINE (DECISIONS11 D2 "memo 5 min per id")
 LEDGER_TODAY_MEMO_SEC = PASS_CADENCE_SEC # derived — MINE (DECISIONS9 D5c "memo 5 min"; HIS CALL Q2)
 LEDGER_TODAY_MAX = 60                    # TRANSPORT — MINE (AMENDMENTS9 E8, DECISIONS9 D5c "≤ ~60 names"; HIS CALL Q2): rows read per open
 LEDGER_TODAY_MAX_NAMES = LEDGER_TODAY_MAX   # derived — MINE: the BUILD_SPEC9 §3.1 name of the same cap (one number, AMENDMENTS9 E8)
@@ -199,7 +204,7 @@ LEDGER_GRADE_AT_ET = "20:15"             # TRANSPORT — = the crontab line of c
 LEDGER_GRADE_LOOKBACK_SESSIONS = 10      # TRANSPORT — MINE (DECISIONS9 D6; HIS CALL Q6): the nightly re-reads 10 market days
 LEDGER_BACKFILL_MAX_SYMBOL_DAYS = 120    # TRANSPORT — MINE (AMENDMENTS9 E9; HIS CALL Q6): symbol-day loads per nightly run; the rest "not graded yet", the next night
 LEDGER_GRADE_MAX_LOADS = LEDGER_BACKFILL_MAX_SYMBOL_DAYS   # derived — MINE: the BUILD_SPEC9 §3.1 name of the same cap (one number, AMENDMENTS9 E9)
-LEDGER_ROWS_MAX = 200                    # TRANSPORT — MINE: rows served per span (the counts cover every row)
+LEDGER_ROWS_MAX = 400                    # TRANSPORT — MINE (2026-10-16 night, DECISIONS11 D3: the 10d span at ~30 rows a session; the counts still cover every row)
 LEDGER_GRADE_VERSION = 1                 # TRANSPORT — bump to re-grade the lookback window (the grader changed)
 
 # sub-tabs (DECISIONS order) — key, emoji, label. 🧠 Potential (Ajay 2026-10-15 msg 1) then 🏁 Track record (Ajay

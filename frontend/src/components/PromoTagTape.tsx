@@ -7,6 +7,12 @@
  * after read. Plain SVG — no chart lib, one fetch per expanded row. */
 import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { layout, miniLayout, etStamp, TapeChart, TapeSpark, TAPE_DASH, TAPE_DOT_R } from './TapeChart';
+
+/* 🕰️ 2026-10-16 (DECISIONS11 D1): the drawing (etStamp, layout, miniLayout, both SVGs) moved into the shared
+ * TapeChart.tsx — re-exported here so every import of './PromoTagTape' keeps working; the markup is byte-identical
+ * (PromoTagTape.snapshot.test.tsx). */
+export { layout, miniLayout, etStamp } from './TapeChart';
 
 type Bar = { t: number; o: number; h: number; l: number; c: number; v: number; s: string };
 type Tag = { handle: string; tier: 'S' | 'A' | 'B'; at: string; which: 'first' | 'last' | 'post'; sample?: string | null; msg_id?: number | null;
@@ -24,35 +30,12 @@ const VERDICT_STYLE: Record<string, string> = {
   AFTER_THE_MOVE: 'var(--negative, #e5484d)', NO_RUN: 'var(--text-muted, #94a3b8)', NO_TAPE_AFTER: 'var(--text-muted, #94a3b8)',
 };
 
-export const etStamp = (ms: number) =>
-  new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
-    .replace(' AM', 'a').replace(' PM', 'p').replace(',', ' ·') + ' ET';
-
-/* Pure geometry so the test can pin marker placement. */
-export function layout(bars: Bar[], tags: Tag[], w: number, h: number) {
-  if (!bars.length) return null;
-  const t0 = bars[0].t, t1 = bars[bars.length - 1].t;
-  const lo = Math.min(...bars.map((b) => b.l ?? b.c)), hi = Math.max(...bars.map((b) => b.h ?? b.c));   // lite bars carry closes only
-  const span = Math.max(1, t1 - t0), range = Math.max(1e-9, hi - lo);
-  const x = (t: number) => ((Math.min(Math.max(t, t0), t1) - t0) / span) * (w - 8) + 4;
-  const y = (p: number) => h - 14 - ((p - lo) / range) * (h - 26);
-  const path = bars.map((b, i) => `${i ? 'L' : 'M'}${x(b.t).toFixed(1)},${y(b.c).toFixed(1)}`).join(' ');
-  const ext: { x0: number; x1: number }[] = [];
-  let run: { x0: number; x1: number } | null = null;
-  bars.forEach((b, i) => {
-    const isExt = b.s === 'premarket' || b.s === 'afterhours';
-    const xb = x(b.t), xn = i + 1 < bars.length ? x(bars[i + 1].t) : w - 4;
-    if (isExt) { if (run) run.x1 = xn; else run = { x0: xb, x1: xn }; }
-    else if (run) { ext.push(run); run = null; }
-  });
-  if (run) ext.push(run);
-  const markers = tags.map((tg) => {
-    const ms = Date.parse(tg.at);
-    const at = [...bars].reverse().find((b) => b.t <= ms) ?? bars[0];
-    return { ...tg, ms, x: x(ms), y: y(at.c), price: at.c };
-  });
-  return { x, y, lo, hi, path, ext, markers, t0, t1 };
-}
+/* The marker tooltip (unchanged words) — handed to TapeChart as `titleOf`. */
+const tagTitle = (m: Tag & { ms: number; price: number }) =>
+  `@${m.handle} ${m.which} post · ${etStamp(m.ms)} · $${m.price.toFixed(2)}`
+  + (m.before_pct != null ? `\n${m.before_pct >= 0 ? '+' : ''}${m.before_pct.toFixed(1)}% in the hour before` : '')
+  + (m.peak_after_pct != null ? ` · ${m.peak_after_pct >= 0 ? '+' : ''}${m.peak_after_pct.toFixed(1)}% to the peak after` : '')
+  + (m.sample ? `\n“${m.sample}”` : '');
 
 export function PromoTagTape({ ticker, data: preset }: { ticker: string; data?: TapePayload | null }) {
   const [data, setData] = useState<TapePayload | null>(preset ?? null);
@@ -70,7 +53,9 @@ export function PromoTagTape({ ticker, data: preset }: { ticker: string; data?: 
   if (err) return <div className="cm-note cm-note-warn">Tape unavailable: {err}</div>;
   if (!data) return <div className="cm-note">Loading the tape around the tag…</div>;
   const W = 720, H = 110;
-  const g = layout(data.bars, data.tags, W, H);
+  const col = (tg: Tag) => TIER_COLORS[tg.tier] ?? TIER_COLORS.B;
+  const marks = data.tags.map((tg) => ({ ...tg, group: 'ptt__tag', rule: { stroke: col(tg), dash: tg.which === 'first' ? undefined : TAPE_DASH }, dot: { r: TAPE_DOT_R, fill: col(tg) } }));
+  const g = layout(data.bars, marks, W, H);
   if (!g) return <div className="day-empty">No intraday bars for {ticker} yet.</div>;
   const first = g.markers.find((m) => m.which === 'first');
   const last = data.bars[data.bars.length - 1];
@@ -79,26 +64,9 @@ export function PromoTagTape({ ticker, data: preset }: { ticker: string; data?: 
       <div className="ptt__read" style={{ color: VERDICT_STYLE[data.verdict ?? ''] ?? 'inherit' }}>
         {data.read ?? 'No read yet'}
       </div>
-      <svg className="ptt__svg" viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img"
-           aria-label={`${ticker} 5-minute tape around the promo tags`}>
-        {g.ext.map((e, i) => <rect key={i} x={e.x0} y={0} width={Math.max(1, e.x1 - e.x0)} height={H - 14} className="ptt__ext" />)}
-        <path d={g.path} className="ptt__line" fill="none" />
-        {g.markers.map((m, i) => (
-          <g key={i} className="ptt__tag">
-            <line x1={m.x} x2={m.x} y1={4} y2={H - 14} stroke={TIER_COLORS[m.tier] ?? TIER_COLORS.B}
-                  strokeDasharray={m.which === 'first' ? undefined : '3 3'} />
-            <circle cx={m.x} cy={m.y} r={3.5} fill={TIER_COLORS[m.tier] ?? TIER_COLORS.B} />
-            <title>{`@${m.handle} ${m.which} post · ${etStamp(m.ms)} · $${m.price.toFixed(2)}`
-              + (m.before_pct != null ? `\n${m.before_pct >= 0 ? '+' : ''}${m.before_pct.toFixed(1)}% in the hour before` : '')
-              + (m.peak_after_pct != null ? ` · ${m.peak_after_pct >= 0 ? '+' : ''}${m.peak_after_pct.toFixed(1)}% to the peak after` : '')
-              + (m.sample ? `\n“${m.sample}”` : '')}</title>
-          </g>
-        ))}
-        <text x={4} y={H - 3} className="ptt__axis">{etStamp(g.t0)}</text>
-        <text x={W - 4} y={H - 3} textAnchor="end" className="ptt__axis">{etStamp(g.t1)} · ${last.c.toFixed(2)}</text>
-        <text x={W - 4} y={11} textAnchor="end" className="ptt__axis">hi ${g.hi.toFixed(2)}</text>
-        <text x={4} y={11} className="ptt__axis">lo ${g.lo.toFixed(2)}</text>
-      </svg>
+      <TapeChart g={g} width={W} height={H} svgClass="ptt__svg" lineClass="ptt__line"
+                 ariaLabel={`${ticker} 5-minute tape around the promo tags`} titleOf={tagTitle}
+                 corners={{ bl: etStamp(g.t0), br: `${etStamp(g.t1)} · $${last.c.toFixed(2)}`, tr: `hi $${g.hi.toFixed(2)}`, tl: `lo $${g.lo.toFixed(2)}` }} />
       {/* The actual announcements, in order — time, account, words, price then, what had
           already happened, what followed (Ajay: "actual announcement time vs the price action"). */}
       <table className="ptt__posts mono">
@@ -151,35 +119,6 @@ export function fetchLiteTape(ticker: string): Promise<LitePayload> {
 /** Tests only — the cache is module-global. */
 export function _resetLiteCache() { liteCache.clear(); }
 
-/* Pure geometry for the sparkline: closes only, full height, no axis band. */
-export function miniLayout(bars: LiteBar[], tags: Pick<Tag, 'at' | 'which' | 'tier'>[], w: number, h: number) {
-  if (!bars?.length) return null;
-  const t0 = bars[0].t, t1 = bars[bars.length - 1].t;
-  const lo = Math.min(...bars.map((b) => b.c)), hi = Math.max(...bars.map((b) => b.c));
-  const span = Math.max(1, t1 - t0), range = Math.max(1e-9, hi - lo);
-  const x = (t: number) => ((Math.min(Math.max(t, t0), t1) - t0) / span) * (w - 6) + 3;
-  const y = (p: number) => h - 3 - ((p - lo) / range) * (h - 6);
-  const path = bars.map((b, i) => `${i ? 'L' : 'M'}${x(b.t).toFixed(1)},${y(b.c).toFixed(1)}`).join(' ');
-  const ext: { x0: number; x1: number }[] = [];
-  let run: { x0: number; x1: number } | null = null;
-  bars.forEach((b, i) => {
-    const isExt = b.s === 'premarket' || b.s === 'afterhours';
-    const xb = x(b.t), xn = i + 1 < bars.length ? x(bars[i + 1].t) : w - 3;
-    if (isExt) { if (run) run.x1 = xn; else run = { x0: xb, x1: xn }; }
-    else if (run) { ext.push(run); run = null; }
-  });
-  if (run) ext.push(run);
-  const first = tags.find((t) => t.which === 'first') ?? tags[0];
-  let marker: { x: number; y: number; price: number; ms: number } | null = null;
-  if (first) {
-    const ms = Date.parse(first.at);
-    const at = [...bars].reverse().find((b) => b.t <= ms) ?? bars[0];
-    marker = { x: x(ms), y: y(at.c), price: at.c, ms };
-  }
-  const last = bars[bars.length - 1];
-  return { path, ext, marker, last: { x: x(last.t), y: y(last.c), price: last.c }, lo, hi };
-}
-
 const pctS = (v: number | null | undefined) => (v == null ? '' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`);
 
 export function MiniTape({ ticker, onOpen, width = 120 }: { ticker: string; onOpen?: () => void; width?: number }) {
@@ -221,17 +160,8 @@ export function MiniTape({ ticker, onOpen, width = 120 }: { ticker: string; onOp
         : !data ? <span className="pcw__dim">…</span>
         : !g ? <span className="pcw__dim">no tape</span>
         : (
-          <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label={`${ticker} price path since the tag`}>
-            {g.ext.map((e, i) => <rect key={i} x={e.x0} y={0} width={Math.max(1, e.x1 - e.x0)} height={H} className="ptt__ext" />)}
-            <path d={g.path} className={`ptt__mini-line ${up ? 'is-up' : 'is-dn'}`} fill="none" />
-            {g.marker ? (
-              <g className="ptt__mini-tag">
-                <line x1={g.marker.x} x2={g.marker.x} y1={1} y2={H - 1} stroke={VERDICT_STYLE[data.verdict ?? ''] ?? TIER_COLORS.B} />
-                <circle cx={g.marker.x} cy={g.marker.y} r={2.6} fill={VERDICT_STYLE[data.verdict ?? ''] ?? TIER_COLORS.B} />
-              </g>
-            ) : null}
-            <circle cx={g.last.x} cy={g.last.y} r={2} className="ptt__mini-now" />
-          </svg>
+          <TapeSpark g={g} width={W} height={H} ariaLabel={`${ticker} price path since the tag`} up={up}
+                     markColor={VERDICT_STYLE[data.verdict ?? ''] ?? TIER_COLORS.B} />
         )}
     </span>
   );

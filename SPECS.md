@@ -686,12 +686,29 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   closed minutes only, "through HH:MM" never past the read (E6), its own try (the board serves without it). NEVER
   WRITES. Cells read "… so far · not final".
 - **Sub** `LEDGER_SUB` `track_record` = 🏁 Track record, LAST in `SUBS` (after 🧠 Potential); chip count = today's rows
-  graded (`ledger.count_today`). `?span=` `LEDGER_SPANS` today · yesterday · 5d · all, default `LEDGER_SPAN_DEFAULT`
+  graded (`ledger.count_today`). `?span=` `LEDGER_SPANS` today · yesterday · 5d · 10d (`LEDGER_SPAN_SESSIONS_LONG`) · all, default `LEDGER_SPAN_DEFAULT`
   "5d" (the last `LEDGER_SPAN_SESSIONS` 5 sessions — MINE, HIS CALL Q9); "all" = the alert dates of the rows (E7). Every
   string served by `ledger.served_block` (title, rule, honesty, counts, cells); the FE (`TrackRecordPanel`) composes
   nothing; a read fault serves `tab.TRACK_RECORD_FAULT`.
 - **HIS CALLS** Q0–Q16 + the carried items: `docs/gajjala/track_record_2026_10_16.md`. Contracts:
   `scripts/contracts.mjs` "🏁 Gajjala track record (2026-10-16)". ✨ `chart-maps-gajjala-track-record-2026-10-16`.
+- **🕰️ Entries timeline + tape** (2026-10-16, Ajay: *"Can you use the graph component from  that to show what happened
+  to Entries alert of Gajjala with all the 100% criteria satisfier. One you alert it from the alert system you built
+  please"*). **UNMEASURED — a picture of what each A+ alert did, graded by the ledger's own math, not a study**; the
+  2026-10-14 study read NULL; the A+ subset is survivor-biased. The 🏁 Track record gains a served view toggle
+  (`tape.VIEWS` "📋 all alerts" | "🕰️ entries timeline", `?view=timeline`, FE-only — the view never rides the GET;
+  default 📋 all alerts). The timeline lists only the A+ rows (`views.kinds`; 🎯 live + shadow) in the 🏁 served order,
+  each with a lazy mini tape and a 📈 expand — the Promo Circuit tape drawn by ONE primitive
+  `frontend/src/components/TapeChart.tsx` (PromoTagTape / MiniTape re-implemented on it, byte-identical SVG, proved by
+  `PromoTagTape.snapshot.test.tsx` cut before the refactor) plus the trigger / stop / +1R levels, the alert (solid) and
+  fill (dashed) rules and the fill / exit dots; the read line = the 🏁 cells' own texts. Every tape word is served by
+  `chart_maps/gajjala/tape.py` (`ENTRY_TAPE_WORDS`) behind `GET /chart-maps/gajjala/entry-tape?id=&lite=0|1` (404 for an
+  unknown id; NEVER WRITES a gajjala collection; completed days through the house loader, no force; today through the
+  ledger's shared memo `ledger.today_bars`; the mini never fetches; lite = every `promo_tape.LITE_STRIDE`-th bar; memo
+  `LEDGER_TAPE_MEMO_SEC` per id, cap `LEDGER_TAPE_BARS_MAX`). The day picker gains "10d" (`LEDGER_SPAN_SESSIONS_LONG` 10 —
+  MINE, HIS CALL Q3); the default span stays 5d. Contracts: `scripts/contracts.mjs` "🕰️ Gajjala entry tape + replay
+  (2026-10-16)". ✨ `chart-maps-gajjala-entry-timeline-2026-10-16`. Doc + HIS CALL Q1–Q10:
+  `docs/gajjala/entry_timeline_2026_10_16.md`.
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make

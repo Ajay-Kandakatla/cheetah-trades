@@ -1,0 +1,18 @@
+/* 🕰️ Gajjala A+ entry tape (2026-10-16, DECISIONS11 D1) — the Promo Circuit tape (.ptt__*) plus the entry's levels,
+ * rules and dots. Tone classes come from the served payload (tape.py): buy = trigger, stop, target = +1R, alert, fill. */
+.gg-tape-hline line { stroke-width: 1; stroke-dasharray: 2 3; }
+.gg-tape-buy line { stroke: var(--positive, #46a758); }
+.gg-tape-buy circle { fill: var(--positive, #46a758); }
+.gg-tape-buy text { fill: var(--positive, #46a758); }
+.gg-tape-stop line { stroke: var(--negative, #e5484d); }
+.gg-tape-stop circle { fill: var(--negative, #e5484d); }
+.gg-tape-stop text { fill: var(--negative, #e5484d); }
+.gg-tape-target line { stroke: #e8a33d; }
+.gg-tape-target circle { fill: #e8a33d; }
+.gg-tape-target text { fill: #e8a33d; }
+.gg-tape-alert line { stroke: var(--primary, #6e8efb); }
+.gg-tape-alert circle { fill: var(--primary, #6e8efb); }
+.gg-tape-alert text { fill: var(--primary, #6e8efb); }
+.gg-tape-fill line { stroke: var(--text-primary, #e2e8f0); }
+.gg-tape-fill circle { fill: var(--text-primary, #e2e8f0); }
+.gg-tape-fill text { fill: var(--text-primary, #e2e8f0); }

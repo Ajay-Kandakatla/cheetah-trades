@@ -8631,9 +8631,9 @@ const CONTRACTS = [
       }
       // 7. ✨ — FIRST, routed, both messages verbatim, every number a constant; the older 🚩 / 🧠 / 🏁 entries say it went live
       const arr = nf.indexOf('export const NEW_FEATURES');
-      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      // WIDENED 2026-10-16 (night) — 🕰️ Gajjala entry timeline took the first ✨ slot the same day; this entry must be PRESENT (the newest feature is first).
       const ID = 'chart-maps-gajjala-entry-live-2026-10-16';
-      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      if (!nf.includes(`id: '${ID}'`)) errs.push(`the ✨ entry '${ID}' is missing from NEW_FEATURES`);
       const at = nf.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
       else {
@@ -8700,6 +8700,197 @@ const CONTRACTS = [
       if (!board.includes('data-testid={`gg-tile-link-${t.symbol}`}') || !/withSource\(ggHref\(t\.href\)/.test(board)) errs.push('the bar-less ☀️ / 🌙 tile must be a router <Link> through withSource(ggHref(t.href) …) — the charted tile\'s target');
       if (!board.includes('data-testid={`gg-recap-row-${id}`}') || !/ggHref\(r\.href\)/.test(board)) errs.push('the 🌙 recap rows must link the SERVED href through ggHref');
       if (!/"href": PT\.deep_link\(sym, setup\)/.test(tab)) errs.push('tab.recap must serve each row\'s href = potential.deep_link(sym, setup)');
+      return errs;
+    },
+  },
+  {
+    name: '🕰️ Gajjala entry tape + replay (2026-10-16): ONE tape primitive for both tabs, PromoTagTape byte-identical, every tape word served by tape.py, completed days never force-fetched, today through the ledger memo, the lite stride = promo_tape.LITE_STRIDE, the view toggle served, ✨ first + his words verbatim',
+    file: 'src/components/GgEntryTape.tsx',
+    // Ajay 2026-10-16: "We have a Promo Circuit tab in Catalyst tab. Can you use the graph component from  that to
+    // show what happened to Entries alert of Gajjala with all the 100% criteria satisfier. One you alert it from the
+    // alert system you built please" (DECISIONS11 D1–D10, BUILD_SPEC11 §3.10). He trades these entries with real
+    // money: a second tape engine, a tape word or a percent composed in the browser, a forced re-fetch of a cached
+    // day, a second today memo or a typed stride would each draw him a different picture than the record his phone
+    // rang for. UNMEASURED — a picture of what each alert did, graded by the ledger's own math; never a study.
+    checks: (gg) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const B_WORD = /boun|fake/i;
+      const HIS = [
+        'We have a Promo Circuit tab in Catalyst tab.',
+        'Can you use the graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria satisfier. One you alert it from the alert system you built please',
+      ];
+
+      // 1. ONE tape engine: TapeChart.tsx draws; PromoTagTape.tsx re-exports it and defines none of it.
+      const tc = tsCode(tryRead('src/components/TapeChart.tsx'));
+      for (const need of ['function layout(', 'function miniLayout(', 'function TapeChart(', 'function TapeSpark(', 'export const etStamp']) {
+        if (tc && !tc.includes(need)) errs.push(`TapeChart.tsx must define ${need} — the one tape primitive (DECISIONS11 D1)`);
+      }
+      const ptt = tsCode(tryRead('src/components/PromoTagTape.tsx'));
+      if (ptt) {
+        if (!/from\s+'\.\/TapeChart'/.test(ptt)) errs.push("PromoTagTape.tsx must import './TapeChart' — the Promo tape draws on the primitive");
+        for (const n of ['layout', 'miniLayout', 'etStamp']) {
+          if (!new RegExp(`export\\s*\\{[^}]*\\b${n}\\b[^}]*\\}\\s*from\\s*'\\./TapeChart'`).test(ptt)) errs.push(`PromoTagTape.tsx must re-export ${n} from './TapeChart' (PromoTagTape.test.tsx imports it from './PromoTagTape')`);
+        }
+        for (const bad of ['function layout(', 'function miniLayout(', 'const etStamp =']) {
+          if (ptt.includes(bad)) errs.push(`PromoTagTape.tsx defines ${bad} — a second tape engine; it lives in TapeChart.tsx only`);
+        }
+      }
+
+      // 2. GgEntryTape.tsx types no word, number or percent: the tape is drawn from served strings only.
+      const g = tsCode(gg);
+      if (!/import\s*\{[^}]*\bTapeChart\b[^}]*\}\s*from\s*'\.\/TapeChart'/.test(g) || !/import\s*\{[^}]*\bTapeSpark\b[^}]*\}\s*from\s*'\.\/TapeChart'/.test(g)) errs.push("GgEntryTape.tsx must import TapeChart and TapeSpark from './TapeChart' — never a second SVG");
+      if (!g.includes("GG_TAPE_PATH = '/chart-maps/gajjala/entry-tape'")) errs.push("GgEntryTape.tsx must carry GG_TAPE_PATH = '/chart-maps/gajjala/entry-tape'");
+      const fmt = /toFixed|Math\.|%|etStamp\(|toLocale|Intl\./.exec(g);
+      if (fmt) errs.push(`GgEntryTape.tsx composes a number / a percent / a date ("${fmt[0]}") — every tape string is served by tape.py`);
+      for (const m of g.matchAll(/>([^<>{}\n]+)</g)) {
+        const t = m[1].trim();
+        if (t && t !== '…' && t !== '—') errs.push(`GgEntryTape.tsx types the JSX text "${t}" — only "…" / "—" glyphs; every word is served`);
+      }
+
+      // 3. tape.py — the only place a tape word is typed; the house loader without force; today through the ledger memo.
+      const tpRaw = tryRead('../backend/chart_maps/gajjala/tape.py');
+      if (tpRaw) {
+        const tp = pyCode(tpRaw);
+        if (!/^ENTRY_TAPE_WORDS = \{/m.test(tpRaw)) errs.push('tape.py must carry ENTRY_TAPE_WORDS = { … } — the only place a tape word is typed');
+        if (/force\s*=\s*True/.test(tp)) errs.push('tape.py passes force=True — a cached completed day is never re-fetched (C1)');
+        if (/_today_load\(/.test(tp)) errs.push('tape.py calls _today_load( — today goes through LG.today_bars (the ONE memo, _TODAY_MEMO)');
+        // LG.today_bars( or (today_bars or LG.today_bars)( — BUILD_SPEC11 §3.3 step 4's own injectable call
+        if (!/LG\.today_bars\)?\(/.test(tp)) errs.push('tape.py must read today through LG.today_bars( — the shared ledger memo');
+        if (!/stride\s*=\s*PROMO\.LITE_STRIDE\b/.test(tp)) errs.push('tape.py must call the Promo lite engine with stride=PROMO.LITE_STRIDE (read at call time — never a typed 3)');
+        if (/%\s*3\b|::3\b|"5min"|'5min'/.test(tp)) errs.push('tape.py types the stride or the frame ("% 3" / "::3" / "5min") — use PROMO.LITE_STRIDE / GC.LEDGER_TAPE_TF_MIN');
+        if (/^\s*(?:from|import)\s+scripts\b/m.test(tp)) errs.push('tape.py imports scripts/ — the runtime never imports a study script');
+        // /bounc/ (the 🏁 block's ledger.py rule): tape.py calls LG._bounds_of — an identifier, not the word
+        if (/bounc|fake/i.test(tpRaw)) errs.push('tape.py says the b-word / "fake"');
+      }
+
+      // 4. the route: its own GET (404 on an unknown id), never inside the board GET's slice.
+      const api = tryRead('../backend/chart_maps/api.py');
+      if (api) {
+        const ra = api.indexOf('@router.get("/chart-maps/gajjala/entry-tape")');
+        if (ra < 0) errs.push('chart_maps/api.py lacks @router.get("/chart-maps/gajjala/entry-tape")');
+        else {
+          const rn = api.indexOf('\n@router.', ra + 1);
+          const h = pyCode(api.slice(ra, rn < 0 ? undefined : rn));
+          if (!/entry_tape\(/.test(h)) errs.push('the entry-tape handler must call entry_tape(');
+          if (!/\b404\b/.test(h)) errs.push('the entry-tape handler must answer 404 for an unknown id');
+        }
+        const ga = api.indexOf('async def chart_maps_gajjala(');
+        if (ga >= 0) {
+          const gn = api.indexOf('\n@router.', ga);
+          if (/entry_tape/.test(api.slice(ga, gn < 0 ? undefined : gn))) errs.push('GET /chart-maps/gajjala names entry_tape — the board GET never reads a tape (the lazy per-row GET does)');
+        }
+      }
+
+      // 5. constants.py — the 10d span tagged mine; the four tape lines mine; the memo + cap built by name.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py');
+      const cline = (name) => new RegExp(`^${name} = ([^\\n]*?)\\s*#\\s*([^\\n]*)$`, 'm').exec(gc);
+      const val = (name) => { const m = cline(name); return m ? m[1].trim() : null; };
+      const tag = (name) => { const m = cline(name); return m ? m[2].trim() : ''; };
+      const LONG = Number(val('LEDGER_SPAN_SESSIONS_LONG'));
+      const TF = Number(val('LEDGER_TAPE_TF_MIN'));
+      if (gc) {
+        if (!/^\d+$/.test(val('LEDGER_SPAN_SESSIONS_LONG') || '') || !/^Cheetah default \(MINE\b/.test(tag('LEDGER_SPAN_SESSIONS_LONG'))) errs.push('constants.py must carry LEDGER_SPAN_SESSIONS_LONG = <int>  # Cheetah default (MINE … (HIS CALL Q3)');
+        const spans = (/^LEDGER_SPANS = \(([^)]*)\)/m.exec(gc) || ['', ''])[1].split(',').map((x) => x.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        if (!Number.isInteger(LONG) || !spans.includes(`${LONG}d`)) errs.push(`constants.LEDGER_SPANS must contain "${LONG}d" (LEDGER_SPAN_SESSIONS_LONG)`);
+        if (val('LEDGER_TAPE_MEMO_SEC') !== 'PASS_CADENCE_SEC') errs.push('constants.py must carry LEDGER_TAPE_MEMO_SEC = PASS_CADENCE_SEC (memo 5 min per id, by name)');
+        const cap = val('LEDGER_TAPE_BARS_MAX') || '';
+        if (!/\bLEDGER_TAPE_SESSIONS\b/.test(cap) || !/\bLEDGER_TAPE_TF_MIN\b/.test(cap)) errs.push('constants.LEDGER_TAPE_BARS_MAX must be BUILT from LEDGER_TAPE_SESSIONS and LEDGER_TAPE_TF_MIN');
+        if (!/^\d+$/.test(val('LEDGER_TAPE_TF_MIN') || '')) errs.push('constants.py must carry LEDGER_TAPE_TF_MIN = <int>');
+        for (const [n, re, w] of [['LEDGER_TAPE_TF_MIN', /^TRANSPORT — MINE\b/, 'TRANSPORT — MINE'], ['LEDGER_TAPE_SESSIONS', /^TRANSPORT — MINE\b/, 'TRANSPORT — MINE'],
+                                  ['LEDGER_TAPE_BARS_MAX', /^derived — MINE\b/, 'derived — MINE'], ['LEDGER_TAPE_MEMO_SEC', /^derived — MINE\b/, 'derived — MINE']]) {
+          if (!re.test(tag(n))) errs.push(`constants.${n} must be tagged # ${w} (…`);
+        }
+      }
+
+      // 6. ledger.py — today_bars reads/fills the ONE memo; the 🏁 block serves the views.
+      const lg = tryRead('../backend/chart_maps/gajjala/ledger.py');
+      if (lg) {
+        const tb = pyBody(lg, 'today_bars');
+        if (!tb) errs.push('ledger.py lacks def today_bars(');
+        else if (!tb.includes('_TODAY_MEMO') || !tb.includes('GC.LEDGER_TODAY_MEMO_SEC')) errs.push('ledger.today_bars must read / fill _TODAY_MEMO under GC.LEDGER_TODAY_MEMO_SEC (ONE today memo)');
+        const sb = pyBody(lg, 'served_block');
+        if (!sb || !sb.includes('"views"')) errs.push('ledger.served_block must serve "views" (tape.views_block())');
+      }
+
+      // 7. GajjalaBoard — the view param FE-only, dropped by a sub click; the toggle + timeline outside the 🏁 bodies.
+      const board = tryRead('src/components/GajjalaBoard.tsx');
+      if (board) {
+        if (!/import\s*\{[^}]*\bGG_VIEW_PARAM\b[^}]*\}\s*from\s*'\.\.\/lib\/gajjala'/.test(board)) errs.push("GajjalaBoard must import GG_VIEW_PARAM from '../lib/gajjala'");
+        if (!/const pickSub = [^\n]*\[[^\]\n]*\bGG_VIEW_PARAM\b[^\]\n]*\]/.test(board)) errs.push('GajjalaBoard pickSub must drop GG_VIEW_PARAM (a sub click drops the 🕰️ view)');
+        for (const m of ['<GgTrViews ', '<GgEntryTimeline ']) if (!board.includes(m)) errs.push(`GajjalaBoard must mount ${m}…/>`);
+        const fnBody = (name) => {
+          const fa = board.indexOf(`\nfunction ${name}(`);
+          const ca = board.indexOf(`\nconst ${name} = `);
+          if (fa < 0 && ca < 0) return null;
+          const a = fa >= 0 ? fa : ca;
+          const e = board.indexOf(fa >= 0 ? '\n}\n' : ';\n', a + 1);
+          return board.slice(a, e < 0 ? undefined : e);
+        };
+        for (const n of ['TrCell', 'trChip', 'TrRowCells', 'TrackRecordPanel']) {
+          const b = fnBody(n);
+          if (b == null) errs.push(`GajjalaBoard lost ${n} (the 🏁 panel)`);
+          else if (/GgEntryTape|GgEntryMiniTape/.test(tsCode(b))) errs.push(`the 🏁 body ${n} names GgEntryTape / GgEntryMiniTape — the tape mounts only inside GgEntryTimeline (outside the scanned bodies)`);
+        }
+      }
+      const lib = tryRead('src/lib/gajjala.ts');
+      if (lib) {
+        const qa = lib.indexOf('export function ggQuery(');
+        const qe = qa < 0 ? -1 : lib.indexOf('\n}\n', qa);
+        if (qa < 0) errs.push('lib/gajjala.ts lost export function ggQuery(');
+        else if (/GG_VIEW_PARAM|\bview\b/.test(lib.slice(qa, qe < 0 ? undefined : qe))) errs.push('lib/gajjala.ts ggQuery names the view — the 🕰️ view is FE-only, it never rides the GET');
+        if (!/export const GG_VIEW_PARAM = 'view'/.test(lib) || !/export const GG_VIEW_TIMELINE = 'timeline'/.test(lib)) errs.push("lib/gajjala.ts must carry GG_VIEW_PARAM = 'view' and GG_VIEW_TIMELINE = 'timeline'");
+      }
+
+      // 8. ✨ — FIRST, routed to the timeline, his two lines verbatim, UNMEASURED, every number a pinned constant.
+      const nf = tryRead('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-entry-timeline-2026-10-16';
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      const at = nf.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
+      else {
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        const W = 'the 🕰️ ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=track_record&view=timeline'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala&sub=track_record&view=timeline'`);
+        for (const h of HIS) if (!e.includes(h)) errs.push(`${W} must quote him verbatim: "${h.slice(0, 40)}…"`);
+        for (const need of ['UNMEASURED', 'the 2026-10-14 study read no edge']) if (!e.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (B_WORD.test(e)) errs.push(`${W} says the b-word / "fake"`);
+        let forbidden = [];
+        try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+        for (const w of forbidden) if (e.toLowerCase().includes(w.toLowerCase())) errs.push(`${W} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        const R = Number(val('LEDGER_R_MULT'));
+        const AT = (/^LEDGER_GRADE_AT_ET = "(\d\d:\d\d)"/m.exec(gc) || [])[1] || null;
+        let label = e.slice(Math.max(0, e.indexOf('label: ')));
+        for (const h of HIS) label = label.split(h).join(' ');
+        const seen = { s: 0, m: 0, r: 0, t: 0 };
+        for (const m of label.matchAll(/(\d+) sessions/g)) { seen.s++; if (Number(m[1]) !== LONG) errs.push(`${W} says "${m[0]}" — constants.LEDGER_SPAN_SESSIONS_LONG is ${LONG}`); }
+        for (const m of label.matchAll(/(\d+)-minute/g)) { seen.m++; if (Number(m[1]) !== TF) errs.push(`${W} says "${m[0]}" — constants.LEDGER_TAPE_TF_MIN is ${TF}`); }
+        for (const m of label.matchAll(/\+(\d+(?:\.\d+)?)R\b/g)) { seen.r++; if (Number(m[1]) !== R) errs.push(`${W} says "${m[0]}" — constants.LEDGER_R_MULT is ${R}`); }
+        for (const m of label.matchAll(/\b(\d\d:\d\d)\b/g)) { seen.t++; if (m[1] !== AT) errs.push(`${W} prints "${m[1]}" — constants.LEDGER_GRADE_AT_ET is ${AT}`); }
+        for (const [k, w] of [['s', `${LONG} sessions`], ['m', `${TF}-minute`], ['r', `+${R}R`], ['t', `${AT} ET`]]) if (!seen[k]) errs.push(`${W} must state "${w}" as constants.py has it`);
+        const left = label.replace(/\d+ sessions|\d+-minute|\+\d+(?:\.\d+)?R\b|\b\d\d:\d\d\b|\b\d{4}-\d\d-\d\d\b/g, ' ');
+        const stray = /[^\s]*\d[^\s]*/.exec(left);
+        if (stray) errs.push(`${W} prints "${stray[0]}" — no constant pins it (numbers only from constants.py)`);
+      }
+
+      // 9. SPECS.md + the doc.
+      const specs = tryRead('../SPECS.md');
+      if (specs && !specs.includes('- **🕰️ Entries timeline + tape** (2026-10-16')) errs.push('SPECS.md lacks the "- **🕰️ Entries timeline + tape** (2026-10-16" bullet');
+      const DOC = '../docs/gajjala/entry_timeline_2026_10_16.md';
+      if (!exists(DOC)) errs.push('docs/gajjala/entry_timeline_2026_10_16.md is missing');
+      else {
+        const doc = read(DOC);
+        for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'UNMEASURED']) if (!doc.includes(need)) errs.push(`docs/gajjala/entry_timeline_2026_10_16.md must carry "${need}"`);
+      }
       return errs;
     },
   },

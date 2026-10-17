@@ -246,8 +246,9 @@ def test_every_span_is_served_as_asked(store, span):
     tr = board(store, span)["track_record"]
     assert tr["span"] == span
     assert [s["key"] for s in tr["spans"]] == list(GC.LEDGER_SPANS)
+    # WIDENED 2026-10-16 (night): DECISIONS11 D3 — the "10d" span between 5d and All
     assert [s["label"] for s in tr["spans"]] == ["Today", "Yesterday", f"Last {GC.LEDGER_SPAN_SESSIONS} sessions",
-                                                 "All"]
+                                                 f"Last {GC.LEDGER_SPAN_SESSIONS_LONG} sessions", "All"]
 
 
 @pytest.mark.parametrize("junk", ["", "zzz", "TODAY ", None, 5, ["5d"]])
@@ -260,6 +261,7 @@ def test_spans_pick_their_days(store):
     days = {k: [d["date"] for d in board(store, k)["track_record"]["days"]] for k in GC.LEDGER_SPANS}
     assert days["today"] == ["2026-10-16"] and days["yesterday"] == ["2026-10-15"]
     assert days["5d"] == ["2026-10-16", "2026-10-15"] and days["all"] == ["2026-10-16", "2026-10-15"]
+    assert days["10d"] == ["2026-10-16", "2026-10-15"]           # WIDENED 2026-10-16 (night): DECISIONS11 D3
 
 
 @pytest.mark.parametrize("sub", [k for k, _e, _l in GC.SUBS if k != GC.LEDGER_SUB])
@@ -487,7 +489,8 @@ def test_route_coerces_the_span_query_object_to_the_default(store, monkeypatch):
     body = json.loads(resp.body)
     assert body["track_record"]["span"] == GC.LEDGER_SPAN_DEFAULT and rec.calls == [((None,), {"span": ""})]
     desc = inspect.signature(API.chart_maps_gajjala).parameters["span"].default.description
-    assert "today | yesterday | 5d (default) | all" in desc
+    # WIDENED 2026-10-16 (night): AMENDMENTS11 F20 — the description lists the "10d" span
+    assert "today | yesterday | 5d (default) | 10d | all" in desc
     sub_desc = inspect.signature(API.chart_maps_gajjala).parameters["sub"].default.description
     assert "| track_record" in sub_desc
 

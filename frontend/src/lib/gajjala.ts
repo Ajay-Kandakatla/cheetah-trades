@@ -43,6 +43,12 @@
  * ledger.py). This module types that payload and adds the `span` param (the
  * day picker); every string SERVED; no number typed. A ledger of the alerts
  * as sent, not a study. UNMEASURED.
+ *
+ * 🕰️ Entries timeline (2026-10-16, DECISIONS11 D3). Ajay: "We have a Promo Circuit tab in Catalyst tab. Can you use
+ * the graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria
+ * satisfier. One you alert it from the alert system you built please". The 🏁 block gains the SERVED `views` (the
+ * toggle labels, the kinds the timeline lists, its empty line, the Tape head and the 📈 title); this module types it,
+ * adds the `view` param (FE-only — it never rides the GET: ggQuery is unchanged) and ggTimelineOn. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -58,6 +64,10 @@ export const GG_TF_PARAM = 'tf';
 export const GG_SORT_PARAM = 'sort';
 /** 🏁 the Track record day picker (the served `spans` keys) — rides only when set. */
 export const GG_SPAN_PARAM = 'span';
+/** 🕰️ the 🏁 view toggle (the served `views.items` keys) — FE-only, never sent on the GET (DECISIONS11 D3). */
+export const GG_VIEW_PARAM = 'view';
+/** The served `views.items` key of the 🕰️ entries timeline (tape.VIEWS[1][0]) — the default view rides no param. */
+export const GG_VIEW_TIMELINE = 'timeline';
 export const GG_DEFAULT_SUB: GgSub = 'bull_flag';
 export const GG_TFS: ReadonlyArray<GgTf> = ['5m', '15m'];
 
@@ -248,7 +258,17 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   /** 🎯 the live A+ entries' own line (ledger.served_block, AMENDMENTS10 F3 — never pooled with the 🧠 %); served,
    *  null when no live A+ entry is on the span (2026-10-16). */
   entries_text?: string | null; today_text?: string | null;
-  days: GgTrDay[]; more_text?: string | null; empty_text?: string | null; grade_at_et?: string | null };
+  days: GgTrDay[]; more_text?: string | null; empty_text?: string | null; grade_at_et?: string | null;
+  /** 🕰️ the served view toggle (tape.views_block(), DECISIONS11 D3); absent on an older API → no toggle. */
+  views?: GgTrViews | null };
+/** 🕰️ tape.views_block() — every label SERVED; `kinds` = the row kinds the timeline lists (the FE picks none itself). */
+export type GgTrViews = { param: string; default: string; items: { key: string; label: string }[]; kinds: string[];
+  empty_text: string; tape_head: string; tape_toggle: string; tape_toggle_title: string };
+
+/** 🕰️ The timeline view is on: the served toggle offers it AND the URL asks for it (an older API → never). */
+export function ggTimelineOn(tr: GgTrackRecord | null | undefined, view: string | null | undefined): boolean {
+  return !!tr?.views?.items?.some((i) => i.key === GG_VIEW_TIMELINE) && view === GG_VIEW_TIMELINE;
+}
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;

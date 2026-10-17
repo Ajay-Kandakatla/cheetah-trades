@@ -459,8 +459,8 @@ async def chart_maps_gajjala(
     focus: str = Query("", description="a symbol to deep-link to (the push url carries it)."),
     sort: str = Query("", description="☀️ Premarket only: volume (default, his ToS sort) | change."),
     limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
-    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | all — an unknown "
-                                      "value serves the default."),
+    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | 10d | all — an "
+                                      "unknown value serves the default."),
 ):
     """🚩 Gajjala's tab (2026-10-13) — Goverdhan Gajjala's five 5-minute setups over his scanner, ☀️ Premarket,
     🌙 Post-market and 📓 his Playbook. Ajay: "Name the Tab Gajjala's he has multiple strategies..around this."
@@ -526,6 +526,35 @@ async def chart_maps_gajjala_scan(email: str = Depends(current_user_email)):
     from rotation.api import _scrub
     from .gajjala import on_demand as OD
     return JSONResponse(_scrub(await asyncio.to_thread(OD.request)))
+
+
+@router.get("/chart-maps/gajjala/entry-tape")
+async def chart_maps_gajjala_entry_tape(
+    id: str = Query("", description="a 🏁 A+ row id (ledger_id '…|aplus', or 'REPLAY:…' for a replayed row)"),
+    lite: int = Query(0, ge=0, le=1, description="1 = the row's mini tape (t/c/s, every promo_tape.LITE_STRIDE-th bar)"),
+):
+    """🕰️ (2026-10-16, DECISIONS11 D2) — ONE A+ entry's 5-minute tape for the 🏁 entries timeline: completed days from
+    intraday_cache through the house loader (no force), today through the ledger's shared memo, a replayed row from its
+    stored bars. Memo LEDGER_TAPE_MEMO_SEC per id. NEVER WRITES a gajjala collection. 404 for an unknown id.
+    AMENDMENTS11 F8: lite=1 (the row's mini) never fetches — intraday_cache and the ledger memo only. F19: a raising
+    build serves 200 with the fault note (every payload key present), never a 500.
+    Every argument is coerced (a direct call receives the Query OBJECT)."""
+    from rotation.api import _scrub
+    from .gajjala import tape as TP
+
+    def _run():
+        _id = id if isinstance(id, str) else ""
+        lt = isinstance(lite, int) and not isinstance(lite, bool) and lite == 1
+        try:
+            p = TP.entry_tape(_id, lite=lt)
+        except Exception as exc:                                # F19: never a 500
+            log.warning("chart-maps/gajjala/entry-tape: %s failed: %s", _id[:80], type(exc).__name__)
+            p = TP.fault_payload(_id, lite=lt)
+        if p is None:
+            return JSONResponse({"detail": TP.ENTRY_TAPE_WORDS["not_found"]}, status_code=404)
+        return JSONResponse(_scrub(p))
+
+    return await asyncio.to_thread(_run)
 
 
 @router.get("/chart-maps/news")

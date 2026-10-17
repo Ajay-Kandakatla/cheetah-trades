@@ -676,6 +676,43 @@ def _floor_minute(t: datetime) -> datetime:
     return t.replace(second=0, microsecond=0)
 
 
+def today_bars(sym: str, day: date, *, clock: Optional[Callable] = None, load: Optional[Callable] = None,
+               now: Optional[datetime] = None) -> tuple:
+    """DECISIONS11 D2 — today's 1-minute bars of `sym` through the ONE memo today_read fills (_TODAY_MEMO, key
+    (day_iso, SYM), LEDGER_TODAY_MEMO_SEC): a hit loads nothing; a miss loads ONCE through `load` (the caller passes
+    _today_load for the 📈 full tape) and stores it for today_read too (the same value shape). AMENDMENTS11 F8: `load`
+    None = MEMO-ONLY — a miss never loads and answers (None, None) (the row's mini tape never fetches). -> (bars
+    [(t_utc, o, h, l, c)] of that ET day, fetched_at aware UTC) | (None, None) on a miss without a loader, a provider
+    failure or no bars (never memoised). NEVER WRITES Mongo."""
+    clock = clock or time.monotonic
+    d_iso, sym_u = day.isoformat(), str(sym or "").upper()
+    with _TODAY_LOCK:
+        for m in (_TODAY_MEMO, _TODAY_SPLIT):                   # the today_read prune rule: one session at a time
+            for k in [k for k in m if k[0] != d_iso]:
+                m.pop(k, None)
+        hit = _TODAY_MEMO.get((d_iso, sym_u))
+    if hit is not None and clock() - hit[0] < GC.LEDGER_TODAY_MEMO_SEC:
+        return hit[2], hit[1]
+    if load is None:
+        return None, None
+    try:
+        res = load(sym_u, day)
+        bars, failed = (res if isinstance(res, tuple) else (res, False))
+        bars = bars if isinstance(bars, list) else bars_from_frame(bars)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala ledger: today bars failed for %s: %s", sym_u, type(exc).__name__)
+        return None, None
+    if failed:
+        return None, None
+    bars = [b for b in bars or [] if b[0].astimezone(ET).date() == day]
+    if not bars:
+        return None, None
+    at = _aware(now)
+    with _TODAY_LOCK:
+        _TODAY_MEMO[(d_iso, sym_u)] = (clock(), at, bars)
+    return bars, at
+
+
 def today_read(now: Optional[datetime] = None, *, span: str = "", store=None, load_frames: Optional[Callable] = None,
                clock: Optional[Callable] = None, split_lookup: Optional[Callable] = None) -> Optional[dict]:
     """D5c. None when the span excludes today ("yesterday"), or tab.session_for(now) is not today, or no today row
@@ -861,6 +898,7 @@ def rule_text() -> str:
 
 def _span_label(k: str) -> str:
     return {"today": "Today", "yesterday": "Yesterday", "5d": f"Last {GC.LEDGER_SPAN_SESSIONS} sessions",
+            "10d": f"Last {GC.LEDGER_SPAN_SESSIONS_LONG} sessions",                                     # DECISIONS11 D3
             "all": "All"}.get(k, k)                                                                      # W12
 
 
@@ -872,6 +910,8 @@ def _sessions_for(span_k: str, session: date, store) -> list:
         return [_prev_market_day(session)]
     if span_k == "5d":
         return CX.history_window(_next_market_day(session), GC.LEDGER_SPAN_SESSIONS)
+    if span_k == "10d":                                         # DECISIONS11 D3 — the whole past week + fits
+        return CX.history_window(_next_market_day(session), GC.LEDGER_SPAN_SESSIONS_LONG)
     dates = store.alert_dates()                                 # E7: the rows' own dates, never the ledger's alone
     if dates is None:
         raise LedgerReadError("the alert dates could not be read")
@@ -962,6 +1002,13 @@ def _cell(row: dict, h: str, g: Optional[dict], provisional: bool, now: datetime
     return {"state": st, "text": text, "sub_text": sub, "provisional": bool(provisional)}
 
 
+def filled_grade(same: Optional[dict], nxt: Optional[dict]) -> Optional[dict]:
+    """The first of (same, next) that FILLED with a numeric fill_px and is not a split cell — the pick _plan_text makes,
+    now one function (DECISIONS11 D2: the tape draws the same fill the plan text prints); _plan_text calls it."""
+    return next((x for x in (same, nxt) if isinstance(x, dict) and x.get("entry") == "filled"
+                 and _num(x.get("fill_px")) is not None and x.get("reason") != "split"), None)
+
+
 def _plan_text(row: dict, same: Optional[dict], nxt: Optional[dict]) -> tuple:
     """W9 -> (plan_text, fill_px)."""
     if row.get("plan") == PLANS[1]:
@@ -971,8 +1018,7 @@ def _plan_text(row: dict, same: Optional[dict], nxt: Optional[dict]) -> tuple:
     if row.get("plan") == PLANS[2]:
         return NO_RISK_TEXT, None
     T, S = _px(row["trigger"]), _px(row["stop"])
-    g = next((x for x in (same, nxt) if isinstance(x, dict) and x.get("entry") == "filled"
-              and _num(x.get("fill_px")) is not None and x.get("reason") != "split"), None)
+    g = filled_grade(same, nxt)
     if g is None:
         return f"trigger {T} · stop {S}", None
     when = _when(g.get("fill_t"), _as_date(row["date"]))
@@ -1053,6 +1099,8 @@ def _empty_text(span_k: str, sessions: list) -> str:
         return f"No Gajjala alert rang on {sessions[0].isoformat() if sessions else '—'}."
     if span_k == "5d":
         return f"No Gajjala alert rang in the last {GC.LEDGER_SPAN_SESSIONS} sessions."
+    if span_k == "10d":
+        return f"No Gajjala alert rang in the last {GC.LEDGER_SPAN_SESSIONS_LONG} sessions."
     return "No Gajjala alert on file yet."                                                              # W15
 
 
@@ -1065,6 +1113,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     pending / split are listed, never in the %. Raises LedgerReadError on a read
     fault (the tab softens it into TRACK_RECORD_FAULT)."""
     from . import alerts as AL
+    from . import tape as TP                                    # lazy: tape imports this module (DECISIONS11 D3)
     now = _aware(now)
     session = _as_date(session)
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
@@ -1160,10 +1209,11 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                              else None),                                                       # AMENDMENTS10 F3
             "today_text": today_text, "days": days,
             "more_text": f"+{extra} more rows — the counts above cover all {len(built)}" if extra > 0 else None,  # W14
-            "empty_text": None if built else _empty_text(span_k, sessions), "grade_at_et": at}
+            "empty_text": None if built else _empty_text(span_k, sessions), "grade_at_et": at,
+            "views": TP.views_block()}                                                  # DECISIONS11 D3 (served)
 
 
 __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES", "LedgerReadError", "ledger_id",
            "plan_of", "rang_of", "alert_of", "rows_for", "count_today", "session_bounds", "fill_window",
-           "bars_from_frame", "grade", "grade_step", "today_read", "served_block", "rule_text", "TITLE", "RULE_LABEL",
-           "HONESTY", "HEADS", "KIND_TEXT", "COUNT_LINES", "ENTRIES_HEAD"]
+           "bars_from_frame", "grade", "grade_step", "today_read", "today_bars", "filled_grade", "served_block",
+           "rule_text", "TITLE", "RULE_LABEL", "HONESTY", "HEADS", "KIND_TEXT", "COUNT_LINES", "ENTRIES_HEAD"]

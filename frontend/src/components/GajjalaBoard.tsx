@@ -88,8 +88,17 @@
  * router Link to its SERVED href (the setup card, tab.recap). Both pass ggHref
  * first — an href that is not an in-app path renders the symbol as text. The
  * CardExtras lines stay text (the tile is the link). The FE composes no href.
+ *
+ * 🕰️ Entries timeline (2026-10-16, DECISIONS11 D1–D3). Ajay: "We have a Promo Circuit tab in Catalyst tab. Can you
+ * use the graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria
+ * satisfier. One you alert it from the alert system you built please". The 🏁 panel gains the SERVED view toggle
+ * (`?view=`, FE-only — the GET never carries it; a sub click drops it, a span click keeps it): 📋 all alerts (the
+ * default, the tables as shipped) | 🕰️ entries timeline — only the rows whose kind is in the served `views.kinds`
+ * (the A+ entries), in the served order, each with the Promo Circuit's lazy mini tape and a 📈 toggle that opens
+ * the full tape under the row (the Promo table's pattern). The FE types no tape word: every label, line, dot and
+ * read on the tape is served by chart_maps/gajjala/tape.py. UNMEASURED — a record of what each alert did.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
@@ -98,6 +107,7 @@ import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { RulesInfo } from './RulesInfo';
+import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
@@ -106,12 +116,12 @@ import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
-  changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
+  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
-  type GgTrRow, type GgWatch,
+  type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
 
@@ -136,6 +146,8 @@ export default function GajjalaBoard() {
   const focus = parseFocus(params.get(FOCUS_PARAM));
   const sort = (params.get(GG_SORT_PARAM) || '').trim() || null;
   const span = (params.get(GG_SPAN_PARAM) || '').trim() || null;
+  /* 🕰️ the 🏁 view — FE-only: it never rides the GET (ggQuery has no view), so a toggle click fetches nothing. */
+  const view = (params.get(GG_VIEW_PARAM) || '').trim() || null;
 
   const [board, setBoard] = useState<GgBoard | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -334,8 +346,8 @@ export default function GajjalaBoard() {
     setParams(next);
   };
   // A sub click keeps `tab=gajjala` (it is what keeps this board mounted) and
-  // drops the ☀️ / 🌙 sort and the 🏁 span, which belong to the sub they were picked on.
-  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM]);
+  // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view, which belong to the sub they were picked on.
+  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM]);
 
   const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null }));
   const session = board?.session;
@@ -414,7 +426,8 @@ export default function GajjalaBoard() {
         <PlaybookPanel pb={board?.playbook ?? null} />
       ) : activeSub === 'track_record' ? (
         <TrackRecordPanel tr={board?.track_record ?? null} emptyNote={board?.empty_note ?? null}
-                          onSpan={(k) => setParam(GG_SPAN_PARAM, k)} />
+                          onSpan={(k) => setParam(GG_SPAN_PARAM, k)} view={view}
+                          onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)} />
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
@@ -802,11 +815,13 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
  *  lines, one table per served day (served heads, served rows), the served more / empty lines, the served rule folded
  *  and the served honesty line last. The panel types no word, no number and no percent sign; no tiles, no room POST.
  *  An older API (no `track_record` block) → the served empty note only. */
-function TrackRecordPanel({ tr, emptyNote, onSpan }: {
+function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView }: {
   tr: GgTrackRecord | null; emptyNote: string | null; onSpan: (key: string) => void;
+  view: string | null; onView: (key: string) => void;
 }) {
   if (!tr) return emptyNote ? <div className="cm-note" data-testid="gg-tr-empty">{emptyNote}</div> : null;
   const heads = tr.heads || [];
+  const tl = ggTimelineOn(tr, view);
   return (
     <section className="gg-track-record" data-testid="gg-track-record">
       <h3 className="gg-pb-h" data-testid="gg-tr-title">{tr.title}</h3>
@@ -822,12 +837,13 @@ function TrackRecordPanel({ tr, emptyNote, onSpan }: {
           ))}
         </div>
       ) : null}
-      {tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
-      {tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
+      <GgTrViews views={tr.views} on={tl} onView={onView} />
+      {!tl && tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
+      {!tl && tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
       {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
       {tr.entries_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-entries">{tr.entries_text}</div> : null}
       {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
-      {(tr.days || []).map((d) => (
+      {tl ? <GgEntryTimeline tr={tr} /> : (tr.days || []).map((d) => (
         <div key={d.date} className="gg-tr-day">
           <h4 className="gg-pb-h" data-testid={`gg-tr-day-${d.date}`}>{d.label}</h4>
           <div className="gg-tr-scroll">
@@ -854,6 +870,90 @@ function TrackRecordPanel({ tr, emptyNote, onSpan }: {
       ) : null}
       {tr.honesty ? <div className="gg-muted" data-testid="gg-tr-honesty">{tr.honesty}</div> : null}
     </section>
+  );
+}
+
+/** 🕰️ the served view toggle (DECISIONS11 D3): one house phase button per served item, its served label; the
+ *  selected one is the timeline when it is on, else the served default. An older API (no views) draws nothing. */
+function GgTrViews({ views, on, onView }: {
+  views: GgTrViewsBlock | null | undefined; on: boolean; onView: (key: string) => void;
+}) {
+  const items = (views?.items || []).filter((i) => i && typeof i.key === 'string' && i.key && typeof i.label === 'string');
+  if (!views || !items.length) return null;
+  const sel = on ? GG_VIEW_TIMELINE : views.default;
+  return (
+    <div className="cm-phase gg-tr-views" role="tablist" data-testid="gg-tr-views">
+      {items.map((i) => (
+        <button key={i.key} type="button" role="tab" aria-selected={i.key === sel}
+                data-testid={`gg-tr-view-${i.key}`}
+                className={`cm-phase-btn${i.key === sel ? ' cm-phase-on' : ''}`}
+                onClick={() => onView(i.key)}>
+          {i.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 🕰️ the entries timeline (DECISIONS11 D3): per served day, only the rows whose kind is in the served
+ *  `views.kinds`, in the SERVED order (days newest first, the panel's own grouping); a day without one is skipped;
+ *  none at all → the served empty line. One table per day: the served heads + the served Tape head; each row = the
+ *  🏁 cells + a lazy mini tape and a 📈 toggle that opens the full tape under the row (the Promo table's pattern). */
+function GgEntryTimeline({ tr }: { tr: GgTrackRecord }) {
+  const views = tr.views;
+  if (!views) return null;
+  const kinds = views.kinds || [];
+  const heads = tr.heads || [];
+  const days = (tr.days || [])
+    .map((d) => ({ d, rows: (d.rows || []).filter((r) => !!r && kinds.includes(r.kind)) }))
+    .filter((x) => x.rows.length > 0);
+  if (!days.length) return <div className="cm-note" data-testid="gg-tl-empty">{views.empty_text}</div>;
+  return (
+    <div className="gg-tl" data-testid="gg-tl">
+      {days.map(({ d, rows }) => (
+        <div key={d.date} className="gg-tr-day">
+          <h4 className="gg-pb-h" data-testid={`gg-tl-day-${d.date}`}>{d.label}</h4>
+          <div className="gg-tr-scroll">
+            <table className="gg-tr-table gg-tl-table">
+              <thead><tr>{heads.map((h) => <th key={h.key}>{h.label}</th>)}<th>{views.tape_head}</th></tr></thead>
+              <tbody>
+                {rows.map((r) => <GgEntryTimelineRow key={r.key} row={r} heads={heads} views={views} />)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 🕰️ one timeline row: the 🏁 cells (TrRowCells), the mini tape cell, and — when 📈 is open — the full tape row. */
+function GgEntryTimelineRow({ row, heads, views }: {
+  row: GgTrRow; heads: { key: string; label: string }[]; views: GgTrViewsBlock;
+}) {
+  const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((o) => !o);
+  return (
+    <Fragment>
+      <tr data-testid={`gg-tl-row-${row.key}`}>
+        {heads.map((h) => <TrRowCells key={h.key} row={row} head={h.key} />)}
+        <td className="ptt__mini-cell">
+          {row.id ? (
+            <>
+              <GgEntryMiniTape id={row.id} onOpen={toggle} width={100} />
+              <button type="button" className={`ptt__toggle${open ? ' is-on' : ''}`}
+                      data-testid={`gg-tl-open-${row.key}`} aria-expanded={open}
+                      title={views.tape_toggle_title} onClick={toggle}>{views.tape_toggle}</button>
+            </>
+          ) : null}
+        </td>
+      </tr>
+      {open && row.id ? (
+        <tr className="ptt__row" data-testid={`gg-tl-tape-${row.key}`}>
+          <td colSpan={heads.length + 1}><GgEntryTape id={row.id} /></td>
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }
 

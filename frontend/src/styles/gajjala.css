@@ -157,3 +157,13 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-tr-shadow { border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22)); color: var(--ink-subtle, #94a3b8); }
 .gg-tr-rule summary { cursor: pointer; color: var(--ink-subtle, #94a3b8); }
 .gg-tr-rule { font-size: 0.76rem; line-height: 1.4; }
+
+/* 🕰️ Entries timeline (2026-10-16, DECISIONS11 D3). Ajay: "We have a Promo Circuit tab in Catalyst tab. Can you use the
+   graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria satisfier. One
+   you alert it from the alert system you built please". The served view toggle under the day picker, and the timeline's
+   day tables (the 🏁 table look + the Promo table's Tape column and 📈 toggle). Every word on it is SERVED. */
+.gg-tr-views { margin-top: 0.1rem; }
+.gg-tl { display: flex; flex-direction: column; gap: 0.35rem; }
+.gg-tl-table .ptt__mini-cell { white-space: nowrap; vertical-align: middle; }
+.gg-tl-table .ptt__toggle { margin-left: 0.3rem; }
+.gg-tl-table .ptt__row td { padding: 0.3rem 0.2rem 0.5rem; white-space: normal; }

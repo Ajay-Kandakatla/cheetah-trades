@@ -635,12 +635,37 @@
       "label": "Last 5 sessions"
      },
      {
+      "key": "10d",
+      "label": "Last 10 sessions"
+     },
+     {
       "key": "all",
       "label": "All"
      }
     ],
     "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
-    "today_text": "Today · through 11:11 ET · not final"
+    "today_text": "Today · through 11:11 ET · not final",
+    "views": {
+     "default": "all",
+     "empty_text": "No A+ entry in this span — the 🧠 alerts are under 📋 all alerts.",
+     "items": [
+      {
+       "key": "all",
+       "label": "📋 all alerts"
+      },
+      {
+       "key": "timeline",
+       "label": "🕰️ entries timeline"
+      }
+     ],
+     "kinds": [
+      "aplus"
+     ],
+     "param": "view",
+     "tape_head": "Tape",
+     "tape_toggle": "📈",
+     "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop / +1R"
+    }
    }
   },
   "today": {
@@ -1202,12 +1227,37 @@
       "label": "Last 5 sessions"
      },
      {
+      "key": "10d",
+      "label": "Last 10 sessions"
+     },
+     {
       "key": "all",
       "label": "All"
      }
     ],
     "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
-    "today_text": "Today · through 11:11 ET · not final"
+    "today_text": "Today · through 11:11 ET · not final",
+    "views": {
+     "default": "all",
+     "empty_text": "No A+ entry in this span — the 🧠 alerts are under 📋 all alerts.",
+     "items": [
+      {
+       "key": "all",
+       "label": "📋 all alerts"
+      },
+      {
+       "key": "timeline",
+       "label": "🕰️ entries timeline"
+      }
+     ],
+     "kinds": [
+      "aplus"
+     ],
+     "param": "view",
+     "tape_head": "Tape",
+     "tape_toggle": "📈",
+     "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop / +1R"
+    }
    }
   },
   "yesterday": {
@@ -1565,12 +1615,37 @@
       "label": "Last 5 sessions"
      },
      {
+      "key": "10d",
+      "label": "Last 10 sessions"
+     },
+     {
       "key": "all",
       "label": "All"
      }
     ],
     "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
-    "today_text": null
+    "today_text": null,
+    "views": {
+     "default": "all",
+     "empty_text": "No A+ entry in this span — the 🧠 alerts are under 📋 all alerts.",
+     "items": [
+      {
+       "key": "all",
+       "label": "📋 all alerts"
+      },
+      {
+       "key": "timeline",
+       "label": "🕰️ entries timeline"
+      }
+     ],
+     "kinds": [
+      "aplus"
+     ],
+     "param": "view",
+     "tape_head": "Tape",
+     "tape_toggle": "📈",
+     "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop / +1R"
+    }
    }
   }
  }

@@ -1398,3 +1398,109 @@ def test_NEGATIVE_the_module_names_no_b_word_and_no_forecast_word():
     every = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
     assert not [s for s in every for w in FORBIDDEN_WORDS if w in s.lower()]          # docstrings included
     assert not [s for s in _string_literals(tree) if SEPA_NAMES.search(s)]           # served literals (not docstrings)
+
+
+# ── 🕰️ phase-1 additions (2026-10-16 night, BUILD_SPEC11 §3.2, AMENDMENTS11 F8): today_bars, filled_grade, "10d" ────
+# Ajay 2026-10-16 ~22:00 ET: "Can you use the graph component from  that to show what happened to Entries alert of
+# Gajjala with all the 100% criteria satisfier." — the tape reads today through the ONE memo today_read fills.
+class TodayLoad:
+    """An injected today loader: (bars, provider_failed); every call logged."""
+
+    def __init__(self, bars=None, failed=False, exc=None):
+        self.bars, self.failed, self.exc, self.calls = bars, failed, exc, []
+
+    def __call__(self, sym, day):
+        self.calls.append((sym, day))
+        if self.exc is not None:
+            raise self.exc
+        return (xlab_bars() if self.bars is None else self.bars), self.failed
+
+
+def test_today_bars_a_miss_loads_once_and_fills_the_memo_today_read_reads():
+    load, clk = TodayLoad(), Clock()
+    bars, at = LG.today_bars("xlab", D16, clock=clk, load=load, now=NOW_1225)
+    assert load.calls == [("XLAB", D16)] and bars == xlab_bars() and at == NOW_1225
+    assert LG._TODAY_MEMO[("2026-10-16", "XLAB")] == (clk.t, NOW_1225, bars)                  # today_read's own shape
+    clk.t += GC.LEDGER_TODAY_MEMO_SEC - 1
+    assert LG.today_bars("XLAB", D16, clock=clk, load=load, now=NOW_1225) == (bars, NOW_1225)
+    assert len(load.calls) == 1                                                               # a hit loads nothing
+    out = LG.today_read(NOW_1225, span="today", store=_xlab_store(), load_frames=load, clock=clk)
+    assert len(load.calls) == 1 and out["stats"]["memo"] == 1                                 # one memo, both readers
+    clk.t += 1
+    LG.today_bars("XLAB", D16, clock=clk, load=load, now=NOW_1225)
+    assert len(load.calls) == 2                                                               # the window ran out
+
+
+def test_F8_NEGATIVE_today_bars_without_a_loader_never_loads():
+    clk = Clock()
+    assert LG.today_bars("XLAB", D16, clock=clk, now=NOW_1225) == (None, None)
+    assert LG._TODAY_MEMO == {}
+    LG._TODAY_MEMO[("2026-10-16", "XLAB")] = (clk.t, NOW_1225, xlab_bars())
+    assert LG.today_bars("XLAB", D16, clock=clk, now=NOW_1225)[0] == xlab_bars()             # memo only
+    clk.t += GC.LEDGER_TODAY_MEMO_SEC
+    assert LG.today_bars("XLAB", D16, clock=clk, now=NOW_1225) == (None, None)               # stale: still no load
+
+
+@pytest.mark.parametrize("load", [TodayLoad(failed=True), TodayLoad(bars=[]), TodayLoad(exc=RuntimeError("down")),
+                                  TodayLoad(bars=flat(D15, (10, 0), (10, 5), 1.0))])
+def test_NEGATIVE_today_bars_a_failure_or_no_bars_is_never_memoised(load):
+    assert LG.today_bars("XLAB", D16, clock=Clock(), load=load, now=NOW_1225) == (None, None)
+    assert LG._TODAY_MEMO == {} and len(load.calls) == 1
+
+
+def test_today_bars_prunes_another_sessions_memo_and_keeps_only_its_day():
+    LG._TODAY_MEMO[("2026-10-15", "XLAB")] = (1000.0, NOW_1225, [])
+    LG._TODAY_SPLIT[("2026-10-15", "AHX", "2026-10-14")] = False
+    mixed = flat(D15, (15, 0), (15, 2), 1.0) + xlab_bars()
+    bars, _at = LG.today_bars("XLAB", D16, clock=Clock(), load=TodayLoad(bars=mixed), now=NOW_1225)
+    assert set(LG._TODAY_MEMO) == {("2026-10-16", "XLAB")} and LG._TODAY_SPLIT == {}
+    assert bars == xlab_bars() and all(b[0].astimezone(ET).date() == D16 for b in bars)
+
+
+def test_filled_grade_picks_exactly_what_the_plan_text_prints():
+    filled = _g("win")
+    nf = _g("loss", entry="no_entry")
+    split = dict(_g("win"), reason="split")
+    nopx = dict(_g("win"), fill_px=None)
+    nxt = _g("flat", h="next")
+    assert LG.filled_grade(filled, nxt) is filled and LG.filled_grade(nf, nxt) is nxt
+    assert LG.filled_grade(split, nxt) is nxt and LG.filled_grade(nopx, nxt) is nxt
+    assert LG.filled_grade(None, None) is None and LG.filled_grade(nf, split) is None
+    assert LG.filled_grade("x", ["y"]) is None                                                # NEGATIVE: junk
+    row = row_of(pot_doc("AAA", "bull_flag", D15, et(D15, 10, 30), 10.0, 9.0))
+    for same, n in ((filled, nxt), (nf, nxt), (split, nxt), (nf, None), (None, None)):
+        g = LG.filled_grade(same, n)
+        text, px = LG._plan_text(row, same, n)
+        assert px == (g or {}).get("fill_px") and (("→ fill" in text) is (g is not None)), (same, n)
+
+
+def test_NEGATIVE_plan_text_calls_filled_grade_one_engine(monkeypatch):
+    row = row_of(pot_doc("AAA", "bull_flag", D15, et(D15, 10, 30), 10.0, 9.0))
+    monkeypatch.setattr(LG, "filled_grade", lambda s, n: None)
+    assert LG._plan_text(row, _g("win"), None) == ("trigger 10.00 · stop 9.00", None)
+
+
+def test_the_10d_span_label_sessions_and_empty_text():
+    from chart_maps.gajjala import context as CX
+    assert LG._span_label("10d") == f"Last {GC.LEDGER_SPAN_SESSIONS_LONG} sessions" == "Last 10 sessions"
+    want = CX.history_window(LG._next_market_day(D16), GC.LEDGER_SPAN_SESSIONS_LONG)
+    assert LG._sessions_for("10d", D16, store_with()) == want and len(want) == 10 and want[-1] == D16
+    assert LG._empty_text("10d", want) == "No Gajjala alert rang in the last 10 sessions."
+    b = LG.served_block(store_with(), D16, NOW_1225, span="10d", is_today=True)
+    assert b["span"] == "10d" and b["empty_text"] == "No Gajjala alert rang in the last 10 sessions."
+    assert [s["label"] for s in b["spans"]] == ["Today", "Yesterday", "Last 5 sessions", "Last 10 sessions", "All"]
+
+
+def test_the_10d_span_reaches_back_past_the_5d_window():
+    old = date(2026, 10, 6)                                        # 8 sessions before 10-16: in 10d, not in 5d
+    st = store_with([pot_doc("OLD", "bull_flag", old, et(old, 11, 0), 10.0, 9.0),
+                     pot_doc("AAA", "bull_flag", D15, et(D15, 11, 0), 10.0, 9.0)])
+    syms = lambda b: [r["symbol"] for d in b["days"] for r in d["rows"]]          # noqa: E731
+    assert syms(LG.served_block(st, D16, NOW_1225, span="10d", is_today=True)) == ["AAA", "OLD"]
+    assert syms(LG.served_block(st, D16, NOW_1225, span="5d", is_today=True)) == ["AAA"]      # NEGATIVE
+
+
+def test_served_block_serves_the_tape_views_block():
+    from chart_maps.gajjala import tape as TP
+    b = LG.served_block(store_with(), D16, NOW_1225, span="today", is_today=True)
+    assert b["views"] == TP.views_block() and b["views"]["kinds"] == [LG.KINDS[1]]
