@@ -37,6 +37,8 @@ reclaim not yet.
 - `armed` = `ready is True` (the bool; a truthy value is "building"). `building` = forming, not ready.
 - Never a potential (no code needed, they are `partial` / `none` by construction): the long flag (4–5 bars), the
   near-kiss, the VCP "B — imperfect", a 🎾 read with an unknown / suspect / too-large float.
+  WIDENED 2026-10-18 (DECISIONS13 D1): a 4–5 bar forming Bull Flag IS a potential candidate now (K4 = 1–5, the long-flag
+  band empty while `K4_BF_LONG_FLAG_MAX` is None); near-kiss, "B" and the 🎾 float cases unchanged.
 
 Per setup, the forming read the potential reuses (trigger / stop it already carries):
 

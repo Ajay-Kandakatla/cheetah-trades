@@ -72,7 +72,10 @@ def test_no_placeholder_left_until_ajay_answers():
 
 def test_the_only_none_values_are_the_named_off_switches():
     nones = {n for n, v, _ in _assigns() if isinstance(v, ast.Constant) and v.value is None}
-    assert nones == set(GC.OFF_BY_DEFAULT)
+    # WIDENED 2026-10-18 (DECISIONS13 D1): K4_BF_LONG_FLAG_MAX = None is Ajay's answer (the long-flag band is empty),
+    # not an unanswered option — the one named exception; any other None still fails
+    assert nones == set(GC.OFF_BY_DEFAULT) | {"K4_BF_LONG_FLAG_MAX"}
+    assert "K4_BF_LONG_FLAG_MAX" not in GC.OFF_BY_DEFAULT
     placeholder_names = {n for names in GC.PLACEHOLDERS.values() for n in names}
     assert not (placeholder_names & nones)
     assert all(hasattr(GC, n) for n in placeholder_names)
@@ -94,7 +97,9 @@ def test_decisions_round_a_b_c_values():
     assert GC.SCAN_UNKNOWN_TYPE_POLICY == "list" and GC.SCAN_UNKNOWN_TYPE_LABEL == "type unknown"
     assert GC.GAJJALA_PUSH_MODE == "live" and GC.GAJJALA_PUSH_MODE in GC.PUSH_MODES  # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
     assert GC.PUSH_KIND == "gajjala_setup"
-    assert (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX, GC.K4_BF_LONG_FLAG_MAX) == (1, 3, 5)
+    # WIDENED 2026-10-18 (DECISIONS13 D1): Ajay "make the change for Long flags" — 1–5 bars = A+, the long-flag band
+    # empty (None); was (1, 3, 5) (Ajay K4 / K4a 2026-10-13)
+    assert (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX, GC.K4_BF_LONG_FLAG_MAX) == (1, 5, None)
     assert GC.K4_KF_PULL_MAX == 9 and GC.KF_HONOR_ALL_PULLBACK_CLOSES is True
     assert GC.KF_ALLOW_NO_TOUCH is True and GC.KF_NO_TOUCH_VARIANT == "near_kiss"
     assert (GC.K8_FAIL_NEAR_PCT, GC.K8_FAIL_DROP_PCT, GC.K8_FAIL_EVENT_RULE) == (2, 8, "distinct")
@@ -482,3 +487,51 @@ def test_NEGATIVE_the_mine_tag_guard_bites_on_a_loss_line_filed_as_ggs(monkeypat
         test_NEGATIVE_no_ledger_comment_is_filed_as_ggs()
     with pytest.raises(AssertionError):
         test_loss_fact_constants_values_and_tags()
+
+
+# ── 🚩 K4 long flags + 🎾 float order (DECISIONS13, 2026-10-18) ──────────────────────────────────────────────────────
+def _line_of(name: str) -> str:
+    return LINES[dict((n, ln) for n, _v, ln in _assigns())[name] - 1]
+
+
+def test_decisions13_k4_values_and_tags():
+    """Ajay 2026-10-18 "make the change for Long flags": both K4 lines carry the dated tag and his words."""
+    assert (GC.K4_BF_PULL_MAX, GC.K4_BF_LONG_FLAG_MAX) == (5, None)
+    assert _comment(dict((n, ln) for n, _v, ln in _assigns())["K4_BF_PULL_MAX"]).startswith(
+        'Ajay 2026-10-18 "make the change for Long flags"')
+    assert _comment(dict((n, ln) for n, _v, ln in _assigns())["K4_BF_LONG_FLAG_MAX"]).startswith("Ajay 2026-10-18")
+
+
+def test_NEGATIVE_k4_pull_min_comment_no_longer_says_1_to_3():
+    """FIX ROUND 1 (critic LOW b): the PULL_MIN comment named the old 1-3 range, contradicting PULL_MAX 5."""
+    line = _line_of("K4_BF_PULL_MIN")
+    assert GC.K4_BF_PULL_MIN == 1 and _comment(dict((n, ln) for n, _v, ln in _assigns())["K4_BF_PULL_MIN"]) == (
+        "Ajay K4: Bull Flag min 1 bar")
+    assert "1-3" not in line and "1–3" not in line
+
+
+def test_decisions13_float_cap_and_15_minutes_unchanged_and_confirmed():
+    """Ajay 2026-10-18 "Keep the float reduce and also 15 mins filter": VALUES UNCHANGED, each line dated."""
+    assert GC.K8_MAX_FLOAT == 10_000_000 and GC.NO_TRADE_AFTER_OPEN_MIN == 15
+    assert 'Ajay 2026-10-18 "Keep the float reduce"' in _line_of("K8_MAX_FLOAT")
+    assert 'Ajay 2026-10-18 "also 15 mins filter"' in _line_of("NO_TRADE_AFTER_OPEN_MIN")
+    assert _comment(dict((n, ln) for n, _v, ln in _assigns())["K8_MAX_FLOAT"]).startswith("Ajay K8")
+
+
+def test_rs_float_sort_is_mine_and_well_formed():
+    assert GC.RS_FLOAT_SORT in ("within_state", "global")
+    assert GC.RS_FLOAT_SORT == "within_state"
+    assert _comment(dict((n, ln) for n, _v, ln in _assigns())["RS_FLOAT_SORT"]).startswith("MINE")
+    assert "HIS CALL Q1" in _line_of("RS_FLOAT_SORT")
+
+
+def test_NEGATIVE_a_none_outside_the_named_set_still_fails_the_guard(monkeypatch):
+    """The widened None guard still bites: a second, unnamed None fails it."""
+    global TREE
+    keep = TREE
+    TREE = ast.parse(SRC + "\nSOME_NEW_KNOB = None\n")
+    try:
+        with pytest.raises(AssertionError):
+            test_the_only_none_values_are_the_named_off_switches()
+    finally:
+        TREE = keep

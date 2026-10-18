@@ -369,6 +369,7 @@ def test_NEGATIVE_pushable_refuses_non_aplus_states():
     assert AL.pushable(read(), None) is False                        # no frames → never pushable
 
 
+# the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
 @pytest.mark.parametrize("extra", [{"variant": "long_flag"}, {"variant": "near_kiss"}, {"grade": "B"}])
 def test_NEGATIVE_a_listed_variant_never_rings_even_if_marked_aplus(live, extra):
     counts, send = one(fake_store(), read(**extra))
@@ -554,6 +555,7 @@ def test_NEGATIVE_two_passes_on_the_same_key_send_once():
 
 
 @pytest.mark.parametrize("case,want", [
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     ("long_flag", "not_aplus_variant"),
     ("near_kiss", "not_aplus_variant"),
     ("grade_b", "not_aplus_variant"),
@@ -729,6 +731,7 @@ def test_NEGATIVE_a_dry_or_refused_pass_never_reads_the_potential(monkeypatch, c
         r, kw["dry"] = read(), True
     elif case == "premarket":
         r, kw["now"] = read(entry=stamp(8, 35)), at(8, 36)
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     elif case == "variant":
         r = read(variant="long_flag")
     else:

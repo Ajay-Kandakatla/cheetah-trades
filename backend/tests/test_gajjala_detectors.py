@@ -291,35 +291,62 @@ def test_nvct_one_big_candle_then_a_deep_pullback_is_none():
     assert r["state"] == "none"
 
 
-def test_bf_three_pullback_bars_is_aplus():
-    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(3))))
-    assert r["state"] == "aplus" and r["variant"] is None
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_bf_1_to_3_bars_unchanged(n):
+    """1–3 pullback bars with the break = A+, as before 2026-10-18 (NEGATIVE of the change: nothing below 4 moved)."""
+    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(n))))
+    assert r["state"] == "aplus" and r["variant"] is None and r["entry_bar_t"] is not None and "k4" not in r["missed"]
 
 
 @pytest.mark.parametrize("n", [4, 5])
-def test_bf_4_or_5_bars_is_a_long_flag_listed_never_aplus(n):
+def test_bf_4_or_5_bars_is_aplus_since_2026_10_18(n):
+    """Ajay 2026-10-18 "make the change for Long flags" (DECISIONS13 D1): 4–5 bar flags with the break are A+ —
+    entry set, k4 met, no long_flag variant (the band is empty while K4_BF_LONG_FLAG_MAX is None)."""
+    # WIDENED 2026-10-18 (DECISIONS13 D1): was partial / variant long_flag / k4 missed (Ajay K4a 2026-10-13)
+    assert (GC.K4_BF_PULL_MAX, GC.K4_BF_LONG_FLAG_MAX) == (5, None)
     r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(n))))
-    assert r["state"] == "partial" and r["broke"] is True and r["variant"] == "long_flag" and "k4" in r["missed"]
+    assert r["state"] == "aplus" and r["broke"] is True and r["entry_bar_t"] is not None
+    assert r["trigger"] is not None and r["stop"] is not None
+    assert "k4" not in r["missed"] and r["variant"] is None
+    assert next(c for c in r["criteria"] if c["key"] == "k4")["ok"] is True
 
 
-def test_bf_long_flag_forming_is_listed_partial():
+def test_bf_4_bar_flag_without_the_break_is_forming():
+    """WIDENED 2026-10-18 (DECISIONS13 D1): a 4-bar flag still waiting for the break is a FORMING read (was a listed
+    partial long flag)."""
+    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(4), entry=None)))
+    assert r["state"] == "forming" and r["variant"] is None and r["missed"] == []
+
+
+def test_bf_6_bars_is_invalid():
+    """NEGATIVE: more than K4_BF_PULL_MAX (5) bars = invalid, and the reason names 5 bars."""
+    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6))))
+    assert r["state"] == "invalid" and "longer than 5 bars" in r["reason"] and r["variant"] is None
+    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6), entry=None)))
+    assert r["state"] == "invalid" and "longer than 5 bars" in r["reason"]
+
+
+def test_NEGATIVE_the_dormant_long_flag_band_still_reads_when_configured(monkeypatch):
+    """The long-flag code path stays (config-driven): put the 2026-10-13 numbers back (PULL_MAX 3, LONG_FLAG_MAX 5)
+    and a 4-bar flag is a listed partial long flag again, never A+; 6 bars stay invalid."""
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 3)
+    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
+    for n in (4, 5):
+        r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(n))))
+        assert r["state"] == "partial" and r["broke"] is True and r["variant"] == "long_flag" and "k4" in r["missed"]
     r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(4), entry=None)))
     assert r["state"] == "partial" and r["variant"] == "long_flag"
-
-
-def test_bf_six_pullback_bars_is_invalid():
-    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6))))
-    assert r["state"] == "invalid" and "longer than 5" in r["reason"]
+    assert D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(3))))["state"] == "aplus"
+    assert D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6))))["state"] == "invalid"
 
 
 def test_zyne_5_bar_flag_reads_per_setting(monkeypatch):
+    """WIDENED 2026-10-18 (DECISIONS13 D1): the shipped setting reads ZYNE's 5-bar flag A+; the 1–3-only setting
+    (LONG_FLAG_MAX None, PULL_MAX 3) reads it invalid."""
     F = FX.frame(FX.bf_bars(FX.flat_pull(5)))
-    assert D.bull_flag(F)["variant"] == "long_flag"
-    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", GC.K4_BF_PULL_MAX)
+    assert D.bull_flag(F)["state"] == "aplus" and D.bull_flag(F)["variant"] is None
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 3)
     assert D.bull_flag(F)["state"] == "invalid"
-    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 5)
-    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
-    assert D.bull_flag(F)["state"] == "aplus"
     assert D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6))))["state"] == "invalid"
 
 
@@ -881,7 +908,8 @@ SWEEP = [
     ("K1_RANGE_LOOKBACK", 40, "bf"), ("K1_BODY_GAIN_PCT", 6.0, "bf"), ("K1_RANGE_MULT", 3.0, "bf"),
     ("K2_MAX_VOL_STEP", 1.2, "bf"), ("K2_CHECK_FIRST_BAR", True, "ocx"), ("K3_DEPTH_FRAC", 0.1, "bf"),
     ("K3_VOL_FRAC", 0.2, "bf"), ("K3_DEPTH_SETUPS", (), "rkda"), ("K4_BF_PULL_MIN", 3, "bf"),
-    ("K4_BF_PULL_MAX", 1, "bf"), ("K4_BF_LONG_FLAG_MAX", 4, "bf5"), ("BF_LEG_MIN_BARS", 3, "bf"),
+    ("K4_BF_PULL_MAX", 1, "bf"), ("K4_BF_LONG_FLAG_MAX", 4, "bf5"), ("K4_BF_PULL_MAX", 3, "bf5"),
+    ("BF_LEG_MIN_BARS", 3, "bf"),   # 2026-10-18 (DECISIONS13 D1): bf5 is A+ shipped; LONG_FLAG_MAX 4 → invalid, PULL_MAX 3 → invalid
     ("K4_KF_PULL_MAX", 2, "kf"), ("K5_KISS_TOL_PCT", 0.0, "kf"), ("K5_SLOPE_BARS", 40, "kf"),
     ("KF_HONOR_ALL_PULLBACK_CLOSES", False, "kf_honor"), ("KF_ALLOW_NO_TOUCH", False, "kf_near"),
     ("KF_NO_TOUCH_VARIANT", "nk", "kf_near"), ("KF_LEG_MIN_BARS", 2, "kf"),
@@ -1041,13 +1069,17 @@ def test_higher_high_then_kiss_reads_through_time():
 
 
 def test_long_flag_label_is_built_from_the_constants(monkeypatch):
+    """2026-10-18 (DECISIONS13 D1): with K4_BF_LONG_FLAG_MAX None the k4 label is the plain 1–5 range and never names a
+    long flag; with the band configured (PULL_MAX 2, LONG_FLAG_MAX 5) the label carries the band from the constants."""
+    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(5))))
+    k4 = next(c for c in r["criteria"] if c["key"] == "k4")
+    assert k4["label"] == f"K4 pullback {GC.K4_BF_PULL_MIN}–{GC.K4_BF_PULL_MAX} bars" == "K4 pullback 1–5 bars"
+    assert "long flag" not in k4["label"]
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 2)
+    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
     r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(5))))
     k4 = next(c for c in r["criteria"] if c["key"] == "k4")
     assert k4["label"].endswith(f"({GC.K4_BF_PULL_MAX + 1}–{GC.K4_BF_LONG_FLAG_MAX} = long flag)")
-    assert "(4–5 = long flag)" in k4["label"]
-    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 2)
-    r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(5))))
-    k4 = next(c for c in r["criteria"] if c["key"] == "k4")
     assert "(3–5 = long flag)" in k4["label"] and "4–5" not in k4["label"]
 
 

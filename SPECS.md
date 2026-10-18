@@ -536,7 +536,7 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `K1_RANGE_LOOKBACK` 20; K2 `K2_MAX_VOL_STEP` 5.0 within the leg (`K2_CHECK_FIRST_BAR` False); K3 `K3_DEPTH_FRAC` 0.50 /
   `K3_VOL_FRAC` 0.50, the depth floor on `K3_DEPTH_SETUPS` (Bull Flag, Kiss & Fly) only. Legs: `BF_LEG_MIN_BARS` 2 (GG S9
   1:59:24), `KF_LEG_MIN_BARS` 1 (GG S8 31:33), `HF_LEG_MIN_BARS` 2, `VCP_LEG_MIN_BARS` 1. Bull Flag pullback
-  `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX` 1–3; Kiss & Fly `K5_KISS_TOL_PCT` 0.5, `K5_SLOPE_BARS` 3, ≤ `K4_KF_PULL_MAX` 9, every
+  `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX` 1–5 (WIDENED 2026-10-18 from 1–3, Ajay *"make the change for Long flags"*); Kiss & Fly `K5_KISS_TOL_PCT` 0.5, `K5_SLOPE_BARS` 3, ≤ `K4_KF_PULL_MAX` 9, every
   pullback close ≥ 9 EMA (`KF_HONOR_ALL_PULLBACK_CLOSES`); Fade base `K4_HF_BASE_MIN`–`K4_HF_BASE_MAX` 6–24, `K6_MERGE_PCT`
   0.5, `K6_TIGHT_PCT` 8.0, `K6_SELL_DECAY` 0.70, trigger `HF_TRIGGER` "base_high"; VCP ≥ `K4_VCP_MIN_CYCLES` 2,
   `K7_CONTRACTION` 0.75, `K7_EMA21_TOL_PCT` 0.5, `VCP_PIVOT_WINDOW` 2; Reversal Squeeze `K8_MAX_FLOAT` 10,000,000,
@@ -546,7 +546,8 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `K9_AH_CARRY_PCT` 10.0; 🌙 K10 `K10_CLOSE_TOP_FRAC` 0.30, `K10_AH_MIN_VOLUME` 250,000, `K10_AH_MIN_GAIN_PCT` 5.0.
   Entry = the entry bar's high trades above the trigger on a CLOSED bar; stop = the trigger bar's low (the bar before the entry bar) / the base's low.
 - **Reads**: **A+** = every rule met and the entry bar closed — the only pushable state. Listed, never A+, never pushed:
-  **"long flag"** (Bull Flag pullback past `K4_BF_PULL_MAX`, up to `K4_BF_LONG_FLAG_MAX` 5; more = invalid),
+  **"long flag"** (Bull Flag pullback past `K4_BF_PULL_MAX`, up to `K4_BF_LONG_FLAG_MAX` 5; more = invalid — band EMPTY
+  since 2026-10-18 while `K4_BF_LONG_FLAG_MAX` is None: 1–5 bars = A+, > 5 invalid; the variant path stays config-driven),
   **"near-kiss"** (`KF_NO_TOUCH_VARIANT`, `KF_ALLOW_NO_TOUCH` True: K3 + uptrend pass, no bar kissed the 9 EMA),
   **"B — imperfect"** (`VCP_B_GRADE`, `VCP_B_READS` True: exactly one of the K7 contraction / 21-EMA hold missed).
   Other states: triggered · forming · partial · stopped; invalid / none are counted, never tiled. Chips are display only:
@@ -652,6 +653,16 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   503); nothing hidden, nothing muted, nothing guessed (a pre-screen from Fidelity's published rules = HIS CALL Q2). Doc
   `docs/gajjala/broker_flags_2026_10_17.md`; contracts "🚫 Gajjala broker tag (2026-10-17)"; ✨
   `chart-maps-gajjala-broker-tag-2026-10-17`.
+- **🎾 lowest float on top** (2026-10-18, Ajay: *"for the float lower the better is what I wanna follow so sort it by
+  lowest on top"*; GG S8 21:04 "the lower the float the better", no cutoff). On the `reversal_squeeze` sub only:
+  `RS_FLOAT_SORT` "within_state" (MINE — state rank first, A+ › triggered › ready › forming › partial › stopped, then
+  float ascending, unknown float last — none / 0 / suspect under `FLOAT_SUSPECT_POLICY` "ineligible" — then the existing
+  tiebreaks; "global" = float above the state, HIS CALL Q1). The word is served: `tab.RS_ORDER_TEXT` "🎾 lowest float on
+  top" as `order_note` on the squeeze sub, null on the other setup subs and absent on the list / 🧠 / 🏁 / 📓 subs; the FE prints it verbatim and types none. Same day,
+  his word: `K8_MAX_FLOAT` 10,000,000 and `NO_TRADE_AFTER_OPEN_MIN` 15 UNCHANGED (*"Keep the float reduce and also 15
+  mins filter."*). UNMEASURED. Doc + HIS CALL Q1–Q6: `docs/gajjala/k4_long_flags_float_2026_10_18.md`; contracts
+  "🚩 K4 long flags + 🎾 float order (2026-10-18)"; ✨ `chart-maps-gajjala-float-sort-2026-10-18`,
+  `chart-maps-gajjala-long-flags-2026-10-18`.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a

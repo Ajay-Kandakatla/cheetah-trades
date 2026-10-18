@@ -18,9 +18,9 @@
    "counts": {
     "aplus": 0,
     "awaiting_answer": 0,
-    "forming": 3,
+    "forming": 4,
     "invalid": 0,
-    "listed": 9,
+    "listed": 10,
     "none": 4,
     "partial": 1,
     "stopped": 0,
@@ -51,6 +51,7 @@
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "order_note": null,
    "pass": {
     "as_of_et": "10:31 ET",
     "at": "2026-10-13T14:31:00+00:00",
@@ -62,12 +63,39 @@
    },
    "potential": {
     "counts": {
-     "armed": 1,
+     "armed": 2,
      "building": 1,
-     "today": 2
+     "today": 3
     },
     "empty_text": null,
     "rows": [
+     {
+      "again": false,
+      "broker_text": null,
+      "first_seen_et": "10:31",
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=EEE",
+      "kind": "armed",
+      "kind_label": "trigger armed",
+      "reason": null,
+      "risk_pct": 0.5706134094151213,
+      "setup": "bull_flag",
+      "stop": 10.890625,
+      "symbol": "EEE",
+      "tells": [
+       {
+        "cite": "S8 21:04 “the lower the float the better”",
+        "key": "float",
+        "text": "Float 1.0M"
+       },
+       {
+        "cite": "S8 1:15:24 “the float is rotating”",
+        "key": "rotation",
+        "text": "🔄 float ×9.0"
+       }
+      ],
+      "text": "EEE · trigger armed · trigger 10.95 · stop 10.89 (−0.6%) · first seen 10:31 ET",
+      "trigger": 10.953125
+     },
      {
       "again": true,
       "broker_text": null,
@@ -144,7 +172,7 @@
      }
     ],
     "text": "Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
-    "title": "🧠 Potential — 1 trigger armed · 1 building · 2 first seen today · UNMEASURED"
+    "title": "🧠 Potential — 2 trigger armed · 1 building · 3 first seen today · UNMEASURED"
    },
    "push": {
     "mode": "live",
@@ -188,13 +216,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
-     "count": 4,
+     "count": 5,
      "emoji": "🚩",
      "key": "bull_flag",
      "label": "Bull Flag"
     },
     {
-     "count": 3,
+     "count": 4,
      "emoji": "💋",
      "key": "kiss_fly",
      "label": "EMA Kiss & Fly"
@@ -236,7 +264,7 @@
      "label": "Playbook"
     },
     {
-     "count": 5,
+     "count": 6,
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential"
@@ -251,6 +279,269 @@
    "tab": "gajjala",
    "tf": "5m",
    "tiles": [
+    {
+     "badges": [],
+     "bands": [],
+     "bars": [
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:35",
+       "v": 1000
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:40",
+       "v": 1001
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:45",
+       "v": 1002
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:50",
+       "v": 1003
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:55",
+       "v": 1004
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:00",
+       "v": 1005
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:05",
+       "v": 1006
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:10",
+       "v": 1007
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:15",
+       "v": 1008
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:20",
+       "v": 1009
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:25",
+       "v": 1010
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:30",
+       "v": 1011
+      }
+     ],
+     "broker_text": null,
+     "curves": [
+      {
+       "label": "9 EMA",
+       "tone": "ema9",
+       "values": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+       ]
+      },
+      {
+       "label": "21 EMA",
+       "tone": "ema21",
+       "values": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+       ]
+      }
+     ],
+     "gajjala": {
+      "bars_since_entry": null,
+      "broke": false,
+      "chips": {
+       "change_pct": 50.0,
+       "first15": false,
+       "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
+       "float": {
+        "as_of": "2026-10-13",
+        "shares": 1000000.0,
+        "src": "float",
+        "suspect": false,
+        "text": "Float 1.0M"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "instrument": null,
+       "outside_rth": null,
+       "psych": [],
+       "read_at": null,
+       "red_closes": "4 red closes in a row — he waits (“more than 3 red closes is red flag to me”)",
+       "rotation": "🔄 float ×9.0",
+       "session_badge": "RTH",
+       "stopped_earlier": null,
+       "vol_src": "min_av",
+       "volume": 9000000.0
+      },
+      "criteria": [
+       {
+        "key": "k2",
+        "label": "K2 leg volume rising, each step ≤ 5×",
+        "need": "rising, no step above the cap",
+        "ok": true,
+        "value": "2 demand bars"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 pullback volume ≤ 0.5× leg mean",
+        "need": "≤ 125000",
+        "ok": true,
+        "value": "max 80000 vs cap 125000"
+       },
+       {
+        "key": "k4",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
+        "ok": true,
+        "value": "4 bars"
+       }
+      ],
+      "entry_bar_t": null,
+      "flag_k": 1,
+      "frame": "5m",
+      "grade": null,
+      "grade_label": null,
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13",
+       "text": "listed day 1/3 · since 2026-10-13"
+      },
+      "missed": [],
+      "ready": true,
+      "reason": "",
+      "red_closes": 4,
+      "risk_pct": 0.5706134094151213,
+      "setup": "bull_flag",
+      "state": "forming",
+      "state_label": "forming — ready: the next bar over 10.95 · UNMEASURED",
+      "stop": 10.890625,
+      "trigger": 10.953125,
+      "unjudged": [],
+      "variant": null,
+      "variant_label": null
+     },
+     "href": "/sepa/EEE?tab=supply",
+     "lines": [
+      {
+       "label": "BUY > 10.95",
+       "price": 10.953125,
+       "tone": "buy"
+      },
+      {
+       "label": "STOP 10.89",
+       "price": 10.890625,
+       "tone": "stop"
+      }
+     ],
+     "markers": [],
+     "name": null,
+     "stats": [
+      {
+       "k": "Change",
+       "v": "+50.0%"
+      },
+      {
+       "k": "Volume",
+       "v": "9.0M"
+      }
+     ],
+     "symbol": "EEE",
+     "tf": "5m",
+     "vol_avg": {
+      "label": "50-bar avg volume",
+      "period": 50,
+      "values": [
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0
+      ]
+     },
+     "why": ""
+    },
     {
      "badges": [],
      "bands": [],
@@ -435,8 +726,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": true,
         "value": "2 bars"
        }
@@ -698,8 +989,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": true,
         "value": "2 bars"
        }
@@ -961,8 +1252,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": false,
         "value": "0 bars"
        }
@@ -1181,18 +1472,18 @@
       }
      ],
      "gajjala": {
-      "bars_since_entry": null,
-      "broke": false,
+      "bars_since_entry": 0,
+      "broke": true,
       "chips": {
        "change_pct": 50.0,
        "first15": false,
        "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
        "float": {
         "as_of": "2026-10-13",
-        "shares": 1000000.0,
+        "shares": 7000000.0,
         "src": "float",
         "suspect": false,
-        "text": "Float 1.0M"
+        "text": "Float 7.0M"
        },
        "float_suspect": null,
        "halts": null,
@@ -1200,8 +1491,8 @@
        "outside_rth": null,
        "psych": [],
        "read_at": null,
-       "red_closes": "4 red closes in a row — he waits (“more than 3 red closes is red flag to me”)",
-       "rotation": "🔄 float ×9.0",
+       "red_closes": null,
+       "rotation": "🔄 float ×1.3",
        "session_badge": "RTH",
        "stopped_earlier": null,
        "vol_src": "min_av",
@@ -1219,18 +1510,18 @@
         "key": "k3_vol",
         "label": "K3 pullback volume ≤ 0.5× leg mean",
         "need": "≤ 125000",
-        "ok": true,
-        "value": "max 80000 vs cap 125000"
+        "ok": false,
+        "value": "max 127500 vs cap 125000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars (4–5 = long flag)",
-        "need": "1–3",
-        "ok": false,
-        "value": "4 bars"
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
+        "ok": true,
+        "value": "2 bars"
        }
       ],
-      "entry_bar_t": null,
+      "entry_bar_t": "2026-10-13 10:10",
       "flag_k": 1,
       "frame": "5m",
       "grade": null,
@@ -1243,31 +1534,31 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [
-       "k4"
+       "k3_vol"
       ],
       "ready": false,
-      "reason": "",
-      "red_closes": 4,
-      "risk_pct": 0.5706134094151213,
+      "reason": "broke — not A+",
+      "red_closes": 2,
+      "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
       "state": "partial",
-      "state_label": "partial · missed: K4 pullback 1–3 bars (4–5 = long flag) · UNMEASURED",
-      "stop": 10.890625,
-      "trigger": 10.953125,
+      "state_label": "broke — not A+ · missed: K3 pullback volume ≤ 0.5× leg mean · UNMEASURED",
+      "stop": 10.8125,
+      "trigger": 10.96875,
       "unjudged": [],
-      "variant": "long_flag",
-      "variant_label": "long flag — listed, never A+, never pushed"
+      "variant": null,
+      "variant_label": null
      },
-     "href": "/sepa/EEE?tab=supply",
+     "href": "/sepa/FFF?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.95",
-       "price": 10.953125,
+       "label": "BUY > 10.97",
+       "price": 10.96875,
        "tone": "buy"
       },
       {
-       "label": "STOP 10.89",
-       "price": 10.890625,
+       "label": "STOP 10.81",
+       "price": 10.8125,
        "tone": "stop"
       }
      ],
@@ -1283,7 +1574,7 @@
        "v": "9.0M"
       }
      ],
-     "symbol": "EEE",
+     "symbol": "FFF",
      "tf": "5m",
      "vol_avg": {
       "label": "50-bar avg volume",
@@ -1303,7 +1594,7 @@
        100.0
       ]
      },
-     "why": ""
+     "why": "broke — not A+"
     }
    ]
   },
@@ -1324,11 +1615,11 @@
    "counts": {
     "aplus": 1,
     "awaiting_answer": 0,
-    "forming": 7,
+    "forming": 8,
     "invalid": 0,
-    "listed": 9,
-    "none": 31,
-    "partial": 1,
+    "listed": 10,
+    "none": 34,
+    "partial": 2,
     "stopped": 0,
     "triggered": 0
    },
@@ -1408,13 +1699,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
-     "count": 4,
+     "count": 5,
      "emoji": "🚩",
      "key": "bull_flag",
      "label": "Bull Flag"
     },
     {
-     "count": 3,
+     "count": 4,
      "emoji": "💋",
      "key": "kiss_fly",
      "label": "EMA Kiss & Fly"
@@ -1456,7 +1747,7 @@
      "label": "Playbook"
     },
     {
-     "count": 5,
+     "count": 6,
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential"
@@ -1471,6 +1762,291 @@
    "tab": "gajjala",
    "tf": "5m",
    "tiles": [
+    {
+     "badges": [],
+     "bands": [],
+     "bars": [
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:35",
+       "v": 1000
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:40",
+       "v": 1001
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:45",
+       "v": 1002
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:50",
+       "v": 1003
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 09:55",
+       "v": 1004
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:00",
+       "v": 1005
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:05",
+       "v": 1006
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:10",
+       "v": 1007
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:15",
+       "v": 1008
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:20",
+       "v": 1009
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:25",
+       "v": 1010
+      },
+      {
+       "c": 4.05,
+       "h": 4.1,
+       "l": 3.9,
+       "o": 4.0,
+       "t": "2026-10-13 10:30",
+       "v": 1011
+      }
+     ],
+     "broker_text": null,
+     "curves": [
+      {
+       "label": "9 EMA",
+       "tone": "ema9",
+       "values": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+       ]
+      },
+      {
+       "label": "21 EMA",
+       "tone": "ema21",
+       "values": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+       ]
+      }
+     ],
+     "gajjala": {
+      "bars_since_entry": null,
+      "broke": false,
+      "chips": {
+       "change_pct": 50.0,
+       "first15": false,
+       "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
+       "float": {
+        "as_of": "2026-10-13",
+        "shares": 1000000.0,
+        "src": "float",
+        "suspect": false,
+        "text": "Float 1.0M"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "instrument": null,
+       "outside_rth": null,
+       "psych": [],
+       "read_at": null,
+       "red_closes": "4 red closes in a row — he waits (“more than 3 red closes is red flag to me”)",
+       "rotation": "🔄 float ×9.0",
+       "session_badge": "RTH",
+       "stopped_earlier": null,
+       "vol_src": "min_av",
+       "volume": 9000000.0
+      },
+      "criteria": [
+       {
+        "key": "k2",
+        "label": "K2 leg volume rising, each step ≤ 5×",
+        "need": "rising, no step above the cap",
+        "ok": true,
+        "value": "2 demand bars"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 pullback volume ≤ 0.5× leg mean",
+        "need": "≤ 125000",
+        "ok": true,
+        "value": "max 80000 vs cap 125000"
+       },
+       {
+        "key": "k4",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
+        "ok": true,
+        "value": "4 bars"
+       }
+      ],
+      "entry_bar_t": null,
+      "flag_k": 1,
+      "frame": "5m",
+      "grade": null,
+      "grade_label": null,
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13",
+       "text": "listed day 1/3 · since 2026-10-13"
+      },
+      "missed": [],
+      "potential": {
+       "again": false,
+       "also": [],
+       "first_seen_et": "10:31",
+       "kind": "armed",
+       "kind_label": "trigger armed",
+       "setup": "bull_flag",
+       "setup_label": "🚩 Bull Flag",
+       "tells": [
+        {
+         "cite": "S8 21:04 “the lower the float the better”",
+         "key": "float",
+         "text": "Float 1.0M"
+        },
+        {
+         "cite": "S8 1:15:24 “the float is rotating”",
+         "key": "rotation",
+         "text": "🔄 float ×9.0"
+        }
+       ],
+       "text": "🧠 trigger armed · 🚩 Bull Flag · first seen 10:31 ET"
+      },
+      "ready": true,
+      "reason": "",
+      "red_closes": 4,
+      "risk_pct": 0.5706134094151213,
+      "setup": "bull_flag",
+      "state": "forming",
+      "state_label": "forming — ready: the next bar over 10.95 · UNMEASURED",
+      "stop": 10.890625,
+      "trigger": 10.953125,
+      "unjudged": [],
+      "variant": null,
+      "variant_label": null
+     },
+     "href": "/sepa/EEE?tab=supply",
+     "lines": [
+      {
+       "label": "BUY > 10.95",
+       "price": 10.953125,
+       "tone": "buy"
+      },
+      {
+       "label": "STOP 10.89",
+       "price": 10.890625,
+       "tone": "stop"
+      }
+     ],
+     "markers": [],
+     "name": null,
+     "stats": [
+      {
+       "k": "Change",
+       "v": "+50.0%"
+      },
+      {
+       "k": "Volume",
+       "v": "9.0M"
+      }
+     ],
+     "symbol": "EEE",
+     "tf": "5m",
+     "vol_avg": {
+      "label": "50-bar avg volume",
+      "period": 50,
+      "values": [
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0,
+       100.0
+      ]
+     },
+     "why": ""
+    },
     {
      "badges": [],
      "bands": [],
@@ -1953,8 +2529,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": true,
         "value": "2 bars"
        }
@@ -2263,8 +2839,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": true,
         "value": "2 bars"
        }
@@ -2961,14 +3537,14 @@
    ],
    "track": {
     "empty_today": "No potential first seen yet this session — the pass runs every 5 minutes from 04:01 to 19:56 ET.",
-    "title": "📈 Track — 6 potentials first seen today · UNMEASURED",
+    "title": "📈 Track — 7 potentials first seen today · UNMEASURED",
     "today": {
-     "armed_n": 2,
+     "armed_n": 3,
      "building_n": 4,
      "date": "2026-10-13",
      "label": "today",
-     "n": 6,
-     "pushed_n": 5,
+     "n": 7,
+     "pushed_n": 6,
      "rows": [
       {
        "broker_text": null,
@@ -2999,6 +3575,36 @@
        ],
        "vs_trigger_pct": 82.4,
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
+      },
+      {
+       "broker_text": null,
+       "entry_text": null,
+       "first_kind": "armed",
+       "first_kind_label": "trigger armed",
+       "first_px": 11.4,
+       "first_seen_et": "10:31",
+       "first_stop": 10.890625,
+       "first_trigger": 10.953125,
+       "graveyard_on": null,
+       "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=EEE",
+       "last_px": 11.4,
+       "last_state": "forming",
+       "last_state_text": "trigger armed",
+       "move_pct": 0.0,
+       "move_text": "11.40 → 11.40 (+0.0%) since first seen",
+       "push_text": "📲 sent 10:31 ET",
+       "setup": "bull_flag",
+       "setup_label": "🚩 Bull Flag",
+       "symbol": "EEE",
+       "text": "EEE · 🚩 Bull Flag · first seen 10:31 ET trigger armed · now trigger armed · 11.40 → 11.40 (+0.0%) since first seen",
+       "timeline": [
+        {
+         "at_et": "10:31",
+         "text": "10:31 trigger armed"
+        }
+       ],
+       "vs_trigger_pct": 4.08,
+       "vs_trigger_text": "+4.1% vs the trigger at first sight (10.95)"
       },
       {
        "broker_text": null,

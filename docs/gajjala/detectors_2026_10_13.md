@@ -58,6 +58,12 @@ no j: trigger/stop = h/l[last]; 0 pullback bars = forming not ready "waiting for
 j:   trigger/stop = h/l[j−1] → entry_event / state table
 flag_k = 1 + earlier STRUCTURES today (a leg absorbed into a live flag is not a new flag) whose own read (bounded at the next leg) was not none/invalid (display, STRATEGY D-FLAGN)
 ```
+WIDENED 2026-10-18 (DECISIONS13 D1): Ajay *"make the change for Long flags"* — `K4_BF_PULL_MAX` = 5 and
+`K4_BF_LONG_FLAG_MAX` = None. The three K4 lines above (the `> K4_BF_LONG_FLAG_MAX (5)` invalid line, `k4` 1–3, and
+4–5 bars = `long_flag`) are the 2026-10-13 setting, kept as written. Shipped now: invalid when `len(P) > 5` (the None
+path falls back to `K4_BF_PULL_MAX`), `k4` = 1–5, and the `long_flag` band is EMPTY — 4–5 bars with the break = A+.
+The variant path stays config-driven (PULL_MAX 3 + LONG_FLAG_MAX 5 reads it again). Doc:
+`docs/gajjala/k4_long_flags_float_2026_10_18.md`.
 
 ## 💋 EMA Kiss & Fly (GG S8 31:33–32:41, S9 1:55:28; K1–K5, K5a)
 ```
@@ -156,6 +162,8 @@ LONG_FLAG_MAX 3; A+ with PULL_MAX 5 · HKD 9-bar Kiss & Fly → A+ (invalid at t
 on heavy volume) → invalid, both B settings · AYLA sharp pullback (expands AND under the 21 EMA) → invalid, both ·
 SNES spike + violent decline → none · SASI steady fade → none · SGD no demand after the open → none · FCHL float on file
 above shares out → none under "ineligible", A+ under "shares_out".
+WIDENED 2026-10-18 (DECISIONS13 D1): ZYNE 5-bar flag → **A+ under the shipped setting** (PULL_MAX 5, LONG_FLAG_MAX
+None); "long flag" only when PULL_MAX 3 + LONG_FLAG_MAX 5 are configured; a 6-bar flag → invalid.
 
 ## Deviations from BUILD §3.3 / the WP3 test list (and why)
 - DECISIONS overrides applied: K4a long flag; K5a honor rule + 9 bars + near-kiss; HF trigger = base high; VCP "B";

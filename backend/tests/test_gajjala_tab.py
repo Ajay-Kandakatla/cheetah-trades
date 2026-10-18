@@ -549,6 +549,7 @@ def test_outside_rth_chip_and_squeeze_history_from_the_daily_doc():
 
 
 def test_variant_and_grade_labels():
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     reads = [read_doc("LNG", {BF: R(BF, "partial", variant="long_flag", missed=["k4"])}),
              read_doc("VCB", {"intraday_vcp": R("intraday_vcp", "partial", grade="B", missed=["k7_ratio"],
                                                 criteria=[{"key": "k7_ratio", "label": "K7 contraction",
@@ -746,3 +747,120 @@ def test_the_stopped_earlier_chip_names_the_entry_bar_not_the_stop():
     st = store_with(reads=[nodate], scans=[scan_doc("STQ")], passes=[latest()])
     chip = GT.build("bull_flag", now=NOW, store=st)["tiles"][0]["gajjala"]["chips"]["stopped_earlier"]
     assert chip.startswith("stopped earlier today on this setup — ") and "entered" not in chip   # NEGATIVE: no time
+
+
+# ── 🎾 lowest float on top (DECISIONS13 D3, Ajay 2026-10-18 "for the float lower the better is what I wanna follow so
+#    sort it by lowest on top") ─────────────────────────────────────────────────────────────────────────────────────
+def _daily(sym, shares, suspect=None):
+    fr = {"shares": shares, "src": "float", "text": None, "as_of": S.isoformat(), "suspect": suspect}
+    return {"_id": f"{S.isoformat()}|{sym}", "date": S.isoformat(), "symbol": sym, "float": fr}
+
+
+def _squeeze_store(reads: dict, floats: dict, suspect=()):
+    docs = [read_doc(s, {RS: r}) for s, r in reads.items()]
+    daily = [_daily(s, sh, "float_exceeds_shares_out" if s in suspect else None) for s, sh in floats.items()]
+    return store_with(reads=docs, daily=daily, scans=[scan_doc(s) for s in reads], passes=[latest()])
+
+
+def _syms(out):
+    return [t["symbol"] for t in out["tiles"]]
+
+
+def test_squeeze_tiles_order_by_float_ascending_within_state():
+    """Three forming squeeze reads, same bars to go: 9M / 2M / unknown → 2M, 9M, unknown (the symbol order is the
+    reverse, so the float is what moved them)."""
+    reads = {s: R(RS, "forming", base={"bars": 0}) for s in ("AAA", "BBB", "CCC")}
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"AAA": None, "BBB": 9_000_000, "CCC": 2_000_000}))
+    assert _syms(out) == ["CCC", "BBB", "AAA"]
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"BBB": 9_000_000, "CCC": 2_000_000}))   # no daily doc
+    assert _syms(out) == ["CCC", "BBB", "AAA"]
+    reads0 = {s: R(RS, "forming", base={"bars": 0}) for s in ("AAA", "BBB")}
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads0, {"AAA": 0, "BBB": 5_000_000}))     # 0 = unknown, last
+    assert _syms(out) == ["BBB", "AAA"]
+
+
+def test_squeeze_aplus_stays_above_forming_whatever_the_float(monkeypatch):
+    """within_state (shipped, MINE): an A+ at 9M stays above a forming name at 2M; GC.RS_FLOAT_SORT "global" (HIS CALL
+    Q1) puts the float above the state rank — the forming 2M name first."""
+    reads = {"APL": R(RS, "aplus", entry_bar_t="2026-10-13 10:20", broke=True),
+             "FRM": R(RS, "forming", base={"bars": 0})}
+    floats = {"APL": 9_000_000, "FRM": 2_000_000}
+    assert GC.RS_FLOAT_SORT == "within_state"
+    assert _syms(GT.build(RS, now=NOW, store=_squeeze_store(reads, floats))) == ["APL", "FRM"]
+    monkeypatch.setattr(GC, "RS_FLOAT_SORT", "global")
+    assert _syms(GT.build(RS, now=NOW, store=_squeeze_store(reads, floats))) == ["FRM", "APL"]
+
+
+def test_squeeze_float_ties_keep_todays_tiebreaks():
+    """Same state, same float → today's key decides (newest A+ entry first)."""
+    reads = {"OLD": R(RS, "aplus", entry_bar_t="2026-10-13 10:00", broke=True),
+             "NEW": R(RS, "aplus", entry_bar_t="2026-10-13 10:30", broke=True),
+             "LOW": R(RS, "aplus", entry_bar_t="2026-10-13 09:50", broke=True)}
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"OLD": 4_000_000, "NEW": 4_000_000, "LOW": 1_000_000}))
+    assert _syms(out) == ["LOW", "NEW", "OLD"]
+
+
+def test_suspect_ineligible_float_sorts_last(monkeypatch):
+    """A float on file above shares out under FLOAT_SUSPECT_POLICY "ineligible" (the context.rotation policy) is
+    unknown → last; under "shares_out" the served shares count again (NEGATIVE of the policy)."""
+    reads = {s: R(RS, "forming", base={"bars": 0}) for s in ("SUS", "OKK")}
+    floats = {"SUS": 1_000_000, "OKK": 8_000_000}
+    monkeypatch.setattr(GC, "FLOAT_SUSPECT_POLICY", "ineligible")
+    assert _syms(GT.build(RS, now=NOW, store=_squeeze_store(reads, floats, suspect=("SUS",)))) == ["OKK", "SUS"]
+    assert GT._float_shares_of({"shares": 1_000_000, "suspect": "float_exceeds_shares_out"}) is None
+    monkeypatch.setattr(GC, "FLOAT_SUSPECT_POLICY", "shares_out")
+    assert _syms(GT.build(RS, now=NOW, store=_squeeze_store(reads, floats, suspect=("SUS",)))) == ["SUS", "OKK"]
+
+
+def test_float_shares_of_unknowns():
+    assert GT._float_shares_of({"shares": 2_500_000.0, "suspect": None}) == 2_500_000
+    for fr in (None, {}, {"shares": None}, {"shares": 0}, {"shares": -5}, {"shares": "x"}, "Float 2M"):
+        assert GT._float_shares_of(fr) is None, fr
+
+
+def test_order_key_is_byte_identical_off_the_squeeze_sub():
+    """NEGATIVE: the float slot exists only on a squeeze card built by setup_tile; other setups (and the cross-setup
+    focus pick, which never stashes `_float_shares`) keep today's 4-tuple."""
+    g = {"setup": BF, "state": "aplus", "entry_bar_t": "2026-10-13 10:30", "_float_shares": 1}
+    assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, -202610131030.0, 0.0, "X")
+    g = {"setup": RS, "state": "aplus", "entry_bar_t": "2026-10-13 10:30"}
+    assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, -202610131030.0, 0.0, "X")
+    g = dict(g, _float_shares=3_000_000)
+    assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, 3_000_000.0, -202610131030.0, 0.0, "X")
+    assert GT.order_key({"symbol": "X", "gajjala": dict(g, _float_shares=None)})[1] == float("inf")
+
+
+def test_NEGATIVE_bull_flag_ordering_is_unchanged_with_floats_on_file():
+    """The bull-flag EXPECTED order holds even when every read carries a float (the float never sorts another sub)."""
+    floats = {s: 1_000_000 * (len(ORDER_READS) - i) for i, s in enumerate(ORDER_READS)}
+    reads = [read_doc(s, {BF: r}, ctx={"float": {"shares": floats[s], "src": "float", "suspect": None}})
+             for s, r in ORDER_READS.items()]
+    st = store_with(reads=reads, scans=[scan_doc(s) for s in ORDER_READS], passes=[latest()])
+    assert _syms(GT.build(BF, now=NOW, store=st)) == EXPECTED
+    assert _syms(GT.build(BF, now=NOW, store=ordering_store())) == EXPECTED
+
+
+def test_order_note_served_on_the_squeeze_sub_only():
+    """The ordering word is served (tab.RS_ORDER_TEXT), the FE types none; null on every other setup sub (NEGATIVE)
+    and absent off the setup subs."""
+    assert GT.RS_ORDER_TEXT == "🎾 lowest float on top"
+    reads = {"AAA": R(RS, "forming", base={"bars": 0})}
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"AAA": 2_000_000}))
+    assert out["order_note"] == GT.RS_ORDER_TEXT
+    for sub in GC.SETUPS:
+        if sub != RS:
+            out = GT.build(sub, now=NOW, store=ordering_store())
+            assert "order_note" in out and out["order_note"] is None, sub
+    for sub in ("premarket", "postmarket", "playbook"):
+        assert GT.build(sub, now=NOW, store=ordering_store()).get("order_note") is None, sub
+
+
+def test_no_private_key_reaches_the_served_squeeze_tiles():
+    """`_strip_private` pops `_float_shares` (with `_last` / `_bars_to_go`): no `_`-key in any served tile's JSON."""
+    reads = {s: R(RS, "forming", base={"bars": 0}) for s in ("AAA", "BBB")}
+    out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"AAA": 9_000_000, "BBB": 2_000_000}))
+    assert out["tiles"]
+    for t in out["tiles"]:
+        blob = json.dumps(t)
+        assert "_float_shares" not in blob and '"_last"' not in blob and '"_bars_to_go"' not in blob
+        assert not [k for k in t["gajjala"] if k.startswith("_")]

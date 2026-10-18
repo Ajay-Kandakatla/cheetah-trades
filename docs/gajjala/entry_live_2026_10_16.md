@@ -53,7 +53,7 @@ pass, the 🧠 potential tracker and the 🧠 potential pushes stay exactly as t
 | Step | Where | What |
 |---|---|---|
 | mode | `constants.GAJJALA_PUSH_MODE` → `alerts.push_mode()` | "live" only on the exact string "live"; any other value runs as shadow (fail closed). A flip back is one word. |
-| A+ only | `alerts.run_pass` (`not_aplus_variant`) | a read with `variant` (long flag, near-kiss) or `grade` (VCP "B — imperfect") is refused. A+ = `detectors._resolve_break`: every rule met, the entry bar's HIGH traded through the trigger, not stopped, the entry bar is the last closed bar. |
+| A+ only | `alerts.run_pass` (`not_aplus_variant`) | a read with `variant` (long flag, near-kiss) or `grade` (VCP "B — imperfect") is refused. WIDENED 2026-10-18 (DECISIONS13 D1): the long flag no longer occurs (band empty while `K4_BF_LONG_FLAG_MAX` is None — 4–5 bar flags are A+ and ring); near-kiss and "B" still refused. A+ = `detectors._resolve_break`: every rule met, the entry bar's HIGH traded through the trigger, not stopped, the entry bar is the last closed bar. |
 | fresh | `alerts.pushable`, `MAX_ENTRY_AGE_SEC` = `PASS_CADENCE_SEC` + `BAR_SETTLE_SEC` | the entry bar must be the latest closed bar of the read's own frame, closed within one pass; else `late`. |
 | closed day | `alerts._closed_reason` | `suppressed_closed`; the sender also drops on closed days. |
 | window | `alerts.window_reason`, `alerts._closes` | bar judged by its START: before 09:30 → `suppressed_premarket`; before 09:30 + `NO_TRADE_AFTER_OPEN_MIN` (09:45) → `suppressed_first15`; label after the extended close (20:00, 17:00 on `HALF_DAYS`) → `suppressed_window`. |

@@ -59,9 +59,14 @@ def vcp_no_pullback():
     return D.intraday_vcp(FX.vcp_frame(FX.VCP_BARS[:6], entry=None))         # forming, base None
 
 
+def four_bar_flag():
+    """WIDENED 2026-10-18 (DECISIONS13 D1): the 4-bar flat-pull flag with no break — a listed partial "long flag" until
+    2026-10-18 (was `real_partials()["long_flag"]`), a FORMING read (trigger armed) since 1–5 bars = A+."""
+    return D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(4), entry=None)))
+
+
 def real_partials():
-    return {"long_flag": D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(4), entry=None))),
-            "near_kiss": D.kiss_fly(FX.kf_near_kiss()),
+    return {"near_kiss": D.kiss_fly(FX.kf_near_kiss()),
             "vcp_b": D.intraday_vcp(FX.vcp_frame(FX.vcp_replace(r13=(10.1875, 10.25, 9.8, 10.125, 40_000)),
                                                  e21_at={13: 9.8}))}
 
@@ -152,8 +157,19 @@ def test_NEGATIVE_the_real_aplus_and_the_partials_are_never_a_potential():
     for name, r in real_partials().items():
         assert r["state"] == "partial", name
         assert PT.potential_kind(r) is None, name
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     assert PT.potential_kind(dict(bf_armed(), variant="long_flag")) is None     # a future forming variant: still None
+    assert PT.potential_kind(dict(bf_armed(), variant="some_future_variant")) is None
     assert PT.potential_kind(dict(bf_armed(), grade="B")) is None
+
+
+def test_a_4_bar_forming_flag_is_a_potential_since_2026_10_18():
+    """WIDENED 2026-10-18 (DECISIONS13 D1, Ajay "make the change for Long flags"): the 4-bar flag waiting for its break
+    is a forming read with no variant — a 🧠 potential, trigger armed (it was a partial long flag, never a potential)."""
+    r = four_bar_flag()
+    assert r["state"] == "forming" and r["variant"] is None and r["ready"] is True and r["base"]["bars"] == 4
+    assert PT.potential_kind(r) == "armed"
+    assert PT.potential_kind(D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(6), entry=None)))) is None   # NEGATIVE: 6 = invalid
 
 
 def test_NEGATIVE_a_forming_read_with_no_sideways_bar_is_not_a_potential():

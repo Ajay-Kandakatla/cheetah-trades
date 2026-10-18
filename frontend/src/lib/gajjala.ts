@@ -120,6 +120,7 @@ export const GG_OUTER_CHIPS = ['growth', 'short', 'explosive', 'enterable'] as c
  *  (DECISIONS 2026-10-13: K4a "long flag", K5a "near-kiss", VCP "B — imperfect").
  *  FALLBACK ONLY — the served `variant_label` / `grade_label` wins. */
 export const GG_VARIANT_LABEL: Readonly<Record<string, string>> = {
+  // long_flag: band empty since 2026-10-18 (DECISIONS13 D1/D4, K4_BF_LONG_FLAG_MAX = None) — a fallback word for older payloads; HIS CALL Q3 to drop.
   long_flag: 'long flag', near_kiss: 'near-kiss',
 };
 export const GG_GRADE_LABEL: Readonly<Record<string, string>> = { B: 'B — imperfect' };
@@ -389,6 +390,9 @@ export type GgBoard = {
   awaiting?: { setup: string; his_call: string; text: string }[];
   sorts?: { key: string; label: string }[];
   sort?: string | null;
+  /** 🎾 2026-10-18 (DECISIONS13 D3): the served ordering word (tab.RS_ORDER_TEXT) — the squeeze sub only; null on every other
+   *  sub, absent on an older API. Printed verbatim; the FE types none. */
+  order_note?: string | null;
   push?: { mode?: string | null; text?: string | null } | null;
   postmarket?: {
     unchecked_n?: number; unchecked_text?: string | null;

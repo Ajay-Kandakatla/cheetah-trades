@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-18 (verbatim below): "for the float lower the better is what I wanna follow so sort it by lowest on top". DECISIONS13 D3:
+  // the squeeze sub only (the one sub whose cards carry a float read); state first, then float ascending, unknown float last —
+  // constants.RS_FLOAT_SORT = "within_state" is MINE ("global" = HIS CALL Q1). The order word is tab.RS_ORDER_TEXT, served as
+  // order_note — pinned by scripts/contracts.mjs ("🚩 K4 long flags + 🎾 float order (2026-10-18)").
+  { id: 'chart-maps-gajjala-float-sort-2026-10-18', addedAt: '2026-10-18', route: '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+    label: "🎾 Gajjala’s Reversal Squeeze now lists the lowest float on top. You said: “for the float lower the better is what I wanna follow so sort it by lowest on top”. On the 🎾 Reversal Squeeze sub-tab the cards keep their state order first — A+ on top, as on every sub-tab — and within each state the lowest float comes first; a name with no float read (or a suspect one) sits last in its state. An A+ never drops under a forming name for its float: state first is my default, and one switch puts the float above the state — your call. The order line under the sub-tabs is served by the tab. The other sub-tabs keep their order (their cards carry no float read). Display order only — the float cap and the alerts are unchanged. Not advice." },
+  // Ajay 2026-10-18 (verbatim below): "make the change for Long flags" and "Keep the float reduce and also 15 mins filter". DECISIONS13
+  // D1/D2/D4: K4_BF_PULL_MAX 3 → 5, K4_BF_LONG_FLAG_MAX 5 → None (the long-flag band is empty; > 5 bars stays invalid); K8_MAX_FLOAT
+  // and NO_TRADE_AFTER_OPEN_MIN unchanged on his word. The Substack NXTP / ZYNE flags are a third-party relay (F4VS), not a GG quote.
+  // Pinned by scripts/contracts.mjs ("🚩 K4 long flags + 🎾 float order (2026-10-18)"). UNMEASURED.
+  { id: 'chart-maps-gajjala-long-flags-2026-10-18', addedAt: '2026-10-18', route: '/chart-maps?tab=gajjala&sub=bull_flag',
+    label: "🚩 Bull Flags with 4–5 pullback bars are A+ now (they ring). You said: “make the change for Long flags”. A Bull Flag’s quiet pullback of 1 to 5 bars now meets his K4 rule: a 4- or 5-bar flag that breaks its trigger is an A+ entry like a 1–3 bar one — on the 🎯 line and rung on your phone in the A+ window — and while it is still forming it is a 🧠 potential. More than 5 bars is not a flag (invalid, as before). The separate “long flag” read is gone. The evidence is third-party: the Substack bull-flag post (a relay, not his own words) shows NXTP with 4 and ZYNE with 5 pullback bars as valid trades; his own line calls one bar, usually two to three, the typical case, not a cap. And “Keep the float reduce and also 15 mins filter”: the 10,000,000-share float cap and his first 15 minutes stay exactly as they were. UNMEASURED — the 2026-10-14 study read no edge for these setups. Not advice." },
   // Ajay 2026-10-17 (verbatim below, his 2nd and 3rd lines). DECISIONS12 D1–D9. A TAG, never a filter — pinned by scripts/contracts.mjs ("🚫 Gajjala broker tag (2026-10-17)").
   // AMENDMENTS12 A1: the push title carries 🚫 too ("the title carries 🚫 and the body says it in words"); F1: "Only you" = the primary owner.
   { id: 'chart-maps-gajjala-broker-tag-2026-10-17', addedAt: '2026-10-17', route: '/chart-maps?tab=gajjala',

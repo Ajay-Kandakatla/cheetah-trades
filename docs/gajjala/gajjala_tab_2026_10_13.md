@@ -29,7 +29,7 @@ the base" (S8 34:45). Entry = the break of the prior bar's high; stop = that bar
 
 | Sub | His words | Numbers (all in `constants.py`) |
 |---|---|---|
-| 🚩 Bull Flag | S8 21:45–24:37, S9 1:59:24 | leg ≥ `BF_LEG_MIN_BARS` (his 2); pullback `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX`; up to `K4_BF_LONG_FLAG_MAX` = "long flag" (K4a, never A+) |
+| 🚩 Bull Flag | S8 21:45–24:37, S9 1:59:24 | leg ≥ `BF_LEG_MIN_BARS` (his 2); pullback `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX`; up to `K4_BF_LONG_FLAG_MAX` = "long flag" (K4a, never A+). WIDENED 2026-10-18 (DECISIONS13 D1): pullback 1–5 = A+, > 5 invalid; `K4_BF_LONG_FLAG_MAX` None = the "long flag" band is empty |
 | 💋 EMA Kiss & Fly | S8 31:33–32:41, S9 1:55:28 | `K5_*`; every pullback close ≥ 9 EMA (K5a); ≤ `K4_KF_PULL_MAX`; no kiss = "near-kiss" (never A+) |
 | ➖ Horizontal Fade | S8 32:49–33:50, 1:20:08, S9 1:56:08 (1:57:33 is HIS Fade line, not a VCP rule) | `K6_*`, base `K4_HF_BASE_MIN`–`MAX`, trigger = the base high (round C) |
 | 🌀 Intraday VCP | S8 33:50–34:37 | `K7_*`, ≥ `K4_VCP_MIN_CYCLES`; one miss of two = "B — imperfect" (round C, never pushed) |
@@ -45,6 +45,8 @@ number (Hn)" on the ℹ️ panel, the knob table and the board's `awaiting[]` �
 `aplus` "A+ — every rule met, entry bar closed" · `triggered` "triggered n bars ago" · `forming` (ready: "the next bar over
 X") · `partial` ("partial — missed: …", or "broke — not A+ · missed: …" / "· not judgeable: 9 EMA warming up", HIS CALL 21) ·
 `stopped` · `invalid` / `none` = counted, never tiled. Variant / grade pills: "long flag", "near-kiss", "B — imperfect".
+WIDENED 2026-10-18 (DECISIONS13 D1): the "long flag" pill no longer occurs under the shipped setting (band empty while
+`K4_BF_LONG_FLAG_MAX` is None; 4–5 bar flags read A+); the pill word stays for a configured band and older payloads.
 
 ## Endpoint — `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=`
 `chart_maps/api.py` → `chart_maps/gajjala/tab.py:build()`. **Reads Mongo only** (never scans, never fetches a bar); the route

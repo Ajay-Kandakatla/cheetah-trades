@@ -212,6 +212,35 @@ def test_knobs_are_built_from_constants_and_move_with_them(monkeypatch):
     assert "+4.5%" in k2["K1"]["text"] and "333,000" in k2["K10"]["text"] and "$2 / $20" in k2["🧱 Psych chip"]["text"]
 
 
+def test_k4_knob_has_no_long_flag_while_the_band_is_empty():
+    """2026-10-18 (DECISIONS13 D1/D4): K4_BF_LONG_FLAG_MAX None → "Bull Flag 1–5 bars · Kiss & Fly ≤ …", no long-flag
+    clause and never a "waiting for your number" (the None is his answer, not a placeholder)."""
+    t = {r["key"]: r["text"] for r in PB.knobs()}["K4"]
+    assert GC.K4_BF_LONG_FLAG_MAX is None
+    assert t.startswith("Bull Flag %d–%d bars · Kiss & Fly ≤ %d" % (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX,
+                                                                     GC.K4_KF_PULL_MAX))
+    assert t.startswith("Bull Flag 1–5 bars · Kiss & Fly ≤ ")
+    assert "long flag" not in t and "waiting for your number" not in t and "None" not in t
+
+
+def test_NEGATIVE_k4_knob_names_the_long_flag_when_the_band_is_set(monkeypatch):
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 3)
+    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
+    t = {r["key"]: r["text"] for r in PB.knobs()}["K4"]
+    assert t.startswith("Bull Flag 1–3 bars (up to 5 = long flag, never A+) · Kiss & Fly ≤ ")
+
+
+def test_k4_knob_provenance_names_his_2026_10_18_answer(monkeypatch):
+    """FIX ROUND 1 (critic LOW a): the K4 range is his 2026-10-18 answer — the knob's provenance says so, built from
+    the constants at call time; every other K-knob keeps PB.AJAY (NEGATIVE)."""
+    k = {r["key"]: r for r in PB.knobs()}
+    assert k["K4"]["value"] == "Ajay 2026-10-13 · 2026-10-18 (1–5 bars)"
+    assert k["K4"]["value"] == PB.AJAY_K4_FMT % (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX)
+    assert all(k[x]["value"] == PB.AJAY for x in ("K1", "K2", "K3", "K5", "K6")), "only K4 carries the 10-18 date"
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 3)
+    assert {r["key"]: r for r in PB.knobs()}["K4"]["value"] == "Ajay 2026-10-13 · 2026-10-18 (1–3 bars)"
+
+
 def test_a_none_placeholder_renders_waiting_never_none(monkeypatch):
     monkeypatch.setattr(GC, "HF_LEG_MIN_BARS", None)
     monkeypatch.setattr(GC, "K8_FAIL_EVENT_RULE", None)

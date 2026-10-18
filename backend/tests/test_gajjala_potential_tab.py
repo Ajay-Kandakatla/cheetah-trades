@@ -29,12 +29,13 @@ import pytest
 
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import context as CX
+from chart_maps.gajjala import detectors as D
 from chart_maps.gajjala import potential as PT
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
 from tests.fixtures.gajjala import detector_frames as FX
-from tests.test_gajjala_potential import Rec, bf_armed, bf_no_pullback, frame_at, kf_building, one_per_setup, \
-    real_partials
+from tests.test_gajjala_potential import Rec, bf_armed, bf_no_pullback, four_bar_flag, frame_at, kf_building, \
+    one_per_setup, real_partials
 from tests.test_gajjala_store import FakeColl, fake_store
 from tests.test_gajjala_tab import _walk_strings, read_doc, run_route
 
@@ -63,7 +64,7 @@ def _no_override(monkeypatch):
 
 # ── the fixture day ──────────────────────────────────────────────────────────────────────────────────────────────
 FLOATS = {"AAA": 5e6, "JJJ": 2e6, "BBB": 4e6, "CCC": 8e6, "DDD": 3e6, "EEE": 1e6, "GGG": 1e6, "HHH": None,
-          "ZZZ": 6e6, "XYZ": 5e6}
+          "ZZZ": 6e6, "XYZ": 5e6, "FFF": 7e6}
 VOLUME = 9e6
 
 
@@ -84,6 +85,13 @@ def bf_building():
     return dict(bf_armed(), ready=False)        # the same real flag with its pullback not complete yet
 
 
+def bf_partial():
+    """A real 🚩 partial (FIX ROUND 1 2026-10-18): the pullback's first bar 1.02× over the K3 volume cap, then the
+    break — "broke — not A+", missed k3_vol (tests/test_gajjala_detectors.py test_bf_pullback_volume_051x_is_partial_broke)."""
+    cap = GC.K3_VOL_FRAC * (FX.D1[4] + FX.D2[4]) / 2
+    return D.bull_flag(FX.frame(FX.bf_bars([FX.P1[:4] + (cap * 1.02,), FX.P2])))
+
+
 def reads_at(when: str) -> dict:
     """{SYM: {setup: Read}} of today's passes. HHH never reaches a pass (a read with no tracker doc — a doc lost or
     written before this build) so its strip row has no first sighting."""
@@ -96,7 +104,10 @@ def reads_at(when: str) -> dict:
         return dict(base, CCC={"horizontal_fade": one["horizontal_fade"]})
     return dict(base, BBB={"kiss_fly": dict(kf_building(), state="aplus")},
                 CCC={"horizontal_fade": one["horizontal_fade"]}, DDD={"reversal_squeeze": one["reversal_squeeze"]},
-                EEE={"bull_flag": real_partials()["long_flag"]}, GGG={"bull_flag": bf_no_pullback()})
+                EEE={"bull_flag": four_bar_flag()}, GGG={"bull_flag": bf_no_pullback()},
+                # FIX ROUND 1 2026-10-18: EEE left the partial set (a forming 4-bar flag now) — FFF is today's real
+                # partial (near_kiss) so the "partial is never a potential" NEGATIVE keeps a case on this day
+                FFF={"kiss_fly": real_partials()["near_kiss"], "bull_flag": bf_partial()})
 
 
 def run(st, now, reads, *, px, stale=(), tape="rth", send=None):
@@ -116,7 +127,7 @@ def day_store(*, post_rows=None, with_tracker=True):
                                                  {"symbol": "CARY", "ah_move_pct": 9.0, "price": 2.0, "day_c": 1.8}])
     st.record_qualifiers(S, at(8, 0), [dict(row("AAA"), tape_session="premarket"),
                                       dict(row("PMX"), tape_session="premarket")], "premarket")
-    st.record_qualifiers(S, at(9, 21), [row(s) for s in ("AAA", "JJJ", "BBB", "CCC", "DDD", "EEE", "GGG", "HHH")],
+    st.record_qualifiers(S, at(9, 21), [row(s) for s in ("AAA", "JJJ", "BBB", "CCC", "DDD", "EEE", "GGG", "HHH", "FFF")],
                          "rth")
     if with_tracker:
         run(st, at(9, 21, PREV), {"AAA": {"bull_flag": bf_armed()}, "ZZZ": {"kiss_fly": kf_building()}}, px=PX0,
@@ -154,10 +165,14 @@ def strip_syms(out):
 
 
 def test_the_fixture_pushes_came_from_the_writer(store):
-    """Sanity on the writer's output the tab reads: four first sightings rang at 09:21, CCC held, DDD rang at 10:31."""
+    """Sanity on the writer's output the tab reads: four first sightings rang at 09:21, CCC held, DDD and EEE rang at
+    10:31."""
     docs = {(d["symbol"], d["setup"]): d for d in store.potentials(S)}
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
     assert set(docs) == {("AAA", "bull_flag"), ("AAA", "kiss_fly"), ("BBB", "kiss_fly"), ("JJJ", "bull_flag"),
-                         ("CCC", "horizontal_fade"), ("DDD", "reversal_squeeze")}
+                         ("CCC", "horizontal_fade"), ("DDD", "reversal_squeeze"), ("EEE", "bull_flag")}
+    eee = docs[("EEE", "bull_flag")]["push"]
+    assert eee["state"] == "pushed" and eee["at_et"] == "10:31"
     assert [h["reason"] for h in docs[("CCC", "horizontal_fade")]["held"]] == ["muted", "stale_tape"]
     assert "push" not in docs[("CCC", "horizontal_fade")]
     assert docs[("DDD", "reversal_squeeze")]["push"]["state"] == "pushed"
@@ -167,9 +182,11 @@ def test_the_fixture_pushes_came_from_the_writer(store):
 def test_setup_sub_strip_has_only_that_setups_potentials_armed_first(store):
     out = build("bull_flag", store)
     pot = out["potential"]
-    assert strip_syms(out) == ["AAA", "JJJ"]                    # armed AAA (5M float) before building JJJ (2M)
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert strip_syms(out) == ["EEE", "AAA", "JJJ"]             # armed EEE (1M) and AAA (5M) by float, then building JJJ
     assert {r["setup"] for r in pot["rows"]} == {"bull_flag"}
-    a, j = pot["rows"]
+    e, a, j = pot["rows"]
+    assert (e["kind"], e["first_seen_et"], e["again"]) == ("armed", "10:31", False)
     assert (a["kind"], a["kind_label"], j["kind"], j["kind_label"]) == ("armed", "trigger armed", "building", "building")
     assert a["first_seen_et"] == "09:21" and a["href"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=AAA"
     assert a["again"] is True and j["again"] is False            # AAA was a bull-flag potential last session
@@ -177,8 +194,8 @@ def test_setup_sub_strip_has_only_that_setups_potentials_armed_first(store):
     read = bf_armed()
     assert a["text"] == PT.row_text("AAA", "bull_flag", read, "armed", "09:21")
     assert a["trigger"] == read["trigger"] and a["stop"] == read["stop"]
-    assert pot["counts"] == {"armed": 1, "building": 1, "today": 2}
-    assert pot["title"] == "🧠 Potential — 1 trigger armed · 1 building · 2 first seen today · UNMEASURED"
+    assert pot["counts"] == {"armed": 2, "building": 1, "today": 3}
+    assert pot["title"] == "🧠 Potential — 2 trigger armed · 1 building · 3 first seen today · UNMEASURED"
     assert pot["empty_text"] is None
 
 
@@ -194,7 +211,17 @@ def test_strip_tells_are_ggs_badges_with_their_cites(store):
 
 def test_negative_aplus_partial_and_baseless_forming_are_not_in_any_strip(store):
     every = [s for sub in GC.SETUPS for s in strip_syms(build(sub, store))]
-    assert "EEE" not in every and "GGG" not in every              # long flag (partial); forming with no sideways bar
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert "EEE" in every and every.count("EEE") == 1             # in the 🚩 strip only
+    assert "EEE" in strip_syms(build("bull_flag", store))
+    assert "FFF" not in every                                     # a real partial (near_kiss) is never a potential
+    assert real_partials()["near_kiss"]["state"] == bf_partial()["state"] == "partial"
+    for sub in ("kiss_fly", "bull_flag"):                         # it IS a partial card on 💋 and 🚩, only not a potential
+        fff = [t for t in build(sub, store)["tiles"] if t["symbol"] == "FFF"]
+        assert len(fff) == 1 and fff[0]["gajjala"]["state"] == "partial", sub
+    assert "FFF" not in [t["symbol"] for t in build(GC.POTENTIAL_SUB, store)["tiles"]]
+    assert "FFF" not in {d["symbol"] for d in store.potentials(S) + store.potentials(PREV)}   # never a tracker doc
+    assert "GGG" not in every                                     # forming with no sideways bar
     assert "BBB" not in every                                     # A+ is "what has happened", not a potential
     assert strip_syms(build("kiss_fly", store)) == ["AAA", "HHH"]  # unknown float sorts after a known one
 
@@ -216,7 +243,9 @@ def test_negative_a_raising_tracker_serves_rows_and_never_raises():
     good = day_store()
     st = fake_store(**{n: (FakeColl(fail=True) if n == ST.POTENTIALS else good.coll(n)) for n in ST.ALL})
     out = build("bull_flag", st)
-    assert strip_syms(out) == ["AAA", "JJJ"] and all(r["first_seen_et"] is None for r in out["potential"]["rows"])
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert strip_syms(out) == ["EEE", "AAA", "JJJ"]
+    assert all(r["first_seen_et"] is None for r in out["potential"]["rows"])
     p = build(GC.POTENTIAL_SUB, st)
     assert p["track"]["today"]["n"] == 0 and p["track"]["today"]["rows"] == []
 
@@ -246,11 +275,12 @@ def test_negative_a_raising_potential_engine_never_silences_the_a_plus_board(sto
 def test_negative_a_raising_track_or_push_line_keeps_the_rest(store, monkeypatch):
     monkeypatch.setattr(PT, "state_word", _boom)
     p = build(GC.POTENTIAL_SUB, store)
-    assert p["track"] is None and [t["symbol"] for t in p["tiles"]][:2] == ["DDD", "AAA"]
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert p["track"] is None and [t["symbol"] for t in p["tiles"]][:2] == ["EEE", "DDD"]
     monkeypatch.undo()
     monkeypatch.setattr(PT, "push_note", _boom)
     bf = build("bull_flag", store)
-    assert bf["push_potential"] is None and bf["push"]["text"] and strip_syms(bf) == ["AAA", "JJJ"]
+    assert bf["push_potential"] is None and bf["push"]["text"] and strip_syms(bf) == ["EEE", "AAA", "JJJ"]
 
 
 def test_negative_a_malformed_tracker_doc_never_takes_down_the_tab():
@@ -289,8 +319,9 @@ def test_empty_strip_text_in_and_out_of_the_window(store):
 def test_potential_sub_one_tile_per_symbol_primary_first_by_order_key(store):
     out = build(GC.POTENTIAL_SUB, store)
     assert out["sub"] == "potential" and out["sub_resolved_from"] == "param"
-    assert [t["symbol"] for t in out["tiles"]] == ["DDD", "AAA", "JJJ", "CCC", "HHH"]   # armed by float ↑, then building
-    aaa = out["tiles"][1]
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert [t["symbol"] for t in out["tiles"]] == ["EEE", "DDD", "AAA", "JJJ", "CCC", "HHH"]   # armed by float ↑, building
+    aaa = out["tiles"][2]
     p = aaa["gajjala"]["potential"]
     assert aaa["gajjala"]["setup"] == "bull_flag" and p["setup"] == "bull_flag" and p["setup_label"] == "🚩 Bull Flag"
     assert p["also"] == [{"setup": "kiss_fly", "label": "💋 EMA Kiss & Fly"}]
@@ -305,11 +336,12 @@ def test_potential_sub_one_tile_per_symbol_primary_first_by_order_key(store):
 def test_track_today_newest_first_with_push_and_held_words(store):
     tr = build(GC.POTENTIAL_SUB, store)["track"]
     today = tr["today"]
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
     assert [(r["symbol"], r["setup"]) for r in today["rows"]] == [
-        ("DDD", "reversal_squeeze"), ("CCC", "horizontal_fade"), ("AAA", "bull_flag"), ("AAA", "kiss_fly"),
-        ("BBB", "kiss_fly"), ("JJJ", "bull_flag")]
-    assert (today["n"], today["armed_n"], today["building_n"], today["pushed_n"]) == (6, 2, 4, 5)
-    assert tr["title"] == "📈 Track — 6 potentials first seen today · UNMEASURED"
+        ("DDD", "reversal_squeeze"), ("EEE", "bull_flag"), ("CCC", "horizontal_fade"), ("AAA", "bull_flag"),
+        ("AAA", "kiss_fly"), ("BBB", "kiss_fly"), ("JJJ", "bull_flag")]
+    assert (today["n"], today["armed_n"], today["building_n"], today["pushed_n"]) == (7, 3, 4, 6)
+    assert tr["title"] == "📈 Track — 7 potentials first seen today · UNMEASURED"
     by = {(r["symbol"], r["setup"]): r for r in today["rows"]}
     assert by[("DDD", "reversal_squeeze")]["push_text"] == "📲 sent 10:31 ET"
     assert by[("CCC", "horizontal_fade")]["push_text"] == "held: " + PT.HELD_WORDS["stale_tape"]
@@ -351,7 +383,8 @@ def test_track_yesterday_chronological_with_outcome_states_and_graveyard(store):
 def test_track_rows_are_capped_with_more_n(store, monkeypatch):
     monkeypatch.setattr(GC, "TILE_LIMIT_MAX", 2)
     today = build(GC.POTENTIAL_SUB, store)["track"]["today"]
-    assert len(today["rows"]) == 2 and today["more_n"] == 4 and today["n"] == 6
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert len(today["rows"]) == 2 and today["more_n"] == 5 and today["n"] == 7
     assert "more_n" not in build(GC.POTENTIAL_SUB, store)["track"]["yesterday"]
 
 
@@ -392,8 +425,8 @@ def test_watch_lists_list_names_with_no_potential():
 
 
 def test_negative_watch_line_never_lists_a_name_whose_read_has_structure():
-    """W14 says "no structure yet": a ☀️ name whose read already broke (BBB A+), failed a rule (EEE partial) or is
-    forming without a base (GGG) has a card in a setup sub, so it is never on the watch line; PMX (no read) is."""
+    """W14 says "no structure yet": a ☀️ name whose read already broke (BBB A+), has a structure forming (EEE, a 4-bar
+    flag since 2026-10-18 — was a partial long flag) or is forming without a base (GGG) has a card in a setup sub, so it is never on the watch line; PMX (no read) is."""
     st = day_store(with_tracker=False)
     st.record_qualifiers(S, at(8, 0), [dict(row(s), tape_session="premarket") for s in ("BBB", "EEE", "GGG")],
                          "premarket")
@@ -421,7 +454,8 @@ def test_subs_end_with_potential_and_the_other_eight_keep_their_order(store):
     out = build("bull_flag", store)
     # WIDENED 2026-10-16 — 🏁 Track record appended LAST (Ajay "keep a new tab"); 🧠 Potential is now second to last and
     # the other eight keep their order
-    assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 5}
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 6}
     assert {k: out["subs"][-1][k] for k in ("key", "emoji", "label")} == {"key": "track_record", "emoji": "🏁",
                                                                           "label": "Track record"}
     assert [s["key"] for s in out["subs"][:-2]] == ["bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp",
@@ -449,7 +483,8 @@ def test_route_serves_the_potential_sub(store, monkeypatch):
     assert resp.status_code == 200
     body = json.loads(resp.body)
     assert body["sub"] == "potential" and {"track", "watch", "push_potential", "tiles", "subs"} <= set(body)
-    assert [t["symbol"] for t in body["tiles"]][:2] == ["DDD", "AAA"] and "NaN" not in resp.body.decode()
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert [t["symbol"] for t in body["tiles"]][:2] == ["EEE", "DDD"] and "NaN" not in resp.body.decode()
     desc = inspect.signature(API.chart_maps_gajjala).parameters["sub"].default.description
     assert "| potential" in desc
 
@@ -623,9 +658,10 @@ def test_NEGATIVE_an_alert_rows_fault_serves_the_track_without_entries(monkeypat
     else:
         monkeypatch.setattr(st, "alert_rows", lambda sessions: None)
     out = build(GC.POTENTIAL_SUB, st)
-    assert out["track"] is not None and out["track"]["today"]["n"] == 6
+    # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
+    assert out["track"] is not None and out["track"]["today"]["n"] == 7
     assert all(r["entry_text"] is None for day in ("today", "yesterday") for r in out["track"][day]["rows"])
-    assert [t["symbol"] for t in out["tiles"]][:2] == ["DDD", "AAA"]     # the rest of the 🧠 board serves
+    assert [t["symbol"] for t in out["tiles"]][:2] == ["EEE", "DDD"]     # the rest of the 🧠 board serves
 
 
 def test_NEGATIVE_one_malformed_entry_doc_never_blanks_the_others(monkeypatch):
@@ -693,6 +729,10 @@ def test_golden_fixture_is_the_served_payload():
     assert GOLDEN.read_text(encoding="utf-8") == text, f"the golden fixture drifted — run: {RECIPE}"
     boards = json.loads(text)["boards"]
     assert boards["potential"]["track"]["today"]["rows"] and boards["bull_flag"]["potential"]["rows"]
+    # FIX ROUND 1 2026-10-18: the 🚩 board keeps one real partial tile (FFF) for the FE's partial pill, never on the strip
+    bf_tiles = boards["bull_flag"]["tiles"]
+    assert [t["symbol"] for t in bf_tiles if t["gajjala"]["state"] == "partial"] == ["FFF"]
+    assert "FFF" not in [r["symbol"] for r in boards["bull_flag"]["potential"]["rows"]]
     rows = boards["potential"]["track"]["today"]["rows"]
     assert all("entry_text" in r for r in rows)
     assert [r["entry_text"] for r in rows].count("🎯 entry sent 10:36 ET") == 1

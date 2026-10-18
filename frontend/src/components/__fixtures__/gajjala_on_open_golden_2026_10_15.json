@@ -51,6 +51,7 @@
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "order_note": null,
    "pass": {
     "as_of_et": "10:41 ET",
     "at": "2026-10-13T14:41:20+00:00",
@@ -320,8 +321,8 @@
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–3 bars",
-        "need": "1–3",
+        "label": "K4 pullback 1–5 bars",
+        "need": "1–5",
         "ok": true,
         "value": "2 bars"
        }
@@ -732,8 +733,8 @@
      },
      {
       "key": "K4",
-      "text": "Bull Flag 1–3 bars (up to 5 = long flag, never A+) · Kiss & Fly ≤ 9 · Fade base 6–24 · VCP ≥ 2 contractions",
-      "value": "Ajay 2026-10-13"
+      "text": "Bull Flag 1–5 bars · Kiss & Fly ≤ 9 · Fade base 6–24 · VCP ≥ 2 contractions",
+      "value": "Ajay 2026-10-13 · 2026-10-18 (1–5 bars)"
      },
      {
       "key": "K5",

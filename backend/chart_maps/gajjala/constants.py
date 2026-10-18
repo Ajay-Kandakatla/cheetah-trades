@@ -4,6 +4,7 @@ Provenance tag on every line:
   GG <src> <ts>   = his own words (FIRST_HAND_ibd_webinar.md; S8 = IBD webinar CI7mNvEQyms, S9 = TraderLion podcast
                     10pHBNVi4Jc; X = his post on X, by id)
   Ajay K# / H#    = Ajay's answer 2026-10-13 (DECISIONS.md, binding — the ROUND A/B/C answers override the first round)
+  Ajay 2026-10-18 = Ajay's answer 2026-10-18 after the K-rules audit (DECISIONS13.md, binding; his words verbatim on the line)
   Cheetah default = Ajay's number, NOT Gajjala's — the ℹ️ panel labels it so (DECISIONS round A)
   TRANSPORT       = pacing only — no list, read or push depends on it
 H1–H5 were placeholders (None) until Ajay answered on 2026-10-13; every one is filled. The only None values left are
@@ -25,7 +26,7 @@ SCAN_UNKNOWN_TYPE_POLICIES = ("list", "drop")
 SCAN_UNKNOWN_TYPE = "unknown"            # the `type` a row carries when the reference map has no entry
 SCAN_UNKNOWN_TYPE_LABEL = "type unknown"  # Ajay round A wording
 STAY_LISTED_SESSIONS = 2                 # Cheetah default (Ajay, not GG — he says "a couple of days", S9 1:17:32)
-NO_TRADE_AFTER_OPEN_MIN = 15             # GG S8 14:41 "I don't take trades for the first 15 minutes"
+NO_TRADE_AFTER_OPEN_MIN = 15             # GG S8 14:41 "I don't take trades for the first 15 minutes" · Ajay 2026-10-18 "also 15 mins filter" — confirmed
 
 # instrument-type reference map (Massive /v3/reference/tickers, all types, paginated, once per trading day)
 TYPES_PAGE_LIMIT = 1000                  # TRANSPORT — Massive's largest page
@@ -43,9 +44,9 @@ K3_DEPTH_FRAC = 0.50                     # Ajay K3: lows >= last demand high - 0
 K3_VOL_FRAC = 0.50                       # Ajay K3: pullback volume <= 0.50 x the demand bars' mean
 K3_DEPTH_SETUPS = ("bull_flag", "kiss_fly")   # Ajay round C: the depth floor binds the Bull Flag and Kiss & Fly ONLY
 # K4 pullback / base lengths
-K4_BF_PULL_MIN = 1                       # Ajay K4: Bull Flag 1-3 bars
-K4_BF_PULL_MAX = 3                       # Ajay K4 / K4a: 1-3 bars = A+ (pushable)
-K4_BF_LONG_FLAG_MAX = 5                  # Ajay K4a: 4-5 bars = listed "long flag", never A+, never pushed; > 5 invalid
+K4_BF_PULL_MIN = 1                       # Ajay K4: Bull Flag min 1 bar
+K4_BF_PULL_MAX = 5                       # Ajay 2026-10-18 "make the change for Long flags" — Substack NXTP 4 / ZYNE 5 pullback bars shown as valid trades; was 3 (Ajay K4 2026-10-13)
+K4_BF_LONG_FLAG_MAX = None               # Ajay 2026-10-18: the "long flag" band is EMPTY (1–5 = A+, > 5 invalid); was 5 (Ajay K4a). The detector keeps the None path.
 K4_KF_PULL_MAX = 9                       # Ajay K5a: Kiss & Fly pullback <= 9 bars (round A raised K4's 8)
 K4_HF_BASE_MIN = 6                       # Ajay K4: Horizontal Fade base 6-24 bars
 K4_HF_BASE_MAX = 24                      # Ajay K4
@@ -68,7 +69,7 @@ K7_EMA21_TOL_PCT = 0.5                   # Ajay K7: each cycle low >= EMA21 x 0.
 VCP_B_READS = True                       # Ajay round C: exactly one of {K7 contraction, K7 21-EMA hold} false -> "B — imperfect", listed, never pushed
 VCP_B_GRADE = "B"                        # Ajay round C wording ("B — imperfect")
 # K8 reversal squeeze
-K8_MAX_FLOAT = 10_000_000                # Ajay K8: float <= 10,000,000
+K8_MAX_FLOAT = 10_000_000                # Ajay K8: float <= 10,000,000 · Ajay 2026-10-18 "Keep the float reduce" — confirmed after the audit
 K8_DROP_PCT = 8.0                        # Ajay K8: tennis ball = a drop >= 8% from a bar's high
 K8_RECOVER_PCT = 2.0                     # Ajay K8: recovered to within 2% of the pre-drop level
 K8_RECOVER_BARS = 3                      # Ajay K8: within 3 bars
@@ -76,6 +77,7 @@ K8_HISTORY_SESSIONS = 30                 # Ajay K8: squeeze-history chip over th
 K8_HISTORY_RANGE_PCT = 50.0              # Ajay K8: (high - low)/low >= 50% OR a halt that day
 FLOAT_SUSPECT_POLICY = "ineligible"      # spec default (R1-9b not answered): a float on file > shares out -> unknown -> ineligible
 FLOAT_SUSPECT_POLICIES = ("ineligible", "shares_out")
+RS_FLOAT_SORT = "within_state"           # MINE (DECISIONS13 D3) — state rank first, then float ascending, unknown last; "global" = float above the state rank (HIS CALL Q1)
 # K9 premarket / K10 post-market
 K9_PM_MIN_VOLUME = 1_000_000             # Ajay K9: accumulated premarket volume >= 1,000,000
 K9_AH_CARRY_PCT = 10.0                   # Ajay K9: prior-day after-hours move >= 10% vs the regular close

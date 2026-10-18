@@ -101,11 +101,18 @@ describe('Notifications · 🚩 gajjala_setup', () => {
     expect(d).not.toMatch(/clos\w* above (its|the) trigger/);
   });
 
+  // WIDENED 2026-10-18 (DECISIONS13 D1/D4): Ajay "make the change for Long flags" — a 4–5 bar flag is A+ now, so "long flag" left the list.
   it('WHAT NEVER FIRES names the listed-but-never-rung reads', () => {
     const d = gg()[0].detail;
-    for (const phrase of ['WHAT NEVER FIRES', 'long flag', 'near-kiss', 'B — imperfect', 'found late']) {
+    for (const phrase of ['WHAT NEVER FIRES', 'near-kiss', 'B — imperfect', 'found late']) {
       expect(d).toContain(phrase);
     }
+  });
+
+  it('NEGATIVE: no "long flag" anywhere — the band is empty since 2026-10-18 (DECISIONS13 D4)', () => {
+    const d = gg()[0].detail;
+    expect(d).not.toContain('long flag');
+    expect(d).toContain('WHAT NEVER FIRES: a near-kiss, a "B — imperfect" VCP');
   });
 
   it('NEGATIVE: never OFF BY DEFAULT while the keep-set carries it, never "bounce", never a buy word', () => {

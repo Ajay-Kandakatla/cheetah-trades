@@ -397,9 +397,12 @@ def _bull_flag_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
 
 
 def bull_flag(F: Frame, minutes=None, *, last: Optional[int] = None) -> dict:
-    """Latest ≥2-bar demand leg today, a 1–3 bar shallow quiet pullback, entry = break of the pullback bar's high,
-    stop = its low ("taking the highs of that previous green bar … the low of that bar", S8 21:45). 4–5 bars = listed
-    "long flag" (Ajay K4a). `flag_k` = this flag's number today (display only)."""
+    """Latest ≥2-bar demand leg today, a K4_BF_PULL_MIN–K4_BF_PULL_MAX bar shallow quiet pullback, entry = break of the
+    pullback bar's high, stop = its low ("taking the highs of that previous green bar … the low of that bar", S8 21:45).
+    Ajay 2026-10-18 ("make the change for Long flags", DECISIONS13 D1): 1–5 bars = A+, longer = invalid; the "long
+    flag" band (Ajay K4a, 4–5 bars listed, never A+) is EMPTY while K4_BF_LONG_FLAG_MAX is None — long_max falls back to
+    K4_BF_PULL_MAX, so the `variant = "long_flag"` branch is unreachable; it reads again when the constant is set.
+    `flag_k` = this flag's number today (display only)."""
     setup = "bull_flag"
     last = _last(F, last)
     if last < 0:

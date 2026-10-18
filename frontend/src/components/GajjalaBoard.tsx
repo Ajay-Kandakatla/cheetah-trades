@@ -483,6 +483,10 @@ export default function GajjalaBoard() {
           </button>
         ))}
       </div>
+      {/* (3a) 🎾 the served ordering word (tab.RS_ORDER_TEXT, squeeze sub only; DECISIONS13 D3) — verbatim, no sort control. */}
+      {typeof board?.order_note === 'string' && board.order_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
+      ) : null}
 
       {/* (3b) 🎯 the served A+ line — every sub, so on 🧠 Potential it leads the 📈 Track. */}
       {board?.enterable ? <AplusBanner block={board.enterable} /> : null}

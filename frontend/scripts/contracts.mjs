@@ -9217,8 +9217,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts');
       const ID = 'chart-maps-gajjala-broker-tag-2026-10-17';
       const arr = nf.indexOf('export const NEW_FEATURES');
-      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      // WIDENED 2026-10-18 (DECISIONS13 D7 / BUILD_SPEC13 §2 B5a) — 🎾 float order + 🚩 K4 long flags took the first two ✨
+      // slots; this entry must be PRESENT (the newest feature is first). `arr` stays for the slice below.
+      if (arr < 0 || !nf.slice(arr).includes(`{ id: '${ID}'`)) errs.push(`the ✨ entry id: '${ID}' is missing from NEW_FEATURES`);
       const at = nf.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
       else {
@@ -9249,6 +9250,110 @@ const CONTRACTS = [
         const doc = read(DOC);
         for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'Nothing is hidden']) if (!doc.includes(need)) errs.push(`docs/gajjala/broker_flags_2026_10_17.md must carry "${need}"`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '🚩 K4 long flags + 🎾 float order (2026-10-18): 1–5 pullback bars = A+ (long-flag band empty), the float cap + 15 minutes unchanged on his word, the squeeze sub orders by float inside the state (MINE), the order word served by tab.py, no "a long flag" in WHAT NEVER FIRES, the FE types no word, ✨ first + second with his words verbatim',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-10-18: "Keep the float reduce and also 15 mins filter." / "make the change for Long flags" / "for the float lower
+    // the better is what I wanna follow so sort it by lowest on top" (DECISIONS13 D1–D8, BUILD_SPEC13 §2 B5b). He trades the A+
+    // pushes with real money: a 4–5 bar flag must ring under the K4 numbers he set, the float cap and his first 15 minutes must
+    // hold on his word, and the order word must be the served one — never a second copy typed in the browser.
+    checks: (nf) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const B_WORD = /boun|fake/i;
+      const HIS_KEEP = 'Keep the float reduce and also 15 mins filter';
+      const HIS_LONG = 'make the change for Long flags';
+      const HIS_FLOAT = 'for the float lower the better is what I wanna follow so sort it by lowest on top';
+      const GG = '../backend/chart_maps/gajjala/';
+
+      // 1–3. constants.py — his K4 numbers (dated), his confirmation of K8 + the 15 minutes (values unchanged), my sort knob.
+      const gc = tryRead(`${GG}constants.py`);
+      const cline = (name) => new RegExp(`^${name} = ([^\\n]*?)\\s*#\\s*([^\\n]*)$`, 'm').exec(gc);
+      const val = (name) => { const m = cline(name); return m ? m[1].trim() : null; };
+      const tag = (name) => { const m = cline(name); return m ? m[2].trim() : ''; };
+      if (gc) {
+        if (val('K4_BF_PULL_MAX') !== '5' || !/^Ajay 2026-10-18\b/.test(tag('K4_BF_PULL_MAX'))) errs.push('constants.py must carry K4_BF_PULL_MAX = 5  # Ajay 2026-10-18 … (DECISIONS13 D1 — 1–5 pullback bars = A+)');
+        if (val('K4_BF_LONG_FLAG_MAX') !== 'None' || !/^Ajay 2026-10-18\b/.test(tag('K4_BF_LONG_FLAG_MAX'))) errs.push('constants.py must carry K4_BF_LONG_FLAG_MAX = None  # Ajay 2026-10-18 … (DECISIONS13 D1 — the long-flag band is empty)');
+        if (val('K8_MAX_FLOAT') !== '10_000_000') errs.push(`constants.py K8_MAX_FLOAT must stay 10_000_000 — Ajay 2026-10-18 "${HIS_KEEP}" (found ${val('K8_MAX_FLOAT')})`);
+        if (val('NO_TRADE_AFTER_OPEN_MIN') !== '15') errs.push(`constants.py NO_TRADE_AFTER_OPEN_MIN must stay 15 — Ajay 2026-10-18 "${HIS_KEEP}" (found ${val('NO_TRADE_AFTER_OPEN_MIN')})`);
+        if (!/^"(within_state|global)"$/.test(val('RS_FLOAT_SORT') || '') || !/^MINE\b/.test(tag('RS_FLOAT_SORT'))) errs.push('constants.py must carry RS_FLOAT_SORT = "within_state" | "global"  # MINE (DECISIONS13 D3 — HIS CALL Q1)');
+      }
+
+      // 4. tab.py — the ONE served order word, the float key on the squeeze sub only, served as order_note.
+      const tab = tryRead(`${GG}tab.py`);
+      if (tab) {
+        if (!/^RS_ORDER_TEXT = "🎾 lowest float on top"/m.test(tab)) errs.push('tab.py must carry RS_ORDER_TEXT = "🎾 lowest float on top" — the ONE served order word (DECISIONS13 D3)');
+        const ok = pyBody(tab, 'order_key');
+        if (!ok) errs.push('tab.py lost def order_key(');
+        else for (const need of ['_float_shares', 'reversal_squeeze']) if (!ok.includes(need)) errs.push(`tab.order_key must name ${need} (DECISIONS13 D3 — float order on the squeeze sub only)`);
+        if (!tab.includes('"order_note"')) errs.push('tab.py must serve "order_note" (the key lib/gajjala.ts reads)');
+      }
+
+      // 5. Notifications.tsx — neither WHAT NEVER FIRES sentence (🚩 / 🧠) names "a long flag" any more (DECISIONS13 D4).
+      const nt = tryRead('src/pages/Notifications.tsx');
+      for (const k of ['gajjala_setup', 'gajjala_potential']) {
+        const a = nt.indexOf(`key: '${k}'`);
+        if (a < 0) { errs.push(`Notifications.tsx lost the ${k} entry`); continue; }
+        const b = nt.indexOf("{ key: '", a + 5);
+        const entry = nt.slice(a, b < 0 ? undefined : b);
+        const w = entry.indexOf('WHAT NEVER FIRES');
+        if (w < 0) { errs.push(`Notifications.tsx ${k} lost its WHAT NEVER FIRES sentence`); continue; }
+        const q = /(?<!\\)'/.exec(entry.slice(w));
+        const sentence = entry.slice(w, q ? w + q.index : undefined);
+        if (/long flag/i.test(sentence)) errs.push(`Notifications.tsx ${k} WHAT NEVER FIRES still names "a long flag" — 1–5 bars are A+ since 2026-10-18 (DECISIONS13 D4)`);
+      }
+
+      // 6. the FE types no order word: GajjalaBoard.tsx + lib/gajjala.ts code never spell "lowest float"; the board prints
+      //    the served order_note under its testid; the lib type carries the key.
+      const board = tryRead('src/components/GajjalaBoard.tsx');
+      const lib = tryRead('src/lib/gajjala.ts');
+      if (/lowest float/i.test(tsCode(board))) errs.push('GajjalaBoard.tsx types "lowest float" — the served order_note is printed verbatim (DECISIONS13 D3)');
+      if (/lowest float/i.test(tsCode(lib))) errs.push('lib/gajjala.ts types "lowest float" in code — the order word is served by tab.py');
+      if (board && (!board.includes('data-testid="gg-order-note"') || !board.includes('board.order_note'))) errs.push('GajjalaBoard.tsx must print board.order_note under data-testid="gg-order-note" (BUILD_SPEC13 §2 B2)');
+      if (lib && !/order_note\?: string \| null;/.test(lib)) errs.push('lib/gajjala.ts board type must carry order_note?: string | null (BUILD_SPEC13 §2 B1)');
+
+      // 7. ✨ — FIRST the 🎾 float order, SECOND the 🚩 long flags; his lines verbatim; routes; UNMEASURED; never the b-word.
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const ids = arr < 0 ? [] : [...nf.slice(arr).matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      const ID1 = 'chart-maps-gajjala-float-sort-2026-10-18', ID2 = 'chart-maps-gajjala-long-flags-2026-10-18';
+      if (ids[0] !== ID1 || ids[1] !== ID2) errs.push(`the ✨ entries '${ID1}' then '${ID2}' must be FIRST and SECOND in NEW_FEATURES (found ${ids.join(', ')})`);
+      let forbidden = [];
+      try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+      if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+      const rows = [
+        [ID1, '/chart-maps?tab=gajjala&sub=reversal_squeeze', [HIS_FLOAT], 'the 🎾 ✨ entry', '🎾 Gajjala’s Reversal Squeeze now lists the lowest float on top.'],
+        [ID2, '/chart-maps?tab=gajjala&sub=bull_flag', [HIS_LONG, HIS_KEEP, 'UNMEASURED'], 'the 🚩 K4 ✨ entry', '🚩 Bull Flags with 4–5 pullback bars are A+ now (they ring).'],
+      ];
+      for (const [id, route, needs, W, lead] of rows) {
+        const at = nf.indexOf(`{ id: '${id}'`);
+        if (at < 0) { errs.push(`newFeatures.ts lacks the ✨ entry id: '${id}'`); continue; }
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        if (!e.includes(`route: '${route}',`)) errs.push(`${W} must route to '${route}'`);
+        if (!e.includes(`label: "${lead}`)) errs.push(`${W} label must begin "${lead}"`);
+        for (const h of needs) if (!e.includes(h)) errs.push(`${W} must say / quote him verbatim: "${h.slice(0, 40)}…"`);
+        if (B_WORD.test(e)) errs.push(`${W} says the b-word / "fake"`);
+        for (const w of forbidden) if (e.toLowerCase().includes(w.toLowerCase())) errs.push(`${W} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+      }
+
+      // 8. the doc.
+      const DOC = '../docs/gajjala/k4_long_flags_float_2026_10_18.md';
+      if (!exists(DOC)) errs.push('docs/gajjala/k4_long_flags_float_2026_10_18.md is missing');
+      else {
+        const doc = read(DOC);
+        for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'UNMEASURED']) if (!doc.includes(need)) errs.push(`docs/gajjala/k4_long_flags_float_2026_10_18.md must carry "${need}"`);
+      }
+
+      // 9. SPECS.md names K4_BF_PULL_MAX with 1–5.
+      const specs = tryRead('../SPECS.md');
+      if (specs && !/`K4_BF_PULL_MAX`[^\n]{0,24}1–5/.test(specs)) errs.push('SPECS.md must name `K4_BF_PULL_MAX` 1–5 (BUILD_SPEC13 §3 M2)');
       return errs;
     },
   },

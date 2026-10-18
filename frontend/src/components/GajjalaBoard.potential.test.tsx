@@ -144,8 +144,11 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
       expect(rows[i].querySelector('.gg-pot-kind')!.className).toContain(`gg-pot-kind-${r.kind}`);
     });
     // NEGATIVE: AAA is `again` and its served ↻ tell already says so — the ↻ is not printed twice.
-    expect(pot.rows[0].again).toBe(true);
-    expect(within(rows[0]).queryByTestId('gg-pot-again')).toBeNull();
+    // WIDENED 2026-10-18 (DECISIONS13 D1): rows are looked up by SYMBOL, not position — the regenerated golden lists the
+    // 4-bar flag EEE first on the 🚩 strip (4–5 bar flags are A+ candidates since 2026-10-18), AAA second.
+    const aaa = pot.rows.find((r: any) => r.symbol === 'AAA');
+    expect(aaa.again).toBe(true);
+    expect(within(screen.getByTestId('gg-potential-row-AAA')).queryByTestId('gg-pot-again')).toBeNull();
     expect(screen.queryByTestId('gg-potential-empty')).toBeNull();
     // NEGATIVE: no Track / watch on a setup sub
     for (const id of ['gg-track', 'gg-watch']) expect(screen.queryByTestId(id)).toBeNull();
@@ -153,12 +156,15 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
 
   it('"↻" marks an `again` row only when no served ↻ tell carries it; NEGATIVE never on a not-again row', async () => {
     const b = clone(GOLD.bull_flag);
-    b.potential.rows[0].tells = b.potential.rows[0].tells.filter((t: any) => t.key !== 'again');
+    // WIDENED 2026-10-18 (DECISIONS13 D1): by SYMBOL — EEE (the 4-bar flag) is first on the regenerated golden's strip.
+    const aaa = b.potential.rows.find((r: any) => r.symbol === 'AAA');
+    aaa.tells = aaa.tells.filter((t: any) => t.key !== 'again');
     stubFetch(() => clone(b));
     const { container } = mount('tab=gajjala&sub=bull_flag');
     await loaded(container);
     expect(within(screen.getByTestId('gg-potential-row-AAA')).getByTestId('gg-pot-again')).toHaveTextContent('↻');
-    expect(b.potential.rows[1].again).toBe(false);
+    const jjj = b.potential.rows.find((r: any) => r.symbol === 'JJJ');
+    expect(jjj.again).toBe(false);
     expect(within(screen.getByTestId('gg-potential-row-JJJ')).queryByTestId('gg-pot-again')).toBeNull();
   });
 

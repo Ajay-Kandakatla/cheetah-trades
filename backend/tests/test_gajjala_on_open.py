@@ -612,6 +612,7 @@ def test_NEGATIVE_the_banner_lists_only_aplus(read):
 
 
 def test_A11_a_variant_and_a_grade_aplus_are_listed_with_the_cards_own_words():
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     out, _ = board({"LNG": {BF: R(BF, "aplus", entry_bar_t="2026-10-13 10:30", variant="long_flag", broke=True)},
                     "VCB": {VCP: R(VCP, "aplus", entry_bar_t="2026-10-13 10:30", grade=GC.VCP_B_GRADE, broke=True,
                                    trigger=None, stop=None, risk_pct=None)}})
@@ -725,6 +726,7 @@ def test_W19_the_note_slices_ggs_entry_quote_and_never_misattributes_k1():
 
 def test_banner_strings_carry_no_banned_word():
     p = passes_at(at(10, 51), on_demand=True, cron_at=at(10, 0))
+    # the long_flag band is empty since 2026-10-18 — synthetic variant, the mechanism is what is tested
     outs = [board({"GGA": {BF: R(BF, "aplus", entry_bar_t="2026-10-13 10:30", variant="long_flag")}})[0],
             board({"GGA": {BF: R(BF, "aplus", entry_bar_t="2026-10-13 10:50")}}, passes=p, now=at(10, 52))[0],
             board({"GGA": {BF: R(BF, "forming")}})[0], GT.build(BF, now=at(3, 0), store=store_with())]

@@ -84,9 +84,11 @@ EXAMPLES = (
 # setups a setting can move (the replay prints only those rows for it).
 SETTINGS = {
     "shipped": {"overrides": {}, "setups": GC.SETUPS},
-    "R1-4a flag 1–3 only": {"overrides": {"K4_BF_LONG_FLAG_MAX": None}, "setups": ("bull_flag",)},
-    "R1-4b flag 1–5 A+": {"overrides": {"K4_BF_PULL_MAX": GC.K4_BF_LONG_FLAG_MAX, "K4_BF_LONG_FLAG_MAX": None},
-                          "setups": ("bull_flag",)},
+    # Ajay 2026-10-18 ("make the change for Long flags", DECISIONS13 D1): the shipped setting IS the old "R1-4b flag
+    # 1–5 A+" (dropped as identical); the 2026-10-13 readings stay as labelled alternatives.
+    "R1-4a flag 1–3 only": {"overrides": {"K4_BF_PULL_MAX": 3, "K4_BF_LONG_FLAG_MAX": None}, "setups": ("bull_flag",)},
+    "R1-4c flag 1–3 + long flag (pre-2026-10-18)": {"overrides": {"K4_BF_PULL_MAX": 3, "K4_BF_LONG_FLAG_MAX": 5},
+                                                   "setups": ("bull_flag",)},
     "R1-5 first-bar step": {"overrides": {"K2_CHECK_FIRST_BAR": True},
                             "setups": ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp")},
     "R1-6a kiss bar only": {"overrides": {"KF_HONOR_ALL_PULLBACK_CLOSES": False}, "setups": ("kiss_fly",)},

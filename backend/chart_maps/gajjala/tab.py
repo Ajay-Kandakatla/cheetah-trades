@@ -75,6 +75,7 @@ BADGE_CLOSED_TODAY = "closed"                   # after the last pass on a sessi
 OUTSIDE_RTH = {"premarket": "pre-market — he uses limit orders only and less size outside regular hours (S8 1:16:35)",
                "afterhours": "after-hours — he uses limit orders only and less size outside regular hours (S8 1:16:35)"}
 UNMEASURED = "UNMEASURED"
+RS_ORDER_TEXT = "🎾 lowest float on top"   # DECISIONS13 D3 — the ordering word, served as order_note on the squeeze sub
 
 
 # ── small helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -726,11 +727,30 @@ def _read_at_text(doc: dict, pass_at: Optional[datetime]) -> Optional[str]:
     return f"read at the {_et(upd).strftime('%H:%M')} ET pass"
 
 
+def _float_read(doc: dict, daily: Optional[dict]):
+    """The name's float read: the pass's own (ctx) first, else the 🎾 daily doc's."""
+    ctx = doc.get("ctx") if isinstance(doc.get("ctx"), dict) else {}
+    return ctx.get("float") if isinstance(ctx.get("float"), dict) else (daily or {}).get("float")
+
+
+def _float_shares_of(fr) -> Optional[int]:
+    """🎾 order key (DECISIONS13 D3): the float read's positive share count; None = unknown (sorts last) — no read,
+    shares ≤ 0, or a suspect float under FLOAT_SUSPECT_POLICY "ineligible" (the policy context.rotation applies)."""
+    if not isinstance(fr, dict):
+        return None
+    if fr.get("suspect") and GC.FLOAT_SUSPECT_POLICY == "ineligible":
+        return None
+    shares = _f(fr.get("shares"))
+    if shares is None or shares <= 0:
+        return None
+    return int(shares)
+
+
 def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_doc, daily: Optional[dict],
            pass_at: Optional[datetime] = None) -> dict:
     ctx = doc.get("ctx") if isinstance(doc.get("ctx"), dict) else {}
+    fr = _float_read(doc, daily)
     daily = daily or {}
-    fr = ctx.get("float") if isinstance(ctx.get("float"), dict) else daily.get("float")
     price = scan_row.get("price")
     tape = sess.get("tape")
     out = {
@@ -803,10 +823,25 @@ def _bars_to_go(read: dict) -> Optional[int]:
 
 def order_key(t: dict) -> tuple:
     """BUILD_SPEC §3.4.1 ordering keys: state rank; A+/triggered/stopped newest entry first; ready forming nearest
-    its trigger; forming by bars to go; partial by fewest misses, then biggest change; final tie the symbol."""
+    its trigger; forming by bars to go; partial by fewest misses, then biggest change; final tie the symbol.
+    🎾 (DECISIONS13 D3, Ajay 2026-10-18 "for the float lower the better is what I wanna follow so sort it by
+    lowest on top"): a reversal_squeeze card built by setup_tile (it carries `_float_shares`) sorts by float ascending, unknown last —
+    GC.RS_FLOAT_SORT "within_state" = right after the state rank; "global" = above it. Every other setup, and a read
+    without the stash (the cross-setup focus pick), keeps today's key byte-identical."""
     g = t.get("gajjala") or {}
+    key = _state_key(g, t.get("symbol") or "")
+    if g.get("setup") == "reversal_squeeze" and "_float_shares" in g:
+        fl = g.get("_float_shares")
+        fkey = float(fl) if fl else float("inf")
+        if GC.RS_FLOAT_SORT == "global":
+            return (0, fkey) + key
+        return key[:1] + (fkey,) + key[1:]
+    return key
+
+
+def _state_key(g: dict, sym: str) -> tuple:
+    """Today's §3.4.1 key (state rank first) — order_key's tail for every setup."""
     st = g.get("state")
-    sym = t.get("symbol") or ""
     big = float("inf")
     if st in MARKED_STATES:
         rank = {"aplus": 0, "triggered": 1, "stopped": 5}[st]
@@ -874,6 +909,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
               "grade_label": grade_label(read), "chips": chips, "listed": _listed_block(listed),
               "_last": _last_close(doc, read.get("frame") or "5m") or _f(scan_row.get("price")),
               "_bars_to_go": _bars_to_go(read)})
+    if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
+        g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
     return {"symbol": sym, "name": doc.get("name"), "href": board_mod._href(sym), "tf": fr["tf"], "bars": fr["bars"],
             "vol_avg": vol_avg, "bands": [], "lines": _tile_lines(read), "markers": markers, "stats": stats,
@@ -886,6 +923,7 @@ def _strip_private(tiles: list) -> None:
         if isinstance(g, dict):
             g.pop("_last", None)
             g.pop("_bars_to_go", None)
+            g.pop("_float_shares", None)
 
 
 def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: dict, sess: dict,
@@ -1597,6 +1635,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
     if sub_k in per_setup:
         out["tiles"] = per_setup[sub_k][:lim]
+        out["order_note"] = RS_ORDER_TEXT if sub_k == "reversal_squeeze" else None   # DECISIONS13 D3 — served word
         e, label = SUB_META[sub_k]
         out["empty_note"] = (f"No {e} {label} on his list right now — the next pass is at most "
                              f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
@@ -1653,7 +1692,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     return _plain(out)
 
 
-__all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
+__all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block"]

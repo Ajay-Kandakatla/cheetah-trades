@@ -153,13 +153,20 @@ describe('Notifications · 🧠 gajjala_potential', () => {
   });
 
   // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — an A+ rings under 🚩 now.
-  it('WHAT NEVER FIRES names the A+ (rings under 🚩 since 2026-10-16), a partial, the long flag, the near-kiss, the B VCP and a second sighting', () => {
+  // WIDENED 2026-10-18 (DECISIONS13 D1/D4): Ajay "make the change for Long flags" — "a long flag" left the list (a 4–5 bar flag is A+).
+  it('WHAT NEVER FIRES names the A+ (rings under 🚩 since 2026-10-16), a partial, the near-kiss, the B VCP and a second sighting', () => {
     const d = detail();
     for (const phrase of ['WHAT NEVER FIRES', 'a read that already broke', 'ring under \u{1F6A9} as an A+ entry since 2026-10-16',
-      'a partial (a rule failed)', 'a long flag', 'a near-kiss', '"B — imperfect" VCP', 'a second sighting the same session']) {
+      'a partial (a rule failed)', 'a near-kiss', '"B — imperfect" VCP', 'a second sighting the same session']) {
       expect(d).toContain(phrase);
     }
     expect(d).not.toContain('never sent');
+  });
+
+  it('NEGATIVE: no "long flag" anywhere — the band is empty since 2026-10-18 (DECISIONS13 D4)', () => {
+    const d = detail();
+    expect(d).not.toContain('long flag');
+    expect(d).toContain('a partial (a rule failed), a near-kiss, a "B — imperfect" VCP');
   });
 
   it('NEGATIVE: never "shadow", never the b-word, never OFF BY DEFAULT, never "potential to" or a buy / forecast word', () => {

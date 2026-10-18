@@ -59,7 +59,9 @@ def test_one_line_per_setup_with_its_numbers(sec):
     assert "close ≥ open +%g%%" % GC.K1_BODY_GAIN_PCT in t and "%g× the prior %d bars" % (GC.K1_RANGE_MULT,
                                                                                         GC.K1_RANGE_LOOKBACK) in t
     assert "%d–%d bar quiet pullback" % (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX) in t
-    assert "up to %d bars = “long flag”" % GC.K4_BF_LONG_FLAG_MAX in t
+    # WIDENED 2026-10-18 (DECISIONS13 D1/D4): K4_BF_LONG_FLAG_MAX is None — 1–5 = A+, the long-flag clause is gone
+    assert "long flag" not in t
+    assert "1–5 bar quiet pullback (longer = invalid)" in t
     assert "at most %d bars" % GC.K4_KF_PULL_MAX in t and "%d–%d bar base" % (GC.K4_HF_BASE_MIN, GC.K4_HF_BASE_MAX) in t
     assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in t
     assert "float ≤ {:,}".format(GC.K8_MAX_FLOAT) in t and "drop ≥%g%%" % GC.K8_DROP_PCT in t
@@ -87,6 +89,17 @@ def test_push_line_is_live_by_default_and_shadow_on_a_flip_back(sec, monkeypatch
     assert "SHADOW" not in live and "ON for the owner" in live
     monkeypatch.setattr(GC, "NO_TRADE_AFTER_OPEN_MIN", 20)
     assert "09:50–16:00" in " ".join(RI._gajjala_section()["alerts"])
+
+
+def test_the_long_flag_clause_returns_when_the_band_is_configured(monkeypatch):
+    """2026-10-18 (DECISIONS13 D4): the None branch is the shipped one; the clause is built from the constant when it
+    is set (NEGATIVE: never typed, never printed while None)."""
+    assert GC.K4_BF_LONG_FLAG_MAX is None
+    assert "long flag" not in _text(RI._gajjala_section())
+    monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 3)
+    monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
+    t = _text(RI._gajjala_section())
+    assert "1–3 bar quiet pullback (longer, up to 5 bars = “long flag”, listed, never A+; longer still = invalid)" in t
 
 
 # ── every number is a constant's ──────────────────────────────────────────────────────────────────────────────

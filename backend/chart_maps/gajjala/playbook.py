@@ -39,6 +39,9 @@ LABEL_CONTRADICTED = "sources disagree"
 LABEL_NOT_BUILT = "not built"
 KIND_QUOTE, KIND_SUMMARY, KIND_NOT_BUILT = "quote", "summary", "not_built"
 AJAY = "Ajay 2026-10-13"
+# Ajay 2026-10-18 "make the change for Long flags" (DECISIONS13 D1): the K4 Bull Flag range is his 2026-10-18 answer —
+# the provenance names both dates; the bar range is built from the constants, never retyped.
+AJAY_K4_FMT = AJAY + " · 2026-10-18 (%d–%d bars)"   # filled at call time from K4_BF_PULL_MIN / K4_BF_PULL_MAX
 CHEETAH_DEFAULT = "Cheetah default (Ajay, not GG)"
 WAITING = "waiting for your number ({h})"
 _PCT = 100                                      # a unit, not a rule (a fraction shown as a percent, as rules_info does)
@@ -436,11 +439,13 @@ def knobs() -> list:
         ("K2", "leg volume rising bar to bar, no step over %s×" % _v("K2_MAX_VOL_STEP"), AJAY),
         ("K3", "pullback lows ≥ last demand high − %s × its range (%s only); pullback volume ≤ %s× the leg's mean"
          % (_v("K3_DEPTH_FRAC"), _setup_names(GC.K3_DEPTH_SETUPS), _v("K3_VOL_FRAC")), AJAY),
-        ("K4", "Bull Flag %s–%s bars (up to %s = long flag, never A+) · Kiss & Fly ≤ %s · Fade base %s–%s · VCP ≥ %s "
-               "contractions"
-         % (_v("K4_BF_PULL_MIN", "%d"), _v("K4_BF_PULL_MAX", "%d"), _v("K4_BF_LONG_FLAG_MAX", "%d"),
+        ("K4", "Bull Flag %s–%s bars%s · Kiss & Fly ≤ %s · Fade base %s–%s · VCP ≥ %s contractions"
+         % (_v("K4_BF_PULL_MIN", "%d"), _v("K4_BF_PULL_MAX", "%d"),
+            # Ajay 2026-10-18 (DECISIONS13 D1/D4): the long-flag band is empty while K4_BF_LONG_FLAG_MAX is None
+            (" (up to %s = long flag, never A+)" % _v("K4_BF_LONG_FLAG_MAX", "%d")
+             if GC.K4_BF_LONG_FLAG_MAX is not None else ""),
             _v("K4_KF_PULL_MAX", "%d"), _v("K4_HF_BASE_MIN", "%d"), _v("K4_HF_BASE_MAX", "%d"),
-            _v("K4_VCP_MIN_CYCLES", "%d")), AJAY),
+            _v("K4_VCP_MIN_CYCLES", "%d")), AJAY_K4_FMT % (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX)),
         ("K5", "kiss = low ≤ 9 EMA +%s%% and close above it; uptrend = 9 over 21, both above %s bars back; every "
                "pullback close ≥ the 9 EMA" % (_v("K5_KISS_TOL_PCT"), _v("K5_SLOPE_BARS", "%d")), AJAY),
         ("K6", "EMAs within %s%%, base ≤ %s%% of price, second-half volume < %s× the first"
