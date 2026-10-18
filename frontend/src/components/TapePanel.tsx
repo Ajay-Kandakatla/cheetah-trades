@@ -117,7 +117,7 @@ export function TapePanel({ symbol }: { symbol: string }) {
   const scanBtn = (
     <button className="btn" onClick={scan} disabled={scanning}
       style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem' }}>
-      {scanning ? 'Reading the tape… (a few seconds; up to ~30s on megacaps)' : `Scan tape for ${symbol}`}
+      {scanning ? 'Reading the tape… (a few seconds; megacaps take longer)' : `Scan tape for ${symbol}`}
     </button>
   );
 
@@ -229,7 +229,7 @@ export function TapePanel({ symbol }: { symbol: string }) {
         {delta?.per_minute && <DeltaBars series={delta.per_minute} />}
         {d.tape?.truncated && (
           <p style={{ margin: '0.25rem 0 0', fontSize: '0.68rem', color: '#f59e0b' }}>
-            ⚠️ Very heavy tape — analysis covers the first 1.2M prints of the session.
+            ⚠️ Very heavy tape — a window of the session passed its cap and lost its tail (the rest of the day is complete).
           </p>
         )}
       </div>

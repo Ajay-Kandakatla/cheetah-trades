@@ -851,7 +851,12 @@ ledger (`GET /orderflow/ledger/accuracy`) grades the five-check verdict, not che
   sides are the **tick rule** (`RULE_WORD`); the Tape tab classifies against the NBBO where it can, so the two reads can
   differ — every push ends with `RULE_TAIL` "tick rule (the Tape tab's quote-rule read can differ)". No new tape math, no
   new provider. One `tape.fetch_trades(sym, day, max_429=MAX_429)` per active pin per poll (`MAX_429 = 3  # MINE`; the
-  default `max_429=None` keeps every other caller unchanged). "Today" = the ET day of the poll clock, never the container's.
+  default `max_429=None` keeps every other caller unchanged). Since 2026-10-18 (DECISIONS14) the trades and NBBO pulls
+  run as 13 parallel ET windows (`orderflow/massive_pages.py`; `MAX_429` counts per window; up to 24 pages per trade window — the old
+  whole-day cap; the NBBO uses the 11 session windows × 8 pages = `quotes.MAX_QUOTE_PAGES` 88; each page compacted as
+  it arrives, D11/D12), and the quote rule
+  classifies inside covered windows only (`quotes.covered_mask`); `coverage_pct` = the share of prints with a held
+  quote (D10) — docs/orderflow/parallel_fetch_2026_10_18.md. "Today" = the ET day of the poll clock, never the container's.
 - **WATCH** = `{"IREN": "2026-10-16"}  # Ajay 2026-10-16` — symbol → the LAST session (inclusive) it is read and rings;
   `None` = standing. An expired pin is never fetched; when no pin is active the pass records `REASON_NO_PIN`.
 - **Where it runs**: the EXISTING `2-57/5 9-15 * * 1-5 … sepa.cli trade-flash-watch` line (no crontab line of its own).

@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-18 (verbatim below, on a screenshot of the Tape · Order Flow panel). DECISIONS14 D1–D8: the day is pulled in
+  // 13 parallel ET windows (orderflow/massive_pages.WINDOW_EDGES_ET, FETCH_WORKERS — MINE), per-window page caps replace the
+  // day-prefix cap (D4; 24 / 8 pages per window since D12, each page compacted as it arrives D11), the quote rule classifies only inside covered windows (D5). The BEFORE seconds are the 2026-10-16
+  // profile_scan.py counts (DECISIONS14 "Measured"); AFTER = the same script on 4b1873a5 (DECISIONS14 Amendments); D10 = what coverage % means. A speed count, never an edge —
+  // pinned by scripts/contracts.mjs ("⚡ Tape scan parallel windows (2026-10-18)").
+  { id: 'tape-scan-parallel-2026-10-18', addedAt: '2026-10-18', route: '/sepa/IREN?tab=tape',
+    label: "⚡ The Tape scan reads the day in parallel now. You said: “I see a big lag in Tap reading its 30 secs this feature. Can we make it fast.”. The day’s prints and quotes are now pulled in 13 time windows at once instead of one page after another. On a very heavy tape a window that passes its cap loses its own tail — never the whole afternoon, as before — and the panel says when that happened. The quote rule only classifies prints whose quote we actually hold — after-hours prints and the tail of a capped window take the tick rule — and the coverage % now means exactly that: the share of prints with a quote we hold. Before, on 2026-10-16: NVDA 143 s, IREN 57 s. After, same day: NVDA 40 s with the whole day read (the old read stopped at 560,176 of 1,197,259 prints), IREN 12 s. Not advice." },
   // Ajay 2026-10-18 (verbatim below): "for the float lower the better is what I wanna follow so sort it by lowest on top". DECISIONS13 D3:
   // the squeeze sub only (the one sub whose cards carry a float read); state first, then float ascending, unknown float last —
   // constants.RS_FLOAT_SORT = "within_state" is MINE ("global" = HIS CALL Q1). The order word is tab.RS_ORDER_TEXT, served as

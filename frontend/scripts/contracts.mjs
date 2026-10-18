@@ -9319,11 +9319,14 @@ const CONTRACTS = [
       if (board && (!board.includes('data-testid="gg-order-note"') || !board.includes('board.order_note'))) errs.push('GajjalaBoard.tsx must print board.order_note under data-testid="gg-order-note" (BUILD_SPEC13 §2 B2)');
       if (lib && !/order_note\?: string \| null;/.test(lib)) errs.push('lib/gajjala.ts board type must carry order_note?: string | null (BUILD_SPEC13 §2 B1)');
 
-      // 7. ✨ — FIRST the 🎾 float order, SECOND the 🚩 long flags; his lines verbatim; routes; UNMEASURED; never the b-word.
+      // 7. ✨ — the 🎾 float order, then the 🚩 long flags right after it; his lines verbatim; routes; UNMEASURED; never the b-word.
+      // WIDENED 2026-10-18 (DECISIONS14 D8 / BUILD_SPEC14 B2) — the ⚡ Tape scan entry took the first ✨ slot; the two entries
+      // must be PRESENT and ADJACENT in this order (the newest feature is first), no longer FIRST and SECOND.
       const arr = nf.indexOf('export const NEW_FEATURES');
-      const ids = arr < 0 ? [] : [...nf.slice(arr).matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      const allIds = arr < 0 ? [] : [...nf.slice(arr).matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       const ID1 = 'chart-maps-gajjala-float-sort-2026-10-18', ID2 = 'chart-maps-gajjala-long-flags-2026-10-18';
-      if (ids[0] !== ID1 || ids[1] !== ID2) errs.push(`the ✨ entries '${ID1}' then '${ID2}' must be FIRST and SECOND in NEW_FEATURES (found ${ids.join(', ')})`);
+      const i1 = allIds.indexOf(ID1);
+      if (i1 < 0 || allIds[i1 + 1] !== ID2) errs.push(`the ✨ entries '${ID1}' then '${ID2}' must be present and adjacent in NEW_FEATURES (found ${allIds.slice(0, 3).join(', ')})`);
       let forbidden = [];
       try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
       if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
@@ -9354,6 +9357,150 @@ const CONTRACTS = [
       // 9. SPECS.md names K4_BF_PULL_MAX with 1–5.
       const specs = tryRead('../SPECS.md');
       if (specs && !/`K4_BF_PULL_MAX`[^\n]{0,24}1–5/.test(specs)) errs.push('SPECS.md must name `K4_BF_PULL_MAX` 1–5 (BUILD_SPEC13 §3 M2)');
+      return errs;
+    },
+  },
+  {
+    name: '⚡ Tape scan parallel windows (2026-10-18): MINE edges / workers / per-window caps pinned, the covered-window rule in quote_rule_sides and retail.identify, the FE copy promises no seconds and no "1.2M", ✨ first with his words + the AFTER line, coverage % = prints with a quote we hold (D10), per-page compaction (D11), caps 24 / 8 (D12), no "always read", the docs',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-10-18: "I see a big lag in Tap reading its 30 secs this feature. Can we make it fast." (DECISIONS14 D1–D8,
+    // BUILD_SPEC14 B3). The day is pulled in parallel ET windows with a per-window cap; the quote rule must classify only
+    // prints whose quote is held, and the panel must never promise a number of seconds or a print count it no longer reads.
+    checks: (nf) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const HIS = 'I see a big lag in Tap reading its 30 secs this feature. Can we make it fast.';
+      const OF = '../backend/orderflow/';
+      const constLine = (src, name) => new RegExp(`^${name} = ([^\\n#]*?)\\s*#\\s*([^\\n]*)$`, 'm').exec(src);
+
+      // 1. massive_pages.py — the MINE window edges (D2), the MINE worker count (D3), the two entry points (D1).
+      const mp = tryRead(`${OF}massive_pages.py`);
+      if (mp) {
+        // the statement = its first line through the first line whose CODE (before #) closes the tuple, so a trailing
+        // comment's own parentheses never end it
+        const wa = mp.search(/^WINDOW_EDGES_ET = \(/m);
+        let we = null;
+        if (wa >= 0) {
+          const span = [], code = [];
+          for (const ln of mp.slice(wa).split('\n')) { span.push(ln); code.push(ln.split('#')[0]); if (code.length === 1 ? code[0].slice(code[0].indexOf('(') + 1).includes(')') : code[code.length - 1].includes(')')) break; }
+          we = [span.join('\n'), code.join('\n')];
+        }
+        if (!we) errs.push('massive_pages.py must carry WINDOW_EDGES_ET = ( … ) (DECISIONS14 D2)');
+        else {
+          const edges = [...we[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+          const hhmm = edges.every((x) => /^\d\d:\d\d$/.test(x));
+          const asc = edges.every((x, i) => i === 0 || x > edges[i - 1]);
+          if (edges.length !== 14 || !hhmm || !asc || edges[0] !== '04:00' || edges[13] !== '20:00') errs.push(`massive_pages.WINDOW_EDGES_ET must hold 14 ascending "HH:MM" edges from "04:00" to "20:00" (DECISIONS14 D2; found ${edges.length}: ${edges.join(', ')})`);
+          if (!we[0].includes('# MINE (DECISIONS14 D2)')) errs.push('massive_pages.WINDOW_EDGES_ET must carry # MINE (DECISIONS14 D2)');
+        }
+        const fw = constLine(mp, 'FETCH_WORKERS');
+        if (!fw || fw[1].trim() !== '8' || !fw[2].startsWith('MINE (DECISIONS14 D3)')) errs.push('massive_pages.py must carry FETCH_WORKERS = 8  # MINE (DECISIONS14 D3)');
+        for (const d of ['windows_for', 'fetch_windowed']) if (!mp.includes(`def ${d}(`)) errs.push(`massive_pages.py must define def ${d}( (DECISIONS14 D1)`);
+        // 10. every page is compacted as it arrives — fetch_windowed takes the compact callable (DECISIONS14 D11).
+        const fwSig = /def fetch_windowed\(([\s\S]*?)\)\s*(->[^:\n]*)?:/.exec(mp);
+        if (fwSig && !/\bcompact\b/.test(fwSig[1])) errs.push('massive_pages.fetch_windowed must take compact — each page compacted as it arrives (DECISIONS14 D11)');
+      }
+
+      // 2. tape.py — the per-window trade cap (D4); fetch_trades goes through the shared pager, no serial loop left (D1).
+      const tp = tryRead(`${OF}tape.py`);
+      if (tp) {
+        const tc = constLine(tp, 'TRADE_PAGES_PER_WINDOW');
+        // CHANGED 2026-10-18 (DECISIONS14 D12, critic HIGH): 2 → 24 = the old whole-day cap, so no window is capped on a day
+        // the serial pager read in full.
+        if (!tc || tc[1].trim() !== '24' || !tc[2].startsWith('MINE (DECISIONS14 D12)')) errs.push('tape.py must carry TRADE_PAGES_PER_WINDOW = 24  # MINE (DECISIONS14 D12)');
+        const ft = pyBody(tp, 'fetch_trades');
+        if (!ft) errs.push('tape.py lost def fetch_trades(');
+        else {
+          if (!ft.includes('fetch_windowed(')) errs.push('tape.fetch_trades must call fetch_windowed( (DECISIONS14 D1 — one shared pager)');
+          if (/while\s+next_url/.test(ft)) errs.push('tape.fetch_trades still pages serially (while next_url) — DECISIONS14 D1');
+        }
+      }
+
+      // 3. quotes.py — the per-window quote cap (D4), covered windows set by fetch_quotes and honoured by the quote rule (D5);
+      //    retail.identify honours them too (D5).
+      const qt = tryRead(`${OF}quotes.py`);
+      if (qt) {
+        const qc = constLine(qt, 'QUOTE_PAGES_PER_WINDOW');
+        // CHANGED 2026-10-18 (DECISIONS14 D12): 4 → 8 (400k NBBO rows per window).
+        if (!qc || qc[1].trim() !== '8' || !qc[2].startsWith('MINE (DECISIONS14 D12)')) errs.push('quotes.py must carry QUOTE_PAGES_PER_WINDOW = 8  # MINE (DECISIONS14 D12)');
+        if (!qt.includes('\ndef covered_mask(')) errs.push('quotes.py must define def covered_mask( (DECISIONS14 D5)');
+        const fq = pyBody(qt, 'fetch_quotes');
+        if (!fq) errs.push('quotes.py lost def fetch_quotes(');
+        else if (!/attrs\[\s*["']covered["']\s*\]\s*=/.test(fq)) errs.push('quotes.fetch_quotes must set attrs["covered"] (DECISIONS14 D5)');
+        const qr = pyBody(qt, 'quote_rule_sides');
+        if (!qr) errs.push('quotes.py lost def quote_rule_sides(');
+        else if (!qr.includes('covered_mask(')) errs.push('quotes.quote_rule_sides must call covered_mask( — classify only inside covered windows (DECISIONS14 D5)');
+      }
+      const rt = tryRead(`${OF}retail.py`);
+      if (rt) {
+        const idf = pyBody(rt, 'identify');
+        if (!idf) errs.push('retail.py lost def identify(');
+        else if (!idf.includes('covered_mask(')) errs.push('retail.identify must call covered_mask( — sign only inside covered windows (DECISIONS14 D5)');
+      }
+
+      // 4. TapePanel.tsx — the copy promises no seconds and no print count (D8).
+      const panel = tryRead('src/components/TapePanel.tsx');
+      if (panel) {
+        if (!panel.includes('megacaps take longer')) errs.push('TapePanel.tsx scanning copy must say "megacaps take longer" (DECISIONS14 D8)');
+        if (panel.includes('~30s')) errs.push('TapePanel.tsx still promises "~30s" — no number of seconds (DECISIONS14 D8)');
+        if (panel.includes('1.2M')) errs.push('TapePanel.tsx still says "1.2M" — the cap is per window now (DECISIONS14 D4/D8)');
+      }
+
+      // 5. ✨ — FIRST, his line verbatim, "Not advice.".
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const first = arr < 0 ? null : /\{ id: '([^']+)'/.exec(nf.slice(arr));
+      const ID = 'tape-scan-parallel-2026-10-18';
+      if (!first || first[1] !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (DECISIONS14 D8; found ${first ? first[1] : 'none'})`);
+      const at = nf.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}' (DECISIONS14 D8)`);
+      else {
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        if (!e.includes(HIS)) errs.push(`the ⚡ ✨ entry must quote him verbatim: "${HIS}" (DECISIONS14 D8)`);
+        if (!e.includes('Not advice.')) errs.push('the ⚡ ✨ entry must end "Not advice." (DECISIONS14 D8)');
+        // 8. the AFTER line is present (the __AFTER__ token or the filled counts), the old placeholder gone (DECISIONS14 Amendments).
+        // CHANGED 2026-10-18 (DECISIONS14 Amendments after the critic): the counts are re-measured, so the token is accepted.
+        if (!e.includes('After, same day:')) errs.push('the ⚡ ✨ entry must carry the "After, same day:" line (DECISIONS14 Amendments)');
+        if (e.includes('measured after the build')) errs.push('the ⚡ ✨ entry still carries the "measured after the build" placeholder (DECISIONS14 Amendments)');
+      }
+
+      // 7. lib/orderflow.ts classificationView — coverage % = prints with a quote we hold, in BOTH tooltips; never the old
+      //    wording that conflated coverage with the midpoint (DECISIONS14 D10).
+      const ofl = tryRead('src/lib/orderflow.ts');
+      if (ofl) {
+        const ca = ofl.indexOf('export function classificationView(');
+        const ce = ca < 0 ? -1 : ofl.indexOf('\n}\n', ca);
+        const cv = ca < 0 ? '' : ofl.slice(ca, ce < 0 ? undefined : ce);
+        if (!cv) errs.push('lib/orderflow.ts lost export function classificationView( (DECISIONS14 D10)');
+        else {
+          const qa = cv.indexOf("method === 'quote'"), ma = cv.indexOf("method === 'mixed'");
+          const quoteBr = qa < 0 ? '' : cv.slice(qa, ma > qa ? ma : undefined);
+          const mixedBr = ma < 0 ? '' : cv.slice(ma);
+          if (!quoteBr.includes('had a quote we hold')) errs.push('classificationView quote tooltip must say "had a quote we hold" (DECISIONS14 D10)');
+          if (!mixedBr.includes('had a quote we hold')) errs.push('classificationView mixed tooltip must say "had a quote we hold" (DECISIONS14 D10)');
+          if (cv.includes('the rest sat exactly at the midpoint')) errs.push('classificationView still says "the rest sat exactly at the midpoint" — coverage and at-mid are two counts (DECISIONS14 D10)');
+        }
+      }
+
+      // 11. no surface claims the tail of the day is "always read" — a capped window loses ITS tail (DECISIONS14 critic MED).
+      if (nf.includes('always read')) errs.push('newFeatures.ts says "always read" — a capped window loses its own tail (DECISIONS14 critic MED)');
+      const pdoc = exists('../docs/orderflow/parallel_fetch_2026_10_18.md') ? read('../docs/orderflow/parallel_fetch_2026_10_18.md') : '';
+      if (pdoc.includes('always read')) errs.push('docs/orderflow/parallel_fetch_2026_10_18.md says "always read" — a capped window loses its own tail (DECISIONS14 critic MED)');
+
+      // 9. the quote-rule doc says it in the same words (DECISIONS14 D10).
+      const qdoc = tryRead('../docs/orderflow/quote_rule_and_darkpool.md');
+      if (qdoc && !qdoc.includes('quote we hold')) errs.push('docs/orderflow/quote_rule_and_darkpool.md must say "quote we hold" (DECISIONS14 D10)');
+
+      // 6. the doc.
+      const DOC = '../docs/orderflow/parallel_fetch_2026_10_18.md';
+      if (!exists(DOC)) errs.push('docs/orderflow/parallel_fetch_2026_10_18.md is missing (DECISIONS14 D8)');
+      else {
+        const doc = read(DOC);
+        for (const need of ['READ THIS FIRST', 'Measured', 'HIS CALL']) if (!doc.includes(need)) errs.push(`docs/orderflow/parallel_fetch_2026_10_18.md must carry "${need}" (DECISIONS14 D8/D9)`);
+      }
       return errs;
     },
   },

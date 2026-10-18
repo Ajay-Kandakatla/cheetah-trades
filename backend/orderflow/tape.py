@@ -17,6 +17,13 @@ Configured house values (NOT a book method):
   BURST_MIN_TRADES         15 prints in the window (a real burst, not one block)
   VALUE_AREA_PCT           70% — standard volume-profile value area
 
+Fetch (2026-10-18, DECISIONS14 D1–D7, D11, D12, docs/orderflow/parallel_fetch_2026_10_18.md):
+the day's prints are pulled as 13 disjoint ET time windows in parallel
+(orderflow/massive_pages.py), at most TRADE_PAGES_PER_WINDOW (24) x 50k prints
+per window (MAX_TRADE_PAGES 312 is a ceiling, never a target); each page is
+compacted to a small frame as it arrives (D11). `truncated` means a window hit
+its cap: that window lost its tail, not the whole afternoon.
+
 Trade eligibility (2026-09-27, docs/sepa/orderflow_methodology.md §"Trade
 eligibility"): every print is classified by its Massive sale conditions and
 correction indicator (`print_kind`) BEFORE any side is assigned. Busted and
@@ -32,11 +39,13 @@ from __future__ import annotations
 import logging
 import math
 import threading
-import time
-from datetime import datetime, timedelta
+import time  # noqa: F401 — tests patch TP.time.sleep (the same module object massive_pages sleeps through)
+from datetime import timedelta
 from typing import Optional
 
 import pandas as pd
+
+from .massive_pages import FETCH_WORKERS, WINDOW_EDGES_ET, fetch_windowed, windows_for  # noqa: F401
 
 log = logging.getLogger("orderflow.tape")
 
@@ -52,7 +61,10 @@ BURST_MIN_TRADES = 15
 BURSTS_MAX = 10
 VALUE_AREA_PCT = 0.70
 PROFILE_BUCKETS = 40
-MAX_TRADE_PAGES = 24            # 24 x 50k = 1.2M prints — flags `truncated` past that
+TRADE_PAGES_PER_WINDOW = 24  # MINE (DECISIONS14 D12) — equals the OLD whole-day cap: a window is capped only on a day the serial pager would have truncated too; realistic dense windows hold 2–6 pages
+MAX_TRADE_PAGES = TRADE_PAGES_PER_WINDOW * (len(WINDOW_EDGES_ET) - 1)   # MINE (DECISIONS14 D12) — 312, a ceiling, never a target (was 24, a whole-day prefix cap)
+TRADE_PAGE_COLUMNS = ("sip_timestamp", "participant_timestamp", "price", "size", "exchange",
+                      "conditions", "correction")   # what a compacted page keeps (DECISIONS14 D11)
 FETCH_TIMEOUT_SEC = 10
 LATE_WINDOW_MIN = 30            # "who's in control NOW" — the last 30 min of tape
 
@@ -188,7 +200,8 @@ def fetch_trades(symbol: str, day, *, max_429: Optional[int] = None) -> Optional
     """All prints for one ET calendar day (04:00-20:00 ET), ascending.
 
     Returns DataFrame [ts_utc index, price, size, exchange, kind, exec_utc]
-    with attrs['truncated'] set when the page cap was hit, or None on no data
+    with attrs['truncated'] set when any time window hit its page cap
+    (TRADE_PAGES_PER_WINDOW, 2026-10-18 DECISIONS14 D4), or None on no data
     / provider failure. ALL rows are returned (busted and summary included) —
     `kind` says what each one is; `analyze_tape` decides what counts where,
     and every other consumer keeps its pre-2026-09-27 frame plus two columns.
@@ -198,10 +211,10 @@ def fetch_trades(symbol: str, day, *, max_429: Optional[int] = None) -> Optional
 
     `max_429` (2026-10-16, opt-in, orderflow/tape_control.py only): None keeps
     the HTTP 429 sleep-and-retry with no cap for every other caller; when set,
-    the (max_429 + 1)-th 429 of this pull returns None and
-    `last_fetch_fault()` answers "rate_limited" on this thread.
+    the (max_429 + 1)-th 429 of ONE time window (per window since 2026-10-18,
+    DECISIONS14 D6) returns None and `last_fetch_fault()` answers
+    "rate_limited" on this (the caller's) thread.
     """
-    import requests
     from massive_keys import stocks_key
 
     _FETCH_FAULT.why = None
@@ -211,57 +224,36 @@ def fetch_trades(symbol: str, day, *, max_429: Optional[int] = None) -> Optional
         log.error("MASSIVE_API_KEY_STOCKS missing — cannot fetch tape")
         return None
 
-    et = _et_zone()
-    start = datetime(day.year, day.month, day.day, 4, 0, tzinfo=et)
-    end = datetime(day.year, day.month, day.day, 20, 0, tzinfo=et)
-    gte_ns = int(start.timestamp() * 1_000_000_000)
-    lt_ns = int(end.timestamp() * 1_000_000_000)
+    # 2026-10-18 (DECISIONS14 D1/D4/D6/D7): the day is pulled as disjoint ET windows in
+    # parallel (orderflow/massive_pages.py), TRADE_PAGES_PER_WINDOW pages each. Any window
+    # that fails (non-429 HTTP status, exception) or exceeds max_429 makes the pull None,
+    # exactly as the serial pager's first failure did.
+    # D11: each page is compacted as it arrives — the trade columns only, `kind` labelled on the
+    # page (the sale conditions + correction indicator, see print_kind), then the raw
+    # conditions / correction dropped.
+    def compact(results):
+        df = pd.DataFrame(results)
+        df = df[[c for c in TRADE_PAGE_COLUMNS if c in df.columns]]
+        label_kinds(df)
+        return df.drop(columns=[c for c in ("conditions", "correction") if c in df.columns])
 
     url = f"{BASE_URL}/v3/trades/{symbol.upper()}"
-    params = {"timestamp.gte": gte_ns, "timestamp.lt": lt_ns,
-              "order": "asc", "sort": "timestamp", "limit": 50000, "apiKey": key}
-    rows: list = []
-    truncated = False
-    page = 0
-    n_429 = 0
-    next_url = url
-    while next_url:
-        try:
-            r = requests.get(next_url, params=params, timeout=FETCH_TIMEOUT_SEC)
-        except Exception as exc:
-            try:
-                from sepa.prices import _scrub_key
-                log.warning("tape fetch failed for %s: %s", symbol, _scrub_key(exc))
-            except Exception:
-                log.warning("tape fetch failed for %s (page %d)", symbol, page)
-            return None
-        if r.status_code == 429:
-            n_429 += 1
-            if max_429 is not None and n_429 > max_429:
-                log.warning("tape %s -> HTTP 429 x%d: gave up (max_429=%d)", symbol, n_429, max_429)
-                _FETCH_FAULT.why = "rate_limited"
-                return None
-            time.sleep(2)
-            continue
-        if r.status_code != 200:
-            log.warning("tape %s -> HTTP %s: %s", symbol, r.status_code, r.text[:200])
-            return None
-        body = r.json() or {}
-        rows.extend(body.get("results") or [])
-        nxt = body.get("next_url")
-        if nxt:
-            page += 1
-            if page >= MAX_TRADE_PAGES:
-                truncated = True
-                break
-            next_url = nxt
-            params = {"apiKey": key}      # next_url carries its own cursor params
-        else:
-            next_url = None
-
-    if not rows:
+    result = fetch_windowed(url, key, windows=windows_for(day, (4, 0), (20, 0)), limit=50000,
+                            timeout=FETCH_TIMEOUT_SEC, pages_per_window=TRADE_PAGES_PER_WINDOW,
+                            compact=compact, max_429=max_429, label=f"tape {symbol}", log=log)
+    if result.fault == "rate_limited":
+        log.warning("tape %s -> HTTP 429 past max_429=%s in a window: pull abandoned", symbol, max_429)
+        _FETCH_FAULT.why = "rate_limited"
         return None
-    df = pd.DataFrame(rows)
+    if result.failed > 0:
+        log.warning("tape %s -> %d of %d windows failed: pull abandoned",
+                    symbol, result.failed, len(result.windows))
+        return None
+    truncated = result.truncated
+
+    if not result.frames:
+        return None
+    df = pd.concat(result.frames, ignore_index=True)
     ts_col = "sip_timestamp" if "sip_timestamp" in df.columns else "participant_timestamp"
     df["ts_utc"] = pd.to_datetime(df[ts_col], unit="ns", utc=True)
     # `exchange` is kept (2026-08-13) so orderflow.darkpool can split lit vs
@@ -269,7 +261,7 @@ def fetch_trades(symbol: str, day, *, max_429: Optional[int] = None) -> Optional
     # consumer selects the columns it needs.
     # `kind` (2026-09-27) from the sale conditions + correction indicator —
     # see print_kind. Every consumer before this read every row as a trade.
-    label_kinds(df)
+    # Since 2026-10-18 (D11) it is labelled per page inside `compact` above.
     if "participant_timestamp" in df.columns:
         df["exec_utc"] = pd.to_datetime(df["participant_timestamp"], unit="ns", utc=True)
     keep = (["ts_utc", "price", "size"] + (["exchange"] if "exchange" in df.columns else [])

@@ -34,7 +34,7 @@ Q13). Never again while it holds. Again only after a poll reads it lost.
 ## What never fires
 
 - A poll that cannot read the tape. That is a **fault, never a False**: no ring, no re-arm, `faults` +1. Faults are
-  `no_prints`, `no_regular`, `truncated` (the pull hit `tape.MAX_TRADE_PAGES` 24 × 50k, newest prints missing),
+  `no_prints`, `no_regular`, `truncated` (a window hit its cap — since 2026-10-18 the cap is `tape.TRADE_PAGES_PER_WINDOW` 24 pages × 50k per window, the old whole-day cap, so `tape.MAX_TRADE_PAGES` 312 = 13 × 24 is a ceiling, never a target; a capped window loses its own tail, every window of the day is still read),
   `rate_limited` (more than `MAX_429` HTTP 429s), `error`, `budget` (the read would start after `START_BY_SEC`) and
   `no_mongo`.
 - Sellers taking over (True → False): no push. The /alerts row shows it (his call Q7).
@@ -80,7 +80,8 @@ Q13). Never again while it holds. Again only after a poll reads it lost.
 - `--kinds tape_control` runs it alone among the kinds (the zone pass always runs). `--dry-run` reads the tape and writes
   nothing.
 - Cost per poll, per active pin: ONE `tape.fetch_trades(sym, day, max_429=MAX_429)`. That is ⌈prints so far / 50,000⌉
-  pages, each ≤ `tape.FETCH_TIMEOUT_SEC` 10 s. Then `analyze_tape`'s pure math. No NBBO, no bars, no snapshot write, no
+  pages, each ≤ `tape.FETCH_TIMEOUT_SEC` 10 s; since 2026-10-18 (DECISIONS14 D1/D6) the pages are fetched in parallel,
+  one chain per ET time window (`orderflow/massive_pages.py`), and `MAX_429` counts per window. Then `analyze_tape`'s pure math. No NBBO, no bars, no snapshot write, no
   ledger write.
   - Measured 2026-10-16: 173,803 trade rows fetched in 18.2 s at 11:11:40 ET (the Q1 read below).
   - The 12:13 ET dry pass read 220,984 prints.
@@ -167,7 +168,7 @@ One `tape_control_state` doc per pin per ET day, `_id` `SYM:day`.
 |---|---|
 | `no_prints` | no prints from the provider |
 | `no_regular` | no regular prints yet |
-| `truncated` | the pull hit the page cap — the newest prints were missing |
+| `truncated` | the densest minutes were capped — every window of the session was read (CHANGED 2026-10-18, DECISIONS14 D8 — was "the pull hit the page cap — the newest prints were missing") |
 | `rate_limited` | the provider kept answering HTTP 429 (rate limited) |
 | `error` | the tape read failed |
 | `budget` | the poll ran out of time |
@@ -259,7 +260,7 @@ print(json.dumps(out, default=str))
 
 - **Q1 Side classification.**
   - **Default: the tick rule** (D2; cheap, said on every push).
-  - Alternative: the quote rule his Tape tab uses — one NBBO pull per poll (up to `quotes.MAX_QUOTE_PAGES` 40 pages),
+  - Alternative: the quote rule his Tape tab uses — one NBBO pull per poll (up to `quotes.MAX_QUOTE_PAGES` 88 pages = 11 session windows × 8 since 2026-10-18, was 40),
     so the push agrees with the panel.
   - Today's read: 11:11:40 ET, tick −8.1% vs quote −5.9% of volume, check 3 false on both; 90.3% tick agreement on the
     quote-classified prints; stored snapshots 86.6% (10-07) and 88.5% (10-09). The NBBO pull took 39.7 s.

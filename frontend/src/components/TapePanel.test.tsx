@@ -141,3 +141,50 @@ describe('TapePanel date stamps and auction rows', () => {
     expect(screen.getByTestId('tape-print-stamp').closest('tr')!.textContent).toMatch(/BUY/);
   });
 });
+
+/* Scan copy (2026-10-18, DECISIONS14 D8). The backend now pulls the day in parallel time windows with a per-window cap:
+ * the scanning button must promise no number of seconds, and the truncation note must no longer claim "the first 1.2M
+ * prints" (the cap is per window: a capped window loses its own tail; the rest of the day is complete). */
+describe('TapePanel scan copy (2026-10-18)', () => {
+  it('while a scan is pending the button says megacaps take longer — NEGATIVE: no "30s" promise', async () => {
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return new Promise(() => {});
+      const body = String(url).includes('/ledger/accuracy') ? ACCURACY : NOT_FOUND;
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+    }));
+    render(<TapePanel symbol="ARM" />);
+    const btn = await screen.findByRole('button', { name: /Reading the tape/ });
+    expect(btn.textContent).toContain('megacaps take longer');
+    expect(btn.textContent).not.toMatch(/30s/);
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  const truncatedSnap = (truncated: boolean) => ({
+    found: true, symbol: 'NVDA', et_date: '2026-10-16', verdict: 'WAIT',
+    reason: 'tape not confirmed', checks: [], checks_passed: 2, checks_total: 5, last_price: 180,
+    tape: {
+      delta: { buy_volume: 10, sell_volume: 5, delta: 5, delta_pct_of_volume: 1, classified_pct: 99, late_delta: 1, late_window_min: 30, series: [], n_trades: 560176 },
+      big_prints: { threshold_dollars: 100000, buy_dollars: 0, sell_dollars: 0, prints: [] },
+      bursts: [], truncated,
+    },
+    profile: null, emas: { intraday: { pass: false, ema9: null, ema21: null, detail: '' }, daily: { pass: true, detail: '', source: 'sepa' } },
+    zone: { detail: 'Mid-range' }, gex: null,
+  });
+
+  it('a truncated tape shows the capped-window note — NEGATIVE: never "1.2M"', async () => {
+    mockFetch((url) => (url.includes('/ledger/accuracy') ? ACCURACY : truncatedSnap(true)));
+    const { container } = render(<TapePanel symbol="NVDA" />);
+    // CHANGED 2026-10-18 (DECISIONS14 Amendments after the critic): a capped window loses ITS tail; the rest of the day is complete.
+    const note = await screen.findByText(/passed its cap and lost its tail/);
+    expect(note.textContent).toBe('⚠️ Very heavy tape — a window of the session passed its cap and lost its tail (the rest of the day is complete).');
+    expect(note.textContent).not.toContain('always read');
+    expect(container.textContent).not.toContain('1.2M');
+  });
+
+  it('NEGATIVE: an untruncated tape shows no cap note', async () => {
+    mockFetch((url) => (url.includes('/ledger/accuracy') ? ACCURACY : truncatedSnap(false)));
+    render(<TapePanel symbol="NVDA" />);
+    await waitFor(() => expect(screen.getByText('🟡 WAIT')).toBeTruthy());
+    expect(screen.queryByText(/Very heavy tape/)).toBeNull();
+  });
+});

@@ -385,6 +385,10 @@ def http(monkeypatch):
     calls, sleeps, plan = [], [], {"n429": 50}   # critic 2026-10-16: a finite default so a lost cap fails fast instead of hanging
     monkeypatch.setattr(massive_keys, "stocks_key", lambda: "k")
     monkeypatch.setattr(TP.time, "sleep", lambda s: sleeps.append(s))
+    from orderflow import massive_pages as MP
+    # 2026-10-18 (DECISIONS14 D6): ONE window here so the exact call / sleep counts of the serial
+    # contract hold; the parallel semantics live in test_tape_parallel_fetch_2026_10_18.py
+    monkeypatch.setattr(MP, "WINDOW_EDGES_ET", ("04:00", "20:00"))
 
     def get(url, params=None, timeout=None):
         calls.append(url)
@@ -681,10 +685,11 @@ def test_status_words_for_every_state(monkeypatch):
                                             "why": "truncated"})
     d2["rings"][0]["pushed"] = False
     d2["rings"][0]["not_pushed_reason"] = "not_sent"
+    # CHANGED 2026-10-18 (DECISIONS14 D8): FAULT_WORDS["truncated"] no longer says the newest prints were missing
     assert TC.pin_text(pin, d2, NOW) == (
         "in_control", "buyers in control since 10:12 ET · " + num
         + " · read 10:12 ET · rang 10:12 (reached no device) ET · 10:17 ET poll not read: "
-          "the pull hit the page cap — the newest prints were missing · tick rule")
+          "the densest minutes were capped — every window of the session was read · tick rule")
     for delta, late, who in ((-1000, 500, "sellers in control for the session"),
                              (0, 0, "session delta flat"),
                              (1000, -1, "sellers took the last 30 min")):

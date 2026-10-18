@@ -26,8 +26,10 @@ async def get_orderflow(symbol: str):
 async def scan_orderflow(symbol: str):
     """Compute a fresh Tape snapshot — pulls the session's raw prints from
     Massive and re-derives delta / big prints / bursts / profile / verdict.
-    Typical SEPA names return in a few seconds; megacap tape (NVDA-class,
-    >1M prints) can take ~20-30s and flags `tape.truncated` past 1.2M."""
+    Since 2026-10-18 (DECISIONS14 D1/D4) the prints and the NBBO are pulled
+    as parallel ET time windows (orderflow/massive_pages.py): typical SEPA
+    names return in a few seconds, megacaps take longer. `tape.truncated`
+    means the dense windows hit their per-window page cap."""
     import asyncio
     from . import engine
     snap = await asyncio.to_thread(engine.compute, symbol.upper())

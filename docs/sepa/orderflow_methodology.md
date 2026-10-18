@@ -16,7 +16,7 @@ Endpoints: `GET /orderflow/{symbol}`, `POST /orderflow/{symbol}/scan`,
 
 | Input | Source | Notes |
 |---|---|---|
-| Raw trade prints | Massive `/v3/trades/{sym}` (Stocks Advanced) | full session 04:00–20:00 ET, paginated 50k/page, cap 24 pages → `truncated` flag |
+| Raw trade prints | Massive `/v3/trades/{sym}` (Stocks Advanced) | full session 04:00–20:00 ET, paginated 50k/page in 13 parallel ET windows, up to 24 pages per window (`tape.MAX_TRADE_PAGES` 312, a ceiling) → `truncated` when a window hits its cap (2026-10-18, DECISIONS14 D12; the NBBO pull: 11 session windows × 8 pages = `quotes.MAX_QUOTE_PAGES` 88) |
 | 1-min bars | Massive aggs via `daytrading/data.py` | volume profile + intraday EMAs |
 | Daily bars | `sepa/prices.py` | trend gate fallback + ledger grading |
 | Zones | `supply_demand/price_zones.py` (reused) | swing-cluster supply/demand bands |

@@ -1,7 +1,7 @@
 /* useOrderflow — the Tape snapshot for one ticker.
  * GET /orderflow/{symbol} serves the cached snapshot instantly; scan() POSTs
- * a fresh compute (a few seconds on typical names, up to ~30s on megacap
- * tape — the caller shows progress copy). Also fetches the accuracy ledger
+ * a fresh compute (a few seconds; megacaps take longer — the backend pulls the day
+ * in parallel windows since 2026-10-18; the caller shows progress copy). Also fetches the accuracy ledger
  * once per mount for the measured-record strip. */
 import { useCallback, useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';

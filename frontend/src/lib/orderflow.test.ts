@@ -88,10 +88,35 @@ describe('classificationView — delta must say how it was computed', () => {
     expect(v.title).toContain('76.4%');
   });
 
+  // CHANGED 2026-10-18 (DECISIONS14 D10): coverage_pct = share of prints with a quote we hold; at-mid prints are a
+  // separate count inside that share, and out-of-session prints take the tick rule too.
+  it('quote tooltip says coverage = prints with a quote we hold, at-mid counted inside it', () => {
+    const v = classificationView({
+      method: 'quote', coverage_pct: 83.3, trustworthy: true, tick_agreement_pct: 76.4, n_at_mid: 1234,
+    });
+    expect(v.title).toContain('83.3% of prints had a quote we hold');
+    expect(v.title).toContain('of those, 1234 sat exactly at the midpoint and take the tick rule');
+    // CHANGED 2026-10-18 (DECISIONS14 critic LOW): uncovered prints have two causes — after hours, or past a capped window.
+    expect(v.title).toContain('and prints with no quote we hold — after hours, or past a capped window — take it too.');
+    expect(v.title).not.toContain('outside the regular session');
+    expect(v.title).toContain('The old tick rule agrees with it on only 76.4% of prints.');
+  });
+
+  it('NEGATIVE: the quote tooltip never conflates coverage with the midpoint ("the rest sat exactly at the midpoint")', () => {
+    const v = classificationView({ method: 'quote', coverage_pct: 83.3, trustworthy: true, tick_agreement_pct: null, n_at_mid: 5 });
+    expect(v.title).not.toContain('the rest sat exactly at the midpoint');
+    expect(v.title).not.toContain('classified this way');
+  });
+
   it('warns when quote coverage is too thin to headline', () => {
     const v = classificationView({ method: 'mixed', coverage_pct: 41, trustworthy: false, tick_agreement_pct: null });
     expect(v.label).toContain('41');
     expect(v.color).toBe('#d97706');
+    // CHANGED 2026-10-18 (DECISIONS14 D10): the mixed tooltip names why prints lack a held quote.
+    expect(v.label).toBe('mixed 41%');
+    expect(v.title).toContain('Only 41% of prints had a quote we hold');
+    expect(v.title).toContain('after hours, or past a capped window');
+    expect(v.title).not.toContain('could be matched to a quote');
   });
 
   it('says plainly when it fell back to the tick rule', () => {

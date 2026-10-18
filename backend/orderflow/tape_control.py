@@ -40,7 +40,7 @@ URL_FMT = "/sepa/{sym}?tab=tape&from=alerts"                   # MINE — the Ta
 RULE_WORD = "tick rule"          # Cheetah default — tape.tick_rule_sides (analyze_tape with no quotes)
 RULE_TAIL = RULE_WORD + " (the Tape tab's quote-rule read can differ)"   # MINE (AMENDMENTS7 A7)
 START_BY_SEC = KINDS_BUDGET_SEC  # MINE (reuse) — no tape read STARTS later than this into the poll
-MAX_429 = 3                      # MINE (AMENDMENTS7 A4) — HTTP 429 retries per pull before it is a fault
+MAX_429 = 3                      # MINE (AMENDMENTS7 A4; per WINDOW since 2026-10-18, DECISIONS14 D6) — HTTP 429 retries per window before the pull is a fault
 MAX_PUSH_ATTEMPTS = 2            # MINE (AMENDMENTS7 A3) — sends per flip while none reaches a device
 UNMEASURED_NOTE = ("UNMEASURED — the Tape verdict's forward ledger (GET /orderflow/ledger/accuracy) measures "
                    "the five-check verdict, not this check alone. Not advice.")
@@ -48,7 +48,7 @@ RULE_NOTE = "Sides by the " + RULE_TAIL + "."
 FAULT_WORDS = {                   # MINE — why a poll did not read the tape (never a False read)
     "no_prints": "no prints from the provider",
     "no_regular": "no regular prints yet",
-    "truncated": "the pull hit the page cap — the newest prints were missing",
+    "truncated": "the densest minutes were capped — every window of the session was read",   # CHANGED 2026-10-18 (DECISIONS14 D8) — the cap is per window
     "rate_limited": "the provider kept answering HTTP 429 (rate limited)",
     "error": "the tape read failed",
     "budget": "the poll ran out of time",

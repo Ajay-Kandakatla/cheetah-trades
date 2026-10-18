@@ -82,14 +82,57 @@ session delta by ~106k shares. Guarded by `MID_EPSILON` and
 
 `classification` rides in the payload on every scan:
 
-- `method` — `quote` (≥ `MIN_USEFUL_COVERAGE_PCT` 60% matched) · `mixed` ·
+- `method` — `quote` (`coverage_pct` ≥ `MIN_USEFUL_COVERAGE_PCT` 60%) · `mixed` ·
   `tick` (no NBBO) · `none`
 - `coverage_pct`, `n_at_mid`, `n_fallback`, `tick_agreement_pct`
+
+`coverage_pct` (2026-10-18, DECISIONS14 D10) is the share of prints WITH a
+prevailing quote we hold: 100 × (n − `n_uncovered`) / n. A print has no held
+quote when it comes before the first quote, when it lies outside the spans the
+pull actually holds (below), or — on a hand-built / legacy frame only — when its
+prevailing quote is degenerate (a zero side, locked or crossed; critic MED,
+2026-10-18). On LIVE data `fetch_quotes` drops zero / locked / crossed quotes
+on every page as it arrives (DECISIONS14 D13), so a print during a locked market
+is classified against the prior VALID quote — the standard Lee-Ready practice and
+what the serial code always did — and every covered-span edge comes from a valid
+quote. A print exactly at the
+midpoint of a REAL two-sided quote (0 < bid < ask) HAS a quote —
+it counts as covered; only its side comes from the tick rule. The counts keep
+their meanings: `n_quote_classified` = held quote, off the midpoint (±1 from the
+quote); `n_at_mid` = held quote, exactly at the midpoint (tick side);
+`n_fallback` = `n_at_mid` + `n_uncovered`. Before D10 the number was
+quote-classified / n, which also subtracted every at-mid print — two different
+things in one number. Sides are unchanged by D10; only the headline number and
+the label move.
 
 A failed or partial NBBO pull degrades to the tick rule **and says so** in the
 UI badge. It never presents a tick-rule delta as a quote-rule number.
 Pre/post-market prints keep the tick rule by design — that NBBO is wide, thin
 and frequently crossed.
+
+### Covered windows (2026-10-18)
+
+Since 2026-10-18 (DECISIONS14 D5) the NBBO is pulled as 11 parallel ET windows
+with a per-window page cap (8 pages each, `MAX_QUOTE_PAGES` 88 = 11 × 8, DECISIONS14 D12), and `fetch_quotes` records `attrs["covered"]`: per window,
+the span it actually holds (ending at the window end when the window completed —
+rows or not, since zero updates means the prior quote stayed prevailing — at the
+last quote + 1 ns when it stopped early, nothing when it did not complete and
+held no quotes; starting at its own first quote — not the window start — when
+the window before it was capped or failed, and adding nothing when such a window
+is followed by a completed window with no quotes).
+`quotes.covered_mask` tests a timestamp against those spans. A print outside
+them keeps the tick rule in `quote_rule_sides` (counted in `n_fallback` and in
+the additive `n_uncovered`) and stays unsigned in `retail.identify`, even when
+an earlier quote exists. That closes two holes the paragraph above already
+claimed were closed: after-hours prints (16:00–20:00 ET) were classified against
+the 15:59:59 quote, and prints past a truncated pull against the last quote held.
+Those prints are uncovered, so under D10 `coverage_pct` reads lower — and
+honest — on heavy or after-hours tapes, while an at-mid print no longer lowers
+it. UNMEASURED as a verdict change. A quotes frame with no
+`covered` attr (hand-built, not from `fetch_quotes`) keeps the legacy behaviour:
+no restriction, `merge_asof` alone decides; an empty `covered` list classifies
+nothing. Full method:
+`docs/orderflow/parallel_fetch_2026_10_18.md`.
 
 ## 2. Off-exchange ("dark") print analytics
 

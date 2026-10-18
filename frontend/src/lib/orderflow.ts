@@ -141,7 +141,7 @@ export function classificationView(c?: Partial<Classification>):
     return {
       label: 'quote rule',
       color: '#10b981',
-      title: `Each print classified against the real NBBO (Lee-Ready): at/above the ask = buyer-aggressive, at/below the bid = seller-aggressive. ${c.coverage_pct}% of prints classified this way; the rest sat exactly at the midpoint and fall back to the tick rule.`
+      title: `Each print classified against the real NBBO (Lee-Ready): at/above the ask = buyer-aggressive, at/below the bid = seller-aggressive. ${c.coverage_pct}% of prints had a quote we hold; of those, ${c.n_at_mid} sat exactly at the midpoint and take the tick rule, and prints with no quote we hold — after hours, or past a capped window — take it too.`
         + (c.tick_agreement_pct != null
           ? ` The old tick rule agrees with it on only ${c.tick_agreement_pct}% of prints.` : ''),
     };
@@ -150,7 +150,7 @@ export function classificationView(c?: Partial<Classification>):
     return {
       label: `mixed ${c.coverage_pct}%`,
       color: '#d97706',
-      title: `Only ${c.coverage_pct}% of prints could be matched to a quote, so this is part quote-rule, part tick-rule. Treat the delta as an estimate.`,
+      title: `Only ${c.coverage_pct}% of prints had a quote we hold (the rest printed outside the quotes we pulled — after hours, or past a capped window), so this is part quote-rule, part tick-rule. Treat the delta as an estimate.`,
     };
   }
   return {

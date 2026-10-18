@@ -141,6 +141,10 @@ def identify(trades: Optional[pd.DataFrame],
         quotes.reset_index().sort_values("ts_utc")[["ts_utc", "bid", "ask"]],
         on="ts_utc", direction="backward",
     )
+    # 2026-10-18 (DECISIONS14 D5): a print outside the spans we hold quotes for
+    # is never signed against a stale earlier quote.
+    from . import quotes as quotes_mod
+    m = m[quotes_mod.covered_mask(m["ts_utc"], quotes)]
     m = m.dropna(subset=["bid", "ask"])
     if m.empty:
         out["read"] = "Retail prints identified but no quote matched them."
