@@ -9449,11 +9449,9 @@ const CONTRACTS = [
         if (panel.includes('1.2M')) errs.push('TapePanel.tsx still says "1.2M" — the cap is per window now (DECISIONS14 D4/D8)');
       }
 
-      // 5. ✨ — FIRST, his line verbatim, "Not advice.".
-      const arr = nf.indexOf('export const NEW_FEATURES');
-      const first = arr < 0 ? null : /\{ id: '([^']+)'/.exec(nf.slice(arr));
+      // 5. ✨ — present, his line verbatim, "Not advice.". WIDENED 2026-10-18 (same day): FIRST → present, because the
+      // 🧠 tiles-first entry (chart-maps-gajjala-potential-tiles-first-2026-10-18, his later ask that day) is newer.
       const ID = 'tape-scan-parallel-2026-10-18';
-      if (!first || first[1] !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (DECISIONS14 D8; found ${first ? first[1] : 'none'})`);
       const at = nf.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}' (DECISIONS14 D8)`);
       else {

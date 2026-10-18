@@ -615,7 +615,7 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   sighting rings at the next pass while still forming); the join rule (AMENDMENTS4 D9, HIS CALL P12, no constant) tracks
   but never rings what a mid-session restart finds already forming. GG's tells (float, 🔄 rotation, ⏸ halts, 🌙
   after-hours mover, 📅 prior-day listing, 🧩 another setup) are badges and order, never gates. Surfaces: a 🧠 strip in
-  every setup sub, and the sub `POTENTIAL_SUB` (last in `SUBS`) = roll-up + 📈 Track + 👀 watch line. Tracker: Mongo
+  every setup sub, and the sub `POTENTIAL_SUB` (last in `SUBS`) = roll-up + 📈 Track + 👀 watch line (drawn in that order since 2026-10-18 — the live tiles first, Ajay: "bring them to the top of the view"). Tracker: Mongo
   `gajjala_potentials` (`store.POTENTIALS`, kept for the later study), one doc per (session, symbol, setup) stamped on
   the pass clock, written only by the existing 5-minute pass (`run.run_pass` → `PT.run_pass`, own try/except). Push
   `POTENTIAL_PUSH_KIND` `gajjala_potential`: LIVE, owner-only (`OWNER_KEEP_SET`, default pref False), MARKET kind (silent

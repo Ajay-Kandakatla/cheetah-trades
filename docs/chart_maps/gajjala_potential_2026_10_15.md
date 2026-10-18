@@ -201,6 +201,15 @@ Every served key the tab (WP-B) and the board (WP-D) rely on comes from `potenti
 `tell_values`, `order_key`, `row_text`, `line`, `state_word`, `push_note`, `rules_lines`, `pass_times`,
 `defaults_sentence`, `KIND_LABEL`, `HELD_WORDS`, `CONCEPT`, `AGAIN_TEXT`, `TAIL`.
 
+### Render order on the 🧠 sub (2026-10-18)
+
+Ajay, on a screenshot of the sub after Friday's close: "this view is confusing are there 2 potential here?" → "Oh I think
+we should bring them to the top of the view". The board draws, in order: the 🎯 A+ line, the counts line (board-wide, all
+five setups — "forming" there counts reads, not potentials), the LIVE potential tiles (the sub's number = distinct symbols
+with a potential at the last pass), then the 📈 Track (that session's first sightings and what became of them), then the 👀
+watch line. Before 2026-10-18 the Track and the watch line came before the tiles. Served contents unchanged; FE tests
+"the live tiles come first" pin the order (NEGATIVE: the empty note also precedes the Track; setup subs unchanged).
+
 ## Push volume — UNKNOWN until the replay reads
 
 A dry run cannot dedupe a day. The scratchpad replay (`scratchpad/gajjala/probe/potential_volume_replay.py`, never the

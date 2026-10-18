@@ -476,3 +476,51 @@ describe('GajjalaBoard — 🧠 Potential (live capture)', () => {
     }
   });
 });
+
+/* Ajay 2026-10-18, on a screenshot of the 🧠 sub after the close ("this view is confusing are there 2 potential here?" →
+   "Oh I think we should bring them to the top of the view"): the live potential tiles render BEFORE the 📈 Track and the
+   👀 watch line; the A+ line and the counts line stay above everything, as on every sub. */
+describe('🧠 sub: the live tiles come first (2026-10-18)', () => {
+  const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+  it('every live tile precedes the 📈 Track and the 👀 watch line; the A+ and counts lines still precede the tiles', async () => {
+    stubFetch(from(GOLD, 'potential'));
+    const { container } = mount('tab=gajjala&sub=potential');
+    await loaded(container);
+    const tiles = screen.getAllByTestId(/^gg-tile-/);
+    expect(tiles.length).toBe(GOLD.potential.tiles.length);
+    expect(tiles.length).toBeGreaterThan(0);
+    const track = screen.getByTestId('gg-track');
+    const watch = screen.queryByTestId('gg-watch');
+    for (const tile of tiles) {
+      expect(before(tile, track), tile.getAttribute('data-testid')!).toBe(true);
+      if (watch) expect(before(tile, watch), tile.getAttribute('data-testid')!).toBe(true);
+    }
+    // the Track still comes before the watch line (their relative order is unchanged)
+    if (watch) expect(before(track, watch)).toBe(true);
+    // NEGATIVE: nothing above the tiles moved — the 🎯 A+ line and the counts line precede the first tile
+    for (const id of ['gg-aplus', 'gg-counts']) {
+      const el = screen.queryByTestId(id);
+      if (el) expect(before(el, tiles[0]), id).toBe(true);
+    }
+  });
+
+  it('NEGATIVE: with no live tile the served empty note precedes the 📈 Track (the history never leads)', async () => {
+    const b = clone(GOLD.potential);
+    b.tiles = [];
+    stubFetch(() => clone(b));
+    const { container } = mount('tab=gajjala&sub=potential');
+    await loaded(container);
+    expect(screen.queryAllByTestId(/^gg-tile-/)).toHaveLength(0);
+    const empty = screen.getByTestId('gg-empty');
+    expect(empty.textContent).toBe(b.empty_note);
+    expect(before(empty, screen.getByTestId('gg-track'))).toBe(true);
+  });
+
+  it('NEGATIVE: a setup sub still shows no Track / watch at all (the move touched the 🧠 sub only)', async () => {
+    stubFetch(from(GOLD, 'bull_flag'));
+    const { container } = mount('tab=gajjala&sub=bull_flag');
+    await loaded(container);
+    for (const id of ['gg-track', 'gg-watch']) expect(screen.queryByTestId(id)).toBeNull();
+  });
+});

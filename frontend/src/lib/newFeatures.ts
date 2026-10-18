@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-18 (verbatim below, on a screenshot of the 🧠 Potential sub after Friday's close). A render-order change
+  // only — the tiles, the 📈 Track and the 👀 watch line keep their served contents; the 🧠 sub now draws the live tiles
+  // first (GajjalaBoard (6b)); tests in GajjalaBoard.potential.test.tsx "the live tiles come first".
+  { id: 'chart-maps-gajjala-potential-tiles-first-2026-10-18', addedAt: '2026-10-18', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "🧠 Gajjala’s Potential sub now shows the live potentials first. You said: “this view is confusing are there 2 potential here?” and “Oh I think we should bring them to the top of the view.”. Yes — there were 2: the sub’s number counts the symbols forming as a potential at the last pass, and their cards sat under the 74-row 📈 Track. The cards now come right after the counts line; the 📈 Track (everything that was a potential at any point that session and what became of it) and the 👀 watch line follow below. The three numbers on this sub count three different things: the sub’s number = live potentials; “forming” on the counts line = forming reads across all five setups (a name forming on two setups counts twice, and a forming read with a variant or no base bar yet is not a potential); the Track’s number = that session’s first sightings. Nothing is counted or gated differently. Not advice." },
   // Ajay 2026-10-18 (verbatim below, on a screenshot of the Tape · Order Flow panel). DECISIONS14 D1–D8: the day is pulled in
   // 13 parallel ET windows (orderflow/massive_pages.WINDOW_EDGES_ET, FETCH_WORKERS — MINE), per-window page caps replace the
   // day-prefix cap (D4; 24 / 8 pages per window since D12, each page compacted as it arrives D11), the quote rule classifies only inside covered windows (D5). The BEFORE seconds are the 2026-10-16

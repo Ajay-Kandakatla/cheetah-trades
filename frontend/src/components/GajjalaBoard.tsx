@@ -531,9 +531,6 @@ export default function GajjalaBoard() {
           {isGgSetup(activeSub) && board.potential ? (
             <PotentialStrip strip={board.potential} onPick={(sym) => setParam(FOCUS_PARAM, sym)} />
           ) : null}
-          {/* (5c) 🧠 sub: the 📈 Track and the 👀 watch line above the roll-up tiles. */}
-          {activeSub === 'potential' && board.track ? <TrackPanel track={board.track} /> : null}
-          {activeSub === 'potential' && board.watch ? <WatchLine watch={board.watch} /> : null}
           {board.postmarket?.unchecked_text ? (
             <div className="cm-note" data-testid="gg-unchecked">{board.postmarket.unchecked_text}</div>
           ) : null}
@@ -610,6 +607,11 @@ export default function GajjalaBoard() {
               );
             })}
           </div>
+          {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of
+              this sub ("this view is confusing are there 2 potential here?" → "Oh I think we should bring them to the top
+              of the view"): the 2 live potentials are what the sub is named for; the 74-row history came first and hid them. */}
+          {activeSub === 'potential' && board.track ? <TrackPanel track={board.track} /> : null}
+          {activeSub === 'potential' && board.watch ? <WatchLine watch={board.watch} /> : null}
         </>
       ) : null}
 
