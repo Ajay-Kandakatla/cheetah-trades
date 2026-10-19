@@ -412,7 +412,7 @@ export default function GajjalaBoard() {
   // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view + ✅ / ❌ category, which belong to the sub they were picked on.
   const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM]);
 
-  const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null }));
+  const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null, title: null }));
   const session = board?.session;
   const pass = board?.pass;
   const strip = board?.strip;
@@ -478,6 +478,7 @@ export default function GajjalaBoard() {
           <button key={s.key} type="button" role="tab" aria-selected={s.key === activeSub}
                   data-testid={`gg-sub-${s.key}`}
                   className={`cat-tab${s.key === activeSub ? ' is-active' : ''}`}
+                  title={s.title || undefined}
                   onClick={() => pickSub(s.key)}>
             {`${s.emoji} ${s.label}`}{typeof s.count === 'number' ? ` · ${s.count}` : ''}
           </button>
@@ -630,15 +631,46 @@ const tfWords = (f: GgTf | string) => String(f).replace(/m$/, '-min');
 const frameDiffers = (tileTf: unknown, boardTf: string): boolean =>
   typeof tileTf === 'string' && (GG_TFS as ReadonlyArray<string>).includes(tileTf) && tileTf !== boardTf;
 
+/** The counts line. ℹ️ 2026-10-18 (DECISIONS15 D2): with a served `counts_legend` each count is a span carrying the served
+ *  text as its native title, and ONE folded ⓘ under the line lists every served row ("word — text") in served order. The
+ *  FE prints the served words and defines no state; a served `counts_text` still wins as plain text; no served legend →
+ *  today's markup. */
 function CountsLine({ board }: { board: GgBoard }) {
   const c = board.counts || {};
+  const counted = COUNT_WORDS.filter(([k]) => typeof (c as Record<string, unknown>)[k] === 'number');
   const line = board.counts_text
-    || COUNT_WORDS.filter(([k]) => typeof (c as Record<string, unknown>)[k] === 'number')
-      .map(([k, w]) => `${w} ${(c as Record<string, number>)[k]}`).join(' · ');
+    || counted.map(([k, w]) => `${w} ${(c as Record<string, number>)[k]}`).join(' · ');
+  const legend = (Array.isArray(board.counts_legend) ? board.counts_legend : [])
+    .filter((r) => r && typeof r.key === 'string' && r.key && typeof r.word === 'string' && r.word
+      && typeof r.text === 'string' && r.text);
+  const byKey = new Map(legend.map((r) => [r.key, r]));
+  const spans = !board.counts_text && legend.length > 0;
   const grave = board.graveyard_today || [];
   return (
     <>
-      {line ? <div className="cm-foot" data-testid="gg-counts">{line}</div> : null}
+      {line ? (spans ? (
+        <div className="cm-foot" data-testid="gg-counts">
+          {counted.map(([k, w], i) => {
+            const row = byKey.get(k);
+            return (
+              <Fragment key={k}>
+                {i ? ' · ' : ''}
+                <span data-testid={`gg-count-${k}`} title={row?.text}>{`${row?.word || w} ${(c as Record<string, number>)[k]}`}</span>
+              </Fragment>
+            );
+          })}
+        </div>
+      ) : <div className="cm-foot" data-testid="gg-counts">{line}</div>) : null}
+      {legend.length ? (
+        <details className="gg-aplus-note gg-counts-legend" data-testid="gg-counts-legend">
+          <summary>ⓘ</summary>
+          <ul>
+            {legend.map((r) => (
+              <li key={r.key} data-testid={`gg-legend-${r.key}`}><strong>{r.word}</strong> — {r.text}</li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {grave.length ? (
         <div className="cm-note" data-testid="gg-graveyard">
           {board.graveyard_text || `\u{1FAA6} moved to the graveyard today: ${grave.join(', ')}`}

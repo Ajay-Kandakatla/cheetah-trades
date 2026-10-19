@@ -62,6 +62,58 @@ log = logging.getLogger("chart_maps.gajjala.tab")
 ET = ZoneInfo("America/New_York")
 TILE_STATES = ("aplus", "triggered", "forming", "partial", "stopped")
 COUNT_STATES = ("aplus", "forming", "partial", "triggered", "stopped", "invalid", "none")
+LEGEND_KEYS = tuple(COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track")   # MINE (DECISIONS15 D1)
+POTENTIAL_LEGEND_END = "not yet printed."           # MINE (DECISIONS15 D1) — the cut of potential.rules_lines()[0]
+POTENTIAL_LEGEND_TAIL = " Counted per symbol, not per setup."   # MINE (DECISIONS15 D1)
+
+
+def _as_sentence(clause: str) -> str:
+    """A served clause as its own sentence: first letter capitalised, a closing "." unless it already ends with one of
+    ".!?" (also inside a closing ")"); a trailing ")" gets the "." after it."""
+    c = (clause or "").strip()
+    if not c:
+        return c
+    c = c[0].upper() + c[1:]
+    if c.endswith((".", "!", "?", ".)", "!)", "?)")):
+        return c
+    return c + "."
+
+
+def count_legend() -> list:
+    """DECISIONS15 D1 — the ONE served legend: [{key, word, text}] for every word on the counts line, the 🧠 sub's
+    number and the 📈 Track's number. Words = the FE's structural labels (A+, triggered, forming, partial, stopped,
+    invalid, none, awaiting your number, listed, 🧠 Potential, 📈 Track). Texts in DECISIONS15's table, reusing served
+    phrases: the rules_info A+ phrase ("every rule met and the entry bar closed"), potential.rules_lines()[0]'s first
+    sentence (split at ". On top"), detectors.AWAITING_TEXT's spirit for awaiting. Pure, no clock, no Mongo.
+    2026-10-18 critic fix: the potential text also carries potential.defaults_clauses()[0]'s base clause (worded for the
+    CURRENT POTENTIAL_NEEDS_BASE), so the legend follows the setting — DECISIONS15 D1 wins over BUILD_SPEC15's bare cut."""
+    first = PT.rules_lines()[0]                     # at request time — the ONE 🧠 sentence, never retyped
+    head, cut, _rest = first.partition(POTENTIAL_LEGEND_END)
+    base = _as_sentence(PT.defaults_clauses()[0][2])   # the POTENTIAL_NEEDS_BASE clause, worded for its current value
+    potential = head + cut + " " + base + POTENTIAL_LEGEND_TAIL
+    rows = (
+        ("aplus", "A+", "every rule of the setup met and the bar that traded through the trigger closed on the "
+                        "name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ "
+                        "window, once per name and setup a day"),
+        ("forming", "forming", "no rule has failed yet and the break has not printed — “ready” means the next bar "
+                               "over the trigger would be the entry"),
+        ("partial", "partial", "a rule failed — the card says which (“missed: …”); a break that was not A+ reads "
+                               "here too"),
+        ("triggered", "triggered", "every rule met and the break printed earlier — the entry has passed; the stop "
+                                   "has not printed"),
+        ("stopped", "stopped", "the break printed and then the stop printed"),
+        ("invalid", "invalid", "the structure died — the entry bar traded under the stop first, too many pullback "
+                               "bars, the base broke"),
+        ("none", "none", "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or "
+                         "an unknown float, or a detector error"),
+        ("awaiting_answer", "awaiting your number", "held by a rule whose number you have not given"),
+        ("listed", "listed", "the names his scanner listed for the session — every count above is read on these"),
+        ("potential", "🧠 Potential", potential),
+        ("track", "📈 Track", "every symbol-and-setup that was a potential at any point that session, with what "
+                             "became of it since — a record, not a list to act on"),
+    )
+    by = {k: (w, t) for k, w, t in rows}
+    return [{"key": k, "word": by[k][0], "text": by[k][1]} for k in LEGEND_KEYS]
 MARKED_STATES = ("aplus", "triggered", "stopped")
 SUB_KEYS = tuple(k for k, _e, _l in GC.SUBS)
 SUB_META = {k: (e, label) for k, e, label in GC.SUBS}
@@ -1600,6 +1652,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
 
+    legend = count_legend()                                         # DECISIONS15 D1 — ONE served legend
+    pot_title = next(r["text"] for r in legend if r["key"] == "potential")
     subs = []
     for key, e, label in GC.SUBS:
         if key == GC.LEDGER_SUB:                # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
@@ -1607,7 +1661,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
                  else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
-        subs.append({"key": key, "emoji": e, "label": label, "count": n})
+        subs.append({"key": key, "emoji": e, "label": label, "count": n,
+                     "title": pot_title if key == GC.POTENTIAL_SUB else None})     # DECISIONS15 D1
 
     if sub_k in per_setup:
         counts = counts_by[sub_k]
@@ -1617,7 +1672,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     out = {"tab": "gajjala", "sub": sub_k, "sub_resolved_from": resolved, "tf": tf_k, "subs": subs,
            "session": sess, "pass": _pass_block(pass_doc, now, session, in_window, cron=cron),
            "strip": _strip_block(spass),
-           "counts": counts, "tiles": [], "graveyard_today": [], "note": board_note(),
+           "counts": counts, "counts_legend": legend, "tiles": [], "graveyard_today": [], "note": board_note(),
            "empty_note": None, "rules_section": "gajjala", "push": push_block(),
            "push_potential": _soft("potential push line", push_potential_block, session),
            "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a],

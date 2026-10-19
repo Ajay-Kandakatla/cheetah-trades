@@ -209,6 +209,10 @@ five setups — "forming" there counts reads, not potentials), the LIVE potentia
 with a potential at the last pass), then the 📈 Track (that session's first sightings and what became of them), then the 👀
 watch line. Before 2026-10-18 the Track and the watch line came before the tiles. Served contents unchanged; FE tests
 "the live tiles come first" pin the order (NEGATIVE: the empty note also precedes the Track; setup subs unchanged).
+2026-10-18 (DECISIONS15 D1): the 🧠 sub button carries `subs[].title` = the served legend's potential text (the first
+sentence of `rules_lines()[0]` + "Counted per symbol, not per setup."), and every payload serves `counts_legend` — the
+counts line's words (forming = no rule has failed yet; partial = a rule failed; A+ = every rule met and the entry bar
+closed) under one folded ⓘ; see `docs/gajjala/gajjala_tab_2026_10_13.md` "The served legend".
 
 ## Push volume — UNKNOWN until the replay reads
 

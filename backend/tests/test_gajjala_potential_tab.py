@@ -455,7 +455,12 @@ def test_subs_end_with_potential_and_the_other_eight_keep_their_order(store):
     # WIDENED 2026-10-16 — 🏁 Track record appended LAST (Ajay "keep a new tab"); 🧠 Potential is now second to last and
     # the other eight keep their order
     # WIDENED 2026-10-18 (DECISIONS13 D1): EEE's 4-bar flag is a forming 🧠 potential now (armed, 1M, 10:31)
-    assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 6}
+    # WIDENED 2026-10-18 (DECISIONS15 D1 — subs[].title)
+    pot_title = next(r["text"] for r in GT.count_legend() if r["key"] == "potential")
+    assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 6,
+                               "title": pot_title}
+    others = [s for s in out["subs"] if s["key"] != "potential"]
+    assert len(others) == 9 and all(s["title"] is None for s in others)          # NEGATIVE: the other nine
     assert {k: out["subs"][-1][k] for k in ("key", "emoji", "label")} == {"key": "track_record", "emoji": "🏁",
                                                                           "label": "Track record"}
     assert [s["key"] for s in out["subs"][:-2]] == ["bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp",

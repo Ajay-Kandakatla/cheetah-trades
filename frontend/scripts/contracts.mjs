@@ -9502,6 +9502,65 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'ℹ️ Gajjala counts legend (2026-10-18): ONE served legend (tab.count_legend + LEGEND_KEYS, MINE) served as counts_legend, its texts carry the definitions, the FE prints them and types none, lib/gajjala.ts declares the key, ✨ first with his lines verbatim + "Not advice.", the tab doc names counts_legend',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-10-18: "Ok Forming is still Criteria not met.. Potential is all the gajjalas criteria met. may be add an info
+    // tag for them explicitly.. To tell me what athey are" (DECISIONS15 D1–D4, BUILD_SPEC15 B5). He read two words the other
+    // way round; the words that explain them must have ONE source (tab.py), never a second copy typed in the browser.
+    checks: (nf) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const DEFS = ['no rule has failed', 'a rule failed', 'every rule'];
+      const HIS1 = 'Ok Forming is still Criteria not met.. Potential is all the gajjalas criteria met.';
+      const HIS2 = 'may be add an info tag for them explicitly.. To tell me what athey are';
+
+      // 1–2. tab.py — the legend function, its MINE keys, served on the payload; the definitions live in its body.
+      const tab = tryRead('../backend/chart_maps/gajjala/tab.py');
+      if (tab) {
+        if (!/^LEGEND_KEYS = [^\n]*# MINE \(DECISIONS15 D1\)/m.test(tab)) errs.push('tab.py must carry LEGEND_KEYS = …  # MINE (DECISIONS15 D1)');
+        const body = pyBody(tab, 'count_legend');
+        if (!body) errs.push('tab.py must define def count_legend( (DECISIONS15 D1 — the ONE served legend)');
+        else for (const need of DEFS) if (!body.includes(need)) errs.push(`tab.count_legend must say "${need}" (DECISIONS15 table)`);
+        if (!tab.includes('"counts_legend"')) errs.push('tab.py must serve "counts_legend" (the key lib/gajjala.ts reads)');
+      }
+
+      // 3. GajjalaBoard.tsx prints the served legend and types no definition.
+      const board = tryRead('src/components/GajjalaBoard.tsx');
+      if (board) {
+        if (!board.includes('gg-counts-legend')) errs.push('GajjalaBoard.tsx must render the folded legend (gg-counts-legend, DECISIONS15 D2)');
+        if (!board.includes('counts_legend')) errs.push('GajjalaBoard.tsx must read board.counts_legend (DECISIONS15 D2)');
+        for (const d of DEFS) if (board.toLowerCase().includes(d)) errs.push(`GajjalaBoard.tsx types "${d}" — the FE prints the served legend and defines no state (DECISIONS15 D2)`);
+      }
+
+      // 4. lib/gajjala.ts declares the served key.
+      const lib = tryRead('src/lib/gajjala.ts');
+      if (lib && !/counts_legend\?:/.test(lib)) errs.push('lib/gajjala.ts board type must declare counts_legend?: (BUILD_SPEC15 B1)');
+
+      // 5. ✨ FIRST, his lines verbatim, "Not advice.", never the b-word / "fake".
+      const ID = 'chart-maps-gajjala-counts-legend-2026-10-18';
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const first = arr < 0 ? null : /\{ id: '([^']+)'/.exec(nf.slice(arr));
+      if (!first || first[1] !== ID) errs.push(`the first ✨ entry must be '${ID}' (found ${first ? first[1] : 'none'})`);
+      const at = nf.indexOf(`{ id: '${ID}'`);
+      if (at >= 0) {
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=potential',")) errs.push("the ℹ️ ✨ entry must route to '/chart-maps?tab=gajjala&sub=potential'");
+        for (const h of [HIS1, HIS2]) if (!e.includes(h)) errs.push(`the ℹ️ ✨ entry must quote him verbatim: "${h.slice(0, 40)}…"`);
+        if (!e.includes('Not advice.')) errs.push('the ℹ️ ✨ entry must end "Not advice."');
+        if (/boun|fake/i.test(e)) errs.push('the ℹ️ ✨ entry says the b-word / "fake"');
+      }
+
+      // 6. the tab doc names the served key.
+      const doc = tryRead('../docs/gajjala/gajjala_tab_2026_10_13.md');
+      if (doc && !doc.includes('counts_legend')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must name "counts_legend" (BUILD_SPEC15 A3)');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

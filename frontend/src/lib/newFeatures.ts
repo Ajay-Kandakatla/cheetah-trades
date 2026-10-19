@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-18 (verbatim below, after the 🧠 tiles-first change). DECISIONS15 D1–D4: words only, no methodology change —
+  // the ONE legend is served by chart_maps/gajjala/tab.count_legend as `counts_legend` (+ `subs[].title` on the 🧠 sub); the
+  // board prints it as each count's title and one folded ⓘ under the counts line, and types no definition (GajjalaBoard
+  // (CountsLine)). Pinned by scripts/contracts.mjs ("ℹ️ Gajjala counts legend (2026-10-18)").
+  { id: 'chart-maps-gajjala-counts-legend-2026-10-18', addedAt: '2026-10-18', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "ℹ️ Gajjala’s counts line now says what each word means. You said: “Ok Forming is still Criteria not met.. Potential is all the gajjalas criteria met.” and “may be add an info tag for them explicitly.. To tell me what athey are”. Two of those read the other way round: “forming” means no rule has failed yet and the break has not printed — a rule that failed is “partial” (the card says which); “A+” is the one where every rule is met and the entry bar closed through the trigger. A 🧠 potential is a forming read whose quiet base has begun, on the plain setup, counted once per symbol. Tap the ⓘ under the counts line for every word (on a computer, hovering a count shows the same words); the ⓘ also explains the 🧠 sub’s number and the 📈 Track’s number (on a computer, hovering the 🧠 sub-tab’s button shows the same words). Nothing is counted or gated differently. Not advice." },
   // Ajay 2026-10-18 (verbatim below, on a screenshot of the 🧠 Potential sub after Friday's close). A render-order change
   // only — the tiles, the 📈 Track and the 👀 watch line keep their served contents; the 🧠 sub now draws the live tiles
   // first (GajjalaBoard (6b)); tests in GajjalaBoard.potential.test.tsx "the live tiles come first".

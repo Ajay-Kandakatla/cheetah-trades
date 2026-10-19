@@ -364,7 +364,9 @@ export type GgBoard = {
   sub: GgSub;
   sub_resolved_from?: string;
   tf: GgTf;
-  subs: { key: GgSub; emoji: string; label: string; count?: number | null }[];
+  /** ℹ️ 2026-10-18 (DECISIONS15 D1): `title` = the served legend text for the 🧠 sub (tab.count_legend's potential row);
+   *  null on every other sub, absent on an older API. Printed as the button's native title; the FE types none. */
+  subs: { key: GgSub; emoji: string; label: string; count?: number | null; title?: string | null }[];
   session?: {
     date?: string; label?: string; tape?: string; badge?: string | null;
     first15?: boolean; first15_text?: string | null; refresh_sec?: number | null;
@@ -381,6 +383,9 @@ export type GgBoard = {
             best_symbol?: string | null; quiet?: boolean; text?: string | null };
   counts?: Partial<Record<GgState | 'awaiting_answer' | 'listed', number>>;
   counts_text?: string | null;
+  /** ℹ️ 2026-10-18 (DECISIONS15 D1): the ONE served legend (tab.count_legend) — one {key, word, text} per word on the
+   *  counts line, the 🧠 sub's number and the 📈 Track's number, in served order; absent on an older API (nothing new renders). */
+  counts_legend?: { key: string; word: string; text: string }[] | null;
   tiles: GgTile[];
   graveyard_today?: string[];
   graveyard_text?: string | null;

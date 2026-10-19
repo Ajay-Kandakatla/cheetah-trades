@@ -26,6 +26,63 @@
     "stopped": 0,
     "triggered": 0
    },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    }
+   ],
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,
@@ -117,61 +174,71 @@
      "count": 1,
      "emoji": "🚩",
      "key": "bull_flag",
-     "label": "Bull Flag"
+     "label": "Bull Flag",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "💋",
      "key": "kiss_fly",
-     "label": "EMA Kiss & Fly"
+     "label": "EMA Kiss & Fly",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "➖",
      "key": "horizontal_fade",
-     "label": "Horizontal Fade"
+     "label": "Horizontal Fade",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🌀",
      "key": "intraday_vcp",
-     "label": "Intraday VCP"
+     "label": "Intraday VCP",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🎾",
      "key": "reversal_squeeze",
-     "label": "Reversal Squeeze"
+     "label": "Reversal Squeeze",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "☀️",
      "key": "premarket",
-     "label": "Premarket"
+     "label": "Premarket",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🌙",
      "key": "postmarket",
-     "label": "Post-market"
+     "label": "Post-market",
+     "title": null
     },
     {
      "count": null,
      "emoji": "📓",
      "key": "playbook",
-     "label": "Playbook"
+     "label": "Playbook",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🧠",
      "key": "potential",
-     "label": "Potential"
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
      "emoji": "🏁",
      "key": "track_record",
-     "label": "Track record"
+     "label": "Track record",
+     "title": null
     }
    ],
    "tab": "gajjala",
@@ -416,6 +483,63 @@
     "stopped": 0,
     "triggered": 0
    },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    }
+   ],
    "empty_note": null,
    "enterable": {
     "empty_text": null,
@@ -1922,61 +2046,71 @@
      "count": 1,
      "emoji": "🚩",
      "key": "bull_flag",
-     "label": "Bull Flag"
+     "label": "Bull Flag",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "💋",
      "key": "kiss_fly",
-     "label": "EMA Kiss & Fly"
+     "label": "EMA Kiss & Fly",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "➖",
      "key": "horizontal_fade",
-     "label": "Horizontal Fade"
+     "label": "Horizontal Fade",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🌀",
      "key": "intraday_vcp",
-     "label": "Intraday VCP"
+     "label": "Intraday VCP",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🎾",
      "key": "reversal_squeeze",
-     "label": "Reversal Squeeze"
+     "label": "Reversal Squeeze",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "☀️",
      "key": "premarket",
-     "label": "Premarket"
+     "label": "Premarket",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🌙",
      "key": "postmarket",
-     "label": "Post-market"
+     "label": "Post-market",
+     "title": null
     },
     {
      "count": null,
      "emoji": "📓",
      "key": "playbook",
-     "label": "Playbook"
+     "label": "Playbook",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🧠",
      "key": "potential",
-     "label": "Potential"
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
      "emoji": "🏁",
      "key": "track_record",
-     "label": "Track record"
+     "label": "Track record",
+     "title": null
     }
    ],
    "tab": "gajjala",
@@ -2008,6 +2142,63 @@
     "stopped": 0,
     "triggered": 0
    },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    }
+   ],
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,
@@ -2087,61 +2278,71 @@
      "count": 1,
      "emoji": "🚩",
      "key": "bull_flag",
-     "label": "Bull Flag"
+     "label": "Bull Flag",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "💋",
      "key": "kiss_fly",
-     "label": "EMA Kiss & Fly"
+     "label": "EMA Kiss & Fly",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "➖",
      "key": "horizontal_fade",
-     "label": "Horizontal Fade"
+     "label": "Horizontal Fade",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🌀",
      "key": "intraday_vcp",
-     "label": "Intraday VCP"
+     "label": "Intraday VCP",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🎾",
      "key": "reversal_squeeze",
-     "label": "Reversal Squeeze"
+     "label": "Reversal Squeeze",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "☀️",
      "key": "premarket",
-     "label": "Premarket"
+     "label": "Premarket",
+     "title": null
     },
     {
      "count": 0,
      "emoji": "🌙",
      "key": "postmarket",
-     "label": "Post-market"
+     "label": "Post-market",
+     "title": null
     },
     {
      "count": null,
      "emoji": "📓",
      "key": "playbook",
-     "label": "Playbook"
+     "label": "Playbook",
+     "title": null
     },
     {
      "count": 1,
      "emoji": "🧠",
      "key": "potential",
-     "label": "Potential"
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
      "emoji": "🏁",
      "key": "track_record",
-     "label": "Track record"
+     "label": "Track record",
+     "title": null
     }
    ],
    "tab": "gajjala",

@@ -595,7 +595,10 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
 - **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=&span=` (`span` 🏁 only, 2026-10-16) (`limit` `TILE_LIMIT_DEFAULT` 24, max
   `TILE_LIMIT_MAX` 80) → `tab.build()`: reads Mongo only (`gajjala_reads`, `gajjala_passes`, `gajjala_alerts`) plus one
   live fan-out for the shown tiles' now-line; never scans or fetches a bar on the request. `stale` after `STALE_AFTER_SEC`
-  900. ℹ️ panel: `rules_info` section "gajjala", built from `constants.py`.
+  900. ℹ️ panel: `rules_info` section "gajjala", built from `constants.py`. Every payload serves `counts_legend`
+  (2026-10-18, DECISIONS15 D1: `tab.count_legend()` → `[{key, word, text}]` over `LEGEND_KEYS` = the seven
+  `COUNT_STATES` + `awaiting_answer`, `listed`, `potential`, `track` — words only, `counts` unchanged) and `subs[].title`
+  (the legend's potential text on the 🧠 sub, None elsewhere); the FE prints them as hover titles and one folded ⓘ.
 - **Not built** (📓 Playbook text only, each would need Ajay's numbers): exits / partials / breakeven-and-add are never
   computed (his discretion), sizing and the drawdown brake, a trades-per-day cap, a confluence score, the post-market
   journal (R2-8: not now).
