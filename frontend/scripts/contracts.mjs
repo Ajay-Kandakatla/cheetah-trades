@@ -9698,8 +9698,10 @@ const CONTRACTS = [
       // 6. the ✨ entry — FIRST, his four lines verbatim, UNMEASURED, ends "Not advice.", the same numbers.
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (firstId !== ID) errs.push(`the first ✨ entry must be '${ID}' (found ${firstId || 'none'})`);
+      // 2026-10-19, later the same day: the 📱 gajjala phone-layout ✨ (its own block below) sits above this one —
+      // the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9755,6 +9757,43 @@ const CONTRACTS = [
         const doc = read(DOC);
         for (const need of ['overnight_reads', 'on_dollar', 'prior_pct', 'leveraged']) if (!doc.includes(need)) errs.push(`docs/overnight/overnight_2026_10_19.md must name "${need}"`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '📱 gajjala phone layout (2026-10-19)',
+    file: 'src/styles/gajjala.css',
+    // Ajay 2026-10-19, an iPhone 14 Pro Max screenshot of a TCRT card: "On the phone Gajjalas looks wierd and cut off can
+    // you fix the UX issues I use an Iphone 14 pro max". Measured in the browser at 430 px: the card is a .cm-grid item,
+    // and a grid item's default `min-width: auto` let ONE unbreakable served chip (the 549 px `flag #1 today · Business
+    // Insider: …` house badge, nowrap) widen the single 1fr column to 552 px inside a 386 px board — the chart, the K-rule
+    // lines and the chip row ran off the screen. Two CSS rules fix it and nothing served changes; this pins them, the
+    // guard test (incl. NEGATIVES), the ✨ line with his words, and the doc section.
+    checks: (css) => {
+      const errs = [];
+      const card = /(^|\n)\s*\.gg-card\s*\{([^}]*)\}/.exec(css);
+      if (!card) errs.push('gajjala.css must keep a .gg-card rule');
+      else {
+        if (!/min-width:\s*0\b/.test(card[2])) errs.push('.gg-card must carry min-width: 0 — a grid item never exceeds its column');
+        if (!/max-width:\s*100%/.test(card[2])) errs.push('.gg-card must carry max-width: 100%');
+      }
+      const chip = /\n([^{}\n]*\.gg-chip-row \.cm-badge[^{}\n]*)\{([^}]*)\}/.exec(css);
+      if (!chip) errs.push('gajjala.css must un-nowrap .gg-chip-row .cm-badge (the served chips wrap instead of widening the card)');
+      else {
+        for (const sel of ['.gg-pot-tells .cm-badge', '.cm-tile-chips .cm-badge']) if (!chip[1].includes(sel)) errs.push(`the chip-wrap rule must also list ${sel}`);
+        if (!/white-space:\s*normal/.test(chip[2])) errs.push('the chip-wrap rule must set white-space: normal');
+        if (!/overflow-wrap:\s*anywhere/.test(chip[2])) errs.push('the chip-wrap rule must set overflow-wrap: anywhere');
+      }
+      const lines = /\n([^{}\n]*\.gg-criteria li[^{}\n]*)\{([^}]*overflow-wrap:\s*anywhere[^}]*)\}/.exec(css);
+      if (!lines) errs.push('the K-rule lines (.gg-criteria li) must carry overflow-wrap: anywhere');
+      else for (const sel of ['.gg-pills .gg-state', '.gg-pills .gg-variant', '.gg-pot-tile .gg-pot-kind', '.gg-plan', '.gg-line']) if (!lines[1].includes(sel)) errs.push(`the wrap-anywhere rule must list ${sel}`);
+      if (!exists('src/components/GajjalaBoard.phone.test.tsx')) errs.push('GajjalaBoard.phone.test.tsx (the guard incl. NEGATIVES) is missing');
+      const nf = read('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-phone-layout-2026-10-19';
+      if (!nf.includes(`id: '${ID}'`)) errs.push(`newFeatures.ts must carry the ✨ ${ID}`);
+      if (!nf.includes('On the phone Gajjalas looks wierd and cut off')) errs.push('the ✨ line must quote his words verbatim');
+      const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
+      if (!exists(DOC) || !read(DOC).includes('Phone layout (2026-10-19)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "Phone layout (2026-10-19)" section');
       return errs;
     },
   },

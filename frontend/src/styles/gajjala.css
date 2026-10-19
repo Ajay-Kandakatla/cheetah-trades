@@ -21,8 +21,19 @@
 
 .gg-subs { flex-wrap: wrap; }
 
-.gg-card { border-radius: 8px; }
+/* 📱 Phone layout (2026-10-19). Ajay, iPhone 14 Pro Max screenshot: "On the phone Gajjalas looks wierd and cut off".
+   Measured at 430 px: the card is a .cm-grid item whose `min-width: auto` let ONE unbreakable served chip (a 549 px
+   `flag #1 today · Business Insider: …` house badge, nowrap) set the card's minimum, so the grid's single 1fr column
+   grew to 552 px inside a 386 px board and the chart, the rule lines and the chip row ran off the screen. Two rules:
+   the card can never be wider than its column, and every served chip on it wraps instead of widening it. */
+.gg-card { border-radius: 8px; min-width: 0; max-width: 100%; }
 .gg-card.gg-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
+.gg-chip-row .cm-badge, .gg-pot-tells .cm-badge, .cm-tile-chips .cm-badge {
+  white-space: normal; overflow-wrap: anywhere;
+}
+.gg-pills .gg-state, .gg-pills .gg-variant, .gg-pot-tile .gg-pot-kind, .gg-plan, .gg-criteria li, .gg-line {
+  overflow-wrap: anywhere;
+}
 .gg-row-head { font-weight: 600; padding: 0.3rem 0; }
 
 .gg-extras { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.3rem 0.1rem 0.5rem; font-size: 0.78rem; }

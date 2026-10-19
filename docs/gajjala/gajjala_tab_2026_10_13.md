@@ -153,3 +153,24 @@ minutes; 🧱 psych (Cheetah default band); chips-never-rules. Alerts: the SHADO
 ## HIS CALLs still open
 None introduced here. Display-only defaults kept as the spec wrote them: R2-3 halts = chip only (`HALT_CALM_BARS` off), R2-4
 after-hours exhaustion = shown only (`AH_EXHAUSTION_MAX_PCT` off), R2-9 house chips kept, R2-10 "[reverses]" brackets.
+
+## 📱 Phone layout (2026-10-19)
+Ajay, with an iPhone 14 Pro Max screenshot of a TCRT card: "On the phone Gajjalas looks wierd and cut off can you fix
+the UX issues I use an Iphone 14 pro max". Measured in the browser at that screen's width (430 px): the card is a
+`.cm-grid` item, and a grid item's default `min-width: auto` lets its unbreakable content set the column's minimum. One
+served chip under the card — the `flag_k` house badge "flag #1 today · Business Insider: he plays the first and second,
+usually skips the third (one third-party source)", 549 px with the house `.cm-badge { white-space: nowrap }` — set the
+card's minimum, so the grid's single `1fr` column grew to 552 px inside a 386 px board and the chart, the K-rule lines
+and the chip row ran off the right edge. Only this tab serves a chip that long, which is why only this tab showed it.
+
+Two rules in `frontend/src/styles/gajjala.css` fix it, nothing served changes:
+- `.gg-card { min-width: 0; max-width: 100% }` — the card can never be wider than its column.
+- `.gg-chip-row .cm-badge, .gg-pot-tells .cm-badge, .cm-tile-chips .cm-badge { white-space: normal; overflow-wrap:
+  anywhere }` and `overflow-wrap: anywhere` on the pills, the plan line, the K-rule lines and the served lines — every
+  served string on the card wraps instead of widening it.
+
+After the fix at 430 px: column 386 px, card 386 px, the flag chip 383 × 35 px on two lines, no element of the board past
+the viewport. The sub-tab strip still scrolls sideways on a phone — the house `.cat-tabs` rule at narrow widths
+(`flex-wrap: nowrap !important; overflow-x: auto`), the same as every Catalysts-style tab; wrapping it into two rows is
+HIS CALL. Guards: `frontend/src/components/GajjalaBoard.phone.test.tsx` (source guards incl. NEGATIVES on the pre-fix
+stylesheet) and the contracts block "📱 gajjala phone layout (2026-10-19)". ✨ `chart-maps-gajjala-phone-layout-2026-10-19`.
