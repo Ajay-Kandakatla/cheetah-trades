@@ -30,6 +30,7 @@ import { HB_ALL_ON, HB_ALL_PARAM, HB_DIR_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, 
 import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } from './highBeta';
 import type { CmDojiSweepBoard, CmDojiSweepRead } from './dojiSweep';
 import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
+import { ON_OWN_PARAMS } from './overnightSession';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'doji_sweep';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -538,7 +539,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   overnight: {
     label: 'Overnight',
-    blurb: 'The overnight movers board, in Chart Maps where the rest of the scan lives. Move = the headline change (chipped PM/AH/O\u2044N only when it IS the extended-hours move); O\u2044N drift = the actual extended-session change vs the last regular close; $ Vol avg = 50-day average liquidity for context; O\u2044N $ Vol = the dollars that actually traded in tonight\u2019s extended session (top names only \u2014 that is the real overnight volume). RelVol \u22651.5\u00d7 = elevated interest, <1\u00d7 = thin tape. Same data as the Day Trading page\u2019s scan. Not advice.',
+    blurb: 'Two sub-tabs: \u{1F319} Overnight session (the default) and Gappers. \u{1F319} Overnight session reads the overnight session (Blue Ocean, the evening before each trading day) from Alpaca\u2019s overnight feed: every name re-priced through the session against its last regular close, SPY, QQQ, IWM and DIA first, then top gainers, top losers or most dollars traded overnight; leveraged and inverse ETFs are tagged and one tap hides them; \u2b50 marks your watchlist. The board\u2019s own lines say the floors, how often it reads and how late the overnight trades are. UNMEASURED \u2014 what moved overnight, not what to buy. Gappers: the overnight movers board, in Chart Maps where the rest of the scan lives. Move = the headline change (chipped PM/AH/O\u2044N only when it IS the extended-hours move); O\u2044N drift = the actual extended-session change vs the last regular close; $ Vol avg = 50-day average liquidity for context; O\u2044N $ Vol = the dollars that actually traded in tonight\u2019s extended session (top names only \u2014 that is the real overnight volume). RelVol \u22651.5\u00d7 = elevated interest, <1\u00d7 = thin tape. Same data as the Day Trading page\u2019s scan. Not advice.',
   },
   // Ajay 2026-09-05: "also move catalyst tab in to Chart maps ... for
   // catalyst same deal make sure you sort stocks by bigger gaps in to supply
@@ -1818,6 +1819,13 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
     for (const k of DJ_OWN_PARAMS) next.delete(k);
     const srt = next.get('sort');
     if (srt && srt.startsWith('doji_')) next.delete('sort');
+  }
+  // 🌙 Overnight's sub / order / hide-leveraged switch (`on_sub`, `on_sort`,
+  // `on_lev`, 2026-10-19) mean nothing anywhere else — the 🎢 border rule:
+  // dropped crossing into or out of the tab, kept on a click on the tab it is
+  // already on.
+  if (from !== t && (from === 'overnight' || t === 'overnight')) {
+    for (const k of ON_OWN_PARAMS) next.delete(k);
   }
   // 🧭 `iz_open` (the open macro row on the strip, 2026-10-15) lives on zones
   // only. Keyed on the DESTINATION, never on `from`: zones is DEFAULT_TAB, so a

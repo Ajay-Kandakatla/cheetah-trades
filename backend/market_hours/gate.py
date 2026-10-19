@@ -130,6 +130,12 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     "tape_burst_highbeta", "tape_burst_chartmaps",
     # 🎚️ tape_control (2026-10-16) — read off the live tape: a MARKET kind, silent on weekends and NYSE holidays.
     "tape_control",
+    # 🌙 overnight_movers (overnight/push.py, 2026-10-19) — computed from the
+    # overnight tape against closed regular-session bars, so a MARKET kind:
+    # silent on weekends and NYSE holidays (its crontab line is also wrapped in
+    # this gate). The kind ships OFF in push.subs.default_prefs; this is about
+    # WHEN it may push, not whether it is on.
+    "overnight_movers",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

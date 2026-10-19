@@ -109,6 +109,10 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // return on capital positive). Ships OFF, the only trading kind that does.
   // A filing changed, not a setup; NOT measured.
   capital_quality_upgrade: { emoji: '💎', label: 'Capital quality improved', group: 'trading' },
+  // 🌙 overnight/push.py (2026-10-19) — Ajay: "Can you do an over night scan for all the stocks they are all growing
+  // over night". One push per overnight session at the served slot on trading days: the index line + the top
+  // overnight gainers that pass the gate. Ships OFF (not in the owner keep-set — his call). UNMEASURED.
+  overnight_movers:    { emoji: '🌙', label: 'Overnight movers',        group: 'trading' },
 
   // ── breakouts (also arrive as source='breakout' rows) ─────────────────────
   volume_breakout:     { emoji: '🚀', label: 'Volume breakout',         group: 'breakout' },

@@ -30,6 +30,7 @@ import {
 } from './chartMaps';
 import { HB_OWN_PARAMS } from './highBeta';
 import { DJ_OWN_PARAMS } from './dojiSweep';
+import { ON_OWN_PARAMS } from './overnightSession';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, parseGgTf } from './gajjala';
 import { parseTf } from './supportLevels';
 
@@ -3093,5 +3094,55 @@ describe('tabSearch — doji_sweep drops its own params at the border (2026-10-1
     const next = sw('tab=fallen&sort=fallen_depth&depth=60', 'zones');
     expect(next.get('sort')).toBe('fallen_depth');
     expect(next.get('depth')).toBe('60');
+  });
+});
+
+describe('tabSearch — 🌙 overnight drops its own params at the border (2026-10-19)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+
+  it('the shared params are the ones lib/overnightSession owns', () => {
+    expect([...ON_OWN_PARAMS]).toEqual(['on_sub', 'on_sort', 'on_lev']);
+  });
+
+  it('leaving overnight for support drops on_sub, on_sort and on_lev; universe kept', () => {
+    const next = sw('tab=overnight&on_sub=session&on_sort=losers&on_lev=1&universe=full', 'support');
+    expect(next.get('tab')).toBe('support');
+    for (const k of ON_OWN_PARAMS) expect(next.has(k), k).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('entering overnight drops a stale on_* carried on another address', () => {
+    const next = sw('tab=zones&on_sub=gappers&on_sort=dollar&on_lev=1', 'overnight');
+    expect(next.get('tab')).toBe('overnight');
+    for (const k of ON_OWN_PARAMS) expect(next.has(k), k).toBe(false);
+  });
+
+  it('NEGATIVE: a click on overnight while ON overnight keeps on_sub / on_sort / on_lev', () => {
+    const next = sw('tab=overnight&on_sub=gappers&on_sort=dollar&on_lev=1', 'overnight');
+    expect(next.get('on_sub')).toBe('gappers');
+    expect(next.get('on_sort')).toBe('dollar');
+    expect(next.get('on_lev')).toBe('1');
+  });
+
+  it('NEGATIVE: crossing between two other tabs never touches on_* (only the overnight border drops them)', () => {
+    const next = sw('tab=zones&on_sort=dollar', 'vcp');
+    expect(next.get('on_sort')).toBe('dollar');
+  });
+
+  it('NEGATIVE: the gajjala `sub` / `sort` are not overnight params — the overnight border leaves a plain sort alone', () => {
+    const next = sw('tab=overnight&sort=room', 'zones');
+    expect(next.get('sort')).toBe('room');
+  });
+
+  it('TAB_META.overnight names both subs and types no floor, clock or $ figure', () => {
+    const b = TAB_META.overnight.blurb;
+    expect(TAB_META.overnight.label).toBe('Overnight');
+    expect(b).toContain('\u{1F319} Overnight session');
+    expect(b).toContain('Gappers');
+    expect(b).toContain('UNMEASURED');
+    expect(splitBlurb(b).head).toBe('Two sub-tabs: \u{1F319} Overnight session (the default) and Gappers.');
+    const session = b.slice(0, b.indexOf('Gappers:'));
+    expect(session).not.toMatch(/\$\d|\d\d:\d\d|\d+ minutes|\d+ min\b/);
+    expect(b).not.toMatch(new RegExp(`${['bou', 'nce'].join('')}|fake`, 'i'));
   });
 });

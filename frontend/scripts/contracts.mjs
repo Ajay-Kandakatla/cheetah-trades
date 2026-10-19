@@ -9542,9 +9542,9 @@ const CONTRACTS = [
 
       // 5. ✨ FIRST, his lines verbatim, "Not advice.", never the b-word / "fake".
       const ID = 'chart-maps-gajjala-counts-legend-2026-10-18';
+      // WIDENED 2026-10-19 — 🌙 overnight session took the first ✨ slot (BUILD_SPEC16 §3.10 (7)); this entry must be PRESENT (the newest feature is first).
       const arr = nf.indexOf('export const NEW_FEATURES');
-      const first = arr < 0 ? null : /\{ id: '([^']+)'/.exec(nf.slice(arr));
-      if (!first || first[1] !== ID) errs.push(`the first ✨ entry must be '${ID}' (found ${first ? first[1] : 'none'})`);
+      if (arr < 0 || !nf.slice(arr).includes(`{ id: '${ID}'`)) errs.push(`the ✨ entry '${ID}' is missing from NEW_FEATURES`);
       const at = nf.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const end = nf.indexOf('" },', at);
@@ -9558,6 +9558,203 @@ const CONTRACTS = [
       // 6. the tab doc names the served key.
       const doc = tryRead('../docs/gajjala/gajjala_tab_2026_10_13.md');
       if (doc && !doc.includes('counts_legend')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must name "counts_legend" (BUILD_SPEC15 A3)');
+      return errs;
+    },
+  },
+  {
+    name: '🌙 overnight session + overnight_movers (2026-10-19)',
+    file: 'src/components/OvernightSessionBoard.tsx',
+    // Ajay 2026-10-19: "Can you do an over night scan for all the stocks they are all growing over night", "Here are from
+    // stocktwits", "These are over night check qqq for example", "Massive is what we use probably we don't have the
+    // subscription" (BUILD_SPEC16 §3.10 + AMENDMENTS16 A1/A4). He ACTS on what this tab and its push say (real money): a
+    // floor typed on a surface drifts from the constant that drives the pass, a kind missing from a registry sends to zero
+    // devices in silence, a cron line wrapped in market_hours.gate skips Sunday night. The 🎚️ block is the template.
+    // Every backend file is hard-read: the four packages land in ONE commit. UNMEASURED.
+    checks: (board) => {
+      const errs = [];
+      const K = 'overnight_movers';
+      const ID = 'chart-maps-overnight-session-2026-10-19';
+      const HIS = [
+        'Can you do an over night scan for all the stocks they are all growing over night',
+        'Here are from stocktwits',
+        'These are over night check qqq for example',
+        "Massive is what we use probably we don't have the subscription",
+      ];
+      const BANNED = /boun|fak[e]/i;
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const pyNoComments = (x) => x.replace(/#[^\n]*/g, '');
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const pyNum = (src, name) => { const m = new RegExp(`^${name} = ([0-9_.]+)\\b`, 'm').exec(src); return m ? Number(m[1].replace(/_/g, '')) : null; };
+      const usd = (n) => (n >= 1e6 && n % 1e6 === 0 ? `$${n / 1e6}M` : n >= 1e3 && n % 1e3 === 0 ? `$${n / 1e3}K` : `$${Number(n.toFixed(2))}`);
+
+      // 1. the engines and their frozen names (WP-A / WP-B).
+      const scan = tryRead('../backend/overnight/scan.py', 'WP-A');
+      const sess = tryRead('../backend/overnight/session.py', 'WP-A');
+      const boardPy = tryRead('../backend/overnight/board.py', 'WP-A');
+      const push = tryRead('../backend/overnight/push.py', 'WP-B');
+      const floor = tryRead('../backend/trading/safety_floor.py', 'house floor');
+      for (const [src, file, re, word] of [
+        [scan, 'scan.py', /^FEED = "overnight"/m, 'FEED = "overnight"'],
+        [scan, 'scan.py', /^ALPACA_BATCH = 200\b/m, 'ALPACA_BATCH = 200'],
+        [scan, 'scan.py', /^UNIVERSE_MIN_DOLLAR_VOL = 1_000_000\b/m, 'UNIVERSE_MIN_DOLLAR_VOL = 1_000_000'],
+        [scan, 'scan.py', /^BOARD_MIN_ON_DOLLAR = 25_000\b/m, 'BOARD_MIN_ON_DOLLAR = 25_000'],
+        [scan, 'scan.py', /^REF_SYMBOLS = \("SPY", "QQQ", "IWM", "DIA"\)/m, 'REF_SYMBOLS = ("SPY", "QQQ", "IWM", "DIA")'],
+        [scan, 'scan.py', /^UNIVERSE_MIN_PRICE = MIN_SHARE_PRICE\b/m, 'UNIVERSE_MIN_PRICE = MIN_SHARE_PRICE (the house $ floor, by name)'],
+        [sess, 'session.py', /^SESSION_OPEN_ET = dtime\(20, 0\)/m, 'SESSION_OPEN_ET = dtime(20, 0)'],
+        [sess, 'session.py', /^SESSION_CLOSE_ET = dtime\(4, 0\)/m, 'SESSION_CLOSE_ET = dtime(4, 0)'],
+        [push, 'push.py', /^KIND = "overnight_movers"/m, 'KIND = "overnight_movers"'],
+        [push, 'push.py', /^SLOT_ET = "\d\d:\d\d"/m, 'SLOT_ET = "HH:MM"'],
+        [push, 'push.py', /^PUSH_TOP_N = \d+\b/m, 'PUSH_TOP_N = <int>'],
+        [push, 'push.py', /^PUSH_MIN_ON_DOLLAR = [0-9_]+\b/m, 'PUSH_MIN_ON_DOLLAR = <int>'],
+        [push, 'push.py', /^PUSH_MIN_PRICE = MIN_SHARE_PRICE\b/m, 'PUSH_MIN_PRICE = MIN_SHARE_PRICE (the house $ floor, by name)'],
+      ]) if (src && !re.test(src)) errs.push(`overnight/${file} must define ${word} (BUILD_SPEC16 §3.10 (1))`);
+      const minPx = pyNum(floor, 'MIN_SHARE_PRICE');
+      if (floor && minPx == null) errs.push('trading/safety_floor.py lost MIN_SHARE_PRICE = <number>');
+      const uniDv = pyNum(scan, 'UNIVERSE_MIN_DOLLAR_VOL'), boardDv = pyNum(scan, 'BOARD_MIN_ON_DOLLAR'), cadence = pyNum(scan, 'CADENCE_SEC');
+      const topN = pyNum(push, 'PUSH_TOP_N'), pushDv = pyNum(push, 'PUSH_MIN_ON_DOLLAR');
+      const slot = (/^SLOT_ET = "(\d\d:\d\d)"/m.exec(push) || [])[1] || null;
+      const hm = (name) => { const m = new RegExp(`^${name} = dtime\\((\\d+),\\s*(\\d+)\\)`, 'm').exec(sess); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : null; };
+      const open = hm('SESSION_OPEN_ET'), close = hm('SESSION_CLOSE_ET');
+
+      // 2. the crontab: two self-gated scan lines, one gated push line at SLOT_ET.
+      const cron = cronCommands(tryRead('../backend/crontab', 'WP-A'));
+      const scanLines = cron.filter((l) => /-m overnight\.scan\b/.test(l));
+      const wantScan = [['*/10', '20-23', '*', '*', '0-4'], ['*/10', '0-3', '*', '*', '1-5']];
+      if (scanLines.length !== 2) errs.push(`the crontab must carry exactly two "-m overnight.scan" lines (found ${scanLines.length}, BUILD_SPEC16 §3.5)`);
+      else for (let i = 0; i < 2; i++) {
+        const f = scanLines[i].trim().split(/\s+/).slice(0, 5);
+        if (f.join(' ') !== wantScan[i].join(' ')) errs.push(`overnight.scan line ${i + 1} must run "${wantScan[i].join(' ')}" (got "${f.join(' ')}")`);
+      }
+      for (const l of scanLines) if (/market_hours\.gate/.test(l)) errs.push('an overnight.scan line runs via market_hours.gate — the gate reads TODAY and Sunday 20:00 would skip (D6)');
+      for (const l of cron.filter((x) => /overnight/.test(x))) if (/curl|api:8000/.test(l)) errs.push(`an overnight crontab line calls the api (${l.trim()}) — a python module, never a curl`);
+      const step = scanLines.length ? Number((/^\*\/(\d+)\s/.exec(scanLines[0].trim()) || [])[1]) : null;
+      if (step && cadence != null && step * 60 !== cadence) errs.push(`scan.CADENCE_SEC (${cadence}) != the crontab */${step} step`);
+      const pushLines = cron.filter((l) => /market_hours\.gate overnight\.push\b/.test(l));
+      if (pushLines.length !== 1) errs.push(`the crontab must carry exactly one "market_hours.gate overnight.push" line (found ${pushLines.length})`);
+      else if (slot) {
+        const [mm, hh] = pushLines[0].trim().split(/\s+/);
+        if (`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}` !== slot) errs.push(`the overnight.push line runs at ${hh}:${mm} — push.SLOT_ET is ${slot}`);
+      }
+
+      // 3. every registry — ships OFF, NOT in the keep-set.
+      const subs = tryRead('../backend/push/subs.py', 'WP-B');
+      const dm = new RegExp(`["']${K}["']\\s*:\\s*(True|False)`).exec(subs);
+      if (subs && !dm) errs.push(`push/subs.py default_prefs must list "${K}" (a kind missing = zero devices)`);
+      else if (dm && dm[1] !== 'False') errs.push(`${K} must be False in push/subs.py default_prefs — it ships OFF (HIS CALL #1)`);
+      if (keepSet(subs).includes(K)) errs.push(`${K} must NOT be in push/subs.OWNER_KEEP_SET — he asked for a scan, not an alert (HIS CALL #1)`);
+      const gate = tryRead('../backend/market_hours/gate.py', 'WP-B');
+      if (gate && !(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes(K)) errs.push(`market_hours/gate.py must treat ${K} as a MARKET kind (silent on closed days)`);
+      const recent = tryRead('../backend/push/recent.py', 'WP-B');
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(recent) || [])[1] || '';
+      const iu = new RegExp(`["']${K}["']\\s*:\\s*([^,\\n]+)`).exec(pyNoComments(itemBlock));
+      if (recent && !iu) errs.push(`push/recent.ITEM_URL_BY_KIND must carry ${K} — every listed name is its own link on /alerts`);
+      else if (iu && iu[1].trim() !== '"/chart-maps?tab=support&symbol={sym}"') errs.push(`push/recent.ITEM_URL_BY_KIND["${K}"] must be "/chart-maps?tab=support&symbol={sym}" (got ${iu[1].trim()})`);
+      const status = tryRead('../backend/supply_demand/alert_status.py', 'WP-B');
+      const dpk = (/^DAILY_PASS_KINDS = \(([\s\S]*?)\)/m.exec(pyNoComments(status)) || [])[1] || '';
+      // A member is the literal or a module-level NAME bound to it (the TAPE_CONTROL_KIND precedent: `OVERNIGHT_KIND = "overnight_movers"`).
+      const dpkHas = new RegExp(`["']${K}["']`).test(dpk) || [...dpk.matchAll(/\b([A-Z][A-Z0-9_]*)\b/g)]
+        .some((m) => new RegExp(`^${m[1]} = ["']${K}["']`, 'm').test(status));
+      if (status && !dpkHas) errs.push(`supply_demand/alert_status.DAILY_PASS_KINDS must carry "${K}"`);
+      const kinds = tryRead('src/lib/alertKinds.ts', 'WP-B');
+      if (kinds && !new RegExp(`^\\s*${K}:\\s*\\{[^\\n]*group: 'trading'`, 'm').test(kinds)) errs.push(`alertKinds.ts must register ${K} in the 'trading' group — else the bell renders a raw id`);
+      const alerts = tryRead('src/pages/Alerts.tsx', 'WP-B');
+      const daily = (/const DAILY_PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      if (alerts && !new RegExp(`key: '${K}'`).test(daily)) errs.push(`Alerts.tsx DAILY_PASSES must carry '${K}' — the 🌙 daily strip`);
+      const chips = [...((/KIND_CHIPS: string\[\] = \[([^\]]*)\]/.exec(alerts) || [])[1] || '').matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]);
+      if (alerts && chips.indexOf(K) < 0) errs.push(`Alerts.tsx KIND_CHIPS must carry '${K}'`);
+      else if (alerts && chips.indexOf(K) !== chips.indexOf('tape_control') + 1) errs.push(`Alerts.tsx KIND_CHIPS must list '${K}' right after 'tape_control'`);
+      const prefs = tryRead('src/hooks/useNotificationPrefs.ts', 'WP-B');
+      if (prefs && !new RegExp(`\\b${K}\\?: boolean`).test(prefs)) errs.push(`NotificationPrefs (hooks/useNotificationPrefs.ts) must carry ${K}?: boolean`);
+      const notif = tryRead('src/pages/Notifications.tsx', 'WP-B');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      if (new RegExp(`${K}:\\s*true`).test(ess)) errs.push(`Essentials must NOT turn ${K} on — it is not in OWNER_KEEP_SET`);
+
+      // 4. the numbers on the two surfaces he reads == the constants.
+      const numErrs = (where, text, dollarsAllowed, needs) => {
+        const out = [];
+        for (const n of needs) if (n && !text.toLowerCase().includes(n.toLowerCase())) out.push(`${where} must say "${n}"`);
+        for (const m of text.matchAll(/\$(\d+(?:\.\d+)?)([KMB]?)(?!\d)/g)) {
+          const tok = m[0];
+          if (m[2] ? !dollarsAllowed.includes(tok) : (minPx == null || Number(m[1]) !== minPx)) out.push(`${where} says "${tok}" — no constant carries it`);
+        }
+        if (topN != null) for (const m of text.matchAll(/top (\d+)/gi)) if (Number(m[1]) !== topN) out.push(`${where} says "${m[0]}" — push.PUSH_TOP_N is ${topN}`);
+        if (step) for (const m of text.matchAll(/every (\d+) minutes/gi)) if (Number(m[1]) !== step) out.push(`${where} says "${m[0]}" — the crontab step is ${step}`);
+        if (slot) for (const m of text.matchAll(/(\d\d:\d\d) ET push/g)) if (m[1] !== slot) out.push(`${where} says "${m[0]}" — push.SLOT_ET is ${slot}`);
+        return out;
+      };
+      const px = minPx != null ? usd(minPx) : null;
+      const nm = notif.match(new RegExp(`key: '${K}'[\\s\\S]*?' \\},\\n`));
+      if (notif && !nm) errs.push(`${K} must be listed on the Notifications page — a kind the page cannot show cannot be switched on`);
+      else if (nm) {
+        const d = unesc(nm[0]);
+        const W = `the ${K} Notifications entry`;
+        for (const need of ['OFF', 'ships off', 'UNMEASURED', 'Not advice.', HIS[0]]) if (!d.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (BANNED.test(d)) errs.push(`${W} says the b-word or the sham word`);
+        errs.push(...numErrs(W, d, pushDv != null ? [usd(pushDv)] : [],
+          [px, pushDv != null ? usd(pushDv) : null, slot, topN != null ? `top ${topN}` : null]));
+      }
+
+      // 6. the ✨ entry — FIRST, his four lines verbatim, UNMEASURED, ends "Not advice.", the same numbers.
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (firstId !== ID) errs.push(`the first ✨ entry must be '${ID}' (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = unesc(arr.slice(at, nextAt < 0 ? undefined : nextAt));
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🌙 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=overnight&on_sub=session'")) errs.push(`${W} must route to '/chart-maps?tab=overnight&on_sub=session'`);
+        for (const h of HIS) if (!label.includes(h)) errs.push(`${W} must quote him verbatim: "${h}"`);
+        if (!label.includes('UNMEASURED')) errs.push(`${W} must say UNMEASURED`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (BANNED.test(label)) errs.push(`${W} says the b-word or the sham word`);
+        errs.push(...numErrs(W, label, [uniDv, boardDv].filter((n) => n != null).map(usd),
+          [px, uniDv != null ? usd(uniDv) : null, boardDv != null ? usd(boardDv) : null, slot,
+           topN != null ? `top ${topN}` : null, step ? `every ${step} minutes` : null, open && close ? `${open}–${close}` : null]));
+      }
+      // The spec's own engine `supply_demand.bounce_room` (SESSION_OPEN, push.window_reason §3.6) is an internal module
+      // name — internal identifiers keep the word (cheetah-ops); only that identifier is exempt, every other use fails.
+      for (const [src, file] of [[scan, 'scan.py'], [sess, 'session.py'], [boardPy, 'board.py'], [push, 'push.py']]) {
+        if (src && BANNED.test(pyNoComments(src).replace(/\bbounce_room\b/g, ''))) errs.push(`overnight/${file} says the b-word or the sham word (comments stripped)`);
+      }
+      if (!BANNED.test(pyNoComments('x = "a reversal bounce"').replace(/\bbounce_room\b/g, ''))) errs.push('self-test: a typed b-word in a string was not caught');
+
+      // 5. the board + lib type no floor, no clock, no dollar threshold; they print the served lines.
+      const lib = tryRead('src/lib/overnightSession.ts', 'WP-C');
+      const TYPED = ['$25', '$250', '$1M', '$2 ', '20:00', '04:00', '06:45', '15 min'];
+      const typedIn = (text) => TYPED.filter((t) => text.includes(t));
+      for (const [src, file] of [[board, 'OvernightSessionBoard.tsx'], [lib, 'lib/overnightSession.ts']]) {
+        for (const t of typedIn(src)) errs.push(`${file} types "${t}" — every floor, clock and $ figure is served by overnight/board.py`);
+      }
+      if (!typedIn(board + '\n{"$25K"}').length) errs.push('self-test: a typed "$25K" in the board was not caught');
+      for (const [re, word] of [[/session\??\.line/, 'session.line'], [/lines\??\.counts/, 'lines.counts'],
+                                [/lines\??\.price_rule/, 'lines.price_rule'], [/lines\??\.unmeasured/, 'lines.unmeasured']]) {
+        if (!re.test(board)) errs.push(`OvernightSessionBoard.tsx must print the served ${word}`);
+      }
+      // A1/A4: a trade-based price is "indicative" and "delayed", never "live" — the FE types no "live".
+      const tsNoComments = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      for (const [src, file] of [[board, 'OvernightSessionBoard.tsx'], [lib, 'lib/overnightSession.ts']]) {
+        if (/\blive\b/i.test(tsNoComments(src))) errs.push(`${file} says "live" — an overnight trade is indicative and delayed (AMENDMENTS16 A1/A4)`);
+      }
+      if (lib && !(/indicative/.test(lib) && /delayed/.test(lib))) errs.push('lib/overnightSession.ts srcWords must call a trade price "indicative" and "delayed" (AMENDMENTS16 A4)');
+      for (const f of ['src/lib/overnightSession.ts', 'src/hooks/useOvernightSession.ts', 'src/components/OvernightTab.tsx',
+                       'src/components/OvernightSessionBoard.tsx', 'src/styles/overnight.css']) {
+        const s = tryRead(f, 'WP-C');
+        if (s && BANNED.test(s)) errs.push(`${f} says the b-word or the sham word`);
+      }
+      if (!/import '\.\.\/styles\/overnight\.css'/.test(board)) errs.push("OvernightSessionBoard.tsx must import '../styles/overnight.css' (the per-component CSS precedent)");
+
+      // 8. the doc names the stored keys.
+      const DOC = '../docs/overnight/overnight_2026_10_19.md';
+      if (!exists(DOC)) errs.push('docs/overnight/overnight_2026_10_19.md is missing (WP-D)');
+      else {
+        const doc = read(DOC);
+        for (const need of ['overnight_reads', 'on_dollar', 'prior_pct', 'leveraged']) if (!doc.includes(need)) errs.push(`docs/overnight/overnight_2026_10_19.md must name "${need}"`);
+      }
       return errs;
     },
   },

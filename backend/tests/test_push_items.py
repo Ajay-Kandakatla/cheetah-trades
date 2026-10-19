@@ -373,7 +373,9 @@ def test_item_urls_match_each_kinds_single_push_url():
     assert R.item_url("gajjala_potential", "NVDA") == "/chart-maps?tab=gajjala&focus=NVDA"
     # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only): 13 → 14 — the Tape tab, back-linked to /alerts.
     assert R.item_url("tape_control", "NVDA") == "/sepa/NVDA?tab=tape&from=alerts"
-    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 14
+    # WIDENED 2026-10-19 — 🌙 overnight_movers ("Can you do an over night scan for all the stocks they are all growing over night"; ships OFF, owner-only): 14 → 15 — the Support tab on Chart Maps (the key_level_alert precedent).
+    assert R.item_url("overnight_movers", "NVDA") == "/chart-maps?tab=support&symbol=NVDA"
+    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 15
 
 
 # ---------------------------------------------------------------------------

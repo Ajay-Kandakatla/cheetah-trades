@@ -1254,3 +1254,16 @@
 1-56/5 4-20  *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run
 # 20:15 ET — float (shares_cache, 7-day) + 30-session halt-history backfill + 🎾 squeeze-history warm.
 15     20    *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly
+
+# ── 🌙 Overnight session read (overnight/scan.py, 2026-10-19) ─────────────────
+# Ajay 2026-10-19: "Can you do an over night scan for all the stocks they are all
+# growing over night". Blue Ocean session 20:00–04:00 ET, the evening before each
+# trade date. NOT wrapped in market_hours.gate — the gate reads TODAY and Sunday
+# 20:00 is a weekend; the module gates itself on the SESSION's trade date. A python
+# module, never a curl to the api. The image must carry overnight/ BEFORE the host
+# crontab names it.
+*/10   20-23 *    *    0-4  /usr/local/bin/python -m overnight.scan
+*/10   0-3   *    *    1-5  /usr/local/bin/python -m overnight.scan
+# 🌙 the one morning push (overnight/push.py SLOT_ET) — kind overnight_movers,
+# owner only, ships OFF (his call); the pass records why it was quiet on /alerts.
+45     6     *    *    1-5  /usr/local/bin/python -m market_hours.gate overnight.push

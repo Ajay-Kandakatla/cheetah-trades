@@ -215,6 +215,10 @@ const DAILY_PASSES: { key: string; label: string }[] = [
    * legitimately silent evening reads as silent-with-a-reason, not as a dead
    * cron. */
   { key: 'capital_quality_upgrade', label: '💎 Capital quality improved' },
+  /* 🌙 overnight/push.py (2026-10-19). Ajay: "Can you do an over night scan for
+   * all the stocks they are all growing over night". One pass per trading
+   * morning; its kind ships OFF (his call) — carried for the 💎 reason. */
+  { key: 'overnight_movers', label: '🌙 Overnight movers' },
 ];
 /* An older API sends no `schedule`; the page says how often, never WHEN — a
  * slot typed here would drift from the crontab the way the cap floor did. */
@@ -340,6 +344,13 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
      * per-pass count is gone one pass later — this one is counted from the
      * stored events (push.state = "shadow") of the session, and it stays. */
     case 'shadow_session':    return `🧬 shadow — ${n} would have pushed this session`;
+    /* 🌙 overnight_movers (2026-10-19): the push gate's skip counters, in
+     * words — no floor typed here (the figures live in overnight/push.py). */
+    case 'skipped_thin':        return `${n} skipped: thin overnight $ volume`;
+    case 'skipped_leveraged':   return `${n} skipped: leveraged / inverse ETF`;
+    case 'skipped_lev_unknown': return `${n} skipped: leverage unknown`;
+    case 'skipped_not_up':      return `${n} not up overnight`;
+    case 'skipped_price':       return `${n} skipped: under the share-price floor`;
     default: return null;
   }
 }
@@ -436,7 +447,9 @@ const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'sk
                    'stale_print', 'unknown_prev', 'unknown_room',
                    'first_pass', 'since_tracking', 'fresh', 'claimed_elsewhere',
                    'skipped_timing_unknown', 'fetch_failed', 'dropped_not_last_bar', 'shadow_mode', 'shadow',
-                   'shadow_session'];
+                   'shadow_session',
+                   /* 🌙 overnight_movers (2026-10-19) */
+                   'skipped_thin', 'skipped_leveraged', 'skipped_lev_unknown', 'skipped_not_up', 'skipped_price'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
  * chip says "push calls", and each row's delivery line says what landed. */
@@ -509,7 +522,7 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'tape_control', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'tape_control', 'overnight_movers', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;

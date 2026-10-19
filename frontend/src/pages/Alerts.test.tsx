@@ -741,8 +741,9 @@ describe('Alerts page — the once-a-day passes', () => {
     stubFetch({ rows: ROWS }, STATUS_LIVE);
     draw();
     await screen.findByText(/NVDA in demand/);
+    // WIDENED 2026-10-19 — 🌙 overnight_movers ("Can you do an over night scan for all the stocks they are all growing over night"; ships OFF): 4 → 5.
     const DAILY = ['earnings_reaction', 'board_arrival:bonde', 'board_arrival:growth',
-                   'capital_quality_upgrade'];
+                   'capital_quality_upgrade', 'overnight_movers'];
     for (const k of DAILY) {
       const strip = screen.getByTestId(`pass-${k}`);
       expect(within(strip).getByText('no pass recorded')).toBeInTheDocument();
@@ -2110,5 +2111,102 @@ describe('🎚️ tape_control row (2026-10-16)', () => {
     for (const a of links) expect(a.getAttribute('href')).toBe('/sepa/IREN?tab=tape&from=alerts');
     // NEGATIVE: never the raw kind id
     expect(within(r).queryByText('tape_control')).toBeNull();
+  });
+});
+
+/* 🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an over
+ * night scan for all the stocks they are all growing over night". One daily
+ * pass at the served slot; its kind ships OFF — the strip is here so a quiet
+ * morning still says why. The five skip counters print in words, no floor typed. */
+describe('Alerts page — the 🌙 overnight movers daily pass (2026-10-19)', () => {
+  const withOn = (pass: unknown) => ({ ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, overnight_movers: pass } });
+  const ON_PASS = {
+    as_of: '2026-09-05T06:45:03-04:00', date: '2026-09-05', cadence_sec: null,
+    schedule: '06:45 ET, trading days', reason: 'no name passed the gate',
+    counts: { candidates: 750, passed: 0, pushed: 0, no_target: 0, skipped_thin: 412, skipped_leveraged: 61,
+              skipped_lev_unknown: 3, skipped_not_up: 270, skipped_price: 4 },
+  };
+
+  it('renders the 🌙 strip with its schedule, stamp, reason and the five skip chips in words', async () => {
+    stubFetch({ rows: ROWS }, withOn(ON_PASS));
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    const strip = screen.getByTestId('pass-overnight_movers');
+    expect(within(strip).getByText('🌙 Overnight movers')).toBeInTheDocument();
+    expect(within(strip).getByText('· 06:45 ET, trading days')).toBeInTheDocument();
+    expect(within(strip).getByText('last pass 06:45 ET')).toBeInTheDocument();
+    expect(within(strip).getByTestId('daily-reason-overnight_movers')).toHaveTextContent('⚠ no name passed the gate');
+    expect(within(strip).getByText('candidates 750')).toBeInTheDocument();
+    for (const t of ['412 skipped: thin overnight $ volume', '61 skipped: leveraged / inverse ETF',
+                     '3 skipped: leverage unknown', '270 not up overnight', '4 skipped: under the share-price floor']) {
+      expect(within(strip).getByText(t)).toBeInTheDocument();
+    }
+    // NEGATIVE: no raw counter key ever reaches the page, and no floor is typed into a chip
+    expect(strip.textContent).not.toMatch(/skipped_|lev_unknown|not_up/);
+    expect(strip.textContent).not.toMatch(/\$2\b|\$250|250K|25K/);
+  });
+
+  it('NEGATIVE: a zero skip counter gets no chip, and the gate counters never join the S/D room aggregate', async () => {
+    const pass = { ...ON_PASS, counts: { ...ON_PASS.counts, skipped_price: 0, skipped_lev_unknown: 0 } };
+    stubFetch({ rows: ROWS }, withOn(pass));
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    const strip = screen.getByTestId('pass-overnight_movers');
+    expect(within(strip).queryByText(/under the share-price floor/)).not.toBeInTheDocument();
+    expect(within(strip).queryByText(/leverage unknown/)).not.toBeInTheDocument();
+    expect(JSON.stringify(skipsToday(withOn(pass) as never, '2026-09-05')))
+      .toBe(JSON.stringify(skipsToday(STATUS_LIVE as never, '2026-09-05')));
+  });
+
+  it('NEGATIVE: no pass recorded reads as such, never as zeros, with no invented slot', async () => {
+    stubFetch({ rows: ROWS }, STATUS_LIVE);
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    const strip = screen.getByTestId('pass-overnight_movers');
+    expect(within(strip).getByText('no pass recorded')).toBeInTheDocument();
+    expect(within(strip).getByText('· once a trading day')).toBeInTheDocument();
+    expect(within(strip).queryByText(/candidates/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the daily pass never joins the intraday cadence header', async () => {
+    stubFetch({ rows: ROWS }, withOn(ON_PASS));
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');
+  });
+
+  it('the kind chip sits right after 🎚️ tape_control and narrows the feed to kinds=overnight_movers', async () => {
+    expect(KIND_CHIPS.indexOf('overnight_movers')).toBe(KIND_CHIPS.indexOf('tape_control') + 1);
+    expect(KIND_CHIPS.filter((k) => k === 'overnight_movers')).toHaveLength(1);
+    const fn = stubFetch({ rows: [] }, STATUS_LIVE);
+    draw();
+    await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: '🌙 Overnight movers' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('overnight_movers'));
+  });
+
+  it('a total-0 overnight_movers row lists every name, each linked to its Support tab', async () => {
+    const a = 'AAOI +6.4% · $31.20 · $1.4M overnight · prior session -3.1% · q';
+    const b = 'VICR +4.0% · $88.10 · $620K overnight · prior session -1.0% · delayed indicative trade';
+    const row = {
+      _id: 'on1', ts: T('2026-09-05T10:45:00Z'), ts_iso: '2026-09-05T10:45:00+00:00',
+      kind: 'overnight_movers', ticker: null, tickers: ['AAOI', 'VICR'], source: 'push', sent: 0, failed: 0, total: 0,
+      title: '🌙 Overnight movers — AAOI +6.4%, VICR +4.0%', url: '/chart-maps?tab=overnight&on_sub=session',
+      body: `SPY +0.12% · QQQ +0.25% · IWM -0.10% · DIA — · vs Fri 09-04 close · read Sat 3:50 ET\n${a}\n${b}\nUNMEASURED — what moved overnight, not what to buy. Not advice.`,
+      items: [{ symbol: 'AAOI', text: a, url: '/chart-maps?tab=support&symbol=AAOI' },
+              { symbol: 'VICR', text: b, url: '/chart-maps?tab=support&symbol=VICR' }],
+      items_not_stored: 0,
+    };
+    stubFetch({ rows: [row] }, STATUS_LIVE);
+    draw();
+    const r = (await screen.findAllByTestId('alert-row'))[0];
+    expect(within(r).getByText('🌙 Overnight movers')).toBeInTheDocument();
+    for (const sym of ['AAOI', 'VICR']) {
+      const links = within(r).getAllByRole('link', { name: sym });
+      expect(links.length).toBeGreaterThanOrEqual(1);
+      for (const l of links) expect(l.getAttribute('href')).toContain(`/chart-maps?tab=support&symbol=${sym}`);
+    }
+    // NEGATIVE: never the raw kind id
+    expect(within(r).queryByText('overnight_movers')).toBeNull();
   });
 });

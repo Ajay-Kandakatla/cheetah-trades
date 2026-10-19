@@ -90,8 +90,14 @@ ZONE_EDGE_KIND = "zone_edge"
 # them: it runs once, after the evening metrics warm. It is the one daily pass
 # whose kind ships OFF — the page must still carry it, because "why was my phone
 # quiet" is exactly the question a pass he has just switched on will raise.
+# 🌙 overnight_movers (overnight/push.py, 2026-10-19) joined them: one pass at
+# overnight.push.SLOT_ET on the trade date. Its kind ships OFF (HIS CALL #1) —
+# carried anyway, for the capital_quality reason. Typed, not imported: this file
+# stays a module-level leaf (test_overnight_movers_kind pins it equal to
+# overnight.push.KIND).
+OVERNIGHT_KIND = "overnight_movers"
 DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:growth",
-                    "capital_quality_upgrade")
+                    "capital_quality_upgrade", OVERNIGHT_KIND)
 # 🔑 key_level_alert (supply_demand/key_level_alerts.py, 2026-09-25) rides the
 # zone_edge minute — no crontab line of its own — and records its own pass doc.
 # Its kind ships OFF; the page still carries it for the capital_quality reason.
@@ -374,6 +380,11 @@ def schedule_map() -> dict:
         out["capital_quality_upgrade"] = "%s ET, trading days" % QA.SLOT_ET
     except Exception as exc:                      # pragma: no cover - import shim
         log.warning("alert_status: quality_alerts slot unavailable: %s", exc)
+    try:
+        from overnight import push as OP         # lazy: this module stays a leaf
+        out[OVERNIGHT_KIND] = "%s ET, trading days" % OP.SLOT_ET
+    except Exception as exc:                      # pragma: no cover - import shim
+        log.warning("alert_status: overnight push slot unavailable: %s", exc)
     return out
 
 
@@ -638,7 +649,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials",

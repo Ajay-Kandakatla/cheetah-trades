@@ -1,0 +1,98 @@
+/* 🌙 Chart Maps ▸ Overnight — the sub strip and the overnight session board
+   (2026-10-19). The sub strip reuses the house cat-tabs / cat-tab rules; only
+   what is new to this tab lives here. Prefix ons-. */
+
+.ons-tab { display: flex; flex-direction: column; gap: 0.5rem; }
+.ons-subs { flex-wrap: wrap; }
+
+.ons-board { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+
+.ons-line {
+  font-size: 0.82rem; line-height: 1.4; padding: 0.3rem 0.6rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+  background: var(--bg-surface, transparent);
+}
+.ons-session { font-weight: 600; }
+.ons-stale {
+  border-color: var(--gold-hairline, rgba(217, 119, 6, 0.45));
+  background: var(--gold-faint, rgba(217, 119, 6, 0.12));
+  color: var(--warn, #b45309);
+}
+.ons-old { font-style: italic; }
+.ons-error { border-color: rgba(220, 38, 38, 0.4); color: var(--down, #dc2626); }
+.ons-empty { text-align: center; padding: 0.8rem 0.6rem; }
+.ons-muted { color: var(--ink-subtle, #94a3b8); font-size: 0.78rem; }
+.ons-counts { font-size: 0.78rem; }
+
+.ons-refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.4rem; }
+.ons-ref {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem;
+  padding: 0.4rem 0.6rem; border-radius: 6px; cursor: pointer; text-align: left;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
+  background: var(--bg-surface, transparent); color: inherit; font: inherit;
+}
+.ons-ref-sym { font-weight: 700; font-size: 0.9rem; }
+.ons-ref-pct { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.ons-ref-px { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+.ons-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.ons-sorts { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.ons-btn {
+  font: inherit; font-size: 0.8rem; padding: 0.25rem 0.6rem; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.18));
+  background: transparent; color: inherit;
+}
+.ons-btn.is-active {
+  border-color: var(--gold, #c9a227);
+  background: var(--gold-faint, rgba(184, 147, 90, 0.16));
+  font-weight: 600;
+}
+.ons-hidden-n { font-weight: 400; }
+
+.ons-up { color: var(--up, #16a34a); }
+.ons-down { color: var(--down, #dc2626); }
+
+.ons-src {
+  display: inline-block; min-width: 1.1em; text-align: center;
+  font-size: 0.68rem; font-weight: 700; line-height: 1.2; padding: 0 0.25rem; border-radius: 4px;
+  vertical-align: 1px;
+}
+.ons-src-q { background: rgba(59, 130, 246, 0.14); color: var(--info, #2563eb); }
+.ons-src-t { background: rgba(217, 119, 6, 0.14); color: var(--warn, #b45309); }
+
+.ons-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.ons-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; min-width: 760px; }
+.ons-table th {
+  text-align: left; font-weight: 600; font-size: 0.74rem; white-space: nowrap;
+  padding: 0.3rem 0.45rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.18));
+  color: var(--ink-subtle, #64748b);
+}
+.ons-table td {
+  padding: 0.3rem 0.45rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.08));
+  vertical-align: top;
+}
+.ons-row { cursor: pointer; }
+.ons-row:hover, .ons-row:focus { background: var(--gold-faint, rgba(184, 147, 90, 0.08)); outline: none; }
+.ons-star { width: 1.4rem; text-align: center; }
+.ons-sym { min-width: 9rem; }
+.ons-sym-t { font-weight: 700; }
+.ons-name {
+  display: block; font-size: 0.72rem; color: var(--ink-subtle, #94a3b8);
+  max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ons-lev-chip {
+  display: inline-block; margin-left: 0.35rem; padding: 0 0.3rem; border-radius: 4px;
+  font-size: 0.68rem; font-weight: 600;
+  background: rgba(168, 85, 247, 0.14); color: var(--accent, #7c3aed);
+}
+.ons-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ons-sub { display: block; font-size: 0.7rem; color: var(--ink-subtle, #94a3b8); }
+.ons-time, .ons-srcw { white-space: nowrap; font-size: 0.76rem; }
+
+.ons-foot { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.76rem; color: var(--ink-subtle, #64748b); }
+.ons-foot p { margin: 0; }
+.ons-unmeasured { font-weight: 600; }
+
+@media (max-width: 640px) {
+  .ons-refs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

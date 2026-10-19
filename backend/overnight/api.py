@@ -1,10 +1,12 @@
 """FastAPI handlers for the overnight tracker."""
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Query
 
+from . import board
 from . import movers as mv
 from daytrading.api import DEFAULT_WATCHLIST as DAY_WATCHLIST
 
@@ -96,3 +98,12 @@ async def overnight_symbol(symbol: str):
     if r is None:
         return {"symbol": symbol.upper(), "error": "no data"}
     return r
+
+
+@router.get("/overnight/session")
+async def overnight_session(sort: Optional[str] = Query(None), hide_lev: bool = Query(False)):
+    """🌙 The overnight-session read (BUILD_SPEC16 §3.4): the newest stored
+    `overnight_reads` doc, Mongo only, in a thread (the async-route freeze of
+    2026-10-05). An unknown `sort` falls back to the default, echoed in
+    `read.sort`. UNMEASURED. Not advice."""
+    return await asyncio.to_thread(board.board_payload, sort=sort, hide_lev=hide_lev)

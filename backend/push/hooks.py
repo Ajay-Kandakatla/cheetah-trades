@@ -266,3 +266,16 @@ def notify_gajjala_potential(*, owner: str, payload: dict) -> dict:
     setup) — the tracker doc's claim is the dedupe. UNMEASURED — every body ends
     "a potential, not an entry; GG enters on the reclaim of the highs"."""
     return sender.send_to_user(owner, payload, kind="gajjala_potential")
+
+
+def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
+    """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
+    over night scan for all the stocks they are all growing over night". Owner-
+    scoped (send_to_user) under its own pref kind, so the closed-day drop, quiet
+    hours and the /notifications toggle all apply at the sender. The kind SHIPS
+    OFF (not in OWNER_KEEP_SET — HIS CALL #1): until he switches it on the send
+    targets zero devices and push_history keeps a total-0 row with every name.
+    overnight.push.run_pass calls it once per session (the trade-date claim is
+    the dedupe). UNMEASURED — every body ends "what moved overnight, not what to
+    buy. Not advice." """
+    return sender.send_to_user(owner, payload, kind="overnight_movers")

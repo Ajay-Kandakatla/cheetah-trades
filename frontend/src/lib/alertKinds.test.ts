@@ -193,6 +193,25 @@ describe('the 🧠 gajjala_potential kind (2026-10-15)', () => {
   });
 });
 
+/* 🌙 2026-10-19 — overnight_movers. Ajay: "Can you do an over night scan for all
+   the stocks they are all growing over night". Ships OFF (his call). */
+describe('the 🌙 overnight_movers kind (2026-10-19)', () => {
+  it('labels 🌙 overnight_movers in the trading group', () => {
+    expect(ALERT_KINDS.overnight_movers).toEqual({ emoji: '🌙', label: 'Overnight movers', group: 'trading' });
+    expect(kindLabel('overnight_movers')).toBe('🌙 Overnight movers');
+    expect(kindText('overnight_movers')).toBe('Overnight movers');
+    expect(kindEmoji('overnight_movers')).toBe('🌙');
+  });
+
+  it('NEGATIVE: not a zone or breakout kind; never the raw id; no b-word, sham or buy word', () => {
+    expect(ZONE_KINDS).not.toContain('overnight_movers');
+    expect(BREAKOUT_KINDS).not.toContain('overnight_movers');
+    expect(kindLabel('overnight_movers')).not.toContain('overnight_movers');
+    const l = kindLabel('overnight_movers').toLowerCase();
+    for (const bad of ['bounce', 'fake', 'buy', 'signal', 'gainers to']) expect(l).not.toContain(bad);
+  });
+});
+
 describe('ET clock', () => {
   it('formats a UTC epoch in ET and says so', () => {
     // 14:42 UTC in September = 10:42 EDT.

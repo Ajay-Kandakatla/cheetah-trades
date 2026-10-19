@@ -182,6 +182,20 @@ export const CATEGORIES: CategoryDef[] = [
       + 'NOT READ: a poll that cannot read the tape (no prints, a provider failure, a pull cut off at the page cap, the poll’s time budget) never rings and never re-arms. '
       + 'Every 5 minutes, 09:32–16:00 ET on trading days, silent on closed days; every ring listed on /alerts with its ticker linked to its tape. '
       + 'UNMEASURED — the Tape verdict’s forward ledger measures the five-check verdict, not this check alone. Not advice.' },
+  /* 🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
+     over night scan for all the stocks they are all growing over night". SHIPS
+     OFF — False in backend push/subs.default_prefs and NOT in OWNER_KEEP_SET
+     (BUILD_SPEC16 D8, AMENDMENTS16 A2 — his call), so the Essentials preset
+     does not carry it. The figures ($2 = trading.safety_floor.MIN_SHARE_PRICE,
+     $250K = PUSH_MIN_ON_DOLLAR, top 5 = PUSH_TOP_N, 06:45 = SLOT_ET, 9:30 =
+     daytrading.data.ET_RTH_OPEN, 04:00 = overnight.session.SESSION_CLOSE_ET) are
+     pinned to those constants by the contracts.mjs 🌙 block. UNMEASURED. */
+  { key: 'overnight_movers', label: 'Overnight movers', emoji: '🌙', group: 'trading',
+    detail: 'OFF — switch it on here. You asked for the scan (\u201CCan you do an over night scan for all the stocks they are all growing over night\u201D), not an alert, so it ships off until you say on. '
+      + 'WHAT FIRES: once per overnight session, at 06:45 ET on trading days — never 20:00–06:44, never after the 9:30 open — the index line (SPY, QQQ, IWM, DIA against the last regular close) and the top 5 overnight gainers that pass: price at least $2, at least $250K traded overnight, not a leveraged or inverse ETF (a name whose leverage could not be read is left out too). '
+      + 'No name passes \u2192 no push; /alerts says why. Every name it lists is linked on /alerts. '
+      + 'It reports the session that ended at 04:00 ET — its last stored read, timed in the push. '
+      + 'UNMEASURED — what moved overnight, not what to buy. Not advice.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20

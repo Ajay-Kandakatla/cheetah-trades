@@ -176,7 +176,9 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                                 "tape_burst_highbeta", "tape_burst_chartmaps",
                                 "tape_control",   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — FOURTEEN: rides trade-flash-watch, its own pass doc
                                 "earnings_reaction", "board_arrival:bonde",
-                                "board_arrival:growth", "capital_quality_upgrade"}
+                                "board_arrival:growth", "capital_quality_upgrade",
+                                # WIDENED 2026-10-19 (BUILD_SPEC16 WP-B — overnight_movers ships OFF) — FIFTEEN: a daily pass at 06:45 ET
+                                "overnight_movers"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
     ze = p["passes"]["zone_edge"]
     assert ze["as_of"] == NOW.isoformat() and ze["date"] == "2026-09-03"

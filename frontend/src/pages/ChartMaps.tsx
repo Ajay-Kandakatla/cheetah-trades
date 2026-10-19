@@ -69,7 +69,7 @@ import GrowthArrivalsStrip from '../components/GrowthArrivalsStrip';
 import { GROWTH_TAB } from '../lib/growthArrivals';
 import GntBoard from '../components/GntBoard';
 import BondeBoard from '../components/BondeBoard';
-import { OvernightGappers } from '../components/OvernightGappers';
+import OvernightTab from '../components/OvernightTab';
 import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
 import EmaFramesBoard from '../components/EmaFramesBoard';
@@ -1612,8 +1612,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * this is where he starts the day (Ajay 2026-09-01: "I think we need a
          * page in Chart Maps to show over night volume or move this page
          * there"). Same component, same endpoint — one implementation. Picking
-         * a row hands the symbol to the Support tab, same as Session. */
-        <OvernightGappers profile="aggressive" onPick={(sym) => {
+         * a row hands the symbol to the Support tab, same as Session.
+         * 2026-10-19 (BUILD_SPEC16 D1): two subs — 🌙 Overnight session (the
+         * Blue Ocean read, default) and Gappers (that same component,
+         * unchanged); one setter for both. */
+        <OvernightTab onPick={(sym) => {
           const next = new URLSearchParams(params);
           next.set('tab', 'support');
           next.set('symbol', sym);

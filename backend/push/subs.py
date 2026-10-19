@@ -634,6 +634,17 @@ def default_prefs() -> dict:
         # 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16): owner-only
         # (send_to_user targets him alone); it must exist here or zero devices / no toggle.
         "tape_control": False,
+        # 🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do
+        # an over night scan for all the stocks they are all growing over
+        # night". He asked for a SCAN, not an alert, so it SHIPS OFF — False
+        # here AND deliberately NOT in OWNER_KEEP_SET (BUILD_SPEC16 D8,
+        # AMENDMENTS16 A2 — HIS CALL #1; the capital_quality_upgrade
+        # precedent). He switches it on at /notifications. It must still be
+        # here: a kind missing from default_prefs targets ZERO devices and
+        # renders no toggle. One push per overnight session at 06:45 ET on
+        # trading days (overnight.push.SLOT_ET), owner-only (send_to_user
+        # targets him alone). A MARKET kind (market_hours.gate). UNMEASURED.
+        "overnight_movers": False,
         "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

@@ -984,6 +984,55 @@ only: scans, bands, the ledger and the 📐 page still read closed bars (the liv
   `src/pages/ChartMapsCardLive.test.tsx`, `src/components/PatternChart.cardLive.test.tsx`.
 - **HIS CALLS**: `docs/chart_maps/live_card_2026_10_16.md` (Q1–Q14 + the builders' a–d).
 
+### Chart Maps — 🌙 Overnight session read (Blue Ocean) — overnight/scan.py (2026-10-19)
+Every stock and ETF re-priced through the overnight session (Ajay: *"Can you do an over night scan for all the stocks
+they are all growing over night"*, his StockTwits screenshot, *"These are over night check qqq for example"*, *"Massive
+is what we use probably we don't have the subscription"*). **UNMEASURED** — what moved overnight, never what to buy; no
+edge claimed. Home: the existing Chart Maps tab `overnight` gets two subs, **🌙 Overnight session** (default, `on_sub`)
+and **Gappers** (unchanged); own params `on_sub` / `on_sort` / `on_lev`, dropped crossing the tab border.
+- **Clock** (`overnight/session.py`, pure): `SESSION_OPEN_ET` 20:00 → `SESSION_CLOSE_ET` 04:00 ET, the evening before
+  each trade date (Alpaca 24/5 doc). `session_for(now)` → `{open, trade_date, base_date, opens_at, closes_at,
+  next_open, reason}`; open only when the ONE calendar (`market_hours.gate.closed_reason` on an aware ET noon of the trade
+  date) says the trade date is a market day; `base_date = reaction.prev_market_day(trade_date)`.
+- **Base**: the last regular close from `sepa.prices.market_snapshot_with_meta()`, **pinned once per session** at the
+  first pass (`overnight_base`), refused after `BASE_PIN_LATEST_ET` 03:30 (snapshot reset) or when SPY carries no close.
+  Prior-session % = `close / prev_day_close`, never `todaysChangePerc` (carries after-hours, measured); Alpaca's
+  `dailyBar` / `prevDailyBar` are overnight bars and never the base.
+- **Now** (AMENDMENTS16 A1): Alpaca `feed=overnight` snapshots in batches of `ALPACA_BATCH` 200. The live quote mid
+  first — quote time ≥ the session open, age ≤ `QUOTE_FRESH_SEC` 300 (MINE), 0 < bid < ask, spread / mid ≤
+  `QUOTE_SPREAD_MAX` 0.015 (MINE) → `src "q"`; else the delayed indicative trade if it printed this session → `src
+  "t"` (~15 min late, measured 900–1,044 s; served `price_age_sec`, the pass median `trade_age_median_sec`); else
+  dropped `no_price`. Wire symbols `symbols.for_massive` (BRK.B); errors through `broker_alpaca._scrub`.
+- **Floors**: universe close ≥ `MIN_SHARE_PRICE` ($2, house) on ≥ `UNIVERSE_MIN_DOLLAR_VOL` $1M (MINE); listed rows ≥
+  `BOARD_MIN_ON_DOLLAR` $25K overnight (MINE), thinner counted; `REF_SYMBOLS` SPY QQQ IWM DIA always served first.
+- **Leverage** (`scan.fund_flags`, served `leveraged` bool|None + `lev_label`): parsed from the fund's own name in the
+  Massive reference list (`levered_etf.fetch_reference`, its `FUND_TYPES` / `FACTOR_RE` / `SHORT_WORDS` /
+  `MIN_FACTOR_EXCLUSIVE` by name); a CS is never classified; an incomplete list → None on every row. The FE types no
+  rule; "Hide leveraged ETFs" (`on_lev=1`) drops True only.
+- **Collections**: `overnight_base` (`_id` trade date), `overnight_reads` (`_id` `{td}T{HHMM}`, ordered by `as_of_ts`,
+  never `_id`; stored only when `counts.priced > 0`; `KEEP_SESSIONS` 2), `overnight_pass` (`_id "latest"`, every pass
+  that ran), `overnight_push` (the push claim). Row keys include `pct`, `on_dollar`, `prior_pct`, `src`,
+  `price_age_sec`, `leveraged`, `lev_label`.
+- **Route**: `GET /overnight/session?sort=&hide_lev=` (`overnight/api.py` → `asyncio.to_thread(board.board_payload)`),
+  Mongo only — never Alpaca, Massive or `scan.read_once`. Keys `session`, `read`, `last_pass`, `sorts`, `lines`,
+  `refresh_sec`, `disclaimer`; every sentence a `board.py` constant the FE prints verbatim
+  (`components/OvernightSessionBoard.tsx`, `lib/overnightSession.ts`, `hooks/useOvernightSession.ts`); ⭐ from
+  `useWatchlist`.
+- **Cron**: two `python -m overnight.scan` lines (`*/10 20-23 * * 0-4`, `*/10 0-3 * * 1-5`), NOT wrapped in
+  `market_hours.gate` (it reads TODAY; Sunday 20:00 would skip) — the module self-gates on the session's trade date; one
+  `market_hours.gate overnight.push` line at 06:45. Host-mounted: a deploy does NOT install them (§6; the host install
+  is his step).
+- **Push** `overnight_movers` (`overnight/push.py`), owner-only, one per session at `SLOT_ET` 06:45 ET, never after the
+  9:30 open; top `PUSH_TOP_N` 5 gainers with price ≥ $2, ≥ `PUSH_MIN_ON_DOLLAR` $250K overnight (MINE), `leveraged is
+  False` (unknown fails closed) + the index line. **Ships OFF** (`default_prefs` False, NOT in `OWNER_KEEP_SET`) — he
+  asked for a scan; it still runs, logs its would-be push on /alerts and records why-quiet (`DAILY_PASS_KINDS`).
+- **Contracts**: `scripts/contracts.mjs` "🌙 overnight session + overnight_movers (2026-10-19)". **Tests**:
+  `backend/tests/test_overnight_session.py`, `test_overnight_scan.py`, `test_overnight_board.py`,
+  `test_overnight_cron.py`, `test_overnight_push.py`, `test_overnight_movers_kind.py`; FE
+  `src/lib/overnightSession.test.ts`, `src/hooks/useOvernightSession.test.tsx`, `src/components/OvernightTab.test.tsx`,
+  `src/components/OvernightSessionBoard.test.tsx`, `src/pages/Notifications.overnight.test.tsx`.
+- **HIS CALLS** 1–17 + OPEN O1–O7: `docs/overnight/overnight_2026_10_19.md`.
+
 ---
 
 ## 4. Live Data Layer
@@ -1155,6 +1204,12 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, `gajjala_setup` A+ entry push (LIVE since 2026-10-16) + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm + 🏁 track-record grade (2026-10-16, last step; same line, no new crontab entry). |
 | `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`), and 🎚️ `tape_control` (2026-10-16). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab", § 3 "Tape — 🎚️ buyers in control on pinned names". |
+| `*/10 20-23 * * 0-4` | `/usr/local/bin/python -m overnight.scan` | 🌙 Overnight session read, evening half (Sun–Thu 20:00–23:50 ET, 2026-10-19). NOT wrapped in `market_hours.gate` (it reads TODAY; Sunday 20:00 is a weekend) — the module self-gates on the SESSION's trade date (holiday eves closed, zero HTTP). Pins the Massive base once, re-prices the universe from Alpaca `feed=overnight`, stores `overnight_reads`. § 3 "Chart Maps — 🌙 Overnight session read". |
+| `*/10 0-3 * * 1-5` | `/usr/local/bin/python -m overnight.scan` | 🌙 Overnight session read, after-midnight half (Mon–Fri 00:00–03:50 ET). Same module, same self-gate. |
+| `45 6 * * 1-5` | `/usr/local/bin/python -m market_hours.gate overnight.push` | 🌙 `overnight_movers` 06:45 ET push (`overnight/push.py` `SLOT_ET`), owner-only, **ships OFF** (his call) — the pass still records why it was quiet on /alerts. |
+
+The three 🌙 lines are host-mounted: a deploy does NOT install them. Deploy `api frontend cron` first, then the host
+install block in `docs/overnight/overnight_2026_10_19.md` (Ajay's step).
 
 **Two operational gotchas (load-bearing):**
 1. The crontab MUST use the absolute python path (`/usr/local/bin/python`).

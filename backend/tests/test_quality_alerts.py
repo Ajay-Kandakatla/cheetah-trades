@@ -139,7 +139,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
     assert off == {QA.KIND, "key_level_alert", "med_catalyst", "gajjala_setup",
                    "gajjala_potential",
                    "tape_burst_highbeta", "tape_burst_chartmaps",
-                   "tape_control"}, \
+                   "tape_control",
+                   # WIDENED 2026-10-19 (BUILD_SPEC16 WP-B — overnight_movers ships OFF)
+                   "overnight_movers"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 

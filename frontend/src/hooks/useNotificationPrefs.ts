@@ -99,6 +99,11 @@ export type NotificationPrefs = {
      owner keep-set; False in default_prefs for anyone else. LIVE (never
      shadow). UNMEASURED. */
   tape_control?: boolean;
+  /* 🌙 The one morning push off the overnight session read (overnight/push.py,
+     2026-10-19: "Can you do an over night scan for all the stocks they are all
+     growing over night"). Ships OFF — False in default_prefs and NOT in the
+     owner keep-set (he asked for a scan, not an alert; his call). UNMEASURED. */
+  overnight_movers?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;
