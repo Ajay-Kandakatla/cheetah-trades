@@ -124,7 +124,7 @@ DAILY_PERIOD = "2y"
 
 CLASSES = ("stop_clamped", "shakeout", "band_failed", "market_down",
            "chased", "no_follow_through", "unclassified")
-STRATEGIES = ("zone_edge", "minervini", "catalyst", "manual")
+STRATEGIES = ("zone_edge", "minervini", "catalyst", "gajjala", "manual")
 STATUSES = ("preliminary", "final", "incomplete")
 
 CITE = ("autopsy: Supply & Demand OWNER RULES, no book "
@@ -626,6 +626,14 @@ def _tagged_det(tag: str, entry: dict, state: Optional[dict]) -> Optional[dict]:
         return {"strategy": "catalyst", "side": reason.get("side") or "demand",
                 "kind": "demand", "band": band, "tier": None, "first_seen": None,
                 "stop_requested_pct": _f(reason.get("stop_pct"))}
+    if tag == "gajjala":
+        # 🚩 Gajjala paper lane (2026-10-20): no band, no requested stop percent
+        # (the stop is the alert's own), so the floor / chase rules never fire;
+        # the rest of the table classifies the trade. first_seen = the alert's
+        # "HH:MM" ET (the lane passes it as reason.alert_at).
+        return {"strategy": "gajjala", "side": None, "kind": None, "band": None,
+                "tier": None, "first_seen": reason.get("alert_at"),
+                "stop_requested_pct": None}
     if tag == "minervini":
         trig = entry.get("trigger") if isinstance(entry.get("trigger"), dict) else {}
         pivot = trig.get("pivot") if trig.get("pivot") is not None else reason.get("pivot")

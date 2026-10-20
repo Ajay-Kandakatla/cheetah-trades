@@ -76,6 +76,19 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | GET | `/sepa/alerts/recent` | `?since=<unix>` | `{fires: AlertFire[]}` | reads `price_alert_fires` since ts | `sepa.price_alerts.recent_fires` |
 | GET | `/indian-stocks` | — | `{stocks[], indices[], fetchedAt}` | populates `indian_market._quote_cache` | `indian_market.fetch_indian_market` |
 | GET | `/indian-news` | `?symbol=` (optional) | `{symbol, items[], fetchedAt}` | populates `news._cache` under `__IN_*__` key | `news.indian_news` |
+| GET | `/trading/gajjala` | — (admin) | `{date, armed, mode, as_of, status, today[], recent[], journal}` — today's pushed 🚩 A+ alerts LEFT JOIN the lane docs, every row with a served `fate_text` | reads `gajjala_lane`, `gajjala_alerts`, the broker's positions (open rows' last) | `trading.gajjala_entry.tab_payload` |
+| POST | `/trading/gajjala/close/{symbol}` | path (admin, armed) | `{ok, state, symbol, errors[]}`; 400 `engine not armed` / `no open 🚩 Gajjala position on XYZ` | cancels the lane's order or flattens its position through `exit_engine.flatten` | `trading.gajjala_entry.close_now` |
+
+**🚩 Auto-Pilot Gajjala lane (2026-10-20, `backend/trading/gajjala_entry.py`, `docs/trading_gajjala_lane.md`).**
+Ajay: "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please." Paper-only
+lane, tick step (n): today's pushed live 🚩 A+ ENTRY claims (`ledger.alert_of`, line live) are entered the way the 🏁
+Track record fills — a day limit `GAJJALA_CHASE_PCT` over the last trade once the tape trades the trigger, the alert's
+stop, entry + 1R target, `GAJJALA_RISK_PCT` of equity at risk, 3 a day / 3 open, cancelled unfilled after 180 s or at
+the cut-off (regular close − 30 min), flat at regular close − 5 min. Buys only through `entries.enter` (new
+keyword-only lane plan: `target_price`, `sizing`, `floors`, `tif`, `order_intent`); the house safety floors apply
+while `gajjala_floors` is ON (default). Stock prices go to the broker on Alpaca's grid (4 decimals under $1.00).
+POST `/trading/config` takes `gajjala_entry`, `gajjala_floors`, `hot_pullback_entry` (strict booleans, null → true).
+UNMEASURED — the study of his setups read no edge.
 
 **Module-level state in `main.py`:**
 - `cache: QuoteCache` — `_data` dict + `_ticks` deque per symbol (maxlen=`TICK_WINDOW`=64).

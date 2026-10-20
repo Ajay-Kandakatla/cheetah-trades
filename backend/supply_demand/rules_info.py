@@ -20,6 +20,7 @@ from growth import screen_measured as SM
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
+from trading import gajjala_entry as GLN
 from . import premarket_entry as PME
 
 log = logging.getLogger("supply_demand.rules_info")
@@ -466,12 +467,20 @@ def sections() -> dict:
             % (ZDL.SIGNAL_MAX_AGE_SEC, _t(ZDL.ENTRY_OPEN_ET), _t(ZDL.LAST_ENTRY_ET),
                ZDL.RISK_PCT_OF_EQUITY, int(ZDL.MAX_PREMIUM_PER_TRADE), ZDL.MAX_ENTRIES_PER_DAY,
                int(ZDL.PREMIUM_TAKE_PCT), int(ZDL.PREMIUM_STOP_PCT), _t(ZDL.FLATTEN_ET)),
-            "\U0001F6E1\uFE0F Safety floors — EVERY lane, no exceptions (they all buy through "
+            "🚩 Gajjala lane (paper): the A+ ENTRY alerts that reached your phone, entered the way "
+            "the 🏁 Track record fills — a day limit %g%% over the last trade once the tape trades "
+            "the trigger, the alert's stop, the entry + %gR target; %g%% of equity at risk, at most "
+            "%d a day and %d open, flat by %s ET."
+            % (GLN.GAJJALA_CHASE_PCT, GLN.R_MULT, GLN.GAJJALA_RISK_PCT,
+               GLN.GAJJALA_MAX_ENTRIES_PER_DAY, GLN.GAJJALA_MAX_OPEN, _t(GLN.flatten_et())),
+            "\U0001F6E1\uFE0F Safety floors — every stock lane (they all buy through "
             "the one entry function): share price ≥ $%.2f and, when the cap is known, market "
-            "cap ≥ %s. An unknown cap or a tape under $%dM/day WARNS instead of blocking."
+            "cap ≥ %s. An unknown cap or a tape under $%dM/day WARNS instead of blocking. "
+            "The 🚩 Gajjala lane obeys them while its switch gajjala_floors is ON (the default); "
+            "OFF waives the two blocks for that lane only and records them as warnings."
             % (SFL.MIN_SHARE_PRICE, _b(SFL.MIN_CAP_USD), int(SFL.MIN_DOLLAR_VOL / 1e6)),
             "Every entry is journaled by strategy (minervini / demand_zone / breakout / "
-            "catalyst / options_zone / zero_dte / manual).",
+            "catalyst / gajjala / options_zone / zero_dte / manual).",
             # Ajay 2026-09-12 chose "charts and scans only" for the robotics
             # ETFs once this limit surfaced. It is invisible from the board —
             # an ETF just quietly never alerts — so the rules panel says it.
@@ -506,7 +515,7 @@ def sections() -> dict:
             "position_alert on every stop hit, target fill, watchdog exit and queued exit.",
         ],
         "note": "Paper account. Minervini numbers are TLSW pp.291-315 (trading/risk_rules.py); "
-                "zone and catalyst lanes are owner rules, no book.",
+                "zone, catalyst and 🚩 Gajjala lanes are owner rules, no book.",
     }
 
     out["growth"] = {

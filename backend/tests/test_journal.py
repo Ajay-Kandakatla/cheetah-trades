@@ -526,3 +526,28 @@ def test_legacy_flatten_row_without_closed_flag_still_closes(db):
                       detail={"canceled": 0, "fill": 52.0}, cite="p.302"))
     docs = JN.reconcile() and JN.load()
     assert _by_id(docs, "GGG")["status"] == "closed"
+
+
+def test_by_strategy_keeps_gajjala(db):
+    """2026-10-20 (BUILD_SPEC17 §3.6): the 🚩 Gajjala paper lane's entries keep their own row; the journal tuple
+    mirrors trading/entries.STRATEGIES. NEG: an unknown tag is still journaled as manual."""
+    from trading import entries as EN
+    assert JN.STRATEGIES == EN.STRATEGIES
+    assert "gajjala" in JN.STRATEGIES
+    db.trade_ledger.insert_one(_row("entry", "GGL", BASE + 1000,
+                                    detail=_entry_detail(strategy="gajjala",
+                                                         entry_reason={"lane": "gajjala", "alert_at": "10:52"})))
+    db.trade_ledger.insert_one(_row("trade_closed", "GGL", BASE + 1000 + 3600,
+                                    detail={"leg": "take_profit", "fill": 103.0,
+                                            "entry": 100.0, "gain_pct": 3.0}))
+    db.trade_ledger.insert_one(_row("entry", "WLF", BASE + 1100,
+                                    detail=_entry_detail(strategy="gajjala_wolf")))
+    JN.reconcile()
+    docs = {d["symbol"]: d for d in JN.load()}
+    assert docs["GGL"]["entry"]["strategy"] == "gajjala"
+    assert docs["WLF"]["entry"]["strategy"] == "manual"                      # NEG
+    bs = JN.by_strategy(JN.load())
+    assert bs["gajjala"]["n"] == 1 and bs["gajjala"]["closed"] == 1 and bs["gajjala"]["wins"] == 1
+    assert bs["manual"]["n"] == 1
+    assert JN.by_strategy([{"status": "open", "entry": {"strategy": "nope"}}]) \
+        == {"manual": JN.by_strategy([{"status": "open", "entry": {"strategy": "manual"}}])["manual"]}

@@ -39,6 +39,7 @@ import { TradeAutopsies } from '../components/TradeAutopsies';
 import { CatalystEntryCard, type CatalystEntryInfo } from '../components/CatalystEntryCard';
 import { OptionsLaneTab, type OptionsLaneStatus } from '../components/OptionsLaneTab';
 import { ZeroDteLaneTab } from '../components/ZeroDteLaneTab';
+import { GajjalaLaneTab } from '../components/GajjalaLaneTab';
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
@@ -1906,9 +1907,12 @@ type ConfirmState =
 const SIM_NOTE_KEY = 'trading.simNoteDismissed';
 const VIEW_KEY = 'trading.view';
 
-export type View = 'dashboard' | 'journal' | 'analytics' | 'options' | 'zero_dte';
+export type View = 'dashboard' | 'gajjala' | 'journal' | 'analytics' | 'options' | 'zero_dte';
 export const VIEWS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
+  // 🚩 Gajjala paper lane tab (2026-10-20) — Ajay: "in the autopilot can you stop rest of the strategies and only
+  // use the Gajjalas strategies please." Right after Dashboard (BUILD_SPEC17 HIS CALL #12).
+  { key: 'gajjala', label: '🚩 Gajjala' },
   { key: 'journal', label: 'Journal' },
   { key: 'analytics', label: 'Analytics' },
   // Options lane tab (2026-09-06) — paper options on demand-zone touches.
@@ -1918,7 +1922,7 @@ export const VIEWS: { key: View; label: string }[] = [
 ];
 /** A ?view= / stored value → a View, or null for anything else (never a crash). */
 export function parseView(v?: string | null): View | null {
-  return v === 'dashboard' || v === 'journal' || v === 'analytics' || v === 'options' || v === 'zero_dte' ? v : null;
+  return v === 'dashboard' || v === 'gajjala' || v === 'journal' || v === 'analytics' || v === 'options' || v === 'zero_dte' ? v : null;
 }
 
 export function TradingPage() {
@@ -2113,6 +2117,9 @@ export function TradingPage() {
       {/* 0DTE lane (2026-09-08) — same-day paper options on Signal Lab tags;
           owns its own poll, switch and close-now dialog. */}
       {view === 'zero_dte' && <ZeroDteLaneTab onChanged={refresh} />}
+      {/* 🚩 Gajjala paper lane (2026-10-20) — owns its own poll, lane + floors
+          switches and close-now dialog; prints only served strings. */}
+      {view === 'gajjala' && <GajjalaLaneTab onChanged={refresh} />}
 
       {view === 'dashboard' && <>
       {statusErr && !status && (

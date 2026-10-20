@@ -194,7 +194,8 @@ def test_entries_calls_the_floors_and_feeds_them_into_blocked():
 
 
 @pytest.mark.parametrize("lane", ["auto_entry", "zone_edge_entry",
-                                  "catalyst_entry", "hot_pullback_entry"])
+                                  "catalyst_entry", "hot_pullback_entry",
+                                  "gajjala_entry"])
 def test_every_lane_buys_through_entries_never_the_broker(lane):
     """SOURCE GUARD. _evaluate is the chokepoint only while every lane goes
     through it. A lane that called broker submit_bracket directly would size,

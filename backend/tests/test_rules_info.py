@@ -57,6 +57,32 @@ def test_numbers_come_from_the_enforcing_modules():
     assert ("%d positions" % RR.MAX_POSITIONS) in p
 
 
+def test_the_gajjala_lane_line_is_built_from_the_lane_constants():
+    """2026-10-20 (BUILD_SPEC17 §3.6): the 🚩 Auto-Pilot line quotes the lane's own constants; the safety-floors line
+    says the lane's switch; the journaled list and the note name the lane."""
+    from trading import gajjala_entry as GLN
+    p = RI.sections()["autopilot"]
+    line = next(x for x in p["picks"] if x.startswith("🚩 Gajjala lane (paper)"))
+    assert ("a day limit %g%% over the last trade" % GLN.GAJJALA_CHASE_PCT) in line
+    assert ("the entry + %gR target" % GLN.R_MULT) in line
+    assert ("%g%% of equity at risk" % GLN.GAJJALA_RISK_PCT) in line
+    assert ("at most %d a day and %d open" % (GLN.GAJJALA_MAX_ENTRIES_PER_DAY, GLN.GAJJALA_MAX_OPEN)) in line
+    assert ("flat by %s ET" % RI._t(GLN.flatten_et())) in line and "15:55" in line
+    floors = next(x for x in p["picks"] if "Safety floors" in x)
+    assert "EVERY lane, no exceptions" not in floors                    # NEG: the old absolute is gone
+    assert "gajjala_floors is ON (the default)" in floors
+    assert "/ gajjala /" in " ".join(p["picks"])
+    assert "🚩 Gajjala lanes are owner rules, no book." in p["note"]
+    assert "bounce" not in line.lower()
+
+
+def test_the_gajjala_lane_line_MOVES_when_a_constant_moves(monkeypatch):
+    from trading import gajjala_entry as GLN
+    monkeypatch.setattr(GLN, "GAJJALA_MAX_ENTRIES_PER_DAY", 4)
+    line = next(x for x in RI.sections()["autopilot"]["picks"] if x.startswith("🚩 Gajjala lane (paper)"))
+    assert "at most 4 a day" in line and "at most 3 a day" not in line
+
+
 def test_the_deep_demand_prose_is_built_from_the_enforcing_constants():
     """🕳️ Deep Demand, widened 2026-09-16 (Ajay: "the stocks that crosses the
     first level of support and lying in second or third level of support").

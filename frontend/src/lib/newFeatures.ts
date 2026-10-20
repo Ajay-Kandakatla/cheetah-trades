@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-20 (verbatim in the label). BUILD_SPEC17: the 🚩 Gajjala paper lane (backend/trading/gajjala_entry.py).
+  // Every number here is a backend constant — GAJJALA_RISK_PCT, GAJJALA_MAX_ENTRIES_PER_DAY, GC.LEDGER_R_MULT, 16:00 −
+  // GAJJALA_FLATTEN_BEFORE_CLOSE_MIN, safety_floor.MIN_SHARE_PRICE — pinned by scripts/contracts.mjs
+  // ("🚩 Auto-Pilot Gajjala lane (2026-10-20)"). UNMEASURED.
+  { id: 'autopilot-gajjala-lane-2026-10-20', addedAt: '2026-10-20', route: '/trading?view=gajjala',
+    label: "🚩 Auto-Pilot trades only Gajjala's A+ entries now (paper). You said: “in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please.” The other lanes are switched off. The 🚩 lane buys an A+ that reached your phone the way the 🏁 Track record fills it — the alert's stop, a +1R target, 0.5% of equity at risk, at most 3 a day — and is flat by 15:55 ET. The house safety floors still apply, so most of his names under $2 or small caps are skipped and counted; one switch on the tab waives them for this lane. UNMEASURED — not a measured signal. Not advice." },
   // Ajay 2026-10-20 (verbatim below, on a screenshot of the 🔄 button on Gajjala's). Frontend only: GajjalaBoard.startScan
   // now prints the SERVED line of every answer (reused for the pass on screen and closed printed nothing before), pulses the
   // button while the POST is out, and prints a non-ok answer's served detail. Nothing served, scanned, counted or gated

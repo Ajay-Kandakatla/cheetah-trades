@@ -57,15 +57,17 @@ describe('JournalByStrategy — rows', () => {
     expect(within(c).queryByText('0%')).toBeNull();
   });
 
-  it('an absent by_strategy block renders all six lanes muted, plus the honesty note (negative)', () => {
+  // 2026-10-20: seven lanes (the 🚩 Gajjala lane joined, BUILD_SPEC17 §3.7) — the count is STRATEGY_ORDER's.
+  it('an absent by_strategy block renders every lane muted, plus the honesty note (negative)', () => {
+    expect(STRATEGY_ORDER).toHaveLength(7);
     render(<JournalByStrategy byStrategy={undefined} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(6);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(7);
     expect(screen.getByText(HONESTY_NOTE)).toBeInTheDocument();
     render(<JournalByStrategy byStrategy={null} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(12);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(14);
   });
 
-  it('a lane the server adds that we do not know still gets a row, after the six', () => {
+  it('a lane the server adds that we do not know still gets a row, after the canonical lanes', () => {
     render(<JournalByStrategy byStrategy={{ ...FULL, zone_edge: { n: 4, open: 0, closed: 4, wins: 2, losses: 2, win_rate_pct: 50, avg_r: 0.2, expectancy_pct: 0.5, realized_pnl: 30 } }} />);
     const rows = screen.getAllByRole('row').slice(1);
     expect(rows[rows.length - 1].getAttribute('data-strategy')).toBe('zone_edge');
@@ -120,7 +122,7 @@ describe('pure helpers', () => {
     expect(rows.map(([k]) => k)).toEqual([...STRATEGY_ORDER, 'extra']);
     expect(rows[0][1]).toBeNull();
     expect(rows[STRATEGY_ORDER.indexOf('manual')][1]).toEqual(FULL.manual);
-    expect(strategyRows(undefined).map(([, v]) => v)).toEqual([null, null, null, null, null, null]);
+    expect(strategyRows(undefined).map(([, v]) => v)).toEqual(STRATEGY_ORDER.map(() => null));
   });
   it('formatters are null-safe and signed where a sign carries meaning', () => {
     expect(fmtInt(3)).toBe('3'); expect(fmtInt(null)).toBe('—'); expect(fmtInt(NaN)).toBe('—');
@@ -167,5 +169,50 @@ describe('JournalByStrategy — wording he reads (2026-09-14)', () => {
     const m = strategyMeta('bounce_lane');
     expect(m.label).toBe('bounce lane');
     expect(m.blurb).toMatch(/not one the page knows/);
+  });
+});
+
+/* 🚩 Gajjala lane (2026-10-20) — Ajay: "in the autopilot can you stop rest of
+   the strategies and only use the Gajjalas strategies please." The engine tags
+   the lane's entries `gajjala`; the table must show it FIRST and by name, never
+   as an unknown "gajjala" lane or folded into manual. */
+describe('JournalByStrategy — 🚩 Gajjala lane (2026-10-20)', () => {
+  const GG: StrategyStats = { n: 2, open: 1, closed: 1, wins: 1, losses: 0, win_rate_pct: 100, avg_r: 1.25, expectancy_pct: 3.6, realized_pnl: 398.4 };
+
+  it('the 🚩 row is first, labelled Gajjala, with its stats', () => {
+    render(<JournalByStrategy byStrategy={{ ...FULL, gajjala: GG }} />);
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows[0].getAttribute('data-strategy')).toBe('gajjala');
+    const g = rowOf(/🚩 Gajjala/);
+    expect(within(g).getByText('🚩 Gajjala')).toBeInTheDocument();
+    expect(within(g).getByText('+1.25R')).toBeInTheDocument();
+    expect(within(g).getByText('+$398.40')).toBeInTheDocument();
+    expect(STRATEGY_ORDER[0]).toBe('gajjala');
+  });
+
+  it('NEGATIVE: an absent gajjala block is a muted "no trades yet" row, not a missing row or a crash', () => {
+    render(<JournalByStrategy byStrategy={FULL} />);
+    const g = rowOf(/🚩 Gajjala/);
+    expect(within(g).getByText(NO_TRADES_TEXT)).toBeInTheDocument();
+    expect(g.getAttribute('style') || '').toMatch(/opacity: 0\.55/);
+  });
+
+  it('NEGATIVE: an unknown lane is still its own row after the canonical lanes, never relabelled 🚩', () => {
+    render(<JournalByStrategy byStrategy={{ gajjala: GG, gajjala_v2: { n: 1, open: 1, closed: 0 } }} />);
+    const rows = screen.getAllByRole('row').slice(1);
+    const last = rows[rows.length - 1];
+    expect(last.getAttribute('data-strategy')).toBe('gajjala_v2');
+    expect(within(last).getByText(/gajjala v2/)).toBeInTheDocument();
+    expect(last.textContent).not.toContain('🚩');
+  });
+
+  it('meta: glyph, label, blurb says owner rules + UNMEASURED; no b-word, no book cite', () => {
+    const m = strategyMeta('gajjala');
+    expect(m.glyph).toBe('🚩');
+    expect(m.label).toBe('Gajjala');
+    expect(m.blurb).toBe('The 🚩 Gajjala lane — his A+ ENTRY alerts on paper (owner rules, UNMEASURED).');
+    expect(m.blurb).not.toMatch(/bounc|TLSW|TTLAC|Minervini p\./i);
+    render(<StrategyChip strategy="gajjala" />);
+    expect(screen.getByTestId('strategy-chip')).toHaveTextContent('🚩 Gajjala');
   });
 });

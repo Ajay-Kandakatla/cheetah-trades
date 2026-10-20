@@ -177,6 +177,13 @@ def get_config() -> dict:
         # the paper account, exactly like the 0DTE lane above.
         "hot_pullback_entry": bool(doc.get("hot_pullback_entry", True)),
         "last_hot_pullback_disabled_day": doc.get("last_hot_pullback_disabled_day"),
+        # 🚩 Gajjala paper lane (trading/gajjala_entry.py; Ajay 2026-10-20 "in the
+        # autopilot can you stop rest of the strategies and only use the Gajjalas
+        # strategies please"). Default ON — the lane refuses a live broker.
+        # gajjala_floors default ON = the house safety floors apply to the lane.
+        "gajjala_entry": bool(doc.get("gajjala_entry", True)),
+        "gajjala_floors": bool(doc.get("gajjala_floors", True)),
+        "last_gajjala_disabled_day": doc.get("last_gajjala_disabled_day"),
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
         "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
@@ -1299,6 +1306,16 @@ def tick(force: bool = False) -> dict:
         log.warning("hot_pullback lane run failed: %s", exc)
         summary["errors"].append("hot_pullback: %s" % exc)
 
+    # (n) 🚩 Gajjala paper lane (trading/gajjala_entry.py; flag gajjala_entry, default ON, paper-only) — manages its
+    # same-session orders and positions (fill wait, the cut-off, the close-of-day flatten) THEN buys today's pushed A+
+    # ENTRY alerts the way the 🏁 Track record fills them. Fenced like (m).
+    try:
+        from trading import gajjala_entry
+        summary["gajjala_lane"] = gajjala_entry.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("gajjala lane run failed: %s", exc)
+        summary["errors"].append("gajjala_lane: %s" % exc)
+
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
     # trading side effects; fully fenced + lazy-imported so it can NEVER break
@@ -1417,6 +1434,12 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["zero_dte_lane"] = {"enabled": bool(cfg.get("zero_dte_entry")),
                                 "error": str(exc)}
+    try:
+        from trading import gajjala_entry
+        out["gajjala_lane"] = gajjala_entry.status_block(cfg)
+    except Exception as exc:                       # noqa: BLE001
+        out["gajjala_lane"] = {"enabled": bool(cfg.get("gajjala_entry")),
+                               "error": str(exc)}
     if not out["configured"]:
         return out
     try:

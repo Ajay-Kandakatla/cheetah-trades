@@ -1153,7 +1153,7 @@ def test_losers_skip_exits_older_than_the_backlog_window(monkeypatch):
 # ── Explicit strategy tag (2026-09-05 lanes) ─────────────────────────────────
 
 def test_detect_prefers_the_explicit_tag_and_falls_back_to_inference():
-    assert AP.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
+    assert AP.STRATEGIES == ("zone_edge", "minervini", "catalyst", "gajjala", "manual")
     band = {"kind": "demand", "lo": 98.0, "hi": 99.5, "touches": 3, "strength": 1.5}
     # demand_zone tag, no state doc matched -> zone_edge/demand from the reason.
     d = AP.detect({"strategy": "demand_zone",
@@ -1187,6 +1187,35 @@ def test_detect_prefers_the_explicit_tag_and_falls_back_to_inference():
     assert AP.detect({"trigger": {"path": "intraday", "pivot": 99.0}}, None)["strategy"] == "minervini"
     assert AP.detect({"strategy": "manual"}, None)["strategy"] == "manual"
     assert AP.detect({"strategy": "alpha_wolf"}, None)["strategy"] == "manual"
+
+
+def test_gajjala_tag_detects_its_lane():
+    """2026-10-20 (BUILD_SPEC17 §3.6): the 🚩 Gajjala paper lane is its own autopsy label — no band, no requested
+    stop percent (the stop is the alert's own), first_seen = the alert's HH:MM. NEG: an unknown tag still falls back."""
+    d = AP.detect({"strategy": "gajjala", "entry_reason": {"lane": "gajjala", "alert_at": "10:52",
+                                                           "setup": "bull_flag", "stop_pct": 3.3}}, None)
+    assert d == {"strategy": "gajjala", "side": None, "kind": None, "band": None, "tier": None,
+                 "first_seen": "10:52", "stop_requested_pct": None}
+    assert AP.floor_of(d["kind"], d["band"]) is None              # the floor / chase rules never fire
+    # a state doc never re-labels the explicit tag
+    assert AP.detect({"strategy": "gajjala", "entry_reason": {}}, state("AAA"))["strategy"] == "gajjala"
+    assert AP.detect({"strategy": "gajjala_x"}, None)["strategy"] == "manual"          # NEG
+
+
+def test_gajjala_trade_autopsied_under_its_own_strategy(env):
+    t = trade("GGL")
+    t["entry"]["strategy"] = "gajjala"
+    t["entry"]["entry_reason"] = {"lane": "gajjala", "alert_at": "10:12", "setup": "bull_flag"}
+    db, _ = env(trades=[t], minute={"GGL": BASE_MINUTE},
+                dailies={"GGL": daily(99.0, after=(97.0, 97.0))})
+    out = AP.run(now=et(D0, 16, 30))
+    assert out["checked"] == 1 and out["errors"] == []
+    d = _doc(db, "GGL")
+    assert d["strategy"] == "gajjala" and d["side"] is None and d["kind"] is None
+    assert d["entry"]["stop_requested_pct"] is None
+    assert d["classification"] not in ("stop_clamped", "band_failed", "chased")
+    rep = AP.report(days=60, now=et(D0, 16, 30))
+    assert rep["summary"]["by_strategy"] == {"gajjala": 1}
 
 
 def test_catalyst_trade_autopsied_under_its_own_strategy(env):

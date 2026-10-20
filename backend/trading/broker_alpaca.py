@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from typing import Optional
 
 import requests
@@ -29,6 +30,52 @@ OPEN_STATUSES = {
     "new", "held", "accepted", "partially_filled", "pending_new",
     "pending_replace", "accepted_for_bidding", "calculated",
 }
+
+
+# ── Stock price grid (2026-10-20, the 🚩 Gajjala lane) ──────────────────────
+# Alpaca, docs.alpaca.markets/docs/orders-at-alpaca (fetched 2026-10-20): a
+# limit / stop price "< $1.00: Max Decimals = 4", "≥ $1.00: 2"; a bracket's
+# stop-loss "has to be at least $0.01 below … the base price" (the entry
+# limit). Every STOCK price this module and the sim send goes through
+# price_str / price_decimals; option orders keep their 2-decimal ticks.
+SUB_DOLLAR_LINE = 1.00
+SUB_DOLLAR_DECIMALS = 4
+DOLLAR_DECIMALS = 2
+MIN_STOP_GAP_USD = 0.01
+
+_ROUNDING = {"nearest": ROUND_HALF_UP, "up": ROUND_CEILING, "down": ROUND_FLOOR}
+
+
+def _dec(px) -> Decimal:
+    """The decimal a price prints as (repr), never its binary expansion."""
+    return px if isinstance(px, Decimal) else Decimal(repr(float(px)))
+
+
+def price_decimals(px) -> int:
+    """Decimals Alpaca accepts for a stock price: 4 under $1.00, 2 at or over."""
+    return SUB_DOLLAR_DECIMALS if _dec(px) < _dec(SUB_DOLLAR_LINE) else DOLLAR_DECIMALS
+
+
+def round_price(px, how: str = "nearest") -> float:
+    """`px` on the broker's grid. how = "nearest" (half up) | "up" | "down".
+    A sub-dollar price that rounds onto $1.00 is re-gridded at 2 decimals."""
+    if how not in _ROUNDING:
+        raise ValueError("round_price: how must be one of %s" % ", ".join(_ROUNDING))
+    d = _dec(px)
+    mode = _ROUNDING[how]
+    places = price_decimals(d)
+    q = d.quantize(Decimal(1).scaleb(-places), rounding=mode)
+    if places == SUB_DOLLAR_DECIMALS and q >= _dec(SUB_DOLLAR_LINE):
+        q = q.quantize(Decimal(1).scaleb(-DOLLAR_DECIMALS), rounding=mode)
+    return float(q)
+
+
+def price_str(px) -> str:
+    """The order-body string for a stock price, on the grid (nearest)."""
+    v = round_price(px)
+    if price_decimals(v) == DOLLAR_DECIMALS:
+        return str(v)
+    return ("%.*f" % (SUB_DOLLAR_DECIMALS, v)).rstrip("0").rstrip(".") or "0"
 
 
 class BrokerError(RuntimeError):
@@ -192,11 +239,11 @@ def submit_bracket(symbol: str, qty: int, take_profit_price: float,
         "type": "limit" if limit_price is not None else "market",
         "time_in_force": tif,
         "order_class": order_class,
-        "take_profit": {"limit_price": str(round(float(take_profit_price), 2))},
-        "stop_loss": {"stop_price": str(round(float(stop_price), 2))},
+        "take_profit": {"limit_price": price_str(take_profit_price)},
+        "stop_loss": {"stop_price": price_str(stop_price)},
     }
     if limit_price is not None:
-        body["limit_price"] = str(round(float(limit_price), 2))
+        body["limit_price"] = price_str(limit_price)
     if client_order_id:
         body["client_order_id"] = client_order_id
     return _request("POST", "/v2/orders", json_body=body) or {}
@@ -212,7 +259,7 @@ def submit_stop(symbol: str, qty: int, stop_price: float,
         "side": "sell",
         "type": "stop",
         "time_in_force": "gtc",
-        "stop_price": str(round(float(stop_price), 2)),
+        "stop_price": price_str(stop_price),
     }
     if client_order_id:
         body["client_order_id"] = client_order_id
@@ -223,9 +270,9 @@ def replace_order(order_id: str, stop_price: Optional[float] = None,
                   limit_price: Optional[float] = None) -> dict:
     body = {}
     if stop_price is not None:
-        body["stop_price"] = str(round(float(stop_price), 2))
+        body["stop_price"] = price_str(stop_price)
     if limit_price is not None:
-        body["limit_price"] = str(round(float(limit_price), 2))
+        body["limit_price"] = price_str(limit_price)
     if not body:
         raise BrokerError("replace_order: nothing to change")
     return _request("PATCH", "/v2/orders/%s" % order_id, json_body=body) or {}

@@ -75,7 +75,7 @@ def _has_fill(r: dict) -> bool:
 
 # Journal lane tags (mirror of trading/entries.STRATEGIES — kept literal so
 # this import-light module never pulls entries -> broker at import time).
-STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")
+STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "gajjala", "manual")
 
 # Per ET trading day ~6.5h; holding_days counts CALENDAR days between entry and
 # exit (weekends/holidays included) — a plain wall-clock read, labelled clearly.

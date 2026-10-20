@@ -735,6 +735,7 @@ GUARDED = ("supply_demand/alert_gates.py", "supply_demand/zone_bounce_alerts.py"
            "supply_demand/hot_pullback_alerts.py", "supply_demand/alert_status.py",
            "trading/entries.py", "trading/auto_entry.py", "trading/zone_edge_entry.py",
            "trading/hot_pullback_entry.py", "trading/catalyst_entry.py",
+           "trading/gajjala_entry.py",
            "sepa/scanner.py", "chart_maps/board.py")
 
 

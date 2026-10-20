@@ -17,7 +17,7 @@
  */
 import type { CSSProperties } from 'react';
 
-export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual';
+export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual' | 'gajjala';
 
 /** One lane's block in journal.summary.by_strategy. Every field optional —
  *  the API and the page deploy separately, and a lane the engine has never
@@ -36,11 +36,17 @@ export type StrategyStats = {
 
 export type StrategyMeta = { glyph: string; label: string; blurb: string };
 
-/** Fixed row order — the book lane first, then the two zone lanes, then the
- *  catalyst lane, then the options lane (2026-09-06), then hand entries. */
-export const STRATEGY_ORDER: StrategyKey[] = ['minervini', 'demand_zone', 'breakout', 'catalyst', 'options_zone', 'manual'];
+/** Fixed row order — the 🚩 Gajjala lane first (2026-10-20: "only use the
+ *  Gajjalas strategies please" — the lane the Auto-Pilot trades now; BUILD_SPEC17
+ *  HIS CALL #12), then the book lane, the two zone lanes, the catalyst lane, the
+ *  options lane (2026-09-06), then hand entries. */
+export const STRATEGY_ORDER: StrategyKey[] = ['gajjala', 'minervini', 'demand_zone', 'breakout', 'catalyst', 'options_zone', 'manual'];
 
 export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
+  gajjala: {
+    glyph: '🚩', label: 'Gajjala',
+    blurb: 'The 🚩 Gajjala lane — his A+ ENTRY alerts on paper (owner rules, UNMEASURED).',
+  },
   minervini: {
     glyph: '📈', label: 'Minervini',
     blurb: 'SEPA buyable list — the book gates in auto_entry.py / risk_rules.py (TLSW), unchanged.',

@@ -9702,8 +9702,9 @@ const CONTRACTS = [
       // the FIRST pin widened to the top two, dated.
       // 2026-10-20: the 🏛️ shareholders'-equity ✨ (its own block) sits above both — widened to the top three, dated.
       // 2026-10-20, later: the 🔄 scan-now ✨ (its own block) sits above all three — widened to the top four, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-20, later still: the 🚩 Gajjala lane ✨ (its own block, FIRST) sits above all four — widened to the top five, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9900,8 +9901,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const ID = 'chart-maps-gajjala-scan-now-2026-10-20';
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (first !== ID) errs.push(`the ✨ ${ID} must be FIRST (found ${first})`);
+      // 2026-10-20, later: the 🚩 Gajjala lane ✨ (its own block) ships above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -9913,6 +9915,179 @@ const CONTRACTS = [
       if (!/route: '\/chart-maps\?tab=gajjala/.test(e)) errs.push('the ✨ must route to the Gajjala tab');
       const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
       if (!exists(DOC) || !read(DOC).includes('## 🔄 Scan now answers every tap (2026-10-20)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "🔄 Scan now answers every tap (2026-10-20)" section');
+      return errs;
+    },
+  },
+  {
+    name: '🚩 Auto-Pilot Gajjala lane (2026-10-20)',
+    file: 'src/pages/Trading.tsx',
+    // Ajay 2026-10-20: "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please."
+    // BUILD_SPEC17: a NEW paper lane (backend/trading/gajjala_entry.py) trades the 🚩 A+ ENTRY alerts that reached his
+    // phone with GG's trade math; the 🚩 Gajjala tab on /trading prints only served strings. Pinned: the tab is wired,
+    // its three writes, its silence on numbers / books / the b-word, the journal row, the backend anchor strings (⚓,
+    // §3.1–3.5), the ✨ line (every number a backend constant) and the doc. UNMEASURED — the study read no edge.
+    checks: (tr) => {
+      const errs = [];
+      const HIS = 'in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please.';
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
+
+      // 1. Trading.tsx: import, View, VIEWS (right after Dashboard), parseView, the mount.
+      if (!/import\s*\{\s*GajjalaLaneTab\s*\}\s*from\s*'\.\.\/components\/GajjalaLaneTab'/.test(tr)) errs.push("Trading.tsx must import { GajjalaLaneTab } from '../components/GajjalaLaneTab'");
+      if (!/export\s+type\s+View\s*=[^;]*'gajjala'/.test(tr)) errs.push("Trading.tsx View type must carry 'gajjala'");
+      const viewsBody = (/export const VIEWS:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(tr) || [])[1] || '';
+      const viewKeys = [...viewsBody.replace(/\/\/[^\n]*/g, '').matchAll(/key:\s*'([a-z_]+)'/g)].map((m) => m[1]);
+      if (viewKeys[0] !== 'dashboard' || viewKeys[1] !== 'gajjala') errs.push(`VIEWS must list 'gajjala' right after 'dashboard' (found ${viewKeys.join(', ') || 'none'})`);
+      if (!/\{\s*key:\s*'gajjala'\s*,\s*label:\s*'🚩 Gajjala'\s*\}/.test(viewsBody)) errs.push("VIEWS must carry { key: 'gajjala', label: '🚩 Gajjala' }");
+      const pv = (/export function parseView[\s\S]*?\n\}/.exec(tr) || [''])[0];
+      if (!/v\s*===\s*'gajjala'/.test(pv)) errs.push("parseView must accept 'gajjala' (the ✨ route /trading?view=gajjala)");
+      if (!/view\s*===\s*'gajjala'\s*&&\s*<GajjalaLaneTab\s+onChanged=\{refresh\}\s*\/>/.test(tr)) errs.push("Trading.tsx must mount <GajjalaLaneTab onChanged={refresh} /> on view === 'gajjala'");
+
+      // 2. the tab: one GET, the two switches' four bodies, the close URL, the confirm dialogs, the poll.
+      const tab = tryRead('src/components/GajjalaLaneTab.tsx', 'WP-B');
+      for (const need of ['`${API}/trading/gajjala`', "credentials: 'include'", 'export const POLL_MS = 60_000', 'clearInterval(t)',
+                          "{ gajjala_entry: false }", "{ gajjala_entry: true }", "{ gajjala_floors: false }", "{ gajjala_floors: true }",
+                          '`/trading/gajjala/close/${encodeURIComponent(row.symbol)}`', 'aria-label={`Close ${closing} Gajjala?`}',
+                          's.floors_off_confirm_text', "row.floors === 'gg'", 'row.broker_text', 'row.closable === true',
+                          'row.fate_text', 'row.pnl_text', 's.caps_text', 's.floors_text', 's.floors_flip', 's.skipped_floor_text',
+                          's.unmeasured_text', 's.streak_text', 's.track_record_url', 's.empty_today_text', 's.live_text',
+                          's.disabled_text', 'data.journal?.text', 'rules.map(']) {
+        if (tab && !tab.includes(need)) errs.push(`GajjalaLaneTab.tsx must carry ${need}`);
+      }
+      if (tab && !/<Link to=\{s\.track_record_url\}/.test(tab)) errs.push('GajjalaLaneTab.tsx must link the 🏁 Track record with a router <Link> (no full-page reload)');
+      if (tab && !/<Link to=\{row\.url\}>/.test(tab)) errs.push('GajjalaLaneTab.tsx must link each symbol to its served row.url with a router <Link>');
+      if (!exists('src/components/GajjalaLaneTab.test.tsx')) errs.push('GajjalaLaneTab.test.tsx (incl. NEGATIVES) is missing');
+
+      // 3. the tab types no book, no b-word, and none of the lane's numbers (they are served).
+      const BOOK = /TLSW|TTLAC|Minervini p\./;
+      const BWORD = /boun/i;
+      const TYPED = /15:55|0\.5%|09:45/;
+      if (BOOK.test(tab)) errs.push('GajjalaLaneTab.tsx names a book — the lane is owner rules, no book');
+      if (BWORD.test(tab)) errs.push('GajjalaLaneTab.tsx says the b-word — "reversal", never the b-word');
+      const typed = tab.match(TYPED);
+      if (typed) errs.push(`GajjalaLaneTab.tsx types "${typed[0]}" — every number, time and percent is served by trading/gajjala_entry.py`);
+      if (!TYPED.test(`${tab}\nflat by 15:55`) || !BWORD.test('a bounce') || !BOOK.test('TLSW p.1')) errs.push('self-test: a typed 15:55 / b-word / book name was not caught');
+
+      // 4. the journal row: 🚩 first, named, owner rules + UNMEASURED.
+      const jbs = tryRead('src/components/JournalByStrategy.tsx', 'WP-B');
+      const order = (/export const STRATEGY_ORDER:[^=]*=\s*\[([^\]]*)\]/.exec(jbs) || [])[1] || '';
+      if (((/'([a-z_]+)'/.exec(order)) || [])[1] !== 'gajjala') errs.push("JournalByStrategy STRATEGY_ORDER must lead with 'gajjala'");
+      if (!/gajjala:\s*\{\s*glyph:\s*'🚩',\s*label:\s*'Gajjala',\s*blurb:\s*'The 🚩 Gajjala lane — his A\+ ENTRY alerts on paper \(owner rules, UNMEASURED\)\.'/.test(jbs)) {
+        errs.push("JournalByStrategy STRATEGY_META must carry gajjala: { glyph: '🚩', label: 'Gajjala', blurb: 'The 🚩 Gajjala lane — … (owner rules, UNMEASURED).' }");
+      }
+      const sk = jbs.indexOf('export type StrategyKey');
+      if (sk < 0 || !/'gajjala'/.test(jbs.slice(sk, jbs.indexOf(';', sk)))) errs.push("StrategyKey must carry 'gajjala'");
+
+      // 5. the backend anchor strings (⚓) the tab and the ✨ depend on.
+      const gl = tryRead('../backend/trading/gajjala_entry.py', 'WP-A');
+      const num = (name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\b`, 'm').exec(gl);
+        if (gl && !m) errs.push(`gajjala_entry.py must define ${name} = <number> at column 0`);
+        return m ? Number(m[1]) : null;
+      };
+      const RISK = num('GAJJALA_RISK_PCT');
+      num('GAJJALA_MAX_NOTIONAL_PCT');
+      const PER_DAY = num('GAJJALA_MAX_ENTRIES_PER_DAY');
+      num('GAJJALA_MAX_OPEN');
+      num('GAJJALA_SIGNAL_MAX_AGE_MIN');
+      num('GAJJALA_CHASE_PCT');
+      num('GAJJALA_FILL_WAIT_SEC');
+      num('GAJJALA_MAX_ROUND_R_PCT');
+      num('GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN');
+      const FLAT_MIN = num('GAJJALA_FLATTEN_BEFORE_CLOSE_MIN');
+      for (const need of ['from trading.broker import BrokerError, get_broker, round_price, MIN_STOP_GAP_USD',
+                          'STRATEGY = "gajjala"', 'LANE_COLL = "gajjala_lane"']) {
+        if (gl && !gl.includes(need)) errs.push(`gajjala_entry.py must carry ${need}`);
+      }
+      for (const line of ['WINDOW_OPEN_ET = GC.LEDGER_FILL_FROM_ET', 'R_MULT = GC.LEDGER_R_MULT', 'MIN_R_PCT = GC.LEDGER_MIN_R_PCT']) {
+        if (gl && !new RegExp(`^${line.replace(/\./g, '\\.')}\\b`, 'm').test(gl)) errs.push(`gajjala_entry.py must take its number by name at column 0: ${line}`);
+      }
+      const callAt = gl.indexOf('TE.enter(');
+      if (gl && callAt < 0) errs.push('gajjala_entry.py must enter through the ONE chokepoint TE.enter(…)');
+      else if (gl) {
+        let depth = 0, end = callAt + 'TE.enter'.length;
+        for (; end < gl.length; end++) {
+          if (gl[end] === '(') depth++;
+          else if (gl[end] === ')') { depth--; if (depth === 0) break; }
+        }
+        const call = gl.slice(callAt, end + 1);
+        for (const need of ['strategy=STRATEGY', 'target_price=TP', 'sizing=', 'floors=', 'tif="day"', 'order_intent="gg-" + setup']) {
+          if (!call.includes(need)) errs.push(`the TE.enter( call must carry ${need}`);
+        }
+      }
+      const ee = tryRead('../backend/trading/exit_engine.py', 'WP-A');
+      for (const need of ['"gajjala_entry": bool(doc.get("gajjala_entry", True)),', '"gajjala_floors": bool(doc.get("gajjala_floors", True)),',
+                          '"last_gajjala_disabled_day": doc.get("last_gajjala_disabled_day"),',
+                          'out["gajjala_lane"] = gajjala_entry.status_block(cfg)']) {
+        if (ee && !ee.includes(need)) errs.push(`exit_engine.py must carry ${need}`);
+      }
+      const RUN = 'summary["gajjala_lane"] = gajjala_entry.run(broker=broker, cfg=get_config())';
+      const runAt = ee.indexOf(RUN);
+      const hpAt = ee.indexOf('hot_pullback_entry.run(');
+      if (ee && runAt < 0) errs.push(`exit_engine.py tick must carry ${RUN}`);
+      else if (ee && !(hpAt >= 0 && hpAt < runAt)) errs.push('exit_engine.py: the 🚩 step (n) must run after hot_pullback_entry.run( (step m)');
+      const api = tryRead('../backend/trading/api.py', 'WP-A');
+      for (const need of ['for lane_key in ("gajjala_entry", "gajjala_floors", "hot_pullback_entry"):',
+                          '@router.get("/gajjala")', '@router.post("/gajjala/close/{symbol}")']) {
+        if (api && !api.includes(need)) errs.push(`api.py must carry ${need}`);
+      }
+      const en = tryRead('../backend/trading/entries.py', 'WP-A');
+      for (const need of ['STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "gajjala", "manual")',
+                          'FLOOR_WAIVER_STRATEGIES = ("gajjala",)']) {
+        if (en && !en.includes(need)) errs.push(`entries.py must carry ${need}`);
+      }
+      const ba = tryRead('../backend/trading/broker_alpaca.py', 'WP-A');
+      for (const [re, line] of [[/^SUB_DOLLAR_DECIMALS = 4\b/m, 'SUB_DOLLAR_DECIMALS = 4'], [/^MIN_STOP_GAP_USD = 0\.01\b/m, 'MIN_STOP_GAP_USD = 0.01']]) {
+        if (ba && !re.test(ba)) errs.push(`broker_alpaca.py must carry ${line} at column 0`);
+      }
+
+      // 6. the ✨ entry: FIRST, routed to the tab, his words verbatim, UNMEASURED, ends "Not advice.", every number a constant.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'backend');
+      const rMult = Number(((/^LEDGER_R_MULT = (\d+(?:\.\d+)?)/m.exec(gc)) || [])[1]);
+      const sf = tryRead('../backend/trading/safety_floor.py', 'backend');
+      const minPx = Number(((/^MIN_SHARE_PRICE = (\d+(?:\.\d+)?)/m.exec(sf)) || [])[1]);
+      if (!Number.isFinite(rMult)) errs.push('chart_maps/gajjala/constants.py LEDGER_R_MULT is unreadable');
+      if (!Number.isFinite(minPx)) errs.push('trading/safety_floor.py MIN_SHARE_PRICE is unreadable');
+      let flat = null;
+      if (FLAT_MIN != null) {
+        const t = 16 * 60 - FLAT_MIN;   // a full session's 16:00 RTH close (catalysts.medical.reaction.rth_close_time)
+        flat = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+      }
+      const ID = 'autopilot-gajjala-lane-2026-10-20';
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = unesc(arr.slice(at, nextAt < 0 ? undefined : nextAt));
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🚩 ✨ entry';
+        if (!e.includes("route: '/trading?view=gajjala'")) errs.push(`${W} must route to '/trading?view=gajjala'`);
+        if (!label.includes(HIS)) errs.push(`${W} must quote him verbatim: "${HIS}"`);
+        if (!label.includes('UNMEASURED')) errs.push(`${W} must say UNMEASURED`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (BWORD.test(label) || BOOK.test(label)) errs.push(`${W} says the b-word or names a book`);
+        const allowed = new Map();
+        if (RISK != null) allowed.set(`${RISK}%`, 'GAJJALA_RISK_PCT');
+        if (PER_DAY != null) allowed.set(String(PER_DAY), 'GAJJALA_MAX_ENTRIES_PER_DAY');
+        if (Number.isFinite(rMult)) allowed.set(`+${rMult}R`, 'GC.LEDGER_R_MULT');
+        if (flat) allowed.set(flat, '16:00 − GAJJALA_FLATTEN_BEFORE_CLOSE_MIN');
+        if (Number.isFinite(minPx)) allowed.set(`$${minPx}`, 'safety_floor.MIN_SHARE_PRICE');
+        const toks = [...label.matchAll(/[$+]?\d+(?:[.:]\d+)?[%R]?/g)].map((m) => m[0]);
+        for (const tok of toks) if (!allowed.has(tok)) errs.push(`${W} says "${tok}" — no backend constant carries it (allowed: ${[...allowed.keys()].join(', ')})`);
+        for (const [tok, name] of allowed) if (!toks.includes(tok)) errs.push(`${W} must say "${tok}" (${name})`);
+      }
+
+      // 7. the doc: the ask verbatim, the floors his-call, UNMEASURED, the three-lane rule satisfied.
+      const DOC = '../docs/trading_gajjala_lane.md';
+      if (!exists(DOC)) errs.push('docs/trading_gajjala_lane.md is missing (WP-A)');
+      else {
+        const doc = read(DOC);
+        for (const need of [HIS, 'HIS CALL #0', 'UNMEASURED', 'never add a lane without his call']) if (!doc.includes(need)) errs.push(`docs/trading_gajjala_lane.md must carry "${need}"`);
+      }
       return errs;
     },
   },

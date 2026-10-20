@@ -805,7 +805,8 @@ def test_autopsy_params_importable_and_equal():
                           "unclassified")
     assert [r["class"] for r in ap.rules_list()] == list(ap.CLASSES)
     # 2026-09-05 lanes: the catalyst lane got its own autopsy label (deliberate).
-    assert ap.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
+    # 2026-10-20: the 🚩 Gajjala paper lane got its own (BUILD_SPEC17 §3.6).
+    assert ap.STRATEGIES == ("zone_edge", "minervini", "catalyst", "gajjala", "manual")
 
 
 def test_autopsy_never_touches_the_broker_and_cites_no_book():
@@ -881,9 +882,12 @@ def test_zone_edge_entry_hands_entries_the_absolute_stop_level():
         en = fh.read()
     # 2026-09-05 lanes: the signature grew strategy + reason (the journal
     # tag) — the guard moved with it, deliberately.
+    # 2026-10-20 (BUILD_SPEC17 D6): keyword-only lane-plan args follow reason
+    # (target_price / sizing / floors / tif / order_intent) — moved again.
     assert "stop_price: Optional[float] = None," in en and \
         'strategy: str = "manual",' in en and \
-        "reason: Optional[dict] = None) -> dict:" in en, (
+        "reason: Optional[dict] = None, *," in en and \
+        'order_intent: str = "entry") -> dict:' in en, (
         "entries.enter lost its absolute stop_price kwarg or the "
         "strategy/reason journal tags")
     assert "is not below the entry price" in en and "past the %g%% line" in en, (
@@ -1026,7 +1030,8 @@ def test_catalyst_entry_wired_fenced_and_configurable():
 def test_entries_ledger_detail_carries_strategy_and_reason():
     with open(os.path.join(TRADING_DIR, "entries.py"), encoding="utf-8") as fh:
         en = fh.read()
-    assert 'STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")' in en
+    assert 'STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "gajjala", "manual")' in en
+    assert 'FLOOR_WAIVER_STRATEGIES = ("gajjala",)' in en
     assert '"strategy": ' in en and '"entry_reason": ' in en
     assert "REASON_MAX_BYTES = 2048" in en
     from trading import entries
@@ -1152,3 +1157,46 @@ def test_zero_dte_lane_2026_09_08_owner_numbers_locked_and_engine_seams():
     assert '"paper": mode != "live"' in run_src and "paper-only" in run_src
     assert "never a market order" in ZD.__doc__
 
+
+
+# ── 🚩 Gajjala paper lane 2026-10-20 (BUILD_SPEC17) ──────────────────────────
+
+def test_gajjala_lane_2026_10_20_owner_numbers_and_seams():
+    """Ajay 2026-10-20: "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies
+    please." The lane's owner numbers, its tick step (n) between (m) and the journal (g), the config defaults
+    (gajjala_entry ON, gajjala_floors ON), the strict API switches and the two admin routes."""
+    import inspect
+    from trading import gajjala_entry as GL, exit_engine as EE, api as TA, entries as EN
+    from chart_maps.gajjala import constants as GC
+    assert GL.STRATEGY == "gajjala" and GL.LANE_COLL == "gajjala_lane"
+    assert (GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT) == (0.5, 10.0)
+    assert (GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN) == (3, 3)
+    assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_FILL_WAIT_SEC) == (20, 0.5, 180)
+    assert GL.GAJJALA_MAX_ROUND_R_PCT == 10.0
+    assert (GL.GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN, GL.GAJJALA_FLATTEN_BEFORE_CLOSE_MIN) == (30, 5)
+    assert GL.WINDOW_OPEN_ET is GC.LEDGER_FILL_FROM_ET and GL.R_MULT is GC.LEDGER_R_MULT
+    assert GL.MIN_R_PCT is GC.LEDGER_MIN_R_PCT and GL.DEFAULT_ON is True
+    assert "gajjala" in EN.STRATEGIES and EN.FLOOR_WAIVER_STRATEGIES == ("gajjala",)
+    with open(os.path.join(TRADING_DIR, "exit_engine.py"), encoding="utf-8") as fh:
+        eng = fh.read()
+    assert '"gajjala_entry": bool(doc.get("gajjala_entry", True)),' in eng
+    assert '"gajjala_floors": bool(doc.get("gajjala_floors", True)),' in eng
+    assert '"last_gajjala_disabled_day": doc.get("last_gajjala_disabled_day"),' in eng
+    tick = inspect.getsource(EE.tick)
+    line = 'summary["gajjala_lane"] = gajjala_entry.run(broker=broker, cfg=get_config())'
+    assert line in tick
+    assert tick.index("hot_pullback_entry.run(") < tick.index(line) < tick.index("journal.reconcile()"), \
+        "step (n) runs after (m) and before the journal (g)"
+    assert 'summary["errors"].append("gajjala_lane: %s" % exc)' in tick, "step (n) is fenced"
+    assert 'out["gajjala_lane"] = gajjala_entry.status_block(cfg)' in inspect.getsource(EE.status)
+    api_src = inspect.getsource(TA)
+    assert 'for lane_key in ("gajjala_entry", "gajjala_floors", "hot_pullback_entry"):' in api_src
+    assert 'raise HTTPException(400, "%s must be a boolean or null" % lane_key)' in api_src
+    assert '@router.get("/gajjala")' in api_src and '@router.post("/gajjala/close/{symbol}")' in api_src
+    route = api_src[api_src.index('@router.get("/gajjala")'):api_src.index('@router.post("/gajjala/close/{symbol}")')]
+    assert "_require_admin(email)" in route, "the 🚩 tab GET is owner-only"
+    with open(os.path.join(TRADING_DIR, "gajjala_entry.py"), encoding="utf-8") as fh:
+        gl = fh.read()
+    assert "broker_alpaca" not in gl and "get_broker" in gl, "the lane goes through the broker factory"
+    assert 'tif="day"' in gl and 'order_intent="gg-" + setup' in gl and "TE.enter(" in gl
+    assert "submit_bracket" not in gl, "the lane buys through entries.enter only"

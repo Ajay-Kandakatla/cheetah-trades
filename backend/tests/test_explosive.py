@@ -520,7 +520,7 @@ def test_SOURCE_GUARD_the_score_never_gates_an_alert_or_a_lane():
                 "supply_demand/hot_pullback_alerts.py", "supply_demand/alert_status.py",
                 "trading/entries.py", "trading/auto_entry.py",
                 "trading/zone_edge_entry.py", "trading/hot_pullback_entry.py",
-                "trading/catalyst_entry.py"):
+                "trading/catalyst_entry.py", "trading/gajjala_entry.py"):
         # the MODULE, not the word: `explosive` is also a Bonde tier name
         # (sepa.bonde.SECTION_EXPLOSIVE) that the catalyst lane legitimately
         # reads, so the guard looks for an import or an attribute access.

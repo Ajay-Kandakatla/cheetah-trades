@@ -15,7 +15,9 @@ know which one they hold. The sim additionally exposes process_fills() —
 its matching engine — which exit_engine.tick() duck-calls when present.
 
 BrokerError and OPEN_STATUSES are re-exported here so the engine modules
-import NOTHING from a broker implementation directly (locked by the factory
+import NOTHING from a broker implementation directly; so is the stock price
+grid (price_decimals / round_price / price_str, MIN_STOP_GAP_USD and the
+sub-dollar line, 2026-10-20 — Alpaca takes 4 decimals under $1.00) (locked by the factory
 invariant in tests/test_trading_contracts.py).
 """
 from __future__ import annotations
@@ -23,8 +25,15 @@ from __future__ import annotations
 import os
 
 from trading.broker_alpaca import (  # noqa: F401 — re-exports for the engine
+    DOLLAR_DECIMALS,
+    MIN_STOP_GAP_USD,
     OPEN_STATUSES,
+    SUB_DOLLAR_DECIMALS,
+    SUB_DOLLAR_LINE,
     BrokerError,
+    price_decimals,
+    price_str,
+    round_price,
 )
 
 

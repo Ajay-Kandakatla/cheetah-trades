@@ -8,7 +8,9 @@ POST /trading/auto-entry?enabled=true|false  auto-entry flag (admin)
 POST /trading/config                JSON {equity_cap?, auto_min_score?,
                                     auto_min_rs?, progressive_exposure?,
                                     pyramiding?, zone_edge_entry?,
-                                    zone_edge_rules?, catalyst_entry?} —
+                                    zone_edge_rules?, catalyst_entry?,
+                                    gajjala_entry?, gajjala_floors?,
+                                    hot_pullback_entry?} —
                                     sizing ceiling + funnel floors + pilot
                                     governor + the Supply & Demand zone-edge
                                     and catalyst-lane entry switches (admin;
@@ -23,6 +25,11 @@ POST /trading/enter                 bracket entry (admin; the ONLY buy path)
 POST /trading/flatten/{symbol}      cancel orders + close position (admin)
 POST /trading/flatten-all?confirm=yes  disaster plan (admin)
 POST /trading/sim-reset?confirm=yes wipe SIM broker state (admin, sim-only)
+GET  /trading/gajjala               🚩 Gajjala paper lane tab: status, today's
+                                    pushed A+ alerts with their fates, recent,
+                                    journal (admin)
+POST /trading/gajjala/close/{symbol}  owner closes / cancels the lane's
+                                    position on one name now (admin, armed)
 GET  /trading/ledger?limit=100      trade_ledger tail
 GET  /trading/journal?limit&decisions  round-trip journal (+ open MTM, decisions)
 GET  /trading/analytics             Minervini batting/expectancy/win-loss stats
@@ -186,6 +193,19 @@ async def trading_config(payload: dict = Body(...),
             updates["zero_dte_entry"] = raw
         else:
             raise HTTPException(400, "zero_dte_entry must be a boolean or null")
+    # 🚩 Gajjala paper lane (Ajay 2026-10-20 "only use the Gajjalas strategies
+    # please"), its house-floors switch, and the 🔥 Hot Pullback lane's flag.
+    # Strict booleans; null resets to the code default, ON for all three.
+    for lane_key in ("gajjala_entry", "gajjala_floors", "hot_pullback_entry"):
+        if lane_key not in payload:
+            continue
+        raw = payload.get(lane_key)
+        if raw is None:
+            updates[lane_key] = True
+        elif isinstance(raw, bool):
+            updates[lane_key] = raw
+        else:
+            raise HTTPException(400, "%s must be a boolean or null" % lane_key)
     if "zone_edge_rules" in payload:
         # Owner rule switches for the zone-edge entries (Ajay 2026-09-03:
         # "Enter anything that is in demand zone ... any stocks crossing the
@@ -216,8 +236,9 @@ async def trading_config(payload: dict = Body(...),
         raise HTTPException(400, "nothing to update — send equity_cap, "
                                  "auto_min_score, auto_min_rs, "
                                  "progressive_exposure, pyramiding, "
-                                 "zone_edge_entry, zone_edge_rules and/or "
-                                 "catalyst_entry")
+                                 "zone_edge_entry, zone_edge_rules, "
+                                 "catalyst_entry, gajjala_entry, "
+                                 "gajjala_floors and/or hot_pullback_entry")
     from trading import exit_engine
 
     def work():
@@ -310,6 +331,34 @@ async def trading_zero_dte_close(symbol: str,
         result = await asyncio.to_thread(zero_dte_lane.close_now, symbol, "owner close")
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+    return JSONResponse(result)
+
+
+@router.get("/gajjala")
+async def trading_gajjala(email: str = Depends(current_user_email)):
+    """🚩 Gajjala paper lane tab: status block, today's pushed A+ alerts with
+    their fates, recent rows, journal. Owner only (account positions)."""
+    _require_admin(email)
+    from trading import gajjala_entry
+    return JSONResponse(await asyncio.to_thread(gajjala_entry.tab_payload))
+
+
+@router.post("/gajjala/close/{symbol}")
+async def trading_gajjala_close(symbol: str,
+                                email: str = Depends(current_user_email)):
+    """Owner closes the 🚩 lane's position (or cancels its order) on one name
+    now (armed only)."""
+    _require_admin(email)
+    from trading import gajjala_entry
+    try:
+        result = await asyncio.to_thread(gajjala_entry.close_now, symbol, "owner close")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    if result.get("ok") is False:
+        # The broker did not close / cancel it (critic 2026-10-20): the tab reads the HTTP status, so a failed close
+        # must NOT be a 200 — 502 with the served broker errors as the detail (the tab prints the served detail).
+        errors = [str(e) for e in (result.get("errors") or []) if str(e).strip()]
+        raise HTTPException(502, "; ".join(errors) or f"the broker did not close {result.get('symbol') or symbol}")
     return JSONResponse(result)
 
 

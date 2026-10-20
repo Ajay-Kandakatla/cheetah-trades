@@ -34,7 +34,7 @@ from typing import Optional
 
 # The shared error type + open-status set — engine code catches/reads these
 # through trading.broker; importing them here keeps the two brokers in sync.
-from trading.broker_alpaca import OPEN_STATUSES, BrokerError
+from trading.broker_alpaca import OPEN_STATUSES, BrokerError, price_decimals
 
 log = logging.getLogger("trading.broker_sim")
 
@@ -243,9 +243,9 @@ def _new_order(db, *, symbol, side, otype, qty, order_class="",
         "filled_avg_price": None,
         "filled_at": None,
         "submitted_at": _utc_iso(),
-        "stop_price": (round(float(stop_price), 2)
+        "stop_price": (round(float(stop_price), price_decimals(stop_price))
                        if stop_price is not None else None),
-        "limit_price": (round(float(limit_price), 2)
+        "limit_price": (round(float(limit_price), price_decimals(limit_price))
                         if limit_price is not None else None),
         "time_in_force": tif,
         "parent_id": parent_id,
@@ -446,9 +446,9 @@ def replace_order(order_id: str, stop_price: Optional[float] = None,
                           % (order_id, doc.get("status")))
     fields = {}
     if stop_price is not None:
-        fields["stop_price"] = round(float(stop_price), 2)
+        fields["stop_price"] = round(float(stop_price), price_decimals(stop_price))
     if limit_price is not None:
-        fields["limit_price"] = round(float(limit_price), 2)
+        fields["limit_price"] = round(float(limit_price), price_decimals(limit_price))
     if not fields:
         raise BrokerError("replace_order: nothing to change")
     fields["updated_at"] = _utc_iso()
