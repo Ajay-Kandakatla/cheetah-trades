@@ -9919,6 +9919,88 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🚫 Gajjala no-risk A+ · one price grid (2026-10-20)',
+    file: 'src/lib/gajjala.ts',
+    // Measured in the live Mongo 2026-10-20: the pushed A+ GG:2026-10-20|MMA|kiss_fly carried trigger = stop (risk 0). Nothing
+    // rounded it — a one-print name; the kiss bar was one trade with no range. Pinned: (1) the card's ggPx mirrors the broker grid
+    // constants in backend/trading/broker_alpaca.py and GajjalaBoard prints trigger / stop through it, never pxText / toFixed;
+    // (2) the backend refuses a no-risk break at the detector (ledger.plan_of) and at the push gate (COUNT_KEYS "no_risk", right
+    // before "broker_flagged"); (3) /alerts words the refusal; (4) tab._px sits on round_price / price_decimals; (5) the ✨ label
+    // types no digit; (6) the doc carries the dated section; (7) the tests exist.
+    checks: (lib) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const BWORD = /boun/i;
+
+      // 1. the grid, mirrored once and pinned to the broker module's constants
+      const py = tryRead('../backend/trading/broker_alpaca.py', 'the broker grid');
+      const pyNum = (name) => {
+        const m = new RegExp(`^${name}\\s*=\\s*(-?\\d+(?:\\.\\d+)?)\\b`, 'm').exec(py);
+        if (py && !m) errs.push(`broker_alpaca.py must define ${name} = <number> at column 0`);
+        return m ? Number(m[1]) : null;
+      };
+      const LINE = pyNum('SUB_DOLLAR_LINE'), UNDER = pyNum('SUB_DOLLAR_DECIMALS'), OVER = pyNum('DOLLAR_DECIMALS');
+      const grid = /export const GG_PX_GRID = \{ line: ([0-9.]+), under: (\d+), atOrOver: (\d+) \} as const;/.exec(lib);
+      if (!grid) errs.push('lib/gajjala.ts must export GG_PX_GRID = { line, under, atOrOver } as const');
+      else {
+        if (LINE !== null && Number(grid[1]) !== LINE) errs.push(`GG_PX_GRID.line ${grid[1]} ≠ broker_alpaca.SUB_DOLLAR_LINE ${LINE}`);
+        if (UNDER !== null && Number(grid[2]) !== UNDER) errs.push(`GG_PX_GRID.under ${grid[2]} ≠ broker_alpaca.SUB_DOLLAR_DECIMALS ${UNDER}`);
+        if (OVER !== null && Number(grid[3]) !== OVER) errs.push(`GG_PX_GRID.atOrOver ${grid[3]} ≠ broker_alpaca.DOLLAR_DECIMALS ${OVER}`);
+      }
+      if (!/export function ggPx\(p: unknown\): string \| null/.test(lib)) errs.push('lib/gajjala.ts must export ggPx(p: unknown): string | null');
+      const board = tryRead('src/components/GajjalaBoard.tsx', 'the card');
+      if (board && !board.includes('const trig = ggPx(read.trigger)')) errs.push('GajjalaBoard must print the trigger through ggPx');
+      if (board && !board.includes('const stop = ggPx(read.stop)')) errs.push('GajjalaBoard must print the stop through ggPx');
+      if (/pxText\(/.test(board)) errs.push('GajjalaBoard calls pxText( — the house 3-decimal print blurs a sub-dollar trigger and stop');
+      if (/toFixed\(/.test(board)) errs.push('GajjalaBoard types a toFixed( — every number on the card is served or on the grid');
+
+      // 2. the backend: the detector rule and the push gate
+      const det = tryRead('../backend/chart_maps/gajjala/detectors.py', 'the detectors');
+      for (const need of ['from chart_maps.gajjala.ledger import PLANS, plan_of', 'NO_RISK_REASON = "no risk', 'NO_PLAN_REASON = "no plan',
+                          'plan = plan_of(trigger, stop)[0]', 'return _invalid(r, NO_RISK_REASON if plan == PLANS[2] else NO_PLAN_REASON)']) {
+        if (det && !det.includes(need)) errs.push(`detectors.py must carry ${need}`);
+      }
+      const al = tryRead('../backend/chart_maps/gajjala/alerts.py', 'the push gate');
+      const keys = (/^COUNT_KEYS = \(([\s\S]*?"broker_flagged")\)/m.exec(al) || [])[1] || '';
+      const keyList = [...keys.replace(/#[^\n]*/g, '').matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+      if (al && (keyList.indexOf('no_risk') !== keyList.length - 2 || keyList[keyList.length - 1] !== 'broker_flagged')) {
+        errs.push(`alerts.COUNT_KEYS must carry "no_risk" right before "broker_flagged" (found …${keyList.slice(-3).join(', ')})`);
+      }
+      if (al && !al.includes('state = "no_risk"')) errs.push('alerts.run_pass must refuse a no-risk A+ with state = "no_risk"');
+      const tab = tryRead('../backend/chart_maps/gajjala/tab.py', 'the formatter');
+      if (tab && !/def _px\(x\) -> str:[\s\S]*?v = round_price\(v\)\s*\n\s*n = price_decimals\(v\)/.test(tab)) errs.push('tab._px must sit on trading.broker.round_price / price_decimals');
+      if (tab && !tab.includes('or the trigger would equal the stop (a reference bar with no ')) errs.push('tab.count_legend invalid text must name the no-risk cause');
+
+      // 3. /alerts words the refusal
+      const alerts = tryRead('src/pages/Alerts.tsx', 'the alerts page');
+      const chip = /case 'no_risk':\s*return `\$\{n\} ([^`]*)`;/.exec(alerts);
+      if (!chip) errs.push("Alerts.tsx gajjalaChipText must carry case 'no_risk'");
+      else if (!/no risk/.test(chip[1]) || BWORD.test(chip[1])) errs.push(`Alerts.tsx no_risk chip must say "no risk" without the b-word (found "${chip[1]}")`);
+      const gk = (/const GAJJALA_KEYS = \[([\s\S]*?)\];/.exec(alerts) || [])[1] || '';
+      if (!/'no_risk'/.test(gk)) errs.push("Alerts.tsx GAJJALA_KEYS must list 'no_risk' (a key not listed never prints)");
+
+      // 4. the ✨ line: present, routed to the kiss_fly sub, no digit typed
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨ line');
+      const ent = /\{ id: 'chart-maps-gajjala-no-risk-price-grid-2026-10-20', addedAt: '2026-10-20', route: '\/chart-maps\?tab=gajjala&sub=kiss_fly',\s*label: "([^"]*)" \}/.exec(nf);
+      if (!ent) errs.push("newFeatures.ts must carry chart-maps-gajjala-no-risk-price-grid-2026-10-20 routed to /chart-maps?tab=gajjala&sub=kiss_fly");
+      else {
+        if (/\d/.test(ent[1])) errs.push('the ✨ label types a digit — every number is a backend constant, none belongs in the label');
+        for (const need of ['no risk', 'MMA', 'never pushed', 'Not advice.']) if (!ent[1].includes(need)) errs.push(`the ✨ label must carry "${need}"`);
+        if (BWORD.test(ent[1])) errs.push('the ✨ label says the b-word');
+      }
+
+      // 5. the doc and the tests
+      const doc = tryRead('../docs/gajjala/gajjala_tab_2026_10_13.md', 'the tab doc');
+      if (doc && !doc.includes('## 🚫 A no-risk A+ never rings · one price grid (2026-10-20)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the dated 2026-10-20 section');
+      if (!exists('../backend/tests/test_gajjala_no_risk_2026_10_20.py')) errs.push('backend/tests/test_gajjala_no_risk_2026_10_20.py is missing');
+      const lt = tryRead('src/lib/gajjala.test.ts', 'the lib test');
+      if (lt && !/describe\('ggPx — the broker price grid'/.test(lt)) errs.push("lib/gajjala.test.ts must carry describe('ggPx — the broker price grid') incl. the $4.46 NEGATIVE");
+      if (lt && !lt.includes("[4.46, '4.46']")) errs.push('lib/gajjala.test.ts must pin the NEGATIVE: a $4.46 level prints two decimals');
+      if (!BWORD.test('a bounce') || !/\d/.test('a 4')) errs.push('self-test: the b-word / digit regexes do not catch');
+      return errs;
+    },
+  },
+  {
     name: '🚩 Auto-Pilot Gajjala lane (2026-10-20)',
     file: 'src/pages/Trading.tsx',
     // Ajay 2026-10-20: "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please."

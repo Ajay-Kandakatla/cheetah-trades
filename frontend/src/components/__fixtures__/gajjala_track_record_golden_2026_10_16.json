@@ -54,7 +54,7 @@
     },
     {
      "key": "invalid",
-     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
      "word": "invalid"
     },
     {
@@ -1003,7 +1003,7 @@
     },
     {
      "key": "invalid",
-     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
      "word": "invalid"
     },
     {
@@ -1821,7 +1821,7 @@
     },
     {
      "key": "invalid",
-     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
      "word": "invalid"
     },
     {

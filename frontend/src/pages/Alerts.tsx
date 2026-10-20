@@ -375,6 +375,10 @@ function gajjalaChipText(key: string, n: number): string | null {
     case 'late':                 return `${n} A+ found late (bar older than one pass), not sent`;
     case 'claimed_before':       return `${n} A+ already recorded today`;
     case 'not_aplus_variant':    return `${n} listed variant, never sent`;
+    /* 2026-10-20 (the MMA finding): an A+ whose trigger is not above its stop —
+     * a one-print reference bar — is refused at the gate (the detectors refuse
+     * it first) and recorded, never rung. */
+    case 'no_risk':              return `${n} A+ held: trigger = stop (no risk), never sent`;
     default: return null;
   }
 }
@@ -441,7 +445,7 @@ export const GG_POTENTIAL_HELD_ROW: Record<string, string> = {
 };
 const GAJJALA_KEYS = ['shadow_mode', 'shadow', 'shadow_session', 'suppressed_premarket', 'suppressed_first15',
                       'suppressed_window', 'suppressed_closed', 'suppressed_halt', 'suppressed_exhausted', 'late',
-                      'claimed_before', 'not_aplus_variant'];
+                      'claimed_before', 'not_aplus_variant', 'no_risk'];
 const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
                    'skipped_mood', 'skipped_floor', 'skipped_not_enterable', 'skipped_cap', 'unknown_cap',
                    'stale_print', 'unknown_prev', 'unknown_room',

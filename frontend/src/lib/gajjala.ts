@@ -503,6 +503,50 @@ export function riskText(v: unknown): string | null {
   return fin(v) ? `${v.toFixed(1)}%` : null;
 }
 
+/* 🚫 One price grid (2026-10-20, the MMA finding: an A+ push rang with the
+ * stop printed at the trigger). The card prints a served trigger / stop the
+ * way the push, the 🏁 Track record and the 🚩 lane print it — on the
+ * broker's own grid: four decimals under the sub-dollar line, two at or over
+ * it (backend/trading/broker_alpaca.py SUB_DOLLAR_LINE / SUB_DOLLAR_DECIMALS /
+ * DOLLAR_DECIMALS, mirrored here and pinned by scripts/contracts.mjs "🚫
+ * Gajjala no-risk A+ · one price grid (2026-10-20)"), half-up on the number's
+ * own decimal text (the backend quantizes Decimal(repr(x)); String(x) is the
+ * same shortest round-trip text), trailing zeros dropped under a dollar
+ * ("0.31", "0.3101", "0.295"), two decimals always kept at or over ("4.46",
+ * "1.00"). `null` for anything not a finite number — the caller drops the
+ * item. The house pxText (three decimals under a dollar, the S&D card ladder)
+ * is untouched: a different surface, HIS call. */
+export const GG_PX_GRID = { line: 1.0, under: 4, atOrOver: 2 } as const;
+
+function quantizeHalfUp(text: string, places: number): string {
+  const [ip, fp = ''] = text.split('.');
+  if (fp.length <= places) return `${ip}.${fp.padEnd(places, '0')}`;
+  const digits = (ip + fp.slice(0, places)).split('').map((d) => d.charCodeAt(0) - 48);
+  if (fp.charCodeAt(places) - 48 >= 5) {
+    let i = digits.length - 1;
+    while (i >= 0 && digits[i] === 9) { digits[i] = 0; i -= 1; }
+    if (i < 0) digits.unshift(1); else digits[i] += 1;
+  }
+  const s = digits.join('');
+  const cut = s.length - places;
+  return `${s.slice(0, cut) || '0'}.${s.slice(cut)}`;
+}
+
+export function ggPx(p: unknown): string | null {
+  if (typeof p !== 'number' || !Number.isFinite(p)) return null;
+  const abs = Math.abs(p);
+  const text = String(abs);
+  if (/e/i.test(text)) return null;
+  let places: number = abs < GG_PX_GRID.line ? GG_PX_GRID.under : GG_PX_GRID.atOrOver;
+  let q = quantizeHalfUp(text, places);
+  if (places === GG_PX_GRID.under && Number(q) >= GG_PX_GRID.line) {
+    places = GG_PX_GRID.atOrOver;                       // a sub-dollar price that rounds onto the line re-grids at two
+    q = quantizeHalfUp(q, places);
+  }
+  if (places === GG_PX_GRID.under) q = q.replace(/0+$/, '').replace(/\.$/, '') || '0';
+  return `${p < 0 ? '-' : ''}${q}`;
+}
+
 /** A playbook item's text, timestamp tag ("S8 14:41") and status pill (the
  *  SERVED label, else the raw served code — never a guessed pill). */
 export function playbookItem(it: GgPlaybookItem): { text: string; tag: string | null; pill: string | null } {

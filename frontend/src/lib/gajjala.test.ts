@@ -4,6 +4,7 @@ import {
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   playbookItem, riskText, variantText, watchParts,
   GG_SCAN_PATH, ggScanAdvanced, ggScanPlan, type GgBoard,
+  GG_PX_GRID, ggPx,
 } from './gajjala';
 
 /* tsc-safe source read (the HottestSectors.width.test precedent): the app's
@@ -245,5 +246,43 @@ describe('🔄 GG_SCAN_PATH / ggScanPlan / ggScanAdvanced', () => {
     const hook = new RegExp(`use${'B' + 'ounce'}Room|${'B' + 'ounce'}Room|${bw}Room`, 'g');
     const board = (await readSource('src/components/GajjalaBoard.tsx')).replace(hook, '');
     expect(board).not.toMatch(banned);
+  });
+});
+
+/* 🚫 One price grid (2026-10-20, the MMA finding). The card's trigger / stop
+ * print on the broker's grid — four decimals under a dollar, two at or over —
+ * exactly as the push, the 🏁 Track record and the 🚩 lane print them (the
+ * backend's tab._px on trading.broker.round_price). The NEGATIVES carry it: a
+ * $4.46 level keeps two decimals, never four; a non-number prints nothing. */
+describe('ggPx — the broker price grid', () => {
+  it('mirrors the broker grid constants (pinned to backend/trading/broker_alpaca.py by the contracts)', () => {
+    expect(GG_PX_GRID).toEqual({ line: 1.0, under: 4, atOrOver: 2 });
+  });
+
+  it.each([
+    [4.46, '4.46'],              // NEGATIVE: a dollar level still prints two decimals
+    [4.12, '4.12'], [3.95, '3.95'], [10.8125, '10.81'], [2.375, '2.38'], [1234.5, '1234.50'],
+    [1.0, '1.00'], [0.99996, '1.00'],   // a sub-dollar price that rounds onto $1.00 re-grids at two
+    [0.3101, '0.3101'], [0.31, '0.31'], [0.295, '0.295'], [0.44495, '0.445'], [0.5888, '0.5888'], [0.0921, '0.0921'],
+    [-0.3101, '-0.3101'],
+  ])('ggPx(%s) → %s (the same text the backend serves)', (x, want) => {
+    expect(ggPx(x)).toBe(want);
+  });
+
+  it('NEGATIVE: not a finite number → null, never "NaN" / "undefined"', () => {
+    for (const v of [null, undefined, NaN, Infinity, -Infinity, '0.31', {}, []]) expect(ggPx(v)).toBeNull();
+  });
+
+  it('a 0.3101 trigger with a 0.2950 stop keeps its R in the printed pair', () => {
+    expect(`trigger ${ggPx(0.3101)} · stop ${ggPx(0.295)}`).toBe('trigger 0.3101 · stop 0.295');
+    expect(ggPx(0.3101)).not.toBe(ggPx(0.295));
+  });
+
+  it('GajjalaBoard prints the plan line through ggPx and never through the house pxText', async () => {
+    const src = await readSource('src/components/GajjalaBoard.tsx');
+    expect(src).toContain('const trig = ggPx(read.trigger)');
+    expect(src).toContain('const stop = ggPx(read.stop)');
+    expect(src).not.toMatch(/pxText\(/);
+    expect(src).not.toMatch(/toFixed\(/);
   });
 });

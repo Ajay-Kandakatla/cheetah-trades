@@ -83,6 +83,7 @@ COUNT_KEYS = ("aplus", "pushed", "shadow", "shadow_mode", "shadow_session", "sup
               "suppressed_first15", "suppressed_window", "suppressed_closed", "suppressed_halt",
               "suppressed_exhausted", "not_aplus_variant", "claimed_before", "late", "no_target", "failed", "dry",
               "awaiting_answer",
+              "no_risk",           # 2026-10-20: an A+ whose trigger is not above its stop — ledger.plan_of ≠ ok — recorded "#no_risk", never rung
               "broker_flagged")   # 🚫 2026-10-17 (DECISIONS12 D4): names read this pass that are on his broker list (any state) — informational, never a gate
 
 
@@ -374,6 +375,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     last_halt_resume_et, reg_gain_pct}}; `store` = the GajjalaStore (its `alerts_coll()`); `send(owner, payload)`
     defaults to push.hooks.notify_gajjala_setup. `dry` → nothing claimed, recorded or sent (counted "dry").
     -> counts (COUNT_KEYS)."""
+    from . import ledger as LG
     from . import store as ST
     from .tab import broker_text_for
     mode = mode if mode in GC.PUSH_MODES else push_mode()
@@ -400,6 +402,9 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
                 "risk_pct": r.get("risk_pct"), "price": (ctx.get(sym) or {}).get("price"), "kind": KIND}
         if r.get("variant") or r.get("grade"):
             state = "not_aplus_variant"                         # long flag / near-kiss / B — never rings (round C)
+        elif LG.plan_of(r.get("trigger"), r.get("stop"))[0] != LG.PLANS[0]:
+            state = "no_risk"                                   # 2026-10-20: trigger = stop (or no stop under it) — the
+            #                                                     detectors refuse it first; this gate is the second lock
         elif not pushable(r, frames.get(sym) if isinstance(frames, dict) else None, now):
             # a 15-minute bar stays "latest" for three passes: the pass after the one that claimed it is a repeat,
             # not a late A+

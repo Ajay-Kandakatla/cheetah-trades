@@ -132,18 +132,23 @@ KF_D = (10.0, 10.5, 10.0, 10.5, 300_000)      # one demand bar is enough (GG S8 
 
 def kf_frame(n_pull: int = 3, *, kiss_above_pct: float | None = None, e21_rise: float = 0.0625,
              e21_over: float | None = None, pull_v: float = 100_000, red: int = 0, entry: bool = True,
-             minutes: dict | None = None, honor_fail_at: int | None = None, doji: int = 0) -> Frame:
+             minutes: dict | None = None, honor_fail_at: int | None = None, doji: int = 0,
+             one_print_kiss: bool = False) -> Frame:
     """Leg = KF_D, then n_pull pullback bars with descending highs; the LAST pullback bar kisses the 9 EMA (its low sits
     1/128 above the EMA — inside K5's tolerance). `kiss_above_pct` instead puts that low x% above the EMA (no kiss).
     `red` = the last `red` pullback bars close under their open; `doji` = the first `doji` close AT their open but
     under the bar before. `e21_over` puts the 21 EMA ABOVE the 9 EMA at the kiss bar; `e21_rise` = 0 flattens the 21.
-    `honor_fail_at` = a pullback offset whose close sits under its 9 EMA (still above the K3 floor)."""
+    `honor_fail_at` = a pullback offset whose close sits under its 9 EMA (still above the K3 floor).
+    `one_print_kiss` (2026-10-20, the MMA shape) = the kiss bar is ONE print: open = high = low = close, so the trigger
+    (its high) equals the stop (its low); the 9 EMA still sits 1/128 under it (a kiss by K5's tolerance)."""
     pre = [quiet(10.0)] * 4
     pull = []
     for i in range(n_pull):
         h = 10.5 - 0.0078125 * i
         lo = h - 0.0625
-        if i >= n_pull - red:
+        if one_print_kiss and i == n_pull - 1:
+            o = lo = c = h                                       # one print: no range at all
+        elif i >= n_pull - red:
             o, c = h - 0.015625, h - 0.03125                     # red close
         elif i < doji:
             o = c = h - 0.03125 - 0.0078125 * i                  # close == open, lower than the bar before

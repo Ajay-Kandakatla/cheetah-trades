@@ -241,6 +241,17 @@ describe('GajjalaBoard', () => {
     expect(roomSyms[roomSyms.length - 1]).toEqual(BOARDS.bull_flag.tiles.map((t: any) => t.symbol));
   });
 
+  it('a sub-dollar plan line keeps the served decimals: trigger 0.3101 · stop 0.295 (2026-10-20, the MMA finding)', async () => {
+    const sub = clone(BOARDS.bull_flag);
+    Object.assign(sub.tiles[0].gajjala, { trigger: 0.3101, stop: 0.295, risk_pct: 4.869 });
+    stubFetch(() => sub);
+    mount();
+    const pf = await screen.findByTestId('gg-tile-PFAI');
+    expect(within(pf).getByTestId('gg-plan')).toHaveTextContent('trigger 0.3101 · stop 0.295 · risk 4.9%');
+    // NEGATIVE: the house three-decimal print would have read "0.310" — the trigger and the stop must not blur
+    expect(within(pf).getByTestId('gg-plan').textContent).not.toContain('0.310 ');
+  });
+
   it('card extras: state pill, plan line, ✓ / ✗ / · criteria and the served chips', async () => {
     stubFetch(bySub);
     mount();

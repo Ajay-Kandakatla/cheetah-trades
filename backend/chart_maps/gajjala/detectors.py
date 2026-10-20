@@ -30,11 +30,17 @@ from typing import Optional
 
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala.bars import Frame
+from chart_maps.gajjala.ledger import PLANS, plan_of   # the 🏁 Track record's plan rule (E4) — ONE rule, never retyped
 
 log = logging.getLogger("chart_maps.gajjala.detectors")
 
 STATES = ("aplus", "triggered", "stopped", "forming", "partial", "invalid", "none")
 AWAITING_TEXT = "awaiting Ajay's answer ({h})"
+# 2026-10-20 (MMA kiss_fly, a one-print name): a reference bar with no range puts the stop AT the trigger — zero risk,
+# nothing to size, a Track record row the grader cannot score. The read is invalid, never A+, never pushed. The words are
+# the ledger's own plan names (ledger.PLANS: "no_risk" = trigger == stop, "no_plan" = the stop above the trigger).
+NO_RISK_REASON = "no risk — the trigger and the stop print the same price (a bar with no range)"
+NO_PLAN_REASON = "no plan — the stop sits above the trigger"
 
 
 # ── input contract ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -221,6 +227,13 @@ def _f(x, nd=2) -> str:
     return "—" if x is None else f"{x:.{nd}f}"
 
 
+def _px(x) -> str:
+    """A PRICE (or a price distance) inside a criterion's served value: the ONE price formatter (tab._px — the broker's
+    grid, 2026-10-20), so a sub-dollar name's EMAs, cycle lows and ranges keep their decimals on the card."""
+    from .tab import _px as tab_px
+    return tab_px(x)
+
+
 # ── Read builders ─────────────────────────────────────────────────────────────────────────────────────────────────
 def _blank(setup: str, F: Optional[Frame], last: int) -> dict:
     t = getattr(F, "t", None) or []
@@ -265,11 +278,16 @@ def _invalid(r: dict, reason: str) -> dict:
 
 
 def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minutes, last: int, crit: list) -> dict:
-    """Bar j printed above the trigger: entry_event decides break / stop-first / same-minute, then the state table."""
-    mins = _minutes_of(F, minutes, j)
-    ev, m = entry_event(F, j, trigger, stop, mins)
+    """Bar j printed above the trigger: the plan first (trigger must sit ABOVE the stop — ledger.plan_of, 2026-10-20),
+    then entry_event decides break / stop-first / same-minute, then the state table."""
     _levels(r, trigger, stop)
     r["entry_bar_t"], r["bars_since_entry"] = F.t[j], last - j
+    plan = plan_of(trigger, stop)[0]
+    if plan != PLANS[0]:                                        # no_risk (trigger == stop) / no_plan — never A+
+        _set_criteria(r, crit)
+        return _invalid(r, NO_RISK_REASON if plan == PLANS[2] else NO_PLAN_REASON)
+    mins = _minutes_of(F, minutes, j)
+    ev, m = entry_event(F, j, trigger, stop, mins)
     if ev == "stop":
         _set_criteria(r, crit)
         return _invalid(r, "stopped before the break — the entry bar traded under the stop first")
@@ -505,7 +523,7 @@ def _kiss_fly_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         criterion("k3_vol", f"K3 pullback volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, P, range(s, e + 1)),
                   f"max {_f(max((F.v[p] for p in P), default=None), 0)}", f"≤ {_f(cap, 0)}"),
         criterion("k5_uptrend", f"K5 9 EMA above 21 EMA, both rising over {GC.K5_SLOPE_BARS} bars", uptrend(F, ref),
-                  f"9 EMA {_f(_e9(F, ref))} · 21 EMA {_f(_e21(F, ref))}", "9 > 21, both rising"),
+                  f"9 EMA {_px(_e9(F, ref))} · 21 EMA {_px(_e21(F, ref))}", "9 > 21, both rising"),
         criterion("k4", f"K4 pullback ≤ {GC.K4_KF_PULL_MAX} bars", len(P) <= GC.K4_KF_PULL_MAX, f"{len(P)} bars",
                   f"≤ {GC.K4_KF_PULL_MAX}"),
     ]
@@ -747,9 +765,9 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     crit = [
         k4,
         criterion("k7_ratio", f"K7 each cycle's range ≤ {GC.K7_CONTRACTION:g}× the previous", ratio_ok,
-                  " → ".join(_f(x) for x in ranges), f"≤ {GC.K7_CONTRACTION:g}× each"),
+                  " → ".join(_px(x) for x in ranges), f"≤ {GC.K7_CONTRACTION:g}× each"),
         criterion("k7_ema21", f"K7 each cycle low holds the 21 EMA (−{GC.K7_EMA21_TOL_PCT:g}%)", ema_ok,
-                  " · ".join(_f(x) for x in lows), f"≥ 21 EMA × (1 − {GC.K7_EMA21_TOL_PCT:g}%)"),
+                  " · ".join(_px(x) for x in lows), f"≥ 21 EMA × (1 − {GC.K7_EMA21_TOL_PCT:g}%)"),
         criterion("k3_vol", f"K3 pullback volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, pull, range(s, e + 1)),
                   f"max {_f(max((F.v[p] for p in pull), default=None), 0)}", f"≤ {_f(cap, 0)}"),
     ]

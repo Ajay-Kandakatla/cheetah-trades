@@ -135,12 +135,12 @@ import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
-import { pxText, shortVol } from '../lib/chartMaps';
+import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
-  ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
+  ggPx, ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
@@ -759,8 +759,8 @@ function AplusBanner({ block }: { block: GgEnterable }) {
 function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard; sub: GgSub | null }) {
   if (!read) return null;
   const chips = read.chips || {};
-  const trig = pxText(read.trigger);
-  const stop = pxText(read.stop);
+  const trig = ggPx(read.trigger);                    // the broker's grid — the push, the 🏁 Track and the 🚩 lane agree
+  const stop = ggPx(read.stop);
   const risk = riskText(read.risk_pct);
   const variant = variantText(read);
   const grade = gradeText(read);

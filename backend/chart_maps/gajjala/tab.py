@@ -56,6 +56,7 @@ from zoneinfo import ZoneInfo
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
+from trading.broker import DOLLAR_DECIMALS, price_decimals, round_price   # the ONE stock price grid (2026-10-20)
 
 log = logging.getLogger("chart_maps.gajjala.tab")
 
@@ -103,7 +104,8 @@ def count_legend() -> list:
                                    "has not printed"),
         ("stopped", "stopped", "the break printed and then the stop printed"),
         ("invalid", "invalid", "the structure died — the entry bar traded under the stop first, too many pullback "
-                               "bars, the base broke"),
+                               "bars, the base broke, or the trigger would equal the stop (a reference bar with no "
+                               "range — no risk)"),
         ("none", "none", "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or "
                          "an unknown float, or a detector error"),
         ("awaiting_answer", "awaiting your number", "held by a rule whose number you have not given"),
@@ -161,10 +163,17 @@ def _hhmm(t) -> Optional[str]:
 
 
 def _px(x) -> str:
+    """The ONE price formatter of the tab, the push, the 🏁 Track record and the 🚩 lane: a price on the broker's own
+    grid (trading.broker.round_price / price_decimals — Alpaca takes four decimals under the sub-dollar line, two at or
+    over it; 2026-10-20, the MMA finding). Sub-dollar prices drop their trailing zeros ("0.31", "0.3101"); a dollar
+    price always carries its two ("4.46", "1.00"). The rule is the broker module's — nothing here types a decimal count."""
     v = _f(x)
     if v is None:
         return "—"
-    return f"{v:.4f}".rstrip("0").rstrip(".") if v < 1 else f"{v:.2f}"
+    v = round_price(v)
+    n = price_decimals(v)
+    s = f"{v:.{n}f}"
+    return s if n == DOLLAR_DECIMALS else (s.rstrip("0").rstrip(".") or "0")
 
 
 def _compact(n) -> Optional[str]:

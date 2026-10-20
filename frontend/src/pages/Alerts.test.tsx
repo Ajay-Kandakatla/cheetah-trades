@@ -1186,12 +1186,13 @@ describe('Alerts page — the 🚩 Gajjala A+ setups pass (2026-10-13)', () => {
     stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
       gajjala_setup: { ...STATUS_LIVE.passes.gajjala_setup,
         counts: { candidates: 3, pushed: 0, shadow_mode: 1, suppressed_premarket: 2, suppressed_first15: 1, late: 1,
-                  claimed_before: 1, suppressed_window: 1 } } } });
+                  claimed_before: 1, suppressed_window: 1, no_risk: 1 } } } });
     draw();
     const gg = await screen.findByTestId('pass-gajjala_setup');
     for (const t of ['2 A+ held: pre-market', '1 A+ held: first 15 minutes',
                      '1 A+ found late (bar older than one pass), not sent', '1 A+ already recorded today',
-                     '1 A+ held: outside his push windows']) {
+                     '1 A+ held: outside his push windows',
+                     '1 A+ held: trigger = stop (no risk), never sent' /* 2026-10-20: the MMA finding */]) {
       expect(within(gg).getByText(t)).toBeInTheDocument();
     }
     // NEGATIVE: no typed window — a half day ends 17:00, so "09:45–20:00" would be wrong there

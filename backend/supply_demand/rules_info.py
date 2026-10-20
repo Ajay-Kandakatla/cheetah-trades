@@ -1229,9 +1229,10 @@ def _gajjala_section() -> dict:
         ],
         "stops": [
             "Entry = the break of the prior bar's high (VCP: the last cycle's high; squeeze: the top of the "
-            "squeeze-back); stop = that bar's low (VCP: the last cycle's low; squeeze: the base low). Never the "
-            "first %d minutes after the open (his) — rows carry ⏳. Exits are his discretion — 📓 Playbook — never "
-            "computed." % GC.NO_TRADE_AFTER_OPEN_MIN,
+            "squeeze-back); stop = that bar's low (VCP: the last cycle's low; squeeze: the base low). A reference bar "
+            "with no range puts the stop at the trigger — no risk — and that read is invalid: never A+, never pushed "
+            "(the 🏁 Track record's own “no risk” word). Never the first %d minutes after the open (his) — rows carry "
+            "⏳. Exits are his discretion — 📓 Playbook — never computed." % GC.NO_TRADE_AFTER_OPEN_MIN,
             "🧱 %s chip when a level sits within %s%% above the price — his profit-taking / climax levels, not an "
             "entry; the %s%% band is a Cheetah default (yours, not his)."
             % (levels, _gg_v("PSY_NEAR_PCT"), _gg_v("PSY_NEAR_PCT")),
