@@ -18,6 +18,10 @@ type FundamentalHeadline = {
   enterprise_value: number | null;
   total_debt: number | null;
   total_cash: number | null;
+  /** 2026-10-20: the served source of `shareholder_equity` (filed balance sheet first) — see CompanyHeadline. */
+  equity_source?: 'filing' | 'derived' | null;
+  equity_as_of?: string | null;
+  equity_note?: string | null;
 };
 
 type FundamentalPanel = {
@@ -231,7 +235,9 @@ function HeadlineStrip({ h }: { h: FundamentalHeadline }) {
             body={
               <>
                 <span>The accounting "net worth" — total assets minus total liabilities. What the shareholders would technically own if the company sold everything and paid off all debts tomorrow.</span>
-                <span className="sa-info__formula mono">book value per share × shares outstanding</span>
+                {h.equity_note
+                  ? <span className="sa-info__formula" data-testid="sa-equity-note">{h.equity_note}</span>
+                  : <span className="sa-info__formula mono">book value per share × shares outstanding</span>}
                 <span>Differs from market capitalization because the market prices in expected future growth. The ratio market cap ÷ equity is the Price-to-Book (P/B) ratio — higher means the market expects a lot of growth above what's already on the balance sheet.</span>
               </>
             }

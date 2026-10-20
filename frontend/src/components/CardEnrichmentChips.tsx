@@ -121,7 +121,9 @@ export function CardEnrichmentChips({ symbol }: Props) {
         <Link
           to={`/sepa/${symbol}?tab=fundamentals`}
           className="val-chip val-fair"
-          title={`Shareholders' equity (book value): ${fmtBig(equity)} — total assets minus liabilities.`}
+          title={data?.headline?.equity_note
+            ? `Shareholders' equity: ${fmtBig(equity)} — ${data.headline.equity_note}`
+            : `Shareholders' equity (book value): ${fmtBig(equity)} — total assets minus liabilities.`}
         >
           🏛️ {fmtBig(equity)} equity
         </Link>

@@ -42,7 +42,10 @@ export type CardEnrichment = {
   };
   headline?: {
     market_cap?:          number | null;   // "current net worth"
-    shareholder_equity?:  number | null;   // book equity
+    shareholder_equity?:  number | null;   // book equity — the FILED balance sheet first (2026-10-20)
+    equity_source?:       'filing' | 'derived' | null;
+    equity_as_of?:        string | null;   // the filed period end, when the source is a filing
+    equity_note?:         string | null;   // the served sentence the chip's hover prints
   };
 };
 

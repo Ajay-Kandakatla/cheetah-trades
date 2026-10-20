@@ -123,8 +123,27 @@ def _extract_headline(analysis_blob: dict) -> dict:
     head = fundamental.get("headline") or {}
     return {
         "market_cap":          head.get("market_cap"),          # "current net worth"
-        "shareholder_equity":  head.get("shareholder_equity"),  # book equity
+        "shareholder_equity":  head.get("shareholder_equity"),  # book equity — the FILED balance sheet first (2026-10-20)
+        "equity_source":       head.get("equity_source"),       # "filing" | "derived" | None
+        "equity_status":       head.get("equity_status"),       # what the filings helper said (see `_cacheable`)
+        "equity_as_of":        head.get("equity_as_of"),        # the filed period end
+        "equity_note":         head.get("equity_note"),         # the served sentence the chip's hover prints
     }
+
+
+def _headline_current(doc: Optional[dict]) -> bool:
+    """2026-10-20: a cached row from before the filed-equity keys must recompute —
+    otherwise the 🏛️ chip keeps Yahoo's product (SXTC $25.69B) for the 24h TTL
+    while the header already prints the filing. Same pattern as the
+    `sell_count_30d` guard below. PURE."""
+    return bool(doc) and "equity_source" in (doc.get("headline") or {})
+
+
+def _cacheable(headline: Optional[dict]) -> bool:
+    """A headline built while the filings provider was not answering is never
+    written to the 24h cache — the next card view recomputes (the analysis
+    cache behind it keeps such a build only UNAVAILABLE_TTL_SEC). PURE."""
+    return (headline or {}).get("equity_status") != "unavailable"
 
 
 # --------------------------------------------------------------------------
@@ -173,7 +192,9 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
                     and doc.get("headline") is not None
                     # force a recompute for cards cached before the insider
                     # buy/sell score was added, so it appears without the 24h wait
-                    and "sell_count_30d" in (doc.get("insider") or {})):
+                    and "sell_count_30d" in (doc.get("insider") or {})
+                    # 2026-10-20: and for cards cached before the filed-equity keys
+                    and _headline_current(doc)):
                 return {
                     "symbol":     sym,
                     "cached_at":  doc.get("cached_at"),
@@ -207,8 +228,9 @@ async def enrich(symbol: str, *, force_refresh: bool = False) -> dict:
 
     # Best-effort cache write. A failure here doesn't break the response —
     # next call recomputes (which is fine, just costs the EDGAR/analysis
-    # round trip again).
-    if coll is not None:
+    # round trip again). 2026-10-20: a build made while the filings provider
+    # was down is not written at all (`_cacheable`).
+    if coll is not None and _cacheable(headline):
         try:
             coll.update_one(
                 {"symbol": sym},

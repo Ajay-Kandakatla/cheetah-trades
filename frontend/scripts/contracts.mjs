@@ -9700,8 +9700,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-19, later the same day: the 📱 gajjala phone-layout ✨ (its own block below) sits above this one —
       // the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-20: the 🏛️ shareholders'-equity ✨ (its own block) sits above both — widened to the top three, dated.
+      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstThree.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three (found ${firstThree.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9794,6 +9795,65 @@ const CONTRACTS = [
       if (!nf.includes('On the phone Gajjalas looks wierd and cut off')) errs.push('the ✨ line must quote his words verbatim');
       const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
       if (!exists(DOC) || !read(DOC).includes('Phone layout (2026-10-19)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "Phone layout (2026-10-19)" section');
+      return errs;
+    },
+  },
+  {
+    name: "🏛️ shareholders' equity = the FILED balance sheet first (2026-10-20)",
+    file: 'src/components/CompanyHeadline.tsx',
+    // Ajay 2026-10-20, the SXTC card: "Share holders queirty is werong". It showed $25.69B on a $1.2M company —
+    // Yahoo's `bookValue` per share ($2,480.58, stale after serial reverse splits) × today's 10.36M shares; the 20-F
+    // filed 2026-07-01 says $29,707,422. BRK-B got $735T the same way (the A-share book value per share × the B-share
+    // count), CDT $4.59B, NIVF $2.39B, TWG $1.13B. He reads this figure (real money): the backend serves the newest
+    // FILED balance sheet through the ONE financials helper, with its period end and a served sentence; Yahoo's
+    // product only as a plausible fallback; the FE prints the served words and types no formula of its own.
+    checks: (head) => {
+      const errs = [];
+      const ID = 'sepa-headline-equity-filed-2026-10-20';
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      // 1. the backend: the two functions, the dotted spelling, the two statements, the served keys, the schema bump.
+      const sa = tryRead('../backend/sepa/stock_analysis.py', 'backend');
+      for (const need of ['def filed_equity(', 'def pick_equity(', 'def cache_ttl_for(', 'symbols.for_massive(',
+                          'statements=(MF.INCOME, MF.BALANCE)', 'timeout=HELPER_TIMEOUT_SEC', 'equity_attributable_to_parent',
+                          '{"status": "skipped"} if is_etf else filed_equity(symbol)', 'financial_currency=info.get("financialCurrency")',
+                          '"equity_source": equity["source"]', '"equity_status": equity["status"]', '"equity_as_of": equity["as_of"]',
+                          '"equity_filed": equity["filed"]', '"equity_period": equity["period"]', '"equity_note": equity["note"]',
+                          'EQUITY_IMPLAUSIBLE_CAP_MULT = 20', 'UNAVAILABLE_TTL_SEC = 300', 'HELPER_TIMEOUT_SEC = 6.0',
+                          '_cache_put(sym, payload, ttl_sec=cache_ttl_for(payload))',
+                          'fundamental_panel(sym, is_etf=bool(etf and etf.get("is_etf")))']) {
+        if (!sa.includes(need)) errs.push(`stock_analysis.py must carry ${need}`);
+      }
+      const sv = /^SCHEMA_VERSION = (\d+)/m.exec(sa);
+      if (!sv || Number(sv[1]) < 5) errs.push('stock_analysis.SCHEMA_VERSION must be ≥ 5 so cached v4 products recompute');
+      const ce = tryRead('../backend/sepa/card_enrichment.py', 'backend');
+      for (const k of ['"equity_source"', '"equity_status"', '"equity_as_of"', '"equity_note"']) if (!ce.includes(k)) errs.push(`card_enrichment._extract_headline must pass ${k}`);
+      for (const need of ['def _headline_current(', 'def _cacheable(', 'and _headline_current(doc)', 'coll is not None and _cacheable(headline)']) {
+        if (!ce.includes(need)) errs.push(`card_enrichment.py must carry ${need} (the 24h chip cache: recompute pre-fix rows, never cache an outage build)`);
+      }
+      if (!exists('../backend/tests/test_fundamental_headline_equity_2026_10_20.py')) errs.push('the backend test (incl. NEGATIVES) is missing');
+      // 2. the FE: the served words, the as-of under the figure, no formula of its own outside the served-note fallback.
+      for (const need of ['equity_note', 'equity_source', 'equity_as_of', 'cm-headline__sub', 'cm-equity-note']) {
+        if (!head.includes(need)) errs.push(`CompanyHeadline.tsx must reference ${need}`);
+      }
+      const formula = 'book value per share × shares outstanding';
+      const nForm = head.split(formula).length - 1;
+      if (nForm !== 1) errs.push(`CompanyHeadline.tsx must type the old formula exactly once, as the fallback when no equity_note is served (found ${nForm})`);
+      if (head.indexOf('{h?.equity_note') < 0 || head.indexOf('{h?.equity_note') > head.indexOf(formula)) errs.push('CompanyHeadline.tsx: the served equity_note must be checked (in the JSX) before the formula fallback');
+      const sap = tryRead('src/components/StockAnalysisPanel.tsx', 'FE');
+      if (!sap.includes('h.equity_note')) errs.push('StockAnalysisPanel.tsx must print the served equity_note');
+      if (sap.split(formula).length - 1 !== 1) errs.push('StockAnalysisPanel.tsx must type the old formula exactly once, as the fallback');
+      const chips = tryRead('src/components/CardEnrichmentChips.tsx', 'FE');
+      if (!chips.includes('equity_note')) errs.push('CardEnrichmentChips.tsx must put the served equity_note on the 🏛️ hover');
+      const hook = tryRead('src/hooks/useCardEnrichment.ts', 'FE');
+      for (const k of ['equity_source', 'equity_as_of', 'equity_note']) if (!hook.includes(k)) errs.push(`useCardEnrichment.ts headline type must carry ${k}`);
+      if (!tryRead('src/styles.css', 'FE').includes('.cm-headline__sub')) errs.push('styles.css must style .cm-headline__sub');
+      if (!exists('src/components/CompanyHeadline.equity.test.tsx')) errs.push('CompanyHeadline.equity.test.tsx (incl. NEGATIVES) is missing');
+      // 3. the ✨ line with his words, and the doc.
+      const nf = read('src/lib/newFeatures.ts');
+      if (!nf.includes(`id: '${ID}'`)) errs.push(`newFeatures.ts must carry the ✨ ${ID}`);
+      if (!nf.includes('Share holders queirty is werong')) errs.push('the ✨ line must quote his words verbatim');
+      const DOC = '../docs/sepa/fundamentals_headline.md';
+      if (!exists(DOC) || !read(DOC).includes('2026-10-20')) errs.push('docs/sepa/fundamentals_headline.md must carry the 2026-10-20 section');
       return errs;
     },
   },

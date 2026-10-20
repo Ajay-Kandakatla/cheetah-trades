@@ -40,7 +40,10 @@ CACHE_TTL_SEC = 60 * 60  # 1 hour — fundamentals/ESG are slow-changing
 # `fundamental.headline` block (net worth / shareholders' equity / revenue /
 # enterprise value — surfaced by CompanyHeadline) get recomputed WITH it,
 # instead of the company-headline strip silently disappearing on deploy.
-SCHEMA_VERSION = 4
+# v5 (2026-10-20): `fundamental.headline.shareholder_equity` now comes from the
+# FILED balance sheet first (see `filed_equity`); cached v4 blobs still carry
+# Yahoo's per-share product (SXTC $25.69B, BRK-B $735T) and must recompute.
+SCHEMA_VERSION = 5
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
 # ---------------------------------------------------------------------------
@@ -81,7 +84,9 @@ def _cache_get(symbol: str) -> Optional[dict]:
         doc = coll.find_one({"symbol": symbol.upper()})
         if not doc:
             return None
-        if (time.time() - (doc.get("cached_at") or 0)) >= CACHE_TTL_SEC:
+        # 2026-10-20: a row may carry its own shorter TTL (`cache_ttl_for`).
+        ttl = doc.get("ttl_sec") or CACHE_TTL_SEC
+        if (time.time() - (doc.get("cached_at") or 0)) >= ttl:
             return None
         # Drop cached payloads from older schemas so newly added panel
         # fields (headline strip, axis formulas, etc.) don't take an hour
@@ -93,7 +98,7 @@ def _cache_get(symbol: str) -> Optional[dict]:
         return None
 
 
-def _cache_put(symbol: str, payload: dict) -> None:
+def _cache_put(symbol: str, payload: dict, ttl_sec: Optional[int] = None) -> None:
     coll = _get_cache()
     if coll is None:
         return
@@ -105,6 +110,7 @@ def _cache_put(symbol: str, payload: dict) -> None:
                 "payload": payload,
                 "cached_at": int(time.time()),
                 "schema_version": SCHEMA_VERSION,
+                "ttl_sec": int(ttl_sec) if ttl_sec else None,
             }},
             upsert=True,
         )
@@ -160,10 +166,183 @@ def _esg_label(score: Optional[float]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shareholders' equity — the FILED balance sheet first (2026-10-20)
+# ---------------------------------------------------------------------------
+# Ajay 2026-10-20, the SXTC card: "Share holders queirty is werong". It showed
+# $25.69B on a $1.2M company. The product below (Yahoo `bookValue` per share ×
+# `sharesOutstanding`) multiplied a stale, pre-reverse-split $2,480.58 per share
+# by today's 10.36M shares; the 20-F filed 2026-07-01 says $29,707,422. The
+# same product gave BRK-B $735T (Yahoo pairs the A-share book value per share
+# with the B-share count), CDT $4.59B, NIVF $2.39B and TWG $1.13B — a scan of
+# the 1,348 cached headlines that day. So the figure is the newest FILED
+# balance sheet through the ONE financials helper (sepa.massive_fundamentals,
+# the long-term tab's source, SEC-identical for every name checked), and
+# Yahoo's product is only a fallback — and only when it is plausible.
+EQUITY_IMPLAUSIBLE_CAP_MULT = 20   # MINE — a DERIVED equity above 20× market cap, or with no market cap to
+                                   # judge it against, is refused, not served (the five garbage products ran
+                                   # 36× to 670,000×). A FILED figure is never guarded: SXTC's real equity is
+                                   # 26× its market cap.
+UNAVAILABLE_TTL_SEC = 300          # MINE — an analysis built while the filings provider was down is
+                                   # re-tried after 5 min, not kept for the hour
+HELPER_TIMEOUT_SEC = 6.0           # MINE — per Massive call (the helper retries); the second series is
+                                   # not asked once the first one fails
+
+
+def cache_ttl_for(payload: dict) -> Optional[int]:
+    """None = the default hour; UNAVAILABLE_TTL_SEC when the headline's equity
+    was built while the filings provider was not answering."""
+    head = (((payload or {}).get("fundamental") or {}).get("headline") or {})
+    return UNAVAILABLE_TTL_SEC if head.get("equity_status") == "unavailable" else None
+
+
+def _cell_value(v) -> Optional[float]:
+    """A vX-shaped cell ({"value": x}) or a bare number → finite float, else None."""
+    if isinstance(v, dict):
+        v = v.get("value")
+    if v is None or isinstance(v, bool):
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f and f not in (float("inf"), float("-inf")) else None
+
+
+def filed_equity(symbol: str) -> dict:
+    """The newest FILED balance-sheet equity for `symbol`.
+
+    Asks the quarterly and the annual series (one period each — foreign filers
+    such as SXTC have no quarterly rows in v1, Berkshire only annual under its
+    dotted ticker) for the income spine + balance sheet, and keeps the row with
+    the newest period end that carries an equity figure — on a tie (a Q4 row
+    and the FY row end on the same day) the row that names its filing date
+    wins. `equity_attributable_to_parent` first (line "parent"), else `equity`
+    (line "total"). Massive spells class shares with a dot (symbols.for_massive).
+
+    Returns one of three shapes, never raises:
+      {"status": "filing", "value", "as_of", "filed", "period", "line"}
+      {"status": "none"}          — the provider answered: no filings here
+      {"status": "unavailable", "reason"} — the provider did not answer
+          (rate_limited, server_error, transport_error, …); the second series
+          is not asked, and the caller never caches this for the hour.
+    """
+    from sepa import massive_fundamentals as MF
+
+    sym = symbols.for_massive(str(symbol or "").upper().strip())
+    best: Optional[dict] = None
+    for timeframe in ("quarterly", "annual"):
+        try:
+            reports = MF.fetch_reports(sym, timeframe=timeframe, limit=1,
+                                       statements=(MF.INCOME, MF.BALANCE),
+                                       timeout=HELPER_TIMEOUT_SEC)
+        except MF.FinancialsUnavailable as exc:
+            log.warning("filed equity unavailable for %s (%s): %s", sym, timeframe, exc.reason)
+            return _finish(best) if best else {"status": "unavailable", "reason": str(exc.reason or "unavailable")}
+        except Exception as exc:  # noqa: BLE001 — the headline must never 500 over this
+            log.warning("filed equity failed for %s (%s): %s", sym, timeframe, exc)
+            return _finish(best) if best else {"status": "unavailable", "reason": "error"}
+        for r in reports or []:
+            if not isinstance(r, dict):
+                continue
+            bal = ((r.get("financials") or {}).get("balance_sheet") or {})
+            line = "parent"
+            val = _cell_value(bal.get("equity_attributable_to_parent"))
+            if val is None:
+                line = "total"
+                val = _cell_value(bal.get("equity"))
+            end = r.get("end_date")
+            if val is None or not end:
+                continue
+            key = (str(end), 1 if r.get("filing_date") else 0)
+            if best is None or key > best["_key"]:
+                period = " ".join(str(x) for x in (r.get("fiscal_period"), r.get("fiscal_year")) if x)
+                best = {"status": "filing", "value": val, "as_of": str(end), "filed": r.get("filing_date"),
+                        "period": period or None, "line": line, "_key": key}
+    return _finish(best) if best else {"status": "none"}
+
+
+def _finish(best: dict) -> dict:
+    best = dict(best)
+    best.pop("_key", None)
+    return best
+
+
+def _usd(n: float) -> str:
+    a = abs(n)
+    if a >= 1e12:
+        return f"${n / 1e12:.2f}T"
+    if a >= 1e9:
+        return f"${n / 1e9:.2f}B"
+    if a >= 1e6:
+        return f"${n / 1e6:.1f}M"
+    return f"${n:,.0f}"
+
+
+def pick_equity(filed: Optional[dict], derived: Optional[float],
+                market_cap: Optional[float], *, financial_currency: Optional[str] = None) -> dict:
+    """PURE. The headline's equity block: the filed figure when there is one,
+    else Yahoo's per-share product when it is plausible, else nothing — each
+    with the served sentence (`note`) the ⓘ prints.
+
+    Keys: value, source ("filing" | "derived" | None), status ("filing" |
+    "none" | "unavailable" | "skipped" | None — what the filings helper said),
+    as_of, filed, period, note. A product is plausible only against a known,
+    positive market cap and within EQUITY_IMPLAUSIBLE_CAP_MULT of it. When the
+    company reports in another currency (Yahoo's `financialCurrency`), the note
+    says so — the filed figure is served as the provider serves it, not
+    converted here."""
+    status = (filed or {}).get("status")
+    if status == "filing" and filed.get("value") is not None:
+        as_of, filed_on, period = filed.get("as_of"), filed.get("filed"), filed.get("period")
+        line = ("total equity attributable to shareholders" if filed.get("line") == "parent"
+                else "total equity, including any minority interest")
+        cur = str(financial_currency or "").upper().strip()
+        hint = (f" The company reports in {cur}; the figure is as the filings provider serves it, not converted here."
+                if cur and cur != "USD" else "")
+        note = (f"Filed balance sheet{f' ({period})' if period else ''}, period ended {as_of}"
+                f"{f', filed {filed_on}' if filed_on else ''} — {line}.{hint}")
+        return {"value": float(filed["value"]), "source": "filing", "status": "filing", "as_of": as_of,
+                "filed": filed_on, "period": period, "note": note}
+    empty = {"value": None, "source": None, "status": status if status in ("none", "unavailable", "skipped") else None,
+             "as_of": None, "filed": None, "period": None, "note": None}
+    if derived is None:
+        return empty
+    try:
+        d = float(derived)
+    except (TypeError, ValueError):
+        return empty
+    if d != d:
+        return empty
+    cap = None
+    try:
+        cap = float(market_cap) if market_cap is not None else None
+    except (TypeError, ValueError):
+        cap = None
+    if cap is not None and (cap != cap or cap <= 0):
+        cap = None
+    why = ("The filings provider did not answer" + (f" ({filed.get('reason')})" if (filed or {}).get("reason") else "")
+           if status == "unavailable"
+           else "Filings are not read for a fund" if status == "skipped"
+           else "No filed balance sheet was found under this ticker")
+    if cap is None or abs(d) > EQUITY_IMPLAUSIBLE_CAP_MULT * cap:
+        against = (f"against a {_usd(cap)} market capitalization" if cap is not None
+                   else "with no market capitalization to judge it against")
+        return {**empty, "note": (
+            f"Refused: Yahoo's book value per share × shares outstanding gives {_usd(d)} {against} — a stale "
+            f"per-share figure after reverse splits, or another share class. {why}.")}
+    return {**empty, "value": d, "source": "derived", "note": (
+        f"{why} — this is Yahoo's book value per share × shares outstanding, which can be stale after "
+        "reverse splits. Estimated.")}
+
+
+# ---------------------------------------------------------------------------
 # 1. Fundamental analysis
 # ---------------------------------------------------------------------------
-def fundamental_panel(symbol: str) -> dict:
+def fundamental_panel(symbol: str, *, is_etf: bool = False) -> dict:
     """Compute the four fundamental axes from yfinance `.info`.
+
+    `is_etf`: a fund has no filed balance sheet to read — the filings helper
+    is not asked (2026-10-20).
 
     All four scores are 0-100 (higher = better). Returns the raw metric values
     too, so the UI can show "P/E 18 vs sector 22" tooltips.
@@ -191,12 +370,18 @@ def fundamental_panel(symbol: str) -> dict:
     revenue_ttm = info.get("totalRevenue")
     book_value_per_share = info.get("bookValue")
     shares_out = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
-    shareholder_equity = None
+    derived_equity = None
     if book_value_per_share and shares_out:
         try:
-            shareholder_equity = float(book_value_per_share) * float(shares_out)
+            derived_equity = float(book_value_per_share) * float(shares_out)
         except Exception:
-            shareholder_equity = None
+            derived_equity = None
+    # 2026-10-20: the FILED balance sheet first; Yahoo's product only as a
+    # plausible fallback — see `filed_equity` / `pick_equity` above.
+    filed = {"status": "skipped"} if is_etf else filed_equity(symbol)
+    equity = pick_equity(filed, derived_equity, market_cap,
+                         financial_currency=info.get("financialCurrency"))
+    shareholder_equity = equity["value"]
     enterprise_value = info.get("enterpriseValue")
     total_debt = info.get("totalDebt")
     total_cash_short = info.get("totalCash")
@@ -268,6 +453,12 @@ def fundamental_panel(symbol: str) -> dict:
         "headline": {
             "market_cap": market_cap,
             "shareholder_equity": shareholder_equity,
+            "equity_source": equity["source"],
+            "equity_status": equity["status"],
+            "equity_as_of": equity["as_of"],
+            "equity_filed": equity["filed"],
+            "equity_period": equity["period"],
+            "equity_note": equity["note"],
             "book_value_per_share": book_value_per_share,
             "shares_outstanding": shares_out,
             "revenue_ttm": revenue_ttm,
@@ -700,11 +891,11 @@ def analysis_for(symbol: str, force_refresh: bool = False) -> dict:
         "fetched_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "is_etf":   bool(etf and etf.get("is_etf")),
         "etf_info": etf if (etf and etf.get("is_etf")) else None,
-        "fundamental": fundamental_panel(sym),
+        "fundamental": fundamental_panel(sym, is_etf=bool(etf and etf.get("is_etf"))),
         "technical": technical_panel(sym),
         "esg": esg_panel(sym),
         "analyst": analyst_panel(sym),
         "cached": False,
     }
-    _cache_put(sym, payload)
+    _cache_put(sym, payload, ttl_sec=cache_ttl_for(payload))
     return payload

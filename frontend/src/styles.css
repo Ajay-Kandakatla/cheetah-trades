@@ -3137,6 +3137,8 @@ tr:last-child td { border-bottom: none; }
   letter-spacing: -0.01em;
 }
 .cm-headline__value.is-loading { color: var(--ink-faint); }
+/* 2026-10-20: the served as-of under a headline figure (shareholders' equity = the filed period end). */
+.cm-headline__sub { font-size: 0.66rem; color: var(--cm-slate, #8595ad); margin-top: 0.1rem; letter-spacing: 0.02em; }
 
 @media (max-width: 720px) {
   .cm-headline__stat { flex: 1 1 calc(50% - 0px); border-right: none; padding: 0.4rem 0.6rem; }

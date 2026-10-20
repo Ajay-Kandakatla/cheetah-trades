@@ -11,6 +11,14 @@ type Headline = {
   enterprise_value: number | null;
   total_debt: number | null;
   total_cash: number | null;
+  /** 2026-10-20 (Ajay, SXTC: "Share holders queirty is werong"): where `shareholder_equity` came from — the FILED
+   *  balance sheet ("filing", with its period end + filing date) or Yahoo's per-share product ("derived"), or null when
+   *  the backend refused both. `equity_note` is the served sentence the ⓘ prints; the FE types no formula of its own. */
+  equity_source?: 'filing' | 'derived' | null;
+  equity_as_of?: string | null;
+  equity_filed?: string | null;
+  equity_period?: string | null;
+  equity_note?: string | null;
 };
 
 type EtfInfo = {
@@ -184,13 +192,17 @@ export function CompanyHeadline({ symbol }: Props) {
       <Stat
         label="Shareholders' equity"
         value={fmtBig(h?.shareholder_equity)}
+        sub={h?.equity_source === 'filing' && h.equity_as_of ? `as of ${h.equity_as_of}`
+          : h?.equity_source === 'derived' ? 'estimated' : null}
         loading={!h}
         info={{
           title: "Shareholders' equity (Book value)",
           body: (
             <>
               <p>The accounting net worth — total assets minus total liabilities. What shareholders would technically own if the company sold everything and paid off all debts tomorrow.</p>
-              <p><strong>Formula:</strong> book value per share × shares outstanding</p>
+              {h?.equity_note
+                ? <p data-testid="cm-equity-note"><strong>Source:</strong> {h.equity_note}</p>
+                : <p><strong>Formula:</strong> book value per share × shares outstanding</p>}
               <p>It usually trails market capitalization because the market prices in expected future growth. The ratio market cap ÷ equity is the Price-to-Book (P/B) ratio.</p>
             </>
           ),
@@ -232,7 +244,7 @@ export function CompanyHeadline({ symbol }: Props) {
 
 type InfoSpec = { title: string; body: React.ReactNode };
 
-function Stat({ label, value, loading, info }: { label: string; value: string; loading: boolean; info: InfoSpec }) {
+function Stat({ label, value, loading, info, sub }: { label: string; value: string; loading: boolean; info: InfoSpec; sub?: string | null }) {
   return (
     <div className="cm-headline__stat">
       <div className="cm-headline__label">
@@ -240,6 +252,7 @@ function Stat({ label, value, loading, info }: { label: string; value: string; l
         <CmInfoDot info={info} />
       </div>
       <div className={`cm-headline__value mono ${loading ? 'is-loading' : ''}`}>{loading ? '…' : value}</div>
+      {!loading && sub ? <div className="cm-headline__sub" data-testid="cm-headline-sub">{sub}</div> : null}
     </div>
   );
 }
