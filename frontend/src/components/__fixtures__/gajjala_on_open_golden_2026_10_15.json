@@ -107,6 +107,7 @@
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
    "graveyard_today": [],
+   "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "order_note": null,
    "pass": {
@@ -192,7 +193,7 @@
      "title": null
     },
     {
-     "count": 1,
+     "count": 0,
      "emoji": "🌀",
      "key": "intraday_vcp",
      "label": "Intraday VCP",
@@ -394,6 +395,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": "2026-10-13 10:40",
       "flag_k": 1,
       "frame": "5m",
@@ -2064,7 +2066,7 @@
      "title": null
     },
     {
-     "count": 1,
+     "count": 0,
      "emoji": "🌀",
      "key": "intraday_vcp",
      "label": "Intraday VCP",
@@ -2296,7 +2298,7 @@
      "title": null
     },
     {
-     "count": 1,
+     "count": 0,
      "emoji": "🌀",
      "key": "intraday_vcp",
      "label": "Intraday VCP",
@@ -2512,6 +2514,7 @@
         "value": "second-half volume 2.50×"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
@@ -2593,13 +2596,13 @@
    ],
    "track": {
     "empty_today": "No potential first seen yet this session — the pass runs every 5 minutes from 04:01 to 19:56 ET.",
-    "title": "📈 Track — 4 potentials first seen today · UNMEASURED",
+    "title": "📈 Track — 3 potentials first seen today · UNMEASURED",
     "today": {
      "armed_n": 1,
-     "building_n": 3,
+     "building_n": 2,
      "date": "2026-10-13",
      "label": "today",
-     "n": 4,
+     "n": 3,
      "pushed_n": 0,
      "rows": [
       {
@@ -2683,36 +2686,6 @@
        "setup_label": "➖ Horizontal Fade",
        "symbol": "GGA",
        "text": "GGA · ➖ Horizontal Fade · first seen 10:36 ET building · now building · 10.88 → 10.88 (+0.0%) since first seen",
-       "timeline": [
-        {
-         "at_et": "10:36",
-         "text": "10:36 building"
-        }
-       ],
-       "vs_trigger_pct": -1.14,
-       "vs_trigger_text": "-1.1% vs the trigger at first sight (11.00)"
-      },
-      {
-       "broker_text": null,
-       "entry_text": null,
-       "first_kind": "building",
-       "first_kind_label": "building",
-       "first_px": 10.875,
-       "first_seen_et": "10:36",
-       "first_stop": 10.8125,
-       "first_trigger": 11.0,
-       "graveyard_on": null,
-       "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=GGA",
-       "last_px": 10.875,
-       "last_state": "forming",
-       "last_state_text": "building",
-       "move_pct": 0.0,
-       "move_text": "10.88 → 10.88 (+0.0%) since first seen",
-       "push_text": "held: joined mid-session: tracking, not ringing",
-       "setup": "intraday_vcp",
-       "setup_label": "🌀 Intraday VCP",
-       "symbol": "GGA",
-       "text": "GGA · 🌀 Intraday VCP · first seen 10:36 ET building · now building · 10.88 → 10.88 (+0.0%) since first seen",
        "timeline": [
         {
          "at_et": "10:36",

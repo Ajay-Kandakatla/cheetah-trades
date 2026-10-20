@@ -69,6 +69,18 @@ def test_one_line_per_setup_with_its_numbers(sec):
     assert "Cheetah default" in t                                   # stays-listed + psych band are Ajay's
 
 
+def test_vcp_line_carries_the_listing_clause_from_the_switch(sec, monkeypatch):
+    # BUILD_SPEC18 D5 (Ajay 2026-10-20 "show me stocks only that have 2 contractions"): built from the one switch +
+    # K4; the pinned K4/K7 clause above stays intact. NEGATIVE: the switch off drops the clause.
+    t = _text(sec)
+    assert ", carded from %d contractions (fewer are counted, not listed)" % GC.vcp_list_min_cycles() in t
+    assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in t
+    monkeypatch.setattr(GC, "VCP_LIST_FROM_K4", False)
+    off = _text(RI.sections()["gajjala"])
+    assert "carded from" not in off
+    assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in off
+
+
 def test_push_line_is_live_by_default_and_shadow_on_a_flip_back(sec, monkeypatch):
     # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the shipped line is the
     # live one; the shadow line is pinned on an explicit flip back (one word).

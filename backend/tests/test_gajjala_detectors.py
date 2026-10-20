@@ -721,6 +721,59 @@ def test_vcp_k3_depth_does_not_bind():
     assert FX.VCP_BARS[8][2] < D.k3_floor(FX.vcp_frame(), TI(FX.vcp_frame(), 3))
 
 
+# ── 🌀 the read carries its contraction count (2026-10-20, BUILD_SPEC18 D2) ────────────────────────────────────
+# Ajay 2026-10-20: "show me stocks only that have 2 contractions" — the tab cards from `cycles`; the detector only
+# COUNTS (no state, criterion, trigger or stop moves).
+VCP_THIRD = [(10.125, 10.375, 10.0625, 10.3125, 40_000), (10.3125, 10.5, 10.25, 10.4375, 40_000),
+             (10.4375, 10.5625, 10.375, 10.5, 40_000), (10.5, 10.5, 10.25, 10.3125, 30_000),
+             (10.3125, 10.375, 10.0625, 10.125, 30_000), (10.125, 10.25, 10.0, 10.1875, 30_000),
+             (10.1875, 10.3125, 10.125, 10.25, 30_000), (10.25, 10.375, 10.1875, 10.3125, 30_000),
+             (10.3125, 10.4375, 10.25, 10.375, 30_000)]           # a third, tighter cycle: H3 10.5625, L3 10.0
+
+VCP_STATE_TABLE = [   # (name, frame builder, cycles, state, reason, missed, grade, trigger, stop, ready)
+    ("printing_highs", lambda: FX.vcp_frame(FX.VCP_BARS[:6], entry=None), 0, "forming",
+     "no pullback yet — the leg is still printing highs", [], None, 11.0, None, False),
+    ("one_forming", lambda: FX.vcp_frame(FX.VCP_BARS[:11], entry=None), 1, "forming",
+     "1 of 2 cycles", [], None, 11.0, 9.75, False),
+    ("one_broke", lambda: FX.vcp_frame(FX.VCP_BARS[:11] + [(10.5, 11.125, 10.4375, 10.75, 150_000)], entry=None), 1,
+     "partial", "broke — not A+", ["k4_cycles"], None, 11.0, 9.75, False),
+    ("two_aplus", lambda: FX.vcp_frame(), 2, "aplus", "", [], None, 10.75, 9.875, False),
+    ("two_forming", lambda: FX.vcp_frame(entry=None), 2, "forming", "the last cycle is still making its low", [],
+     None, 10.75, 9.875, False),
+    ("two_b", lambda: FX.vcp_frame(FX.vcp_replace(r13=(10.1875, 10.25, 9.8, 10.125, 40_000)), e21_at={13: 9.8}), 2,
+     "partial", "B — imperfect · missed k7_ratio", ["k7_ratio"], "B", 10.75, 9.8, False),
+    ("three_b", lambda: FX.vcp_frame(FX.VCP_BARS + VCP_THIRD, entry=None), 3, "partial",
+     "B — imperfect · missed k7_ema21", ["k7_ema21"], "B", 10.5625, 10.0, False),
+    ("two_lower_low", lambda: FX.vcp_frame(FX.vcp_replace(r13=(10.1875, 10.25, 9.6875, 10.125, 40_000))), 2,
+     "invalid", "lower low — not contracting up", [], None, None, None, False),
+]
+
+
+@pytest.mark.parametrize("row", VCP_STATE_TABLE, ids=[r[0] for r in VCP_STATE_TABLE])
+def test_vcp_read_carries_its_cycle_count(row):
+    _name, build, cycles, *_ = row
+    r = D.intraday_vcp(build())
+    assert r["cycles"] == cycles and isinstance(r["cycles"], int) and not isinstance(r["cycles"], bool)
+
+
+@pytest.mark.parametrize("row", VCP_STATE_TABLE, ids=[r[0] for r in VCP_STATE_TABLE])
+def test_NEGATIVE_the_vcp_state_table_is_unchanged_by_the_count(row):
+    """The count is the ONLY new key: state / reason / missed / grade / trigger / stop / ready are the pre-2026-10-20
+    values, and the key set is the blank read's plus nothing else."""
+    _name, build, _c, state, reason, missed, grade, trigger, stop, ready = row
+    r = D.intraday_vcp(build())
+    assert (r["state"], r["reason"], r["missed"], r["grade"], r["trigger"], r["stop"], r["ready"]) == \
+        (state, reason, missed, grade, trigger, stop, ready)
+    assert set(r) == set(D._blank("intraday_vcp", None, -1))
+
+
+def test_NEGATIVE_cycles_is_none_on_every_other_setup_and_on_a_read_with_no_leg():
+    assert D._blank("bull_flag", None, -1)["cycles"] is None
+    assert D.bull_flag(FX.frame(FX.bf_bars()))["cycles"] is None
+    assert D.intraday_vcp(FX.frame([FX.quiet(10.0)] * 5))["cycles"] is None     # no demand leg — nothing counted
+    assert D.intraday_vcp(FX.vcp_frame())["cycles"] == GC.K4_VCP_MIN_CYCLES
+
+
 # ── 🎾 Reversal Squeeze ──────────────────────────────────────────────────────────────────────────────────────
 def _rs(F=None, shares=5_000_000, **kw):
     return D.reversal_squeeze(F if F is not None else FX.rs_frame(), float_read=FX.float_read(shares, **kw))

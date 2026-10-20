@@ -68,6 +68,16 @@ K7_CONTRACTION = 0.75                    # Ajay K7: each cycle's range <= 0.75 x
 K7_EMA21_TOL_PCT = 0.5                   # Ajay K7: each cycle low >= EMA21 x 0.995
 VCP_B_READS = True                       # Ajay round C: exactly one of {K7 contraction, K7 21-EMA hold} false -> "B — imperfect", listed, never pushed
 VCP_B_GRADE = "B"                        # Ajay round C wording ("B — imperfect")
+VCP_LIST_FROM_K4 = True                    # Ajay 2026-10-20 "show me stocks only that have 2 contractions … I don't see a point of seeing the ones with one contraction": the 🌀 sub cards only reads with ≥ K4_VCP_MIN_CYCLES contractions — fewer are COUNTED, never carded, never a 🧠 potential; False = card every read (the pre-2026-10-20 board)
+
+
+def vcp_list_min_cycles() -> "int | None":
+    """The fewest contractions a 🌀 read needs to be carded (and to be a 🧠 potential): K4_VCP_MIN_CYCLES while
+    VCP_LIST_FROM_K4 is on, else None (no listing rule). Reads both at call time — a patched K4 is followed; no
+    second number (BUILD_SPEC18 D1)."""
+    return K4_VCP_MIN_CYCLES if VCP_LIST_FROM_K4 else None
+
+
 # K8 reversal squeeze
 K8_MAX_FLOAT = 10_000_000                # Ajay K8: float <= 10,000,000 · Ajay 2026-10-18 "Keep the float reduce" — confirmed after the audit
 K8_DROP_PCT = 8.0                        # Ajay K8: tennis ball = a drop >= 8% from a bar's high

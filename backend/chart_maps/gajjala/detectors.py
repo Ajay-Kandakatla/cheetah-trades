@@ -241,7 +241,8 @@ def _blank(setup: str, F: Optional[Frame], last: int) -> dict:
             "ready": False, "broke": False, "leg": None, "base": None, "trigger": None, "stop": None,
             "risk_pct": None, "entry_bar_t": None, "bars_since_entry": None, "criteria": [], "missed": [],
             "unjudged": [], "reason": "", "as_of_bar_t": t[last] if 0 <= last < len(t) else None,
-            "meta": {"structure_alive": False}, "grade": None, "variant": None, "red_closes": 0, "flag_k": None}
+            "meta": {"structure_alive": False}, "grade": None, "variant": None, "red_closes": 0, "flag_k": None,
+            "cycles": None}                       # 🌀 contractions counted (BUILD_SPEC18 D2); None for every other setup
 
 
 def _none(setup: str, F: Optional[Frame], last: int, reason: str) -> dict:
@@ -742,10 +743,12 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         _levels(r, F.h[Hn], None)
         r["reason"] = "no pullback yet — the leg is still printing highs"
         r["state"] = "forming"
+        r["cycles"] = 0                                                # no contraction yet (BUILD_SPEC18 D2)
         return r
     Ln = min(range(Hn + 1, end + 1), key=lambda i: (F.l[i], i))       # the last cycle low, bars BEFORE the break
     all_cycles = cycles + [(Hn, Ln)]
     n = len(all_cycles)
+    r["cycles"] = n                                                    # the K4 count, kept on an invalid read too (D2)
     ranges = [F.h[H] - F.l[L] for H, L in all_cycles]
     lows = [F.l[L] for _, L in all_cycles]
     pull = [p for H, L in all_cycles for p in range(H + 1, L + 1)]

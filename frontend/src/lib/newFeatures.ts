@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-20 (verbatim in the label). BUILD_SPEC18 D1–D8: the 🌀 sub cards only reads with at least
+  // GC.K4_VCP_MIN_CYCLES contractions (switch GC.VCP_LIST_FROM_K4); fewer are counted, not carded, and the served
+  // `list_note` says how many; potential.potential_kind follows the same rule. The only digit in the label is the one in
+  // his quote — pinned equal to K4_VCP_MIN_CYCLES by scripts/contracts.mjs ("🌀 Gajjala VCP cards from two contractions
+  // (2026-10-20)"). UNMEASURED.
+  { id: 'chart-maps-gajjala-vcp-two-contractions-2026-10-20', addedAt: '2026-10-20', route: '/chart-maps?tab=gajjala&sub=intraday_vcp',
+    label: "🌀 Gajjala's Intraday VCP sub lists only names with at least two contractions now. You said: “Hey, Can you actually show me stocks only that have 2 contractions. in Gajjallas I don't see a point of seeing the ones with one contraction do you?”. Agreed — one contraction is a pullback, not a VCP: his rules ask for at least two, each tighter than the one before. Names with fewer are still counted (forming or partial) on the counts line, and a line under the sub-tabs says how many were counted but not listed. The 🧠 Potential sub, its push and the 🏁 Track record’s potential rows follow the same rule from today, so a one-contraction name no longer rings as a potential. The A+ alert gate itself is unchanged. UNMEASURED. Not advice." },
   // Ajay 2026-10-20 (verbatim in the label). BUILD_SPEC17: the 🚩 Gajjala paper lane (backend/trading/gajjala_entry.py).
   // Every number here is a backend constant — GAJJALA_RISK_PCT, GAJJALA_MAX_ENTRIES_PER_DAY, GC.LEDGER_R_MULT, 16:00 −
   // GAJJALA_FLATTEN_BEFORE_CLOSE_MIN, safety_floor.MIN_SHARE_PRICE — pinned by scripts/contracts.mjs

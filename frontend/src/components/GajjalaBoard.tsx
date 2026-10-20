@@ -529,6 +529,10 @@ export default function GajjalaBoard() {
       {typeof board?.order_note === 'string' && board.order_note.trim() ? (
         <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
       ) : null}
+      {/* (3a) 🌀 the served "counted, not listed" line (tab.build list_note, 🌀 sub only; BUILD_SPEC18 D3/D6) — verbatim. */}
+      {typeof board?.list_note === 'string' && board.list_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-list-note">{board.list_note}</span>
+      ) : null}
 
       {/* (3b) 🎯 the served A+ line — every sub, so on 🧠 Potential it leads the 📈 Track. */}
       {board?.enterable ? <AplusBanner block={board.enterable} /> : null}

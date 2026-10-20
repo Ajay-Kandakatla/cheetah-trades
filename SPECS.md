@@ -552,7 +552,9 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX` 1–5 (WIDENED 2026-10-18 from 1–3, Ajay *"make the change for Long flags"*); Kiss & Fly `K5_KISS_TOL_PCT` 0.5, `K5_SLOPE_BARS` 3, ≤ `K4_KF_PULL_MAX` 9, every
   pullback close ≥ 9 EMA (`KF_HONOR_ALL_PULLBACK_CLOSES`); Fade base `K4_HF_BASE_MIN`–`K4_HF_BASE_MAX` 6–24, `K6_MERGE_PCT`
   0.5, `K6_TIGHT_PCT` 8.0, `K6_SELL_DECAY` 0.70, trigger `HF_TRIGGER` "base_high"; VCP ≥ `K4_VCP_MIN_CYCLES` 2,
-  `K7_CONTRACTION` 0.75, `K7_EMA21_TOL_PCT` 0.5, `VCP_PIVOT_WINDOW` 2; Reversal Squeeze `K8_MAX_FLOAT` 10,000,000,
+  `K7_CONTRACTION` 0.75, `K7_EMA21_TOL_PCT` 0.5, `VCP_PIVOT_WINDOW` 2 (2026-10-20 `VCP_LIST_FROM_K4` True, Ajay
+  *"show me stocks only that have 2 contractions"*: the 🌀 sub cards only reads with ≥ `K4_VCP_MIN_CYCLES` contractions
+  — fewer are counted, never carded, never a 🧠 potential; the read's `cycles` field carries the count); Reversal Squeeze `K8_MAX_FLOAT` 10,000,000,
   `K8_DROP_PCT` 8.0, `K8_RECOVER_PCT` 2.0 in `K8_RECOVER_BARS` 3, failed attempt `K8_FAIL_NEAR_PCT` 2.0 /
   `K8_FAIL_DROP_PCT` 8.0 / `K8_FAIL_EVENT_RULE` "distinct", `RS_BASE_MIN_BARS` 1, history chip `K8_HISTORY_SESSIONS` 30 /
   `K8_HISTORY_RANGE_PCT` 50.0, `FLOAT_SUSPECT_POLICY` "ineligible" (spec default); ☀️ K9 `K9_PM_MIN_VOLUME` 1,000,000,

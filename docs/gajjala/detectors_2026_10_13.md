@@ -123,6 +123,10 @@ trigger = h[H_n], stop = l[L_n] (HIS CALL 6: "entry the top of this cycle, stop 
 no break: forming, ready = ≥ 2 cycles and the cycle low is not the latest bar; break: entry_event / state table
     (entry bar under the stop before its break minute → invalid; after → stopped)
 ```
+- 2026-10-20 (BUILD_SPEC18 D2): every read carries `cycles` (None from `_blank`, so None on every other setup); the 🌀
+  read sets 0 on "no pullback yet" and n = the cycle count once it is known (kept on an invalid read). It only COUNTS —
+  the tab cards a 🌀 read from `K4_VCP_MIN_CYCLES` contractions (`VCP_LIST_FROM_K4`); no state, criterion, trigger or stop
+  moved.
 
 ## 🎾 Reversal Squeeze (GG S8 35:02–38:18, S9 2:00:32–2:02:40; K8, H1, H2, H4)
 ```

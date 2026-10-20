@@ -132,6 +132,29 @@ UNMEASURED = "UNMEASURED"
 RS_ORDER_TEXT = "🎾 lowest float on top"   # DECISIONS13 D3 — the ordering word, served as order_note on the squeeze sub
 
 
+def _vcp_listed(setup: str, r: dict) -> bool:
+    """BUILD_SPEC18 D3 (Ajay 2026-10-20 "show me stocks only that have 2 contractions"): a 🌀 read is carded only with
+    at least vcp_list_min_cycles() contractions. Every other setup, the switch off, or a read stored without an int
+    `cycles` (the previous code, at most one pass old) lists as before — fail-open. A bool is never a count."""
+    if setup != "intraday_vcp":
+        return True
+    m = GC.vcp_list_min_cycles()
+    n = (r or {}).get("cycles")
+    if m is None or not isinstance(n, int) or isinstance(n, bool):
+        return True
+    return n >= m
+
+
+def vcp_list_note(k: int) -> Optional[str]:
+    """The 🌀 sub's served line for the k reads counted but not carded (D3) — the words MINE, the numbers the count and
+    the constant; None when nothing was held back or the switch is off."""
+    m = GC.vcp_list_min_cycles()
+    if m is None or not isinstance(k, int) or isinstance(k, bool) or k <= 0:
+        return None
+    return (f"🌀 {k} with fewer than {m} contractions counted, not listed — his K4: a VCP needs at least {m} "
+            f"contractions, each tighter than the one before (S8 33:50)")
+
+
 # ── small helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
 def _f(x) -> Optional[float]:
     try:
@@ -965,7 +988,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
     g = {k: read.get(k) for k in ("setup", "state", "frame", "ready", "broke", "trigger", "stop", "risk_pct",
                                   "entry_bar_t", "bars_since_entry", "criteria", "missed", "unjudged", "grade",
-                                  "variant", "red_closes", "flag_k", "reason")}
+                                  "variant", "red_closes", "flag_k", "reason",
+                                  "cycles")}            # 🌀 the contraction count (BUILD_SPEC18 D2; critic 2026-10-20)
     g.update({"setup": setup, "state_label": state_label(read), "variant_label": variant_label(read),
               "grade_label": grade_label(read), "chips": chips, "listed": _listed_block(listed),
               "_last": _last_close(doc, read.get("frame") or "5m") or _f(scan_row.get("price")),
@@ -1160,7 +1184,9 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
         best = None
         for i, setup in enumerate(GC.SETUPS):
             r = (doc.get("setups") or {}).get(setup) or {}
-            if r.get("state") not in TILE_STATES:
+            # a read the 🌀 listing rule holds back has no card there — a focus link must not open an empty sub
+            # (BUILD_SPEC18 D3; critic 2026-10-20)
+            if r.get("state") not in TILE_STATES or not _vcp_listed(setup, r):
                 continue
             t = {"symbol": sym, "gajjala": dict(r, _last=_last_close(doc, r.get("frame") or "5m"),
                                                 _bars_to_go=_bars_to_go(r))}
@@ -1635,6 +1661,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     counts_by: dict = {}
     n_tiles: dict = {}
     tile_syms: set = set()                                          # names with a card in any setup sub (W14)
+    unlisted: dict = {}                                             # 🌀 reads counted, not carded (BUILD_SPEC18 D3)
     for setup in GC.SETUPS:
         tiles, c = [], {k: 0 for k in COUNT_STATES}
         c["awaiting_answer"] = 0
@@ -1650,8 +1677,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                 c["awaiting_answer"] += 1
                 continue
             if state in TILE_STATES:
+                tile_syms.add(sym)                                      # it HAS structure — never on the 👀 line
+                if not _vcp_listed(setup, r):                           # D3: counted above, not carded
+                    unlisted[setup] = unlisted.get(setup, 0) + 1
+                    continue
                 n_tiles[setup] = n_tiles.get(setup, 0) + 1
-                tile_syms.add(sym)
                 if setup == sub_k:                                      # only the shown sub builds its cards
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k), scan_row=_row(sym), sess=sess,
@@ -1700,6 +1730,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     if sub_k in per_setup:
         out["tiles"] = per_setup[sub_k][:lim]
         out["order_note"] = RS_ORDER_TEXT if sub_k == "reversal_squeeze" else None   # DECISIONS13 D3 — served word
+        out["list_note"] = (_soft("vcp list note", vcp_list_note, unlisted.get(sub_k, 0))
+                            if sub_k == "intraday_vcp" else None)                # BUILD_SPEC18 D3 — served line
         e, label = SUB_META[sub_k]
         out["empty_note"] = (f"No {e} {label} on his list right now — the next pass is at most "
                              f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else

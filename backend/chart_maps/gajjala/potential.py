@@ -169,9 +169,15 @@ def potential_kind(read: Optional[dict]) -> Optional[str]:
     """'armed' | 'building' | None. K1 (Ajay 2026-10-15 "Structure forming, any gate still open"): state ==
     POTENTIAL_STATE only; with POTENTIAL_NEEDS_BASE (Cheetah default, not his) the read's base spans ≥ 1 bar — GG's
     "goes sideways at the top of the bars" has begun; `ready is True` (the bool, never truthy) → 'armed'. A read with
-    a `variant` / `grade` (long flag, near-kiss, VCP "B") is partial by construction and never a potential."""
+    a `variant` / `grade` (long flag, near-kiss, VCP "B") is partial by construction and never a potential. A 🌀 read
+    with an int `cycles` below vcp_list_min_cycles() is never a potential (BUILD_SPEC18 D4, Ajay 2026-10-20); a read
+    stored without `cycles` is judged as before."""
     if not isinstance(read, dict) or read.get("state") != GC.POTENTIAL_STATE:
         return None
+    if read.get("setup") == "intraday_vcp":             # BUILD_SPEC18 D4 — the 🌀 sub's listing rule, one switch
+        m, n = GC.vcp_list_min_cycles(), read.get("cycles")
+        if m is not None and isinstance(n, int) and not isinstance(n, bool) and n < m:
+            return None                                 # one contraction is a pullback, not a VCP — never a potential
     if read.get("variant") or read.get("grade"):
         return None
     if GC.POTENTIAL_NEEDS_BASE and _base_bars(read) < 1:

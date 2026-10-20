@@ -535,3 +535,32 @@ def test_NEGATIVE_a_none_outside_the_named_set_still_fails_the_guard(monkeypatch
             test_the_only_none_values_are_the_named_off_switches()
     finally:
         TREE = keep
+
+
+# ── 🌀 the VCP listing switch (2026-10-20, BUILD_SPEC18 D1) ───────────────────────────────────────────────────────
+# Ajay 2026-10-20: "Hey, Can you actually show me stocks only that have 2 contractions. in Gajjallas I don't see a
+# point of seeing the ones with one contraction do you?" — ONE switch, no second number (K4 is the rule).
+def test_vcp_list_switch_is_on_and_tagged_his():
+    assert GC.VCP_LIST_FROM_K4 is True
+    ln = next(ln for n, _v, ln in _assigns() if n == "VCP_LIST_FROM_K4")
+    c = _comment(ln)
+    assert c.startswith("Ajay 2026-10-20") and "2 contractions" in c and "one contraction" in c
+    assert "K4_VCP_MIN_CYCLES" in c
+
+
+def test_vcp_list_helper_returns_k4_or_none(monkeypatch):
+    assert GC.vcp_list_min_cycles() == GC.K4_VCP_MIN_CYCLES == 2
+    monkeypatch.setattr(GC, "K4_VCP_MIN_CYCLES", 3)
+    assert GC.vcp_list_min_cycles() == 3                         # read at call time (the detector mutation sweep)
+    monkeypatch.setattr(GC, "VCP_LIST_FROM_K4", False)
+    assert GC.vcp_list_min_cycles() is None
+
+
+def test_NEGATIVE_the_vcp_switch_adds_no_second_number():
+    """The switch is a bool and the helper's body names K4 — no numeric literal anywhere in it."""
+    assert isinstance(GC.VCP_LIST_FROM_K4, bool)
+    fn = next(n for n in TREE.body if isinstance(n, ast.FunctionDef) and n.name == "vcp_list_min_cycles")
+    lits = [n.value for n in ast.walk(fn) if isinstance(n, ast.Constant) and isinstance(n.value, (int, float))
+            and not isinstance(n.value, bool)]
+    assert lits == []
+    assert any(isinstance(n, ast.Name) and n.id == "K4_VCP_MIN_CYCLES" for n in ast.walk(fn))

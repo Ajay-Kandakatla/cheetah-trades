@@ -1160,6 +1160,9 @@ def _gajjala_section() -> dict:
     hf_trig = ("the base's high" if GC.HF_TRIGGER == "base_high" else "the prior bar's high")
     vcp_b = ("; exactly one of those two missed = “%s — imperfect”, listed, never pushed" % GC.VCP_B_GRADE
              if GC.VCP_B_READS else "")
+    vcp_min = GC.vcp_list_min_cycles()                  # BUILD_SPEC18 D5 — the 🌀 listing rule, from the one switch
+    vcp_list = (", carded from %d contractions (fewer are counted, not listed)" % vcp_min
+                if vcp_min is not None else "")
     rule = GC.K8_FAIL_EVENT_RULE
     fail_rule = ("a separate, earlier sell-off" if rule == "distinct" else
                  "the same drop may count" if rule == "same_ok" else _gg_v("K8_FAIL_EVENT_RULE"))
@@ -1209,10 +1212,11 @@ def _gajjala_section() -> dict:
                _gg_v("K4_HF_BASE_MAX", "%d"), _gg_v("K6_TIGHT_PCT"), e9, e21, _gg_v("K6_MERGE_PCT"),
                _gg_v("K6_SELL_DECAY"), hf_trig),
             "%s: ≥%s demand bar(s), ≥%s contractions each ≤ %s× the one before, every cycle low ≥ the %d EMA −%s%%, "
-            "higher lows, pivots confirmed by %s closed bars each side%s; entry over the last cycle's high, stop "
+            "higher lows, pivots confirmed by %s closed bars each side%s%s; entry over the last cycle's high, stop "
             "its low."
             % (_gg_label("intraday_vcp"), _gg_v("VCP_LEG_MIN_BARS", "%d"), _gg_v("K4_VCP_MIN_CYCLES", "%d"),
-               _gg_v("K7_CONTRACTION"), e21, _gg_v("K7_EMA21_TOL_PCT"), _gg_v("VCP_PIVOT_WINDOW", "%d"), vcp_b),
+               _gg_v("K7_CONTRACTION"), e21, _gg_v("K7_EMA21_TOL_PCT"), _gg_v("VCP_PIVOT_WINDOW", "%d"), vcp_list,
+               vcp_b),
             "%s (float ≤ %s): a drop ≥%s%% off a bar's high back within %s%% inside %s bars, AND a failed try at "
             "today's high (within %s%%, then %s%% under it; %s), then a quiet base of ≥%s bar(s) at the top on the "
             "pullback volume above; entry over the top, stop the base low. 🎾 squeeze-history chip: last %s "

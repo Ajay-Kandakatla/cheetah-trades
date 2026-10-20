@@ -188,6 +188,10 @@ def test_NEGATIVE_a_truthy_ready_is_building_not_armed():
 def test_the_needs_base_knob_bites(monkeypatch):
     monkeypatch.setattr(GC, "POTENTIAL_NEEDS_BASE", False)
     assert PT.potential_kind(bf_no_pullback()) == "building"
+    # WIDENED 2026-10-20 (BUILD_SPEC18 D4): the no-pullback 🌀 read now carries cycles 0 — under K4's contractions it
+    # is never a potential; with the listing switch off the knob still bites on it exactly as before
+    assert PT.potential_kind(vcp_no_pullback()) is None
+    monkeypatch.setattr(GC, "VCP_LIST_FROM_K4", False)
     assert PT.potential_kind(vcp_no_pullback()) == "building"
 
 

@@ -107,6 +107,7 @@
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
    "graveyard_today": [],
+   "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "order_note": null,
    "pass": {
@@ -536,6 +537,7 @@
         "value": "4 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -799,6 +801,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -1062,6 +1065,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -1325,6 +1329,7 @@
         "value": "0 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -1588,6 +1593,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": "2026-10-13 10:10",
       "flag_k": 1,
       "frame": "5m",
@@ -2086,6 +2092,7 @@
         "value": "4 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -2379,6 +2386,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
@@ -2669,6 +2677,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -2979,6 +2988,7 @@
         "value": "2 bars"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": 1,
       "frame": "5m",
@@ -3278,6 +3288,7 @@
         "value": "second-half volume 0.50×"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
@@ -3584,6 +3595,7 @@
         "value": "0.6% above the 9 EMA"
        }
       ],
+      "cycles": null,
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",

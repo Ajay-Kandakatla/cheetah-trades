@@ -251,3 +251,48 @@ level prints two decimals; a 0.3101 / 0.2950 alert keeps R = 0.0151 and rings wi
 still reads A+), `frontend/src/lib/gajjala.test.ts` ("ggPx — the broker price grid"), `GajjalaBoard.test.tsx` (the
 sub-dollar plan line), `Alerts.test.tsx` (the no-risk chip) and the contracts block "🚫 Gajjala no-risk A+ · one price grid
 (2026-10-20)". ✨ `chart-maps-gajjala-no-risk-price-grid-2026-10-20`.
+
+## 🌀 Cards from two contractions (2026-10-20)
+Ajay: "Hey, Can you actually show me stocks only that have 2 contractions. in Gajjallas I don't see a point of seeing the
+ones with one contraction do you?" On Gajjala's a contraction is a cycle of the 🌀 Intraday VCP detector only (criterion
+`k4_cycles`, "K4 at least `K4_VCP_MIN_CYCLES` contractions" — his K4 / K7 number). `K7_CONTRACTION` compares each cycle's
+range with the one before; with one cycle there is nothing to compare, so a one-cycle read is a pullback, not a VCP
+(GG S8 33:50: "in each cycle it honors the 21 EMA and the volatility contracts").
+
+Measured on the live 🌀 sub that morning (~11:3x ET): 19 cards — 10 partial with 1 cycle, 1 forming with 1 cycle ("1 of 2
+cycles"), 2 forming with no pullback yet, 3 partial with 2 cycles, 2 partial "B" with 2 cycles, 1 partial with 3 cycles;
+counts line forming 3 · partial 16 · invalid 37 · none 4 · listed 60. So 13 of 19 cards had fewer than two contractions.
+
+What changed (every number is a constant; nothing about the A+ read, the pushes' gates, the ledger or the lane moved):
+- D1 one switch, no second number: `constants.VCP_LIST_FROM_K4 = True`; `constants.vcp_list_min_cycles()` returns
+  `K4_VCP_MIN_CYCLES` while it is on, else None (read at call time).
+- D2 the read carries its count: `detectors._blank` adds `cycles` (None on every other setup); the 🌀 read sets 0 on
+  "no pullback yet — the leg is still printing highs" and the cycle count right after it is known (an invalid read keeps
+  it). No state, criterion, trigger or stop moved.
+- D3 `tab._vcp_listed`: a 🌀 read with an int `cycles` below the helper's number is COUNTED on the counts line (forming /
+  partial as before) but not carded; it stays out of the 👀 "no structure yet" line (it has structure). A read stored
+  without `cycles` (the previous code, at most one pass old) lists as before. The 🌀 sub's `subs[].count` = the cards
+  shown. Served `list_note` on the 🌀 sub when anything was held back: "🌀 k with fewer than m contractions counted, not
+  listed — his K4: a VCP needs at least m contractions, each tighter than the one before (S8 33:50)"; null on every other
+  setup sub, absent off the setup subs (the `order_note` pattern).
+- D4 `potential.potential_kind`: a 🌀 forming read with an int `cycles` below the number is never a 🧠 potential — the
+  🧠 sub, the `gajjala_potential` push and the 📈 Track follow the same rule from now on (stored tracker docs untouched).
+- D5 ℹ️ 🌀 line: ", carded from m contractions (fewer are counted, not listed)" from the switch; no clause when it is off.
+
+**HIS CALL #1:** one switch governs the 🌀 sub AND the 🧠 potentials; splitting them (e.g. one-cycle potentials kept) is
+his call.
+
+**HIS CALL #2 (critic 2026-10-20):** because the `gajjala_potential` push and the 🏁 Track record's potential rows
+(`ledger.KINDS[0]`) both run through `potential_kind`, from 2026-10-20 a one-cycle 🌀 read no longer rings as a
+potential, the A+ push body no longer carries a "🧠 potential rang HH:MM" line for it, and the 🏁 ledger gains
+fewer 🌀 potential rows — 🌀 ledger counts before and after 2026-10-20 are not comparable. Keeping one-cycle
+potentials (ringing and graded) while the sub hides them is the split in HIS CALL #1.
+
+A focus link (`?sub=intraday_vcp&focus=SYM`) stored before the deploy for a one-cycle name resolves away from the
+🌀 sub (critic 2026-10-20: `resolve_sub` applies the same rule), and every 🌀 card now serves its `cycles` count. To revert: set `VCP_LIST_FROM_K4 = False` in `backend/chart_maps/gajjala/constants.py` — every TILE_STATES read
+is carded again, no `list_note`, no ℹ️ clause, potentials as before.
+
+UNMEASURED — this is his rule applied to what is listed, not a measured edge. Guards:
+`backend/tests/test_gajjala_vcp_listing.py` (the listing rule, the note, the potential rule, the ℹ️ clause, NEGATIVES with
+the switch off and on every other setup), the `cycles` rows in `tests/test_gajjala_detectors.py` (state table unchanged),
+the switch pins in `tests/test_gajjala_constants.py`.

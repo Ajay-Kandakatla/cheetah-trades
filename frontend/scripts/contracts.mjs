@@ -9703,8 +9703,9 @@ const CONTRACTS = [
       // 2026-10-20: the 🏛️ shareholders'-equity ✨ (its own block) sits above both — widened to the top three, dated.
       // 2026-10-20, later: the 🔄 scan-now ✨ (its own block) sits above all three — widened to the top four, dated.
       // 2026-10-20, later still: the 🚩 Gajjala lane ✨ (its own block, FIRST) sits above all four — widened to the top five, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) sits above all five — widened to the top six, dated.
+      const firstSix = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstSix.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six (found ${firstSix.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9902,8 +9903,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-scan-now-2026-10-20';
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-20, later: the 🚩 Gajjala lane ✨ (its own block) ships above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above both — widened to the top three, dated.
+      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstThree.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first three (found ${firstThree.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10138,8 +10140,9 @@ const CONTRACTS = [
       const ID = 'autopilot-gajjala-lane-2026-10-20';
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-20, later: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10170,6 +10173,81 @@ const CONTRACTS = [
         const doc = read(DOC);
         for (const need of [HIS, 'HIS CALL #0', 'UNMEASURED', 'never add a lane without his call']) if (!doc.includes(need)) errs.push(`docs/trading_gajjala_lane.md must carry "${need}"`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '🌀 Gajjala VCP cards from two contractions (2026-10-20)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-20: "Hey, Can you actually show me stocks only that have 2 contractions. in Gajjallas I don't see a point
+    // of seeing the ones with one contraction do you?" BUILD_SPEC18 D1–D8: ONE switch (GC.VCP_LIST_FROM_K4) — the 🌀 sub
+    // cards only reads with at least GC.K4_VCP_MIN_CYCLES contractions (HIS number); fewer are counted, never carded, never
+    // a 🧠 potential; the served `list_note` says how many. The FE prints the note verbatim and types no word and no number.
+    // Pins: the FE span + type, the backend switch / count / listing / potential clause / ℹ️ clause, both test files, the ✨
+    // FIRST with his words (its only digit = K4_VCP_MIN_CYCLES read from constants.py), the doc section.
+    checks: (src) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const HIS = "Hey, Can you actually show me stocks only that have 2 contractions. in Gajjallas I don't see a point of seeing the ones with one contraction do you?";
+      const BWORD = /boun/i;
+
+      // 1. the FE: the served line printed verbatim, guarded, typed.
+      for (const need of ['data-testid="gg-list-note"', 'board.list_note']) if (!src.includes(need)) errs.push(`GajjalaBoard.tsx must carry: ${need}`);
+      if (!/typeof board\?\.list_note === 'string' && board\.list_note\.trim\(\)/.test(src)) errs.push('GajjalaBoard.tsx must guard list_note (a string, not blank) before printing it');
+      const lib = tryRead('src/lib/gajjala.ts', 'frontend');
+      if (lib && !lib.includes('list_note?: string | null;')) errs.push('lib/gajjala.ts GgBoard must type list_note?: string | null;');
+
+      // 2. the backend: the switch, HIS number (read, never retyped), the count on the read, the listing, the potential clause, ℹ️.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'backend');
+      if (gc && !/^VCP_LIST_FROM_K4 = True\b/m.test(gc)) errs.push('chart_maps/gajjala/constants.py must carry VCP_LIST_FROM_K4 = True at column 0');
+      const k4 = Number(((/^K4_VCP_MIN_CYCLES = (\d+)\b/m.exec(gc)) || [])[1]);
+      if (!Number.isInteger(k4)) errs.push('chart_maps/gajjala/constants.py K4_VCP_MIN_CYCLES is unreadable');
+      const det = tryRead('../backend/chart_maps/gajjala/detectors.py', 'backend');
+      if (det && !det.includes('r["cycles"] = n')) errs.push('chart_maps/gajjala/detectors.py _vcp_leg must store r["cycles"] = n');
+      const tab = tryRead('../backend/chart_maps/gajjala/tab.py', 'backend');
+      for (const need of ['def _vcp_listed(', '"list_note"']) if (tab && !tab.includes(need)) errs.push(`chart_maps/gajjala/tab.py must carry: ${need}`);
+      const pot = tryRead('../backend/chart_maps/gajjala/potential.py', 'backend');
+      if (pot) {
+        const at = pot.indexOf('def potential_kind(');
+        const next = at < 0 ? -1 : pot.slice(at + 1).search(/\ndef |\nclass /);
+        const body = at < 0 ? '' : pot.slice(at, next < 0 ? undefined : at + 1 + next);
+        if (at < 0) errs.push('chart_maps/gajjala/potential.py lost def potential_kind(');
+        else if (!body.includes('vcp_list_min_cycles(')) errs.push('chart_maps/gajjala/potential.py potential_kind must call vcp_list_min_cycles(');
+      }
+      const ri = tryRead('../backend/supply_demand/rules_info.py', 'backend');
+      if (ri && !ri.includes('carded from')) errs.push('supply_demand/rules_info.py 🌀 line must carry the "carded from" clause');
+
+      // 3. the tests, both sides.
+      if (!exists('../backend/tests/test_gajjala_vcp_listing.py')) errs.push('backend/tests/test_gajjala_vcp_listing.py is missing (WP-A)');
+      if (!exists('src/components/GajjalaBoard.list_note.test.tsx')) errs.push('src/components/GajjalaBoard.list_note.test.tsx is missing');
+
+      // 4. the ✨ entry: FIRST, routed to the 🌀 sub, his words verbatim, the only digit = K4_VCP_MIN_CYCLES, ends "Not advice.".
+      const ID = 'chart-maps-gajjala-vcp-two-contractions-2026-10-20';
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🌀 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=intraday_vcp'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala&sub=intraday_vcp'`);
+        if (!label.startsWith("🌀 Gajjala's Intraday VCP sub lists only names with at least two contractions now.")) errs.push(`${W} must lead with what changed`);
+        if (!label.includes(`“${HIS}”`)) errs.push(`${W} must quote him verbatim: "${HIS}"`);
+        if (!label.includes('UNMEASURED')) errs.push(`${W} must say UNMEASURED`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (BWORD.test(label)) errs.push(`${W} says the b-word`);
+        const digits = label.match(/\d+/g) || [];
+        if (digits.length !== 1) errs.push(`${W} must carry exactly one number — the one in his quote (found ${digits.join(', ') || 'none'})`);
+        else if (Number.isInteger(k4) && Number(digits[0]) !== k4) errs.push(`${W} says "${digits[0]}" — K4_VCP_MIN_CYCLES is ${k4}`);
+      }
+
+      // 5. the doc section (WP-A).
+      const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
+      if (!exists(DOC) || !read(DOC).includes('## 🌀 Cards from two contractions (2026-10-20)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "🌀 Cards from two contractions (2026-10-20)" section (WP-A)');
       return errs;
     },
   },
