@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-20 (verbatim below, on a screenshot of the 🔄 button on Gajjala's). Frontend only: GajjalaBoard.startScan
+  // now prints the SERVED line of every answer (reused for the pass on screen and closed printed nothing before), pulses the
+  // button while the POST is out, and prints a non-ok answer's served detail. Nothing served, scanned, counted or gated
+  // changed; no FE number. Pinned by scripts/contracts.mjs ("🔄 Gajjala scan-now answers every tap (2026-10-20)").
+  { id: 'chart-maps-gajjala-scan-now-2026-10-20', addedAt: '2026-10-20', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "🔄 Gajjala’s scan-now button answers every tap. You said: “This can button has been unresponsive for me”. The server was answering every tap — the board printed nothing for the two answers a tap gets most often: a pass that had just finished and is simply reused, and a closed session. Now every answer prints its served line under the strip (it stays until the board’s next read or your next tap), the button pulses while the request is out, and a server error prints its served reason. While a pass is running the button stays dim and a tap sends nothing — the scanning line above the board says so. Nothing scanned, counted or gated changed. Not advice." },
   // Ajay 2026-10-19 (his four lines verbatim below). BUILD_SPEC16 D1–D10 + AMENDMENTS16 A1 (the price rule: a fresh, tight quote's
   // midpoint first, marked q; else the indicative, delayed overnight trade, marked t). Every number here is a constant in
   // backend/overnight/{scan,session,push}.py or the crontab step — pinned by scripts/contracts.mjs

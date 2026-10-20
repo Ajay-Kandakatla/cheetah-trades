@@ -248,6 +248,11 @@ export default function GajjalaBoard() {
   const isOwner = user?.is_admin === true;
   const [scanResp, setScanResp] = useState<GgScanResponse | null>(null);
   const [scanning, setScanning] = useState(false);
+  /* 🔄 the POST in flight (2026-10-20, Ajay: "This can button has been unresponsive for me"): the button is disabled
+   * and pulses (aria-busy) while the request is out; a non-ok answer prints its SERVED `detail` when it is a string
+   * (404 → nothing, the house rule of the broker-tag writes); a network error prints nothing — idle again either way. */
+  const [posting, setPosting] = useState(false);
+  const [scanErr, setScanErr] = useState<string | null>(null);
   const scanAsked = useRef(false);
   const scanPosting = useRef(false);
   const scanTimer = useRef<number | null>(null);
@@ -258,14 +263,27 @@ export default function GajjalaBoard() {
   /* A 🔄 answered "reused" for a pass newer than the board on screen: ONE re-read, the served line meanwhile
    * (2026-10-16 fix round 2 — the board re-reads on the served cadence only, so it could lag a whole cadence).
    * Settled right after the POST answers, and again as each GET finishes (never while one is in flight). */
-  const reusedWant = useRef<{ at: string; issued: boolean } | null>(null);
+  const reusedWant = useRef<{ at: string; seqAt: number; issued: boolean } | null>(null);
   const [reusedText, setReusedText] = useState<string | null>(null);
+  /* 2026-10-20: a 🔄 answer that starts no poll and asks for no re-read (reused for the pass already on screen, closed)
+   * used to print NOTHING — his tap looked dead. Its SERVED line now shows (the same `gg-scan-reused` line) until the
+   * first board read that STARTS after the answer lands (`seq` at the answer; cleared once boardSeq passes it — a GET
+   * already in flight never clears it) or until the next tap replaces it. No FE timer, no FE number, no FE word. */
+  const noteSeq = useRef<number | null>(null);
   const settleReused = () => {
     const want = reusedWant.current;
     if (!want || !mounted.current || inFlight.current != null) return;
-    if (want.issued || boardRef.current?.pass?.at === want.at) {
+    if (want.issued) {
       reusedWant.current = null;
       setReusedText(null);
+      return;
+    }
+    if (boardRef.current?.pass?.at === want.at) {
+      // 2026-10-20: the board that landed (a read that STARTED before the answer — the scan on open racing the first
+      // GET) already shows that pass: no re-read, and the served line stays, keyed on the sequence at the answer, until
+      // the first read that starts after it or the next tap (see noteSeq).
+      reusedWant.current = null;
+      noteSeq.current = want.seqAt;
       return;
     }
     want.issued = true;
@@ -282,29 +300,49 @@ export default function GajjalaBoard() {
   const startScan = async () => {
     if (scanning || scanPosting.current) return;
     scanPosting.current = true;
+    setPosting(true);
     let resp: GgScanResponse | null = null;
+    let detail: string | null = null;
+    let failed = false;
     try {
       const r = await fetch(`${API}${GG_SCAN_PATH}`, { method: 'POST', credentials: 'include', cache: 'no-store' });
-      if (!r.ok) return;
-      resp = (await r.json()) as GgScanResponse;
+      const body: unknown = await r.json().catch(() => null);
+      if (r.ok) {
+        resp = body as GgScanResponse;
+      } else {
+        failed = true;
+        const d = (body as { detail?: unknown } | null)?.detail;
+        detail = r.status !== 404 && typeof d === 'string' && d.trim() ? d : null;
+      }
     } catch {
-      return;
+      failed = true;
     } finally {
       scanPosting.current = false;
+      if (mounted.current) setPosting(false);
     }
-    if (!mounted.current || !resp || typeof resp !== 'object') return;
-    setScanResp(resp);
+    if (!mounted.current) return;
+    // Every answer replaces the lines of the one before it.
     reusedWant.current = null;
+    noteSeq.current = null;
     setReusedText(null);
+    setScanErr(detail);
+    if (failed || !resp || typeof resp !== 'object') { setScanResp(null); return; }
+    setScanResp(resp);
+    const text = typeof resp.text === 'string' && resp.text.trim() ? resp.text : null;
     if (resp.state === 'reused' && typeof resp.latest_at === 'string' && resp.latest_at
         && boardRef.current?.pass?.at !== resp.latest_at) {
-      reusedWant.current = { at: resp.latest_at, issued: false };
-      setReusedText(typeof resp.text === 'string' && resp.text.trim() ? resp.text : null);
+      reusedWant.current = { at: resp.latest_at, seqAt: seq.current, issued: false };
+      setReusedText(text);
       settleReused();
       return;
     }
     const plan = ggScanPlan(resp);
-    if (!plan) return;
+    if (!plan) {
+      // reused for the pass already on screen, closed, or a plan the server did not send: the served line stays until
+      // the next board read or the next tap (refused keeps its own error line below).
+      if (resp.state !== 'refused' && text) { noteSeq.current = seq.current; setReusedText(text); }
+      return;
+    }
     clearScanTimer();
     scanFromSeq.current = seq.current;
     setScanning(true);
@@ -331,6 +369,7 @@ export default function GajjalaBoard() {
   }, [isOwner]);
   useEffect(() => {
     if (scanning && scanResp && boardSeq > scanFromSeq.current && ggScanAdvanced(board, scanResp.latest_at)) stopScan();
+    if (noteSeq.current != null && boardSeq > noteSeq.current) { noteSeq.current = null; setReusedText(null); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, boardSeq, scanning, scanResp]);
 
@@ -432,7 +471,8 @@ export default function GajjalaBoard() {
         {asOfServed ? <span className="gg-muted" data-testid="gg-as-of">{asOfServed}</span>
           : pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
         {isOwner && scanOpen && scan?.rescan_label ? (
-          <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning}
+          <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
+                  aria-busy={posting ? 'true' : undefined}
                   title={scan.rescan_title || undefined} onClick={() => void startScan()}>
             {scan.rescan_label}
           </button>
@@ -461,6 +501,7 @@ export default function GajjalaBoard() {
       {scanResp?.state === 'refused' && scanResp.text ? (
         <div className="cm-note cm-note-err" data-testid="gg-scan-refused">{scanResp.text}</div>
       ) : null}
+      {scanErr ? <div className="cm-note cm-note-err" role="status" data-testid="gg-scan-err">{scanErr}</div> : null}
       {scan?.note ? <div className="cm-note" data-testid="gg-scan-note">{scan.note}</div> : null}
       {board?.push?.text ? <div className="cm-note" data-testid="gg-push">{board.push.text}</div> : null}
       {board?.push_potential?.text ? (

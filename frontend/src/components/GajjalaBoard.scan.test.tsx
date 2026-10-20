@@ -262,7 +262,8 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     await waitFor(() => expect(posts()).toHaveLength(1));
     await sleep(50);
     expect(gets()).toHaveLength(1);
-    expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+    // 2026-10-20: the on-open answer (reused for the pass on screen) prints its served line too; the click replaces it.
+    expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
     fireEvent.click(btn);
     expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent(reused.text);
     expect(screen.getByTestId('gg-scan-reused')).toHaveAttribute('role', 'status');
@@ -277,8 +278,8 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     expect(posts()).toHaveLength(2);
   });
 
-  it('NEGATIVE: 🔄 answered reused with the SAME latest_at as the board on screen → no extra GET, no reused line', async () => {
-    stub(post('reused'), () => OLD());
+  it('NEGATIVE: 🔄 answered reused with the SAME latest_at as the board on screen → no extra GET, no poll; the served line shows (2026-10-20)', async () => {
+    stub(post('reused', { text: 'served reused W11 line' }), () => OLD());
     mount();
     const btn = await screen.findByTestId('gg-rescan');
     await waitFor(() => expect(posts()).toHaveLength(1));
@@ -286,8 +287,9 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     await waitFor(() => expect(posts()).toHaveLength(2));
     await sleep(200);
     expect(gets()).toHaveLength(1);
-    expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+    expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused W11 line');
     expect(screen.queryByTestId('gg-scanning')).toBeNull();
+    expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
   });
 
   it('NEGATIVE: reused for a newer pass whose re-read still answers the older pass → ONE re-read only, never a loop', async () => {
@@ -303,14 +305,15 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     expect(screen.getByTestId('gg-tile-AAA')).toBeTruthy();
   });
 
-  it('NEGATIVE: reused on mount while the first GET is still in flight and lands the same pass → NO extra GET', async () => {
+  it('NEGATIVE: reused on mount while the first GET is still in flight and lands the same pass → NO extra GET; the line stays (the in-flight read never clears it)', async () => {
     stub(post('reused'), () => later(150, OLD()));
     mount();
+    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
     await screen.findByTestId('gg-tile-AAA', {}, { timeout: 2000 });
     await waitFor(() => expect(posts()).toHaveLength(1));
     await sleep(250);
     expect(gets()).toHaveLength(1);
-    expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+    expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
   });
 
   /* Fix round 2 (2026-10-16): a GET slower than the served poll — a poll step never starts a GET over one in flight,
@@ -371,7 +374,7 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
   });
 
   for (const [label, answer] of [['POST 404', 404], ['a network error', 'throw']] as const) {
-    it(`NEGATIVE: ${label} → nothing shown, no poll`, async () => {
+    it(`NEGATIVE: ${label} → nothing shown, no poll, the button idle again`, async () => {
       stub(answer, () => OLD());
       mount();
       await screen.findByTestId('gg-tile-AAA');
@@ -379,6 +382,10 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
       await sleep(200);
       expect(screen.queryByTestId('gg-scanning')).toBeNull();
       expect(screen.queryByTestId('gg-scan-refused')).toBeNull();
+      expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+      expect(screen.queryByTestId('gg-scan-err')).toBeNull();
+      expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
+      expect(screen.getByTestId('gg-rescan')).not.toHaveAttribute('aria-busy');
       expect(gets()).toHaveLength(1);
     });
   }
@@ -535,5 +542,164 @@ describe('GajjalaBoard — 🎯 the served A+ line', () => {
     mount();
     const tile2 = await screen.findByTestId('gg-tile-GGA');
     expect(within(tile2).queryByText(/read at/)).toBeNull();
+  });
+});
+
+/* 🔄 Scan now answers every tap (2026-10-20). Ajay, a screenshot of the button: "This can button has been unresponsive
+ * for me". The api answered every tap 200; the board printed nothing for `reused` when the pass was the one on screen
+ * and for `closed`, nothing for a non-ok answer, and only dimmed while a pass ran. Pinned here: every plan-less answer
+ * prints its SERVED line until the first board read that STARTS after it (a read already in flight never clears it —
+ * the test above) or the next tap; the button is disabled + aria-busy while the POST is out; a non-ok answer prints the
+ * served `detail` when it is a string (404 → nothing, the house rule); NEGATIVES: no served text → no line, never
+ * "undefined"; a network error → nothing and the button idle. No FE timer anywhere (the contracts block pins that). */
+describe('GajjalaBoard — 🔄 scan now answers every tap (2026-10-20)', () => {
+  beforeEach(() => { userRet = OWNER; });
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+  const wait = <T,>(ms: number, v: T) => new Promise<T>((r) => setTimeout(() => r(v), ms));
+  const bySub = (_n: number, u: URL) => clone(POT[u.searchParams.get('sub') || 'bull_flag'] || POT.bull_flag);
+  /** A POST that answers `answer` after `ms`; GETs answer at once. */
+  function stubSlowPost(ms: number, answer: any) {
+    calls = [];
+    const spy = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = new URL(String(url), 'http://x');
+      const method = String(init?.method || 'GET').toUpperCase();
+      calls.push({ method, path: u.pathname, url: String(url) });
+      if (u.pathname.endsWith('/chart-maps/gajjala/scan')) {
+        await wait(ms, null);
+        return { ok: true, status: 200, json: async () => clone(answer) };
+      }
+      return { ok: true, status: 200, json: async () => bySub(0, u) };
+    });
+    vi.stubGlobal('fetch', spy);
+  }
+  /** A non-ok POST with the given status and JSON body (the house stub types `{ detail: 'Not Found' }` for every number). */
+  function stubFailedPost(status: number, body: unknown) {
+    calls = [];
+    const spy = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = new URL(String(url), 'http://x');
+      const method = String(init?.method || 'GET').toUpperCase();
+      calls.push({ method, path: u.pathname, url: String(url) });
+      if (u.pathname.endsWith('/chart-maps/gajjala/scan')) return { ok: false, status, json: async () => clone(body) };
+      return { ok: true, status: 200, json: async () => bySub(0, u) };
+    });
+    vi.stubGlobal('fetch', spy);
+  }
+
+  it('🔄 reused for the pass on screen → the served line shows at once, no extra GET, and goes on the first board read started after it', async () => {
+    const line = '🔄 the 10:32 ET pass finished 38 s ago — reused (served W11 line)';
+    stub((n: number) => (n <= 1 ? post('reused', { text: 'served on-open line' }) : post('reused', { text: line })), bySub);
+    mount();
+    const btn = await screen.findByTestId('gg-rescan');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    await screen.findByTestId('gg-tile-AAA');
+    const before = gets().length;
+    fireEvent.click(btn);
+    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent(line);
+    expect(screen.getByTestId('gg-scan-reused')).toHaveAttribute('role', 'status');
+    await sleep(150);
+    expect(gets()).toHaveLength(before);
+    expect(screen.queryByTestId('gg-scanning')).toBeNull();
+    expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
+    // a board read that STARTS after the answer (a sub click) lands → the line goes
+    fireEvent.click(screen.getByTestId('gg-sub-potential'));
+    await screen.findByTestId('gg-track');
+    await waitFor(() => expect(screen.queryByTestId('gg-scan-reused')).toBeNull());
+    expect(posts()).toHaveLength(2);
+  });
+
+  it('closed → the served closed line, no poll, not the error class', async () => {
+    stub(post('closed', { text: 'market closed — no scan on open; last pass 15:56 ET 2026-10-17 (served)' }), () => OLD());
+    mount();
+    const el = await screen.findByTestId('gg-scan-reused');
+    expect(el).toHaveTextContent('market closed — no scan on open; last pass 15:56 ET 2026-10-17 (served)');
+    expect(el.className).not.toContain('cm-note-err');
+    await sleep(200);
+    expect(screen.queryByTestId('gg-scanning')).toBeNull();
+    expect(screen.queryByTestId('gg-scan-refused')).toBeNull();
+    expect(gets()).toHaveLength(1);
+  });
+
+  it('NEGATIVE: an answer without a served text prints no line, never "undefined"', async () => {
+    stub(post('reused', { text: null }), () => OLD());
+    mount();
+    const btn = await screen.findByTestId('gg-rescan');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    fireEvent.click(btn);
+    await waitFor(() => expect(posts()).toHaveLength(2));
+    await sleep(100);
+    expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+    expect(screen.queryByTestId('gg-scan-err')).toBeNull();
+    expect(document.body.textContent || '').not.toMatch(/undefined|null/);
+  });
+
+  it('the button is disabled and aria-busy while the POST is out; idle again when it answers, the served line on screen', async () => {
+    stubSlowPost(200, post('reused', { text: 'served reused line' }));
+    mount();
+    const btn = await screen.findByTestId('gg-rescan');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(btn);
+    await sleep(30);
+    expect(posts()).toHaveLength(1);
+    await waitFor(() => expect(screen.getByTestId('gg-rescan')).not.toBeDisabled(), { timeout: 2000 });
+    expect(screen.getByTestId('gg-rescan')).not.toHaveAttribute('aria-busy');
+    expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
+    expect((screen.getByTestId('gg-scan-reused').textContent || '')).not.toMatch(BANNED);
+  });
+
+  it('a non-ok answer with a served detail → the detail line (error class); NEGATIVE: a 404 or a non-string detail prints nothing', async () => {
+    stubFailedPost(503, { detail: 'the scan store did not answer (served detail)' });
+    mount();
+    const el = await screen.findByTestId('gg-scan-err');
+    expect(el).toHaveTextContent('the scan store did not answer (served detail)');
+    expect(el.className).toContain('cm-note-err');
+    expect(screen.queryByTestId('gg-scan-reused')).toBeNull();
+    expect(screen.queryByTestId('gg-scanning')).toBeNull();
+    expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
+    cleanup();
+    stubFailedPost(404, { detail: 'Not Found' });
+    mount();
+    await screen.findByTestId('gg-tile-AAA');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    await sleep(100);
+    expect(screen.queryByTestId('gg-scan-err')).toBeNull();
+    cleanup();
+    stubFailedPost(500, { detail: { code: 7 } });
+    mount();
+    await screen.findByTestId('gg-tile-AAA');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    await sleep(100);
+    expect(screen.queryByTestId('gg-scan-err')).toBeNull();
+    expect(document.body.textContent || '').not.toMatch(/\[object Object\]|undefined/);
+  });
+
+  it('a second tap replaces the line with the new answer; a later failed answer clears it', async () => {
+    let fail = false;
+    const spyBody = (n: number) => (n <= 1 ? post('reused', { text: 'first served line' }) : post('closed', { text: 'second served line' }));
+    calls = [];
+    const spy = vi.fn(async (url: string, init?: RequestInit) => {
+      const u = new URL(String(url), 'http://x');
+      const method = String(init?.method || 'GET').toUpperCase();
+      calls.push({ method, path: u.pathname, url: String(url) });
+      if (u.pathname.endsWith('/chart-maps/gajjala/scan')) {
+        if (fail) return { ok: false, status: 502, json: async () => { throw new Error('html body'); } };
+        return { ok: true, status: 200, json: async () => clone(spyBody(posts().length)) };
+      }
+      return { ok: true, status: 200, json: async () => OLD() };
+    });
+    vi.stubGlobal('fetch', spy);
+    mount();
+    const btn = await screen.findByTestId('gg-rescan');
+    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent('first served line');
+    fireEvent.click(btn);
+    await waitFor(() => expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('second served line'));
+    expect(screen.queryByText('first served line')).toBeNull();
+    fail = true;
+    fireEvent.click(screen.getByTestId('gg-rescan'));
+    await waitFor(() => expect(posts()).toHaveLength(3));
+    await waitFor(() => expect(screen.queryByTestId('gg-scan-reused')).toBeNull());
+    expect(screen.queryByTestId('gg-scan-err')).toBeNull();
+    expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
   });
 });

@@ -9701,8 +9701,9 @@ const CONTRACTS = [
       // 2026-10-19, later the same day: the 📱 gajjala phone-layout ✨ (its own block below) sits above this one —
       // the FIRST pin widened to the top two, dated.
       // 2026-10-20: the 🏛️ shareholders'-equity ✨ (its own block) sits above both — widened to the top three, dated.
-      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstThree.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three (found ${firstThree.join(', ') || 'none'})`);
+      // 2026-10-20, later: the 🔄 scan-now ✨ (its own block) sits above all three — widened to the top four, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9854,6 +9855,64 @@ const CONTRACTS = [
       if (!nf.includes('Share holders queirty is werong')) errs.push('the ✨ line must quote his words verbatim');
       const DOC = '../docs/sepa/fundamentals_headline.md';
       if (!exists(DOC) || !read(DOC).includes('2026-10-20')) errs.push('docs/sepa/fundamentals_headline.md must carry the 2026-10-20 section');
+      return errs;
+    },
+  },
+  {
+    name: '🔄 Gajjala scan-now answers every tap (2026-10-20)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-20, a screenshot of the 🔄 button on Gajjala's: "This can button has been unresponsive for me". The api
+    // answered every tap 200 (24 POSTs that morning) — the board printed nothing for `reused` when the pass was the one on
+    // screen and for `closed`, nothing for a non-ok answer, and only dimmed (`disabled`) while a pass ran. Frontend only.
+    // Pins: the served line for every plan-less answer, keyed on the GET sequence (a read already in flight never clears
+    // it; no FE timer), aria-busy + disabled while the POST is out, the served `detail` on a non-ok answer (404 → nothing),
+    // the pulse rule (still under reduced motion), the tests incl. NEGATIVES, the ✨ FIRST with his words, the doc section.
+    checks: (src) => {
+      const errs = [];
+      for (const need of [
+        'const [posting, setPosting] = useState(false);',
+        'const [scanErr, setScanErr] = useState<string | null>(null);',
+        'const noteSeq = useRef<number | null>(null);',
+        'disabled={scanning || posting}',
+        "aria-busy={posting ? 'true' : undefined}",
+        'data-testid="gg-scan-err"',
+        'if (resp.state !== \'refused\' && text) { noteSeq.current = seq.current; setReusedText(text); }',
+        'if (noteSeq.current != null && boardSeq > noteSeq.current) { noteSeq.current = null; setReusedText(null); }',
+        "detail = r.status !== 404 && typeof d === 'string' && d.trim() ? d : null;",
+        'if (failed || !resp || typeof resp !== \'object\') { setScanResp(null); return; }',
+      ]) if (!src.includes(need)) errs.push(`GajjalaBoard.tsx must carry: ${need}`);
+      if (/setTimeout\([^;]*(setReusedText|setScanErr)/.test(src)) errs.push('the served answer line must not be cleared by an FE timer (no FE number) — it lives until the next board read or the next tap');
+      const css = read('src/styles/gajjala.css');
+      if (!/\.gg-rescan\[aria-busy="true"\]\s*\{\s*animation:\s*gg-rescan-pulse/.test(css)) errs.push('gajjala.css must pulse .gg-rescan[aria-busy="true"]');
+      if (!/@keyframes gg-rescan-pulse/.test(css)) errs.push('gajjala.css must define @keyframes gg-rescan-pulse');
+      if (!/prefers-reduced-motion: reduce\)\s*\{\s*\.gg-rescan\[aria-busy="true"\]\s*\{\s*animation: none/.test(css)) errs.push('the pulse must stop under prefers-reduced-motion');
+      const t = read('src/components/GajjalaBoard.scan.test.tsx');
+      for (const name of [
+        'reused for the pass on screen → the served line shows at once, no extra GET, and goes on the first board read started after it',
+        'closed → the served closed line, no poll, not the error class',
+        'NEGATIVE: an answer without a served text prints no line, never "undefined"',
+        'the button is disabled and aria-busy while the POST is out',
+        'a non-ok answer with a served detail → the detail line (error class); NEGATIVE: a 404 or a non-string detail prints nothing',
+        'a second tap replaces the line with the new answer; a later failed answer clears it',
+        'the line stays (the in-flight read never clears it)',
+        'nothing shown, no poll, the button idle again',
+      ]) if (!t.includes(name)) errs.push(`GajjalaBoard.scan.test.tsx must keep the test "${name}"`);
+      const nf = read('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-scan-now-2026-10-20';
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (first !== ID) errs.push(`the ✨ ${ID} must be FIRST (found ${first})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
+      const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
+      const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+      if (!label.includes('This can button has been unresponsive for me')) errs.push('the ✨ label must quote his words verbatim');
+      if (!label.endsWith('Not advice.')) errs.push('the ✨ label must end "Not advice."');
+      if (/\d/.test(label)) errs.push('the ✨ label types a number — nothing here is measured, nothing counted changed');
+      if (/b[o]unce|enterable/i.test(label)) errs.push('the ✨ label says the b-word or the sham word');
+      if (!/route: '\/chart-maps\?tab=gajjala/.test(e)) errs.push('the ✨ must route to the Gajjala tab');
+      const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
+      if (!exists(DOC) || !read(DOC).includes('## 🔄 Scan now answers every tap (2026-10-20)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "🔄 Scan now answers every tap (2026-10-20)" section');
       return errs;
     },
   },

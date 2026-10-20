@@ -135,6 +135,11 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
 }
 .gg-rescan:disabled { opacity: 0.5; cursor: default; }
+/* 🔄 the request is out (2026-10-20, Ajay: "This can button has been unresponsive for me"): the button pulses until the
+   server answers; every answer then prints its served line under the strip (GajjalaBoard startScan). */
+.gg-rescan[aria-busy="true"] { animation: gg-rescan-pulse 0.9s ease-in-out infinite; }
+@keyframes gg-rescan-pulse { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .gg-rescan[aria-busy="true"] { animation: none; } }
 
 /* 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.11). Ajay: "also can you track all Gajjals stocks and keep a new tab to
    show wins vs losses. To see a percentage and the ticker." / "We are not looking for winners just in time but when

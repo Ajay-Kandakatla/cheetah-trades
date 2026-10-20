@@ -174,3 +174,28 @@ the viewport. The sub-tab strip still scrolls sideways on a phone — the house 
 (`flex-wrap: nowrap !important; overflow-x: auto`), the same as every Catalysts-style tab; wrapping it into two rows is
 HIS CALL. Guards: `frontend/src/components/GajjalaBoard.phone.test.tsx` (source guards incl. NEGATIVES on the pre-fix
 stylesheet) and the contracts block "📱 gajjala phone layout (2026-10-19)". ✨ `chart-maps-gajjala-phone-layout-2026-10-19`.
+
+## 🔄 Scan now answers every tap (2026-10-20)
+Ajay, with a screenshot of the 🔄 button: "This can button has been unresponsive for me". The api log for that morning
+shows every tap answered `200` (24 `POST /chart-maps/gajjala/scan` since the open), so the server was never the problem;
+the board was. `GajjalaBoard.startScan` printed something for three of the five answers only: `started` / `waiting` (the
+scanning line and a poll), `refused` (its error line) and `reused` for a pass NEWER than the one on screen (one re-read,
+the served line meanwhile). The two answers a tap gets most often printed nothing: `reused` for the pass already on
+screen (any tap within `ON_DEMAND_REUSE_SEC` of a pass — and the scan on open had just run one) and `closed`. A non-ok
+answer and a network error printed nothing either. Right after open the button is `disabled` while the on-open pass runs
+(up to `ON_DEMAND_WAIT_MAX_SEC`), so a tap then sends nothing — the scanning line says so; the button only dims.
+Measured at 430 px before the fix: the button is 98 × 38 px, so the tap target was never the problem.
+
+What changed (frontend only — nothing served, scanned, counted or gated changed):
+- Every plan-less answer (`reused` for the pass on screen, `closed`, or a plan the server did not send) prints its SERVED
+  `text` under the strip (the same `gg-scan-reused` line). It lives until the first board read that STARTS after the
+  answer lands (`seq` at the answer, cleared once `boardSeq` passes it — a read already in flight never clears it) or
+  until the next tap replaces it. No FE timer, no FE number, no FE word; `refused` keeps its own error line.
+- While the POST is out the button is `disabled` and `aria-busy="true"`; `.gg-rescan[aria-busy="true"]` pulses, still
+  under `prefers-reduced-motion`.
+- A non-ok answer prints the served `detail` when it is a string (`gg-scan-err`, the error class); `404` prints nothing,
+  as the broker-tag writes do; a network error prints nothing — the button is idle again either way.
+
+Guards: `frontend/src/components/GajjalaBoard.scan.test.tsx` (the describe "🔄 scan now answers every tap", incl.
+NEGATIVES, and the three earlier reused tests updated) and the contracts block "🔄 Gajjala scan-now answers every tap
+(2026-10-20)". ✨ `chart-maps-gajjala-scan-now-2026-10-20`.
