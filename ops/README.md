@@ -51,7 +51,8 @@ watchdog shows a macOS notification on the first failed try and retries every
 | `CRON_RESYNC_AT_SEC` | 120 | summed sleep since the cron container started that triggers a re-sync |
 | `CRON_SLEEP_JITTER_SEC` | 5 | per-run wall-minus-uptime noise, not counted |
 | `CRON_BUSY_ALERT_SEC` | 30 min | a job keeps cron busy this long → one `cron_drift_busy` |
-| `CRON_RESYNC_MIN_GAP_SEC` / `CRON_RESYNC_MAX_PER_DAY` | 10 min / 12 | guards on `docker restart cheetah-market-app-cron-1` |
+| `CRON_RESYNC_MIN_GAP_SEC` / `CRON_RESYNC_MAX_PER_DAY` | 10 min / 12 | guards on `docker restart cheetah-market-app-cron-1`; the cap holds only under `CRON_RESYNC_CAP_EXEMPT_SEC` of drift |
+| `CRON_RESYNC_CAP_EXEMPT_SEC` | 600 | a drift this large re-syncs past the daily cap (2026-10-21); the gap, the busy wait and the pause file still hold |
 | `CRON_STOP_GRACE_SEC` / `CRON_RESTART_TIMEOUT_SEC` | 120 s / 150 s | `docker restart -t 120` (SIGTERM, SIGKILL only after 120 s) / the CLI call's timeout |
 | `CRON_EDGE_LEAD_SEC` / `CRON_EDGE_TRAIL_SEC` | 3 / 3 | no restart in second 57–59 or 0–3 of a minute (per-minute jobs start at :00) |
 
@@ -106,10 +107,19 @@ What the watchdog does, each run:
    exits (supercronic README: SIGTERM is a graceful shutdown; main.go
    `wg.Wait()` after the signal; jobs run via `exec.Command` in their own
    process group, so the job itself gets no signal). At most one
-   per `CRON_RESYNC_MIN_GAP_SEC` (10 min) and `CRON_RESYNC_MAX_PER_DAY` (12) per
-   24 h. Success: drift back to 0, the new `StartedAt` stored, no push (it happens
-   at every wake). Failure: logged, one `watchdog_error` a day, the drift is kept
-   and the next allowed run tries again.
+   per `CRON_RESYNC_MIN_GAP_SEC` (10 min); `CRON_RESYNC_MAX_PER_DAY` (12) per
+   24 h holds only while the drift is under `CRON_RESYNC_CAP_EXEMPT_SEC`
+   (600 s). The cap is for a flapping host. 2026-10-21: twelve short wake-ups
+   overnight used it up, then a 3 h 04 min pause (11,044 s) met `cap` on 40
+   consecutive runs, supercronic ran every job 3 h 05 min late and the in-session
+   alert jobs (SEPA alerts, tape_control, demand_alerts, the Auto-Pilot tick) had
+   not started by 11:50 ET. So a sleep of ten minutes or more always re-syncs,
+   past the cap, still behind the gap, the busy wait and the pause file; the
+   attempt is counted (`resyncs_24h` stays honest) and `cron_resynced_past_cap`
+   is logged beside `cron_resynced`. Success: drift back to 0, the new
+   `StartedAt` stored, no push (it happens at every wake). Failure: logged, one
+   `watchdog_error` a day, the drift is kept and the next allowed run tries
+   again (past the cap that means every gap until it succeeds, not 12 times).
 
 Docker CLI trouble (the container missing or stopped, `docker` failing, an
 unreadable `docker top`): no action, one log line a day per reason, no push.
@@ -125,6 +135,10 @@ grep -E 'cron_resynced|cron resync failed|drift reset' ~/.cheetah/watchdog/watch
 
 - `"msg": "cron_resynced", "drift_sec": 80640.0, "drift_h": 22.4, "started_at": "…"`:
   the cron container was restarted after 22.4 h of summed sleep.
+- `"msg": "cron_resynced_past_cap", "drift_sec": 11044.0, "resyncs_24h": 13, "cap": 12,
+  "exempt_sec": 600`: that re-sync went through although the day's cap was used
+  up, because the drift was at least `CRON_RESYNC_CAP_EXEMPT_SEC`. A
+  `"cron resync failed"` line carries `past_cap` too.
 - `"msg": "cron container restarted; drift reset"`: someone else restarted it
   (deploy or by hand); `dropped_sec` is the drift that restart cleared,
   `kept_sec` the sleep of that same interval, which still counts.

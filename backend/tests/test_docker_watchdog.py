@@ -928,7 +928,8 @@ def test_C6_NEGATIVE_under_the_line_never_resyncs_or_reads_top():
 def test_C7_idle_and_due_gives_exactly_one_restart_action():
     st = slept_state(wd.CRON_RESYNC_AT_SEC)
     st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
-    assert resyncs(a) == [{"type": "cron_resync", "drift_sec": 120.0}]
+    assert resyncs(a) == [{"type": "cron_resync", "drift_sec": 120.0,
+                           "past_cap": False, "resyncs_24h": 1}]
     assert st["cron_resyncs"] == [NOW + 120]
     assert [x["type"] for x in a].count("restart") == 0, "Docker itself is never touched"
 
@@ -995,12 +996,129 @@ def test_C12_NEGATIVE_min_gap_and_daily_cap():
     assert resyncs(a) == [] and st["cron_last_decision"] == "gap"
     st, a = wd.evaluate(st, cobs(1120.0 + 600), t + 600, CFG)
     assert len(resyncs(a)) == 1
-    st = slept_state(3600)
+    st = slept_state(300)                                          # a small drift: the cap holds
     st["cron_resyncs"] = [NOW - 86000 + i * 700 for i in range(wd.CRON_RESYNC_MAX_PER_DAY)]
     st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
     assert resyncs(a) == [] and st["cron_last_decision"] == "cap"
     st, a = wd.evaluate(st, cobs(1120.0 + 400), NOW + 520, CFG)    # the oldest rolled off
     assert len(resyncs(a)) == 1
+
+
+# --------------------------------------------------------------------------- cap exemption 2026-10-21
+# Twelve short wake-ups overnight used the day's cap; then a 3 h 04 min pause
+# (11,044 s) met "cap" on 40 consecutive runs, supercronic ran every job 3 h 05 min
+# late and the in-session alert jobs never started. The cap is for a flapping host:
+# it holds only under CRON_RESYNC_CAP_EXEMPT_SEC (600 s) of drift.
+FULL_DAY = [NOW - 86000 + i * 700 for i in range(wd.CRON_RESYNC_MAX_PER_DAY)]
+LONG_DRIFT = 11044.0
+
+
+def test_C27_a_long_sleep_resyncs_past_the_daily_cap_and_counts_it():
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = list(FULL_DAY)
+    assert wd.cron_wants_top(st, cobs(1120.0), NOW + 120, CFG) is True, "docker top is read"
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert resyncs(a) == [{"type": "cron_resync", "drift_sec": LONG_DRIFT,
+                           "past_cap": True, "resyncs_24h": 13}]
+    assert st["cron_last_decision"] == "resync"
+    assert len(st["cron_resyncs"]) == 13 and st["cron_resyncs"][-1] == NOW + 120, "counted"
+    assert [x["type"] for x in a].count("restart") == 0, "Docker itself is never touched"
+    # the boundary: exactly CRON_RESYNC_CAP_EXEMPT_SEC goes through
+    st = slept_state(wd.CRON_RESYNC_CAP_EXEMPT_SEC)
+    st["cron_resyncs"] = list(FULL_DAY)
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert len(resyncs(a)) == 1 and resyncs(a)[0]["past_cap"] is True
+
+
+def test_C28_NEGATIVE_small_drift_stays_capped_and_gap_busy_pause_off_hold_past_the_cap():
+    # the 13th at 300 s of drift (a flapping host): capped, nothing counted
+    st = slept_state(300)
+    st["cron_resyncs"] = list(FULL_DAY)
+    assert wd.cron_wants_top(st, cobs(1120.0), NOW + 120, CFG) is False
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "cap"
+    assert st["cron_resyncs"] == FULL_DAY
+    # one second under the line is still capped
+    st = slept_state(wd.CRON_RESYNC_CAP_EXEMPT_SEC - 1)
+    st["cron_resyncs"] = list(FULL_DAY)
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "cap"
+    # the 600 s gap still holds for a long drift past the cap: 599 s after the 12th
+    t = NOW + 120
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = FULL_DAY[:-1] + [t - 599]
+    st, a = wd.evaluate(st, cobs(1120.0), t, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "gap"
+    st, a = wd.evaluate(st, cobs(1121.0), t + 1, CFG)              # 600 s: allowed
+    assert len(resyncs(a)) == 1 and resyncs(a)[0]["past_cap"] is True
+    # a running job still waits past the cap, and the busy alert still fires once
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = list(FULL_DAY)
+    for i in range(1, 18):                                         # 34 min of waiting
+        st, a = wd.evaluate(st, cobs(1000.0 + i * 120, procs=BUSY), NOW + i * 120, CFG)
+        assert resyncs(a) == [] and st["cron_last_decision"] == "busy"
+    assert conds(st) == ["cron_drift_busy"]
+    # the pause file and the config flag still win past the cap
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = list(FULL_DAY)
+    st, a = wd.evaluate(st, cobs(1120.0, paused=True), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "paused"
+    st, a = wd.evaluate(st, cobs(1240.0), NOW + 240, dict(CFG, cron_resync=False))
+    assert resyncs(a) == [] and st["cron_last_decision"] == "off"
+
+
+def test_C29_run_once_past_cap_writes_cron_resynced_past_cap_and_zeroes_the_drift(tmp_path):
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = list(FULL_DAY)
+    wd.save_state(str(tmp_path), st)
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert calls == {"top": 1, "restart": 1, "inspect": 1}
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_sleep_acc_sec"] == 0.0 and len(st["cron_resyncs"]) == 13
+    assert st["cron_last_resync"] == {"ts": NOW + 120, "drift_sec": LONG_DRIFT}
+    assert d.calls == [], "no push: it happens at every wake"
+    lines = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()]
+    assert len([x for x in lines if x["msg"] == "cron_resynced"]) == 1
+    hit = [x for x in lines if x["msg"] == "cron_resynced_past_cap"]
+    assert len(hit) == 1
+    assert {k: hit[0][k] for k in ("level", "drift_sec", "resyncs_24h", "cap", "exempt_sec")} == {
+        "level": "warning", "drift_sec": LONG_DRIFT, "resyncs_24h": 13,
+        "cap": wd.CRON_RESYNC_MAX_PER_DAY, "exempt_sec": wd.CRON_RESYNC_CAP_EXEMPT_SEC}
+    run = [x for x in lines if x["msg"] == "run"][-1]
+    assert run["cron"] == "resync" and run["cron_drift_sec"] == 0
+    assert wd._cron_summary(st, NOW + 120)["resyncs_24h"] == 13, "honest in --status too"
+
+
+def test_C29b_NEGATIVE_an_ordinary_resync_writes_no_past_cap_line_and_a_failed_one_says_past_cap(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    text = (tmp_path / "watchdog.log").read_text()
+    assert text.count('"cron_resynced"') == 1 and "cron_resynced_past_cap" not in text
+    # a failed restart past the cap keeps the drift, says past_cap and retries at the gap
+    st = slept_state(LONG_DRIFT)
+    st["cron_resyncs"] = list(FULL_DAY)
+    wd.save_state(str(tmp_path), st)
+
+    def fail():
+        raise RuntimeError("docker restart exit 1: daemon not ready")
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1240.0, procs=None), restart=fail)
+    wd.run_once(CFG, NOW + 240, **kw)
+    assert calls["restart"] == 1
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_sleep_acc_sec"] == LONG_DRIFT and len(st["cron_resyncs"]) == 13
+    lines = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()]
+    failed = [x for x in lines if x["msg"] == "cron resync failed"]
+    assert len(failed) == 1 and failed[0]["past_cap"] is True
+    assert "cron_resynced_past_cap" not in (tmp_path / "watchdog.log").read_text().split(
+        '"cron resync failed"')[-1]
+    assert d.calls == [], "the failure alert is queued; the next run delivers it"
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1240.0 + 599, procs=None), restart=fail)
+    wd.run_once(CFG, NOW + 240 + 599, **kw)
+    assert calls["restart"] == 0, "the gap still holds after a failed try past the cap"
+    assert wd.load_state(str(tmp_path))["cron_last_decision"] == "gap"
+    assert [c["condition"] for c in d.calls] == ["watchdog_error"], "one alert, as before"
 
 
 @pytest.mark.parametrize("kw", [dict(cerr="missing"), dict(cerr="inspect exit 1"),
@@ -1201,14 +1319,16 @@ def test_C21_dry_run_and_status_show_the_drift(tmp_path, monkeypatch):
         monkeypatch.setattr(wd, name, lambda *a, **k: (_ for _ in ()).throw(AssertionError(name)))
     out = wd.dry_run(CFG, NOW + 120, observe_fn=lambda c, n: cobs(1120.0, procs=None),
                      state_dir=str(tmp_path), cron_top_fn=lambda: {"procs": IDLE, "error": None})
-    assert resyncs(out["actions"]) == [{"type": "cron_resync", "drift_sec": 18000.0}]
+    assert resyncs(out["actions"]) == [{"type": "cron_resync", "drift_sec": 18000.0,
+                                        "past_cap": False, "resyncs_24h": 1}]
     assert out["cron"]["sleep_acc_sec"] == 18000.0 and out["cron"]["decision"] == "resync"
     assert out["cron"]["resync_at_sec"] == wd.CRON_RESYNC_AT_SEC
     json.dumps(out, default=str)
     s = wd.status(str(tmp_path))
     assert s["cron"]["sleep_acc_sec"] == 18000.0 and s["cron"]["started_at"] == STARTED
-    assert set(s["cron"]) == {"started_at", "sleep_acc_sec", "resync_at_sec", "decision",
-                              "busy_since", "busy_alerted", "resyncs_24h", "last_resync"}
+    assert set(s["cron"]) == {"started_at", "sleep_acc_sec", "resync_at_sec", "cap_exempt_sec",
+                              "decision", "busy_since", "busy_alerted", "resyncs_24h",
+                              "last_resync"}
 
 
 def test_C22_config_cron_resync_key(tmp_path):
@@ -1251,6 +1371,8 @@ def test_C26_cron_constants_are_the_reviewed_values():
     assert (wd.CRON_RESYNC_AT_SEC, wd.CRON_SLEEP_JITTER_SEC, wd.CRON_BUSY_ALERT_SEC,
             wd.CRON_RESYNC_MIN_GAP_SEC, wd.CRON_RESYNC_MAX_PER_DAY, wd.CRON_RESTART_TIMEOUT_SEC,
             wd.CRON_CMD_MAX) == (120, 5, 1800, 600, 12, 150, 80)
+    assert wd.CRON_RESYNC_CAP_EXEMPT_SEC == 600, "2026-10-21: a 10-min sleep goes past the cap"
+    assert wd.CRON_RESYNC_CAP_EXEMPT_SEC >= wd.CRON_RESYNC_MIN_GAP_SEC, "exempt but never faster than the gap"
     assert (wd.CRON_STOP_GRACE_SEC, wd.CRON_EDGE_LEAD_SEC, wd.CRON_EDGE_TRAIL_SEC) == (120, 3, 3)
     assert (wd.DOCKER_CLI, wd.CRON_CONTAINER) == ("/usr/local/bin/docker",
                                                   "cheetah-market-app-cron-1")

@@ -34,6 +34,15 @@ gap, 12 per day, and never within 3 s either side of a wall-clock minute, when
 the per-minute jobs start). A running job is never interrupted: it waits, and
 after CRON_BUSY_ALERT_SEC of waiting it sends one ``cron_drift_busy`` alert.
 
+The daily cap is for a flapping host (2026-10-21): twelve short wake-ups
+overnight used it up, then a 3 h 04 min pause (11,044 s) met ``cap`` on 40
+consecutive runs and every in-session alert job ran 3 h late. So the cap applies
+only while the summed drift is under CRON_RESYNC_CAP_EXEMPT_SEC (600 s): a longer
+sleep always re-syncs, past the cap, still behind the gap, the busy wait and the
+pause file, and logs ``cron_resynced_past_cap`` beside ``cron_resynced``. A
+``docker restart`` that keeps failing at a large drift therefore retries every
+gap until it succeeds (one ``watchdog_error`` a day), not 12 times.
+
 It never kills anything: it sends no signal itself, and the one container it
 restarts is restarted only while no cron job runs. ``-t 120`` overrides the
 container's 1 s stop timeout: Docker sends SIGTERM, tini (docker-init) forwards
@@ -87,7 +96,8 @@ CRON_RESYNC_AT_SEC = 120            # summed sleep since cron started that trigg
 CRON_SLEEP_JITTER_SEC = 5           # per-run wall-minus-monotonic noise; not sleep
 CRON_BUSY_ALERT_SEC = 1800          # a job has kept cron busy this long -> one alert
 CRON_RESYNC_MIN_GAP_SEC = 600
-CRON_RESYNC_MAX_PER_DAY = 12
+CRON_RESYNC_MAX_PER_DAY = 12        # a flapping host; holds only under CRON_RESYNC_CAP_EXEMPT_SEC
+CRON_RESYNC_CAP_EXEMPT_SEC = 600    # drift this large re-syncs past the daily cap (2026-10-21)
 CRON_STOP_GRACE_SEC = 120           # `docker restart -t`: SIGTERM, then SIGKILL after this
 CRON_RESTART_TIMEOUT_SEC = 150      # the CLI call; > CRON_STOP_GRACE_SEC
 CRON_EDGE_LEAD_SEC = 3              # no restart in second 57..59 of a minute ...
@@ -594,7 +604,10 @@ def _cron_pre(st: dict, obs: dict, cfg: dict, now: float) -> Optional[str]:
     if obs.get("paused"):
         return "paused"
     recent = [t for t in st["cron_resyncs"] if now - t < _DAY]
-    if len(recent) >= CRON_RESYNC_MAX_PER_DAY:
+    # the daily cap holds only for small drifts (a flapping host); a drift of
+    # CRON_RESYNC_CAP_EXEMPT_SEC or more goes past it (2026-10-21), gap still held
+    if (len(recent) >= CRON_RESYNC_MAX_PER_DAY
+            and st["cron_sleep_acc_sec"] < CRON_RESYNC_CAP_EXEMPT_SEC):
         return "cap"
     if recent and now - max(recent) < CRON_RESYNC_MIN_GAP_SEC:
         return "gap"
@@ -629,9 +642,13 @@ def _cron_evaluate(st: dict, obs: dict, cfg: dict, now: float, actions: List[dic
                                                    "cmd": _clip(busy[0], CRON_CMD_MAX)}, now)
             else:
                 decision = "resync"
-                st["cron_resyncs"] = [t for t in st["cron_resyncs"] if now - t < _DAY] + [now]
+                recent = [t for t in st["cron_resyncs"] if now - t < _DAY]
+                # every attempt counts, past the cap too: resyncs_24h stays honest
+                st["cron_resyncs"] = recent + [now]
                 actions.append({"type": "cron_resync",
-                                "drift_sec": round(st["cron_sleep_acc_sec"], 1)})
+                                "drift_sec": round(st["cron_sleep_acc_sec"], 1),
+                                "past_cap": len(recent) >= CRON_RESYNC_MAX_PER_DAY,
+                                "resyncs_24h": len(recent) + 1})
     if decision != "busy":
         st["cron_busy_since"] = None
     st["cron_last_decision"] = decision
@@ -1144,9 +1161,13 @@ def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_d
             if err is None:
                 log_line(state_dir, "warning", "cron_resynced", drift_sec=a["drift_sec"],
                          drift_h=round(a["drift_sec"] / 3600.0, 2), started_at=started)
+                if a.get("past_cap"):
+                    log_line(state_dir, "warning", "cron_resynced_past_cap",
+                             drift_sec=a["drift_sec"], resyncs_24h=a.get("resyncs_24h"),
+                             cap=CRON_RESYNC_MAX_PER_DAY, exempt_sec=CRON_RESYNC_CAP_EXEMPT_SEC)
             else:
                 log_line(state_dir, "error", "cron resync failed", drift_sec=a["drift_sec"],
-                         error=_clip(err, 200))
+                         error=_clip(err, 200), past_cap=bool(a.get("past_cap")))
         elif a["type"] == "push":
             try:
                 res = deliver_fn(a, cfg)
@@ -1183,6 +1204,7 @@ def _cron_summary(st: dict, now: float) -> dict:
     return {"started_at": st["cron_started_at"],
             "sleep_acc_sec": round(st["cron_sleep_acc_sec"], 1),
             "resync_at_sec": CRON_RESYNC_AT_SEC,
+            "cap_exempt_sec": CRON_RESYNC_CAP_EXEMPT_SEC,
             "decision": st["cron_last_decision"],
             "busy_since": st["cron_busy_since"], "busy_alerted": st["cron_busy_alerted"],
             "resyncs_24h": len([t for t in st["cron_resyncs"] if now - t < _DAY]),
