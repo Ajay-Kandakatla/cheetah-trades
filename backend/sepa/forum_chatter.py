@@ -554,6 +554,19 @@ async def chatter_for(
     if reddit_down and coll is not None:
         try:
             doc = prior_doc
+            # A keep needs something worth keeping. When NEITHER cached Reddit
+            # lane was good (a row written during the outage, or one still
+            # carrying the old typed guess), there is nothing to hold: fall
+            # through to the normal path, which serves the fresh sentences
+            # with fetched_at = now, writes the row (so the 15-min TTL holds
+            # and the legacy words leave the cache) and still keeps a stale
+            # StockTwits block. 2026-10-21, after the first deploy: every
+            # ticker read "Cached · hours ago" on the refresh button and
+            # re-fetched all four lanes on every open while Reddit stays closed.
+            cached_lanes = (doc.get("payload") or {}) if doc else {}
+            if doc and not any((cached_lanes.get(lane) or {}).get("available")
+                               for lane in ("thoughtful", "momentum")):
+                doc = None
             if doc:
                 stale_payload = dict(doc.get("payload") or {})
                 stale_payload["cached"] = True

@@ -332,3 +332,65 @@ def test_reddit_keep_no_write_when_stocktwits_has_no_good_read(wire):
     out = run()
     assert coll.writes == []
     assert out["stocktwits"]["reason"].endswith(" · no earlier read")
+
+
+# ── 2026-10-21, after the first deploy: a keep with nothing to keep ─────────
+# Every live row whose Reddit lanes had both failed came back through the keep
+# with the row's old fetched_at and cached=True ("Cached · hours ago" on the
+# refresh button) and nothing was written, so each open re-fetched all four
+# lanes. Now: no good cached Reddit lane → the normal path (fresh stamps, a
+# full write, the StockTwits stale keep still applies).
+
+def test_reddit_keep_falls_through_when_no_cached_lane_is_good(wire):
+    doc = cached_doc(st_good())
+    doc["payload"]["thoughtful"] = legacy_reddit()
+    doc["payload"]["momentum"] = legacy_reddit()
+    coll = FakeColl(doc)
+    wire(coll, st_good(bull=7, bear=2), thoughtful=reddit_down(), momentum=reddit_down())
+    out = run()
+    assert out["cached"] is False and out.get("stale") is None
+    assert out["fetched_at"] == NOW
+    assert out["reddit_degraded"] is True
+    assert out["thoughtful"]["reason"] == reddit_down()["reason"]
+    assert out["stocktwits"]["bullish"] == 7 and out["stocktwits"].get("stale") is None
+    # the row is rewritten: fresh stamp, fresh lanes, the legacy words gone
+    assert len(coll.writes) == 1
+    written = coll.writes[0]["$set"]
+    assert written["fetched_at"] == NOW
+    assert written["payload"]["thoughtful"]["reason_code"] == "blocked"
+    import json
+    assert "(rate-limit?)" not in json.dumps(coll.doc)
+
+
+def test_fall_through_still_keeps_a_stale_stocktwits_block(wire):
+    # Both Reddit lanes dead in the cache AND StockTwits down now: the normal
+    # path serves the cached good StockTwits read flagged stale, and the
+    # write carries stocktwits_last_good_at so the next tick keeps it too.
+    doc = cached_doc(st_good(bull=4, bear=1))
+    doc["payload"]["thoughtful"] = legacy_reddit()
+    doc["payload"]["momentum"] = legacy_reddit()
+    coll = FakeColl(doc)
+    wire(coll, st_down(), thoughtful=reddit_down(), momentum=reddit_down())
+    out = run()
+    assert out["cached"] is False and out["fetched_at"] == NOW
+    assert out["stocktwits"]["stale"] is True
+    assert out["stocktwits"]["bullish"] == 4
+    assert out["stocktwits"]["stale_reason"] == OUTAGE
+    assert len(coll.writes) == 1
+    written = coll.writes[0]["$set"]
+    assert "stocktwits_last_good_at" in written and written["fetched_at"] == NOW
+
+
+def test_NEGATIVE_one_good_cached_lane_still_takes_the_keep(wire):
+    # A row with ONE good Reddit lane is a real transient-outage keep: the
+    # good lane is held, the stamps stay the row's, no full write.
+    doc = cached_doc(st_good())
+    doc["payload"]["momentum"] = legacy_reddit()
+    coll = FakeColl(doc)
+    wire(coll, st_good(), thoughtful=reddit_down(), momentum=reddit_down())
+    out = run()
+    assert out["cached"] is True and out["stale"] is True
+    assert out["fetched_at"] == EARLIER
+    assert out["thoughtful"]["available"] is True and out["thoughtful"]["mentions_7d"] == 9
+    assert out["momentum"]["reason"] == reddit_down()["reason"]
+    assert all("fetched_at" not in w["$set"] for w in coll.writes)

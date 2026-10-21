@@ -462,6 +462,8 @@ api.stocktwits.com was down for everyone (timeouts, 0 bytes); Reddit closed anon
   `tests/test_reddit_scrape_oauth_2026_10_21.py` (hermetic: monkeypatched seams and
   `httpx.MockTransport` via `reddit_scrape._transport_factory`; a real transport raises).
 
+**Keep only what is worth keeping (2026-10-21, after the first deploy):** the Reddit keep (both lanes down) holds the cached Reddit lanes only when at least one of them was good; a row whose cached lanes had both failed falls through to the normal path — fresh `fetched_at`, `cached: False`, the served sentences written into the row (the 15-minute TTL holds and the old typed guess leaves the cache) — and the StockTwits stale keep still applies there. Before this every ticker read "Cached · hours ago" and re-fetched all four lanes on every open while Reddit stays closed.
+
 ### `dual_momentum.py` — Antonacci's two-gate ranking
 Reuses the latest persisted scan (`scanner.load_latest()`) for universe + names
 + RS rank, then recomputes 1/3/6/12-month returns from cached daily bars (no
