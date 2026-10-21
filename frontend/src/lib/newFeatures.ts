@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-21 ~16:05 ET (both lines verbatim in the label), on the 15:36:15 ET 🚩 gajjala_setup push for NIXX that
+  // push_history recorded as sent 3 / failed 0 while the two 🧠 potentials around it (SAIQ 15:11, POLA 16:01) reached his
+  // phone. `sent` was only ever the push service accepting the message. Now push/sender stamps a push_id on every device
+  // payload (+ endpoint-HASH targets on the history row), public/sw.js echoes it to POST /push/receipt once
+  // showNotification has resolved (its own subscription endpoint is the credential; main.py lists the path public),
+  // push/receipts.py appends ONE receipt per device (idempotent, never touches sent/failed), push/recent serves
+  // `shown_on` and /alerts prints its `text` verbatim. The label types no digit outside his quotes — pinned by
+  // scripts/contracts.mjs ("📬 Push delivery receipts (2026-10-21)"). UNMEASURED — bookkeeping, not an edge.
+  { id: 'alerts-push-delivery-receipts-2026-10-21', addedAt: '2026-10-21', route: '/alerts',
+    label: "📬 Every push row on 🔔 Alerts now says which of your devices actually showed it. You said: “Oh man I did not get an A+ alert for it then today” — and, on the two potentials around it, “Yes POLA reached and SAIQ too”. That row read as delivered to every device, because “delivered” only ever meant the push service accepted the message; nothing knew whether your phone showed it. Now each device reports back the moment the notification is on its screen, and the row prints a second line: how many of the targeted devices showed it, which ones, and which one sent no receipt. Rows from before today carry no receipt line; a device reports only after it has picked up the new worker (open the app once). The delivered counts are untouched — a receipt sits beside them and never corrects them. Nothing about a device is stored but a hash of its address and a word for it. UNMEASURED — delivery bookkeeping, not an edge. Not advice." },
   // Ajay 2026-10-21 ~14:20 ET (verbatim in the label): "Also I need this tab and its subtabs sercheable in global search" —
   // on the 🚩 Gajjala's tab. lib/navSearch.GAJJALA_ENTRIES: ONE ⌘K row for the tab and ONE deep link per sub, GENERATED
   // from lib/gajjala.GG_SUBS (the sub strip, contract-pinned to backend chart_maps/gajjala/constants.SUBS), each routed

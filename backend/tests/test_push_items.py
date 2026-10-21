@@ -85,7 +85,8 @@ def test_send_paths_hand_the_device_no_items_and_history_the_full_dict(push_stac
         out = S.send_to_all(p, kind="trade_flash")
     assert out["sent"] == 2
     assert len(sent) == 2 and all("items" not in d for d in sent)
-    assert all(set(d) == {"title", "body", "url", "kind"} for d in sent)
+    # 2026-10-21: the sender stamps a push_id on the device payload (delivery receipts).
+    assert all(set(d) == {"title", "body", "url", "kind", "push_id"} for d in sent)
     assert len(recorded) == 1 and len(recorded[0]["items"]) == 8, "history gets the FULL payload"
 
 

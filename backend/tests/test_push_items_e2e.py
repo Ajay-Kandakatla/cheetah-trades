@@ -122,7 +122,8 @@ def test_eight_bursts_phone_gets_four_lines_alerts_gets_all_eight(chain):
     # 3. the DEVICE payload: the pre-change keys only, body <= 4 lines
     assert len(device) == 1
     d = device[0]
-    assert set(d) == {"title", "body", "url", "kind"}, "items must never reach the phone"
+    # push_id (2026-10-21, delivery receipts) is the ONE key the sender adds for the device.
+    assert set(d) == {"title", "body", "url", "kind", "push_id"}, "items must never reach the phone"
     assert len(d["body"].split("\n")) <= TF.PUSH_BODY_LINES == 4
     assert d["title"] == "⚡ Tape burst at a zone — CRWV +7 more"
 
@@ -148,7 +149,7 @@ def test_NEGATIVE_one_burst_is_one_item_and_nothing_off_push(chain):
     device, hist = chain
     TF.record_and_push(_events(1))
     d = device[0]
-    assert "items" not in d and set(d) == {"title", "body", "url", "kind"}
+    assert "items" not in d and set(d) == {"title", "body", "url", "kind", "push_id"}
     assert "more" not in d["title"]
     [doc] = hist.docs
     assert len(doc["items"]) == 1 and doc["items_total"] == 1

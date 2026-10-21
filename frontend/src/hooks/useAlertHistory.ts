@@ -54,6 +54,24 @@ export type AlertRow = {
    *
    *  Absent on an unfolded row and on every answer from an older API. */
   repeat?: RepeatBlock | null;
+  /** 📬 Delivery receipts (2026-10-21, push/receipts.shown_on). Ajay, on a
+   *  🚩 A+ push the server had recorded as sent 3 / failed 0: "Oh man I did
+   *  not get an A+ alert for it then today". `sent` is the push service
+   *  accepting the message; this block is what the DEVICES reported after
+   *  showing it. `text` is the whole sentence ("shown on 2 of 3 devices (Mac
+   *  Chrome ×2); no receipt from iPhone") — printed verbatim, never
+   *  recomposed here. null on a row stored before receipts and on one that
+   *  targeted nobody; absent on an older API. */
+  shown_on?: ShownOnBlock | null;
+};
+
+/** The served delivery-receipt block. `text` is the only field any surface prints. */
+export type ShownOnBlock = {
+  shown: number;
+  total: number;
+  devices: string[];
+  missing: string[];
+  text: string;
 };
 
 /** The served fold block. `line` is the only field any surface prints. */

@@ -28,7 +28,12 @@ Query params (all optional; absent = the old feed):
 Row shape (normalized across both sources, unchanged apart from `tickers`):
     {_id, ts, ts_iso, title, body, kind, ticker, tickers, url,
      source: 'push' | 'breakout', sent, failed, total, dismissed?, repeat?,
-     items?, items_not_stored?}
+     items?, items_not_stored?, shown_on}
+`shown_on` (2026-10-21, push/receipts.shown_on) is on EVERY push row: the served
+delivery-receipt block {shown, total, devices, missing, text} — "shown on 2 of 3
+devices (Mac Chrome ×2); no receipt from iPhone" — or None on a row stored before
+receipts / one that targeted nobody. The page prints `text` verbatim. The stored
+`receipts` / `targets` (endpoint hashes) and `push_id` never leave the server.
 `items` / `items_not_stored` (2026-09-29) are present ONLY on a push row that
 lists linkable lines — see ``served_items``.
 `repeat` is present ONLY on a survivor of a fold:
@@ -59,6 +64,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
 from auth import current_user_email
+from push.receipts import shown_on as _shown_on
 
 log = logging.getLogger("push.recent")
 
@@ -848,6 +854,14 @@ def _gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
         # Present on every row, null on the ones stored before 2026-09-15 and
         # on the kinds that carry no read.
         p.setdefault("enterable", None)
+        # 📬 Delivery receipts (2026-10-21, Ajay: "Oh man I did not get an A+
+        # alert for it then today" on a sent-3 row): the served sentence, or
+        # None on a row stored before receipts / one that targeted nobody. The
+        # receipts, the target hashes and the push_id never leave the server.
+        p["shown_on"] = _shown_on(p)
+        p.pop("receipts", None)
+        p.pop("targets", None)
+        p.pop("push_id", None)
         # Always a list (2026-09-20): the stored one, the single's ticker, or
         # what an old digest body names. Never None — the chips render nothing
         # on [].

@@ -320,8 +320,10 @@ def test_route_adds_tickers_and_nothing_else(monkeypatch):
     app.dependency_overrides[current_user_email] = lambda: "a@x"
     row = TestClient(app).get("/notifications/recent").json()["rows"][0]
     assert row["tickers"] == ["NVDA", "AVGO"]
-    assert set(row) - set(push) == {"source", "enterable", "tickers"}, \
+    # 2026-10-21: `shown_on` (delivery receipts, push/receipts.shown_on) rides on every push row — null here.
+    assert set(row) - set(push) == {"source", "enterable", "tickers", "shown_on"}, \
         "no other key appeared on the feed row"
+    assert row["shown_on"] is None, "a row with no push_id is from before receipts"
 
 
 # ---------------------------------------------------------------------------

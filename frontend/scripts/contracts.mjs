@@ -6578,8 +6578,13 @@ const CONTRACTS = [
       if (!/ITEMS_FOLD_AT/.test(items)) errs.push('AlertItems.tsx must fold on ITEMS_FOLD_AT (measured p90 16, max 44 per push)');
       const sender = read('../backend/push/sender.py');
       if (!/LOG_ONLY_KEYS/.test(sender)) errs.push('push/sender.py must strip LOG_ONLY_KEYS before a device sees the payload');
+      // 2026-10-21: both paths send through the ONE chokepoint _fan_out (it stamps the delivery-receipt push_id on
+      // the stripped device dict); the pin is now "the chokepoint strips, both paths use it".
       const sends = (sender.match(/_send_one\(sub, device\)/g) || []).length;
-      if (sends !== 2) errs.push(`push/sender.py must call _send_one(sub, device) in BOTH send_to_all and send_to_user (found ${sends}) — the unstripped payload would reach the phone`);
+      const fans = (sender.match(/_fan_out\(targets, payload\)/g) || []).length;
+      if (sends !== 1 || fans !== 2) errs.push(`push/sender.py must send through _fan_out (one _send_one(sub, device), found ${sends}) from BOTH send_to_all and send_to_user (found ${fans}) — the unstripped payload would reach the phone`);
+      const fan = sender.slice(sender.indexOf('def _fan_out('), sender.indexOf('def send_to_all('));
+      if (!/device_payload\(payload\)/.test(fan)) errs.push('_fan_out must build the device dict from device_payload(payload)');
       const hist = read('../backend/push/history.py');
       if (!/"items":/.test(hist) || !/MAX_ITEMS/.test(hist)) errs.push('push/history.py::record must store the sanitized items, capped at MAX_ITEMS');
       const recent = read('../backend/push/recent.py');
@@ -9709,8 +9714,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9914,8 +9920,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first ten (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first eleven (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10185,8 +10192,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top six, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10375,8 +10383,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10464,8 +10473,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10604,8 +10614,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10711,8 +10722,9 @@ const CONTRACTS = [
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top three, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10751,9 +10763,10 @@ const CONTRACTS = [
       const ID = 'autopilot-gajjala-lane-gg-words-2026-10-21';
       // 1. the ✨ entry: FIRST.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above this one — widened to the top two, dated.
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10882,8 +10895,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-k11-volume-floor-2026-10-21';
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10955,8 +10969,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-global-search-2026-10-21';
-      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (nf && first !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${first || 'none'})`);
+      // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -10964,6 +10979,123 @@ const CONTRACTS = [
         if (!entry.includes('“Also I need this tab and its subtabs sercheable in global search”')) errs.push('the ✨ must quote his line verbatim');
         const label = (/label: "([^"]*)"/.exec(entry) || ['', ''])[1];
         if (/\d/.test(label)) errs.push('the ✨ label types a digit — nothing here is a number of his');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '📬 Push delivery receipts (2026-10-21)',
+    file: '../backend/push/receipts.py',
+    // Ajay 2026-10-21 ~16:05 ET, on the 15:36:15 ET 🚩 gajjala_setup NIXX push that push_history recorded as sent 3 /
+    // failed 0: "Oh man I did not get an A+ alert for it then today" — "Yes POLA reached and SAIQ too". `sent` is the push
+    // SERVICE accepting the message; the receipt is the device's screen. The chain: sender stamps push_id → sw.js echoes it
+    // after showNotification → POST /push/receipt (public path, the subscription endpoint is the credential) → one receipt
+    // per device on the history row → push/recent serves `shown_on` → /alerts prints `text` verbatim. Never an endpoint or
+    // a key stored or served; sent/failed/total never changed by a receipt.
+    checks: (rc) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const pyNoComments = (x) => x.replace(/#[^\n]*/g, '');
+      const HIS = ['Oh man I did not get an A+ alert for it then today', 'Yes POLA reached and SAIQ too'];
+      // 1. receipts.py: the path, sha1 of the endpoint, no auth dependency, the served sentence builder.
+      const rcc = pyNoComments(rc);
+      if (!/^RECEIPT_PATH = "\/push\/receipt"/m.test(rc)) errs.push('receipts.RECEIPT_PATH must be "/push/receipt"');
+      if (!/hashlib\.sha1\(/.test(rcc)) errs.push('receipts.endpoint_hash must be sha1 of the endpoint');
+      if (/current_user_email/.test(rcc)) errs.push('the receipt route must take NO auth dependency — the SW may have no session cookie');
+      if (!/"receipts\.sub": \{"\$ne": h\}/.test(rcc)) errs.push('record_receipt must refuse a second receipt from the same device (receipts.sub $ne)');
+      if (/\$set[^\n]*(sent|failed|total)/.test(rcc)) errs.push('record_receipt must never write sent / failed / total');
+      if (!/def shown_on\(/.test(rc)) errs.push('receipts.shown_on is gone');
+      if (!/f"shown on \{shown\} of \{total\} device/.test(rc)) errs.push('shown_on.text must lead "shown on N of M device(s)"');
+      if (!/; no receipt from /.test(rc)) errs.push('shown_on.text must name the silent devices ("; no receipt from …")');
+      // 2. the sender stamp — both send paths hand the SAME id to the devices and to history.
+      const sender = tryRead('../backend/push/sender.py', 'sender');
+      if (sender) {
+        const sc = pyNoComments(sender);
+        if (!/device\["push_id"\] = push_id/.test(sc)) errs.push('sender._fan_out must stamp push_id on the DEVICE dict');
+        if (!/device = dict\(device_payload\(payload\)\)/.test(sc)) errs.push('the device dict must be a COPY (the caller\'s payload is never mutated)');
+        if ((sc.match(/push_id=push_id, targets=target_rows/g) || []).length !== 2) errs.push('both send_to_all and send_to_user must record push_id + targets');
+        if (/payload\["push_id"\]/.test(sc)) errs.push('the caller\'s payload must never get push_id written into it');
+      }
+      // 3. history: the sparse index and the two optional fields; a legacy call stores neither.
+      const hist = tryRead('../backend/push/history.py', 'history');
+      if (hist) {
+        if (!/create_index\("push_id", sparse=True\)/.test(hist)) errs.push('push_history needs the sparse push_id index');
+        if (!/push_id: Optional\[str\] = None,\s*\n\s*targets: Optional\[list\] = None/.test(hist)) errs.push('history.record must take push_id / targets as optional kwargs');
+        if (!/if push_id:\s*\n\s*doc\["push_id"\] = str\(push_id\)/.test(hist)) errs.push('history.record must store push_id only when given (a legacy row reads "before receipts")');
+      }
+      // 4. recent: shown_on on every push row; the hashes never leave the server.
+      const recent = tryRead('../backend/push/recent.py', 'recent');
+      if (recent) {
+        if (!/p\["shown_on"\] = _shown_on\(p\)/.test(recent)) errs.push('push/recent must serve shown_on on every push row');
+        for (const k of ['receipts', 'targets', 'push_id']) if (!recent.includes(`p.pop("${k}", None)`)) errs.push(`push/recent must strip "${k}" before serving`);
+      }
+      // 5. main.py: public path + the router.
+      const main = tryRead('../backend/main.py', 'main');
+      if (main) {
+        const at = main.indexOf('_PUBLIC_API_PATHS = {');
+        const block = at < 0 ? '' : main.slice(at, main.indexOf('}', at));
+        if (!/"\/push\/receipt",/.test(block)) errs.push('main._PUBLIC_API_PATHS must list "/push/receipt" (the SW posts without a session)');
+        if (!main.includes('app.include_router(push_receipts_router)')) errs.push('main.py must include push.receipts.router');
+      }
+      // 6. sw.js: the receipt FOLLOWS showNotification; three keys; never a key or content.
+      const sw = tryRead('public/sw.js', 'sw');
+      if (sw) {
+        const show = sw.indexOf('self.registration.showNotification(title, options)');
+        if (show < 0 || !sw.slice(show, show + 200).includes('.then(() => sendReceipt(payload)')) errs.push('sw.js must post the receipt AFTER showNotification resolves');
+        if (!/fetch\(`\$\{cfg\.api\}\/push\/receipt`/.test(sw)) errs.push('sw.js must POST to <api>/push/receipt via the shared config');
+        if (!/credentials: 'include'/.test(sw.slice(sw.indexOf('async function sendReceipt(')))) errs.push('the receipt fetch must send credentials');
+        const rb = sw.slice(sw.indexOf('function receiptBody('), sw.indexOf('\n}\n', sw.indexOf('function receiptBody(')));
+        if (!rb.includes('push_id: payload.push_id, endpoint: endpoint, shown_at: Date.now()')) errs.push('receiptBody must be exactly {push_id, endpoint, shown_at}');
+        if (/keys|title|body:/.test(rb.replace(/payload\.push_id/g, ''))) errs.push('receiptBody must carry no key and no content');
+      }
+      // 7. the page prints the served words; the row type carries the block.
+      const page = tryRead('src/pages/Alerts.tsx', 'page');
+      if (page) {
+        if (!page.includes('data-testid="alert-shown-on"') || !page.includes('{row.shown_on.text}')) errs.push('Alerts.tsx must print row.shown_on.text verbatim under data-testid="alert-shown-on"');
+        if (/shown on \$\{|`shown on /.test(page)) errs.push('Alerts.tsx composes its own "shown on" sentence — the server owns the words');
+      }
+      const hook = tryRead('src/hooks/useAlertHistory.ts', 'hook');
+      if (hook && !/shown_on\?: ShownOnBlock \| null;/.test(hook)) errs.push('AlertRow must carry shown_on?: ShownOnBlock | null');
+      // 8. tests, both sides, with their NEGATIVEs.
+      if (!exists('../backend/tests/test_push_receipts_2026_10_21.py')) errs.push('backend/tests/test_push_receipts_2026_10_21.py is missing');
+      const bt = tryRead('../backend/tests/test_push_receipts_2026_10_21.py', 'backend tests');
+      for (const name of ['test_NEGATIVE_a_receipt_never_changes_sent_failed_total', 'test_NEGATIVE_legacy_record_call_stores_neither_key',
+        'test_unknown_endpoint_unknown_push_and_another_users_row_all_answer_404', 'test_recent_serves_shown_on_and_never_the_hashes']) {
+        if (bt && !bt.includes(name)) errs.push(`test_push_receipts_2026_10_21.py must keep ${name}`);
+      }
+      const st = tryRead('src/lib/swReceipt.test.ts', 'sw test');
+      for (const name of ['NEGATIVE: a payload without push_id', 'NEGATIVE: a receipt that fails never rejects the push event', 'NEGATIVE: a failed showNotification posts no receipt']) {
+        if (st && !st.includes(name)) errs.push(`swReceipt.test.ts must keep the test "${name}"`);
+      }
+      const at2 = tryRead('src/pages/Alerts.receipts.test.tsx', 'page test');
+      if (at2 && !at2.includes('NEGATIVE: a row from before receipts (shown_on null)')) errs.push('Alerts.receipts.test.tsx must keep the legacy-row NEGATIVE');
+      // 9. docs + SPECS.
+      if (!exists('../docs/notifications/push_delivery_receipts_2026_10_21.md')) errs.push('docs/notifications/push_delivery_receipts_2026_10_21.md is missing');
+      const specs = tryRead('../SPECS.md', 'specs');
+      if (specs && !specs.includes('`/push/receipt`')) errs.push('SPECS.md must carry the /push/receipt line');
+      // 10. the ✨ entry: FIRST, routed to /alerts, both his lines verbatim, UNMEASURED, no digit outside his quotes.
+      const nf = read('src/lib/newFeatures.ts');
+      const ID = 'alerts-push-delivery-receipts-2026-10-21';
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at3 = arr.indexOf(`{ id: '${ID}'`);
+      if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at3 + 1);
+        const e = arr.slice(at3, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 📬 ✨ entry';
+        if (!e.includes("route: '/alerts'")) errs.push(`${W} must route to '/alerts'`);
+        for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote verbatim: “${h.slice(0, 40)}…”`);
+        for (const need of ['no receipt', 'never corrects', 'UNMEASURED']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (/boun/i.test(label)) errs.push(`${W} says the b-word`);
+        let outside = label;
+        for (const h of HIS) outside = outside.split(`“${h}”`).join('');
+        const d = outside.match(/\d+/);
+        if (d) errs.push(`${W} types "${d[0]}" outside his quotes — the counts are served`);
+        if (!/\d/.test(`${outside} 3 devices`)) errs.push('self-test: a typed number outside the quote was not caught');
       }
       return errs;
     },

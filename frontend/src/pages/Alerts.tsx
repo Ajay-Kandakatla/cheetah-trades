@@ -645,6 +645,17 @@ function AlertRowCard({ row }: { row: AlertRowT }) {
           <>
             <span style={{ color: delivery.tone }}>{delivery.text}</span>
             {row.failed > 0 ? <span style={{ color: '#fca5a5' }}>{row.failed} failed</span> : null}
+            {/* 📬 What the DEVICES reported (2026-10-21, push/receipts.shown_on) —
+                "delivered" above is the push service accepting the message;
+                this is the screen. Printed EXACTLY as served; amber while a
+                targeted device has not reported, dim once every one has. A
+                row from before receipts carries null and prints nothing. */}
+            {row.shown_on?.text ? (
+              <span data-testid="alert-shown-on"
+                    style={{ color: row.shown_on.shown < row.shown_on.total ? AMBER : DIM }}>
+                {row.shown_on.text}
+              </span>
+            ) : null}
           </>
         )}
         {/* 🔁 The fold line, 2026-09-21 — printed EXACTLY as the server composed

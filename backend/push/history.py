@@ -28,9 +28,20 @@ Schema (push_history collection)
                                     # Capped at MAX_ITEMS; None when absent.
       items_total: int | None,      # valid entries BEFORE the MAX_ITEMS cap
       user_email: str | None,      # None = broadcast
-      sent:       int,             # devices reached
+      sent:       int,             # devices reached (the push SERVICE accepted)
       failed:     int,             # delivery failures
       total:      int,             # devices targeted
+      push_id:    str,             # 2026-10-21 — the id stamped on the device payload;
+                                    # absent on a row stored before receipts
+      targets:    list[{sub, device, ok}],
+                                    # 2026-10-21 — one per subscription tried: sha1 of
+                                    # the endpoint, the device word ("Mac Chrome"),
+                                    # whether the push service accepted. Never an
+                                    # endpoint, never a key. Absent on a legacy row.
+      receipts:   list[{sub, device, shown_at, at}],
+                                    # 2026-10-21 — appended by POST /push/receipt
+                                    # (push/receipts.py) once per device that SHOWED
+                                    # the notification; never changes sent/failed.
     }
 
 Indexes
@@ -78,6 +89,12 @@ def _get_coll():
         client.admin.command("ping")
         c = client[db_name].push_history
         c.create_index([("user_email", ASCENDING), ("ts", DESCENDING)])
+        try:
+            # 2026-10-21: POST /push/receipt looks a row up by the id the sender
+            # stamped. Sparse — rows stored before receipts carry none.
+            c.create_index("push_id", sparse=True)
+        except Exception:
+            pass
         try:
             # Mongo TTL is on a datetime field — use ts_iso.
             c.create_index("ts_iso", expireAfterSeconds=_TTL_DAYS * 86400)
@@ -139,12 +156,17 @@ def _items(raw) -> tuple[Optional[list], Optional[int]]:
 
 
 def record(payload: dict, *, user_email: Optional[str] = None,
-           result: Optional[dict] = None) -> None:
+           result: Optional[dict] = None, push_id: Optional[str] = None,
+           targets: Optional[list] = None) -> None:
     """Insert one history row. Best-effort — failures are swallowed.
 
     Called from push.sender after every send_to_all / send_to_user.
     The history write is in the same execution path as the live push,
     so it MUST be cheap + must never raise (delivery is what matters).
+
+    ``push_id`` / ``targets`` (2026-10-21, delivery receipts): stored only when
+    the sender hands them over — a legacy caller stores neither key, so a row
+    without ``push_id`` reads as "before receipts", never as "nobody showed it".
     """
     coll = _get_coll()
     if coll is None:
@@ -152,7 +174,7 @@ def record(payload: dict, *, user_email: Optional[str] = None,
     try:
         now = int(time.time())
         items, items_total = _items(payload.get("items"))
-        coll.insert_one({
+        doc = {
             "ts":         now,
             "ts_iso":     datetime.fromtimestamp(now, tz=timezone.utc),
             "title":      payload.get("title"),
@@ -183,7 +205,11 @@ def record(payload: dict, *, user_email: Optional[str] = None,
             "sent":       int((result or {}).get("sent", 0)),
             "failed":     int((result or {}).get("failed", 0)),
             "total":      int((result or {}).get("total_targets", 0)),
-        })
+        }
+        if push_id:
+            doc["push_id"] = str(push_id)
+            doc["targets"] = [t for t in (targets or []) if isinstance(t, dict)]
+        coll.insert_one(doc)
     except Exception as exc:
         log.debug("push.history record failed: %s", exc)
 

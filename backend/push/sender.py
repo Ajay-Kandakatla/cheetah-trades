@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 
 from push import keys, subs
+from push import receipts
 
 log = logging.getLogger("push.sender")
 
@@ -84,6 +85,26 @@ def _send_one(subscription: dict, payload: dict) -> bool:
         return False
 
 
+def _fan_out(targets: list, payload: dict) -> tuple:
+    """Send one payload to every target. Returns (result, push_id, targets_for_history).
+
+    The DEVICE dict is a NEW dict every time: the caller's payload minus
+    LOG_ONLY_KEYS, plus the ``push_id`` the service worker echoes in its delivery
+    receipt (2026-10-21, Ajay: "Oh man I did not get an A+ alert for it then
+    today" on a row that read sent 3 / failed 0 — see push/receipts.py). The
+    caller's dict, which history records, is never mutated. ``targets`` carries
+    the endpoint HASH + device word + acceptance per subscription, never an
+    endpoint or a key.
+    """
+    push_id = receipts.new_push_id()
+    device = dict(device_payload(payload))
+    device["push_id"] = push_id
+    oks = [_send_one(sub, device) for sub in targets]
+    sent = sum(1 for ok in oks if ok)
+    result = {"sent": sent, "failed": len(oks) - sent, "total_targets": len(targets)}
+    return result, push_id, receipts.targets_of(targets, oks)
+
+
 def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
     """Deliver a push payload to every subscribed device whose prefs allow ``kind``."""
     from market_hours import gate   # lazy: gate → reminder → notify → sender
@@ -94,24 +115,16 @@ def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind)
-    device = device_payload(payload)
-    sent = 0
-    failed = 0
-    for sub in targets:
-        ok = _send_one(sub, device)
-        if ok:
-            sent += 1
-        else:
-            failed += 1
-    log.info("push.sender: kind=%s sent=%d failed=%d", kind, sent, failed)
-    result = {"sent": sent, "failed": failed, "total_targets": len(targets)}
+    result, push_id, target_rows = _fan_out(targets, payload)
+    log.info("push.sender: kind=%s sent=%d failed=%d", kind, result["sent"], result["failed"])
     # Persist the full untruncated payload to history so the user can
     # re-read it from /notifications even after the phone has cleared
     # the lock-screen banner (which clips body to ~180 chars).
     # Best-effort — never block delivery on history failure.
     try:
         from push import history
-        history.record(payload, user_email=None, result=result)
+        history.record(payload, user_email=None, result=result,
+                       push_id=push_id, targets=target_rows)
     except Exception as exc:
         log.debug("push.sender: history record failed: %s", exc)
     return result
@@ -128,24 +141,16 @@ def send_to_user(user_email: str, payload: dict, kind: Optional[str] = None) -> 
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind, user_email=user_email)
-    device = device_payload(payload)
-    sent = 0
-    failed = 0
-    for sub in targets:
-        ok = _send_one(sub, device)
-        if ok:
-            sent += 1
-        else:
-            failed += 1
+    result, push_id, target_rows = _fan_out(targets, payload)
     log.info("push.sender: user=%s kind=%s sent=%d failed=%d",
-             user_email, kind, sent, failed)
-    result = {"sent": sent, "failed": failed, "total_targets": len(targets)}
+             user_email, kind, result["sent"], result["failed"])
     # Same history-record path as send_to_all, but scoped to this user
     # so /push/history shows it under their email instead of as a
     # broadcast row.
     try:
         from push import history
-        history.record(payload, user_email=user_email, result=result)
+        history.record(payload, user_email=user_email, result=result,
+                       push_id=push_id, targets=target_rows)
     except Exception as exc:
         log.debug("push.sender: history record failed: %s", exc)
     return result

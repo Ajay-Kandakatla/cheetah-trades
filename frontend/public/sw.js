@@ -29,8 +29,45 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  // The receipt (below) runs only AFTER the notification is on screen, and a
+  // receipt failure never fails the push: the notification is what matters.
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+      .then(() => sendReceipt(payload).catch(() => { /* best-effort */ })),
+  );
 });
+
+/* --------------------------------------------------------------------------
+   Delivery receipts (2026-10-21). Ajay, on a 🚩 A+ push the server recorded as
+   sent 3 / failed 0: "Oh man I did not get an A+ alert for it then today" —
+   and "Yes POLA reached and SAIQ too" for the two pushes around it. `sent` is
+   the push service accepting the message; nothing server-side knew whether
+   the phone SHOWED it. Now, once showNotification has resolved, the worker
+   echoes the `push_id` the sender stamped on the payload to POST /push/receipt
+   together with its own subscription endpoint (the credential — only this
+   device and the server know it) and a clock stamp. Nothing else: no title,
+   no body, no key. A payload without push_id (an old sender, the Settings-page
+   test ping) posts nothing. /alerts then prints "shown on 2 of 3 devices".
+   -------------------------------------------------------------------------- */
+function receiptBody(payload, endpoint) {
+  if (!payload || typeof payload.push_id !== 'string' || !payload.push_id) return null;
+  if (typeof endpoint !== 'string' || !endpoint) return null;
+  return { push_id: payload.push_id, endpoint: endpoint, shown_at: Date.now() };
+}
+
+async function sendReceipt(payload) {
+  if (!payload || !payload.push_id) return;
+  const sub = await self.registration.pushManager.getSubscription();
+  const body = receiptBody(payload, sub && sub.endpoint);
+  if (!body) return;
+  const cfg = await loadConfig();
+  await fetch(`${cfg.api}/push/receipt`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

@@ -195,6 +195,11 @@ export async function ensurePushSubscription(opts: { force?: boolean; now?: numb
   const storage = opts.storage === undefined ? safeStorage() : opts.storage;
   if (!pushSupported()) return { ok: false, action: 'unsupported' };
   if (Notification.permission !== 'granted') return { ok: false, action: 'no-permission' };
+  // 2026-10-21: the worker's API base is refreshed on EVERY load, before the
+  // throttle — sw.js posts the delivery receipt to it (push/receipts.py), and a
+  // cleared Cache API must not leave the worker on its host:8000 fallback for
+  // up to six hours. postMessage + one cache put; no network.
+  try { await shareConfigWithServiceWorker(await ensureServiceWorker()); } catch { /* ignore */ }
   if (!opts.force) {
     const last = Number(storage?.getItem(RESYNC_STAMP) || 0);
     if (last && now - last < RESYNC_EVERY_MS) return { ok: true, action: 'skipped' };
@@ -202,7 +207,6 @@ export async function ensurePushSubscription(opts: { force?: boolean; now?: numb
   try {
     const reg = await ensureServiceWorker();
     if (!reg) return { ok: false, action: 'no-sw' };
-    await shareConfigWithServiceWorker(reg);
     const label = 'Pounce · ' + navigator.userAgent.slice(0, 100) + ' · self-heal';
     let sub = await reg.pushManager.getSubscription();
     let action: EnsureResult['action'] = 'kept';

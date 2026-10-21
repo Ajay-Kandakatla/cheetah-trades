@@ -637,6 +637,12 @@ _PUBLIC_API_PATHS = {
     "/auth/local/login",
     "/auth/local/logout",
     "/auth/local/me",
+    # 📬 Push delivery receipt (2026-10-21, push/receipts.py). The service
+    # worker POSTs it when the page is closed and its session cookie may be
+    # gone; the credential is the device's own subscription endpoint, which
+    # the route validates against push_subscriptions (unknown → 404). It
+    # writes one receipt onto a push_history row and nothing else.
+    "/push/receipt",
 }
 
 # Path prefixes that don't require auth. Kept short — every entry
@@ -4286,6 +4292,10 @@ async def push_list_subscriptions(email: str = Depends(current_user_email)):
 # path, same row shape, same default behaviour; see that module's docstring.
 from push.recent import router as notifications_recent_router  # noqa: E402
 app.include_router(notifications_recent_router)
+# 📬 POST /push/receipt (2026-10-21): the service worker's "I showed it" — see
+# push/receipts.py. Public path (above): the subscription endpoint is the credential.
+from push.receipts import router as push_receipts_router  # noqa: E402
+app.include_router(push_receipts_router)
 
 # Private chat with the local Ollama model (Ajay only, 404 to everyone else).
 from ollama_chat.api import router as ollama_router  # noqa: E402

@@ -103,6 +103,19 @@ describe('ensurePushSubscription', () => {
     expect((await ensurePushSubscription({ storage: st, now: t0 + 7 * 3_600_000 })).action).toBe('subscribed');
   });
 
+  it('hands the API base to the worker even on a throttled load (2026-10-21: the delivery receipt posts to it)', async () => {
+    const st = mem();
+    const s = setup({ local: null, server: [] });
+    const t0 = 1_800_000_000_000;
+    await ensurePushSubscription({ storage: st, now: t0 });
+    s.reg.active.postMessage.mockClear();
+    expect((await ensurePushSubscription({ storage: st, now: t0 + 60_000 })).action).toBe('skipped');
+    expect(s.reg.active.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'cheetah:config', api: expect.any(String) }));
+    // NEGATIVE: the throttled load still subscribes nothing and posts nothing to the server
+    expect(s.subscribe).toHaveBeenCalledTimes(1);
+    expect(s.calls.filter((c) => c.method === 'POST')).toHaveLength(1);
+  });
+
   it('swallows failures into an error result instead of throwing on app load', async () => {
     const s = setup({ local: null, server: [] });
     s.reg.pushManager.subscribe.mockRejectedValueOnce(new Error('boom'));
