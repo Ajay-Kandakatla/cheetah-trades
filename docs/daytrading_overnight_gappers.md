@@ -41,3 +41,44 @@ exactly-three non-board set.
 
 Tests: backend/tests/test_gappers_overnight.py (11) ·
 frontend/src/components/OvernightGappers.test.tsx (4) · chartMaps contracts.
+
+## The 05:15 cron warm (removed 2026-10-21)
+
+`backend/crontab` carried, since 2026-05-11:
+
+```
+15 5 * * * /usr/local/bin/python -c "from overnight import movers as m; m.scan_movers(min_gap_pct=0.5)"
+```
+
+`overnight.movers` never had a `scan_movers` (the line predates the module,
+which arrived 2026-05-25 with `overnight_movers(symbols, min_gap_pct, force)`
+and `overnight_for_symbol_cached(symbol, force)`), so the job raised
+`AttributeError` every morning (reproduced in the cron image 2026-10-21).
+
+**Removed, not repointed.** The Gappers sub is computed on demand by
+`GET /overnight/movers` (day-trading watchlist ∪ top-20 SEPA) over a
+per-symbol Mongo cache whose TTL is market-aware (`movers._cache_ttl_sec`):
+120 s in pre-market 04:00–09:30 ET, 600 s in RTH, 1,800 s otherwise. A
+05:15 warm would be stale by 05:17, and the FE forces a fresh load on its
+first pre-market render anyway (`useOvernightMovers`). Repointing the line
+would have added ~30 Massive calls a morning for nothing.
+
+**Pinned:** `backend/tests/test_crontab_entrypoints.py` imports every
+`python -c` body in the crontab and getattr-resolves every import-rooted
+call target without executing it; every `python -m` module (and what the
+`market_hours.gate` wrapper runs, incl. `--call pkg.mod:func`) must be
+importable. Negative cases: the dead line, a missing module, an unbound
+name, a non-callable, a package without `__main__`.
+
+**Install is a host step** (the crontab is bind-mounted from the main
+checkout's working tree; a deploy does not ship it). In
+`/Users/ajay/clinet-test/cheetah-market-app`:
+
+```
+git fetch origin
+git show origin/main:backend/crontab > backend/crontab
+docker compose restart -t 120 cron
+docker compose exec -T cron grep -c scan_movers /app/crontab
+```
+
+The last line must print `0`.

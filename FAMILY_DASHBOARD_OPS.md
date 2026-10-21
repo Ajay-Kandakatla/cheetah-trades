@@ -134,7 +134,7 @@ Edit `backend/crontab`. Container TZ is `America/New_York`. After editing, conta
 0      5     *    *    *    python -m supply_demand.tracker --force
 5      5     *    *    *    python -c "from food import planner as p; p.suggest_today('ajaykandakatla@gmail.com')"
 10     5     *    *    *    python -c "from kids import activities as a; print('kids warm:', len(a.ACTIVITIES))"
-15     5     *    *    *    python -c "from overnight import movers as m; m.scan_movers(min_gap_pct=0.5)"
+# (2026-10-21) no overnight-gappers warm: /overnight/movers computes on demand (120 s pre-market cache); the old 05:15 line named a function that never existed
 0      6     *    *    *    python -m supply_demand.tracker --force
 
 # House — daily Redfin/Zillow scrape (best-effort)

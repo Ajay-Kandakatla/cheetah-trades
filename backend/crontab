@@ -582,7 +582,13 @@
 0      5     *    *    *    /usr/local/bin/python -m supply_demand.tracker --force
 5      5     *    *    *    /usr/local/bin/python -c "from food import planner as p, store as s; [p.suggest_today(u) for u in [s._default_pantry().get('owner_email') or 'ajaykandakatla@gmail.com']]"
 10     5     *    *    *    /usr/local/bin/python -c "from kids import activities as a, store as s; print('kids warm:', len(a.ACTIVITIES), 'activities')"
-15     5     *    *    *    /usr/local/bin/python -c "from overnight import movers as m; m.scan_movers(min_gap_pct=0.5)"
+# (2026-10-21) The 05:15 Gappers warm is GONE, not replaced. It called
+# overnight.movers.scan_movers, a function that never existed (the line is from
+# 05-11, overnight/movers.py from 05-25), so it raised AttributeError every morning.
+# No warm belongs here: GET /overnight/movers computes on demand with a per-symbol
+# Mongo cache whose TTL is 120 s in pre-market (movers._cache_ttl_sec), so a 05:15
+# warm is stale by 05:17. tests/test_crontab_entrypoints.py resolves every
+# `python -c` / `-m` target in this file before it can crash a tick.
 
 #
 # ============================================================================
