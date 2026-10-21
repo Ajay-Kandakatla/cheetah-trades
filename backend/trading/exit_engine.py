@@ -6,7 +6,11 @@ Each tick:
   adopt-and-protect  any position with no working sell-stop gets one at
                      risk_rules.initial_stop (pp.301-302: absolute max stop,
                      sell the moment it's hit — so a stop must always rest
-                     at the broker).
+                     at the broker). When every share is already reserved
+                     for a resting sell order (Alpaca 403 40310000) the stop
+                     is NOT re-posted each minute: one `adopt_held` ledger
+                     row per position per day + a served sentence on
+                     status(); the holding order is the owner's call.
   ratchet            price >= breakeven_trigger (3x initial risk, p.308)
                      and the stop still sits below entry -> move the stop
                      to breakeven at Alpaca.
@@ -600,6 +604,90 @@ def _find_working_stop(orders, symbol: str) -> Optional[dict]:
     return None
 
 
+# ── Adopt-and-protect when the shares are already held (2026-10-21) ─────────
+# Alpaca reserves a position's shares for every resting SELL order on it (a
+# bracket take-profit limit, a plain sell limit, a stuck "held" leg). With all
+# of them reserved, POST /v2/orders for a protective stop is refused with HTTP
+# 403 code 40310000 {"available":"0","held_for_orders":"36",...}. EMR
+# 2026-10-21: a sell LIMIT from 2026-09-22 held all 36 shares, the adopt path
+# re-POSTed the stop every minute, each refusal landed in last_errors and none
+# of it was ledgered. The engine now sees the hold BEFORE posting, writes ONE
+# `adopt_held` ledger row per position per ET day and serves the sentence
+# below on /trading/status. It never cancels or replaces the holding order —
+# that is the owner's call (cancel it, or replace it with an OCO). The
+# watchdog is unchanged: a breach still goes through _force_exit, which
+# cancels the holding order(s) first and then closes at market.
+ADOPT_HELD_KIND = "adopt_held"
+
+
+def _order_qty(o: dict) -> int:
+    try:
+        return int(float(o.get("qty") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _holding_sell_orders(orders, symbol: str) -> list:
+    """Every working SELL order on symbol — each one reserves its qty at Alpaca."""
+    return [o for o in orders or []
+            if (o.get("symbol") or "").upper() == symbol
+            and (o.get("side") or "").lower() == "sell"
+            and _is_working(o)]
+
+
+def _order_brief(o: dict) -> dict:
+    return {"id": o.get("id"), "client_order_id": o.get("client_order_id"),
+            "type": _order_type(o) or None, "qty": _order_qty(o),
+            "status": o.get("status"), "submitted_at": o.get("submitted_at"),
+            "limit_price": o.get("limit_price"), "stop_price": o.get("stop_price"),
+            "order_class": o.get("order_class")}
+
+
+def _adopt_hold(pos: dict, orders, symbol: str, qty: int) -> Optional[dict]:
+    """Why no protective stop can rest on this position right now, or None.
+
+    Held when the working sell orders on the name reserve >= its whole qty, or
+    when the broker's own `qty_available` says nothing is free (orders the
+    engine cannot see). Free shares -> None and adopt-and-protect posts the
+    stop exactly as before. A PARTIAL hold (some shares free) is not a hold:
+    the full-size stop goes out as today and a refusal stays loud."""
+    held = _holding_sell_orders(orders, symbol)
+    held_qty = sum(_order_qty(o) for o in held)
+    avail = pos.get("qty_available")
+    try:
+        avail = int(float(avail)) if avail not in (None, "") else None
+    except (TypeError, ValueError):
+        avail = None
+    if held_qty < qty and not (avail is not None and avail <= 0):
+        return None
+    return {"held_qty": held_qty if held_qty >= qty else qty,
+            "available": avail if avail is not None else max(qty - held_qty, 0),
+            "orders": [_order_brief(o) for o in held]}
+
+
+def _order_day(o: dict) -> str:
+    s = str(o.get("submitted_at") or "")[:10]
+    return s if len(s) == 10 else "an unknown date"
+
+
+def adopt_held_sentence(qty: int, hold: dict) -> str:
+    """The served sentence for a held position; the page prints it verbatim."""
+    orders = hold.get("orders") or []
+    if len(orders) == 1:
+        o = orders[0]
+        what = "a sell %s from %s" % (o.get("type") or "order", _order_day(o))
+        them = "it"
+    elif orders:
+        what = "%d sell orders (%s)" % (len(orders), ", ".join(
+            "%s from %s" % (o.get("type") or "order", _order_day(o)) for o in orders))
+        them = "them"
+    else:
+        what = "orders the engine cannot see (%s available)" % hold.get("available", 0)
+        them = "them"
+    return ("%d sh held by %s — no stop can rest; cancel %s or replace %s with an OCO (your call)"
+            % (int(qty), what, them, them))
+
+
 def _effective_stop(symbol: str, avg_entry: float, reg: str,
                     stop_order: Optional[dict] = None) -> Optional[float]:
     """The protective stop price the engine is COMMITTED to, for the watchdog +
@@ -913,7 +1001,7 @@ def _sent_order_filled(entry: dict) -> bool:
 def tick(force: bool = False) -> dict:
     summary = {"ok": True, "forced": bool(force), "market_open": None,
                "armed": False, "regime": None, "positions": 0,
-               "adopted": 0, "ratcheted": 0, "watchdog_exits": 0,
+               "adopted": 0, "adopt_held": 0, "ratcheted": 0, "watchdog_exits": 0,
                "distribution_exits": 0, "distribution_alerts": 0,
                "dry_run_rows": 0, "streak_events": 0, "errors": [],
                "flatten_queue": _empty_drain()}
@@ -1085,6 +1173,20 @@ def tick(force: bool = False) -> dict:
             detail = {"qty": qty, "avg_entry": avg_entry,
                       "stop_price": plan.stop_price, "stop_pct": plan.stop_pct,
                       "basis": plan.basis, "regime": reg}
+            hold = _adopt_hold(pos, open_orders, sym, qty)
+            if hold is not None:
+                # Every share is reserved for a resting sell order: Alpaca
+                # would refuse the stop (403 40310000), so do NOT post it every
+                # minute. One ledger row per position per day; status() serves
+                # the sentence under the position. The watchdog above still
+                # covers a breach (_force_exit cancels the holder, then closes).
+                summary["adopt_held"] += 1
+                if not _fired_today(ADOPT_HELD_KIND, sym):
+                    ledger(ADOPT_HELD_KIND, symbol=sym,
+                           detail={"sentence": adopt_held_sentence(qty, hold),
+                                   **detail, "last": last, **hold},
+                           dry_run=False, cite="p.301-302")
+                continue
             if armed:
                 try:
                     order = broker.submit_stop(
@@ -1096,6 +1198,17 @@ def tick(force: bool = False) -> dict:
                     summary["adopted"] += 1
                 except BrokerError as exc:
                     summary["errors"].append("adopt %s: %s" % (sym, exc))
+                    if _held_for_orders(exc) and not _fired_today(ADOPT_HELD_KIND, sym):
+                        # Refused as held although no holder was visible (the
+                        # order list lagged or was truncated): ledger it once
+                        # per day too; the error line above stays loud.
+                        blind = {"held_qty": qty, "available": 0, "orders": []}
+                        ledger(ADOPT_HELD_KIND, symbol=sym,
+                               detail={"sentence": adopt_held_sentence(qty, blind),
+                                       **detail, "last": last, **blind,
+                                       "error": str(exc)},
+                               dry_run=False, cite="p.301-302")
+                        summary["adopt_held"] += 1
             else:
                 ledger("adopt_protect", symbol=sym, detail=detail,
                        dry_run=True, cite="p.301-302")
@@ -1507,10 +1620,21 @@ def status() -> dict:
             if init_sp and avg_entry and float(init_sp) < avg_entry:
                 bt = risk_rules.breakeven_trigger(avg_entry, float(init_sp))
 
+            # No stop rests and none CAN rest: every share is reserved for a
+            # resting sell order (2026-10-21, EMR). Served sentence, printed
+            # verbatim under the position; None when a stop rests or shares
+            # are free. The engine never cancels the holder — owner's call.
+            adopt_held = None
+            if so is None and qe is None:
+                hold = _adopt_hold(pos, orders, sym, qty)
+                if hold is not None:
+                    adopt_held = {**hold, "sentence": adopt_held_sentence(qty, hold)}
+
             out["positions"].append({
                 "symbol": sym, "qty": qty, "avg_entry": avg_entry,
                 "last": last, "upl_pct": upl_pct, "stop": stop,
                 "watchdog_stop": watchdog_stop, "stop_status": stop_status,
+                "adopt_held": adopt_held,
                 "target": target, "breakeven_trigger": bt,
                 # Covered = a working broker stop OR the engine watchdog enforces
                 # one. Only "none" (no working stop and nothing to enforce) is

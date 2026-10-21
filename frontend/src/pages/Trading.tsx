@@ -29,7 +29,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
-import { exitQueueLine, stopStatusView, type ExitQueueEntry, type ExitQueueState } from '../lib/autopilotStop';
+import { exitQueueLine, stopStatusView, type ExitQueueEntry, type ExitQueueState, adoptHeldLine, type AdoptHeld } from '../lib/autopilotStop';
 import { cashOut, rowTotals, statusErrKind, summarizePnl, tableTotals, type StatusErrKind } from '../lib/autopilotPnl';
 import { cleanRules, scanWarning, type EngineRule, type ScanTrust } from '../lib/autopilotRules';
 import { InfoButton } from '../components/InfoButton';
@@ -85,6 +85,10 @@ type Position = {
   // the row exactly as before.
   exit_queued?: boolean | null;
   exit_queue_state?: ExitQueueState | null;
+  /* Adopt-and-protect blocked (2026-10-21): every share is reserved for a
+   * resting sell order, so no stop can rest; the served sentence prints under
+   * the Stop-status badge. null / absent → the row renders as before. */
+  adopt_held?: AdoptHeld | null;
 };
 
 /* One row of the persistent flatten queue (GET /trading/status.flatten_queue). */
@@ -514,7 +518,7 @@ const TD: React.CSSProperties = {
   verticalAlign: 'middle', whiteSpace: 'nowrap',
 };
 
-function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlatten, onUnqueue, onFlattenAll, onSimReset }: {
+export function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlatten, onUnqueue, onFlattenAll, onSimReset }: {
   positions: Position[];
   simMode: boolean;
   cash?: number | null;
@@ -645,7 +649,7 @@ function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlat
                     </td>
                     <td className="mono" style={TD}>{p.target ? money(p.target.price) : <span style={{ color: C.sub }}>—</span>}</td>
                     <td style={TD}><BreakevenBar p={p} /></td>
-                    <td style={TD}>
+                    <td style={{ ...TD, minWidth: 0 }}>
                       {(() => {
                         const v = stopStatusView(p);
                         const color = v.tone === 'good' ? C.green : v.tone === 'warn' ? C.amber : C.red;
@@ -658,6 +662,20 @@ function PositionsTable({ positions, simMode, cash, equity, flattenQueue, onFlat
                                                        borderRadius: 5, padding: '1px 6px' } : {}) }}>
                             {v.label}
                           </span>
+                        );
+                      })()}
+                      {(() => {
+                        /* Served sentence (2026-10-21): every share is held by a
+                           resting sell order, so no stop can rest — printed
+                           verbatim; the engine never cancels the holder. */
+                        const line = adoptHeldLine(p);
+                        if (line == null) return null;
+                        return (
+                          <div data-testid={`adopt-held-${p.symbol}`}
+                               style={{ color: C.amber, fontSize: '0.68rem', lineHeight: 1.3, marginTop: 3,
+                                        whiteSpace: 'normal', minWidth: 0, maxWidth: 280 }}>
+                            {line}
+                          </div>
                         );
                       })()}
                     </td>

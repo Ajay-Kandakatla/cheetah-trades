@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { exitQueueLine, stopStatusView } from './autopilotStop';
+import { adoptHeldLine, exitQueueLine, stopStatusView } from './autopilotStop';
 
 describe('stopStatusView — Auto-Pilot Stop-status badge', () => {
   it('working broker stop → green "Stop set"', () => {
@@ -123,5 +123,42 @@ describe('exitQueueLine — the one-line summary under the positions table', () 
     expect(exitQueueLine(undefined)).toBeNull();
     expect(exitQueueLine([{ symbol: '' }, { symbol: '   ' }, null as unknown as { symbol: string }])).toBeNull();
     expect(exitQueueLine('nope' as unknown as [])).toBeNull();
+  });
+});
+
+/* Adopt-and-protect blocked by a resting sell order (2026-10-21, EMR). The
+ * backend serves the sentence; the page prints it verbatim or nothing. */
+describe('adoptHeldLine — served sentence under a held position', () => {
+  const EMR = '36 sh held by a sell limit from 2026-09-22 — no stop can rest; cancel it or replace it with an OCO (your call)';
+
+  it('prints the served sentence verbatim', () => {
+    expect(adoptHeldLine({ adopt_held: { held_qty: 36, available: 0, sentence: EMR,
+      orders: [{ id: 'e8cd076d', type: 'limit', qty: 36, submitted_at: '2026-09-22T13:34:08Z' }] } })).toBe(EMR);
+  });
+
+  it('trims but never rewrites the served words', () => {
+    expect(adoptHeldLine({ adopt_held: { sentence: `  ${EMR}  ` } })).toBe(EMR);
+  });
+
+  it('NEGATIVE: a pre-deploy payload (no field) prints nothing', () => {
+    expect(adoptHeldLine({})).toBeNull();
+    expect(adoptHeldLine({ adopt_held: undefined })).toBeNull();
+  });
+
+  it('NEGATIVE: null (a stop rests or shares are free) prints nothing', () => {
+    expect(adoptHeldLine({ adopt_held: null })).toBeNull();
+  });
+
+  it('NEGATIVE: a held block without a sentence prints nothing — the page composes no wording', () => {
+    expect(adoptHeldLine({ adopt_held: { held_qty: 36, available: 0, orders: [] } })).toBeNull();
+    expect(adoptHeldLine({ adopt_held: { sentence: '' } })).toBeNull();
+    expect(adoptHeldLine({ adopt_held: { sentence: '   ' } })).toBeNull();
+    expect(adoptHeldLine({ adopt_held: { sentence: null } })).toBeNull();
+  });
+
+  it('NEGATIVE: the held read never changes the Stop-status badge — the watchdog still covers a breach', () => {
+    const v = stopStatusView({ stop_status: 'watchdog', watchdog_stop: 142.75 });
+    expect(v.kind).toBe('watchdog');
+    expect(v.label).not.toBe('No stop');
   });
 });

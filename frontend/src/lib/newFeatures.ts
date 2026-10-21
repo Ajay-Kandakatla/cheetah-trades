@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-21 — EMR: a bracket take-profit sell limit from 2026-09-22 held all 36 shares, Alpaca refused the engine's
+  // protective stop every minute (HTTP 403 40310000) and nothing was ledgered. Backend: trading/exit_engine.py sees the
+  // hold before posting, writes ONE `adopt_held` ledger row per position per day and SERVES the sentence
+  // (positions[].adopt_held.sentence); the page prints it verbatim under the Stop-status badge. The engine never cancels
+  // or replaces the holding order — that is his call. No number in the label is composed here.
+  { id: 'autopilot-adopt-held-sentence-2026-10-21', addedAt: '2026-10-21', route: '/trading',
+    label: "🛡 Auto-Pilot now says when a position's shares are held by a resting sell order, so no protective stop can rest. Before, the engine re-sent the stop every minute, Alpaca refused it every minute, and the only trace was an error line. Now the engine stops retrying, writes one ledger row per position per day, and prints the served sentence under the Stop-status badge: what holds the shares, since when, and the two ways out (cancel it, or replace it with an OCO). The engine never cancels the holding order itself — that stays your call. The watchdog is unchanged: a breach still cancels the holder and exits at market." },
   // Ajay 2026-10-20 (verbatim in the label). BUILD_SPEC18 D1–D8: the 🌀 sub cards only reads with at least
   // GC.K4_VCP_MIN_CYCLES contractions (switch GC.VCP_LIST_FROM_K4); fewer are counted, not carded, and the served
   // `list_note` says how many; potential.potential_kind follows the same rule. The only digit in the label is the one in

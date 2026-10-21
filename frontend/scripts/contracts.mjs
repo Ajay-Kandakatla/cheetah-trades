@@ -9704,8 +9704,9 @@ const CONTRACTS = [
       // 2026-10-20, later: the 🔄 scan-now ✨ (its own block) sits above all three — widened to the top four, dated.
       // 2026-10-20, later still: the 🚩 Gajjala lane ✨ (its own block, FIRST) sits above all four — widened to the top five, dated.
       // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) sits above all five — widened to the top six, dated.
-      const firstSix = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstSix.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six (found ${firstSix.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9904,8 +9905,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-20, later: the 🚩 Gajjala lane ✨ (its own block) ships above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above both — widened to the top three, dated.
-      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstThree.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first three (found ${firstThree.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first four (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10141,8 +10143,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-20, later: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
+      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstThree.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstThree.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10225,8 +10228,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-vcp-two-contractions-2026-10-20';
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {

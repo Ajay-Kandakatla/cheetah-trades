@@ -117,3 +117,41 @@ export function exitQueueLine(queue: ExitQueueEntry[] | null | undefined): ExitQ
     items,
   };
 }
+
+/* ── Adopt-and-protect blocked by a resting sell order (2026-10-21) ──────────
+ * GET /trading/status → positions[].adopt_held: null, or {held_qty, available,
+ * orders[], sentence} when EVERY share is reserved for a resting sell order so
+ * no protective stop can rest at Alpaca (403 40310000; EMR: a bracket
+ * take-profit limit from 2026-09-22 held all 36 shares). The engine stops
+ * re-posting the stop each minute, writes one `adopt_held` ledger row per
+ * position per day and SERVES the sentence; the page prints it verbatim under
+ * the Stop-status badge — served words only, nothing composed here. Cancel vs
+ * replace-with-an-OCO is Ajay's call; the engine never touches the holder. */
+export type AdoptHeldOrder = {
+  id?: string | null;
+  client_order_id?: string | null;
+  type?: string | null;
+  qty?: number | null;
+  status?: string | null;
+  submitted_at?: string | null;
+  limit_price?: string | number | null;
+  stop_price?: string | number | null;
+  order_class?: string | null;
+};
+
+export type AdoptHeld = {
+  held_qty?: number | null;
+  available?: number | null;
+  orders?: AdoptHeldOrder[] | null;
+  sentence?: string | null;
+};
+
+/* The served sentence to print under the position, or null when nothing is
+ * held (field absent / null / no sentence) — a pre-deploy payload renders the
+ * row exactly as before. */
+export function adoptHeldLine(p: { adopt_held?: AdoptHeld | null }): string | null {
+  const s = p.adopt_held?.sentence;
+  if (typeof s !== 'string') return null;
+  const t = s.trim();
+  return t.length > 0 ? t : null;
+}

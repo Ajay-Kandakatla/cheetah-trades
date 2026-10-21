@@ -12,6 +12,12 @@ risk_management_methodology.md, "How the engine maps the rules to Alpaca"):
       still below entry -> one replace_order moving the stop to breakeven;
       below the trigger, or stop already at/above entry -> no call.
 
+    * every share reserved for a resting sell order (EMR 2026-10-21: a
+      bracket take-profit limit held all 36) -> NO submit_stop, ONE
+      adopt_held ledger row per position per day, the served sentence on
+      status(); free shares -> the stop goes out as before; the hold clears
+      the moment the holder is gone; the watchdog still exits a breach.
+
   trading.entries.enter()/preview() — the ONLY buy path. Refuses:
     * when MAX_POSITIONS (5) are already held (p.312);
     * adding to a held name below average cost (pp.304-305, never average
@@ -117,6 +123,7 @@ class FakeDB:
         }])
         self.trade_ledger = FakeColl()
         self.auto_entry_state = FakeColl()
+        self.trading_account_baseline = FakeColl()   # status() P&L baseline
 
 
 def _position(symbol, qty, avg_entry, last):
@@ -590,3 +597,219 @@ def test_detail_text_flattens_objects_for_the_feed():
     assert _detail_text("already a string") == "already a string"
     assert _detail_text(None) == ""
     assert _detail_text({"flags": ["a", "b"], "n": 3}) == "flags: a, b · n: 3"
+
+
+# ── Adopt-and-protect when the shares are held by a resting sell order (2026-10-21)
+# EMR: a bracket take-profit sell LIMIT from 2026-09-22 held all 36 shares;
+# Alpaca refused the protective stop every minute (HTTP 403 40310000,
+# available 0 / held_for_orders 36) and nothing was ledgered — the line only
+# lived in last_errors. The engine must see the hold BEFORE posting, write ONE
+# adopt_held row per position per ET day, serve the sentence on status() and
+# leave the holding order alone (cancel vs OCO is the owner's call).
+
+EMR_SENTENCE = ("36 sh held by a sell limit from 2026-09-22 — no stop can rest; "
+                "cancel it or replace it with an OCO (your call)")
+
+
+def _sell_limit(symbol, limit_price, qty, oid="limit-1",
+                submitted_at="2026-09-22T13:34:08.28669Z", status="new"):
+    """Alpaca /v2/orders working sell LIMIT (a bracket's take-profit leg)."""
+    return {"id": oid, "client_order_id": "5cf7cce7-a60d-4a63-b8d5-e3d658065ea4",
+            "symbol": symbol, "qty": str(qty), "side": "sell", "type": "limit",
+            "order_type": "limit", "status": status, "order_class": "bracket",
+            "limit_price": str(limit_price), "stop_price": None,
+            "submitted_at": submitted_at, "legs": None}
+
+
+def _emr(**patch):
+    """The live EMR row on 2026-10-21 (qty_available 0 = every share held)."""
+    pos = _position("EMR", 36, 153.49, 163.37)
+    pos["qty_available"] = "0"
+    pos.update(patch)
+    return pos
+
+
+def _held_rows(db):
+    return [r for r in db.trade_ledger.rows if r["kind"] == "adopt_held"]
+
+
+def test_held_position_writes_one_adopt_held_row_and_never_posts_the_stop(env):
+    broker, db = env(positions=[_emr()], orders=[_sell_limit("EMR", 168.18, 36)])
+    summary = EE.tick()
+
+    assert not _calls(broker, "submit_stop"), broker.calls
+    assert not _calls(broker, "cancel_order") and not _calls(broker, "replace_order")
+    assert summary["adopt_held"] == 1 and summary["adopted"] == 0
+    assert not any("adopt EMR" in e for e in summary["errors"]), summary["errors"]
+    assert not any("EMR" in e for e in (EE.get_config().get("last_errors") or []))
+    rows = _held_rows(db)
+    assert len(rows) == 1
+    assert rows[0]["dry_run"] is False and rows[0]["cite"] == "p.301-302"
+    d = rows[0]["detail"]
+    assert d["sentence"] == EMR_SENTENCE
+    assert d["held_qty"] == 36 and d["available"] == 0 and d["qty"] == 36
+    assert d["stop_price"] == initial_stop(153.49).stop_price
+    assert d["orders"] == [{"id": "limit-1",
+                            "client_order_id": "5cf7cce7-a60d-4a63-b8d5-e3d658065ea4",
+                            "type": "limit", "qty": 36, "status": "new",
+                            "submitted_at": "2026-09-22T13:34:08.28669Z",
+                            "limit_price": "168.18", "stop_price": None,
+                            "order_class": "bracket"}]
+
+
+def test_held_position_status_serves_the_sentence_under_the_position(env):
+    broker, db = env(positions=[_emr()], orders=[_sell_limit("EMR", 168.18, 36)])
+    out = EE.status()
+    assert out["error"] is None, out["error"]
+    row = {p["symbol"]: p for p in out["positions"]}["EMR"]
+    assert row["adopt_held"]["sentence"] == EMR_SENTENCE
+    assert row["adopt_held"]["held_qty"] == 36 and row["adopt_held"]["available"] == 0
+    assert row["adopt_held"]["orders"][0]["id"] == "limit-1"
+    assert row["stop"] is None
+    # The watchdog still covers a breach, so the badge is not "none".
+    assert row["stop_status"] == "watchdog" and row["protected"] is True
+    assert "EMR" not in out["unprotected"]
+    # The holder IS the take-profit leg: it still prints as the target.
+    assert row["target"] == {"price": 168.18, "order_id": "limit-1"}
+    assert not broker.calls
+
+
+def test_second_tick_writes_no_second_adopt_held_row(env):
+    """NEGATIVE: once per position per day — three ticks, one row, zero POSTs."""
+    broker, db = env(positions=[_emr()], orders=[_sell_limit("EMR", 168.18, 36)])
+    EE.tick()
+    EE.tick()
+    s3 = EE.tick()
+    assert len(_held_rows(db)) == 1
+    assert not _calls(broker, "submit_stop"), broker.calls
+    assert s3["adopt_held"] == 1          # still counted each tick, written once
+
+
+def test_the_hold_clears_the_moment_the_limit_is_gone(env):
+    """NEGATIVE: the gate is the LIVE state, not the day's row — with the limit
+    cancelled the very next tick posts the stop (the day's adopt_held row must
+    not block adopt-and-protect) and status() serves no sentence."""
+    broker, db = env(positions=[_emr()], orders=[_sell_limit("EMR", 168.18, 36)])
+    EE.tick()
+    assert not _calls(broker, "submit_stop")
+
+    broker._orders = []                           # the owner cancelled it at Alpaca
+    broker._positions[0]["qty_available"] = "36"
+    s = EE.tick()
+    stops = _calls(broker, "submit_stop")
+    assert len(stops) == 1 and stops[0]["symbol"] == "EMR" and stops[0]["qty"] == 36
+    assert stops[0]["stop_price"] == initial_stop(153.49).stop_price
+    assert s["adopted"] == 1 and s["adopt_held"] == 0
+    assert [r["kind"] for r in db.trade_ledger.rows if r["symbol"] == "EMR"] == ["adopt_held", "adopt_protect"]
+    row = {p["symbol"]: p for p in EE.status()["positions"]}["EMR"]
+    assert row["adopt_held"] is None
+
+
+def test_free_shares_still_get_their_stop_even_with_a_partial_sell_limit(env):
+    """NEGATIVE: a sell limit on 40 of 100 shares is NOT a hold — the full-size
+    stop goes out exactly as before and no adopt_held row is written."""
+    pos = _position("AAA", 100, 100.0, 102.0)
+    pos["qty_available"] = "60"
+    broker, db = env(positions=[pos], orders=[_sell_limit("AAA", 120.0, 40, oid="limit-part")])
+    s = EE.tick()
+    stops = _calls(broker, "submit_stop")
+    assert len(stops) == 1 and stops[0]["qty"] == 100
+    assert s["adopted"] == 1 and s["adopt_held"] == 0
+    assert not _held_rows(db)
+    row = {p["symbol"]: p for p in EE.status()["positions"]}["AAA"]
+    assert row["adopt_held"] is None
+
+
+def test_a_position_without_qty_available_and_no_orders_is_not_a_hold(env):
+    """NEGATIVE: the sim broker's positions carry no qty_available — unchanged."""
+    broker, db = env(positions=[_position("AAA", 100, 100.0, 102.0)])
+    s = EE.tick()
+    assert len(_calls(broker, "submit_stop")) == 1 and s["adopt_held"] == 0
+    assert not _held_rows(db)
+    assert {p["symbol"]: p for p in EE.status()["positions"]}["AAA"]["adopt_held"] is None
+
+
+def test_qty_available_zero_with_no_visible_holder_is_a_hold(env):
+    """Alpaca says nothing is free but the open-order list shows no holder
+    (lagging list): no POST either, and the sentence says so."""
+    broker, db = env(positions=[_emr()])
+    s = EE.tick()
+    assert not _calls(broker, "submit_stop") and s["adopt_held"] == 1
+    rows = _held_rows(db)
+    assert len(rows) == 1 and rows[0]["detail"]["orders"] == []
+    assert rows[0]["detail"]["sentence"] == (
+        "36 sh held by orders the engine cannot see (0 available) — no stop can rest; "
+        "cancel them or replace them with an OCO (your call)")
+
+
+def test_watchdog_still_exits_a_held_position_on_a_breach(env):
+    """The price check is untouched: last (140) under the committed stop
+    (142.75 = 7% under 153.49) with the limit holding the shares -> the existing
+    _force_exit path cancels the holder and closes at market; no stop POST, no
+    adopt_held row (the name is leaving)."""
+    broker, db = env(positions=[_emr(current_price="140.0")],
+                     orders=[_sell_limit("EMR", 168.18, 36)])
+    s = EE.tick()
+    assert _calls(broker, "cancel_order") == [{"order_id": "limit-1"}], broker.calls
+    assert _calls(broker, "close_position") == [{"symbol": "EMR"}]
+    assert not _calls(broker, "submit_stop")
+    assert s["watchdog_exits"] == 1 and s["adopt_held"] == 0
+    assert not _held_rows(db)
+
+
+def test_disarmed_held_position_touches_nothing_and_writes_one_row(env):
+    broker, db = env(positions=[_emr()], orders=[_sell_limit("EMR", 168.18, 36)],
+                     armed=False)
+    EE.tick()
+    EE.tick()
+    assert broker.calls == [], broker.calls
+    assert len(_held_rows(db)) == 1
+    assert not _dry_rows(db)              # no adopt_protect dry-run spam either
+    row = {p["symbol"]: p for p in EE.status()["positions"]}["EMR"]
+    assert row["adopt_held"]["sentence"] == EMR_SENTENCE
+
+
+def test_a_held_refusal_with_no_visible_holder_is_ledgered_once_and_stays_loud(env, monkeypatch):
+    """Fallback: no holder visible AND no qty_available (the pre-check cannot
+    see the hold) and Alpaca still refuses as held -> the error line stays in
+    the summary + last_errors AND one adopt_held row per day is written."""
+    broker, db = env(positions=[_position("EMR", 36, 153.49, 163.37)])
+
+    def refuse(symbol, qty, stop_price, client_order_id=None):
+        raise BrokerError('alpaca POST /v2/orders -> HTTP 403: {"available":"0",'
+                          '"code":40310000,"existing_qty":"36","held_for_orders":"36",'
+                          '"message":"insufficient qty available for order (requested: 36, available: 0)"}')
+    monkeypatch.setattr(broker, "submit_stop", refuse)
+    s = EE.tick()
+    EE.tick()
+    assert any("adopt EMR" in e for e in s["errors"]), s["errors"]
+    assert any("adopt EMR" in e for e in (EE.get_config().get("last_errors") or []))
+    rows = _held_rows(db)
+    assert len(rows) == 1
+    assert "cannot see" in rows[0]["detail"]["sentence"]
+    assert "40310000" in rows[0]["detail"]["error"]
+
+
+def test_a_non_held_refusal_writes_no_adopt_held_row(env, monkeypatch):
+    """NEGATIVE: any other broker refusal is NOT a hold — error only, as before."""
+    broker, db = env(positions=[_position("AAA", 100, 100.0, 102.0)])
+
+    def refuse(*a, **k):
+        raise BrokerError("alpaca POST /v2/orders -> HTTP 422: stop price too close")
+    monkeypatch.setattr(broker, "submit_stop", refuse)
+    s = EE.tick()
+    assert any("adopt AAA" in e for e in s["errors"])
+    assert not _held_rows(db) and s["adopt_held"] == 0
+
+
+def test_adopt_held_sentence_shapes():
+    one = EE.adopt_held_sentence(36, {"orders": [{"type": "limit", "submitted_at": "2026-09-22T13:34:08Z"}]})
+    assert one == EMR_SENTENCE
+    two = EE.adopt_held_sentence(100, {"orders": [
+        {"type": "limit", "submitted_at": "2026-09-22T13:34:08Z"},
+        {"type": "stop", "submitted_at": None}]})
+    assert two == ("100 sh held by 2 sell orders (limit from 2026-09-22, stop from an unknown date)"
+                   " — no stop can rest; cancel them or replace them with an OCO (your call)")
+    blind = EE.adopt_held_sentence(36, {"orders": [], "available": 0})
+    assert blind == ("36 sh held by orders the engine cannot see (0 available) — no stop can rest; "
+                     "cancel them or replace them with an OCO (your call)")

@@ -166,6 +166,75 @@ Locked: `tests/test_trading_engine.py` (watchdog: fires on breach armed; held
 leg ≠ protection; trusts a working stop; not above the stop; disarmed dry-run;
 close-failure surfaced) + `frontend/src/lib/autopilotStop.test.ts` (badge wording).
 
+## Adopt-and-protect when the shares are already held by a resting sell order (2026-10-21)
+
+**The case (EMR, read from the live api container 2026-10-21 12:01 ET).** Alpaca paper
+position EMR: 36 shares, avg entry 153.49, last 163.37. One open order on the name: a
+**sell LIMIT at 168.18 for all 36 shares**, status `new`, submitted 2026-09-22 — the
+take-profit leg of the original bracket, whose stop leg is long gone. Alpaca reserves a
+position's shares for every resting sell order on it, so the position reports
+`qty_available = 0`. The adopt-and-protect pass found no stop, POSTed a protective stop
+for 36 shares, and Alpaca refused it every minute:
+
+```
+adopt EMR: alpaca POST /v2/orders -> HTTP 403: {"available":"0","code":40310000,
+"existing_qty":"36","held_for_orders":"36","message":"insufficient qty available for order …"}
+```
+
+The refusal was not ledgered (six EMR rows in `trade_ledger`, none for this); it lived only
+in `trading_config.last_errors`, re-written each tick. EMR had **no protective stop at the
+broker** the whole time. (The engine watchdog did cover a breach: see below.)
+
+**What the engine does now** (`trading/exit_engine.py`, `_adopt_hold` /
+`adopt_held_sentence`, tick step (d)):
+
+1. **Sees the hold before posting.** In the adopt path (no stop rests), the working SELL
+   orders on the name are summed; when they reserve ≥ the whole position, or the broker's
+   own `qty_available` is 0 (holders the engine cannot see), the stop is **not** POSTed.
+   Free shares → the stop goes out exactly as before. A *partial* hold (some shares free)
+   is not a hold: the full-size stop is still sent and a refusal stays loud.
+2. **One ledger row per position per ET day**, kind `adopt_held`, cite p.301-302, with
+   the planned stop, the resting order's id / client_order_id / type / qty / status /
+   submitted_at / limit_price / order_class, and the served sentence. The second tick
+   writes nothing. The gate is the **live** order state, not the day's row: the moment the
+   holder is gone the very next tick posts the stop (`adopt_protect`) as usual.
+3. **Served on `/trading/status`** as `positions[].adopt_held` (`null` when nothing is
+   held) with the sentence the page prints verbatim under the Stop-status badge:
+
+   > 36 sh held by a sell limit from 2026-09-22 — no stop can rest; cancel it or replace it with an OCO (your call)
+
+   `stop_status` is unchanged (`watchdog` when armed), because the watchdog still covers
+   the name.
+4. **Fallback.** If a POST is still refused with the held code although no holder was
+   visible, the error line stays in `last_errors` *and* one `adopt_held` row per day is
+   written with the error text.
+5. **The watchdog is untouched.** A hit stop with no working broker stop still goes through
+   `_force_exit`: it cancels the symbol's working orders (which releases the held shares)
+   and then closes at market — the existing path, not a new one.
+
+**What the engine does NOT do — the two options are Ajay's call.** The engine never cancels
+or replaces the holding order. For EMR, the two ways to get a stop resting again:
+
+- **Option A — cancel the sell limit at Alpaca.** The 36 shares are released; the next tick
+  posts the engine's protective stop (7% under 153.49 in a normal regime = 142.75; 6% in a
+  difficult regime). The +168.18 take-profit is gone unless re-entered as a bracket/OCO.
+- **Option B — replace the limit with an OCO.** Cancel the limit, then submit a sell OCO
+  (take-profit limit 168.18 + stop-loss) for 36 shares. Both legs rest at Alpaca and the
+  engine's adopt path sees a working stop (`_find_stop`) and ratchets it as usual. Alpaca
+  requires the shares to be free before the OCO is accepted, so the cancel comes first.
+
+Until one of them happens, EMR's downside is covered only by the engine watchdog (tick
+cadence, market hours) — the same stated limit as the stuck-`held`-leg case above.
+
+Locked: `tests/test_trading_engine.py` (held → no POST, one row with the order brief, no
+error line; status serves the sentence; second tick writes no second row; the hold clears
+the moment the limit is gone; free shares / partial limit / no `qty_available` still get
+the stop; `qty_available` 0 with no visible holder; the watchdog still exits a held breach;
+disarmed → one row, broker untouched; a held refusal with no visible holder stays loud +
+one row; a non-held refusal writes no row; sentence shapes) +
+`frontend/src/lib/autopilotStop.test.ts` / `frontend/src/pages/Trading.adoptHeld.test.tsx`
+(the page prints the served sentence verbatim or nothing).
+
 ## Active sell discipline — auto-exit on distribution / stage-breakdown (2026-06-25)
 
 The watchdog protects the downside *stop*. This adds Minervini's *active* sell
