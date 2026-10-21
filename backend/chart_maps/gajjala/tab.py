@@ -943,10 +943,25 @@ def _state_key(g: dict, sym: str) -> tuple:
     return (9, big, 0.0, sym)
 
 
+def _is_entry_read(read: dict) -> bool:
+    """The trigger IS the entry: A+ (every rule met and the entry bar closed through it) or a forming read that is
+    ready (the next bar over the trigger would be the entry). Everything else with a trigger — partial (a rule failed),
+    a break that was not A+, not ready, triggered earlier, stopped — is a level to watch, not a buy."""
+    st = (read or {}).get("state")
+    return st == "aplus" or (st == "forming" and read.get("ready") is True)
+
+
 def _tile_lines(read: dict) -> list:
+    """2026-10-21 (Ajay, a NAUT 🚩 card reading "broke — not A+ · missed: K3": "Why does this chart in potential say buy?
+    If its in Buy at the rate why is it not in A+?"): the trigger line says BUY only when the read is the entry
+    (_is_entry_read); every other read prints TRIGGER — a level, never a word that reads as advice. The tone stays
+    "buy" (the line style and the card ladder's Entry row key on it); the STOP line is unchanged."""
     out = []
     if _f(read.get("trigger")) is not None:
-        out.append({"price": _f(read["trigger"]), "label": f"BUY > {_px(read['trigger'])}", "tone": "buy"})
+        entry = _is_entry_read(read)
+        out.append({"price": _f(read["trigger"]),
+                    "label": f"BUY > {_px(read['trigger'])}" if entry else f"TRIGGER {_px(read['trigger'])}",
+                    "tone": "buy"})                     # the tone (line style, the ladder's Entry row) is unchanged
     if _f(read.get("stop")) is not None:
         out.append({"price": _f(read["stop"]), "label": f"STOP {_px(read['stop'])}", "tone": "stop"})
     return out

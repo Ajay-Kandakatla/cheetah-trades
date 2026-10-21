@@ -2566,7 +2566,7 @@
      "href": "/sepa/GGA?tab=supply",
      "lines": [
       {
-       "label": "BUY > 11.25",
+       "label": "TRIGGER 11.25",
        "price": 11.25,
        "tone": "buy"
       },

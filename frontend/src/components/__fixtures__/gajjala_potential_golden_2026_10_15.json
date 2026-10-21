@@ -1095,7 +1095,7 @@
      "href": "/sepa/JJJ?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.97",
+       "label": "TRIGGER 10.97",
        "price": 10.96875,
        "tone": "buy"
       },
@@ -1359,7 +1359,7 @@
      "href": "/sepa/GGG?tab=supply",
      "lines": [
       {
-       "label": "BUY > 11.00",
+       "label": "TRIGGER 11.00",
        "price": 11.0,
        "tone": "buy"
       },
@@ -1625,7 +1625,7 @@
      "href": "/sepa/FFF?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.97",
+       "label": "TRIGGER 10.97",
        "price": 10.96875,
        "tone": "buy"
       },
@@ -3040,7 +3040,7 @@
      "href": "/sepa/JJJ?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.97",
+       "label": "TRIGGER 10.97",
        "price": 10.96875,
        "tone": "buy"
       },
@@ -3340,7 +3340,7 @@
      "href": "/sepa/CCC?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.94",
+       "label": "TRIGGER 10.94",
        "price": 10.9375,
        "tone": "buy"
       },
@@ -3636,7 +3636,7 @@
      "href": "/sepa/HHH?tab=supply",
      "lines": [
       {
-       "label": "BUY > 10.48",
+       "label": "TRIGGER 10.48",
        "price": 10.484375,
        "tone": "buy"
       },

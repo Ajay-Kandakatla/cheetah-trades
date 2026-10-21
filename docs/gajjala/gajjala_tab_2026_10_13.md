@@ -296,3 +296,12 @@ UNMEASURED — this is his rule applied to what is listed, not a measured edge. 
 `backend/tests/test_gajjala_vcp_listing.py` (the listing rule, the note, the potential rule, the ℹ️ clause, NEGATIVES with
 the switch off and on every other setup), the `cycles` rows in `tests/test_gajjala_detectors.py` (state table unchanged),
 the switch pins in `tests/test_gajjala_constants.py`.
+
+## 🚩 Chart trigger line: BUY only when the read is the entry (2026-10-21)
+Ajay, on a NAUT 🚩 Bull Flag card reading "broke — not A+ · missed: K3 pullback volume ≤ 0.5× leg mean" while the chart
+printed "BUY > 2.72": "So Gajjalas entries are only for A+ stock setups right? Why does this chart in potential say buy?
+If its in Buy at the rate why is it not in A+?" `tab._tile_lines` printed BUY for every read with a trigger. Now the
+trigger line says `BUY > x` (tone `buy`) only when the read IS the entry (`_is_entry_read`: A+, or forming and `ready`
+is True); partial, not-ready forming, triggered, stopped and invalid reads print `TRIGGER x` (the tone stays `buy`: the
+line style and the card ladder's Entry row key on it). The STOP line, the A+ claim (alerts) and the 🚩 lane are untouched — the lane trades pushed A+
+alerts only. Guard: `backend/tests/test_gajjala_trigger_label_2026_10_21.py` (incl. NEGATIVES).
