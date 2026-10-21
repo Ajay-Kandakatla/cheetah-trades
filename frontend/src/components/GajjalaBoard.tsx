@@ -119,6 +119,16 @@
  * place of the add box. One write at a time (every broker control disabled while one is in flight); a write that lands
  * re-reads the board ONCE. The owner header comes from the proxy, never typed here. Every word is served by tab.py;
  * the FE never types the broker's name.
+ *
+ * 🔴 Live on the cards (2026-10-21, BUILD_SPEC20 D1/D2). Ajay, on a StockTwits screenshot of SAIQ: "Are we not real
+ * time SAIQ already broke the EMA", "I see it on Stock Twitz" and "If something is Potential add min on min for pricing
+ * and other updates to make them more realtime and give us a better edge". Every tile (all subs, 🧠 Potential too)
+ * rides the Chart Maps card poll — lib/cardLive.cardLiveSymbols → hooks/useCardLive (CARD_LIVE_MS, only while the
+ * SERVED refresh_sec says the window is open) → lib/cardLive.patchTiles into PatternChart — and the served footer word
+ * prints after the "as of" stamp. The POST carries `levels` (the tile's OWN served trigger / stop and frame, copied,
+ * never typed) only for tiles that carry one; the served `vs.text` prints under the plan line as one line, verbatim.
+ * The READ still moves at GG's closed bar (the pass) — the live words are display only. UNMEASURED — freshness, not an
+ * edge.
  */
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -131,6 +141,9 @@ import { EnterableChip } from './EnterableChip';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useCardLive } from '../hooks/useCardLive';
+import { cardLiveSymbols, liveVsText, patchTiles, type CardLiveLevels } from '../lib/cardLive';
+import type { CmTapeSession } from '../lib/chartMaps';
 import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
@@ -426,6 +439,16 @@ export default function GajjalaBoard() {
    * AMD mistake). Nothing on this board is ordered or hidden by it. */
   const room = useBounceRoom(shownSymbols);
 
+  /* 🔴 the live overlay (2026-10-21): the tile symbols, polled only inside the SERVED window (refresh_sec > 0); a board
+   * refetch is the reset (its answer was asked against the levels of the board before). */
+  const liveSyms = useMemo(() => cardLiveSymbols(tiles), [tiles]);
+  const liveLevels = useMemo(() => ggLiveLevels(tiles, board?.tf ?? null), [tiles, board]);
+  const inWindow = every != null && every > 0;
+  const cardLive = useCardLive(liveSyms, inWindow && liveSyms.length > 0, {
+    resetKey: board, initialSession: (board?.session?.tape ?? null) as CmTapeSession | null, levels: liveLevels,
+  });
+  const liveTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+
   // `focus` scrolls to that tile ONCE per focus value, the first time its tile
   // has landed. The param stays in the URL (the outline keeps marking the tile)
   // and every served refresh hands a new `tiles` array — keyed on the tiles
@@ -470,6 +493,8 @@ export default function GajjalaBoard() {
         {session?.label ? <span className="gg-muted">{session.label}</span> : null}
         {asOfServed ? <span className="gg-muted" data-testid="gg-as-of">{asOfServed}</span>
           : pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
+        {/* 2026-10-21 critic fix: the window closed → nothing polls, so no "live" stamp is left behind */}
+        {inWindow && cardLive.footer ? <span className="gg-muted" data-testid="gg-live-footer">{cardLive.footer}</span> : null}
         {isOwner && scanOpen && scan?.rescan_label ? (
           <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
                   aria-busy={posting ? 'true' : undefined}
@@ -604,7 +629,7 @@ export default function GajjalaBoard() {
             <div className="cm-note" data-testid="gg-empty">{board.empty_note}</div>
           ) : null}
           <div className={`cm-grid${loading ? ' cm-grid-stale' : ''}`} aria-busy={loading || undefined}>
-            {tiles.map((t) => {
+            {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
               const isFocus = focus === t.symbol;
               return (
@@ -644,7 +669,7 @@ export default function GajjalaBoard() {
                       {t.name ? ` ${t.name}` : ''}
                     </div>
                   )}
-                  <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} />
+                  <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} sym={t.symbol} live={liveVsText(t)} />
                   {brokerEditable && brokerBlock ? (
                     <BrokerToggle sym={t.symbol} on={typeof t.broker_text === 'string' && t.broker_text.trim() !== ''}
                                   block={brokerBlock} busy={brokerBusy} onWrite={brokerWrite} />
@@ -759,8 +784,30 @@ function AplusBanner({ block }: { block: GgEnterable }) {
   );
 }
 
-/** State pill, plan line, criteria checklist and the chip row under a tile. */
-function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard; sub: GgSub | null }) {
+/** 🔴 The `levels` body of the live POST (2026-10-21, BUILD_SPEC20 D2): per tile that carries a served trigger or stop,
+ *  those numbers and the read's served frame (`gajjala.frame`, else the tile's `tf`, else the board's) — copied from
+ *  the payload, never typed. A tile with
+ *  neither sends nothing. */
+function ggLiveLevels(tiles: GgTile[], boardTf: string | null): CardLiveLevels {
+  const fin = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+  const out: CardLiveLevels = {};
+  for (const t of tiles) {
+    const sym = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+    const trigger = fin(t?.gajjala?.trigger);
+    const stop = fin(t?.gajjala?.stop);
+    if (!sym || (trigger == null && stop == null)) continue;
+    // 2026-10-21 critic fix: the frame the READ is on (a 15m fade on a 5m board), else the drawn frame, else the board's
+    const frame = t?.gajjala?.frame;
+    const tf = typeof frame === 'string' && frame ? frame : typeof t.tf === 'string' && t.tf ? t.tf : boardTf;
+    out[sym] = { trigger, stop, tf };
+  }
+  return out;
+}
+
+/** State pill, plan line, the 🔴 served live line, criteria checklist and the chip row under a tile. */
+function CardExtras({ read, board, sub, sym, live }: {
+  read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null;
+}) {
   if (!read) return null;
   const chips = read.chips || {};
   const trig = ggPx(read.trigger);                    // the broker's grid — the push, the 🏁 Track and the 🚩 lane agree
@@ -803,6 +850,8 @@ function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard;
             .filter(Boolean).join(' · ')}
         </div>
       ) : null}
+      {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
+      {live ? <div className="cm-note gg-line gg-live" data-testid={`gg-live-${sym}`}>{live}</div> : null}
       {read.criteria?.length ? (
         <ul className="gg-criteria" data-testid="gg-criteria">
           {read.criteria.map((c) => (

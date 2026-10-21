@@ -11,7 +11,14 @@
  * and say so when they don't; there is no Level-2 feed on our subscription so
  * no bookmap — the volume profile and the off-exchange print table are the
  * honest substitutes; the accuracy strip shows OUR measured record, not the
- * WhatsApp group's 70%. Reads /orderflow/{sym}; Scan POSTs a fresh compute. */
+ * WhatsApp group's 70%. Reads /orderflow/{sym}; Scan POSTs a fresh compute.
+ *
+ * 🎚 ONE control line (2026-10-21, BUILD_SPEC21 D2/D3). Ajay: "Also its not very clear in the TAPE if they are
+ * buyers or sellers". The delta block now leads with the SERVED `delta.control.headline` and `delta.control.detail`
+ * (orderflow/tape.py — the sign of the session delta and the last window, "turning" when they disagree), printed
+ * verbatim; the panel types no control word. The print-classification METHOD badge ("quote rule" / "mixed N%" / …)
+ * left the "who's in control" eyebrow for the methodology footnote — it says how prints were sided, not who won.
+ * UNMEASURED. Not advice. */
 import { useEffect, useRef } from 'react';
 import { useOrderflow } from '../hooks/useOrderflow';
 import { InfoButton } from './InfoButton';
@@ -138,6 +145,8 @@ export function TapePanel({ symbol }: { symbol: string }) {
   const vv = verdictView(d.verdict);
   const delta = d.tape?.delta;
   const tone = deltaTone(delta?.delta ?? 0);
+  const control = delta?.control && typeof delta.control.headline === 'string' && delta.control.headline.trim()
+    ? delta.control : null;
   const prints = d.tape?.big_prints;
   const bursts = d.tape?.bursts ?? [];
   const accLine = accuracyLine(accuracy);
@@ -195,7 +204,7 @@ export function TapePanel({ symbol }: { symbol: string }) {
 
       {/* ── Delta ───────────────────────────────────────────────────────── */}
       <div style={{ marginTop: '0.9rem' }}>
-        <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div className="eyebrow" data-testid="tape-delta-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           Big delta · who's in control
           <InfoButton title="What is delta?" inline align="left">
             <p><strong>Delta = buy volume − sell volume.</strong> Every print is classified
@@ -208,18 +217,26 @@ export function TapePanel({ symbol }: { symbol: string }) {
               think — on CIEN that day the tick rule matched the quote rule on only <strong>76%</strong> of
               prints and understated net selling by <strong>2.3×</strong>.</p>
             <p><strong>Last 30 min</strong> matters most — it's who's in control <em>right now</em>.</p>
+            <p data-testid="tape-control-info">The headline is who is in control: the sign of the session delta, and the last 30 minutes next to it — when they disagree the tape is turning.</p>
           </InfoButton>
-          {cls && (
-            <span title={cls.title}
-              style={{ marginLeft: 4, fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999,
-                background: `${cls.color}22`, color: cls.color, fontWeight: 600, cursor: 'help' }}>
-              {cls.label}
-            </span>
-          )}
         </div>
+        {control && (
+          <div data-testid="tape-control" style={{ marginTop: '0.35rem', minWidth: 0 }}>
+            <div data-testid="tape-control-headline"
+              style={{ fontSize: '1.05rem', fontWeight: 800, color: tone.color, overflowWrap: 'anywhere' }}>
+              {control.headline}
+            </div>
+            {typeof control.detail === 'string' && control.detail.trim() && (
+              <div className="mono" data-testid="tape-control-detail"
+                style={{ fontSize: '0.72rem', color: 'var(--cm-slate)', marginTop: 1, overflowWrap: 'anywhere' }}>
+                {control.detail}
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.4rem' }}>
           <Tile label="Session delta" value={fmtShares(delta?.delta)} color={tone.color}
-            sub={`${delta?.delta_pct_of_volume ?? 0}% of volume · ${tone.word} in control`} />
+            sub={`${delta?.delta_pct_of_volume ?? 0}% of volume`} />
           <Tile label={`Last ${delta?.late_window_min ?? 30} min`} value={fmtShares(delta?.late_delta)}
             color={deltaTone(delta?.late_delta ?? 0).color} sub="who's in control now" />
           <Tile label="Buy volume" value={fmtShares(delta?.buy_volume)} color="#10b981" />
@@ -460,7 +477,14 @@ export function TapePanel({ symbol }: { symbol: string }) {
         </span>
       </div>
 
-      <p style={{ margin: '0.55rem 0 0', fontSize: '0.7rem', lineHeight: 1.45, color: 'var(--cm-slate)', fontStyle: 'italic' }}>
+      <p data-testid="tape-method-footnote" style={{ margin: '0.55rem 0 0', fontSize: '0.7rem', lineHeight: 1.45, color: 'var(--cm-slate)', fontStyle: 'italic' }}>
+        {cls && (
+          <span data-testid="tape-method-badge" title={cls.title}
+            style={{ marginRight: 6, fontSize: '0.62rem', padding: '1px 6px', borderRadius: 999, fontStyle: 'normal',
+              background: `${cls.color}22`, color: cls.color, fontWeight: 600, cursor: 'help' }}>
+            classified: {cls.label}
+          </span>
+        )}
         Tick-rule classification (~75-80% agreement with the full quote rule) · configured house
         thresholds, not a book method · decision-support, not advice. Order flow is intraday-noisy —
         the daily SEPA gate keeps this page from ever fighting your main system.

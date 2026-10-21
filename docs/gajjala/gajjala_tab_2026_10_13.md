@@ -305,3 +305,45 @@ trigger line says `BUY > x` (tone `buy`) only when the read IS the entry (`_is_e
 is True); partial, not-ready forming, triggered, stopped and invalid reads print `TRIGGER x` (the tone stays `buy`: the
 line style and the card ladder's Entry row key on it). The STOP line, the A+ claim (alerts) and the 🚩 lane are untouched — the lane trades pushed A+
 alerts only. Guard: `backend/tests/test_gajjala_trigger_label_2026_10_21.py` (incl. NEGATIVES).
+
+## 🔴 Live on the cards (2026-10-21)
+Ajay, three messages on 2026-10-21 (a StockTwits screenshot of SAIQ at $5.59, −18.30% today): "Are we not real time
+SAIQ already broke the EMA" / "I see it on Stock Twitz" / "If something is Potential add min on min for pricing and
+other updates to make them more realtime and give us a better edge". BUILD_SPEC20.
+
+**Worked example (SAIQ, 2026-10-21, ET).** The 11:12 pass read 🌀 VCP forming & ready (trigger 5.7993 / stop 5.6706).
+The 11:15 bar (closed 11:20) printed low 5.61, under that stop, and was the first close under the 9 EMA. The 11:21
+pass dropped the 🌀 card. The 🧠 Potential horizontal-fade read (trigger 5.85 / stop 5.63) stayed, because the 11:35 bar
+closed AT 5.63. At 11:40 the live bar traded 5.58 while the card still said "BUY > 5.85 / STOP 5.63", and nothing on it
+said the stop had printed. The live overlay had 5.60 at 11:40:15: the price was live, the card was not wired to it.
+
+**What is live now vs what is a read.**
+- Live (every `CARD_LIVE_MS` 30 s, in window): each 🚩 tile gets the same overlay every other Chart Maps tab has,
+  `POST /chart-maps/live` (today candle, now line, footer). The FE also sends `levels` {SYM: {trigger, stop, tf}},
+  copied from the tab's own payload (`tf` = the READ's frame `gajjala.frame`, else the tile's drawn `tf`, else the
+  board's — critic fix 2026-10-21: a ➖ fade reads 15-minute bars first, so on the 5-minute board its line names the
+  15-minute close; the "live" footer prints only while the served window is open), and the answer carries `vs` {kind, text} per quote (`live_card.VS_TEXT`):
+  - `over_trigger`: "🔴 {px} over the trigger {trigger} on the live bar — the read moves when the {tf}-minute bar
+    closes ({next_close} ET)"
+  - `under_stop`: "🔴 {px} under the stop {stop} on the live bar — the read moves when the {tf}-minute bar closes
+    ({next_close} ET)"
+  - `between`: "🔴 {px} · between the stop {stop} and the trigger {trigger}"
+  - no `vs` key: no now price, no levels, or an unparsable level.
+  Compared on the broker grid (`trading.broker.round_price`, the grid `tab._px` prints): px ≥ trigger → over_trigger,
+  else px ≤ stop → under_stop, else between (both levels needed; one level with the price on its other side says
+  nothing). `next_close` = the next tf-minute boundary of the server's ET clock; tf off `tab.TFS` (5 default, 15
+  accepted, anything else → 5). A malformed `levels` is ignored for that symbol, never a 422. On SAIQ at 11:40:15 the
+  card would have read "🔴 5.60 under the stop 5.63 on the live bar — the read moves when the 5-minute bar closes
+  (11:45 ET)".
+- A read (unchanged): every state, the A+ claim, the 🧠 potentials, the 🏁 Track record, the pushes and the 🚩 lane read
+  GG's CLOSED 5- or 15-minute bars (tab.TFS) from the pass. `vs` is display only: no module under `chart_maps/gajjala` or `trading`
+  imports `live_card` (import guard, `backend/tests/test_gajjala_live_vs_2026_10_21.py`).
+- The pass still runs every 5 minutes after each bar close; a minute pass would re-read the same closed bars.
+
+**HIS CALLs.** #1 the cadence: he said "min on min"; the overlay polls every 30 s (`CARD_LIVE_MS`, the existing
+constant); 10 s is his call (one snapshot per poll per open tab). #2 doc only, not built: start the pass N seconds
+after the bar close instead of at :01, once Massive's 5-minute aggregate latency after a close is measured (a
+re-runnable script first); the crontab is his to install.
+
+UNMEASURED: this is freshness, not an edge. Not advice. ℹ️ panel: one 🔴 line in the 🚩 section's stops, built from
+`live_card.CARD_LIVE_SEC` (a mirror of the FE's `CARD_LIVE_MS`, pinned equal by test) and `tab.TFS`.

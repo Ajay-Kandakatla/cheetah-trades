@@ -922,6 +922,10 @@ ledger (`GET /orderflow/ledger/accuracy`) grades the five-check verdict, not che
   over, an editable pin list, thin tape, a ring that reached no device, the start guard, the tap, the first read):
   `docs/alerts/tape_control_2026_10_16.md`. Each ships with its default.
 - **Docs**: `docs/alerts/tape_control_2026_10_16.md`.
+- **🎚 Who's in control (2026-10-21, BUILD_SPEC21)**: `tape.delta_summary` serves `control` {session, late, turning,
+  headline, detail} — the sign rule (> 0 buyers, < 0 sellers, 0 balanced; no threshold) over the session and the last
+  `LATE_WINDOW_MIN` delta, words in `tape.CONTROL_TEXT`; the Tape panel prints it verbatim. UNMEASURED.
+  `docs/sepa/orderflow_methodology.md` §"Who's in control (2026-10-21)".
 
 ### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)
 A doji after a test of the prior low, in a downtrend (Ajay: *"create me a new tab for Doji candle after a sweep. For any
@@ -998,6 +1002,10 @@ only: scans, bands, the ledger and the 📐 page still read closed bars (the liv
   `backend/tests/test_chart_maps_live_card.py`, `frontend/src/lib/cardLive.test.ts`, `src/hooks/useCardLive.test.tsx`,
   `src/pages/ChartMapsCardLive.test.tsx`, `src/components/PatternChart.cardLive.test.tsx`.
 - **HIS CALLS**: `docs/chart_maps/live_card_2026_10_16.md` (Q1–Q14 + the builders' a–d).
+- **🔴 Gajjala cards live (2026-10-21, BUILD_SPEC20)**: the 🚩 tab's tiles ride this overlay; an OPTIONAL body `levels`
+  {SYM: {trigger, stop, tf}} (copied from the tab payload) adds display-only `vs` {kind over_trigger|under_stop|between,
+  text from `live_card.VS_TEXT`} per quote (on the broker grid; malformed levels ignored, never a 422); no module under
+  `chart_maps/gajjala` or `trading` imports `live_card`. UNMEASURED. `docs/gajjala/gajjala_tab_2026_10_13.md` §🔴.
 
 ### Chart Maps — 🌙 Overnight session read (Blue Ocean) — overnight/scan.py (2026-10-19)
 Every stock and ETF re-priced through the overnight session (Ajay: *"Can you do an over night scan for all the stocks

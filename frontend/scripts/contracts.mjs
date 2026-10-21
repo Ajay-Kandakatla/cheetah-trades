@@ -9704,9 +9704,10 @@ const CONTRACTS = [
       // 2026-10-20, later: the 🔄 scan-now ✨ (its own block) sits above all three — widened to the top four, dated.
       // 2026-10-20, later still: the 🚩 Gajjala lane ✨ (its own block, FIRST) sits above all four — widened to the top five, dated.
       // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) sits above all five — widened to the top six, dated.
-      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
+      // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all six — widened to the top nine, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9905,9 +9906,10 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-20, later: the 🚩 Gajjala lane ✨ (its own block) ships above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-20, later again: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above both — widened to the top three, dated.
-      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first four (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
+      // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all three — widened to the top six, dated.
+      const firstSix = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstSix.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first six (found ${firstSix.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10143,9 +10145,10 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-20, later: the 🌀 VCP two-contractions ✨ (its own block, FIRST) ships above this one — the FIRST pin widened to the top two, dated.
-      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
-      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstThree.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstThree.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
+      // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above both — widened to the top five, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10228,9 +10231,10 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-vcp-two-contractions-2026-10-20';
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
+      // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above this one — the FIRST pin widened to the top four, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10252,6 +10256,245 @@ const CONTRACTS = [
       // 5. the doc section (WP-A).
       const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
       if (!exists(DOC) || !read(DOC).includes('## 🌀 Cards from two contractions (2026-10-20)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "🌀 Cards from two contractions (2026-10-20)" section (WP-A)');
+      return errs;
+    },
+  },
+  {
+    name: '🔴 Gajjala cards live (2026-10-21)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-21, on a StockTwits screenshot of SAIQ: "Are we not real time SAIQ already broke the EMA", "I see it on
+    // Stock Twitz" and "If something is Potential add min on min for pricing and other updates to make them more realtime
+    // and give us a better edge". BUILD_SPEC20 D1–D7: every Gajjala tile rides the Chart Maps card poll (useCardLive on
+    // the tile symbols, only inside the SERVED window) → patchTiles into PatternChart → the served footer after "as of";
+    // POST /chart-maps/live takes an OPTIONAL `levels` (the tile's own served trigger / stop / frame) and live_card adds
+    // display-only `vs` words (VS_TEXT); the card prints `live_vs.text` verbatim. The read still moves at GG's closed bar.
+    // Pins: the FE wiring, no typed vs word on the FE, the backend signature / route / words / kinds, the import guard
+    // (nothing that reads, rings or trades imports live_card), CARD_LIVE_MS unchanged, the ✨ FIRST, the tests, the docs.
+    checks: (src) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const noComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      const HIS = [
+        'Are we not real time SAIQ already broke the EMA',
+        'I see it on Stock Twitz',
+        'If something is Potential add min on min for pricing and other updates to make them more realtime and give us a better edge',
+      ];
+      const LINE = "the card's price and its stop/trigger relation now refresh every 30 s; the read itself still moves at GG's bar close (5-minute; 15-minute for a fade read on 15-minute bars)";
+      const VS_WORDS = /over the trigger|under the stop|between the stop|on the live bar|bar closes/i;
+
+      // 1. the FE wiring (GajjalaBoard.tsx).
+      const code = noComments(src);
+      for (const need of [
+        "import { useCardLive } from '../hooks/useCardLive';",
+        'const liveSyms = useMemo(() => cardLiveSymbols(tiles), [tiles]);',
+        'const inWindow = every != null && every > 0;',
+        'useCardLive(liveSyms, inWindow && liveSyms.length > 0, {',
+        'levels: liveLevels,',
+        'patchTiles(tiles, cardLive.answer)',
+        'liveTiles.map((t) => {',
+        '<span className="gg-muted" data-testid="gg-live-footer">{cardLive.footer}</span>',
+        'live={liveVsText(t)}',
+        'data-testid={`gg-live-${sym}`}>{live}</div>',
+        'const trigger = fin(t?.gajjala?.trigger);',
+        'const stop = fin(t?.gajjala?.stop);',
+        'if (!sym || (trigger == null && stop == null)) continue;',
+      ]) if (!code.includes(need)) errs.push(`GajjalaBoard.tsx must carry: ${need}`);
+      if (!/^\s*const every = ggRefreshMs\(board\);/m.test(code)) errs.push('GajjalaBoard.tsx: the window is the SERVED refresh_sec (const every = ggRefreshMs(board))');
+      if ((code.match(/\buseCardLive\(/g) || []).length !== 1) errs.push('GajjalaBoard.tsx must call useCardLive( exactly once (one live read per board)');
+      if ((code.match(/data-testid="gg-live-footer"/g) || []).length !== 1) errs.push('GajjalaBoard.tsx must print the live footer exactly once');
+      const asOfAt = code.indexOf('data-testid="gg-as-of"');
+      const footAt = code.indexOf('data-testid="gg-live-footer"');
+      if (asOfAt < 0 || footAt < asOfAt) errs.push('the gg-live-footer must print AFTER the "as of" span');
+      const cardLive = tryRead('src/lib/cardLive.ts', 'frontend');
+      const hook = tryRead('src/hooks/useCardLive.ts', 'frontend');
+      for (const [f, t] of [['GajjalaBoard.tsx', src], ['lib/cardLive.ts', cardLive], ['hooks/useCardLive.ts', hook]]) {
+        const m = t ? VS_WORDS.exec(noComments(t)) : null;
+        if (m) errs.push(`${f} types "${m[0]}" — every live-vs word is served (live_card.VS_TEXT)`);
+        if (t && /[?&]levels=/.test(noComments(t))) errs.push(`${f} puts levels in a URL — the POST body only`);
+      }
+      // 2. lib/cardLive.ts: the quote type, the copy, the same tile when unchanged, the cadence untouched.
+      if (cardLive) {
+        for (const need of ['vs?: CardLiveVs | null;', 'export type CardLiveVs = { kind: string; text: string };',
+          'const vs = validVs(q.vs) ? q.vs : undefined;', 'if (bars === bars0 && lines === lines0 && sameVs) return t;',
+          'if (vs) out.live_vs = vs; else delete out.live_vs;', 'export function liveVsText(']) {
+          if (!cardLive.includes(need)) errs.push(`lib/cardLive.ts must carry: ${need}`);
+        }
+        if (!/^export const CARD_LIVE_MS = 30_000;/m.test(cardLive)) errs.push('lib/cardLive.ts CARD_LIVE_MS must stay 30_000 (HIS CALL #1 — 10 s is his call)');
+      }
+      // 3. the hook: optional levels, the body unchanged without them.
+      if (hook) {
+        if (!hook.includes('levels?: CardLiveLevels | null')) errs.push('useCardLive.ts opts must take levels?: CardLiveLevels | null');
+        if (!hook.includes('JSON.stringify(Object.keys(levels).length ? { symbols: asked, levels } : { symbols: asked })')) errs.push('useCardLive.ts must send {symbols, levels} only when a level is given, else exactly {symbols}');
+      }
+      // 4. the backend: the route takes levels, compose's signature, the words, the kinds.
+      const api = tryRead('../backend/chart_maps/api.py', 'backend');
+      const hAt = api.indexOf('@router.post("/chart-maps/live")');
+      const hEnd = hAt < 0 ? -1 : api.indexOf('\n@router.', hAt + 1);
+      const handler = hAt < 0 ? '' : api.slice(hAt, hEnd < 0 ? undefined : hEnd);
+      if (!handler.includes('payload.get("levels")') || !handler.includes('levels=levels')) errs.push('the /chart-maps/live handler must read payload.get("levels") and pass levels=levels to live_card.compose (WP-A)');
+      const lc = tryRead('../backend/chart_maps/live_card.py', 'backend');
+      if (lc) {
+        if (!/^def compose\(symbols, \*, levels=None, now: Optional\[datetime\] = None\) -> dict:/m.test(lc)) errs.push('live_card.compose must read def compose(symbols, *, levels=None, now: Optional[datetime] = None) -> dict: (WP-A)');
+        if (!/^VS_KINDS = \("over_trigger", "under_stop", "between", "none"\)/m.test(lc)) errs.push('live_card.py must declare VS_KINDS = ("over_trigger", "under_stop", "between", "none") (WP-A)');
+        const vAt = lc.search(/^VS_TEXT = \{/m);
+        const vEnd = vAt < 0 ? -1 : lc.indexOf('\n}', vAt);
+        const vt = vAt < 0 ? '' : lc.slice(vAt, vEnd < 0 ? undefined : vEnd).replace(/"\s*\n\s*"/g, '');
+        if (!vt) errs.push('live_card.py must declare VS_TEXT = { … } (WP-A)');
+        for (const need of [
+          '"over_trigger": ("🔴 {px} over the trigger {trigger} on the live bar — the read moves when the {tf}-minute bar closes ({next_close} ET)"',
+          '"under_stop": ("🔴 {px} under the stop {stop} on the live bar — the read moves when the {tf}-minute bar closes ({next_close} ET)"',
+          '"between": "🔴 {px} · between the stop {stop} and the trigger {trigger}"',
+        ]) if (vt && !vt.includes(need)) errs.push(`live_card.VS_TEXT must carry ${need.slice(0, 60)}… (BUILD_SPEC20 D2)`);
+        if (/bounc/i.test(lc)) errs.push('live_card.py says the b-word — reversal');
+      }
+      // 5. the import guard: nothing that reads, stores, rings, grades or trades imports live_card.
+      const walk = (rel) => {
+        const out = [];
+        let names = [];
+        try { names = readdirSync(join(FRONTEND_ROOT, rel), { withFileTypes: true }); } catch { return out; }
+        for (const d of names) {
+          if (d.name === '__pycache__') continue;
+          const p = `${rel}/${d.name}`;
+          if (d.isDirectory()) out.push(...walk(p)); else if (d.name.endsWith('.py')) out.push(p);
+        }
+        return out;
+      };
+      const IMPORT = /^\s*(from\s+[\w.]*\blive_card\b\s+import|import\s+[\w.]*\blive_card\b|from\s+[\w.]+\s+import\s+[^\n]*\blive_card\b)/m;
+      for (const f of [...walk('../backend/chart_maps/gajjala'), ...walk('../backend/trading')]) {
+        if (IMPORT.test(read(f))) errs.push(`${f.replace('../', '')} imports live_card — the live words are display only (BUILD_SPEC20 D2)`);
+      }
+      // 6. the tests, both sides.
+      if (!exists('../backend/tests/test_gajjala_live_vs_2026_10_21.py')) errs.push('backend/tests/test_gajjala_live_vs_2026_10_21.py is missing (WP-A)');
+      if (!exists('src/components/GajjalaBoard.live.test.tsx')) errs.push('src/components/GajjalaBoard.live.test.tsx is missing');
+      // 7. the ✨ entry: FIRST, routed to 🧠, his three lines verbatim, the line, the two digits = the constants.
+      const ID = 'chart-maps-gajjala-live-2026-10-21';
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at >= 0) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🔴 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=potential'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala&sub=potential'`);
+        for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote him verbatim: "${h}"`);
+        if (!label.includes(LINE)) errs.push(`${W} must say: ${LINE}`);
+        for (const need of ['UNMEASURED', 'freshness']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (/bounc/i.test(label)) errs.push(`${W} says the b-word`);
+        const fastM = /^export const CARD_LIVE_MS = ([0-9_]+);/m.exec(cardLive);
+        const sec = fastM ? Number(fastM[1].replace(/_/g, '')) / 1000 : null;
+        const tab = tryRead('../backend/chart_maps/gajjala/tab.py', 'backend');
+        // 2026-10-21 (verifier): the label names BOTH of GG's frames — a fade read can sit on 15-minute bars — so every
+        // tab.TFS value is an allowed number, not only TFS[0].
+        const tfM = /^TFS = \(([^)]*)\)/m.exec(tab);
+        const frames = tfM ? [...tfM[1].matchAll(/"(\d+)m"/g)].map((m) => Number(m[1])) : [];
+        const digits = [...new Set(label.match(/\d+/g) || [])].map(Number).sort((a, b) => a - b);
+        const want = [...new Set([...frames, sec].filter((x) => x != null))].sort((a, b) => a - b);
+        if (digits.join(',') !== want.join(',')) errs.push(`${W} numbers ${digits.join(', ')} must be exactly CARD_LIVE_MS/1000 (${sec}) and tab.TFS (${frames.join(', ')})`);
+      } else errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      // 8. the docs (WP-A).
+      const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
+      if (!exists(DOC) || !read(DOC).includes('🔴 Live on the cards (2026-10-21)')) errs.push('docs/gajjala/gajjala_tab_2026_10_13.md must carry the "🔴 Live on the cards (2026-10-21)" section (WP-A)');
+      const ri = tryRead('../backend/supply_demand/rules_info.py', 'backend');
+      if (ri && !(ri.includes('the read moves at the %d-minute') || ri.includes('the read moves at the 5-minute'))) errs.push('supply_demand/rules_info.py 🚩 block must carry the "the read moves at the … bar close" line (WP-A)');
+      return errs;
+    },
+  },
+  {
+    name: '🎚 Tape: one control line (2026-10-21)',
+    file: 'src/components/TapePanel.tsx',
+    // Ajay 2026-10-21, on a screenshot of the Tape panel's delta block ("MIXED 40.4%" beside "who's in control"): "Also
+    // its not very clear in the TAPE if they are buyers or sellers". BUILD_SPEC21 D1–D7: ONE served control read
+    // (orderflow/tape.py delta_summary `control`, CONTROL_TEXT — the SIGN rule the FE used, moved server-side, NO
+    // threshold); the panel prints control.headline / control.detail verbatim and types no control word; deltaTone keeps
+    // the colour only; the classification badge leaves the "who's in control" eyebrow for the footnote. UNMEASURED.
+    checks: (src) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const noComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      const HIS = 'Also its not very clear in the TAPE if they are buyers or sellers';
+      const LINE = 'one served line says who is in control; the classification badge moved to the footnote';
+
+      // 1. the backend: CONTROL_TEXT, the words, the sign rule, no threshold, the served key.
+      const py = tryRead('../backend/orderflow/tape.py', 'backend');
+      if (py) {
+        if (!/^CONTROL_WORDS = \("buyers", "sellers", "balanced"\)/m.test(py)) errs.push('orderflow/tape.py must declare CONTROL_WORDS = ("buyers", "sellers", "balanced") (WP-A)');
+        const cAt = py.search(/^CONTROL_TEXT = \{/m);
+        const ct = cAt < 0 ? '' : py.slice(cAt, py.indexOf('\n}', cAt));
+        if (!ct) errs.push('orderflow/tape.py must declare CONTROL_TEXT = { … } (WP-A)');
+        for (const need of ['"{session_upper} IN CONTROL"', '— turning"', '"BALANCED"', '"balanced for the session · {late} now"', '"no prints yet"',
+          '"session {delta} sh ({pct}% of volume) · last {late_window_min} min {late_delta} sh"']) {
+          if (ct && !ct.includes(need)) errs.push(`orderflow/tape.py CONTROL_TEXT must carry ${need} (BUILD_SPEC21 D1)`);
+        }
+        if (!/return buyers if delta > 0 else \(sellers if delta < 0 else balanced\)/.test(py)) errs.push('orderflow/tape.py _control_word must be the SIGN rule (> 0 buyers, < 0 sellers, else balanced) — no threshold');
+        if (/^CONTROL_[A-Z_]*(MIN|MAX|THRESH|PCT|SHARES|FLOOR)[A-Z_]* = /m.test(py)) errs.push('orderflow/tape.py defines a CONTROL_* threshold — the word is the sign rule only (a threshold is a conscious, cited change)');
+        if (!/^def _signed_shares\(/m.test(py)) errs.push('orderflow/tape.py must carry def _signed_shares( (one helper, the FE minus)');
+        if (!/"control": control_read\(/.test(py)) errs.push('orderflow/tape.py delta_summary must serve "control": control_read(…) (WP-A)');
+        if (/bounc/i.test(py.slice(Math.max(0, cAt - 1200), cAt + 2000))) errs.push('the tape.py control block says the b-word');
+      }
+      // 2. the FE prints the served line only, types no control word, keeps the 30-minute caption.
+      const code = noComments(src);
+      for (const need of ['{control.headline}', '{control.detail}', 'data-testid="tape-control-headline"', 'data-testid="tape-control-detail"',
+        "delta?.control && typeof delta.control.headline === 'string' && delta.control.headline.trim()",
+        'sub={`${delta?.delta_pct_of_volume ?? 0}% of volume`}', `sub="who's in control now"`]) {
+        if (!code.includes(need)) errs.push(`TapePanel.tsx must carry: ${need}`);
+      }
+      if (/\btone\.word\b|\.word\b/.test(code)) errs.push('TapePanel.tsx reads a .word — the control word is served (delta.control)');
+      const bare = code.replace(/<InfoButton[\s\S]*?<\/InfoButton>/g, '');
+      const typed = /\b(buyers|sellers|balanced)\b|IN CONTROL|BALANCED/.exec(bare);
+      if (typed) errs.push(`TapePanel.tsx types "${typed[0]}" outside an ⓘ — the control words are served`);
+      if (!src.includes('The headline is who is in control: the sign of the session delta, and the last 30 minutes next to it — when they disagree the tape is turning.')) errs.push('the ⓘ "What is delta?" must carry the headline sentence (BUILD_SPEC21 D4)');
+      // 3. deltaTone keeps the colour only.
+      const lib = tryRead('src/lib/orderflow.ts', 'frontend');
+      const dAt = lib.indexOf('export function deltaTone(');
+      const dBody = dAt < 0 ? '' : lib.slice(dAt, lib.indexOf('\n}', dAt));
+      if (!dBody.startsWith('export function deltaTone(delta: number): { color: string } {')) errs.push('lib/orderflow.ts deltaTone must return { color: string } only');
+      if (/word/.test(dBody)) errs.push('lib/orderflow.ts deltaTone still carries a word');
+      if (!lib.includes('control?: TapeControl | null;')) errs.push('lib/orderflow.ts must type delta.control?: TapeControl | null;');
+      // 4. the badge: out of the eyebrow, into the footnote.
+      const eAt = code.indexOf('data-testid="tape-delta-eyebrow"');
+      const eEnd = eAt < 0 ? -1 : code.indexOf('</InfoButton>\n        </div>', eAt);
+      const eyebrow = eAt < 0 || eEnd < 0 ? '' : code.slice(eAt, eEnd);
+      if (!eyebrow) errs.push('TapePanel.tsx lost the tape-delta-eyebrow block');
+      if (/cls\.|tape-method-badge/.test(eyebrow.replace(/<InfoButton[\s\S]*?<\/InfoButton>/g, ''))) errs.push('the classification badge is back in the "who\'s in control" eyebrow');
+      const fAt = code.indexOf('data-testid="tape-method-footnote"');
+      const foot = fAt < 0 ? '' : code.slice(fAt, code.indexOf('</p>', fAt));
+      if (!foot.includes('data-testid="tape-method-badge"') || !foot.includes('classified: {cls.label}') || !foot.includes('title={cls.title}')) errs.push('the footnote must carry the badge: data-testid="tape-method-badge", title={cls.title}, classified: {cls.label}');
+      if ((code.match(/\{cls\.label\}/g) || []).length !== 1) errs.push('TapePanel.tsx must print cls.label exactly once (the footnote)');
+      // 5. the tests, both sides.
+      if (!exists('../backend/tests/test_tape_control_line_2026_10_21.py')) errs.push('backend/tests/test_tape_control_line_2026_10_21.py is missing (WP-A)');
+      const t = tryRead('src/components/TapePanel.test.tsx', 'frontend');
+      for (const name of ['prints the served control.headline and control.detail verbatim',
+        'NEGATIVE: an older snapshot with no control → no headline row and no control word anywhere',
+        'NEGATIVE: never in the eyebrow']) if (t && !t.includes(name)) errs.push(`TapePanel.test.tsx must keep the test "${name}"`);
+      // 6. the ✨ entry: in the top two, routed, his line verbatim, the one digit = tape.LATE_WINDOW_MIN.
+      const ID = 'chart-maps-tape-control-line-2026-10-21';
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at >= 0) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🎚 ✨ entry';
+        if (!e.includes("route: '/alerts'")) errs.push(`${W} must route to '/alerts' (the symbol-less page whose 🎚 rows open a tape)`);
+        if (!label.includes(`“${HIS}”`)) errs.push(`${W} must quote him verbatim: "${HIS}"`);
+        if (!label.includes(LINE)) errs.push(`${W} must say: ${LINE}`);
+        if (!label.includes('UNMEASURED')) errs.push(`${W} must say UNMEASURED`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (/bounc/i.test(label)) errs.push(`${W} says the b-word`);
+        const lwM = /^LATE_WINDOW_MIN = (\d+)/m.exec(py);
+        const digits = [...new Set(label.match(/\d+/g) || [])];
+        if (!lwM || digits.length !== 1 || digits[0] !== lwM[1]) errs.push(`${W} must carry exactly one number = tape.LATE_WINDOW_MIN (${lwM ? lwM[1] : 'absent'}; found ${digits.join(', ') || 'none'})`);
+      } else errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      // 7. the doc (WP-A).
+      const DOC = '../docs/sepa/orderflow_methodology.md';
+      if (!exists(DOC) || !read(DOC).includes("Who's in control (2026-10-21)")) errs.push(`docs/sepa/orderflow_methodology.md must carry the "Who's in control (2026-10-21)" section (WP-A)`);
       return errs;
     },
   },

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TapePanel } from './TapePanel';
 
 /* TapePanel — the Tape (order-flow) tab. The critical behavior under test is
@@ -186,5 +186,108 @@ describe('TapePanel scan copy (2026-10-18)', () => {
     render(<TapePanel symbol="NVDA" />);
     await waitFor(() => expect(screen.getByText('🟡 WAIT')).toBeTruthy());
     expect(screen.queryByText(/Very heavy tape/)).toBeNull();
+  });
+});
+
+/* 🎚 ONE served control line (2026-10-21, BUILD_SPEC21 D2/D3/D4/D7). Ajay, on a screenshot of this block ("MIXED
+ * 40.4%" beside "who's in control", "sellers in control" in a tile sub, "who's in control now" on the 30-minute tile):
+ * "Also its not very clear in the TAPE if they are buyers or sellers". The headline and its detail are the SERVED
+ * `delta.control` (orderflow/tape.py CONTROL_TEXT), printed verbatim; the panel types no control word; the method badge
+ * moved to the footnote. NEGATIVES: no control → no headline row and no word anywhere; the badge never in the eyebrow. */
+describe('TapePanel — 🎚 one served control line (2026-10-21)', () => {
+  const SELL_CONTROL = {
+    session: 'sellers', late: 'sellers', turning: false, headline: 'SELLERS IN CONTROL',
+    detail: 'session −564,000 sh (−18.5% of volume) · last 30 min −14,000 sh',
+  };
+  const TURN_CONTROL = {
+    session: 'sellers', late: 'buyers', turning: true,
+    headline: 'sellers for the session · buyers in the last 30 min — turning',
+    detail: 'session −564,000 sh (−18.5% of volume) · last 30 min +14,000 sh',
+  };
+  const snap = (control: unknown, over: Record<string, unknown> = {}) => ({
+    found: true, symbol: 'SAIQ', et_date: '2026-10-21', verdict: 'WAIT',
+    reason: 'tape not confirmed', checks: [], checks_passed: 2, checks_total: 5, last_price: 5.6,
+    tape: {
+      delta: {
+        buy_volume: 1_200_000, sell_volume: 1_764_000, delta: -564_000, delta_pct_of_volume: -18.5, classified_pct: 99,
+        late_delta: -14_000, late_window_min: 30, series: [], n_trades: 40_000,
+        ...(control === undefined ? {} : { control }),
+      },
+      big_prints: { threshold_dollars: 100000, buy_dollars: 0, sell_dollars: 0, prints: [] },
+      bursts: [], truncated: false,
+      classification: { method: 'mixed', coverage_pct: 40.4, trustworthy: false, n_quote_classified: 1,
+        n_at_mid: 0, n_fallback: 1, tick_agreement_pct: null },
+      ...over,
+    },
+    profile: null, emas: { intraday: { pass: false, ema9: null, ema21: null, detail: '' }, daily: { pass: true, detail: '', source: 'sepa' } },
+    zone: { detail: 'Mid-range' }, gex: null,
+  });
+  const show = async (control: unknown) => {
+    mockFetch((url) => (url.includes('/ledger/accuracy') ? ACCURACY : snap(control)));
+    const r = render(<TapePanel symbol="SAIQ" />);
+    await waitFor(() => expect(screen.getByText('🟡 WAIT')).toBeTruthy());
+    return r;
+  };
+  const CONTROL_WORDS = /\b(buyers|sellers|balanced)\b|IN CONTROL|BALANCED|turning/;
+
+  it('prints the served control.headline and control.detail verbatim, the headline first in the delta block', async () => {
+    await show(SELL_CONTROL);
+    expect(screen.getByTestId('tape-control-headline').textContent).toBe('SELLERS IN CONTROL');
+    expect(screen.getByTestId('tape-control-detail').textContent).toBe(SELL_CONTROL.detail);
+    const eyebrow = screen.getByTestId('tape-delta-eyebrow');
+    expect(eyebrow.nextElementSibling).toBe(screen.getByTestId('tape-control'));
+    expect((screen.getByTestId('tape-control-headline') as HTMLElement).style.color).toBe('rgb(239, 68, 68)');
+  });
+
+  it('the turning headline prints verbatim (the server composes it, not the panel)', async () => {
+    await show(TURN_CONTROL);
+    expect(screen.getByTestId('tape-control-headline').textContent).toBe(TURN_CONTROL.headline);
+    expect(screen.getByTestId('tape-control-detail').textContent).toBe(TURN_CONTROL.detail);
+  });
+
+  it('the control words appear ONLY inside the served line; the Session delta tile sub carries no word', async () => {
+    const { container } = await show(SELL_CONTROL);
+    const control = screen.getByTestId('tape-control');
+    const rest = (container.textContent ?? '').replace(control.textContent ?? '', '');
+    expect(rest).not.toMatch(CONTROL_WORDS);
+    expect(screen.getByText('-18.5% of volume')).toBeTruthy();
+    expect(container.textContent).not.toMatch(/of volume · (buyers|sellers|balanced) in control/);
+  });
+
+  it('NEGATIVE: an older snapshot with no control → no headline row and no control word anywhere', async () => {
+    const { container } = await show(undefined);
+    expect(screen.queryByTestId('tape-control')).toBeNull();
+    expect(screen.queryByTestId('tape-control-headline')).toBeNull();
+    expect(container.textContent).not.toMatch(CONTROL_WORDS);
+    expect(screen.getByText("who's in control now")).toBeTruthy();   // the 30-minute tile caption stays
+  });
+
+  it('NEGATIVE: a control with a blank headline (or null) renders no row', async () => {
+    for (const c of [null, { ...SELL_CONTROL, headline: '  ' }]) {
+      const { container, unmount } = await show(c);
+      expect(screen.queryByTestId('tape-control')).toBeNull();
+      expect(container.textContent).not.toMatch(CONTROL_WORDS);
+      unmount();
+    }
+  });
+
+  it('the method badge sits in the footnote ("classified: …", same title) — NEGATIVE: never in the eyebrow', async () => {
+    await show(SELL_CONTROL);
+    const eyebrow = screen.getByTestId('tape-delta-eyebrow');
+    expect(eyebrow.querySelector('[data-testid="tape-method-badge"]')).toBeNull();
+    expect(eyebrow.textContent).not.toMatch(/mixed|quote rule|tick rule|unclassified/);
+    const foot = screen.getByTestId('tape-method-footnote');
+    const badge = foot.querySelector('[data-testid="tape-method-badge"]') as HTMLElement;
+    expect(badge).toBeTruthy();
+    expect(badge.textContent).toBe('classified: mixed 40.4%');
+    expect(badge.title).toMatch(/^Only 40\.4% of prints had a quote we hold/);
+    expect(screen.getAllByTestId('tape-method-badge')).toHaveLength(1);
+  });
+
+  it('the ⓘ "What is delta?" carries the headline sentence', async () => {
+    await show(SELL_CONTROL);
+    fireEvent.click(screen.getByRole('button', { name: 'What is What is delta??' }));
+    expect(screen.getByTestId('tape-control-info').textContent).toBe(
+      'The headline is who is in control: the sign of the session delta, and the last 30 minutes next to it — when they disagree the tape is turning.');
   });
 });

@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-21 (his three lines verbatim in the label, on a StockTwits screenshot of SAIQ). BUILD_SPEC20 D1–D5: every
+  // Gajjala tile rides the Chart Maps card poll (hooks/useCardLive, lib/cardLive.CARD_LIVE_MS) and prints the SERVED
+  // live-vs-levels line (chart_maps/live_card.VS_TEXT); the read still moves at GG's closed bar. The two digits in the
+  // label are CARD_LIVE_MS / 1000 and the first frame of chart_maps/gajjala/tab.TFS — pinned by scripts/contracts.mjs
+  // ("🔴 Gajjala cards live (2026-10-21)"). UNMEASURED — freshness, not an edge.
+  { id: 'chart-maps-gajjala-live-2026-10-21', addedAt: '2026-10-21', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "🔴 Gajjala's cards are live now — every sub, 🧠 Potential included. You said: “Are we not real time SAIQ already broke the EMA”, “I see it on Stock Twitz” and “If something is Potential add min on min for pricing and other updates to make them more realtime and give us a better edge”. Right — the card's price was never wired to the live print, so on SAIQ the stop had already printed while the card still showed the old plan. Fixed: the card's price and its stop/trigger relation now refresh every 30 s; the read itself still moves at GG's bar close (5-minute; 15-minute for a fade read on 15-minute bars). One served line under the plan says where the live print sits against the trigger and the stop, and the strip says when the price last refreshed. The A+ still needs the bar to close through the trigger — the live line is display only. This is freshness, not an edge — UNMEASURED. Not advice." },
+  // Ajay 2026-10-21 (his line verbatim in the label, on a screenshot of the Tape panel's delta block). BUILD_SPEC21 D1–D5:
+  // the ONE served control line (orderflow/tape.py CONTROL_TEXT — the sign rule, no threshold) leads the delta block; the
+  // classification badge moved to the footnote. The panel mounts on the ticker page (/sepa/:symbol?tab=tape — no
+  // symbol-less form), so this routes to 🔔 Alerts, the symbol-less page whose 🎚 rows open a ticker's tape. The one digit is
+  // tape.LATE_WINDOW_MIN — pinned by scripts/contracts.mjs ("🎚 Tape: one control line (2026-10-21)"). UNMEASURED.
+  { id: 'chart-maps-tape-control-line-2026-10-21', addedAt: '2026-10-21', route: '/alerts',
+    label: "🎚 The Tape now says who is in control in one line. You said: “Also its not very clear in the TAPE if they are buyers or sellers”. Now one served line says who is in control; the classification badge moved to the footnote. The line is the sign of the session delta with the last 30 minutes next to it — when the two disagree it says turning, with the share counts under it. The badge (quote rule, mixed …) only says how the prints were sided, not who won, so it no longer sits beside “who's in control”. On any ticker's 🧾 tape tab (a 🎚 row on 🔔 Alerts opens one). UNMEASURED. Not advice." },
   // 2026-10-21 — EMR: a bracket take-profit sell limit from 2026-09-22 held all 36 shares, Alpaca refused the engine's
   // protective stop every minute (HTTP 403 40310000) and nothing was ledgered. Backend: trading/exit_engine.py sees the
   // hold before posting, writes ONE `adopt_held` ledger row per position per day and SERVES the sentence

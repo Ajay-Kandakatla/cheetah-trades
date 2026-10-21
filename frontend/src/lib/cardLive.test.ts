@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  CARD_LIVE_CLOSED_MS, CARD_LIVE_MS, CARD_LIVE_PATH, cardLiveSymbols, nextCadence, parseCardLive,
-  patchTile, patchTiles, type CardLiveAnswer, type CardLiveQuote,
+  CARD_LIVE_CLOSED_MS, CARD_LIVE_MS, CARD_LIVE_PATH, cardLiveSymbols, liveVsText, nextCadence, parseCardLive,
+  patchTile, patchTiles, type CardLiveAnswer, type CardLiveQuote, type LiveVsTile,
 } from './cardLive';
 import type { CmBar, CmTile } from './chartMaps';
 
@@ -246,5 +246,88 @@ describe('nextCadence', () => {
     for (const s of ['rth', 'premarket', 'afterhours', null, undefined] as const) {
       expect(nextCadence(s)).toBe(CARD_LIVE_MS);
     }
+  });
+});
+
+/* 🔴 Gajjala cards live (2026-10-21, BUILD_SPEC20 D2/D7): patchTile copies the served `q.vs` onto the tile as
+ * `live_vs` — the SAME tile when nothing (bar, line, words) moved. The words are a stand-in shaped like
+ * chart_maps/live_card.VS_TEXT; this file only checks they are carried verbatim, never composed. */
+describe('patchTile — 🔴 live_vs (2026-10-21)', () => {
+  const VS = { kind: 'under_stop', text: 'served words A' };
+  const VS2 = { kind: 'between', text: 'served words B' };
+  /** A Gajjala-shaped tile: 5-minute bars (never spliced) and its plan lines, no now line. */
+  const ggTile = (over: Partial<CmTile & LiveVsTile> = {}): CmTile & LiveVsTile => tile({
+    symbol: 'SAIQ',
+    bars: [bar('2026-10-21 11:30', 5.66), bar('2026-10-21 11:35', 5.63)],
+    lines: [{ price: 5.85, label: 'BUY > 5.85', tone: 'buy' }, { price: 5.63, label: 'STOP 5.63', tone: 'stop' }],
+    ...over,
+  });
+  const ggQuote = (over: Partial<CardLiveQuote> = {}): CardLiveQuote =>
+    ({ bar: { t: '2026-10-21', o: 6.8, h: 6.9, l: 5.55, c: 5.6, v: 9e6 }, prev_t: '2026-10-20',
+       now: { ...NOW, price: 5.6, add_line: false }, ...over });
+
+  it('copies q.vs → live_vs (the served object as is); the 5-minute bars and the plan lines keep identity', () => {
+    const t = ggTile();
+    const q = ggQuote({ vs: VS });
+    const p = patchTile(t, q, LABELS);
+    expect(p).not.toBe(t);
+    expect(p.live_vs).toBe(q.vs);
+    expect(p.bars).toBe(t.bars);    // an intraday tile never takes the daily bar
+    expect(p.lines).toBe(t.lines);  // BUY / STOP untouched (no now line, add_line false)
+    expect(liveVsText(p)).toBe('served words A');
+  });
+
+  it('the same words again (a new object, same kind + text) → the SAME tile', () => {
+    const t = patchTile(ggTile(), ggQuote({ vs: VS }), LABELS);
+    expect(patchTile(t, ggQuote({ vs: { ...VS } }), LABELS)).toBe(t);
+  });
+
+  it('new words replace the old ones; the rest of the tile is carried', () => {
+    const t = patchTile(ggTile(), ggQuote({ vs: VS }), LABELS);
+    const p = patchTile(t, ggQuote({ vs: VS2 }), LABELS);
+    expect(p).not.toBe(t);
+    expect(p.live_vs).toEqual(VS2);
+    expect(p.bars).toBe(t.bars);
+  });
+
+  it('NEGATIVE: a quote with no vs (or vs null) on an unchanged tile → the SAME tile, no live_vs', () => {
+    const t = ggTile();
+    expect(patchTile(t, ggQuote(), LABELS)).toBe(t);
+    expect(patchTile(t, ggQuote({ vs: null }), LABELS)).toBe(t);
+    expect('live_vs' in patchTile(t, ggQuote(), LABELS)).toBe(false);
+  });
+
+  it('NEGATIVE: invalid served words (blank text, no kind, a string, an array) are never carried', () => {
+    const t = ggTile();
+    for (const bad of [{ kind: 'between', text: '  ' }, { kind: '', text: 'x' }, { text: 'x' }, 'x', ['x'], 7]) {
+      const p = patchTile(t, ggQuote({ vs: bad as never }), LABELS);
+      expect(p).toBe(t);
+      expect(liveVsText(p)).toBeNull();
+    }
+  });
+
+  it('NEGATIVE: a later answer without words drops the earlier ones (no stale line)', () => {
+    const t = patchTile(ggTile(), ggQuote({ vs: VS }), LABELS);
+    const p = patchTile(t, ggQuote(), LABELS);
+    expect(p).not.toBe(t);
+    expect('live_vs' in p).toBe(false);
+    expect(liveVsText(p)).toBeNull();
+  });
+
+  it('patchTiles: words on one tile only; an all-unchanged answer keeps the SAME array', () => {
+    const tiles = [ggTile({ symbol: 'AAA' }), ggTile()];
+    const out = patchTiles(tiles, answer({ SAIQ: ggQuote({ vs: VS }) }));
+    expect(out).not.toBe(tiles);
+    expect(out[0]).toBe(tiles[0]);
+    expect(liveVsText(out[1])).toBe('served words A');
+    expect(patchTiles(out, answer({ SAIQ: ggQuote({ vs: { ...VS } }) }))).toBe(out);
+  });
+
+  it('liveVsText — NEGATIVE: null for no tile, no words, blank words', () => {
+    expect(liveVsText(null)).toBeNull();
+    expect(liveVsText(undefined)).toBeNull();
+    expect(liveVsText(ggTile())).toBeNull();
+    expect(liveVsText({ live_vs: { kind: 'x', text: '' } })).toBeNull();
+    expect(liveVsText({ live_vs: 'words' })).toBeNull();
   });
 });

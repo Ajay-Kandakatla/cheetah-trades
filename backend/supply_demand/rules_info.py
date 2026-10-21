@@ -1139,9 +1139,11 @@ def _gajjala_section() -> dict:
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from chart_maps.gajjala import constants as GC
     from chart_maps.gajjala import tab as GT
+    from chart_maps import live_card as LC                 # 🔴 2026-10-21 (BUILD_SPEC20 D6) — display constants only
     from daytrading import data as DTD
 
     tf5, tf15 = GT.TFS
+    live_tf, live_tf15 = LC.vs_tf_minutes()                # the same TFS, in minutes (live_card's own parse)
     e9, e21 = GC.EMA_FAST, GC.EMA_SLOW
     push_open = _gg_hhmm((_dt.combine(_date.min, DTD.ET_RTH_OPEN)
                           + _td(minutes=GC.NO_TRADE_AFTER_OPEN_MIN)).time())
@@ -1248,6 +1250,11 @@ def _gajjala_section() -> dict:
             "is hidden, the pushes still ring and carry the tag. %s"
             % (GC.BROKER_NAME, GC.BROKER_NAME,
                ("Seeded with %s." % ", ".join(GC.BROKER_FLAG_SEED)) if GC.BROKER_FLAG_SEED else "Nothing is seeded."),
+            # 🔴 2026-10-21 (BUILD_SPEC20 D6, Ajay: "If something is Potential add min on min for pricing …")
+            # 2026-10-21 critic fix: a read on 15-minute bars (horizontal fade reads 15m first) moves at the 15-minute close
+            "🔴 Live on the card: price and the live-bar relation refresh every %d s; the read moves at the %d-minute "
+            "bar close (the %d-minute close for a read on %d-minute bars) — display only, freshness, not an edge."
+            % (LC.CARD_LIVE_SEC, live_tf, live_tf15, live_tf15),
         ],
         "alerts": [push] + _gg_potential_lines(),
         "note": ("Goverdhan Gajjala's five setups as he described them (IBD webinar, Feb 2024; TraderLion "

@@ -36,10 +36,15 @@ describe('formatters', () => {
 });
 
 describe('deltaTone', () => {
-  it('positive → buyers, negative → sellers, zero → balanced', () => {
-    expect(deltaTone(1).word).toBe('buyers');
-    expect(deltaTone(-1).word).toBe('sellers');
-    expect(deltaTone(0).word).toBe('balanced');
+  // CHANGED 2026-10-21 (BUILD_SPEC21 D2, predicted): the control WORD moved server-side (orderflow/tape.py
+  // delta_summary `control`); deltaTone keeps the colour only, the same sign rule.
+  it('positive → green, negative → red, zero → grey (the sign rule; −1 is negative)', () => {
+    expect(deltaTone(1)).toEqual({ color: '#10b981' });
+    expect(deltaTone(-1)).toEqual({ color: '#ef4444' });
+    expect(deltaTone(0)).toEqual({ color: '#9ca3af' });
+  });
+  it('NEGATIVE: no word key is returned — the panel can never type buyers / sellers off it', () => {
+    for (const d of [5, -5, 0]) expect(Object.keys(deltaTone(d))).toEqual(['color']);
   });
 });
 

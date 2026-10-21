@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCardLive } from './useCardLive';
-import { CARD_LIVE_CLOSED_MS, CARD_LIVE_MS, type CardLiveAnswer } from '../lib/cardLive';
+import { CARD_LIVE_CLOSED_MS, CARD_LIVE_MS, type CardLiveAnswer, type CardLiveLevels } from '../lib/cardLive';
 import type { CmTapeSession } from '../lib/chartMaps';
 
 /* useCardLive — the Chart Maps card poll (BUILD_SPEC8 §3.5, AMENDMENTS8 C1/C3).
@@ -304,5 +304,61 @@ describe('useCardLive — board refetch (resetKey)', () => {
     await advance(50);
     expect(h.result.current.footer).toBeNull();
     expect(h.result.current.answer).toBeNull();
+  });
+});
+
+/* 🔴 `levels` in the body (2026-10-21, BUILD_SPEC20 D2/D7): optional, POST body only, the asked symbols only;
+ * absent / empty → the body is byte-identical to before. */
+describe('useCardLive — 🔴 levels (2026-10-21)', () => {
+  const LV: CardLiveLevels = { IREN: { trigger: 5.85, stop: 5.63, tf: '5m' } };
+  type PL = { syms: readonly string[]; resetKey: unknown; levels?: CardLiveLevels | null };
+  const mountL = (p: PL) => renderHook(
+    (q: PL) => useCardLive(q.syms, true, { resetKey: q.resetKey, initialSession: 'rth', levels: q.levels }),
+    { initialProps: p });
+  const body = (i: number) => JSON.parse(String(posts()[i][1]?.body));
+
+  it('the body carries `levels` for the asked symbols that have one', async () => {
+    mountL({ syms: SYMS, resetKey: 1, levels: LV });
+    await advance(CARD_LIVE_MS + 100);
+    expect(posts().length).toBe(1);
+    expect(body(0)).toEqual({ symbols: SYMS, levels: LV });
+    expect(String(posts()[0][1]?.body)).toBe(
+      '{"symbols":["IREN","NVDA","XLAB"],"levels":{"IREN":{"trigger":5.85,"stop":5.63,"tf":"5m"}}}');
+  });
+
+  it('NEGATIVE: no levels / null / {} → the body is exactly {symbols} as before', async () => {
+    for (const levels of [undefined, null, {}] as (CardLiveLevels | null | undefined)[]) {
+      fetchMock.mockClear();
+      const h = mountL({ syms: SYMS, resetKey: 1, levels });
+      await advance(CARD_LIVE_MS + 100);
+      expect(posts().length).toBe(1);
+      expect(posts()[0][1]?.body).toBe('{"symbols":["IREN","NVDA","XLAB"]}');
+      h.unmount();
+    }
+  });
+
+  it('NEGATIVE: levels only for symbols not asked → the body is exactly {symbols}', async () => {
+    mountL({ syms: SYMS, resetKey: 1, levels: { SAIQ: { trigger: 5.85, stop: 5.63, tf: '5m' } } });
+    await advance(CARD_LIVE_MS + 100);
+    expect(posts()[0][1]?.body).toBe('{"symbols":["IREN","NVDA","XLAB"]}');
+  });
+
+  it('NEGATIVE: levels never ride the URL', async () => {
+    mountL({ syms: SYMS, resetKey: 1, levels: LV });
+    await advance(CARD_LIVE_MS + 100);
+    const [url] = posts()[0];
+    expect(String(url)).not.toMatch(/levels|trigger|stop|\?/);
+  });
+
+  it('new levels on a re-render are the ones the next tick sends (never the old board\'s), no extra POST', async () => {
+    const h = mountL({ syms: SYMS, resetKey: 1, levels: LV });
+    await advance(CARD_LIVE_MS + 100);
+    const LV2: CardLiveLevels = { IREN: { trigger: 6.1, stop: 5.7, tf: '5m' } };
+    h.rerender({ syms: SYMS, resetKey: 1, levels: LV2 });
+    await advance(100);
+    expect(posts().length).toBe(1);            // a levels change alone never ticks
+    await advance(CARD_LIVE_MS);
+    expect(posts().length).toBe(2);
+    expect(body(1).levels).toEqual(LV2);
   });
 });

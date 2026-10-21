@@ -244,7 +244,13 @@ async def chart_maps_live(payload: Any = Body(None)):
     get back each card's today candle + now line, composed by the board's own
     helpers in chart_maps/live_card.py. One snapshot call, one cached-frames
     find; nothing is written. Above the snapshot chunk the read is refused
-    whole (413) — never a partial cut."""
+    whole (413) — never a partial cut.
+
+    🔴 2026-10-21 (BUILD_SPEC20 D2, Ajay: "If something is Potential add min on
+    min for pricing …"): an OPTIONAL `levels` {SYM: {trigger, stop, tf}} — the
+    numbers the 🚩 tab already served — adds display-only `vs` words per quote.
+    A malformed `levels` is ignored (never a 422); the body's 422 / 413 rules
+    are unchanged."""
     from . import live_card as LC
     syms_in = payload.get("symbols") if isinstance(payload, dict) else None
     if not isinstance(syms_in, list):
@@ -252,7 +258,9 @@ async def chart_maps_live(payload: Any = Body(None)):
     syms = LC.normalize(syms_in)
     if len(syms) > LC.cap():
         return JSONResponse({"detail": LC.too_many_text(len(syms), LC.cap())}, status_code=413)
-    return JSONResponse(await asyncio.to_thread(LC.compose, syms))
+    levels = payload.get("levels")
+    levels = levels if isinstance(levels, dict) else None
+    return JSONResponse(await asyncio.to_thread(LC.compose, syms, levels=levels))
 
 
 @router.get("/chart-maps/high-beta/watch")

@@ -21,18 +21,26 @@
  *    read into 12 POSTs an hour. Any other session ticks at once.
  *  - no request while `document.hidden`; none while one is in flight; the
  *    poll stops on unmount and an answer from a previous run is dropped.
+ *
+ * 🔴 `levels` (2026-10-21, BUILD_SPEC20 D2 — Ajay: "If something is Potential
+ * add min on min for pricing and other updates to make them more realtime and
+ * give us a better edge"): an OPTIONAL per-symbol {trigger, stop, tf} the caller
+ * copies from its own served payload. It rides the POST body (never a URL) only
+ * when at least one asked symbol carries one; absent → the body is exactly
+ * {symbols} as before. Read from a ref at each tick, so a board refetch with new
+ * levels is never answered against the old ones. It never changes the key.
  */
 import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import type { CmTapeSession } from '../lib/chartMaps';
-import { CARD_LIVE_PATH, nextCadence, parseCardLive, type CardLiveAnswer } from '../lib/cardLive';
+import { CARD_LIVE_PATH, nextCadence, parseCardLive, type CardLiveAnswer, type CardLiveLevels } from '../lib/cardLive';
 
 export type CardLiveState = { answer: CardLiveAnswer | null; footer: string | null };
 
 export function useCardLive(
   symbols: readonly string[],
   enabled: boolean,
-  opts: { resetKey: unknown; initialSession?: CmTapeSession | null },
+  opts: { resetKey: unknown; initialSession?: CmTapeSession | null; levels?: CardLiveLevels | null },
 ): CardLiveState {
   const key = symbols.join(',');
   const [answer, setAnswer] = useState<CardLiveAnswer | null>(null);
@@ -44,6 +52,8 @@ export function useCardLive(
   symsRef.current = symbols;
   const sessionRef = useRef<CmTapeSession | null | undefined>(opts.initialSession);
   sessionRef.current = opts.initialSession;
+  const levelsRef = useRef<CardLiveLevels | null | undefined>(opts.levels);
+  levelsRef.current = opts.levels;
 
   // A new symbol set is a new board: forget the previous board's answer.
   useEffect(() => {
@@ -63,7 +73,16 @@ export function useCardLive(
     let timer: ReturnType<typeof setTimeout> | null = null;
     let ctrl: AbortController | null = null;
     let session: CmTapeSession | null = sessionRef.current ?? lastGood.current?.session ?? null;
-    const body = JSON.stringify({ symbols: [...symsRef.current] });
+    /* The POST body: {symbols} — plus `levels` for the asked symbols that carry one, read at each tick. */
+    const asked = [...symsRef.current];
+    const bodyNow = (): string => {
+      const lv = levelsRef.current;
+      const levels: CardLiveLevels = {};
+      if (lv && typeof lv === 'object') {
+        for (const s of asked) if (Object.prototype.hasOwnProperty.call(lv, s) && lv[s]) levels[s] = lv[s];
+      }
+      return JSON.stringify(Object.keys(levels).length ? { symbols: asked, levels } : { symbols: asked });
+    };
 
     const schedule = (ms: number) => {
       if (!alive) return;
@@ -85,7 +104,7 @@ export function useCardLive(
       try {
         const r = await fetch(`${API}${CARD_LIVE_PATH}`, {
           method: 'POST', credentials: 'include', cache: 'no-store',
-          headers: { 'Content-Type': 'application/json' }, body, signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json' }, body: bodyNow(), signal: ctrl.signal,
         });
         if (!alive) return;
         const j = r.ok ? parseCardLive(await r.json()) : null;

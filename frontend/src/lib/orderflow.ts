@@ -30,6 +30,11 @@ export type TapeExcluded = {
   note?: string;
 };
 
+/** The served control read (orderflow/tape.py CONTROL_TEXT). The words are served; the FE types none. */
+export type TapeControl = {
+  session: string; late: string; turning: boolean; headline: string; detail: string;
+};
+
 export type TapeData = {
   found: boolean;
   symbol: string;
@@ -52,6 +57,9 @@ export type TapeData = {
        *  Optional: snapshots written before 2026-08-24 predate the field. */
       per_minute?: [string, number][];
       series: [string, number][]; n_trades: number;
+      /** 🎚 2026-10-21 (BUILD_SPEC21 D1): the ONE served "who's in control" read — orderflow/tape.py delta_summary.
+       *  The panel prints `headline` and `detail` verbatim. Absent on snapshots written before it shipped. */
+      control?: TapeControl | null;
     };
     big_prints: {
       threshold_dollars: number; buy_dollars: number; sell_dollars: number;
@@ -176,10 +184,13 @@ export function fmtSharesAbs(n?: number | null): string {
   return fmtShares(Math.abs(n)).replace(/^[+−]/, '');
 }
 
-export function deltaTone(delta: number): { color: string; word: string } {
-  if (delta > 0) return { color: '#10b981', word: 'buyers' };
-  if (delta < 0) return { color: '#ef4444', word: 'sellers' };
-  return { color: '#9ca3af', word: 'balanced' };
+/** The colour of a signed delta. 🎚 2026-10-21 (BUILD_SPEC21 D2): the control WORD left the client — the server's
+ *  `delta.control` says who is in control (orderflow/tape.py CONTROL_TEXT, the same sign rule); this keeps the colour
+ *  only. */
+export function deltaTone(delta: number): { color: string } {
+  if (delta > 0) return { color: '#10b981' };
+  if (delta < 0) return { color: '#ef4444' };
+  return { color: '#9ca3af' };
 }
 
 /** Downsample the per-minute cumulative-delta series to <= max points for the sparkline. */

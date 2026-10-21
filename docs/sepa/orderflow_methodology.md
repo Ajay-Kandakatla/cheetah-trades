@@ -196,3 +196,28 @@ reports per-verdict hit rates with n — **read the n before the %**.
    page can never fight the main system.
 4. The WhatsApp 70% is unverified until OUR ledger shows it. Decision-support,
    not advice.
+
+## Who's in control (2026-10-21)
+
+Ajay 2026-10-21, on the Tape panel showing "MIXED 40.4%" beside "Big delta · who's in control": "Also its not very
+clear in the TAPE if they are buyers or sellers". BUILD_SPEC21.
+
+- **One served line.** `orderflow/tape.delta_summary` adds `control` {session, late, turning, headline, detail}; the
+  panel prints `headline` and `detail` verbatim and types no buyers/sellers word of its own.
+- **The rule = the sign rule the FE used, moved server-side, unchanged.** Two inputs: the session delta and the last
+  `LATE_WINDOW_MIN` (30) minutes' delta. Each reads > 0 buyers, < 0 sellers, 0 balanced. No threshold: −1 sh is
+  sellers. A threshold later is a conscious change with a cite.
+- **Headlines** (`tape.CONTROL_TEXT`): both sides the same → "SELLERS IN CONTROL" / "BUYERS IN CONTROL"; both zero →
+  "BALANCED"; session zero, last window not → "balanced for the session · buyers now"; session one-sided, last window
+  zero → "sellers for the session · balanced in the last 30 min" (not named in the spec; the mirror of the line
+  before); no prints → "no prints yet".
+- **Turning** = the session word and the last-window word differ and neither is balanced: "sellers for the session ·
+  buyers in the last 30 min — turning".
+- **Detail**: "session −578,000 sh (−18.5% of volume) · last 30 min −14,000 sh", signed with the FE's unicode minus so
+  it matches the tiles.
+- **The method badge moved.** "quote rule" / "mixed N%" / "tick rule" / "unclassified" says how prints were classified
+  (mixed 40.4% = only 40.4% of prints had an NBBO quote to classify against). It is not a verdict, so it leaves the
+  "who's in control" eyebrow and sits in the methodology footnote as "classified: …".
+- **Unchanged**: the BUY / WAIT / AVOID checks (`signals.delta_check`, check 3) and the 🎚 `tape_control` push read
+  `delta` / `late_delta`, never `control`.
+- UNMEASURED. Not advice.

@@ -13,7 +13,8 @@ Imports live inside the functions (house style): the tests stub `sepa.prices`.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+import math
+from datetime import datetime, timedelta
 from typing import Optional
 
 log = logging.getLogger("chart_maps.live_card")
@@ -23,6 +24,23 @@ FAULT_TEXT = "live quotes unavailable — the cards keep the board's last read"
 BAD_BODY_TEXT = "symbols must be a list of tickers"
 # MINE — AMENDMENTS8 C2: the word served for ONE symbol whose composition failed (the others still serve).
 SYMBOL_FAULT_TEXT = "live quote unavailable for this symbol — the card keeps the board's last read"
+
+# 🔴 Live vs the card's levels (Ajay 2026-10-21: "Are we not real time SAIQ already broke the EMA" / "If something is
+# Potential add min on min for pricing and other updates to make them more realtime and give us a better edge";
+# BUILD_SPEC20 D2). DISPLAY ONLY: the words say where the live print sits against the trigger / stop the tab already
+# served; the pass, store, potentials, pushes, ledger and lane never read them (tests/test_gajjala_live_vs_2026_10_21.py
+# import guard). The read itself still moves at the closed bar. UNMEASURED — freshness, not an edge. Not advice.
+VS_KINDS = ("over_trigger", "under_stop", "between", "none")   # "none" = no `vs` key on the quote
+VS_TEXT = {   # MINE — BUILD_SPEC20 D2 (2026-10-21), the contracts block pins these strings
+    "over_trigger": ("🔴 {px} over the trigger {trigger} on the live bar — the read moves when the {tf}-minute bar "
+                     "closes ({next_close} ET)"),
+    "under_stop": ("🔴 {px} under the stop {stop} on the live bar — the read moves when the {tf}-minute bar closes "
+                   "({next_close} ET)"),
+    "between": "🔴 {px} · between the stop {stop} and the trigger {trigger}",
+}
+# MIRROR (2026-10-21, BUILD_SPEC20 D6) of the FE's CARD_LIVE_MS 30_000 (frontend/src/lib/cardLive.ts, MINE — = the
+# SessionPrice poll): the ℹ️ panel prints it; a repo test pins equality with the FE constant. Not read by any poll.
+CARD_LIVE_SEC = 30
 
 
 class TooManySymbols(ValueError):
@@ -124,8 +142,100 @@ def card_now(probe: dict, snap: dict) -> Optional[dict]:
             "add_line": bool(sess), "as_of_epoch": epoch or None, "as_of": as_of}
 
 
-def compose(symbols, *, now: Optional[datetime] = None) -> dict:
-    """The §3.3 answer for `symbols` (raises TooManySymbols above the cap — a direct call never cuts silently)."""
+def vs_tf_minutes() -> tuple:
+    """The bar sizes the 🚩 tab reads, in minutes, off `chart_maps.gajjala.tab.TFS` ("5m", "15m") — the first is the
+    default (BUILD_SPEC20 D2: tf 5 default, 15 accepted, any other → 5). Never retyped here."""
+    from chart_maps.gajjala import tab as GT
+    return tuple(int(str(s).rstrip("m")) for s in GT.TFS)
+
+
+def _vs_tf(tf) -> int:
+    """A served tf ("5m" / "15m" / 5 / 15 / "15") → its minutes; anything else → the default (the first TFS)."""
+    sizes = vs_tf_minutes()
+    if isinstance(tf, bool):
+        return sizes[0]
+    if isinstance(tf, int):
+        return tf if tf in sizes else sizes[0]
+    if isinstance(tf, str):
+        t = tf.strip().lower()
+        for m in sizes:
+            if t in (str(m), f"{m}m"):
+                return m
+    return sizes[0]
+
+
+def _vs_level(v):
+    """(ok, value): a missing / None level is absent (ok, None); a finite positive number is the level; anything else
+    (a string, a bool, NaN, inf, ≤ 0) is unparsable → (False, None), and the symbol gets no `vs`."""
+    if v is None:
+        return True, None
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return False, None
+    f = float(v)
+    if not math.isfinite(f) or f <= 0:
+        return False, None
+    return True, f
+
+
+def next_close(now_et: datetime, tf_min: int) -> str:
+    """HH:MM of the next `tf_min`-minute boundary of the ET clock after `now_et` (the close of the live bar; a clock
+    exactly on a boundary is the open of a new bar, so its close is one bar later)."""
+    mins = now_et.hour * 60 + now_et.minute
+    nxt = (mins // tf_min + 1) * tf_min
+    day0 = now_et.replace(hour=0, minute=0, second=0, microsecond=0)
+    return f"{day0 + timedelta(minutes=nxt):%H:%M}"
+
+
+def live_vs(price, level, now_et: datetime) -> Optional[dict]:
+    """{kind, text} for one served now price against one tile's {trigger, stop, tf}; None = kind "none" (no price, no
+    level dict, an unparsable level, or a price with only one side's level that sits on the other side). Compared on
+    the broker grid (trading.broker.round_price — the same grid `tab._px` prints), so the kind and the printed words
+    never disagree: px ≥ trigger → over_trigger, else px ≤ stop → under_stop, else between (both levels needed)."""
+    from chart_maps.gajjala import tab as GT
+    from trading.broker import round_price
+    if not isinstance(level, dict):
+        return None
+    ok_p, px = _vs_level(price)
+    ok_t, trig = _vs_level(level.get("trigger"))
+    ok_s, stop = _vs_level(level.get("stop"))
+    if not (ok_p and ok_t and ok_s) or px is None or (trig is None and stop is None):
+        return None
+    tf = _vs_tf(level.get("tf"))
+    g_px = round_price(px)
+    words = {"px": GT._px(px), "trigger": GT._px(trig) if trig is not None else None,
+             "stop": GT._px(stop) if stop is not None else None, "tf": tf}
+    if trig is not None and g_px >= round_price(trig):
+        kind = "over_trigger"
+    elif stop is not None and g_px <= round_price(stop):
+        kind = "under_stop"
+    elif trig is not None and stop is not None:
+        kind = "between"
+    else:
+        return None
+    if kind != "between":
+        words["next_close"] = next_close(now_et, tf)
+    return {"kind": kind, "text": VS_TEXT[kind].format(**words)}
+
+
+def _norm_levels(levels, syms: list) -> dict:
+    """The `levels` body, keyed like `normalize` (stripped, upper-cased), only for symbols asked; anything else is
+    dropped (never a 422 — BUILD_SPEC20 D2)."""
+    if not isinstance(levels, dict):
+        return {}
+    asked = set(syms)
+    out: dict = {}
+    for k, v in levels.items():
+        if not isinstance(k, str) or not isinstance(v, dict):
+            continue
+        s = k.strip().upper()
+        if s in asked and s not in out:
+            out[s] = v
+    return out
+
+
+def compose(symbols, *, levels=None, now: Optional[datetime] = None) -> dict:
+    """The §3.3 answer for `symbols` (raises TooManySymbols above the cap — a direct call never cuts silently).
+    `levels` {SYM: {trigger, stop, tf}} (optional, display only) adds `vs` {kind, text} to that symbol's quote."""
     from sepa import prices
     from rotation.api import _scrub
     from . import board
@@ -134,6 +244,7 @@ def compose(symbols, *, now: Optional[datetime] = None) -> dict:
     if len(syms) > c:
         raise TooManySymbols(len(syms), c)
     now_et = (now or datetime.now(board.ET)).astimezone(board.ET)
+    lv = _norm_levels(levels, syms)
     meta: dict = {}
     # stamps meta["tape_session"] with the board's own clock; no tiles → no snapshot read
     board.attach_live_now([], meta, live={}, now=now_et)
@@ -179,6 +290,14 @@ def compose(symbols, *, now: Optional[datetime] = None) -> dict:
                     missing.append(s)
                     continue
                 quotes[s] = {"bar": bar, "prev_t": prev_t, "prev_bar": prev_bar, "now": nb}
+                if s in lv and nb is not None:
+                    try:
+                        vs = live_vs(nb.get("price"), lv[s], now_et)
+                    except Exception as exc:                    # noqa: BLE001 — display words never fail a quote
+                        log.debug("live card: %s vs words failed: %s", s, exc)
+                        vs = None
+                    if vs is not None:
+                        quotes[s]["vs"] = vs
         # every asked symbol faulted → a read that served nothing claims no "live · HH:MM" (critic LOW, WP-A)
         if not quotes and faults and fault is None:
             fault = FAULT_TEXT

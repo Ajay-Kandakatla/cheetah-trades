@@ -20,11 +20,23 @@ export type CardLiveNow = {
   price: number; label: string; session: 'premarket' | 'afterhours' | null;
   add_line: boolean; as_of_epoch: number | null; as_of: string | null;
 };
+/** 🔴 The served live-vs-levels words (2026-10-21, BUILD_SPEC20 D2): where the live print sits against the
+ *  trigger / stop the tile already carries — chart_maps/live_card.VS_TEXT composes `text`; the FE prints it verbatim
+ *  and types none of it. Absent = kind "none" (no now price, no levels, an unparsable level). Display only. */
+export type CardLiveVs = { kind: string; text: string };
+/** The optional `levels` body (BUILD_SPEC20 D2): per symbol, the numbers the tab already served — copied, never typed. */
+export type CardLiveLevel = { trigger: number | null; stop: number | null; tf: string | number | null };
+export type CardLiveLevels = Record<string, CardLiveLevel>;
+/** A tile the live answer may carry served `vs` words on (patchTile copies `q.vs` here). */
+export type LiveVsTile = { live_vs?: CardLiveVs };
+
 /** `prev_bar` (AMENDMENTS8 C4): the closed frame's bar BEFORE `bar`, served as
  *  a closed bar (no `s` tag). On a new-session append it replaces the card's
  *  last bar first, so yesterday's extended-hours shading does not carry over. */
 export type CardLiveQuote = {
   bar: CmBar | null; prev_t: string | null; prev_bar?: CmBar | null; now: CardLiveNow | null;
+  /** 🔴 2026-10-21: present only when the request carried `levels` for this symbol and the print sits somewhere. */
+  vs?: CardLiveVs | null;
 };
 export type CardLiveAnswer = {
   session: CmTapeSession | null; as_of_epoch: number; as_of: string;
@@ -122,19 +134,30 @@ function patchLines(lines: CmLine[], now: CardLiveNow | null, nowLabels: readonl
   return changed ? out : lines;
 }
 
-/** One tile with the served quote spliced in; the SAME tile when nothing moved. */
-export function patchTile(t: CmTile, q: CardLiveQuote | undefined, nowLabels: readonly string[]): CmTile {
+function validVs(v: unknown): v is CardLiveVs {
+  return isObj(v) && typeof v.kind === 'string' && v.kind.length > 0 && typeof v.text === 'string' && v.text.trim().length > 0;
+}
+
+/** One tile with the served quote spliced in; the SAME tile when nothing moved. 🔴 2026-10-21: the served `q.vs`
+ *  rides along as `live_vs` (the served object as is — absent or invalid → no `live_vs`). */
+export function patchTile<T extends CmTile>(t: T, q: CardLiveQuote | undefined, nowLabels: readonly string[]): T {
   if (!q) return t;
   const bars0 = Array.isArray(t.bars) ? t.bars : [];
   const lines0 = Array.isArray(t.lines) ? t.lines : [];
   const bars = patchBars(bars0, q);
   const lines = patchLines(lines0, q.now, nowLabels);
-  if (bars === bars0 && lines === lines0) return t;
-  return { ...t, bars, lines };
+  const vs0 = (t as T & LiveVsTile).live_vs;
+  const vs = validVs(q.vs) ? q.vs : undefined;
+  const sameVs = vs0 === vs || (!!vs0 && !!vs && vs0.kind === vs.kind && vs0.text === vs.text);
+  if (bars === bars0 && lines === lines0 && sameVs) return t;
+  const out: T & LiveVsTile = { ...t, bars, lines };
+  if (sameVs) return out;
+  if (vs) out.live_vs = vs; else delete out.live_vs;
+  return out;
 }
 
 /** Every tile patched with its quote; the SAME array when no tile changed. */
-export function patchTiles(tiles: CmTile[], a: CardLiveAnswer | null): CmTile[] {
+export function patchTiles<T extends CmTile>(tiles: T[], a: CardLiveAnswer | null): T[] {
   if (!a) return tiles;
   let changed = false;
   const out = tiles.map((t) => {
@@ -145,4 +168,10 @@ export function patchTiles(tiles: CmTile[], a: CardLiveAnswer | null): CmTile[] 
     return p;
   });
   return changed ? out : tiles;
+}
+
+/** The served live-vs words on a patched tile, or null (nothing printed). */
+export function liveVsText(t: unknown): string | null {
+  const v = isObj(t) ? t.live_vs : undefined;
+  return validVs(v) ? v.text : null;
 }

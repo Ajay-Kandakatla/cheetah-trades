@@ -68,6 +68,24 @@ TRADE_PAGE_COLUMNS = ("sip_timestamp", "participant_timestamp", "price", "size",
 FETCH_TIMEOUT_SEC = 10
 LATE_WINDOW_MIN = 30            # "who's in control NOW" — the last 30 min of tape
 
+# 🎚 ONE served "who's in control" line (Ajay 2026-10-21: "Also its not very clear in the TAPE if they are buyers or
+# sellers"; BUILD_SPEC21 D1, docs/sepa/orderflow_methodology.md §"Who's in control (2026-10-21)"). The word rule is the
+# SIGN rule the FE's deltaTone used (delta > 0 buyers, < 0 sellers, 0 balanced) moved server-side, unchanged — NO
+# threshold (−1 sh = sellers; a threshold later is a conscious change with a cite). UNMEASURED. Not advice.
+CONTROL_WORDS = ("buyers", "sellers", "balanced")
+CONTROL_TEXT = {   # MINE — BUILD_SPEC21 D1 (2026-10-21), the contracts block pins these strings
+    "same": "{session_upper} IN CONTROL",
+    "turning": "{session} for the session · {late} in the last {late_window_min} min — turning",
+    "balanced": "BALANCED",
+    "session_balanced": "balanced for the session · {late} now",
+    # MINE — BUILD_SPEC21 D1 names no headline for a one-sided session with a balanced last window; this mirrors
+    # "session_balanced" the other way round (2026-10-21, executor reading, reported)
+    "late_balanced": "{session} for the session · balanced in the last {late_window_min} min",
+    "empty": "no prints yet",
+    "detail": "session {delta} sh ({pct}% of volume) · last {late_window_min} min {late_delta} sh",
+}
+MINUS_SIGN = "\u2212"   # the FE's unicode minus, so the served detail matches the tiles' numbers
+
 
 # ── Trade eligibility (Massive sale conditions + correction indicator) ────────
 # Ajay 2026-09-27, on the ORCL Tape tab: "Can you add date stamps please to the
@@ -294,6 +312,46 @@ def tick_rule_sides(prices) -> list:
     return sides
 
 
+def _control_word(delta) -> str:
+    """The SIGN rule (BUILD_SPEC21 D1): > 0 buyers, < 0 sellers, else balanced. No threshold."""
+    buyers, sellers, balanced = CONTROL_WORDS
+    return buyers if delta > 0 else (sellers if delta < 0 else balanced)
+
+
+def _signed_shares(n) -> str:
+    """+1,234 / −1,234 / +0 — signed, thousands-separated, the FE's unicode minus."""
+    return f"{int(n):+,}".replace("-", MINUS_SIGN)
+
+
+def _signed_pct(p) -> str:
+    """+18.5 / −18.5 — one decimal, the FE's unicode minus."""
+    return f"{float(p):+.1f}".replace("-", MINUS_SIGN)
+
+
+def control_read(delta, late_delta, delta_pct_of_volume, late_window_min: int = LATE_WINDOW_MIN,
+                 n_trades: int = 1) -> dict:
+    """{session, late, turning, headline, detail} — who is in control, ONE served line (BUILD_SPEC21 D1).
+    `turning` = the session and last-window words differ and neither is balanced. n_trades 0 → "no prints yet"."""
+    balanced = CONTROL_WORDS[-1]
+    s_word, l_word = _control_word(delta), _control_word(late_delta)
+    turning = s_word != l_word and balanced not in (s_word, l_word)
+    if not n_trades:
+        headline = CONTROL_TEXT["empty"]
+    elif s_word == l_word == balanced:
+        headline = CONTROL_TEXT["balanced"]
+    elif s_word == l_word:
+        headline = CONTROL_TEXT["same"].format(session_upper=s_word.upper())
+    elif turning:
+        headline = CONTROL_TEXT["turning"].format(session=s_word, late=l_word, late_window_min=late_window_min)
+    elif s_word == balanced:
+        headline = CONTROL_TEXT["session_balanced"].format(late=l_word)
+    else:
+        headline = CONTROL_TEXT["late_balanced"].format(session=s_word, late_window_min=late_window_min)
+    detail = CONTROL_TEXT["detail"].format(delta=_signed_shares(delta), pct=_signed_pct(delta_pct_of_volume),
+                                           late_window_min=late_window_min, late_delta=_signed_shares(late_delta))
+    return {"session": s_word, "late": l_word, "turning": bool(turning), "headline": headline, "detail": detail}
+
+
 def delta_summary(df: pd.DataFrame) -> dict:
     """Cumulative volume delta + per-minute series from a sided tape.
 
@@ -306,7 +364,8 @@ def delta_summary(df: pd.DataFrame) -> dict:
         return {"buy_volume": 0, "sell_volume": 0, "delta": 0,
                 "delta_pct_of_volume": 0.0, "classified_pct": 0.0,
                 "late_delta": 0, "late_window_min": LATE_WINDOW_MIN,
-                "series": [], "per_minute": [], "n_trades": 0}
+                "series": [], "per_minute": [], "n_trades": 0,
+                "control": control_read(0, 0, 0.0, LATE_WINDOW_MIN, n_trades=0)}
     signed = df["size"] * df["side"]
     buy_vol = int(df.loc[df["side"] > 0, "size"].sum())
     sell_vol = int(df.loc[df["side"] < 0, "size"].sum())
@@ -329,17 +388,20 @@ def delta_summary(df: pd.DataFrame) -> dict:
     late_delta = int((late["size"] * late["side"]).sum())
 
     classified = buy_vol + sell_vol
+    delta_pct = round(delta / total_vol * 100, 1) if total_vol else 0.0
     return {
         "buy_volume": buy_vol,
         "sell_volume": sell_vol,
         "delta": int(delta),
-        "delta_pct_of_volume": round(delta / total_vol * 100, 1) if total_vol else 0.0,
+        "delta_pct_of_volume": delta_pct,
         "classified_pct": round(classified / total_vol * 100, 1) if total_vol else 0.0,
         "late_delta": late_delta,
         "late_window_min": LATE_WINDOW_MIN,
         "series": series,
         "per_minute": per_minute,
         "n_trades": int(len(df)),
+        # 🎚 2026-10-21 (BUILD_SPEC21 D1): the ONE served "who's in control" line — the sign rule, no threshold
+        "control": control_read(delta, late_delta, delta_pct, LATE_WINDOW_MIN, n_trades=int(len(df))),
     }
 
 
