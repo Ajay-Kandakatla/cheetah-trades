@@ -1326,7 +1326,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             16:00 ET / 15:00 CT close + 15:30 CT cron rescan. Spelled out
             so a stale BUY chip during a collapsing tape doesn't fool the
             user (the MU lesson). */}
-        <SepaAnchorFooter scannedAt={(row as any).scanned_at} />
+        <SepaAnchorFooter scannedAt={(row as any).scanned_at} rerateText={(row as any).rerate_text} />
       </div>
     </article>
   );
@@ -1344,7 +1344,11 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
 
 /** Tiny mono footer noting when the card's rating was computed and when
  *  it will next re-rate. CT-anchored because that's the user's timezone. */
-function SepaAnchorFooter({ scannedAt }: { scannedAt?: string | null }) {
+function SepaAnchorFooter({ scannedAt, rerateText }: { scannedAt?: string | null; rerateText?: unknown }) {
+  // The re-rate note is SERVED (scan row `rerate_text`, one backend constant —
+  // 2026-10-21); the typed "3:00 PM CT (4:00 PM ET)" was the close, not the
+  // 16:30 ET re-rate. Absent on an older row → omitted.
+  const rerate = typeof rerateText === 'string' && rerateText.trim() ? rerateText.trim() : null;
   const fmt = (iso?: string | null): string => {
     if (!iso) return 'yesterday\'s close';
     try {
@@ -1368,10 +1372,10 @@ function SepaAnchorFooter({ scannedAt }: { scannedAt?: string | null }) {
         flexWrap: 'wrap',
         gap: '0.6rem',
       }}
-      title="SEPA ratings are computed against the official daily close, not intraday prices. Today's intraday move won't flip the rating until after 4 PM ET / 3 PM CT close."
+      title="SEPA ratings are computed against the official daily close, not intraday prices."
     >
       <span>Rated: {fmt(scannedAt)}</span>
-      <span>· Re-rates after 3:00 PM CT (4:00 PM ET)</span>
+      {rerate && <span data-testid="sepa-card-rerate">· {rerate}</span>}
     </div>
   );
 }

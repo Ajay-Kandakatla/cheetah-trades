@@ -57,6 +57,55 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LATEST_PATH = CACHE_DIR / "latest.json"
 WATCH_PATH = CACHE_DIR / "watchlist.json"
 
+# The post-close SEPA re-rate time, ET (2026-10-21, Ajay "Dated info."). Until
+# today only backend/crontab knew it (`30 16 * * 1-5 … sepa.cli fast-scan
+# --mode broad`), and the candidate page + card typed "3:00 PM CT (4:00 PM
+# ET)" — the CLOSE, not the re-rate. tests/test_sepa_page_asof_2026_10_21.py
+# pins this constant to that crontab line.
+SEPA_RERATE_ET = "16:30"
+
+
+def rerate_text() -> str:
+    """The served re-rate note, built from SEPA_RERATE_ET:
+    "re-rates after 4:30 PM ET"."""
+    hh, mm = (int(x) for x in SEPA_RERATE_ET.split(":"))
+    ampm = "AM" if hh < 12 else "PM"
+    return f"re-rates after {hh % 12 or 12}:{mm:02d} {ampm} ET"
+
+
+def as_of_close(df, now=None) -> Optional[str]:
+    """ISO session date of the frame's last bar when that bar is a CLOSED
+    session, else None (2026-10-21).
+
+    Closed = dated before today (ET), or dated today once the ET clock is at
+    or past SEPA_RERATE_ET (the 16:30 fast-scan re-rate) or
+    `prices.trade_session` says 'closed'. During pre-market / RTH a bar dated
+    today is the hourly `patch_latest_closes` in-progress bar, and the 16:00
+    hourly vcp-watch run builds rows seconds after the bell — neither is the
+    re-rate, so nothing is served (the page then omits the "SEPA read from"
+    fact). `now` is an ET wall clock (injectable for tests)."""
+    import pandas as pd
+    try:
+        if df is None or len(df) == 0:
+            return None
+        last = pd.Timestamp(df.index[-1])
+        if last.tzinfo is not None:
+            last = last.tz_convert("America/New_York").tz_localize(None)
+        et_now = pd.Timestamp.now(tz="America/New_York") if now is None else pd.Timestamp(now)
+        if et_now.tzinfo is not None:
+            et_now = et_now.tz_convert("America/New_York").tz_localize(None)
+        last_d, today = last.date(), et_now.date()
+        if last_d > today:
+            return None
+        if last_d == today:
+            rh, rm = (int(x) for x in SEPA_RERATE_ET.split(":"))
+            past_rerate = (et_now.hour, et_now.minute) >= (rh, rm)
+            if not past_rerate and prices.trade_session(et_now) != "closed":
+                return None
+        return last_d.isoformat()
+    except Exception:                                           # noqa: BLE001
+        return None
+
 
 def _rating_label(score: float) -> str:
     """Map 0-100 composite to a human-readable rating tier."""
@@ -747,6 +796,10 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
+        # Page "as of" facts (2026-10-21): the closed session this read came
+        # from (None = an in-progress bar) and the served re-rate note.
+        "as_of_close": as_of_close(df),
+        "rerate_text": rerate_text(),
         "dual_momentum": dm_metrics,
         "is_etf":        bool(etf_data and etf_data.get("is_etf")),
         "etf_data":      etf_data if (etf_data and etf_data.get("is_etf")) else None,
@@ -1447,6 +1500,10 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict,
         "adr_pct": adr_value,
         "day_change_pct": day_change_pct,
         "last_close": last_close,
+        # Page "as of" facts (2026-10-21): the closed session this read came
+        # from (None = an in-progress bar) and the served re-rate note.
+        "as_of_close": as_of_close(df),
+        "rerate_text": rerate_text(),
         "dual_momentum": dm_metrics,
         "is_etf":        bool(etf_data and etf_data.get("is_etf")),
         "etf_data":      etf_data if (etf_data and etf_data.get("is_etf")) else None,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchSepaCandidate, addToWatchlist, planPosition, useSepaCandidate } from '../hooks/useSepa';
+import { sepaAsOfParts } from '../lib/sepaAsOf';
 import { resolveBack } from '../lib/navSource';
 import { TABS, resolveSepaTab, scrollActiveTabIntoView, type Tab } from '../lib/sepaTabs';
 import { ipoAgeLabel } from '../lib/ipoAge';
@@ -546,6 +547,17 @@ export function SepaCandidatePage() {
   // ticker's scan record (entry_setup / vcp / volume / stage).
   const pivotT = useMemo(() => (base ? pivotTiming(base as any) : null), [base]);
   const fetchedAt = useMemo(() => new Date(), [symbol, data]);
+  // "loaded" = when the VISIBLE data was fetched (critic fix 2026-10-21). On a
+  // stale-while-revalidate paint the data is the cached copy, so the render
+  // clock would label hours-old data "loaded now" — and keep doing so if the
+  // background refresh fails. useSepaCandidate's `cachedAt` is the cache
+  // envelope's ts on a cache paint and Date.now() when a fetch lands, so it
+  // is the visible data's fetch time in every state; render time only when
+  // the hook has none.
+  const loadedAt = useMemo(
+    () => (cachedAt != null ? new Date(cachedAt) : fetchedAt),
+    [cachedAt, fetchedAt],
+  );
 
   // Live SSE-backed quote — subscribes to the bus, prefills from
   // /quote/<sym> on mount, and updates as ticks arrive. Anywhere we
@@ -615,13 +627,17 @@ export function SepaCandidatePage() {
           {backLabel}
         </button>
         <div className="sepa-candidate-page__asof mono">
-          Data as of {fetchedAt.toLocaleString(undefined, {
-            month: 'short', day: 'numeric',
-            hour: 'numeric', minute: '2-digit',
-          })}
-          {/* Re-rate window — same note the list card carries in its footer, so
-              the user knows when fresh ratings land (card↔detail parity 2026-06-09). */}
-          <span style={{ opacity: 0.7 }}> · Re-rates after 3:00 PM CT (4:00 PM ET)</span>
+          {/* Served facts only (Ajay 2026-10-21 "Dated info."): the browser
+              clock prints ONLY as "loaded", the price as live, the SEPA read
+              as the close it came from and the served re-rate note — see
+              lib/sepaAsOf.ts. An absent fact is omitted. */}
+          <span data-testid="sepa-asof">{sepaAsOfParts({
+            loadedAt,
+            livePriced: typeof live?.last_price === 'number' && live.last_price > 0,
+            liveAsOf: live?.as_of ?? null,
+            asOfClose: data?.as_of_close ?? data?.base?.as_of_close,
+            rerateText: data?.rerate_text ?? data?.base?.rerate_text,
+          }).join(' · ')}</span>
           {/* Stale-while-revalidate indicator. When the page renders from
               cache and a background refresh is in flight, show a subtle
               "cached … refreshing" hint so the user knows the visible

@@ -2178,6 +2178,12 @@ async def sepa_candidate_detail(symbol: str):
         "stale_last_bar": last_bar,
         "renamed_to": (renamed or {}).get("to"),
         "stale_reason": stale_reason,
+        # Page "as of" facts (2026-10-21, Ajay "Dated info."): the closed
+        # session the SEPA read came from — as stamped on the row by the scan
+        # that built it (None when that bar was in progress, or the row
+        # predates the field) — and the served re-rate note from ONE constant.
+        "as_of_close": (base or {}).get("as_of_close"),
+        "rerate_text": sepa_scanner.rerate_text(),
     })
     return JSONResponse(payload)
 
