@@ -457,7 +457,7 @@ def sections() -> dict:
                ZEE.MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY),
             "🗞️ Catalyst: from the Catalysts scan — quadrant %s, evidence grade %s, no pump "
             "warning, no offering, price ≥ $%d, dollar volume ≥ $%dM — and the same gate "
-            "read through bounce-room; %d per day."
+            "read through /supply-demand/bounce-room; %d per day."
             % ("/".join(CE.QUADRANTS_OK), "/".join(CE.GRADES_OK), int(CE.CATALYST_MIN_PRICE),
                int(CE.CATALYST_MIN_DOLLAR_VOL / 1e6), CE.MAX_CATALYST_ENTRIES_PER_DAY),
             "⏱️ 0DTE paper lane: Signal Lab's 1-min BUY / SELL tag (≤ %d s old) on the 0DTE tab's "

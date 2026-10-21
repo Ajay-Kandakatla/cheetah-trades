@@ -529,7 +529,7 @@ def zone_gate(c: dict, row: Optional[dict], doc: Optional[dict]) -> tuple:
         return False, d
     px = _f(row.get("print"))
     if px is None or px <= 0:
-        d["reason"] = "no print in bounce-room row"
+        d["reason"] = "no print in the /supply-demand/bounce-room row"
         return False, d
     d["print"] = px
     # Stale print = the phone's rule (zone_bounce_alerts.STALE_PRINT_SEC): the
@@ -585,10 +585,10 @@ def zone_gate(c: dict, row: Optional[dict], doc: Optional[dict]) -> tuple:
                     d["reason"] = ("alert gate: print %.2f back under the padded band floor %g"
                                    % (px, LP.support_floor(anchor)))
                 else:
-                    d["reason"] = ("alert gate: print %.2f back under bounce band floor %g"
+                    d["reason"] = ("alert gate: print %.2f back under reversal band floor %g"
                                    % (px, b_lo))
             else:
-                d["reason"] = ("alert gate: print %.1f%% above bounce band top %g (max %g%%)"
+                d["reason"] = ("alert gate: print %.1f%% above reversal band top %g (max %g%%)"
                                % ((px / (b_hi or px) - 1.0) * 100.0, b_hi or 0.0,
                                   alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT))
             return False, d
@@ -612,7 +612,7 @@ def zone_gate(c: dict, row: Optional[dict], doc: Optional[dict]) -> tuple:
                               "above_top_pct": round((px / float(anchor["hi"]) - 1.0) * 100.0, 2),
                               "anchor": "band"}
     if anchor is None:
-        d["reason"] = ("alert gate: not at a demand level (no bounce, no demand band "
+        d["reason"] = ("alert gate: not at a demand level (no reversal read, no demand band "
                        "within %g%% under the print)" % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT)
         return False, d
     lo = _f(anchor.get("lo"))
@@ -933,23 +933,24 @@ def rules_list() -> list:
                  % alert_gates.ALERT_MIN_ROOM_PCT,
          "value": "room >= %g%% (alert_gates.ALERT_MIN_ROOM_PCT)" % alert_gates.ALERT_MIN_ROOM_PCT,
          "source": "owner rule (%s; S&D, no book)" % quote},
-        {"rule": "Phone gate = entry gate: the print must sit AT a level — a bounce "
+        {"rule": "Phone gate = entry gate: the print must sit AT a level — a reversal "
                  "read off a demand band / broken-supply shelf whose band STILL holds "
-                 "the print within %g%% of its top, or (no bounce) a demand band with "
-                 "the print between its floor and %g%% above its top; a bounce that "
-                 "already ran past the line lists on the board, it is not bought"
+                 "the print within %g%% of its top, or (no reversal read) a demand band "
+                 "with the print between its floor and %g%% above its top; a reversal "
+                 "that already ran past the line lists on the board, it is not bought"
                  % (alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT, alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT),
          "value": "%s — reversal band or demand band (a broken-supply shelf keeps band.lo)"
                   % LP.proximity_text(alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT),
          "source": "owner rule (%s; S&D, no book)" % quote},
         {"rule": "The print is the cached scan's own price (no tape read from the tick); "
-                 "older than the phone's stale line it is not acted on — "
-                 "zone_bounce_alerts.STALE_PRINT_SEC, reused",
-         "value": "scan age <= %ds" % STALE_PRINT_SEC,
+                 "older than the phone's stale line it is not acted on — the 🪃 push's "
+                 "own constant, reused",
+         "value": "scan age <= %ds (zone_bounce_alerts.STALE_PRINT_SEC)" % STALE_PRINT_SEC,
          "source": "owner rule (the 🪃 push's own stale line; S&D, no book)"},
         {"rule": "Zone docs are READ from Mongo only (zone_store warm + the on-demand "
-                 "cache the Catalysts board's bounce-room call fills); a name without a "
-                 "doc is skipped and re-read next tick — the tick never builds one and "
+                 "cache the Catalysts board's /supply-demand/bounce-room read fills); a "
+                 "name without a doc is skipped and re-read next tick — the tick never "
+                 "builds one and "
                  "never assumes clear",
          "value": "coverage in (store, ondemand); else skip",
          "source": "owner rule (S&D, no book); review 2026-09-05"},

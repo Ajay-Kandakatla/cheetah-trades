@@ -615,8 +615,9 @@ def test_requires_bounce_or_demand_proximity(env):
     br, docs = happy(print_px=5.12)          # 4.97 x 1.03
     _, db, enter_calls, _, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
     out = CE.run()
-    assert out["skipped"][0]["reason"] == ("alert gate: not at a demand level (no bounce, no "
-                                          "demand band within %g%% under the print)"
+    # 2026-10-21: served reason says "reversal read" (Ajay reads it; never "bounce").
+    assert out["skipped"][0]["reason"] == ("alert gate: not at a demand level (no reversal read, "
+                                          "no demand band within %g%% under the print)"
                                           % ALERT_MAX_ABOVE_DEMAND_PCT)
     _assert_never(db, enter_calls)
     # Just inside the line (0.99% above the top) passes.
@@ -700,8 +701,9 @@ def test_bounce_anchor_must_still_be_within_the_proximity_line(env, padmode):
     br, docs = happy(print_px=101.0, bands=(b95, far), bounce=b)
     _, db, enter_calls, _, _ = env(payload=scan([cand(price=101.0)]), bounce=br, docs=docs)
     out = CE.run()
+    # 2026-10-21: served reason says "reversal band" (Ajay reads it; never "bounce").
     assert out["skipped"][0]["reason"] == (
-        "alert gate: print 4.1%% above bounce band top 97 (max %g%%)" % ALERT_MAX_ABOVE_DEMAND_PCT)
+        "alert gate: print 4.1%% above reversal band top 97 (max %g%%)" % ALERT_MAX_ABOVE_DEMAND_PCT)
     assert out["skipped_alert_gate"] == 1
     _assert_never(db, enter_calls)
     # 0.5% above the top: at the level -> passes, anchored to the bounce band
@@ -719,7 +721,7 @@ def test_bounce_anchor_must_still_be_within_the_proximity_line(env, padmode):
     docs["EOSE"]["prev_close"] = 93.0
     _, db, enter_calls, _, _ = env(payload=scan([cand(price=95.0)]), bounce=br, docs=docs)
     out = CE.run()
-    assert out["skipped"][0]["reason"].startswith("alert gate: print 3.3% above bounce band top 92")
+    assert out["skipped"][0]["reason"].startswith("alert gate: print 3.3% above reversal band top 92")
     _assert_never(db, enter_calls)
 
 

@@ -18,6 +18,7 @@ Host-runnable (py3.9, stdlib only):
     cd backend && python3 -m pytest tests/test_trading_contracts.py -q
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -1007,6 +1008,74 @@ def test_zone_edge_entry_applies_both_alert_gates():
     with open(os.path.join(TRADING_DIR, "auto_entry.py"), encoding="utf-8") as fh:
         ae = fh.read()
     assert 'strategy="minervini"' in ae, "auto_entry's enter call lost its lane tag"
+
+
+# 2026-10-21 wording contract: on a surface Ajay READS the word is "reversal",
+# never "bounce" (memory cheetah_reversal_wording_and_pattern_gate). Identifiers
+# (bounce_room, zone_bounce_alerts, quick_bounce) and a literal endpoint path
+# (/supply-demand/bounce-room) are names and stay; the prose word may not.
+_BOUNCE_PATH_RE = re.compile(r"/[\w/-]*bounce[\w/-]*")
+_BOUNCE_IDENT_RE = re.compile(r"\b\w*(?:_bounce\w*|bounce_\w*)\b")
+
+
+def _prose_bounce(text):
+    """The first prose 'bounce' / 'bounces' / 'bounced' (any case) left once
+    literal paths and identifiers are removed; None when the text is clean."""
+    cleaned = _BOUNCE_IDENT_RE.sub(" ", _BOUNCE_PATH_RE.sub(" ", text or ""))
+    m = re.search(r"\bbounce[sd]?\b", cleaned, re.I)
+    return m.group(0) if m else None
+
+
+def test_prose_bounce_checker_negatives():
+    """The checker itself: prose fails, names and paths pass (negatives)."""
+    assert _prose_bounce("a bounce read off a demand band") == "bounce"
+    assert _prose_bounce("Bounces that already ran past the line") == "Bounces"
+    assert _prose_bounce("the band bounced") == "bounced"
+    assert _prose_bounce("bounce-room row") == "bounce"            # hyphen alone is prose
+    assert _prose_bounce("the /supply-demand/bounce-room read fills") is None
+    assert _prose_bounce("scan age <= 600s (zone_bounce_alerts.STALE_PRINT_SEC)") is None
+    assert _prose_bounce("bounce_room.read_symbol; quick_bounce lane") is None
+    assert _prose_bounce("a reversal read off a demand band") is None
+    assert _prose_bounce("") is None and _prose_bounce(None) is None
+
+
+def test_catalyst_entry_served_sentences_say_reversal_never_bounce():
+    """Every served catalyst-lane sentence — the rules list the FE prints
+    verbatim (rule / value / source), every gate-reason string literal in the
+    module, and the Autopilot + Catalysts sections of rules_info — carries no
+    prose 'bounce'. Found live 2026-10-21 in GET /trading/status rules[8..10]."""
+    import ast
+    from trading import catalyst_entry as ce
+    from supply_demand import rules_info as RI
+    for i, r in enumerate(ce.rules_list()):
+        for field in ("rule", "value", "source"):
+            word = _prose_bounce(r[field])
+            assert word is None, f"catalyst_entry.rules_list()[{i}].{field} says {word!r}: {r[field]!r}"
+    # the gate-reason strings (served in skipped[].reason / attempts[].reason)
+    tree = ast.parse(_catalyst_entry_source())
+    reasons = [n.value for n in ast.walk(tree)
+               if isinstance(n, ast.Constant) and isinstance(n.value, str)
+               and ("alert gate" in n.value or "no print in" in n.value)]
+    assert len(reasons) >= 6, "the gate-reason literals moved; re-anchor this test"
+    for lit in reasons:
+        word = _prose_bounce(lit)
+        assert word is None, f"catalyst_entry gate reason says {word!r}: {lit!r}"
+    secs = RI.sections()
+    for key in ("autopilot", "catalysts"):
+        texts = []
+        def walk(v):
+            if isinstance(v, str):
+                texts.append(v)
+            elif isinstance(v, dict):
+                for x in v.values():
+                    walk(x)
+            elif isinstance(v, (list, tuple)):
+                for x in v:
+                    walk(x)
+        walk(secs[key])
+        for t in texts:
+            word = _prose_bounce(t)
+            assert word is None, f"rules_info.sections()[{key!r}] says {word!r}: {t!r}"
 
 
 def test_catalyst_entry_wired_fenced_and_configurable():

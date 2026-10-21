@@ -123,8 +123,8 @@ its zone doc:
    ≥ max(3%, 1 ATR) off it) **whose band still satisfies**
    `alert_gates.demand_proximity_gate(print, bounce.band)` — a bounce that
    already ran past 1% above the top lists on the board but is neither pushed
-   nor bought (`alert gate: print 4.1% above bounce band top 97 (max 1%)`) —
-   **or**, with no bounce read, a demand band that satisfies the proximity
+   nor bought (`alert gate: print 4.1% above reversal band top 97 (max 1%)`) —
+   **or**, with no reversal read, a demand band that satisfies the proximity
    gate on its own (the highest such band anchors). Neither → skip `alert
    gate: not at a demand level (…)`. The journaled `proximity` carries
    `anchor: "bounce" | "band"`.
