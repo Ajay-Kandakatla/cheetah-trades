@@ -349,6 +349,22 @@ def last_resume_et(rec: Optional[dict]) -> Optional[str]:
     return best.isoformat() if best else None
 
 
+def open_halt(rec: Optional[dict]) -> bool:
+    """True while ANY of the ticker's halts today has no parseable resume (the same parse as last_resume_et) — a name
+    that halted, resumed and halted again is still halted although last_resume_et is set (critic 2026-10-21: the lane's
+    A3 wait read only last_resume_et; GG VR 10.1 "when it's clean, when it's calmer, then I enter" — Ajay 2026-10-21
+    "keep what ever Gajjala says")."""
+    for h in (rec or {}).get("halts") or []:
+        d, t = (h.get("resume_date") or "").strip(), _clean_time(h.get("resume_time"))
+        if not d or not t:
+            return True
+        try:
+            datetime.strptime(f"{d} {t}", "%m/%d/%Y %H:%M:%S")
+        except ValueError:
+            return True
+    return False
+
+
 def _halt_rec(sym: str, halts: Optional[dict]) -> Optional[dict]:
     by = (halts or {}).get("by_ticker") or {}
     for k in _feed_keys(sym):
@@ -367,12 +383,13 @@ def halts_chip(sym: str, halts: Optional[dict]) -> Optional[dict]:
     reasons = [r for r in rec.get("reasons") or [] if r]
     times = sorted(t for t in (_clean_time(h.get("halt_time")) for h in rec.get("halts") or []) if t)
     return {"n": n, "reasons": reasons, "text": f"⏸ halted ×{n}" + (f" ({', '.join(reasons)})" if reasons else ""),
-            "first_halt_time": times[0] if times else None, "last_resume_et": last_resume_et(rec)}
+            "first_halt_time": times[0] if times else None, "last_halt_time": times[-1] if times else None,
+            "last_resume_et": last_resume_et(rec), "open_halt": open_halt(rec)}
 
 
 def record_halts(store, session, payload: Optional[dict], *, source: str) -> int:
     """Upsert one `gajjala_halts` row per halted ticker of `session` ({n_halts, reasons, first_halt_time,
-    last_resume_et, source "live" | "history"}). Returns the rows written. An empty / failed payload writes nothing."""
+    last_halt_time, last_resume_et, open_halt, source "live" | "history"}). Returns the rows written. An empty / failed payload writes nothing."""
     if store is None or not payload:
         return 0
     n = 0
@@ -382,7 +399,8 @@ def record_halts(store, session, payload: Optional[dict], *, source: str) -> int
             continue
         store.upsert_halt(session, _our_symbol(ticker), {
             "n_halts": chip["n"], "reasons": chip["reasons"], "first_halt_time": chip["first_halt_time"],
-            "last_resume_et": chip["last_resume_et"], "source": source})
+            "last_halt_time": chip["last_halt_time"], "last_resume_et": chip["last_resume_et"],
+            "open_halt": chip["open_halt"], "source": source})
         n += 1
     return n
 
@@ -743,7 +761,7 @@ def unchecked_text(n: int) -> Optional[str]:
 
 
 __all__ = ["floats_for", "refine_order", "unknown_float", "rotation", "halts_chip", "last_resume_et",
-           "record_halts", "record_live_halts", "halt_ledger_dates", "psych_chips", "red_closes_chip",
+           "open_halt", "record_halts", "record_live_halts", "halt_ledger_dates", "psych_chips", "red_closes_chip",
            "history_window", "squeeze_history", "warm_squeeze_history", "pm_levels_for", "premarket_list",
            "postmarket_confirm", "unchecked_text", "FLOAT_FETCH_INTERVAL_SEC", "FLOAT_BACKOFF_START_SEC",
            "FLOAT_BACKOFF_MAX_SEC"]

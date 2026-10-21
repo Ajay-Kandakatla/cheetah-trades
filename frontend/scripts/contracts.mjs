@@ -9707,8 +9707,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all six — widened to the top nine, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
-      const firstTen = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstTen.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten (found ${firstTen.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9910,8 +9911,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all three — widened to the top six, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seven (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nine (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10179,8 +10181,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above both — widened to the top five, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top six, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10217,10 +10220,17 @@ const CONTRACTS = [
     // p.312 ceiling / SEPA distribution exit do not apply to his lane, no take-profit ever, management on CLOSED bars
     // only. The tab prints the served `rules` object verbatim and types no digit; the ✨ is FIRST and its only digits are
     // inside his quote. PAPER, UNMEASURED.
+    // UPDATED 2026-10-21, later (BUILD_SPEC22 A5 — Ajay "keep what ever Gajjala says for these"): the four None
+    // placeholders are GG's sentences now (VR 11.4 / 10.1 / 11.7) and `awaiting` is served EMPTY; this block pins the new
+    // constants and their cites instead of the placeholders, and the ✨ sits in the top three (two newer ✨ above it).
     checks: (tab) => {
       const errs = [];
       const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
       const pyNoComments = (x) => x.replace(/#[^\n]*/g, '');
+      // self-test: a surviving placeholder line must be caught by the NEGATIVE below.
+      if (!/^(GG_[A-Z_]+)\s*=\s*None\b[^\n]*awaiting your number/m.test('X = 1\nGG_PARTIAL_R = None  # awaiting your number — R')) {
+        errs.push('self-test: a `= None  # awaiting your number` placeholder line was not caught');
+      }
       const HIS1 = 'Is the 700 M floor by Gajjala?';
       const HIS2 = 'Follow full Gajjala and he doesnt care exactly about this.. Go through his rules from play book and implement them exactly';
       const BWORD = /boun/i;
@@ -10241,11 +10251,44 @@ const CONTRACTS = [
       ggNum('GG_DRAWDOWN_PCT', 10);             // VR 11.7 — a −10% drawdown …
       ggNum('GG_DRAWDOWN_TRADES', 5);           // … the next five trades …
       ggNum('GG_DRAWDOWN_RISK_SUM_PCT', 5);     // … ≤ −5% together
-      for (const name of ['GG_PARTIAL_R', 'GG_TRAIL_EMA_KF', 'GG_HALT_CALM_MIN', 'GG_CUSHION_DOUBLE_PCT']) {
-        if (gl && !new RegExp(`^${name}\\s*=\\s*None\\b[^\\n]*#[^\\n]*awaiting your number`, 'm').test(gl)) {
-          errs.push(`gajjala_entry.py must carry ${name} = None  # awaiting your number — … (a placeholder for HIS number; the rule is off while None)`);
-        }
+      // REWRITTEN 2026-10-21 (BUILD_SPEC22 A5 — Ajay "keep what ever Gajjala says for these"): the four `= None  # awaiting
+      // your number` placeholders are gone; each is GG's sentence now. Pin the new constants with their VR cite and his
+      // 2026-10-21 line, the three readings flagged HIS CALL #24 / #25 / #26, and an EMPTY awaiting list.
+      const HIS_WORDS = 'keep what ever Gajjala says for these';
+      ggNum('GG_PARTIAL_FRAC', 0.5);            // VR 11.4 — "peel off 1/3 or half" — half (HIS CALL #25)
+      ggNum('GG_HALT_CALM_BARS', 1);            // VR 10.1 — one clean closed bar after the resume (HIS CALL #26)
+      ggNum('GG_CUSHION_LOSERS', 2);            // VR 11.7 — "a cushion that survives 2 losers"
+      ggNum('GG_DOUBLE_MULT', 2);               // VR 11.7 — "A+ up to double"
+      const ggLine = (name, valRe, valWord, vr, hisCall) => {
+        const m = new RegExp(`^${name}\\s*=\\s*${valRe}\\s+(#[^\\n]*)$`, 'm').exec(gl);
+        if (!m) { if (gl) errs.push(`gajjala_entry.py must define ${name} = ${valWord} at column 0 (BUILD_SPEC22)`); return; }
+        if (!/\bGG\b/.test(m[1]) || !m[1].includes(vr)) errs.push(`gajjala_entry.py ${name} must carry its GG cite "${vr}" on the line`);
+        if (/\bMINE\b/.test(m[1])) errs.push(`gajjala_entry.py ${name} is GG's word, not MINE`);
+        if (hisCall && !m[1].includes(hisCall)) errs.push(`gajjala_entry.py ${name} must flag ${hisCall} on the line (the lead's reading)`);
+        return m[1];
+      };
+      for (const [name, valRe, valWord, vr, hisCall] of [
+        ['GG_PARTIAL_AFTER', '"add"', '"add"', 'VR 11.4', null],
+        ['GG_PARTIAL_STRENGTH', '"new_high"', '"new_high"', 'VR 11.4', 'HIS CALL #24'],
+        ['GG_TRAIL_EMA_KF', 'GC\\.EMA_SLOW\\b', 'GC.EMA_SLOW (the pass\'s 21 EMA — imported, never retyped)', 'VR 11.4', null],
+        ['GG_HALT_CALM_BARS', '1\\b', '1', 'VR 10.1', 'HIS CALL #26'],
+        ['GG_CUSHION_LOSERS', '2\\b', '2', 'VR 11.7', null],
+        ['GG_DOUBLE_MULT', '2(?:\\.0)?\\b', '2.0', 'VR 11.7', null],
+        ['GG_CUSHION_PERIOD', '"month"', '"month"', 'VR 11.7', null],
+      ]) {
+        const c = ggLine(name, valRe, valWord, vr, hisCall);
+        if (c != null && !c.includes(`Ajay 2026-10-21 "${HIS_WORDS}"`)) errs.push(`gajjala_entry.py ${name} must carry his line on the line: Ajay 2026-10-21 "${HIS_WORDS}"`);
       }
+      if (gl && !/^GG_PARTIAL_FRAC\s*=[^\n]*HIS CALL #25/m.test(gl)) errs.push('gajjala_entry.py GG_PARTIAL_FRAC must flag HIS CALL #25 (1/3 vs half) on the line');
+      if (gl && /^GG_TRAIL_EMA_KF\s*=\s*\d/m.test(gl)) errs.push('gajjala_entry.py GG_TRAIL_EMA_KF retypes a number — it is GC.EMA_SLOW by name');
+      // NEGATIVE: the placeholders are gone — no `= None` line, no R / minutes / % stand-in under any of the old names.
+      for (const name of ['GG_PARTIAL_R', 'GG_HALT_CALM_MIN', 'GG_CUSHION_DOUBLE_PCT']) {
+        if (gl && new RegExp(`^${name}\\s*=`, 'm').test(gl)) errs.push(`gajjala_entry.py still defines ${name} — the placeholder is GG's sentence now (BUILD_SPEC22 A2 / A3 / A4)`);
+      }
+      if (gl && /^(GG_[A-Z_]+)\s*=\s*None\b[^\n]*awaiting your number/m.test(gl)) errs.push('gajjala_entry.py still carries a `= None  # awaiting your number` placeholder (BUILD_SPEC22 A5: nothing awaits)');
+      // the served awaiting list is EMPTY: AWAITING is the empty tuple and the status serves it through AWAITING only.
+      if (gl && !/^AWAITING: tuple = \(\)\s/m.test(gl)) errs.push('gajjala_entry.py must carry AWAITING: tuple = () — nothing awaits (BUILD_SPEC22 A5)');
+      if (gl && !pyNoComments(gl).includes('"awaiting": [{"key": k, "question": q} for k, q in AWAITING')) errs.push('gajjala_entry.py rules."awaiting" must be built from AWAITING (served EMPTY)');
 
       // 2. the served `rules` object (D14) — every key the tab prints, and the awaiting rows' question.
       const glCode = pyNoComments(gl);
@@ -10323,11 +10366,13 @@ const CONTRACTS = [
       if (!exists('../backend/tests/test_gajjala_lane_gg_rules.py')) errs.push('backend/tests/test_gajjala_lane_gg_rules.py is missing (WP-A, BUILD_SPEC19 D17)');
 
       // 5. the ✨ entry: FIRST, routed to the tab, both his lines verbatim, the only digits inside his quote, UNMEASURED, "Not advice.".
+      // WIDENED 2026-10-21, later (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨
+      // (SECOND), each pinned in its own block, ship above this one — the FIRST pin widened to the top three, dated.
       const ID = 'autopilot-gajjala-lane-gg-rules-2026-10-21';
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10346,9 +10391,18 @@ const CONTRACTS = [
         if (!/\d/.test(`${outside} risk 0.25%`)) errs.push('self-test: a typed number outside his quote was not caught');
       }
 
-      // 6. the doc lists the placeholders (WP-A, D16).
+      // 6. the doc: REWRITTEN 2026-10-21 (BUILD_SPEC22 A5) — the placeholders are resolved by his word; the phrase
+      // "awaiting your number" survives only as history inside that section, never as a live list.
       const DOC = '../docs/trading_gajjala_lane.md';
-      if (!exists(DOC) || !read(DOC).includes('awaiting your number')) errs.push('docs/trading_gajjala_lane.md must carry the "awaiting your number" list (BUILD_SPEC19 D16)');
+      const docTxt = exists(DOC) ? read(DOC) : '';
+      const SEC = '## The four placeholders, resolved by his word';
+      if (!docTxt.includes(SEC)) errs.push(`docs/trading_gajjala_lane.md must carry the section "${SEC}" (BUILD_SPEC22 A5)`);
+      for (const need of [HIS_WORDS, 'HIS CALL #24', 'HIS CALL #25', 'HIS CALL #26', 'served EMPTY']) {
+        if (docTxt && !docTxt.includes(need)) errs.push(`docs/trading_gajjala_lane.md must carry "${need}" (BUILD_SPEC22 A5)`);
+      }
+      const nb = docTxt.indexOf('## Not built');
+      const nbBody = nb < 0 ? '' : docTxt.slice(nb, docTxt.indexOf('\n## ', nb + 3) < 0 ? undefined : docTxt.indexOf('\n## ', nb + 3));
+      if (docTxt && !/all-in/.test(nbBody)) errs.push('docs/trading_gajjala_lane.md "## Not built" must keep all-in on an obvious A+ (his word "obvious" has no rule)');
       return errs;
     },
   },
@@ -10404,8 +10458,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🛡 adopt_held served-sentence ✨ (autopilot-adopt-held-sentence-2026-10-21, its own block, FIRST) ships above — widened by one, dated (merged below with the two 🔴/🎚 pins that landed after it: +3 over the base).
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above this one — the FIRST pin widened to the top four, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10542,8 +10597,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10647,8 +10703,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top three, dated.
-      const firstThree = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstThree.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstThree.join(', ') || 'none'})`);
+      // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10668,6 +10725,175 @@ const CONTRACTS = [
       // 7. the doc (WP-A).
       const DOC = '../docs/sepa/orderflow_methodology.md';
       if (!exists(DOC) || !read(DOC).includes("Who's in control (2026-10-21)")) errs.push(`docs/sepa/orderflow_methodology.md must carry the "Who's in control (2026-10-21)" section (WP-A)`);
+      return errs;
+    },
+  },
+  {
+    name: "🚩 Gajjala lane: GG's words (2026-10-21)",
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-10-21 ~13:10 ET: "keep what ever Gajjala says for these" — on the four lane placeholders (partial R,
+    // 9 or 21 EMA on Kiss & Fly, halt calm-down minutes, cushion for double size). BUILD_SPEC22 Part A: each is GG's
+    // sentence (VR 11.4 / 11.3 / 10.1 / 11.7) in backend/trading/gajjala_entry.py — its constants are pinned in the
+    // block "🚩 Gajjala lane: GG's rules (2026-10-21)". This block pins the ✨ (FIRST, his line verbatim, the four rules
+    // in words, NO digit outside his quote — the numbers are served on the tab) and the 🚩 lane rules_info line built
+    // from the new constants by name. PAPER, UNMEASURED.
+    checks: (nf) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const HIS = 'keep what ever Gajjala says for these';
+      const ID = 'autopilot-gajjala-lane-gg-words-2026-10-21';
+      // 1. the ✨ entry: FIRST.
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = "the 🚩 GG's-words ✨ entry";
+        if (!e.includes("route: '/trading?view=gajjala'")) errs.push(`${W} must route to '/trading?view=gajjala'`);
+        if (!e.includes("addedAt: '2026-10-21'")) errs.push(`${W} must carry addedAt '2026-10-21'`);
+        if (!label.includes(`“${HIS}”`)) errs.push(`${W} must quote him verbatim: “${HIS}”`);
+        // the four rules, in words (A1 Kiss & Fly trail, A2 partial after the add, A3 halt wait, A4 cushion → double).
+        for (const need of ['Kiss & Fly', 'slower EMA', 'added at breakeven', 'closes above every high since the entry sells half',
+                            'never enters while a name is halting', 'one clean closed bar after the resume', 'risks up to double', // 2026-10-21 verifier: 'up to' — the size caps still apply
+                            'covers two losers', 'no loss streak', 'drawdown mode off', 'all-in on an obvious A+ stays not built']) {
+          if (!label.includes(need)) errs.push(`${W} must say "${need}" (BUILD_SPEC22 A1–A4)`);
+        }
+        for (const need of ['UNMEASURED', '(paper)']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (/boun/i.test(label)) errs.push(`${W} says the b-word`);
+        const outside = label.split(`“${HIS}”`).join('');
+        const d = outside.match(/\d+/);
+        if (d) errs.push(`${W} types "${d[0]}" outside his quote — every number is served on the tab`);
+        if (!/\d/.test(`${outside} the 21 EMA`)) errs.push('self-test: a typed number outside his quote was not caught');
+      }
+      // 2. the 🚩 lane rules_info line reads the new constants by name (WP-A) — never a retyped 21 / 1 / 2.
+      const ri = tryRead('../backend/supply_demand/rules_info.py', 'WP-A');
+      for (const name of ['GLN.GG_TRAIL_EMA_KF', 'GLN.GG_PARTIAL_FRAC', 'GLN.GG_HALT_CALM_BARS', 'GLN.GG_DOUBLE_MULT', 'GLN.GG_CUSHION_LOSERS']) {
+        if (ri && !ri.includes(name)) errs.push(`rules_info.py 🚩 lane line must read ${name} by name (BUILD_SPEC22 A5)`);
+      }
+      if (ri && /GG_PARTIAL_R\b|GG_HALT_CALM_MIN|GG_CUSHION_DOUBLE_PCT/.test(ri)) errs.push('rules_info.py still names a removed placeholder (GG_PARTIAL_R / GG_HALT_CALM_MIN / GG_CUSHION_DOUBLE_PCT)');
+      // 3. the tests, both sides.
+      if (!exists('../backend/tests/test_gajjala_lane_gg_words_2026_10_21.py')) errs.push('backend/tests/test_gajjala_lane_gg_words_2026_10_21.py is missing (WP-A)');
+      const t = tryRead('src/components/GajjalaLaneTab.test.tsx', 'frontend');
+      if (t && !t.includes('NEGATIVE: an empty awaiting list (every number given) → no awaiting list')) errs.push('GajjalaLaneTab.test.tsx must keep the empty-awaiting NEGATIVE (rules.awaiting is served EMPTY)');
+      return errs;
+    },
+  },
+  {
+    name: "🚩 Gajjala K11 today's volume floor (2026-10-21)",
+    file: '../backend/chart_maps/gajjala/detectors.py',
+    // Ajay 2026-10-21 ~13:10 ET: "keep what ever Gajjala says for these" — on "Whether an A+ should also require today’s
+    // volume to clear GG’s 1M floor (NIXX rang on 288K shares)." BUILD_SPEC22 Part B: GG VR 0.4 "1M is a floor … it must
+    // SUSTAIN (one 1M bar then a fade = not interested)". ONE number: K11_MIN_SESSION_VOLUME = SCAN_MIN_VOLUME. A broke
+    // read under it (or with no figure — fail-closed) is "broke — not A+" before the push gate (detectors.k11_gate inside
+    // read_all), so it is never claimed; forming 🧠 reads are untouched. The ✨ sits in the top two; its only digits are
+    // inside his quoted line. UNMEASURED.
+    checks: (det) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const pyNoComments = (x) => x.replace(/#[^\n]*/g, '');
+      const HIS = 'keep what ever Gajjala says for these';
+      const ASKED = 'Whether an A+ should also require today’s volume to clear GG’s 1M floor (NIXX rang on 288K shares).';
+      // 1. ONE number: the floor IS the scanner floor, by name, with GG's VR cite and his line on the line.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'WP-B');
+      const k = /^K11_MIN_SESSION_VOLUME\s*=\s*([^#\n]*?)\s*(#[^\n]*)?$/m.exec(gc);
+      if (gc && !k) errs.push('constants.py must define K11_MIN_SESSION_VOLUME at column 0 (BUILD_SPEC22 B1)');
+      else if (k) {
+        if (k[1] !== 'SCAN_MIN_VOLUME') errs.push(`constants.py K11_MIN_SESSION_VOLUME must be SCAN_MIN_VOLUME by name — one number, never a second (found "${k[1]}")`);
+        if (!/\bGG VR 0\.4\b/.test(k[2] || '')) errs.push('constants.py K11_MIN_SESSION_VOLUME must carry its cite "# GG VR 0.4 …" on the line');
+        if (!(k[2] || '').includes(`Ajay 2026-10-21 "keep what ever Gajjala says`)) errs.push('constants.py K11_MIN_SESSION_VOLUME must carry his 2026-10-21 line on the line');
+      }
+      if (gc && !/^SCAN_MIN_VOLUME = 1_000_000\b/m.test(gc)) errs.push('constants.py SCAN_MIN_VOLUME must stay his 1_000_000 (GG S8 19:12)');
+      const second = gc ? [...gc.matchAll(/^(K11_[A-Z_]+)\s*=\s*[-\d]/gm)].map((m) => m[1]) : [];
+      if (second.length) errs.push(`constants.py types a second K11 number (${second.join(', ')}) — K11 has ONE number, the scanner floor`);
+      if (!/^(K11_[A-Z_]+)\s*=\s*[-\d]/m.test('K11_MIN_SESSION_VOLUME = SCAN_MIN_VOLUME\nK11_FADE_BARS = 3')) errs.push('self-test: a second typed K11 number was not caught');
+      // 2. the detector: the criteria key, the states judged (never forming), the fail-closed words, the claim gate.
+      const code = pyNoComments(det);
+      for (const [re, line] of [
+        [/^K11_KEY = "k11_volume"$/m, 'K11_KEY = "k11_volume"'],
+        [/^K11_CTX_KEY = "session_volume"$/m, 'K11_CTX_KEY = "session_volume"'],
+        [/^K11_STATES = \("aplus", "triggered", "stopped"\)$/m, 'K11_STATES = ("aplus", "triggered", "stopped")'],
+        [/^K11_UNKNOWN = "today's volume unknown"$/m, 'K11_UNKNOWN = "today\'s volume unknown"'],
+        [/^K11_WHY = "GG: one 1M bar then a fade = not interested"/m, 'K11_WHY = "GG: one 1M bar then a fade = not interested"'],
+        [/^NOT_APLUS_REASON = "broke — not A\+"/m, 'NOT_APLUS_REASON = "broke — not A+"'],
+      ]) if (!re.test(det)) errs.push(`detectors.py must carry ${line} at column 0 (BUILD_SPEC22 B1)`);
+      const st = (/^K11_STATES = \(([^)]*)\)/m.exec(det) || [])[1] || '';
+      if (/"forming"|"potential"/.test(st)) errs.push('detectors.K11_STATES judges a forming read — 🧠 potentials are untouched (K11 is judged at the ring)');
+      const crit = (/def k11_criterion\([\s\S]*?\n(?=\n\ndef )/.exec(code) || [''])[0];
+      if (!crit) errs.push('detectors.py must define k11_criterion(');
+      else {
+        if (!crit.includes('floor = int(GC.K11_MIN_SESSION_VOLUME)')) errs.push('k11_criterion must read the floor from GC.K11_MIN_SESSION_VOLUME at call time');
+        if (/\b\d{3,}\b|\d_\d{3}/.test(crit)) errs.push('k11_criterion types a number — the floor is the constant');
+        if (!/if v is None:\s*\n\s*return criterion\(K11_KEY, f"K11 \{K11_UNKNOWN\} \(needs ≥ \{floor:,\}\)", False/.test(crit)) {
+          errs.push('k11_criterion must FAIL CLOSED: no figure → criterion(K11_KEY, f"K11 {K11_UNKNOWN} (needs ≥ {floor:,})", False, …)');
+        }
+        if (!crit.includes('if v >= floor:')) errs.push('k11_criterion must pass at v >= floor (the floor itself clears)');
+      }
+      const gate = (/def k11_gate\([\s\S]*?\n(?=\n\n)/.exec(code) || [''])[0];
+      if (!gate) errs.push('detectors.py must define k11_gate(');
+      else {
+        if (!gate.includes('r.get("state") not in K11_STATES')) errs.push('k11_gate must judge only K11_STATES reads (forming untouched)');
+        if (!/r\["state"\], r\["reason"\], r\["ready"\] = "partial", NOT_APLUS_REASON, False/.test(gate)) errs.push('k11_gate must turn a miss into state "partial", NOT_APLUS_REASON, ready False (the K3 path) — never A+');
+      }
+      const ra = (/def read_all\([\s\S]*?\n    return out\n/.exec(code) || [''])[0];
+      if (!ra) errs.push('detectors.read_all must end "return out"');
+      else if (!/if K11_CTX_KEY in ctx:[\s\S]*k11_gate\(r, vol\)[\s\S]*return out\n$/.test(ra)) errs.push('detectors.read_all must apply k11_gate(r, vol) to every read when ctx carries K11_CTX_KEY — the claim gate runs before alerts.py sees the read');
+      // the seam (critic 2026-10-21): the pass hands its own scanner session volume to BOTH read_all calls, or K11 never fires.
+      const rp = pyNoComments(tryRead('../backend/chart_maps/gajjala/run.py', 'seam'));
+      const rcalls = rp.match(/deps\.read_all\([^\n]*\n?[^\n]*/g) || [];
+      if (rp && (rcalls.length !== 2 || !rcalls.every((c) => c.includes('D.K11_CTX_KEY: sv.get(s)')) || !/sv = \{s: \(q_rows\.get\(s\) or _row_from_snapshot\(s, rows\.get\(s\), session_iso\) or \{\}\)\.get\("volume"\) for s in frames\}/.test(rp))) errs.push('run.py must pass D.K11_CTX_KEY: sv.get(s) (the pass\'s own qualifier / snapshot row volume, never the stored row) to BOTH deps.read_all calls');
+      // the push gate claims an "aplus" read only — so a K11 "partial" is never a candidate.
+      const al = tryRead('../backend/chart_maps/gajjala/alerts.py', 'WP-B');
+      if (al && !/K11/.test(al)) errs.push('alerts.py must say how K11 keeps a read off the claim (docstring)');
+      if (al && !/state"\)\s*(?:!=|==)\s*"aplus"|state"\) == "aplus"|\.get\("state"\) != "aplus"/.test(pyNoComments(al))) errs.push('alerts.py must gate the claim on state "aplus" only');
+      // 3. the panel line, the Playbook row, the tests, the doc, SPECS.md.
+      const ri = tryRead('../backend/supply_demand/rules_info.py', 'WP-C');
+      if (ri && !/_gg_n\("K11_MIN_SESSION_VOLUME"\), GD\.K11_WHY, GD\.K11_UNKNOWN, GD\.NOT_APLUS_REASON/.test(ri)) errs.push('rules_info.py 🚩 Gajjala section must build the K11 line from _gg_n("K11_MIN_SESSION_VOLUME"), GD.K11_WHY, GD.K11_UNKNOWN, GD.NOT_APLUS_REASON — never retyped');
+      const pb = tryRead('../backend/chart_maps/gajjala/playbook.py', 'WP-B');
+      if (pb && !/\("K11", "today's volume ≥ %s shares at the ring[^"]*"\s*\n\s*% _n\("K11_MIN_SESSION_VOLUME"\)/.test(pb)) errs.push('playbook.py must carry the ("K11", "today\'s volume ≥ %s shares at the ring …" % _n("K11_MIN_SESSION_VOLUME")) row');
+      for (const f of ['../backend/tests/test_gajjala_k11_volume_2026_10_21.py', '../backend/tests/test_rules_info_gajjala_k11_2026_10_21.py']) {
+        if (!exists(f)) errs.push(`${f.replace('../', '')} is missing (BUILD_SPEC22 B5)`);
+      }
+      const DOC = '../docs/gajjala/gajjala_tab_2026_10_13.md';
+      const doc = exists(DOC) ? read(DOC) : '';
+      const SEC = "## K11 today's volume floor on the A+ claim (2026-10-21)";
+      if (!doc.includes(SEC)) errs.push(`${DOC.replace('../', '')} must carry the section "${SEC}"`);
+      else {
+        const body = doc.slice(doc.indexOf(SEC), doc.indexOf('\n## ', doc.indexOf(SEC) + 3) < 0 ? undefined : doc.indexOf('\n## ', doc.indexOf(SEC) + 3));
+        for (const need of ['NIXX', '288', 'HIS CALL #27', 'UNMEASURED', 'K11_MIN_SESSION_VOLUME']) if (!body.includes(need)) errs.push(`the K11 doc section must carry "${need}"`);
+        if (/boun/i.test(body)) errs.push('the K11 doc section says the b-word');
+      }
+      const specs = tryRead('../SPECS.md', 'WP-C');
+      if (specs && !/`K11_MIN_SESSION_VOLUME` = `SCAN_MIN_VOLUME`/.test(specs)) errs.push('SPECS.md must carry the K11 line (`K11_MIN_SESSION_VOLUME` = `SCAN_MIN_VOLUME`)');
+      // 4. the ✨ entry: in the top two, routed, his words + the line he answered verbatim, the only digits inside that quote.
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-gajjala-k11-volume-floor-2026-10-21';
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 🚩 K11 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=kiss_fly'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala&sub=kiss_fly'`);
+        for (const h of [HIS, ASKED]) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote verbatim: “${h.slice(0, 50)}…”`);
+        for (const need of ['broke — not A+', 'no volume figure', 'never rings', 'potentials are not judged', 'not comparable', 'UNMEASURED']) {
+          if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        }
+        if (!label.endsWith('Not advice.')) errs.push(`${W} must end "Not advice."`);
+        if (/boun/i.test(label)) errs.push(`${W} says the b-word`);
+        const outside = label.split(`“${HIS}”`).join('').split(`“${ASKED}”`).join('');
+        const d = outside.match(/\d+/);
+        if (d) errs.push(`${W} types "${d[0]}" outside the quote — the floor is served (K11_MIN_SESSION_VOLUME)`);
+        if (!/\d/.test(`${outside} under 1M`)) errs.push('self-test: a typed number outside the quote was not caught');
+      }
       return errs;
     },
   },

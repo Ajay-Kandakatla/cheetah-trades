@@ -22,6 +22,22 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-21 ~13:10 ET (verbatim in the label): "keep what ever Gajjala says for these" — on the four lane
+  // placeholders. BUILD_SPEC22 Part A: backend/trading/gajjala_entry.py builds each from GG's sentence in
+  // chart_maps/gajjala/verified_rules.json — GG_TRAIL_EMA_KF = EMA_SLOW (VR 11.4), GG_PARTIAL_AFTER "add" +
+  // GG_PARTIAL_STRENGTH "new_high" (VR 11.4 / 11.3, HIS CALL #24 / #25), GG_HALT_CALM_BARS (VR 10.1, HIS CALL #26),
+  // GG_CUSHION_LOSERS / GG_DOUBLE_MULT / GG_CUSHION_PERIOD (VR 11.7); rules.awaiting is served EMPTY. Every number is
+  // served on the tab; the label types NO digit outside his quote — pinned by scripts/contracts.mjs
+  // ("🚩 Gajjala lane: GG's words (2026-10-21)"). UNMEASURED.
+  { id: 'autopilot-gajjala-lane-gg-words-2026-10-21', addedAt: '2026-10-21', route: '/trading?view=gajjala',
+    label: "🚩 The Gajjala lane's four open rules are GG's own words now (paper). You said: “keep what ever Gajjala says for these”. So: a Kiss & Fly trade trails his slower EMA (his “maybe” for Kiss & Fly); every other setup still trails the fast one. The partial has no R: once the second half is added at breakeven, the first closed bar that closes above every high since the entry sells half. The lane never enters while a name is halting — it waits for one clean closed bar after the resume. An A+ risks up to double once this month's realized lane profit covers two losers at the normal risk, with no loss streak and drawdown mode off. Nothing is awaiting your number any more; all-in on an obvious A+ stays not built (his word “obvious” has no rule). Three readings stay yours to change: a new high as his “strength”, half rather than a third, one bar as his “calmer”. Every number is served on the tab. UNMEASURED. Not advice." },
+  // Ajay 2026-10-21 ~13:10 ET (verbatim in the label, with the list line he answered): "keep what ever Gajjala says for
+  // these". BUILD_SPEC22 Part B: chart_maps/gajjala/constants.K11_MIN_SESSION_VOLUME = SCAN_MIN_VOLUME (GG VR 0.4, ONE
+  // number); detectors.k11_gate turns a break whose session volume is under it — or unknown (fail-closed) — into
+  // "broke — not A+" (criteria key k11_volume) before the push gate. The only digits in the label are inside the quoted
+  // list line — pinned by scripts/contracts.mjs ("🚩 Gajjala K11 today's volume floor (2026-10-21)"). UNMEASURED.
+  { id: 'chart-maps-gajjala-k11-volume-floor-2026-10-21', addedAt: '2026-10-21', route: '/chart-maps?tab=gajjala&sub=kiss_fly',
+    label: "🚩 A Gajjala A+ now also needs today's volume over his scanner floor. You said “keep what ever Gajjala says for these” on “Whether an A+ should also require today’s volume to clear GG’s 1M floor (NIXX rang on 288K shares).” GG's volume rule is a floor that must sustain — one big bar and then a fade, he is not interested. So when the entry bar closes, the name's volume for the session so far must clear the same floor his scanner uses. Under it — or with no volume figure for the name — the break shows “broke — not A+” with the missed line, the trigger and stop stay on the card, and it never rings. Forming 🧠 potentials are not judged on it. A+ counts from before today and after it are not comparable. UNMEASURED. Not advice." },
   // Ajay 2026-10-21 (verbatim in the label, both lines, on a screenshot of the 🚩 lane's floor skips). BUILD_SPEC19: the
   // 🚩 lane v2 trades by GG's playbook rules (backend/trading/gajjala_entry.py; docs/trading_gajjala_lane.md) — the house
   // floors default OFF for his lane, market at the break, half size then add at breakeven, no target, the 9 EMA trail,

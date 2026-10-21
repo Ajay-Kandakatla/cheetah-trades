@@ -98,8 +98,13 @@ drawdown window (10% under the peak → 5 trades ≤ 5% together, half off once)
 day cap, no stale / thin-R line; `gajjala_floors` default OFF; `entries.enter(ceiling="gg", order_class="oto")` and
 `allow_earnings=True` (the p.312 and earnings waivers, strategy-gated to the lane); `exit_engine.tick` (d1) and the
 p.308 ratchet skip lane names. Brokers: `submit_bracket(take_profit_price=None)` = OTO, `close_position(symbol, qty)`.
-`status.gajjala_lane.rules` serves the rule words + the `awaiting` placeholders (`GG_PARTIAL_R`, `GG_TRAIL_EMA_KF`,
-`GG_HALT_CALM_MIN`, `GG_CUSHION_DOUBLE_PCT` — each rule off while None). The 🏁 grader is unchanged (+1R). UNMEASURED.
+`status.gajjala_lane.rules` serves the rule words + an EMPTY `awaiting` list (2026-10-21, BUILD_SPEC22 Part A — Ajay
+"keep what ever Gajjala says for these": the four placeholders are GG's sentences — Kiss & Fly trails the 21 EMA
+(`GG_TRAIL_EMA_KF` = `EMA_SLOW`, VR 11.4); after the add fills, the first closed bar closing above every high since the
+entry sells `GG_PARTIAL_FRAC` half (VR 11.4, HIS CALL #24 / #25); no entry during a halt until `GG_HALT_CALM_BARS` 1
+clean closed bar after the resume — the doc waits (VR 10.1, HIS CALL #26); an A+ risks `GG_DOUBLE_MULT` 2× once the
+lane's realized P&L this ET month covers `GG_CUSHION_LOSERS` 2 × the trade's single-rate risk, no loss streak, drawdown
+off (VR 11.7); all-in not built). The 🏁 grader is unchanged (+1R). UNMEASURED.
 
 **Module-level state in `main.py`:**
 - `cache: QuoteCache` — `_data` dict + `_ticks` deque per symbol (maxlen=`TICK_WINDOW`=64).
@@ -570,6 +575,13 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `K8_FAIL_DROP_PCT` 8.0 / `K8_FAIL_EVENT_RULE` "distinct", `RS_BASE_MIN_BARS` 1, history chip `K8_HISTORY_SESSIONS` 30 /
   `K8_HISTORY_RANGE_PCT` 50.0, `FLOAT_SUSPECT_POLICY` "ineligible" (spec default); ☀️ K9 `K9_PM_MIN_VOLUME` 1,000,000,
   `K9_AH_CARRY_PCT` 10.0; 🌙 K10 `K10_CLOSE_TOP_FRAC` 0.30, `K10_AH_MIN_VOLUME` 250,000, `K10_AH_MIN_GAIN_PCT` 5.0.
+  K11 today's volume on the A+ claim (2026-10-21, GG VR 0.4 "1M is a floor … it must SUSTAIN" — Ajay *"keep what ever
+  Gajjala says for these"*): `K11_MIN_SESSION_VOLUME` = `SCAN_MIN_VOLUME` (one number, never a second); a read that broke
+  with K1–K10 met (`detectors.K11_STATES` aplus / triggered / stopped) carries the criteria row `k11_volume`; the name's
+  session volume from the scanner row under the floor, or no figure (fail-closed, "today's volume unknown"), turns it
+  into "broke — not A+" in `detectors.k11_gate` before the push gate — never claimed, never pushed; forming 🧠 reads
+  are not judged. The figure reaches `read_all` as ctx `session_volume` (`K11_CTX_KEY`; a caller without the key
+  reads K1–K10 only). HIS CALL #27: A+ counts before / after 2026-10-21 are not comparable. UNMEASURED.
   Entry = the entry bar's high trades above the trigger on a CLOSED bar; stop = the trigger bar's low (the bar before the entry bar) / the base's low.
 - **Reads**: **A+** = every rule met and the entry bar closed — the only pushable state. Listed, never A+, never pushed:
   **"long flag"** (Bull Flag pullback past `K4_BF_PULL_MAX`, up to `K4_BF_LONG_FLAG_MAX` 5; more = invalid — band EMPTY

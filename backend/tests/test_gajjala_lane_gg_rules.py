@@ -7,11 +7,12 @@ Locks (every positive with its NEGATIVE): the market OTO entry at first sight / 
 stop prints first (VR 11.0 / 11.1 / 11.2); half size first and the add at breakeven with the combined stop at the
 first fill (VR 11.3, S8 56:27); breakeven only on a CLOSED bar ≥ GG_BE_AFTER_BARS after the entry bar that closes
 above the fill (NEG: 2 bars, a close at the fill, a LIVE bar — the mutation guard); the 9 EMA trail after breakeven
-only on a closed bar's CLOSE (NEG: before breakeven, an intrabar low); the partial off while GG_PARTIAL_R is None (NEG
-both ways); GG's 0.25% risk, halved after a loss, back after a win, the drawdown window budget and the half-off
-(VR 11.7); the 2-bar cooldown (VR 10.6); the halt rule off while None (VR 10.1); the earnings / p.312 exemptions for
+only on a closed bar's CLOSE (NEG: before breakeven, an intrabar low); the partial into strength after the add (2026-10-21,
+BUILD_SPEC22 A2 — its own file tests/test_gajjala_lane_gg_words_2026_10_21.py; here the part-sell mechanics); GG's 0.25%
+risk, halved after a loss, back after a win, the drawdown window budget and the half-off (VR 11.7); the 2-bar cooldown
+(VR 10.6); the halt wait (VR 10.1, 2026-10-21 A3); the earnings / p.312 exemptions for
 the lane ONLY (NEG: zone_edge / other strategies still blocked); the SEPA distribution step and the p.308 ratchet skip
-lane names (NEG: a house name still exits / ratchets); floors default OFF; the served `rules` + `awaiting`; the F5
+lane names (NEG: a house name still exits / ratchets); floors default OFF; the served `rules` + an EMPTY `awaiting`; the F5
 broker changes in BOTH brokers; the 🏁 grader's +1R untouched.
 
 UNMEASURED — GG's rules as he gave them, on paper; no edge, no win rate. Hermetic: fake broker + fake Mongo, the bars
@@ -319,25 +320,28 @@ def test_trail_uses_a_real_bars_frame_and_its_9_ema():
     assert rows[0]["ema9"] is None                                       # warm-up is a gap, never a guess
 
 
-def test_trail_ema_kiss_fly_placeholder(monkeypatch):
-    assert GL.trail_ema_period("kiss_fly") == 9 == GL.trail_ema_period("bull_flag")      # None → 9
-    monkeypatch.setattr(GL, "GG_TRAIL_EMA_KF", 21)
+def test_trail_ema_kiss_fly_is_the_21(monkeypatch):
+    # 2026-10-21 (BUILD_SPEC22 A1, Ajay "keep what ever Gajjala says for these"): GG VR 11.4 "the 21 on Kiss & Fly"
     assert GL.trail_ema_period("kiss_fly") == 21 and GL.trail_ema_period("bull_flag") == 9   # NEG: other setups
+    monkeypatch.setattr(GL, "GG_TRAIL_EMA_KF", None)
+    assert GL.trail_ema_period("kiss_fly") == 9                                          # None would fall back to 9
 
 
-# ── D8b partial ──────────────────────────────────────────────────────────────────────────────────────────────────
-def test_partial_off_while_none(gg):
-    assert GL.GG_PARTIAL_R is None
+# ── D8b partial — 2026-10-21 (BUILD_SPEC22 A2): after the add, the first closed bar closing over the move's high ─────
+def test_partial_NEG_no_add_fill_no_partial(gg):
+    """The placeholder GG_PARTIAL_R is gone (2026-10-21); the peel needs the add's FILL (GG_PARTIAL_AFTER "add")."""
+    assert not hasattr(GL, "GG_PARTIAL_R")
     f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 5.40, 4.70)])     # far into strength
-    s = gg(docs=[_after_be()], positions=[_position("SAIQ", 1470, 4.545, 5.40)], orders=_be_orders(), frame=f,
+    doc = _after_be()
+    doc.update(add_fill_qty=None, add_fill_px=None, add_order_id=None)
+    s = gg(docs=[doc], positions=[_position("SAIQ", 735, 4.49, 5.40)], orders=[stop_leg(4.49, 735)], frame=f,
            now=_at(DAY, 11, 16))
     out = s.run()
     assert out["partials"] == 0 and calls(s.brk, "close_position") == [] and calls(s.brk, "cancel_order") == []
 
 
-def test_partial_on_with_a_number_cancel_sell_restop(gg, monkeypatch):
-    monkeypatch.setattr(GL, "GG_PARTIAL_R", 2.0)                         # line = 4.49 + 2 x 0.15 = 4.79
-    f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 4.80, 4.62)])
+def test_partial_into_strength_cancel_sell_restop(gg, monkeypatch):
+    f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 4.80, 4.62)])     # 4.80 > the move's high 4.60
     s = gg(docs=[_after_be()], positions=[_position("SAIQ", 1470, 4.545, 4.80)], orders=_be_orders(), frame=f,
            now=_at(DAY, 11, 16))
     out = s.run()
@@ -351,22 +355,20 @@ def test_partial_on_with_a_number_cancel_sell_restop(gg, monkeypatch):
     assert calls(s.brk, "submit_stop") == [{"symbol": "SAIQ", "qty": 735, "stop_price": 4.49}]
     d = s.coll.get(SAIQ_ID)
     assert d["partial_state"] == "done" and d["partial_qty"] == 735 and d["partial_naked_ms"] == 60_000   # one tick
-    assert "rules" in GL.status_block(EE.get_config()) and "comes off once a closed bar is 2R over the entry" in \
-        GL.rules_block()["manage_text"]
+    assert "rules" in GL.status_block(EE.get_config()) and "the first closed bar closing at a new high of the move " \
+        "peels half" in GL.rules_block()["manage_text"]
     s.run(at=_at(DAY, 11, 18))
     assert len(calls(s.brk, "close_position")) == 1                     # once
 
 
-def test_partial_NEG_under_the_line(gg, monkeypatch):
-    monkeypatch.setattr(GL, "GG_PARTIAL_R", 2.0)
-    f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 4.70, 4.62)])
-    s = gg(docs=[_after_be()], positions=[_position("SAIQ", 1470, 4.545, 4.70)], orders=_be_orders(), frame=f,
+def test_partial_NEG_a_close_at_the_moves_high(gg, monkeypatch):
+    f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 4.60, 4.55)])     # equal to the high = not strength
+    s = gg(docs=[_after_be()], positions=[_position("SAIQ", 1470, 4.545, 4.60)], orders=_be_orders(), frame=f,
            now=_at(DAY, 11, 16))
-    assert s.run()["partials"] == 0 and calls(s.brk, "close_position") == []
+    assert s.run()["partials"] == 0 and calls(s.brk, "close_position") == [] and calls(s.brk, "cancel_order") == []
 
 
 def test_partial_sell_refused_restores_the_stop(gg, monkeypatch):
-    monkeypatch.setattr(GL, "GG_PARTIAL_R", 2.0)
     f = frame(BELOW + [(11, 10, 4.60, 4.45), (11, 15, 4.80, 4.62)])
     s = gg(docs=[_after_be()], positions=[_position("SAIQ", 1470, 4.545, 4.80)], orders=_be_orders(), frame=f,
            now=_at(DAY, 11, 16))
@@ -497,22 +499,21 @@ def test_cooldown_NEG_three_bars_later_a_new_alert_trades(gg):
     assert s.coll.get(f"GG:{DAY}|SAIQ|kiss_fly")["state"] == "ordered"
 
 
-def test_halt_rule_off_while_none_and_on_with_a_number(gg, monkeypatch):
+def test_halt_wait_one_clean_closed_bar_after_the_resume(gg, monkeypatch):
+    """2026-10-21 (BUILD_SPEC22 A3): GG_HALT_CALM_MIN is gone; a resume at 10:50 sits in the 10:50–10:55 bar, so the
+    first clean bar is 10:55–11:00 — the lane WAITS (never a terminal skip) until it has closed."""
+    assert not hasattr(GL, "GG_HALT_CALM_MIN") and GL.GG_HALT_CALM_BARS == 1
     h = {"n": 2, "text": "⏸ halted ×2 (LUDP)", "last_resume_et": _at(DAY, 10, 50).isoformat()}
-    assert GL.GG_HALT_CALM_MIN is None
     s = gg(alerts=[alert()], lasts={"SAIQ": 4.48}, halts=h, now=_at(DAY, 10, 55))
-    s.run()
+    out = s.run()
     d = s.coll.get(SAIQ_ID)
-    assert d["state"] == "ordered" and d["halts"]["n"] == 2                       # recorded, not a gate
+    assert d["state"] == "waiting" and d["wait_reason"] == "halt_calm" and d["skip_kind"] is None
+    assert out["halt_waiting"] == 1 and _brackets(s.brk) == []
+    assert GL.fate_text(d).startswith("halted, resumed 10:50 ET — waiting for one clean closed bar (closes 11:00 ET)")
+    out = s.run(at=_at(DAY, 11, 0) + timedelta(seconds=GC.BAR_SETTLE_SEC))
+    d = s.coll.get(SAIQ_ID)
+    assert d["state"] == "ordered" and d["halts"]["n"] == 2 and len(_brackets(s.brk)) == 1   # calm again
     assert GL.fate_text(d).endswith(" · ⏸ halted ×2 (LUDP) today")
-    monkeypatch.setattr(GL, "GG_HALT_CALM_MIN", 10)
-    s = gg(alerts=[alert()], lasts={"SAIQ": 4.48}, halts=h, now=_at(DAY, 10, 55))
-    s.run()
-    d = s.coll.get(SAIQ_ID)
-    assert d["skip_kind"] == "halt" and "until 11:00 ET" in d["why"] and _brackets(s.brk) == []
-    s = gg(alerts=[alert()], lasts={"SAIQ": 4.48}, halts=h, now=_at(DAY, 11, 1))
-    s.run()
-    assert s.coll.get(SAIQ_ID)["state"] == "ordered"                               # NEG: calm again
 
 
 # ── D2 / D3 exemptions — strategy-gated (entries) ────────────────────────────────────────────────────────────────
@@ -645,36 +646,36 @@ def test_rules_object_and_awaiting_list(gg, monkeypatch):
     gg()
     r = GL.status_block(EE.get_config())["rules"]
     assert r["entry_text"] == ("market at the break, after the entry bar closes (GG: 'right at the break … sometimes "
-                               "I wait for the bar close')")
+                               "I wait for the bar close'); never during a halt — one clean closed bar after the resume "
+                               "(GG: 'when it's clean, when it's calmer, then I enter')")      # 2026-10-21 A5
     assert r["stop_text"] == "the alert's stop, a market stop at the broker from the fill (GG: 'low of the prior bar as the stop loss')"
     assert r["size_text"] == "half of 0.25% of equity at risk first; the other half is added at breakeven (GG: 'half size, then add')"
     # 2026-10-21 (critic): the wording says what be_bar() does — ONE close above the entry, ≥ 3 bars after the entry bar
     assert r["manage_text"] == ("no target — after the first closed bar, 3 or more bars after the entry bar, that "
                                 "closes above the entry, the stop moves to breakeven and the second half is added; the "
-                                "remainder trails the 5-minute 9 EMA (out on a close below it); flat at 15:55 ET")
+                                "remainder trails the 5-minute 9 EMA, the 21 on Kiss & Fly (out on a close below it); "
+                                "after the add, the first closed bar closing at a new high of the move peels half; "
+                                "flat at 15:55 ET")                                    # 2026-10-21 A5
     assert "after 3 closed bars above the entry" not in r["manage_text"]       # NEG: the old wording is gone
     assert r["risk_text"].startswith("0.25% of equity per trade, halved after a loss, back to 0.25% after a win — now "
                                      "0.25%; drawdown mode off: ")
     assert r["exempt_text"] == ("no earnings shield, no five-position ceiling, no SEPA distribution exit on lane names "
                                 "— GG's rules only")
-    assert r["not_built"][0] == "base counting (3rd base climax, 4th out)" and len(r["not_built"]) == 5
-    assert [a["key"] for a in r["awaiting"]] == ["GG_PARTIAL_R", "GG_TRAIL_EMA_KF", "GG_HALT_CALM_MIN",
-                                                 "GG_CUSHION_DOUBLE_PCT"]
-    assert all(isinstance(a["question"], str) and a["question"] for a in r["awaiting"])
-    monkeypatch.setattr(GL, "GG_TRAIL_EMA_KF", 21)
-    assert "GG_TRAIL_EMA_KF" not in [a["key"] for a in GL.rules_block()["awaiting"]]   # NEG: answered → not served
+    assert r["not_built"][0] == "base counting (3rd base climax, 4th out)" and len(r["not_built"]) == 6
+    assert r["not_built"][-1].startswith("all-in on an obvious A+")             # 2026-10-21 A4: still not built
+    assert r["awaiting"] == [] and GL.AWAITING == ()                            # 2026-10-21 A5: nothing awaits
     text = json.dumps(GL.status_block(EE.get_config()), ensure_ascii=False).lower()
     assert ("b" + "ounc") not in text and "win rate" not in text and "edge" not in text.replace("no edge", "")
 
 
-def test_every_placeholder_is_none_and_every_gg_number_is_cited():
-    for k, _q in GL.AWAITING:
-        assert getattr(GL, k) is None, k
+def test_no_placeholder_left_and_every_gg_number_is_cited():
+    # 2026-10-21 (BUILD_SPEC22): the four placeholders are gone — GG's sentences replace them (cited in the new file)
+    assert GL.AWAITING == ()
     with open(os.path.join(os.path.dirname(__file__), "..", "trading", "gajjala_entry.py"), encoding="utf-8") as fh:
         src = fh.read()
-    for name in ("GG_PARTIAL_R", "GG_TRAIL_EMA_KF", "GG_HALT_CALM_MIN", "GG_CUSHION_DOUBLE_PCT"):
-        line = next(x for x in src.splitlines() if x.startswith(name + " = "))
-        assert "# ⚓ awaiting your number — " in line, line
+    for name in ("GG_PARTIAL_R", "GG_HALT_CALM_MIN", "GG_CUSHION_DOUBLE_PCT"):
+        assert not any(x.startswith(name + " = ") for x in src.splitlines()), name
+    assert "awaiting your number" not in src
     for name in ("GAJJALA_RISK_PCT", "GG_BE_AFTER_BARS", "GG_PARTIAL_FRAC", "GG_REENTRY_WAIT_BARS", "GG_DRAWDOWN_PCT",
                  "GG_DRAWDOWN_TRADES", "GG_DRAWDOWN_RISK_SUM_PCT", "GG_LOSS_RISK_CUT", "GG_TRAIL_EMA"):
         line = next(x for x in src.splitlines() if x.startswith(name + " = "))

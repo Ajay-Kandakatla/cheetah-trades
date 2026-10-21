@@ -3,7 +3,9 @@
 WHAT RINGS. An A+ only: every rule of a setup met AND the entry bar printed — the detector's `state == "aplus"` on
 the latest CLOSED bar of the frame it was read on (5-minute; the ➖ Fade may be read on 15-minute). Each A+ is its own
 push, once per (symbol, setup, ET trading day). A "long flag", a "near-kiss" or a "B — imperfect" VCP is never A+ and
-never rings (Ajay round C), and is refused here too.
+never rings (Ajay round C), and is refused here too. K11 (2026-10-21, GG VR 0.4 — Ajay "keep what ever Gajjala says"):
+today's volume under his 1M floor (or unknown) makes the read "broke — not A+" in detectors.k11_gate BEFORE this gate
+sees it, so it is never a candidate here: no claim, no push, no 🏁 row, no 🚩 lane entry.
 
 WHEN (DECISIONS). 09:45–16:00 and 16:00–20:00 ET; never 09:30–09:45 (GG S8 14:41 "I don't take trades for the first
 15 minutes" — the 09:45 is derived from NO_TRADE_AFTER_OPEN_MIN, never typed); never pre-market (an entry bar that

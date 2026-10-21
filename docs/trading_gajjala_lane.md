@@ -9,10 +9,16 @@ Ajay 2026-10-21 (on the tab's "skipped — house safety floors …" rows), verba
 *"Is the 700 M floor by Gajjala?"* / *"Follow full Gajjala and he doesnt care exactly about this.. Go through his rules
 from play book and implement them exactly"*
 
+Ajay 2026-10-21 (~13:10 ET, on "The four lane numbers GG never gave: partial size trigger (R), 9 or 21 EMA on Kiss & Fly,
+halt calm-down minutes, cushion for double size"), verbatim:
+
+*"keep what ever Gajjala says for these"*
+
 Code: `backend/trading/gajjala_entry.py`. Engine seam: `trading/exit_engine.py` tick step **(n)**, every minute in
 RTH, after the 🔥 lane (m) and before the journal (g). Tab: `/trading?view=gajjala` (GET `/trading/gajjala`, admin).
 **OWNER RULES — GG's, no book, no Minervini cites.** Paper only: the lane refuses a live broker. Not advice.
-Spec: BUILD_SPEC19 (v2, 2026-10-21); v1 was BUILD_SPEC17 (2026-10-20).
+Spec: BUILD_SPEC19 (v2, 2026-10-21) + BUILD_SPEC22 Part A (GG's words for the four placeholders, 2026-10-21); v1 was
+BUILD_SPEC17 (2026-10-20).
 
 ## READ THIS FIRST
 
@@ -20,9 +26,9 @@ Spec: BUILD_SPEC19 (v2, 2026-10-21); v1 was BUILD_SPEC17 (2026-10-20).
   trades them on paper so the fills can be read — not because they are measured. Nothing here quotes an edge or a win
   rate.
 - **The rule source is GG's**: `backend/chart_maps/gajjala/verified_rules.json` (`VR i.j` = `topics[i].verified[j]`) and
-  the playbook's quoted lines. Every number in the code is his (`# GG <cite>`), mine (`# MINE — HIS CALL #n`) or a
-  `None` placeholder that waits for his number (`# awaiting your number — <question>`); a placeholder keeps the lane
-  running with that rule off.
+  the playbook's quoted lines. Every number in the code is his (`# GG <cite>`) or mine (`# MINE — HIS CALL #n`). The
+  four `None` placeholders that were "awaiting your number" until 2026-10-21 are gone: each is built from GG's own
+  sentence (see "The four placeholders, resolved by his word" below); nothing awaits.
 - The $2 / $700M floors are the **house** floors (Ajay 2026-09-11, `trading/safety_floor.py`), not GG's: the switch
   `gajjala_floors` now **defaults OFF** (HIS CALL #0 decided 2026-10-21; the live config was flipped false at 11:05 ET).
 - The other lanes stay off live (`auto_entry`, `zone_edge_entry`, `catalyst_entry`, `options_entry`, `zero_dte_entry`,
@@ -40,14 +46,15 @@ Spec: BUILD_SPEC19 (v2, 2026-10-21); v1 was BUILD_SPEC17 (2026-10-20).
 | Entry | VR 11.0 "right at the break"; sometimes waits for the bar close · VR 11.1 market orders in regular hours | a **market** order (day) at first sight when the last trade ≥ the trigger; under it the doc **waits** (D7). Ajay's A+ needs the entry bar to CLOSE through the trigger, so the lane always sees the break after the close |
 | Stop | VR 11.2 "low of the prior bar as the stop loss"; "a breakout back into its range = out" | the alert's stop rounded DOWN on the grid, the OTO order's stop leg (a market stop at the broker from the fill); the stop printing before the trigger trades = `never_triggered` |
 | Size | VR 11.7 he STARTS at 0.25%; S8 56:27 "half size, then add" | full = ⌊equity × 0.25% × risk_mult ÷ (last − stop)⌋, capped by 10% of equity and the cash; the ENTRY is half (⌊full/2⌋, min 1) |
+| Cushion → double | VR 11.7 "raise only on a cushion that survives 2 losers; A+ up to double"; "moves it with MONTHLY performance" | an A+ risks 0.25% × `GG_DOUBLE_MULT` 2 when the lane's REALIZED P&L this ET calendar month (closed lane docs' `pnl_usd`, never the broker's account P&L) ≥ `GG_CUSHION_LOSERS` 2 × this trade's planned risk at the single rate, risk_mult is 1 and drawdown mode is off; still capped by 10% of equity and the cash ("up to double"). The doc records `risk_basis` single / double and `cushion_text`; 2026-10-21 critic fix: `double` only when the doubled plan's `full_qty` is larger, else `single (size cap)` (the 10% notional cap, the cash or the drawdown budget held the size). A v1 limit-bracket trade (a `target`) never counts toward the cushion, the same trades `risk_after` skips |
 | Breakeven + add | VR 11.3 "breakeven once it moves … then I added half, double the size with zero risk" (S8 39:03) | the first CLOSED 5-minute bar ≥ 3 bars after the entry bar that closes ABOVE the fill → every stop of the name moves to the fill, the second half is bought at market with its stop at the same fill (D8a). The add = min(full − the first fill, full − held) — never a refill of shares sold since — and none while the drawdown half-off is due or done |
-| Partial | VR 11.4 "peel off 1/3 or half … when strong" | `GG_PARTIAL_FRAC` 0.5; `GG_PARTIAL_R` = None → **off** until he gives the R |
-| Trail | VR 11.4 "trail the remaining along the 9 EMA" (the 21 on Kiss & Fly "maybe") | after breakeven: out at market on a closed bar whose CLOSE is under the 9 EMA (`orderflow.signals.EMA_FAST`, the pass's `_masked_ema`); Kiss & Fly 21 = `GG_TRAIL_EMA_KF` None → 9 |
+| Partial | VR 11.4 "peel off 1/3 or half into strength after ~15 min / 3 bars when strong"; VR 11.3 the add first | after the add has FILLED (`GG_PARTIAL_AFTER` "add"): the first CLOSED bar after the breakeven+add bar whose close is above the highest high of every closed bar since the entry bar (`GG_PARTIAL_STRENGTH` "new_high", HIS CALL #24) sells `GG_PARTIAL_FRAC` 0.5 of the held shares (HIS CALL #25) through the two-tick part-sell, once; the rest trails. No add fill (the breakeven never came, or the add was refused) = no partial |
+| Trail | VR 11.4 "trail the remaining along the 9 EMA" (the 21 on Kiss & Fly "maybe") | after breakeven: out at market on a closed bar whose CLOSE is under the 9 EMA (`orderflow.signals.EMA_FAST`, the pass's `_masked_ema`); on Kiss & Fly under the 21 EMA (`GG_TRAIL_EMA_KF` = `EMA_SLOW` 21, the frame's `ema21` column) |
 | Target | VR 11.6 no fixed targets | no take-profit leg, ever (Alpaca OTO) |
 | Losers | S8 46:47 "$2,000 … next trade I cut to $1,000 … then $500" | `risk_mult` halves after a losing lane trade; back to 1 after a win (HIS CALL #18) |
 | Drawdown | VR 11.7 "−10% / −15% drawdown → the next five trades ≤ −5% together"; VR 11.4 "in drawdowns take half off immediately" | at 10% under the equity peak the next 5 lane trades may risk 5% of equity together; on the turn into drawdown half of every open lane position is sold at market, once (HIS CALL #19) |
 | Re-entry | VR 10.6 no re-entry on the next bar, "at least like couple of bars" | an alert on a name stopped out within the last 2 closed 5-minute bars is skipped `cooldown` |
-| Halts | VR 10.1 "when it's clean, when it's calmer, then I enter" | `GG_HALT_CALM_MIN` None → **off**; today's halts are recorded on the row and shown in the fate text |
+| Halts | VR 10.1 "when it's clean, when it's calmer, then I enter"; once IN, a halt-up raises his confidence | at entry time today's `gajjala_halts` row for the name: still halted (no resume yet, or 2026-10-21 critic fix: a later halt with no resume after an earlier resume — `open_halt` on the `gajjala_halts` row, with `last_halt_time`) or the last resume inside the latest closed bar or the live bar → the doc WAITS (`wait_reason` "halt_calm", re-checked every tick, never a terminal skip) until `GG_HALT_CALM_BARS` 1 clean CLOSED 5-minute bar has closed after the bar holding the resume (HIS CALL #26). The stop printing meanwhile = `never_triggered`; still waiting at the cut-off = unfilled `halt`. A row of another day is ignored; an open position is never touched by a halt |
 | Overnight | VR 0.8 no overnight holds in low floats | flat at 15:55 ET (regular close − 5) through `exit_engine.flatten` |
 | Not his | VR 11.8 / 11.9 "exit within five minutes", "close below the 21 EMA" (Business Insider, Dollar Wisdom) | not built |
 
@@ -58,14 +65,15 @@ Spec: BUILD_SPEC19 (v2, 2026-10-21); v1 was BUILD_SPEC17 (2026-10-20).
    the cut-off; at the cut-off `never_triggered`). Last > trigger + `GAJJALA_MISSED_R` × R → `missed` (HIS CALL #9).
 3. Stop SL = the alert's stop rounded DOWN; a grid shift over `GAJJALA_MAX_ROUND_R_PCT` 10% of R → `rounding`; last − SL
    under $0.01 → `broker_gap` (Alpaca refuses the stop leg).
-4. Size as in the table; 0 shares → `size`. Then `held` (one position per name), `cap_open` (`GAJJALA_MAX_OPEN` 3, HIS
-   CALL #17), `cooldown`, `halt` (off), `floor` (only while `gajjala_floors` is ON), disarmed → `dry_run`.
+4. Size as in the table; 0 shares → `size`. Then the halt wait (the doc stays `waiting`, `halt_calm`), the cushion
+   (double or single), `held` (one position per name), `cap_open` (`GAJJALA_MAX_OPEN` 3, HIS CALL #17), `cooldown`,
+   `floor` (only while `gajjala_floors` is ON), disarmed → `dry_run`.
 5. ONE market OTO order through `entries.enter` (the one chokepoint): `limit_price=None`, `stop_price=SL`,
    `sizing={qty: half, price: last, full_qty, …}`, `allow_earnings=True`, `ceiling="gg"`, `order_class="oto"`,
    `tif="day"`, `order_intent="gg-" + setup`. Not filled in `GAJJALA_FILL_WAIT_SEC` 180 s → cancelled, `unfilled`.
 6. Open: every tick on **closed** 5-minute bars only (`bars.closed_only`; the bars come from the pass's own loader
-   `bars.frames_for`, once per name per 5-minute bucket): breakeven + add (D8a); after it the 9 EMA trail (D8c); the
-   partial once `GG_PARTIAL_R` is set (D8b). A failed stop replace keeps the old stop and adds nothing; it is retried
+   `bars.frames_for`, once per name per 5-minute bucket): breakeven + add (D8a); after it the 9 EMA trail, the 21 on
+   Kiss & Fly (D8c); once the add has filled, the partial into strength (D8b, 2026-10-21). A failed stop replace keeps the old stop and adds nothing; it is retried
    next tick (`be_failed_n`, one `gajjala_be_failed` ledger row). The add goes through `entries.enter` too, so
    never-average-down refuses it when the tape is back under the average (the stop move stands).
 7. A partial or the drawdown half-off: cancel the stop(s) → `close_position(sym, qty)` → a stop for the rest at the
@@ -140,32 +148,45 @@ v1 (`floor` skips, counted on the tab). Flip from the tab, which sends `POST /tr
   round 2): a disarmed flatten is a dry run, so a cancel at 15:54 followed by a disarm gets the same one stop through
   the close. Not covered: the lane switched OFF and disarmed together (the lane does not run).
 - Served `status.rules` (D14, printed verbatim by the tab): `entry_text`, `stop_text`, `size_text`, `manage_text`,
-  `risk_text`, `exempt_text`, `not_built[]`, `awaiting[] {key, question}` (only the placeholders still None).
+  `risk_text`, `exempt_text`, `not_built[]`, `awaiting[] {key, question}` (served EMPTY since 2026-10-21 — nothing
+  awaits; the tab hides an empty list). `risk_text` ends with the cushion state ("cushion +$x this month vs 2 losers
+  $y → double / single", $y from the last equity read × 0.25%; since the 2026-10-21 critic fix the sentence says it
+  is an estimate: "(estimated on 0.25% of the last equity read; each entry decides on its own planned risk and size
+  caps)"); `entry_text` names the halt wait; `manage_text` the 21
+  on Kiss & Fly and the partial after the add.
 
-## Awaiting your number (the rule is off while None)
+## The four placeholders, resolved by his word (2026-10-21, BUILD_SPEC22 Part A)
 
-- `GG_PARTIAL_R` — "peel off 1/3 or half … when strong": at how many R above the entry?
-- `GG_TRAIL_EMA_KF` — 9 or 21 on Kiss & Fly ("the 21 on Kiss & Fly maybe")?
-- `GG_HALT_CALM_MIN` — "when it's clean, when it's calmer, then I enter": minutes after the last halt resumed?
-- `GG_CUSHION_DOUBLE_PCT` — the account cushion (% above the start of the month?) at which an A+ gets double size?
-  A placeholder only: nothing reads it until the cushion's basis is his.
+Ajay 2026-10-21: *"keep what ever Gajjala says for these"*. Each rule is GG's sentence; where his sentence names no
+number, the rule is built from the event he names (a bar, a resume, two losers). `rules.awaiting` is served EMPTY.
+
+| Was (None, "awaiting your number") | GG (verified_rules.json) | Now |
+|---|---|---|
+| `GG_PARTIAL_R` — at how many R? | VR 11.4 "partials of 1/3 or 1/2 into strength after ~15 min / 3 bars when strong"; VR 11.3 "breakeven once it moves; add the second half at ~zero risk" | no R at all: `GG_PARTIAL_AFTER` "add" + `GG_PARTIAL_STRENGTH` "new_high" — after the add fills, the first closed bar closing above every high since the entry sells half |
+| `GG_TRAIL_EMA_KF` — 9 or 21? | VR 11.4 "the 21 on Kiss & Fly 'maybe'" | `GG_TRAIL_EMA_KF` = the pass's 21 EMA (`EMA_SLOW`); every other setup trails the 9 |
+| `GG_HALT_CALM_MIN` — how many minutes? | VR 10.1 "when it's clean, when it's calmer, then I enter" | no minutes: `GG_HALT_CALM_BARS` 1 clean closed 5-minute bar after the resume (the bar is his unit) |
+| `GG_CUSHION_DOUBLE_PCT` — what % cushion? | VR 11.7 "raise only on a cushion that survives 2 losers; A+ up to double"; "moves it with MONTHLY performance" | no %: `GG_CUSHION_LOSERS` 2 × this trade's planned risk, against the lane's realized P&L this ET month (`GG_CUSHION_PERIOD` "month"), `GG_DOUBLE_MULT` 2 |
+
+Every A+ the lane trades IS an A+ (the pushed claim), so "up to double" applies to all of them once the cushion holds.
 
 ## Not built (Playbook text only)
 
 Base counting (3rd base climax, 4th out); psychological $1 / $5 / $10 levels; "exit before the stop on hesitation";
-mental stops; monthly risk re-basing.
+mental stops; monthly risk re-basing (the 0.25% itself moving with the month); all-in "on an obvious A+ with a
+cushion" (VR 11.7 — his word "obvious" has no rule; served in `not_built`).
 
 ## Differences from the 🏁 grader
 
 The lane trades the alerts the 🏁 Track record grades, but it is not the same trade. The grader is untouched and still
 grades **+1R before the stop** at max(trigger, the next minute's open) — a measurement, not the lane's exit.
 
-1. The lane has no target: breakeven + add, then the 9 EMA trail; the grader wins at fill + 1R.
+1. The lane has no target: breakeven + add, the partial into strength, then the 9 EMA trail (the 21 on Kiss & Fly);
+   the grader wins at fill + 1R.
 2. The lane's fill is a market order at the tick that first sees the last at or over the trigger.
 3. The stop printing before the lane's order is final (`never_triggered`); the grader still fills on a later minute
    whose high reaches the trigger.
 4. The lane is flat at 15:55 ET (regular close − 5); the grader marks to 16:00.
-5. The lane's size moves (half then add; risk_mult); the grader counts alerts, not dollars.
+5. The lane's size moves (half then add; risk_mult; the cushion's double); the grader counts alerts, not dollars.
 
 ## HIS CALL (renumbered 2026-10-21)
 
@@ -206,11 +227,17 @@ grades **+1R before the stop** at max(trigger, the next minute's open) — a mea
   market), ledger row `gajjala_restop_disarmed`; the part-sell itself waits for an armed tick. Before and after
   the 15:55 flatten time alike (the disarmed flatten is a dry run). The only order a disarmed engine places. Yours
   to keep or reverse.
+- **#24** (2026-10-21) "Into strength" = the first CLOSED bar after the breakeven+add bar whose close is above the
+  highest high of every closed bar since the entry bar (a close equal to that high is not strength). The lead's
+  reading of VR 11.4; GG named no level.
+- **#25** (2026-10-21) The partial is HALF (`GG_PARTIAL_FRAC` 0.5) — his larger figure of "1/3 or half".
+- **#26** (2026-10-21) The halt wait is ONE clean closed 5-minute bar after the bar holding the last resume
+  (`GG_HALT_CALM_BARS` 1). The bar is his unit ("when it's clean, when it's calmer"); the count 1 is the lead's reading.
 
 ## Tests
 
 ```bash
-docker run --rm --network none --name cheetah-tmp-pytest-gglane2-a -v /Users/ajay/clinet-test/wt-gglane2:/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_gajjala_lane.py tests/test_gajjala_lane_gg_rules.py tests/test_entries_lane_plan.py tests/test_broker_price_precision.py tests/test_trading_contracts.py
+docker run --rm --network none --name cheetah-tmp-pytest-gglane2-a -v /Users/ajay/clinet-test/wt-gglane2:/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_gajjala_lane.py tests/test_gajjala_lane_gg_rules.py tests/test_gajjala_lane_gg_words_2026_10_21.py tests/test_entries_lane_plan.py tests/test_broker_price_precision.py tests/test_trading_contracts.py
 ```
 
 `test_gajjala_lane.py` (v1's lane contract with the v2 pins moved in place: market OTO, half of 0.25%, no stale /
@@ -219,6 +246,15 @@ thin-R / dead / day cap, floors default OFF, earnings waived, the served `rules`
 both brokers, the grader's +1R untouched). Mutations proved on scratch copies (2026-10-21, 11 of 11 killed): the live
 bar read, the D9 skips dropped / widened, the p.312 waiver not strategy-gated, breakeven after 2 bars or on a close at
 the fill, the earnings shield kept, the trail before breakeven, the add past full_qty, floors default ON.
+
+`test_gajjala_lane_gg_words_2026_10_21.py` (2026-10-21, BUILD_SPEC22 A1–A5): the 21 trail on Kiss & Fly (NEG: under the
+9 but over the 21 stays, a bull flag still trails the 9, an intrabar low, the live bar); the partial after the add
+into a new high (NEG: a close equal to the high, the live bar, no add fill, before breakeven, a second strength bar);
+the halt wait (NEG: no halt row, yesterday's halt; the stop meanwhile, the cut-off); the cushion (exactly 2 losers →
+double, 1.99 → single, a loss streak, drawdown, the 10-30 → 11-02 month boundary; NEG the broker's unrealized P&L); the
+served words and the rules_info line. Mutations proved on scratch copies (2026-10-21, 8 of 8 killed): the live bar
+read, the partial without the add fill, strength at an equal close, open docs in the month P&L, the halt wait off,
+Kiss & Fly on the 9, double during a loss streak, the cushion across months.
 
 ## Known limits (v2)
 

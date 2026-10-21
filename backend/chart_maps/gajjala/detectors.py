@@ -7,8 +7,8 @@ invalid / none. GG's common rule (S8 34:45): "good demand, very shallow pullback
 previous highs — enter; stop loss would be the low of the base."
 
 WHOSE RULES. GG's words (FIRST_HAND_ibd_webinar.md) set the shape: legs of green demand bars, quiet pullbacks, entry at
-the break, stop at the prior bar / base low. Every NUMBER is Ajay's K1–K10 / H1–H5 answer and lives in constants.py —
-this file holds no threshold of its own (a source-guard test refuses numeric literals here). Constants are read at CALL
+the break, stop at the prior bar / base low. Every NUMBER is Ajay's K1–K10 / H1–H5 answer (K11, 2026-10-21: GG's own
+scanner floor on today's volume) and lives in constants.py — this file holds no threshold of its own (a source-guard test refuses numeric literals here). Constants are read at CALL
 time (`GC.NAME`, never `from constants import NAME`) so a test can monkeypatch any of them and see the read move.
 
 NOT SEPA. Nothing here imports or cites a SEPA / trend-template gate; this is his intraday method on his scanner.
@@ -26,6 +26,7 @@ UNMEASURED. These are his rules as he described them — no study in this app sa
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 from chart_maps.gajjala import constants as GC
@@ -41,6 +42,7 @@ AWAITING_TEXT = "awaiting Ajay's answer ({h})"
 # the ledger's own plan names (ledger.PLANS: "no_risk" = trigger == stop, "no_plan" = the stop above the trigger).
 NO_RISK_REASON = "no risk — the trigger and the stop print the same price (a bar with no range)"
 NO_PLAN_REASON = "no plan — the stop sits above the trigger"
+NOT_APLUS_REASON = "broke — not A+"                     # a break with a rule missed (K1–K11) — the card's pill head
 
 
 # ── input contract ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -304,7 +306,7 @@ def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minut
             r["state"] = "aplus" if j == last else "triggered"
     else:
         r["state"] = "partial"
-        r["reason"] = "broke — not A+"
+        r["reason"] = NOT_APLUS_REASON
     return r
 
 
@@ -965,6 +967,56 @@ def _float_gate(r: dict, float_read) -> dict:
     return r
 
 
+# ── K11 today's volume on the A+ claim (2026-10-21, BUILD_SPEC22 B1) ─────────────────────────────────────────────
+# GG VR 0.4 "Volume: 1M is a floor … it must SUSTAIN and INCREASE (one 1M bar then a fade = not interested)" — Ajay
+# 2026-10-21 "keep what ever Gajjala says" on "Whether an A+ should also require today's volume to clear GG's 1M floor
+# (NIXX rang on 288K shares)". A read that broke with every K1–K10 rule met (aplus / triggered / stopped) is A+ only when
+# the symbol's cumulative volume for the CURRENT session (premarket + regular so far — the scanner's `_volume` figure of
+# the pass that reads the entry bar, the card's "Volume" stat) is ≥ GC.K11_MIN_SESSION_VOLUME (= SCAN_MIN_VOLUME, one
+# number). Missed → the K3 path: state "partial", reason NOT_APLUS_REASON, the row in `missed`; the trigger, stop, leg
+# and base stay on the card. FAIL-CLOSED: no figure for the name → ok False, "today's volume unknown". Forming reads
+# (🧠 potentials) are never judged — K11 is judged at the ring. The figure arrives in read_all's ctx under
+# K11_CTX_KEY; a caller that does not pass the key at all (a study replay, a unit test) reads K1–K10 as before.
+K11_KEY = "k11_volume"
+K11_CTX_KEY = "session_volume"
+K11_STATES = ("aplus", "triggered", "stopped")
+K11_WHY = "GG: one 1M bar then a fade = not interested"      # VR 0.4, his words — the only digit is in his sentence
+K11_UNKNOWN = "today's volume unknown"
+
+
+def _k11_volume(v) -> Optional[float]:
+    """A usable session volume: a finite number ≥ 0 (never a bool, a string or NaN), else None (= unknown)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    v = float(v)
+    return v if math.isfinite(v) and v >= 0 else None
+
+
+def k11_criterion(volume) -> dict:
+    """The K11 criteria row {key k11_volume, label, ok}: the figure and the floor in the label (the card's
+    "missed: …" prints labels), the floor read from the constant at CALL time."""
+    floor = int(GC.K11_MIN_SESSION_VOLUME)
+    v = _k11_volume(volume)
+    if v is None:
+        return criterion(K11_KEY, f"K11 {K11_UNKNOWN} (needs ≥ {floor:,})", False, "", f"≥ {floor:,}")
+    if v >= floor:
+        return criterion(K11_KEY, f"K11 today's volume {int(v):,} ≥ {floor:,}", True, "", "")
+    return criterion(K11_KEY, f"K11 today's volume {int(v):,} < {floor:,} ({K11_WHY})", False, "", "")
+
+
+def k11_gate(r: dict, volume) -> dict:
+    """K11 on one read: a broke-with-K1–K10 read (K11_STATES) gets the k11_volume row; missed → partial
+    ("broke — not A+", the K3 path). Every other read is returned untouched (a 🧠 forming potential included)."""
+    if not isinstance(r, dict) or r.get("state") not in K11_STATES:
+        return r
+    crit = [c for c in (r.get("criteria") or []) if isinstance(c, dict) and c.get("key") != K11_KEY]
+    crit.append(k11_criterion(volume))
+    _set_criteria(r, crit)
+    if crit[-1]["ok"] is not True:
+        r["state"], r["reason"], r["ready"] = "partial", NOT_APLUS_REASON, False
+    return r
+
+
 # ── all five ──────────────────────────────────────────────────────────────────────────────────────────────────────
 def _guarded(setup: str, fn, symbol: str) -> dict:
     held = _awaiting(setup)
@@ -979,7 +1031,8 @@ def _guarded(setup: str, fn, symbol: str) -> dict:
 
 def read_all(frames: dict, ctx: Optional[dict] = None, now=None) -> dict:
     """{setup: Read} for the five setups. `frames` = {"5m": Frame, "15m": Frame|None} (each carrying its own
-    `minutes`); `ctx` = {"symbol", "float_read"}. `now` is unused — the detectors read closed bars only and push
+    `minutes`); `ctx` = {"symbol", "float_read"} + K11_CTX_KEY ("session_volume", the scanner's session volume of
+    the name — present, even None, → K11 is judged on every broke read; absent → K1–K10 only). `now` is unused — the detectors read closed bars only and push
     timing is the pass's job. Never raises: a per-setup exception reads none("detector error"), logged."""
     ctx = ctx or {}
     sym = str(ctx.get("symbol") or "?")
@@ -993,4 +1046,8 @@ def read_all(frames: dict, ctx: Optional[dict] = None, now=None) -> dict:
         "reversal_squeeze": lambda: (reversal_squeeze(f5, float_read=fr) if f5 is not None
                                      else _none("reversal_squeeze", None, -1, "no 5m bars")),
     }
-    return {setup: _guarded(setup, calls[setup], sym) for setup in GC.SETUPS}
+    out = {setup: _guarded(setup, calls[setup], sym) for setup in GC.SETUPS}
+    if K11_CTX_KEY in ctx:                                         # K11 (2026-10-21): judged at the ring, fail-closed
+        vol = ctx.get(K11_CTX_KEY)
+        out = {setup: k11_gate(r, vol) for setup, r in out.items()}
+    return out

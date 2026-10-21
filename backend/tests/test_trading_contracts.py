@@ -1246,7 +1246,10 @@ def test_gajjala_lane_2026_10_20_owner_numbers_and_seams():
     assert (GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT) == (0.25, 10.0)
     assert (GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN) == (None, 3)
     assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_FILL_WAIT_SEC) == (None, None, 180)
-    assert (GL.GG_BE_AFTER_BARS, GL.GG_REENTRY_WAIT_BARS, GL.GG_PARTIAL_R, GL.GG_TRAIL_EMA_KF) == (3, 2, None, None)
+    # 2026-10-21 (BUILD_SPEC22, Ajay "keep what ever Gajjala says for these"): the placeholders are GG's words now
+    assert (GL.GG_BE_AFTER_BARS, GL.GG_REENTRY_WAIT_BARS, GL.GG_TRAIL_EMA_KF, GL.GG_HALT_CALM_BARS) == (3, 2, 21, 1)
+    assert (GL.GG_CUSHION_LOSERS, GL.GG_DOUBLE_MULT, GL.GG_PARTIAL_AFTER) == (2, 2.0, "add")
+    assert not hasattr(GL, "GG_PARTIAL_R") and not hasattr(GL, "GG_HALT_CALM_MIN")
     assert (GL.GG_DRAWDOWN_PCT, GL.GG_DRAWDOWN_TRADES, GL.GG_DRAWDOWN_RISK_SUM_PCT) == (10.0, 5, 5.0)
     assert EN.CEILINGS == ("house", "gg") and EN.ORDER_CLASSES == ("bracket", "oto")
     assert GL.GAJJALA_MAX_ROUND_R_PCT == 10.0

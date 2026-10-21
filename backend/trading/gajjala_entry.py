@@ -33,9 +33,24 @@ open lane position comes off once (HIS CALL #19).
 MANAGEMENT (D8, VR 11.3 / 11.4) on CLOSED 5-minute bars only (`bars.closed_only` — never the live bar): the first
 closed bar at least GG_BE_AFTER_BARS bars after the entry bar that closes above the fill moves the stop to the fill
 (breakeven) and adds the second half at market with its stop at the same fill (the first half risks nothing; the add
-risks its own fill minus the first fill — fixed 2026-10-21, critic); after that the remainder trails the 9 EMA (out at market on a closed bar under it); GG_PARTIAL_R None = no partial. Flat at the
+risks its own fill minus the first fill — fixed 2026-10-21, critic); after that the remainder trails the 9 EMA, the 21
+on Kiss & Fly (VR 11.4, GG_TRAIL_EMA_KF; out at market on a closed bar whose close is under it). After the add has
+filled, the first closed bar after the breakeven bar whose CLOSE is above the highest high of every closed bar since
+the entry bar sells GG_PARTIAL_FRAC of the held shares through the two-tick part-sell, once (VR 11.4 "into strength",
+GG_PARTIAL_AFTER / GG_PARTIAL_STRENGTH, HIS CALL #24 / #25). Flat at the
 regular close minus GAJJALA_FLATTEN_BEFORE_CLOSE_MIN (VR 0.8 "no overnight holds"). Switched OFF stops NEW entries
 (and the add) only (HIS CALL #13): on paper, armed and with the market open the lane still manages what it holds.
+
+HALTS (VR 10.1 "when it's clean, when it's calmer, then I enter"): while today's halt ledger shows the name halted (no
+resume yet) or the last resume falls inside the latest closed bar or the live one, a doc whose tape trades the trigger
+WAITS (wait_reason "halt_calm", never a terminal skip) until GG_HALT_CALM_BARS clean closed 5-minute bars have closed
+after the bar that holds the resume (HIS CALL #26); the stop printing meanwhile is never_triggered, the cut-off unfilled.
+
+CUSHION (VR 11.7 "raise only on a cushion that survives 2 losers; A+ up to double"): an A+ risks GAJJALA_RISK_PCT x
+GG_DOUBLE_MULT when the lane's REALIZED P&L this ET calendar month (closed lane docs' pnl_usd — never the broker's
+account P&L) is at least GG_CUSHION_LOSERS x this trade's planned risk at the single rate, risk_mult is 1 and drawdown
+mode is off. All-in "on an obvious A+" is not built.
+Ajay 2026-10-21, verbatim, on the four lane numbers GG never gave: "keep what ever Gajjala says for these".
 
 EXEMPT (D2 / D3 / D9): no earnings shield, no five-position ceiling (strategy-gated in `entries`), no SEPA
 distribution exit and no p.308 ratchet on lane names (exit_engine); the house safety floors only while the switch
@@ -81,14 +96,20 @@ GAJJALA_MISSED_R = 1.0                                  # ⚓ MINE — HIS CALL 
 GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN = 30              # ⚓ MINE — HIS CALL #22: 15:30 ET (12:30 half day): last order, unfilled cancelled
 GAJJALA_FLATTEN_BEFORE_CLOSE_MIN = 5                    # ⚓ MINE — HIS CALL #2 / #16: 15:55 ET (= zone_edge_entry.QB_EOD_FLATTEN_ET)
 GG_BE_AFTER_BARS = 3                                    # ⚓ GG S8 24:46 "give it 15 minutes, three bars" (VR 11.4) — HIS CALL #15 reading
-GG_PARTIAL_FRAC = 0.5                                   # ⚓ GG VR 11.4 "peel off 1/3 or half" — "half"
-GG_PARTIAL_R = None                                     # ⚓ awaiting your number — "peel off 1/3 or half … when strong": at how many R above the entry?
+GG_PARTIAL_FRAC = 0.5                                   # ⚓ GG VR 11.4 "peel off 1/3 or half" — "half" (his larger figure — HIS CALL #25: 1/3 vs half)
+# 2026-10-21 (BUILD_SPEC22, Ajay "keep what ever Gajjala says for these"): the four placeholders (GG_PARTIAL_R,
+# GG_TRAIL_EMA_KF None, GG_HALT_CALM_MIN, GG_CUSHION_DOUBLE_PCT) are GG's own sentences now — no number beyond his words
+# except the three HIS CALLs flagged on the line (#24 new high, #25 half, #26 one bar)
+GG_PARTIAL_AFTER = "add"                                # ⚓ GG VR 11.4 "peel off 1/3 or half into strength after ~15 min / 3 bars when strong" — the peel comes AFTER the breakeven+add of VR 11.3 (the add completes the position at zero risk; the peel is the next strength) — Ajay 2026-10-21 "keep what ever Gajjala says for these"
+GG_PARTIAL_STRENGTH = "new_high"                        # ⚓ GG VR 11.4 "into strength" — the lead's reading: the first CLOSED bar after the add bar whose close is above the highest high of every closed bar since the entry bar — HIS CALL #24 — Ajay 2026-10-21 "keep what ever Gajjala says for these"
 GG_TRAIL_EMA = GC.EMA_FAST                              # ⚓ GG VR 11.4 "trail the remaining along the 9 EMA" (the pass's one EMA definition)
-GG_TRAIL_EMA_KF = None                                  # ⚓ awaiting your number — 9 or 21 ("the 21 on Kiss & Fly maybe")
+GG_TRAIL_EMA_KF = GC.EMA_SLOW                           # ⚓ GG VR 11.4 "the 21 on Kiss & Fly ('maybe')" — the pass's 21 EMA (orderflow.signals.EMA_SLOW, the frame's ema21 column) — Ajay 2026-10-21 "keep what ever Gajjala says for these"
 GG_REENTRY_WAIT_BARS = 2                                # ⚓ GG S8 1:17:12 "at least like couple of bars" (VR 10.6)
-GG_HALT_CALM_MIN = None                                 # ⚓ awaiting your number — "when it's clean, when it's calmer, then I enter": minutes since the last halt resumed
-GG_CUSHION_DOUBLE_PCT = None                            # ⚓ awaiting your number — the account cushion (% above the start of the month?) at which an A+ gets double size
-GG_DRAWDOWN_PCT = 10.0                                  # ⚓ GG VR 11.7 "a −10% / −15% drawdown"
+GG_HALT_CALM_BARS = 1                                   # ⚓ GG VR 10.1 "when it's clean, when it's calmer, then I enter" — one clean CLOSED 5-minute bar after the last resume before the lane may enter (the bar itself is his unit; the count 1 is the lead's reading — HIS CALL #26) — Ajay 2026-10-21 "keep what ever Gajjala says for these"
+GG_CUSHION_LOSERS = 2                                   # ⚓ GG VR 11.7 "raise only on a cushion that survives 2 losers; A+ up to double" — Ajay 2026-10-21 "keep what ever Gajjala says for these"
+GG_DOUBLE_MULT = 2.0                                    # ⚓ GG VR 11.7 "A+ up to double" — Ajay 2026-10-21 "keep what ever Gajjala says for these"
+GG_CUSHION_PERIOD = "month"                             # ⚓ GG VR 11.7 "moves it with MONTHLY performance" — the cushion = the lane's REALIZED P&L this ET calendar month — Ajay 2026-10-21 "keep what ever Gajjala says for these"
+GG_DRAWDOWN_PCT = 10.0                                 # ⚓ GG VR 11.7 "a −10% / −15% drawdown"
 GG_DRAWDOWN_TRADES = 5                                  # ⚓ GG VR 11.7 "the next five trades"
 GG_DRAWDOWN_RISK_SUM_PCT = 5.0                          # ⚓ GG VR 11.7 "≤ −5% together"
 GG_LOSS_RISK_CUT = 0.5                                  # ⚓ GG S8 46:47 "$2,000 … next trade I cut to $1,000 … then $500"
@@ -96,14 +117,10 @@ DEFAULT_ON = True                                       # Ajay 2026-10-20 "only 
 WINDOW_OPEN_ET = GC.LEDGER_FILL_FROM_ET                 # 09:45 — GG VR 1.4 / Ajay 2026-10-16 "From 09:45 ET only" (never retyped)
 R_MULT = GC.LEDGER_R_MULT                               # the 🏁 grader's +1R (a measurement; the lane has no target)
 MIN_R_PCT = GC.LEDGER_MIN_R_PCT                         # the 🏁 grader's thin-R line (the lane no longer refuses on it, D7)
-AWAITING = (("GG_PARTIAL_R", "“peel off 1/3 or half … when strong”: at how many R above the entry?"),
-            ("GG_TRAIL_EMA_KF", "9 or 21 on Kiss & Fly (“the 21 on Kiss & Fly maybe”)?"),
-            ("GG_HALT_CALM_MIN", "“when it's clean, when it's calmer, then I enter”: how many minutes after the last "
-                                 "halt resumed?"),
-            ("GG_CUSHION_DOUBLE_PCT", "the account cushion (% above the start of the month?) at which an A+ gets "
-                                      "double size?"))
+AWAITING: tuple = ()                                    # 2026-10-21 (BUILD_SPEC22 A5): nothing awaits — GG's words answered all four
 NOT_BUILT = ("base counting (3rd base climax, 4th out)", "psychological $1 / $5 / $10 levels",
-             "exit before the stop on hesitation", "mental stops", "monthly risk re-basing")   # D13 — Playbook text only
+             "exit before the stop on hesitation", "mental stops", "monthly risk re-basing",
+             "all-in on an obvious A+ (GG's word “obvious” has no rule)")   # D13 — Playbook text only; all-in 2026-10-21 (A4)
 LANE_COLL = "gajjala_lane"                              # ⚓
 STATE_COLL = "gajjala_lane_state"                       # ⚓ D4/D5: risk_mult, the equity peak, the drawdown window
 STATE_ID = "state"
@@ -483,7 +500,7 @@ def bar_label(t: datetime, minutes: int) -> datetime:
 
 
 def closed_rows(frame, now) -> list:
-    """[{t (UTC close label), close, ema9, ema21}] of the frame's CLOSED bars only (`bars.closed_only`: a bucket counts
+    """[{t (UTC close label), close, high, ema9, ema21}] of the frame's CLOSED bars only (`bars.closed_only`: a bucket counts
     BAR_SETTLE_SEC after its right label) — the live bar never reaches a management rule."""
     df = getattr(frame, "df", None) if frame is not None else None
     if df is None or len(df) == 0:
@@ -494,7 +511,8 @@ def closed_rows(frame, now) -> list:
     for ts, rec in zip(df.index, df.to_dict("records")):
         t = ts.to_pydatetime()
         t = t.replace(tzinfo=UTC) if t.tzinfo is None else t.astimezone(UTC)
-        out.append({"t": t, "close": _f(rec.get("close")), "ema9": _f(rec.get("ema9")), "ema21": _f(rec.get("ema21"))})
+        out.append({"t": t, "close": _f(rec.get("close")), "high": _f(rec.get("high")), "ema9": _f(rec.get("ema9")),
+                    "ema21": _f(rec.get("ema21"))})
     out.sort(key=lambda r: r["t"])
     return out
 
@@ -512,7 +530,7 @@ def be_bar(rows: list, fill_t: datetime, fill_px, minutes: int) -> Optional[dict
 
 
 def trail_ema_period(setup) -> int:
-    """GG_TRAIL_EMA (9); on Kiss & Fly GG_TRAIL_EMA_KF once he gives it."""
+    """GG_TRAIL_EMA (9); on Kiss & Fly GG_TRAIL_EMA_KF (21, VR 11.4 — 2026-10-21)."""
     if setup == GC.SETUPS[1] and GG_TRAIL_EMA_KF is not None:
         return int(GG_TRAIL_EMA_KF)
     return int(GG_TRAIL_EMA)
@@ -529,17 +547,136 @@ def trail_bar(rows: list, after: Optional[datetime], ema_key: str) -> Optional[d
     return None
 
 
-def partial_bar(rows: list, after: Optional[datetime], fill_px, r, partial_r=None) -> Optional[dict]:
-    """D8b: the first closed bar after breakeven whose close ≥ fill + partial_r x R. partial_r None = never."""
-    if partial_r is None or _f(fill_px) is None or _f(r) is None:
+def strength_bar(rows: list, fill_t: Optional[datetime], after: Optional[datetime], minutes: int) -> Optional[dict]:
+    """A2 (VR 11.4 "into strength", GG_PARTIAL_STRENGTH "new_high", HIS CALL #24): the first closed bar AFTER the
+    breakeven+add bar `after` whose CLOSE is strictly above the highest high of every closed bar from the entry bar (the
+    bar holding the fill) through the bar before it. Returns the row plus `prior_high`; None = no strength yet (a close
+    equal to the prior high is not strength). `rows` are closed bars only (closed_rows)."""
+    if fill_t is None or after is None or GG_PARTIAL_STRENGTH != "new_high":
         return None
-    line = _D(fill_px) + _D(partial_r) * _D(r)
+    entry_label = bar_label(fill_t, minutes)
+    top: Optional[Decimal] = None
     for x in rows:
-        if after is not None and x["t"] <= after:
+        if x["t"] < entry_label:
             continue
-        if x["close"] is not None and _D(x["close"]) >= line:
-            return x
+        if x["t"] > after and top is not None and x.get("close") is not None and _D(x["close"]) > top:
+            return dict(x, prior_high=float(top))
+        h = x.get("high")
+        if h is not None and (top is None or _D(h) > top):
+            top = _D(h)
     return None
+
+
+def partial_due(doc: dict) -> bool:
+    """A2 (GG_PARTIAL_AFTER "add"): the peel comes only once the breakeven add has FILLED (add_fill_qty recorded ≥ 1),
+    once per trade (partial_state None). No add (the breakeven never came, or the add was refused) = no partial."""
+    d = doc or {}
+    if d.get("partial_state") is not None or d.get("be_state") != "done":
+        return False
+    if GG_PARTIAL_AFTER != "add":
+        return False
+    return int(_f(d.get("add_fill_qty")) or 0) >= 1
+
+
+def _frac_word(frac) -> str:
+    """GG_PARTIAL_FRAC in his word ("half"), else its percent."""
+    return "half" if _D(frac) == _D(0.5) else f"{_g(float(_D(frac) * 100))}%"
+
+
+def _bars_word(n) -> str:
+    n = int(n)
+    return "one clean closed bar" if n == 1 else f"{n} clean closed bars"
+
+
+def _parse_et(s) -> Optional[datetime]:
+    """An ET stamp (context.last_resume_et: an ET ISO stamp with its offset); a naive stamp is ET."""
+    if isinstance(s, datetime):
+        return s if s.tzinfo else s.replace(tzinfo=ET)
+    if not isinstance(s, str) or not s:
+        return None
+    try:
+        d = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=ET)
+
+
+def halt_wait(h: Optional[dict], now_et: datetime, day, minutes: int) -> Optional[dict]:
+    """A3 (VR 10.1 "when it's clean, when it's calmer, then I enter"): {why, until} while the lane must WAIT, None when the
+    name is clean. Halted = today's halt ledger row with n > 0 and either no resume yet / a halt still open after an
+    earlier resume (open_halt — still halted) or a resume whose
+    bar (the left-closed 5-minute bar holding it) is not followed by GG_HALT_CALM_BARS CLOSED bars (each counts
+    GC.BAR_SETTLE_SEC after its right label, bars.closed_only's rule). A row of another day, or a resume on another day,
+    is ignored; no row = clean."""
+    if not isinstance(h, dict):
+        return None
+    dd = _as_date(day)
+    hd = _as_date(h.get("date"))
+    if hd is not None and dd is not None and hd != dd:
+        return None
+    if int(_f(h.get("n")) or 0) <= 0:
+        return None
+    want = _bars_word(GG_HALT_CALM_BARS)
+    res = _parse_et(h.get("last_resume_et"))
+    # critic 2026-10-21: halted, resumed, halted again — last_resume_et is the EARLIER resume, so the open halt (any halt
+    # with no resume, context.open_halt) is still "halted, not resumed" (VR 10.1 "when it's clean … then I enter").
+    if res is None or h.get("open_halt") is True:
+        ft = str((h.get("last_halt_time") if h.get("open_halt") is True else None) or h.get("first_halt_time") or "")[:5]
+        at = f" at {ft} ET" if len(ft) == 5 and ft[2] == ":" else ""
+        return {"why": f"halted{at}, not resumed — waiting for {want} after the resume", "until": None}
+    if dd is not None and res.astimezone(ET).date() != dd:
+        return None
+    calm = bar_label(res, minutes) + timedelta(minutes=int(GG_HALT_CALM_BARS) * minutes)
+    if now_et.astimezone(UTC) < calm + timedelta(seconds=GC.BAR_SETTLE_SEC):
+        return {"why": f"halted, resumed {_hhmm(res.astimezone(ET))} ET — waiting for {want} "
+                       f"(closes {_hhmm(calm.astimezone(ET))} ET)", "until": calm}
+    return None
+
+
+def _month_of(d: dict):
+    """The ET calendar month a closed lane doc's P&L belongs to (its exit, else its session date)."""
+    t = _parse(d.get("exit_t"))
+    day = t.astimezone(ET).date() if t is not None else _as_date(d.get("date"))
+    return (day.year, day.month) if day is not None else None
+
+
+def month_realized_pnl(docs: list, day) -> float:
+    """A4 (VR 11.7 "moves it with MONTHLY performance", GG_CUSHION_PERIOD "month"): the sum of pnl_usd over the lane's
+    CLOSED docs whose exit falls in `day`'s ET calendar month. Realized only — an open doc, an unfilled / skipped one
+    and the broker's account P&L never count; a v1 limit-bracket trade (target set) never counts either — the same
+    trades risk_after skips (critic 2026-10-21: _close_doc moves risk_mult only when target is None)."""
+    dd = _as_date(day)
+    if dd is None or GG_CUSHION_PERIOD != "month":
+        return 0.0
+    tot = Decimal(0)
+    for d in docs or []:
+        if (d or {}).get("state") != "closed" or d.get("target") is not None:   # v1 limit brackets: _close_doc's rule
+            continue
+        p = _f(d.get("pnl_usd"))
+        if p is None or _month_of(d) != (dd.year, dd.month):
+            continue
+        tot += _D(p)
+    return float(tot.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def cushion_read(month_pnl, single_risk_usd, risk_mult=1.0, state: Optional[dict] = None) -> dict:
+    """A4: {double, cushion, need, text}. double = this month's realized lane P&L ≥ GG_CUSHION_LOSERS x the trade's
+    planned risk $ at the single rate, AND risk_mult == 1 (no loss streak), AND drawdown mode off."""
+    st = state or {}
+    pnl = _f(month_pnl) or 0.0
+    one = _f(single_risk_usd)
+    need = _r2(_D(GG_CUSHION_LOSERS) * _D(one)) if one is not None and one > 0 else None
+    m = _f(risk_mult)
+    m = 1.0 if m is None else m
+    dd_on = bool(st.get("in_drawdown")) or isinstance(st.get("dd_window"), dict)
+    covered = need is not None and _D(pnl) >= _D(need)
+    double = bool(covered and _D(m) == 1 and not dd_on)
+    need_txt = f"${need:,.2f}" if need is not None else "(no planned risk read)"
+    text = (f"cushion {_money(pnl)} this month vs {GG_CUSHION_LOSERS} losers {need_txt} → "
+            f"{'double' if double else 'single'}")
+    if covered and not double:
+        text += " (risk halved after a loss)" if _D(m) != 1 else " (drawdown mode)"
+    return {"double": double, "cushion": pnl, "need": need, "text": text}
 
 
 def cooldown_until(exit_t: datetime, minutes: int) -> datetime:
@@ -570,6 +707,8 @@ def _fate(d: dict) -> str:
     st = d.get("state")
     cut = _hhmm(cutoff_et(d.get("date")))
     if st == "waiting":
+        if d.get("wait_reason") == "halt_calm" and d.get("why"):      # A3 (VR 10.1), 2026-10-21
+            return (f"{d['why']} · trigger {_px(d.get('trigger'))} (stop {_px(d.get('stop'))}) — until {cut} ET")
         return (f"waiting for the tape to trade {_px(d.get('trigger'))} (stop {_px(d.get('stop'))}) — until {cut} ET")
     if st in ("ordering", "ordered"):
         if d.get("target") is not None:                            # a v1 limit bracket
@@ -632,17 +771,27 @@ def pnl_text(row: dict) -> Optional[str]:
     return None
 
 
-def rules_block(state: Optional[dict] = None, day=None) -> dict:
-    """D14 — the served `rules` object (GajjalaLaneTab prints these keys verbatim; every number from a constant)."""
+def single_risk_usd(state: Optional[dict]) -> Optional[float]:
+    """The served stand-in for "this trade's planned risk at the single rate": the last equity read x GAJJALA_RISK_PCT
+    (the entry path uses the plan's own full_risk_usd)."""
+    eq = _f((state or {}).get("equity"))
+    return _r2(_D(eq) * _D(GAJJALA_RISK_PCT) / 100) if eq is not None and eq > 0 else None
+
+
+def rules_block(state: Optional[dict] = None, day=None, docs: Optional[list] = None) -> dict:
+    """D14 — the served `rules` object (GajjalaLaneTab prints these keys verbatim; every number from a constant).
+    `docs` = the lane docs (the cushion's realized month P&L; None = none read)."""
     st = state or {}
     flat = f"{_hhmm(flatten_et(_as_date(day)))} ET"
     # wording FIXED 2026-10-21 (critic): be_bar() needs ONE close above the fill, on a bar ≥ GG_BE_AFTER_BARS bars after
-    # the entry bar — not N closes above it
+    # the entry bar — not N closes above it. 2026-10-21 (BUILD_SPEC22 A1 / A2): the 21 on Kiss & Fly, the peel after the add
     manage = (f"no target — after the first closed bar, {GG_BE_AFTER_BARS} or more bars after the entry bar, that "
-              f"closes above the entry, the stop moves to breakeven and the second half is added; the remainder trails the 5-minute {GG_TRAIL_EMA} EMA (out on a close below it)")
-    if GG_PARTIAL_R is not None:
-        manage += f"; {_g(GG_PARTIAL_FRAC * 100)}% comes off once a closed bar is {_g(GG_PARTIAL_R)}R over the entry"
+              f"closes above the entry, the stop moves to breakeven and the second half is added; the remainder trails "
+              f"the 5-minute {GG_TRAIL_EMA} EMA, the {GG_TRAIL_EMA_KF} on Kiss & Fly (out on a close below it); after "
+              f"the add, the first closed bar closing at a new high of the move peels {_frac_word(GG_PARTIAL_FRAC)}")
     manage += f"; flat at {flat}"
+    cush = cushion_read(month_realized_pnl(docs or [], day or _et_day()), single_risk_usd(st),
+                        st.get("risk_mult", 1.0), st)
     if st.get("in_drawdown") or isinstance(st.get("dd_window"), dict):
         win = st.get("dd_window") if isinstance(st.get("dd_window"), dict) else {}
         dd = (f"on: {int(win.get('trades') or 0)} of {GG_DRAWDOWN_TRADES} trades, budget left "
@@ -652,7 +801,8 @@ def rules_block(state: Optional[dict] = None, day=None) -> dict:
               f"{_g(GG_DRAWDOWN_RISK_SUM_PCT)}% together and half of every open lane position comes off")
     return {
         "entry_text": "market at the break, after the entry bar closes (GG: 'right at the break … sometimes I wait for "
-                      "the bar close')",
+                      f"the bar close'); never during a halt — {_bars_word(GG_HALT_CALM_BARS)} after the resume (GG: "
+                      "'when it's clean, when it's calmer, then I enter')",
         "stop_text": "the alert's stop, a market stop at the broker from the fill (GG: 'low of the prior bar as the "
                      "stop loss')",
         "size_text": f"half of {_g(GAJJALA_RISK_PCT)}% of equity at risk first; the other half is added at breakeven "
@@ -660,7 +810,11 @@ def rules_block(state: Optional[dict] = None, day=None) -> dict:
         "manage_text": manage,
         "risk_text": f"{_g(GAJJALA_RISK_PCT)}% of equity per trade, halved after a loss, back to "
                      f"{_g(GAJJALA_RISK_PCT)}% after a win — now {_g(risk_pct_now(st.get('risk_mult', 1.0)))}%; "
-                     f"drawdown mode {dd}",
+                     f"drawdown mode {dd}; an A+ risks {_g(GG_DOUBLE_MULT)}× once this month's realized lane P&L "
+                     f"covers {GG_CUSHION_LOSERS} losers at the single rate, with no loss streak and drawdown mode off "
+                     f"(GG: 'raise only on a cushion that survives 2 losers; A+ up to double') — {cush['text']} "
+                     f"(estimated on {_g(GAJJALA_RISK_PCT)}% of the last equity read; each entry decides on its own "
+                     f"planned risk and size caps)",
         "exempt_text": "no earnings shield, no five-position ceiling, no SEPA distribution exit on lane names — GG's "
                        "rules only",
         "not_built": list(NOT_BUILT),
@@ -722,7 +876,8 @@ def _alert_docs(day) -> Optional[list]:
 
 
 def _halts_of(day, sym: str) -> Optional[dict]:
-    """D11: today's halt ledger row for the name ({n, text, last_resume_et}) or None — Mongo only (gajjala_halts)."""
+    """D11: today's halt ledger row for the name ({n, text, last_resume_et, first_halt_time, last_halt_time, open_halt,
+    date}) or None — Mongo only (gajjala_halts, store.HALTS)."""
     try:
         from chart_maps.gajjala.store import GajjalaStore
         for h in GajjalaStore().halts(day) or []:
@@ -730,7 +885,9 @@ def _halts_of(day, sym: str) -> Optional[dict]:
                 n = int(_f(h.get("n_halts")) or 0)
                 reasons = [x for x in h.get("reasons") or [] if x]
                 return {"n": n, "text": f"⏸ halted ×{n}" + (f" ({', '.join(reasons)})" if reasons else ""),
-                        "last_resume_et": h.get("last_resume_et")}
+                        "last_resume_et": h.get("last_resume_et"), "first_halt_time": h.get("first_halt_time"),
+                        "last_halt_time": h.get("last_halt_time"), "open_halt": h.get("open_halt") is True,
+                        "date": h.get("date")}
     except Exception as exc:                                    # noqa: BLE001
         log.debug("gajjala lane: halts unread for %s: %s", sym, exc)
     return None
@@ -1263,8 +1420,8 @@ def _restop_disarmed(doc: dict, sym: str, pos: dict, reads: _Reads, out: dict) -
 
 def _gg_manage(brk, cfg: dict, coll, doc: dict, sym: str, pos: dict, now_et: datetime, reads: _Reads, out: dict,
                lane_on: bool) -> None:
-    """D8 on CLOSED 5-minute bars: breakeven + add, then the 9 EMA trail (and the partial once GG_PARTIAL_R is given);
-    D8f the drawdown half-off. Armed only (the caller checks)."""
+    """D8 on CLOSED 5-minute bars: breakeven + add, then the 9 EMA trail (the 21 on Kiss & Fly) and, once the add has
+    filled, the partial into strength (A2, 2026-10-21); D8f the drawdown half-off. Armed only (the caller checks)."""
     fill_t, fill_px = _parse(doc.get("fill_t")), _f(doc.get("fill_px"))
     if fill_t is None or fill_px is None or doc.get("target") is not None:
         return                                                  # a v1 bracket keeps its own legs
@@ -1298,14 +1455,15 @@ def _gg_manage(brk, cfg: dict, coll, doc: dict, sym: str, pos: dict, now_et: dat
     if t is not None:
         _trail_exit(coll, doc, sym, t, period, now_et, out)
         return
-    if GG_PARTIAL_R is not None and doc.get("partial_state") is None:
-        r = (_f(doc.get("trigger")) or 0) - (_f(doc.get("stop")) or 0)
-        p = partial_bar(rows, after, fill_px, r if r > 0 else None, GG_PARTIAL_R)
+    if partial_due(doc):                                        # A2 (VR 11.4): after the add, into strength, once
+        p = strength_bar(rows, fill_t, after, mins)
         held = int(_f(pos.get("qty")) or 0)
         if p is not None and held >= 2:
             part = max(1, min(held - 1, int(_D(held) * _D(GG_PARTIAL_FRAC))))
             _sell_part(brk, coll, doc, sym, held, part, "partial", reads, out,
-                       f"🚩 Gajjala lane: {_g(GG_PARTIAL_FRAC * 100)}% into strength at +{_g(GG_PARTIAL_R)}R", now_et)
+                       f"🚩 Gajjala lane: {_frac_word(GG_PARTIAL_FRAC)} into strength — the "
+                       f"{_hhmm(p['t'].astimezone(ET))} ET 5-minute bar closed {_px(p['close'])} over the move's high "
+                       f"{_px(p['prior_high'])} (GG: 'peel off 1/3 or half into strength')", now_et)
 
 
 def _breakeven(brk, cfg: dict, coll, doc: dict, sym: str, pos: dict, bar: dict, now_et: datetime, reads: _Reads,
@@ -1552,9 +1710,11 @@ def _expire_waiting(coll, now_et: datetime, day: str, out: dict, cfg: Optional[d
         d = str(doc.get("date") or "")
         cut = cutoff_et(d or None)
         if d < day or (d == day and now_et.time() >= cut):
-            why = f"the tape never traded {_px(doc.get('trigger'))} by {_hhmm(cut)} ET"
-            _skip(coll, doc, "waiting", "never_triggered", why, out, state="unfilled",
-                  dry_run=not (cfg or {}).get("armed"))
+            kind, why = "never_triggered", f"the tape never traded {_px(doc.get('trigger'))} by {_hhmm(cut)} ET"
+            if doc.get("wait_reason") == "halt_calm":           # A3: the halt wait ran into the cut-off — unfilled
+                kind, why = "halt", (f"still waiting for {_bars_word(GG_HALT_CALM_BARS)} after the halt at the "
+                                     f"{_hhmm(cut)} ET cut-off")
+            _skip(coll, doc, "waiting", kind, why, out, state="unfilled", dry_run=not (cfg or {}).get("armed"))
 
 
 # ── claim today's pushed A+ ──────────────────────────────────────────────────────────────────────────────────────
@@ -1637,21 +1797,10 @@ def _cooldown_why(coll, sym: str, now_et: datetime) -> Optional[str]:
     return None
 
 
-def _halt_why(doc: dict, now_et: datetime) -> Optional[str]:
-    """D11 (VR 10.1), off while GG_HALT_CALM_MIN is None."""
-    if GG_HALT_CALM_MIN is None:
-        return None
-    h = _halts_of(doc.get("date"), doc.get("symbol")) or doc.get("halts") or {}
-    if int(_f(h.get("n")) or 0) <= 0:
-        return None
-    res = _parse(h.get("last_resume_et"))
-    if res is None:
-        return "halted — no resume time yet (GG enters 'when it's calmer')"
-    calm = res + timedelta(minutes=float(GG_HALT_CALM_MIN))
-    if now_et.astimezone(UTC) < calm.astimezone(UTC):
-        return (f"halted, resumed {_hhmm(res.astimezone(ET))} ET — GG waits {_g(GG_HALT_CALM_MIN)} min after a halt "
-                f"(until {_hhmm(calm.astimezone(ET))} ET)")
-    return None
+def _halt_wait(doc: dict, now_et: datetime) -> tuple:
+    """A3 (VR 10.1): (wait, halts row) — today's halt ledger row (else the claim's snapshot) through halt_wait()."""
+    h = _halts_of(doc.get("date"), doc.get("symbol")) or doc.get("halts")
+    return halt_wait(h, now_et, doc.get("date"), _bar_min()), h
 
 
 def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads, out: dict, scoll=None,
@@ -1667,6 +1816,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
     open_n = len(live)
     floors = _floors_of(cfg)
     dry = not cfg.get("armed")
+    month_pnl = month_realized_pnl(_find(coll, {"state": "closed"}), day)      # A4: the lane's own realized P&L only
     for doc in waiting:
         sym = (doc.get("symbol") or "").upper()
         try:
@@ -1683,6 +1833,8 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                               risk_mult=st.get("risk_mult", 1.0), budget_left_pct=budget_left_pct(st))
             if plan["waiting"]:
                 out["waiting"] += 1
+                if doc.get("wait_reason"):                      # back under the trigger: the plain wait again
+                    _move_if(coll, {"_id": doc["_id"], "state": "waiting"}, {"wait_reason": None, "why": None})
                 continue
             pfields = {"last": last, "last_source": src, "entry": plan["entry"], "target": None,
                        "stop_px": plan["stop"], "qty": plan["qty"], "full_qty": plan["full_qty"],
@@ -1692,6 +1844,34 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                 state = "unfilled" if plan["skip_kind"] == "never_triggered" else "skipped"
                 _skip(coll, doc, "waiting", plan["skip_kind"], plan["why"], out, pfields, state=state, dry_run=dry)
                 continue
+            # A3 (VR 10.1, 2026-10-21): never during a halt — the doc WAITS (not a terminal skip), re-checked every tick
+            hw, hrow = _halt_wait(doc, now_et)
+            if hw is not None:
+                hf = {"wait_reason": "halt_calm", "why": hw["why"], "halts": hrow, "last": last, "last_source": src,
+                      "halt_until": _iso(hw.get("until"))}
+                if _move_if(coll, {"_id": doc["_id"], "state": "waiting"}, hf):
+                    doc.update(hf)
+                out["waiting"] += 1
+                out["halt_waiting"] += 1
+                continue
+            # A4 (VR 11.7, 2026-10-21): an A+ risks double once this month's realized lane P&L covers
+            # GG_CUSHION_LOSERS x this trade's planned risk at the single rate (no loss streak, drawdown off)
+            cush = cushion_read(month_pnl, plan["full_risk_usd"], st.get("risk_mult", 1.0), st)
+            basis = "single"
+            if cush["double"]:
+                dbl = entry_plan(doc, last, _f(acct_d.get("equity")), _f(acct_d.get("cash")),
+                                 risk_mult=float(_D(_f(st.get("risk_mult", 1.0)) or 1.0) * _D(GG_DOUBLE_MULT)),
+                                 budget_left_pct=budget_left_pct(st))
+                # critic 2026-10-21: "double" only when the size DID double — a size cap (10% notional, the cash, the
+                # drawdown budget) that holds full_qty where it was keeps the single plan and says so
+                if dbl["ok"] and int(dbl["full_qty"] or 0) > int(plan["full_qty"] or 0):
+                    plan, basis = dbl, "double"
+                elif dbl["ok"]:
+                    basis = "single (size cap)"
+            pfields.update({"qty": plan["qty"], "full_qty": plan["full_qty"], "half_qty": plan["half_qty"],
+                            "risk_usd": plan["risk_usd"], "risk_pct": plan["risk_pct"], "notional": plan["notional"],
+                            "risk_basis": basis, "cushion_text": cush["text"], "month_pnl": cush["cushion"],
+                            "cushion_need": cush["need"], "wait_reason": None})
             if sym in held:
                 _skip(coll, doc, "waiting", "held", f"already holding {sym}", out, pfields, dry_run=dry)
                 continue
@@ -1701,10 +1881,6 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             why = _cooldown_why(coll, sym, now_et)
             if why:
                 _skip(coll, doc, "waiting", "cooldown", why, out, pfields, dry_run=dry)
-                continue
-            why = _halt_why(doc, now_et)
-            if why:
-                _skip(coll, doc, "waiting", "halt", why, out, pfields, dry_run=dry)
                 continue
             fl = SF.check(sym, plan["entry"])
             warnings = list(fl.get("warnings") or [])
@@ -1757,7 +1933,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                                            "qty": qty, "full_qty": plan["full_qty"], "risk_usd": risk,
                                            "risk_pct": plan["risk_pct"], "order_id": ofields["order_id"],
                                            "order_type": "market", "floors": floors, "floor_warnings": warnings,
-                                           "why": fate_text(doc)})
+                                           "risk_basis": basis, "cushion_text": cush["text"], "why": fate_text(doc)})
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala lane: %s failed: %s", doc.get("_id"), exc)
             out["errors"].append("entry %s: %s" % (doc.get("_id"), type(exc).__name__))
@@ -1792,7 +1968,8 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
     """Manage what is in flight, then claim and buy today's pushed A+. Never raises past its own fence."""
     out = {"ok": True, "ran": False, "manage_only": False, "day": None, "gate": None, "claimed": 0, "waiting": 0, "ordered": 0,
            "skipped": 0, "cancelled": 0, "filled": 0, "closed": 0, "closing": 0, "dry_run": 0, "breakeven": 0,
-           "added": 0, "trailed": 0, "partials": 0, "half_off": 0, "protected": 0, "restopped": 0, "drawdown": False,
+           "added": 0, "trailed": 0, "partials": 0, "half_off": 0, "protected": 0, "restopped": 0, "halt_waiting": 0,
+           "drawdown": False,
            "errors": []}
     try:
         brk = broker if broker is not None else globals()["broker"]
@@ -1874,13 +2051,15 @@ def status_block(cfg: Optional[dict] = None, docs: Optional[list] = None) -> dic
                      "max_notional_pct": GAJJALA_MAX_NOTIONAL_PCT, "max_entries_per_day": GAJJALA_MAX_ENTRIES_PER_DAY,
                      "max_open": GAJJALA_MAX_OPEN, "fill_wait_sec": GAJJALA_FILL_WAIT_SEC,
                      "max_round_r_pct": GAJJALA_MAX_ROUND_R_PCT, "missed_r": GAJJALA_MISSED_R,
-                     "be_after_bars": GG_BE_AFTER_BARS, "partial_frac": GG_PARTIAL_FRAC, "partial_r": GG_PARTIAL_R,
+                     "be_after_bars": GG_BE_AFTER_BARS, "partial_frac": GG_PARTIAL_FRAC,
+                     "partial_after": GG_PARTIAL_AFTER, "partial_strength": GG_PARTIAL_STRENGTH,
                      "trail_ema": GG_TRAIL_EMA, "trail_ema_kf": GG_TRAIL_EMA_KF,
-                     "reentry_wait_bars": GG_REENTRY_WAIT_BARS, "halt_calm_min": GG_HALT_CALM_MIN,
-                     "cushion_double_pct": GG_CUSHION_DOUBLE_PCT, "drawdown_pct": GG_DRAWDOWN_PCT,
+                     "reentry_wait_bars": GG_REENTRY_WAIT_BARS, "halt_calm_bars": GG_HALT_CALM_BARS,
+                     "cushion_losers": GG_CUSHION_LOSERS, "double_mult": GG_DOUBLE_MULT,
+                     "cushion_period": GG_CUSHION_PERIOD, "drawdown_pct": GG_DRAWDOWN_PCT,
                      "drawdown_trades": GG_DRAWDOWN_TRADES, "drawdown_risk_sum_pct": GG_DRAWDOWN_RISK_SUM_PCT,
                      "in_drawdown": bool(st.get("in_drawdown"))},
-        "rules": rules_block(st, d),
+        "rules": rules_block(st, d, docs),
         "unmeasured_text": UNMEASURED_TEXT, "streak_text": STREAK_TEXT,
         "track_record_text": TRACK_RECORD_TEXT, "track_record_url": TRACK_RECORD_URL,
         "empty_today_text": EMPTY_TODAY_TEXT,

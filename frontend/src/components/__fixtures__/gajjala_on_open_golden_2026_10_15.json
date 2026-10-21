@@ -393,6 +393,13 @@
         "need": "1–5",
         "ok": true,
         "value": "2 bars"
+       },
+       {
+        "key": "k11_volume",
+        "label": "K11 today's volume 3,000,000 ≥ 1,000,000",
+        "need": "",
+        "ok": true,
+        "value": ""
        }
       ],
       "cycles": null,
@@ -891,6 +898,11 @@
       "key": "K10",
       "text": "regular close in the top 30% of the day's range, 250,000+ after-hours shares, up 5%+ on the close",
       "value": "Ajay 2026-10-13"
+     },
+     {
+      "key": "K11",
+      "text": "today's volume ≥ 1,000,000 shares at the ring (his scanner floor; 'it must sustain')",
+      "value": "GG S8 1:32:02 / 1:23:30 · Ajay 2026-10-21"
      },
      {
       "key": "H1",

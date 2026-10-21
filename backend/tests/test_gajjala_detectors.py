@@ -926,6 +926,8 @@ def _fix(kind):
     fr = FX.float_read(5_000_000)
     return {
         "bf": lambda: D.bull_flag(FX.bf_aplus()),
+        # WIDENED 2026-10-21 (BUILD_SPEC22 B1, K11): the bf A+ at exactly the floor (= SCAN_MIN_VOLUME, read at call time)
+        "bf_k11": lambda: D.k11_gate(D.bull_flag(FX.bf_aplus()), GC.SCAN_MIN_VOLUME),
         "bf5": lambda: D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(5)))),
         "rkda": lambda: D.bull_flag(FX.frame(FX.bf_bars([(11.0, 11.0, 10.6, 10.9, 100_000), FX.P2]))),
         "ocx": lambda: D.bull_flag(FX.frame(FX.bf_bars([FX.P1[:4] + (400_000,), FX.P2[:4] + (300_000,)],
@@ -977,6 +979,7 @@ SWEEP = [
     ("K8_RECOVER_BARS", 0, "rs"), ("K8_FAIL_NEAR_PCT", 0.0, "rs"), ("K8_FAIL_DROP_PCT", 20.0, "rs"),
     ("K8_FAIL_EVENT_RULE", "same_ok", "rs_s8"), ("RS_BASE_MIN_BARS", 3, "rs"),
     ("FLOAT_SUSPECT_POLICY", "shares_out", "rs_suspect"),
+    ("K11_MIN_SESSION_VOLUME", GC.SCAN_MIN_VOLUME + 1, "bf_k11"),   # WIDENED 2026-10-21 (K11): one share over → not A+
 ]
 
 

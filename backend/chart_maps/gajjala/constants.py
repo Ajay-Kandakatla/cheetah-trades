@@ -94,6 +94,9 @@ K9_AH_CARRY_PCT = 10.0                   # Ajay K9: prior-day after-hours move >
 K10_CLOSE_TOP_FRAC = 0.30                # Ajay K10: regular close in the top 30% of the day's range
 K10_AH_MIN_VOLUME = 250_000              # Ajay K10: after-hours volume >= 250,000
 K10_AH_MIN_GAIN_PCT = 5.0                # Ajay K10: after-hours gain >= 5% vs the regular close
+# K11 today's volume on the A+ claim (2026-10-21, BUILD_SPEC22 B1) — judged at the ring by detectors.k11_gate on the
+# scanner's session volume of the pass that reads the entry bar; ONE number (his scanner floor), never a second
+K11_MIN_SESSION_VOLUME = SCAN_MIN_VOLUME  # GG VR 0.4 "1M is a floor … it must SUSTAIN (one 1M bar then a fade = not interested)" — Ajay 2026-10-21 "keep what ever Gajjala says" on "Whether an A+ should also require today's volume to clear GG's 1M floor (NIXX rang on 288K shares)"
 
 # leg minimums he stated
 BF_LEG_MIN_BARS = 2                      # GG S9 1:59:24 "at least two big green bars"

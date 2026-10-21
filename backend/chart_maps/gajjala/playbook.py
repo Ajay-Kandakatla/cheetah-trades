@@ -43,6 +43,7 @@ AJAY = "Ajay 2026-10-13"
 # the provenance names both dates; the bar range is built from the constants, never retyped.
 AJAY_K4_FMT = AJAY + " · 2026-10-18 (%d–%d bars)"   # filled at call time from K4_BF_PULL_MIN / K4_BF_PULL_MAX
 CHEETAH_DEFAULT = "Cheetah default (Ajay, not GG)"
+AJAY_K11 = "GG S8 1:32:02 / 1:23:30 · Ajay 2026-10-21"   # K11: GG's floor + "it must sustain"; Ajay "keep what ever Gajjala says"
 WAITING = "waiting for your number ({h})"
 _PCT = 100                                      # a unit, not a rule (a fraction shown as a percent, as rules_info does)
 # The bracketed edits of his b-word quotes (the standing reversal rule). Keys = the bracket served, values = what the
@@ -428,7 +429,7 @@ def _event_rule_text() -> str:
 
 
 def knobs() -> list:
-    """K1–K10 (+ round-A/C answers and H1–H5) rendered from constants.py with their provenance."""
+    """K1–K11 (+ round-A/C answers and H1–H5) rendered from constants.py with their provenance."""
     rows = [
         ("Scanner", "price $%s–$%s, %s+ shares today, up %s%%+ on the prior regular close; common stock + ADRs"
          % (_v("SCAN_MIN_PRICE", "%.2f"), _v("SCAN_MAX_PRICE"), _n("SCAN_MIN_VOLUME"), _v("SCAN_MIN_CHANGE_PCT")),
@@ -460,6 +461,9 @@ def knobs() -> list:
                                                                                 _v("K9_AH_CARRY_PCT")), AJAY),
         ("K10", "regular close in the top %s of the day's range, %s+ after-hours shares, up %s%%+ on the close"
          % (_pct_of("K10_CLOSE_TOP_FRAC"), _n("K10_AH_MIN_VOLUME"), _v("K10_AH_MIN_GAIN_PCT")), AJAY),
+        # K11 (2026-10-21, BUILD_SPEC22 B3): GG VR 0.4 — Ajay "keep what ever Gajjala says"; the floor is his scanner's
+        ("K11", "today's volume ≥ %s shares at the ring (his scanner floor; 'it must sustain')"
+         % _n("K11_MIN_SESSION_VOLUME"), AJAY_K11),
         ("H1", "failed try at the highs: within %s%% of today's high, then %s%% under it"
          % (_v("K8_FAIL_NEAR_PCT"), _v("K8_FAIL_DROP_PCT")), AJAY),
         ("H2", "failed try vs the tennis ball: %s" % _event_rule_text(), AJAY),

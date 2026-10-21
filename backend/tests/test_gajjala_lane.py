@@ -732,7 +732,9 @@ def _allowed_numbers():
     vals = [GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT, GL.GAJJALA_MAX_OPEN, GL.GAJJALA_FILL_WAIT_SEC,
             GL.GAJJALA_MAX_ROUND_R_PCT, GL.GAJJALA_MISSED_R, GL.GG_BE_AFTER_BARS, GL.GG_TRAIL_EMA,
             GL.GG_REENTRY_WAIT_BARS, GL.GG_DRAWDOWN_PCT, GL.GG_DRAWDOWN_TRADES, GL.GG_DRAWDOWN_RISK_SUM_PCT,
-            SF.MIN_SHARE_PRICE, SF.MIN_CAP_USD / 1e6, 0]
+            SF.MIN_SHARE_PRICE, SF.MIN_CAP_USD / 1e6, 0,
+            # 2026-10-21 (BUILD_SPEC22 A5): the 21 on Kiss & Fly, the cushion's 2 losers and GG's "up to double"
+            GL.GG_TRAIL_EMA_KF, GL.GG_CUSHION_LOSERS, GL.GG_DOUBLE_MULT]
     out = set()
     for v in vals:
         out |= {f"{v:g}", f"{v:.2f}", str(v)}

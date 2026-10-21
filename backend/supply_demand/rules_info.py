@@ -472,11 +472,16 @@ def sections() -> dict:
             "market order at the break once the tape trades the trigger, the alert's stop at the "
             "broker, no target; half of %g%% of equity at risk first, the other half added at "
             "breakeven after the first closed bar, %d or more bars after the entry bar, that closes "
-            "above the entry, the rest trails the %d EMA (out on a "
-            "closed bar under it); risk halves after a losing trade; %d open at most, no day cap, "
+            "above the entry, the rest trails the %d EMA (the %d on Kiss & Fly; out on a "
+            "closed bar under it); after the add, the first closed bar closing above every high since "
+            "the entry sells %s; never enters during a halt — %s after the resume; an A+ "
+            "risks %g× once the month's realized lane P&L covers %d losers at the single rate (no loss "
+            "streak, drawdown mode off); risk halves after a losing trade; %d open at most, no day cap, "
             "no earnings shield; flat by %s ET. UNMEASURED."
-            % (GLN.GAJJALA_RISK_PCT, GLN.GG_BE_AFTER_BARS, GLN.GG_TRAIL_EMA,
-               GLN.GAJJALA_MAX_OPEN, _t(GLN.flatten_et())),
+            # 2026-10-21 (BUILD_SPEC22, Ajay "keep what ever Gajjala says for these"): VR 11.4 / 10.1 / 11.7
+            % (GLN.GAJJALA_RISK_PCT, GLN.GG_BE_AFTER_BARS, GLN.GG_TRAIL_EMA, GLN.GG_TRAIL_EMA_KF,
+               GLN._frac_word(GLN.GG_PARTIAL_FRAC), GLN._bars_word(GLN.GG_HALT_CALM_BARS), GLN.GG_DOUBLE_MULT,
+               GLN.GG_CUSHION_LOSERS, GLN.GAJJALA_MAX_OPEN, _t(GLN.flatten_et())),
             "\U0001F6E1\uFE0F Safety floors — every stock lane (they all buy through "
             "the one entry function): share price ≥ $%.2f and, when the cap is known, market "
             "cap ≥ %s. An unknown cap or a tape under $%dM/day WARNS instead of blocking. "
@@ -1143,8 +1148,9 @@ def _gajjala_section() -> dict:
     like the 📉 section: the panel must not load the tab to list the others."""
     from datetime import date as _date, datetime as _dt, timedelta as _td
     from chart_maps.gajjala import constants as GC
+    from chart_maps.gajjala import detectors as GD             # K11 2026-10-21 — the served words only (K11_WHY …)
     from chart_maps.gajjala import tab as GT
-    from chart_maps import live_card as LC                 # 🔴 2026-10-21 (BUILD_SPEC20 D6) — display constants only
+    from chart_maps import live_card as LC                # 🔴 2026-10-21 (BUILD_SPEC20 D6) — display constants only
     from daytrading import data as DTD
 
     tf5, tf15 = GT.TFS
@@ -1244,6 +1250,14 @@ def _gajjala_section() -> dict:
             "with no range puts the stop at the trigger — no risk — and that read is invalid: never A+, never pushed "
             "(the 🏁 Track record's own “no risk” word). Never the first %d minutes after the open (his) — rows carry "
             "⏳. Exits are his discretion — 📓 Playbook — never computed." % GC.NO_TRADE_AFTER_OPEN_MIN,
+            # K11 2026-10-21 (BUILD_SPEC22 B3): GG VR 0.4 "1M is a floor … it must SUSTAIN" — Ajay 2026-10-21 "keep what
+            # ever Gajjala says for these". The floor is GC.K11_MIN_SESSION_VOLUME (= SCAN_MIN_VOLUME, one number); the
+            # why / unknown / not-A+ words are the detectors' own served constants, never retyped. No "K11" token here:
+            # the panel's number test allows constant values only (the card's criteria row carries the K11 label).
+            "Today's volume on the A+: when the entry bar closes, the name's volume for the session so far must be "
+            "≥ %s shares (his scanner floor; %s). Under it — or no figure for the name (“%s”) — the break reads "
+            "“%s”: never pushed, no 🏁 row, no 🚩 lane entry. Forming 🧠 potentials are not judged on it."
+            % (_gg_n("K11_MIN_SESSION_VOLUME"), GD.K11_WHY, GD.K11_UNKNOWN, GD.NOT_APLUS_REASON),
             "🧱 %s chip when a level sits within %s%% above the price — his profit-taking / climax levels, not an "
             "entry; the %s%% band is a Cheetah default (yours, not his)."
             % (levels, _gg_v("PSY_NEAR_PCT"), _gg_v("PSY_NEAR_PCT")),

@@ -286,6 +286,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import alerts as AL
     from . import potential as PT
     from . import store as ST
+    from . import detectors as D
 
     deps = deps or Deps()
     now_given = now is not None
@@ -374,7 +375,11 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         budget = GC.ON_DEMAND_BUDGET_SEC if on_demand else max(0.0, GC.PASS_BUDGET_SEC - waited)
         left = max(0.0, budget - (deps.clock() - t0))
         frames = B.frames_for(names, session, now, load_day=deps.load_day, budget_sec=left, stats=bar_stats)
-        reads = {s: deps.read_all(fr.detector_frames(), {"symbol": s, "float_read": floats.get(s)})
+        # K11 (2026-10-21, GG VR 0.4 "1M is a floor … it must SUSTAIN" — Ajay "keep what ever Gajjala says"): the
+        # session volume THIS pass read (the qualifier row, else the snapshot row — scanner._volume); never the stored row.
+        sv = {s: (q_rows.get(s) or _row_from_snapshot(s, rows.get(s), session_iso) or {}).get("volume") for s in frames}
+        reads = {s: deps.read_all(fr.detector_frames(), {"symbol": s, "float_read": floats.get(s),
+                                                          D.K11_CTX_KEY: sv.get(s)})
                  for s, fr in frames.items()}
 
         # float chain step 3 — paced Yahoo, 🎾-alive names first; a changed float re-reads ONLY the 🎾 setup.
@@ -393,8 +398,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 if fr_read.get("refined") or (fr_read.get("shares") != (floats.get(s) or {}).get("shares")):
                     floats[s] = fr_read
                     if s in frames:
-                        reads[s]["reversal_squeeze"] = deps.read_all(
-                            frames[s].detector_frames(), {"symbol": s, "float_read": fr_read})["reversal_squeeze"]
+                        reads[s]["reversal_squeeze"] = deps.read_all(frames[s].detector_frames(), {
+                            "symbol": s, "float_read": fr_read, D.K11_CTX_KEY: sv.get(s)})["reversal_squeeze"]
 
         # ☀️ premarket levels (the 1-minute sum the board prefers) / 🌙 K10 confirm (after-hours passes)
         pm_levels = {}
