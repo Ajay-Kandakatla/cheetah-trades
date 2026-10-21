@@ -569,11 +569,13 @@
       {
        "label": "BUY > 10.95",
        "price": 10.953125,
+       "text": "10.95",
        "tone": "buy"
       },
       {
        "label": "STOP 10.89",
        "price": 10.890625,
+       "text": "10.89",
        "tone": "stop"
       }
      ],
@@ -833,11 +835,13 @@
       {
        "label": "BUY > 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -1097,11 +1101,13 @@
       {
        "label": "TRIGGER 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -1361,11 +1367,13 @@
       {
        "label": "TRIGGER 11.00",
        "price": 11.0,
+       "text": "11.00",
        "tone": "buy"
       },
       {
        "label": "STOP 10.50",
        "price": 10.5,
+       "text": "10.50",
        "tone": "stop"
       }
      ],
@@ -1627,11 +1635,13 @@
       {
        "label": "TRIGGER 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -2146,11 +2156,13 @@
       {
        "label": "BUY > 10.95",
        "price": 10.953125,
+       "text": "10.95",
        "tone": "buy"
       },
       {
        "label": "STOP 10.89",
        "price": 10.890625,
+       "text": "10.89",
        "tone": "stop"
       }
      ],
@@ -2445,11 +2457,13 @@
       {
        "label": "BUY > 6.25",
        "price": 6.25,
+       "text": "6.25",
        "tone": "buy"
       },
       {
        "label": "STOP 6.09",
        "price": 6.09375,
+       "text": "6.09",
        "tone": "stop"
       }
      ],
@@ -2756,11 +2770,13 @@
       {
        "label": "BUY > 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -3042,11 +3058,13 @@
       {
        "label": "TRIGGER 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -3342,11 +3360,13 @@
       {
        "label": "TRIGGER 10.94",
        "price": 10.9375,
+       "text": "10.94",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -3638,11 +3658,13 @@
       {
        "label": "TRIGGER 10.48",
        "price": 10.484375,
+       "text": "10.48",
        "tone": "buy"
       },
       {
        "label": "STOP 10.42",
        "price": 10.421875,
+       "text": "10.42",
        "tone": "stop"
       }
      ],

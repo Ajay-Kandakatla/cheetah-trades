@@ -434,11 +434,13 @@
       {
        "label": "BUY > 10.97",
        "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
        "label": "STOP 10.81",
        "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -2580,11 +2582,13 @@
       {
        "label": "TRIGGER 11.25",
        "price": 11.25,
+       "text": "11.25",
        "tone": "buy"
       },
       {
        "label": "STOP 10.84",
        "price": 10.84375,
+       "text": "10.84",
        "tone": "stop"
       }
      ],

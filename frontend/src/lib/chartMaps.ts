@@ -660,6 +660,13 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
  *  and could push the real support label off the gutter. */
 export type CmLine = {
   price: number; label: string; tone: CmLineTone; quiet?: boolean;
+  /** The ONE served print of `price` (2026-10-21, Ajay on a NUAI 🚩 card: "The
+   *  entry getting changed.." — the chart said TRIGGER 3.61, the PLAN row
+   *  Entry 3.60 from its own toFixed of 3.605). chart_maps/gajjala/tab._tile_lines
+   *  serves it on the broker grid; the PLAN row prints it verbatim and strips
+   *  it off the label to name the row. Absent on every other board (an older
+   *  API too) → the row prints pxText(price) as before. */
+  text?: string | null;
   /** 🧱 A 🔑 support LOW's served pad edge (2026-09-30,
    *  supply_demand/key_levels.chart_lines): the level breaks only past this.
    *  null / absent on highs and on any unpadded line. Never computed here. */

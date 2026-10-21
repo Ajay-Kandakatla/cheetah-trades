@@ -11100,6 +11100,46 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: "🚩 Gajjala card: the PLAN row prints the served line text (2026-10-21)",
+    file: 'src/components/PatternChart.tsx',
+    // Ajay 2026-10-21, on a NUAI 🧠 card (Horizontal Fade, trigger 3.605) whose chart said "TRIGGER 3.61", read line
+    // "trigger 3.61 · stop 3.41" and PLAN row "Entry 3.60 · STOP 3.41  3.41": "The entry getting changed..". ONE print:
+    // chart_maps/gajjala/tab._tile_lines serves `text` = _px(price) (the broker grid) on every line; the PLAN row prints
+    // it verbatim and cardLadder.planLineKey strips it off the label to name the row. No level changes. Bug fix, no ✨.
+    checks: (pc) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      if (!/const lineText = \(l: \{ price\?: unknown; text\?: string \| null \} \| undefined\) =>/.test(pc)) errs.push('PatternChart.tsx must define lineText(l) — the served text first, pxText(price) as the fallback');
+      if (!/const buyPx = lineText\(lineOf\('buy'\)\);/.test(pc)) errs.push("PatternChart.tsx Entry row must print lineText(lineOf('buy'))");
+      if (!/planLineKey\(tone, label, k, line\.text\)/.test(pc)) errs.push('PatternChart.tsx PLAN rows must name the row with planLineKey(tone, label, k, line.text)');
+      if (!/const px = lineText\(line\)!;/.test(pc)) errs.push('PatternChart.tsx PLAN rows must print lineText(line)');
+      if (/const px = pxText\(line\?\.price\);/.test(pc)) errs.push('PatternChart.tsx PLAN rows round the float on their own again (pxText(line?.price))');
+      const cl = tryRead('src/lib/cardLadder.ts', 'planLineKey');
+      if (cl && !/export function planLineKey\(tone: string, label: string \| null \| undefined, word: string,\s*\n\s*text\?: string \| null\): string \{/.test(cl)) errs.push('cardLadder.planLineKey must take the served text as its fourth argument');
+      if (cl && !/const bare = t && l\.endsWith\(` \$\{t\}`\) \? l\.slice\(0, -\(t\.length \+ 1\)\)\.trim\(\) \|\| l : l;/.test(cl)) errs.push('cardLadder.planLineKey must strip exactly the " <text>" tail (strings only, never parsed)');
+      const cm = tryRead('src/lib/chartMaps.ts', 'CmLine');
+      if (cm && !/export type CmLine = \{[\s\S]*?text\?: string \| null;[\s\S]*?\};/.test(cm)) errs.push('chartMaps.CmLine must carry text?: string | null');
+      const py = tryRead('../backend/chart_maps/gajjala/tab.py', '_tile_lines');
+      if (py) {
+        const fn = (/def _tile_lines\(read: dict\) -> list:[\s\S]*?\n    return out\n/.exec(py) || [''])[0];
+        if (!fn) errs.push('tab.py must define _tile_lines(read) ending "return out"');
+        else {
+          if ((fn.match(/"text": tx/g) || []).length !== 2) errs.push('tab._tile_lines must serve "text": tx on BOTH lines (trigger and stop)');
+          if (!/tx = _px\(read\["trigger"\]\)/.test(fn) || !/tx = _px\(read\["stop"\]\)/.test(fn)) errs.push('tab._tile_lines text must be _px(price) — the ONE price formatter (broker grid)');
+          if (!/f"BUY > \{tx\}" if entry else f"TRIGGER \{tx\}"/.test(fn)) errs.push('tab._tile_lines label must carry the same tx the text carries');
+          if (!/"label": f"STOP \{tx\}", "tone": "stop", "text": tx/.test(fn)) errs.push('tab._tile_lines STOP line must carry label "STOP {tx}" and text tx');
+        }
+      }
+      for (const [rel, re, what] of [
+        ['src/lib/cardLadder.test.ts', /a served `text` tail comes off the label before the canonical test \(NUAI 2026-10-21\)/, 'the planLineKey text test'],
+        ['src/components/PatternChart.ladder.test.tsx', /Entry prints the served 3\.61, not its own 3\.60; Stop prints 3\.41 once under the fixed word/, 'the NUAI PLAN-row test'],
+        ['src/components/PatternChart.ladder.test.tsx', /NEGATIVE: without `text` \(another board, an older API\)/, 'the no-text negative'],
+        ['../backend/tests/test_gajjala_line_text_2026_10_21.py', /def test_NEGATIVE_text_is_never_a_second_number/, 'the BE negative'],
+      ]) { const t = tryRead(rel, what); if (t && !re.test(t)) errs.push(`${rel} lost ${what}`); }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

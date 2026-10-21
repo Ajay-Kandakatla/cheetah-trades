@@ -490,11 +490,19 @@ const PLAN_CANON: Record<string, (label: string) => boolean> = {
   cost: (l) => l.startsWith('your cost'),          // holdingsBoard.ts line label
   ownstop: (l) => l.startsWith('your stop'),       // holdingsBoard.ts line label
 };
-export function planLineKey(tone: string, label: string | null | undefined, word: string): string {
+export function planLineKey(tone: string, label: string | null | undefined, word: string,
+                            text?: string | null): string {
   const l = typeof label === 'string' ? label.trim() : '';
   if (!l) return word;
+  /* 2026-10-21 (Ajay, a NUAI 🚩 card: "STOP 3.41  3.41"): a line that also serves
+   * its print (`text`, chart_maps/gajjala/tab._tile_lines) carries that print at
+   * the end of its label for the chart gutter. The row prints the text once, so
+   * the name is the label WITHOUT that tail — "STOP" → the fixed word "Stop";
+   * "BREAK" stays "BREAK". Strings only: an exact " <text>" suffix, nothing parsed. */
+  const t = typeof text === 'string' ? text.trim() : '';
+  const bare = t && l.endsWith(` ${t}`) ? l.slice(0, -(t.length + 1)).trim() || l : l;
   const canon = PLAN_CANON[tone];
-  return canon && canon(l) ? word : l;
+  return canon && canon(bare) ? word : bare;
 }
 
 /* ── ⊞ Expand all (his answer 2026-09-25: "Yes, off by default") ──────────

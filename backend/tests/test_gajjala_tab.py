@@ -173,8 +173,8 @@ def test_tile_carries_lines_marker_curves_vol_avg_and_words():
     out = GT.build("bull_flag", now=NOW, store=ordering_store())
     t = out["tiles"][0]
     assert t["href"] == "/sepa/BBB?tab=supply"
-    assert t["lines"] == [{"price": 4.12, "label": "BUY > 4.12", "tone": "buy"},
-                          {"price": 3.95, "label": "STOP 3.95", "tone": "stop"}]
+    assert t["lines"] == [{"price": 4.12, "label": "BUY > 4.12", "tone": "buy", "text": "4.12"},      # `text` since 2026-10-21 (NUAI)
+                          {"price": 3.95, "label": "STOP 3.95", "tone": "stop", "text": "3.95"}]
     assert t["markers"] == [{"date": "2026-10-13 10:30", "kind": "buy", "label": "A+"}]
     assert [c["tone"] for c in t["curves"]] == ["ema9", "ema21"] and len(t["bars"]) == 12
     assert t["vol_avg"]["values"] == [100.0] * 12

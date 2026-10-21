@@ -368,6 +368,26 @@ describe('cardLadder — repair round 2026-09-25', () => {
     expect(planLineKey('stop', '', 'Stop')).toBe('Stop');
     expect(planLineKey('stop', undefined, 'Stop')).toBe('Stop');
   });
+
+  /* 2026-10-21 — Ajay on a NUAI 🚩 card whose PLAN row read "STOP 3.41  3.41": a line that serves its print
+     (`text`) carries it at the end of the label for the chart gutter; the row name is the label without that tail. */
+  it('planLineKey: a served `text` tail comes off the label before the canonical test (NUAI 2026-10-21)', () => {
+    expect(planLineKey('stop', 'STOP 3.41', 'Stop', '3.41')).toBe('Stop');
+    expect(planLineKey('stop', 'STOP 0.3101', 'Stop', '0.3101')).toBe('Stop');
+    expect(planLineKey('target', 'TARGET 12.00', 'Target', '12.00')).toBe('Target');
+    /* a non-canonical word keeps ITS word, once — never "BREAK 52.00" + "52.00" */
+    expect(planLineKey('target', 'BREAK 52.00', 'Target', '52.00')).toBe('BREAK');
+    /* NEGATIVE: no text → the label prints verbatim as before (an older API) */
+    expect(planLineKey('stop', 'STOP 3.41', 'Stop')).toBe('STOP 3.41');
+    expect(planLineKey('stop', 'STOP 3.41', 'Stop', null)).toBe('STOP 3.41');
+    expect(planLineKey('stop', 'STOP 3.41', 'Stop', '')).toBe('STOP 3.41');
+    /* NEGATIVE: the text must be the exact tail — a different print, a glued one or a prefix strips nothing */
+    expect(planLineKey('stop', 'STOP 3.41', 'Stop', '3.4')).toBe('STOP 3.41');
+    expect(planLineKey('stop', 'STOP3.41', 'Stop', '3.41')).toBe('STOP3.41');
+    expect(planLineKey('stop', '3.41 STOP', 'Stop', '3.41')).toBe('3.41 STOP');
+    /* NEGATIVE: a label that IS the text keeps the label (never an empty name) */
+    expect(planLineKey('stop', '3.41', 'Stop', '3.41')).toBe('3.41');
+  });
 });
 
 describe('cardLadder — 🔑 key levels (2026-09-25)', () => {

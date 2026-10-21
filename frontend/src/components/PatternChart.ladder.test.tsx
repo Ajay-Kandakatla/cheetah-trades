@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import { filterTile } from '../lib/chartOverlays';
-import type { CmTile } from '../lib/chartMaps';
+import type { CmLine, CmTile } from '../lib/chartMaps';
 import type { BurstRead } from '../lib/momentumBurst';
 import type { OuterChip } from '../lib/cardLadder';
 import { VOYA, HCSG, ORKA_LIKE } from '../lib/__fixtures__/cardLadder.tiles';
@@ -64,6 +64,58 @@ describe('PatternChart — the entry ladder', () => {
     expect(screen.queryByText('Buy zone')).not.toBeInTheDocument();
     expect(screen.getByText('Entry')).toBeInTheDocument();
     expect(screen.getAllByText('96.09').length).toBeGreaterThanOrEqual(1);
+  });
+
+  /* 2026-10-21 — Ajay on a NUAI 🚩 card (Horizontal Fade, trigger 3.605): the chart said "TRIGGER 3.61", the read
+     line "trigger 3.61", the PLAN row "Entry 3.60 · STOP 3.41  3.41". "The entry getting changed..". The server now
+     serves `text` on every Gajjala line; the PLAN row prints that text once and names the row by the bare label. */
+  describe('a served line text is the PLAN row\'s print (NUAI 2026-10-21)', () => {
+    const GG_LINES: CmLine[] = [
+      { price: 3.605, label: 'TRIGGER 3.61', tone: 'buy', text: '3.61' },
+      { price: 3.41, label: 'STOP 3.41', tone: 'stop', text: '3.41' },
+    ];
+    const gg = (lines: CmLine[] = GG_LINES): CmTile => ({ ...VOYA, lines, enterable: { ...VOYA.enterable!, band: null } });
+
+    it('Entry prints the served 3.61, not its own 3.60; Stop prints 3.41 once under the fixed word', () => {
+      const { container } = draw(gg());
+      const plan = container.querySelector('.cm-rung-plan')!;
+      expect(plan.textContent).toContain('Entry3.61');
+      expect(plan.textContent).toContain('Stop3.41');
+      expect(plan.textContent).not.toContain('3.60');
+      expect(plan.textContent).not.toContain('STOP 3.41');
+      expect(plan.textContent).not.toContain('3.413.41');
+    });
+
+    it('a sub-dollar text keeps its four decimals (0.3101), where pxText would print three', () => {
+      const { container } = draw(gg([
+        { price: 0.3101, label: 'TRIGGER 0.3101', tone: 'buy', text: '0.3101' },
+        { price: 0.2975, label: 'STOP 0.2975', tone: 'stop', text: '0.2975' },
+      ]));
+      const plan = container.querySelector('.cm-rung-plan')!;
+      expect(plan.textContent).toContain('Entry0.3101');
+      expect(plan.textContent).toContain('Stop0.2975');
+      expect(plan.textContent).not.toContain('0.310S');
+    });
+
+    it('NEGATIVE: without `text` (another board, an older API) the row prints pxText(price) and the label verbatim', () => {
+      const { container } = draw(gg(GG_LINES.map(({ text: _t, ...l }) => l)));
+      const plan = container.querySelector('.cm-rung-plan')!;
+      expect(plan.textContent).toContain('Entry3.60');
+      expect(plan.textContent).toContain('STOP 3.413.41');
+    });
+
+    it('NEGATIVE: an empty or non-string text falls back to pxText; a non-finite price still drops its row', () => {
+      const { container } = draw(gg([
+        { price: 3.605, label: 'TRIGGER 3.61', tone: 'buy', text: '   ' },
+        { price: 3.41, label: 'STOP 3.41', tone: 'stop', text: 7 as any },
+        { price: NaN, label: 'TARGET 9.99', tone: 'target', text: '9.99' },
+      ]));
+      const plan = container.querySelector('.cm-rung-plan')!;
+      expect(plan.textContent).toContain('Entry3.60');
+      expect(plan.textContent).toContain('STOP 3.413.41');
+      expect(plan.textContent).not.toContain('9.99');
+      expect(screen.queryByText('Target')).not.toBeInTheDocument();
+    });
   });
 
   it('NEGATIVE: a NaN / undefined price drops its row — "NaN" and "undefined" never print', () => {

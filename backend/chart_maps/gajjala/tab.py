@@ -957,13 +957,22 @@ def _tile_lines(read: dict) -> list:
     (_is_entry_read); every other read prints TRIGGER — a level, never a word that reads as advice. The tone stays
     "buy" (the line style and the card ladder's Entry row key on it); the STOP line is unchanged."""
     out = []
+    # `text` (2026-10-21, Ajay on a NUAI card whose PLAN row said "Entry 3.60" under a chart label "TRIGGER 3.61" and a
+    # read line "trigger 3.61": "The entry getting changed.."): the ONE print of the level, _px on the broker grid
+    # (3.605 → "3.61"; 0.3101 keeps its four), served next to the raw `price` so the card's PLAN row prints the same
+    # text the chart label and the read line carry instead of rounding the float on its own (toFixed gave 3.60). The
+    # label still carries the word + the same text for the chart gutter; the FE strips the text off the label to name
+    # the row ("Stop", "Entry") and prints the text once.
     if _f(read.get("trigger")) is not None:
         entry = _is_entry_read(read)
+        tx = _px(read["trigger"])
         out.append({"price": _f(read["trigger"]),
-                    "label": f"BUY > {_px(read['trigger'])}" if entry else f"TRIGGER {_px(read['trigger'])}",
-                    "tone": "buy"})                     # the tone (line style, the ladder's Entry row) is unchanged
+                    "label": f"BUY > {tx}" if entry else f"TRIGGER {tx}",
+                    "tone": "buy",                      # the tone (line style, the ladder's Entry row) is unchanged
+                    "text": tx})
     if _f(read.get("stop")) is not None:
-        out.append({"price": _f(read["stop"]), "label": f"STOP {_px(read['stop'])}", "tone": "stop"})
+        tx = _px(read["stop"])
+        out.append({"price": _f(read["stop"]), "label": f"STOP {tx}", "tone": "stop", "text": tx})
     return out
 
 

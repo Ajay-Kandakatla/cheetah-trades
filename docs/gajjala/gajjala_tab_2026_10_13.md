@@ -303,7 +303,10 @@ printed "BUY > 2.72": "So Gajjalas entries are only for A+ stock setups right? W
 If its in Buy at the rate why is it not in A+?" `tab._tile_lines` printed BUY for every read with a trigger. Now the
 trigger line says `BUY > x` (tone `buy`) only when the read IS the entry (`_is_entry_read`: A+, or forming and `ready`
 is True); partial, not-ready forming, triggered, stopped and invalid reads print `TRIGGER x` (the tone stays `buy`: the
-line style and the card ladder's Entry row key on it). The STOP line, the A+ claim (alerts) and the 🚩 lane are untouched — the lane trades pushed A+
+line style and the card ladder's Entry row key on it). The STOP line, the A+ claim (alerts) and the 🚩 lane are untouched —
+**2026-10-21 (NUAI, "The entry getting changed.."):** every line also serves `text` = `_px(price)` (the broker grid; 3.605 →
+"3.61"); the card's PLAN row prints that text once and names the row by the label without it ("Stop", "Entry"), so the
+chart label, the read line and the PLAN row can never disagree by a cent (the browser used to toFixed the raw float: 3.60) — the lane trades pushed A+
 alerts only. Guard: `backend/tests/test_gajjala_trigger_label_2026_10_21.py` (incl. NEGATIVES).
 
 ## 🔴 Live on the cards (2026-10-21)

@@ -264,7 +264,12 @@ export const PatternChart = memo(function PatternChart(
    * (his answer 2026-09-25: "Zone + entry"), then stop / target, then the
    * served room stats. A price that is not a finite number drops its row. */
   const lineOf = (tone: string) => ladder.plan.lines.find((l) => l.tone === tone);
-  const buyPx = pxText(lineOf('buy')?.price);
+  /* The served print wins (2026-10-21, NUAI: the chart label said TRIGGER 3.61
+   * and this row said Entry 3.60 — its own toFixed of 3.605). A line without
+   * `text` (every other board, an older API) prints pxText(price) as before. */
+  const lineText = (l: { price?: unknown; text?: string | null } | undefined) =>
+    (typeof l?.text === 'string' && l.text.trim()) ? l.text.trim() : pxText(l?.price);
+  const buyPx = lineText(lineOf('buy'));
   const zoneLo = pxText(ladder.plan.buyZone?.lo);
   const zoneHi = pxText(ladder.plan.buyZone?.hi);
   // 🧱 The served pad under the buy zone (2026-09-30) — cardLadder passes it
@@ -285,10 +290,10 @@ export const PatternChart = memo(function PatternChart(
   for (const [tone, k] of [['stop', 'Stop'], ['target', 'Target'], ['cost', 'Cost'],
                            ['ownstop', 'Your stop']] as const) {
     const line = lineOf(tone);
-    const px = pxText(line?.price);
-    if (!px || !line) continue;
+    if (!line || pxText(line.price) === null) continue;       // a non-finite price drops its row, text or not
+    const px = lineText(line)!;
     const label = typeof line.label === 'string' ? line.label.trim() : '';
-    planRows.push({ st: { k: planLineKey(tone, label, k), v: px } });
+    planRows.push({ st: { k: planLineKey(tone, label, k, line.text), v: px } });
   }
   for (const st of ladder.plan.stats) planRows.push({ st });
   const showBand = !skip.has('band');

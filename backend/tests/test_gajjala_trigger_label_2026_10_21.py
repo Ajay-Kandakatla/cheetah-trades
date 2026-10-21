@@ -36,12 +36,12 @@ def _read(state, **kw):
 ])
 def test_trigger_line_word_follows_the_state(read, label, tone):
     lines = GT._tile_lines(read)
-    assert lines[0] == {"price": T, "label": label, "tone": tone}
-    assert lines[1] == {"price": S, "label": "STOP 2.64", "tone": "stop"}    # the stop line never changes
+    assert lines[0] == {"price": T, "label": label, "tone": tone, "text": "2.72"}     # `text` since 2026-10-21 (the PLAN row's print)
+    assert lines[1] == {"price": S, "label": "STOP 2.64", "tone": "stop", "text": "2.64"}    # the stop line never changes
 
 
 def test_NEGATIVE_no_trigger_no_trigger_line_and_a_bool_ready_is_required():
-    assert GT._tile_lines({"state": "forming", "trigger": None, "stop": S}) == [{"price": S, "label": "STOP 2.64", "tone": "stop"}]
+    assert GT._tile_lines({"state": "forming", "trigger": None, "stop": S}) == [{"price": S, "label": "STOP 2.64", "tone": "stop", "text": "2.64"}]
     assert GT._tile_lines({"state": "none"}) == []
     assert GT._is_entry_read({"state": "forming", "trigger": T, "ready": 1}) is False     # truthy is not True
     assert GT._is_entry_read({"state": "forming", "trigger": T, "ready": "yes"}) is False
