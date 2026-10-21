@@ -9708,8 +9708,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all six — widened to the top nine, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9912,8 +9913,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above all three — widened to the top six, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nine (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first ten (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10182,8 +10184,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above both — widened to the top five, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top six, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10371,8 +10374,9 @@ const CONTRACTS = [
       const ID = 'autopilot-gajjala-lane-gg-rules-2026-10-21';
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10459,8 +10463,9 @@ const CONTRACTS = [
       // 2026-10-21: the 🔴 Gajjala cards live ✨ and the 🎚 Tape control line ✨ (their own blocks, FIRST and SECOND) ship above this one — the FIRST pin widened to the top four, dated.
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened by one more, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10598,8 +10603,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10704,8 +10710,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later: the 🚩 lane GG's-rules ✨ (its own block, FIRST — BUILD_SPEC19 F7) lands above the three of this morning — widened to the top three, dated.
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10743,9 +10750,10 @@ const CONTRACTS = [
       const HIS = 'keep what ever Gajjala says for these';
       const ID = 'autopilot-gajjala-lane-gg-words-2026-10-21';
       // 1. the ✨ entry: FIRST.
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above this one — widened to the top two, dated.
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10873,8 +10881,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-k11-volume-floor-2026-10-21';
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10893,6 +10902,68 @@ const CONTRACTS = [
         const d = outside.match(/\d+/);
         if (d) errs.push(`${W} types "${d[0]}" outside the quote — the floor is served (K11_MIN_SESSION_VOLUME)`);
         if (!/\d/.test(`${outside} under 1M`)) errs.push('self-test: a typed number outside the quote was not caught');
+      }
+      return errs;
+    },
+  },
+  {
+    name: "🔎 Gajjala's in ⌘K (2026-10-21)",
+    file: 'src/lib/navSearch.ts',
+    // Ajay 2026-10-21 ~14:20 ET: "Also I need this tab and its subtabs sercheable in global search". ONE palette row for
+    // the tab + ONE deep link per sub, GENERATED from lib/gajjala.GG_SUBS (pinned to backend constants.SUBS) — never a
+    // typed sub key; the 🚩 lane view on Trading rides along under its own parent. Search words only; "reversal", never
+    // "bounce"; the tab label == chartMaps.TAB_META.gajjala.label. The ✨ is FIRST with his line verbatim. Frontend only.
+    checks: (nav) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      if (!/^import \{ GG_SUBS, GG_SUB_PARAM \} from '\.\/gajjala';$/m.test(nav)) errs.push("navSearch.ts must import { GG_SUBS, GG_SUB_PARAM } from './gajjala' — the rows are generated from the sub strip");
+      if (!/^export const GG_TAB_TO = '\/chart-maps\?tab=gajjala';$/m.test(nav)) errs.push("navSearch.ts must export GG_TAB_TO = '/chart-maps?tab=gajjala'");
+      if (!/^export const GG_LANE_TO = '\/trading\?view=gajjala';$/m.test(nav)) errs.push("navSearch.ts must export GG_LANE_TO = '/trading?view=gajjala'");
+      const block = (/export const GAJJALA_ENTRIES: ExtraEntry\[\] = \[[\s\S]*?\n\];/.exec(nav) || [''])[0];
+      if (!block) errs.push('navSearch.ts must define export const GAJJALA_ENTRIES: ExtraEntry[] = [ … ];');
+      else {
+        if (!/\.\.\.GG_SUBS\.map\(\(s\) => \(\{/.test(block)) errs.push('GAJJALA_ENTRIES must spread ...GG_SUBS.map((s) => ({ … })) — one generated row per sub');
+        if (!/to: `\$\{GG_TAB_TO\}&\$\{GG_SUB_PARAM\}=\$\{s\.key\}`/.test(block)) errs.push('each sub row must route `${GG_TAB_TO}&${GG_SUB_PARAM}=${s.key}`');
+        if (/sub=[a-z_]+/.test(block)) errs.push('GAJJALA_ENTRIES types a sub key (sub=…) — the keys come from GG_SUBS only');
+        if (/bounce/i.test(block)) errs.push('GAJJALA_ENTRIES says "bounce" — "reversal", never "bounce", on a surface he reads');
+        if (!/parent: 'trading', to: GG_LANE_TO/.test(block)) errs.push('the 🚩 lane row must sit under parent trading with to: GG_LANE_TO');
+        if (!/parent: 'chart-maps', to: GG_TAB_TO, label: GG_TAB_LABEL/.test(block)) errs.push('the tab row must be { parent: chart-maps, to: GG_TAB_TO, label: GG_TAB_LABEL }');
+      }
+      if (!/^\s*\.\.\.GAJJALA_ENTRIES,$/m.test(nav)) errs.push('EXTRA_ENTRIES must spread ...GAJJALA_ENTRIES');
+      // the sub-word map names only real subs (a typo would silently add nothing)
+      const words = (/const GG_SUB_WORDS: Record<string, string\[\]> = \{([\s\S]*?)\n\};/.exec(nav) || ['', ''])[1];
+      if (!words) errs.push('navSearch.ts must define const GG_SUB_WORDS: Record<string, string[]> = { … };');
+      const gg = tryRead('src/lib/gajjala.ts', 'the sub strip');
+      const strip = (/export const GG_SUBS[\s\S]*?\n\];/.exec(gg) || [''])[0];
+      const subKeys = [...strip.matchAll(/\{ key: '([a-z_]+)', emoji:/g)].map((m) => m[1]);
+      if (gg && subKeys.length < 10) errs.push(`gajjala.ts GG_SUBS lists ${subKeys.length} subs — expected the ten (2026-10-13 DECISIONS order)`);
+      for (const m of words.matchAll(/^\s*([a-z_]+):\s*\[/gm)) if (gg && !subKeys.includes(m[1])) errs.push(`GG_SUB_WORDS names '${m[1]}', which is not a GG_SUBS key`);
+      if (/bounce/i.test(words)) errs.push('GG_SUB_WORDS says "bounce"');
+      // the tab label is the Chart Maps tab label
+      const cm = tryRead('src/lib/chartMaps.ts', 'TAB_META');
+      const tabLabel = (/\n\s*gajjala: \{\s*\n\s*label: "([^"]+)"/.exec(cm) || [])[1];
+      if (cm && !tabLabel) errs.push('chartMaps.ts TAB_META.gajjala.label not found');
+      if (tabLabel && !nav.includes(`const GG_TAB_LABEL = "Chart Maps ▸ 🚩 ${tabLabel}";`)) errs.push(`navSearch.ts GG_TAB_LABEL must be "Chart Maps ▸ 🚩 ${tabLabel}" (== TAB_META.gajjala.label)`);
+      // synonyms: 'chart-maps' answers to gajjala
+      if (!/'chart-maps':\s*\[[^\]]*'gajjala'/.test(nav)) errs.push("NAV_SYNONYMS['chart-maps'] must carry 'gajjala'");
+      // the tests read the same strip and keep the negatives
+      const t = tryRead('src/lib/navSearch.test.ts', 'the tests');
+      if (t && !/import \{ GG_SUBS, GG_SUB_PARAM, parseGgSub \} from '\.\/gajjala';/.test(t)) errs.push('navSearch.test.ts must read GG_SUBS + parseGgSub from ./gajjala (one row per sub, each URL resolving to its sub)');
+      if (t && !/NEGATIVE: no row types "bounce"/.test(t)) errs.push('navSearch.test.ts lost the "bounce" negative');
+      if (t && !/NEGATIVE: no lane row without Trading in the menu/.test(t)) errs.push('navSearch.test.ts lost the no-Trading negative');
+      // the ✨: FIRST, routed to the tab, his line verbatim, no digit in the label.
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-gajjala-global-search-2026-10-21';
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (nf && first !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${first || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at >= 0) {
+        const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
+        if (!entry.includes("route: '/chart-maps?tab=gajjala'")) errs.push('the ✨ must route to /chart-maps?tab=gajjala');
+        if (!entry.includes('“Also I need this tab and its subtabs sercheable in global search”')) errs.push('the ✨ must quote his line verbatim');
+        const label = (/label: "([^"]*)"/.exec(entry) || ['', ''])[1];
+        if (/\d/.test(label)) errs.push('the ✨ label types a digit — nothing here is a number of his');
       }
       return errs;
     },

@@ -346,3 +346,128 @@ describe('🏔️ ATH tab deep link (2026-09-29)', () => {
     expect(tos(searchNav(index, 'dual momentum'))).not.toContain(ATH);
   });
 });
+
+/* 🚩 Gajjala's in the palette (2026-10-21). Ajay: "Also I need this tab and its
+   subtabs sercheable in global search". The rows are GENERATED from
+   lib/gajjala.GG_SUBS, so the tests read the same list — a sub added to the
+   strip must land here with no edit to navSearch.ts. */
+import { GAJJALA_ENTRIES, GG_TAB_TO, GG_LANE_TO } from './navSearch';
+import { GG_SUBS, GG_SUB_PARAM, parseGgSub } from './gajjala';
+
+describe("🚩 Gajjala's tab + every sub in ⌘K (2026-10-21)", () => {
+  const subTo = (key: string) => `${GG_TAB_TO}&${GG_SUB_PARAM}=${key}`;
+  const ggRows = (rows: NavEntry[]) => rows.filter((e) => e.to === GG_TAB_TO || e.to.startsWith(`${GG_TAB_TO}&`));
+
+  it('one tab row + one row per GG_SUBS sub, each carrying the sub label and emoji, all under chart-maps', () => {
+    expect(GG_SUBS.length).toBeGreaterThanOrEqual(10);
+    const tab = GAJJALA_ENTRIES.find((e) => e.to === GG_TAB_TO)!;
+    expect(tab).toMatchObject({ parent: 'chart-maps', label: "Chart Maps ▸ 🚩 Gajjala's" });
+    for (const s of GG_SUBS) {
+      const rows = GAJJALA_ENTRIES.filter((e) => e.to === subTo(s.key));
+      expect(rows, s.key).toHaveLength(1);
+      expect(rows[0].parent).toBe('chart-maps');
+      expect(rows[0].label).toBe(`Chart Maps ▸ 🚩 Gajjala's ▸ ${s.emoji} ${s.label}`);
+      expect(rows[0].keywords).toContain('gajjala');
+      // the URL the row opens resolves to that very sub on the board (lib/gajjala.parseGgSub)
+      expect(parseGgSub(s.key)).toBe(s.key);
+    }
+    // the lane row is the only one outside chart-maps
+    expect(GAJJALA_ENTRIES.filter((e) => e.parent !== 'chart-maps')).toEqual([expect.objectContaining({ parent: 'trading', to: GG_LANE_TO })]);
+    expect(GAJJALA_ENTRIES).toHaveLength(GG_SUBS.length + 2);
+  });
+
+  it('the rows sit in the index right after the other Chart Maps deep links, once each', () => {
+    for (const e of GAJJALA_ENTRIES) {
+      if (e.parent !== 'chart-maps') continue;
+      expect(index.filter((r) => r.to === e.to), e.to).toHaveLength(1);
+      expect(index.find((r) => r.to === e.to)!.group).toBe('Primary');
+    }
+    expect(index.find((e) => e.to === GG_LANE_TO)).toMatchObject({ feature: 'trading', group: 'Tools ▸ Trade' });
+  });
+
+  it('"gajjala" ranks the tab first and lists every sub and the lane', () => {
+    const r = searchNav(index, 'gajjala', 20);
+    expect(r[0].to).toBe(GG_TAB_TO);
+    expect(tos(r)).toEqual(expect.arrayContaining([...GG_SUBS.map((s) => subTo(s.key)), GG_LANE_TO]));
+    // the default cap still leads with the tab
+    expect(searchNav(index, 'gajjala')[0].to).toBe(GG_TAB_TO);
+    expect(searchNav(index, "gajjala's")[0].to).toBe(GG_TAB_TO);
+    expect(searchNav(index, 'GAJJALA ')[0].to).toBe(GG_TAB_TO);
+  });
+
+  it("his setup names land on their own sub — the sub above the tab", () => {
+    const cases: Array<[string, string]> = [
+      ['bull flag', 'bull_flag'], ['flag', 'bull_flag'],
+      ['kiss', 'kiss_fly'], ['kiss and fly', 'kiss_fly'], ['ema kiss', 'kiss_fly'],
+      ['horizontal fade', 'horizontal_fade'], ['fade', 'horizontal_fade'],
+      ['intraday vcp', 'intraday_vcp'],
+      ['reversal squeeze', 'reversal_squeeze'], ['squeeze', 'reversal_squeeze'], ['tennis ball', 'reversal_squeeze'],
+      ['premarket', 'premarket'], ['pre-market', 'premarket'],
+      ['post-market', 'postmarket'], ['after hours', 'postmarket'],
+      ['playbook', 'playbook'], ['his rules', 'playbook'],
+      ['potential', 'potential'], ['potentials', 'potential'],
+      ['track record', 'track_record'], ['graded', 'track_record'],
+    ];
+    for (const [q, key] of cases) {
+      const r = tos(searchNav(index, q, 20));
+      expect(r, q).toContain(subTo(key));
+      if (r.includes(GG_TAB_TO)) expect(r.indexOf(subTo(key)), `${q}: sub above tab`).toBeLessThan(r.indexOf(GG_TAB_TO));
+    }
+  });
+
+  it('the tab answers to his name, GG and his universe words', () => {
+    for (const q of ['goverdhan', 'gg', 'small caps', 'small cap', 'five minute', 'a plus', 'setups']) {
+      expect(tos(searchNav(index, q, 20)), q).toContain(GG_TAB_TO);
+    }
+    expect(NAV_SYNONYMS['chart-maps']).toContain('gajjala');
+  });
+
+  it('the lane row opens the Trading page on its 🚩 view and answers to "lane"', () => {
+    expect(GG_LANE_TO).toBe('/trading?view=gajjala');
+    expect(tos(searchNav(index, 'gajjala lane'))[0]).toBe(GG_LANE_TO);
+    expect(tos(searchNav(index, 'lane', 20))).toContain(GG_LANE_TO);
+  });
+
+  it('NEGATIVE: no Gajjala row without Chart Maps in the menu; the lane row stays (its parent is Trading)', () => {
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(ggRows(without)).toEqual([]);
+    expect(tos(searchNav(without, 'gajjala', 20))).toEqual([GG_LANE_TO]);
+    expect(tos(searchNav(without, 'kiss'))).not.toContain(subTo('kiss_fly'));
+  });
+
+  it('NEGATIVE: no lane row without Trading in the menu (a Chart-Maps-only user); the tab rows stay', () => {
+    const noTrading = buildIndex({ ...MENU, misc: MENU.misc.filter((m) => m.feature !== 'trading') }, subgroupOf);
+    expect(tos(noTrading)).not.toContain(GG_LANE_TO);
+    expect(ggRows(noTrading)).toHaveLength(GG_SUBS.length + 1);
+    expect(searchNav(noTrading, 'gajjala')[0].to).toBe(GG_TAB_TO);
+  });
+
+  it('NEGATIVE: nothing Gajjala on an unrelated query, and "medical" / "key level" stay theirs', () => {
+    for (const q of ['whatsapp', 'notification', 'fda', 'key level', 'dual momentum', 'volleyball']) {
+      expect(ggRows(searchNav(index, q, 20)), q).toEqual([]);
+      expect(tos(searchNav(index, q, 20)), q).not.toContain(GG_LANE_TO);
+    }
+  });
+
+  it('NEGATIVE: no row types "bounce" — "reversal", never "bounce", on a surface he reads', () => {
+    for (const e of GAJJALA_ENTRIES) {
+      expect(normalize(e.label), e.to).not.toContain('bounce');
+      expect(e.keywords.join(' '), e.to).not.toContain('bounce');
+    }
+  });
+
+  it('NEGATIVE: no sub key is typed twice — every sub row is generated from GG_SUBS', () => {
+    const typed = GAJJALA_ENTRIES.filter((e) => e.to.startsWith(`${GG_TAB_TO}&`)).map((e) => e.to);
+    expect(new Set(typed).size).toBe(GG_SUBS.length);
+    const keys = new Set(GG_SUBS.map((s) => s.key as string));
+    for (const to of typed) expect(keys.has(to.split('=').pop()!), to).toBe(true);
+  });
+
+  it('NEGATIVE: an unknown sub in the URL would fall back to the default — so no row may carry one', () => {
+    expect(parseGgSub('not_a_sub')).toBe(GG_SUBS[0].key);
+    for (const e of GAJJALA_ENTRIES) {
+      const m = /[?&]sub=([a-z_]+)/.exec(e.to);
+      if (m) expect(parseGgSub(m[1]), e.to).toBe(m[1]);
+    }
+  });
+});

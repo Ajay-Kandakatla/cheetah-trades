@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-21 ~14:20 ET (verbatim in the label): "Also I need this tab and its subtabs sercheable in global search" —
+  // on the 🚩 Gajjala's tab. lib/navSearch.GAJJALA_ENTRIES: ONE ⌘K row for the tab and ONE deep link per sub, GENERATED
+  // from lib/gajjala.GG_SUBS (the sub strip, contract-pinned to backend chart_maps/gajjala/constants.SUBS), each routed
+  // /chart-maps?tab=gajjala&sub=<key>; the 🚩 lane view on Trading rides along as one row under its own parent. Search
+  // words only — no served fact or number is typed; "reversal", never "bounce". Pinned by scripts/contracts.mjs
+  // ("🔎 Gajjala's in ⌘K (2026-10-21)"). Frontend only.
+  { id: 'chart-maps-gajjala-global-search-2026-10-21', addedAt: '2026-10-21', route: '/chart-maps?tab=gajjala',
+    label: "🔎 Gajjala's tab and every one of its sub-tabs are in the global search now. You said: “Also I need this tab and its subtabs sercheable in global search”. Open the search (⌘K, or the 🔎 in the bar) and type gajjala, kiss, flag, squeeze, fade, vcp, premarket, playbook, potential or track record — each row lands on that sub-tab; “gajjala lane” opens the 🚩 lane on Trading." },
   // Ajay 2026-10-21 ~13:10 ET (verbatim in the label): "keep what ever Gajjala says for these" — on the four lane
   // placeholders. BUILD_SPEC22 Part A: backend/trading/gajjala_entry.py builds each from GG's sentence in
   // chart_maps/gajjala/verified_rules.json — GG_TRAIL_EMA_KF = EMA_SLOW (VR 11.4), GG_PARTIAL_AFTER "add" +

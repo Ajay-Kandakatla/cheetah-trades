@@ -11,6 +11,7 @@
  * (components/GlobalSearch.tsx) only renders what this returns.
  */
 import type { Menu, MenuItem } from '../hooks/useMyMenu';
+import { GG_SUBS, GG_SUB_PARAM } from './gajjala';
 
 export type NavEntry = {
   label: string;
@@ -30,7 +31,9 @@ export const NAV_SYNONYMS: Record<string, string[]> = {
   notifications:   ['push', 'phone', 'alerts', 'whatsapp', 'reminders', 'quiet', 'mute', 'settings'],
   alerts:          ['notification', 'push log', 'demand alert', 'bounce', 'supply break', 'why quiet', 'pushed', 'log'],
   'supply-demand': ['zones', 'in demand', 'back in demand', 'deep demand', 'bounce', 'room', 'demand board', 'zone edge'],
-  'chart-maps':    ['deep demand', 'breaking', 'zones', 'catalysts', 'ict', 'overnight', 'maps', 'charts', 'vcp', 'support levels', 'promo', 'signals'],
+  'chart-maps':    ['deep demand', 'breaking', 'zones', 'catalysts', 'ict', 'overnight', 'maps', 'charts', 'vcp', 'support levels', 'promo', 'signals',
+                    // 🚩 Gajjala's (2026-10-21) — the tab's own rows live in GAJJALA_ENTRIES below.
+                    'gajjala', 'small caps', 'setups'],
   'demand-zones':  ['zones', 'supply', 'demand', 'bands'],
   zones:           ['zones', 'supply', 'demand', 'bands'],
   trading:         ['autopilot', 'auto-pilot', 'paper', 'positions', 'journal', 'exit', 'stops', 'alpaca', 'trading', 'autopsy'],
@@ -82,6 +85,47 @@ export type ExtraEntry = {
  *  the SEPA ticker page through lib/sepaTabs.resolveSepaTab (TABS). An extra
  *  whose `to` equals its parent's (Notifications, Trading) is folded into the
  *  parent entry as keywords — the index dedupes by `to`. */
+/* ── 🚩 Gajjala's in the palette (2026-10-21) ─────────────────────────
+ * Ajay: "Also I need this tab and its subtabs sercheable in global search".
+ * ONE row for the tab and ONE deep link per sub, GENERATED from
+ * lib/gajjala.GG_SUBS (the sub strip, contract-pinned to backend
+ * chart_maps/gajjala/constants.SUBS) — a sub added there lands here by
+ * itself and no sub key is typed twice. The keywords are search words only
+ * (his setup names, GG's vocabulary); no served fact or number is typed.
+ * "Reversal", never "bounce" (surfaces he reads). The 🚩 lane view on the
+ * Trading page rides along as one row, gated by its own parent (`trading`)
+ * exactly like every other deep link — a user without Trading never sees it. */
+export const GG_TAB_TO = '/chart-maps?tab=gajjala';
+const GG_TAB_LABEL = "Chart Maps ▸ 🚩 Gajjala's";
+export const GG_LANE_TO = '/trading?view=gajjala';
+/** Extra words per sub beyond its key and label. Keys == GgSub. */
+const GG_SUB_WORDS: Record<string, string[]> = {
+  bull_flag:        ['flag', 'flags', 'flag break', 'first flag', 'tight flag'],
+  kiss_fly:         ['kiss', 'kiss and fly', 'ema kiss', 'ema touch', 'pullback to the ema', 'fly'],
+  horizontal_fade:  ['fade', 'horizontal', 'fading', 'flat top'],
+  intraday_vcp:     ['vcp', 'contraction', 'contractions', 'tightening', 'coil'],
+  reversal_squeeze: ['squeeze', 'reversal', 'tennis ball', 'short squeeze', 'low float', 'lowest float'],
+  premarket:        ['pre-market', 'pre market', 'gappers', 'scanner', 'morning movers'],
+  postmarket:       ['post market', 'after hours', 'afterhours', 'extended hours'],
+  playbook:         ['rules', 'his rules', 'k rules', 'verified rules', 'checklist', 'how he trades'],
+  potential:        ['potentials', 'forming', 'brain', 'setting up', 'watch', 'live cards'],
+  track_record:     ['record', 'graded', 'alert history', 'a plus history', 'hit rate', 'wins and losses', 'scorecard'],
+};
+export const GAJJALA_ENTRIES: ExtraEntry[] = [
+  { parent: 'chart-maps', to: GG_TAB_TO, label: GG_TAB_LABEL,
+    keywords: ['gajjala', "gajjala's", 'goverdhan', 'goverdhan gajjala', 'gg', 'small caps', 'small cap', 'five minute',
+      '5 minute', 'setups', 'a plus', 'aplus', 'a plus setup', 'day trading', 'momentum', 'his scanner',
+      ...GG_SUBS.map((s) => s.label.toLowerCase())] },
+  ...GG_SUBS.map((s) => ({
+    parent: 'chart-maps',
+    to: `${GG_TAB_TO}&${GG_SUB_PARAM}=${s.key}`,
+    label: `${GG_TAB_LABEL} ▸ ${s.emoji} ${s.label}`,
+    keywords: ['gajjala', 'gg', s.key.replace(/_/g, ' '), s.label.toLowerCase(), ...(GG_SUB_WORDS[s.key] ?? [])],
+  })),
+  { parent: 'trading', to: GG_LANE_TO, label: 'Trading ▸ 🚩 Gajjala lane',
+    keywords: ['gajjala', 'gajjala lane', 'gg', 'paper', 'auto-pilot', 'autopilot', 'lane', 'his rules', 'paper trades'] },
+];
+
 export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=zones',       label: 'Chart Maps ▸ Demand zones', keywords: ['zones', 'in demand', 'back in demand', 'demand', 'bands', 'pullback'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=deep_demand', label: 'Chart Maps ▸ Deep Demand',  keywords: ['deep demand', 'zones', 'breaking resistance', 'zone edge'] },
@@ -98,6 +142,8 @@ export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=ath', label: 'Chart Maps ▸ 🏔️ ATH', keywords: ['ath', 'all time high', 'all-time high', 'new highs', '52 week high', 'slipping'] },
   // 🧬 Medical catalysts (2026-09-29): FDA decisions, trial readouts, designations, holds.
   { parent: 'chart-maps', to: '/chart-maps?tab=catalysts&sub=medical', label: 'Chart Maps ▸ Catalysts ▸ 🧬 Medical', keywords: ['medical', 'fda', 'fda approval', 'crl', 'pdufa', 'phase 3', 'topline', 'clinical trial', 'clinical hold', 'breakthrough therapy', 'biotech', 'mrna', 'esmo', 'asco'] },
+  // 🚩 Gajjala's (2026-10-21): the tab, its ten subs and the 🚩 lane — see GAJJALA_ENTRIES above.
+  ...GAJJALA_ENTRIES,
   { parent: 'sepa',       to: '/sepa?tab=supply',            label: 'SEPA ▸ Supply / Demand',    keywords: ['zones', 'supply', 'demand', 'in demand', 'levels'] },
   { parent: 'notifications', to: '/notifications',           label: 'Notifications ▸ push settings', keywords: ['push settings', 'mute', 'kinds', 'devices', 'quiet hours'] },
   { parent: 'trading',    to: '/trading',                    label: 'Trading ▸ Auto-Pilot journal', keywords: ['journal', 'auto-pilot', 'autopilot', 'paper trades', 'execution race'] },
