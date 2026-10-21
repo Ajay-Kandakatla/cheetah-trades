@@ -105,7 +105,9 @@ def test_all_profiles_challenged_is_loud_not_silent_zero(monkeypatch):
     monkeypatch.setattr(stc, "_http_get", lambda u, p, t: CHALLENGE)
     res = stc.fetch_stream("PETZ")
     assert res["ok"] is False
-    assert "cloudflare challenge" in (res["reason"] or "")
+    # 2026-10-21: served sentence, not the old "cloudflare challenge (…)".
+    assert res["reason"] == "StockTwits is challenging this client (http 403)"
+    assert res["reason_code"] == "challenge"
     assert res["messages"] == [] and res["pages"] == 0
 
 
@@ -118,7 +120,9 @@ def test_plain_404_does_not_burn_profiles(monkeypatch):
 
     monkeypatch.setattr(stc, "_http_get", fake_get)
     res = stc.fetch_stream("NOSUCH")
-    assert res["ok"] is False and res["reason"] == "http 404"
+    assert res["ok"] is False
+    assert res["reason"] == "StockTwits answered http 404"
+    assert res["reason_code"] == "http_other"
     assert len(calls) == 1  # only a challenge rotates; a real 404 is final
 
 
@@ -215,13 +219,15 @@ def test_catalysts_n24h_and_velocity_exceed_old_saturation(monkeypatch):
 
 
 def test_catalysts_block_reports_unavailable_not_zero_chatter(monkeypatch):
-    reason = "cloudflare challenge (http 403, profile safari184)"
+    reason = "StockTwits is challenging this client (http 403)"
     monkeypatch.setattr(cat_chatter.stocktwits_client, "fetch_stream",
                         lambda *a, **k: {"ok": False, "reason": reason,
+                                         "reason_code": "challenge",
                                          "messages": [], "pages": 0})
     st = cat_chatter._fetch_stocktwits("PETZ")
     assert st["n_messages"] == 0 and st["n_24h"] == 0
     assert st["unavailable_reason"] == reason
+    assert st["unavailable_code"] == "challenge"
 
 
 # ---------------------------------------------------------------------------
@@ -246,8 +252,154 @@ def test_forum_chatter_lane_uses_shared_client(monkeypatch):
 def test_forum_chatter_lane_surfaces_block_reason(monkeypatch):
     monkeypatch.setattr(forum_chatter.stocktwits_client, "fetch_stream",
                         lambda *a, **k: {"ok": False,
-                                         "reason": "rate limited (http 429)",
+                                         "reason": "StockTwits rate limit (http 429)",
+                                         "reason_code": "rate_limited",
                                          "messages": [], "pages": 0})
     out = asyncio.run(forum_chatter._stocktwits("LIDR"))
     assert out["available"] is False
-    assert out["reason"] == "rate limited (http 429)"
+    assert out["reason"] == "StockTwits rate limit (http 429)"
+    assert out["reason_code"] == "rate_limited"
+
+
+# ---------------------------------------------------------------------------
+# 2026-10-21 — outage words: served sentences + reason_code, no leak
+# ---------------------------------------------------------------------------
+
+CURL_MSG = ("Failed to perform, curl: (28) Operation timed out after 10003 "
+            "milliseconds with 0 bytes received. See "
+            "https://curl.se/libcurl/c/libcurl-errors.html first for more details.")
+
+
+def _curl_timeout_exc():
+    try:
+        from curl_cffi.requests.exceptions import Timeout
+        return Timeout(CURL_MSG)
+    except Exception:  # pragma: no cover — curl_cffi is in the image
+        class Timeout(Exception):
+            pass
+        return Timeout(CURL_MSG)
+
+
+def _assert_clean(reason):
+    assert reason
+    for bad in ("http://", "https://", "curl", "(28)", "Failed to perform",
+                "fetch failed", "Exception", "Error"):
+        assert bad not in reason, (bad, reason)
+
+
+def test_timeout_is_a_plain_sentence_without_curl_text(monkeypatch):
+    def boom(url, profile, timeout):
+        raise _curl_timeout_exc()
+    monkeypatch.setattr(stc, "_http_get", boom)
+    res = stc.fetch_stream("POM", timeout=10)
+    assert res["ok"] is False
+    assert res["reason"] == "StockTwits is not answering (timed out after 10s)"
+    assert res["reason_code"] == "timeout"
+    _assert_clean(res["reason"])
+
+
+def test_connect_error_reads_not_reachable_and_never_leaks(monkeypatch):
+    def boom(url, profile, timeout):
+        raise OSError("curl: (7) Failed to connect https://curl.se/libcurl/c/x")
+    monkeypatch.setattr(stc, "_http_get", boom)
+    res = stc.fetch_stream("POM")
+    assert res["reason"] == "StockTwits is not reachable"
+    assert res["reason_code"] == "unreachable"
+    _assert_clean(res["reason"])
+
+
+def test_curl_message_in_plain_exception_is_not_misread_as_timeout(monkeypatch):
+    # NEGATIVE: the text "timed out" inside a non-Timeout exception does not
+    # make it a timeout, and its URL never reaches the reason.
+    def boom(url, profile, timeout):
+        raise RuntimeError(CURL_MSG)
+    monkeypatch.setattr(stc, "_http_get", boom)
+    res = stc.fetch_stream("POM")
+    assert res["reason_code"] == "unreachable"
+    _assert_clean(res["reason"])
+
+
+def test_requests_fallback_timeout_classified_by_class_name(monkeypatch):
+    monkeypatch.setattr(stc, "HAVE_CURL_CFFI", False)
+
+    class ReadTimeout(Exception):
+        pass
+
+    def boom(url, profile, timeout):
+        assert profile is None
+        raise ReadTimeout("HTTPSConnectionPool(host='api.stocktwits.com'): "
+                          "Read timed out. (read timeout=6)")
+    monkeypatch.setattr(stc, "_http_get", boom)
+    res = stc.fetch_stream("POM", timeout=6)
+    assert res["reason"] == "StockTwits is not answering (timed out after 6s)"
+    assert res["reason_code"] == "timeout"
+    _assert_clean(res["reason"])
+
+
+def test_502_reads_down_not_fetch_failed(monkeypatch):
+    calls = []
+
+    def fake_get(url, profile, timeout):
+        calls.append(profile)
+        return FakeResp(502)
+    monkeypatch.setattr(stc, "_http_get", fake_get)
+    res = stc.fetch_stream("POM")
+    assert res["reason"] == "StockTwits is down (http 502)"
+    assert res["reason_code"] == "http_5xx"
+    assert "fetch failed" not in res["reason"]
+    assert len(calls) == 1  # a 5xx does not rotate profiles
+
+
+def test_429_sentence_and_code(monkeypatch):
+    monkeypatch.setattr(stc, "_http_get", lambda u, p, t: FakeResp(429))
+    res = stc.fetch_stream("POM")
+    assert res["reason"] == "StockTwits rate limit (http 429)"
+    assert res["reason_code"] == "rate_limited"
+
+
+def test_unparseable_json_is_a_sentence(monkeypatch):
+    class BadJson(FakeResp):
+        def json(self):
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+    monkeypatch.setattr(stc, "_http_get", lambda u, p, t: BadJson(200))
+    res = stc.fetch_stream("POM")
+    assert res["ok"] is False
+    assert res["reason"] == "StockTwits answered something that is not JSON"
+    assert res["reason_code"] in stc.REASON_CODES
+    _assert_clean(res["reason"])
+
+
+def test_ok_fetch_carries_ok_code(monkeypatch):
+    monkeypatch.setattr(stc, "_http_get",
+                        lambda u, p, t: page([msg(1, time.time() - 5)]))
+    res = stc.fetch_stream("POM")
+    assert res["ok"] is True and res["reason"] is None
+    assert res["reason_code"] == "ok"
+
+
+@pytest.mark.parametrize("make", [
+    lambda: (_ for _ in ()).throw(_curl_timeout_exc()),
+    lambda: (_ for _ in ()).throw(OSError("boom https://curl.se/x")),
+    lambda: FakeResp(500), lambda: FakeResp(503), lambda: FakeResp(429),
+    lambda: CHALLENGE, lambda: FakeResp(404), lambda: FakeResp(418),
+])
+def test_reason_code_always_in_the_closed_set(monkeypatch, make):
+    def fake_get(url, profile, timeout):
+        return make()
+    monkeypatch.setattr(stc, "_http_get", fake_get)
+    res = stc.fetch_stream("POM")
+    assert res["reason_code"] in {"timeout", "unreachable", "http_5xx",
+                                  "rate_limited", "challenge", "http_other",
+                                  "ok"}
+    assert res["reason_code"] in stc.REASON_CODES
+    _assert_clean(res["reason"])
+
+
+def test_forum_chatter_lane_exception_is_not_reachable(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("curl: (28) https://curl.se/libcurl/c/libcurl-errors.html")
+    monkeypatch.setattr(forum_chatter.stocktwits_client, "fetch_stream", boom)
+    out = asyncio.run(forum_chatter._stocktwits("POM"))
+    assert out["available"] is False
+    assert out["reason"] == "StockTwits is not reachable"
+    assert out["reason_code"] == "unreachable"

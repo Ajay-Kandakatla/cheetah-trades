@@ -3,6 +3,10 @@
 Four lanes per ticker. Scraping-first design: no API keys, no OAuth, no
 client registration. The only env var that matters is REDDIT_USER_AGENT
 (Reddit asks scrapers to identify themselves in the UA string).
+2026-10-21: Reddit closed anonymous JSON; with REDDIT_CLIENT_ID +
+REDDIT_CLIENT_SECRET set, reddit_scrape goes through Reddit's app key
+(OAuth2 client_credentials). StockTwits failures serve the last good read
+flagged stale (see _serve_stocktwits).
 
 Lane 1 — Reddit "Thoughtful" (old.reddit.com .json scrape)
   Allowlist: r/SecurityAnalysis, r/ValueInvesting, r/investing, r/stocks, r/options.
@@ -127,11 +131,17 @@ async def _stocktwits(symbol: str) -> dict:
         res = await asyncio.to_thread(
             stocktwits_client.fetch_stream, symbol, max_pages=1, timeout=10)
     except Exception as exc:
-        log.debug("stocktwits fetch failed for %s: %s", symbol, exc)
-        return {"available": False, "reason": "fetch failed",
+        log.debug("stocktwits fetch failed for %s: %s", symbol,
+                  type(exc).__name__)
+        return {"available": False,
+                "reason": stocktwits_client.SENTENCE_UNREACHABLE,
+                "reason_code": "unreachable",
                 "messages": [], "bullish": 0, "bearish": 0, "neutral": 0}
     if not res.get("ok"):
-        return {"available": False, "reason": res.get("reason") or "fetch failed",
+        # The client's served sentence passes straight through (2026-10-21).
+        return {"available": False,
+                "reason": res.get("reason") or stocktwits_client.SENTENCE_UNREACHABLE,
+                "reason_code": res.get("reason_code") or "unreachable",
                 "messages": [], "bullish": 0, "bearish": 0, "neutral": 0}
 
     raw = res.get("messages") or []
@@ -157,6 +167,7 @@ async def _stocktwits(symbol: str) -> dict:
         })
     return {
         "available": True,
+        "reason_code": "ok",
         "messages": out[:15],
         "bullish":  bullish,
         "bearish":  bearish,
@@ -434,6 +445,59 @@ def get_history(symbol: str, days: int = 60, limit: int = 200) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# StockTwits stale keep (2026-10-21)
+#
+# api.stocktwits.com went dark for everyone on 2026-10-21 (timeouts, 0
+# bytes). The lane used to overwrite the last good read with zeros. Now a
+# failed fresh fetch serves the last GOOD StockTwits block from the cache
+# row (any age), flagged ``stale`` with ``stale_since`` (when that good
+# read was taken) and ``stale_reason`` (the fresh served sentence). The
+# Reddit / HN blocks are never touched by this keep.
+# ---------------------------------------------------------------------------
+STOCKTWITS_NO_EARLIER_READ = " · no earlier read"
+_STALE_KEYS = ("stale", "stale_since", "stale_reason", "last_attempt_at")
+
+
+def _stocktwits_last_good_at(doc: Optional[dict]) -> Optional[int]:
+    """Epoch of the last good StockTwits read held by a cache row, or None
+    when the row holds no good block."""
+    if not doc:
+        return None
+    payload = doc.get("payload") or {}
+    st = payload.get("stocktwits")
+    if not isinstance(st, dict) or st.get("available") is not True:
+        return None
+    for v in (doc.get("stocktwits_last_good_at"), st.get("stale_since"),
+              payload.get("fetched_at"), doc.get("fetched_at")):
+        try:
+            if v is not None and int(v) > 0:
+                return int(v)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _serve_stocktwits(fresh: dict, doc: Optional[dict], now: int):
+    """Pick the StockTwits block to serve. Returns (block, last_good_at)."""
+    if fresh.get("available"):
+        return fresh, now
+    sentence = fresh.get("reason") or stocktwits_client.SENTENCE_UNREACHABLE
+    last_good = _stocktwits_last_good_at(doc)
+    if last_good is None:
+        failed = dict(fresh)
+        failed["reason"] = sentence + STOCKTWITS_NO_EARLIER_READ
+        return failed, None
+    cached_st = (doc.get("payload") or {}).get("stocktwits") or {}
+    block = {k: v for k, v in cached_st.items() if k not in _STALE_KEYS}
+    block["stale"] = True
+    block["stale_since"] = min(last_good, now)
+    block["stale_reason"] = sentence
+    block["reason_code"] = fresh.get("reason_code") or "unreachable"
+    block["last_attempt_at"] = now
+    return block, last_good
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 async def chatter_for(
@@ -477,19 +541,59 @@ async def chatter_for(
         not thoughtful.get("available", True)
         and not momentum.get("available", True)
     )
+
+    # One cache read serves both keeps (StockTwits below, Reddit here).
+    prior_doc = None
+    if coll is not None and (reddit_down or not stocktwits.get("available")):
+        try:
+            prior_doc = coll.find_one({"_id": sym})
+        except Exception as exc:
+            log.debug("forum_chatter stale-read failed: %s", exc)
+    stocktwits, st_last_good_at = _serve_stocktwits(stocktwits, prior_doc, now)
+
     if reddit_down and coll is not None:
         try:
-            doc = coll.find_one({"_id": sym})
+            doc = prior_doc
             if doc:
                 stale_payload = dict(doc.get("payload") or {})
                 stale_payload["cached"] = True
                 stale_payload["stale"] = True
-                stale_payload["stale_reason"] = "reddit unavailable; showing last good fetch"
+                # The served Reddit sentence (reddit_scrape), not a typed guess.
+                stale_payload["stale_reason"] = (
+                    thoughtful.get("reason") or momentum.get("reason")
+                    or reddit_scrape.SENTENCE_UNREACHABLE)
                 # Still refresh StockTwits + HN portions and the
                 # timestamps so the user knows those lanes are live.
+                # A good old Reddit read is kept; a failed one (e.g. a row
+                # still carrying the old typed "(rate-limit?)" guess) is
+                # replaced by the fresh served sentence.
+                for lane, fresh_lane in (("thoughtful", thoughtful),
+                                         ("momentum", momentum)):
+                    if not (stale_payload.get(lane) or {}).get("available"):
+                        stale_payload[lane] = fresh_lane
                 stale_payload["stocktwits"] = stocktwits
                 stale_payload["hn"] = hn
+                # The summary reads the served counts, not the cached row's.
+                stale_payload["summary"] = _summarize(
+                    stale_payload.get("thoughtful") or {},
+                    stale_payload.get("momentum") or {},
+                    stocktwits, hn)
                 stale_payload["last_attempt_at"] = now
+                if st_last_good_at is not None:
+                    # Save the served StockTwits block (fresh good or the
+                    # kept stale one) so the next outage tick has it;
+                    # fetched_at is left alone so the Reddit keep holds.
+                    try:
+                        coll.update_one(
+                            {"_id": sym},
+                            {"$set": {
+                                "payload.stocktwits": stocktwits,
+                                "stocktwits_last_good_at": st_last_good_at,
+                            }},
+                        )
+                    except Exception as exc:
+                        log.debug("forum_chatter stocktwits keep-write "
+                                  "failed: %s", exc)
                 log.warning("forum_chatter %s: reddit lanes both unavailable; "
                             "preserving stale cache", sym)
                 return stale_payload
@@ -519,9 +623,14 @@ async def chatter_for(
 
     if coll is not None:
         try:
+            doc_set = {"fetched_at": now, "payload": payload}
+            if st_last_good_at is not None:
+                # Kept across outage ticks so stale_since stays the time of
+                # the last GOOD read, not of the last failed attempt.
+                doc_set["stocktwits_last_good_at"] = st_last_good_at
             coll.update_one(
                 {"_id": sym},
-                {"$set": {"fetched_at": now, "payload": payload}},
+                {"$set": doc_set},
                 upsert=True,
             )
         except Exception as exc:

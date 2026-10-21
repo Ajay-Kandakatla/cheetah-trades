@@ -41,6 +41,11 @@ except Exception:  # pragma: no cover — dep is in requirements.txt
     import requests as _http  # type: ignore[no-redef]
     HAVE_CURL_CFFI = False
 
+try:
+    from curl_cffi.requests.exceptions import Timeout as _CurlTimeout
+except Exception:  # pragma: no cover — dep is in requirements.txt
+    _CurlTimeout = None  # type: ignore[assignment,misc]
+
 BASE_URL = "https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
 PAGE_SIZE = 30  # server-side cap per page; ?limit= above this is ignored
 
@@ -84,32 +89,73 @@ def _is_challenge(resp) -> bool:
         return False
 
 
+# 2026-10-21 outage words. ``reason`` is SERVED (the ticker page prints it):
+# a plain sentence, never a URL, "curl", a libcurl error code or an
+# exception repr. ``reason_code`` is the machine-readable twin.
+REASON_CODES = ("timeout", "unreachable", "http_5xx", "rate_limited",
+                "challenge", "http_other", "ok")
+SENTENCE_TIMEOUT = "StockTwits is not answering (timed out after {secs:.0f}s)"
+SENTENCE_UNREACHABLE = "StockTwits is not reachable"
+SENTENCE_DOWN = "StockTwits is down (http {code})"
+SENTENCE_RATE_LIMITED = "StockTwits rate limit (http 429)"
+SENTENCE_CHALLENGE = "StockTwits is challenging this client (http 403)"
+SENTENCE_HTTP_OTHER = "StockTwits answered http {code}"
+SENTENCE_NOT_JSON = "StockTwits answered something that is not JSON"
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    """curl_cffi raises ``requests.exceptions.Timeout`` for curl error 28;
+    the plain-``requests`` fallback raises ``Timeout``/``ReadTimeout``."""
+    if HAVE_CURL_CFFI and _CurlTimeout is not None:
+        return isinstance(exc, _CurlTimeout)
+    return "Timeout" in type(exc).__name__
+
+
+def _http_failure(code: int):
+    """(sentence, reason_code) for a non-200, non-challenge answer."""
+    if code == 429:
+        return SENTENCE_RATE_LIMITED, "rate_limited"
+    if 500 <= code <= 599:
+        return SENTENCE_DOWN.format(code=code), "http_5xx"
+    return SENTENCE_HTTP_OTHER.format(code=code), "http_other"
+
+
 def _get_page(url: str, timeout: float):
     """GET one stream page, rotating impersonation profiles past the
-    Cloudflare challenge. Returns (response, None) or (None, reason)."""
+    Cloudflare challenge. Returns (response, None, "ok") or
+    (None, sentence, reason_code)."""
     global _working_profile
     profiles = list(IMPERSONATE_PROFILES) if HAVE_CURL_CFFI else [None]
     if _working_profile in profiles:
         profiles.remove(_working_profile)
         profiles.insert(0, _working_profile)
-    reason = "no profiles attempted"
+    reason, code = SENTENCE_UNREACHABLE, "unreachable"
     for prof in profiles:
         try:
             r = _http_get(url, prof, timeout)
         except Exception as exc:
-            reason = f"fetch failed: {exc}"
+            # The exception text (URL, "curl: (28)", libcurl docs link)
+            # goes to the debug log only — never into the served reason.
+            log.debug("stocktwits GET failed (profile %s): %s",
+                      prof or "default", type(exc).__name__)
+            if _is_timeout(exc):
+                reason = SENTENCE_TIMEOUT.format(secs=float(timeout))
+                code = "timeout"
+            else:
+                reason, code = SENTENCE_UNREACHABLE, "unreachable"
             continue
         if r.status_code == 200:
             _working_profile = prof
-            return r, None
+            return r, None, "ok"
         if r.status_code == 403 and _is_challenge(r):
             # This TLS profile is burned — the next one may still pass.
-            reason = f"cloudflare challenge (http 403, profile {prof or 'default'})"
+            log.debug("stocktwits cloudflare challenge on profile %s",
+                      prof or "default")
+            reason, code = SENTENCE_CHALLENGE, "challenge"
             continue
-        if r.status_code == 429:
-            return None, "rate limited (http 429)"
-        return None, f"http {r.status_code}"
-    return None, reason
+        reason, code = _http_failure(r.status_code)
+        return None, reason, code
+    return None, reason, code
 
 
 def fetch_stream(symbol: str, *, max_pages: int = 1,
@@ -117,7 +163,7 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
                  timeout: float = 8.0) -> dict:
     """Fetch up to ``max_pages`` × 30 messages for ``symbol``.
 
-    Returns ``{ok, reason, messages, pages}`` where ``messages`` runs
+    Returns ``{ok, reason, reason_code, messages, pages}`` where ``messages`` runs
     newest→oldest across pages and each message carries ``_epoch`` (parsed
     UTC ``created_at``). ``ok`` is False only when the FIRST page failed;
     a later page failing keeps what was already fetched. When
@@ -132,12 +178,13 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
         url = BASE_URL.format(symbol=sym)
         if next_max:
             url += f"?max={next_max}"
-        r, reason = _get_page(url, timeout)
+        r, reason, reason_code = _get_page(url, timeout)
         if r is None:
             if pages == 0:
                 log.warning("stocktwits stream unavailable for %s: %s",
                             sym, reason)
-                return {"ok": False, "reason": reason, "messages": [],
+                return {"ok": False, "reason": reason,
+                        "reason_code": reason_code, "messages": [],
                         "pages": 0}
             log.warning("stocktwits page %d failed for %s: %s "
                         "(keeping %d messages)",
@@ -147,7 +194,8 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
             body = r.json() or {}
         except Exception:
             if pages == 0:
-                return {"ok": False, "reason": "unparseable json",
+                return {"ok": False, "reason": SENTENCE_NOT_JSON,
+                        "reason_code": "http_other",
                         "messages": [], "pages": 0}
             break
         page_msgs = body.get("messages") or []
@@ -164,8 +212,9 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
                 and oldest < stop_before_epoch):
             break
         next_max = cursor["max"]
-    return {"ok": True, "reason": None, "messages": messages, "pages": pages}
+    return {"ok": True, "reason": None, "reason_code": "ok",
+            "messages": messages, "pages": pages}
 
 
 __all__ = ["fetch_stream", "parse_created_at", "PAGE_SIZE",
-           "IMPERSONATE_PROFILES", "HAVE_CURL_CFFI"]
+           "IMPERSONATE_PROFILES", "HAVE_CURL_CFFI", "REASON_CODES"]

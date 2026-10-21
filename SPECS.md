@@ -409,6 +409,59 @@ Frontend wiring: data lands on the SepaCandidate detail (`/sepa/:symbol`) under
 - Catalyst tab — "Top discussion" callout listing 2 blog mentions + 3 Reddit
   threads, linking to the dedicated tab.
 
+### `forum_chatter.py` — ticker-page chatter lanes (`GET /sepa/chatter/{symbol}`)
+
+#### 2026-10-21 outage words + stale keep + Reddit app key
+Trigger: the ticker page printed "all subs returned errors (rate-limit?)" on both Reddit
+lanes, StockTwits 0 / 0 / 0, and a raw libcurl timeout line with a curl.se URL.
+api.stocktwits.com was down for everyone (timeouts, 0 bytes); Reddit closed anonymous JSON
+(www → 403 block page, old.reddit → 404).
+
+- **Served words.** Every lane `reason` is a plain sentence — never a URL, "curl", a libcurl
+  code or an exception repr — with a machine-readable `reason_code` beside it.
+  - StockTwits (`stocktwits_client.SENTENCE_*`; codes `timeout`, `unreachable`, `http_5xx`,
+    `rate_limited`, `challenge`, `http_other`, `ok`): "StockTwits is not answering (timed out
+    after 10s)", "StockTwits is not reachable", "StockTwits is down (http 502)", "StockTwits
+    rate limit (http 429)", "StockTwits is challenging this client (http 403)", "StockTwits
+    answered http 404", "StockTwits answered something that is not JSON". A timeout is a
+    `curl_cffi.requests.exceptions.Timeout` (or, on the plain-requests fallback, a class
+    whose name carries "Timeout"). The /chatter board carries the same sentence as
+    `unavailable_reason` plus `unavailable_code`.
+  - Reddit (`reddit_scrape.SENTENCE_*`; per-sub codes `rate_limited`, `blocked` 403, `gone`
+    404, `unreachable`, `http_other`, `bad_json`, `auth_failed`; all subs failed → the most
+    common code, ties → that order): "Reddit closed anonymous access (http 404) — a Reddit
+    app key is needed (REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in backend/.env)" (no key),
+    "Reddit refused the app key (http 403)" (key set, or a refused token exchange), "Reddit
+    rate limit (http 429)", "Reddit is not reachable", "Reddit answered http 502", "Reddit
+    answered something that is not JSON". `partial` is unchanged.
+- **StockTwits stale keep.** A failed fresh fetch serves the last GOOD StockTwits block of the
+  `forum_chatter_cache` row (any age; a cached block with `available` ≠ True is never served)
+  with `stale: true`, `stale_since` (epoch of that good read — the row's
+  `stocktwits_last_good_at`, else the cached payload's `fetched_at`; clamped ≤ now),
+  `stale_reason` (the fresh sentence) and `last_attempt_at`. Reddit / HN / `fetched_at` stay
+  the fresh ones; the summary reads the served counts. The cache write keeps the stale block
+  and `stocktwits_last_good_at`, so a second outage tick still dates the read correctly. No
+  earlier good read → zeros and the sentence + " · no earlier read". A good fetch clears it.
+- **Reddit keep** (both lanes down, a cached row exists) serves the cached row with `stale_reason` =
+  the served Reddit sentence (the typed "reddit unavailable; showing last good fetch" is gone).
+  A cached Reddit lane that was good is kept; a cached lane that had failed (e.g. a row still
+  carrying the old "(rate-limit?)" guess) is replaced by the fresh lane and its sentence. The
+  summary is recomputed from the served lanes and the served StockTwits block. When StockTwits
+  has a good read (fresh or kept), only `payload.stocktwits` + `stocktwits_last_good_at` are
+  written; `fetched_at` is left alone, so the Reddit keep still retries on the next visit.
+- **Reddit app key (dark until set).** With `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` both
+  non-empty (read at call time): POST `https://www.reddit.com/api/v1/access_token` (basic auth,
+  `grant_type=client_credentials`, `User-Agent: REDDIT_USER_AGENT`) → bearer cached in-process
+  until `expires_in − 60 s`; searches `GET https://oauth.reddit.com/r/{sub}/search` and comments
+  `GET https://oauth.reddit.com{permalink}` (no `.json`); one 401 → drop the token, re-auth once
+  per call, retry once. A failed re-auth spends it: later requests of the same call (comment
+  fetches included) run no further token exchange. Unset → the old.reddit `.json` path, unchanged. The secret is never
+  logged, served or stored. Creating the "script" app at reddit.com/prefs/apps and putting the
+  two values in `backend/.env` is Ajay's step.
+- Tests: `tests/test_stocktwits_client.py`, `tests/test_forum_chatter_outage_2026_10_21.py`,
+  `tests/test_reddit_scrape_oauth_2026_10_21.py` (hermetic: monkeypatched seams and
+  `httpx.MockTransport` via `reddit_scrape._transport_factory`; a real transport raises).
+
 ### `dual_momentum.py` — Antonacci's two-gate ranking
 Reuses the latest persisted scan (`scanner.load_latest()`) for universe + names
 + RS rank, then recomputes 1/3/6/12-month returns from cached daily bars (no

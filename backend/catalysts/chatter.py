@@ -72,7 +72,8 @@ def _fetch_stocktwits(ticker: str, max_pages: int = ST_MAX_PAGES) -> dict:
         # an outage reads as "unavailable", never as "0 chatter".
         return {"n_messages": 0, "n_24h": 0, "sentiment_pct_bullish": None,
                 "last_message": None, "blurbs": [],
-                "unavailable_reason": res.get("reason")}
+                "unavailable_reason": res.get("reason"),
+                "unavailable_code": res.get("reason_code")}
 
     msgs = res.get("messages") or []
 

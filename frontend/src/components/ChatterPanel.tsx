@@ -17,6 +17,10 @@ type RedditThread = {
 type RedditLane = {
   available: boolean;
   reason?: string;
+  reason_code?: string;
+  stale?: boolean;
+  stale_since?: number;
+  stale_reason?: string;
   threads: RedditThread[];
   mentions_7d: number;
   mentions_prior_7d: number;
@@ -35,6 +39,10 @@ type StockTwitsMessage = {
 type StockTwitsLane = {
   available: boolean;
   reason?: string;
+  reason_code?: string;
+  stale?: boolean;
+  stale_since?: number;
+  stale_reason?: string;
   messages: StockTwitsMessage[];
   bullish: number;
   bearish: number;
@@ -55,6 +63,10 @@ type HnStory = {
 type HnLane = {
   available: boolean;
   reason?: string;
+  reason_code?: string;
+  stale?: boolean;
+  stale_since?: number;
+  stale_reason?: string;
   stories: HnStory[];
   n: number;
 };
@@ -87,6 +99,15 @@ function timeAgo(unixSec: number | string): string {
   if (diff < 3600) return `${Math.max(1, Math.floor(diff / 60))}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+// A served `reason` is printed verbatim. Defensive scrub (2026-10-21): an
+// older API leaked URLs and curl error text into `reason`; such a string is
+// never printed — the fallback label is shown instead.
+const UNSAFE_REASON = /https?:\/\/|curl/i;
+function servedReason(reason: string | null | undefined): string {
+  if (typeof reason !== 'string' || reason.trim() === '') return 'No data';
+  return UNSAFE_REASON.test(reason) ? 'unavailable' : reason;
 }
 
 function RedditThreadCard({ t }: { t: RedditThread }) {
@@ -240,7 +261,7 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
           </span>
         </div>
         {!data.momentum.available ? (
-          <p className="sepa-empty">{data.momentum.reason ?? 'No data'}</p>
+          <p className="sepa-empty">{servedReason(data.momentum.reason)}</p>
         ) : data.momentum.threads.length === 0 ? (
           <p className="sepa-empty">No threads above the score floor in the last 30 days.</p>
         ) : (
@@ -259,7 +280,7 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
           </span>
         </div>
         {!data.thoughtful.available ? (
-          <p className="sepa-empty">{data.thoughtful.reason ?? 'No data'}</p>
+          <p className="sepa-empty">{servedReason(data.thoughtful.reason)}</p>
         ) : data.thoughtful.threads.length === 0 ? (
           <p className="sepa-empty">No qualifying threads in the last 30 days.</p>
         ) : (
@@ -277,8 +298,13 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
             {' '}{data.stocktwits.bullish} bullish · {data.stocktwits.bearish} bearish · {data.stocktwits.neutral} neutral
           </span>
         </div>
+        {data.stocktwits.stale === true && typeof data.stocktwits.stale_since === 'number' && (
+          <p className="muted cm-chatter__stale" data-testid="stocktwits-stale">
+            {servedReason(data.stocktwits.stale_reason)} · showing the read from {timeAgo(data.stocktwits.stale_since)}
+          </p>
+        )}
         {!data.stocktwits.available ? (
-          <p className="sepa-empty">{data.stocktwits.reason ?? 'No data'}</p>
+          <p className="sepa-empty">{servedReason(data.stocktwits.reason)}</p>
         ) : data.stocktwits.messages.length === 0 ? (
           <p className="sepa-empty">No recent messages.</p>
         ) : (
@@ -314,7 +340,7 @@ export function ChatterPanel({ symbol }: { symbol: string }) {
           </span>
         </div>
         {!data.hn.available ? (
-          <p className="sepa-empty">{data.hn.reason ?? 'No data'}</p>
+          <p className="sepa-empty">{servedReason(data.hn.reason)}</p>
         ) : data.hn.stories.length === 0 ? (
           <p className="sepa-empty">No matching stories — common for non-tech tickers.</p>
         ) : (

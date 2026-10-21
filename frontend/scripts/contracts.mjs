@@ -11140,6 +11140,68 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '💬 Chatter lanes: outage words, stale keep, Reddit app key (2026-10-21)',
+    file: 'src/components/ChatterPanel.tsx',
+    // Ajay 2026-10-21 ~16:20 ET, ticker-page chatter panel: both Reddit lanes "all subs returned errors (rate-limit?)",
+    // StockTwits "0 bullish · 0 bearish" over a raw curl (28) error with a libcurl URL. api.stocktwits.com was down for
+    // everyone; Reddit closed anonymous JSON. BUILD_SPEC23: the backend serves a plain sentence + reason_code per lane,
+    // keeps the last good StockTwits block (stale, stale_since, stale_reason), and Reddit goes through its own app key
+    // (OAuth2 client_credentials, dark until the key lands). The panel prints served words only, scrubs URL/curl text.
+    // Bug fix, no ✨.
+    checks: (panel) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+
+      const st = tryRead('../backend/stocktwits_client.py', 'StockTwits sentences');
+      if (st) {
+        if (st.includes('f"fetch failed: {exc}"')) errs.push('stocktwits_client.py serves f"fetch failed: {exc}" again — exception text reaches the panel');
+        for (const s of [
+          'SENTENCE_TIMEOUT = "StockTwits is not answering (timed out after {secs:.0f}s)"',
+          'SENTENCE_UNREACHABLE = "StockTwits is not reachable"',
+          'SENTENCE_DOWN = "StockTwits is down (http {code})"',
+          'SENTENCE_RATE_LIMITED = "StockTwits rate limit (http 429)"',
+          'SENTENCE_CHALLENGE = "StockTwits is challenging this client (http 403)"',
+          'SENTENCE_HTTP_OTHER = "StockTwits answered http {code}"',
+        ]) if (!st.includes(s)) errs.push(`stocktwits_client.py lost the served sentence ${s}`);
+        if (!st.includes('"reason_code"')) errs.push('stocktwits_client.fetch_stream must return reason_code next to the sentence');
+      }
+
+      const fc = tryRead('../backend/sepa/forum_chatter.py', 'stale keep');
+      if (fc) {
+        if (!fc.includes('stale_since')) errs.push('forum_chatter.py lost stale_since — the StockTwits stale keep');
+        if (!fc.includes('stocktwits_last_good_at')) errs.push('forum_chatter.py lost stocktwits_last_good_at — the cache write of the last good read');
+        if (fc.includes('reddit unavailable; showing last good fetch')) errs.push('forum_chatter.py types "reddit unavailable; showing last good fetch" again — stale_reason is the served Reddit sentence');
+      }
+
+      const rs = tryRead('../backend/sepa/reddit_scrape.py', 'Reddit app key');
+      if (rs) {
+        if (!rs.includes('oauth.reddit.com')) errs.push('reddit_scrape.py lost the oauth.reddit.com base (Reddit app key path)');
+        if (!rs.includes('api/v1/access_token')) errs.push('reddit_scrape.py lost the api/v1/access_token exchange');
+        if (rs.includes('(rate-limit?)')) errs.push('reddit_scrape.py types the "(rate-limit?)" guess again');
+        if (!rs.includes('"Reddit closed anonymous access (http {code}) — a Reddit "')) errs.push('reddit_scrape.py lost the "app key is needed" sentence');
+      }
+
+      if (!/const UNSAFE_REASON = \/https\?:\\\/\\\/\|curl\/i;/.test(panel)) errs.push('ChatterPanel.tsx lost the URL/curl scrub (UNSAFE_REASON)');
+      if (!/function servedReason\(reason: string \| null \| undefined\): string \{/.test(panel)) errs.push('ChatterPanel.tsx lost servedReason()');
+      if (!panel.includes('servedReason(data.stocktwits.stale_reason)')) errs.push('ChatterPanel.tsx must print the served stale_reason');
+      if (!panel.includes('timeAgo(data.stocktwits.stale_since)')) errs.push('ChatterPanel.tsx must print timeAgo(stale_since) on the stale line');
+      for (const lane of ['momentum', 'thoughtful', 'stocktwits', 'hn']) {
+        if (!panel.includes(`servedReason(data.${lane}.reason)`)) errs.push(`ChatterPanel.tsx ${lane} lane must print servedReason(data.${lane}.reason)`);
+      }
+      for (const typed of ['StockTwits is', 'Reddit closed', 'Reddit refused', 'Reddit rate limit', 'Reddit is not',
+        'Reddit answered', 'no earlier read', 'rate-limit?', 'fetch failed']) {
+        if (panel.includes(typed)) errs.push(`ChatterPanel.tsx types the served sentence fragment "${typed}" — the backend serves it`);
+      }
+
+      for (const f of [
+        '../backend/tests/test_forum_chatter_outage_2026_10_21.py',
+        '../backend/tests/test_reddit_scrape_oauth_2026_10_21.py',
+        'src/components/ChatterPanel.test.tsx',
+      ]) if (!exists(f)) errs.push(`${f} is missing`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
