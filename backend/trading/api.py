@@ -195,13 +195,15 @@ async def trading_config(payload: dict = Body(...),
             raise HTTPException(400, "zero_dte_entry must be a boolean or null")
     # 🚩 Gajjala paper lane (Ajay 2026-10-20 "only use the Gajjalas strategies
     # please"), its house-floors switch, and the 🔥 Hot Pullback lane's flag.
-    # Strict booleans; null resets to the code default, ON for all three.
+    # Strict booleans; null resets to the code default: ON for the two lanes;
+    # FIXED 2026-10-21 (critic): gajjala_floors null stores None, so
+    # exit_engine.get_config applies ITS default (OFF since 2026-10-21, D1).
     for lane_key in ("gajjala_entry", "gajjala_floors", "hot_pullback_entry"):
         if lane_key not in payload:
             continue
         raw = payload.get(lane_key)
         if raw is None:
-            updates[lane_key] = True
+            updates[lane_key] = None if lane_key == "gajjala_floors" else True
         elif isinstance(raw, bool):
             updates[lane_key] = raw
         else:

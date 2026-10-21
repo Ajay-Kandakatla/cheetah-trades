@@ -89,6 +89,17 @@ keyword-only lane plan: `target_price`, `sizing`, `floors`, `tif`, `order_intent
 while `gajjala_floors` is ON (default). Stock prices go to the broker on Alpaca's grid (4 decimals under $1.00).
 POST `/trading/config` takes `gajjala_entry`, `gajjala_floors`, `hot_pullback_entry` (strict booleans, null → true).
 UNMEASURED — the study of his setups read no edge.
+**v2 (2026-10-21, BUILD_SPEC19 — Ajay "Follow full Gajjala … implement them exactly"): GG's playbook rules.** A MARKET
+OTO entry (no take-profit) at the break once the tape trades the trigger (`never_triggered` when the stop prints
+first), half of `GAJJALA_RISK_PCT` 0.25% of equity at risk first; on CLOSED 5-minute bars only (`bars.closed_only`):
+after `GG_BE_AFTER_BARS` 3 bars a close above the fill moves the stop to the fill and adds the second half (its stop at
+the same fill), then the rest trails the 9 EMA; `risk_mult` halves after a losing lane trade (back after a win); the
+drawdown window (10% under the peak → 5 trades ≤ 5% together, half off once); a 2-bar cooldown after a stop-out; no
+day cap, no stale / thin-R line; `gajjala_floors` default OFF; `entries.enter(ceiling="gg", order_class="oto")` and
+`allow_earnings=True` (the p.312 and earnings waivers, strategy-gated to the lane); `exit_engine.tick` (d1) and the
+p.308 ratchet skip lane names. Brokers: `submit_bracket(take_profit_price=None)` = OTO, `close_position(symbol, qty)`.
+`status.gajjala_lane.rules` serves the rule words + the `awaiting` placeholders (`GG_PARTIAL_R`, `GG_TRAIL_EMA_KF`,
+`GG_HALT_CALM_MIN`, `GG_CUSHION_DOUBLE_PCT` — each rule off while None). The 🏁 grader is unchanged (+1R). UNMEASURED.
 
 **Module-level state in `main.py`:**
 - `cache: QuoteCache` — `_data` dict + `_ticks` deque per symbol (maxlen=`TICK_WINDOW`=64).

@@ -1,37 +1,45 @@
-"""Auto-Pilot lane — 🚩 Gajjala A+ ENTRY alerts (PAPER), 2026-10-20.
+"""Auto-Pilot lane — 🚩 Gajjala A+ ENTRY alerts (PAPER), v1 2026-10-20, v2 2026-10-21 (GG's playbook rules).
 
 THE ASK (Ajay 2026-10-20, verbatim):
     "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies please."
+v2 (Ajay 2026-10-21, verbatim, on the tab's "house safety floors" skips):
+    "Is the 700 M floor by Gajjala?" / "Follow full Gajjala and he doesnt care exactly about this.. Go through his
+    rules from play book and implement them exactly"
 The other lanes were switched off live; this module is the lane that trades his alerts. The three-lane rule (never add
 a lane without his call) is satisfied by that ask (docs/trading_gajjala_lane.md).
 
-OWNER RULES, NO BOOK. What it trades is the 🚩 A+ ENTRY push exactly as it reached his phone — a live `GG:{date}|
-{SYM}|{setup}` claim in state "pushed" (chart_maps/gajjala/alerts.py), read back through the 🏁 Track record's own
-reader (`ledger.alert_of(doc, "aplus")`, line "live", date = today ET). Never a shadow claim, a `#state` refusal, a
-replay, a 🧠 potential or another day's alert.
+GG'S RULES, NO BOOK (chart_maps/gajjala/verified_rules.json, "VR i.j" = topics[i].verified[j]; BUILD_SPEC19 D1–D13).
+What it trades is the 🚩 A+ ENTRY push exactly as it reached his phone — a live `GG:{date}|{SYM}|{setup}` claim in
+state "pushed" (chart_maps/gajjala/alerts.py), read back through the 🏁 Track record's own reader
+(`ledger.alert_of(doc, "aplus")`, line "live", date = today ET). Never a shadow claim, a `#state` refusal, a replay, a
+🧠 potential or another day's alert. Ajay's A+ needs the entry bar to CLOSE through the trigger, so the lane always
+sees the break after the close (GG VR 11.0: "sometimes I wait for the bar close").
 
-ENTRY (D3). The way the 🏁 Track record fills (`ledger.grade`: the first minute whose high reaches the trigger fills
-at max(trigger, that minute's open)): each tick, once the live last trade is at or over the trigger, ONE day LIMIT
-bracket at E = last x (1 + GAJJALA_CHASE_PCT / 100), on the broker's price grid, rounded up — unless E is already past
-trigger + R_MULT x R (the move went without us). A last under the trigger is "waiting", re-read every tick until the
-cut-off. An order not filled in GAJJALA_FILL_WAIT_SEC is cancelled; no retry.
+ENTRY (D7, VR 11.0 / 11.1). A MARKET order (regular hours only, time in force day) at first sight when the last trade
+is at or over the trigger; under it the doc WAITS until the tape trades the trigger (then market), or the stop prints
+first (`never_triggered` — VR 11.2 "a breakout back into its range = out"), or the cut-off. Past trigger +
+GAJJALA_MISSED_R x R = `missed` (mine, HIS CALL #9).
 
-TARGET AND STOP (D4). Stop = the alert's own stop (rounded DOWN onto the grid, never up into the structure); target
-= E + R_MULT x R with R = trigger - stop (the grader's fill + 1R, rounded up). Both rest at the broker as one bracket.
-A grid that moves the stop or the +1R distance by more than GAJJALA_MAX_ROUND_R_PCT % of R is refused, and so is a
-bracket whose stop sits under MIN_STOP_GAP_USD below the entry (Alpaca refuses it).
+STOP (VR 11.2). The alert's own stop, rounded DOWN onto the broker grid, as the OTO order's stop leg — a market stop
+at the broker from the fill. No take-profit, ever (VR 11.6 "no fixed targets").
 
-HORIZON (D9). Same session only: no new order and every unfilled one cancelled at the regular close minus
-GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN; anything open is flattened through `exit_engine.flatten` at the regular close
-minus GAJJALA_FLATTEN_BEFORE_CLOSE_MIN (half days follow the house calendar). A position carried past its date is
-flattened at the next tick. Time in force "day". A flatten the broker neither closed nor queued keeps the doc open
-and is retried every tick. Switched OFF stops NEW entries only (HIS CALL #13): on paper, armed and with the market
-open the lane still manages what it holds.
+SIZE (D4–D6, VR 11.7 / 11.3). Full = GAJJALA_RISK_PCT % of ACCOUNT equity x risk_mult at risk (capped by
+GAJJALA_MAX_NOTIONAL_PCT % of equity and the cash); the ENTRY is half of it ("half size, then add"), the other half is
+added at breakeven. risk_mult halves after a losing lane trade (GG S8 46:47 "$2,000 … next trade I cut to $1,000 …
+then $500"), back to 1 after a win (mine, HIS CALL #18). Drawdown (VR 11.7): at GG_DRAWDOWN_PCT under the equity peak
+the next GG_DRAWDOWN_TRADES lane trades risk at most GG_DRAWDOWN_RISK_SUM_PCT % of equity together, and half of every
+open lane position comes off once (HIS CALL #19).
 
-SIZE. GAJJALA_RISK_PCT % of ACCOUNT equity at risk per alert, never over GAJJALA_MAX_NOTIONAL_PCT % of equity or the
-cash. The engine's streak / progressive governors are NOT applied (every alert risks the same so the fills stay
-comparable with the 🏁 Track record). Everything else still goes through `entries.enter` — armed, the account's
-position count, never-average-down, earnings, price and (switch `gajjala_floors`, default ON) the house floors.
+MANAGEMENT (D8, VR 11.3 / 11.4) on CLOSED 5-minute bars only (`bars.closed_only` — never the live bar): the first
+closed bar at least GG_BE_AFTER_BARS bars after the entry bar that closes above the fill moves the stop to the fill
+(breakeven) and adds the second half at market with its stop at the same fill (the first half risks nothing; the add
+risks its own fill minus the first fill — fixed 2026-10-21, critic); after that the remainder trails the 9 EMA (out at market on a closed bar under it); GG_PARTIAL_R None = no partial. Flat at the
+regular close minus GAJJALA_FLATTEN_BEFORE_CLOSE_MIN (VR 0.8 "no overnight holds"). Switched OFF stops NEW entries
+(and the add) only (HIS CALL #13): on paper, armed and with the market open the lane still manages what it holds.
+
+EXEMPT (D2 / D3 / D9): no earnings shield, no five-position ceiling (strategy-gated in `entries`), no SEPA
+distribution exit and no p.308 ratchet on lane names (exit_engine); the house safety floors only while the switch
+`gajjala_floors` is ON (default OFF since 2026-10-21, D1).
 
 UNMEASURED — the 2026-10-14 study of his five setups read no edge (docs/gajjala/study_2026_10_13.md). This lane trades
 them on paper so the fills can be read, not because they are measured. Paper only: a live broker gates the lane off.
@@ -46,7 +54,7 @@ from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from trading.broker import BrokerError, get_broker, round_price, MIN_STOP_GAP_USD   # ⚓
+from trading.broker import BrokerError, get_broker, round_price, MIN_STOP_GAP_USD, OPEN_STATUSES   # ⚓
 from trading.broker import DOLLAR_DECIMALS, SUB_DOLLAR_DECIMALS, SUB_DOLLAR_LINE
 from trading.exit_engine import _db, _et_day, get_config, ledger, update_config  # noqa: F401
 from trading import exit_engine as EE
@@ -59,40 +67,66 @@ log = logging.getLogger("trading.gajjala_entry")
 
 broker = get_broker()                       # module-level so tests can monkeypatch GL.broker
 
-# ── OWNER NUMBERS (pinned in tests/test_gajjala_lane.py and frontend/scripts/contracts.mjs) ─────────────────────────
+# ── OWNER NUMBERS (pinned in tests/test_gajjala_lane*.py and frontend/scripts/contracts.mjs) ────────────────────────
 STRATEGY = "gajjala"                                    # ⚓
-GAJJALA_RISK_PCT = 0.5                                  # ⚓ MINE — % of account equity at risk per alert
-GAJJALA_MAX_NOTIONAL_PCT = 10.0                         # ⚓ MINE — a position never costs more than this % of equity (or the cash)
-GAJJALA_MAX_ENTRIES_PER_DAY = 3                         # ⚓ MINE
-GAJJALA_MAX_OPEN = 3                                    # ⚓ MINE
-GAJJALA_SIGNAL_MAX_AGE_MIN = 20                         # ⚓ MINE — HIS CALL #3
-GAJJALA_CHASE_PCT = 0.5                                 # ⚓ MINE — HIS CALL #1: the entry limit sits this % over the last trade
-GAJJALA_FILL_WAIT_SEC = 180                             # ⚓ MINE — same number as zero_dte_lane.ENTRY_FILL_WAIT_SEC (own name)
-GAJJALA_MAX_ROUND_R_PCT = 10.0                          # ⚓ MINE — grid rounding may move the stop / +1R by at most this % of R
-GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN = 30              # ⚓ MINE — 15:30 ET (12:30 half day): last order, unfilled cancelled
-GAJJALA_FLATTEN_BEFORE_CLOSE_MIN = 5                    # ⚓ MINE — 15:55 ET (= zone_edge_entry.QB_EOD_FLATTEN_ET on a full day)
+GAJJALA_RISK_PCT = 0.25                                 # ⚓ GG VR 11.7 "he STARTS at 0.25% of the account per trade" (2026-10-21)
+GAJJALA_MAX_NOTIONAL_PCT = 10.0                         # ⚓ MINE — HIS CALL #4: a position never costs more than this % of equity (or the cash)
+GAJJALA_MAX_ENTRIES_PER_DAY = None                      # ⚓ GG has no day cap (VR 11.7: his only cap is the drawdown rule) — removed 2026-10-21 (D3)
+GAJJALA_MAX_OPEN = 3                                    # ⚓ MINE — HIS CALL #17
+GAJJALA_SIGNAL_MAX_AGE_MIN = None                       # ⚓ removed 2026-10-21 (D7: the stale line was mine, HIS CALL #3)
+GAJJALA_CHASE_PCT = None                                # ⚓ removed 2026-10-21 (D7: a market order at the break, VR 11.1)
+GAJJALA_FILL_WAIT_SEC = 180                             # ⚓ MINE — HIS CALL #20: same number as zero_dte_lane.ENTRY_FILL_WAIT_SEC (own name)
+GAJJALA_MAX_ROUND_R_PCT = 10.0                          # ⚓ MINE — HIS CALL #21: grid rounding may move the stop by at most this % of R
+GAJJALA_MISSED_R = 1.0                                  # ⚓ MINE — HIS CALL #9: last past trigger + this x R = the move went without us
+GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN = 30              # ⚓ MINE — HIS CALL #22: 15:30 ET (12:30 half day): last order, unfilled cancelled
+GAJJALA_FLATTEN_BEFORE_CLOSE_MIN = 5                    # ⚓ MINE — HIS CALL #2 / #16: 15:55 ET (= zone_edge_entry.QB_EOD_FLATTEN_ET)
+GG_BE_AFTER_BARS = 3                                    # ⚓ GG S8 24:46 "give it 15 minutes, three bars" (VR 11.4) — HIS CALL #15 reading
+GG_PARTIAL_FRAC = 0.5                                   # ⚓ GG VR 11.4 "peel off 1/3 or half" — "half"
+GG_PARTIAL_R = None                                     # ⚓ awaiting your number — "peel off 1/3 or half … when strong": at how many R above the entry?
+GG_TRAIL_EMA = GC.EMA_FAST                              # ⚓ GG VR 11.4 "trail the remaining along the 9 EMA" (the pass's one EMA definition)
+GG_TRAIL_EMA_KF = None                                  # ⚓ awaiting your number — 9 or 21 ("the 21 on Kiss & Fly maybe")
+GG_REENTRY_WAIT_BARS = 2                                # ⚓ GG S8 1:17:12 "at least like couple of bars" (VR 10.6)
+GG_HALT_CALM_MIN = None                                 # ⚓ awaiting your number — "when it's clean, when it's calmer, then I enter": minutes since the last halt resumed
+GG_CUSHION_DOUBLE_PCT = None                            # ⚓ awaiting your number — the account cushion (% above the start of the month?) at which an A+ gets double size
+GG_DRAWDOWN_PCT = 10.0                                  # ⚓ GG VR 11.7 "a −10% / −15% drawdown"
+GG_DRAWDOWN_TRADES = 5                                  # ⚓ GG VR 11.7 "the next five trades"
+GG_DRAWDOWN_RISK_SUM_PCT = 5.0                          # ⚓ GG VR 11.7 "≤ −5% together"
+GG_LOSS_RISK_CUT = 0.5                                  # ⚓ GG S8 46:47 "$2,000 … next trade I cut to $1,000 … then $500"
 DEFAULT_ON = True                                       # Ajay 2026-10-20 "only use the Gajjalas strategies please"
-WINDOW_OPEN_ET = GC.LEDGER_FILL_FROM_ET                 # 09:45 — Ajay 2026-10-16 "From 09:45 ET only" (never retyped)
-R_MULT = GC.LEDGER_R_MULT                               # Ajay 2026-10-16 "GG's trade math"
-MIN_R_PCT = GC.LEDGER_MIN_R_PCT                         # thin R — MINE (🏁 HIS CALL Q16)
+WINDOW_OPEN_ET = GC.LEDGER_FILL_FROM_ET                 # 09:45 — GG VR 1.4 / Ajay 2026-10-16 "From 09:45 ET only" (never retyped)
+R_MULT = GC.LEDGER_R_MULT                               # the 🏁 grader's +1R (a measurement; the lane has no target)
+MIN_R_PCT = GC.LEDGER_MIN_R_PCT                         # the 🏁 grader's thin-R line (the lane no longer refuses on it, D7)
+AWAITING = (("GG_PARTIAL_R", "“peel off 1/3 or half … when strong”: at how many R above the entry?"),
+            ("GG_TRAIL_EMA_KF", "9 or 21 on Kiss & Fly (“the 21 on Kiss & Fly maybe”)?"),
+            ("GG_HALT_CALM_MIN", "“when it's clean, when it's calmer, then I enter”: how many minutes after the last "
+                                 "halt resumed?"),
+            ("GG_CUSHION_DOUBLE_PCT", "the account cushion (% above the start of the month?) at which an A+ gets "
+                                      "double size?"))
+NOT_BUILT = ("base counting (3rd base climax, 4th out)", "psychological $1 / $5 / $10 levels",
+             "exit before the stop on hesitation", "mental stops", "monthly risk re-basing")   # D13 — Playbook text only
 LANE_COLL = "gajjala_lane"                              # ⚓
-LEDGER_KINDS = ("gajjala_entry", "gajjala_skip", "gajjala_cancel", "gajjala_exit", "gajjala_disabled")
+STATE_COLL = "gajjala_lane_state"                       # ⚓ D4/D5: risk_mult, the equity peak, the drawdown window
+STATE_ID = "state"
+LEDGER_KINDS = ("gajjala_entry", "gajjala_skip", "gajjala_cancel", "gajjala_exit", "gajjala_disabled",
+                "gajjala_breakeven", "gajjala_be_failed", "gajjala_add", "gajjala_partial")
 STATES = ("waiting", "ordering", "ordered", "open", "closing", "closed", "unfilled", "skipped", "dry_run")
-SKIP_KINDS = ("no_plan", "no_risk", "thin_r", "stale", "dead", "missed", "rounding", "broker_gap", "size", "cap_day",
-              "cap_open", "held", "floor", "earnings", "blocked", "never_triggered", "disarmed")
-CITE = "🚩 Gajjala lane: GG's trade math (chart_maps/gajjala/ledger.grade) — owner rules, no book (docs/trading_gajjala_lane.md)"
-EXIT_KINDS = ("target", "stop", "flatten", "owner", "carried")
+SKIP_KINDS = ("no_plan", "no_risk", "missed", "rounding", "broker_gap", "size", "cap_open", "held", "floor", "earnings",
+              "blocked", "never_triggered", "disarmed", "cooldown", "halt")
+LEGACY_SKIP_KINDS = ("thin_r", "stale", "dead", "cap_day")     # v1 docs (2026-10-20) still carry these
+CITE = "🚩 Gajjala lane: GG's playbook rules (chart_maps/gajjala/verified_rules.json) — owner rules, no book (docs/trading_gajjala_lane.md)"
+EXIT_KINDS = ("stop", "trail", "flatten", "owner", "carried", "target")    # "target" = v1 docs only
 FLOORS = ("house", "gg")
 ROW_STATES = STATES + ("not_seen",)
 RECENT_MAX = 40
 # the regular close of a full session (= daytrading.data.ET_RTH_CLOSE, pinned equal in the 🏁 tests); a dated read
 # uses the house calendar (catalysts.medical.reaction.rth_close_time — 13:00 on a half day)
 _FULL_DAY_CLOSE = GC.LEDGER_FILL_TO_ET
-# states that hold a slot: an order in flight or a position (cap_open) — and, with "closed", an entry today (cap_day)
+# states that hold a slot: an order in flight or a position (cap_open) — and, with "closed", an entry today
 _LIVE_STATES = ("ordering", "ordered", "open", "closing")
 _DAY_STATES = _LIVE_STATES + ("closed",)
 _EXIT_WORD = {"target": "target", "stop": "stop", "flatten": "flattened", "owner": "owner close",
-              "carried": "carried"}
+              "carried": "carried", "trail": "trail exit"}
+_EMA_COL = {GC.EMA_FAST: "ema9", GC.EMA_SLOW: "ema21"}
 
 ET = ZoneInfo("America/New_York")
 UTC = timezone.utc
@@ -126,6 +160,10 @@ def _money(v) -> str:
 
 def _r2(x) -> Optional[float]:
     return None if x is None else float(_D(x).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def _g(x) -> str:
+    return f"{float(x):g}"
 
 
 def _hhmm(t) -> str:
@@ -200,6 +238,16 @@ def _as_date(day) -> Optional[date]:
     return None
 
 
+def _bar_min() -> int:
+    """The 5-minute frame's length — the pass's own table (alerts.FRAME_MINUTES), never retyped."""
+    from chart_maps.gajjala.alerts import FRAME_MINUTES
+    return int(FRAME_MINUTES["5m"])
+
+
+def _qty(o) -> int:
+    return int(_f((o or {}).get("qty")) or 0)
+
+
 # ── PURE pieces (unit-tested) ────────────────────────────────────────────────────────────────────────────────────
 def cutoff_et(day=None) -> dtime:
     """The last minute an order may go out, and the minute every unfilled one is cancelled: the regular close of `day`
@@ -235,14 +283,22 @@ def gate(cfg: dict, broker_mode: str, market_open: bool) -> dict:
 
 def _plan_out(**kw) -> dict:
     out = {"ok": False, "waiting": False, "skip_kind": None, "why": None, "entry": None, "target": None, "stop": None,
-           "qty": None, "risk_usd": None, "notional": None, "per_share": None, "stop_shift_pct_r": None,
-           "target_shift_pct_r": None}
+           "qty": None, "full_qty": None, "half_qty": None, "add_qty": None, "risk_usd": None, "full_risk_usd": None,
+           "risk_pct": None, "notional": None, "per_share": None, "stop_shift_pct_r": None, "target_shift_pct_r": None}
     out.update(kw)
     return out
 
 
-def entry_plan(alert: dict, last, equity, cash) -> dict:
-    """GG's trade math for one alert at the live `last` (see the module docstring). Decimal for every compare."""
+def risk_pct_now(risk_mult=1.0) -> float:
+    """GAJJALA_RISK_PCT x risk_mult (Decimal, the printed decimals)."""
+    m = _f(risk_mult)
+    m = 1.0 if m is None else max(0.0, m)
+    return float(_D(GAJJALA_RISK_PCT) * _D(m))
+
+
+def entry_plan(alert: dict, last, equity, cash, risk_mult=1.0, budget_left_pct=None) -> dict:
+    """GG's entry for one alert at the live `last` (module docstring, D6/D7). Decimal for every compare. `entry` is the
+    planning price (the last trade — the order is a market order); `qty` is the HALF that goes out now."""
     a = alert or {}
     plan = a.get("plan") if a.get("plan") in GLG.PLANS[1:] else GLG.plan_of(a.get("trigger"), a.get("stop"))[0]
     if plan == "no_plan":
@@ -251,54 +307,63 @@ def entry_plan(alert: dict, last, equity, cash) -> dict:
         return _plan_out(skip_kind="no_risk", why="trigger equals the stop — no risk to size")
     trig, stop = _D(a["trigger"]), _D(a["stop"])
     r = trig - stop
-    r_pct = float(r / trig * 100)
-    if a.get("thin") or r_pct < MIN_R_PCT:
-        return _plan_out(skip_kind="thin_r",
-                         why=f"R {_px(float(r))} is {r_pct:.2f}% of the trigger — under the {MIN_R_PCT:g}% thin-R line")
     lx = _f(last)
     if lx is None:
         return _plan_out(waiting=True)
     lst = _D(lx)
     if lst <= stop:
-        return _plan_out(skip_kind="dead", why=f"last {_px(lx)} is at or under the stop {_px(float(stop))}")
+        return _plan_out(skip_kind="never_triggered",
+                         why=f"last {_px(lx)} is at or under the stop {_px(float(stop))} — the break failed back into "
+                             f"its range (GG: out)")
     if lst < trig:
         return _plan_out(waiting=True)
-    one_r = _D(R_MULT) * r
-    e = _D(round_price(lst * (1 + _D(GAJJALA_CHASE_PCT) / 100), "up"))
-    if e >= trig + one_r:
-        return _plan_out(skip_kind="missed", entry=float(e),
-                         why=f"the entry {_px(float(e))} would be past +{R_MULT:g}R ({_px(float(trig + one_r))}) — "
-                             f"the move went without us")
+    bound = trig + _D(GAJJALA_MISSED_R) * r
+    if lst > bound:
+        return _plan_out(skip_kind="missed", entry=float(lst),
+                         why=f"last {_px(lx)} is past +{GAJJALA_MISSED_R:g}R ({_px(float(bound))}) — the move went "
+                             f"without us")
     sl = _D(round_price(stop, "down"))
-    tp = _D(round_price(e + one_r, "up"))
     stop_shift = float((stop - sl) / r * 100)
-    target_shift = float((tp - e - one_r) / r * 100)
-    base = {"entry": float(e), "target": float(tp), "stop": float(sl), "per_share": float(e - sl),
-            "stop_shift_pct_r": round(stop_shift, 2), "target_shift_pct_r": round(target_shift, 2)}
-    worst = max(abs(stop_shift), abs(target_shift))
-    if worst > GAJJALA_MAX_ROUND_R_PCT:
+    base = {"entry": float(lst), "stop": float(sl), "per_share": float(lst - sl),
+            "stop_shift_pct_r": round(stop_shift, 2)}
+    if abs(stop_shift) > GAJJALA_MAX_ROUND_R_PCT:
         return _plan_out(skip_kind="rounding", **base,
-                         why=f"the broker's price grid moves the stop or the target by {worst:.0f}% of R — over the "
+                         why=f"the broker's price grid moves the stop by {abs(stop_shift):.0f}% of R — over the "
                              f"{GAJJALA_MAX_ROUND_R_PCT:g}% line")
-    if e - sl < _D(MIN_STOP_GAP_USD):
+    if lst - sl < _D(MIN_STOP_GAP_USD):
         return _plan_out(skip_kind="broker_gap", **base,
-                         why=f"the stop {_px(float(sl))} is under ${MIN_STOP_GAP_USD:.2f} below the entry "
-                             f"{_px(float(e))} — Alpaca refuses a bracket that tight")
-    if tp - e < _D(MIN_STOP_GAP_USD):                           # R between $0.005 and $0.01: the target leg is too tight
-        return _plan_out(skip_kind="broker_gap", **base,
-                         why=f"the target {_px(float(tp))} is under ${MIN_STOP_GAP_USD:.2f} above the entry "
-                             f"{_px(float(e))} — Alpaca refuses a bracket that tight")
+                         why=f"the stop {_px(float(sl))} is under ${MIN_STOP_GAP_USD:.2f} below the last "
+                             f"{_px(lx)} — Alpaca refuses a stop that tight")
+    rp = _D(risk_pct_now(risk_mult))
     eq, ca = _f(equity) or 0.0, _f(cash) or 0.0
-    qty = 0
+    budget = _f(budget_left_pct)
+    full = 0
+    risk_cap = None
     if eq > 0 and ca > 0:
-        per = e - sl
-        by_risk = int((_D(eq) * _D(GAJJALA_RISK_PCT) / 100 / per).to_integral_value(rounding=ROUND_FLOOR))
-        by_notional = int((_D(eq) * _D(GAJJALA_MAX_NOTIONAL_PCT) / 100 / e).to_integral_value(rounding=ROUND_FLOOR))
-        by_cash = int((_D(ca) / e).to_integral_value(rounding=ROUND_FLOOR))
-        qty = max(0, min(by_risk, by_notional, by_cash))
-    if qty < 1:
-        return _plan_out(skip_kind="size", **base, qty=0, why="0 shares fit the risk, the notional cap and the cash")
-    return _plan_out(ok=True, **base, qty=qty, risk_usd=_r2(_D(qty) * (e - sl)), notional=_r2(_D(qty) * e))
+        per = lst - sl
+        caps = [int((_D(eq) * rp / 100 / per).to_integral_value(rounding=ROUND_FLOOR)),
+                int((_D(eq) * _D(GAJJALA_MAX_NOTIONAL_PCT) / 100 / lst).to_integral_value(rounding=ROUND_FLOOR)),
+                int((_D(ca) / lst).to_integral_value(rounding=ROUND_FLOOR))]
+        if budget is not None:
+            caps.append(int((_D(eq) * _D(max(0.0, budget)) / 100 / per).to_integral_value(rounding=ROUND_FLOOR)))
+        full = max(0, min(caps))
+        risk_cap = caps[0]
+    if full < 1:
+        tail = ", the cash and the drawdown budget" if budget is not None else " and the cash"
+        why = f"0 shares fit the risk, the notional cap{tail}"
+        m = _f(risk_mult)
+        if m is not None and m < 1 and risk_cap is not None and risk_cap < 1:
+            # FIXED 2026-10-21 (critic): a halved risk_mult can lock the lane (only a win resets it, and no trade can run
+            # at this size) — the skip says so; the floor / scratch rule is HIS CALL #18. FIXED 2026-10-21 (verifier):
+            # only when the risk cap itself is 0 shares — not when the cash or the notional cap bound
+            why += (f" — risk_mult is {_g(m)} after losing lane trades ({_g(rp)}% of equity a trade, not "
+                    f"{_g(GAJJALA_RISK_PCT)}%); only a win resets it (HIS CALL #18)")
+        return _plan_out(skip_kind="size", **base, qty=0, full_qty=0, risk_pct=float(rp), why=why)
+    half = max(1, full // 2)
+    per = lst - sl
+    return _plan_out(ok=True, **base, qty=half, full_qty=full, half_qty=half, add_qty=full - half,
+                     risk_usd=_r2(_D(half) * per), full_risk_usd=_r2(_D(full) * per), risk_pct=float(rp),
+                     notional=_r2(_D(half) * lst))
 
 
 def r_multiple(exit_px, fill_px, trigger, stop) -> Optional[float]:
@@ -320,19 +385,218 @@ def pnl_of(exit_px, fill_px, qty) -> Optional[float]:
     return _r2((_D(x) - _D(f)) * q)
 
 
+def trade_pnl(sells: list, buys: list) -> tuple:
+    """(pnl_usd, exit_px) of a scaled trade: `buys` / `sells` = [(qty, px)]. The sells are taken in time order up to
+    the bought quantity; P&L = their dollars − the average cost x their quantity; exit_px = their volume-weighted price.
+    (None, None) when nothing sold or nothing bought is readable."""
+    bq = sum(q for q, p in buys if q > 0 and p is not None)
+    if bq <= 0:
+        return None, None
+    cost = sum(_D(p) * q for q, p in buys if q > 0 and p is not None) / bq
+    left, sq, sd = bq, 0, Decimal(0)
+    for q, p in sells:
+        if left <= 0 or p is None or q <= 0:
+            continue
+        take = min(q, left)
+        sq, sd, left = sq + take, sd + _D(p) * take, left - take
+    if sq <= 0:
+        return None, None
+    pnl = sd - cost * sq
+    vwap = float((sd / sq).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP))
+    return float(pnl.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)), vwap
+
+
+def trade_r(pnl, first_qty, trigger, stop) -> Optional[float]:
+    """P&L in R of the first half: pnl ÷ (first_qty x (trigger − stop)) — equals (exit − fill) ÷ R for one entry and
+    one exit (v1's r_multiple)."""
+    p, t, s = _f(pnl), _f(trigger), _f(stop)
+    try:
+        q = int(first_qty)
+    except (TypeError, ValueError):
+        return None
+    if p is None or t is None or s is None or t <= s or q <= 0:
+        return None
+    return float((_D(p) / (_D(q) * (_D(t) - _D(s)))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
+def risk_after(risk_mult, pnl) -> float:
+    """D4: a lane trade closed at a LOSS halves risk_mult (GG S8 46:47); a WIN puts it back to 1 (mine, HIS CALL #18);
+    flat or unknown leaves it."""
+    m = _f(risk_mult)
+    m = 1.0 if m is None else m
+    p = _f(pnl)
+    if p is None or p == 0:
+        return m
+    return float(_D(m) * _D(GG_LOSS_RISK_CUT)) if p < 0 else 1.0
+
+
+def drawdown_step(state: dict, equity, now_iso: Optional[str] = None) -> tuple:
+    """D5 (VR 11.7): (fields to $set on the state doc, turned_on). The peak = the highest equity seen since the lane's
+    first day; in drawdown = equity ≤ peak x (1 − GG_DRAWDOWN_PCT/100). A window of GG_DRAWDOWN_TRADES trades opens
+    when in drawdown and none is open (and again after it closes while the account is still in drawdown — MINE);
+    turned_on = the account went INTO drawdown this tick (the half-off, D8f)."""
+    st = state or {}
+    eq = _f(equity)
+    if eq is None or eq <= 0:
+        return {}, False
+    prev = _f(st.get("equity_peak"))
+    peak = eq if prev is None or eq > prev else prev
+    line = float(_D(peak) * (1 - _D(GG_DRAWDOWN_PCT) / 100))
+    in_dd = _D(eq) <= _D(line)
+    fields = {"equity": eq, "equity_at": now_iso, "equity_peak": peak, "drawdown_line": line, "in_drawdown": in_dd}
+    if prev is None or eq > prev:
+        fields["peak_at"] = now_iso
+    if in_dd and not st.get("dd_window"):
+        fields["dd_window"] = {"opened_at": now_iso, "trades": 0, "risk_used_pct": 0.0}
+    turned_on = bool(in_dd and not st.get("in_drawdown"))
+    if turned_on:
+        fields["dd_on_at"] = now_iso
+    return fields, turned_on
+
+
+def budget_left_pct(state: dict) -> Optional[float]:
+    """The drawdown window's risk budget still unspent (% of equity), None while no window is open."""
+    win = (state or {}).get("dd_window")
+    if not isinstance(win, dict):
+        return None
+    used = _f(win.get("risk_used_pct")) or 0.0
+    return max(0.0, float(_D(GG_DRAWDOWN_RISK_SUM_PCT) - _D(used)))
+
+
+def window_after_trade(state: dict, risk_pct) -> dict:
+    """The state fields after one lane trade went out inside an open drawdown window ({} when none is open)."""
+    win = (state or {}).get("dd_window")
+    if not isinstance(win, dict):
+        return {}
+    w = dict(win)
+    w["trades"] = int(w.get("trades") or 0) + 1
+    w["risk_used_pct"] = float(_D(_f(w.get("risk_used_pct")) or 0.0) + _D(_f(risk_pct) or 0.0))
+    if w["trades"] >= GG_DRAWDOWN_TRADES:
+        return {"dd_window": None, "dd_last_window": w}
+    return {"dd_window": w}
+
+
+def bar_label(t: datetime, minutes: int) -> datetime:
+    """The right label (= close time, UTC) of the `minutes` bar that holds `t` (the resampler is LEFT-closed)."""
+    u = t.astimezone(UTC).replace(second=0, microsecond=0)
+    return u - timedelta(minutes=u.minute % minutes) + timedelta(minutes=minutes)
+
+
+def closed_rows(frame, now) -> list:
+    """[{t (UTC close label), close, ema9, ema21}] of the frame's CLOSED bars only (`bars.closed_only`: a bucket counts
+    BAR_SETTLE_SEC after its right label) — the live bar never reaches a management rule."""
+    df = getattr(frame, "df", None) if frame is not None else None
+    if df is None or len(df) == 0:
+        return []
+    from chart_maps.gajjala import bars as GB
+    df = GB.closed_only(df, now)
+    out = []
+    for ts, rec in zip(df.index, df.to_dict("records")):
+        t = ts.to_pydatetime()
+        t = t.replace(tzinfo=UTC) if t.tzinfo is None else t.astimezone(UTC)
+        out.append({"t": t, "close": _f(rec.get("close")), "ema9": _f(rec.get("ema9")), "ema21": _f(rec.get("ema21"))})
+    out.sort(key=lambda r: r["t"])
+    return out
+
+
+def be_bar(rows: list, fill_t: datetime, fill_px, minutes: int) -> Optional[dict]:
+    """D8a: the first closed bar at least GG_BE_AFTER_BARS bars after the entry bar (the bar holding the fill) whose
+    close is ABOVE the fill. None = the hard stop stands."""
+    if fill_t is None or _f(fill_px) is None:
+        return None
+    earliest = bar_label(fill_t, minutes) + timedelta(minutes=GG_BE_AFTER_BARS * minutes)
+    for r in rows:
+        if r["t"] >= earliest and r["close"] is not None and _D(r["close"]) > _D(fill_px):
+            return r
+    return None
+
+
+def trail_ema_period(setup) -> int:
+    """GG_TRAIL_EMA (9); on Kiss & Fly GG_TRAIL_EMA_KF once he gives it."""
+    if setup == GC.SETUPS[1] and GG_TRAIL_EMA_KF is not None:
+        return int(GG_TRAIL_EMA_KF)
+    return int(GG_TRAIL_EMA)
+
+
+def trail_bar(rows: list, after: Optional[datetime], ema_key: str) -> Optional[dict]:
+    """D8c: the first closed bar after the breakeven bar that CLOSES under its EMA (a None EMA = warm-up, never)."""
+    for r in rows:
+        if after is not None and r["t"] <= after:
+            continue
+        e = r.get(ema_key)
+        if e is not None and r["close"] is not None and _D(r["close"]) < _D(e):
+            return r
+    return None
+
+
+def partial_bar(rows: list, after: Optional[datetime], fill_px, r, partial_r=None) -> Optional[dict]:
+    """D8b: the first closed bar after breakeven whose close ≥ fill + partial_r x R. partial_r None = never."""
+    if partial_r is None or _f(fill_px) is None or _f(r) is None:
+        return None
+    line = _D(fill_px) + _D(partial_r) * _D(r)
+    for x in rows:
+        if after is not None and x["t"] <= after:
+            continue
+        if x["close"] is not None and _D(x["close"]) >= line:
+            return x
+    return None
+
+
+def cooldown_until(exit_t: datetime, minutes: int) -> datetime:
+    """D10: no re-entry until GG_REENTRY_WAIT_BARS bars have closed after the bar that held the stop-out."""
+    return bar_label(exit_t, minutes) + timedelta(minutes=GG_REENTRY_WAIT_BARS * minutes)
+
+
+def _halt_text(h) -> Optional[str]:
+    if not isinstance(h, dict):
+        return None
+    n = int(_f(h.get("n")) or 0)
+    if n <= 0:
+        return None
+    return h.get("text") if isinstance(h.get("text"), str) and h.get("text") else f"⏸ halted ×{n}"
+
+
 def fate_text(doc: dict) -> str:
     """The one line the tab prints for a row (every number composed here)."""
     d = doc or {}
+    out = _fate(d)
+    ht = _halt_text(d.get("halts"))
+    if ht and d.get("state") not in (None, "not_seen"):
+        out += f" · {ht} today"
+    return out
+
+
+def _fate(d: dict) -> str:
     st = d.get("state")
     cut = _hhmm(cutoff_et(d.get("date")))
     if st == "waiting":
         return (f"waiting for the tape to trade {_px(d.get('trigger'))} (stop {_px(d.get('stop'))}) — until {cut} ET")
     if st in ("ordering", "ordered"):
-        return (f"order {int(d.get('qty') or 0):,} @ {_px(d.get('entry'))} sent {d.get('ordered_et') or '—'} ET · "
-                f"target {_px(d.get('target'))} · stop {_px(d.get('stop_px'))}")
+        if d.get("target") is not None:                            # a v1 limit bracket
+            return (f"order {int(d.get('qty') or 0):,} @ {_px(d.get('entry'))} sent {d.get('ordered_et') or '—'} ET · "
+                    f"target {_px(d.get('target'))} · stop {_px(d.get('stop_px'))}")
+        return (f"market order {int(d.get('qty') or 0):,} sent {d.get('ordered_et') or '—'} ET (last "
+                f"{_px(d.get('entry'))}) · stop {_px(d.get('stop_px'))}")
     if st == "open":
-        return (f"filled {int(d.get('fill_qty') or d.get('qty') or 0):,} @ {_px(d.get('fill_px'))} at "
-                f"{d.get('fill_et') or '—'} ET · target {_px(d.get('target'))} · stop {_px(d.get('stop_px'))}")
+        head = (f"filled {int(d.get('fill_qty') or d.get('qty') or 0):,} @ {_px(d.get('fill_px'))} at "
+                f"{d.get('fill_et') or '—'} ET")
+        if d.get("target") is not None:                            # a v1 bracket
+            return f"{head} · target {_px(d.get('target'))} · stop {_px(d.get('stop_px'))}"
+        out = f"{head} · stop {_px(d.get('stop_px'))} · no target"
+        if d.get("be_state") == "done":
+            out += f" · breakeven at {d.get('be_et') or '—'} ET"
+            if d.get("add_fill_qty"):
+                out += f" · added {int(d['add_fill_qty']):,} @ {_px(d.get('add_fill_px'))}"
+            elif d.get("add_order_id"):
+                out += f" · adding {int(d.get('add_qty') or 0):,}"
+            elif d.get("add_refused"):
+                out += f" · add refused: {d['add_refused']}"
+            out += f" · trailing the {trail_ema_period(d.get('setup'))} EMA"
+        if d.get("partial_state") == "done":
+            out += f" · {int(d.get('partial_qty') or 0):,} sold into strength"
+        if d.get("dd_half_state") == "done":
+            out += f" · {int(d.get('dd_half_qty') or 0):,} off (drawdown)"
+        return out
     if st == "closing":
         return f"closing — {d.get('why') or 'flatten sent'}"
     if st == "closed":
@@ -368,33 +632,49 @@ def pnl_text(row: dict) -> Optional[str]:
     return None
 
 
-def rules_list() -> list:
-    """The ℹ️ lines on the tab — every number read from a constant (tests pin it)."""
-    cut, flat = _hhmm(cutoff_et()), _hhmm(flatten_et())
-    return [
-        "Trades the 🚩 Gajjala A+ ENTRY alerts that reached your phone — all five setups — on the paper account only.",
-        f"Entry the way the 🏁 Track record fills: once the tape trades at or over the trigger, a day limit "
-        f"{GAJJALA_CHASE_PCT:g}% over the last trade, {_hhmm(WINDOW_OPEN_ET)}–{cut} ET; one order per alert, cancelled if "
-        f"not filled in {GAJJALA_FILL_WAIT_SEC} s.",
-        f"Stop = the alert's stop; target = the entry + {R_MULT:g}R (R = trigger − stop). Both rest at the broker as one "
-        f"bracket.",
-        f"Size: {GAJJALA_RISK_PCT:g}% of equity at risk a trade, never over {GAJJALA_MAX_NOTIONAL_PCT:g}% of equity or the "
-        f"cash; {GAJJALA_MAX_ENTRIES_PER_DAY} entries a day, {GAJJALA_MAX_OPEN} open, one position per name.",
-        f"Refused: already past +{R_MULT:g}R, at or under the stop, R under {MIN_R_PCT:g}% of the trigger, first seen over "
-        f"{GAJJALA_SIGNAL_MAX_AGE_MIN} min after it rang, earnings within {TE.EARNINGS_SHIELD_DAYS} days, a stop or target "
-        f"the price grid moves by over {GAJJALA_MAX_ROUND_R_PCT:g}% of R.",
-        f"Same session only: unfilled orders are cancelled at {cut} ET and anything open is closed at {flat} ET.",
-        f"Prices under ${SUB_DOLLAR_LINE:.2f} go to the broker with {SUB_DOLLAR_DECIMALS} decimals, {DOLLAR_DECIMALS} at or "
-        f"over it.",
-    ]
+def rules_block(state: Optional[dict] = None, day=None) -> dict:
+    """D14 — the served `rules` object (GajjalaLaneTab prints these keys verbatim; every number from a constant)."""
+    st = state or {}
+    flat = f"{_hhmm(flatten_et(_as_date(day)))} ET"
+    # wording FIXED 2026-10-21 (critic): be_bar() needs ONE close above the fill, on a bar ≥ GG_BE_AFTER_BARS bars after
+    # the entry bar — not N closes above it
+    manage = (f"no target — after the first closed bar, {GG_BE_AFTER_BARS} or more bars after the entry bar, that "
+              f"closes above the entry, the stop moves to breakeven and the second half is added; the remainder trails the 5-minute {GG_TRAIL_EMA} EMA (out on a close below it)")
+    if GG_PARTIAL_R is not None:
+        manage += f"; {_g(GG_PARTIAL_FRAC * 100)}% comes off once a closed bar is {_g(GG_PARTIAL_R)}R over the entry"
+    manage += f"; flat at {flat}"
+    if st.get("in_drawdown") or isinstance(st.get("dd_window"), dict):
+        win = st.get("dd_window") if isinstance(st.get("dd_window"), dict) else {}
+        dd = (f"on: {int(win.get('trades') or 0)} of {GG_DRAWDOWN_TRADES} trades, budget left "
+              f"{_g(budget_left_pct(st) if win else GG_DRAWDOWN_RISK_SUM_PCT)}%")
+    else:
+        dd = (f"off: at {_g(GG_DRAWDOWN_PCT)}% under the equity peak the next {GG_DRAWDOWN_TRADES} trades risk at most "
+              f"{_g(GG_DRAWDOWN_RISK_SUM_PCT)}% together and half of every open lane position comes off")
+    return {
+        "entry_text": "market at the break, after the entry bar closes (GG: 'right at the break … sometimes I wait for "
+                      "the bar close')",
+        "stop_text": "the alert's stop, a market stop at the broker from the fill (GG: 'low of the prior bar as the "
+                     "stop loss')",
+        "size_text": f"half of {_g(GAJJALA_RISK_PCT)}% of equity at risk first; the other half is added at breakeven "
+                     f"(GG: 'half size, then add')",
+        "manage_text": manage,
+        "risk_text": f"{_g(GAJJALA_RISK_PCT)}% of equity per trade, halved after a loss, back to "
+                     f"{_g(GAJJALA_RISK_PCT)}% after a win — now {_g(risk_pct_now(st.get('risk_mult', 1.0)))}%; "
+                     f"drawdown mode {dd}",
+        "exempt_text": "no earnings shield, no five-position ceiling, no SEPA distribution exit on lane names — GG's "
+                       "rules only",
+        "not_built": list(NOT_BUILT),
+        "awaiting": [{"key": k, "question": q} for k, q in AWAITING if globals().get(k) is None],
+    }
 
 
 def floors_text(floors: str) -> str:
     if floors == "gg":
-        return (f"House safety floors OFF for this lane (your switch): names under ${SF.MIN_SHARE_PRICE:g} and small caps "
-                f"trade; the warnings are still recorded on every entry.")
-    return (f"House safety floors ON for this lane: share price ≥ ${SF.MIN_SHARE_PRICE:.2f} and a known market cap ≥ "
-            f"${SF.MIN_CAP_USD / 1e6:.0f}M. Most of his names sit under them, so most alerts are skipped and counted.")
+        return (f"OFF by default (your call 2026-10-21): the house ${SF.MIN_SHARE_PRICE:g} / "
+                f"${SF.MIN_CAP_USD / 1e6:.0f}M floors do not apply to GG's lane")
+    return (f"House safety floors ON for this lane (your switch): share price ≥ ${SF.MIN_SHARE_PRICE:.2f} and a known "
+            f"market cap ≥ ${SF.MIN_CAP_USD / 1e6:.0f}M. Most of his names sit under them, so most alerts are skipped "
+            f"and counted.")
 
 
 def floors_flip(floors: str) -> str:
@@ -405,8 +685,8 @@ FLOORS_OFF_CONFIRM_TEXT = (f"Turn the house floors off for the 🚩 lane? Names 
                            f"will trade on paper.")
 UNMEASURED_TEXT = ("UNMEASURED — the study of his five setups read no edge; this lane trades them on paper so the fills "
                    "can be read, not because they are measured.")
-STREAK_TEXT = (f"The engine's losing-streak size cut is not applied here: every alert risks the same {GAJJALA_RISK_PCT:g}% "
-               f"so the fills stay comparable with the 🏁 Track record.")
+STREAK_TEXT = (f"The engine's losing-streak size cut is not applied here; GG's own rule is: {_g(GAJJALA_RISK_PCT)}% a "
+               f"trade, halved after a loss, back after a win.")
 TRACK_RECORD_TEXT = "🏁 Track record grades the same alerts by GG's math — compare the fills there."
 TRACK_RECORD_URL = f"/chart-maps?tab=gajjala&sub={GC.LEDGER_SUB}"
 EMPTY_TODAY_TEXT = "No 🚩 A+ entry has reached your phone today — the lane waits for one."
@@ -421,7 +701,8 @@ LIVE_TEXT = "Live broker detected — the 🚩 Gajjala lane is paper-only and st
 
 
 def _floors_of(cfg: dict) -> str:
-    return "gg" if not (cfg or {}).get("gajjala_floors", True) else "house"
+    """D1 (2026-10-21): default OFF — "gg" unless the switch gajjala_floors is explicitly ON."""
+    return "house" if (cfg or {}).get("gajjala_floors", False) else "gg"
 
 
 # ── IO seams (patched in tests) ──────────────────────────────────────────────────────────────────────────────────
@@ -438,6 +719,46 @@ def _coll(name: str):
 def _alert_docs(day) -> Optional[list]:
     from chart_maps.gajjala.store import GajjalaStore
     return GajjalaStore().alert_rows([day])
+
+
+def _halts_of(day, sym: str) -> Optional[dict]:
+    """D11: today's halt ledger row for the name ({n, text, last_resume_et}) or None — Mongo only (gajjala_halts)."""
+    try:
+        from chart_maps.gajjala.store import GajjalaStore
+        for h in GajjalaStore().halts(day) or []:
+            if (h.get("symbol") or "").upper() == (sym or "").upper():
+                n = int(_f(h.get("n_halts")) or 0)
+                reasons = [x for x in h.get("reasons") or [] if x]
+                return {"n": n, "text": f"⏸ halted ×{n}" + (f" ({', '.join(reasons)})" if reasons else ""),
+                        "last_resume_et": h.get("last_resume_et")}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("gajjala lane: halts unread for %s: %s", sym, exc)
+    return None
+
+
+_BAR_CACHE: dict = {}
+_BAR_CACHE_MAX = 64
+
+
+def _bars5(sym: str, day, now_et: datetime):
+    """The name's 5-minute Frame through the pass's own loader (`bars.frames_for`, Massive 5-minute aggregates), once
+    per symbol per 5-minute bucket (the cron ticks every minute). None = no bars (the hard stop stands)."""
+    mins = _bar_min()
+    settle = now_et.astimezone(UTC) - timedelta(seconds=GC.BAR_SETTLE_SEC)
+    key = (sym, str(day), bar_label(settle, mins))
+    if key in _BAR_CACHE:
+        return _BAR_CACHE[key]
+    f5 = None
+    try:
+        from chart_maps.gajjala import bars as GB
+        fr = GB.frames_for([sym], _as_date(day), now_et).get(sym)
+        f5 = fr.f5 if fr is not None else None
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: bars for %s failed: %s", sym, exc)
+    if len(_BAR_CACHE) >= _BAR_CACHE_MAX:
+        _BAR_CACHE.clear()
+    _BAR_CACHE[key] = f5
+    return f5
 
 
 def _live_last(brk, sym: str) -> tuple:
@@ -493,17 +814,48 @@ def _find(coll, q: dict) -> list:
         return []
 
 
-def _move(coll, _id, frm: str, fields: dict) -> bool:
-    """Conditional state change: only when the doc is still in `frm` (overlapping ticks cannot double-order)."""
-    fields = dict(fields)
-    fields["updated_at"] = _iso(datetime.now(UTC))
-    res = coll.update_one({"_id": _id, "state": frm}, {"$set": fields})
+def _matched(res) -> bool:
     if res is None:
         return True
     n = getattr(res, "matched_count", None)
     if n is None:
         n = getattr(res, "modified_count", 0)
     return bool(n)
+
+
+def _move(coll, _id, frm: str, fields: dict) -> bool:
+    """Conditional state change: only when the doc is still in `frm` (overlapping ticks cannot double-order)."""
+    return _move_if(coll, {"_id": _id, "state": frm}, fields)
+
+
+def _move_if(coll, q: dict, fields: dict) -> bool:
+    """Conditional update on any fields (the breakeven / partial claims: overlapping ticks act once)."""
+    fields = dict(fields)
+    fields["updated_at"] = _iso(datetime.now(UTC))
+    return _matched(coll.update_one(dict(q), {"$set": fields}))
+
+
+def _state(scoll) -> dict:
+    """D4/D5 state doc (gajjala_lane_state, _id "state"); defaults when absent or unreadable."""
+    out = {"risk_mult": 1.0, "equity_peak": None, "in_drawdown": False, "dd_window": None}
+    if scoll is None:
+        return out
+    try:
+        doc = scoll.find_one({"_id": STATE_ID}) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: state read failed: %s", exc)
+        doc = {}
+    out.update({k: v for k, v in doc.items() if k != "_id"})
+    return out
+
+
+def _state_set(scoll, fields: dict) -> None:
+    if scoll is None or not fields:
+        return
+    try:
+        scoll.update_one({"_id": STATE_ID}, {"$set": dict(fields, updated_at=_iso(datetime.now(UTC)))}, upsert=True)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: state write failed: %s", exc)
 
 
 def _ledger(kind: str, sym: Optional[str], detail: dict, dry_run: bool = False) -> None:
@@ -541,18 +893,29 @@ class _Reads:
     def __init__(self, brk, since_iso: str):
         self.brk, self.since = brk, since_iso
         self._orders = None
+        self._open = None
         self._closed = None
         self._positions = None
         self.positions_ok = False
 
+    def open_list(self) -> list:
+        """Working orders with their bracket / OTO legs as one flat list."""
+        if self._open is None:
+            flat = []
+            try:
+                for o in self.brk.open_orders() or []:
+                    flat.append(o)
+                    flat += [x for x in (o.get("legs") or []) if isinstance(x, dict)]
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala lane: open orders: %s", exc)
+            self._open = flat
+        return self._open
+
     def orders(self) -> dict:
         if self._orders is None:
             found = {}
-            try:
-                for o in self.brk.open_orders() or []:
-                    found[o.get("id")] = o
-            except Exception as exc:                            # noqa: BLE001
-                log.warning("gajjala lane: open orders: %s", exc)
+            for o in self.open_list():
+                found.setdefault(o.get("id"), o)
             for o in self.closed():
                 found.setdefault(o.get("id"), o)
             self._orders = found
@@ -580,12 +943,25 @@ class _Reads:
         return self._positions
 
 
-def _exit_order(reads: _Reads, sym: str, after: Optional[datetime]) -> Optional[dict]:
-    """The symbol's latest FILLED sell at or after the fill (bracket legs appear on their own once terminal)."""
-    found = []
+def _working_stops(reads: _Reads, sym: str) -> list:
+    out, seen = [], set()
+    for o in reads.open_list():
+        if ((o.get("symbol") or "").upper() == sym and str(o.get("side") or "").lower() == "sell"
+                and str(o.get("type") or o.get("order_type") or "").lower() in ("stop", "stop_limit")
+                and str(o.get("status") or "").lower() in OPEN_STATUSES and o.get("id") not in seen):
+            seen.add(o.get("id"))
+            out.append(o)
+    return out
+
+
+def _filled_sells(reads: _Reads, sym: str, after: Optional[datetime]) -> list:
+    """Every FILLED sell of the name at or after the fill, oldest first: [(t, order)] (legs included, deduped by id)."""
+    found, seen = [], set()
     floor = datetime.min.replace(tzinfo=UTC)
     for o in reads.closed():
         for x in [o] + [y for y in (o.get("legs") or []) if isinstance(y, dict)]:
+            if x.get("id") in seen:
+                continue
             if (x.get("symbol") or "").upper() != sym or str(x.get("side") or "").lower() != "sell":
                 continue
             if str(x.get("status") or "").lower() != "filled":
@@ -593,8 +969,10 @@ def _exit_order(reads: _Reads, sym: str, after: Optional[datetime]) -> Optional[
             t = _parse(x.get("filled_at"))
             if after is not None and t is not None and t < after:
                 continue
+            seen.add(x.get("id"))
             found.append((t or floor, x))
-    return max(found, key=lambda tx: tx[0])[1] if found else None
+    found.sort(key=lambda tx: tx[0])
+    return found
 
 
 def _exit_kind_of(order: Optional[dict], recorded: Optional[str]) -> str:
@@ -651,7 +1029,8 @@ def _open_fields(o: Optional[dict], pos: Optional[dict], now_utc: datetime) -> O
 
 
 # ── manage what is in flight ─────────────────────────────────────────────────────────────────────────────────────
-def _manage(brk, cfg: dict, coll, now_et: datetime, day: str, reads: _Reads, out: dict) -> None:
+def _manage(brk, cfg: dict, coll, now_et: datetime, day: str, reads: _Reads, out: dict, lane_on: bool = True,
+            scoll=None) -> None:
     docs = _find(coll, {"state": {"$in": ["ordering", "ordered", "open", "closing"]}})
     if not docs:
         return
@@ -722,24 +1101,14 @@ def _manage(brk, cfg: dict, coll, now_et: datetime, day: str, reads: _Reads, out
             if not reads.positions_ok:
                 continue
             if sym not in positions:
-                fill_t = _parse(doc.get("fill_t"))
-                sell = _exit_order(reads, sym, fill_t)
-                kind = _exit_kind_of(sell, doc.get("exit_kind"))
-                ex_px = _f((sell or {}).get("filled_avg_price"))
-                ex_t = _parse((sell or {}).get("filled_at")) or now_utc
-                qty = int(doc.get("fill_qty") or doc.get("qty") or 0)
-                pnl = pnl_of(ex_px, doc.get("fill_px"), qty)
-                rm = r_multiple(ex_px, doc.get("fill_px"), doc.get("trigger"), doc.get("stop"))
-                if _move(coll, doc["_id"], st, {"state": "closed", "exit_kind": kind, "exit_px": ex_px,
-                                                "exit_t": _iso(ex_t), "exit_et": _hhmm(ex_t.astimezone(ET)),
-                                                "pnl_usd": pnl, "r_mult": rm}):
-                    out["closed"] += 1
-                    _ledger("gajjala_exit", sym, {"alert_id": doc["_id"], "exit_kind": kind, "exit_px": ex_px,
-                                                  "fill_px": doc.get("fill_px"), "qty": qty, "pnl_usd": pnl,
-                                                  "r_mult": rm})
+                _close_doc(coll, doc, st, sym, reads, now_utc, out, scoll)
                 continue
             flat_t = flatten_et(doc.get("date"))
             if not (past or now_et.time() >= flat_t):
+                if st == "open" and cfg.get("armed"):
+                    _gg_manage(brk, cfg, coll, doc, sym, positions[sym], now_et, reads, out, lane_on)
+                elif st == "open":
+                    _restop_disarmed(doc, sym, positions[sym], reads, out)   # HIS CALL #23: one protective stop only
                 continue
             if st == "closing" and sym in _queued_symbols(cfg):
                 continue                                        # the engine's flatten queue owns it (drains at (a2))
@@ -755,6 +1124,10 @@ def _manage(brk, cfg: dict, coll, now_et: datetime, day: str, reads: _Reads, out
                 out["errors"].append("flatten %s: %s" % (sym, exc))
                 continue
             if res.get("dry_run"):
+                # FIXED 2026-10-21 (verifier, round 2): disarmed in the flatten window → HIS CALL #23's one protective
+                # stop here too (a part-sell cancelled at 15:54 would otherwise leave the shares naked through the close)
+                if st == "open":
+                    _restop_disarmed(doc, sym, positions[sym], reads, out)
                 continue
             if not (res.get("closed") or res.get("queued")):
                 # neither closed nor queued (a non-403 broker error): the doc stays where it is; the next tick retries
@@ -770,6 +1143,372 @@ def _manage(brk, cfg: dict, coll, now_et: datetime, day: str, reads: _Reads, out
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala lane: manage %s failed: %s", doc.get("_id"), exc)
             out["errors"].append("manage %s: %s" % (doc.get("_id"), type(exc).__name__))
+
+
+def _reconcile_add(coll, doc: dict, reads: _Reads) -> None:
+    """The breakeven add's fill (market): read once it is terminal; recorded on the doc for the P&L."""
+    oid = doc.get("add_order_id")
+    if not oid or doc.get("add_fill_qty") is not None:
+        return
+    o = reads.orders().get(oid)
+    ost = str((o or {}).get("status") or "").lower()
+    q = int(_f((o or {}).get("filled_qty")) or 0)
+    if ost == "filled" or (ost in ("canceled", "cancelled", "expired", "rejected", "done_for_day")):
+        fields = {"add_fill_qty": q, "add_fill_px": _f((o or {}).get("filled_avg_price")) if q else None}
+        if _move_if(coll, {"_id": doc["_id"], "add_order_id": oid}, fields):
+            doc.update(fields)
+
+
+def _close_doc(coll, doc: dict, st: str, sym: str, reads: _Reads, now_utc: datetime, out: dict, scoll) -> None:
+    """The position is gone: P&L over every sell since the fill (a partial, the stop legs, the trail / flatten),
+    against the entry and the add; risk_mult moves once (D4)."""
+    _reconcile_add(coll, doc, reads)
+    fill_t = _parse(doc.get("fill_t"))
+    sells = _filled_sells(reads, sym, fill_t)
+    last = sells[-1][1] if sells else None
+    kind = _exit_kind_of(last, doc.get("exit_kind"))
+    ex_t = _parse((last or {}).get("filled_at")) or now_utc
+    buys = [(int(doc.get("fill_qty") or doc.get("qty") or 0), _f(doc.get("fill_px")))]
+    if doc.get("add_fill_qty"):
+        buys.append((int(doc["add_fill_qty"]), _f(doc.get("add_fill_px"))))
+    pnl, ex_px = trade_pnl([(int(_f(o.get("filled_qty")) or _qty(o)), _f(o.get("filled_avg_price")))
+                            for _t, o in sells], buys)
+    first = int(doc.get("fill_qty") or doc.get("qty") or 0)
+    rm = trade_r(pnl, first, doc.get("trigger"), doc.get("stop"))
+    if not _move(coll, doc["_id"], st, {"state": "closed", "exit_kind": kind, "exit_px": ex_px,
+                                        "exit_t": _iso(ex_t), "exit_et": _hhmm(ex_t.astimezone(ET)),
+                                        "pnl_usd": pnl, "r_mult": rm}):
+        return
+    out["closed"] += 1
+    _ledger("gajjala_exit", sym, {"alert_id": doc["_id"], "exit_kind": kind, "exit_px": ex_px,
+                                  "fill_px": doc.get("fill_px"), "qty": first, "add_qty": doc.get("add_fill_qty"),
+                                  "pnl_usd": pnl, "r_mult": rm})
+    if scoll is not None and pnl is not None and doc.get("target") is None:     # v2 trades move GG's risk (D4)
+        stt = _state(scoll)
+        new = risk_after(stt.get("risk_mult", 1.0), pnl)
+        _state_set(scoll, {"risk_mult": new, "last_close": {"alert_id": doc["_id"], "pnl_usd": pnl,
+                                                            "at": _iso(now_utc)}})
+
+
+def _protect(brk, reads: _Reads, doc: dict, sym: str, pos: dict, out: dict) -> None:
+    """A lane position always has its stop at the broker: a shortfall of stop shares gets a stop at the doc's stop; a
+    stop under the doc's (the house adopt-and-protect's book stop) is raised to it."""
+    sp = _f(doc.get("stop_px"))
+    held = int(_f(pos.get("qty")) or 0)
+    if sp is None or held <= 0:
+        return
+    stops = _working_stops(reads, sym)
+    covered = sum(_qty(o) for o in stops)
+    last = _f(pos.get("current_price"))
+    for o in stops:
+        cur = _f(o.get("stop_price"))
+        if cur is not None and _D(cur) < _D(sp) and (last is None or _D(last) > _D(sp)):
+            try:
+                brk.replace_order(o["id"], stop_price=sp)
+            except Exception as exc:                            # noqa: BLE001
+                out["errors"].append("stop %s: %s" % (sym, exc))
+    if covered < held:
+        try:
+            EE.lane_stop(sym, held - covered, sp, "🚩 Gajjala lane: the stop for the shares without one")
+            out["protected"] += 1
+        except Exception as exc:                                # noqa: BLE001
+            out["errors"].append("protect %s: %s" % (sym, exc))
+
+
+PART_SELL_TAGS = ("dd_half", "partial")                  # the two-tick part-sells (`{tag}_state`, _sell_part)
+
+
+def _part_selling(doc: dict) -> Optional[str]:
+    """The tag of a part-sell whose stop cancel was sent (`{tag}_state` "cancelling"), else None."""
+    return next((t for t in PART_SELL_TAGS if (doc or {}).get(t + "_state") == "cancelling"), None)
+
+
+def part_sell_symbols() -> set:
+    """Symbols whose open lane doc is mid part-sell (FIXED 2026-10-21, verifier): exit_engine.tick's adopt-and-protect
+    skips them — a house stop placed between the cancel and the sell re-holds the shares, the lane cancels it again,
+    and the half-off never runs. Fenced: a read failure is an empty set (the house protects every name)."""
+    coll = _coll(LANE_COLL)
+    if coll is None:
+        return set()
+    return {(d.get("symbol") or "").upper() for d in _find(coll, {"state": "open"})
+            if d.get("symbol") and _part_selling(d)}
+
+
+def _restop_disarmed(doc: dict, sym: str, pos: dict, reads: _Reads, out: dict) -> None:
+    """HIS CALL #23 (2026-10-21): the engine was disarmed between a part-sell's cancel (tick N) and its sell (tick N+1).
+    ONE protective SELL stop at the doc's stop for every share without one — never a buy, never a sell at market; the
+    part-sell itself waits for an armed tick (which cancels this stop again, then sells). Nothing while a cancel is
+    still pending at the broker (its shares are held; a new stop would be refused). Ledger `gajjala_restop_disarmed`."""
+    tag = _part_selling(doc)
+    sp = _f(doc.get("stop_px"))
+    held = int(_f(pos.get("qty")) or 0)
+    if tag is None or sp is None or held <= 0:
+        return
+    if any((o.get("symbol") or "").upper() == sym and str(o.get("side") or "").lower() == "sell"
+           and str(o.get("status") or "").lower() == "pending_cancel" for o in reads.open_list()):
+        return
+    qty = held - sum(_qty(o) for o in _working_stops(reads, sym))
+    if qty < 1:
+        return
+    reason = "🚩 Gajjala lane: disarmed mid part-sell — the stop back on the shares without one (HIS CALL #23)"
+    try:
+        order = EE.lane_stop(sym, qty, sp, reason, protective_disarmed=True) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        out["errors"].append("restop %s: %s" % (sym, exc))
+        return
+    out["restopped"] += 1
+    _ledger("gajjala_restop_disarmed", sym, {"alert_id": doc["_id"], "kind": tag, "qty": int(qty), "held": held,
+                                             "stop_px": sp, "order_id": order.get("id"), "why": reason})
+
+
+def _gg_manage(brk, cfg: dict, coll, doc: dict, sym: str, pos: dict, now_et: datetime, reads: _Reads, out: dict,
+               lane_on: bool) -> None:
+    """D8 on CLOSED 5-minute bars: breakeven + add, then the 9 EMA trail (and the partial once GG_PARTIAL_R is given);
+    D8f the drawdown half-off. Armed only (the caller checks)."""
+    fill_t, fill_px = _parse(doc.get("fill_t")), _f(doc.get("fill_px"))
+    if fill_t is None or fill_px is None or doc.get("target") is not None:
+        return                                                  # a v1 bracket keeps its own legs
+    # FIXED 2026-10-21 (critic): a part-sell whose stop cancel was sent last tick finishes first, and nothing re-stops
+    # the shares meanwhile (_protect would re-hold them and the sell would be refused again)
+    for tag in PART_SELL_TAGS:
+        if doc.get(tag + "_state") == "cancelling":
+            _sell_part(brk, coll, doc, sym, int(_f(pos.get("qty")) or 0), None, tag, reads, out,
+                       doc.get(tag + "_why"), now_et)
+            return
+    _protect(brk, reads, doc, sym, pos, out)
+    _reconcile_add(coll, doc, reads)
+    if doc.get("dd_half_due") and doc.get("dd_half_state") is None:
+        held = int(_f(pos.get("qty")) or 0)
+        if held >= 2:
+            _sell_part(brk, coll, doc, sym, held, held // 2, "dd_half", reads, out,
+                       "🚩 Gajjala lane: drawdown — half off (GG: 'in drawdowns take half off immediately')", now_et)
+            return
+    rows = closed_rows(_bars5(sym, doc.get("date"), now_et), now_et)
+    if not rows:
+        return
+    mins = _bar_min()
+    if doc.get("be_state") != "done":
+        b = be_bar(rows, fill_t, fill_px, mins)
+        if b is not None:
+            _breakeven(brk, cfg, coll, doc, sym, pos, b, now_et, reads, out, lane_on)
+        return
+    after = _parse(doc.get("be_bar_t"))
+    period = trail_ema_period(doc.get("setup"))
+    t = trail_bar(rows, after, _EMA_COL.get(period, "ema9"))
+    if t is not None:
+        _trail_exit(coll, doc, sym, t, period, now_et, out)
+        return
+    if GG_PARTIAL_R is not None and doc.get("partial_state") is None:
+        r = (_f(doc.get("trigger")) or 0) - (_f(doc.get("stop")) or 0)
+        p = partial_bar(rows, after, fill_px, r if r > 0 else None, GG_PARTIAL_R)
+        held = int(_f(pos.get("qty")) or 0)
+        if p is not None and held >= 2:
+            part = max(1, min(held - 1, int(_D(held) * _D(GG_PARTIAL_FRAC))))
+            _sell_part(brk, coll, doc, sym, held, part, "partial", reads, out,
+                       f"🚩 Gajjala lane: {_g(GG_PARTIAL_FRAC * 100)}% into strength at +{_g(GG_PARTIAL_R)}R", now_et)
+
+
+def _breakeven(brk, cfg: dict, coll, doc: dict, sym: str, pos: dict, bar: dict, now_et: datetime, reads: _Reads,
+               out: dict, lane_on: bool) -> None:
+    """D8a: (1) every stop of the name moves to the fill (a failed replace keeps the old stop, no add, retried next
+    tick); (2) the second half is added at market through entries.enter with its stop at the same fill."""
+    be_px = round_price(_f(doc.get("fill_px")), "down")
+    now_iso = _iso(now_et)
+    if not _move_if(coll, {"_id": doc["_id"], "state": "open", "be_state": None},
+                    {"be_state": "doing", "be_try_at": now_iso}):
+        return
+    errors, ids = [], []
+    stops = _working_stops(reads, sym)
+    if not stops:
+        errors.append("no working stop at the broker")
+    for o in stops:
+        cur = _f(o.get("stop_price"))
+        if cur is not None and _D(cur) >= _D(be_px):
+            ids.append(o.get("id"))
+            continue
+        try:
+            res = brk.replace_order(o["id"], stop_price=be_px) or {}
+            ids.append(res.get("id") or o.get("id"))            # Alpaca answers with a NEW order id
+        except Exception as exc:                                # noqa: BLE001
+            errors.append(str(exc))
+            break
+    if errors:
+        n = int(doc.get("be_failed_n") or 0) + 1
+        _move_if(coll, {"_id": doc["_id"], "be_state": "doing"},
+                 {"be_state": None, "be_failed_n": n, "be_failed": "; ".join(errors)})
+        out["errors"].append("breakeven %s: %s" % (sym, "; ".join(errors)))
+        if n == 1:
+            _ledger("gajjala_be_failed", sym, {"alert_id": doc["_id"], "errors": errors, "be_px": be_px})
+        return
+    fields = {"be_state": "done", "be_at": now_iso, "be_et": _hhmm(now_et), "be_bar_t": _iso(bar["t"]),
+              "be_bar_close": bar["close"], "stop_px": be_px, "stop_order_ids": ids}
+    _move_if(coll, {"_id": doc["_id"], "be_state": "doing"}, fields)
+    doc.update(fields)
+    out["breakeven"] += 1
+    _ledger("gajjala_breakeven", sym, {"alert_id": doc["_id"], "be_px": be_px, "bar_t": _iso(bar["t"]),
+                                       "bar_close": bar["close"], "stop_order_ids": ids})
+    held = int(_f(pos.get("qty")) or 0)
+    full = int(doc.get("full_qty") or 0)
+    first = int(doc.get("fill_qty") or doc.get("qty") or 0)
+    # FIXED 2026-10-21 (critic): the add is the planned other half (full − the first fill), never a refill of shares
+    # sold since (full − held alone bought the drawdown half-off back); never past full_qty
+    add = max(0, min(full - first, full - held))
+    afields: dict = {"add_qty": add}
+    if add < 1:
+        afields["add_refused"] = "nothing left to add"
+    elif doc.get("dd_half_due") or doc.get("dd_half_state") is not None:
+        # FIXED 2026-10-21 (critic): the drawdown half-off came (or is due) — no add while it stands (HIS CALL #19)
+        afields["add_refused"] = "drawdown — half came off (GG: 'in drawdowns take half off immediately'); no add"
+    elif not lane_on:
+        afields["add_refused"] = "lane switched off — no new buys"
+    else:
+        setup = str(doc.get("setup") or "")
+        last = _f(pos.get("current_price"))
+        try:
+            res = TE.enter(sym, limit_price=None, stop_price=be_px, strategy=STRATEGY,
+                           reason={"lane": STRATEGY, "alert_id": doc["_id"], "setup": setup, "add": True,
+                                   "be_px": be_px, "cite": CITE},
+                           sizing={"qty": add, "basis": "gg_add_at_breakeven", "price": last},
+                           floors=_floors_of(cfg), tif="day", order_intent="gg-add-" + setup, allow_earnings=True,
+                           ceiling="gg", order_class="oto")
+            afields.update(add_order_id=(res or {}).get("order_id"), add_at=now_iso)
+            out["added"] += 1
+        except ValueError as exc:
+            afields["add_refused"] = str(exc)                   # e.g. never average down — the stop move stands
+        except Exception as exc:                                # noqa: BLE001
+            afields["add_refused"] = type(exc).__name__
+    _move_if(coll, {"_id": doc["_id"], "state": "open"}, afields)
+    doc.update(afields)
+    _ledger("gajjala_add", sym, {"alert_id": doc["_id"], **afields})
+
+
+def _trail_exit(coll, doc: dict, sym: str, bar: dict, period: int, now_et: datetime, out: dict) -> None:
+    """D8c: a closed 5-minute bar under the EMA → the whole remainder out at market (exit_engine.flatten)."""
+    reason = (f"🚩 Gajjala lane: the {_hhmm(bar['t'].astimezone(ET))} ET 5-minute bar closed {_px(bar['close'])} under "
+              f"the {period} EMA {_px(bar.get(_EMA_COL.get(period, 'ema9')))}")
+    try:
+        res = EE.flatten(sym, reason) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        out["errors"].append("trail %s: %s" % (sym, exc))
+        return
+    if res.get("dry_run"):
+        return
+    if not (res.get("closed") or res.get("queued")):
+        out["errors"].append("trail %s: %s" % (sym, "; ".join(str(e) for e in (res.get("errors") or []))
+                                               or "not closed"))
+        return
+    if _move(coll, doc["_id"], "open", {"state": "closing", "exit_kind": "trail", "why": reason,
+                                        "closing_at": _iso(now_et), "trail_bar_t": _iso(bar["t"])}):
+        out["closing"] += 1
+        out["trailed"] += 1
+
+
+def _sell_part(brk, coll, doc: dict, sym: str, held: int, sell_qty: Optional[int], tag: str, reads: _Reads, out: dict,
+               reason: Optional[str], now_et: Optional[datetime] = None) -> None:
+    """Sell part of a lane position over two ticks (F5 trap: shares under a working stop are not available, and an
+    Alpaca cancel is asynchronous — `pending_cancel` keeps the shares held; exit_engine.flatten's FLATTEN_HELD_CODE).
+    FIXED 2026-10-21 (critic: the same-tick cancel → sell was refused every time and the stop flickered on and off):
+      tick N   claim `{tag}_state` None → "cancelling", cancel every working stop, record the wanted qty; no sell.
+      tick N+1 a stop still pending_cancel → wait (never resubmit a stop while a cancel is pending); a stop still
+               working → cancel it again and wait; none → sell min(wanted, held) at market and a stop for the rest at
+               the doc's stop. A refused sell restores the stop for every share and frees the claim (retried later).
+    `{tag}_naked_ms` = the cancel → re-stop gap (one tick)."""
+    flag = tag + "_state"
+    now_et = _as_et(now_et)
+    now_iso = _iso(now_et)
+    sp = _f(doc.get("stop_px"))
+    stops_all = [o for o in reads.open_list()
+                 if (o.get("symbol") or "").upper() == sym and str(o.get("side") or "").lower() == "sell"
+                 and str(o.get("type") or o.get("order_type") or "").lower() in ("stop", "stop_limit")]
+    pending = [o for o in stops_all if str(o.get("status") or "").lower() == "pending_cancel"]
+    working = _working_stops(reads, sym)
+
+    def cancel_all(rows) -> list:
+        errs = []
+        for o in rows:
+            try:
+                brk.cancel_order(o["id"])
+            except Exception as exc:                            # noqa: BLE001
+                errs.append("cancel: %s" % exc)
+        return errs
+
+    if doc.get(flag) is None:
+        want = int(sell_qty or 0)
+        if want < 1 or not _move_if(coll, {"_id": doc["_id"], "state": "open", flag: None},
+                                    {flag: "cancelling", tag + "_want": want, tag + "_why": reason,
+                                     tag + "_cancel_at": now_iso}):
+            return
+        doc.update({flag: "cancelling", tag + "_want": want, tag + "_why": reason, tag + "_cancel_at": now_iso})
+        errors = cancel_all(working)
+        if errors and len(errors) == len(working):
+            # nothing was cancelled: every share is still under its stop — free the claim, retried next tick
+            fields = {flag: None, tag + "_error": "; ".join(errors)}
+            _move_if(coll, {"_id": doc["_id"], flag: "cancelling"}, fields)
+            doc.update(fields)
+            out["errors"].append("%s %s: %s" % (tag, sym, "; ".join(errors)))
+        elif errors:
+            out["errors"].append("%s %s: %s" % (tag, sym, "; ".join(errors)))   # the rest is cancelled next tick
+        return
+    if doc.get(flag) != "cancelling":
+        return
+    if pending:
+        return                                                  # the broker still holds the shares — next tick
+    if working:
+        errors = cancel_all(working)
+        if errors:
+            # a stop we cannot cancel still covers its shares: give up this round; _protect covers any shortfall
+            fields = {flag: None, tag + "_error": "; ".join(errors)}
+            _move_if(coll, {"_id": doc["_id"], flag: "cancelling"}, fields)
+            doc.update(fields)
+            out["errors"].append("%s %s: %s" % (tag, sym, "; ".join(errors)))
+        return
+    if not _move_if(coll, {"_id": doc["_id"], flag: "cancelling"}, {flag: "doing"}):
+        return
+    reason = reason or doc.get(tag + "_why")
+    qty = min(int(doc.get(tag + "_want") or 0), int(held))
+    t0 = _parse(doc.get(tag + "_cancel_at")) or now_et.astimezone(UTC)
+    naked = lambda: max(0, int((now_et.astimezone(UTC) - t0).total_seconds() * 1000))   # noqa: E731
+    errors = []
+    sold = False
+    if qty >= 1:
+        try:
+            brk.close_position(sym, qty=int(qty))
+            sold = True
+        except Exception as exc:                                # noqa: BLE001
+            errors.append("sell: %s" % exc)
+    else:
+        errors.append("sell: nothing held to sell")
+    new_id = None
+    if sold:
+        rest = int(held) - int(qty)
+        if rest > 0 and sp is not None:
+            try:
+                new_id = (EE.lane_stop(sym, rest, sp, reason) or {}).get("id")
+            except Exception as exc:                            # noqa: BLE001
+                errors.append("stop for the rest: %s" % exc)
+    else:
+        if held > 0 and sp is not None:                         # never naked: every share back under the stop
+            try:
+                new_id = (EE.lane_stop(sym, int(held), sp, reason) or {}).get("id")
+            except Exception as exc:                            # noqa: BLE001
+                errors.append("restore stop: %s" % exc)
+        fields = {flag: None, tag + "_error": "; ".join(errors), tag + "_naked_ms": naked(),
+                  "stop_order_ids": [new_id] if new_id else []}
+        _move_if(coll, {"_id": doc["_id"], flag: "doing"}, fields)
+        doc.update(fields)
+        out["errors"].append("%s %s: %s" % (tag, sym, "; ".join(errors)))
+        return
+    naked_ms = naked()
+    fields = {flag: "done", tag + "_qty": int(qty), tag + "_at": now_iso, tag + "_naked_ms": naked_ms,
+              "stop_order_ids": [new_id] if new_id else []}
+    if errors:
+        fields[tag + "_error"] = "; ".join(errors)
+        out["errors"].append("%s %s: %s" % (tag, sym, "; ".join(errors)))
+    _move_if(coll, {"_id": doc["_id"], flag: "doing"}, fields)
+    doc.update(fields)
+    out["partials" if tag == "partial" else "half_off"] += 1
+    _ledger("gajjala_partial", sym, {"alert_id": doc["_id"], "kind": tag, "qty": int(qty), "held": int(held),
+                                     "naked_ms": naked_ms, "why": reason})
 
 
 def _queued_symbols(cfg: dict) -> set:
@@ -838,6 +1577,7 @@ def _live_alerts(day: str, docs: list) -> list:
 
 
 def _claim(coll, cfg: dict, brk, now_et: datetime, day: str, out: dict) -> None:
+    """One lane doc per pushed alert id (insert_one; a duplicate key = already claimed). No freshness line (D7)."""
     docs = _alert_docs(day)
     if docs is None:
         out["errors"].append("the 🚩 A+ alerts could not be read")
@@ -852,31 +1592,24 @@ def _claim(coll, cfg: dict, brk, now_et: datetime, day: str, out: dict) -> None:
         _id = raw["_id"]
         if _id in have or not isinstance(a.get("at_utc"), datetime):
             continue
-        age_min = (now_utc - a["at_utc"]).total_seconds() / 60.0
         doc = {"_id": _id, "date": day, "symbol": a["symbol"], "setup": a["setup"],
                "setup_label": _setup_label(a["setup"]), "alert_at": _iso(a["at_utc"]), "alert_et": a.get("at_et"),
                "first_seen": _iso(now_utc), "trigger": a.get("trigger"), "stop": a.get("stop"), "r": a.get("r"),
                "r_pct": a.get("r_pct"), "thin": bool(a.get("thin")), "plan": a.get("plan"), "url": a.get("url"),
                "frame": raw.get("frame"), "entry_bar_t": raw.get("entry_bar_t"), "mode": _mode(brk),
                "state": "waiting", "skip_kind": None, "why": None, "entry": None, "target": None, "stop_px": None,
-               "qty": None, "risk_usd": None, "notional": None, "last": None, "order_id": None,
-               "client_order_id": None, "ordered_at": None, "ordered_et": None, "fill_px": None, "fill_t": None,
-               "fill_et": None, "fill_qty": None, "exit_px": None, "exit_t": None, "exit_et": None, "exit_kind": None,
-               "pnl_usd": None, "r_mult": None, "floors": _floors_of(cfg), "floor_warnings": []}
-        stale = age_min > GAJJALA_SIGNAL_MAX_AGE_MIN
-        if stale:
-            doc.update(state="skipped", skip_kind="stale",
-                       why=f"first seen {int(age_min)} min after it rang — over the {GAJJALA_SIGNAL_MAX_AGE_MIN} min line")
+               "qty": None, "full_qty": None, "half_qty": None, "risk_usd": None, "notional": None, "last": None,
+               "order_id": None, "client_order_id": None, "ordered_at": None, "ordered_et": None, "fill_px": None,
+               "fill_t": None, "fill_et": None, "fill_qty": None, "exit_px": None, "exit_t": None, "exit_et": None,
+               "exit_kind": None, "pnl_usd": None, "r_mult": None, "floors": _floors_of(cfg), "floor_warnings": [],
+               "be_state": None, "partial_state": None, "dd_half_state": None,
+               "halts": _halts_of(day, a["symbol"]), "version": 2}
         try:
             coll.insert_one(dict(doc))
         except dup:
             continue
         out["claimed"] += 1
         have.add(_id)
-        if stale:
-            out["skipped"] += 1
-            _ledger("gajjala_skip", doc["symbol"], {"alert_id": _id, "setup": doc["setup"], "skip_kind": "stale",
-                                                    "why": doc["why"]}, dry_run=not cfg.get("armed"))
 
 
 # ── buy the waiting ones whose tape traded the trigger ───────────────────────────────────────────────────────────
@@ -888,7 +1621,41 @@ def _classify_refusal(text: str) -> str:
     return "blocked"
 
 
-def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads, out: dict) -> None:
+def _cooldown_why(coll, sym: str, now_et: datetime) -> Optional[str]:
+    """D10 (VR 10.6): a lane trade on the name stopped out within the last GG_REENTRY_WAIT_BARS closed bars."""
+    mins = _bar_min()
+    for d in _find(coll, {"symbol": sym, "state": "closed"}):
+        if d.get("exit_kind") != "stop":
+            continue
+        t = _parse(d.get("exit_t"))
+        if t is None:
+            continue
+        until = cooldown_until(t, mins)
+        if now_et.astimezone(UTC) < until:
+            return (f"stopped out on {sym} at {_hhmm(t.astimezone(ET))} ET — GG waits {GG_REENTRY_WAIT_BARS} bars "
+                    f"before a re-entry (until {_hhmm(until.astimezone(ET))} ET)")
+    return None
+
+
+def _halt_why(doc: dict, now_et: datetime) -> Optional[str]:
+    """D11 (VR 10.1), off while GG_HALT_CALM_MIN is None."""
+    if GG_HALT_CALM_MIN is None:
+        return None
+    h = _halts_of(doc.get("date"), doc.get("symbol")) or doc.get("halts") or {}
+    if int(_f(h.get("n")) or 0) <= 0:
+        return None
+    res = _parse(h.get("last_resume_et"))
+    if res is None:
+        return "halted — no resume time yet (GG enters 'when it's calmer')"
+    calm = res + timedelta(minutes=float(GG_HALT_CALM_MIN))
+    if now_et.astimezone(UTC) < calm.astimezone(UTC):
+        return (f"halted, resumed {_hhmm(res.astimezone(ET))} ET — GG waits {_g(GG_HALT_CALM_MIN)} min after a halt "
+                f"(until {_hhmm(calm.astimezone(ET))} ET)")
+    return None
+
+
+def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads, out: dict, scoll=None,
+                 acct: Optional[dict] = None) -> None:
     waiting = _find(coll, {"date": day, "state": "waiting"})
     if not waiting:
         return
@@ -897,9 +1664,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
     live = _find(coll, {"state": {"$in": list(_LIVE_STATES)}})
     held = {(d.get("symbol") or "").upper() for d in live}
     held |= set(reads.positions())
-    entries_today = sum(1 for d in _find(coll, {"date": day, "state": {"$in": list(_DAY_STATES)}}))
     open_n = len(live)
-    acct = None
     floors = _floors_of(cfg)
     dry = not cfg.get("armed")
     for doc in waiting:
@@ -913,25 +1678,33 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                     out["errors"].append("account: %s" % exc)
                     acct = {}
             acct_d = acct or {}
-            plan = entry_plan(doc, last, _f(acct_d.get("equity")), _f(acct_d.get("cash")))
+            st = _state(scoll)
+            plan = entry_plan(doc, last, _f(acct_d.get("equity")), _f(acct_d.get("cash")),
+                              risk_mult=st.get("risk_mult", 1.0), budget_left_pct=budget_left_pct(st))
             if plan["waiting"]:
                 out["waiting"] += 1
                 continue
-            pfields = {"last": last, "last_source": src, "entry": plan["entry"], "target": plan["target"],
-                       "stop_px": plan["stop"], "qty": plan["qty"], "risk_usd": plan["risk_usd"],
+            pfields = {"last": last, "last_source": src, "entry": plan["entry"], "target": None,
+                       "stop_px": plan["stop"], "qty": plan["qty"], "full_qty": plan["full_qty"],
+                       "half_qty": plan["half_qty"], "risk_usd": plan["risk_usd"], "risk_pct": plan["risk_pct"],
                        "notional": plan["notional"]}
             if not plan["ok"]:
-                _skip(coll, doc, "waiting", plan["skip_kind"], plan["why"], out, pfields, dry_run=dry)
+                state = "unfilled" if plan["skip_kind"] == "never_triggered" else "skipped"
+                _skip(coll, doc, "waiting", plan["skip_kind"], plan["why"], out, pfields, state=state, dry_run=dry)
                 continue
             if sym in held:
                 _skip(coll, doc, "waiting", "held", f"already holding {sym}", out, pfields, dry_run=dry)
                 continue
-            if entries_today >= GAJJALA_MAX_ENTRIES_PER_DAY:
-                _skip(coll, doc, "waiting", "cap_day", f"{GAJJALA_MAX_ENTRIES_PER_DAY} entries today already", out,
-                      pfields, dry_run=dry)
-                continue
             if open_n >= GAJJALA_MAX_OPEN:
                 _skip(coll, doc, "waiting", "cap_open", f"{GAJJALA_MAX_OPEN} lane positions open already", out, pfields, dry_run=dry)
+                continue
+            why = _cooldown_why(coll, sym, now_et)
+            if why:
+                _skip(coll, doc, "waiting", "cooldown", why, out, pfields, dry_run=dry)
+                continue
+            why = _halt_why(doc, now_et)
+            if why:
+                _skip(coll, doc, "waiting", "halt", why, out, pfields, dry_run=dry)
                 continue
             fl = SF.check(sym, plan["entry"])
             warnings = list(fl.get("warnings") or [])
@@ -943,7 +1716,8 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                 warnings += ["waived by gajjala_floors=false: " + b for b in (fl.get("blocked") or [])]
             pfields.update(floors=floors, floor_warnings=warnings)
             if not cfg.get("armed"):
-                why = f"disarmed — would have bought {int(plan['qty']):,} @ {_px(plan['entry'])}; nothing sent"
+                why = (f"disarmed — would have bought {int(plan['qty']):,} at market (last {_px(plan['entry'])}); "
+                       f"nothing sent")
                 if _skip(coll, doc, "waiting", "disarmed", why, out, pfields, state="dry_run"):
                     out["dry_run"] += 1
                 continue
@@ -955,12 +1729,12 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             if not _move(coll, doc["_id"], "waiting", ofl):
                 continue
             doc.update(ofl)
-            E, SL, TP, qty, setup = plan["entry"], plan["stop"], plan["target"], plan["qty"], doc.get("setup")
+            E, SL, qty, setup = plan["entry"], plan["stop"], plan["qty"], str(doc.get("setup") or "")
             t, s, r, at, fate = doc.get("trigger"), doc.get("stop"), doc.get("r"), doc.get("alert_et"), fate_text(
                 dict(doc, state="ordered", ordered_et=_hhmm(now_et)))
             equity, risk = _f(acct_d.get("equity")), plan["risk_usd"]
             try:
-                res = TE.enter(sym, limit_price=E, stop_price=SL, strategy=STRATEGY, reason={"lane": STRATEGY, "alert_id": doc["_id"], "setup": setup, "trigger": t, "stop": s, "r": r, "alert_at": at, "why": fate, "cite": CITE}, target_price=TP, sizing={"qty": qty, "basis": "gg_risk_pct", "risk_usd": risk, "equity": equity}, floors=("gg" if not cfg.get("gajjala_floors", True) else "house"), tif="day", order_intent="gg-" + setup)  # ⚓
+                res = TE.enter(sym, limit_price=None, stop_price=SL, strategy=STRATEGY, reason={"lane": STRATEGY, "alert_id": doc["_id"], "setup": setup, "trigger": t, "stop": s, "r": r, "alert_at": at, "why": fate, "cite": CITE}, sizing={"qty": qty, "basis": "gg_risk_pct", "price": E, "full_qty": plan["full_qty"], "risk_usd": risk, "risk_pct": plan["risk_pct"], "equity": equity}, floors=floors, tif="day", order_intent="gg-" + setup, allow_earnings=True, ceiling="gg", order_class="oto")  # ⚓
             except ValueError as exc:
                 text = str(exc)
                 _skip(coll, doc, "ordering", _classify_refusal(text), text, out)
@@ -975,22 +1749,51 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             _move(coll, doc["_id"], "ordering", ofields)
             doc.update(ofields)
             out["ordered"] += 1
-            entries_today += 1
             open_n += 1
             held.add(sym)
-            _ledger("gajjala_entry", sym, {"alert_id": doc["_id"], "setup": setup, "entry": E, "target": TP, "stop": SL,
-                                           "qty": qty, "risk_usd": risk, "order_id": ofields["order_id"],
-                                           "floors": floors, "floor_warnings": warnings, "why": fate_text(doc)})
+            if equity:                                          # D5: the trade's full planned risk counts once
+                _state_set(scoll, window_after_trade(st, float(_D(plan["full_risk_usd"]) / _D(equity) * 100)))
+            _ledger("gajjala_entry", sym, {"alert_id": doc["_id"], "setup": setup, "entry": E, "stop": SL,
+                                           "qty": qty, "full_qty": plan["full_qty"], "risk_usd": risk,
+                                           "risk_pct": plan["risk_pct"], "order_id": ofields["order_id"],
+                                           "order_type": "market", "floors": floors, "floor_warnings": warnings,
+                                           "why": fate_text(doc)})
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala lane: %s failed: %s", doc.get("_id"), exc)
             out["errors"].append("entry %s: %s" % (doc.get("_id"), type(exc).__name__))
 
 
 # ── the tick ─────────────────────────────────────────────────────────────────────────────────────────────────────
+def _account_tick(brk, coll, scoll, now_et: datetime, out: dict, cfg: Optional[dict] = None) -> Optional[dict]:
+    """D5: one account read per tick → the equity peak / drawdown state; on the turn INTO drawdown every open v2 lane
+    doc is marked for the half-off (D8f). Returns the account dict (or None)."""
+    try:
+        acct = brk.account() or {}
+    except Exception as exc:                                    # noqa: BLE001
+        out["errors"].append("account: %s" % exc)
+        return None
+    if scoll is None:
+        return acct
+    st = _state(scoll)
+    fields, turned_on = drawdown_step(st, _f(acct.get("equity")), _iso(now_et))
+    _state_set(scoll, fields)
+    out["drawdown"] = bool(fields.get("in_drawdown", st.get("in_drawdown")))
+    if turned_on:
+        for d in _find(coll, {"state": "open"}):
+            if d.get("target") is None:
+                _move_if(coll, {"_id": d["_id"], "state": "open"}, {"dd_half_due": True})
+        # FIXED 2026-10-21 (critic): a disarmed tick writes no real ledger row (the engine invariant)
+        _ledger("gajjala_partial", None, {"kind": "drawdown_on", "equity": fields.get("equity"),
+                                          "peak": fields.get("equity_peak")}, dry_run=not (cfg or {}).get("armed"))
+    return acct
+
+
 def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
     """Manage what is in flight, then claim and buy today's pushed A+. Never raises past its own fence."""
     out = {"ok": True, "ran": False, "manage_only": False, "day": None, "gate": None, "claimed": 0, "waiting": 0, "ordered": 0,
-           "skipped": 0, "cancelled": 0, "filled": 0, "closed": 0, "closing": 0, "dry_run": 0, "errors": []}
+           "skipped": 0, "cancelled": 0, "filled": 0, "closed": 0, "closing": 0, "dry_run": 0, "breakeven": 0,
+           "added": 0, "trailed": 0, "partials": 0, "half_off": 0, "protected": 0, "restopped": 0, "drawdown": False,
+           "errors": []}
     try:
         brk = broker if broker is not None else globals()["broker"]
         cfg = cfg if cfg is not None else get_config()
@@ -1000,7 +1803,8 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
         g = gate(cfg, _mode(brk), _market_open(brk))
         out["gate"] = g
         # HIS CALL #13: switched OFF stops NEW entries only — on paper, armed, market open, what the lane holds is
-        # still managed (the 15:55 / carried flatten, the fill wait, the cut-off cancel); no claim, no new order
+        # still managed (the 15:55 / carried flatten, the fill wait, the cut-off cancel, the stop moves); no claim,
+        # no new order, no add
         manage_only = (not g["enabled"]) and g["paper"] and g["market_open"] and bool(cfg.get("armed"))
         out["manage_only"] = manage_only
         if not g["ok"] and not manage_only:
@@ -1011,15 +1815,17 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
         if coll is None:
             out["errors"].append("the lane store is not available")
             return out
+        scoll = _coll(STATE_COLL)
         out["ran"] = True
         since = datetime.combine(now_et.date(), dtime(0, 0), tzinfo=ET) - timedelta(days=4)
         reads = _Reads(brk, _iso(since))
-        _manage(brk, cfg, coll, now_et, day, reads, out)
+        acct = _account_tick(brk, coll, scoll, now_et, out, cfg)
+        _manage(brk, cfg, coll, now_et, day, reads, out, lane_on=not manage_only, scoll=scoll)
         _expire_waiting(coll, now_et, day, out, cfg)            # at the cut-off, and a prior day's doc never trades today
         if manage_only or not in_entry_window(now_et):
             return out
         _claim(coll, cfg, brk, now_et, day, out)
-        _try_waiting(coll, cfg, brk, now_et, day, reads, out)
+        _try_waiting(coll, cfg, brk, now_et, day, reads, out, scoll=scoll, acct=acct)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala lane run failed: %s", exc)
         out["ok"] = False
@@ -1047,6 +1853,7 @@ def status_block(cfg: Optional[dict] = None, docs: Optional[list] = None) -> dic
     if docs is None:
         coll = _coll(LANE_COLL)
         docs = _find(coll, {}) if coll is not None else []
+    st = _state(_coll(STATE_COLL))
     c = _counts(docs, day)
     g = gate(cfg, _mode(broker), True)
     floors = _floors_of(cfg)
@@ -1059,15 +1866,21 @@ def status_block(cfg: Optional[dict] = None, docs: Optional[list] = None) -> dic
         "skipped_floor_today": n_floor, "skipped_floor_text": f"{n_floor} skipped by the floors today",
         "skipped_today": c["skipped_today"], "entries_today": c["entries_today"],
         "max_per_day": GAJJALA_MAX_ENTRIES_PER_DAY, "open_n": c["open_n"], "max_open": GAJJALA_MAX_OPEN,
-        "caps_text": (f"{c['entries_today']} of {GAJJALA_MAX_ENTRIES_PER_DAY} entries today · {c['open_n']} of "
+        "caps_text": (f"{c['entries_today']} entries today (GG has no day cap) · {c['open_n']} of "
                       f"{GAJJALA_MAX_OPEN} open"),
         "window": f"{_hhmm(WINDOW_OPEN_ET)}–{_hhmm(cutoff_et(d))} ET", "flatten_at": f"{_hhmm(flatten_et(d))} ET",
-        "settings": {"risk_pct": GAJJALA_RISK_PCT, "max_notional_pct": GAJJALA_MAX_NOTIONAL_PCT,
-                     "max_entries_per_day": GAJJALA_MAX_ENTRIES_PER_DAY, "max_open": GAJJALA_MAX_OPEN,
-                     "signal_max_age_min": GAJJALA_SIGNAL_MAX_AGE_MIN, "chase_pct": GAJJALA_CHASE_PCT,
-                     "fill_wait_sec": GAJJALA_FILL_WAIT_SEC, "max_round_r_pct": GAJJALA_MAX_ROUND_R_PCT,
-                     "r_mult": R_MULT, "min_r_pct": MIN_R_PCT},
-        "rules": rules_list(),
+        "settings": {"risk_pct": GAJJALA_RISK_PCT, "risk_mult": _f(st.get("risk_mult")) or 0.0,
+                     "risk_pct_now": risk_pct_now(st.get("risk_mult", 1.0)),
+                     "max_notional_pct": GAJJALA_MAX_NOTIONAL_PCT, "max_entries_per_day": GAJJALA_MAX_ENTRIES_PER_DAY,
+                     "max_open": GAJJALA_MAX_OPEN, "fill_wait_sec": GAJJALA_FILL_WAIT_SEC,
+                     "max_round_r_pct": GAJJALA_MAX_ROUND_R_PCT, "missed_r": GAJJALA_MISSED_R,
+                     "be_after_bars": GG_BE_AFTER_BARS, "partial_frac": GG_PARTIAL_FRAC, "partial_r": GG_PARTIAL_R,
+                     "trail_ema": GG_TRAIL_EMA, "trail_ema_kf": GG_TRAIL_EMA_KF,
+                     "reentry_wait_bars": GG_REENTRY_WAIT_BARS, "halt_calm_min": GG_HALT_CALM_MIN,
+                     "cushion_double_pct": GG_CUSHION_DOUBLE_PCT, "drawdown_pct": GG_DRAWDOWN_PCT,
+                     "drawdown_trades": GG_DRAWDOWN_TRADES, "drawdown_risk_sum_pct": GG_DRAWDOWN_RISK_SUM_PCT,
+                     "in_drawdown": bool(st.get("in_drawdown"))},
+        "rules": rules_block(st, d),
         "unmeasured_text": UNMEASURED_TEXT, "streak_text": STREAK_TEXT,
         "track_record_text": TRACK_RECORD_TEXT, "track_record_url": TRACK_RECORD_URL,
         "empty_today_text": EMPTY_TODAY_TEXT,
@@ -1090,7 +1903,14 @@ def _row(doc: dict, last=None, flags=None) -> dict:
     if st == "open":
         lx = _f(last)
         d["last"] = lx if lx is not None else _f(d.get("last"))
-        d["pnl_usd"] = pnl_of(d["last"], d.get("fill_px"), d.get("fill_qty") or d.get("qty"))
+        # unrealized on the shares still held, against their average cost (the entry + the breakeven add)
+        buys = [(int(d.get("fill_qty") or d.get("qty") or 0), _f(d.get("fill_px")))]
+        if d.get("add_fill_qty"):
+            buys.append((int(d["add_fill_qty"]), _f(d.get("add_fill_px"))))
+        bq = sum(q for q, p in buys if p is not None)
+        held = bq - int(d.get("partial_qty") or 0) - int(d.get("dd_half_qty") or 0)
+        avg = (float(sum(_D(p) * q for q, p in buys if p is not None) / bq) if bq > 0 else None)
+        d["pnl_usd"] = pnl_of(d["last"], avg, held) if avg is not None else None
     elif st == "closed":
         d["last"] = None
     row = {k: d.get(k) for k in ROW_KEYS}
@@ -1126,11 +1946,13 @@ def journal_block(docs: Optional[list] = None) -> dict:
     flat = sum(1 for p in pnls if p == 0)
     n_target = sum(1 for d in closed if d.get("exit_kind") == "target")
     n_stop = sum(1 for d in closed if d.get("exit_kind") == "stop")
-    n_clock = len(closed) - n_target - n_stop
+    n_trail = sum(1 for d in closed if d.get("exit_kind") == "trail")
+    n_clock = len(closed) - n_target - n_stop - n_trail
     total = _r2(sum(_D(p) for p in pnls)) if pnls else 0.0
     avg_r = float((sum(_D(r) for r in rs) / len(rs)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if rs else None
     decided = wins + losses
-    text = (f"{len(closed)} closed · {n_target} target · {n_stop} stop · {n_clock} flat · P&L {_money(total)} · avg "
+    text = (f"{len(closed)} closed · " + (f"{n_target} target · " if n_target else "") +
+            f"{n_stop} stop · {n_trail} trail · {n_clock} flat · P&L {_money(total)} · avg "
             f"{'—' if avg_r is None else format(avg_r, '+.2f') + 'R'} · {unfilled} not filled")
     return {"n": len(traded), "closed": len(closed), "wins": wins, "losses": losses, "flat": flat,
             "unfilled": unfilled, "win_rate_pct": round(wins / decided * 100.0, 1) if decided else None,

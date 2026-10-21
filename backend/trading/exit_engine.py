@@ -184,9 +184,11 @@ def get_config() -> dict:
         # 🚩 Gajjala paper lane (trading/gajjala_entry.py; Ajay 2026-10-20 "in the
         # autopilot can you stop rest of the strategies and only use the Gajjalas
         # strategies please"). Default ON — the lane refuses a live broker.
-        # gajjala_floors default ON = the house safety floors apply to the lane.
+        # gajjala_floors default OFF since 2026-10-21 (BUILD_SPEC19 D1, Ajay "Follow
+        # full Gajjala and he doesnt care exactly about this"): the $2 / $700M floors
+        # are the HOUSE floors, not GG's. True = the house floors apply to the lane.
         "gajjala_entry": bool(doc.get("gajjala_entry", True)),
-        "gajjala_floors": bool(doc.get("gajjala_floors", True)),
+        "gajjala_floors": bool(doc.get("gajjala_floors", False)),
         "last_gajjala_disabled_day": doc.get("last_gajjala_disabled_day"),
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
@@ -731,6 +733,42 @@ def _distribution_read(symbol: str) -> Optional[dict]:
     return None
 
 
+# 🚩 Gajjala lane positions (2026-10-21, BUILD_SPEC19 D9): the SEPA distribution
+# exit/alert step (d1) and the p.308 breakeven ratchet are Minervini's rules, not
+# GG's — they skip every symbol with a lane doc in one of these states. The
+# watchdog and adopt-and-protect still run (a lane position always has its stop).
+GAJJALA_LANE_COLL = "gajjala_lane"
+GAJJALA_LANE_LIVE_STATES = ("ordered", "open", "closing")
+
+
+def _gajjala_lane_symbols() -> set:
+    """Symbols the 🚩 lane holds or is buying (lane docs in GAJJALA_LANE_LIVE_STATES). Fenced: a read failure is an
+    empty set — the house rules then apply to every name (the old behaviour)."""
+    try:
+        db = _db()
+        if db is None:
+            return set()
+        coll = getattr(db, GAJJALA_LANE_COLL)
+        return {(d.get("symbol") or "").upper()
+                for d in coll.find({"state": {"$in": list(GAJJALA_LANE_LIVE_STATES)}})
+                if d.get("symbol")}
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("gajjala lane symbols unread: %s", exc)
+        return set()
+
+
+def _gajjala_part_sell_symbols() -> set:
+    """🚩 lane names mid part-sell (gajjala_entry.part_sell_symbols — FIXED 2026-10-21, verifier): adopt-and-protect
+    skips them like a flatten-queue name, so no house stop re-holds the shares between the lane's cancel and its sell
+    (the lane re-stops them itself). Fenced: a failure is an empty set — adopt-and-protect then covers every name."""
+    try:
+        from trading import gajjala_entry
+        return set(gajjala_entry.part_sell_symbols())
+    except Exception as exc:                           # noqa: BLE001
+        log.debug("gajjala part-sell symbols unread: %s", exc)
+        return set()
+
+
 def _fired_today(kind: str, symbol: str) -> bool:
     """True if a ledger row of ``kind`` for ``symbol`` already exists today (ET).
     Fires each distribution alert/exit at most once per name per day instead of
@@ -1069,6 +1107,8 @@ def tick(force: bool = False) -> dict:
         return summary
     summary["positions"] = len(positions)
     queued_syms = {e["symbol"] for e in cfg["flatten_queue"]}
+    lane_syms = _gajjala_lane_symbols()             # D9: GG's lane is exempt from (d1) and the p.308 ratchet
+    part_sell_syms = _gajjala_part_sell_symbols()   # mid part-sell: no adopt-and-protect (the lane re-stops them)
 
     for pos in positions:
         sym = (pos.get("symbol") or "").upper()
@@ -1137,7 +1177,7 @@ def tick(force: bool = False) -> dict:
         # protect a name we're exiting). Aggressive mode: any topping/distribution
         # /exhaustion signal -> auto-sell at market. Dedup once per symbol/day/kind.
         from trading import sell_discipline as _sd
-        verdict = _sd.evaluate(_distribution_read(sym), last)
+        verdict = None if sym in lane_syms else _sd.evaluate(_distribution_read(sym), last)
         if verdict and not _fired_today(verdict["kind"], sym):
             ddetail = {"qty": qty, "avg_entry": avg_entry, "last": last,
                        "reason": verdict["reason"]}
@@ -1167,6 +1207,11 @@ def tick(force: bool = False) -> dict:
                 summary["distribution_alerts"] += 1
                 _notify_autopilot("position_alert", sym, "%s — %s." % (sym, verdict["reason"]))
 
+        if stop_order is None and sym in part_sell_syms:
+            # a 🚩 lane part-sell between its stop cancel and its sell: a house stop here would re-hold the shares and
+            # the lane would cancel it again every tick (FIXED 2026-10-21, verifier) — skipped like queued_syms
+            summary["gajjala_part_sell_skipped"] = summary.get("gajjala_part_sell_skipped", 0) + 1
+            continue
         if stop_order is None:
             # adopt-and-protect (pp.301-302: a stop must always be resting)
             plan = risk_rules.initial_stop(avg_entry, reg)
@@ -1215,7 +1260,11 @@ def tick(force: bool = False) -> dict:
                 summary["dry_run_rows"] += 1
             continue
 
-        # ratchet to breakeven (p.308) — trigger uses the ORIGINAL risk
+        # ratchet to breakeven (p.308) — trigger uses the ORIGINAL risk. A 🚩 lane
+        # name moves its own stop (GG: breakeven after 3 closed bars, D8a) — skipped.
+        if sym in lane_syms:
+            summary["gajjala_exempt"] = summary.get("gajjala_exempt", 0) + 1
+            continue
         try:
             cur_stop = float(stop_order.get("stop_price") or 0)
         except (TypeError, ValueError):
@@ -1727,6 +1776,28 @@ def flatten(symbol: str, reason=None) -> dict:
            dry_run=False, cite="p.302")
     return {"dry_run": False, "canceled": canceled, "closed": closed,
             "queued": False, "errors": errors}
+
+
+def lane_stop(symbol: str, qty: int, stop_price: float, reason=None, protective_disarmed: bool = False) -> dict:
+    """A GTC sell stop for a lane's remaining shares (2026-10-21, BUILD_SPEC19 F5 — the 🚩 lane's partial: cancel
+    the stop(s) → sell part → a stop for the rest: tick N cancels the stop(s); once none is pending_cancel, a later
+    tick sells at market and re-stops the rest; adopt-and-protect skips the name in between). The house's
+    adopt-and-protect order, at the LANE's price, never a buy. Armed only (invariant: armed=false places NO orders); BrokerError propagates.
+    `protective_disarmed=True` — the one exception (HIS CALL #23, docs/trading_gajjala_lane.md): the 🚩 lane's re-stop
+    of shares left without a stop when the engine was disarmed mid part-sell; still a SELL stop only."""
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        raise ValueError("symbol required")
+    armed = bool(get_config()["armed"])
+    if not armed and not protective_disarmed:
+        raise ValueError("engine not armed")
+    order = broker.submit_stop(sym, int(qty), float(stop_price), client_order_id=None)
+    detail = {"qty": int(qty), "stop_price": float(stop_price), "order_id": (order or {}).get("id"),
+              "reason": _clean_reason(reason)}
+    if not armed:
+        detail["note"] = "disarmed — the protective sell stop only (HIS CALL #23)"
+    ledger("lane_stop", symbol=sym, detail=detail, dry_run=False, cite="owner rules (docs/trading_gajjala_lane.md)")
+    return order or {}
 
 
 def flatten_all() -> dict:

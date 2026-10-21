@@ -9,6 +9,11 @@ the served stop, size by risk / notional / cash), every refusal (NEG each), the 
 the exits (kind, P&L, R), the caps, the disarmed dry run (no order, no ledger row), the floors switch, the served text
 (every number a constant, no b-word, no book), the tab payload contract and the API switches / routes.
 
+v2 2026-10-21 (BUILD_SPEC19, Ajay "Follow full Gajjala … implement them exactly"): the pins v2 moved are updated in
+place — a market OTO entry (no limit, no target), half of GG's 0.25% first, no stale / thin-R / dead / day cap, floors
+default OFF, the earnings shield waived, the served `rules` object. GG's management rules (breakeven + add, the 9 EMA
+trail, the partial, cooldown, drawdown) are in tests/test_gajjala_lane_gg_rules.py.
+
 Hermetic: fake broker + fake Mongo (tests/test_trading_engine fakes + LaneColl), `_alert_docs`, `_live_last`,
 `_now_et`, `_et_day`, `EN._live_price`, `SF.market_cap` and `sepa.earnings_watch` patched — no network.
 """
@@ -142,6 +147,7 @@ def lane(monkeypatch):
               docs=()):
         db = FakeDB(armed=armed)
         db.gajjala_lane = LaneColl(docs)
+        db.gajjala_lane_state = LaneColl()                  # v2 2026-10-21 (D4/D5): risk_mult + the equity peak
         if cfg:
             db.trading_config.rows[0].update(cfg)
         brk = GBroker(positions, orders, closed, equity, cash, market_open, mode)
@@ -165,6 +171,10 @@ def lane(monkeypatch):
         monkeypatch.setattr(GL, "_live_last", lambda b, sym: (state.lasts.get(sym), "test"))
         monkeypatch.setattr(GL, "_now_et", lambda: state.now)
         monkeypatch.setattr(GL, "_et_day", lambda: state.now.date().isoformat())
+        # v2 2026-10-21: the closed 5-minute bars and the halt ledger are seams (no Massive, no Mongo here); the
+        # management rules have their own file (tests/test_gajjala_lane_gg_rules.py)
+        monkeypatch.setattr(GL, "_bars5", lambda sym, day, now: None)
+        monkeypatch.setattr(GL, "_halts_of", lambda day, sym: None)
         state.run = lambda at=None, **kw: GL.run(broker=brk, cfg=EE.get_config(), now=at or state.now, **kw)
         state.coll = db.gajjala_lane
         return state
@@ -204,12 +214,15 @@ def test_owner_numbers_and_imported_constants():
     assert GL.cutoff_et(date(2026, 10, 20)) == dtime(15, 30) == GL.cutoff_et()
     assert GL.GAJJALA_FILL_WAIT_SEC == ZDL.ENTRY_FILL_WAIT_SEC
     assert GL.STRATEGY == "gajjala" and GL.LANE_COLL == "gajjala_lane" and GL.DEFAULT_ON is True
+    # v2 2026-10-21 (BUILD_SPEC19 D3 / D4 / D7): GG's 0.25%, no day cap, no stale line, no chase limit
     assert (GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT, GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN) \
-        == (0.5, 10.0, 3, 3)
-    assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_MAX_ROUND_R_PCT) == (20, 0.5, 10.0)
+        == (0.25, 10.0, None, 3)
+    assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_MAX_ROUND_R_PCT) == (None, None, 10.0)
+    assert GL.GAJJALA_MISSED_R == 1.0
     from trading import broker as BF
     assert GL.round_price is BF.round_price and GL.MIN_STOP_GAP_USD == BF.MIN_STOP_GAP_USD == 0.01
-    assert set(GL.SKIP_KINDS) >= {"floor", "stale", "never_triggered", "disarmed", "broker_gap", "rounding"}
+    assert set(GL.SKIP_KINDS) >= {"floor", "never_triggered", "disarmed", "broker_gap", "rounding", "cooldown", "halt"}
+    assert not set(GL.SKIP_KINDS) & {"stale", "thin_r", "dead", "cap_day"}           # v2: removed (D3 / D7)
 
 
 def test_half_day_cutoff_1230_flatten_1255():
@@ -283,35 +296,39 @@ def test_claim_once_per_alert_id(lane, monkeypatch):
 
 
 def test_stale_21_min_refused_19_min_claimed(lane):
+    """v2 2026-10-21 (D7): the stale line was mine — an alert first seen 21 min after it rang still waits."""
     s = lane(alerts=[alert("OLD", hm=(10, 34)), alert("NEW", hm=(10, 36))], lasts={})
     out = s.run()                                                # now 10:55 → 21 and 19 minutes
     assert out["claimed"] == 2
     old = s.coll.get(f"GG:{DAY}|OLD|bull_flag")
     new = s.coll.get(f"GG:{DAY}|NEW|bull_flag")
-    assert old["state"] == "skipped" and old["skip_kind"] == "stale"
-    assert old["why"] == "first seen 21 min after it rang — over the 20 min line"
+    assert old["state"] == "waiting" and old["skip_kind"] is None
     assert new["state"] == "waiting" and new["skip_kind"] is None
-    assert [r["detail"]["skip_kind"] for r in _rows(s.db, "gajjala_skip")] == ["stale"]
+    assert _rows(s.db, "gajjala_skip") == []
 
 
 # ── GG's trade math ──────────────────────────────────────────────────────────────────────────────────────────────
 def test_plan_risk_qty():
     p = GL.entry_plan({"trigger": 10.0, "stop": 9.0, "plan": "ok"}, 10.0, 100_000, 100_000)
-    assert p["ok"] and p["entry"] == 10.05 and p["stop"] == 9.0 and p["target"] == 11.05
-    assert p["qty"] == int(100_000 * 0.005 / 1.05) == 476             # the risk binds
-    assert p["risk_usd"] == round(476 * 1.05, 2)
+    assert p["ok"] and p["entry"] == 10.0 and p["stop"] == 9.0 and p["target"] is None
+    assert p["full_qty"] == int(100_000 * 0.0025 / 1.0) == 250                  # the risk binds
+    assert p["qty"] == p["half_qty"] == 125 and p["add_qty"] == 125
+    assert p["risk_usd"] == 125.0 and p["full_risk_usd"] == 250.0 and p["risk_pct"] == 0.25
 
 
 def test_plan_notional_cap_saiq_2217():
     p = GL.entry_plan(PLAN, 4.48, 100_000, 100_000)
-    assert (p["entry"], p["target"], p["stop"]) == (4.51, 4.66, 4.31)
-    assert p["qty"] == 2217 and p["risk_usd"] == 443.4 and p["notional"] == 9998.67
-    assert p["qty"] < int(100_000 * 0.005 / 0.20)                     # NEG: the risk alone would buy 2500
+    assert (p["entry"], p["target"], p["stop"]) == (4.48, None, 4.31)
+    assert p["full_qty"] == int(250 / 0.17) == 1470 and p["qty"] == 735
+    assert p["risk_usd"] == round(735 * 0.17, 2) and p["notional"] == round(735 * 4.48, 2)
+    tight = GL.entry_plan({"trigger": 4.46, "stop": 4.45, "plan": "ok"}, 4.46, 100_000, 100_000)
+    assert tight["full_qty"] == int(10_000 / 4.46) == 2242 and tight["qty"] == 1121    # the 10% notional cap binds
+    assert tight["full_qty"] < int(250 / 0.01)                                         # NEG: the risk alone would buy 25000
 
 
 def test_plan_cash_cap():
-    p = GL.entry_plan(PLAN, 4.48, 100_000, 5_000)
-    assert p["ok"] and p["qty"] == int(5_000 / 4.51) == 1108
+    p = GL.entry_plan(PLAN, 4.48, 100_000, 500)
+    assert p["ok"] and p["full_qty"] == int(500 / 4.48) == 111 and p["qty"] == 55
 
 
 def test_plan_zero_shares_refused():
@@ -321,29 +338,29 @@ def test_plan_zero_shares_refused():
 
 
 def test_bracket_target_is_entry_plus_1R_stop_is_served(lane):
+    """v2 (D7 / D8d): a MARKET entry, OTO — the served stop as its only leg, no take-profit."""
     p = GL.entry_plan(PLAN, 4.50, 100_000, 100_000)
-    assert p["entry"] == 4.53 and p["target"] == round(4.53 + 0.15, 2) and p["stop"] == 4.31
+    assert p["entry"] == 4.50 and p["target"] is None and p["stop"] == 4.31
     s = lane(alerts=[alert()], lasts={"SAIQ": 4.50})
     s.run()
     (br,) = _brackets(s.brk)
-    assert (br["limit_price"], br["take_profit_price"], br["stop_price"]) == (4.53, 4.68, 4.31)
+    assert (br["limit_price"], br["take_profit_price"], br["stop_price"]) == (None, None, 4.31)
+    assert br["order_class"] == "oto" and br["tif"] == "day" and br["qty"] == p["qty"]
 
 
 def test_drma_sub_dollar_four_decimals():
     p = GL.entry_plan({"trigger": 0.8744, "stop": 0.861, "plan": "ok"}, 0.879, 100_000, 100_000)
-    assert p["ok"] and (p["entry"], p["target"], p["stop"]) == (0.8834, 0.8968, 0.861)
-    assert p["qty"] == 11319 and p["risk_usd"] == 253.55 and p["notional"] == 9999.2
-    assert p["stop_shift_pct_r"] == 0.0 and p["target_shift_pct_r"] == 0.0
-    # NEG: the old 2-decimal grid (0.88 / 0.90 / 0.86) would move the +1R distance by ~49% of R
-    r = 0.8744 - 0.861
-    moved = ((round(0.8968, 2) - round(0.8834, 2)) - r) / r * 100
-    assert 49 < moved < 50 and moved > GL.GAJJALA_MAX_ROUND_R_PCT
+    assert p["ok"] and (p["entry"], p["target"], p["stop"]) == (0.879, None, 0.861)
+    assert p["full_qty"] == int(10_000 / 0.879) == 11376 and p["qty"] == 5688
+    assert p["risk_usd"] == round(5688 * 0.018, 2) and p["stop_shift_pct_r"] == 0.0
+    # NEG: the old 2-decimal grid would have put the stop at 0.86, a cent under the served 0.861
+    assert round(0.861, 2) == 0.86 and GL.round_price(0.861, "down") == 0.861
 
 
 def test_rounding_shift_refused():
     p = GL.entry_plan({"trigger": 2.00, "stop": 1.9849, "plan": "ok"}, 2.00, 100_000, 100_000)
     assert not p["ok"] and p["skip_kind"] == "rounding"
-    assert p["why"] == "the broker's price grid moves the stop or the target by 32% of R — over the 10% line"
+    assert p["why"] == "the broker's price grid moves the stop by 32% of R — over the 10% line"
     ok = GL.entry_plan({"trigger": 2.00, "stop": 1.90, "plan": "ok"}, 2.00, 100_000, 100_000)
     assert ok["ok"]                                                   # NEG: an on-grid stop passes
 
@@ -351,18 +368,19 @@ def test_rounding_shift_refused():
 def test_hodo_broker_gap_refused():
     p = GL.entry_plan({"trigger": 0.0753, "stop": 0.0709, "plan": "ok"}, 0.0755, 100_000, 100_000)
     assert not p["ok"] and p["skip_kind"] == "broker_gap"
-    assert p["why"] == "the stop 0.0709 is under $0.01 below the entry 0.0759 — Alpaca refuses a bracket that tight"
+    assert p["why"] == "the stop 0.0709 is under $0.01 below the last 0.0755 — Alpaca refuses a stop that tight"
 
 
 def test_missed_dead_thin_no_plan_no_risk_each_refused():
-    m = GL.entry_plan(PLAN, 4.59, 100_000, 100_000)                    # E 4.62 >= 4.61
+    m = GL.entry_plan(PLAN, 4.62, 100_000, 100_000)                    # past 4.61 = trigger + 1R
     assert m["skip_kind"] == "missed"
-    assert m["why"] == "the entry 4.62 would be past +1R (4.61) — the move went without us"
-    assert GL.entry_plan(PLAN, 4.57, 100_000, 100_000)["ok"]          # NEG: E 4.60 < 4.61
+    assert m["why"] == "last 4.62 is past +1R (4.61) — the move went without us"
+    assert GL.entry_plan(PLAN, 4.61, 100_000, 100_000)["ok"]          # NEG: AT +1R still trades
     d = GL.entry_plan(PLAN, 4.31, 100_000, 100_000)
-    assert d["skip_kind"] == "dead" and d["why"] == "last 4.31 is at or under the stop 4.31"
+    assert d["skip_kind"] == "never_triggered"
+    assert d["why"] == "last 4.31 is at or under the stop 4.31 — the break failed back into its range (GG: out)"
     t = GL.entry_plan({"trigger": 10.0, "stop": 9.96, "plan": "ok", "thin": True}, 10.0, 100_000, 100_000)
-    assert t["skip_kind"] == "thin_r" and t["why"] == "R 0.04 is 0.40% of the trigger — under the 0.5% thin-R line"
+    assert t["ok"] and t["skip_kind"] is None                         # v2 (D7): no thin-R refusal (GG: tight R always)
     n = GL.entry_plan({"trigger": None, "stop": 4.31, "plan": "no_plan"}, 4.5, 100_000, 100_000)
     assert n["skip_kind"] == "no_plan" and n["why"] == "the alert carries no usable trigger and stop"
     z = GL.entry_plan({"trigger": 4.31, "stop": 4.31, "plan": "no_risk"}, 4.5, 100_000, 100_000)
@@ -382,10 +400,10 @@ def test_waiting_then_orders_when_the_tape_trades_the_trigger(lane):
     out = s.run()
     assert out["ordered"] == 1
     (br,) = _brackets(s.brk)
-    assert (br["limit_price"], br["qty"]) == (4.51, 2217)
+    assert (br["limit_price"], br["qty"], br["order_class"]) == (None, 735, "oto")
     d = s.coll.rows[0]
     assert d["state"] == "ordered" and d["order_id"] == "brk-1" and d["client_order_id"] == "test-SAIQ-gg-bull_flag"
-    assert d["ordered_et"] == "10:56"
+    assert d["ordered_et"] == "10:56" and d["full_qty"] == 1470 and d["half_qty"] == 735
     assert len(_rows(s.db, "gajjala_entry")) == 1 and len(_rows(s.db, "entry")) == 1
 
 
@@ -405,7 +423,7 @@ def test_waiting_at_cutoff_never_triggered(lane):
 # ── the floors switch ────────────────────────────────────────────────────────────────────────────────────────────
 def test_floors_on_skip_and_count_a_087_name(lane):
     a = alert("DRMA", "intraday_vcp", 0.8744, 0.861, hm=(10, 50))
-    s = lane(alerts=[a], lasts={"DRMA": 0.879}, cap=None)
+    s = lane(alerts=[a], lasts={"DRMA": 0.879}, cap=None, cfg={"gajjala_floors": True})   # v2: ON is his switch
     s.run()
     d = s.coll.rows[0]
     assert d["state"] == "skipped" and d["skip_kind"] == "floor"
@@ -419,16 +437,16 @@ def test_floors_on_skip_and_count_a_087_name(lane):
 
 def test_floors_off_passes_gg_and_the_entry_row_records_the_waiver(lane):
     a = alert("DRMA", "intraday_vcp", 0.8744, 0.861, hm=(10, 50))
-    s = lane(alerts=[a], lasts={"DRMA": 0.879}, cap=5_000_000.0, cfg={"gajjala_floors": False})
+    s = lane(alerts=[a], lasts={"DRMA": 0.879}, cap=5_000_000.0)       # v2 (D1): the default is OFF
     s.run()
     d = s.coll.rows[0]
     assert d["state"] == "ordered" and d["floors"] == "gg"
     assert any(w.startswith("waived by gajjala_floors=false: share price $0.88") for w in d["floor_warnings"])
     (br,) = _brackets(s.brk)
-    assert (br["limit_price"], br["take_profit_price"], br["stop_price"], br["qty"]) == (0.8834, 0.8968, 0.861, 11319)
+    assert (br["limit_price"], br["take_profit_price"], br["stop_price"], br["qty"]) == (None, None, 0.861, 5688)
     entry = _rows(s.db, "entry")[0]["detail"]
     assert entry["overrides"]["floors"] == "gg" and len(entry["overrides"]["floor_blocks_waived"]) == 2
-    assert entry["strategy"] == "gajjala"
+    assert entry["strategy"] == "gajjala" and entry["order_class"] == "oto" and entry["target_price"] is None
     st = GL.status_block(EE.get_config())
     assert st["floors"] == "gg" and st["floors_flip"] == 'POST /trading/config {"gajjala_floors": true}'
 
@@ -556,14 +574,15 @@ def test_exit_kinds_target_stop_flatten_pnl_and_r(lane):
 
 # ── caps, disarmed, refusals from the chokepoint ─────────────────────────────────────────────────────────────────
 def test_caps_day_open_held_terminal(lane):
+    """v2 (D3): no day cap — four alerts, three open (GAJJALA_MAX_OPEN), the fourth `cap_open`."""
     a = [alert("AAA", hm=(10, 50)), alert("BBB", hm=(10, 51)), alert("CCC", hm=(10, 52)),
          alert("DDD", hm=(10, 53))]
     s = lane(alerts=a, lasts={k: 4.48 for k in ("AAA", "BBB", "CCC", "DDD")})
     s.run()
     st = {d["symbol"]: d for d in s.coll.rows}
     assert [st[k]["state"] for k in ("AAA", "BBB", "CCC")] == ["ordered"] * 3
-    assert st["DDD"]["state"] == "skipped" and st["DDD"]["skip_kind"] == "cap_day"
-    assert st["DDD"]["why"] == "3 entries today already"
+    assert st["DDD"]["state"] == "skipped" and st["DDD"]["skip_kind"] == "cap_open"
+    assert st["DDD"]["why"] == "3 lane positions open already"
     # cap_open: 3 lane positions open from yesterday, a fresh alert today
     yday = "2026-10-19"
     docs = [_open(_id=f"GG:{yday}|O{i}|bull_flag", date=yday, symbol=f"O{i}") for i in range(3)]
@@ -594,20 +613,23 @@ def test_disarmed_dry_run_no_order_no_ledger_row(lane):
     out = s.run()
     d = s.coll.rows[0]
     assert d["state"] == "dry_run" and d["skip_kind"] == "disarmed" and out["dry_run"] == 1
-    assert d["why"] == "disarmed — would have bought 2,217 @ 4.51; nothing sent"
+    assert d["why"] == "disarmed — would have bought 735 at market (last 4.48); nothing sent"
     assert GL.fate_text(d) == d["why"]
     assert s.brk.calls == [] and _lane_rows(s.db) == [] and _rows(s.db, "entry") == []
 
 
 def test_earnings_refusal_classified(lane):
+    """v2 (D2, VR 0.7): GG has no earnings gate — the lane passes allow_earnings=True and still buys."""
     s = lane(alerts=[alert()], lasts={"SAIQ": 4.48}, earnings_days=3)
     s.run()
     d = s.coll.rows[0]
-    assert d["state"] == "skipped" and d["skip_kind"] == "earnings" and "earnings in 3d" in d["why"]
+    assert d["state"] == "ordered" and d["skip_kind"] is None
+    assert _rows(s.db, "entry")[0]["detail"]["allow_earnings"] is True
+    assert GL._classify_refusal("earnings in 3d (2026-10-23)") == "earnings"
     assert GL._classify_refusal("share price $1.00 is under the $2.00 penny floor") == "floor"
     assert GL._classify_refusal("market cap $5M is under the $700M floor") == "floor"
     assert GL._classify_refusal("portfolio full: 5/5 positions (p.312)") == "blocked"
-    assert _brackets(s.brk) == []
+    assert len(_brackets(s.brk)) == 1
 
 
 def test_enter_called_with_the_lane_plan(lane, monkeypatch):
@@ -619,9 +641,11 @@ def test_enter_called_with_the_lane_plan(lane, monkeypatch):
     (sym, kw), = calls
     assert sym == "JBDI"
     assert kw["tif"] == "day" and kw["order_intent"] == "gg-kiss_fly" and kw["strategy"] == "gajjala"
-    assert (kw["limit_price"], kw["stop_price"], kw["target_price"]) == (2.51, 2.40, 2.59)
-    assert kw["sizing"]["qty"] == 3984 and kw["sizing"]["basis"] == "gg_risk_pct" and kw["sizing"]["risk_usd"] == 438.24
-    assert kw["floors"] == "house"
+    assert (kw["limit_price"], kw["stop_price"]) == (None, 2.40) and "target_price" not in kw
+    assert kw["order_class"] == "oto" and kw["ceiling"] == "gg" and kw["allow_earnings"] is True
+    assert kw["sizing"]["qty"] == 1388 and kw["sizing"]["full_qty"] == 2777 and kw["sizing"]["price"] == 2.49
+    assert kw["sizing"]["basis"] == "gg_risk_pct" and kw["sizing"]["risk_usd"] == 124.92
+    assert kw["floors"] == "gg"
     r = kw["reason"]
     assert r["lane"] == "gajjala" and r["alert_id"] == f"GG:{DAY}|JBDI|kiss_fly" and r["alert_at"] == "10:52"
     assert r["cite"] == GL.CITE and (r["trigger"], r["stop"]) == (2.48, 2.40)
@@ -672,18 +696,22 @@ def test_status_block_shape_and_flip_line(lane):
                        "entries_today", "max_per_day", "open_n", "max_open", "caps_text", "window", "flatten_at",
                        "settings", "rules", "unmeasured_text", "streak_text", "track_record_text",
                        "track_record_url", "empty_today_text", "disabled_text", "live_text"}
-    assert st["floors"] == "house" and st["floors_flip"] == 'POST /trading/config {"gajjala_floors": false}'
-    assert st["floors_text"] == ("House safety floors ON for this lane: share price ≥ $2.00 and a known market cap ≥ "
-                                 "$700M. Most of his names sit under them, so most alerts are skipped and counted.")
+    assert st["floors"] == "gg" and st["floors_flip"] == 'POST /trading/config {"gajjala_floors": true}'
+    assert st["floors_text"] == ("OFF by default (your call 2026-10-21): the house $2 / $700M floors do not apply "
+                                 "to GG's lane")
+    house = GL.status_block({"gajjala_entry": True, "gajjala_floors": True})
+    assert house["floors"] == "house" and house["floors_flip"] == 'POST /trading/config {"gajjala_floors": false}'
+    assert house["floors_text"].startswith("House safety floors ON for this lane (your switch): share price ≥ $2.00")
     assert st["floors_off_confirm_text"] == ("Turn the house floors off for the 🚩 lane? Names under $2 and small caps "
                                              "will trade on paper.")
     assert st["window"] == "09:45–15:30 ET" and st["flatten_at"] == "15:55 ET"
-    assert st["caps_text"] == "0 of 3 entries today · 0 of 3 open"
+    assert st["caps_text"] == "0 entries today (GG has no day cap) · 0 of 3 open" and st["max_per_day"] is None
     assert st["track_record_url"] == "/chart-maps?tab=gajjala&sub=track_record"
-    assert len(st["rules"]) == 7 and st["disabled_text"] is None and st["live_text"] is None
-    assert st["settings"] == {"risk_pct": 0.5, "max_notional_pct": 10.0, "max_entries_per_day": 3, "max_open": 3,
-                              "signal_max_age_min": 20, "chase_pct": 0.5, "fill_wait_sec": 180,
-                              "max_round_r_pct": 10.0, "r_mult": 1.0, "min_r_pct": 0.5}
+    assert set(st["rules"]) == {"entry_text", "stop_text", "size_text", "manage_text", "risk_text", "exempt_text",
+                                "not_built", "awaiting"}
+    assert st["disabled_text"] is None and st["live_text"] is None
+    assert st["settings"]["risk_pct"] == 0.25 and st["settings"]["max_entries_per_day"] is None
+    assert st["settings"]["be_after_bars"] == 3 and st["settings"]["reentry_wait_bars"] == 2
     off = GL.status_block({"gajjala_entry": False})
     assert off["enabled"] is False and off["disabled_text"] == \
         ('Lane switched off — no new entries; open lane positions are still flattened at 15:55 ET. '
@@ -693,16 +721,18 @@ def test_status_block_shape_and_flip_line(lane):
 def _texts():
     st = GL.status_block({"gajjala_entry": True, "gajjala_floors": True})
     gg = GL.status_block({"gajjala_entry": False, "gajjala_floors": False})
-    return (st["rules"] + [st["floors_text"], gg["floors_text"], st["floors_off_confirm_text"], st["unmeasured_text"],
-                           st["streak_text"], st["track_record_text"], st["empty_today_text"], gg["disabled_text"],
-                           GL.LIVE_TEXT, st["window"], st["flatten_at"]])
+    rules = st["rules"]
+    return ([rules[k] for k in ("entry_text", "stop_text", "size_text", "manage_text", "risk_text", "exempt_text")]
+            + [st["floors_text"], st["floors_off_confirm_text"], st["unmeasured_text"],
+               st["streak_text"], st["track_record_text"], st["empty_today_text"], gg["disabled_text"],
+               GL.LIVE_TEXT, st["window"], st["flatten_at"], st["caps_text"]])
 
 
 def _allowed_numbers():
-    vals = [GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT, GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN,
-            GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_FILL_WAIT_SEC, GL.GAJJALA_MAX_ROUND_R_PCT,
-            GL.R_MULT, GL.MIN_R_PCT, EN.EARNINGS_SHIELD_DAYS, SF.MIN_SHARE_PRICE, SF.MIN_CAP_USD / 1e6,
-            GL.SUB_DOLLAR_LINE, GL.SUB_DOLLAR_DECIMALS, GL.DOLLAR_DECIMALS]
+    vals = [GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT, GL.GAJJALA_MAX_OPEN, GL.GAJJALA_FILL_WAIT_SEC,
+            GL.GAJJALA_MAX_ROUND_R_PCT, GL.GAJJALA_MISSED_R, GL.GG_BE_AFTER_BARS, GL.GG_TRAIL_EMA,
+            GL.GG_REENTRY_WAIT_BARS, GL.GG_DRAWDOWN_PCT, GL.GG_DRAWDOWN_TRADES, GL.GG_DRAWDOWN_RISK_SUM_PCT,
+            SF.MIN_SHARE_PRICE, SF.MIN_CAP_USD / 1e6, 0]
     out = set()
     for v in vals:
         out |= {f"{v:g}", f"{v:.2f}", str(v)}
@@ -713,18 +743,23 @@ def test_every_number_in_the_text_is_a_constant_value(monkeypatch):
     times = {GL._hhmm(GL.WINDOW_OPEN_ET), GL._hhmm(GL.cutoff_et()), GL._hhmm(GL.flatten_et())}
     assert times == {"09:45", "15:30", "15:55"}
     allowed = _allowed_numbers()
+    his_call_date = "2026-10-21"                                            # D14: the served floors_text names his call
     for text in _texts():
-        assert not re.search(r"\d{4}-\d{2}-\d{2}", text), text             # NO dates (T10)
-        rest = text
+        rest = text.replace(his_call_date, " ")
+        assert not re.search(r"\d{4}-\d{2}-\d{2}", rest), text             # NO other dates (T10)
         for t in times:
             rest = rest.replace(t, " ")
+        rest = rest.replace("5-minute", " ")                                # the frame's name (bars.RULES)
         for n in re.findall(r"\d+(?:\.\d+)?", rest):
             assert n in allowed, (n, text)
     # the text MOVES with the constant (never typed)
     monkeypatch.setattr(GL, "GAJJALA_FLATTEN_BEFORE_CLOSE_MIN", 6)
-    assert any("15:54 ET" in r for r in GL.rules_list()) and not any("15:55" in r for r in GL.rules_list())
-    monkeypatch.setattr(GL, "GAJJALA_CHASE_PCT", 0.75)
-    assert any("a day limit 0.75% over the last trade" in r for r in GL.rules_list())
+    assert "flat at 15:54 ET" in GL.rules_block()["manage_text"] and "15:55" not in GL.rules_block()["manage_text"]
+    monkeypatch.setattr(GL, "GG_BE_AFTER_BARS", 4)
+    assert "the first closed bar, 4 or more bars after the entry bar, that closes above the entry" in \
+        GL.rules_block()["manage_text"]                                  # wording 2026-10-21 (critic)
+    monkeypatch.setattr(GL, "GAJJALA_RISK_PCT", 0.5)
+    assert GL.rules_block()["size_text"].startswith("half of 0.5% of equity at risk first")
 
 
 def test_no_bword_no_book_names_in_served_text(lane):
@@ -752,7 +787,7 @@ SECTION2_ROW_KEYS = {"id", "symbol", "setup", "setup_label", "alert_et", "trigge
 
 def test_tab_payload_every_pushed_alert_has_a_fate(lane):
     alerts = [alert("SAIQ", hm=(10, 52)), alert("DRMA", "intraday_vcp", 0.8744, 0.861, hm=(10, 50))]
-    s = lane(alerts=alerts, lasts={"SAIQ": 4.48, "DRMA": 0.879}, cap=None)
+    s = lane(alerts=alerts, lasts={"SAIQ": 4.48, "DRMA": 0.879}, cap=None, cfg={"gajjala_floors": True})
     s.run()
     s.alerts.append(alert("NEWX", hm=(10, 56)))                       # rang after the last tick: not seen yet
     s.alerts.append(alert("LATE", hm=(15, 40)))                       # rang after the cut-off: never traded
@@ -769,7 +804,7 @@ def test_tab_payload_every_pushed_alert_has_a_fate(lane):
         assert isinstance(r["fate_text"], str) and r["fate_text"]
     assert [r["symbol"] for r in p["today"]] == ["DRMA", "SAIQ", "NEWX", "LATE"]   # ascending alert time
     assert rows["SAIQ"]["state"] == "ordered" and rows["SAIQ"]["closable"] is True
-    assert rows["SAIQ"]["fate_text"] == "order 2,217 @ 4.51 sent 10:55 ET · target 4.66 · stop 4.31"
+    assert rows["SAIQ"]["fate_text"] == "market order 735 sent 10:55 ET (last 4.48) · stop 4.31"
     assert rows["SAIQ"]["setup_label"] == "🚩 Bull Flag" and rows["SAIQ"]["url"] == \
         "/chart-maps?tab=gajjala&sub=bull_flag&focus=SAIQ"
     assert rows["DRMA"]["state"] == "skipped" and rows["DRMA"]["closable"] is False
@@ -779,7 +814,7 @@ def test_tab_payload_every_pushed_alert_has_a_fate(lane):
     assert rows["NEWX"]["fate_text"] == "not seen by the lane yet"
     assert p["status"]["skipped_floor_today"] == 1 and p["status"]["entries_today"] == 1
     assert p["journal"]["n"] == 1 and p["journal"]["text"] == \
-        "0 closed · 0 target · 0 stop · 0 flat · P&L +$0.00 · avg — · 0 not filled"
+        "0 closed · 0 stop · 0 trail · 0 flat · P&L +$0.00 · avg — · 0 not filled"
     json.dumps(p, allow_nan=False)
 
 
@@ -798,8 +833,8 @@ def test_tab_payload_open_and_closed_rows_and_journal(lane):
     j = p["journal"]
     assert (j["n"], j["closed"], j["wins"], j["losses"], j["win_rate_pct"], j["pnl_usd"], j["avg_r"]) == \
         (2, 1, 1, 0, 100.0, 398.4, 1.25)
-    assert j["text"] == "1 closed · 1 target · 0 stop · 0 flat · P&L +$398.40 · avg +1.25R · 0 not filled"
-    assert p["status"]["caps_text"] == "2 of 3 entries today · 1 of 3 open"
+    assert j["text"] == "1 closed · 1 target · 0 stop · 0 trail · 0 flat · P&L +$398.40 · avg +1.25R · 0 not filled"
+    assert p["status"]["caps_text"] == "2 entries today (GG has no day cap) · 1 of 3 open"
 
 
 # ── API ──────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -809,12 +844,15 @@ def test_api_config_three_flags_strict(lane):
     import auth
     admin = auth.HOUSE_OWNER_EMAIL
     s = lane()
-    assert EE.get_config()["gajjala_entry"] is True and EE.get_config()["gajjala_floors"] is True   # defaults ON
+    # v2 2026-10-21 (D1): gajjala_floors defaults OFF; gajjala_entry stays ON
+    assert EE.get_config()["gajjala_entry"] is True and EE.get_config()["gajjala_floors"] is False
     resp = asyncio.run(TA.trading_config({"gajjala_entry": False}, email=admin))
     assert json.loads(resp.body) == {"gajjala_entry": False} and EE.get_config()["gajjala_entry"] is False
     resp = asyncio.run(TA.trading_config({"gajjala_entry": None, "gajjala_floors": None,
                                           "hot_pullback_entry": None}, email=admin))
-    assert json.loads(resp.body) == {"gajjala_entry": True, "gajjala_floors": True, "hot_pullback_entry": True}
+    # 2026-10-21 (critic): null = the code default — gajjala_floors stores None (get_config → OFF), the lanes ON
+    assert json.loads(resp.body) == {"gajjala_entry": True, "gajjala_floors": None, "hot_pullback_entry": True}
+    assert EE.get_config()["gajjala_floors"] is False
     resp = asyncio.run(TA.trading_config({"hot_pullback_entry": False}, email=admin))
     assert EE.get_config()["hot_pullback_entry"] is False
     for key in ("gajjala_entry", "gajjala_floors", "hot_pullback_entry"):
@@ -1009,26 +1047,22 @@ def test_overlapping_ticks_same_waiting_doc_one_bracket(lane, monkeypatch):
 
 
 def test_disarmed_skip_rows_are_dry_run(lane):
-    s = lane(alerts=[alert("OLD", hm=(10, 30))], lasts={}, armed=False)
+    s = lane(docs=[seed()], lasts={"SAIQ": 4.30}, armed=False)             # the stop printed first, disarmed
     s.run()
     (row,) = _rows(s.db, "gajjala_skip")
-    assert row["detail"]["skip_kind"] == "stale" and row["dry_run"] is True
-    s = lane(docs=[seed()], lasts={"SAIQ": 4.30}, armed=False)             # dead, disarmed
-    s.run()
-    assert [r["dry_run"] for r in _rows(s.db, "gajjala_skip")] == [True]
-    s = lane(alerts=[alert("OLD", hm=(10, 30))], lasts={})                 # NEG: armed → a real row
+    assert row["detail"]["skip_kind"] == "never_triggered" and row["dry_run"] is True
+    s = lane(docs=[seed()], lasts={"SAIQ": 4.30})                          # NEG: armed → a real row
     s.run()
     assert [r["dry_run"] for r in _rows(s.db, "gajjala_skip")] == [False]
+    assert s.coll.get(SAIQ_ID)["state"] == "unfilled"
 
 
 def test_target_under_a_cent_over_the_entry_is_broker_gap():
-    """Critic P4: R between $0.005 and $0.01 — E − SL passes but TP − E < MIN_STOP_GAP_USD."""
+    """v2: no target leg — only the stop's distance from the last can be too tight for Alpaca."""
     p = GL.entry_plan({"trigger": 0.50, "stop": 0.492, "plan": "ok"}, 0.50, 100_000, 100_000)
-    assert not p["ok"] and p["skip_kind"] == "broker_gap"
-    assert p["entry"] - p["stop"] >= GL.MIN_STOP_GAP_USD and p["target"] - p["entry"] < GL.MIN_STOP_GAP_USD
-    assert p["why"] == "the target 0.5105 is under $0.01 above the entry 0.5025 — Alpaca refuses a bracket that tight"
-    ok = GL.entry_plan({"trigger": 0.50, "stop": 0.48, "plan": "ok"}, 0.50, 100_000, 100_000)
-    assert ok["ok"] and ok["skip_kind"] is None                             # NEG
+    assert not p["ok"] and p["skip_kind"] == "broker_gap"                   # 0.50 − 0.492 < $0.01
+    ok = GL.entry_plan({"trigger": 0.50, "stop": 0.492, "plan": "ok"}, 0.502, 100_000, 100_000)
+    assert ok["ok"] and ok["skip_kind"] is None and ok["target"] is None    # NEG: R under a cent, no target to refuse
 
 
 def _cancel_lands_fill(s, monkeypatch, filled_qty):

@@ -216,14 +216,21 @@ def _whole_qty(qty) -> int:
     return q
 
 
-def submit_bracket(symbol: str, qty: int, take_profit_price: float,
+def submit_bracket(symbol: str, qty: int, take_profit_price: Optional[float],
                    stop_price: float, limit_price: Optional[float] = None,
                    client_order_id: Optional[str] = None, tif: str = "gtc",
                    order_class: str = "bracket") -> dict:
     """Buy bracket: entry + take-profit limit + stop-loss legs resting AT
     Alpaca (never only in our process). limit_price=None -> market order,
-    allowed only while the market clock says open."""
+    allowed only while the market clock says open.
+
+    2026-10-21 (BUILD_SPEC19 F5, the 🚩 Gajjala lane v2 — GG "no fixed
+    targets"): take_profit_price=None sends NO take_profit key and the order
+    class becomes "oto" (Alpaca OTO = the entry + its stop_loss leg only).
+    Every existing caller passes a take-profit and is unchanged."""
     q = _whole_qty(qty)
+    if take_profit_price is None:
+        order_class = "oto"
     if limit_price is None:
         try:
             is_open = bool(clock().get("is_open"))
@@ -239,9 +246,10 @@ def submit_bracket(symbol: str, qty: int, take_profit_price: float,
         "type": "limit" if limit_price is not None else "market",
         "time_in_force": tif,
         "order_class": order_class,
-        "take_profit": {"limit_price": price_str(take_profit_price)},
         "stop_loss": {"stop_price": price_str(stop_price)},
     }
+    if take_profit_price is not None:
+        body["take_profit"] = {"limit_price": price_str(take_profit_price)}
     if limit_price is not None:
         body["limit_price"] = price_str(limit_price)
     if client_order_id:
@@ -396,5 +404,12 @@ def cancel_order(order_id: str) -> None:
     _request("DELETE", "/v2/orders/%s" % order_id)
 
 
-def close_position(symbol: str) -> dict:
-    return _request("DELETE", "/v2/positions/%s" % symbol.upper()) or {}
+def close_position(symbol: str, qty: Optional[int] = None) -> dict:
+    """DELETE /v2/positions/{symbol} — the WHOLE position at market. qty
+    (2026-10-21, BUILD_SPEC19 F5 — the 🚩 lane's partial) sells only that many
+    shares (`?qty=N`). Shares held by a working sell stop are not available:
+    the caller cancels the stop first."""
+    params = None
+    if qty is not None:
+        params = {"qty": str(_whole_qty(qty))}
+    return _request("DELETE", "/v2/positions/%s" % symbol.upper(), params=params) or {}

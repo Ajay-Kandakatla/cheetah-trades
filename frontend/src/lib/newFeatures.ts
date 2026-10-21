@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-21 (verbatim in the label, both lines, on a screenshot of the 🚩 lane's floor skips). BUILD_SPEC19: the
+  // 🚩 lane v2 trades by GG's playbook rules (backend/trading/gajjala_entry.py; docs/trading_gajjala_lane.md) — the house
+  // floors default OFF for his lane, market at the break, half size then add at breakeven, no target, the 9 EMA trail,
+  // risk halved after a loss, the placeholders listed as "awaiting your number". Every number lives on the tab (served);
+  // the only digits in this label are the ones inside his quote — pinned by scripts/contracts.mjs
+  // ("🚩 Gajjala lane: GG's rules (2026-10-21)"). UNMEASURED.
+  { id: 'autopilot-gajjala-lane-gg-rules-2026-10-21', addedAt: '2026-10-21', route: '/trading?view=gajjala',
+    label: "🚩 The Gajjala lane trades by GG's playbook rules now (paper). You said: “Is the 700 M floor by Gajjala?” / “Follow full Gajjala and he doesnt care exactly about this.. Go through his rules from play book and implement them exactly”. No — those floors are the house's, not his: they are off for his lane by default now (one switch on the tab turns them back on), and his lane has no earnings shield and no house position ceiling. It buys at market at the break once the A+ bar has closed, with the alert's stop resting at the broker; half size first, the other half added when the stop moves to breakeven; no target — the rest trails his EMA and is flat before the close. Risk starts where he starts, halves after a loss and resets after a win. A new GG's rules block on the tab prints every rule with its served numbers, what is not built, and the numbers awaiting you — those rules stay off until you give them. UNMEASURED. Not advice." },
   // Ajay 2026-10-21 (his three lines verbatim in the label, on a StockTwits screenshot of SAIQ). BUILD_SPEC20 D1–D5: every
   // Gajjala tile rides the Chart Maps card poll (hooks/useCardLive, lib/cardLive.CARD_LIVE_MS) and prints the SERVED
   // live-vs-levels line (chart_maps/live_card.VS_TEXT); the read still moves at GG's closed bar. The two digits in the

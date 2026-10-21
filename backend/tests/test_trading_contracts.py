@@ -884,10 +884,14 @@ def test_zone_edge_entry_hands_entries_the_absolute_stop_level():
     # tag) — the guard moved with it, deliberately.
     # 2026-10-20 (BUILD_SPEC17 D6): keyword-only lane-plan args follow reason
     # (target_price / sizing / floors / tif / order_intent) — moved again.
+    # 2026-10-21 (BUILD_SPEC19 D3 / D7): ceiling + order_class follow order_intent (the 🚩 lane's p.312 waiver
+    # and its no-target OTO entry; defaults "house" / "bracket" keep every other caller byte-for-byte) — widened.
     assert "stop_price: Optional[float] = None," in en and \
         'strategy: str = "manual",' in en and \
         "reason: Optional[dict] = None, *," in en and \
-        'order_intent: str = "entry") -> dict:' in en, (
+        'order_intent: str = "entry",' in en and \
+        'ceiling: str = "house",' in en and \
+        'order_class: str = "bracket") -> dict:' in en, (
         "entries.enter lost its absolute stop_price kwarg or the "
         "strategy/reason journal tags")
     assert "is not below the entry price" in en and "past the %g%% line" in en, (
@@ -1164,14 +1168,18 @@ def test_zero_dte_lane_2026_09_08_owner_numbers_locked_and_engine_seams():
 def test_gajjala_lane_2026_10_20_owner_numbers_and_seams():
     """Ajay 2026-10-20: "in the autopilot can you stop rest of the strategies and only use the Gajjalas strategies
     please." The lane's owner numbers, its tick step (n) between (m) and the journal (g), the config defaults
-    (gajjala_entry ON, gajjala_floors ON), the strict API switches and the two admin routes."""
+    (gajjala_entry ON, gajjala_floors OFF since 2026-10-21), the strict API switches and the two admin routes."""
     import inspect
     from trading import gajjala_entry as GL, exit_engine as EE, api as TA, entries as EN
     from chart_maps.gajjala import constants as GC
     assert GL.STRATEGY == "gajjala" and GL.LANE_COLL == "gajjala_lane"
-    assert (GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT) == (0.5, 10.0)
-    assert (GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN) == (3, 3)
-    assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_FILL_WAIT_SEC) == (20, 0.5, 180)
+    # 2026-10-21 (BUILD_SPEC19 D3 / D4 / D7, GG's rules): 0.25% risk, no day cap, no stale line, no chase limit
+    assert (GL.GAJJALA_RISK_PCT, GL.GAJJALA_MAX_NOTIONAL_PCT) == (0.25, 10.0)
+    assert (GL.GAJJALA_MAX_ENTRIES_PER_DAY, GL.GAJJALA_MAX_OPEN) == (None, 3)
+    assert (GL.GAJJALA_SIGNAL_MAX_AGE_MIN, GL.GAJJALA_CHASE_PCT, GL.GAJJALA_FILL_WAIT_SEC) == (None, None, 180)
+    assert (GL.GG_BE_AFTER_BARS, GL.GG_REENTRY_WAIT_BARS, GL.GG_PARTIAL_R, GL.GG_TRAIL_EMA_KF) == (3, 2, None, None)
+    assert (GL.GG_DRAWDOWN_PCT, GL.GG_DRAWDOWN_TRADES, GL.GG_DRAWDOWN_RISK_SUM_PCT) == (10.0, 5, 5.0)
+    assert EN.CEILINGS == ("house", "gg") and EN.ORDER_CLASSES == ("bracket", "oto")
     assert GL.GAJJALA_MAX_ROUND_R_PCT == 10.0
     assert (GL.GAJJALA_ENTRY_CUTOFF_BEFORE_CLOSE_MIN, GL.GAJJALA_FLATTEN_BEFORE_CLOSE_MIN) == (30, 5)
     assert GL.WINDOW_OPEN_ET is GC.LEDGER_FILL_FROM_ET and GL.R_MULT is GC.LEDGER_R_MULT
@@ -1180,7 +1188,10 @@ def test_gajjala_lane_2026_10_20_owner_numbers_and_seams():
     with open(os.path.join(TRADING_DIR, "exit_engine.py"), encoding="utf-8") as fh:
         eng = fh.read()
     assert '"gajjala_entry": bool(doc.get("gajjala_entry", True)),' in eng
-    assert '"gajjala_floors": bool(doc.get("gajjala_floors", True)),' in eng
+    # 2026-10-21 (BUILD_SPEC19 D1): the house floors default OFF for GG's lane
+    assert '"gajjala_floors": bool(doc.get("gajjala_floors", False)),' in eng
+    assert "verdict = None if sym in lane_syms else _sd.evaluate(" in eng, "D9: SEPA distribution skips lane names"
+    assert "if sym in lane_syms:" in eng, "D9: the p.308 ratchet skips lane names"
     assert '"last_gajjala_disabled_day": doc.get("last_gajjala_disabled_day"),' in eng
     tick = inspect.getsource(EE.tick)
     line = 'summary["gajjala_lane"] = gajjala_entry.run(broker=broker, cfg=get_config())'

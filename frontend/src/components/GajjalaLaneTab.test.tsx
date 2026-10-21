@@ -14,9 +14,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  GajjalaLaneTab, POLL_MS, OWNER_ONLY_TEXT, LOAD_ERR_PREFIX, FLOORS_WAIVED_CHIP, DASH, served,
+  GajjalaLaneTab, POLL_MS, OWNER_ONLY_TEXT, LOAD_ERR_PREFIX, FLOORS_WAIVED_CHIP, DASH, served, GG_RULE_KEYS, ggRulesOf,
 } from './GajjalaLaneTab';
-import type { GajjalaPayload, GajjalaRow } from './GajjalaLaneTab';
+import type { GajjalaPayload, GajjalaRow, GajjalaRules } from './GajjalaLaneTab';
 
 /* BUILD_SPEC17 §2 — GET /trading/gajjala, verbatim. */
 const FIXTURE: GajjalaPayload = {"date":"2026-10-20","armed":true,"mode":"paper","as_of":"2026-10-20T15:02:11Z",
@@ -101,7 +101,7 @@ describe('GajjalaLaneTab — the served payload', () => {
     expect(calls[0].url).toMatch(/\/trading\/gajjala$/);
     expect(calls[0].init?.credentials).toBe('include');
     for (const t of [s.floors_text!, s.floors_flip!, s.skipped_floor_text!, s.unmeasured_text!, s.streak_text!,
-                     s.rules![0], FIXTURE.journal!.text!]) {
+                     (s.rules as string[])[0], FIXTURE.journal!.text!]) {
       expect(screen.getByText(t)).toBeTruthy();
     }
     const track = screen.getByTestId('gg-lane-track');
@@ -328,5 +328,117 @@ describe('GajjalaLaneTab — source guard', () => {
     expect('a reversal bounce').toMatch(BWORD);
     expect('TLSW p.312').toMatch(BOOK);
     expect(src).toContain('export const POLL_MS = 60_000');
+  });
+});
+
+
+/* BUILD_SPEC19 D14 — status.rules v2 (an object), the served words as WP-A composes them from its constants
+ * (GAJJALA_RISK_PCT 0.25, GG_BE_AFTER_BARS 3, flatten_at 15:55 ET). The tab must print them VERBATIM and type none. */
+const GG_RULES: GajjalaRules = {
+  entry_text: "market at the break, after the entry bar closes (GG: 'right at the break … sometimes I wait for the bar close')",
+  stop_text: "the alert's stop, a market stop at the broker from the fill (GG: 'low of the prior bar as the stop loss')",
+  size_text: "half of 0.25% of equity at risk first; the other half is added at breakeven (GG: 'half size, then add')",
+  manage_text: 'no target — after 3 closed bars above the entry the stop moves to breakeven and the second half is added; the remainder trails the 5-minute 9 EMA (out on a close below it); flat at 15:55 ET',
+  risk_text: '0.25% of equity per trade, halved after a loss, back to 0.25% after a win — now 0.125%; drawdown mode off',
+  exempt_text: 'no earnings shield, no five-position ceiling, no SEPA distribution exit on lane names — GG\'s rules only',
+  not_built: ['base counting (3rd base climax, 4th out)', 'psychological $1 / $5 / $10 levels', 'exit before the stop on hesitation',
+              'mental stops', 'monthly risk re-basing'],
+  awaiting: [
+    { key: 'GG_PARTIAL_R', question: '"peel off 1/3 or half … when strong": at how many R above the entry?' },
+    { key: 'GG_TRAIL_EMA_KF', question: '9 or 21 ("the 21 on Kiss & Fly maybe")' },
+    { key: 'GG_HALT_CALM_MIN', question: '"when it\'s clean, when it\'s calmer, then I enter": minutes since the last halt resumed' },
+    { key: 'GG_CUSHION_DOUBLE_PCT', question: 'the account cushion (% above the start of the month?) at which an A+ gets double size' },
+  ],
+};
+const withRules = (rules: unknown) => withStatus({ rules: rules as GajjalaRules });
+
+describe("GajjalaLaneTab — GG's rules (2026-10-21)", () => {
+  it('ggRulesOf: the object only — NEGATIVE: an array (older API), null, a string, a number → null', () => {
+    expect(ggRulesOf(GG_RULES)).toBe(GG_RULES);
+    expect(ggRulesOf(['a rule'])).toBeNull();
+    expect(ggRulesOf(null)).toBeNull();
+    expect(ggRulesOf(undefined)).toBeNull();
+    expect(ggRulesOf('a rule')).toBeNull();
+    expect(ggRulesOf(7)).toBeNull();
+  });
+
+  it('prints the six served lines, the not-built list and the awaiting rows (key + question) verbatim, in order', async () => {
+    stub(ok(withRules(GG_RULES)), []);
+    view();
+    const block = await screen.findByTestId('gg-lane-gg-rules');
+    expect(screen.getByText("GG's rules")).toBeTruthy();
+    const shown = GG_RULE_KEYS.map((k) => within(block).getByTestId(`gg-rule-${k}`).textContent);
+    expect(shown).toEqual(GG_RULE_KEYS.map((k) => GG_RULES[k]));
+    const nb = within(block).getByTestId('gg-lane-not-built');
+    expect([...nb.querySelectorAll('li')].map((li) => li.textContent)).toEqual(GG_RULES.not_built);
+    const aw = within(block).getByTestId('gg-lane-awaiting');
+    const items = [...aw.querySelectorAll('li')];
+    expect(items.map((li) => li.getAttribute('data-awaiting-key'))).toEqual(GG_RULES.awaiting!.map((a) => a.key));
+    items.forEach((li, i) => {
+      expect(li.querySelector('code')!.textContent).toBe(GG_RULES.awaiting![i].key);
+      expect(li.textContent).toBe(`${GG_RULES.awaiting![i].key} — ${GG_RULES.awaiting![i].question}`);
+    });
+    // NEGATIVE: the older list block is not drawn for the v2 object; no NaN / null / undefined anywhere.
+    expect(screen.queryByTestId('gg-lane-rules')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/NaN|null|undefined|\[object Object\]/);
+  });
+
+  it('NEGATIVE: no `rules` served → no GG\'s rules block and no older list', async () => {
+    stub(ok(withRules(undefined)), []);
+    view();
+    await screen.findByText(FIXTURE.status!.caps_text!);
+    expect(screen.queryByTestId('gg-lane-gg-rules')).toBeNull();
+    expect(screen.queryByText("GG's rules")).toBeNull();
+    expect(screen.queryByTestId('gg-lane-rules')).toBeNull();
+  });
+
+  it('NEGATIVE: the older API (rules: string[]) renders the old list exactly as before, no GG\'s rules block', async () => {
+    stub(ok(FIXTURE), []);
+    view();
+    const list = await screen.findByTestId('gg-lane-rules');
+    expect([...list.querySelectorAll('li')].map((li) => li.textContent)).toEqual(FIXTURE.status!.rules);
+    expect(screen.getByText('Rules (owner rules, paper)')).toBeTruthy();
+    expect(screen.queryByTestId('gg-lane-gg-rules')).toBeNull();
+  });
+
+  it('NEGATIVE: an empty awaiting list (every number given) → no awaiting list; an empty not_built → no not-built list', async () => {
+    stub(ok(withRules({ ...GG_RULES, awaiting: [], not_built: [] })), []);
+    view();
+    const block = await screen.findByTestId('gg-lane-gg-rules');
+    expect(within(block).queryByTestId('gg-lane-awaiting')).toBeNull();
+    expect(within(block).queryByText('Awaiting your number')).toBeNull();
+    expect(within(block).queryByTestId('gg-lane-not-built')).toBeNull();
+    expect(within(block).getByTestId('gg-rule-manage_text').textContent).toBe(GG_RULES.manage_text);
+  });
+
+  it('NEGATIVE: a null / blank served line is not drawn (never "null" or "—" in its place); an empty object draws nothing', async () => {
+    stub(ok(withRules({ ...GG_RULES, risk_text: null, exempt_text: '  ', awaiting: [{ key: 'GG_PARTIAL_R', question: null }] })), []);
+    const r1 = view();
+    const block = await screen.findByTestId('gg-lane-gg-rules');
+    expect(within(block).queryByTestId('gg-rule-risk_text')).toBeNull();
+    expect(within(block).queryByTestId('gg-rule-exempt_text')).toBeNull();
+    expect(within(block).getByTestId('gg-rule-entry_text').textContent).toBe(GG_RULES.entry_text);
+    expect(within(block).getByTestId('gg-lane-awaiting').textContent).toBe(`GG_PARTIAL_R — ${DASH}`);
+    expect(block.textContent).not.toMatch(/null|undefined/);
+    r1.unmount();
+    stub(ok(withRules({})), []);
+    view();
+    await screen.findByText(FIXTURE.status!.caps_text!);
+    expect(screen.queryByTestId('gg-lane-gg-rules')).toBeNull();
+    expect(screen.queryByTestId('gg-lane-rules')).toBeNull();
+  });
+
+  it('source guard: the GG\'s rules block types no digit and no rule word of its own (with self-tests)', async () => {
+    const src = (await import('./GajjalaLaneTab.tsx?raw')).default as string;
+    const at = src.indexOf('function GgRulesBlock(');
+    const end = src.indexOf('\nfunction Block(', at);
+    expect(at).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(at);
+    const block = src.slice(at, end);
+    expect(block).not.toMatch(/\d/);
+    for (const w of ['breakeven', 'EMA', 'market', 'half', 'earnings', 'stop']) expect(block).not.toContain(w);
+    // NEGATIVE self-tests: the guards catch a typed digit / a typed rule word.
+    expect(`${block}\n<li>after 3 bars</li>`).toMatch(/\d/);
+    expect(`${block}\ntrail the 9 EMA`).toContain('EMA');
   });
 });

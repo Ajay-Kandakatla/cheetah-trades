@@ -21,6 +21,13 @@
  * (fate_text, pnl_text, caps_text, rules, the *_text lines) — this file types
  * none of its own (scripts/contracts.mjs pins it). Null prints "—", never NaN.
  * Paper account — decision support, not advice.
+ *
+ * Ajay 2026-10-21 ("Follow full Gajjala … Go through his rules from play book
+ * and implement them exactly", BUILD_SPEC19 D14): the lane serves `status.rules`
+ * as an OBJECT — entry/stop/size/manage/risk/exempt_text, `not_built`, and
+ * `awaiting` (the placeholders still waiting for his number). <GgRulesBlock>
+ * prints those keys verbatim and types no digit (contracts pin it). The older
+ * API's `rules: string[]` still renders as the old list; no `rules` → nothing.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -48,6 +55,26 @@ export type GajjalaSettings = {
   max_round_r_pct?: number | null; r_mult?: number | null; min_r_pct?: number | null;
 };
 
+/** One placeholder still waiting for his number (served key + question, printed verbatim). */
+export type GajjalaRuleAwaiting = { key?: string | null; question?: string | null };
+
+/** status.rules v2 (BUILD_SPEC19 D14) — every value served by trading/gajjala_entry.py. */
+export type GajjalaRules = {
+  entry_text?: string | null; stop_text?: string | null; size_text?: string | null;
+  manage_text?: string | null; risk_text?: string | null; exempt_text?: string | null;
+  not_built?: string[] | null; awaiting?: GajjalaRuleAwaiting[] | null;
+};
+
+/** The six served rule lines, in the order the block prints them (keys only — the words are served). */
+export const GG_RULE_KEYS = ['entry_text', 'stop_text', 'size_text', 'manage_text', 'risk_text', 'exempt_text'] as const;
+
+/** status.rules as the v2 object, or null (absent, or the older API's string list). */
+export function ggRulesOf(v: unknown): GajjalaRules | null {
+  return v && typeof v === 'object' && !Array.isArray(v) ? (v as GajjalaRules) : null;
+}
+
+const isText = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
+
 export type GajjalaStatus = {
   strategy?: string | null; enabled?: boolean | null; paper?: boolean | null;
   floors?: 'house' | 'gg' | string | null; floors_text?: string | null; floors_flip?: string | null;
@@ -56,7 +83,7 @@ export type GajjalaStatus = {
   skipped_today?: Record<string, number> | null;
   entries_today?: number | null; max_per_day?: number | null; open_n?: number | null; max_open?: number | null;
   caps_text?: string | null; window?: string | null; flatten_at?: string | null;
-  settings?: GajjalaSettings | null; rules?: string[] | null;
+  settings?: GajjalaSettings | null; rules?: string[] | GajjalaRules | null;
   unmeasured_text?: string | null; streak_text?: string | null;
   track_record_text?: string | null; track_record_url?: string | null;
   empty_today_text?: string | null; disabled_text?: string | null; live_text?: string | null;
@@ -170,7 +197,8 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
   const floorsOn = s?.floors !== 'gg';
   const today = data?.today ?? [];
   const recent = data?.recent ?? [];
-  const rules = s?.rules ?? [];
+  const rules: string[] = Array.isArray(s?.rules) ? s.rules : [];
+  const ggRules = ggRulesOf(s?.rules);
 
   const rowsTable = (rows: GajjalaRow[], testId: string) => (
     <div style={{ overflowX: 'auto' }}>
@@ -279,6 +307,8 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
         </Block>
       )}
 
+      {ggRules && <GgRulesBlock rules={ggRules} />}
+
       {rules.length > 0 && (
         <Block title="Rules (owner rules, paper)">
           <ul data-testid="gg-lane-rules" style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: C.sub }}>
@@ -288,6 +318,45 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
       )}
       <p style={{ margin: 0, fontSize: 12, color: C.sub }}>Paper account. Decision support — not advice.</p>
     </section>
+  );
+}
+
+const ggRulesList: CSSProperties = { margin: 0, paddingLeft: 18, fontSize: 13, overflowWrap: 'anywhere' };
+const ggRulesSub: CSSProperties = { margin: '6px 0 2px', fontSize: 12, color: C.sub, fontWeight: 500 };
+const ggRulesGrid: CSSProperties = { display: 'grid', gap: 4, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' };
+
+/** GG's rules (BUILD_SPEC19 D14) — the served lines verbatim; this function types no digit (contracts pin it). */
+function GgRulesBlock({ rules }: { rules: GajjalaRules }) {
+  const lines = GG_RULE_KEYS.filter((k) => isText(rules[k]));
+  const notBuilt = (rules.not_built ?? []).filter(isText);
+  const awaiting = (rules.awaiting ?? []).filter((a) => a && isText(a.key));
+  if (!lines.length && !notBuilt.length && !awaiting.length) return null;
+  return (
+    <Block title="GG's rules">
+      <div data-testid="gg-lane-gg-rules" style={ggRulesGrid}>
+        {lines.map((k) => <div key={k} data-testid={`gg-rule-${k}`}>{rules[k]}</div>)}
+        {notBuilt.length ? (
+          <div>
+            <div style={ggRulesSub}>Not built (playbook text only)</div>
+            <ul data-testid="gg-lane-not-built" style={ggRulesList}>
+              {notBuilt.map((t) => <li key={t}>{t}</li>)}
+            </ul>
+          </div>
+        ) : null}
+        {awaiting.length ? (
+          <div>
+            <div style={ggRulesSub}>Awaiting your number</div>
+            <ul data-testid="gg-lane-awaiting" style={ggRulesList}>
+              {awaiting.map((a) => (
+                <li key={a.key ?? ''} data-awaiting-key={a.key ?? ''}>
+                  <code>{a.key}</code> — {served(a.question)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </Block>
   );
 }
 

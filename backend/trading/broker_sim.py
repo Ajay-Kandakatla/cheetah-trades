@@ -389,14 +389,18 @@ def make_client_order_id(symbol: str, intent: str) -> str:
 
 # ── Duck-typed order surface ────────────────────────────────────────────────
 
-def submit_bracket(symbol: str, qty: int, take_profit_price: float,
+def submit_bracket(symbol: str, qty: int, take_profit_price: Optional[float],
                    stop_price: float, limit_price: Optional[float] = None,
                    client_order_id: Optional[str] = None, tif: str = "gtc",
                    order_class: str = "bracket") -> dict:
     """Buy bracket: entry + take-profit limit + stop-loss legs. Legs start
-    `held` and activate when the entry fills (Alpaca semantics)."""
+    `held` and activate when the entry fills (Alpaca semantics).
+    take_profit_price=None (2026-10-21, BUILD_SPEC19 F5) = Alpaca OTO: the
+    entry + its stop leg only, order_class "oto", no take-profit leg."""
     db = _require_db()
     q = _whole_qty(qty)
+    if take_profit_price is None:
+        order_class = "oto"
     if limit_price is None and not clock().get("is_open"):
         raise BrokerError("market order rejected: market is closed — "
                           "use a limit_price (GTC) instead")
@@ -411,10 +415,11 @@ def submit_bracket(symbol: str, qty: int, take_profit_price: float,
                         qty=q, order_class=order_class,
                         limit_price=limit_price,
                         client_order_id=client_order_id, tif=tif)
-    _new_order(db, symbol=symbol, side="sell", otype="limit", qty=q,
-               order_class=order_class, limit_price=take_profit_price,
-               parent_id=parent["id"], leg_kind="take_profit", tif=tif,
-               status="held")
+    if take_profit_price is not None:
+        _new_order(db, symbol=symbol, side="sell", otype="limit", qty=q,
+                   order_class=order_class, limit_price=take_profit_price,
+                   parent_id=parent["id"], leg_kind="take_profit", tif=tif,
+                   status="held")
     _new_order(db, symbol=symbol, side="sell", otype="stop", qty=q,
                order_class=order_class, stop_price=stop_price,
                parent_id=parent["id"], leg_kind="stop_loss", tif=tif,
@@ -465,14 +470,19 @@ def cancel_order(order_id: str) -> None:
     _cancel_children(db, order_id)     # canceling a parent kills its legs
 
 
-def close_position(symbol: str) -> dict:
-    """Market-sell the whole position NOW at the live Massive quote."""
+def close_position(symbol: str, qty: Optional[int] = None) -> dict:
+    """Market-sell the whole position NOW at the live Massive quote. qty
+    (2026-10-21, BUILD_SPEC19 F5) sells only that many shares; more than the
+    position is refused (Alpaca refuses it too)."""
     db = _require_db()
     sym = (symbol or "").upper()
     pos = db.sim_positions.find_one({"symbol": sym})
-    qty = int(float((pos or {}).get("qty") or 0))
-    if qty <= 0:
+    held = int(float((pos or {}).get("qty") or 0))
+    if held <= 0:
         raise BrokerError("sim: position does not exist: %s" % sym)
+    qty = held if qty is None else _whole_qty(qty)
+    if qty > held:
+        raise BrokerError("sim: insufficient qty %d to sell %d of %s" % (held, qty, sym))
     live = latest_trade(sym)
     if not live:
         raise BrokerError("sim: no live quote for %s — cannot close" % sym)

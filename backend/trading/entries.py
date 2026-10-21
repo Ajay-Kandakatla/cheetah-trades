@@ -40,6 +40,15 @@ STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "gajjala", "ma
 # floors apply). floors="gg" from any other strategy is refused, never honoured.
 FLOOR_WAIVER_STRATEGIES = ("gajjala",)
 FLOORS = ("house", "gg")
+# The p.312 five-position account ceiling (2026-10-21, BUILD_SPEC19 D3 — a
+# Minervini rule, not GG's): ceiling="gg" turns that block into a warning, and is
+# accepted only from a strategy in FLOOR_WAIVER_STRATEGIES (the same one lane).
+CEILINGS = ("house", "gg")
+# Order classes a lane plan may ask for (2026-10-21, BUILD_SPEC19 D7/D8d — GG "no
+# fixed targets"): "oto" = the entry + its stop leg only, no take-profit; it
+# needs a lane plan, carries no target_price and may be a market entry (the
+# plan's `price` is then the planning price).
+ORDER_CLASSES = ("bracket", "oto")
 # entry_reason is a small JSON-safe dict; anything bigger is truncated so a
 # runaway payload can never bloat the ledger row.
 REASON_MAX_BYTES = 2048
@@ -135,7 +144,9 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
               sizing: Optional[dict] = None,
               target_price: Optional[float] = None,
               floors: str = "house",
-              strategy: str = "manual"):
+              strategy: str = "manual",
+              ceiling: str = "house",
+              order_class: str = "bracket"):
     """Run every entry check WITHOUT raising. Returns (blocked, ctx).
 
     LANE PLAN (2026-10-20, the 🚩 Gajjala paper lane): `sizing` = {qty, basis,
@@ -147,6 +158,12 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
     warnings + ctx["floor_blocks_waived"]) and is accepted only from a
     strategy in FLOOR_WAIVER_STRATEGIES. target_price without sizing is
     refused (the book lanes keep the book's target).
+
+    2026-10-21 (BUILD_SPEC19 D3 / D7): `ceiling="gg"` (FLOOR_WAIVER_STRATEGIES
+    only) turns the p.312 position-count block into a warning; a lane plan with
+    `order_class="oto"` carries NO target (GG has no fixed target) and may omit
+    limit_price (a market entry; `sizing["price"]` is the planning price, else the
+    live price). The default bracket lane plan is unchanged.
 
     top_up=True is the PYRAMID path (TTLAC §3 Add and Reduce / §5 scale-up,
     TLSW pp.307-308): size = full-position shares MINUS shares already held,
@@ -183,6 +200,15 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         blocked.append("floors must be one of %s (got %r)" % (", ".join(FLOORS), floors))
     elif floors == "gg" and strategy not in FLOOR_WAIVER_STRATEGIES:
         blocked.append("floors='gg' is the 🚩 Gajjala lane's switch only")
+    if ceiling not in CEILINGS:
+        blocked.append("ceiling must be one of %s (got %r)" % (", ".join(CEILINGS), ceiling))
+    elif ceiling == "gg" and strategy not in FLOOR_WAIVER_STRATEGIES:
+        blocked.append("ceiling='gg' is the 🚩 Gajjala lane's rule only")
+    oto = order_class == "oto"
+    if order_class not in ORDER_CLASSES:
+        blocked.append("order_class must be one of %s (got %r)" % (", ".join(ORDER_CLASSES), order_class))
+    elif oto and not lane:
+        blocked.append("order_class='oto' is only accepted with a lane sizing plan")
     if lane:
         lane_ok = True
         try:
@@ -195,16 +221,19 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
             tgt = float(target_price) if target_price is not None else None
         except (TypeError, ValueError):
             lim = stp = tgt = None
-        if lim is None:
+        if lim is None and not oto:
             blocked.append("a lane plan needs a limit_price")
             lane_ok = False
         if stp is None:
             blocked.append("a lane plan needs a stop_price")
             lane_ok = False
-        if tgt is None:
+        if tgt is None and not oto:
             blocked.append("a lane plan needs a target_price")
             lane_ok = False
-        if lane_ok and not (0 < stp < lim < tgt):
+        if oto and tgt is not None:
+            blocked.append("an OTO lane plan carries no target_price")
+            lane_ok = False
+        if lane_ok and not oto and not (0 < stp < lim < tgt):
             blocked.append("a lane plan needs stop < limit < target (got %s / %s / %s)"
                            % (stp, lim, tgt))
             lane_ok = False
@@ -232,16 +261,28 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
                 if (p.get("symbol") or "").upper() == symbol:
                     held = p
             if held is None and len(positions) >= risk_rules.MAX_POSITIONS:
-                blocked.append("portfolio full: %d/%d positions (p.312)"
-                               % (len(positions), risk_rules.MAX_POSITIONS))
+                full = ("portfolio full: %d/%d positions (p.312)"
+                        % (len(positions), risk_rules.MAX_POSITIONS))
+                if ceiling == "gg" and strategy in FLOOR_WAIVER_STRATEGIES:
+                    ctx["warnings"].append("waived by the 🚩 lane (GG has no position ceiling): " + full)
+                else:
+                    blocked.append(full)
             acct = broker.account()
             ctx["equity"] = float(acct.get("equity") or 0)
             ctx["market_open"] = bool(broker.clock().get("is_open"))
         except BrokerError as exc:
             blocked.append("broker error: %s" % exc)
 
-    # price — an explicit limit_price doubles as the planning price
+    # price — an explicit limit_price doubles as the planning price; an OTO lane
+    # plan's market entry brings its own (the last trade the lane read)
     price, source = (float(limit_price), "requested") if limit_price else (None, None)
+    if price is None and lane and oto and isinstance(sizing, dict):
+        try:
+            plan_px = float(sizing.get("price")) if sizing.get("price") is not None else None
+        except (TypeError, ValueError):
+            plan_px = None
+        if plan_px and plan_px > 0:
+            price, source = plan_px, "lane"
     if price is None and symbol:
         price, source = _live_price(symbol)
     if not price or price <= 0:
@@ -262,7 +303,7 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
     # on ctx["floor_blocks_waived"]; every other caller blocks exactly as before.
     fl = safety_floor.check(symbol, price)
     ctx["market_cap"] = fl["market_cap"]
-    ctx["warnings"] = list(fl["warnings"])
+    ctx["warnings"] = list(ctx["warnings"]) + list(fl["warnings"])
     if floors == "gg" and strategy in FLOOR_WAIVER_STRATEGIES:
         ctx["floor_blocks_waived"] = list(fl["blocked"])
         ctx["warnings"] += ["waived by gajjala_floors=false: " + b for b in fl["blocked"]]
@@ -323,20 +364,30 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
     if lane:
         # The lane's own plan, verbatim (GG's trade math): no book stop, no
         # 2:1 target, no streak / progressive multiplier, no equity_cap.
+        lim_px = lim
+        if lane_ok and oto:
+            # OTO (BUILD_SPEC19 D7): the planning price is the limit or the lane's
+            # last trade; the stop must sit under it; no target at all
+            lim_px = lim if lim is not None else price
+            if not lim_px or not (0 < stp < lim_px):
+                blocked.append("an OTO lane plan needs 0 < stop < the entry price (got %s / %s)"
+                               % (stp, lim_px))
+                lane_ok = False
         if lane_ok:
             basis = str(sizing.get("basis") or "lane")
             ctx["equity_used"] = ctx["equity"]
-            ctx["sizing"] = {"shares": lane_qty, "allocation": round(lane_qty * lim, 2),
+            ctx["sizing"] = {"shares": lane_qty, "allocation": round(lane_qty * lim_px, 2),
                              "multiplier": 1.0, "basis": basis}
             ctx["stop_level"] = stp
             ctx["stop_plan"] = risk_rules.StopPlan(
-                stop_pct=round((lim - stp) / lim * 100.0, 2), stop_price=stp,
+                stop_pct=round((lim_px - stp) / lim_px * 100.0, 2), stop_price=stp,
                 basis="lane:" + basis)
-            ctx["target"] = {"target_price": tgt,
-                             "target_pct": round((tgt - lim) / lim * 100.0, 2),
-                             "reward_risk": round((tgt - lim) / (lim - stp), 2)}
-            ctx["breakeven_trigger"] = risk_rules.breakeven_trigger(lim, stp)
-            ctx["equity_risk_pct"] = (round(lane_qty * (lim - stp) / ctx["equity"] * 100.0, 4)
+            ctx["target"] = (None if oto else
+                             {"target_price": tgt,
+                              "target_pct": round((tgt - lim_px) / lim_px * 100.0, 2),
+                              "reward_risk": round((tgt - lim_px) / (lim_px - stp), 2)})
+            ctx["breakeven_trigger"] = risk_rules.breakeven_trigger(lim_px, stp)
+            ctx["equity_risk_pct"] = (round(lane_qty * (lim_px - stp) / ctx["equity"] * 100.0, 4)
                                       if ctx["equity"] else None)
         return blocked, ctx
 
@@ -465,7 +516,9 @@ def enter(symbol: str, limit_price: Optional[float] = None,
           sizing: Optional[dict] = None,
           floors: str = "house",
           tif: str = "gtc",
-          order_intent: str = "entry") -> dict:
+          order_intent: str = "entry",
+          ceiling: str = "house",
+          order_class: str = "bracket") -> dict:
     """Place the bracket entry. Raises ValueError(reason) on any failed
     check; the API maps that to 400 {detail}. top_up=True is the pyramid
     add (see _evaluate) — the bracket covers ONLY the added shares; its own
@@ -479,12 +532,15 @@ def enter(symbol: str, limit_price: Optional[float] = None,
     target_price / sizing / floors (2026-10-20) are the lane-plan seam (see
     _evaluate); tif / order_intent reach the broker (time in force, and the
     client_order_id intent so two lanes or two setups on one name never
-    collide). The defaults leave the book path's order byte-for-byte."""
+    collide). The defaults leave the book path's order byte-for-byte.
+    ceiling / order_class (2026-10-21, BUILD_SPEC19 D3 / D7): the 🚩 lane's
+    p.312 waiver and its no-target OTO entry (see _evaluate); defaults unchanged."""
     blocked, ctx = _evaluate(symbol, limit_price=limit_price,
                              stop_pct=stop_pct, allow_earnings=allow_earnings,
                              top_up=top_up, stop_price=stop_price,
                              sizing=sizing, target_price=target_price,
-                             floors=floors, strategy=strategy)
+                             floors=floors, strategy=strategy,
+                             ceiling=ceiling, order_class=order_class)
     if blocked:
         raise ValueError("; ".join(blocked))
 
@@ -507,10 +563,13 @@ def enter(symbol: str, limit_price: Optional[float] = None,
     # tif is passed only when it is not the broker default ("gtc"), so the
     # book lanes' call stays exactly what it was.
     tif_kw = {} if tif == "gtc" else {"tif": tif}
+    # OTO (BUILD_SPEC19 D7): no take-profit leg; order_class is passed only then
+    if order_class == "oto":
+        tif_kw["order_class"] = "oto"
     try:
         order = broker.submit_bracket(
             sym, qty,
-            take_profit_price=target["target_price"],
+            take_profit_price=(target or {}).get("target_price"),
             stop_price=plan.stop_price,
             limit_price=limit_price,
             client_order_id=client_order_id, **tif_kw)
@@ -527,8 +586,9 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "consecutive_losses": ctx["cfg"]["consecutive_losses"],
         "stop_price": plan.stop_price, "stop_pct": plan.stop_pct,
         "stop_basis": plan.basis, "stop_level_requested": ctx["stop_level"],
-        "target_price": target["target_price"], "target_pct": target["target_pct"],
-        "reward_risk": target["reward_risk"],
+        "target_price": (target or {}).get("target_price"),
+        "target_pct": (target or {}).get("target_pct"),
+        "reward_risk": (target or {}).get("reward_risk"),
         "breakeven_trigger": ctx["breakeven_trigger"],
         "equity_risk_pct": ctx["equity_risk_pct"],
         "regime": ctx["regime"], "earnings": ctx["earnings"],
@@ -537,9 +597,13 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "strategy": _strategy_tag(strategy),
         "entry_reason": _safe_reason(reason),
         "tif": tif,
+        "order_class": order_class,
+        "ceiling": ceiling,
+        "warnings": list(ctx.get("warnings") or []),
         "overrides": {"sizing": (str(sizing.get("basis") or "lane")
                                  if isinstance(sizing, dict) else None),
-                      "target": "lane" if sizing is not None else None,
+                      "target": ("none" if order_class == "oto" else
+                                 "lane" if sizing is not None else None),
                       "floors": floors,
                       "floor_blocks_waived": list(ctx.get("floor_blocks_waived") or [])},
     }

@@ -63,14 +63,19 @@ def test_the_gajjala_lane_line_is_built_from_the_lane_constants():
     from trading import gajjala_entry as GLN
     p = RI.sections()["autopilot"]
     line = next(x for x in p["picks"] if x.startswith("🚩 Gajjala lane (paper)"))
-    assert ("a day limit %g%% over the last trade" % GLN.GAJJALA_CHASE_PCT) in line
-    assert ("the entry + %gR target" % GLN.R_MULT) in line
-    assert ("%g%% of equity at risk" % GLN.GAJJALA_RISK_PCT) in line
-    assert ("at most %d a day and %d open" % (GLN.GAJJALA_MAX_ENTRIES_PER_DAY, GLN.GAJJALA_MAX_OPEN)) in line
+    # v2 2026-10-21 (BUILD_SPEC19 D16): GG's rules — market at the break, no target, half then add, the 9 EMA trail
+    assert "market order at the break" in line and "no target" in line
+    assert "day limit" not in line and "R target" not in line                       # NEG: the v1 entry / target gone
+    assert ("half of %g%% of equity at risk first" % GLN.GAJJALA_RISK_PCT) in line
+    assert ("after the first closed bar, %d or more bars after the entry bar, that closes above the entry"
+            % GLN.GG_BE_AFTER_BARS) in line                              # wording 2026-10-21 (critic)
+    assert "closed bars above the entry" not in line                    # NEG: the old wording is gone
+    assert ("trails the %d EMA" % GLN.GG_TRAIL_EMA) in line
+    assert ("%d open at most, no day cap" % GLN.GAJJALA_MAX_OPEN) in line
     assert ("flat by %s ET" % RI._t(GLN.flatten_et())) in line and "15:55" in line
     floors = next(x for x in p["picks"] if "Safety floors" in x)
     assert "EVERY lane, no exceptions" not in floors                    # NEG: the old absolute is gone
-    assert "gajjala_floors is ON (the default)" in floors
+    assert "gajjala_floors is ON (default OFF since 2026-10-21" in floors
     assert "/ gajjala /" in " ".join(p["picks"])
     assert "🚩 Gajjala lanes are owner rules, no book." in p["note"]
     assert "bounce" not in line.lower()
@@ -78,9 +83,9 @@ def test_the_gajjala_lane_line_is_built_from_the_lane_constants():
 
 def test_the_gajjala_lane_line_MOVES_when_a_constant_moves(monkeypatch):
     from trading import gajjala_entry as GLN
-    monkeypatch.setattr(GLN, "GAJJALA_MAX_ENTRIES_PER_DAY", 4)
+    monkeypatch.setattr(GLN, "GAJJALA_MAX_OPEN", 4)                    # v2 2026-10-21: no day cap to move
     line = next(x for x in RI.sections()["autopilot"]["picks"] if x.startswith("🚩 Gajjala lane (paper)"))
-    assert "at most 4 a day" in line and "at most 3 a day" not in line
+    assert "4 open at most" in line and "3 open at most" not in line
 
 
 def test_the_deep_demand_prose_is_built_from_the_enforcing_constants():
