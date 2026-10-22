@@ -336,3 +336,59 @@ describe('📌 GnT — the served 🪜 band-structure read', () => {
     expect(screen.queryByText(/🪜/)).not.toBeInTheDocument();
   });
 });
+
+
+/* 📌 The served refresh verdict (2026-10-22).
+ *
+ * From 2026-09-25 to 10-22 the x.com page changed shape, the latest-posts
+ * source read zero, the cron said so twice a day — and this board kept typing
+ * "Checked twice a day" over rows a month old. The verdict is now SERVED
+ * (traders/feed.py refresh_note) and printed verbatim; the board types no
+ * claim of its own about whether it is tracking him. */
+describe('📌 GnT — the served refresh verdict', () => {
+  const OK_NOTE = 'Latest posts checked 2026-10-22 17:40 ET: the x.com page answered with 5 posts '
+                + 'and the history source with 101. Checked twice a day.';
+  const DARK_NOTE = "⚠️ NOT tracking Tito Adhikary's latest posts: at the 2026-10-22 08:31 ET check "
+                  + 'the x.com page returned no posts (it last answered 2026-09-24 17:40 ET). '
+                  + 'The history source answered with 101 posts, so the names below are '
+                  + "Tito Adhikary's history, not what was posted today.";
+
+  it('prints the served verdict verbatim when the source answered', async () => {
+    stub({ ...PAYLOAD, refresh: { at: '2026-10-22T21:40:00+00:00', ok: true,
+                                  last_ok_at: '2026-10-22T21:40:00+00:00',
+                                  sources: { recent: 5, top: 101 }, errors: [], note: OK_NOTE } });
+    mount();
+    const note = await screen.findByTestId('gnt-refresh-note');
+    expect(note.textContent?.trim()).toBe(OK_NOTE);
+    expect(note.classList.contains('gnt-err')).toBe(false);
+  });
+
+  it('NEGATIVE: a dark latest-posts source is said on the board, in the warning tone, with both dates', async () => {
+    stub({ ...PAYLOAD, refresh: { at: '2026-10-22T12:31:00+00:00', ok: false,
+                                  last_ok_at: '2026-09-24T21:40:02+00:00',
+                                  sources: { recent: 0, top: 101 }, errors: ['the recent-post source returned nothing'],
+                                  note: DARK_NOTE } });
+    mount();
+    const note = await screen.findByTestId('gnt-refresh-note');
+    expect(note.textContent).toMatch(/NOT tracking Tito Adhikary's latest posts/);
+    expect(note.textContent).toMatch(/last answered 2026-09-24 17:40 ET/);
+    expect(note.classList.contains('gnt-err')).toBe(true);
+    // the rows still render — his history is still his history
+    expect(screen.getByText(/reclaiming 150 into the close/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a payload with no refresh block types NO "checked" claim of its own', async () => {
+    stub(PAYLOAD);
+    mount();
+    await screen.findByText(/reclaiming 150 into the close/);
+    expect(screen.queryByTestId('gnt-refresh-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checked twice a day/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: an empty note is not rendered as an empty warning', async () => {
+    stub({ ...PAYLOAD, refresh: { at: null, ok: null, note: null } });
+    mount();
+    await screen.findByText(/reclaiming 150 into the close/);
+    expect(screen.queryByTestId('gnt-refresh-note')).not.toBeInTheDocument();
+  });
+});

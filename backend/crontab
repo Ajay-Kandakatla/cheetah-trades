@@ -1071,9 +1071,14 @@
 # an extra run upserts instead of duplicating.
 #
 # `python -m` is correct here: this is an HTTP fetch plus a Mongo write and
-# touches no in-process cache. It EXITS NON-ZERO when the recent-post source
-# returns nothing, so a shape change at X shows up in the cron log instead of
-# the board quietly going stale.
+# touches no in-process cache.
+#
+# EXIT CODES (traders.feed.exit_code): 0 = every latest-posts source answered;
+# rc=1 = PARTIAL — history stored, a latest-posts source dark; rc=2 = an
+# account stored NOTHING. 2026-09-25 → 10-22 this ran rc=1 twice a day for
+# four weeks (X changed the page shape) while the board typed "Checked twice a
+# day": the verdict of every run is now STORED (trader_feed_status) and SERVED
+# on the 📌 tab as refresh.note, so the next shape change is read on the board.
 40     7,17  *    *    *    /usr/local/bin/python -m traders.feed refresh
 #
 # ── Curate what they NAME into the scan universe (Ajay 2026-09-12) ───────────

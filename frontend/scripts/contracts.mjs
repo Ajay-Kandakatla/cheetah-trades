@@ -9715,8 +9715,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9921,8 +9922,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first eleven (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first twelve (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10193,8 +10195,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10384,8 +10387,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10474,8 +10478,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10615,8 +10620,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10723,8 +10729,9 @@ const CONTRACTS = [
       // 2026-10-21, later still (BUILD_SPEC22 A5 / B4): the 🚩 lane GG's-words ✨ (FIRST) and the 🚩 K11 volume-floor ✨ (SECOND), each pinned in its own block, land above — widened by two, dated.
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10765,8 +10772,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above this one — widened to the top two, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10896,8 +10904,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-k11-volume-floor-2026-10-21';
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10970,8 +10979,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-global-search-2026-10-21';
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -11077,8 +11087,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const ID = 'alerts-push-delivery-receipts-2026-10-21';
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11199,6 +11210,76 @@ const CONTRACTS = [
         '../backend/tests/test_reddit_scrape_oauth_2026_10_21.py',
         'src/components/ChatterPanel.test.tsx',
       ]) if (!exists(f)) errs.push(`${f} is missing`);
+      return errs;
+    },
+  },
+  {
+    name: '📌 GnT: latest-posts source restored + served verdict (2026-10-22)',
+    file: '../backend/traders/feed.py',
+    // The cron `traders.feed refresh` exited 1 twice a day from 2026-09-25 to 10-22 with recent=0 / top=101: X moved the
+    // profile timeline out of the flat key stream (`client:VHdlZXQ6…:details … full_text`) into a Relay
+    // GraphQLRequestStream record (`kind:"Result.Ok",value:"<escaped JSON>"`). Measured from the api container with the
+    // module's own httpx transport: HTTP 200, 274 KB — a shape change, not a block. Both readers are kept, the fixtures
+    // are the real 10-22 pages, every run's verdict is STORED (trader_feed_status) and SERVED (board().refresh.note),
+    // GntBoard prints it verbatim and types no "Checked twice a day" of its own, and the cron exits 1 = PARTIAL / 2 =
+    // nothing stored so a dark latest-posts source never again reads as "the whole job failed".
+    checks: (src) => {
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      // 1. both readers, the constant sentence, the status store, the served note, the exit codes.
+      for (const need of ['def _parse_recent_relay(', 'def _parse_recent_keystream(', 'def _parse_recent(html: str, handle',
+        'RECENT_DARK_ERROR = (', 'STATUS_COLL = "trader_feed_status"', 'def store_status(', 'def read_status(',
+        'def refresh_note(', 'def refresh_block(', 'def exit_code(', '"refresh": refresh_block(status, display)']) {
+        if (!src.includes(need)) errs.push(`traders/feed.py must keep ${need}`);
+      }
+      const boardSrc = src.slice(src.indexOf('def board('), src.indexOf('def refresh('));
+      if (boardSrc.includes('fetch(')) errs.push('board() must never fetch — it reads stored posts and the stored verdict');
+      if (!/return _parse_recent_relay\(html, handle\) or _parse_recent_keystream\(html\)/.test(src)) errs.push('_parse_recent must try the Relay record first and the key stream second');
+      // 2. the fixtures are the real pages.
+      for (const f of ['../backend/tests/fixtures/x_profile_GnT_Trades_2026_10_22.html', '../backend/tests/fixtures/x_profile_martinlukkt_2026_10_22.html']) {
+        if (!exists(f)) errs.push(`${f} is missing`);
+      }
+      // 3. the backend tests and their NEGATIVES.
+      const bt = tryRead('../backend/tests/test_trader_feed_recent_shape_2026_10_22.py', 'backend tests');
+      for (const name of ['test_the_real_2026_10_22_page_yields_his_four_posts_of_10_21_and_the_pin',
+        'test_NEGATIVE_the_relay_wrapper_with_no_entries_is_zero_posts_and_NOT_ok',
+        'test_NEGATIVE_somebody_else_s_post_on_his_page_is_not_his',
+        'test_NEGATIVE_the_quoted_USICOfficial_post_inside_his_pin_is_NOT_a_post_of_his',
+        'test_NEGATIVE_no_status_doc_yet_is_said_so_never_a_typed_checked_claim',
+        'test_NEGATIVE_a_dark_source_never_exits_0', 'test_the_crontab_line_is_unchanged_and_its_comment_knows_the_codes']) {
+        if (bt && !bt.includes(name)) errs.push(`test_trader_feed_recent_shape_2026_10_22.py must keep ${name}`);
+      }
+      // 4. the board prints the SERVED verdict and types no claim of its own.
+      const gb = tryRead('src/components/GntBoard.tsx', 'the board');
+      if (gb && !gb.includes('data-testid="gnt-refresh-note"')) errs.push('GntBoard must render the served refresh note');
+      if (gb && !gb.includes('{d.refresh.note}')) errs.push('GntBoard must print refresh.note verbatim');
+      if (gb && /old\. Checked twice a day\./.test(gb)) errs.push('GntBoard still types "Checked twice a day" — that claim is served now');
+      const gt = tryRead('src/components/GntBoard.test.tsx', 'board test');
+      for (const name of ['NEGATIVE: a dark latest-posts source is said on the board', 'NEGATIVE: a payload with no refresh block types NO "checked" claim']) {
+        if (gt && !gt.includes(name)) errs.push(`GntBoard.test.tsx must keep the test "${name}"`);
+      }
+      // 5. the host-mounted crontab: the COMMAND unchanged, the comment knows the codes.
+      const cron = tryRead('../backend/crontab', 'crontab');
+      if (cron && !cron.includes('40     7,17  *    *    *    /usr/local/bin/python -m traders.feed refresh')) errs.push('the traders.feed cron line changed — the host crontab is mounted, not shipped');
+      if (cron && !(cron.includes('rc=1') && cron.includes('rc=2') && cron.includes('refresh.note'))) errs.push('the crontab comment must name rc=1 / rc=2 and refresh.note');
+      // 6. docs.
+      const doc = tryRead('../backend/docs/traders/gnt.md', 'docs');
+      if (doc && !doc.includes('2026-10-22')) errs.push('backend/docs/traders/gnt.md must carry the 2026-10-22 section');
+      // 7. the ✨: FIRST, routed to the tab, the typed claim quoted, UNMEASURED-class wording, Not advice.
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'traders-recent-source-restored-2026-10-22';
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else if (nf) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        if (!e.includes("route: '/chart-maps?tab=gnt'")) errs.push('the 📌 ✨ entry must route to the GnT tab');
+        for (const need of ['“Checked twice a day”', 'served verdict', 'NBIS', 'Not advice']) if (!label.includes(need)) errs.push(`the 📌 ✨ entry must say ${need}`);
+      }
       return errs;
     },
   },

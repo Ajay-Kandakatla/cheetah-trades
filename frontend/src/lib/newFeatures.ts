@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-22: the 📌 tab's latest-posts source (x.com/<handle>) read ZERO posts from the 2026-09-25 07:40 ET run to
+  // 10-22 — X moved the timeline out of the flat key stream into a Relay GraphQLRequestStream record. The cron said so
+  // twice a day (rc=1) and the board kept typing "Checked twice a day". traders/feed.py reads the new record (both
+  // readers kept; fixtures are the real 10-22 pages), every run's verdict is STORED (trader_feed_status) and SERVED
+  // as refresh.note which GntBoard prints verbatim, and the cron exits 1 = PARTIAL / 2 = nothing stored.
+  // UNMEASURED — plumbing, not an edge.
+  { id: 'traders-recent-source-restored-2026-10-22', addedAt: '2026-10-22', route: '/chart-maps?tab=gnt',
+    label: "📌 The GnT tab is tracking again. Since late September the x.com page had changed shape and the tab silently stopped reading Tito's and Martin's newest posts — the board still said “Checked twice a day” while every row was a month old. The reader now understands the new page, both timelines are flowing again (Tito's posts of yesterday on NBIS, TWST, TXG, CRWD and TSLA are in), and the board now prints the served verdict of the last check: when it ran, whether the x.com page answered, and when it last did if not. The next time X changes its page you read it on this board, not in a cron log. Not advice; nothing trades off this list." },
   // Ajay 2026-10-21 ~16:05 ET (both lines verbatim in the label), on the 15:36:15 ET 🚩 gajjala_setup push for NIXX that
   // push_history recorded as sent 3 / failed 0 while the two 🧠 potentials around it (SAIQ 15:11, POLA 16:01) reached his
   // phone. `sent` was only ever the push service accepting the message. Now push/sender stamps a push_id on every device

@@ -42,13 +42,21 @@ speak. Guessing long/short from keywords would be an invention.
 ═══════════════════════════════════════════════════════════════════════════
 WHERE THE DATA COMES FROM — two sources, because neither is enough
 ═══════════════════════════════════════════════════════════════════════════
-  RECENT  https://x.com/<handle>          — his latest ~6 posts, CHRONOLOGICAL.
-          This is the one that carries live ideas. The timeline rides in an
-          undocumented React-stream blob (`client:VHdlZXQ6<b64id>:details ...
-          full_text:"..."`), so it is FRAGILE BY NATURE and X can change it
-          any day. It fails LOUDLY — `ok: False` on the payload and said on
-          the board — rather than quietly going stale, because a tracker that
-          silently stops updating is worse than one that is visibly broken.
+  RECENT  https://x.com/<handle>          — his latest ~5 posts + the pinned one,
+          CHRONOLOGICAL. This is the one that carries live ideas. The timeline
+          rides in the server-rendered page as an undocumented Relay record
+          (`kind:"GraphQLRequestStream.Completed" … result:{kind:"Result.Ok",
+          value:"<escaped JSON>"}` → `profile_user_originals_timeline`), so it
+          is FRAGILE BY NATURE and X can change it any day — and DID: between
+          the 2026-09-24 17:40 ET and 2026-09-25 07:40 ET runs the older
+          key-stream shape (`client:VHdlZXQ6<b64id>:details … full_text:"…"`)
+          vanished and this source read ZERO posts for four weeks. The cron
+          said so twice a day (rc=1) and the board said nothing — it typed
+          "Checked twice a day" over rows that were a month old. Since
+          2026-10-22 BOTH readers are kept (`_parse_recent`), and the verdict
+          of the last refresh is STORED (`trader_feed_status`) and SERVED on
+          the board (`refresh.note`), so the next shape change is said where
+          he reads, not only where nobody does.
 
   TOP     https://syndication.twitter.com/srv/timeline-profile/screen-name/...
           — a stable public JSON blob, ~101 posts, but ENGAGEMENT-RANKED and
@@ -119,6 +127,15 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 TIMEOUT_SEC = 25
 COLL = "gnt_posts"
 KEEP_POSTS = 2000
+# One doc per tracked account: what the LAST refresh found. Read by board().
+STATUS_COLL = "trader_feed_status"
+
+# The one sentence the payload carries when the latest-posts source is dark.
+# A constant so the cron line, the status doc and the test all pin the same
+# words.
+RECENT_DARK_ERROR = ("the recent-post source returned nothing — X may have "
+                     "changed its page shape; this board is NOT tracking his "
+                     "latest posts right now")
 
 # Twitter's snowflake epoch. The tweet id encodes its own creation time, which
 # is how a post gets an exact timestamp out of a stream that carries no
@@ -207,19 +224,108 @@ def _clean(s: str) -> str:
     return " ".join((s or "").split())
 
 
-def _parse_recent(html: str) -> list[dict]:
-    """His latest posts out of the x.com React stream.
+# ── the RECENT page, shape 2 (seen 2026-10-22): a server-rendered Relay record ──
+#   ($R=>$R[19].next($R[21]={kind:"GraphQLRequestStream.Completed",requestId:1,
+#     key:"…{\"screenName\":\"GnT_Trades\"…}",result:$R[22]={kind:"Result.Ok",
+#     value:"{\"data\":{\"user_result_by_screen_name\":…}}"}}))
+# `value` is a JS string literal holding the GraphQL JSON. Several such records
+# ride on one page (finance cards, smart tags, the user lookup); only the one
+# whose JSON carries `entry_id: "tweet-<id>"` entries is the timeline.
+_RELAY_VALUE_RE = re.compile(r'kind:"Result\.Ok",\s*value:"((?:[^"\\]|\\.)*)"', re.S)
+_ENTRY_PREFIX = "tweet-"
 
-    The id rides in the object KEY immediately before the text
-    (`client:VHdlZXQ6<base64 "Tweet:<id>">:details ... full_text:"..."`), which
-    is the only thing tying a body to a timestamp here. Undocumented and
-    fragile on purpose — see the module docstring; the caller reports failure
-    rather than hiding it."""
-    pat = re.compile(
-        r'client:(VHdlZXQ6[A-Za-z0-9+/=]+):details.{0,2000}?full_text:"((?:[^"\\]|\\.)*)"',
-        re.S)
+# ── the RECENT page, shape 1 (2026-09-12 → 2026-09-24): a flat key stream ─────
+#   client:VHdlZXQ6<base64 "Tweet:<id>">:details … full_text:"…"
+_KEYSTREAM_RE = re.compile(
+    r'client:(VHdlZXQ6[A-Za-z0-9+/=]+):details.{0,2000}?full_text:"((?:[^"\\]|\\.)*)"',
+    re.S)
+
+
+def _decode_js_string(lit: str) -> Optional[str]:
+    """A JS string literal's body → text. The escapes X emits are JSON's (it is
+    JSON.stringify output), so json.loads reads it; `\\'` is the one JS-only
+    escape worth tolerating. Anything else → None, never a half-decoded blob."""
+    for cand in (lit, lit.replace("\\'", "'")):
+        try:
+            return json.loads('"' + cand + '"')
+        except ValueError:
+            continue
+    return None
+
+
+def _walk(o):
+    """Every dict in a JSON tree, document order."""
+    stack = [o]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, dict):
+            yield cur
+            stack.extend(reversed(list(cur.values())))
+        elif isinstance(cur, list):
+            stack.extend(reversed(cur))
+
+
+def _tweet_in(entry: dict, tid: str) -> Optional[dict]:
+    """The tweet object of an entry: the dict whose `rest_id` is the entry's own
+    id AND that carries `details`. A quoted post nested inside it has a
+    different rest_id and is someone else's sentence."""
+    for d in _walk(entry):
+        if d.get("rest_id") == tid and isinstance(d.get("details"), dict):
+            return d
+    return None
+
+
+def _parse_recent_relay(html: str, handle: Optional[str] = None) -> list[dict]:
+    """Shape 2. Every `tweet-<id>` entry of every timeline on the page, read as
+    the post of its own tweet object — never a quoted post, never a retweet of
+    somebody else when the author is readable."""
     out, seen = [], set()
-    for m in pat.finditer(html or ""):
+    want = (handle or "").lower()
+    for m in _RELAY_VALUE_RE.finditer(html or ""):
+        text = _decode_js_string(m.group(1))
+        if not text:
+            continue
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            continue
+        for d in _walk(doc):
+            eid = d.get("entry_id")
+            if not (isinstance(eid, str) and eid.startswith(_ENTRY_PREFIX)):
+                continue
+            tid = eid[len(_ENTRY_PREFIX):]
+            if not tid.isdigit() or tid in seen:
+                continue
+            tw = _tweet_in(d, tid)
+            if tw is None:
+                continue
+            det = tw.get("details") or {}
+            body = _clean(det.get("full_text") or "")
+            if not body:
+                continue
+            author = (((((tw.get("core") or {}).get("user_results") or {})
+                        .get("result") or {}).get("core") or {}).get("screen_name") or "")
+            # A post whose author is readable and is NOT the tracked handle is
+            # not his sentence. An unreadable author is kept: unknown is not
+            # "someone else".
+            if want and author and author.lower() != want:
+                log.info("traders.gnt: skipped %s by @%s on @%s's page", tid, author, handle)
+                continue
+            seen.add(tid)
+            comp = ((d.get("content") or {}).get("client_event_info") or {}).get("component")
+            out.append({"id": tid, "text": body, "source": "recent", "shape": "relay",
+                        "author": author or None,
+                        "pinned": comp == "pinned_tweets",
+                        "created_at_ms": det.get("created_at_ms"),
+                        "favorites": (tw.get("counts") or {}).get("favorite_count")})
+    return out
+
+
+def _parse_recent_keystream(html: str) -> list[dict]:
+    """Shape 1. The id rides in the object KEY immediately before the text,
+    which was the only thing tying a body to a timestamp in that stream."""
+    out, seen = [], set()
+    for m in _KEYSTREAM_RE.finditer(html or ""):
         try:
             gid = base64.b64decode(m.group(1)).decode("utf-8", "ignore")
             tid = gid.split(":", 1)[1] if ":" in gid else ""
@@ -229,8 +335,16 @@ def _parse_recent(html: str) -> list[dict]:
         except Exception:                                      # noqa: BLE001,S112
             continue
         seen.add(tid)
-        out.append({"id": tid, "text": text, "source": "recent"})
+        out.append({"id": tid, "text": text, "source": "recent", "shape": "keystream"})
     return out
+
+
+def _parse_recent(html: str, handle: Optional[str] = None) -> list[dict]:
+    """His latest posts out of the x.com page, whichever shape it is in today:
+    the Relay record first (seen 2026-10-22), then the older key stream
+    (2026-09-12 → 09-24). Zero from both is the caller's loud failure —
+    undocumented and fragile on purpose, see the module docstring."""
+    return _parse_recent_relay(html, handle) or _parse_recent_keystream(html)
 
 
 def _parse_top(html: str) -> list[dict]:
@@ -270,7 +384,7 @@ def _get(url: str) -> Optional[str]:
 
 
 def fetch(recent_url: str = RECENT_URL, top_url: str = TOP_URL,
-          getter=None) -> dict:
+          getter=None, handle: Optional[str] = None) -> dict:
     """Both sources, merged. Never raises.
 
     Returns {"posts", "ok", "sources", "errors"}. `ok` is False the moment the
@@ -282,12 +396,11 @@ def fetch(recent_url: str = RECENT_URL, top_url: str = TOP_URL,
     by_id: dict[str, dict] = {}
 
     raw_recent = g(recent_url)
-    fresh = _parse_recent(raw_recent or "")
+    fresh = _parse_recent(raw_recent or "", handle)
     sources["recent"] = len(fresh)
+    recent_shape = fresh[0].get("shape") if fresh else None
     if not fresh:
-        errors.append("the recent-post source returned nothing — X may have "
-                      "changed its page shape; this board is NOT tracking his "
-                      "latest posts right now")
+        errors.append(RECENT_DARK_ERROR)
 
     raw_top = g(top_url)
     top = _parse_top(raw_top or "")
@@ -309,6 +422,7 @@ def fetch(recent_url: str = RECENT_URL, top_url: str = TOP_URL,
                       "cashtags": cashtags(text), "flags": flags(text)})
     posts.sort(key=lambda p: p.get("created_at") or "", reverse=True)
     return {"posts": posts, "ok": bool(fresh), "sources": sources,
+            "recent_shape": recent_shape,
             "errors": errors, "fetched_at": _now().isoformat()}
 
 
@@ -354,6 +468,110 @@ def stored(limit: int = 400, coll=None, trader: Optional[str] = None) -> list[di
     except Exception as exc:                                   # noqa: BLE001
         log.warning("traders.gnt: read failed: %s", exc)
         return []
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# THE VERDICT OF THE LAST REFRESH — stored, so the BOARD can say it
+# ═══════════════════════════════════════════════════════════════════════════
+# For four weeks (2026-09-25 → 10-22) the cron printed `ok=False` twice a day
+# and exited 1 while the board kept typing "Checked twice a day" over rows a
+# month old. The verdict now lives in Mongo, one doc per account, and board()
+# serves it as ONE sentence the frontend prints verbatim.
+def store_status(result: dict, status_coll=None) -> Optional[dict]:
+    """Remember what the last refresh found for ONE account.
+
+    `last_ok_at` survives a dark run: it is when the latest-posts source last
+    answered, which is the date the board prints while the source is dark."""
+    key = (result or {}).get("trader")
+    if not key:
+        return None
+    if status_coll is None:
+        db = _db()
+        if db is None:
+            return None
+        status_coll = db[STATUS_COLL]
+    try:
+        prev = status_coll.find_one({"_id": key}) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("traders.gnt: status read failed for %s: %s", key, exc)
+        prev = {}
+    ok = bool(result.get("ok"))
+    at = result.get("fetched_at") or _now().isoformat()
+    doc = {"_id": key, "handle": result.get("handle"), "at": at, "ok": ok,
+           "stored": int(result.get("stored") or 0),
+           "sources": dict(result.get("sources") or {}),
+           "errors": list(result.get("errors") or []),
+           "recent_shape": result.get("recent_shape"),
+           "last_ok_at": at if ok else prev.get("last_ok_at")}
+    try:
+        status_coll.replace_one({"_id": key}, doc, upsert=True)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("traders.gnt: status write failed for %s: %s", key, exc)
+    return doc
+
+
+def read_status(trader: str, status_coll=None) -> Optional[dict]:
+    if status_coll is None:
+        db = _db()
+        if db is None:
+            return None
+        status_coll = db[STATUS_COLL]
+    try:
+        return status_coll.find_one({"_id": trader})
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("traders.gnt: status read failed for %s: %s", trader, exc)
+        return None
+
+
+def _when(iso: Optional[str]) -> str:
+    """An ISO stamp as he reads clocks: `2026-10-22 08:31 ET`. Unparseable →
+    the raw string, never a typed guess."""
+    if not iso:
+        return "never"
+    try:
+        from zoneinfo import ZoneInfo
+        t = datetime.fromisoformat(str(iso))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return t.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET")
+    except Exception:                                          # noqa: BLE001
+        return str(iso)
+
+
+def refresh_note(status: Optional[dict], display: str = "his") -> str:
+    """ONE sentence on whether this board is actually tracking him, built from
+    the stored verdict of the last refresh. SERVED: the board prints it
+    verbatim and types nothing of its own."""
+    if not status:
+        return ("No refresh recorded yet — the tracker runs twice a day and "
+                "writes its verdict here.")
+    src = status.get("sources") or {}
+    at = _when(status.get("at"))
+    n_recent = int(src.get("recent") or 0)
+    n_top = int(src.get("top") or 0)
+    if status.get("ok"):
+        return (f"Latest posts checked {at}: the x.com page answered with "
+                f"{n_recent} posts and the history source with {n_top}. "
+                f"Checked twice a day.")
+    who = f"{display}'s" if display and display != "his" else "his"
+    history = (f"The history source answered with {n_top} posts, so the names "
+               f"below are {who} history, not what was posted today."
+               if n_top else
+               "The history source returned nothing either, so the names below "
+               "are the stored archive.")
+    return (f"⚠️ NOT tracking {who} latest posts: at the {at} check the x.com "
+            f"page returned no posts (it last answered "
+            f"{_when(status.get('last_ok_at'))}). {history}")
+
+
+def refresh_block(status: Optional[dict], display: str = "his") -> dict:
+    """What board() serves about the last refresh. Same keys every time, so the
+    frontend never branches on a missing field; `note` is the sentence."""
+    st = status or {}
+    return {"at": st.get("at"), "ok": st.get("ok"), "last_ok_at": st.get("last_ok_at"),
+            "stored": st.get("stored"), "sources": st.get("sources") or {},
+            "errors": st.get("errors") or [], "recent_shape": st.get("recent_shape"),
+            "note": refresh_note(status, display)}
 
 
 def age_days(iso: Optional[str], now: Optional[datetime] = None) -> Optional[int]:
@@ -483,20 +701,30 @@ def overlay(rows: list[dict]) -> list[dict]:
     return out
 
 
-def board(limit: int = 400, coll=None, trader: str = "gnt") -> dict:
-    """Everything the tab renders. Reads STORED posts; it never fetches.
+def board(limit: int = 400, coll=None, trader: str = "gnt", status_coll=None) -> dict:
+    """Everything the tab renders. Reads STORED posts and the STORED verdict of
+    the last refresh; it never fetches.
 
     Same rule as every other board here: a page load must not depend on a third
     party answering. The twice-daily cron owns the fetching."""
     from traders import registry as R
     who = R.get(trader) or R.get(R.DEFAULT_KEY) or {}
-    posts = stored(limit=limit, coll=coll, trader=who.get("key", trader))
+    key = who.get("key", trader)
+    db = None
+    if coll is None:
+        db = _db()
+        coll = db[COLL] if db is not None else None
+    if status_coll is None and db is not None:
+        status_coll = db[STATUS_COLL]
+    posts = stored(limit=limit, coll=coll, trader=key) if coll is not None else []
     rows = overlay(tickers(posts))
     fresh = [r for r in rows if r["fresh"]]
     newest = next((p.get("created_at") for p in posts if p.get("created_at")), None)
     handle = who.get("handle") or HANDLE
+    display = who.get("display") or DISPLAY
+    status = read_status(key, status_coll) if status_coll is not None else None
     return {
-        "key": who.get("key"), "handle": handle, "display": who.get("display") or DISPLAY,
+        "key": who.get("key"), "handle": handle, "display": display,
         "profile_url": recent_url(handle),
         "usic": who.get("usic") or USIC_2025, "style": who.get("style"),
         "n_posts": len(posts), "n_tickers": len(rows), "n_fresh": len(fresh),
@@ -506,30 +734,43 @@ def board(limit: int = 400, coll=None, trader: str = "gnt") -> dict:
         "tickers": rows,
         "market_tickers": sorted(MARKET_TICKERS),
         "disclaimer": R.DISCLAIMER,
+        # 2026-10-22: whether the tracker is TRACKING is a served verdict, not
+        # a typed "Checked twice a day".
+        "refresh": refresh_block(status, display),
     }
 
 
-def refresh(coll=None, trader: str = "gnt") -> dict:
-    """Fetch → store, for ONE trader. What the cron calls, twice a day."""
+def refresh(coll=None, trader: str = "gnt", status_coll=None) -> dict:
+    """Fetch → store → record the verdict, for ONE trader. What the cron calls,
+    twice a day."""
     from traders import registry as R
     who = R.get(trader) or {}
     handle = who.get("handle") or HANDLE
-    f = fetch(recent_url=recent_url(handle), top_url=top_url(handle))
-    n = store(f, coll=coll, trader=who.get("key", trader))
-    log.info("traders.feed[%s]: stored %s posts (ok=%s sources=%s)",
-             handle, n, f["ok"], f["sources"])
-    return {"trader": who.get("key", trader), "handle": handle, "stored": n,
-            "ok": f["ok"], "sources": f["sources"], "errors": f["errors"],
-            "fetched_at": f["fetched_at"]}
+    key = who.get("key", trader)
+    if coll is None or status_coll is None:
+        db = _db()
+        if db is not None:
+            coll = coll if coll is not None else db[COLL]
+            status_coll = status_coll if status_coll is not None else db[STATUS_COLL]
+    f = fetch(recent_url=recent_url(handle), top_url=top_url(handle), handle=handle)
+    n = store(f, coll=coll, trader=key) if coll is not None else 0
+    log.info("traders.feed[%s]: stored %s posts (ok=%s sources=%s shape=%s)",
+             handle, n, f["ok"], f["sources"], f.get("recent_shape"))
+    out = {"trader": key, "handle": handle, "stored": n,
+           "ok": f["ok"], "sources": f["sources"], "errors": f["errors"],
+           "recent_shape": f.get("recent_shape"), "fetched_at": f["fetched_at"]}
+    if status_coll is not None:
+        store_status(out, status_coll=status_coll)
+    return out
 
 
-def refresh_all(coll=None) -> dict:
+def refresh_all(coll=None, status_coll=None) -> dict:
     """Every tracked account. One failing account must not stop the others."""
     from traders import registry as R
     out, ok = {}, True
     for t in R.TRADERS:
         try:
-            r = refresh(coll=coll, trader=t["key"])
+            r = refresh(coll=coll, trader=t["key"], status_coll=status_coll)
         except Exception as exc:                               # noqa: BLE001
             log.warning("traders.feed: %s failed: %s", t["key"], exc)
             r = {"trader": t["key"], "ok": False, "stored": 0,
@@ -539,17 +780,47 @@ def refresh_all(coll=None) -> dict:
     return {"ok": ok, "traders": out}
 
 
+def exit_code(all_: dict) -> int:
+    """What the cron exits with.
+
+      0  every account's latest-posts source answered
+      1  PARTIAL: every account stored something, but at least one
+         latest-posts source was dark — the board says so (refresh.note)
+      2  an account stored NOTHING (both sources dead, or an exception)
+
+    Distinct on purpose: for four weeks rc=1 read as "the job failed" while
+    101 history posts were stored every run, and the success was invisible
+    behind the exit code."""
+    tr = (all_ or {}).get("traders") or {}
+    if any(int(r.get("stored") or 0) == 0 for r in tr.values()):
+        return 2
+    return 0 if (all_ or {}).get("ok") else 1
+
+
+def verdict_word(r: dict) -> str:
+    """The word the cron prints per account: ok / PARTIAL / NOTHING STORED."""
+    if r.get("ok"):
+        return "ok"
+    return "PARTIAL" if int(r.get("stored") or 0) > 0 else "NOTHING STORED"
+
+
 if __name__ == "__main__":                                     # pragma: no cover
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "refresh"
     if cmd == "refresh":
         all_ = refresh_all()
         for key, r in all_["traders"].items():
-            print(f"{key}: stored {r.get('stored')} posts, ok={r.get('ok')}, "
-                  f"sources={r.get('sources')}")
+            print(f"{key}: {verdict_word(r)} — stored {r.get('stored')} posts, "
+                  f"sources={r.get('sources')}, recent shape={r.get('recent_shape')}")
             for e in r.get("errors") or []:
                 print(f"  ⚠️  {e}")
-        raise SystemExit(0 if all_["ok"] else 1)
+        rc = exit_code(all_)
+        if rc == 1:
+            print("rc=1 PARTIAL: the history source stored posts; a latest-posts "
+                  "source was dark — the board says so (refresh.note).")
+        elif rc == 2:
+            print("rc=2: an account stored NOTHING this run.")
+        raise SystemExit(rc)
     if cmd == "show":
         b = board(trader=(sys.argv[2] if len(sys.argv) > 2 else "gnt"))
         print(f"{b['display']} (@{b['handle']}) — {b['n_posts']} posts, "

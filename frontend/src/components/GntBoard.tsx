@@ -60,6 +60,16 @@ export type GntTicker = {
   covered?: boolean | null;
   growth?: GntGrowth | null; zone?: GntZone | null;
 };
+/** The SERVED verdict of the last refresh (2026-10-22). `note` is the one
+ *  sentence the board prints — whether the x.com page answered, when, and
+ *  when it last did if not. The board types nothing of its own about it:
+ *  "Checked twice a day" sat on this board through four weeks of a dark
+ *  source (2026-09-25 → 10-22) while every row was a month old. */
+export type GntRefresh = {
+  at?: string | null; ok?: boolean | null; last_ok_at?: string | null;
+  stored?: number | null; sources?: Record<string, number>; errors?: string[];
+  recent_shape?: string | null; note?: string | null;
+};
 export type GntPayload = {
   handle?: string; display?: string; profile_url?: string;
   usic?: { year?: number; division?: string; return_pct?: number; rank?: number;
@@ -67,6 +77,7 @@ export type GntPayload = {
   n_posts?: number; n_tickers?: number; n_fresh?: number; fresh_days?: number;
   newest_post_at?: string | null; newest_age_days?: number | null;
   tickers?: GntTicker[]; disclaimer?: string; error?: string;
+  refresh?: GntRefresh | null;
 };
 
 /** The words found in his post. A chip is EVIDENCE, never a verdict — see the
@@ -208,7 +219,15 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
       <div className="gnt-note">
         <b>Read the sentence, not the ticker.</b> {d?.disclaimer}
         {' '}His {d?.n_posts ?? 0} stored posts give {d?.n_tickers ?? 0} names;
-        {' '}the newest is {ageText(d?.newest_age_days)} old. Checked twice a day.
+        {' '}the newest is {ageText(d?.newest_age_days)} old.
+        {/* 📌 2026-10-22: whether the tracker is TRACKING is the served verdict
+            of the last refresh, printed verbatim — never a typed claim. */}
+        {d?.refresh?.note ? (
+          <span data-testid="gnt-refresh-note"
+                className={d.refresh.ok === false ? 'gnt-err' : undefined}>
+            {' '}{d.refresh.note}
+          </span>
+        ) : null}
       </div>
 
       {u?.note && <div className="gnt-note gnt-dim">⚠️ {u.note}</div>}
