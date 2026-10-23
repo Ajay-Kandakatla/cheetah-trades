@@ -483,6 +483,13 @@ export default function GajjalaBoard() {
   const scanOpen = !!scan && scan.state !== 'closed';
   const asOfServed = scanOpen && typeof scan?.as_of_text === 'string' && scan.as_of_text.trim() ? scan.as_of_text : null;
   const scanningLine = scan?.state === 'scanning' && scan.scanning_text ? scan.scanning_text : scanResp?.text;
+  /* 2026-10-23, Ajay: "why am I not seeing the scan button it hides itself?" / "Can you make the button more promiment
+   * and also why is it disabled". The 🔄 button stays on the strip whenever the owner's label is served — a closed
+   * session included (a tap then prints the served closed line, nothing runs); it is disabled only while a POST is out
+   * or the poll it started runs, and its title then carries the served reason (never an FE word). */
+  const rescanTitle = scanning && scanningLine ? scanningLine
+    : !scanOpen && typeof scan?.as_of_text === 'string' && scan.as_of_text.trim() ? scan.as_of_text
+    : scan?.rescan_title || undefined;
 
   return (
     <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'}>
@@ -495,10 +502,10 @@ export default function GajjalaBoard() {
           : pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
         {/* 2026-10-21 critic fix: the window closed → nothing polls, so no "live" stamp is left behind */}
         {inWindow && cardLive.footer ? <span className="gg-muted" data-testid="gg-live-footer">{cardLive.footer}</span> : null}
-        {isOwner && scanOpen && scan?.rescan_label ? (
+        {isOwner && scan?.rescan_label ? (
           <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
-                  aria-busy={posting ? 'true' : undefined}
-                  title={scan.rescan_title || undefined} onClick={() => void startScan()}>
+                  aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
+                  title={rescanTitle} onClick={() => void startScan()}>
             {scan.rescan_label}
           </button>
         ) : null}

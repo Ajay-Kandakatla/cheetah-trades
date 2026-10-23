@@ -18,7 +18,7 @@ import type { CurrentUser } from '../hooks/useUser';
  * bounded, and gives up at its wait-max; the board it had stays on screen while a pass runs; the 🎯 line prints the
  * served rows and the served words only, on every sub, ahead of the 📈 Track. NEGATIVES: a non-owner or no user never
  * POSTs and sees no 🔄 button or scanning line; reused / closed / refused / 404 / network error never poll; a closed
- * session hides the button; a board from an older API (the hand fixture) renders as before. Small served poll numbers
+ * session keeps the button, enabled, its title the served closed line (2026-10-23 — it hid before); a board from an older API (the hand fixture) renders as before. Small served poll numbers
  * keep the real timers fast. */
 
 let userRet: CurrentUser | null = null;
@@ -390,38 +390,77 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     });
   }
 
-  it('🔄 owner: the served label + title; disabled while scanning (a click then sends nothing)', async () => {
+  it('🔄 owner: the served label; disabled while scanning with the served line as its title + data-scanning (a click then sends nothing)', async () => {
     stub(post('started', { eta_sec: 1, poll_sec: 1, wait_max_sec: 2 }), () => OLD());
     mount();
     const btn = await screen.findByTestId('gg-rescan');
     expect(btn).toHaveTextContent(POT.bull_flag.scan.rescan_label);
-    expect(btn).toHaveAttribute('title', POT.bull_flag.scan.rescan_title);
     await screen.findByTestId('gg-scanning');
     expect(screen.getByTestId('gg-rescan')).toBeDisabled();
+    // 2026-10-23 ("why is it disabled"): the dimmed button says why — the served scanning line, never an FE word.
+    expect(screen.getByTestId('gg-rescan')).toHaveAttribute('title', 'served started line');
+    expect(screen.getByTestId('gg-rescan')).toHaveAttribute('data-scanning', 'true');
     fireEvent.click(screen.getByTestId('gg-rescan'));
     await sleep(50);
     expect(posts()).toHaveLength(1);
   });
 
-  it('🔄 a click when idle → a second POST', async () => {
+  it('🔄 a click when idle → a second POST; idle = the served rescan_title, no data-scanning', async () => {
     stub(post('reused'), () => OLD());
     mount();
     const btn = await screen.findByTestId('gg-rescan');
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(btn).not.toBeDisabled();
+    expect(btn).toHaveAttribute('title', POT.bull_flag.scan.rescan_title);
+    expect(btn).not.toHaveAttribute('data-scanning');
     fireEvent.click(btn);
     await waitFor(() => expect(posts()).toHaveLength(2));
     expect(posts()[1].method).toBe('POST');
   });
 
-  it('NEGATIVE: 🔄 hidden when scan.state is closed — the as-of line falls back to "as of …"', async () => {
-    const closed = () => { const b = OLD(); b.scan = { ...b.scan, state: 'closed' }; return b; };
+  /* 2026-10-23, Ajay: "why am I not seeing the scan button it hides itself?" — it hid whenever scan_block served
+   * state "closed" (out of the pass window). Now it stays, enabled, its title the served closed line; a tap POSTs and
+   * the served closed answer prints (the every-tap rule). The as-of line still falls back to "as of …". */
+  it('🔄 stays on screen when scan.state is closed (2026-10-23) — enabled, its title the served closed line; a tap still POSTs', async () => {
+    const CLOSED_LINE = 'market closed — last pass 15:56 ET 2026-10-17 (served)';
+    const closed = () => { const b = OLD(); b.scan = { ...b.scan, state: 'closed', as_of_text: CLOSED_LINE }; return b; };
     stub(post('closed'), closed);
     mount();
     await screen.findByTestId('gg-tile-AAA');
     await waitFor(() => expect(posts()).toHaveLength(1));
-    expect(screen.queryByTestId('gg-rescan')).toBeNull();
+    const btn = screen.getByTestId('gg-rescan');
+    expect(btn).not.toBeDisabled();
+    expect(btn).toHaveTextContent(POT.bull_flag.scan.rescan_label);
+    expect(btn).toHaveAttribute('title', CLOSED_LINE);
+    expect(btn).not.toHaveAttribute('data-scanning');
     expect(screen.getByTestId('gg-as-of')).toHaveTextContent(`as of ${POT.bull_flag.pass.as_of_et}`);
+    fireEvent.click(btn);
+    await waitFor(() => expect(posts()).toHaveLength(2));
+    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent('served closed line');
+  });
+
+  it('NEGATIVE: no served rescan_label → no button, closed or not', async () => {
+    stub(post('reused'), () => { const b = OLD(); b.scan = { ...b.scan, rescan_label: null }; return b; });
+    mount();
+    await screen.findByTestId('gg-tile-AAA');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(screen.queryByTestId('gg-rescan')).toBeNull();
+    cleanup();
+    stub(post('closed'), () => { const b = OLD(); b.scan = { ...b.scan, state: 'closed', rescan_label: null }; return b; });
+    mount();
+    await screen.findByTestId('gg-tile-AAA');
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(screen.queryByTestId('gg-rescan')).toBeNull();
+  });
+
+  it('NEGATIVE: a non-owner sees no button in a closed session either, and never POSTs', async () => {
+    userRet = GUEST;
+    stub(post('closed'), () => { const b = OLD(); b.scan = { ...b.scan, state: 'closed' }; return b; });
+    mount();
+    await screen.findByTestId('gg-tile-AAA');
+    await sleep(80);
+    expect(posts()).toHaveLength(0);
+    expect(screen.queryByTestId('gg-rescan')).toBeNull();
   });
 
   it('the served scan.note shows; NEGATIVE: none when the note is null', async () => {

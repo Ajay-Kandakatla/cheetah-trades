@@ -200,6 +200,29 @@ Guards: `frontend/src/components/GajjalaBoard.scan.test.tsx` (the describe "🔄
 NEGATIVES, and the three earlier reused tests updated) and the contracts block "🔄 Gajjala scan-now answers every tap
 (2026-10-20)". ✨ `chart-maps-gajjala-scan-now-2026-10-20`.
 
+## 🔄 The button stays on screen (2026-10-23)
+Ajay, on the strip before the open: "why am I not seeing the scan button it hides itself?" and, with a screenshot of
+the greyed button at 09:02:14 ET, "Can you make the button more promiment and also why is it disabled". Two causes,
+both the board's:
+- **Hidden:** `scan_block` serves `state: "closed"` outside the pass window (`PASS_OPEN_ET`–`PASS_CLOSE_ET` on a market
+  day, all day on a closed day) and the board rendered the button only while `scan.state !== 'closed'` — so it vanished
+  every evening and weekend. Now it renders whenever the owner's `rescan_label` is served; a tap in a closed session
+  POSTs and prints the served closed line (the 2026-10-20 every-tap rule); nothing runs. Non-owners still see no button.
+- **Dimmed:** the board disables the button while a POST is out (`aria-busy`) and while the poll it started runs — the
+  on-open POST answers `waiting` whenever a pass already holds the lease (the 5-minute cron pass, or a scan started from
+  elsewhere — the 09:02:10 one that morning), so right after an open the button sits greyed for up to the served
+  `wait_max_sec`. That stays; the title while dimmed is now the served reason (the scanning line), `data-scanning="true"`
+  pulses it slowly (none under reduced motion), and `:disabled` shows a progress cursor.
+- **Prominence:** `.gg-rescan` was a transparent hairline button at 0.76rem — it read as disabled even when idle. Now a
+  solid accent button (`--accent-blue`, white bold label), pinned to the right of its strip row with `margin-left: auto`
+  (it wraps whole on the phone, `white-space: nowrap`).
+
+Guards: `GajjalaBoard.scan.test.tsx` (closed keeps the button, enabled, title = served `as_of_text`, a tap still POSTs
+and prints; the dimmed title = the served scanning line; NEGATIVES: no served label → no button, closed or not; a
+non-owner in a closed session → no button, no POST) and the contracts block "🔄 Gajjala scan button stays on screen
+(2026-10-23)". ✨ `chart-maps-gajjala-scan-button-2026-10-23`. Frontend only — nothing served, scanned, counted or gated
+changed.
+
 ## 🚫 A no-risk A+ never rings · one price grid (2026-10-20)
 Finding (measured in the live Mongo, `gajjala_alerts`): the pushed A+ `GG:2026-10-20|MMA|kiss_fly` (entry bar 11:00 ET)
 carried `trigger 0.31`, `stop 0.31`, `risk_pct 0.0`, `price 0.3101`. The premise that the builder rounds sub-dollar levels to

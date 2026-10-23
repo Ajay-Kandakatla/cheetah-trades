@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-23 ~08:55 ET (both lines verbatim in the label), on the 🚩 Gajjala's strip: the 🔄 button was a hairline
+  // ghost that vanished out of the pass window (scan_block serves state "closed" there and the board hid it) and sat
+  // greyed for up to the served wait-max after every open (the on-open POST answers "waiting" while a pass already holds
+  // the lease — the 5-minute cron pass, or a scan started elsewhere — and the board disables the button until that pass
+  // lands). Frontend only: GajjalaBoard renders the button whenever the owner's label is served (a closed session
+  // included — a tap then prints the served closed line), the title while dimmed is the served reason, .gg-rescan is a
+  // solid accent button. Nothing served, scanned, counted or gated changed; no FE word or number. Pinned by
+  // scripts/contracts.mjs ("🔄 Gajjala scan button stays on screen (2026-10-23)").
+  { id: 'chart-maps-gajjala-scan-button-2026-10-23', addedAt: '2026-10-23', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "🔄 Gajjala’s scan-now button is now a solid button that stays on the strip. You said: “why am I not seeing the scan button it hides itself?” and “Can you make the button more promiment and also why is it disabled”. It hid itself outside the pass window; it is dimmed only while a pass it asked for is still running — hover it for the served reason, the line under the strip says the same." },
   // 2026-10-22: the 📌 tab's latest-posts source (x.com/<handle>) read ZERO posts from the 2026-09-25 07:40 ET run to
   // 10-22 — X moved the timeline out of the flat key stream into a Relay GraphQLRequestStream record. The cron said so
   // twice a day (rc=1) and the board kept typing "Checked twice a day". traders/feed.py reads the new record (both

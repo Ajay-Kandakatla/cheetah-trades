@@ -9716,8 +9716,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9923,8 +9924,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first twelve (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first thirteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10196,8 +10198,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10388,8 +10391,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10479,8 +10483,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10621,8 +10626,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10730,8 +10736,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10773,8 +10780,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10905,8 +10913,9 @@ const CONTRACTS = [
       // 2026-10-21, later again: the 🔎 Gajjala's-in-⌘K ✨ (its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10980,8 +10989,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-global-search-2026-10-21';
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -11088,8 +11098,9 @@ const CONTRACTS = [
       const ID = 'alerts-push-delivery-receipts-2026-10-21';
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11269,8 +11280,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'traders-recent-source-restored-2026-10-22';
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11280,6 +11292,58 @@ const CONTRACTS = [
         if (!e.includes("route: '/chart-maps?tab=gnt'")) errs.push('the 📌 ✨ entry must route to the GnT tab');
         for (const need of ['“Checked twice a day”', 'served verdict', 'NBIS', 'Not advice']) if (!label.includes(need)) errs.push(`the 📌 ✨ entry must say ${need}`);
       }
+      return errs;
+    },
+  },
+  {
+    name: '🔄 Gajjala scan button stays on screen (2026-10-23)',
+    file: 'src/components/GajjalaBoard.tsx',
+    checks(src) {
+      // Ajay 2026-10-23: "why am I not seeing the scan button it hides itself?" / "Can you make the button more promiment and
+      // also why is it disabled". Pinned: (1) the 🔄 button is gated on the owner + the SERVED label only — never on scanOpen /
+      // the closed state; (2) disabled only while a POST is out or the poll it started runs; (3) the dimmed title is the served
+      // scanning line; (4) .gg-rescan is a solid (non-transparent) button whose disabled cursor says progress, pulsing while
+      // the poll runs (none under reduced motion); (5) the ✨ entry is FIRST, routed to the tab, his two lines verbatim, no
+      // digit outside the quotes; (6) the closed-keeps-the-button test and its NEGATIVE stay.
+      const errs = [];
+      const tryRead = (f, what) => { try { return read(f); } catch { errs.push(`cannot read ${f} (${what})`); return ''; } };
+      const i = src.indexOf('data-testid="gg-rescan"');
+      const open = i < 0 ? -1 : src.lastIndexOf('{isOwner', i);
+      const gate = open < 0 ? '' : src.slice(open, i).trim();
+      if (i < 0) errs.push('GajjalaBoard lost the gg-rescan button');
+      else if (!/^\{isOwner && scan\?\.rescan_label \? \(/.test(gate)) errs.push(`the 🔄 button is gated on "${gate.slice(0, 60)}" — the owner + the served label only, never scanOpen`);
+      const tag = i < 0 ? '' : src.slice(i, src.indexOf('>', i));
+      if (tag && !/disabled=\{scanning \|\| posting\}/.test(tag)) errs.push('the 🔄 button is disabled only while a POST is out or its poll runs (scanning || posting)');
+      if (tag && !/data-scanning=\{scanning \? 'true' : undefined\}/.test(tag)) errs.push('the 🔄 button carries data-scanning while its poll runs (the CSS pulse hook)');
+      if (tag && !/title=\{rescanTitle\}/.test(tag)) errs.push('the 🔄 button title is rescanTitle (served words only)');
+      if (!/const rescanTitle = scanning && scanningLine \? scanningLine/.test(src)) errs.push('the dimmed 🔄 title must be the served scanning line');
+      if (!/: !scanOpen && typeof scan\?\.as_of_text === 'string' && scan\.as_of_text\.trim\(\) \? scan\.as_of_text/.test(src)) errs.push('the closed 🔄 title must be the served as_of_text');
+      const css = tryRead('src/styles/gajjala.css', 'the 🔄 button style');
+      const rule = (/\.gg-rescan \{([^}]*)\}/.exec(css) || [])[1] || '';
+      if (css && !/background:\s*var\(--accent-blue/.test(rule)) errs.push('.gg-rescan must be a solid accent button (background: var(--accent-blue, …)), not transparent');
+      if (css && /background:\s*transparent/.test(rule)) errs.push('.gg-rescan is transparent again — he asked for it prominent');
+      if (css && !/\.gg-rescan:disabled \{[^}]*cursor:\s*progress/.test(css)) errs.push('.gg-rescan:disabled must show cursor: progress — a dimmed button is busy, not dead');
+      if (css && !/\.gg-rescan\[data-scanning="true"\] \{ animation: gg-rescan-pulse/.test(css)) errs.push('.gg-rescan[data-scanning="true"] must pulse');
+      if (css && !/prefers-reduced-motion: reduce\) \{ \.gg-rescan\[data-scanning="true"\] \{ animation: none/.test(css)) errs.push('the data-scanning pulse must stop under prefers-reduced-motion');
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-gajjala-scan-button-2026-10-23';
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else if (nf) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        if (!e.includes("route: '/chart-maps?tab=gajjala")) errs.push('the 🔄 ✨ entry must route to the Gajjala tab');
+        for (const h of ['why am I not seeing the scan button it hides itself?', 'Can you make the button more promiment and also why is it disabled']) if (!label.includes(h)) errs.push(`the 🔄 ✨ entry must quote him verbatim: "${h.slice(0, 40)}…"`);
+        if (/\d/.test(label.replace(/“[^”]*”/g, ''))) errs.push('the 🔄 ✨ label types a digit outside his quotes');
+      }
+      const test = tryRead('src/components/GajjalaBoard.scan.test.tsx', 'the scan tests');
+      if (test && !/stays on screen when scan\.state is closed/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the closed-keeps-the-button test');
+      if (test && !/no served rescan_label → no button/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the NEGATIVE no-label test');
+      if (test && !/a non-owner sees no button in a closed session/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the NEGATIVE non-owner-closed test');
       return errs;
     },
   },

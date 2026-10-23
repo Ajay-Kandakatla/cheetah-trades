@@ -737,7 +737,9 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   open HH:MM ET · bars through HH:MM" / "last pass HH:MM ET", "scanning…" while the lease is held) and `enterable` (🎯
   every read of the latest pass whose card state is `aplus`, variant / grade reads included with the card's own words,
   newest entry bar first — A11) on every sub, first in 🧠 Potential; served only while the newest CRON pass
-  (`latest_cron`) is within `STALE_AFTER_SEC` — opens alone never hide a dead cron (A10). Closed bars only. UNMEASURED.
+  (`latest_cron`) is within `STALE_AFTER_SEC` — opens alone never hide a dead cron (A10). Closed bars only. UNMEASURED. 2026-10-23: the board keeps the 🔄 button on the strip in a closed
+  session too (a tap prints the served closed line) and dims it only while the pass it asked for runs, the served reason
+  as its title — `docs/gajjala/gajjala_tab_2026_10_13.md` §🔄 The button stays on screen.
   Doc: `docs/chart_maps/gajjala_on_open_scan_2026_10_15.md`; contracts "🔄 Gajjala scan on open + 🎯 A+ banner
   (2026-10-15)".
 - **🚫 Not eligible at Fidelity** (2026-10-17, Ajay: *"Or just add a tag that not eligible on Fidelity"*) — his own list

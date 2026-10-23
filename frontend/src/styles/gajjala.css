@@ -130,16 +130,25 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-aplus-note { display: inline; color: var(--ink-muted, #94a3b8); font-size: 0.76rem; }
 .gg-aplus-note summary { display: inline; cursor: pointer; }
 .gg-scanning { color: var(--ink-muted, #94a3b8); font-style: italic; }
+/* 🔄 scan now — 2026-10-23, Ajay: "Can you make the button more promiment and also why is it disabled": the one control
+   on the strip is a solid accent button pinned to the right of its row (it wraps whole on the phone), dimmed with a
+   progress cursor only while a POST is out or the poll it started runs — the served reason is its title and the line
+   under the strip; it no longer hides in a closed session (GajjalaBoard). */
 .gg-rescan {
-  font: inherit; font-size: 0.76rem; padding: 0.05rem 0.45rem; cursor: pointer; color: inherit;
-  background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
+  font: inherit; font-size: 0.84rem; font-weight: 600; padding: 0.3rem 0.8rem; cursor: pointer; color: #fff;
+  background: var(--accent-blue, #3b82f6); border: 1px solid transparent; border-radius: 6px; margin-left: auto;
+  white-space: nowrap; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
 }
-.gg-rescan:disabled { opacity: 0.5; cursor: default; }
+.gg-rescan:hover:not(:disabled), .gg-rescan:focus-visible { filter: brightness(1.12); }
+.gg-rescan:disabled { opacity: 0.55; cursor: progress; }
+/* the poll it started is running (data-scanning) — a slow pulse so the dimmed button reads busy, not dead */
+.gg-rescan[data-scanning="true"] { animation: gg-rescan-pulse 1.6s ease-in-out infinite; }
 /* 🔄 the request is out (2026-10-20, Ajay: "This can button has been unresponsive for me"): the button pulses until the
    server answers; every answer then prints its served line under the strip (GajjalaBoard startScan). */
 .gg-rescan[aria-busy="true"] { animation: gg-rescan-pulse 0.9s ease-in-out infinite; }
 @keyframes gg-rescan-pulse { 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .gg-rescan[aria-busy="true"] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .gg-rescan[data-scanning="true"] { animation: none; } }
 
 /* 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.11). Ajay: "also can you track all Gajjals stocks and keep a new tab to
    show wins vs losses. To see a percentage and the ticker." / "We are not looking for winners just in time but when
