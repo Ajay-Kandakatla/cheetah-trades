@@ -151,13 +151,14 @@ import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_BROKER_PATH, GG_CAT_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
-  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggPx, ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
-  type GgTrCategory, type GgTrDay, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
+  type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
+import GajjalaAplusCharts from './GajjalaAplusCharts';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -185,6 +186,8 @@ export default function GajjalaBoard() {
   const view = (params.get(GG_VIEW_PARAM) || '').trim() || null;
   /* ✅ / ❌ the 🏁 category — FE-only too (a client-side filter by the served row bucket): a chip click fetches nothing. */
   const cat = (params.get(GG_CAT_PARAM) || '').trim() || null;
+  /* 🎯 the 🏁 A+ filter — FE-only too (the list swaps to the served `aplus.days`): a chip click fetches nothing. */
+  const kind = (params.get(GG_KIND_PARAM) || '').trim() || null;
 
   const [board, setBoard] = useState<GgBoard | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -471,8 +474,8 @@ export default function GajjalaBoard() {
     setParams(next);
   };
   // A sub click keeps `tab=gajjala` (it is what keeps this board mounted) and
-  // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view + ✅ / ❌ category, which belong to the sub they were picked on.
-  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM]);
+  // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view + ✅ / ❌ category + 🎯 kind, which belong to the sub they were picked on.
+  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM, GG_KIND_PARAM]);
 
   const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null, title: null }));
   const session = board?.session;
@@ -578,7 +581,9 @@ export default function GajjalaBoard() {
                           onSpan={(k) => setParam(GG_SPAN_PARAM, k)} view={view}
                           onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)}
                           cat={cat}
-                          onCat={(k) => setParam(GG_CAT_PARAM, k === board?.track_record?.categories?.[0]?.key ? null : k)} />
+                          onCat={(k) => setParam(GG_CAT_PARAM, k === board?.track_record?.categories?.[0]?.key ? null : k)}
+                          kind={kind}
+                          onKind={(k) => setParam(GG_KIND_PARAM, k === board?.track_record?.kinds?.[0]?.key ? null : k)} />
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
@@ -1044,16 +1049,24 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
 /** 🏁 Track record (2026-10-16) — the served title, the served day picker, the served counts / A+ shadow / 🎯 entries / today
  *  lines, one table per served day (served heads, served rows), the served more / empty lines, the served rule folded
  *  and the served honesty line last. The panel types no word, no number and no percent sign; no tiles, no room POST.
- *  An older API (no `track_record` block) → the served empty note only. */
-function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat }: {
+ *  An older API (no `track_record` block) → the served empty note only.
+ *  🎯 (2026-10-26, BUILD_SPEC25 §3.5 + AMENDMENT A1): on the list view the served A+ chips sit under the view toggle and
+ *  the served A+ block (GajjalaAplusCharts) is drawn ALWAYS when `tr.aplus` is served; the 🎯 chip narrows the ROW list
+ *  only (rows = the served `aplus.days`) and hides the 🧠 counts / ⏪ / more lines while on. The timeline ignores `kind`. */
+function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kind, onKind }: {
   tr: GgTrackRecord | null; emptyNote: string | null; onSpan: (key: string) => void;
   view: string | null; onView: (key: string) => void; cat: string | null; onCat: (key: string) => void;
+  kind: string | null; onKind: (key: string) => void;
 }) {
   if (!tr) return emptyNote ? <div className="cm-note" data-testid="gg-tr-empty">{emptyNote}</div> : null;
   const heads = tr.heads || [];
   const tl = ggTimelineOn(tr, view);
-  const listDays = ggCatDays(tr.days || [], cat, tr.categories);
-  const listCatEmpty = !tl && ggCatOn(cat, tr.categories) && !listDays.length && (tr.days || []).some((d) => !!d.rows?.length);
+  const kindOn = !tl && ggKindOn(kind, tr.kinds);
+  const kindDays = kindOn ? ggKindDays(tr.days || [], kind, tr.kinds, tr.aplus) : (tr.days || []);
+  const cats = kindOn && tr.categories_aplus ? tr.categories_aplus : tr.categories;
+  const listDays = ggCatDays(kindDays, cat, cats);
+  const listCatEmpty = !tl && ggCatOn(cat, cats) && !listDays.length && kindDays.some((d) => !!d.rows?.length);
+  const kindEmpty = kindOn && !tr.aplus && !kindDays.length;
   return (
     <section className="gg-track-record" data-testid="gg-track-record">
       <h3 className="gg-pb-h" data-testid="gg-tr-title">{tr.title}</h3>
@@ -1070,14 +1083,17 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat }: {
         </div>
       ) : null}
       <GgTrViews views={tr.views} on={tl} onView={onView} />
-      <GgTrCats cats={tl ? tr.categories_timeline : tr.categories} cat={cat} onCat={onCat} />
-      {!tl && tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
-      {!tl && tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
+      {!tl ? <GgTrKinds kinds={tr.kinds} kind={kind} onKind={onKind} /> : null}
+      <GgTrCats cats={tl ? tr.categories_timeline : cats} cat={cat} onCat={onCat} />
+      {!tl && !kindOn && tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
+      {!tl && !kindOn && tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
       {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
       {tr.entries_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-entries">{tr.entries_text}</div> : null}
-      {tr.replayed_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-replayed">{tr.replayed_text}</div> : null}
-      {tr.replayed_note ? <div className="gg-muted" data-testid="gg-tr-replayed-note">{tr.replayed_note}</div> : null}
+      {!kindOn && tr.replayed_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-replayed">{tr.replayed_text}</div> : null}
+      {!kindOn && tr.replayed_note ? <div className="gg-muted" data-testid="gg-tr-replayed-note">{tr.replayed_note}</div> : null}
       {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
+      {!tl && tr.aplus ? <GajjalaAplusCharts block={tr.aplus} /> : null}
+      {kindEmpty ? <div className="cm-note" data-testid="gg-tr-kind-empty">{tr.kind_empty_text}</div> : null}
       {listCatEmpty ? <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div> : null}
       {tl ? <GgEntryTimeline tr={tr} cat={cat} /> : listDays.map((d) => (
         <div key={d.date} className="gg-tr-day">
@@ -1099,7 +1115,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat }: {
           </div>
         </div>
       ))}
-      {tr.more_text ? <div className="gg-muted" data-testid="gg-tr-more">{tr.more_text}</div> : null}
+      {!kindOn && tr.more_text ? <div className="gg-muted" data-testid="gg-tr-more">{tr.more_text}</div> : null}
       {tr.empty_text ? <div className="cm-note" data-testid="gg-tr-empty">{tr.empty_text}</div> : null}
       {tr.rule_text ? (
         <details className="gg-tr-rule" data-testid="gg-tr-rule">
@@ -1151,6 +1167,29 @@ function GgTrCats({ cats, cat, onCat }: {
                 className={`cm-phase-btn${c.key === sel ? ' cm-phase-on' : ''}`}
                 onClick={() => onCat(c.key)}>
           {c.text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 🎯 the served A+ filter chips (BUILD_SPEC25 §3.5 — GgTrCats' clone): one house phase button per served chip, its
+ *  served text (the ROW count inside it — never composed here); the selected one is `kind` when it is a served key other
+ *  than the first, else the first (ledger.KIND_KEYS[0]). A click swaps the list client-side — no GET. No served chips → nothing. */
+function GgTrKinds({ kinds, kind, onKind }: {
+  kinds: GgTrKind[] | null | undefined; kind: string | null; onKind: (key: string) => void;
+}) {
+  const items = (kinds || []).filter((k) => k && typeof k.key === 'string' && k.key && typeof k.text === 'string' && k.text);
+  if (!items.length) return null;
+  const sel = ggKindOn(kind, items) ? kind : items[0].key;
+  return (
+    <div className="cm-phase gg-tr-kinds" role="tablist" data-testid="gg-tr-kinds">
+      {items.map((k) => (
+        <button key={k.key} type="button" role="tab" aria-selected={k.key === sel}
+                data-testid={`gg-tr-kind-${k.key}`}
+                className={`cm-phase-btn${k.key === sel ? ' cm-phase-on' : ''}`}
+                onClick={() => onKind(k.key)}>
+          {k.text}
         </button>
       ))}
     </div>

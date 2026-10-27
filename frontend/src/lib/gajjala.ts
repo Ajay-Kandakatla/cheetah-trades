@@ -87,6 +87,9 @@ export const GG_VIEW_TIMELINE = 'timeline';
 /** ✅ / ❌ the 🏁 category chips (the served `categories[].key`, == ledger.CATEGORY_PARAM) — FE-only, never sent on the GET
  *  (DECISIONS11 D11); the first served key (ledger.CATEGORY_KEYS[0], "all") rides no param. */
 export const GG_CAT_PARAM = 'cat';
+/** 🎯 the 🏁 A+ filter chip (the served `kinds[].key`, == ledger.KIND_PARAM) — FE-only, never sent on the GET (ggQuery has
+ *  no kind; BUILD_SPEC25 §3.4); the first served key (ledger.KIND_KEYS[0], "all") rides no param. */
+export const GG_KIND_PARAM = 'kind';
 export const GG_DEFAULT_SUB: GgSub = 'bull_flag';
 export const GG_TFS: ReadonlyArray<GgTf> = ['5m', '15m'];
 
@@ -302,7 +305,33 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   categories?: GgTrCategory[] | null; categories_timeline?: GgTrCategory[] | null;
   category_param?: string | null; category_empty_text?: string | null;
   /** ⏪ the served replayed line + its caveat line (DECISIONS11 D5) — null when no replayed row is on the span. */
-  replayed_text?: string | null; replayed_note?: string | null };
+  replayed_text?: string | null; replayed_note?: string | null;
+  /** 🎯 the served A+ filter chips (ledger._kinds — ROW counts inside the served text, never a %), the param name and the
+   *  served empty line; absent on an older API → no chip row, every row (BUILD_SPEC25 §3.4). */
+  kinds?: GgTrKind[] | null; kind_param?: string | null; kind_empty_text?: string | null;
+  /** 🎯 the ✅ / ❌ chips over the A+ rows only (ledger._categories(aplus rows)) — the chips while 🎯 is on. */
+  categories_aplus?: GgTrCategory[] | null;
+  /** 🎯 the served A+ block (ledger.aplus_block): its own capped rows, pooled counts, sentences and the three charts. */
+  aplus?: GgTrAplus | null };
+/** 🎯 one served A+ filter chip (`track_record.kinds[]` — NOT `views.kinds`, which is a list of row kinds). */
+export type GgTrKind = { key: string; text: string; n: number; n_replayed?: number | null };
+/** 🎯 one served chart item (ledger._aplus_cell items): `key` is a CSS hook, `label` / `text` are served words. */
+export type GgTrApItem = { key: string; label: string; n: number; text: string };
+/** 🎯 one served chart cell (ledger._aplus_cell): every number and sentence served; the FE draws geometry only. */
+export type GgTrApCell = { total: number; decided: number; pct: number | null; loss_pct: number | null; pct_text: string;
+  text: string; short_text: string; items: GgTrApItem[] };
+/** 🎯 one served by-setup row / by-day column — a cell per horizon. */
+export type GgTrApGroup = { key: string; label: string; same: GgTrApCell; next: GgTrApCell };
+export type GgTrApChart =
+  | { key: 'outcomes'; title: string; bars: (GgTrApCell & { key: string; label: string })[] }
+  | { key: 'by_setup'; title: string; rows: GgTrApGroup[] }
+  | { key: 'by_day'; title: string; cols: GgTrApGroup[] };
+/** 🎯 ledger.aplus_block — always served beside the 🏁 list; `days` = its OWN capped A+ rows (the built row dicts). */
+export type GgTrAplus = { title: string; total: number; n_sent: number; n_shadow: number;
+  counts: { same: Record<string, number | null>; next: Record<string, number | null> };
+  counts_text: { same: string; next: string } | null; split_text?: string | null; replayed_note?: string | null;
+  more_text?: string | null; empty_text?: string | null; honesty: string; horizons: { key: string; label: string }[];
+  horizon_default: string; charts: GgTrApChart[]; days: GgTrDay[] };
 /** 🕰️ tape.views_block() — every label SERVED; `kinds` = the row kinds the timeline lists (the FE picks none itself). */
 export type GgTrViews = { param: string; default: string; items: { key: string; label: string }[]; kinds: string[];
   empty_text: string; tape_head: string; tape_toggle: string; tape_toggle_title: string };
@@ -328,6 +357,21 @@ export function ggCatDays(days: GgTrDay[], cat: string | null | undefined,
   return (days || [])
     .map((d) => ({ ...d, rows: (d.rows || []).filter((r) => !!r && r.bucket === cat) }))
     .filter((d) => d.rows.length > 0);
+}
+
+/** 🎯 the A+ filter is on: `kind` is a SERVED chip key other than the first (ggCatOn's rule — the first =
+ *  ledger.KIND_KEYS[0], "all"). No served chips (an older API), a null / unknown `kind` → off (every row). */
+export function ggKindOn(kind: string | null | undefined, kinds: GgTrKind[] | null | undefined): boolean {
+  const keys = (kinds || []).map((k) => (k && typeof k.key === 'string' ? k.key : null));
+  return !!kind && keys.length > 1 && keys.indexOf(kind) > 0;
+}
+
+/** 🎯 the rows the list shows: filter off → `days` unchanged (the same array); on → the served `aplus.days` (its OWN
+ *  capped A+ rows — the 400-row cap of `days` never cuts them), or none when the block is not served. */
+export function ggKindDays(days: GgTrDay[], kind: string | null | undefined, kinds: GgTrKind[] | null | undefined,
+                           aplus: GgTrAplus | null | undefined): GgTrDay[] {
+  if (!ggKindOn(kind, kinds)) return days;
+  return Array.isArray(aplus?.days) ? aplus!.days : [];
 }
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */

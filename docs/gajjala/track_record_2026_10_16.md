@@ -254,3 +254,164 @@ Carried from the critics (defaults as shipped):
 - (d) The 🏁 chip count = today's rows graded so far (`ledger.count_today`); None (no count) on a tracker read fault.
 - (e) After-hours alerts (rang at or after 16:00 ET) use the next session as their same-session column, and the
   session after that as their next-session column.
+
+## 🎯 A+ filter + the win/loss charts (2026-10-26)
+
+BUILD_SPEC25 (+ AMENDMENT A1). Ajay, verbatim (the double space after "a" is his):
+
+- 2026-10-26 ~20:30 ET: "Once done can you give me a  A+ filter in the track record I wanna see how many of the A+ were successful draw some charts to show the winning vs losing percentages of A+ trades please"
+- 2026-10-26 ~20:55 ET: "I need these charts on Track Record page" — this ANSWERS H2: the 🎯 A+ block and its three
+  charts are drawn on the 🏁 list view ALWAYS (filter on or off) whenever `track_record.aplus` is served. The 🕰️
+  timeline view draws none of it.
+
+**UNMEASURED.** A ledger of the A+ alerts graded by GG's own trade math, not a backtest. The 2026-10-14 study of the
+five setups read NULL — no edge over a matched placebo (`docs/gajjala/study_2026_10_13.md`); this block does not
+change that. Small n: 28 decided (same session, 10d, 2026-10-26) — a 95% interval is roughly 39%–73%.
+
+What is served (`ledger.served_block`, the GET never carries `kind`; `tab.py` / `api.py` unchanged):
+
+- `kinds` — the two chips 📋 every alert · 🎯 A+ only, the ROW count inside the served text (`_kind_text`; ⏪ replayed
+  rows counted apart " +r ⏪" on "all"), never a %. `kind_param` = `kind`; `kind_empty_text`.
+- `categories_aplus` — the ✅ / ❌ chips over the A+ rows only (`_categories`), printed while 🎯 is on.
+- `aplus` — always served: `title`, `total`, `n_sent`, `n_shadow`, the **pooled** `counts` (sent + shadow-period A+,
+  one %, tallied by the headline's own thin rule `_tally_into`; % = `_win_pct`), `counts_text` (lead
+  `APLUS_LEADS`), `split_text`, `replayed_note`, `more_text`, `empty_text`, `honesty`, `horizons`, `horizon_default`,
+  `charts`, and its OWN rows `days`.
+- The 🧠 headline (`counts`, `counts_text`, the shadow / entries / ⏪ lines, `days`, `categories`) is byte-identical to
+  4d4058c9 (`PRE_SHA` in `tests/test_gajjala_aplus_filter_2026_10_26.py`); the golden regen was proved additive.
+
+What each chart shows (every label, number and % in them is served; the browser only sizes rectangles):
+
+- **🎯 A+ wins vs losses** (`outcomes`) — one bar per horizon (Same session · Through next session). A bar spans EVERY
+  A+ row of the span (wins, losses, open / flat, no entry, other); its % is of the **decided** rows only (wins /
+  (wins + losses)); `loss_pct` = 100 − pct (one rounding). No entry, open, flat, no risk, thin R and not graded yet are
+  listed in the legend, never in the %.
+- **By setup** (`by_setup`) — one bar per setup that has an A+ row, in `GC.SETUPS` order (never ordered by %), all bars
+  on one scale (the largest served total of the picked horizon).
+- **By alert day** (`by_day`) — one column per alert day, oldest first (a time axis), inside its own scroll box.
+- One served horizon toggle (default `same`) switches by setup + by alert day; local state, never the URL, no fetch.
+- A same-session `split` A+ is in no same count (the existing rule, carried item (c)) — that bar's `total` can be one
+  under the row count; `total` = Σ the counts by design.
+
+The served words (frozen in `ledger.py`, beside the ✅ / ❌ block):
+
+| Name | Served text |
+|---|---|
+| `KIND_PARAM` | `kind` |
+| `KIND_KEYS` | `all` · `aplus` (first = off) |
+| `KIND_LABELS` | 📋 every alert · 🎯 A+ only |
+| `KIND_EMPTY_TEXT` | No 🎯 A+ alert on this span. |
+| `APLUS_LINES` | `live` · `shadow` (⏪ `replayed` out) |
+| `APLUS_TITLE` | 🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED |
+| `APLUS_LEADS` | A+ same session · A+ through next session |
+| `APLUS_SENT_TEXT` | {n} sent to your phone |
+| `APLUS_SHADOW_TEXT` | {n} from the shadow period (never sent) |
+| `APLUS_REPLAYED_NOTE` | ⏪ Replayed rows are not in the 🎯 A+ filter, its counts or its charts — they never rang. |
+| `APLUS_HONESTY` | Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. |
+| `APLUS_CHART_TITLES` | 🎯 A+ wins vs losses · By setup · By alert day |
+| `APLUS_ITEM_LABELS` | wins · losses · open · flat · no entry · other |
+| `NO_DECIDED_TEXT` | no graded entry yet |
+
+Horizon labels = `dict(HEADS)` (never retyped). The honesty sentence is folded under the ⓘ glyph (A1.2) because the
+block now sits on the page in every state.
+
+**The `aplus.days` cap.** On 10d the main list hits `LEDGER_ROWS_MAX` (400, MINE) inside 10-15, so a filter over
+`days` alone would drop 12 of the 42 A+ rows of 2026-10-26. `aplus.days` is the A+ rows grouped by the same
+`_group_days` and cut by the same cap on their own — 42 fit; when rows are cut `more_text` says
+"+k more A+ rows — the counts above cover all N". The counts and the charts always cover every A+ row of the span.
+
+The served read on the live DB, 2026-10-26 ~20:25 ET, span 10d (the served rule; expect it until the 10-27 20:15 grade
+moves NCPL / AUID, both rang after hours and are `pending`):
+
+- 42 A+ rows — 22 sent to your phone · 20 from the shadow period (never sent).
+- Same session 16 wins · 12 losses · 57% won · 7 no entry · 2 open · 1 no risk · 2 thin R (not in the %) · 2 not
+  graded yet. Through next session 17 – 13, 57%.
+- Raw Mongo reads 16 W / 14 L — the two thin-R rows (GP 10-16 💋 shadow, AMRO 10-19 🌀 live, both losses) are out of the
+  % by the existing rule (Q16). Never quote 53%.
+
+Verification recipe (no comment lines in any shell block). Backend, hermetic:
+
+```bash
+/usr/bin/find /Users/ajay/clinet-test/wt-ggaplus/backend -name __pycache__ -type d -prune -exec rm -rf {} +
+docker run --rm --network none --name cheetah-tmp-pytest-ap -v /Users/ajay/clinet-test/wt-ggaplus:/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_gajjala_aplus_filter_2026_10_26.py tests/test_gajjala_ledger.py tests/test_gajjala_ledger_categories.py tests/test_gajjala_ledger_replay.py tests/test_gajjala_ledger_pins.py tests/test_gajjala_broker_flags.py tests/test_gajjala_entry_tape.py tests/test_gajjala_tab.py tests/test_gajjala_source_guard.py tests/test_gajjala_track_record_tab.py
+```
+
+Frontend:
+
+```bash
+cd /Users/ajay/clinet-test/wt-ggaplus/frontend && rtk proxy npx vitest run --reporter=dot && rtk proxy npx tsc --noEmit -p . && rtk proxy node scripts/contracts.mjs
+```
+
+Throwaway api on :8005, the live DB, read-only, outside RTH (the 🏁 GET fetches today's 1-minute bars):
+
+```bash
+cd /Users/ajay/clinet-test/cheetah-market-app
+docker rm -f cheetah-tmp-ap-api >/dev/null 2>&1 || true
+docker compose run -d --rm --no-deps --name cheetah-tmp-ap-api -p 127.0.0.1:8005:8000 -e PYTHONDONTWRITEBYTECODE=1 -e MASSIVE_WS_ENABLED=false -e FINNHUB_POLLER_ENABLED=false -e MAC_OUTBOX_POLL_MS=3600000 -v /Users/ajay/clinet-test/wt-ggaplus/backend:/app api python -c 'import push.mac_stream as m; m._drain_started = True; import chart_maps.gajjala.on_demand as od; od.request = lambda *a, **k: {"state": "refused", "text": "throwaway api — no scan on open"}; import uvicorn; uvicorn.run("main:app", host="0.0.0.0", port=8000)' >/dev/null
+n=0; until [ $n -ge 24 ]; do code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8005/health" 2>/dev/null || true); [ "$code" = "200" ] && break; n=$((n+1)); sleep 5; done; echo "health=$code"
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'db.gajjala_ledger.countDocuments({})'
+curl -s -o /tmp/ap_10d.json -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8005/chart-maps/gajjala?sub=track_record&span=10d"
+curl -s -o /tmp/ap_5d.json -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8005/chart-maps/gajjala?sub=track_record&span=5d"
+curl -s -o /tmp/ap_all.json -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8005/chart-maps/gajjala?sub=track_record&span=all"
+python3 - /tmp/ap_10d.json /tmp/ap_5d.json /tmp/ap_all.json <<'EOF'
+import json, sys
+for p in sys.argv[1:]:
+    tr = json.load(open(p))["track_record"]
+    ap = tr["aplus"]
+    print(p, [k["text"] for k in tr["kinds"]])
+    print(" ", ap["counts_text"], "|", ap["split_text"])
+    for h in ("same", "next"):
+        for k, v in ap["counts"][h].items():
+            if k != "pct":
+                assert v == tr["counts"]["shadow"][h].get(k, 0) + tr["counts"]["entry"][h].get(k, 0), (p, h, k)
+    rows = [r for d in ap["days"] for r in d["rows"]]
+    assert tr["kinds"][1]["n"] == len(rows), p
+    assert not [r for r in rows if r["id"].startswith("REPLAY:")], p
+    ch = {c["key"]: c for c in ap["charts"]}
+    for h in ("same", "next"):
+        o = next(b for b in ch["outcomes"]["bars"] if b["key"] == h) if ch else None
+        if o:
+            for name, groups in (("by_setup", ch["by_setup"]["rows"]), ("by_day", ch["by_day"]["cols"])):
+                for k in ("win", "loss"):
+                    got = sum(i["n"] for g in groups for i in g[h]["items"] if i["key"] == k)
+                    want = sum(i["n"] for i in o["items"] if i["key"] == k)
+                    assert got == want, (p, name, h, k, got, want)
+    print("  ok")
+EOF
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'db.gajjala_ledger.countDocuments({})'
+```
+
+Expect the 2026-10-26 read above until the 10-27 grade; the ledger count unchanged by the GETs. His surface: the
+worktree Vite preview on :5174 (`/api` → :8005, `/api/features/*` + `/api/usage/*` bypassed so his ✨ stays unseen) at
+430 px → `/chart-maps?tab=gajjala&sub=track_record&span=10d`: the A+ block and its three charts under the today line
+with the filter off; tap 🎯 A+ only → zero new GETs, 42 rows, the 🧠 lines hide; ∧ ❌ losers composes; only the
+by-day chart scrolls inside itself. Cleanup by exact name only:
+
+```bash
+docker rm -f cheetah-tmp-ap-api
+```
+
+HIS CALLS (defaults shipped; nothing decided for him):
+
+- **H2 — ANSWERED** 2026-10-26 ~20:55 ET, "I need these charts on Track Record page": the block + charts are drawn
+  ALWAYS on the list view (A1), not only while 🎯 is on. Rule #5: on a phone that is about two screens of charts before
+  the first day table — fold behind the 🎯 chip vs always = his to flip back.
+- H1 Pool sent + shadow in the A+ % (DEFAULT) vs sent-only. 10d same, 2026-10-26: pooled 16–12 **57%** · sent 10–5
+  **67%** · shadow 6–7 **46%** (the 🎯 entries + shadow lines keep showing the split).
+- H3 Three charts (DEFAULT) vs fewer / more; by setup + by alert day one horizon at a time via the served toggle,
+  default "same" (MINE) vs both side by side.
+- H4 The % = wins / (wins + losses); open, flat, no entry, no risk, not graded yet listed, never in it (existing
+  rule); the outcome bar spans EVERY A+ row while its % is of the decided ones.
+- H5 ⏪ replayed rows out of the filter, counts and charts (DEFAULT) vs a third chip.
+- H6 Thin R out of the % (existing Q16): 2 of the 42 (GP 10-16, AMRO 10-19 — both losses); counting them → same
+  16–14 (53%).
+- H7 A per-ticker drill later (not built).
+- H8 A 95% interval beside the % (not built; 16 of 28 → about 39%–73%).
+- H9 Rule #5: three 📋 chip rows now stack (views / kinds / cats) — fold "🎯 A+ only" into the views toggle as a third
+  view instead?
+- H10 The 🧠 headline lines, the ⏪ lines and the list's "+N more rows" hide while 🎯 is on (DEFAULT, the timeline's
+  precedent) vs kept.
+- H11 The 🕰️ timeline ignores `kind` — it already lists A+ only, ⏪ included (DEFAULT).
+- H12 `LEDGER_ROWS_MAX` 400 (MINE) cuts the oldest rows of the unfiltered list and the 🕰️ timeline on 10d / all; the A+
+  list is not cut (`aplus.days`). Exempt A+ / raise the cap = his call.
+- H13 Wording "📋 every alert" / "🎯 A+ only" / "🎯 A+ wins vs losses" / "By alert day" / "{w}W {l}L" (MINE).

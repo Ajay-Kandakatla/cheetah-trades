@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-26 ~20:30 ET + ~20:55 ET (both lines verbatim in the label, the double space after "a" kept), on
+  // 🚩 Gajjala's 🏁 Track record. ledger.served_block (BUILD_SPEC25) now serves `kinds` (📋 every alert / 🎯 A+ only,
+  // ROW counts), `kind_param` "kind", `kind_empty_text`, `categories_aplus` and an always-served `aplus` block: its own
+  // A+ rows (`aplus.days`, live + shadow, ⏪ replayed out, capped by the same LEDGER_ROWS_MAX), the pooled counts tallied by
+  // the SAME thin rule as the headline (`_tally_into`), and three charts (outcomes per horizon, by setup, by alert day) whose
+  // every label, number and % is served. GajjalaAplusCharts draws them as hand SVG (geometry only) on the list view ALWAYS
+  // (AMENDMENT A1 — his second line); `?kind=aplus` narrows the row list only and never rides the GET. The 🧠 headline %
+  // is byte-identical. UNMEASURED — a ledger of the alerts graded by GG's trade math, not a backtest; the 2026-10-14 study
+  // read NULL. Pinned by scripts/contracts.mjs ("🎯 A+ filter + win/loss charts on the 🏁 Track record (2026-10-26)").
+  { id: 'chart-maps-gajjala-aplus-filter-2026-10-26', addedAt: '2026-10-26', route: '/chart-maps?tab=gajjala&sub=track_record',
+    label: "🎯 A+ wins vs losses on 🚩 Gajjala's 🏁 Track record: the charts sit on the page — the outcome bars for the same session and through the next session, by setup, and by alert day — over every A+ alert (sent to your phone, plus the shadow-period ones never sent); one tap on 🎯 A+ only lists just those alerts. You said: “Once done can you give me a  A+ filter in the track record I wanna see how many of the A+ were successful draw some charts to show the winning vs losing percentages of A+ trades please” and “I need these charts on Track Record page”. The % counts decided trades only — no entry, open and thin R are listed, never in it; ⏪ replayed rows stay out. UNMEASURED — a ledger of the alerts graded by GG's trade math, not a backtest; the 2026-10-14 study read no edge." },
   // Ajay 2026-10-26 (verbatim in the label): "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand".
   // Two new rows in the ONE frame table (backend supply_demand/timeframes.py TIMEFRAMES, shortest first): `1min` FIRST
   // ("Today, to the minute" — the 5m_today path at rule 1min: Massive minutes, today from 04:00 ET, ext_hours, the forming

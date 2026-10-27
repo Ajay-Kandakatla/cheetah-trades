@@ -9719,8 +9719,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seventeen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9928,8 +9929,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first fourteen (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first fifteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10203,8 +10205,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10397,8 +10400,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10490,8 +10494,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10634,8 +10639,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10745,8 +10751,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10790,8 +10797,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10924,8 +10932,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11001,8 +11010,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -11111,8 +11121,9 @@ const CONTRACTS = [
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — the FIRST pin widened to the top two, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11294,8 +11305,9 @@ const CONTRACTS = [
       const ID = 'traders-recent-source-restored-2026-10-22';
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11342,8 +11354,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-scan-button-2026-10-23';
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11410,8 +11423,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-support-1min-weekly-frames-2026-10-26';
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11433,6 +11447,204 @@ const CONTRACTS = [
       const ft = tryRead('src/lib/supportLevels.frames1026.test.ts', 'the FE frame tests');
       if (ft && !/'1m' is the one-month WINDOW/.test(ft)) errs.push('supportLevels.frames1026.test.ts lost the NEGATIVE 1m test');
       if (ft && !/'1w' is the one-week WINDOW/.test(ft)) errs.push('supportLevels.frames1026.test.ts lost the NEGATIVE 1w test');
+      return errs;
+    },
+  },
+  {
+    name: '🎯 A+ filter + win/loss charts on the 🏁 Track record (2026-10-26)',
+    file: 'src/components/GajjalaAplusCharts.tsx',
+    checks(charts) {
+      // Ajay 2026-10-26 ~20:30 ET: "Once done can you give me a  A+ filter in the track record I wanna see how many of the
+      // A+ were successful draw some charts to show the winning vs losing percentages of A+ trades please" — then ~20:55 ET
+      // "I need these charts on Track Record page" (BUILD_SPEC25 AMENDMENT A1: the block on the list view ALWAYS).
+      // Pinned: (1) the ✨ is FIRST, routed to the 🏁 sub, quotes BOTH lines verbatim (the double space kept), says
+      // UNMEASURED, no b-word / FORBIDDEN_WORDS; (2) ledger.py carries the §3.1 frozen words, served_block serves the five
+      // keys, _aplus_cell's % is _win_pct's, _kind_text types no %; (3) lib/gajjala.ts: GG_KIND_PARAM 'kind', ggQuery names
+      // no kind (never on the GET), ggKindOn / ggKindDays exported; (4) GajjalaBoard imports GG_KIND_PARAM, pickSub (ONE
+      // line) drops it, mounts <GgTrKinds and <GajjalaAplusCharts, GgTrKinds + TrackRecordPanel type no word; (5) the charts
+      // file is geometry only (no number formatting, no %, no fetch / URL, no letter or digit in JSX text, every literal a
+      // house token, no outcome word); (6) .gg-ap carries min-width: 0 (430 px); (7) the doc section + SPECS bullet and the
+      // tests exist. Every check reads the real file and fails on a removed key. UNMEASURED — the 2026-10-14 study read NULL.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const HIS = [
+        'Once done can you give me a  A+ filter in the track record I wanna see how many of the A+ were successful draw some charts to show the winning vs losing percentages of A+ trades please',
+        'I need these charts on Track Record page',
+      ];
+      const ID = 'chart-maps-gajjala-aplus-filter-2026-10-26';
+      const B_WORD = /bounc|fake/i;
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const literalsOf = (code) => [
+        ...[...code.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map((m) => ({ s: m[1] ?? m[2] ?? m[3], jsx: false })),
+        ...[...code.matchAll(/>([^<>{}\n]+)</g)].map((m) => ({ s: m[1], jsx: true })),
+        // JSX text beside an expression child: `{x} word</tag>` and `<tag>word {x}`
+        ...[...code.matchAll(/\}([^<>{}()=;?:&|]+)<\//g)].map((m) => ({ s: m[1], jsx: true })),
+        ...[...code.matchAll(/>([^<>{}()=;?:&|]+)\{/g)].map((m) => ({ s: m[1], jsx: true })),
+      ].map((x) => ({ ...x, s: x.s.replace(/\$\{[^}]*\}/g, '').replace(/\b(?:gg|cm)-[\w-]*/g, ' ').trim() }));
+      const OUTCOME = /\b(?:win|wins|loss|losses|won|lost|decided|entry|open|flat|other|setup|session|day)\b/i;
+
+      // 1. ✨ FIRST, both lines verbatim, UNMEASURED, no b-word / forecast word.
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else if (nf) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        if (!e.includes("route: '/chart-maps?tab=gajjala&sub=track_record'")) errs.push('the 🎯 ✨ entry must route to the 🏁 Track record sub');
+        if (!e.includes("addedAt: '2026-10-26'")) errs.push('the 🎯 ✨ entry must be dated 2026-10-26');
+        for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`the 🎯 ✨ entry must quote him verbatim (double space kept): “${h.slice(0, 40)}…”`);
+        if (!label.includes('UNMEASURED')) errs.push('the 🎯 ✨ entry must say UNMEASURED');
+        if (B_WORD.test(label)) errs.push('the 🎯 ✨ entry says bounce / fake — reversal, never bounce');
+        let forbidden = [];
+        try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+        const rest = label.replace(/“[^”]*”/g, '');
+        for (const w of forbidden) if (rest.toLowerCase().includes(w.toLowerCase())) errs.push(`the 🎯 ✨ entry says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+      }
+
+      // 2. ledger.py — the frozen words (§3.1), the five served keys, ONE % helper, no % in the chip text.
+      const lg = tryRead('../backend/chart_maps/gajjala/ledger.py', 'the 🏁 ledger');
+      const assign = (name) => {
+        const m = new RegExp(`^${name} = ([\\s\\S]*?)\\n(?=\\S)`, 'm').exec(lg);
+        return m ? m[1].replace(/#[^\n"]*$/gm, '').trim() : null;
+      };
+      const strs = (rhs) => [...(rhs || '').matchAll(/"([^"\n]*)"/g)].map((m) => m[1]);
+      const WORDS = {
+        KIND_PARAM: ['kind'],
+        KIND_KEYS: ['all', 'aplus'],
+        KIND_LABELS: ['all', '📋 every alert', 'aplus', '🎯 A+ only'],
+        KIND_EMPTY_TEXT: ['No 🎯 A+ alert on this span.'],
+        APLUS_TITLE: ["🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED"],
+        APLUS_LEADS: ['same', 'A+ same session', 'next', 'A+ through next session'],
+        APLUS_SENT_TEXT: ['{n} sent to your phone'],
+        APLUS_SHADOW_TEXT: ['{n} from the shadow period (never sent)'],
+        APLUS_REPLAYED_NOTE: ['⏪ Replayed rows are not in the 🎯 A+ filter, its counts or its charts — they never rang.'],
+        APLUS_CHART_KEYS: ['outcomes', 'by_setup', 'by_day'],
+        APLUS_CHART_TITLES: ['outcomes', '🎯 A+ wins vs losses', 'by_setup', 'By setup', 'by_day', 'By alert day'],
+        APLUS_ITEM_LABELS: ['win', 'wins', 'loss', 'losses', 'open', 'open', 'flat', 'flat', 'no_entry', 'no entry', 'other', 'other'],
+        NO_DECIDED_TEXT: ['no graded entry yet'],
+      };
+      const HONESTY = "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.";
+      if (lg) {
+        for (const [name, want] of Object.entries(WORDS)) {
+          const rhs = assign(name);
+          if (rhs == null) { errs.push(`ledger.py lost ${name} (BUILD_SPEC25 §3.1 frozen word)`); continue; }
+          if (strs(rhs).join(' | ') !== want.join(' | ')) errs.push(`ledger.${name} drifted: ${strs(rhs).join(' | ')} — frozen ${want.join(' | ')}`);
+        }
+        if (assign('APLUS_LINES') !== '(LINES[0], LINES[1])') errs.push('ledger.APLUS_LINES must be (LINES[0], LINES[1]) — live + shadow, ⏪ replayed out');
+        const hon = assign('APLUS_HONESTY');
+        if (hon == null) errs.push('ledger.py lost APLUS_HONESTY');
+        else if (strs(hon).join('') !== HONESTY) errs.push('ledger.APLUS_HONESTY drifted from the BUILD_SPEC25 §3.1 text');
+        const defBody = (name) => {
+          const a = lg.indexOf(`\ndef ${name}(`);
+          if (a < 0) return null;
+          const m = /\n(?:def |class |__all__|[A-Z_]+ = )/.exec(lg.slice(a + 1));
+          return lg.slice(a, m ? a + 1 + m.index : undefined);
+        };
+        const sb = defBody('served_block');
+        if (sb == null) errs.push('ledger.py lost served_block');
+        else {
+          for (const need of ['"kinds": _kinds(', '"kind_param": KIND_PARAM', '"kind_empty_text": KIND_EMPTY_TEXT', '"categories_aplus": _categories(', '"aplus": aplus_block(']) {
+            if (!pyCode(sb).includes(need)) errs.push(`served_block must serve ${need.split(':')[0]} (BUILD_SPEC25 §3.2) — missing ${need}`);
+          }
+          if (!/_tally_into\(/.test(pyCode(sb))) errs.push('served_block must tally through _tally_into — the thin rule stays ONE');
+        }
+        const cell = defBody('_aplus_cell');
+        if (cell == null) errs.push('ledger.py lost _aplus_cell');
+        else {
+          if (!/_win_pct\(/.test(pyCode(cell))) errs.push('_aplus_cell must take its % from _win_pct( — never a second % rule');
+          if (!/100 - pct/.test(pyCode(cell))) errs.push('_aplus_cell loss_pct must be 100 - pct (one rounding)');
+        }
+        const kt = defBody('_kind_text');
+        if (kt == null) errs.push('ledger.py lost _kind_text');
+        else if (/%/.test(pyCode(kt).replace(/"""[\s\S]*?"""/g, ''))) errs.push('_kind_text types a % — the chips carry ROW counts, never a %');
+        for (const n of ['_tally_into', 'is_aplus_row', '_aplus_counts', '_group_days', '_kinds', '_aplus_charts', 'aplus_block']) {
+          if (defBody(n) == null) errs.push(`ledger.py lost ${n} (BUILD_SPEC25 §3.2)`);
+        }
+      }
+
+      // 3. lib/gajjala.ts — the FE-only param, never on the GET.
+      const gj = tryRead('src/lib/gajjala.ts', 'the gajjala lib');
+      if (gj && !/^export const GG_KIND_PARAM = 'kind';$/m.test(gj)) errs.push("lib/gajjala.ts must export const GG_KIND_PARAM = 'kind' (== ledger.KIND_PARAM)");
+      const gq = (/export function ggQuery\([\s\S]*?\n\}\n/.exec(gj) || [''])[0];
+      if (gj && !gq) errs.push('lib/gajjala.ts lost ggQuery');
+      else if (/kind/i.test(tsCode(gq))) errs.push('ggQuery names kind — the 🎯 filter never rides the GET (one cache, no GET per tap)');
+      for (const fn of ['ggKindOn', 'ggKindDays']) if (gj && !new RegExp(`^export function ${fn}\\(`, 'm').test(gj)) errs.push(`lib/gajjala.ts must export function ${fn}(`);
+
+      // 4. GajjalaBoard — the import, pickSub drops kind, the two mounts, no typed word.
+      const board = tryRead('src/components/GajjalaBoard.tsx', 'the board');
+      const imp = (/import \{([^}]*)\} from '\.\.\/lib\/gajjala';/.exec(board) || [])[1] || '';
+      if (board && !/\bGG_KIND_PARAM\b/.test(imp)) errs.push('GajjalaBoard must import GG_KIND_PARAM from ../lib/gajjala');
+      const ps = (/const pickSub = [^\n]*/.exec(board) || [''])[0];
+      if (board && !ps) errs.push('GajjalaBoard lost the ONE-line pickSub');
+      else if (board && !/\bGG_KIND_PARAM\b/.test(ps)) errs.push('pickSub must drop GG_KIND_PARAM — a sub click clears the 🎯 filter');
+      for (const tag of ['<GgTrKinds ', '<GajjalaAplusCharts ']) if (board && !board.includes(tag)) errs.push(`GajjalaBoard must mount ${tag.trim()} …/>`);
+      if (board && !/\{!tl && tr\.aplus \? <GajjalaAplusCharts block=\{tr\.aplus\} \/> : null\}/.test(board)) errs.push('the A+ block must be drawn on the list view whenever tr.aplus is served (A1.1), never on the 🕰️ timeline');
+      const fnBody = (name) => {
+        const a = board.indexOf(`\nfunction ${name}(`);
+        if (a < 0) return null;
+        const e = board.indexOf('\n}\n', a + 1);
+        return board.slice(a, e < 0 ? undefined : e);
+      };
+      const HOUSE = new Set(['', 'string', 'button', 'tab', 'tablist', 'true', 'false']);
+      for (const name of ['GgTrKinds', 'TrackRecordPanel']) {
+        const b = fnBody(name);
+        if (board && b == null) { errs.push(`GajjalaBoard lost function ${name}(`); continue; }
+        for (const { s, jsx } of literalsOf(tsCode(b || ''))) {
+          if (jsx ? /[\p{L}\p{N}]/u.test(s) : !HOUSE.has(s)) errs.push(`${name} types "${s}" — every 🎯 word / count is served by ledger.py`);
+        }
+      }
+
+      // 5. GajjalaAplusCharts.tsx — geometry only.
+      const code = tsCode(charts).split('\n').filter((l) => !/^\s*import\s/.test(l)).join('\n');
+      const bad = /toFixed|toLocaleString|Intl\.|%|fetch\(|useSearchParams|setParams/.exec(code);
+      if (bad) errs.push(`GajjalaAplusCharts formats or fetches ("${bad[0]}") — geometry only, every number served`);
+      const ALLOWED = new Set(['', 'none', 'img', 'tab', 'tablist', 'true', 'false', '0 0']);
+      for (const { s, jsx } of literalsOf(code)) {
+        if (jsx && /[\p{L}\p{N}]/u.test(s)) errs.push(`GajjalaAplusCharts types JSX text "${s}" — every label is served`);
+        if (!jsx && !ALLOWED.has(s)) errs.push(`GajjalaAplusCharts types the literal "${s}" — only house tokens (${[...ALLOWED].map((x) => `'${x}'`).join(', ')})`);
+        if (OUTCOME.test(s)) errs.push(`GajjalaAplusCharts types an outcome word "${s}" — served by ledger.py`);
+      }
+      if (!/export default function GajjalaAplusCharts\(/.test(charts)) errs.push('GajjalaAplusCharts.tsx lost its default export');
+      if (!/data-testid="gg-ap-honesty"/.test(charts)) errs.push('GajjalaAplusCharts lost the folded honesty (gg-ap-honesty, A1.2)');
+
+      // 6. 430 px — the block may shrink.
+      const css = tryRead('src/styles/gajjala.css', 'the gajjala styles');
+      const apRule = (/(?:^|\n)\.gg-ap\s*\{([^}]*)\}/.exec(css) || [])[1];
+      if (css && apRule == null) errs.push('gajjala.css lost the .gg-ap rule');
+      else if (css && !/min-width:\s*0\b/.test(apRule)) errs.push('.gg-ap must carry min-width: 0 (his 430 px phone)');
+
+      // 7. the doc section, the SPECS bullet under the 🏁 header (not renamed), the tests.
+      const doc = tryRead('../docs/gajjala/track_record_2026_10_16.md', 'the 🏁 doc');
+      const sec = doc.indexOf('\n## 🎯 A+ filter + the win/loss charts (2026-10-26)\n');
+      if (doc && sec < 0) errs.push('docs/gajjala/track_record_2026_10_16.md lacks "## 🎯 A+ filter + the win/loss charts (2026-10-26)"');
+      else if (doc) {
+        const body = doc.slice(sec);
+        for (const h of HIS) if (!body.includes(`"${h}"`)) errs.push(`the 🎯 doc section must quote him verbatim: "${h.slice(0, 40)}…"`);
+        if (!/H2 — ANSWERED/.test(body)) errs.push('the 🎯 doc section must record H2 as ANSWERED (A1.5)');
+        if (!body.includes('UNMEASURED')) errs.push('the 🎯 doc section must say UNMEASURED');
+        for (const blk of body.match(/```bash\n[\s\S]*?```/g) || []) if (/^\s*#/m.test(blk.replace(/^```bash\n/, ''))) errs.push('the 🎯 doc section has a # line inside a shell block (his zsh)');
+      }
+      const specs = tryRead('../SPECS.md', 'SPECS');
+      const hdr = specs.indexOf("### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)");
+      if (specs && hdr < 0) errs.push('SPECS.md lost the 🏁 Track record header (never renamed)');
+      else if (specs) {
+        const nx = specs.indexOf('\n### ', hdr + 1);
+        const part = specs.slice(hdr, nx < 0 ? undefined : nx);
+        if (!part.includes('- **🎯 A+ filter + win/loss charts** (2026-10-26, Ajay: *"Once done can you give me a  A+')) errs.push('SPECS.md lacks the 🎯 A+ bullet under the 🏁 Track record header');
+        for (const need of [ID, '🎯 A+ filter + win/loss charts on the 🏁 Track record', 'UNMEASURED']) if (!part.replace(/\s*\n\s*/g, ' ').includes(need)) errs.push(`the SPECS 🎯 bullet must name ${need}`);
+      }
+      const bt = tryRead('../backend/tests/test_gajjala_aplus_filter_2026_10_26.py', 'the backend 🎯 tests');
+      if (bt && (bt.match(/def test_NEGATIVE_|def test_\w*NEGATIVE/g) || []).length < 5) errs.push('test_gajjala_aplus_filter_2026_10_26.py lost its NEGATIVE tests');
+      const gt = tryRead('src/components/GajjalaBoard.aplus_golden.test.tsx', 'the 🎯 golden test');
+      if (gt && !/fails, never skips/.test(gt)) errs.push('GajjalaBoard.aplus_golden.test.tsx lost the never-skip golden guard');
+      tryRead('src/components/GajjalaAplusCharts.test.tsx', 'the chart tests');
+      tryRead('src/components/GajjalaBoard.aplus.test.tsx', 'the 🎯 board tests');
       return errs;
     },
   },

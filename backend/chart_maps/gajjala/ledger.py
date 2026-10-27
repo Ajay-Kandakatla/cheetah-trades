@@ -950,6 +950,31 @@ CATEGORY_LABELS = {"all": "📋 all", "win": "✅ winners", "loss": "❌ losers"
 CATEGORY_PARAM = "cat"
 CATEGORY_EMPTY_TEXT = "No row in this category on this span."
 
+# 🎯 Ajay 2026-10-26 (BUILD_SPEC25): "Once done can you give me a  A+ filter in the track record I wanna see how many of
+# the A+ were successful draw some charts to show the winning vs losing percentages of A+ trades please" — FROZEN words
+# (§3.1). The A+ rows pool the sent (live) and the shadow line in ONE % of their own; the 🧠 headline % is unchanged; the
+# ⏪ replayed rows never rang and stay out. ROW counts tallied by the headline's own thin rule (_tally_into). UNMEASURED.
+KIND_PARAM = "kind"
+KIND_KEYS = ("all", "aplus")                                                               # first = off
+KIND_LABELS = {"all": "📋 every alert", "aplus": "🎯 A+ only"}
+KIND_EMPTY_TEXT = "No 🎯 A+ alert on this span."
+APLUS_LINES = (LINES[0], LINES[1])
+APLUS_TITLE = "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED"
+APLUS_LEADS = {"same": "A+ same session", "next": "A+ through next session"}
+APLUS_SENT_TEXT = "{n} sent to your phone"
+APLUS_SHADOW_TEXT = "{n} from the shadow period (never sent)"
+APLUS_REPLAYED_NOTE = "⏪ Replayed rows are not in the 🎯 A+ filter, its counts or its charts — they never rang."
+APLUS_HONESTY = ("Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own "
+                 "line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small "
+                 "n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the "
+                 "five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this "
+                 "record does not change that.")
+APLUS_CHART_KEYS = ("outcomes", "by_setup", "by_day")
+APLUS_CHART_TITLES = {"outcomes": "🎯 A+ wins vs losses", "by_setup": "By setup", "by_day": "By alert day"}
+APLUS_ITEM_LABELS = {"win": "wins", "loss": "losses", "open": "open", "flat": "flat", "no_entry": "no entry",
+                     "other": "other"}
+NO_DECIDED_TEXT = "no graded entry yet"
+
 
 def bucket_of(same_state: Optional[str], next_state: Optional[str], next_due: bool = True) -> str:
     """D11 + BUILD_SPEC11 C8 as modified by AMENDMENTS11 F7 — the row's category from its two SERVED cell states, total:
@@ -1303,14 +1328,18 @@ def _wl(c: dict, pct: bool = True) -> str:
     if not pct:
         return s
     p = _win_pct(c)
-    return s + " · " + (f"{p}% won" if p is not None else "no graded entry yet")
+    return s + " · " + (f"{p}% won" if p is not None else NO_DECIDED_TEXT)
 
 
-def _counts_text(c: dict, h: str, provisional: bool) -> str:
+def _counts_text(c: dict, h: str, provisional: bool, lead: Optional[str] = None) -> str:
+    """W4 / W4n — `lead` (🎯 BUILD_SPEC25: APLUS_LEADS[h]) replaces "Same session" / "Through next session"; the default
+    (None) is the headline's own line, byte for byte."""
     if h == "same":
-        s = f"Same session: {_wl(c)} · {c['no_entry']} no entry · {c['open']} open" + _extras(c, h)
+        head = "Same session" if lead is None else lead
+        s = f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['open']} open" + _extras(c, h)
         return s + (" · today not final" if provisional else "")
-    return f"Through next session: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)  # W4n
+    head = "Through next session" if lead is None else lead
+    return f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)  # W4n
 
 
 def _line_text(head: str, cs: dict, cn: dict, pct: bool = True, pending_text: str = "not graded yet") -> str:
@@ -1357,6 +1386,159 @@ def _empty_text(span_k: str, sessions: list) -> str:
     if span_k == "10d":
         return f"No Gajjala alert rang in the last {GC.LEDGER_SPAN_SESSIONS_LONG} sessions."
     return "No Gajjala alert on file yet."                                                              # W15
+
+
+def _tally_into(c: dict, state: str, thin: bool) -> None:
+    """THE thin rule (E4), ONE place: a thin-R row's win / loss / open / flat / no entry counts under `thin` (out of
+    the %); any other state counts under its own key when the column has one (a same-session split has none)."""
+    if thin and state in ("win", "loss", "open", "flat", "no_entry"):
+        c["thin"] += 1
+    elif state in c:
+        c[state] += 1
+
+
+def _group_days(rows: list, s_iso: str, is_today: bool) -> tuple:
+    """(days, served_n) — the rows by alert date, newest first (W13 label, `more_n`), capped at LEDGER_ROWS_MAX rows
+    in all (the oldest cut first). served_block's `days` AND the 🎯 `aplus.days` (BUILD_SPEC25)."""
+    days, served_n = [], 0
+    by_day: dict = {}
+    for r in rows:
+        by_day.setdefault(r["date"], []).append(r)
+    for d_iso in sorted(by_day, reverse=True):
+        room = max(0, int(GC.LEDGER_ROWS_MAX) - served_n)
+        part = by_day[d_iso][:room]
+        if not part:
+            continue
+        served_n += len(part)
+        d = _as_date(d_iso)
+        label = f"{d:%a} {d_iso}" + (" · today" if d_iso == s_iso and is_today else "")                # W13
+        more = len(by_day[d_iso]) - len(part)
+        days.append({"date": d_iso, "label": label, "more_n": more or None, "rows": part})
+    return days, served_n
+
+
+# ── 🎯 A+ filter + the win / loss charts (Ajay 2026-10-26, BUILD_SPEC25 §3.2) ───────────────────────────────────────
+def is_aplus_row(r: dict) -> bool:
+    """A BUILT row of the 🎯 filter: an A+ on the live (sent) or the shadow line — never a ⏪ replayed one."""
+    return r.get("kind") == KINDS[1] and r.get("line") in APLUS_LINES
+
+
+def _aplus_counts(rows: list) -> dict:
+    """{h: counts} over the BUILT A+ rows, tallied from their served cell states by the headline's own thin rule."""
+    c = {h: _counts_blank(h) for h in GC.LEDGER_HORIZONS}
+    for r in rows:
+        for h in GC.LEDGER_HORIZONS:
+            _tally_into(c[h], r[h]["state"], bool(r.get("thin_text")))
+    for h in GC.LEDGER_HORIZONS:
+        c[h]["pct"] = _win_pct(c[h])
+    return c
+
+
+def _kind_text(key: str, n: int, n_replayed: int = 0) -> str:
+    """The kind chip's served text, the ROW count inside it — never a %."""
+    return f"{KIND_LABELS[key]} {int(n)}" + (f" +{int(n_replayed)} ⏪" if n_replayed else "")
+
+
+def _kinds(shown: list, ap_shown: list) -> list:
+    """The two kind chips over the SERVED rows: "all" (the ⏪ replayed rows counted apart) · "aplus" (aplus.days)."""
+    r_n = sum(1 for r in shown if r.get("line") == LINES[2])
+    n = len(shown) - r_n
+    return [{"key": KIND_KEYS[0], "text": _kind_text(KIND_KEYS[0], n, r_n), "n": n, "n_replayed": r_n},
+            {"key": KIND_KEYS[1], "text": _kind_text(KIND_KEYS[1], len(ap_shown)), "n": len(ap_shown),
+             "n_replayed": 0}]
+
+
+def _aplus_cell(c: dict, h: str, detail: bool) -> dict:
+    """One horizon's served chart cell from a counts dict: {total, decided, pct, loss_pct, pct_text, text, short_text,
+    items}. `total` = Σ the counts (pct excluded); the % is of the decided rows only; loss_pct = 100 − pct (one
+    rounding). items: win + loss ALWAYS, the rest only when n > 0; Σ items.n == total."""
+    total = sum(int(v) for k, v in c.items() if k != "pct")
+    w, lo = int(c["win"]), int(c["loss"])
+    decided = w + lo
+    pct = _win_pct(c)
+    loss_pct = None if pct is None else 100 - pct
+    pct_text = f"{pct}% won · {decided} decided" if pct is not None else NO_DECIDED_TEXT
+    k = total - w - lo
+    text = _wl(c) + (f" · {k} other" if k > 0 else "")
+
+    def item(key, n, txt):
+        return {"key": key, "label": APLUS_ITEM_LABELS[key], "n": int(n), "text": txt}
+
+    items = [item("win", w, _plural(w, "win", "wins")
+                  + (f" ({pct}% of the {decided} decided)" if detail and pct is not None else "")),
+             item("loss", lo, _plural(lo, "loss", "losses")
+                  + (f" ({loss_pct}% of the {decided} decided)" if detail and loss_pct is not None else ""))]
+    if detail:
+        mid_k = "open" if h == GC.LEDGER_HORIZONS[0] else "flat"
+        mid, ne = int(c[mid_k]), int(c["no_entry"])
+        other = total - w - lo - mid - ne
+        if mid > 0:
+            items.append(item(mid_k, mid, f"{mid} {APLUS_ITEM_LABELS[mid_k]}"))
+        if ne > 0:
+            items.append(item("no_entry", ne, f"{ne} {APLUS_ITEM_LABELS['no_entry']}"))
+        if other > 0:
+            items.append(item("other", other, f"{other} {APLUS_ITEM_LABELS['other']}" + _extras(c, h)))
+    elif k > 0:
+        items.append(item("other", k, f"{k} {APLUS_ITEM_LABELS['other']}"))
+    return {"total": total, "decided": decided, "pct": pct, "loss_pct": loss_pct, "pct_text": pct_text,
+            "text": text, "short_text": f"{w}W {lo}L", "items": items}
+
+
+def _aplus_group_cells(rows: list) -> dict:
+    c = _aplus_counts(rows)
+    return {h: _aplus_cell(c[h], h, False) for h in GC.LEDGER_HORIZONS}
+
+
+def _aplus_charts(ap: list) -> list:
+    """The three charts over the BUILT A+ rows ([] when none): outcomes (one bar per horizon, every row) · by_setup
+    (GC.SETUPS order — never by %, unknown setups after, sorted; only setups with a row) · by_day (dates ASCENDING)."""
+    if not ap:
+        return []
+    heads = dict(HEADS)
+    c = _aplus_counts(ap)
+    outcomes = {"key": APLUS_CHART_KEYS[0], "title": APLUS_CHART_TITLES[APLUS_CHART_KEYS[0]],
+                "bars": [dict(_aplus_cell(c[h], h, True), key=h, label=heads[h]) for h in GC.LEDGER_HORIZONS]}
+    by_s: dict = {}
+    for r in ap:
+        by_s.setdefault(r["setup"], []).append(r)
+    order = [s for s in GC.SETUPS if s in by_s] + sorted(s for s in by_s if s not in GC.SETUPS)
+    by_setup = {"key": APLUS_CHART_KEYS[1], "title": APLUS_CHART_TITLES[APLUS_CHART_KEYS[1]],
+                "rows": [dict({"key": s, "label": by_s[s][0].get("setup_label")}, **_aplus_group_cells(by_s[s]))
+                         for s in order]}
+    by_d: dict = {}
+    for r in ap:
+        by_d.setdefault(r["date"], []).append(r)
+    by_day = {"key": APLUS_CHART_KEYS[2], "title": APLUS_CHART_TITLES[APLUS_CHART_KEYS[2]],
+              "cols": [dict({"key": d_iso, "label": _dow_md(_as_date(d_iso))}, **_aplus_group_cells(by_d[d_iso]))
+                       for d_iso in sorted(by_d)]}
+    return [outcomes, by_setup, by_day]
+
+
+def aplus_block(ap: list, ap_days: list, has_replay: bool, prov: bool) -> dict:
+    """🎯 the always-served A+ block (BUILD_SPEC25 §3.2): pooled live + shadow counts of EVERY A+ row on the span (never
+    cut by LEDGER_ROWS_MAX), the house sentences, the three charts and its own capped rows (`days`)."""
+    heads = dict(HEADS)
+    counts = _aplus_counts(ap)
+    n_sent = sum(1 for r in ap if r.get("line") == LINES[0])
+    n_shadow = sum(1 for r in ap if r.get("line") == LINES[1])
+    shown_n = sum(len(d["rows"]) for d in ap_days)
+    cut = len(ap) - shown_n
+    if ap:
+        counts_text = {h: _counts_text(counts[h], h, prov if h == GC.LEDGER_HORIZONS[0] else False,
+                                       lead=APLUS_LEADS[h]) for h in GC.LEDGER_HORIZONS}
+        split_text = APLUS_SENT_TEXT.format(n=n_sent) + (
+            " · " + APLUS_SHADOW_TEXT.format(n=n_shadow) if n_shadow > 0 else "")
+        more_text = f"+{cut} more A+ rows — the counts above cover all {len(ap)}" if cut > 0 else None
+        empty_text = None
+    else:
+        counts_text = split_text = more_text = None
+        empty_text = KIND_EMPTY_TEXT
+    return {"title": APLUS_TITLE, "total": len(ap), "n_sent": n_sent, "n_shadow": n_shadow, "counts": counts,
+            "counts_text": counts_text, "split_text": split_text,
+            "replayed_note": APLUS_REPLAYED_NOTE if has_replay else None, "more_text": more_text,
+            "empty_text": empty_text, "honesty": APLUS_HONESTY,
+            "horizons": [{"key": h, "label": heads[h]} for h in GC.LEDGER_HORIZONS],
+            "horizon_default": GC.LEDGER_HORIZONS[0], "charts": _aplus_charts(ap), "days": ap_days if ap else []}
 
 
 def served_block(store, session: date, now: datetime, *, span: str = "", is_today: bool = False,
@@ -1416,12 +1598,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                     g, prov = grades_today[row["id"]], True
                 cells[h] = _cell(row, h, g, prov, now, session, is_today)
             gs[h] = g
-            c = counts[_count_line(row)][h]
-            st = cells[h]["state"]
-            if row.get("thin") and st in ("win", "loss", "open", "flat", "no_entry"):
-                c["thin"] += 1
-            elif st in c:
-                c[st] += 1
+            _tally_into(counts[_count_line(row)][h], cells[h]["state"], bool(row.get("thin")))   # THE thin rule
             if prov and _count_line(row) == COUNT_LINES[0]:
                 any_prov = True
         plan_text, fill_px = _plan_text(row, gs.get("same"), gs.get("next"))
@@ -1475,22 +1652,14 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                 f" · {_plural(k, 'name', 'names')} not read on this open — graded tonight {at} ET" if k else "")
         else:
             today_text = f"Today · not read on this open — graded tonight {at} ET"                     # W6
-    days, served_n = [], 0
-    by_day: dict = {}
-    for r in built:
-        by_day.setdefault(r["date"], []).append(r)
-    for d_iso in sorted(by_day, reverse=True):
-        room = max(0, int(GC.LEDGER_ROWS_MAX) - served_n)
-        part = by_day[d_iso][:room]
-        if not part:
-            continue
-        served_n += len(part)
-        d = _as_date(d_iso)
-        label = f"{d:%a} {d_iso}" + (" · today" if d_iso == s_iso and is_today else "")                # W13
-        more = len(by_day[d_iso]) - len(part)
-        days.append({"date": d_iso, "label": label, "more_n": more or None, "rows": part})
+    days, served_n = _group_days(built, s_iso, is_today)
     extra = len(built) - served_n
     shown = [r for d in days for r in d["rows"]]                # AMENDMENTS11 F6: the chips count the SERVED rows
+    # 🎯 BUILD_SPEC25: the A+ rows (sent + shadow, never ⏪) — their OWN capped list, counted over every one of them
+    ap = [r for r in built if is_aplus_row(r)]
+    ap_days, _ap_n = _group_days(ap, s_iso, is_today)
+    ap_shown = [r for d in ap_days for r in d["rows"]]
+    ap_prov = any((r["same"] or {}).get("provisional") for r in ap)      # the 🧠 any_prov is untouched
     tl_kinds = TP.views_block()["kinds"]
     rep_text = _replayed_text(counts["replayed"]["same"], counts["replayed"]["next"]) if has_replay else None
     return {"title": TITLE, "rule_label": RULE_LABEL, "rule_text": rule_text(), "honesty": HONESTY, "span": span_k,
@@ -1512,7 +1681,11 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             # ✅ / ❌ DECISIONS11 D11 (C10, F6, F13): ROW counts of the rows served, never a %, never a count line
             "categories": _categories(shown),
             "categories_timeline": _categories([r for r in shown if r["kind"] in tl_kinds]),
-            "category_param": CATEGORY_PARAM, "category_empty_text": CATEGORY_EMPTY_TEXT}
+            "category_param": CATEGORY_PARAM, "category_empty_text": CATEGORY_EMPTY_TEXT,
+            # 🎯 BUILD_SPEC25 (Ajay 2026-10-26): the kind chips (ROW counts), the A+ rows' categories, the A+ block
+            "kinds": _kinds(shown, ap_shown), "kind_param": KIND_PARAM, "kind_empty_text": KIND_EMPTY_TEXT,
+            "categories_aplus": _categories(ap_shown),
+            "aplus": aplus_block(ap, ap_days, has_replay, ap_prov)}
 
 
 __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES", "LedgerReadError", "ledger_id",
@@ -1524,4 +1697,7 @@ __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES"
            "BUCKETS", "BUCKET_TEXT", "CATEGORY_KEYS", "CATEGORY_LABELS", "CATEGORY_PARAM", "CATEGORY_EMPTY_TEXT",
            "bucket_of", "LOSS_FACT_THIN", "LOSS_FACT_STOPPED", "LOSS_FACT_BEST", "LOSS_FACT_FILLED",
            "LOSS_FACT_FILL_MINUTE", "LOSS_FACT_LATE_RTH", "LOSS_FACT_NEXT_MORNING", "LOSS_FACT_STALE",
-           "fill_facts", "loss_facts", "loss_text", "replay_cell"]
+           "fill_facts", "loss_facts", "loss_text", "replay_cell",
+           "KIND_PARAM", "KIND_KEYS", "KIND_LABELS", "KIND_EMPTY_TEXT", "APLUS_LINES", "APLUS_TITLE", "APLUS_LEADS",
+           "APLUS_SENT_TEXT", "APLUS_SHADOW_TEXT", "APLUS_REPLAYED_NOTE", "APLUS_HONESTY", "APLUS_CHART_KEYS",
+           "APLUS_CHART_TITLES", "APLUS_ITEM_LABELS", "NO_DECIDED_TEXT", "is_aplus_row", "aplus_block"]

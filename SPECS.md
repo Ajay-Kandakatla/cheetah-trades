@@ -862,6 +862,21 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   ≥ `LEDGER_LOSS_CLASS_FLAG_N` (3, his Rule #9) → "candidate rule — HIS CALL"; no win rate, no expectancy, no verdict.
   Docs: `docs/gajjala/entry_timeline_2026_10_16.md` "✅ / ❌ categories and loss facts" (+ HIS CALL Q11–Q17),
   `docs/gajjala/losers_study_2026_10_16.md`.
+- **🎯 A+ filter + win/loss charts** (2026-10-26, Ajay: *"Once done can you give me a  A+ filter in the track record I
+  wanna see how many of the A+ were successful draw some charts to show the winning vs losing percentages of A+ trades
+  please"* and *"I need these charts on Track Record page"*). `served_block` adds `kinds` (`KIND_KEYS` all · aplus,
+  `KIND_LABELS` + the ROW count, ⏪ counted apart on "all"), `kind_param` `kind` (FE-only, `?kind=aplus`, never on the
+  GET), `kind_empty_text`, `categories_aplus` (`_categories` over the A+ rows) and an always-served `aplus` block
+  (`aplus_block`): its OWN A+ rows `aplus.days` (live + shadow, `APLUS_LINES`; ⏪ replayed out; cut by the same
+  `LEDGER_ROWS_MAX` with its own `more_text`, the counts cover every A+ row), the **pooled** live + shadow counts tallied
+  by the headline's own thin rule (`_tally_into`, % = `_win_pct`, `loss_pct` = 100 − pct), `counts_text` (lead
+  `APLUS_LEADS`), `split_text`, `replayed_note`, `honesty` (`APLUS_HONESTY`) and three charts (`APLUS_CHART_KEYS`
+  outcomes · by_setup in `GC.SETUPS` order, never by % · by_day ascending) whose every label, number and % is served.
+  The 🧠 headline is byte-identical. FE: `GajjalaAplusCharts` (hand SVG, geometry only) on the list view ALWAYS
+  (AMENDMENT A1 — his second line answered H2); the 🎯 chip narrows the row list only; the 🕰️ timeline draws none of it.
+  **UNMEASURED** — the 2026-10-14 study read NULL. Contracts: "🎯 A+ filter + win/loss charts on the 🏁 Track record
+  (2026-10-26)"; ✨ `chart-maps-gajjala-aplus-filter-2026-10-26`. Doc: `docs/gajjala/track_record_2026_10_16.md`
+  "🎯 A+ filter + the win/loss charts (2026-10-26)".
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make

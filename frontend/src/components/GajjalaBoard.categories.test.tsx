@@ -154,7 +154,10 @@ describe('GajjalaBoard — ✅ / ❌ categories (golden)', () => {
     expect(btns.filter((b) => b.getAttribute('aria-selected') === 'true').map((b) => b.getAttribute('data-testid')))
       .toEqual([`gg-tr-cat-${tr.categories[0].key}`]);
     expect(btns.every((b) => b.className.includes('cm-phase-btn'))).toBe(true);
-    expect(box.previousElementSibling).toBe(screen.getByTestId('gg-tr-views'));
+    // 2026-10-26: BUILD_SPEC25 §3.5 / A1.1 — the 🎯 kinds chips (served `kinds`, list view) sit between the view toggle
+    // and the cats chips; an older payload without `kinds` keeps the cats chips right under the view toggle.
+    expect(box.previousElementSibling).toBe(screen.getByTestId(tr.kinds ? 'gg-tr-kinds' : 'gg-tr-views'));
+    if (tr.kinds) expect(screen.getByTestId('gg-tr-kinds').previousElementSibling).toBe(screen.getByTestId('gg-tr-views'));
     // every number on the chips is a whole token of a served string (the counts are served, never composed)
     expect(numbersServed(box, servedStrings(tr.categories))).toBeGreaterThan(0);
     // no filter → every served row

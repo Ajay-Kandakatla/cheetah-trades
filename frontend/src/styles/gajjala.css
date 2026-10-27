@@ -235,3 +235,37 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-broker-toggle[aria-pressed="true"] { opacity: 1; }
 .gg-broker-strip button:disabled, .gg-broker-strip input:disabled, .gg-broker-toggle:disabled { opacity: 0.5; cursor: default; }
 .gg-broker-toggle[aria-pressed="true"]:disabled { opacity: 0.6; }
+
+/* 🎯 A+ filter + the win/loss charts (2026-10-26, BUILD_SPEC25 §3.5 / §3.6 + AMENDMENT A1). Ajay: "Once done can you give
+   me a  A+ filter in the track record I wanna see how many of the A+ were successful draw some charts to show the winning
+   vs losing percentages of A+ trades please" / "I need these charts on Track Record page". The served 🎯 chips sit under
+   the view toggle; the A+ block is a hand-drawn SVG (geometry only — every label is SERVED HTML that wraps at 430 px);
+   only the by-day columns scroll, inside the house scroll box. No animation. */
+.gg-tr-kinds { margin-top: 0.1rem; flex-wrap: wrap; }
+.gg-ap { min-width: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.gg-ap-chart { min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.gg-ap-chart-title { font-weight: 600; font-size: 0.78rem; }
+.gg-ap-bar { min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.gg-ap-head { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; align-items: baseline; min-width: 0; }
+.gg-ap-label { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.gg-ap-svg { width: 100%; height: 0.6rem; display: block; }
+.gg-ap-legend { display: flex; flex-wrap: wrap; gap: 0.2rem 0.6rem; min-width: 0; font-size: 0.74rem; }
+.gg-ap-key { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; }
+.gg-ap-sw { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; flex: none; }
+.gg-ap-row { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr); gap: 0.4rem; align-items: center; }
+.gg-ap-rowbar { min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; font-size: 0.74rem; }
+.gg-ap-cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(3.6rem, 1fr); gap: 0.2rem; }
+.gg-ap-col { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 0.1rem; font-size: 0.7rem; text-align: center; }
+/* a served day label ("Tue 10-13") never breaks at its hyphen — the box scrolls sideways instead (seen at 430 px) */
+.gg-ap-col-label, .gg-ap-col .gg-muted { white-space: nowrap; }
+.gg-ap-colsvg { width: 100%; height: 4rem; display: block; }
+.gg-ap-seg.gg-ap-win { fill: var(--positive, #22c55e); }
+.gg-ap-sw.gg-ap-win { background: var(--positive, #22c55e); }
+.gg-ap-seg.gg-ap-loss { fill: var(--negative, #ef4444); }
+.gg-ap-sw.gg-ap-loss { background: var(--negative, #ef4444); }
+.gg-ap-seg.gg-ap-open, .gg-ap-seg.gg-ap-flat, .gg-ap-seg.gg-ap-no_entry, .gg-ap-seg.gg-ap-other { fill: var(--ink-subtle, #94a3b8); }
+.gg-ap-sw.gg-ap-open, .gg-ap-sw.gg-ap-flat, .gg-ap-sw.gg-ap-no_entry, .gg-ap-sw.gg-ap-other { background: var(--ink-subtle, #94a3b8); }
+.gg-ap-open, .gg-ap-flat { opacity: 0.6; }
+.gg-ap-no_entry { opacity: 0.35; }
+.gg-ap-other { opacity: 0.2; }
+.gg-ap-honesty { font-size: 0.74rem; line-height: 1.4; }

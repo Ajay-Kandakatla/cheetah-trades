@@ -218,6 +218,554 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "aplus": {
+     "charts": [
+      {
+       "bars": [
+        {
+         "decided": 1,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 1,
+           "text": "1 win (100% of the 1 decided)"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses (0% of the 1 decided)"
+          },
+          {
+           "key": "no_entry",
+           "label": "no entry",
+           "n": 3,
+           "text": "3 no entry"
+          }
+         ],
+         "key": "same",
+         "label": "Same session",
+         "loss_pct": 0,
+         "pct": 100,
+         "pct_text": "100% won · 1 decided",
+         "short_text": "1W 0L",
+         "text": "1 win · 0 losses · 100% won · 3 other",
+         "total": 4
+        },
+        {
+         "decided": 0,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 0,
+           "text": "0 wins"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses"
+          },
+          {
+           "key": "other",
+           "label": "other",
+           "n": 4,
+           "text": "4 other · 4 not graded yet"
+          }
+         ],
+         "key": "next",
+         "label": "Through next session",
+         "loss_pct": null,
+         "pct": null,
+         "pct_text": "no graded entry yet",
+         "short_text": "0W 0L",
+         "text": "0 wins · 0 losses · no graded entry yet · 4 other",
+         "total": 4
+        }
+       ],
+       "key": "outcomes",
+       "title": "🎯 A+ wins vs losses"
+      },
+      {
+       "key": "by_setup",
+       "rows": [
+        {
+         "key": "bull_flag",
+         "label": "🚩 Bull Flag",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         },
+         "same": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         }
+        },
+        {
+         "key": "kiss_fly",
+         "label": "💋 EMA Kiss & Fly",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         },
+         "same": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         }
+        },
+        {
+         "key": "intraday_vcp",
+         "label": "🌀 Intraday VCP",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 2,
+            "text": "2 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 2 other",
+          "total": 2
+         },
+         "same": {
+          "decided": 1,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 1,
+            "text": "1 win"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": 0,
+          "pct": 100,
+          "pct_text": "100% won · 1 decided",
+          "short_text": "1W 0L",
+          "text": "1 win · 0 losses · 100% won · 1 other",
+          "total": 2
+         }
+        }
+       ],
+       "title": "By setup"
+      },
+      {
+       "cols": [
+        {
+         "key": "2026-10-16",
+         "label": "Fri 10-16",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 4,
+            "text": "4 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 4 other",
+          "total": 4
+         },
+         "same": {
+          "decided": 1,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 1,
+            "text": "1 win"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 3,
+            "text": "3 other"
+           }
+          ],
+          "loss_pct": 0,
+          "pct": 100,
+          "pct_text": "100% won · 1 decided",
+          "short_text": "1W 0L",
+          "text": "1 win · 0 losses · 100% won · 3 other",
+          "total": 4
+         }
+        }
+       ],
+       "key": "by_day",
+       "title": "By alert day"
+      }
+     ],
+     "counts": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 4,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 3,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 1
+      }
+     },
+     "counts_text": {
+      "next": "A+ through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 4 not graded yet",
+      "same": "A+ same session: 1 win · 0 losses · 100% won · 3 no entry · 0 open · today not final"
+     },
+     "days": [
+      {
+       "date": "2026-10-16",
+       "label": "Fri 2026-10-16 · today",
+       "more_n": null,
+       "rows": [
+        {
+         "at_et": "11:06",
+         "at_text": "11:06 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
+         "id": "2026-10-16|HCAI|intraday_vcp|aplus",
+         "key": "2026-10-16-HCAI-intraday_vcp-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 3.30 · stop 3.10",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "intraday_vcp",
+         "setup_label": "🌀 Intraday VCP",
+         "stop": 3.1,
+         "symbol": "HCAI",
+         "thin_text": null,
+         "trigger": 3.3
+        },
+        {
+         "at_et": "10:46",
+         "at_text": "10:46 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
+         "id": "2026-10-16|TGL|kiss_fly|aplus",
+         "key": "2026-10-16-TGL-kiss_fly-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 5.60 · stop 5.30",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "kiss_fly",
+         "setup_label": "💋 EMA Kiss & Fly",
+         "stop": 5.3,
+         "symbol": "TGL",
+         "thin_text": null,
+         "trigger": 5.6
+        },
+        {
+         "at_et": "10:36",
+         "at_text": "10:36 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
+         "id": "2026-10-16|PMI|bull_flag|aplus",
+         "key": "2026-10-16-PMI-bull_flag-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 2.40 · stop 2.20",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "bull_flag",
+         "setup_label": "🚩 Bull Flag",
+         "stop": 2.2,
+         "symbol": "PMI",
+         "thin_text": null,
+         "trigger": 2.4
+        },
+        {
+         "at_et": "09:45",
+         "at_text": "09:45 ET",
+         "broker_text": null,
+         "bucket": "win",
+         "bucket_text": "✅ winner",
+         "date": "2026-10-16",
+         "fill_px": 1.85,
+         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+         "id": "2026-10-16|XLAB|intraday_vcp|aplus",
+         "key": "2026-10-16-XLAB-intraday_vcp-aplus",
+         "kind": "aplus",
+         "kind_text": "🎯 A+ entry",
+         "line": "live",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "win",
+          "sub_text": "+1R at 09:47 · not final",
+          "text": "WIN · best +107.6% so far"
+         },
+         "setup": "intraday_vcp",
+         "setup_label": "🌀 Intraday VCP",
+         "stop": 1.75,
+         "symbol": "XLAB",
+         "thin_text": null,
+         "trigger": 1.85
+        }
+       ]
+      }
+     ],
+     "empty_text": null,
+     "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+     "horizon_default": "same",
+     "horizons": [
+      {
+       "key": "same",
+       "label": "Same session"
+      },
+      {
+       "key": "next",
+       "label": "Through next session"
+      }
+     ],
+     "more_text": null,
+     "n_sent": 1,
+     "n_shadow": 3,
+     "replayed_note": "⏪ Replayed rows are not in the 🎯 A+ filter, its counts or its charts — they never rang.",
+     "split_text": "1 sent to your phone · 3 from the shadow period (never sent)",
+     "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
+     "total": 4
+    },
     "categories": [
      {
       "key": "all",
@@ -254,6 +802,44 @@
       "n": 6,
       "n_replayed": 0,
       "text": "— no fill / not graded 6"
+     }
+    ],
+    "categories_aplus": [
+     {
+      "key": "all",
+      "n": 4,
+      "n_replayed": 0,
+      "text": "📋 all 4"
+     },
+     {
+      "key": "win",
+      "n": 1,
+      "n_replayed": 0,
+      "text": "✅ winners 1"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 3,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 3"
      }
     ],
     "categories_timeline": [
@@ -896,6 +1482,22 @@
      }
     ],
     "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
+    "kind_empty_text": "No 🎯 A+ alert on this span.",
+    "kind_param": "kind",
+    "kinds": [
+     {
+      "key": "all",
+      "n": 10,
+      "n_replayed": 1,
+      "text": "📋 every alert 10 +1 ⏪"
+     },
+     {
+      "key": "aplus",
+      "n": 4,
+      "n_replayed": 0,
+      "text": "🎯 A+ only 4"
+     }
+    ],
     "more_text": null,
     "replayed_note": "Replayed on the study's same-day universe (a subset of what the live scanner lists), no float gate, as-printed bars; these never rang. Not a measurement — the 2026-10-14 study read NULL.",
     "replayed_text": "⏪ Replayed with today's detectors (never rang, not in any %): same session 1 win · 0 losses · 0 no entry · 0 open; through next session 1 win · 0 losses · 0 flat",
@@ -1167,6 +1769,554 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "aplus": {
+     "charts": [
+      {
+       "bars": [
+        {
+         "decided": 1,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 1,
+           "text": "1 win (100% of the 1 decided)"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses (0% of the 1 decided)"
+          },
+          {
+           "key": "no_entry",
+           "label": "no entry",
+           "n": 3,
+           "text": "3 no entry"
+          }
+         ],
+         "key": "same",
+         "label": "Same session",
+         "loss_pct": 0,
+         "pct": 100,
+         "pct_text": "100% won · 1 decided",
+         "short_text": "1W 0L",
+         "text": "1 win · 0 losses · 100% won · 3 other",
+         "total": 4
+        },
+        {
+         "decided": 0,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 0,
+           "text": "0 wins"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses"
+          },
+          {
+           "key": "other",
+           "label": "other",
+           "n": 4,
+           "text": "4 other · 4 not graded yet"
+          }
+         ],
+         "key": "next",
+         "label": "Through next session",
+         "loss_pct": null,
+         "pct": null,
+         "pct_text": "no graded entry yet",
+         "short_text": "0W 0L",
+         "text": "0 wins · 0 losses · no graded entry yet · 4 other",
+         "total": 4
+        }
+       ],
+       "key": "outcomes",
+       "title": "🎯 A+ wins vs losses"
+      },
+      {
+       "key": "by_setup",
+       "rows": [
+        {
+         "key": "bull_flag",
+         "label": "🚩 Bull Flag",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         },
+         "same": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         }
+        },
+        {
+         "key": "kiss_fly",
+         "label": "💋 EMA Kiss & Fly",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         },
+         "same": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+          "total": 1
+         }
+        },
+        {
+         "key": "intraday_vcp",
+         "label": "🌀 Intraday VCP",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 2,
+            "text": "2 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 2 other",
+          "total": 2
+         },
+         "same": {
+          "decided": 1,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 1,
+            "text": "1 win"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 1,
+            "text": "1 other"
+           }
+          ],
+          "loss_pct": 0,
+          "pct": 100,
+          "pct_text": "100% won · 1 decided",
+          "short_text": "1W 0L",
+          "text": "1 win · 0 losses · 100% won · 1 other",
+          "total": 2
+         }
+        }
+       ],
+       "title": "By setup"
+      },
+      {
+       "cols": [
+        {
+         "key": "2026-10-16",
+         "label": "Fri 10-16",
+         "next": {
+          "decided": 0,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 0,
+            "text": "0 wins"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 4,
+            "text": "4 other"
+           }
+          ],
+          "loss_pct": null,
+          "pct": null,
+          "pct_text": "no graded entry yet",
+          "short_text": "0W 0L",
+          "text": "0 wins · 0 losses · no graded entry yet · 4 other",
+          "total": 4
+         },
+         "same": {
+          "decided": 1,
+          "items": [
+           {
+            "key": "win",
+            "label": "wins",
+            "n": 1,
+            "text": "1 win"
+           },
+           {
+            "key": "loss",
+            "label": "losses",
+            "n": 0,
+            "text": "0 losses"
+           },
+           {
+            "key": "other",
+            "label": "other",
+            "n": 3,
+            "text": "3 other"
+           }
+          ],
+          "loss_pct": 0,
+          "pct": 100,
+          "pct_text": "100% won · 1 decided",
+          "short_text": "1W 0L",
+          "text": "1 win · 0 losses · 100% won · 3 other",
+          "total": 4
+         }
+        }
+       ],
+       "key": "by_day",
+       "title": "By alert day"
+      }
+     ],
+     "counts": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 4,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 3,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 1
+      }
+     },
+     "counts_text": {
+      "next": "A+ through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 4 not graded yet",
+      "same": "A+ same session: 1 win · 0 losses · 100% won · 3 no entry · 0 open · today not final"
+     },
+     "days": [
+      {
+       "date": "2026-10-16",
+       "label": "Fri 2026-10-16 · today",
+       "more_n": null,
+       "rows": [
+        {
+         "at_et": "11:06",
+         "at_text": "11:06 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
+         "id": "2026-10-16|HCAI|intraday_vcp|aplus",
+         "key": "2026-10-16-HCAI-intraday_vcp-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 3.30 · stop 3.10",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "intraday_vcp",
+         "setup_label": "🌀 Intraday VCP",
+         "stop": 3.1,
+         "symbol": "HCAI",
+         "thin_text": null,
+         "trigger": 3.3
+        },
+        {
+         "at_et": "10:46",
+         "at_text": "10:46 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
+         "id": "2026-10-16|TGL|kiss_fly|aplus",
+         "key": "2026-10-16-TGL-kiss_fly-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 5.60 · stop 5.30",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "kiss_fly",
+         "setup_label": "💋 EMA Kiss & Fly",
+         "stop": 5.3,
+         "symbol": "TGL",
+         "thin_text": null,
+         "trigger": 5.6
+        },
+        {
+         "at_et": "10:36",
+         "at_text": "10:36 ET",
+         "broker_text": null,
+         "bucket": "out",
+         "bucket_text": "— no fill / not graded",
+         "date": "2026-10-16",
+         "fill_px": null,
+         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
+         "id": "2026-10-16|PMI|bull_flag|aplus",
+         "key": "2026-10-16-PMI-bull_flag-aplus",
+         "kind": "aplus",
+         "kind_text": "A+ shadow — never sent",
+         "line": "shadow",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 2.40 · stop 2.20",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "no_entry",
+          "sub_text": "not final",
+          "text": "no entry yet"
+         },
+         "setup": "bull_flag",
+         "setup_label": "🚩 Bull Flag",
+         "stop": 2.2,
+         "symbol": "PMI",
+         "thin_text": null,
+         "trigger": 2.4
+        },
+        {
+         "at_et": "09:45",
+         "at_text": "09:45 ET",
+         "broker_text": null,
+         "bucket": "win",
+         "bucket_text": "✅ winner",
+         "date": "2026-10-16",
+         "fill_px": 1.85,
+         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+         "id": "2026-10-16|XLAB|intraday_vcp|aplus",
+         "key": "2026-10-16-XLAB-intraday_vcp-aplus",
+         "kind": "aplus",
+         "kind_text": "🎯 A+ entry",
+         "line": "live",
+         "loss_text": null,
+         "next": {
+          "provisional": false,
+          "state": "pending",
+          "sub_text": "graded Mon 10-19 20:15 ET",
+          "text": "after Mon 10-19's close"
+         },
+         "note": null,
+         "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
+         "rang": "rth",
+         "rang_text": "rang RTH",
+         "replay_text": null,
+         "same": {
+          "provisional": true,
+          "state": "win",
+          "sub_text": "+1R at 09:47 · not final",
+          "text": "WIN · best +107.6% so far"
+         },
+         "setup": "intraday_vcp",
+         "setup_label": "🌀 Intraday VCP",
+         "stop": 1.75,
+         "symbol": "XLAB",
+         "thin_text": null,
+         "trigger": 1.85
+        }
+       ]
+      }
+     ],
+     "empty_text": null,
+     "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+     "horizon_default": "same",
+     "horizons": [
+      {
+       "key": "same",
+       "label": "Same session"
+      },
+      {
+       "key": "next",
+       "label": "Through next session"
+      }
+     ],
+     "more_text": null,
+     "n_sent": 1,
+     "n_shadow": 3,
+     "replayed_note": null,
+     "split_text": "1 sent to your phone · 3 from the shadow period (never sent)",
+     "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
+     "total": 4
+    },
     "categories": [
      {
       "key": "all",
@@ -1203,6 +2353,44 @@
       "n": 5,
       "n_replayed": 0,
       "text": "— no fill / not graded 5"
+     }
+    ],
+    "categories_aplus": [
+     {
+      "key": "all",
+      "n": 4,
+      "n_replayed": 0,
+      "text": "📋 all 4"
+     },
+     {
+      "key": "win",
+      "n": 1,
+      "n_replayed": 0,
+      "text": "✅ winners 1"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 3,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 3"
      }
     ],
     "categories_timeline": [
@@ -1714,6 +2902,22 @@
      }
     ],
     "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
+    "kind_empty_text": "No 🎯 A+ alert on this span.",
+    "kind_param": "kind",
+    "kinds": [
+     {
+      "key": "all",
+      "n": 8,
+      "n_replayed": 0,
+      "text": "📋 every alert 8"
+     },
+     {
+      "key": "aplus",
+      "n": 4,
+      "n_replayed": 0,
+      "text": "🎯 A+ only 4"
+     }
+    ],
     "more_text": null,
     "replayed_note": null,
     "replayed_text": null,
@@ -1985,6 +3189,58 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "aplus": {
+     "charts": [],
+     "counts": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     },
+     "counts_text": null,
+     "days": [],
+     "empty_text": "No 🎯 A+ alert on this span.",
+     "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+     "horizon_default": "same",
+     "horizons": [
+      {
+       "key": "same",
+       "label": "Same session"
+      },
+      {
+       "key": "next",
+       "label": "Through next session"
+      }
+     ],
+     "more_text": null,
+     "n_sent": 0,
+     "n_shadow": 0,
+     "replayed_note": null,
+     "split_text": null,
+     "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
+     "total": 0
+    },
     "categories": [
      {
       "key": "all",
@@ -2021,6 +3277,44 @@
       "n": 1,
       "n_replayed": 0,
       "text": "— no fill / not graded 1"
+     }
+    ],
+    "categories_aplus": [
+     {
+      "key": "all",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "📋 all 0"
+     },
+     {
+      "key": "win",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "✅ winners 0"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 0"
      }
     ],
     "categories_timeline": [
@@ -2298,6 +3592,22 @@
      }
     ],
     "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
+    "kind_empty_text": "No 🎯 A+ alert on this span.",
+    "kind_param": "kind",
+    "kinds": [
+     {
+      "key": "all",
+      "n": 2,
+      "n_replayed": 0,
+      "text": "📋 every alert 2"
+     },
+     {
+      "key": "aplus",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "🎯 A+ only 0"
+     }
+    ],
     "more_text": null,
     "replayed_note": null,
     "replayed_text": null,
