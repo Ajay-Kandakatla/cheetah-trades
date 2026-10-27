@@ -263,7 +263,10 @@ def test_NEGATIVE_the_board_read_never_runs_on_intraday_bars():
     the board has never seen and cannot reproduce."""
     import inspect
     src = inspect.getsource(S.for_symbol)
-    assert "board_closed = daily_closed if intraday else closed" in src
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    # `own_frame` = every non-daily frame (the minute frames AND weekly): the
+    # board block stays the DAILY closed frame on all of them.
+    assert "board_closed = daily_closed if own_frame else closed" in src
     assert "board_read(board_closed, sym, board_px)" in src
     assert "board_read(closed, sym, last_price)" not in src
 
@@ -305,9 +308,10 @@ def test_NEGATIVE_a_retired_key_is_gone_from_the_offered_frames():
 
 # ── (5) the dropdown shrank, and every option states a TRUE span ────────────
 
-def test_the_dropdown_is_at_most_five_options_named_by_the_job():
+def test_the_dropdown_is_at_most_seven_options_named_by_the_job():
     opts = TF.tf_options(include_live=True)
-    assert len(opts) <= 5, [o["key"] for o in opts]
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    assert len(opts) <= 7, [o["key"] for o in opts]
     for o in opts:
         assert o["span"] == f"{o['bar_label']} bars · {o['window_label']}"
         # the job name must not just restate the bar size

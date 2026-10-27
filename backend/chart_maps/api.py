@@ -284,8 +284,8 @@ async def chart_maps_support(
                                     "1w | 2w | 1m | 3m | 6m | 1y | 2y | 3y "
                                     "| 5y | all"),
     tf: str = Query(support_mod.TF_DEFAULT,
-                    description="bar timeframe the structure is read on: "
-                                "daily | 60m | 15m"),
+                    description="bar timeframe the chart is drawn on: "
+                                "1min | 5m_today | 24h | 15m | 60m | daily | weekly"),
     studies: bool = Query(False,
                           description="append the AMD / Fibonacci / "
                                       "mean-reversion / Keltner study overlays"),

@@ -1,0 +1,58 @@
+[
+ {
+  "key": "1min",
+  "label": "Today, to the minute",
+  "span": "1-minute bars · today only, from 04:00 ET",
+  "bar_label": "1-minute",
+  "window_label": "today only, from 04:00 ET",
+  "bars": 960
+ },
+ {
+  "key": "5m_today",
+  "label": "Today, for an entry",
+  "span": "5-minute bars · today only, from 04:00 ET",
+  "bar_label": "5-minute",
+  "window_label": "today only, from 04:00 ET",
+  "bars": 192
+ },
+ {
+  "key": "24h",
+  "label": "Last 24 hours",
+  "span": "5-minute bars · the 24 hours up to the last print, pre-market through after-hours",
+  "bar_label": "5-minute",
+  "window_label": "the 24 hours up to the last print, pre-market through after-hours",
+  "bars": 288
+ },
+ {
+  "key": "15m",
+  "label": "The last two weeks",
+  "span": "15-minute bars · the last ~10 sessions",
+  "bar_label": "15-minute",
+  "window_label": "the last ~10 sessions",
+  "bars": 260
+ },
+ {
+  "key": "60m",
+  "label": "The last two months",
+  "span": "1-hour bars · the last ~47 sessions",
+  "bar_label": "1-hour",
+  "window_label": "the last ~47 sessions",
+  "bars": 330
+ },
+ {
+  "key": "daily",
+  "label": "The big picture",
+  "span": "daily bars · 1 year by default — the Zoom dropdown sets how far back",
+  "bar_label": "daily",
+  "window_label": "1 year by default — the Zoom dropdown sets how far back",
+  "bars": 252
+ },
+ {
+  "key": "weekly",
+  "label": "The long view",
+  "span": "weekly bars · 1 year by default — the Zoom dropdown sets how far back, up to 5 years",
+  "bar_label": "weekly",
+  "window_label": "1 year by default — the Zoom dropdown sets how far back, up to 5 years",
+  "bars": 260
+ }
+]

@@ -210,7 +210,8 @@ describe('SupportLevels', () => {
     expect(screen.getByText(/not a tested floor/)).toBeTruthy();
   });
 
-  it('offers EXACTLY five chart options, named by the job', async () => {
+  // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+  it('offers EXACTLY seven chart options, named by the job', async () => {
     /* Ajay 2026-09-22: "Just simpliyfy this drop down. I wanna use this for
      * entries during the day and it been useless for that ... at any giving
      * point This has been useless." Seventeen merged (window, tf) entries,
@@ -222,13 +223,15 @@ describe('SupportLevels', () => {
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
     const chart = container.querySelectorAll('select')[0];
     const opts = Array.from(chart.querySelectorAll('option'));
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
     expect(opts.map((o) => o.getAttribute('value')))
-      .toEqual(['5m_today', '24h', '15m', '60m', 'daily']);
+      .toEqual(['1min', '5m_today', '24h', '15m', '60m', 'daily', 'weekly']);
     // NEGATIVE: no optgroups any more — a five-row list needs no headings,
     // and the headings were part of what made it a chore to read.
     expect(chart.querySelectorAll('optgroup').length).toBe(0);
-    // Rule #5: at most five. A sixth option would be a failed change.
-    expect(opts.length).toBeLessThanOrEqual(5);
+    // Rule #5: at most seven since his 2026-10-26 ask (five before). An
+    // eighth option would be a failed change.
+    expect(opts.length).toBeLessThanOrEqual(7);
   });
 
   it('every option shows its SPAN without being selected', async () => {

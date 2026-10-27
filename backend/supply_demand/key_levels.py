@@ -61,13 +61,17 @@ NAMES = {"PDH": "prior-day high", "PDL": "prior-day low",
          "PMH": "prior-month high", "PML": "prior-month low",
          "52wH": "52-week high", "52wL": "52-week low",
          "pre-mkt H": "pre-market high", "pre-mkt L": "pre-market low"}
-# keys pinned == timeframes.DAILY / H1 / M15 / M5_TODAY / H24 by a test
+# keys pinned == timeframes TIMEFRAMES keys by a test
+# 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart
+# in the supply and demand" — the two new frames mirror existing rows, dated.
 FRAME_PERIODS = {"daily": ("week", "month", "year"),
                  "60m": ("day", "week", "month", "year"),
                  "15m": ("day", "week", "month", "year"),
                  "5m_today": ("pre", "day", "week", "month", "year"),
-                 "24h": ("pre", "day", "week", "month", "year")}
-EXT_FRAMES = ("5m_today", "24h")                 # the chart shows extended hours: labels say RTH
+                 "24h": ("pre", "day", "week", "month", "year"),
+                 "1min": ("pre", "day", "week", "month", "year"),   # = the 5m_today row (2026-10-26)
+                 "weekly": ("week", "month", "year")}               # = the daily row (2026-10-26)
+EXT_FRAMES = ("1min", "5m_today", "24h")                 # the chart shows extended hours: labels say RTH
 PUSH_PERIODS = ("week", "month", "year")         # pinned == FRAME_PERIODS["daily"]
 GRID_PER_SIDE = 1
 SUPPORT_PER_SIDE = 2

@@ -77,6 +77,12 @@ H1 = "60m"
 M15 = "15m"
 M5_TODAY = "5m_today"
 H24 = "24h"
+# Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar chart
+# in the supply and demand" — two Support-tab chart frames, dated.
+M1_TODAY = "1min"
+WEEKLY = "weekly"
+#: frame_for's refusal for the weekly frame — "chart frame" is the phrase every refusal test keys on.
+WEEKLY_REFUSED = "the weekly frame is a Support-tab chart frame, not a structure frame"
 
 # RETIRED 2026-09-22. The constants stay so an old import keeps working and
 # so `RETIRED` can be read as a table; neither key is in `TIMEFRAMES` any
@@ -109,6 +115,18 @@ def _span(bar_label: str, window_label: str) -> str:
 # the day" — the frame he reaches for most is the one at the top. DEFAULT_TF
 # is still `daily`, so nothing opens on a different frame than it used to.
 TIMEFRAMES: tuple[dict, ...] = (
+    # Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar
+    # chart in the supply and demand". The `5m_today` path at rule "1min":
+    # raw Massive minutes, extended hours, clipped to the latest ET date.
+    #
+    # Bar budget: 960 = (20 − 4) × 60, the whole extended day 04:00-20:00 ET
+    # at one bar a minute, so `tail(960)` is a no-op after the date clip.
+    # `orb_minutes` 5 = the `5m_today` row's value (HIS CALL #5), pinned equal
+    # by a test. Support-tab only (`ext_hours`); FIRST because it is shortest.
+    {"key": M1_TODAY, "label": "Today, to the minute",
+     "bar_label": "1-minute", "window_label": "today only, from 04:00 ET",
+     "bars": 960, "days": 1, "swing_window": 2, "rule": "1min",
+     "ext_hours": True, "orb_minutes": 5},
     # Ajay 2026-09-17: "For the live 5 min chart data, can you make sure its
     # only showing from todays open only. it going till 6 months." Asked where
     # the day starts, he said "Today 04:00 ET — incl. pre-market".
@@ -161,6 +179,20 @@ TIMEFRAMES: tuple[dict, ...] = (
      "bar_label": "daily",
      "window_label": "1 year by default — the Zoom dropdown sets how far back",
      "bars": 252, "days": 0, "swing_window": 4, "orb_minutes": 30},
+    # Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar
+    # chart in the supply and demand". The Support DAILY frame resampled by
+    # `chart_maps.ema_frames.resample_ohlcv` (W-FRI, closed=right,
+    # label=right) — NOT `resample_ohlcv` below, which is left-closed and
+    # would push each Friday into the next week. `bars` 260 =
+    # `chart_maps.support.weekly_bars_for("5y")` (pinned by a test); the Zoom
+    # sets the span. swing 4 = the daily frame's (UNMEASURED, HIS CALL #4).
+    # No ORB: an opening range on weekly candles would cost a minute fetch.
+    # `support_only`: Support-tab only, refused by every structure caller.
+    {"key": WEEKLY, "label": "The long view",
+     "bar_label": "weekly",
+     "window_label": "1 year by default — the Zoom dropdown sets how far back, up to 5 years",
+     "bars": 260, "days": 0, "swing_window": 4, "orb_minutes": None,
+     "support_only": True},
 )
 
 for _t in TIMEFRAMES:                       # one span sentence, built once
@@ -183,6 +215,12 @@ _ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
           "24": H24, "h24": H24, "24hr": H24, "24hour": H24, "last24": H24,
           "5m_today": M5_TODAY, "5today": M5_TODAY, "today": M5_TODAY,
           "5m_day": M5_TODAY, "5m_open": M5_TODAY, "5open": M5_TODAY,
+          # 2026-10-26 (the 1-minute + weekly frames). `1m` (the one-month
+          # WINDOW) and `1w` (the one-week WINDOW) are NEVER aliases — a tf
+          # alias with a window's spelling makes `?window=1w&tf=1w` mean two
+          # things.
+          "1-min": M1_TODAY, "1minute": M1_TODAY, "m1": M1_TODAY,
+          "w": WEEKLY, "week": WEEKLY, "wk": WEEKLY, "1wk": WEEKLY,
           **RETIRED}
 
 
@@ -215,11 +253,14 @@ def tf_options(include_live: bool = False) -> list:
     the span beside the job name without knowing this table (Ajay
     2026-09-22: he must be able to tell the span without opening the
     option).
+
+    2026-10-26: `1min` (ext_hours) and `weekly` (support_only — daily bars
+    resampled to weeks, a Support-tab chart frame) are hidden by default too.
     """
     return [{"key": t["key"], "label": t["label"], "span": t["span"],
              "bar_label": t["bar_label"], "window_label": t["window_label"],
              "bars": t["bars"]} for t in TIMEFRAMES
-            if include_live or not t.get("ext_hours")]
+            if include_live or not (t.get("ext_hours") or t.get("support_only"))]
 
 
 def resample_ohlcv(df, rule: str):
@@ -260,7 +301,7 @@ def intraday_raw(symbol: str, tf: str = M15):
     at 10 workers.
     """
     spec = tf_spec(tf)
-    if spec["key"] == DAILY:
+    if spec["key"] in (DAILY, WEEKLY):
         return None
     try:
         from daytrading.data import load_intraday_range
@@ -316,6 +357,25 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
                      "source": "daily bars", "as_of": as_of})
         return df, meta
 
+    if key == WEEKLY:
+        if not allow_ext:
+            meta["reason"] = WEEKLY_REFUSED
+            return None, meta
+        try:
+            from chart_maps.support import _weekly_frames
+            wk = _weekly_frames(sym, want)
+        except Exception as exc:
+            log.warning("timeframes: weekly frame for %s failed: %s", sym, exc)
+            wk = None
+        if not wk:
+            meta["reason"] = "no daily bars"
+            return None, meta
+        df = wk["full"].tail(want)
+        meta.update({"bars": len(df), "available": True, "source": wk["source"],
+                     "as_of": wk["as_of"], "partial": bool(wk["forming"]),
+                     "forming": wk["forming"], "ext_hours": False})
+        return df, meta
+
     # Intraday: 1-minute bars over the calendar span, then resample. `raw` lets
     # a caller hand in bars it already holds (see `intraday_raw`) so the fetch
     # is not paid for twice.
@@ -340,10 +400,13 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
         meta["reason"] = "resample produced no bars"
         return None, meta
 
-    if key in (M5_TODAY, H24):
+    if key in (M1_TODAY, M5_TODAY, H24):
         # THE ONE CLOCK-SLICE BLOCK. Both frames that answer "no previous
         # days" are cut here, off the SAME ET conversion, so there is one
         # place where a timezone can be got wrong rather than two.
+        # 2026-10-26: `1min` takes the ET-calendar-date arm exactly like
+        # `5m_today` (Ajay: "Can you build me 1 min bar chart and also 1 week
+        # bar chart in the supply and demand").
         #
         # `5m_today` slices by ET CALENDAR DATE and lands on today
         # 04:00-20:00 ET, the pre-market-included day Ajay asked for
@@ -413,6 +476,15 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
     except Exception as exc:                                # pragma: no cover
         log.warning("timeframes: as_of from raw minutes failed: %s", exc)
         partial, as_of = True, str(df.index[-1])
+    if key == M1_TODAY and not partial:
+        # A 1-minute bucket is labelled raw+1 min, so the rule above can never flag
+        # it. While the tape is open the last minute may still be printing: over-mark
+        # it (the safe side, ema_frames' rule) so the zone engine never reads it.
+        try:
+            partial = live_state().get("state") != "closed"
+        except Exception as exc:                            # pragma: no cover
+            log.warning("timeframes: live state for the forming minute failed: %s", exc)
+            partial = True
     meta.update({"bars": len(df), "available": True,
                  "source": (f"1-minute bars resampled to {spec['bar_label']}, "
                             + ("pre/post market drawn, structure from RTH"

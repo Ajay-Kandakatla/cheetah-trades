@@ -31,6 +31,11 @@ daily bars to weekly: `sepa.market_gauge._to_weekly` and
                                         calendar month, labelled by its last
                                         calendar day.
 
+`closed="right", label="right"` is explicit since 2026-10-26 — the same values
+as the pandas defaults for an end-anchored rule; the Support tab's weekly frame
+reads this function (Ajay 2026-10-26: "Can you build me 1 min bar chart and
+also 1 week bar chart in the supply and demand").
+
 W-FRI, not W-SUN: a Sunday anchor labels a US equity week with a day the market
 was shut, and the two existing weekly readers in this repo are Friday-anchored
 — two weekly conventions in one app is how the same name gets two different
@@ -141,6 +146,9 @@ def resample_ohlcv(df, frame: str):
     Pandas DEFAULTS on the label/closed pair — see the module docstring. Buckets
     with no session at all (a holiday-shortened frame's empty week) are dropped
     rather than served as a NaN bar.
+
+    Explicit since 2026-10-26 — the same values as the pandas defaults for an
+    end-anchored rule; the Support tab's weekly frame reads this function.
     """
     if df is None or not len(df):
         return None
@@ -152,7 +160,7 @@ def resample_ohlcv(df, frame: str):
         agg = {"open": "first", "high": "max", "low": "min", "close": "last"}
         if "volume" in d.columns:
             agg["volume"] = "sum"
-        out = d.resample(rule).agg(agg).dropna(how="any")
+        out = d.resample(rule, closed="right", label="right").agg(agg).dropna(how="any")
         return out if len(out) else None
     except Exception as exc:                                    # pragma: no cover
         log.debug("ema-frames: resample %s failed: %s", frame, exc)

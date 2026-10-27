@@ -271,9 +271,19 @@ def test_for_symbol_reads_levels_from_the_frame_it_draws():
     assert 'sym, spec["bars"], with_closed=True)' in src
     # and it no longer replaces the analysed frame unconditionally
     assert 'df = daily_df\n        closed = daily_closed' not in src
-    assert 'own_bars = intraday' in src
+    # WIDENED 2026-10-26 — Ajay: "Can you build me 1 min bar chart and also 1
+    # week bar chart in the supply and demand". The weekly frame reads its own
+    # (resampled) bars too, so own-bars keys off "not the daily frame"
+    # (`own_frame`), not off the minute-sourced `intraday`; and the weekly
+    # signal joins the ext frames as never written to the ledger.
+    assert 'own_bars = own_frame' in src
+    assert 'own_frame = tf_key != tf_mod.DAILY' in src
+    assert 'own_bars = intraday' not in src        # NEGATIVE: weekly would read daily levels
     assert 'levels_fallback' in src
-    assert 'and not ext_frame:\n            _record_signal' in src   # no ledger write
+    assert 'unrecorded = ext_frame or weekly' in src
+    assert 'and not unrecorded:\n            _record_signal' in src   # no ledger write
+    # NEGATIVE: an ext-only gate would file a weekly BUY/SELL in the ledger
+    assert 'and not ext_frame:\n            _record_signal' not in src
     assert 'opening_range_from_bars' in src        # one minute fetch per poll
     assert 'allow_ext=True' in src
     assert '"live": tf_mod.live_state() if ext_frame else None' in src

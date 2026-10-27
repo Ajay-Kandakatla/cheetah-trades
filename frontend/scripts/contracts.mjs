@@ -646,10 +646,11 @@ const CONTRACTS = [
       {
         const comp = read('src/components/SupportLevels.tsx');
         // FIVE rows, not seventeen. He asked for this twice.
+        // 2026-10-26: Ajay asked for two more frames, verbatim: "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — the ceiling widened five → seven, dated. An EIGHTH row still fails.
         const tfs = src.match(/export const FALLBACK_TIMEFRAMES[\s\S]*?\n\];/);
         const n = tfs ? [...tfs[0].matchAll(/key:\s*'([^']+)'/g)].length : 0;
         if (!tfs) errs.push('FALLBACK_TIMEFRAMES not found');
-        else if (n > 5) errs.push(`the frame picker is back to ${n} rows — he asked twice for fewer`);
+        else if (n > 7) errs.push(`the frame picker is back to ${n} rows — he asked twice for fewer`);
         // A retired key must still land somewhere real, and SAY it moved.
         for (const k of ['15m_open', '5m_live']) {
           if (!new RegExp(`'${k}'`).test(src)) errs.push(`the retired frame ${k} no longer resolves — an old link would break`);
@@ -9717,8 +9718,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seventeen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9925,8 +9927,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first thirteen (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first fourteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10199,8 +10202,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10392,8 +10396,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10484,8 +10489,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10627,8 +10633,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10737,8 +10744,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10781,8 +10789,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10914,8 +10923,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above the 🔎 one — widened by one more, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10990,8 +11000,9 @@ const CONTRACTS = [
       // 2026-10-21, evening: the 📬 push delivery receipts ✨ (alerts-push-delivery-receipts-2026-10-21, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -11099,8 +11110,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-22: the 📌 GnT latest-posts-source ✨ (traders-recent-source-restored-2026-10-22, its own block, FIRST) lands above — the FIRST pin widened to the top two, dated.
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11281,8 +11293,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'traders-recent-source-restored-2026-10-22';
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11328,8 +11341,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-scan-button-2026-10-23';
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11344,6 +11358,81 @@ const CONTRACTS = [
       if (test && !/stays on screen when scan\.state is closed/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the closed-keeps-the-button test');
       if (test && !/no served rescan_label → no button/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the NEGATIVE no-label test');
       if (test && !/a non-owner sees no button in a closed session/.test(test)) errs.push('GajjalaBoard.scan.test.tsx lost the NEGATIVE non-owner-closed test');
+      return errs;
+    },
+  },
+  {
+    name: '🕐 Support 1-minute + weekly frames (2026-10-26)',
+    file: 'src/lib/supportLevels.ts',
+    checks(src) {
+      // Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand".
+      // Pinned: (1) the BACKEND frame table, shortest first, 1min FIRST and weekly LAST; (2) 1m / 1w are window keys, never tf
+      // aliases (both sides); (3) the weekly resampler is ema_frames' (W-FRI, explicit closed/label right) and the minute one is
+      // still left-closed — no parallel weekly resample in support.py; (4) FRAME_WINDOWS rows mirror backend WEEKLY_WINDOWS;
+      // (5) the FE mirror's key order equals the backend's; (6) the zone-map picker filters supportOnly; (7) the ✨ entry is FIRST,
+      // routed to the Support tab, his line verbatim, UNMEASURED, no digit outside the quotes; (8) the negatives stay.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const WANT = ['1min', '5m_today', '24h', '15m', '60m', 'daily', 'weekly'];
+      const tfPy = tryRead('../backend/supply_demand/timeframes.py', 'the frame table');
+      const consts = Object.fromEntries([...tfPy.matchAll(/^([A-Z][A-Z0-9_]*) = "([^"]+)"$/gm)].map((m) => [m[1], m[2]]));
+      const tbl = /TIMEFRAMES: tuple\[dict, \.\.\.\] = \(([\s\S]*?)\n\)\n/.exec(tfPy);
+      const beKeys = tbl ? [...tbl[1].matchAll(/\{"key":\s*([A-Z][A-Z0-9_]*)/g)].map((m) => consts[m[1]] || `?${m[1]}`) : [];
+      if (tfPy && beKeys.length !== WANT.length) errs.push(`timeframes.py TIMEFRAMES parsed ${beKeys.length} rows, expected ${WANT.length} — regex drifted or a row moved`);
+      else if (tfPy && beKeys.join(',') !== WANT.join(',')) errs.push(`TIMEFRAMES order is ${beKeys.join(',')} — expected ${WANT.join(',')} (shortest first)`);
+      const alias = (/_ALIAS = \{([\s\S]*?)\*\*RETIRED\}/.exec(tfPy) || [])[1] || '';
+      if (tfPy && !alias) errs.push('timeframes.py _ALIAS not found');
+      if (/"1m"\s*:/.test(alias)) errs.push('"1m" is the one-month WINDOW — never a tf alias');
+      if (/"1w"\s*:/.test(alias)) errs.push('"1w" is the one-week WINDOW — never a tf alias');
+      if (alias && (!/"m1":\s*M1_TODAY/.test(alias) || !/"w":\s*WEEKLY/.test(alias))) errs.push('the 1min / weekly aliases are missing');
+      if (tfPy && !/df\.resample\(rule, label="right", closed="left"\)/.test(tfPy)) errs.push('the MINUTE resampler is no longer label=right, closed=left');
+      if (tfPy && (tfPy.match(/\.resample\(/g) || []).length !== 1) errs.push('timeframes.py has a second .resample( — the weekly frame must use ema_frames.resample_ohlcv');
+      const ef = tryRead('../backend/chart_maps/ema_frames.py', 'the weekly engine');
+      if (ef && !/FRAME_RULE = \{"weekly": "W-FRI"/.test(ef)) errs.push('ema_frames FRAME_RULE weekly is not W-FRI');
+      if (ef && !/d\.resample\(rule, closed="right", label="right"\)/.test(ef)) errs.push('ema_frames.resample_ohlcv is not explicitly closed="right", label="right"');
+      const sp = tryRead('../backend/chart_maps/support.py', 'the Support tab');
+      if (sp && /\.resample\(/.test(sp)) errs.push('support.py resamples on its own — the weekly frame must come from ema_frames.resample_ohlcv');
+      if (sp && !/EF\.resample_ohlcv\(daily, "weekly"\)/.test(sp)) errs.push('support._weekly_frames no longer reads ema_frames.resample_ohlcv(daily, "weekly")');
+      const ww = (/WEEKLY_WINDOWS: tuple\[str, \.\.\.\] = \(([^)]*)\)/.exec(sp) || [])[1] || '';
+      const beWeekly = [...ww.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+      const fw = (/export const FRAME_WINDOWS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src) || [])[1] || '';
+      const feWeekly = [...((/\bweekly:\s*\[([^\]]*)\]/.exec(fw) || [])[1] || '').matchAll(/'([^']+)'/g)].map((m) => m[1]);
+      if (!beWeekly.length) errs.push('support.py WEEKLY_WINDOWS not found');
+      else if (beWeekly.join(',') !== feWeekly.join(',')) errs.push(`FRAME_WINDOWS.weekly ${feWeekly.join(',')} != backend WEEKLY_WINDOWS ${beWeekly.join(',')}`);
+      if (feWeekly.includes('all')) errs.push('weekly offers the overlay — that is a daily read (HIS CALL)');
+      if (!/'1min':\s*\[\]/.test(fw)) errs.push("FRAME_WINDOWS '1min' must be [] — the 1-minute frame defines its own window");
+      const fb = (/export const FALLBACK_TIMEFRAMES[\s\S]*?\n\];/.exec(src) || [''])[0];
+      const feKeys = [...fb.matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]);
+      if (feKeys.join(',') !== WANT.join(',')) errs.push(`FALLBACK_TIMEFRAMES order is ${feKeys.join(',')} — must mirror the backend ${WANT.join(',')}`);
+      const tfa = (/const TF_ALIAS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src) || [])[1] || '';
+      if (/'1m'\s*:/.test(tfa) || /'1w'\s*:/.test(tfa)) errs.push("TF_ALIAS maps '1m' or '1w' — those are window keys");
+      if (!/STRUCTURE_TIMEFRAMES[^=]*=\s*FALLBACK_TIMEFRAMES\.filter\(\(t\) => !t\.ext && !t\.supportOnly\)/.test(src)) errs.push('STRUCTURE_TIMEFRAMES must drop ext AND supportOnly frames');
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-support-1min-weekly-frames-2026-10-26';
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else if (nf) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        if (!e.includes("route: '/chart-maps?tab=support'")) errs.push('the 🕐 ✨ entry must route to the Support tab');
+        if (!label.includes('“Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand”')) errs.push('the 🕐 ✨ entry must quote him verbatim');
+        for (const need of ['UNMEASURED', 'Not advice']) if (!label.includes(need)) errs.push(`the 🕐 ✨ entry must say ${need}`);
+        if (/bounc/i.test(label)) errs.push('the 🕐 ✨ entry says bounce — reversal, never bounce');
+        if (/\d/.test(label.replace(/“[^”]*”/g, ''))) errs.push('the 🕐 ✨ label types a digit outside his quotes');
+      }
+      const t1 = tryRead('../backend/tests/test_frame_1min_2026_10_26.py', 'the 1-minute tests');
+      const tw = tryRead('../backend/tests/test_frame_weekly_2026_10_26.py', 'the weekly tests');
+      for (const [f, names] of [[t1, ['test_NEGATIVE_1m_is_a_window_not_a_frame', 'test_NEGATIVE_structure_callers_refuse_1min', 'test_the_forming_minute_is_partial_while_the_tape_is_open', 'test_NEGATIVE_the_five_existing_frames_are_byte_identical']],
+                               [tw, ['test_NEGATIVE_1w_is_a_window_not_a_frame', 'test_NEGATIVE_structure_callers_refuse_weekly', 'test_holiday_week_ends_on_its_friday_label_with_mon_thu', 'test_the_week_still_forming_is_flagged_and_kept_out_of_structure', 'test_the_fe_fixture_is_the_served_list']]]) {
+        for (const n of names) if (f && !f.includes(`def ${n}(`)) errs.push(`backend test ${n} is missing`);
+      }
+      const ft = tryRead('src/lib/supportLevels.frames1026.test.ts', 'the FE frame tests');
+      if (ft && !/'1m' is the one-month WINDOW/.test(ft)) errs.push('supportLevels.frames1026.test.ts lost the NEGATIVE 1m test');
+      if (ft && !/'1w' is the one-week WINDOW/.test(ft)) errs.push('supportLevels.frames1026.test.ts lost the NEGATIVE 1w test');
       return errs;
     },
   },

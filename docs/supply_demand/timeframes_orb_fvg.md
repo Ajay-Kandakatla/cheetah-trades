@@ -362,3 +362,17 @@ Tests: `backend/tests/test_5m_today_frame_2026_09_17.py` (16) and
 `5m_live`'s days/bars/label are pinned so this frame can never silently eat the
 overnight view, the new frame is still refused when `allow_ext` is False, an
 empty latest date does not crash, and nothing made it a default.
+
+## 2026-10-26 — `1min` and `weekly`
+
+Ajay: *"Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand"*. Two rows join
+`TIMEFRAMES` (shortest first): `1min` FIRST ("Today, to the minute" — the `5m_today` path at rule `"1min"`, 1-minute
+Massive bars, today from 04:00 ET, ≤ 960 = 16 × 60 bars, swing 2, ORB 5 like `5m_today`) and `weekly` LAST ("The long
+view" — the Support daily frame resampled by `chart_maps.ema_frames.resample_ohlcv`, W-FRI, closed=right, label=right;
+260 bars at most, swing 4, no ORB). Aliases: `1-min` / `1minute` / `m1` and `w` / `week` / `wk` / `1wk`; **`1m` and
+`1w` are window keys, never frame aliases**. `1min` is `ext_hours` and `weekly` is the new `support_only` flag: both
+ride `tf_options(include_live=True)` (the Support tab) and neither is in `tf_options()`. `frame_for` refuses both to
+any caller without `allow_ext=True` ("chart frame" in the reason — `WEEKLY_REFUSED` for weekly); with it, the forming
+minute is `partial` while `live_state()` is not `closed`, and the forming week is `partial` with `forming` = its Friday.
+`resample_ohlcv` here is unchanged (still the minute rule, left-closed) and is still the only `.resample(` in this file.
+UNMEASURED. Full contract: `docs/supply_demand/support_levels_tab.md` § "One-minute and weekly bars (2026-10-26)".

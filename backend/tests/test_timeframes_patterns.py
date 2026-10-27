@@ -43,7 +43,8 @@ def test_parse_tf_accepts_what_a_human_types_and_falls_back_to_daily():
         assert TF.parse_tf(raw) == TF.DAILY, raw
     # Junk must land on daily: every surface worked on daily before the
     # dropdown existed, so it is the one fallback that cannot surprise.
-    for raw in (None, "", "weekly", "4h", 15, {"tf": "60m"}):
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    for raw in (None, "", "fortnightly", "4h", 15, {"tf": "60m"}):
         assert TF.parse_tf(raw) == TF.DAILY, raw
 
 
@@ -54,8 +55,9 @@ def test_tf_options_carry_a_label_and_a_real_span():
     # feed the zone engine.
     opts = TF.tf_options()
     assert [o["key"] for o in opts] == [TF.M15, TF.H1, TF.DAILY]
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
     assert [o["key"] for o in TF.tf_options(include_live=True)] == [
-        TF.M5_TODAY, TF.H24, TF.M15, TF.H1, TF.DAILY]
+        TF.M1_TODAY, TF.M5_TODAY, TF.H24, TF.M15, TF.H1, TF.DAILY, TF.WEEKLY]
     for o in TF.tf_options(include_live=True):
         assert o["label"] and o["span"] and o["bars"] > 0
         # the bar size and the span ride along so the FE can print them

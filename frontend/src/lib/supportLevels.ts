@@ -141,7 +141,11 @@ export type SupportPayload = {
   bars_used?: number;
   /** Set when the frame could not cover the window asked for — a recent IPO.
    *  The label still says what was asked; this says what was read. */
-  short_history?: { have: number; asked: number } | null;
+  short_history?: { have: number; asked: number; unit?: string } | null;
+  /** Weekly frame only (2026-10-26): the week still forming — its Friday label
+   *  and the SERVED sentence saying it is drawn but never read as a level.
+   *  Absent on every other frame. */
+  forming?: { date: string; note: string } | null;
   /** Freshness stamp (2026-08-26, after INTU's frozen partial bar read as a
    *  blown stop): `as_of` = epoch seconds the data left the PROVIDER (parquet
    *  mtime / deep-fetch time) — null when unprovable, never fabricated;
@@ -278,12 +282,24 @@ export type Timeframe = {
    *  Support tab may draw one — every structure endpoint refuses them, so the
    *  zone-map picker filters them out (see STRUCTURE_TIMEFRAMES). */
   ext?: boolean;
+  /** Support-tab only, not extended-hours — the weekly frame. Every
+   *  structure endpoint refuses it, so the zone-map picker filters it out. */
+  supportOnly?: boolean;
 };
 
 /** Shown until the server's own list lands. Mirrors
  *  `tf_options(include_live=True)`; a change backend-side needs no FE deploy,
  *  this only has to be a truthful stand-in for the first paint. */
 export const FALLBACK_TIMEFRAMES: Timeframe[] = [
+  // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar
+  // chart in the supply and demand". Two rows: `1min` FIRST (shortest bar) and
+  // `weekly` LAST, strings exactly the served `tf_options(include_live=True)`
+  // rows (pinned to the generated fixture by supportLevels.frames1026.test.ts).
+  // The picker renders the SERVED list; these rows must still exist because
+  // ChartMaps' `parseTf(?tf=)` and `windowsForFrame` resolve against this list.
+  { key: '1min', label: 'Today, to the minute',
+    bar_label: '1-minute', window_label: 'today only, from 04:00 ET',
+    span: '1-minute bars · today only, from 04:00 ET', bars: 960, ext: true },
   // Ajay 2026-09-22: "support level from market open but I do not have to see
   // previous days in that" — THIS is the frame that answers it.
   { key: '5m_today', label: 'Today, for an entry',
@@ -314,6 +330,13 @@ export const FALLBACK_TIMEFRAMES: Timeframe[] = [
     window_label: '1 year by default — the Zoom dropdown sets how far back',
     span: 'daily bars · 1 year by default — the Zoom dropdown sets how far back',
     bars: 252 },
+  // 2026-10-26 (his line above): daily bars resampled to weeks backend-side
+  // (ema_frames W-FRI). Support-tab only — never offered by a structure picker.
+  { key: 'weekly', label: 'The long view',
+    bar_label: 'weekly',
+    window_label: '1 year by default — the Zoom dropdown sets how far back, up to 5 years',
+    span: 'weekly bars · 1 year by default — the Zoom dropdown sets how far back, up to 5 years',
+    bars: 260, supportOnly: true },
 ];
 
 /** The frames a STRUCTURE surface (the ticker Setup tab's zone map) may
@@ -322,7 +345,7 @@ export const FALLBACK_TIMEFRAMES: Timeframe[] = [
  *  anyone defended — so offering one there would be a dropdown entry that
  *  errors. The server's own list already excludes them; this keeps the
  *  first-paint fallback honest too. */
-export const STRUCTURE_TIMEFRAMES: Timeframe[] = FALLBACK_TIMEFRAMES.filter((t) => !t.ext);
+export const STRUCTURE_TIMEFRAMES: Timeframe[] = FALLBACK_TIMEFRAMES.filter((t) => !t.ext && !t.supportOnly);
 
 export const DEFAULT_TF = 'daily';
 
@@ -358,6 +381,11 @@ const TF_ALIAS: Record<string, string> = {
   '24': '24h', h24: '24h', '24hr': '24h', '24hour': '24h', last24: '24h',
   '5today': '5m_today', today: '5m_today', '5m_day': '5m_today',
   '5m_open': '5m_today', '5open': '5m_today',
+  // 2026-10-26 (the 1-minute + weekly frames). '1m' (one month) and '1w' (one
+  // week) are WINDOW keys and are NEVER aliases here — `?window=1w&tf=1w`
+  // must not mean two things.
+  '1-min': '1min', '1minute': '1min', m1: '1min',
+  w: 'weekly', week: 'weekly', wk: 'weekly', '1wk': 'weekly',
   ...Object.fromEntries(Object.entries(RETIRED_TIMEFRAMES).map(([k, v]) => [k, v.to])),
 };
 
@@ -401,6 +429,11 @@ export const FRAME_WINDOW: Record<string, string> = {
   '24h': '6m',
   '15m': '1m',
   '60m': '3m',
+  // 2026-10-26: `1min` mirrors `5m_today` — the window still decides the DAILY
+  // board block and the named fallback. `weekly` opens on his one default,
+  // 1 year, and is the zoom's fallback when the remembered one is not weekly's.
+  '1min': '6m',
+  weekly: '1y',
 };
 
 /* WHICH ZOOMS MEAN SOMETHING ON WHICH FRAME (2026-09-23).
@@ -432,6 +465,11 @@ export const FRAME_WINDOWS: Record<string, readonly string[]> = {
   // Fixed by definition: "today" and "the last 24 hours" are the window.
   '5m_today': [],
   '24h': [],
+  // 2026-10-26: fixed like the 5-minute frames — "today" is the window.
+  '1min': [],
+  // 2026-10-26: mirror of backend support.WEEKLY_WINDOWS — only what weekly bars
+  // can fill. No `all`: the overlay is a daily read (HIS CALL #2).
+  weekly: ['6m', '1y', '2y', '3y', '5y'],
 };
 
 /** The zooms this frame can actually answer. Unknown frames get daily's list
@@ -776,7 +814,9 @@ export function shortHistoryNote(p: SupportPayload | null | undefined): string {
   // NUMBERS were read from, not the 5-session picture — so the sentence names
   // it. Unset everywhere else, and the original wording is unchanged there.
   const w = p?.levels_window_label;
-  return `Only ${s.have} sessions of history — less than the ${s.asked} `
+  // `unit` is SERVED, only on the weekly frame (2026-10-26) — every other
+  // payload renders byte-identically.
+  return `Only ${s.have} ${s.unit || 'sessions'} of history — less than the ${s.asked} `
     + (w ? `the ${w} read asks for. ` : `this window asks for. `)
     + `Levels are read from what exists.`;
 }

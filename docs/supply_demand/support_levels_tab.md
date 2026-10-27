@@ -242,6 +242,7 @@ to the zoom list, which today starts at 1 month. Same daily/intraday candles
 you have now, just zoomed into the last 5 or 10 sessions."* He **declined**
 weekly CANDLES — there is no new bar interval, no resample, no `closed=left`
 anywhere in this change (pinned: `test_no_bar_interval_was_introduced`).
+(2026-10-26: he asked for weekly bars — *"Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand"*; see § One-minute and weekly bars. The pin now forbids a `.resample(` in `support.py` only.)
 
 **Bars are SESSIONS.** The list's own convention (`support.py`: *"`bars` are
 TRADING days: 21/mo"*) makes a trading month 4.2 trading weeks, so a week is
@@ -459,6 +460,7 @@ Ajay, on a 1W chart showing its honest 5 daily bars: *"Can you increase the bars
 on the weekly chart please? I am trying to read more on the weekly chart"*.
 Offered three readings he chose **"1 week of HOURLY bars"** — keep the span,
 raise the resolution. He **declined weekly candles**, so nothing resamples.
+(2026-10-26: he asked for weekly bars — *"Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand"*; see § One-minute and weekly bars. The pin now forbids a `.resample(` in `support.py` only.)
 
 Before, a short window was inert on every intraday frame: `1w + 60m` drew the
 frame's whole 330-bar budget (~47 sessions) under a label that said one week.
@@ -768,7 +770,7 @@ key, Chart Maps passes it down and the tab prints, above the chart:
 > hours" instead. Nothing you had bookmarked has stopped working.
 
 Junk (`?tf=weekly`) still degrades to daily **silently** and on purpose — no
-real frame was asked for, so there is nothing to announce.
+real frame was asked for, so there is nothing to announce. (2026-10-26: `weekly` is now a real frame — junk is e.g. `?tf=fortnightly`.)
 
 ### Where the levels came from, on every frame
 
@@ -1002,3 +1004,202 @@ should be merged is **his call** — see below.
 6. **The tile's own "touched in last month" stat** (`_stats`, support.py) is
    the same daily-unit wording on an intraday frame. It was not in the
    findings and was left alone rather than widening scope.
+
+## One-minute and weekly bars (2026-10-26)
+
+Ajay, 2026-10-26:
+
+> "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand"
+
+Two new rows in the ONE frame table (`backend/supply_demand/timeframes.py`
+`TIMEFRAMES`, shortest first), drawn by the ONE Support path
+(`chart_maps/support.py` `for_symbol`), read by the same zone engine
+(`price_zones.compute`) on their own bars. The picker now has seven rows:
+`1min` FIRST, `weekly` LAST.
+
+| key | label | bar_label | window_label | bars | days | swing | flag |
+|---|---|---|---|---|---|---|---|
+| `1min` (`M1_TODAY`) | Today, to the minute | 1-minute | today only, from 04:00 ET | 960 | 1 | 2 | `ext_hours: True` |
+| `weekly` (`WEEKLY`) | The long view | weekly | 1 year by default — the Zoom dropdown sets how far back, up to 5 years | 260 | 0 | 4 | `support_only: True` |
+
+`1min` keeps `orb_minutes` 5 (= the `5m_today` row, pinned equal); `weekly`
+has no ORB (`orb_minutes: None` — an opening range on weekly candles would cost
+a minute fetch).
+
+**Aliases.** `1min`, `1-min`, `1minute`, `m1` → `1min`; `weekly`, `w`, `week`,
+`wk`, `1wk` → `weekly`. **`1m` and `1w` are NEVER frame aliases** — they are
+the one-month and one-week WINDOW keys (`SUPPORT_WINDOWS`, `FALLBACK_WINDOWS`,
+`?window=`); `?tf=1m` still parses to `daily`. Pinned on both sides and by
+`scripts/contracts.mjs`.
+
+### The 2026-09-18 decline, and today's reversal of it
+
+On 2026-09-18 he turned down weekly CANDLES **twice**: first he picked a
+"1 week" ZOOM (*"Same daily/intraday candles you have now, just zoomed into the
+last 5 or 10 sessions"* — § The two short zooms), then, asking for more bars on
+that chart, *"1 week of HOURLY bars"* (§ 1W / 2W on an intraday frame). The pin
+`test_no_bar_interval_was_introduced` was named for that decline.
+
+Today's ask puts "1 week bar chart" beside "1 min bar chart" — a bar SIZE
+beside a bar size — so it is read as **weekly candles**, a reversal of the
+09-18 decline. The 1W / 2W zooms are untouched and still the short-window
+reading. That reading is the build's default; if he meant the zoom, the weekly
+row comes out and nothing else moves (HIS CALL 11 below). The pin is widened,
+not deleted: `support.py` still owns no `.resample(`, no left-closed bin and no
+`W-FRI` rule of its own — the weekly bars come from `ema_frames.resample_ohlcv`.
+
+### Which list renders
+
+The picker renders the SERVED list (`SupportLevels.tsx`: `data.timeframes`
+when present, else `FALLBACK_TIMEFRAMES`); the served list is
+`tf_options(include_live=True)`. `FALLBACK_TIMEFRAMES` (`lib/supportLevels.ts`)
+still had to grow by the same two rows: `ChartMaps.tsx:308` resolves
+`?tf=` with `parseTf()` against FALLBACK, and `windowsForFrame()` does too —
+without the rows, `?tf=1min` written by `onView` parsed back to `daily` and the
+frame was unreachable (the 2026-09-18 half-ship class). The mirror is pinned
+row-for-row to the served list by a generated fixture
+(`frontend/src/components/__fixtures__/support_timeframes_2026_10_26.json`,
+`json.dumps(TF.tf_options(include_live=True))`, checked from both sides).
+`tf_options()` (the structure zone-map list) is unchanged: `15m, 60m, daily`.
+
+### The 1-minute frame
+
+The `5m_today` path at rule `"1min"`: raw Massive 1-minute bars
+(`daytrading.data.load_intraday_range`), extended hours, clipped in THE ONE
+clock-slice block to the latest ET calendar date from 04:00. Budget: 960 =
+(20 − 4) × 60 = 16 × 60, the whole extended day, so `tail(960)` is a no-op
+after the date clip. Stamps are RIGHT-labelled like every intraday frame: the
+04:00 minute is stamped 04:01 and the 09:29 pre-market minute 09:30 (`s:"pre"`)
+— do not "fix" to left labels.
+
+**The forming minute.** The existing `partial` rule (`label − last minute > 1
+minute`) can never flag a 1-minute bucket — its label is exactly raw + 1 min.
+So while `live_state()` says the tape is not `closed` the last minute is marked
+`partial` (over-marks on a lagging feed — the safe side). It is drawn and never
+read as structure. The chart polls every `LIVE_REFRESH_SEC` like the 5-minute
+frames.
+
+### The weekly frame
+
+The Support DAILY frame (`support._frame_for`, today's live bar overlaid
+exactly as on the daily chart) resampled by THE EXISTING weekly engine,
+`chart_maps.ema_frames.resample_ohlcv(df, "weekly")` — no parallel weekly
+resample anywhere (`support.py` has no `.resample(`; `timeframes.py` has one,
+the minute one, still `label="right", closed="left"`). The composition lives
+in `support._weekly_frames`.
+
+* **W-FRI, `closed="right", label="right"`** — now written explicitly in
+  `ema_frames.resample_ohlcv`; the same values as the pandas defaults for an
+  end-anchored rule (pinned: the output equals the default call for weekly AND
+  monthly).
+* **Friday belongs to its own week**; a holiday week (e.g. Good Friday) keeps
+  its Friday label with Mon–Thu sessions; an empty week is dropped, never
+  painted.
+* **Forming week** = `ema_frames.is_forming` (label ≥ today ET). It errs
+  toward forming: Friday evening the just-finished week is still forming until
+  Saturday. The forming week is drawn (`s: "forming"`, shaded and dimmed by
+  `PatternChart`), carries a `▱ week still forming` badge and the served
+  `forming` sentence, and is never read as a level.
+* **`data_through`** is the last DAILY session — never the future Friday label.
+
+**Window → weeks** (`support.weekly_bars_for` =
+round(window sessions × `WEEKS_PER_YEAR` / the 1y window's sessions)):
+
+| zoom | 6m | 1y | 2y | 3y | 5y |
+|---|---|---|---|---|---|
+| weekly bars | 26 | 52 | 104 | 156 | 260 |
+
+That mapping lives in the BACKEND only. The FE lists only which window keys the
+weekly frame offers (`FRAME_WINDOWS.weekly = ['6m','1y','2y','3y','5y']`, the
+mirror of backend `WEEKLY_WINDOWS`, pinned by `contracts.mjs`). Default zoom
+`1y` (his 2026-09-06 one-default rule). `1w`/`2w`/`1m`/`3m`, the daily overlay
+`all` and junk land on `1y` before the overlay early return — so
+`?window=all&tf=weekly` can never draw daily bands under a weekly label. The
+fetch asks for `weeks × SESSIONS_PER_WEEK + SESSIONS_PER_WEEK` sessions, so the
+oldest drawn week is whole.
+
+### Closed bars only
+
+On both frames the forming minute / week is DRAWN and never feeds the zones,
+ATR, gaps, SMC or mood; the live print prices the levels (`distance_pct`)
+exactly as on the daily chart. An after-hours print inside the forming week
+moves the drawn bar, not a level (pinned by a negative).
+
+### What did NOT change
+
+* The five existing rows are byte-identical (pinned against a snapshot taken
+  from the untouched tree); `DEFAULT_TF` is still `daily`, `DEFAULT_WINDOW`
+  still `1y`.
+* The board block (the alert board's band) stays DAILY on both frames.
+* Alerts, lanes, pushes, gates and every S&D constant: untouched.
+* Every structure endpoint refuses both frames: `frame_for` without
+  `allow_ext` returns a reason containing "chart frame" (`WEEKLY_REFUSED` for
+  weekly, the ext guard for 1min); `price_zones` errors; `patterns.timeframe`
+  scans nothing.
+* No new HTTP: weekly costs at most the daily frame's own fetch, 1-minute the
+  `5m_today` fetch.
+* The weekly pattern scan reads the window's DAILY closed sessions (weekly bars
+  through the daily Bulkowski gates would mint a "7-week cup" from 7 candles).
+
+### Unit honesty
+
+* Recency is printed in the frame's own bars: "touched in the last 21 ×
+  weekly bars" / "21 × 1-minute bars" (`RECENCY_IN_OWN_BARS`); the five older
+  frames keep "last month" byte-for-byte (HIS CALL).
+* The weekly short-history note is served with `unit: "weekly bars"`; every
+  other payload renders the old "sessions" sentence unchanged.
+* Neither frame's BUY/SELL is written to the forward ledger (no horizon row);
+  the served `recorded_note` names the frame ("the weekly frame has none" /
+  "the 1-minute frame has none"); the 5-minute sentence is unchanged
+  (`NOT_RECORDED_5M`).
+
+### UNMEASURED
+
+Neither frame is measured, and nothing here implies an edge. The 2026-08-24
+`sd_zone_timeframe_studies` (cited above) found no lookback with an edge and no
+demand-zone re-entry that beats SPY; its weekly-bar arm (26w, sw=2) was the only
+positive-CI arm but all of it sat in the first half of the sample and died
+leave-3-symbols-out — UNPROVEN. Its 0DTE study on 1-minute bars found no level
+source (daily zones, 1/5/15/30/60m, prior/same session) that predicts intraday
+reversals. The weekly note carries `WEEKLY_UNMEASURED` verbatim.
+
+### Tests
+
+* `backend/tests/test_frame_1min_2026_10_26.py` — 20 tests.
+* `backend/tests/test_frame_weekly_2026_10_26.py` — 37 tests (the Friday and holiday-week tests run over the cache's real 00:00 / 04:00 / 05:00 / mixed stamps, plus a left-closed negative).
+* Widened 2026-10-26 (the critic round): `test_support_live.py::test_for_symbol_reads_levels_from_the_frame_it_draws` (`own_bars = own_frame`, `unrecorded = ext_frame or weekly`) and `test_chart_maps_support.py::test_no_bar_interval_was_introduced` (no `.resample(` in `support.py`; the weekly bars come from `EF.resample_ohlcv`).
+* Widened, dated: `test_timeframes_patterns.py`, `test_5m_today_frame_2026_09_17.py`,
+  `test_support_frame_levels_2026_09_22.py`, `test_key_levels.py`.
+* `frontend/src/lib/supportLevels.frames1026.test.ts` (13),
+  `frontend/src/components/SupportLevels.frames1026.test.tsx` (7),
+  `frontend/src/lib/chartMaps.frameTicks1026.test.ts` (4),
+  `frontend/src/components/PatternChart.frames1026.test.tsx` (3); widened:
+  `supportLevels.test.ts`, `SupportLevels.test.tsx`.
+* `scripts/contracts.mjs` — "🕐 Support 1-minute + weekly frames (2026-10-26)";
+  the frame-picker ceiling is seven (an eighth row fails).
+
+### HIS CALL (built as the default, never blocked)
+
+1. Weekly default zoom — 1 year (alternative: 5 years, its 260-bar budget).
+2. Weekly overlay (`all`) — not offered (a weekly overlay is new clustering maths).
+3. Forming week's close — today's live print included (the Support convention);
+   the 〰️ EMA W/M tab uses closed sessions only, so the last bar differs
+   intraday between the two tabs.
+4. Weekly `swing_window` — 4, the daily frame's (UNMEASURED; the 2026-08-24
+   weekly arm used 2, in-sample only).
+5. 1-minute opening range — the 5-minute ORB (`orb_minutes` 5).
+6. 1-minute axis — unchanged ticks (date · open · 16:00); hourly ticks would
+   touch the shared `timeTicks`.
+7. Picker length — seven rows (alternative: merge the two "Today" rows behind a
+   bar-size toggle).
+8. 1-minute weight — the whole extended day (≤ 960 bars) re-read every 30 s
+   (alternative: a trailing window — a new number).
+9. Recency wording on the older frames — only the two new frames print recency
+   in their own bars.
+10. Weekly on the structure surfaces — Support tab only (`support_only`).
+11. "1 week bar chart" read as weekly CANDLES — a reversal of his 2026-09-18
+    decline (§ The 2026-09-18 decline). Alternative: he meant the existing 1W
+    zoom, and the weekly row is withdrawn.
+11. Short-history unit on the older intraday frames — served only on weekly.
+12. Weekend after-hours adjust of the last daily bar — inherited unchanged
+    (fixing it changes the daily frame).

@@ -230,7 +230,8 @@ def test_a_tz_naive_index_still_slices_to_one_day():
 
 
 def test_junk_still_falls_back_to_daily():
-    for raw in (None, "", "weekly", "4h", "5m_tomorrow", 5, {"tf": "5m_today"}):
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    for raw in (None, "", "fortnightly", "4h", "5m_tomorrow", 5, {"tf": "5m_today"}):
         assert TF.parse_tf(raw) == TF.DAILY, raw
 
 

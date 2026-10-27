@@ -690,9 +690,11 @@ def test_constants_are_the_house_constants():
     assert KL.ROLL_AT == ZE.SESSION_CLOSE
     assert KL.SESSION_START == ZE.SESSION_OPEN
     assert KL.STALE_PRINT_SEC == ZE.STALE_PRINT_SEC
-    assert set(KL.FRAME_PERIODS) == {TF.DAILY, TF.H1, TF.M15, TF.M5_TODAY, TF.H24}
+    # 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    assert set(KL.FRAME_PERIODS) == {TF.DAILY, TF.H1, TF.M15, TF.M5_TODAY, TF.H24,
+                                     TF.M1_TODAY, TF.WEEKLY}
     assert KL.PUSH_PERIODS == KL.FRAME_PERIODS[TF.DAILY]
-    assert set(KL.EXT_FRAMES) == {TF.M5_TODAY, TF.H24}
+    assert set(KL.EXT_FRAMES) == {TF.M1_TODAY, TF.M5_TODAY, TF.H24}
     assert KL.MEASURED is False
     assert set(KL.NAMES) == set(KL.LABELS.values())
 

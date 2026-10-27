@@ -58,6 +58,7 @@ from supply_demand import timeframes as tf_mod
 from supply_demand import level_pad as LP
 
 from . import board as board_mod
+from . import ema_frames as EF
 
 log = logging.getLogger("chart_maps.support")
 
@@ -160,6 +161,35 @@ OVERLAY_KEY = "all"
 # than price_zones.ZONE_MERGE_PCT-at-4% territory would double-merge, looser
 # would split genuine agreement.
 CLUSTER_PCT = 2.0
+
+
+# ── the weekly + 1-minute frames (2026-10-26) ────────────────────────────────
+# Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar chart
+# in the supply and demand". The weekly frame is the Support DAILY frame
+# resampled by ema_frames.resample_ohlcv (W-FRI) — one weekly engine in the app.
+#: Calendar weeks in a year — with the 1y window's 252 sessions this maps every zoom
+#: to weeks exactly: 6m 26 · 1y 52 · 2y 104 · 3y 156 · 5y 260.
+WEEKS_PER_YEAR = 52
+#: SUPPORT_WINDOWS' own convention ("a week is 5 sessions") — the padding that keeps
+#: the oldest weekly bar of a window a WHOLE week.
+SESSIONS_PER_WEEK = 5
+#: The zooms the weekly frame offers — only what weekly bars can fill (1m = 4 bars and
+#: 3m = 13 sit at the swing floor; 1w/2w are daily-bar windows; `all` is the daily
+#: overlay). Mirrored by frontend FRAME_WINDOWS.weekly (pinned by contracts.mjs).
+WEEKLY_WINDOWS: tuple[str, ...] = ("6m", "1y", "2y", "3y", "5y")
+WEEKLY_FORMING_NOTE = ("The last bar is this week still forming — it ends {end}. "
+                       "It is drawn with today's print and no level is read off it.")
+WEEKLY_UNMEASURED = ("UNMEASURED — the same zone engine on weekly bars; no study has "
+                     "shown an edge for zones at any bar size.")
+#: Frames whose recency is printed in their OWN bars (2026-10-26). The five older
+#: frames keep "last month" byte-for-byte — extending it is HIS CALL #9.
+RECENCY_IN_OWN_BARS = (tf_mod.M1_TODAY, tf_mod.WEEKLY)
+#: The existing sentence, moved verbatim into a constant (the 5-minute frames' payload
+#: must not change by a byte).
+NOT_RECORDED_5M = ("This chart's BUY/SELL is NOT written to the forward ledger: "
+                   "the ledger scores an outcome over a per-timeframe horizon and "
+                   "the 5-minute frames have none, so no hit rate is claimed for "
+                   "it. The daily, 15-minute and 1-hour charts are recorded.")
 
 
 # ── deep history (the 5y window) ─────────────────────────────────────────────
@@ -307,6 +337,47 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False,
         deep_closed = _closed_of(deep, deep_partial)
         return _ret(deep, len(deep), (deep_live_as_of or deep_as_of), deep_closed)
     return _ret(df, have, _shared_frame_as_of(sym), closed)
+
+
+def weekly_bars_for(window: str) -> int:
+    """Weekly bars for a Support zoom: round(window sessions × 52 / the 1y window's
+    sessions). Unknown/short windows are coerced by the caller first."""
+    return int(round(window_spec(window)["bars"] * WEEKS_PER_YEAR
+                     / window_spec("1y")["bars"]))
+
+
+def _weekly_frames(sym: str, weeks: int, *, today=None, snap=None) -> Optional[dict]:
+    """ONE composition of two existing engines: the Support DAILY frame (`_frame_for`,
+    today's live bar overlaid exactly as on the daily chart) resampled by
+    `ema_frames.resample_ohlcv(…, "weekly")`. None when there are no bars.
+    Returns {"full": weekly frame incl. the forming week (UNtailed),
+             "closed": full minus the forming week (== full when the week is done),
+             "forming": "YYYY-MM-DD" (the forming week's Friday label) | None,
+             "daily": the overlaid daily frame, "daily_closed": its closed frame,
+             "as_of": epoch | None, "source": str}"""
+    need = int(weeks) * SESSIONS_PER_WEEK + SESSIONS_PER_WEEK
+    res = (_frame_for(sym, need, with_closed=True) if snap is None
+           else _frame_for(sym, need, with_closed=True, snap=snap))
+    daily, _have, as_of = res[0], res[1], res[2]
+    daily_closed = res[3] if len(res) > 3 and res[3] is not None else daily
+    full = EF.resample_ohlcv(daily, "weekly")
+    if full is None or not len(full):
+        return None
+    forming = EF.is_forming(full.index[-1], today)
+    forming_date = full.index[-1].strftime("%Y-%m-%d") if forming else None
+    closed = full.iloc[:-1] if (forming and len(full) > 1) else full
+    return {"full": full, "closed": closed, "forming": forming_date,
+            "daily": daily, "daily_closed": daily_closed, "as_of": as_of,
+            "source": f"daily bars resampled to weekly — {EF.FRAME_WHAT['weekly']}"}
+
+
+def _not_recorded_note(tf_key: str, bar_label: str) -> str:
+    if tf_key in (tf_mod.M5_TODAY, tf_mod.H24):
+        return NOT_RECORDED_5M
+    return ("This chart's BUY/SELL is NOT written to the forward ledger: "
+            "the ledger scores an outcome over a per-timeframe horizon and "
+            f"the {bar_label} frame has none, so no hit rate is claimed for "
+            "it. The daily, 15-minute and 1-hour charts are recorded.")
 
 
 def window_keys() -> list[str]:
@@ -866,7 +937,8 @@ def _board_why(board: Optional[dict]) -> str:
     return f"BOARD (what alerts and lanes use): {dem} · {sup}. "
 
 
-def _stats(levels: dict, zones: dict, spec: dict) -> list[dict]:
+def _stats(levels: dict, zones: dict, spec: dict,
+           recent_label: Optional[str] = None) -> list[dict]:
     sup = (levels.get("supports") or [None])[0]
     ovh = (levels.get("overhead") or [None])[0]
     out = [{"k": "zoom", "v": spec["label"]}]
@@ -881,7 +953,11 @@ def _stats(levels: dict, zones: dict, spec: dict) -> list[dict]:
     sups = levels.get("supports") or []
     n_recent = sum(1 for lv in sups if lv["recent"])
     n_tested = sum(1 for lv in sups if lv["tested"])
-    out.append({"k": "touched in last month", "v": f"{n_recent} of {len(sups)}"})
+    # `recent_label` (2026-10-26): the 1-minute and weekly frames count recency
+    # in their OWN bars; every other caller passes nothing → byte-identical.
+    out.append({"k": ("touched in last month" if recent_label is None
+                      else f"touched in the last {recent_label}"),
+                "v": f"{n_recent} of {len(sups)}"})
     out.append({"k": "turned at more than once", "v": f"{n_tested} of {len(sups)}"})
     return out
 
@@ -917,7 +993,8 @@ def _in_zone_head(inside: dict) -> str:
             f"— support is right here.")
 
 
-def _why(levels: dict, zones: dict, spec: dict) -> str:
+def _why(levels: dict, zones: dict, spec: dict,
+         recent_label: Optional[str] = None) -> str:
     verdict = (zones.get("verdict") or {})
     sup = (levels.get("supports") or [None])[0]
     head = verdict.get("label") or ""
@@ -928,7 +1005,8 @@ def _why(levels: dict, zones: dict, spec: dict) -> str:
         # pointing at numbers a reader cannot find.
         head = _in_zone_head(inside) if inside else ""
     if sup and sup["distance_pct"] is not None:
-        when = ("tested in the last month" if sup["recent"]
+        when = (("tested in the last month" if recent_label is None
+                 else f"tested in the last {recent_label}") if sup["recent"]
                 else f"last tested {sup['bars_since_test']} bars ago")
         weak = ("" if sup["tested"] else
                 " Single swing low, not a tested floor.")
@@ -1321,6 +1399,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     is to change the zoom or the ticker.
     """
     sym = (symbol if isinstance(symbol, str) else "").upper().strip()
+    # Weekly bars offer only the zooms weekly bars can fill; a bookmark carrying 1w/2w/1m/3m
+    # or the daily overlay (`all`) lands on the one default every surface opens on.
+    # (Ajay 2026-10-26: "Can you build me 1 min bar chart and also 1 week bar chart
+    # in the supply and demand".) BEFORE the overlay check, which returns early.
+    if tf_mod.parse_tf(tf) == tf_mod.WEEKLY and parse_window(window) not in WEEKLY_WINDOWS:
+        window = DEFAULT_WINDOW
     spec = window_spec(window)
     overlay = parse_window(window) == OVERLAY_KEY
     base = {
@@ -1350,7 +1434,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         return overlay_for_symbol(sym, base)
 
     tf_key = tf_mod.parse_tf(tf)
-    intraday = tf_key != tf_mod.DAILY
+    weekly = tf_key == tf_mod.WEEKLY
+    # `intraday` keeps its meaning — the MINUTE-sourced frames (frame_for). `own_frame`
+    # is every frame that is not the daily chart: it reads its own bars, with the daily
+    # read beside it for the board block, the named fallback and the pattern scan.
+    # (2026-10-26, the weekly frame.)
+    intraday = tf_key not in (tf_mod.DAILY, tf_mod.WEEKLY)
+    own_frame = tf_key != tf_mod.DAILY
     # Empty on the daily branch, which never calls `frame_for`. It is read
     # below for the frame's OWN window label, which `frame_for` may narrow
     # once it has seen the bars (the `24h` one-session case, 2026-09-23).
@@ -1360,6 +1450,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # (integrator 2026-09-05). Structure (swings, gaps, ATR) reads it; the
     # live print still prices the levels — price_zones.for_symbol's rule.
     closed = None
+    # The DAILY frame beside a non-daily chart (board block, named fallback,
+    # pattern scan). Initialised here since 2026-10-26: the weekly branch
+    # fills it from the same `_frame_for` read its weeks are built from.
+    daily_df = daily_closed = daily_as_of = None
+    forming_date = None
+    weekly_weeks = weekly_bars_for(spec["key"]) if weekly else 0
     try:
         if intraday:
             # allow_ext: this tab is the one caller allowed to hold an
@@ -1387,6 +1483,19 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                     f"{tf_meta.get('reason') or 'intraday data unavailable'}.")}
             if tf_meta.get("partial") and len(df) > 1:
                 closed = df.iloc[:-1]
+        elif weekly:
+            # THE WEEKLY FRAME (2026-10-26): the daily frame below, resampled by
+            # ema_frames — one read, both frames. The forming week is drawn and
+            # never structure (`closed` drops it).
+            wk = _weekly_frames(sym, weekly_weeks)
+            if wk is None:
+                return {**base, "error": f"No price data for {sym}."}
+            df, closed, as_of = wk["full"], wk["closed"], wk["as_of"]
+            daily_df, daily_closed, daily_as_of = wk["daily"], wk["daily_closed"], wk["as_of"]
+            forming_date = wk["forming"]
+            base = {**base, "timeframe_meta": {"tf": tf_mod.WEEKLY, "bars": len(df),
+                    "available": True, "source": wk["source"], "as_of": as_of,
+                    "partial": bool(forming_date), "forming": forming_date, "ext_hours": False}}
         else:
             df, _have, as_of, closed = _frame_for(sym, spec["bars"], with_closed=True)
     except Exception as exc:                                  # pragma: no cover
@@ -1396,7 +1505,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
     base = {**base, "as_of": as_of,
-            "data_through": _last_bar_date(df, intraday=intraday)}
+            # The last SESSION, never the weekly bar's future Friday label.
+            "data_through": _last_bar_date(daily_df if weekly else df, intraday=intraday)}
 
     # AN INTRADAY FRAME READS ITS OWN LEVELS (Ajay 2026-09-22).
     #
@@ -1427,7 +1537,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # The DAILY frame is still read on every intraday frame, for two things
     # that must not follow the chart: the BOARD block (what the alerts and
     # lanes use — see `board_read`) and the named level fallback.
-    daily_df = daily_closed = daily_as_of = None
+    # (`daily_df` / `daily_closed` / `daily_as_of` are initialised above; the
+    # weekly frame already holds its daily frames.)
     if intraday:
         try:
             daily_df, _have_d, daily_as_of, daily_closed = _frame_for(
@@ -1460,7 +1571,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     tf_window_label = tf_meta.get("window_label") or tf_spec_["window_label"]
     # EVERY intraday frame budgets from its own spec now, the 5-minute ones
     # included. This one assignment is the whole behavioural change.
-    own_bars = intraday
+    own_bars = own_frame
     # The chart-only zooms (Ajay 2026-09-18). `budget` is the CHART bar count —
     # the 5 or 10 sessions his label promises. `read_budget` is what every
     # ANALYTIC read runs on, and at 1w/2w that is the 1-month window's 21 bars:
@@ -1472,8 +1583,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     chart_only = (not own_bars) and spec["key"] in CHART_ONLY_LEVELS_FROM
     level_spec = (window_spec(CHART_ONLY_LEVELS_FROM[spec["key"]])
                   if chart_only else spec)
-    budget = tf_spec_["bars"] if own_bars else spec["bars"]
-    read_budget = tf_spec_["bars"] if own_bars else level_spec["bars"]
+    # Weekly budgets from the ZOOM (2026-10-26): `weekly_bars_for` maps the
+    # window to weeks; every other own-bars frame keeps its spec's budget.
+    own_budget = weekly_weeks if weekly else tf_spec_["bars"]
+    budget = own_budget if own_bars else spec["bars"]
+    read_budget = own_budget if own_bars else level_spec["bars"]
     swing = tf_spec_["swing_window"] if own_bars else level_spec["swing_window"]
     bars_used = min(len(df), budget)
     # A SHORT WINDOW NOW REACHES THE INTRADAY CHART (Ajay 2026-09-18).
@@ -1517,7 +1631,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # at 5-minute candles under daily bands with nothing on screen to tell
     # him which is which.
     levels_fallback = None
-    if (not _holds_a_level(zones)) and intraday and daily_df is not None:
+    if (not _holds_a_level(zones)) and own_frame and daily_df is not None:
         # Everything the daily read would overwrite, kept so the fallback can
         # be ABANDONED. If the daily window holds no level either, the
         # intraday read — empty lists and all — is still the honest answer to
@@ -1570,13 +1684,19 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     scope_spec = (level_spec if not own_bars
                   else {**spec,
                         "label": f"{bars_used} x {tf_spec_['bar_label']} bars"})
+    # Recency in the frame's OWN bars on the 1-minute and weekly frames
+    # (2026-10-26); None keeps "last month" byte-for-byte everywhere else.
+    recent_label = (f"{RECENT_BARS} × {tf_spec_['bar_label']} bars"
+                    if (own_bars and tf_key in RECENCY_IN_OWN_BARS) else None)
 
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
         # The frame's BAR SIZE, not its job name: "too few to read a Today,
         # for an entry window" is not a sentence (2026-09-22).
-        scope = (f"{tf_spec_['bar_label']} ({tf_window_label})"
+        scope = (f"{tf_spec_['bar_label']} ({spec['label']})"
+                 if (own_bars and weekly) else
+                 f"{tf_spec_['bar_label']} ({tf_window_label})"
                  if own_bars else level_spec["label"])
         # `len(df)`, not `bars_used`: on this branch they are the same number
         # for every non-chart-only window (short ⟺ len(df) < budget ⟺
@@ -1610,6 +1730,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         except Exception as exc:                            # pragma: no cover
             log.warning("support: orb from bars failed: %s", exc)
             orb = None
+    elif weekly:
+        # No opening range on weekly candles — it would cost a minute fetch.
+        orb = None
     else:
         orb = pat_mod.opening_range(sym, tf_spec_["orb_minutes"])
     # POSITION is the side, not origin — the same rule levels_from_zones
@@ -1652,7 +1775,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # which would file a five-minute call under a three-day outcome and
         # quietly corrupt the accuracy ledger. Giving it a horizon is a
         # measured question, not a view change.
-        if sig.get("action") in ("BUY", "SELL") and not ext_frame:
+        # 2026-10-26: the weekly frame has no horizon row either.
+        unrecorded = ext_frame or weekly
+        if sig.get("action") in ("BUY", "SELL") and not unrecorded:
             _record_signal(sym, tf_key, sig, last_price)
         # SAID OUT LOUD (2026-09-23). The tab printed "Every BUY/SELL is
         # written to the forward ledger and scored against real prices"
@@ -1660,13 +1785,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # 2026-09-22 that sentence was still true there, because the signal
         # WAS the daily frame's signal. Now it is the frame's own, so the
         # claim has to carry the exception with it.
-        sig["recorded"] = not ext_frame
-        if ext_frame:
-            sig["recorded_note"] = (
-                "This chart's BUY/SELL is NOT written to the forward ledger: "
-                "the ledger scores an outcome over a per-timeframe horizon and "
-                "the 5-minute frames have none, so no hit rate is claimed for "
-                "it. The daily, 15-minute and 1-hour charts are recorded.")
+        sig["recorded"] = not unrecorded
+        if unrecorded:
+            sig["recorded_note"] = _not_recorded_note(tf_key, tf_spec_["bar_label"])
     except Exception as exc:                                # pragma: no cover
         log.warning("support: mood/signal for %s failed: %s", sym, exc)
         mood_read, sig = None, None
@@ -1707,10 +1828,14 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # not a view change, so the scan keeps reading the daily frame it
         # read before this change and returns byte-identical records.
         pat_key = tf_key if tf_key in pat_tf.BARS_PER_SESSION else "daily"
-        pat_df = (daily_closed if (pat_key == "daily" and intraday
+        pat_df = (daily_closed if (pat_key == "daily" and own_frame
                                    and daily_closed is not None)
                   else closed)
-        bullish = pat_tf.scan(sym, pat_key, df=pat_df.tail(read_budget))
+        # Weekly (2026-10-26): the window's DAILY sessions — the same calendar
+        # span the weekly bands cover; weekly bars through the daily Bulkowski
+        # gates would mint a "7-week cup" from 7 candles.
+        pat_tail = spec["bars"] if weekly else read_budget
+        bullish = pat_tf.scan(sym, pat_key, df=pat_df.tail(pat_tail))
     except Exception as exc:                                # pragma: no cover
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
@@ -1725,9 +1850,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # board reading is the thing that keeps them honest — two readings, each
     # labelled ("BOARD (what alerts and lanes use)" vs this tab's finer
     # bands), never conflated — so it is served on all five.
-    board_closed = daily_closed if intraday else closed
+    board_closed = daily_closed if own_frame else closed
     board_px = last_price
-    if intraday and daily_df is not None:
+    if own_frame and daily_df is not None:
         try:
             board_px = float(daily_df["close"].iloc[-1])
         except Exception:                                   # pragma: no cover
@@ -1761,6 +1886,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # `frame_for`, so the tail is a no-op on every non-fallback read.
         "bars": (_frame_bars(short_intraday if short_intraday is not None
                              else chart_df.tail(tf_spec_["bars"])) if intraday
+                 else EF._frame_to_bars(chart_df.tail(weekly_weeks), forming_date) if weekly
                  else board_mod.bars_for(
                      sym, days=bars_used,
                      min_bars=(bars_used if chart_only
@@ -1769,10 +1895,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "bands": _bands(levels) + _board_bands(board),
         "lines": _lines(levels, last_price),
         "markers": _touch_markers(levels),
-        "stats": _stats(levels, zones, scope_spec) + _board_stats(board),
-        "why": _board_why(board) + _why(levels, zones, scope_spec),
+        "stats": (_stats(levels, zones, scope_spec, recent_label=recent_label)
+                  + _board_stats(board)),
+        "why": _board_why(board) + _why(levels, zones, scope_spec,
+                                        recent_label=recent_label),
         "theme": board_mod._theme(sym),
-        "badges": [],
+        "badges": ([{"text": f"▱ {EF.FRAME_NOUN['weekly']} still forming", "tone": "warn"}]
+                   if (weekly and forming_date) else []),
     }
     overlay = _draw_overlay(tile, gaps, smc_read, orb, last_price)
     # 〰️ 9 EMA / 20 SMA / 200 SMA, the same three checkboxes the Chart Maps
@@ -1780,8 +1909,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # 15-minute chart is twenty 15-minute bars, never twenty days painted over
     # it. The same rule the levels themselves follow on this tab since
     # 2026-09-23. Soft-fails to no lines; it can never empty a tile.
+    # Weekly (2026-10-26): averages in WEEKLY bars, joined by date-only stamps.
     _attach_ma(tile,
-               (chart_df if intraday else
+               (chart_df if (intraday or weekly) else
                 (_ma_frame[0] if _ma_frame else None)),
                intraday=intraday)
     trend = trend_read(df.tail(read_budget), mood_read)
@@ -1800,6 +1930,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # the two are no longer the same thing on any frame by accident. The old
     # shape had four arms and said nothing about provenance on 15m/60m.
     chart_part = (
+        f"{len(tile['bars'])} x {tf_spec_['bar_label']} bars · {spec['label']}"
+        if weekly else
         f"{len(tile['bars'])} x {tf_spec_['bar_label']} bars over "
         f"{short_sessions} session{'' if short_sessions == 1 else 's'}"
         if short_intraday is not None else
@@ -1822,6 +1954,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     if levels_fallback:
         chart_span += (f" (the {tf_spec_['bar_label']} window held no level)")
 
+    short_history = ({"have": len(df), "asked": read_budget}
+                     if (chart_only and level_short)
+                     else {"have": bars_used, "asked": budget}
+                     if short else None)
+    # Weekly counts its history in WEEKS (2026-10-26) — the unit is served so
+    # the FE types no word; every other frame's payload is byte-identical.
+    if weekly and own_bars and short_history:
+        short_history["unit"] = f"{tf_spec_['bar_label']} bars"
+
     return {
         **base,
         "name": tile["name"],
@@ -1831,10 +1972,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # the shortfall behind the NUMBERS is the larger claim. Without it a
         # 13-bar symbol warned at window=1m and went silent at window=1w,
         # which is backwards.
-        "short_history": ({"have": len(df), "asked": read_budget}
-                          if (chart_only and level_short)
-                          else {"have": bars_used, "asked": budget}
-                          if short else None),
+        "short_history": short_history,
+        # The forming week (2026-10-26) — the key exists ONLY on weekly payloads.
+        **({"forming": ({"date": forming_date,
+                         "note": WEEKLY_FORMING_NOTE.format(end=forming_date)}
+                        if forming_date else None)} if weekly else {}),
         "tile": tile,
         **levels,
         "verdict": zones.get("verdict"),
@@ -1952,6 +2094,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                   # generic arm used to say "this window", which on a daily
                   # view means the Zoom and on an intraday view means the
                   # frame — two different things wearing one sentence.
+                  # THE WEEKLY FRAME (2026-10-26): its own weekly bars at the
+                  # Zoom's span; the forming week named; UNMEASURED.
+                  (f"Levels are read from this chart's own weekly bars — the last {read_budget} weeks "
+                   f"({spec['label']}). The Zoom dropdown sets how far back. "
+                   + (WEEKLY_FORMING_NOTE.format(end=forming_date) + " " if forming_date else "")
+                   + WEEKLY_UNMEASURED + " ")
+                  if (own_bars and weekly) else
                   f"Levels are read from this chart's own "
                   f"{tf_spec_['bar_label']} bars — {tf_window_label}. "
                   f"The Zoom dropdown does not move them. "

@@ -1138,11 +1138,21 @@ def test_the_short_zoom_still_states_its_daily_span_on_a_DAILY_frame(loaded):
     assert "the last 5 sessions" in out["note"]
 
 
-# BE-16 NEGATIVE — he declined weekly CANDLES
+# BE-16 NEGATIVE — he declined weekly CANDLES (2026-09-18: twice — a "1 week"
+# zoom of the same daily/intraday candles, then "1 week of HOURLY bars").
+# WIDENED 2026-10-26, his reversal of that decline, verbatim: "Can you build me
+# 1 min bar chart and also 1 week bar chart in the supply and demand". Weekly
+# candles now exist, built by THE ONE weekly engine
+# (`ema_frames.resample_ohlcv(…, "weekly")`); support.py itself must still own
+# no resample of its own and no left-closed bin.
 def test_no_bar_interval_was_introduced():
     src = inspect.getsource(S)
-    assert "resample" not in src
-    assert "closed=left" not in src
+    assert ".resample(" not in src
+    assert "closed=left" not in src and 'closed="left"' not in src
+    assert "EF.resample_ohlcv(daily, \"weekly\")" in src   # the one engine, by name
+    # NEGATIVE: no parallel weekly bucketing either
+    assert "pd.Grouper" not in src
+    assert '"W-FRI"' not in src and "'W-FRI'" not in src
 
 
 # BE-17 [C1] the equality that makes the note true

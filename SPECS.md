@@ -599,6 +599,15 @@ when the stored close is the prior session's; text = `high_beta_tab.leg_text` of
 live fetch); the header's `as_of` is measured on SPY/QQQ. Context only — gates nothing, alerts nothing, not
 advice. Full contract: `docs/supply_demand/index_zones.md`.
 
+### Supply/Demand Support-tab frames — supply_demand/timeframes.py (2026-08-29; 1-minute + weekly 2026-10-26)
+`TIMEFRAMES`, shortest first: `1min` "Today, to the minute" (1-minute Massive bars, today from 04:00 ET, ≤ 960, `ext_hours`) ·
+`5m_today` · `24h` · `15m` · `60m` · `daily` (`DEFAULT_TF`) · `weekly` "The long view" (the Support daily frame resampled by
+`chart_maps.ema_frames.resample_ohlcv` — W-FRI, closed=right, label=right; zoom → weeks via `chart_maps.support.weekly_bars_for`:
+6m 26 · 1y 52 · 2y 104 · 3y 156 · 5y 260; default 1y; `support_only`). Ajay 2026-10-26: *"Can you build me 1 min bar chart and also
+1 week bar chart in the supply and demand"*. Both ride `tf_options(include_live=True)` (Support tab only); `frame_for` refuses both to
+every structure caller. The forming minute / week is drawn, never structure; the board block stays daily; neither frame's BUY/SELL is
+recorded. UNMEASURED. Contract: `docs/supply_demand/support_levels_tab.md` § "One-minute and weekly bars (2026-10-26)".
+
 ### Chart Maps — Gajjala's tab — `chart_maps/gajjala/` (2026-10-13)
 Goverdhan Gajjala's five intraday setups over HIS scanner on the whole US market (Ajay: *"Implement his full stategy do
 not assume anything."*). Long setups only. **UNMEASURED** — nothing here trades, sizes or enters a lane; not SEPA (no

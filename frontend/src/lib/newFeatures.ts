@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-26 (verbatim in the label): "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand".
+  // Two new rows in the ONE frame table (backend supply_demand/timeframes.py TIMEFRAMES, shortest first): `1min` FIRST
+  // ("Today, to the minute" — the 5m_today path at rule 1min: Massive minutes, today from 04:00 ET, ext_hours, the forming
+  // minute flagged partial via live_state while the tape is open) and `weekly` LAST ("The long view" — the Support daily
+  // frame resampled by chart_maps.ema_frames.resample_ohlcv, W-FRI closed/label right; the zoom → weeks lives in
+  // support.weekly_bars_for; support_only). Both draw on the Support tab only, read levels off their own CLOSED bars with
+  // the same zone engine; the board block stays daily; neither frame's BUY/SELL is recorded; structure endpoints refuse
+  // both. UNMEASURED — no study has shown an edge for zones at any bar size. Pinned by scripts/contracts.mjs
+  // ("🕐 Support 1-minute + weekly frames (2026-10-26)").
+  { id: 'chart-maps-support-1min-weekly-frames-2026-10-26', addedAt: '2026-10-26', route: '/chart-maps?tab=support',
+    label: "🕐 Two new charts in the Support Levels picker: one-minute bars and weekly bars. You said: “Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand”. “Today, to the minute” draws today from the pre-market open on one-minute bars, pre-market and after-hours shaded, re-read while the tape is open. “The long view” draws one bar per week, Monday to Friday, labelled by that week’s Friday; the Zoom sets how far back, six months to five years. Both read their levels off their own bars with the same zone engine — no new level maths — and the minute or week still forming is drawn but never read as a level. The alert board’s band stays the daily one. UNMEASURED — no study has shown an edge for zones at any bar size. Not advice." },
   // Ajay 2026-10-23 ~08:55 ET (both lines verbatim in the label), on the 🚩 Gajjala's strip: the 🔄 button was a hairline
   // ghost that vanished out of the pass window (scan_block serves state "closed" there and the board hid it) and sat
   // greyed for up to the served wait-max after every open (the on-open POST answers "waiting" while a pass already holds

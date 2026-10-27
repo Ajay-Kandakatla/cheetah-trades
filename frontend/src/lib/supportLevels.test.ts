@@ -322,16 +322,21 @@ describe('priceAsOf', () => {
  * Seventeen merged (window, tf) entries became five FRAMES plus a zoom that
  * exists only where it changes something. These pin the agreed set, the span
  * beside every name, and the pins that keep an invalid pair unreachable. */
-describe('the chart control — five frames, named by the job', () => {
-  it('offers EXACTLY the five agreed frames, shortest first', () => {
+// 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+describe('the chart control — seven frames, named by the job', () => {
+  it('offers EXACTLY the seven agreed frames, shortest first', () => {
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
     expect(FALLBACK_TIMEFRAMES.map((t) => t.key))
-      .toEqual(['5m_today', '24h', '15m', '60m', 'daily']);
+      .toEqual(['1min', '5m_today', '24h', '15m', '60m', 'daily', 'weekly']);
     expect(FALLBACK_TIMEFRAMES.map((t) => t.label)).toEqual([
+      'Today, to the minute',
       'Today, for an entry', 'Last 24 hours', 'The last two weeks',
       'The last two months', 'The big picture',
+      'The long view',
     ]);
-    // Rule #5: a change that ADDS options has failed. Five is the ceiling.
-    expect(FALLBACK_TIMEFRAMES.length).toBeLessThanOrEqual(5);
+    // Rule #5: a change that ADDS options has failed. Seven is the ceiling
+    // (five until his 2026-10-26 ask for two more; an eighth still fails).
+    expect(FALLBACK_TIMEFRAMES.length).toBeLessThanOrEqual(7);
   });
 
   it('every option carries a span built from its own bar size and window', () => {
@@ -386,7 +391,10 @@ describe('the chart control — five frames, named by the job', () => {
     // the named fallback, both DAILY reads. It is just not his to pick where
     // nothing he can see would change. These are the pins the merged control
     // carried before 2026-09-22; 24h inherits 5m_live's 6m.
-    expect(FRAME_WINDOW).toEqual({ '5m_today': '6m', '24h': '6m', '15m': '1m', '60m': '3m' });
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    expect(FRAME_WINDOW).toEqual({
+      '1min': '6m', '5m_today': '6m', '24h': '6m', '15m': '1m', '60m': '3m', weekly: '1y',
+    });
     expect(windowForFrame('5m_today', '1y')).toBe('6m');
     expect(windowForFrame('24h', '3y')).toBe('6m');
     expect(windowForFrame('15m', '5y')).toBe('1m');
@@ -396,7 +404,8 @@ describe('the chart control — five frames, named by the job', () => {
     expect(windowForFrame('daily', 'all')).toBe('all');
     expect(windowForFrame('daily', 'garbage')).toBe(DEFAULT_WINDOW);
     // and an unknown frame is daily, so it keeps the zoom too
-    expect(windowForFrame('weekly', '3m')).toBe('3m');
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    expect(windowForFrame('fortnightly', '3m')).toBe('3m');
   });
 
   it('the zoom offers only what the chosen frame can answer', () => {
@@ -454,8 +463,9 @@ describe('the chart control — five frames, named by the job', () => {
     expect(STRUCTURE_TIMEFRAMES.some((t) => t.ext)).toBe(false);
     // NEGATIVE: and the two that ARE extended-hours are still offered on the
     // Support tab, which is the one surface allowed to draw them.
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
     expect(FALLBACK_TIMEFRAMES.filter((t) => t.ext).map((t) => t.key))
-      .toEqual(['5m_today', '24h']);
+      .toEqual(['1min', '5m_today', '24h']);
   });
 });
 
@@ -553,7 +563,8 @@ describe('retired frames — an old link still works, and says where it went', (
     // Every surface answered on daily before timeframes existed, so that is
     // the one fallback that cannot surprise anyone — and it needs no notice,
     // because no real frame was asked for.
-    for (const junk of ['', '5m_tomorrow', 'weekly', null, undefined, '15m_opne']) {
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    for (const junk of ['', '5m_tomorrow', 'fortnightly', null, undefined, '15m_opne']) {
       expect(parseTf(junk)).toBe('daily');
       expect(retiredTf(junk as never)).toBeNull();
     }
@@ -570,8 +581,9 @@ describe('retired frames — an old link still works, and says where it went', (
 /* ── TradingView link-out stays in step (Ajay 2026-08-31) ─────────────────── */
 describe('tvChartUrl — an interval for every frame that can be selected', () => {
   it('maps every offered frame to a real TradingView interval', () => {
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
     const want: Record<string, string> = {
-      '5m_today': '5', '24h': '5', '15m': '15', '60m': '60', daily: 'D',
+      '1min': '1', '5m_today': '5', '24h': '5', '15m': '15', '60m': '60', daily: 'D', weekly: 'W',
     };
     for (const t of FALLBACK_TIMEFRAMES) {
       expect(tvChartUrl('NVDA', t.key), `${t.key} lost its TV interval`)
@@ -585,7 +597,8 @@ describe('tvChartUrl — an interval for every frame that can be selected', () =
   });
 
   it('NEGATIVE: an unknown frame opens the daily chart', () => {
-    expect(tvChartUrl('NVDA', 'weekly')).toContain('interval=D');
+    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
+    expect(tvChartUrl('NVDA', 'fortnightly')).toContain('interval=D');
     expect(tvChartUrl('BRK-B')).toContain('symbol=BRK.B');
   });
 });
