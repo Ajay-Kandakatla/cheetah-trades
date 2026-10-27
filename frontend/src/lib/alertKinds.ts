@@ -89,6 +89,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // A Gajjala setup read still forming (sideways part begun, reclaim not printed). LIVE, owner-only (keep-set).
   // UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs.
   gajjala_potential:   { emoji: '🧠', label: 'Gajjala potential',       group: 'trading' },
+  // 🚩 Gajjala's 1-min (2026-10-27, BUILD_SPEC27) — the same setups read on CLOSED 1-minute candles. Both kinds are
+  // SHADOW (GAJJALA_1M_PUSH_MODE, HIS CALL #1): recorded on /alerts, never sent; off in default_prefs, not in the
+  // owner keep-set. Registered so a recorded row renders with a label instead of the raw id. UNMEASURED.
+  gajjala_1m_setup:     { emoji: '🚩', label: 'Gajjala 1-min A+ (shadow)',        group: 'trading' },
+  gajjala_1m_potential: { emoji: '🧠', label: 'Gajjala 1-min potential (shadow)', group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

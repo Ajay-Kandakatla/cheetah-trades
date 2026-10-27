@@ -44,6 +44,13 @@ first), releases carry the holder's token (a holder that was taken over releases
 from Mongo goes through `_utc` (the live client is not tz-aware — A5). The cron's pass doc moves "latest" AND
 "latest_cron"; an on-open pass doc moves "latest" only, never backwards in time (A10).
 
+🚩 The 1-minute page (2026-10-27, BUILD_SPEC27 §3.4 — Ajay "do the same logic of Gajjalas but on 1 min candles"): a
+store carries a `variant` (variant.py). GG5 = the twelve names above, byte for byte (`GajjalaStore()` — the 🚩 lane's
+store — never changes). GG1 (`for_variant(GG1)`) writes its OWN collections under its prefix (gajjala_1m_passes,
+gajjala_1m_reads, gajjala_1m_alerts, gajjala_1m_state, gajjala_1m_potentials, gajjala_1m_ledger, gajjala_1m_replay)
+and reads the SHARED ones (the scanner list, ah-carry, post, halts, daily) through GG5's store; the broker list is ONE
+list (GG5's gajjala_state doc). Its lease runs on its own numbers (GG1M_LEASE_SEC / GG1M_LEASE_MIN_GAP_SEC).
+
 Every handle is injectable (`GajjalaStore(colls={...})`) — the tests pass in-memory stand-ins and tests/conftest.py
 refuses a real MongoClient. Module-level functions delegate to one default store, so callers may hand either the
 module or an instance to `scanner.listed_symbols(store, session)`. Every write soft-fails (logged, never raised): a
@@ -61,6 +68,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from . import constants as GC
+from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.store")
 
@@ -78,6 +86,9 @@ LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-
 REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4) — written ONLY by scripts/gajjala_replay.py --write; kept, no TTL
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
 ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, REPLAY)
+# 2026-10-27 (BUILD_SPEC27 §3.4): what a variant WRITES under its own prefix vs what it READS from GG5 (ALL = OWN ∪ SHARED)
+OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY)
+SHARED = (SCAN, AH_CARRY, POST, HALTS, DAILY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
 LEDGER_ALERT_STATES = ("shadow", "pushed")     # the A+ rows the ledger reads (ledger.alert_of filters the ids)
@@ -186,9 +197,13 @@ def _broker_effective(seed: list, added: list, removed: list) -> tuple:
 def _broker_read(store) -> tuple:
     """(doc, fault) — the gajjala_state broker doc through the store's fault-aware `_find_or_none` (None = a READ
     FAULT, AMENDMENTS12 F5); a store without it falls back to `get_state` (its {} cannot tell a fault, so it reads as
-    "no doc"). store None / no reader / a raise → ({}, True). Never raises, never writes."""
+    "no doc"). store None / no reader / a raise → ({}, True). Never raises, never writes. A variant store (2026-10-27)
+    reads through its `shared` GG5 store — ONE broker list."""
     if store is None:
         return {}, True
+    shared = getattr(store, "shared", None)
+    if shared is not None and shared is not store:
+        store = shared
     fon = getattr(store, "_find_or_none", None)
     if callable(fon):
         try:
@@ -257,22 +272,32 @@ def _stamp(v) -> Optional[datetime]:
     return _utc(v) if isinstance(v, datetime) else None
 
 
-def lease_free(doc: Optional[dict], now: datetime) -> bool:
+def _lease_sec(lease_sec) -> float:
+    return GC.LEASE_SEC if lease_sec is None else lease_sec
+
+
+def _gap_sec(gap_sec) -> float:
+    return GC.LEASE_MIN_GAP_SEC if gap_sec is None else gap_sec
+
+
+def lease_free(doc: Optional[dict], now: datetime, lease_sec=None) -> bool:
     """Nobody holds the lease: no doc, or `status` ≠ "running", or the holder claimed it ≥ LEASE_SEC ago (a crashed
-    holder frees itself). The python twin of `lease_query`'s `free` clause."""
+    holder frees itself). The python twin of `lease_query`'s `free` clause. `lease_sec` (2026-10-27): None = GC.LEASE_SEC
+    at call time (GG5); the 1-minute page passes GC.GG1M_LEASE_SEC."""
     if not isinstance(doc, dict) or doc.get("status") != "running":
         return True
     claimed = _stamp(doc.get("claimed_at"))
-    return claimed is not None and claimed <= _utc(now) - timedelta(seconds=GC.LEASE_SEC)
+    return claimed is not None and claimed <= _utc(now) - timedelta(seconds=_lease_sec(lease_sec))
 
 
-def lease_gap_ok(doc: Optional[dict], now: datetime) -> bool:
+def lease_gap_ok(doc: Optional[dict], now: datetime, gap_sec=None) -> bool:
     """The last CRON start is ≥ LEASE_MIN_GAP_SEC ago (the duplicate-cron guard). The clock is `last_cron_started_at`
     when on file, else `started_at` (a legacy medical-shape doc — its started_at was always a cron start, and an on-open
-    claim never writes started_at, A9), else none → True. The python twin of `lease_query`'s `gap` clause."""
+    claim never writes started_at, A9), else none → True. The python twin of `lease_query`'s `gap` clause. `gap_sec`
+    (2026-10-27): None = GC.LEASE_MIN_GAP_SEC at call time (GG5); the 1-minute page passes GC.GG1M_LEASE_MIN_GAP_SEC."""
     if not isinstance(doc, dict):
         return True
-    cut = _utc(now) - timedelta(seconds=GC.LEASE_MIN_GAP_SEC)
+    cut = _utc(now) - timedelta(seconds=_gap_sec(gap_sec))
     for k in ("last_cron_started_at", "started_at"):
         if k in doc:
             v = _stamp(doc.get(k))
@@ -280,26 +305,28 @@ def lease_gap_ok(doc: Optional[dict], now: datetime) -> bool:
     return True
 
 
-def lease_claimable(doc: Optional[dict], now: datetime, source: str, *, take_over: bool = False) -> bool:
+def lease_claimable(doc: Optional[dict], now: datetime, source: str, *, take_over: bool = False, lease_sec=None,
+                    gap_sec=None) -> bool:
     """What `lease_query(now, source, take_over=)` matches, in python (a test pins the two together on a doc table):
     on_demand = free (NO gap — C1); cron = (free, or with take_over an on-open holder) AND the gap."""
     if source == LEASE_ON_DEMAND:
-        return lease_free(doc, now)
-    holder_ok = lease_free(doc, now) or (take_over and isinstance(doc, dict) and doc.get("status") == "running"
-                                         and doc.get("held_by") == LEASE_ON_DEMAND)
-    return bool(holder_ok) and lease_gap_ok(doc, now)
+        return lease_free(doc, now, lease_sec)
+    holder_ok = lease_free(doc, now, lease_sec) or (take_over and isinstance(doc, dict)
+                                                    and doc.get("status") == "running"
+                                                    and doc.get("held_by") == LEASE_ON_DEMAND)
+    return bool(holder_ok) and lease_gap_ok(doc, now, gap_sec)
 
 
-def lease_query(now: datetime, source: str, *, take_over: bool = False) -> dict:
+def lease_query(now: datetime, source: str, *, take_over: bool = False, lease_sec=None, gap_sec=None) -> dict:
     """The claim's filter on `_id "lease"` — only $or / $and / $ne / $lte / $exists (the FakeColl has no $lt / $gt).
     on_demand → free only (C1: an open skips the cron gap); cron → holder AND gap, holder = free, or with `take_over`
     free OR running-and-held-by-on_demand."""
     now = _utc(now)
     free = {"$or": [{"status": {"$ne": "running"}},
-                    {"claimed_at": {"$lte": now - timedelta(seconds=GC.LEASE_SEC)}}]}
+                    {"claimed_at": {"$lte": now - timedelta(seconds=_lease_sec(lease_sec))}}]}
     if source == LEASE_ON_DEMAND:
         return {"_id": LEASE_ID, "$and": [free]}
-    cut = now - timedelta(seconds=GC.LEASE_MIN_GAP_SEC)
+    cut = now - timedelta(seconds=_gap_sec(gap_sec))
     gap = {"$or": [{"last_cron_started_at": {"$lte": cut}},
                    {"last_cron_started_at": {"$exists": False}, "started_at": {"$lte": cut}},
                    {"last_cron_started_at": {"$exists": False}, "started_at": {"$exists": False}}]}
@@ -308,23 +335,46 @@ def lease_query(now: datetime, source: str, *, take_over: bool = False) -> dict:
 
 
 class GajjalaStore:
-    """The twelve collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
+    """The twelve collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo.
+    2026-10-27: `variant` (variant.py; None = GG5) picks the physical names of the OWN collections; `shared` (a GG5
+    store) answers the SHARED ones for a variant store. `colls` keys are always the LOGICAL names."""
 
-    def __init__(self, colls: Optional[dict] = None):
+    def __init__(self, colls: Optional[dict] = None, *, variant=None, shared=None):
         self._injected = dict(colls or {})
         self._cache: dict = {}
+        self.variant = V.of(variant)
+        self.shared = shared
+
+    def physical(self, name: str) -> str:
+        """The Mongo collection a logical name resolves to: GG5 → the name; a variant's OWN name → its prefix
+        (gajjala_passes → gajjala_1m_passes); a SHARED name → GG5's name."""
+        v = self.variant
+        if V.is_gg5(v) or name not in OWN:
+            return name
+        return v.store_prefix + name[len("gajjala"):]
 
     def coll(self, name: str):
         if name in self._injected:
             return self._injected[name]
-        if name not in self._cache:
-            self._cache[name] = _coll(name)
-        return self._cache[name]
+        if self.shared is not None and name in SHARED:
+            return self.shared.coll(name)
+        phys = self.physical(name)
+        if phys not in self._cache:
+            self._cache[phys] = _coll(phys)
+        return self._cache[phys]
+
+    def _lease_nums(self) -> tuple:
+        """(lease_sec, gap_sec) of the variant: (None, None) on GG5 (the GC numbers at call time, as before); the
+        1-minute page's own (GC.GG1M_LEASE_SEC, GC.GG1M_LEASE_MIN_GAP_SEC), read at call time."""
+        if V.is_gg5(self.variant):
+            return None, None
+        return GC.GG1M_LEASE_SEC, GC.GG1M_LEASE_MIN_GAP_SEC
 
     # ── indexes ────────────────────────────────────────────────────────────────────────────────────────────────
     def ensure_indexes(self) -> None:
-        """Idempotent: TTL on `at` where the spec keeps a retention, plus the read paths' keys."""
-        for name in ALL:
+        """Idempotent: TTL on `at` where the spec keeps a retention, plus the read paths' keys. A variant store with a
+        `shared` GG5 store (2026-10-27) walks its OWN collections only (GG5's own run indexes the shared ones)."""
+        for name in (OWN if self.shared is not None else ALL):
             c = self.coll(name)
             if c is None:
                 continue
@@ -596,8 +646,10 @@ class GajjalaStore:
             from pymongo.errors import DuplicateKeyError
         except Exception:                                       # pragma: no cover
             DuplicateKeyError = KeyError                        # noqa: N806
+        ls, gs = self._lease_nums()
         try:
-            pre = c.find_one_and_update(lease_query(now, source, take_over=take_over), {"$set": sets}, upsert=True)
+            pre = c.find_one_and_update(lease_query(now, source, take_over=take_over, lease_sec=ls, gap_sec=gs),
+                                        {"$set": sets}, upsert=True)
         except DuplicateKeyError:
             return self._classify_refusal(c, now, source)
         except Exception as exc:                                # noqa: BLE001
@@ -606,23 +658,24 @@ class GajjalaStore:
         try:
             # pymongo returns the PRE-image by default; a non-dict (the dry-run recorder) reads as "no prior holder"
             taken = (take_over and isinstance(pre, dict) and pre.get("status") == "running"
-                     and pre.get("held_by") == LEASE_ON_DEMAND and not lease_free(pre, now))
+                     and pre.get("held_by") == LEASE_ON_DEMAND and not lease_free(pre, now, ls))
         except Exception:                                       # noqa: BLE001
             taken = False
         return LeaseClaim(True, "taken_over" if taken else "claimed", token=token)
 
     def _classify_refusal(self, c, now: datetime, source: str) -> LeaseClaim:
+        ls, gs = self._lease_nums()
         try:
             doc = c.find_one({"_id": LEASE_ID})
             if not isinstance(doc, dict):
                 return LeaseClaim(False, "error")
-            if not lease_free(doc, now):
+            if not lease_free(doc, now, ls):
                 holder = doc.get("held_by") or LEASE_CRON
                 if source == LEASE_CRON and holder == LEASE_ON_DEMAND:
-                    why = "gap" if not lease_gap_ok(doc, now) else "held_on_demand"
+                    why = "gap" if not lease_gap_ok(doc, now, gs) else "held_on_demand"
                     return LeaseClaim(False, why, held_by=holder)
                 return LeaseClaim(False, "held", held_by=holder)
-            if source == LEASE_CRON and not lease_gap_ok(doc, now):
+            if source == LEASE_CRON and not lease_gap_ok(doc, now, gs):
                 return LeaseClaim(False, "gap", held_by=None)
             return LeaseClaim(False, "error")                   # freed between the attempt and this read (A7 retries)
         except Exception as exc:                                # noqa: BLE001
@@ -678,7 +731,7 @@ class GajjalaStore:
             log.warning("gajjala.store: lease state read failed: %s", type(exc).__name__)
             return {}
         doc = doc if isinstance(doc, dict) else {}
-        held = not lease_free(doc or None, now)
+        held = not lease_free(doc or None, now, self._lease_nums()[0])
         held_by = doc.get("held_by") or (LEASE_CRON if doc.get("status") == "running" else None)
         stamps = {k: _stamp(doc.get(k)) for k in ("claimed_at", "started_at", "od_started_at", "last_cron_started_at")}
         own = None
@@ -810,7 +863,14 @@ class GajjalaStore:
         """🏁 Every 🧠 tracker doc of these ET sessions whose push RANG (`push.state` "pushed") — the ledger's live rows.
         None on a read fault / no handle ([] = none on file)."""
         days = [_iso(s) for s in sessions or []]
-        return self._find_or_none(POTENTIALS, {"date": {"$in": days}, "push.state": "pushed"})
+        return self._find_or_none(POTENTIALS, {"date": {"$in": days}, "push.state": self._push_state_q()})
+
+    def _push_state_q(self):
+        """GG5: exactly "pushed" (the query as it always was); a variant: {"$in": its ledger_push_states} (the 1-minute
+        page counts its shadow potentials — HIS CALL #2 of BUILD_SPEC27)."""
+        if V.is_gg5(self.variant):
+            return "pushed"
+        return {"$in": list(self.variant.ledger_push_states)}
 
     def alert_rows(self, sessions: Iterable) -> Optional[list]:
         """🏁 Every A+ ledger doc of these sessions in state shadow / pushed (ledger.alert_of keeps the SHADOW: claims
@@ -838,7 +898,7 @@ class GajjalaStore:
         """🏁 AMENDMENTS9 E7 — the distinct alert dates of the rows themselves (pushed 🧠 potentials ∪ A+ shadow / live
         claims), sorted: the "all" span reads these, never the ledger's own dates alone (a night that failed must not
         hide a day). None on a read fault on either collection."""
-        pot = self._find_or_none(POTENTIALS, {"push.state": "pushed"})
+        pot = self._find_or_none(POTENTIALS, {"push.state": self._push_state_q()})
         al = self._find_or_none(ALERTS, {"state": {"$in": list(LEDGER_ALERT_STATES)}})
         if pot is None or al is None:
             return None
@@ -961,6 +1021,21 @@ def default() -> GajjalaStore:
     if _DEFAULT is None:
         _DEFAULT = GajjalaStore()
     return _DEFAULT
+
+
+_VARIANT_STORES: dict = {}
+
+
+def for_variant(v=None) -> GajjalaStore:
+    """The real store of a variant (2026-10-27): GG5 → default() (the same object); another variant → ONE cached
+    `GajjalaStore(variant=v, shared=default())` per process."""
+    vv = V.of(v)
+    if V.is_gg5(vv):
+        return default()
+    st = _VARIANT_STORES.get(vv.key)
+    if st is None:
+        st = _VARIANT_STORES[vv.key] = GajjalaStore(variant=vv, shared=default())
+    return st
 
 
 def _delegate(name: str):

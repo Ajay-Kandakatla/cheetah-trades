@@ -30,6 +30,11 @@ that does not ring for a window, a late bar, a halt or exhaustion is recorded un
 consumes the day's claim, so a fresh A+ later the same day still can.
 
 UNMEASURED. Every body ends "UNMEASURED — his setup, not a buy signal". Nothing here trades, sizes or enters a lane.
+
+THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.5 — Ajay "do the same logic of Gajjalas but on 1 min candles"): the SAME
+gate runs for a `variant.Variant` read off the store (`V.of(store)`): its claim prefix ("GG1:…" / "SHADOW:GG1:…"), its
+push kind / sender / mode switch (GAJJALA_1M_PUSH_MODE — shadow: recorded, never sent), its tab in the url, and its
+freshness clock (one 1-minute cadence + BAR_SETTLE_SEC). GG5 (today's tab) keeps every byte.
 """
 from __future__ import annotations
 
@@ -45,6 +50,7 @@ from daytrading.data import ET_AFTERHOURS_CLOSE, ET_RTH_OPEN
 from supply_demand.timeframes import HALF_DAYS
 
 from . import constants as GC
+from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.alerts")
 
@@ -60,7 +66,7 @@ HALF_DAY_AH_CLOSE = dtime(17, 0)
 # empty buckets, so on a thin after-hours name the frame's own "latest" bar can be hours old — the clock, not the
 # frame, decides "fresh".
 MAX_ENTRY_AGE_SEC = GC.PASS_CADENCE_SEC + GC.BAR_SETTLE_SEC
-FRAME_MINUTES = {"5m": 5, "15m": 15}
+FRAME_MINUTES = {"5m": 5, "15m": 15, "1m": 1}               # 2026-10-27: "1m" appended (the 1-minute page's frame)
 SETUP_META = {k: (e, label) for k, e, label in GC.SUBS}
 UNMEASURED_TAIL = "UNMEASURED — his setup, not a buy signal"
 AH_TAG = "after-hrs · he uses limit orders and less size outside RTH (S8 1:16:35)"
@@ -90,19 +96,30 @@ COUNT_KEYS = ("aplus", "pushed", "shadow", "shadow_mode", "shadow_session", "sup
 
 
 # ── mode ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-def push_mode() -> str:
-    """"live" only when constants.py says exactly that; anything else is shadow (fail closed). Read at CALL time."""
+def push_mode(variant=None) -> str:
+    """"live" only when constants.py says exactly that; anything else is shadow (fail closed). Read at CALL time.
+    `variant` (2026-10-27): GG5 reads GAJJALA_PUSH_MODE as always; another variant reads its own switch."""
+    if not V.is_gg5(variant):
+        return V.push_mode(variant)
     return "live" if GC.GAJJALA_PUSH_MODE == "live" else "shadow"
 
 
-def claim_key(session, sym: str, setup: str) -> str:
-    """Once per (symbol, setup, ET trading day) — HIS CALL 11."""
+def max_entry_age_sec(variant=None) -> int:
+    """The freshness window of an entry bar: GG5 = the module's MAX_ENTRY_AGE_SEC (read at call time); another variant
+    = its own cadence + BAR_SETTLE_SEC (the 1-minute page: 60 + 30 = 90 s) — the same formula, its own clock."""
+    if V.is_gg5(variant):
+        return MAX_ENTRY_AGE_SEC
+    return V.cadence_sec(variant) + GC.BAR_SETTLE_SEC
+
+
+def claim_key(session, sym: str, setup: str, variant=None) -> str:
+    """Once per (symbol, setup, ET trading day) — HIS CALL 11. "GG:…" on GG5, the variant's prefix otherwise ("GG1:…")."""
     d = session.isoformat() if isinstance(session, (date, datetime)) else str(session)
-    return f"GG:{d}|{(sym or '').upper()}|{setup}"
+    return f"{V.of(variant).claim_prefix}:{d}|{(sym or '').upper()}|{setup}"
 
 
-def shadow_key(session, sym: str, setup: str) -> str:
-    return SHADOW_CLAIM_PREFIX + claim_key(session, sym, setup)
+def shadow_key(session, sym: str, setup: str, variant=None) -> str:
+    return SHADOW_CLAIM_PREFIX + claim_key(session, sym, setup, variant)
 
 
 # ── the clock ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -171,24 +188,24 @@ def _as_of(frames, frame: str) -> Optional[str]:
     return (m or {}).get(frame) if isinstance(m, dict) else None
 
 
-def is_fresh(read: dict, now) -> bool:
-    """The entry bar closed no more than MAX_ENTRY_AGE_SEC before `now` (and not after it)."""
+def is_fresh(read: dict, now, variant=None) -> bool:
+    """The entry bar closed no more than max_entry_age_sec(variant) before `now` (and not after it)."""
     close, at = bar_close_et((read or {}).get("entry_bar_t")), bar_close_et(now)
     if close is None or at is None:
         return False
-    return 0 <= (at - close).total_seconds() <= MAX_ENTRY_AGE_SEC
+    return 0 <= (at - close).total_seconds() <= max_entry_age_sec(variant)
 
 
-def pushable(read: dict, frames, now=None) -> bool:
+def pushable(read: dict, frames, now=None, variant=None) -> bool:
     """A+ on the latest closed bar OF ITS OWN FRAME (a 15-minute Fade is judged against the 15-minute clock) AND, when
     `now` is given, that bar closed within MAX_ENTRY_AGE_SEC of the pass. An A+ found on an older bar (host sleep, a
     catch-up pass, a thin name whose latest bar is hours old, a 15-minute bar the previous pass already saw) is
     "late", never rung."""
     if not isinstance(read, dict) or read.get("state") != "aplus" or not read.get("entry_bar_t"):
         return False
-    if read["entry_bar_t"] != _as_of(frames, read.get("frame") or "5m"):
+    if read["entry_bar_t"] != _as_of(frames, read.get("frame") or V.of(variant).primary):
         return False
-    return now is None or is_fresh(read, now)
+    return now is None or is_fresh(read, now, variant)
 
 
 def _bars_after(resume_et, bar_t_et, frame: str) -> Optional[int]:
@@ -261,7 +278,7 @@ def potential_rang_at(store, session, sym: str, setup: str) -> Optional[str]:
 
 def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None,
             potential_at_et: Optional[str] = None, broker_text: Optional[str] = None,
-            trader_text: Optional[str] = None) -> dict:
+            trader_text: Optional[str] = None, variant=None) -> dict:
     """The device payload of one A+ entry. Every number is the read's own (trigger / stop / risk_pct / entry bar).
     Body (AMENDMENTS10 F9 — numbers first): broke T on the bar · stop · the setup's entry words · 🧠 potential rang
     HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · the 🚫 broker tag · UNMEASURED;
@@ -269,12 +286,15 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     served word) when a non-empty str → the clause right before UNMEASURED AND " · " + tab.BROKER_FLAG_ICON on the
     title; anything else → the body and title of before. A TAG only: the push still rings.
     📌 (2026-10-27, BUILD_SPEC26 §3.3): `trader_text` (trader_names.text_for — the tag and his handle) when a non-empty
-    str → its clause between the after-hours tag and the broker clause; the title is UNCHANGED (HIS CALL #4)."""
+    str → its clause between the after-hours tag and the broker clause; the title is UNCHANGED (HIS CALL #4).
+    `variant` (2026-10-27): the kind, the url's tab and the tag prefix ("gg-" GG5 / "gg1-" the 1-minute page) and the
+    frame a read without one is said on (its primary)."""
+    v = V.of(variant)
     ctx = tile_ctx or {}
     sym = (sym or "").upper()
     setup = read.get("setup") or ""
     emoji, label = SETUP_META.get(setup, ("🚩", setup))
-    frame = read.get("frame") or "5m"
+    frame = read.get("frame") or v.primary
     close = bar_close_et(read.get("entry_bar_t"))
     hhmm = close.strftime("%H:%M") if close else "—"
     risk = read.get("risk_pct")
@@ -295,15 +315,24 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     if bt:
         from .tab import BROKER_FLAG_ICON                       # AMENDMENTS12 A1: the lock screen always shows it
         title = f"{title} · {BROKER_FLAG_ICON}"
-    return {"title": title, "body": body, "tag": f"gg-{setup}-{sym}",
-            "url": f"/chart-maps?tab=gajjala&sub={setup}&focus={sym}", "kind": KIND, "ticker": sym,
+    return {"title": title, "body": body, "tag": f"{_tag_prefix(v)}-{setup}-{sym}",
+            "url": f"/chart-maps?tab={v.tab}&sub={setup}&focus={sym}", "kind": v.push_kind_setup, "ticker": sym,
             "items": [{"symbol": sym, "text": line}]}
 
 
+def _tag_prefix(v) -> str:
+    """"gg" on GG5 (byte-identical tags); "gg1" on the 1-minute page (its claim prefix, lower-cased)."""
+    return "gg" if V.is_gg5(v) else V.of(v).claim_prefix.lower()
+
+
 # ── send ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-def _default_send(owner: str, payload: dict) -> dict:
+def _default_send(owner: str, payload: dict, variant=None) -> dict:
+    """push.hooks' sender of the variant (GG5 notify_gajjala_setup — the shipped line; the 1-minute page's is named
+    by variant.GG1.send_setup and is never reached while its mode is shadow)."""
     from push import hooks
-    return hooks.notify_gajjala_setup(owner=owner, payload=payload)
+    if V.is_gg5(variant):
+        return hooks.notify_gajjala_setup(owner=owner, payload=payload)
+    return getattr(hooks, V.of(variant).send_setup)(owner=owner, payload=payload)
 
 
 def _owner() -> str:
@@ -380,12 +409,16 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames} (the per-frame latest bar); `ctx` = {SYM: {float_text,
     last_halt_resume_et, reg_gain_pct}}; `store` = the GajjalaStore (its `alerts_coll()`); `send(owner, payload)`
     defaults to push.hooks.notify_gajjala_setup. `dry` → nothing claimed, recorded or sent (counted "dry").
-    -> counts (COUNT_KEYS)."""
+    -> counts (COUNT_KEYS). 2026-10-27: the variant is the store's (`V.of(store)` — GG5 for today's store): its claim
+    prefix, kind, freshness clock, default mode (push_mode(v)) and default sender; the signature is unchanged."""
     from . import ledger as LG
     from . import store as ST
     from .tab import broker_text_for
-    mode = mode if mode in GC.PUSH_MODES else push_mode()
-    send = send or _default_send
+    v = V.of(store)
+    gg5 = V.is_gg5(v)
+    mode = mode if mode in GC.PUSH_MODES else push_mode(v)
+    if send is None:
+        send = _default_send if gg5 else (lambda o, p: _default_send(o, p, v))
     ctx = ctx or {}
     coll = store.alerts_coll() if store is not None else None
     counts = {k: 0 for k in COUNT_KEYS}
@@ -402,11 +435,11 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     closed = _closed_reason(now)
     for entry_t, _o, sym, setup, r in _candidates(reads):
         counts["aplus"] += 1
-        key = claim_key(session, sym, setup)
+        key = claim_key(session, sym, setup, v)
         c = ctx.get(sym) or {}
         base = {"date": session_iso, "symbol": sym, "setup": setup, "mode": mode, "entry_bar_t": entry_t,
                 "frame": r.get("frame"), "trigger": r.get("trigger"), "stop": r.get("stop"),
-                "risk_pct": r.get("risk_pct"), "price": c.get("price"), "kind": KIND}
+                "risk_pct": r.get("risk_pct"), "price": c.get("price"), "kind": v.push_kind_setup}
         if c.get("trader"):                                     # 📌 2026-10-27 — the 🏁 ledger's tag (claim doc)
             base["trader"] = c["trader"]
         if r.get("variant") or r.get("grade"):
@@ -414,15 +447,15 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
         elif LG.plan_of(r.get("trigger"), r.get("stop"))[0] != LG.PLANS[0]:
             state = "no_risk"                                   # 2026-10-20: trigger = stop (or no stop under it) — the
             #                                                     detectors refuse it first; this gate is the second lock
-        elif not pushable(r, frames.get(sym) if isinstance(frames, dict) else None, now):
+        elif not pushable(r, frames.get(sym) if isinstance(frames, dict) else None, now, v):
             # a 15-minute bar stays "latest" for three passes: the pass after the one that claimed it is a repeat,
             # not a late A+
-            claimed = _exists(coll, key) or _exists(coll, shadow_key(session, sym, setup))
+            claimed = _exists(coll, key) or _exists(coll, shadow_key(session, sym, setup, v))
             state = "claimed_before" if claimed else "late"
         elif closed:
             state = "suppressed_closed"
         else:
-            state = window_reason(entry_t, session, r.get("frame") or "5m") or extra_suppression(
+            state = window_reason(entry_t, session, r.get("frame") or v.primary) or extra_suppression(
                 r, ctx.get(sym), session)
         if state == "claimed_before":
             counts[state] += 1
@@ -437,10 +470,10 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             continue
         pot_at = potential_rang_at(store, session, sym, setup)  # DECISIONS10 D2: after every refusal and the dry gate
         payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at,
-                          broker_text=broker_text_for(sym, flags), trader_text=c.get("trader_text"))
+                          broker_text=broker_text_for(sym, flags), trader_text=c.get("trader_text"), variant=v)
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
-            sk = shadow_key(session, sym, setup)
+            sk = shadow_key(session, sym, setup, v)
             # `at` = the PASS clock (claimed_at is the house helper's wall clock — a replayed or late pass must not
             # stamp a shadow row with the time it was replayed)
             if not _claim(coll, sk, dict(base, state="shadow", would_push=payload, note=SHADOW_NOTE,
@@ -449,7 +482,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
                 continue
             counts["shadow"] += 1                               # the sender is NEVER called in shadow
             continue
-        if _exists(coll, shadow_key(session, sym, setup)) or not _claim(coll, key, dict(base, state="claimed",
+        if _exists(coll, shadow_key(session, sym, setup, v)) or not _claim(coll, key, dict(base, state="claimed",
                                                                                       at=now.isoformat())):
             counts["claimed_before"] += 1
             continue
@@ -469,6 +502,6 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     return counts
 
 
-__all__ = ["KIND", "push_mode", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
+__all__ = ["KIND", "push_mode", "max_entry_age_sec", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
            "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "run_pass", "shadow_session_count", "COUNT_KEYS",
            "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT"]

@@ -21,6 +21,11 @@ NEVER WRITES a gajjala collection. Cost rules:
 - the row's MINI tape (lite) NEVER fetches (AMENDMENTS11 F8): completed days from intraday_cache only, today from the
   ledger memo only.
 - each payload is memoised per (id, full | lite) for LEDGER_TAPE_MEMO_SEC; a full build refreshes the lite entry too.
+
+🚩 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.7 / WP-C): the same tape for the 1-minute page's store (`V.of(store)`
+= GG1): bars at variant.tape_tf_min (GG1M_TAPE_TF_MIN — 1-minute bars, HIS CALL #8), capped at variant.tape_bars_max
+(GG1M_TAPE_BARS_MAX), its minute words from that number, and its memo keyed (variant key, id, full | lite) — a GG1 id
+has the SAME shape as a GG5 id, so a GG5 memo entry never answers it. GG5 keeps every byte and the (id, …) key.
 """
 from __future__ import annotations
 
@@ -39,6 +44,7 @@ from supply_demand.timeframes import resample_ohlcv
 
 from . import constants as GC
 from . import ledger as LG
+from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.tape")
 
@@ -181,7 +187,13 @@ def bars5(df) -> list:
     loader's shape (naive-UTC minute STARTS; open/high/low/close[, volume][, session]) -> resample_ohlcv (left-closed,
     right-labelled) at LEDGER_TAPE_TF_MIN -> [{"t": epoch ms of the right label, "o", "h", "l", "c" (round 4), "v":
     float | None, "s": session}] ascending; `session` from daytrading.data._classify_session when absent; NaN volume ->
-    None; [] for None / empty."""
+    None; [] for None / empty. 2026-10-27: = tape_bars(df, LEDGER_TAPE_TF_MIN) (read at call time)."""
+    return tape_bars(df, GC.LEDGER_TAPE_TF_MIN)
+
+
+def tape_bars(df, tf_min) -> list:
+    """bars5's engine at any bar size `tf_min` (minutes) — GG5 LEDGER_TAPE_TF_MIN, the 1-minute page GG1M_TAPE_TF_MIN
+    (2026-10-27): the same resampler, the same shape."""
     if df is None or getattr(df, "empty", True):
         return []
     try:
@@ -194,7 +206,7 @@ def bars5(df) -> list:
     if "session" not in f.columns or f["session"].isna().any():
         tags = [dt_data._classify_session(ts) for ts in f.index]
         f["session"] = tags if "session" not in f.columns else f["session"].where(f["session"].notna(), tags)
-    rule = f"{GC.LEDGER_TAPE_TF_MIN}min"
+    rule = f"{int(tf_min)}min"
     out5 = resample_ohlcv(f, rule)
     if out5 is None or out5.empty:
         return []
@@ -248,9 +260,11 @@ def _market_days(d: date, last: date) -> list:
 
 
 # ── the payload ───────────────────────────────────────────────────────────────────────────────────────────────────
-def fault_payload(_id, *, lite: bool = False, now: Optional[datetime] = None, ticker: Optional[str] = None) -> dict:
-    """AMENDMENTS11 F19 — the tape that could not be built: every PAYLOAD_KEY present, no bars, the fault note."""
-    n = GC.LEDGER_TAPE_TF_MIN
+def fault_payload(_id, *, lite: bool = False, now: Optional[datetime] = None, ticker: Optional[str] = None,
+                  variant=None) -> dict:
+    """AMENDMENTS11 F19 — the tape that could not be built: every PAYLOAD_KEY present, no bars, the fault note.
+    `variant` (2026-10-27): its bar size in the words (GG5 LEDGER_TAPE_TF_MIN)."""
+    n = V.tape_tf_min(variant)
     return {"id": _id if isinstance(_id, str) else "", "ticker": ticker, "tf": _w("tf", n=n), "lite": bool(lite),
             "bars": [], "n_bars": 0, "hlines": [], "rules": [], "dots": [], "axis": None, "legend": None,
             "read": None, "title": None, "tone": None, "note": ENTRY_TAPE_WORDS["fault"],
@@ -340,11 +354,12 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
     if parsed is None:
         return None
     d, sym, _setup = parsed
-    n, m = GC.LEDGER_TAPE_TF_MIN, LG._m()
+    v = V.of(store)                                             # 2026-10-27: GG5 for today's store
+    n, m = V.tape_tf_min(v), LG._m()
     # 1. the row — the ledger's own reader (alert_of), each doc in its own try
     docs = store.alert_rows([d])
     if docs is None:
-        return fault_payload(_id, lite=lite, now=now, ticker=sym)
+        return fault_payload(_id, lite=lite, now=now, ticker=sym, variant=v)
     row = None
     for doc in docs:
         try:
@@ -406,14 +421,15 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
             continue
         if f is not None:
             parts.append(f)
-    # 5. the frame cut to the window -> the 5-minute bars
+    # 5. the frame cut to the window -> the tape bars (GG5: 5-minute; the 1-minute page: its own size and cap)
     frame = None
     if parts:
         frame = pd.concat(parts).sort_index()
         frame = frame[~frame.index.duplicated(keep="last")]
         lo_t, hi_t = start.replace(tzinfo=None), end.replace(tzinfo=None)
         frame = frame[(frame.index >= lo_t) & (frame.index + ONE_MIN <= hi_t)]
-    bars = bars5(frame)[:int(GC.LEDGER_TAPE_BARS_MAX)]
+    bars = (bars5(frame)[:int(GC.LEDGER_TAPE_BARS_MAX)] if V.is_gg5(v)
+            else tape_bars(frame, n)[:V.tape_bars_max(v)])
     # 6. today's provisional same column (the ledger's own grade on the closed minutes, as today_read grades it)
     session, is_today, _in = GT.session_for(now)
     same_p, prov = None, False
@@ -445,14 +461,17 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
         note = _w("no_bars", n=n, sym=sym, date=d.isoformat())
     else:
         note = None
-    return _compose(_id, row, d, sym, bars, cs, cn, same or same_p, nxt, split=split, note=note, lite=lite, now=now)
+    return _compose(_id, row, d, sym, bars, cs, cn, same or same_p, nxt, split=split, note=note, lite=lite, now=now,
+                    n=n)
 
 
 def _compose(_id: str, row: dict, d: date, sym: str, bars: list, cs: dict, cn: dict, same: Optional[dict],
-             nxt: Optional[dict], *, split: bool, note: Optional[str], lite: bool, now: datetime) -> dict:
+             nxt: Optional[dict], *, split: bool, note: Optional[str], lite: bool, now: datetime,
+             n: Optional[int] = None) -> dict:
     """Steps 7–8 — ONE composer for the live / shadow tape and the ⏪ replayed tape: the read (the 🏁 cells), the
-    trigger / stop / +1R lines, the alert / fill rules, the fill / exit dots, the axis and the tone."""
-    n, m = GC.LEDGER_TAPE_TF_MIN, LG._m()
+    trigger / stop / +1R lines, the alert / fill rules, the fill / exit dots, the axis and the tone. `n` (2026-10-27)
+    = the bar size in minutes of the words; None = LEDGER_TAPE_TF_MIN (GG5, as always)."""
+    n, m = (GC.LEDGER_TAPE_TF_MIN if n is None else n), LG._m()
     heads = dict(LG.HEADS)
     read = _w("read", same_head=heads["same"], same=_cell_text(cs), next_head=heads["next"], next=_cell_text(cn))
     # 8. the lines, rules and dots
@@ -522,19 +541,31 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
     clock = clock or time.monotonic
     now = LG._aware(now)
     lite = bool(lite)
-    key = (_id, "lite" if lite else "full")
+    from . import store as ST
+    try:
+        st = store or ST.default()
+    except Exception as exc:                                    # noqa: BLE001 — _build below serves the fault
+        log.warning("gajjala tape: no store: %s", type(exc).__name__)
+        st = None
+    v = V.of(st)
+    gg5 = V.is_gg5(v)
+
+    def mkey(mode: str) -> tuple:
+        """GG5: (id, mode), as always; another variant: (variant key, id, mode) — a GG1 id has a GG5 id's shape."""
+        return (_id, mode) if gg5 else (v.key, _id, mode)
+    key = mkey("lite" if lite else "full")
     with _LOCK:
         hit = _MEMO.get(key)
     if hit is not None and clock() - hit[0] < GC.LEDGER_TAPE_MEMO_SEC:
         return hit[1]
     notes: set = set()
     try:
-        from . import store as ST
-        p = _build(_id, lite=lite, now=now, store=store or ST.default(), clock=clock, load_day=load_day,
+        p = _build(_id, lite=lite, now=now, store=st, clock=clock, load_day=load_day,
                    today_bars=today_bars, notes_out=notes)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala tape: build failed for %s: %s", _id, type(exc).__name__)
-        p = fault_payload(_id, lite=lite, now=now, ticker=ref[1])
+        p = fault_payload(_id, lite=lite, now=now, ticker=ref[1]) if gg5 else fault_payload(
+            _id, lite=lite, now=now, ticker=ref[1], variant=v)
     if p is None:
         return None
     out = lite_of(p) if lite else p
@@ -545,10 +576,11 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
                 _MEMO.pop(k, None)
             _MEMO[key] = (t, out)
             if not lite:
-                _MEMO[(_id, "lite")] = (t, lite_of(p))
+                _MEMO[mkey("lite")] = (t, lite_of(p))
     return out
 
 
 __all__ = ["ENTRY_TAPE_WORDS", "VIEW_PARAM", "VIEWS", "VIEW_DEFAULT", "TIMELINE_EMPTY_TEXT", "TAPE_HEAD", "TAPE_TOGGLE",
-           "PAYLOAD_KEYS", "LITE_KEYS", "views_block", "parse_id", "replay_ref", "bars5", "entry_tape", "lite_of",
+           "PAYLOAD_KEYS", "LITE_KEYS", "views_block", "parse_id", "replay_ref", "bars5", "tape_bars", "entry_tape",
+           "lite_of",
            "fault_payload"]

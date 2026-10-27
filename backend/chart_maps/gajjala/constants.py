@@ -251,3 +251,23 @@ TRADER_NAMES_MAX = 10                    # Cheetah default (MINE, not GG — HIS
 TRADER_REFRESH_SEC = PASS_CADENCE_SEC * 3   # derived — MINE (HIS CALL #5): the pass re-reads a flagged StockTwits account every 900 s
 TRADER_FETCH_PAGES = 1                   # TRANSPORT — MINE: one 30-message page per in-pass read
 TRADER_FETCH_TIMEOUT_SEC = 5.0           # TRANSPORT — MINE: worst case 3 profiles x 5 s, out of the pass's own bar budget
+
+# 🚩 Gajjala's 1-minute page (Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of
+# Gajjalas but on 1 min candles please." / "do everything and also add the track record for it from today..") —
+# BUILD_SPEC27 §3.2. The variant (chart_maps/gajjala/variant.py GG1) runs GG's SAME rules on 1-minute bars; every number
+# below is MINE (a Cheetah transport / page default) or derived — NO GG number is copied or changed here, and none of
+# his K-numbers moves. UNMEASURED: nothing has measured a 1-minute read.
+GAJJALA_1M_ENABLED = True                # MINE — kill switch; env GAJJALA_1M_ENABLED=0 also stops it (read by run.main + run_1m)
+GAJJALA_1M_PUSH_MODE = "shadow"          # MINE — HIS CALL #1: every 1-minute A+ and 🧠 potential recorded, never sent
+GG1M_TAB_LABEL = "Gajjala's 1-min"       # MINE — HIS CALL #10
+GG1M_CADENCE_SEC = 60                    # TRANSPORT — one iteration per closed 1-minute bar
+GG1M_MAX_NAMES = 60                      # TRANSPORT — MINE (HIS CALL #3): names per iteration, top change first
+GG1M_MINUTE_BUDGET_SEC = 35              # TRANSPORT — MINE: one iteration's bar budget, from its start
+GG1M_SLOT_MARGIN_SEC = 20                # TRANSPORT — MINE: start + budget + margin must be ≤ the next cron tick
+GG1M_LEASE_SEC = 55                      # TRANSPORT — MINE: a crashed 1-minute holder frees itself
+GG1M_LEASE_MIN_GAP_SEC = 0               # TRANSPORT — MINE: the iterations of one loop are ~20–60 s apart; the lease alone serialises
+GG1M_STALE_AFTER_SEC = max(300, 3 * GG1M_CADENCE_SEC)   # derived — the STALE_AFTER_SEC formula → 300 (= Alerts.tsx staleAfterSec(60))
+GG1M_TAPE_TF_MIN = 1                     # TRANSPORT — MINE (HIS CALL #8): the 🏁 entry tape on 1-minute bars
+GG1M_TAPE_BARS_MAX = LEDGER_TAPE_SESSIONS * (16 * 60 // GG1M_TAPE_TF_MIN)   # derived → 2,880
+GG1M_TILE_BARS_MAX = LEDGER_TAPE_BARS_MAX // LEDGER_TAPE_SESSIONS          # derived — MINE (HIS CALL #7): last 192 1-minute bars per card
+GG1M_RECORD_FROM = "2026-10-27"          # Ajay 2026-10-27 "add the track record for it from today" — no session before it is read

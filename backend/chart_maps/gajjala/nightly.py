@@ -21,6 +21,12 @@ The pass (run.py) computes the bounded in-pass part; this job does the rest once
 Writes only the gajjala_* collections + the house `intraday_cache` (the loader caches a completed day it fetched);
 one Massive splits call per walked next-session row. Read-only on every other provider. Idempotent: a second run the same night reads
 nothing new (halts) and serves the stored chips (history).
+
+🚩 The 1-minute page (2026-10-27, BUILD_SPEC27 §3.6 — Ajay "do everything and also add the track record for it from
+today.."): `main` then grades the GG1 record (`ledger.grade_step(store.for_variant(GG1), now)` → gajjala_1m_ledger),
+AFTER GG5's run and only when "grade" is a step, in its OWN try: its summary lands under `gajjala_1m`, a failure there
+is logged and named under `gajjala_1m.error` — never in GG5's `errors`, never in the exit code. floats / halts / history
+are shared data GG5's run already warmed.
 """
 from __future__ import annotations
 
@@ -160,6 +166,19 @@ def run(session: Optional[date] = None, *, store=None, now: Optional[datetime] =
     return out
 
 
+def grade_1m(now: datetime, *, store=None) -> dict:
+    """🏁 The 1-minute page's grade (2026-10-27): {"grade": ledger.grade_step(<GG1 store>, now)}; a raise →
+    {"error": "grade: <Type>"} (logged). Never raises."""
+    try:
+        from . import ledger as LG
+        from . import store as ST
+        from . import variant as V
+        return {"grade": LG.grade_step(store if store is not None else ST.for_variant(V.GG1), now)}
+    except Exception as exc:                                    # noqa: BLE001
+        log.exception("gajjala nightly: the 1-minute page's grade failed")
+        return {"error": f"grade: {type(exc).__name__}"}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="chart_maps.gajjala.nightly", description=__doc__.split("\n")[0])
     ap.add_argument("--session", help="YYYY-MM-DD (default: today ET, or the last market day)")
@@ -172,6 +191,8 @@ def main(argv=None) -> int:
     st = ST.default()
     st.ensure_indexes()
     out = run(session, store=st, steps=steps)
+    if "grade" in steps:                                         # 🚩 1-minute page (2026-10-27): after GG5, fenced
+        out["gajjala_1m"] = grade_1m(datetime.now(timezone.utc))
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

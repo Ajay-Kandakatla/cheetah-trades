@@ -136,11 +136,17 @@ describe('BURST_EXEMPT — every non-board tab, with a written reason', () => {
   it('keys == the Chart Maps tabs that are not tile boards', () => {
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t)).sort();
     expect(Object.keys(BURST_EXEMPT).sort()).toEqual(nonBoard);
-    expect(nonBoard).toHaveLength(16);   // +gajjala 2026-10-13 (its own endpoint and sub-tabs)
+    expect(nonBoard).toHaveLength(17);   // +gajjala 2026-10-13 (its own endpoint and sub-tabs); +gajjala_1m 2026-10-27 (BUILD_SPEC27 — its own endpoint)
   });
 
   it('NEGATIVE: no board tab is exempt — every tile board gets the pin', () => {
     for (const t of CM_TABS.filter(isBoardTab)) expect(BURST_EXEMPT[t]).toBeUndefined();
+  });
+
+  it('🚩 gajjala_1m (2026-10-27, BUILD_SPEC27 §3.8) is exempt with the 🚩 reason — NEGATIVE: it is not a tile board', () => {
+    expect(BURST_EXEMPT.gajjala_1m).toBe('his setup state orders this board (A+ \u2192 forming \u2192 partial); the \u26A1 burst is a daily-volume read');
+    expect(BURST_EXEMPT.gajjala_1m).toBe(BURST_EXEMPT.gajjala);
+    expect(isBoardTab('gajjala_1m')).toBe(false);
   });
 
   it('every reason is non-empty and none says "bounce"', () => {

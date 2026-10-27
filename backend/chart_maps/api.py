@@ -2,7 +2,8 @@
 
 Read-only by construction with TWO exceptions: POST /chart-maps/gajjala/scan
 (owner-only, 2026-10-15) starts one Gajjala pass in a SUBPROCESS and answers at
-once — no GET here ever starts a scan; and the owner's 🚫 broker list (POST /
+once — no GET here ever starts a scan (POST /chart-maps/gajjala-1m/scan, the
+1-minute page's, 2026-10-27, the same); and the owner's 🚫 broker list (POST /
 DELETE /chart-maps/gajjala/broker-flags — one gajjala_state doc, 2026-10-17,
 DECISIONS12 D5), the primary admin's own edit and nobody else's. The demand tab warms in the background
 and answers `warming: true` immediately, so a page load cannot sit behind a
@@ -567,6 +568,113 @@ async def chart_maps_gajjala_entry_tape(
         except Exception as exc:                                # F19: never a 500
             log.warning("chart-maps/gajjala/entry-tape: %s failed: %s", _id[:80], type(exc).__name__)
             p = TP.fault_payload(_id, lite=lt)
+        if p is None:
+            return JSONResponse({"detail": TP.ENTRY_TAPE_WORDS["not_found"]}, status_code=404)
+        return JSONResponse(_scrub(p))
+
+    return await asyncio.to_thread(_run)
+
+
+# ── 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.7 / WP-C) ────────────────────────────────────────────────
+# Ajay, verbatim: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles
+# please." / "do everything and also add the track record for it from today..". Three routes under the variant's api
+# base (chart_maps.gajjala.variant.GG1.api_base) — the SAME handlers' shape over the 1-minute page's store
+# (ST.for_variant(GG1)). The 🚩 routes above are untouched; the 🚫 broker list stays ONE list under
+# /chart-maps/gajjala/broker-flags and POST /chart-maps/live is shared. Every alert of that page is recorded in shadow,
+# never sent (GAJJALA_1M_PUSH_MODE). UNMEASURED.
+@router.get("/chart-maps/gajjala-1m")
+async def chart_maps_gajjala_1m(
+    sub: str = Query("", description="the 🚩 Gajjala's subs (bull_flag default … track_record) — EMPTY with a `focus` "
+                                     "symbol = the server picks the sub; an unknown value serves the default."),
+    tf: str = Query("", description="1m | 5m — the tile bars (default 1m; 5m for the Horizontal Fade)."),
+    focus: str = Query("", description="a symbol to deep-link to."),
+    sort: str = Query("", description="☀️ Premarket only: volume (default, his ToS sort) | change."),
+    limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
+    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | 10d | all — an "
+                                      "unknown value serves the default; no session before the record start is read."),
+    email: Optional[str] = Depends(maybe_current_user),
+):
+    """🚩 Gajjala's 1-minute page — GG's five setups, K1–K11, the A+ claim, the 🧠 potentials, the 📈 track and the 🏁
+    Track record read on CLOSED 1-minute bars (the Fade on 5-minute first) by the 1-minute pass. Served from Mongo
+    ONLY (`gajjala.tab.build(…, variant=GG1)`) plus the same ONE live fan-out for the shown tiles' now-line; on 🏁 only,
+    ONE 1-minute read of today's alerted names (ledger.today_read over the 1-minute store, the shared memo). Every
+    argument is coerced (a direct call receives the Query OBJECT). The owner (is_primary_admin) gets the 🚫 tags."""
+    from rotation.api import _scrub
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
+    from .gajjala import store as ST
+    from .gajjala import tab as GT
+    from .gajjala import variant as V
+    GC = gajjala_consts
+    owner = bool(is_primary_admin(email if isinstance(email, str) else ""))
+
+    def _run():
+        lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
+        sub_s, span_s = (sub if isinstance(sub, str) else ""), (span if isinstance(span, str) else "")
+        today = None
+        if sub_s.strip().lower() == GC.LEDGER_SUB:                   # 🏁 only — every other sub stays Mongo-only
+            try:
+                from .gajjala import ledger as LG
+                today = LG.today_read(None, span=span_s, store=ST.for_variant(V.GG1))
+            except Exception as exc:                                # the board serves without it
+                log.debug("chart-maps/gajjala-1m: track-record today read failed: %s", exc)
+                today = None
+        out = GT.build(sub_s,
+                       tf=tf if isinstance(tf, str) else "",
+                       focus=focus if isinstance(focus, str) else "",
+                       sort=sort if isinstance(sort, str) else "",
+                       limit=max(1, min(lim, GC.TILE_LIMIT_MAX)),
+                       span=span_s, today=today, owner=owner, variant=V.GG1)
+        tiles = out.get("tiles") or []
+        if tiles:
+            try:
+                live = board_mod._live_snapshot(tiles)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala-1m: live snapshot failed: %s", exc)
+                live = {}
+            try:
+                board_mod.attach_live_now(tiles, out, live=live)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala-1m: live now-line failed: %s", exc)
+        return _scrub(out)
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.post("/chart-maps/gajjala-1m/scan")
+async def chart_maps_gajjala_1m_scan(email: str = Depends(current_user_email)):
+    """🔄 The 1-minute page's scan on open — OWNER-ONLY (auth.is_admin_email; anyone else the stealth 404, as the 🚩
+    POST). Answers at once (gajjala.on_demand.request(variant=GG1) — its own child slot); the pass runs in a
+    SUBPROCESS with both push gates dry. This process never runs the pass."""
+    from auth import is_admin_email                                  # lazy: tests monkeypatch auth.is_admin_email
+    if not is_admin_email(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from rotation.api import _scrub
+    from .gajjala import on_demand as OD
+    from .gajjala import variant as V
+    return JSONResponse(_scrub(await asyncio.to_thread(lambda: OD.request(variant=V.GG1))))
+
+
+@router.get("/chart-maps/gajjala-1m/entry-tape")
+async def chart_maps_gajjala_1m_entry_tape(
+    id: str = Query("", description="a 🏁 A+ row id of the 1-minute page (ledger_id '…|aplus')"),
+    lite: int = Query(0, ge=0, le=1, description="1 = the row's mini tape (t/c/s, every promo_tape.LITE_STRIDE-th bar)"),
+):
+    """🕰️ ONE A+ entry's tape of the 1-minute page — its bars at GG1M_TAPE_TF_MIN (1-minute), capped at
+    GG1M_TAPE_BARS_MAX, memo keyed per variant (gajjala.tape.entry_tape over ST.for_variant(GG1)). NEVER WRITES. 404
+    for an unknown id; a raising build serves 200 with the fault note."""
+    from rotation.api import _scrub
+    from .gajjala import store as ST
+    from .gajjala import tape as TP
+    from .gajjala import variant as V
+
+    def _run():
+        _id = id if isinstance(id, str) else ""
+        lt = isinstance(lite, int) and not isinstance(lite, bool) and lite == 1
+        try:
+            p = TP.entry_tape(_id, lite=lt, store=ST.for_variant(V.GG1))
+        except Exception as exc:                                # never a 500
+            log.warning("chart-maps/gajjala-1m/entry-tape: %s failed: %s", _id[:80], type(exc).__name__)
+            p = TP.fault_payload(_id, lite=lt, variant=V.GG1)
         if p is None:
             return JSONResponse({"detail": TP.ENTRY_TAPE_WORDS["not_found"]}, status_code=404)
         return JSONResponse(_scrub(p))

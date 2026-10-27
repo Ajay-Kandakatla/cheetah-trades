@@ -45,6 +45,15 @@ when they got in to our alerts if they made it or not. Like XLAB today was a win
 sub, LAST: every alert that rang, graded by GG's trade math — ledger.py owns the rows, the grader and every served
 string (`served_block`); this module only routes `?sub=track_record&span=…` to it and serves the chip count
 (`count_today`). Operational accounting of the alerts as sent, not a study — UNMEASURED.
+
+🚩 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.7 / WP-C). Ajay, verbatim: "Can you create a new page, I would like you
+to do the same logic of Gajjalas but on 1 min candles please." / "do everything and also add the track record for it
+from today..". `build(…, variant=V.GG1)` serves the SAME board off the 1-minute page's store (variant.py GG1: its own
+`gajjala_1m_*` collections, GG5's scanner list / halts / daily / carry / post): its frames ("1m", the Fade on "5m"
+first), its cadence and stale words (variant.cadence_sec / stale_after_sec — never a typed number), its push lines
+(variant.WORDS_1M — every alert recorded in shadow, never sent), its links (potential.deep_link(…, v)), `tab` =
+"gajjala_1m" and ONE added key, `variant` (variant.served_block — title / honesty / tfs the FE prints). GG5 (variant
+None) serves every byte as before and never carries `variant`. A Cheetah variant — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -56,6 +65,7 @@ from zoneinfo import ZoneInfo
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
+from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
 from trading.broker import DOLLAR_DECIMALS, price_decimals, round_price   # the ONE stock price grid (2026-10-20)
 
@@ -171,6 +181,17 @@ def _f(x) -> Optional[float]:
 def _clock() -> datetime:
     """The wall clock (tests pin it)."""
     return datetime.now(timezone.utc)
+
+
+def _cad(v=None) -> int:
+    """The pass cadence in minutes of the variant (GG5: PASS_CADENCE_SEC // 60; the 1-minute page: GG1M_CADENCE_SEC
+    // 60) — read at call time, never typed."""
+    return V.cadence_sec(v) // 60
+
+
+def _mins(n: int) -> str:
+    """"{n} minutes" — "1 minute" for the 1-minute page's cadence (2026-10-27); GG5's "5 minutes" byte for byte."""
+    return f"{n} minute" if n == 1 else f"{n} minutes"
 
 
 def _et(now: Optional[datetime]) -> datetime:
@@ -312,7 +333,7 @@ def first15_text() -> str:
     return f"⏳ first {GC.NO_TRADE_AFTER_OPEN_MIN} min — he doesn't trade it (S8 14:41)"
 
 
-def _session_block(now, session: date, is_today: bool, in_window: bool) -> dict:
+def _session_block(now, session: date, is_today: bool, in_window: bool, v=None) -> dict:
     tape = tape_for(now, in_window)
     badge = (BADGE_CLOSED_TODAY if is_today and tape == "closed"     # 20:05→midnight: "today", not "last session"
              else SESSION_BADGE.get(tape, SESSION_BADGE["closed"]))
@@ -320,10 +341,11 @@ def _session_block(now, session: date, is_today: bool, in_window: bool) -> dict:
             "label": "today" if is_today else f"last session {session.isoformat()}",
             "tape": tape, "badge": badge,
             "first15": first15(now, in_window), "first15_text": first15_text(),
-            "refresh_sec": GC.PASS_CADENCE_SEC if in_window else 0}
+            "refresh_sec": V.cadence_sec(v) if in_window else 0}
 
 
-def _pass_block(latest: Optional[dict], now, session: date, in_window: bool, cron: Optional[dict] = None) -> dict:
+def _pass_block(latest: Optional[dict], now, session: date, in_window: bool, cron: Optional[dict] = None,
+                v=None) -> dict:
     """The `pass` block. `latest` = the pass shown (any source); `cron` = the newest CRON pass (`_cron_ref`). 2026-10-15
     (AMENDMENTS5 A10): `stale` reads the CRON pass — an on-open pass alone never clears it — and the block gains `at`
     (`pass_stamp`, the stamp the POST answers with) and `on_demand`. `cron` None with a non-on-open `latest` = the
@@ -339,20 +361,21 @@ def _pass_block(latest: Optional[dict], now, session: date, in_window: bool, cro
     c_this = isinstance(cron, dict) and cron.get("date") == session.isoformat() and c_at is not None
     age = (_et(now) - _et(c_at)).total_seconds() if c_this else None
     warming = bool(in_window and not this_session)
-    stale = bool(in_window and this_session and (not c_this or (age is not None and age > GC.STALE_AFTER_SEC)))
-    out = {"as_of_et": as_of, "stale": stale, "stale_after_sec": GC.STALE_AFTER_SEC, "warming": warming,
+    stale_sec = V.stale_after_sec(v)                                # GG5: STALE_AFTER_SEC (2026-10-27: per variant)
+    stale = bool(in_window and this_session and (not c_this or (age is not None and age > stale_sec)))
+    out = {"as_of_et": as_of, "stale": stale, "stale_after_sec": stale_sec, "warming": warming,
            "status": (latest or {}).get("status") if isinstance(latest, dict) else None,
            "at": pass_stamp(latest), "on_demand": bool((latest or {}).get("on_demand")) if isinstance(latest, dict)
            else False}
-    cad = GC.PASS_CADENCE_SEC // 60
+    cad = _cad(v)
     if stale and not c_this:
-        out["stale_text"] = f"stale — the {cad}-minute pass has not run this session; it runs every {cad} minutes"
+        out["stale_text"] = f"stale — the {cad}-minute pass has not run this session; it runs every {_mins(cad)}"
     elif stale and cron is latest:
         out["stale_text"] = (f"stale — the last pass was {as_of}, {int(age // 60)} min ago; the pass runs every "
-                             f"{cad} minutes")
+                             f"{_mins(cad)}")
     elif stale:
         out["stale_text"] = (f"stale — the last {cad}-minute pass was {_et(c_at).strftime('%H:%M')} ET, "
-                             f"{int(age // 60)} min ago; the pass runs every {cad} minutes")
+                             f"{int(age // 60)} min ago; the pass runs every {_mins(cad)}")
     if warming:
         out["warming_text"] = (f"warming — no pass this session yet (the first runs just after {GC.PASS_OPEN_ET} "
                                "ET); the reads shown are older")
@@ -458,7 +481,7 @@ def _when(at: Optional[datetime], session: date, *, sec: bool = False) -> Option
     return t if e.date() == session else f"{e.date().isoformat()} {t}"
 
 
-def scan_block(latest: Optional[dict], lease: dict, now, *, in_window: bool, session: date) -> dict:
+def scan_block(latest: Optional[dict], lease: dict, now, *, in_window: bool, session: date, v=None) -> dict:
     """§3.6 (b) — the 🔄 line, every sub. state "closed" out of the pass window (C6), "scanning" while the pass lease is
     held (a lease claimed LEASE_SEC ago is not held — a crashed holder never shows "scanning" forever), else "idle".
     Closed bars only (C3): the copy says "bars through HH:MM", never a newer bar. Reads its two arguments only."""
@@ -469,7 +492,7 @@ def scan_block(latest: Optional[dict], lease: dict, now, *, in_window: bool, ses
     on_demand = bool((latest or {}).get("on_demand"))
     bt = (latest or {}).get("bars_through_et")
     bt = bt if isinstance(bt, str) and bt else None
-    cad = GC.PASS_CADENCE_SEC // 60
+    cad = _cad(v)
     hhmm = _et(at).strftime("%H:%M") if at is not None else None
     bars = f" · bars through {bt}" if bt else ""
     if not in_window:
@@ -514,9 +537,9 @@ def scan_block(latest: Optional[dict], lease: dict, now, *, in_window: bool, ses
                              f"pass is reused when it finished under {GC.ON_DEMAND_REUSE_SEC} s ago")}    # W9 (A13)
 
 
-def _aplus_text(sym: str, setup: str, r: dict, since: Optional[str], extra: list) -> str:
+def _aplus_text(sym: str, setup: str, r: dict, since: Optional[str], extra: list, v=None) -> str:
     """W16 — "{SYM} · {e} {label} · trigger {T} · stop {S} (−r%) · A+ since HH:MM ET" (+ the card's own variant / grade
-    words, + " (15-min bar)")."""
+    words, + " (15-min bar)" — 2026-10-27: " ({m}-min bar)" when the read is on the variant's SLOW frame)."""
     bits = [sym, _setup_label(setup)] + [x for x in extra if x]
     trig, stop, risk = _f(r.get("trigger")), _f(r.get("stop")), _f(r.get("risk_pct"))
     if trig is not None:
@@ -526,8 +549,9 @@ def _aplus_text(sym: str, setup: str, r: dict, since: Optional[str], extra: list
     text = " · ".join(bits)
     if since:
         text += f" · A+ since {since} ET"
-    if (r.get("frame") or "5m") == "15m":
-        text += " (15-min bar)"
+    vv = V.of(v)
+    if (r.get("frame") or vv.primary) == vv.slow:
+        text += f" ({V.frame_minutes(vv.slow, vv)}-min bar)"
     return text
 
 
@@ -543,7 +567,7 @@ def _aplus_note(cad: int) -> str:
 
 
 def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool, scan: dict,
-                cron: Optional[dict] = None, session: Optional[date] = None) -> dict:
+                cron: Optional[dict] = None, session: Optional[date] = None, v=None) -> dict:
     """§3.6 (c) — the 🎯 banner, every sub (DECISIONS5 K1 / K3, AMENDMENTS5 A10 / A11). Rows = every listed read OF THE
     LATEST PASS (its `updated_at` is that pass's clock — a name the pass did not re-read keeps an older read and is not
     listed) whose card state is `aplus`, a variant / grade read included with the card's own words; ordered newest
@@ -555,12 +579,13 @@ def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool,
     latest = latest if isinstance(latest, dict) else None
     at = _at_utc(latest)
     session = session or _et(now).date()
-    cad = GC.PASS_CADENCE_SEC // 60
+    vv = V.of(v)
+    cad = _cad(vv)
     if cron is None and latest is not None and not latest.get("on_demand"):
         cron = latest                                                # pre-split: every pass was a cron pass
     c_at = _at_utc(cron)
     c_age = (_et(now) - _et(c_at)).total_seconds() if c_at is not None else None
-    cron_ok = c_age is not None and c_age <= GC.STALE_AFTER_SEC
+    cron_ok = c_age is not None and c_age <= V.stale_after_sec(vv)
     this_session = latest is not None and at is not None and latest.get("date") == session.isoformat()
     rows: list = []
     if in_window and this_session and cron_ok:
@@ -579,7 +604,7 @@ def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool,
                 sym_u = str(sym or doc.get("symbol") or "").upper()
                 close = AL.bar_close_et(r.get("entry_bar_t"))
                 since = close.strftime("%H:%M") if close is not None else None
-                frame = r.get("frame") if r.get("frame") in TFS else "5m"
+                frame = r.get("frame") if r.get("frame") in vv.tfs else vv.primary
                 extra = [variant_label(r), grade_label(r)]
                 keyed.append(((order_key({"symbol": sym_u, "gajjala": {"state": "aplus",
                                                                        "entry_bar_t": r.get("entry_bar_t")}})[:2],
@@ -588,8 +613,8 @@ def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool,
                                "trigger": _f(r.get("trigger")), "stop": _f(r.get("stop")),
                                "risk_pct": _f(r.get("risk_pct")), "since_et": since,
                                "variant_label": extra[0], "grade_label": extra[1],
-                               "href": PT.deep_link(sym_u, setup),
-                               "text": _aplus_text(sym_u, setup, r, since, extra)}))
+                               "href": PT.deep_link(sym_u, setup, vv),
+                               "text": _aplus_text(sym_u, setup, r, since, extra, vv)}))
         keyed.sort(key=lambda kv: kv[0])
         rows = [row for _k, row in keyed]
     empty = None
@@ -614,7 +639,11 @@ def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool,
     return {"title": title, "rows": rows, "empty_text": empty, "note": _aplus_note(cad)}
 
 
-def push_block() -> dict:
+def push_block(v=None) -> dict:
+    """The A+ push line. GG5: GAJJALA_PUSH_MODE's sentence, as always. 2026-10-27 — another variant: its own mode
+    (variant.push_mode) and its frozen sentence (variant.WORDS_1M "push")."""
+    if not V.is_gg5(v):
+        return {"mode": V.push_mode(v), "text": V.word("push", v)}
     mode = GC.GAJJALA_PUSH_MODE
     if mode == "live":
         text = ("📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first "
@@ -627,9 +656,12 @@ def push_block() -> dict:
     return {"mode": mode, "text": text}
 
 
-def push_potential_block(session: date) -> dict:
+def push_potential_block(session: date, v=None) -> dict:
     """🧠 the LIVE potential push line (BUILD_SPEC4 W15, 2026-10-15 msg 3 "Give me an alert … I will jump on to ride
-    the wave"): served beside `push` on every sub; the words are potential.push_note's."""
+    the wave"): served beside `push` on every sub; the words are potential.push_note's. 2026-10-27 — another variant:
+    its own mode (variant.push_mode — the 1-minute page records in shadow) and potential.push_note(session, v)."""
+    if not V.is_gg5(v):
+        return {"mode": V.push_mode(v), "text": PT.push_note(session, v)}
     return {"mode": "live", "text": PT.push_note(session)}
 
 
@@ -877,15 +909,20 @@ def _listed_block(info: Optional[dict]) -> Optional[dict]:
 
 
 # ── tiles ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-def _tile_frame(doc: dict, tf: str) -> dict:
+def _tile_frame(doc: dict, tf: str, v=None) -> dict:
+    """The stored tile of one frame: `tf` when it is one of the variant's frames, else its primary (GG5: "15m" → the
+    bars15 keys, anything else → bars5, as always; the 1-minute page: "5m" → bars5, anything else → bars1). The key
+    suffix is variant.frame_minutes (2026-10-27), never typed."""
+    vv = V.of(v)
     tile = doc.get("tile") if isinstance(doc.get("tile"), dict) else {}
-    suf = "15" if tf == "15m" else "5"
-    return {"tf": "15m" if suf == "15" else "5m", "bars": list(tile.get(f"bars{suf}") or []),
+    t = tf if tf in vv.tfs else vv.primary
+    suf = str(V.frame_minutes(t, vv))
+    return {"tf": t, "bars": list(tile.get(f"bars{suf}") or []),
             "curves": list(tile.get(f"curves{suf}") or []), "vol_avg": tile.get(f"vol_avg{suf}")}
 
 
-def _last_close(doc: dict, frame: str) -> Optional[float]:
-    bars = _tile_frame(doc, frame).get("bars") or []
+def _last_close(doc: dict, frame: str, v=None) -> Optional[float]:
+    bars = _tile_frame(doc, frame, v).get("bars") or []
     for b in reversed(bars):
         c = _f(b.get("c")) if isinstance(b, dict) else None
         if c is not None:
@@ -982,13 +1019,15 @@ def _tile_lines(read: dict) -> list:
     return out
 
 
-def tile_tf(read: dict, tf: str, sub_default: str) -> str:
+def tile_tf(read: dict, tf: str, sub_default: str, v=None) -> str:
     """The frame a card draws: the asked tf when the URL carries one, else the frame its own read was taken on (the
-    ➖ Fade reads 15-minute first but falls back to a 5-minute read), else the sub's default."""
-    if tf in TFS:
+    ➖ Fade reads 15-minute first but falls back to a 5-minute read), else the sub's default. 2026-10-27: the
+    variant's frames (GG5 = TFS)."""
+    tfs = V.of(v).tfs
+    if tf in tfs:
         return tf
     f = read.get("frame")
-    return f if f in TFS else sub_default
+    return f if f in tfs else sub_default
 
 
 def _on_bars(markers: list, bars: list) -> list:
@@ -998,17 +1037,18 @@ def _on_bars(markers: list, bars: list) -> list:
 
 
 def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, listed: Optional[dict],
-               halt_doc=None, daily=None, pass_at: Optional[datetime] = None) -> dict:
+               halt_doc=None, daily=None, pass_at: Optional[datetime] = None, v=None) -> dict:
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
     is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
     "read at …" chip, 2026-10-15)."""
     from chart_maps import board as board_mod
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
-    fr = _tile_frame(doc, tf)
+    vv = V.of(v)
+    fr = _tile_frame(doc, tf, vv)
     if not fr["bars"]:                                               # the asked frame is empty → the other one
-        other = "5m" if tf == "15m" else "15m"
-        alt = _tile_frame(doc, other)
+        other = next((t for t in vv.tfs if t != fr["tf"]), fr["tf"])
+        alt = _tile_frame(doc, other, vv)
         if alt["bars"]:
             fr = alt
     markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": "A+"}]
@@ -1022,7 +1062,7 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
                                   "cycles")}            # 🌀 the contraction count (BUILD_SPEC18 D2; critic 2026-10-20)
     g.update({"setup": setup, "state_label": state_label(read), "variant_label": variant_label(read),
               "grade_label": grade_label(read), "chips": chips, "listed": _listed_block(listed),
-              "_last": _last_close(doc, read.get("frame") or "5m") or _f(scan_row.get("price")),
+              "_last": _last_close(doc, read.get("frame") or vv.primary, vv) or _f(scan_row.get("price")),
               "_bars_to_go": _bars_to_go(read)})
     if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
         g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
@@ -1042,11 +1082,11 @@ def _strip_private(tiles: list) -> None:
 
 
 def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: dict, sess: dict,
-               listed: Optional[dict], halt_doc=None, daily=None, extra: dict) -> dict:
+               listed: Optional[dict], halt_doc=None, daily=None, extra: dict, v=None) -> dict:
     """A ☀️ / 🌙 row: the name's bars when it is listed (its read doc), its list facts in words, no setup lines."""
     from chart_maps import board as board_mod
     doc = doc or {}
-    fr = _tile_frame(doc, tf) if doc else {"bars": [], "curves": [], "vol_avg": None}
+    fr = _tile_frame(doc, tf, v) if doc else {"bars": [], "curves": [], "vol_avg": None}
     read = {"setup": sub, "state": "forming"}
     chips = _chips(doc, sub, read, scan_row, sess, halt_doc, daily)
     g = {"setup": sub, "state": "forming", "state_label": extra.pop("state_label"), "chips": chips,
@@ -1126,7 +1166,7 @@ def _post_extra(d: dict) -> dict:
                            "exhaustion_text": f"regular session {reg:+.1f}%" if reg is not None else None}}
 
 
-def recap(reads: list) -> dict:
+def recap(reads: list, v=None) -> dict:
     """🌙 today's A+ recap (DECISIONS R2-7): which reads went A+ / triggered / stopped — states only, no win/loss
     maths. Ordered by the entry bar; each row links its setup card (DECISIONS10 D7b — rendered in commit 2):
     `href` = potential.deep_link(sym, setup), the A+ push url."""
@@ -1144,7 +1184,7 @@ def recap(reads: list) -> dict:
                          f", stop {_px(r.get('stop'))}"))
     rows.sort()
     return {"title": f"Today's A+ recap — states only, no win/loss maths · {UNMEASURED}",
-            "rows": [{"symbol": sym, "setup": setup, "text": text, "href": PT.deep_link(sym, setup)}
+            "rows": [{"symbol": sym, "setup": setup, "text": text, "href": PT.deep_link(sym, setup, v)}
                      for _t, sym, setup, text in rows]}
 
 
@@ -1177,7 +1217,7 @@ def _pushed_potential_setup(potentials, sym: str, day: str) -> Optional[str]:
 
 
 def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, listed: dict,
-                pm_syms: set, post_syms: set, potentials: Optional[list] = None) -> tuple:
+                pm_syms: set, post_syms: set, potentials: Optional[list] = None, v=None) -> tuple:
     """(sub, resolved_from). An explicit known sub wins; an unknown one → DEFAULT_SUB (fail open). Empty sub + a
     focus symbol → the setup of today's newest pushed (or shadow-recorded) claim, else (2026-10-15) the setup of
     today's newest PUSHED 🧠 potential ("focus_potential"; `potentials` = the tracker docs `build` already read, None →
@@ -1190,7 +1230,9 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
     if not sym:
         return GC.DEFAULT_SUB, "default"
     day = session.isoformat()
-    ids = [f"{p}GG:{day}|{sym}|{st}" for st in GC.SETUPS for p in ("", "SHADOW:")]
+    vv = V.of(v)
+    # the variant's claim ids (GG5 "GG:…", the 1-minute page "GG1:…" — alerts.claim_key's shape)
+    ids = [f"{p}{vv.claim_prefix}:{day}|{sym}|{st}" for st in GC.SETUPS for p in ("", "SHADOW:")]
     claims = [d for d in _alerts_find(store, ids) if d.get("state") in ("pushed", "shadow")]
     if claims:
         def _when(d):
@@ -1218,7 +1260,7 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
             # (BUILD_SPEC18 D3; critic 2026-10-20)
             if r.get("state") not in TILE_STATES or not _vcp_listed(setup, r):
                 continue
-            t = {"symbol": sym, "gajjala": dict(r, _last=_last_close(doc, r.get("frame") or "5m"),
+            t = {"symbol": sym, "gajjala": dict(r, _last=_last_close(doc, r.get("frame") or vv.primary, vv),
                                                 _bars_to_go=_bars_to_go(r))}
             k = (order_key(t), i)
             if best is None or k < best[0]:
@@ -1383,7 +1425,7 @@ def _setup_label(setup: str) -> str:
 
 
 def _potential_reads(reads_by: dict, scan_by: dict, *, trackers: dict, trackers_prev: set, ah_prev, prev_scan_by: dict,
-                     setup: Optional[str] = None) -> list:
+                     setup: Optional[str] = None, v=None) -> list:
     """Every (symbol, setup) potential of the board's listed reads — `setup` given: that setup only — as
     [(order_key, PotRow, read_doc, read)] in potential.order_key order (one order everywhere). `trackers` =
     {(SYM, setup): today's tracker doc} (first_seen_et); `trackers_prev` = {(SYM, setup)} of the session before (↻)."""
@@ -1406,13 +1448,13 @@ def _potential_reads(reads_by: dict, scan_by: dict, *, trackers: dict, trackers_
             row = {"symbol": sym, "setup": s, "kind": kind, "kind_label": PT.KIND_LABEL[kind],
                    "trigger": _f(read.get("trigger")), "stop": _f(read.get("stop")), "risk_pct": _f(read.get("risk_pct")),
                    "reason": reason, "first_seen_et": first, "again": again, "tells": PT.tells(values),
-                   "href": PT.deep_link(sym, s), "text": PT.row_text(sym, s, read, kind, first)}
+                   "href": PT.deep_link(sym, s, v), "text": PT.row_text(sym, s, read, kind, first)}
             out.append((PT.order_key(kind, values, s, sym), row, doc, read))
     out.sort(key=lambda x: x[0])
     return out
 
 
-def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_window: bool) -> dict:
+def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_window: bool, v=None) -> dict:
     """§3.9 (a) — the 🧠 strip of one setup sub (W6 title, W7 text, W8 empty), ALL of its potentials (a compact list,
     never cut by `limit`)."""
     rows = [p[1] for p in pots]
@@ -1426,7 +1468,7 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
     e, label = SUB_META[setup]
     empty = None
     if not rows:
-        empty = (f"No {e} {label} forming right now — the next pass is at most {GC.PASS_CADENCE_SEC // 60} minutes "
+        empty = (f"No {e} {label} forming right now — the next pass is at most {_mins(_cad(v))} "
                  "away." if in_window else f"No {e} {label} was forming at the last pass ({sess['label']}).")
     return {"title": f"🧠 Potential — {a} trigger armed · {b} building · {today_n} first seen {sess['label']} · "
                      f"{UNMEASURED}",
@@ -1434,7 +1476,7 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
 
 
 def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, sess: dict, listed: dict,
-                     halts_by: dict, pass_at: Optional[datetime] = None) -> list:
+                     halts_by: dict, pass_at: Optional[datetime] = None, v=None) -> list:
     """§3.9 (b) — one tile per SYMBOL: the existing `setup_tile` card of its PRIMARY potential (the first by
     potential.order_key), with `gajjala.potential` (W12) and the 🧩 other setups forming on it (GG S9 1:59:01)."""
     by_sym: dict = {}
@@ -1445,8 +1487,9 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
         _k, row, doc, read = items[0]
         setup = row["setup"]
         daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
-        tile = setup_tile(doc, setup, tile_tf(read, tf_ask, "5m"), scan_row=scan_row(sym), sess=sess,
-                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at)
+        vv = V.of(v)
+        tile = setup_tile(doc, setup, tile_tf(read, tf_ask, vv.primary, vv), scan_row=scan_row(sym), sess=sess,
+                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at, v=vv)
         first = row["first_seen_et"]
         tile["gajjala"]["potential"] = {
             "kind": row["kind"], "kind_label": row["kind_label"], "setup": setup, "setup_label": _setup_label(setup),
@@ -1457,7 +1500,7 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
     return tiles
 
 
-def _track_row(doc: dict, entries: Optional[dict] = None) -> dict:
+def _track_row(doc: dict, entries: Optional[dict] = None, v=None) -> dict:
     """One 📈 Track row from a tracker doc (W13) — the doc's own prices (the pass wrote them, AMENDMENTS4 D2: the
     5-minute frame's closed close first), never recomputed here; states and prices only, no win/loss maths — and the
     🎯 entry that rang (DECISIONS10 D4): `entries` = _entry_times' {(date_iso, SYM, setup): "HH:MM"}; `entry_text` is
@@ -1487,13 +1530,14 @@ def _track_row(doc: dict, entries: Optional[dict] = None) -> dict:
         else:
             push_text = PUSH_TEXT.get(ps)
     else:
+        hw = PT.held_words(v)                                       # GG5: HELD_WORDS itself (2026-10-27: per variant)
         held = [h.get("reason") for h in doc.get("held") or [] if isinstance(h, dict)
-                and (h.get("reason") in PT.HELD_WORDS or h.get("reason") in PT.TRADER_HELD)]
+                and (h.get("reason") in hw or h.get("reason") in PT.TRADER_HELD)]
         if not held and doc.get("first_seen_mode") == PT.FIRST_SEEN_MODES[1]:
             held = [PT.JOIN_HELD[0]]                                # D9: a joined doc whose hold write was lost
         if held:
             push_text = (TN.TRADER_HOLD_TEXT if held[-1] in PT.TRADER_HELD          # 📌 A2 2026-10-27, verbatim
-                         else f"held: {PT.HELD_WORDS[held[-1]]}")
+                         else f"held: {hw[held[-1]]}")
     timeline = []
     for e in path:
         at_et = e.get("at_et") if isinstance(e.get("at_et"), str) else None
@@ -1505,7 +1549,8 @@ def _track_row(doc: dict, entries: Optional[dict] = None) -> dict:
     bits = [f"{sym} · {_setup_label(setup)}", (f"first seen {first} ET" + (f" {fkl}" if fkl else "")) if first else fkl,
             f"now {last_text}", move_text]
     url = doc.get("url")
-    href = url if isinstance(url, str) and url.startswith("/") and not url.startswith("//") else PT.deep_link(sym, setup)
+    href = (url if isinstance(url, str) and url.startswith("/") and not url.startswith("//")
+            else PT.deep_link(sym, setup, v))
     return {"symbol": sym, "setup": setup, "setup_label": _setup_label(setup), "first_seen_et": first,
             "first_kind": fk, "first_kind_label": fkl, "first_px": p0, "first_trigger": t0,
             "first_stop": _f(doc.get("first_stop")), "last_state": last_state, "last_state_text": last_text,
@@ -1532,7 +1577,7 @@ def _capped(rows: list) -> dict:
 
 
 def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date, sess: dict,
-                 entries: Optional[dict] = None) -> dict:
+                 entries: Optional[dict] = None, v=None) -> dict:
     """§3.9 (b) `track` — today's first sightings newest first, the session before chronological (no outcome
     ranking), each row's timeline in potential.state_word's words; rows capped at TILE_LIMIT_MAX (`more_n`).
     `entries` = _entry_times' answer, handed to every row (DECISIONS10 D4)."""
@@ -1544,24 +1589,24 @@ def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date
     today = sorted(today, key=_first_seen_key, reverse=True)
     yday = sorted(sorted(prev_docs, key=tie), key=_first_seen_key)
     n = len(today)
-    first, last = PT.pass_times(session)
+    first, last = PT.pass_times(session) if V.is_gg5(v) else PT.pass_times(session, v)
     return {"title": f"📈 Track — {n} potentials first seen {sess['label']} · {UNMEASURED}",
             "unmeasured": TRACK_UNMEASURED,
             "empty_today": (f"No potential first seen yet this session — the pass runs every "
-                            f"{GC.PASS_CADENCE_SEC // 60} minutes from {first} to {last} ET."),
+                            f"{_mins(_cad(v))} from {first} to {last} ET."),
             "today": dict({"date": session.isoformat(), "label": sess["label"], "n": n,
                            "armed_n": sum(1 for d in today if d.get("first_kind") == GC.POTENTIAL_KINDS[0]),
                            "building_n": sum(1 for d in today if d.get("first_kind") == GC.POTENTIAL_KINDS[1]),
                            "pushed_n": sum(1 for d in today if isinstance(d.get("push"), dict)
                                            and d["push"].get("state") == "pushed")},
-                          **_capped([_track_row(d, entries=entries) for d in today])),
+                          **_capped([_track_row(d, entries=entries, v=v) for d in today])),
             "yesterday": dict({"date": prev.isoformat(),
                                "title": (f"Last session ({prev.isoformat()}) — {len(yday)} potentials and how each "
                                          "ended: states and prices only, no win/loss maths"),
-                               "n": len(yday)}, **_capped([_track_row(d, entries=entries) for d in yday]))}
+                               "n": len(yday)}, **_capped([_track_row(d, entries=entries, v=v) for d in yday]))}
 
 
-def _watch_block(pm_rows: list, post_list: list, exclude: set) -> Optional[dict]:
+def _watch_block(pm_rows: list, post_list: list, exclude: set, v=None) -> Optional[dict]:
     """W14 — ☀️ / 🌙 list names with NO structure yet (GG S8 13:21–14:34): `exclude` = every name with a potential
     in any setup PLUS every name whose read shows a card in any setup sub (a TILE_STATES read — A+, triggered,
     partial, stopped, forming), so the line's own words "no structure yet" stay true. Display only: never pushed,
@@ -1572,7 +1617,7 @@ def _watch_block(pm_rows: list, post_list: list, exclude: set) -> Optional[dict]
             sym = str((r or {}).get("symbol") or "").upper()
             if sym and sym not in seen:
                 seen.add(sym)
-                syms.append({"symbol": sym, "href": f"/chart-maps?tab=gajjala&sub={sub}&focus={sym}"})
+                syms.append({"symbol": sym, "href": f"/chart-maps?tab={V.of(v).tab}&sub={sub}&focus={sym}"})
     if not syms:
         return None
     return {"text": WATCH_HEAD + ", ".join(s["symbol"] for s in syms), "symbols": syms}
@@ -1603,7 +1648,7 @@ def _ledger():
         return None
 
 
-def _entry_times(st, sessions) -> dict:
+def _entry_times(st, sessions, v=None) -> dict:
     """DECISIONS10 D4 — {(date_iso, SYM, setup): "HH:MM"} of the live A+ entries that RANG on these sessions: ONE read
     (store.alert_rows — the ledger's own) classified by ledger.alert_of (line "live" = a `GG:` claim in state pushed;
     shadow / refusals / claimed / failed / no_target are never entries). A read fault / no handle / no ledger → {}.
@@ -1613,7 +1658,8 @@ def _entry_times(st, sessions) -> dict:
     out = {}
     for d in docs or []:
         try:
-            a = LG.alert_of(d, LG.KINDS[1])
+            a = (LG.alert_of(d, LG.KINDS[1]) if V.is_gg5(v)                  # GG5: the call as always
+                 else LG.alert_of(d, LG.KINDS[1], variant=v))
         except Exception as exc:                                    # noqa: BLE001
             log.warning("gajjala tab: an A+ entry doc could not be read: %s", type(exc).__name__)
             continue
@@ -1622,7 +1668,7 @@ def _entry_times(st, sessions) -> dict:
     return out
 
 
-def _ledger_count(st, session: date) -> Optional[int]:
+def _ledger_count(st, session: date, v=None) -> Optional[int]:
     """🏁 chip: ledger.count_today over today's tracker docs and today's ledger docs; None when the ledger cannot load
     or EITHER read faulted (an unknown count is never served as 0). The tracker is read here with `st.potentials`
     directly, never through `_safe_list` (which turns a read fault into [] — a chip of 0; critic LOW 2026-10-16)."""
@@ -1635,18 +1681,29 @@ def _ledger_count(st, session: date) -> Optional[int]:
     docs = st.ledger_docs([session])
     if docs is None:
         return None
-    return LG.count_today([d for d in pots if isinstance(d, dict) and d.get("symbol") and d.get("setup")], docs)
+    rows = [d for d in pots if isinstance(d, dict) and d.get("symbol") and d.get("setup")]
+    return LG.count_today(rows, docs) if V.is_gg5(v) else LG.count_today(rows, docs, variant=v)
 
 
 def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT, sort: str = "",
           span: str = "", now: Optional[datetime] = None, store=None, today: Optional[dict] = None,
-          owner: bool = False) -> dict:
+          owner: bool = False, variant=None) -> dict:
     """The served board. Reads Mongo only (BUILD_SPEC §3.4.1). `span` = the 🏁 Track record day picker (ignored on
     every other sub); `today` = the route's ledger.today_read answer (🏁 only, None = not read on this open).
     🚫 `owner` (2026-10-17, DECISIONS12 D3): `is True` only — the primary admin is served `broker_flags` and every row's
-    `broker_text`; anyone else (and a truthy Query / Depends object) reads null on every one. A TAG, never a filter."""
-    st = _store(store)
+    `broker_text`; anyone else (and a truthy Query / Depends object) reads null on every one. A TAG, never a filter.
+    🚩 `variant` (2026-10-27, BUILD_SPEC27 §3.7): None → GG5, this tab, every byte as before (the store's own variant
+    when a store is handed in); V.GG1 → the 1-minute page off ST.for_variant(GG1) — its frames, cadence, stale and push
+    words, links, `tab` and the ONE added key `variant` (variant.served_block). The broker list stays ONE list."""
     from chart_maps.gajjala import store as ST
+    if store is not None:
+        st = store
+    elif variant is not None:
+        st = ST.for_variant(V.of(variant))
+    else:
+        st = _store(store)
+    v = V.of(variant) if variant is not None else V.of(st)
+    gg5 = V.is_gg5(v)
     if owner is True:
         _bf, bfault = ST.broker_flags(st)
         flags = frozenset(_bf)
@@ -1701,7 +1758,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
             ah_prev = None
         prev_scan_by = {str(d["symbol"]).upper(): d for d in _safe_list(st.scan_docs, [prev]) if d.get("symbol")}
         pots = _potential_reads(reads_by, scan_by, trackers=trackers_today, trackers_prev=trackers_prev,
-                                ah_prev=ah_prev, prev_scan_by=prev_scan_by)
+                                ah_prev=ah_prev, prev_scan_by=prev_scan_by, v=v)
     except Exception as exc:                                        # noqa: BLE001
         log.warning("gajjala tab: potential assembly failed: %s", exc)
         pot_ok, trackers_today, pots = False, {}, []
@@ -1709,11 +1766,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     sub_k, resolved = resolve_sub(sub, focus, store=st, session=session, reads_by=reads_by, listed=listed,
                                   pm_syms={str(r.get("symbol")).upper() for r in pm_rows},
                                   post_syms={str(r.get("symbol")).upper() for r in post_list},
-                                  potentials=pot_docs)
+                                  potentials=pot_docs, v=v)
     tf_ask = (tf or "").strip().lower() if isinstance(tf, str) else ""
-    tf_ask = tf_ask if tf_ask in TFS else ""                        # no / unknown tf → each card its read's frame
-    tf_k = tf_ask or ("15m" if sub_k == "horizontal_fade" else "5m")
-    sess = _session_block(now, session, is_today, in_window)
+    tf_ask = tf_ask if tf_ask in v.tfs else ""                      # no / unknown tf → each card its read's frame
+    tf_k = tf_ask or (v.slow if sub_k == "horizontal_fade" else v.primary)   # GG5: "15m" / "5m", as always
+    sess = _session_block(now, session, is_today, in_window, v)
 
     def _row(sym):
         return dict(((scan_by.get(sym) or {}).get("last") or {}))
@@ -1746,9 +1803,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                 n_tiles[setup] = n_tiles.get(setup, 0) + 1
                 if setup == sub_k:                                      # only the shown sub builds its cards
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
-                    tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k), scan_row=_row(sym), sess=sess,
+                    tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
-                                            pass_at=pass_at))
+                                            pass_at=pass_at, v=v))
         tiles.sort(key=order_key)
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
@@ -1758,7 +1815,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     subs = []
     for key, e, label in GC.SUBS:
         if key == GC.LEDGER_SUB:                # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
-            n = _soft("track record count", _ledger_count, st, session, default=None)
+            n = _soft("track record count", _ledger_count, st, session, v, default=None)
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
                  else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
@@ -1770,18 +1827,21 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     else:
         counts = {k: sum(c[k] for c in counts_by.values()) for k in list(COUNT_STATES) + ["awaiting_answer"]}
         counts["listed"] = len(listed) if listed else len(reads_by)
-    out = {"tab": "gajjala", "sub": sub_k, "sub_resolved_from": resolved, "tf": tf_k, "subs": subs,
-           "session": sess, "pass": _pass_block(pass_doc, now, session, in_window, cron=cron),
+    out = {"tab": v.tab, "sub": sub_k, "sub_resolved_from": resolved, "tf": tf_k, "subs": subs,
+           "session": sess, "pass": _pass_block(pass_doc, now, session, in_window, cron=cron, v=v),
            "strip": _strip_block(spass),
            "counts": counts, "counts_legend": legend, "tiles": [], "graveyard_today": [], "note": board_note(),
-           "empty_note": None, "rules_section": "gajjala", "push": push_block(),
-           "push_potential": _soft("potential push line", push_potential_block, session),
+           "empty_note": None, "rules_section": "gajjala", "push": push_block() if gg5 else push_block(v),
+           "push_potential": (_soft("potential push line", push_potential_block, session) if gg5 else
+                              _soft("potential push line", push_potential_block, session, v)),
            "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a],
            "broker_flags": broker_block(flags, fault=bfault) if flags is not None else None}
+    if not gg5:                                 # 🚩 2026-10-27 — the 1-minute page's ONE added key (never on GG5)
+        out["variant"] = V.served_block(v)
     out["scan"] = _soft("scan line", scan_block, pass_doc, lease, now, in_window=in_window, session=session,
-                        default=None)
+                        v=v, default=None)
     out["enterable"] = _soft("A+ banner", aplus_block, reads_by, pass_doc, now, in_window=in_window,
-                             scan=out["scan"] or {}, cron=cron, session=session, default=None)
+                             scan=out["scan"] or {}, cron=cron, session=session, v=v, default=None)
     try:
         out["graveyard_today"] = SC.graveyard_today(st, session)
     except Exception as exc:                                        # noqa: BLE001
@@ -1796,30 +1856,30 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                             if sub_k == "intraday_vcp" else None)                # BUILD_SPEC18 D3 — served line
         e, label = SUB_META[sub_k]
         out["empty_note"] = (f"No {e} {label} on his list right now — the next pass is at most "
-                             f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
+                             f"{_mins(_cad(v))} away." if in_window else
                              f"No {e} {label} on the {sess['label']} list.")
         today_n = sum(1 for (_s, setup) in trackers_today if setup == sub_k)
         out["potential"] = _soft("potential strip", _potential_strip, sub_k,
                                  [p for p in pots if p[1]["setup"] == sub_k], today_n, sess=sess,
-                                 in_window=in_window) if pot_ok else None
+                                 in_window=in_window, v=v) if pot_ok else None
     elif sub_k == GC.POTENTIAL_SUB:
         out["tiles"] = (_soft("potential tiles", _potential_tiles, pots, st=st, session=session, tf_ask=tf_ask,
                               scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, pass_at=pass_at,
-                              default=[])
+                              v=v, default=[])
                         if pot_ok else [])[:lim]
-        entries = _soft("A+ entry read", _entry_times, st, [session, prev], default={}) or {}   # D4: ONE read
+        entries = _soft("A+ entry read", _entry_times, st, [session, prev], v, default={}) or {}   # D4: ONE read
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
-                             sess=sess, entries=entries) if pot_ok else None
-        out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms)
+                             sess=sess, entries=entries, v=v) if pot_ok else None
+        out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms, v)
         out["empty_note"] = ("Nothing forming on his list right now — the next pass is at most "
-                             f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
+                             f"{_mins(_cad(v))} away." if in_window else
                              f"Nothing was forming at the last pass ({sess['label']}).")
     elif sub_k == "premarket":
         tiles = []
         for r in pm_rows:                                           # the engine's order (today's, then the carry)
             sym = str(r["symbol"]).upper()
             tiles.append(_list_tile(sym, "premarket", reads_by.get(sym), tf_k, scan_row=_row(sym), sess=sess,
-                                    listed=listed.get(sym), halt_doc=halts_by.get(sym), extra=_pm_extra(r)))
+                                    listed=listed.get(sym), halt_doc=halts_by.get(sym), extra=_pm_extra(r), v=v))
         out.update({"tiles": tiles[:lim], "sorts": [{"key": k, "label": lb} for k, lb in SORTS_PM], "sort": sk,
                     "empty_note": "No pre-market mover on his list and no after-hours carry from the last session."})
     elif sub_k == "postmarket":
@@ -1827,11 +1887,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         tiles = [_list_tile(str(d["symbol"]).upper(), "postmarket", reads_by.get(str(d["symbol"]).upper()), tf_k,
                             scan_row=_row(str(d["symbol"]).upper()), sess=sess,
                             listed=listed.get(str(d["symbol"]).upper()),
-                            halt_doc=halts_by.get(str(d["symbol"]).upper()), extra=_post_extra(d))
+                            halt_doc=halts_by.get(str(d["symbol"]).upper()), extra=_post_extra(d), v=v)
                  for d in post_list]
         out.update({"tiles": tiles[:lim],
                     "postmarket": {"unchecked_n": unchecked, "unchecked_text": CX.unchecked_text(unchecked),
-                                   "recap": recap(reads)},
+                                   "recap": recap(reads, v)},
                     "empty_note": "No after-hours mover has passed his three after-hours checks yet."})
     elif sub_k == "playbook":
         from chart_maps.gajjala import playbook as PB
@@ -1843,7 +1903,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["track_record"] = (_soft("track record", LG.served_block, st, session, now, span=span_s,
                                      is_today=is_today, today=today if isinstance(today, dict) else None,
                                      broker_text_of=lambda s: broker_text_for(s, flags),
-                                     default=None) if LG else None)
+                                     **({} if gg5 else {"variant": v}), default=None) if LG else None)
         out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})

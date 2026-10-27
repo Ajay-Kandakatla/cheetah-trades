@@ -196,6 +196,19 @@ export const CATEGORIES: CategoryDef[] = [
       + 'No name passes \u2192 no push; /alerts says why. Every name it lists is linked on /alerts. '
       + 'It reports the session that ended at 04:00 ET — its last stored read, timed in the push. '
       + 'UNMEASURED — what moved overnight, not what to buy. Not advice.' },
+  /* 🚩 / 🧠 Gajjala's 1-min page (2026-10-27, BUILD_SPEC27 §3.7–3.8). Ajay: "Can you create a new page, I would like
+     you to do the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track
+     record for it from today..". Two kinds, both SHADOW (backend constants.GAJJALA_1M_PUSH_MODE, HIS CALL #1): False
+     in push/subs.default_prefs, NOT in OWNER_KEEP_SET, so nothing reaches a phone; the toggles exist so the switch is
+     here the day he goes live. UNMEASURED. */
+  { key: 'gajjala_1m_setup', label: 'Gajjala 1-min A+ (shadow)', emoji: '🚩', group: 'trading',
+    detail: 'SHADOW — recorded, never sent to any phone until you say so (your call). You said: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." '
+      + 'WHAT IS RECORDED: an A+ entry on \u{1F6A9} Gajjala’s 1-min page — his five setups, the same rules, read on CLOSED 1-minute candles (the Fade on 5-minute first) over the same scanner list as \u{1F6A9} Gajjala’s. Each one is listed on /alerts and in that page’s \u{1F3C1} Track record (from 2026-10-27), never rung; while the page is in shadow this toggle changes nothing. '
+      + 'GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED. Not a recommendation.' },
+  { key: 'gajjala_1m_potential', label: 'Gajjala 1-min potential (shadow)', emoji: '\u{1F9E0}', group: 'trading',
+    detail: 'SHADOW — recorded, never sent to any phone until you say so (your call). You said: "do everything and also add the track record for it from today..". '
+      + 'WHAT IS RECORDED: the first time a listed name is a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session. Each one is listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27), never rung; while the page is in shadow this toggle changes nothing. '
+      + 'UNMEASURED — a potential, not an entry. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20

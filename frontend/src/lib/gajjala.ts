@@ -71,13 +71,20 @@
  * (tab / ledger via trader_names.text_for — served to EVERY viewer, null when untagged) and the strip the SERVED
  * `trader_text` / `trader_skip_text` lines. A TAG: nothing hides, filters or counts a row here. This module types no
  * word and no trader's name. UNMEASURED.
+ *
+ * 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.8). Ajay: "Can you create a new page, I would like you to do
+ * the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track record for it from
+ * today..". The same board, its own endpoint (components/ggVariant.ts GG_VARIANT_BASE): GgTf gains '1m', GgBoard.tab
+ * 'gajjala_1m', and the 1-minute board serves a `variant` block (its title, its honesty line, its frames — every word
+ * and every frame SERVED by variant.served_block); parseGgTf takes the allowed frames (the served `variant.tfs`, else
+ * GG_TFS — a '1m' never reaches the 5-minute board). Every alert there is recorded in shadow. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
 export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
-export type GgTf = '5m' | '15m';
+export type GgTf = '1m' | '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
 /** URL params. `focus` is the house FOCUS_PARAM (lib/growthArrivals). */
@@ -98,6 +105,11 @@ export const GG_CAT_PARAM = 'cat';
 export const GG_KIND_PARAM = 'kind';
 export const GG_DEFAULT_SUB: GgSub = 'bull_flag';
 export const GG_TFS: ReadonlyArray<GgTf> = ['5m', '15m'];
+/** Every frame a GgTf can name (the type's members) — a served `variant.tfs` entry outside it is dropped.
+ *  2026-10-27 (critic finding 5): exported as GG_TF_ALL so a variant page parses its `tf` deep link before its
+ *  first board lands (the server ignores a tf outside its own v.tfs). */
+export const GG_TF_ALL: ReadonlyArray<GgTf> = ['1m', '5m', '15m'];
+const GG_TF_KEYS: ReadonlySet<string> = new Set<string>(GG_TF_ALL);
 
 /** The fallback sub strip — == backend chart_maps/gajjala/constants.SUBS
  *  (DECISIONS order), contract-pinned. The SERVED `subs` (with counts) wins. */
@@ -419,8 +431,17 @@ export type GgPlaybook = {
               first_hand?: boolean; note?: string | null }[];
 };
 
+/** 🚩 2026-10-27: the served variant block (backend chart_maps/gajjala/variant.served_block) — the 1-minute page only;
+ *  absent on 🚩 Gajjala's. `title` / `honesty` are printed verbatim, `tfs` drives the bar-size toggle. The FE types none. */
+export type GgVariantBlock = {
+  key: string; tab: string; label?: string | null; title?: string | null; honesty?: string | null;
+  tfs?: string[] | null; primary?: string | null; slow?: string | null; api_base?: string | null; record_from?: string | null;
+};
+
 export type GgBoard = {
-  tab: 'gajjala';
+  tab: 'gajjala' | 'gajjala_1m';
+  /** 🚩 2026-10-27: the 1-minute page's served block; absent on 🚩 Gajjala's (and on an older API). */
+  variant?: GgVariantBlock | null;
   sub: GgSub;
   sub_resolved_from?: string;
   tf: GgTf;
@@ -501,9 +522,20 @@ export function parseGgSub(raw: string | null | undefined): GgSub | null {
   return SUB_KEYS.has(s) ? (s as GgSub) : GG_DEFAULT_SUB;
 }
 
-export function parseGgTf(raw: string | null | undefined): GgTf | null {
+/** `?tf=` → a frame in `allowed` (default GG_TFS — 🚩 Gajjala's 5m | 15m; the 1-minute board passes its served
+ *  `variant.tfs`), else null. A value that is not a GgTf is null whatever `allowed` says. */
+export function parseGgTf(raw: string | null | undefined, allowed: ReadonlyArray<string> = GG_TFS): GgTf | null {
   const s = (raw || '').trim().toLowerCase();
-  return s === '5m' || s === '15m' ? s : null;
+  return GG_TF_KEYS.has(s) && allowed.includes(s) ? (s as GgTf) : null;
+}
+
+/** The bar-size toggle's frames: the served `variant.tfs` (GgTf members only, served order) when the board serves a
+ *  non-empty list, else GG_TFS. */
+export function ggTfs(board: Pick<GgBoard, 'variant'> | null | undefined): ReadonlyArray<GgTf> {
+  const served = board?.variant?.tfs;
+  if (!Array.isArray(served)) return GG_TFS;
+  const tfs = served.filter((t): t is GgTf => typeof t === 'string' && GG_TF_KEYS.has(t));
+  return tfs.length ? tfs : GG_TFS;
 }
 
 /** The endpoint query. `sub` / `tf` / `focus` / `sort` / `span` ride only when

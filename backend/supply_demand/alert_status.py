@@ -31,6 +31,11 @@ never ran". This module keeps the last pass's counters per kind:
                      of its own); its served pass also carries
                      `potential_items`, today's tracker docs read from
                      `gajjala_potentials` (read_gajjala_potentials)
+  gajjala_1m_setup / gajjala_1m_potential
+                     written here by the 🚩 1-minute page's pass
+                     (chart_maps/gajjala/run_1m.py, 2026-10-27) — no crontab
+                     line of its own; both kinds are recorded in SHADOW, never
+                     sent (GAJJALA_1M_PUSH_MODE)
   tape_burst_highbeta / tape_burst_chartmaps
                      written here by orderflow.tape_burst_kinds.run_all
                      (2026-10-14), the 🎢 / 🗺️ kinds riding the
@@ -132,8 +137,19 @@ GAJJALA_POTENTIAL_KIND = "gajjala_potential"
 # pass doc. Typed, not imported: this file stays a module-level leaf
 # (test_tape_control_registry pins it equal to tape_control.KIND).
 TAPE_CONTROL_KIND = "tape_control"
+# 🚩 the 1-minute page (chart_maps/gajjala/run_1m.py, 2026-10-27). Ajay: "Can you
+# create a new page, I would like you to do the same logic of Gajjalas but on 1
+# min candles please." Its A+ and 🧠 potential kinds ride the 🚩 line via the
+# run_1m loop (the 5-minute cron pass spawns it — no crontab line of their own)
+# and record their own pass docs. Both are recorded in SHADOW, never sent
+# (GAJJALA_1M_PUSH_MODE, HIS CALL #1). Typed, not imported: this file stays a
+# module-level leaf (tests/test_gajjala_1m_page_2026_10_27.py pins them equal to
+# chart_maps.gajjala.variant.GG1.push_kind_setup / push_kind_potential).
+GAJJALA_1M_KIND = "gajjala_1m_setup"
+GAJJALA_1M_POTENTIAL_KIND = "gajjala_1m_potential"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
-              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND) + TAPE_KINDS + (TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
+              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND) + TAPE_KINDS + (
+                  TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -157,6 +173,11 @@ CADENCE_SEC[GAJJALA_KIND] = 300
 # 🧠 rides that same `1-56/5` line (run.run_pass calls potential.run_pass) →
 # 300 s (the crontab source guard derives it from that line's minute field).
 CADENCE_SEC[GAJJALA_POTENTIAL_KIND] = 300
+# 🚩 the 1-minute page's two kinds ride the 🚩 line via the run_1m loop: one
+# iteration per closed 1-minute bar → 60 s (= constants.GG1M_CADENCE_SEC, pinned
+# by tests/test_gajjala_1m_page_2026_10_27.py; no crontab minute field to derive).
+CADENCE_SEC[GAJJALA_1M_KIND] = 60
+CADENCE_SEC[GAJJALA_1M_POTENTIAL_KIND] = 60
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
@@ -669,6 +690,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
                                                    read_pass(GAJJALA_POTENTIAL_KIND, pass_coll)),
                                      potential_items=read_gajjala_potentials(potential_coll, et)),
     }
+    for kind in (GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND):     # 🚩 2026-10-27 — the 1-minute page (shadow)
+        passes[kind] = _with_cadence(kind, read_pass(kind, pass_coll))
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
@@ -688,7 +711,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND",
+           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials",

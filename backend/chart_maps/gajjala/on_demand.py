@@ -23,6 +23,12 @@ Order of `request()` (every step soft; it never raises; no pass runs in it):
      2026-10-16, W11b);
   6. started — the child is spawned (a spawn that raises → refused).
 No number is typed here (constants.py). UNMEASURED — nothing here trades.
+
+🚩 The 1-minute page (2026-10-27, BUILD_SPEC27 §3.6 — Ajay "do the same logic of Gajjalas but on 1 min candles"):
+`request(variant=GG1)` runs the SAME order on the GG1 store (`store.for_variant(GG1)` — its own lease, pass docs and
+"latest_cron" pointer), spawns `python -m chart_maps.gajjala.run_1m --on-demand` (PROC_NAME_1M) in its OWN child slot
+(a live 🚩 child never makes the 1-minute page "waiting", and back), and words its texts on the variant's cadence
+(variant.cadence_sec — "the 1-minute pass …"). A GG5 call (no variant) answers byte for byte as before.
 """
 from __future__ import annotations
 
@@ -37,6 +43,7 @@ from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 from . import constants as GC
+from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.on_demand")
 
@@ -44,6 +51,8 @@ ET = ZoneInfo("America/New_York")
 _LOCK = threading.Lock()
 _STATE: dict = {"proc": None, "started_at": None}
 PROC_NAME = "gajjala-on-open"
+PROC_NAME_1M = "gajjala-1m-on-open"                                # 2026-10-27 — the 1-minute page's on-open child
+_STATES: dict = {}                                                  # 2026-10-27 — {variant key: {proc, started_at}} (non-GG5)
 # the directory that holds the `chart_maps` package (the api's /app) — the child's cwd, so `-m` resolves the same tree
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ARGV = (sys.executable, "-m", "chart_maps.gajjala.run", "--on-demand")
@@ -123,16 +132,33 @@ def _hms(t: Optional[datetime]) -> Optional[str]:
     return t.astimezone(ET).strftime("%H:%M:%S") if isinstance(t, datetime) else None
 
 
-def _ticks(now: datetime) -> tuple:
+def _slot(v) -> dict:
+    """The variant's child slot: GG5 → the module's `_STATE` (read at call time); another variant → its own."""
+    if V.is_gg5(v):
+        return _STATE
+    return _STATES.setdefault(v.key, {"proc": None, "started_at": None})
+
+
+def _argv(v) -> tuple:
+    """(argv, name) the variant's on-open child runs: GG5 `run --on-demand`; GG1 `run_1m --on-demand`."""
+    if V.is_gg5(v):
+        return ARGV, PROC_NAME
+    from . import run_1m as R1                                      # ARGV only — the pass never runs here
+    return R1.ARGV_ON_DEMAND, PROC_NAME_1M
+
+
+def _ticks(now: datetime, cadence_sec: Optional[int] = None) -> tuple:
     """(first, next) cron tick of `now`'s ET day as ET datetimes: PASS_OPEN_ET + PASS_MINUTE_OFFSET, then every
-    PASS_CADENCE_SEC (the crontab step, pinned by the run tests)."""
+    PASS_CADENCE_SEC (the crontab step, pinned by the run tests). `cadence_sec` (2026-10-27): the variant's cadence
+    (None = PASS_CADENCE_SEC at call time)."""
+    cad = GC.PASS_CADENCE_SEC if cadence_sec is None else cadence_sec
     et = now.astimezone(ET)
     h, m = (int(x) for x in GC.PASS_OPEN_ET.split(":"))
     first = et.replace(hour=h, minute=m, second=0, microsecond=0) + timedelta(minutes=GC.PASS_MINUTE_OFFSET)
     if et <= first:
         return first, first
-    steps = math.ceil((et - first).total_seconds() / GC.PASS_CADENCE_SEC)
-    return first, first + timedelta(seconds=GC.PASS_CADENCE_SEC * steps)
+    steps = math.ceil((et - first).total_seconds() / cad)
+    return first, first + timedelta(seconds=cad * steps)
 
 
 def _clamp_eta(sec: float) -> int:
@@ -140,9 +166,10 @@ def _clamp_eta(sec: float) -> int:
 
 
 def _text(state: str, latest: Optional[dict], now: datetime, *, holder=None, started=None, age=None,
-          first_wait=None, via_open: bool = False) -> str:
-    """W10–W14 (BUILD_SPEC5 §3.7) + W12c (A12) + W11b (final critic 2026-10-16: reused on an open's release)."""
-    cad = GC.PASS_CADENCE_SEC // 60
+          first_wait=None, via_open: bool = False, variant=None) -> str:
+    """W10–W14 (BUILD_SPEC5 §3.7) + W12c (A12) + W11b (final critic 2026-10-16: reused on an open's release).
+    2026-10-27: the cadence word is the variant's (V.cadence_sec — GG5 = PASS_CADENCE_SEC at call time)."""
+    cad = V.cadence_sec(variant) // 60
     at = _stamp((latest or {}).get("at")) if isinstance(latest, dict) else None
     hhmm = at.astimezone(ET).strftime("%H:%M") if at is not None else None
     if state == "started":
@@ -172,7 +199,7 @@ def _text(state: str, latest: Optional[dict], now: datetime, *, holder=None, sta
 
 
 def _resp(state: str, latest: Optional[dict], now: datetime, *, holder=None, started=None, age=None,
-          eta: Optional[int] = None, first_wait=None, via_open: bool = False) -> dict:
+          eta: Optional[int] = None, first_wait=None, via_open: bool = False, variant=None) -> dict:
     """EXACTLY RESPONSE_KEYS. `latest_at` = tab.pass_stamp(latest) — the SAME stamp the GET serves as `pass.at`.
     started / waiting carry the poll plan (eta clamped to [ON_DEMAND_POLL_SEC, ON_DEMAND_WAIT_MAX_SEC]: the last
     pass's wall time minus the time it has run, else the on-open budget); reused / closed / refused carry none."""
@@ -180,7 +207,7 @@ def _resp(state: str, latest: Optional[dict], now: datetime, *, holder=None, sta
     out = {"state": state, "latest_at": GT.pass_stamp(latest), "eta_sec": None, "poll_sec": None,
            "wait_max_sec": None,
            "text": _text(state, latest, now, holder=holder, started=started, age=age, first_wait=first_wait,
-                         via_open=via_open)}
+                         via_open=via_open, variant=variant)}
     if state in ("started", "waiting"):
         if eta is None:
             prev = _finite((latest or {}).get("wall_s")) if isinstance(latest, dict) else None
@@ -204,12 +231,17 @@ def _closed(now: datetime) -> bool:
     return not RUN.in_window(now)
 
 
-def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Callable] = None) -> dict:
+def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Callable] = None, variant=None) -> dict:
     """CONTRACT — the POST's answer (see the module docstring for the order). `store` / `spawn` are injectable (tests);
-    `spawn(argv, name)` returns a process-like object with `poll()`. Never raises."""
+    `spawn(argv, name)` returns a process-like object with `poll()`. Never raises. `variant` (2026-10-27): None / GG5 =
+    today's tab, byte for byte; GG1 = the 1-minute page (its store, child, argv and cadence words)."""
+    v = V.of(variant)
+    gg5 = V.is_gg5(v)
+    rv = None if gg5 else v                                         # GG5's _resp / _text calls stay as they were
     try:
         from . import store as ST
-        st = store if store is not None else ST.default()
+        st = store if store is not None else (ST.default() if gg5 else ST.for_variant(v))
+        slot = _slot(v)
         now = _utc(now)
         try:
             latest = st.latest_pass()
@@ -218,11 +250,11 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
             latest = None
         latest = latest if isinstance(latest, dict) else None
         if _closed(now):
-            return _resp("closed", latest, now)
+            return _resp("closed", latest, now, variant=rv)
         with _LOCK:
-            if _alive(_STATE.get("proc")):
-                started = _STATE.get("started_at")
-                return _resp("waiting", latest, now, holder="on_demand", started=started)
+            if _alive(slot.get("proc")):
+                started = slot.get("started_at")
+                return _resp("waiting", latest, now, holder="on_demand", started=started, variant=rv)
             try:
                 lease = st.lease_state(now) or {}
             except Exception as exc:                                # noqa: BLE001
@@ -231,13 +263,13 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
             if lease.get("held"):
                 started = _stamp(lease.get("holder_started_at")) or _stamp(lease.get("claimed_at"))
                 holder = lease.get("held_by") if lease.get("held_by") in HOLDERS else "cron"
-                return _resp("waiting", latest, now, holder=holder, started=started)
+                return _resp("waiting", latest, now, holder=holder, started=started, variant=rv)
             cron = _cron_pass(st)
             session = now.astimezone(ET).date().isoformat()
             if not (isinstance(cron, dict) and cron.get("date") == session):
-                first, nxt = _ticks(now)                            # A12: the 04:01 tick runs first
+                first, nxt = _ticks(now) if gg5 else _ticks(now, V.cadence_sec(v))   # A12: the 04:01 tick first
                 return _resp("waiting", latest, now, eta=_clamp_eta((nxt - now).total_seconds()),
-                             first_wait=(first, nxt))
+                             first_wait=(first, nxt), variant=rv)
             fin = _finished_at(latest)
             od_done = None                                          # final critic 2026-10-16: an open that re-read
             if lease.get("held_by") == "on_demand" and lease.get("status") == "done":   # nothing left `latest` alone
@@ -247,21 +279,23 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
                 age = max(0.0, (now - ref).total_seconds())         # a negative age reads 0
                 if age < GC.ON_DEMAND_REUSE_SEC:
                     return _resp("reused", latest, now, age=age, via_open=(od_done is not None and ref == od_done
-                                                                              and (fin is None or od_done > fin)))
+                                                                              and (fin is None or od_done > fin)),
+                                 variant=rv)
             try:
-                proc = (spawn or _spawn)(list(ARGV), PROC_NAME)
+                argv, name = _argv(v)
+                proc = (spawn or _spawn)(list(argv), name)
             except Exception as exc:                                # noqa: BLE001
                 log.warning("gajjala on-open: spawn failed: %s", exc)
-                return _resp("refused", latest, now)
-            _STATE.update(proc=proc, started_at=now)
-        return _resp("started", latest, now, started=now)
+                return _resp("refused", latest, now, variant=rv)
+            slot.update(proc=proc, started_at=now)
+        return _resp("started", latest, now, started=now, variant=rv)
     except Exception as exc:                                        # noqa: BLE001
         log.warning("gajjala on-open: request failed: %s", exc)
         try:
-            return _resp("refused", None, _utc(None))
+            return _resp("refused", None, _utc(None), variant=rv)
         except Exception:                                           # noqa: BLE001
             return {"state": "refused", "latest_at": None, "eta_sec": None, "poll_sec": None, "wait_max_sec": None,
                     "text": "🔄 the scan could not start (store error) — the board shows the last pass"}
 
 
-__all__ = ["request", "RESPONSE_KEYS", "STATES", "PROC_NAME", "ARGV"]
+__all__ = ["request", "RESPONSE_KEYS", "STATES", "PROC_NAME", "PROC_NAME_1M", "ARGV"]

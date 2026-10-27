@@ -135,6 +135,15 @@
  * `trader_text` as a muted chip just BEFORE the 🚫 chip (tiles, the 🌙 recap, the 🎯 line, the 🧠 strip, 📈 Track, the
  * 🏁 rows, 👀 watch), and the strip prints the SERVED `trader_text` / `trader_skip_text` lines after its own text. A
  * TAG, never a filter; served to every viewer; the FE types no word and no trader's name. UNMEASURED.
+ *
+ * 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.8). Ajay: "Can you create a new page, I would like you to do
+ * the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track record for it from
+ * today..". The SAME component draws it: `variant="gajjala_1m"` (ChartMaps mounts it with key="gajjala_1m", so a switch
+ * from 🚩 Gajjala's REMOUNTS — a fresh board and its own on-open POST). The variant picks the endpoint base only
+ * (components/ggVariant.ts): GET `${base}`, POST `${base}/scan`, and the 🕰️ entry tape `${base}/entry-tape` through
+ * GgVariantContext. The bar-size toggle runs over the SERVED `variant.tfs` (else GG_TFS), and the served `variant.title`
+ * / `variant.honesty` print above the strip, verbatim — the FE types no word, frame or number of the 1-minute page.
+ * Every alert there is recorded in shadow (served words say so). UNMEASURED.
  */
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -146,6 +155,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
+import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useCardLive } from '../hooks/useCardLive';
 import { cardLiveSymbols, liveVsText, patchTiles, type CardLiveLevels } from '../lib/cardLive';
@@ -157,8 +167,8 @@ import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
-  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggPx, ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
@@ -176,7 +186,10 @@ const COUNT_WORDS: ReadonlyArray<[string, string]> = [
   ['listed', 'listed'],
 ];
 
-export default function GajjalaBoard() {
+export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVariantKey } = {}) {
+  /* 🚩 2026-10-27: the page this board draws — its endpoint base only (ggVariant.ts); an unknown key is 🚩 Gajjala's. */
+  const vkey = ggVariantKey(variant);
+  const base = GG_VARIANT_BASE[vkey];
   const [params, setParams] = useSearchParams();
   /* The back-to-tab glue of PatternChart.tsx:235-236 (Ajay 2026-08-25: "back button do not take me to the same place
    * in these tabs") — a bar-less ☀️ / 🌙 tile links the same way a charted tile does, state + ?from/from_q. */
@@ -184,7 +197,6 @@ export default function GajjalaBoard() {
   const carryQ = sanitizeSourceQuery(location.search);
   const backTarget = carryQ ? `/chart-maps?${carryQ}` : '/chart-maps';
   const urlSub = parseGgSub(params.get(GG_SUB_PARAM));
-  const tf = parseGgTf(params.get(GG_TF_PARAM));
   const focus = parseFocus(params.get(FOCUS_PARAM));
   const sort = (params.get(GG_SORT_PARAM) || '').trim() || null;
   const span = (params.get(GG_SPAN_PARAM) || '').trim() || null;
@@ -196,6 +208,12 @@ export default function GajjalaBoard() {
   const kind = (params.get(GG_KIND_PARAM) || '').trim() || null;
 
   const [board, setBoard] = useState<GgBoard | null>(null);
+  /* The bar sizes this page offers: the SERVED `variant.tfs` (the 1-minute page), else GG_TFS — a `tf` outside them
+   * never rides the GET (a '1m' never reaches 🚩 Gajjala's). 2026-10-27 (critic finding 5): before the first board
+   * lands on a VARIANT page, every GgTf member parses (the server coerces a tf outside its v.tfs) — a `tf=1m` deep
+   * link rides the first GET instead of a 5m GET then a 1m one. 🚩 Gajjala's own page keeps GG_TFS. */
+  const tfs = ggTfs(board);
+  const tf = parseGgTf(params.get(GG_TF_PARAM), board == null && variant !== 'gajjala' ? GG_TF_ALL : tfs);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0);
@@ -224,7 +242,7 @@ export default function GajjalaBoard() {
     const my = ++seq.current;
     inFlight.current = my;
     setLoading(true);
-    fetch(`${API}/chart-maps/gajjala?${reqKey}`, { credentials: 'include', cache: 'no-store' })
+    fetch(`${API}${base}?${reqKey}`, { credentials: 'include', cache: 'no-store' })
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return (await r.json()) as GgBoard;
@@ -253,7 +271,7 @@ export default function GajjalaBoard() {
       });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reqKey, tick]);
+  }, [reqKey, tick, base]);
 
   // Re-read on the SERVED cadence only; 0 / absent (a closed session) = no timer.
   const every = ggRefreshMs(board);
@@ -327,7 +345,10 @@ export default function GajjalaBoard() {
     let detail: string | null = null;
     let failed = false;
     try {
-      const r = await fetch(`${API}${GG_SCAN_PATH}`, { method: 'POST', credentials: 'include', cache: 'no-store' });
+      // 🚩 2026-10-27: 🚩 Gajjala's POSTs GG_SCAN_PATH exactly as before; the 1-minute page POSTs its own `${base}/scan`.
+      const r = vkey === 'gajjala'
+        ? await fetch(`${API}${GG_SCAN_PATH}`, { method: 'POST', credentials: 'include', cache: 'no-store' })
+        : await fetch(`${API}${base}/scan`, { method: 'POST', credentials: 'include', cache: 'no-store' });
       const body: unknown = await r.json().catch(() => null);
       if (r.ok) {
         resp = body as GgScanResponse;
@@ -436,8 +457,8 @@ export default function GajjalaBoard() {
 
   const activeSub: GgSub | null = parseGgSub(board?.sub) ?? urlSub;
   useEffect(() => {
-    if (activeSub) trackFeature(`chart-maps:tab:gajjala:${activeSub}`);
-  }, [activeSub]);
+    if (activeSub) trackFeature(`chart-maps:tab:${vkey}:${activeSub}`);
+  }, [activeSub, vkey]);
 
   // 📓 and 🏁 draw no tiles, so useBounceRoom posts nothing on them.
   const tiles = useMemo<GgTile[]>(
@@ -487,7 +508,7 @@ export default function GajjalaBoard() {
   const session = board?.session;
   const pass = board?.pass;
   const strip = board?.strip;
-  const servedTf = board?.tf ?? tf ?? '5m';
+  const servedTf = board?.tf ?? tf ?? tfs[0];
   const scan = board?.scan ?? null;
   const scanOpen = !!scan && scan.state !== 'closed';
   const asOfServed = scanOpen && typeof scan?.as_of_text === 'string' && scan.as_of_text.trim() ? scan.as_of_text : null;
@@ -501,7 +522,16 @@ export default function GajjalaBoard() {
     : scan?.rescan_title || undefined;
 
   return (
-    <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'}>
+    <GgVariantContext.Provider value={vkey}>
+    <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'} data-variant={vkey}>
+      {/* (0) 🚩 2026-10-27: the 1-minute page's SERVED title + honesty line (variant.served_block) — verbatim; absent on
+          🚩 Gajjala's, so nothing prints there. */}
+      {servedText(board?.variant?.title) ? (
+        <div className="cm-note gg-page-title" data-testid="gg-page-title"><strong>{board?.variant?.title}</strong></div>
+      ) : null}
+      {servedText(board?.variant?.honesty) ? (
+        <div className="gg-muted gg-page-honesty" data-testid="gg-page-honesty">{board?.variant?.honesty}</div>
+      ) : null}
       {/* (1) situational-awareness strip — his read of the day (S8 43:39). */}
       <div className="gg-strip" data-testid="gg-strip" role="status">
         {strip?.text ? <span className="gg-strip-text" data-testid="gg-strip-text">{strip.text}</span> : null}
@@ -606,7 +636,7 @@ export default function GajjalaBoard() {
 
           {/* (5) bar size + the ☀️ / 🌙 served sorts. */}
           <div className="cm-phase" role="tablist" aria-label="Bar size">
-            {GG_TFS.map((f) => (
+            {tfs.map((f) => (
               <button key={f} type="button" role="tab" aria-selected={f === servedTf}
                       data-testid={`gg-tf-${f}`}
                       className={`cm-phase-btn${f === servedTf ? ' cm-phase-on' : ''}`}
@@ -670,7 +700,7 @@ export default function GajjalaBoard() {
                     <GgBrokerChip text={t.broker_text} testid={`gg-broker-tile-${t.symbol}`} />
                     {/* The frame this card drew, when it is not the bar size the toggle shows (a ➖ Fade read
                         that fell back to 5-minute bars) — the served per-tile `tf`, never a guess. */}
-                    {frameDiffers(t.tf, servedTf) ? (
+                    {frameDiffers(t.tf, servedTf, tfs) ? (
                       <>{' '}<span className="cm-badge cm-badge-muted" data-testid={`gg-frame-${t.symbol}`}
                                    title={`this card is drawn on ${tfWords(t.tf as GgTf)} bars, not the ${tfWords(servedTf)} bars the toggle shows`}>
                         {`${tfWords(t.tf as GgTf)} read`}
@@ -718,14 +748,15 @@ export default function GajjalaBoard() {
       </div>
       {board?.note ? <div className="cm-note" data-testid="gg-note">{board.note}</div> : null}
     </div>
+    </GgVariantContext.Provider>
   );
 }
 
 /** '5m' → '5-min'. */
 const tfWords = (f: GgTf | string) => String(f).replace(/m$/, '-min');
-/** A served tile frame that is a real bar size and not the board's. */
-const frameDiffers = (tileTf: unknown, boardTf: string): boolean =>
-  typeof tileTf === 'string' && (GG_TFS as ReadonlyArray<string>).includes(tileTf) && tileTf !== boardTf;
+/** A served tile frame that is one of this page's bar sizes and not the board's. */
+const frameDiffers = (tileTf: unknown, boardTf: string, tfs: ReadonlyArray<string> = GG_TFS): boolean =>
+  typeof tileTf === 'string' && tfs.includes(tileTf) && tileTf !== boardTf;
 
 /** The counts line. ℹ️ 2026-10-18 (DECISIONS15 D2): with a served `counts_legend` each count is a span carrying the served
  *  text as its native title, and ONE folded ⓘ under the line lists every served row ("word — text") in served order. The

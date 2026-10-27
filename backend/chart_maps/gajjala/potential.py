@@ -40,6 +40,12 @@ tracker doc (`push` set where absent), so a name never rings twice a session (K3
 
 UNMEASURED. No study has read a potential (the A+ study read NULL, 2026-10-14). Nothing here trades, sizes or enters a
 lane; every push says "UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs".
+
+THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.5): the same engine for a `variant.Variant` read off the store
+(`V.of(store)`): its tracker collection, deep link, push kind / tag ("gg1-pot-"), its primary frame's clock for the
+fresh-tape check and the price, its held words. Its 🧠 potentials are SHADOW (GAJJALA_1M_PUSH_MODE): the claim lands,
+the settle records state "shadow" with the payload it would have sent, the sender is NEVER called, and only that
+variant's counts carry "shadow". GG5 keeps every byte (its counts, words and sends).
 """
 from __future__ import annotations
 
@@ -51,6 +57,7 @@ from zoneinfo import ZoneInfo
 from daytrading.data import ET_AFTERHOURS_CLOSE, ET_PREMARKET_OPEN, ET_RTH_OPEN   # the house session clock
 
 from . import constants as GC
+from . import variant as V
 from . import trader_names as TN                                 # 📌 A2 — the hold reason + its words (one source)
 
 log = logging.getLogger("chart_maps.gajjala.potential")
@@ -279,8 +286,16 @@ def doc_id(session, sym: str, setup: str) -> str:
     return ST.potential_key(session, sym, setup)
 
 
-def deep_link(sym: str, setup: str) -> str:
-    return f"/chart-maps?tab=gajjala&sub={setup}&focus={(sym or '').upper()}"
+def deep_link(sym: str, setup: str, variant=None) -> str:
+    return f"/chart-maps?tab={V.of(variant).tab}&sub={setup}&focus={(sym or '').upper()}"
+
+
+def held_words(variant=None) -> dict:
+    """The held-reason words of the variant: GG5 → HELD_WORDS itself (the same object); the 1-minute page → a copy whose
+    stale-tape line names ITS bar (variant.WORDS_1M "held_stale_tape")."""
+    if V.is_gg5(variant):
+        return HELD_WORDS
+    return dict(HELD_WORDS, stale_tape=V.word("held_stale_tape", variant))
 
 
 def line(sym, setup, read, kind) -> str:
@@ -313,15 +328,17 @@ def row_text(sym, setup, read, kind, first_seen_et) -> str:
 
 
 def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text: Optional[str] = None,
-            trader_text: Optional[str] = None) -> dict:
+            trader_text: Optional[str] = None, variant=None) -> dict:
     """The device payload (W3/W4 + AMENDMENTS4 D8): "UNMEASURED" in the TITLE; the body is the trigger / stop clause,
     then the TAIL (so the ~180-char lock screen shows it), then the session, the first sighting and the tells last.
     Every number is the read's own. 🚫 (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1): `broker_text` (tab.broker_text_for
     — the served word) when a non-empty str → the clause right BEFORE the TAIL and " · " + tab.BROKER_FLAG_ICON on the
     title; anything else → the body and title of before. A TAG only: the push still rings.
     📌 (2026-10-27): `trader_text` (trader_names.text_for — the tag and his handle) when a non-empty str → its clause
-    right before the broker clause; the title is UNCHANGED (HIS CALL #4)."""
+    right before the broker clause; the title is UNCHANGED (HIS CALL #4).
+    `variant` (2026-10-27): its kind, deep link and tag prefix ("gg-pot-" GG5 / "gg1-pot-" the 1-minute page)."""
     from .tab import BROKER_FLAG_ICON, SESSION_BADGE
+    var = V.of(variant)
     sym = (sym or "").upper()
     read = read or {}
     e, label = _setup_meta(setup)
@@ -340,9 +357,10 @@ def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text:
              f"first seen {first_seen_et} ET" if first_seen_et else "", v.get("float_text") or "",
              v.get("rotation_text") or ""]
     title = f"🧠 {sym} · {e} {label} — {kl} · UNMEASURED" + (f" · {BROKER_FLAG_ICON}" if bt else "")
+    prefix = "gg" if V.is_gg5(var) else var.claim_prefix.lower()
     return {"title": title, "body": " · ".join(b for b in bits if b),
-            "tag": f"gg-pot-{setup}-{sym}", "url": deep_link(sym, setup), "kind": KIND, "ticker": sym,
-            "items": [{"symbol": sym, "text": line(sym, setup, read, kind)}]}
+            "tag": f"{prefix}-pot-{setup}-{sym}", "url": deep_link(sym, setup, var), "kind": var.push_kind_potential,
+            "ticker": sym, "items": [{"symbol": sym, "text": line(sym, setup, read, kind)}]}
 
 
 # ── K2: the window, judged on the PASS clock ──────────────────────────────────────────────────────────────────────
@@ -361,27 +379,31 @@ def window_reason(now, session) -> Optional[str]:
     return None
 
 
-def fresh_tape(frames_obj, now) -> bool:
+def fresh_tape(frames_obj, now, variant=None) -> bool:
     """POTENTIAL_FRESH_TAPE (Cheetah default, not his): the 5-minute frame's latest closed bar closed 0 …
-    alerts.MAX_ENTRY_AGE_SEC before the pass clock — a name with no print in the bar that just closed is not "a wave"."""
-    from .alerts import MAX_ENTRY_AGE_SEC, _as_of, bar_close_et
-    close, at = bar_close_et(_as_of(frames_obj, "5m")), bar_close_et(_et(now))
+    alerts.MAX_ENTRY_AGE_SEC before the pass clock — a name with no print in the bar that just closed is not "a wave".
+    `variant` (2026-10-27): its PRIMARY frame and alerts.max_entry_age_sec(variant) (the 1-minute page: 1m, 90 s)."""
+    from .alerts import _as_of, bar_close_et, max_entry_age_sec
+    v = V.of(variant)
+    close, at = bar_close_et(_as_of(frames_obj, v.primary)), bar_close_et(_et(now))
     if close is None or at is None:
         return False
-    return 0 <= (at - close).total_seconds() <= MAX_ENTRY_AGE_SEC
+    return 0 <= (at - close).total_seconds() <= max_entry_age_sec(v)
 
 
-def pass_times(session) -> tuple:
+def pass_times(session, variant=None) -> tuple:
     """(first, last) "HH:MM" pass clocks that may ring: PASS_OPEN_ET + PASS_MINUTE_OFFSET, every PASS_CADENCE_SEC, up
     to the extended close of the session (half days per the house table). "passes from", never "first possible ring"
-    — the 04:01 pass has no closed 5-minute bar yet (bars.build_frames) and cannot find a potential."""
+    — the 04:01 pass has no closed 5-minute bar yet (bars.build_frames) and cannot find a potential.
+    `variant` (2026-10-27): the step is the variant's cadence (variant.cadence_sec; GG5 PASS_CADENCE_SEC)."""
     from .alerts import _closes
+    cad = V.cadence_sec(variant)
     day = _as_date(session)
     open_t = datetime.strptime(GC.PASS_OPEN_ET, "%H:%M").time()
     first = datetime.combine(day, open_t, tzinfo=ET) + timedelta(minutes=GC.PASS_MINUTE_OFFSET)
     close = datetime.combine(day, _closes(session)[1], tzinfo=ET)
-    steps = int((close - first).total_seconds() // GC.PASS_CADENCE_SEC)
-    last = first + timedelta(seconds=GC.PASS_CADENCE_SEC * max(0, steps))
+    steps = int((close - first).total_seconds() // cad)
+    last = first + timedelta(seconds=cad * max(0, steps))
     return first.strftime("%H:%M"), last.strftime("%H:%M")
 
 
@@ -390,9 +412,13 @@ def _join_sentence(mute_end: str) -> str:
             f"already forming without ringing it {CHEETAH_TAG}.")
 
 
-def push_note(session) -> str:
-    """W15 — the tab's `push_potential.text`, under the narrowed A+ line."""
+def push_note(session, variant=None) -> str:
+    """W15 — the tab's `push_potential.text`, under the narrowed A+ line. The 1-minute page (2026-10-27): its own frozen
+    sentence (variant.WORDS_1M "push_potential" — recorded in shadow, never sent), the same clock words, its cadence."""
     w = _clock_words(session)
+    if not V.is_gg5(variant):
+        return V.word("push_potential", variant, open=w["open"], close=w["close"],
+                      cad=V.cadence_sec(variant) // 60, rth_open=w["rth_open"], mute_end=w["mute_end"], n=w["n"])
     first, last = pass_times(session)
     return (f"🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a "
             f"potential, {w['open']}–{w['close']} ET on the {w['cadence']}-minute pass (passes from {first} to {last} "
@@ -503,7 +529,7 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
     last = _last_block(read, kind, now, px)
     first_px, first_trig = base.get("first_px"), base.get("first_trigger")
     sets = {"last": last, "state_path": path, "move_pct": _pct_move(last["px"], first_px),
-            "vs_trigger_pct": _pct_move(last["px"], first_trig), "url": deep_link(sym, setup),
+            "vs_trigger_pct": _pct_move(last["px"], first_trig), "url": deep_link(sym, setup, V.of(store)),
             "updated_at": now_u, "at": now_u}
     if kind is not None:
         sets["line"] = line(sym, setup, read, kind)             # the latest potential's line (a later A+ keeps it)
@@ -619,14 +645,19 @@ def _gate_block_ok(p) -> bool:
     return not (joined > 0 and tracked == 0)
 
 
-def _default_send(owner: str, payload: dict) -> dict:
+def _default_send(owner: str, payload: dict, variant=None) -> dict:
     from push import hooks
-    return hooks.notify_gajjala_potential(owner=owner, payload=payload)
+    if V.is_gg5(variant):
+        return hooks.notify_gajjala_potential(owner=owner, payload=payload)
+    return getattr(hooks, V.of(variant).send_potential)(owner=owner, payload=payload)
 
 
 def _frame_close(frames_obj) -> Optional[float]:
-    """The 5-minute frame's latest CLOSED close (AMENDMENTS4 D2: the price source read first)."""
-    f5 = getattr(frames_obj, "f5", None)
+    """The PRIMARY frame's latest CLOSED close (AMENDMENTS4 D2: the price source read first) — `fprimary` (bars.Frames,
+    2026-10-27: 5m on GG5, 1m on the 1-minute page) first, then `f5` (a stand-in / a plain map)."""
+    f5 = getattr(frames_obj, "fprimary", None)
+    if f5 is None:
+        f5 = getattr(frames_obj, "f5", None)
     if f5 is None and isinstance(frames_obj, dict):
         f5 = frames_obj.get("f5")
     c = getattr(f5, "c", None)
@@ -647,15 +678,23 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     Never touches `gajjala_alerts`, never calls the A+ sender, never reads GAJJALA_PUSH_MODE. -> {COUNT_KEYS: int}.
     📌 A2 (2026-10-27): `trader_hold` = {SYM: the session volume this pass read} for the 📌 ADDS (run.py — the number
     K11 reads); a potential of one is HELD (TRADER_HELD, counted "trader_held") while it is under GC.SCAN_MIN_VOLUME.
-    A GG qualifier carrying the tag is never in it (it passed the floors)."""
+    A GG qualifier carrying the tag is never in it (it passed the floors).
+    2026-10-27 (BUILD_SPEC27 §3.5): the variant is the store's (`V.of(store)`); signature unchanged. A non-GG5 variant
+    in shadow (variant.push_mode — GAJJALA_1M_PUSH_MODE) claims as always, then SETTLES {"state": "shadow", "at_et",
+    "result": {"would_push": payload}} and counts "shadow" (a key ONLY its counts carry) — the sender is never called."""
     from . import alerts as AL
     from . import store as ST
     from . import tab as GT
-    send = send or _default_send
+    var = V.of(store)
+    shadow = (not V.is_gg5(var)) and V.push_mode(var) == "shadow"
+    if send is None:
+        send = _default_send if V.is_gg5(var) else (lambda o, p: _default_send(o, p, var))
     from . import trader_names as TN
     ctx, rows, live_rows, frames = ctx or {}, rows or {}, live_rows or {}, frames or {}
     trader_hold = {str(k).upper(): v for k, v in (trader_hold or {}).items()}
     counts = {k: 0 for k in COUNT_KEYS}
+    if shadow:
+        counts["shadow"] = 0
     # 🚫 DECISIONS12 D4 — his broker list, read ONCE per pass before the tracker read (a read fault → the seed); a TAG
     # on the body, never a gate; COUNT_KEYS unchanged (the A+ pass counts "broker_flagged")
     flags = frozenset(ST.broker_flags(store)[0])
@@ -731,7 +770,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             reason = ckey = "closed_day"
         elif window:
             reason = ckey = window
-        elif GC.POTENTIAL_FRESH_TAPE and not fresh_tape(frames.get(sym), now):
+        elif GC.POTENTIAL_FRESH_TAPE and not fresh_tape(frames.get(sym), now, var):
             reason = ckey = "stale_tape"
         elif sym in trader_hold and TN.under_floor(trader_hold[sym]):
             reason, ckey = TRADER_HELD[0], "trader_held"      # 📌 A2 — GG's 1M floor stays on every push
@@ -759,7 +798,12 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
                 _hold(store, doc, STORE_HELD[0], now)
             continue
         payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
-                          broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"))
+                          broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"), variant=var)
+        if shadow:                                              # recorded, NEVER sent (HIS CALL #1 of BUILD_SPEC27)
+            counts["shadow"] += 1
+            store.settle_potential_push(_id, {"state": "shadow", "at_et": _hhmm(now),
+                                              "result": {"would_push": payload}})
+            continue
         try:
             res = send(owner or AL._owner(), payload) or {}
         except Exception as exc:                                # noqa: BLE001
@@ -788,6 +832,6 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
 
 __all__ = ["KIND", "TAIL", "KIND_LABEL", "CONCEPT", "COUNT_KEYS", "HELD_WORDS", "RULE_HELD", "STORE_HELD", "JOIN_HELD",
            "FIRST_SEEN_MODES", "TRADER_HELD", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
-           "doc_id", "deep_link", "line", "row_text", "compose", "window_reason", "fresh_tape", "pass_times",
+           "doc_id", "deep_link", "held_words", "line", "row_text", "compose", "window_reason", "fresh_tape", "pass_times",
            "push_note", "rules_lines", "defaults_clauses", "defaults_sentence", "track", "eligible", "mark_graveyard",
            "run_pass"]

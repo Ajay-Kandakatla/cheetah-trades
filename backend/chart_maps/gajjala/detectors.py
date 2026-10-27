@@ -1029,22 +1029,26 @@ def _guarded(setup: str, fn, symbol: str) -> dict:
         return _none(setup, None, -1, "detector error")
 
 
-def read_all(frames: dict, ctx: Optional[dict] = None, now=None) -> dict:
+def read_all(frames: dict, ctx: Optional[dict] = None, now=None, *, primary: str = "5m", slow: str = "15m") -> dict:
     """{setup: Read} for the five setups. `frames` = {"5m": Frame, "15m": Frame|None} (each carrying its own
     `minutes`); `ctx` = {"symbol", "float_read"} + K11_CTX_KEY ("session_volume", the scanner's session volume of
     the name — present, even None, → K11 is judged on every broke read; absent → K1–K10 only). `now` is unused — the detectors read closed bars only and push
-    timing is the pass's job. Never raises: a per-setup exception reads none("detector error"), logged."""
+    timing is the pass's job. Never raises: a per-setup exception reads none("detector error"), logged.
+    2026-10-27 (BUILD_SPEC27 §3.5, the 🚩 1-minute page): `primary` / `slow` name the frames — the four setups read
+    `frames[primary]`, the Fade reads `slow` first then `primary` (GG5 "5m" / "15m", the defaults; GG1 "1m" / "5m").
+    The K-rules are untouched: their bar counts count bars of the frame they read."""
     ctx = ctx or {}
     sym = str(ctx.get("symbol") or "?")
-    f5, f15 = frames.get("5m"), frames.get("15m")
+    f5, f15 = frames.get(primary), frames.get(slow)
+    no_bars = f"no {primary} bars"
     fr = ctx.get("float_read")
     calls = {
-        "bull_flag": lambda: bull_flag(f5) if f5 is not None else _none("bull_flag", None, -1, "no 5m bars"),
-        "kiss_fly": lambda: kiss_fly(f5) if f5 is not None else _none("kiss_fly", None, -1, "no 5m bars"),
+        "bull_flag": lambda: bull_flag(f5) if f5 is not None else _none("bull_flag", None, -1, no_bars),
+        "kiss_fly": lambda: kiss_fly(f5) if f5 is not None else _none("kiss_fly", None, -1, no_bars),
         "horizontal_fade": lambda: horizontal_fade(f15, f5),
-        "intraday_vcp": lambda: intraday_vcp(f5) if f5 is not None else _none("intraday_vcp", None, -1, "no 5m bars"),
+        "intraday_vcp": lambda: intraday_vcp(f5) if f5 is not None else _none("intraday_vcp", None, -1, no_bars),
         "reversal_squeeze": lambda: (reversal_squeeze(f5, float_read=fr) if f5 is not None
-                                     else _none("reversal_squeeze", None, -1, "no 5m bars")),
+                                     else _none("reversal_squeeze", None, -1, no_bars)),
     }
     out = {setup: _guarded(setup, calls[setup], sym) for setup in GC.SETUPS}
     if K11_CTX_KEY in ctx:                                         # K11 (2026-10-21): judged at the ring, fail-closed

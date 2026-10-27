@@ -268,6 +268,21 @@ def notify_gajjala_potential(*, owner: str, payload: dict) -> dict:
     return sender.send_to_user(owner, payload, kind="gajjala_potential")
 
 
+def notify_gajjala_1m_setup(*, owner: str, payload: dict) -> dict:
+    """🚩 gajjala_1m_setup — the 1-minute page's A+ (chart_maps/gajjala/alerts.py via variant GG1, 2026-10-27; Ajay:
+    "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.").
+    Owner-scoped (send_to_user) under its own pref kind. Called only when GAJJALA_1M_PUSH_MODE is "live" — it ships in
+    SHADOW (HIS CALL #1): the pass records and never gets here. UNMEASURED."""
+    return sender.send_to_user(owner, payload, kind="gajjala_1m_setup")
+
+
+def notify_gajjala_1m_potential(*, owner: str, payload: dict) -> dict:
+    """🧠 gajjala_1m_potential — the 1-minute page's potential (chart_maps/gajjala/potential.py via variant GG1,
+    2026-10-27). Owner-scoped (send_to_user) under its own pref kind. Called only when GAJJALA_1M_PUSH_MODE is "live"
+    — in shadow the pass settles the tracker doc "shadow" and never gets here (HIS CALL #1). UNMEASURED."""
+    return sender.send_to_user(owner, payload, kind="gajjala_1m_potential")
+
+
 def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
     """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
     over night scan for all the stocks they are all growing over night". Owner-

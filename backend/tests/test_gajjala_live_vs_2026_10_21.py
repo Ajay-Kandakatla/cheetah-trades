@@ -115,7 +115,10 @@ def test_tf_15_says_15_minute_and_the_15_minute_boundary(monkeypatch):
 
 
 def test_negative_any_other_tf_reads_as_5():
-    for tf in (None, "1m", 7, "abc", True, 15.0, [15], {"m": 15}):
+    # WIDENED 2026-10-27 (BUILD_SPEC27 §3.7 — 🚩 1-minute page inserted, Ajay "do the same logic of Gajjalas but on 1
+    # min candles"): "1m" is now a variant frame and reads as 1 (pinned in test_gajjala_1m_page_2026_10_27.py); every
+    # other junk value still reads as 5, and vs_tf_minutes() stays GG5's TFS.
+    for tf in (None, 7, "abc", True, 15.0, [15], {"m": 15}):
         t = LC.live_vs(9.12, {"trigger": 9.0, "tf": tf}, NOW)["text"]
         assert "the 5-minute bar closes (14:05 ET)" in t, tf
     assert LC.vs_tf_minutes() == tuple(int(s.rstrip("m")) for s in GT.TFS) == (5, 15)

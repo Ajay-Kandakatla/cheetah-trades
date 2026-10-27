@@ -141,7 +141,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
                    "tape_burst_highbeta", "tape_burst_chartmaps",
                    "tape_control",
                    # WIDENED 2026-10-19 (BUILD_SPEC16 WP-B — overnight_movers ships OFF)
-                   "overnight_movers"}, \
+                   "overnight_movers",
+                   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — OFF, not in OWNER_KEEP_SET
+                   "gajjala_1m_setup", "gajjala_1m_potential"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 

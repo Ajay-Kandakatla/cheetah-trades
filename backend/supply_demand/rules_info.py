@@ -1155,6 +1155,24 @@ def _gg_trader_clause() -> str:
     return " " + clause if clause else ""
 
 
+def _gg_one_minute_clause() -> str:
+    """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
+    candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
+    chart_maps.gajjala.variant GG1 (its frames' minutes) and GC.GG1M_RECORD_FROM, never typed: " " + the clause, or ""
+    when the module cannot load (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import constants as GC
+        from chart_maps.gajjala import variant as V
+        v = V.GG1
+        p, s = V.frame_minutes(v.primary, v), V.frame_minutes(v.slow, v)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala one-minute clause unavailable: %s", exc)
+        return ""
+    return (" 🚩 %d-minute page: the same rules on CLOSED %d-minute bars (the Fade on %d-minute first), about once a "
+            "minute over the same list — a Cheetah variant by your call (%s); its alerts are recorded in shadow, never "
+            "sent." % (p, p, s, GC.GG1M_RECORD_FROM))
+
+
 def _gajjala_section() -> dict:
     """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
     and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
@@ -1293,6 +1311,7 @@ def _gajjala_section() -> dict:
                  "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13)."
                  + (" 🚫: XLAB and XELB (XELB under a dollar) went through at %s on 2026-10-16, so a price floor is "
                     "not the rule." % GC.BROKER_NAME)
+                 + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),
     }
 

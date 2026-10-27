@@ -920,6 +920,35 @@ surface). **UNMEASURED** — no study in this app has read any tracked account's
   `docs/gajjala/trader_names_2026_10_27.md`; contracts "📌 GnT: latest-posts source restored + served verdict
   (2026-10-22)" and "📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)".
 
+### Chart Maps — 🚩 Gajjala's 1-minute page — `chart_maps/gajjala/variant.py` (2026-10-27)
+Ajay 2026-10-27: *"Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles
+please."* and *"do everything and also add the track record for it from today.."* (BUILD_SPEC27). Tab `gajjala_1m`, right
+after 🚩 Gajjala's, label `GG1M_TAB_LABEL`. **UNMEASURED** — nothing has measured a 1-minute read; the 2026-10-14 study of
+the 5-minute setups read NULL.
+- **One pipeline, a frozen `Variant`** (`variant.py`): `GG5` = 🚩 Gajjala's (every stored and served byte unchanged —
+  `tests/test_gajjala_variant_gg5_identity.py` + the three goldens); `GG1` = the same detectors / alerts / potentials /
+  ledger / tape / board on CLOSED `("1m", "5m")` frames (the ➖ Fade on 5-minute first), claims `GG1:`, kinds
+  `gajjala_1m_setup` / `gajjala_1m_potential`, api base `/chart-maps/gajjala-1m`. Words: `WORDS_1M` (served as the board's
+  `variant` block: title, honesty, tfs, record_from); the FE types none.
+- **Collections** (`store.OWN` / `store.SHARED`): GG1 writes only `gajjala_1m_*` (passes, reads, alerts, state,
+  potentials, ledger, replay) and reads GG5's scan, ah-carry, post, halts, daily and the ONE broker-list doc. GG1 never
+  scans: names = GG5's listed names, capped at `GG1M_MAX_NAMES` by today's change; ctx = GG5's stored ctx.
+- **Cadence** (`run_1m.py`): the 🚩 cron pass's `run.main` SPAWNS a detached `run_1m --loop` (`spawn_loop`; cron path only)
+  and returns at once — never in-process (supercronic runs without `-overlapping` and would SKIP the next 🚩 tick). The
+  loop reads one closed 1-minute bar per iteration, at most 5 per slot, inside `GG1M_MINUTE_BUDGET_SEC` +
+  `GG1M_SLOT_MARGIN_SEC`; its own lease (`GG1M_LEASE_SEC`). No crontab line. Kill switch `GAJJALA_1M_ENABLED` / env
+  `GAJJALA_1M_ENABLED=0`. Nightly grades GG1 after GG5 (fenced).
+- **Shadow**: `GAJJALA_1M_PUSH_MODE` = "shadow" — every 1-minute A+ and 🧠 potential is recorded, never sent; both kinds
+  default_prefs False, not in OWNER_KEEP_SET (HIS CALL #1). The 🏁 Track record counts the shadow 🧠 potentials and shadow
+  A+ from `GG1M_RECORD_FROM` (2026-10-27) — no replay, no backfill.
+- **Routes**: `GET /chart-maps/gajjala-1m`, `POST /chart-maps/gajjala-1m/scan` (owner; stealth 404),
+  `GET /chart-maps/gajjala-1m/entry-tape` (1-minute bars, up to `GG1M_TAPE_BARS_MAX`). Broker flags stay under
+  `/chart-maps/gajjala/…`.
+- **FE**: `GajjalaBoard variant="gajjala_1m"` mounted with `key="gajjala_1m"` (the remount); `components/ggVariant.ts`
+  `GG_VARIANT_BASE` == variant.py `api_base`.
+- Doc `docs/gajjala/one_minute_page_2026_10_27.md` (the 15 HIS CALLs, costs, verification); contract "🚩 Gajjala
+  1-minute page (2026-10-27)"; ✨ `chart-maps-gajjala-1m-2026-10-27`.
+
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
 sure you do a full scan."*, *"in the High Beta tab.I wanna able to sort my most volatile stocks"*). **UNMEASURED** —

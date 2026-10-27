@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-27 ~11:35 ET (both lines verbatim in the label): "Can you create a new page, I would like you to do the
+  // same logic of Gajjalas but on 1 min candles please." then "do everything and also add the track record for it from
+  // today.." (BUILD_SPEC27). ONE pipeline parametrized by a frozen Variant (backend chart_maps/gajjala/variant.py): GG5 =
+  // 🚩 Gajjala's, every stored and served byte unchanged; GG1 = the same engines on CLOSED ("1m", "5m") frames, its own
+  // gajjala_1m_* collections, GG5's scanner list / halts / daily / broker list read shared. The 🚩 cron pass SPAWNS a
+  // detached `run_1m --loop` (never in-process — the supercronic skip trap) that reads one closed 1-minute bar per
+  // iteration. Every GG1 A+ and 🧠 potential is SHADOW (GAJJALA_1M_PUSH_MODE, HIS CALL #1); the 🏁 record starts
+  // GG1M_RECORD_FROM. UNMEASURED. Pinned by scripts/contracts.mjs ("🚩 Gajjala 1-minute page (2026-10-27)").
+  { id: 'chart-maps-gajjala-1m-2026-10-27', addedAt: '2026-10-27', route: '/chart-maps?tab=gajjala_1m',
+    label: "🚩 Gajjala's 1-minute page: his five setups, K1–K11, the A+ claim, the 🧠 potentials, the 📈 track and the 🏁 Track record (🎯 A+ filter + charts) on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute, over the same scanner list as 🚩 Gajjala's. Every alert is recorded in shadow, never sent; the 🏁 Track record starts today, 2026-10-27. A Cheetah variant — GG trades these on 5-minute bars. UNMEASURED. Ajay 2026-10-27: \"Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.\" / \"do everything and also add the track record for it from today..\" Not advice." },
   // Ajay 2026-10-27 ~08:45 ET (both lines verbatim in the label): "Can you track this guy please? and his tickers"
   // (https://stocktwits.com/algo888), then "Add them to Gajjals, they are pretty good" (BUILD_SPEC26). backend
   // traders/registry.py gains the algo888 row (source "stocktwits", usic None, gajjala True, curate False — AMENDMENT A1:

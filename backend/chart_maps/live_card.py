@@ -149,9 +149,24 @@ def vs_tf_minutes() -> tuple:
     return tuple(int(str(s).rstrip("m")) for s in GT.TFS)
 
 
+def _vs_sizes() -> tuple:
+    """The bar sizes `_vs_tf` accepts: GG5's TFS FIRST (vs_tf_minutes — the first is still the default), then every
+    other variant frame's minutes (chart_maps.gajjala.variant — 2026-10-27, the 🚩 1-minute page's "1m" → 1). Never
+    retyped here."""
+    sizes = list(vs_tf_minutes())
+    from chart_maps.gajjala import variant as V
+    for v in V.VARIANTS:
+        for tf in v.tfs:
+            m = V.frame_minutes(tf, v)
+            if m not in sizes:
+                sizes.append(m)
+    return tuple(sizes)
+
+
 def _vs_tf(tf) -> int:
-    """A served tf ("5m" / "15m" / 5 / 15 / "15") → its minutes; anything else → the default (the first TFS)."""
-    sizes = vs_tf_minutes()
+    """A served tf ("5m" / "15m" / 5 / 15 / "15") → its minutes; anything else → the default (the first TFS).
+    2026-10-27: every variant frame is accepted too ("1m" / 1 → 1, the 🚩 1-minute page); the default stays 5."""
+    sizes = _vs_sizes()
     if isinstance(tf, bool):
         return sizes[0]
     if isinstance(tf, int):

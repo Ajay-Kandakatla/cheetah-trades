@@ -150,7 +150,7 @@ export function capFloorPhrase(gate: Partial<AlertsGate> | null | undefined): st
  * (backend CADENCE_SEC derives it from zone_edge's), so it is judged on the
  * same minute clock. Its KIND ships OFF; the pass still runs and records its
  * counters, so a quiet close reads as quiet-with-a-reason. */
-const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+export const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_edge',         label: '🚀 🧲 Zone edge',             fallbackCadenceSec: 60 },
   { key: 'zone_bounce_alert', label: '🪃 Intraday demand turn',   fallbackCadenceSec: 300 },
   { key: 'demand_alert',      label: '🧲 Reversal at demand',      fallbackCadenceSec: 300 },
@@ -169,6 +169,17 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
    * rides another pass, own row, so the header reads "all 7 passes". LIVE: this
    * row never says shadow (ggPotentialChipText below). */
   { key: 'gajjala_potential', label: '🧠 Gajjala potentials',      fallbackCadenceSec: 300 },
+];
+
+/* 🚩 / 🧠 Gajjala's 1-min page (2026-10-27, BUILD_SPEC27). Both ride the 🚩 line through the 1-minute loop its pass
+ * spawns (chart_maps/gajjala/run_1m.py) — about once a minute, so backend CADENCE_SEC says 60 and a stamp older than
+ * staleAfterSec(60) reads stale. Both kinds are SHADOW (recorded, never sent). HIS CALL #12: keep or drop these rows.
+ * 2026-10-27 (critic finding 1/2): their OWN strip, the TAPE_PASSES precedent — inside PASSES they turned the header
+ * into "⚠ 2 of 9 passes" whenever the 1-minute page is switched off (GAJJALA_1M_ENABLED), and the "all 7 passes" line
+ * speaks for the passes that can ring the phone. */
+export const GG1M_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+  { key: 'gajjala_1m_setup',     label: '🚩 Gajjala 1-min A+ (shadow)',        fallbackCadenceSec: 60 },
+  { key: 'gajjala_1m_potential', label: '🧠 Gajjala 1-min potentials (shadow)', fallbackCadenceSec: 60 },
 ];
 
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
@@ -1112,6 +1123,13 @@ export function AlertsPage() {
         {/* ── 🎚️ buyers in control on the pinned names (2026-10-16) — own row, the tape window ── */}
         <div data-testid="tape-control">
           <PassStrip meta={TAPE_CONTROL_PASS} pass={status?.passes?.[TAPE_CONTROL_PASS.key]} status={status} gate={gate} today={today} />
+        </div>
+        {/* ── 🚩 🧠 the two 1-minute page passes (2026-10-27) — own strip, shadow, outside the header count ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gg1m-passes-head">🚩 🧠 Gajjala 1-min passes · shadow — recorded, never sent · not counted in the header</div>
+        <div data-testid="gg1m-passes">
+          {GG1M_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
         </div>
         {/* ── the once-a-day passes ── */}
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }}>🗓️ Daily passes</div>

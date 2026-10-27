@@ -173,6 +173,8 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
                                 "key_level_alert", "med_catalyst", "gajjala_setup",
                                 "gajjala_potential",
+                                # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — SEVENTEEN: two pass docs riding the run_1m loop
+                                "gajjala_1m_setup", "gajjala_1m_potential",
                                 "tape_burst_highbeta", "tape_burst_chartmaps",
                                 "tape_control",   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — FOURTEEN: rides trade-flash-watch, its own pass doc
                                 "earnings_reaction", "board_arrival:bonde",
@@ -285,6 +287,7 @@ def test_cadence_sec_matches_the_crontab():
     """CADENCE_SEC is what the page measures staleness against; if the crontab
     moves a pass, this must move with it (review 2026-09-05)."""
     import re
+    from chart_maps.gajjala import constants as GC1                  # WIDENED 2026-10-27 — the 1-minute cadence, by name
     lines = (ROOT / "backend/crontab").read_text().splitlines()
 
     def minute_field(module: str) -> str:
@@ -316,12 +319,17 @@ def test_cadence_sec_matches_the_crontab():
                               "tape_burst_highbeta": seconds(minute_field("sepa.cli trade-flash-watch")),
                               "tape_burst_chartmaps": seconds(minute_field("sepa.cli trade-flash-watch")),
                               # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — rides that same line
-                              "tape_control": seconds(minute_field("sepa.cli trade-flash-watch"))}
+                              "tape_control": seconds(minute_field("sepa.cli trade-flash-watch")),
+                              # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — no crontab line: one run_1m iteration per closed 1-minute bar
+                              "gajjala_1m_setup": GC1.GG1M_CADENCE_SEC, "gajjala_1m_potential": GC1.GG1M_CADENCE_SEC}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
+    assert not [ln for ln in lines if "run_1m" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE (2026-10-27): the 1-minute page has no crontab line (the 🚩 pass spawns its loop)"
     assert not [ln for ln in lines if "potential" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the 🧠 potential pass has no crontab line of its own (it rides chart_maps.gajjala.run)"
     assert not [ln for ln in lines if "tape_burst" in ln and not ln.lstrip().startswith("#")], \
@@ -403,11 +411,13 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
                                    "med_catalyst", "gajjala_setup",
                                    "gajjala_potential",   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                                    "tape_burst_highbeta", "tape_burst_chartmaps",
+                                   "gajjala_1m_setup", "gajjala_1m_potential",   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                                    "tape_control"}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
 
 

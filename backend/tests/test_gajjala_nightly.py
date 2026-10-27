@@ -19,6 +19,14 @@ T = date(2026, 10, 14)                     # the next market day — the chips a
 NOW = datetime(2026, 10, 14, 0, 15, tzinfo=timezone.utc)   # 20:15 EDT
 
 
+# WIDENED 2026-10-27 (BUILD_SPEC27 §3.6, the 🚩 1-minute page): main() now grades the GG1 record after GG5's run — the
+# main() tests here inject GG5's store only, so the GG1 grade is a recorder (tests/test_gajjala_run_1m_2026_10_27.py
+# pins the hook itself)
+@pytest.fixture(autouse=True)
+def _no_1m_grade(monkeypatch):
+    monkeypatch.setattr(NG, "grade_1m", lambda now, **k: {"grade": {}})
+
+
 class Halts:
     def __init__(self, fail=()):
         self.fail = set(fail)

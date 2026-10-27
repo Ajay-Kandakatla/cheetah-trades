@@ -1,0 +1,7961 @@
+{
+ "_recipe": "GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_variant_gg5_identity.py (untouched tree only)",
+ "live": {
+  "passes": [
+   {
+    "ah_carry": "skipped",
+    "alerts": {
+     "aplus": 0,
+     "awaiting_answer": 0,
+     "broker_flagged": 0,
+     "claimed_before": 0,
+     "dry": 0,
+     "failed": 0,
+     "late": 0,
+     "no_risk": 0,
+     "no_target": 0,
+     "not_aplus_variant": 0,
+     "pushed": 0,
+     "shadow": 0,
+     "shadow_mode": 0,
+     "shadow_session": 0,
+     "suppressed_closed": 0,
+     "suppressed_exhausted": 0,
+     "suppressed_first15": 0,
+     "suppressed_halt": 0,
+     "suppressed_premarket": 0,
+     "suppressed_window": 0
+    },
+    "aplus": [],
+    "at_et": "2026-10-13T10:31:00-04:00",
+    "bars": {
+     "failed": 0,
+     "loaded": 1,
+     "no_bars": 0,
+     "over_budget": 0
+    },
+    "bars_through_et": "10:30",
+    "counts": {
+     "ah_close_eq_last": 0,
+     "ah_rows": 0,
+     "band_ok": 1,
+     "change_ok": 1,
+     "dated_session": 1,
+     "held_split": 0,
+     "qualifiers": 1,
+     "rows": 1,
+     "split_failed": 0,
+     "trader_added": 0,
+     "trader_skipped": 0,
+     "trader_tagged": 0,
+     "type_ok": 1,
+     "type_out": 0,
+     "type_unknown": 0,
+     "vol_ok": 1
+    },
+    "dry": false,
+    "errors": [],
+    "floats": {
+     "attempted": 1,
+     "fetched": 0,
+     "rate_limited": false,
+     "skipped_backoff": false
+    },
+    "lease": {
+     "held_by": null,
+     "waited_s": 0.0,
+     "why": "claimed"
+    },
+    "n_listed": 1,
+    "n_read": 1,
+    "on_demand": false,
+    "postmarket": null,
+    "potential": {
+     "armed": 1,
+     "building": 2,
+     "claimed_before": 0,
+     "closed_day": 0,
+     "dry": 0,
+     "failed": 0,
+     "graveyard": 0,
+     "joined": 0,
+     "muted": 0,
+     "new": 3,
+     "no_target": 0,
+     "outside_hours": 0,
+     "potential": 3,
+     "pushed": 3,
+     "stale_tape": 0,
+     "tracked_today": 4,
+     "trader_held": 0
+    },
+    "premarket": {
+     "pm_levels": {}
+    },
+    "qualifiers": [
+     "GGA"
+    ],
+    "ran": true,
+    "session": "2026-10-13",
+    "snapshot": {
+     "bytes": 1,
+     "error": null,
+     "http": 200,
+     "n": 1,
+     "wall_s": 0.5
+    },
+    "status": "ok",
+    "strip": {
+     "best_change_pct": 40.0,
+     "best_symbol": "GGA",
+     "n_population": 1,
+     "quiet": false,
+     "runners_100": 0,
+     "runners_80": 0
+    },
+    "tape_session": "rth",
+    "trader": {
+     "added": [],
+     "refresh": null,
+     "skips": [],
+     "tagged": [],
+     "who": [
+      "algo888"
+     ]
+    },
+    "types_meta": {
+     "as_of": "2026-10-13",
+     "complete": true,
+     "n": 1
+    },
+    "wall_s": 0.0
+   },
+   {
+    "ah_carry": "skipped",
+    "alerts": {
+     "aplus": 1,
+     "awaiting_answer": 0,
+     "broker_flagged": 0,
+     "claimed_before": 0,
+     "dry": 0,
+     "failed": 0,
+     "late": 0,
+     "no_risk": 0,
+     "no_target": 0,
+     "not_aplus_variant": 0,
+     "pushed": 1,
+     "shadow": 0,
+     "shadow_mode": 0,
+     "shadow_session": 0,
+     "suppressed_closed": 0,
+     "suppressed_exhausted": 0,
+     "suppressed_first15": 0,
+     "suppressed_halt": 0,
+     "suppressed_premarket": 0,
+     "suppressed_window": 0
+    },
+    "aplus": [
+     "GGA:bull_flag"
+    ],
+    "at_et": "2026-10-13T10:41:00-04:00",
+    "bars": {
+     "failed": 0,
+     "loaded": 2,
+     "no_bars": 0,
+     "over_budget": 0
+    },
+    "bars_through_et": "10:40",
+    "counts": {
+     "ah_close_eq_last": 0,
+     "ah_rows": 0,
+     "band_ok": 3,
+     "change_ok": 2,
+     "dated_session": 3,
+     "held_split": 0,
+     "qualifiers": 2,
+     "rows": 3,
+     "split_failed": 0,
+     "trader_added": 0,
+     "trader_skipped": 0,
+     "trader_tagged": 0,
+     "type_ok": 3,
+     "type_out": 0,
+     "type_unknown": 2,
+     "vol_ok": 3
+    },
+    "dry": false,
+    "errors": [],
+    "floats": {
+     "attempted": 2,
+     "fetched": 0,
+     "rate_limited": false,
+     "skipped_backoff": false
+    },
+    "lease": {
+     "held_by": null,
+     "waited_s": 0.0,
+     "why": "claimed"
+    },
+    "n_listed": 2,
+    "n_read": 2,
+    "on_demand": false,
+    "postmarket": null,
+    "potential": {
+     "armed": 1,
+     "building": 3,
+     "claimed_before": 0,
+     "closed_day": 0,
+     "dry": 0,
+     "failed": 0,
+     "graveyard": 0,
+     "joined": 0,
+     "muted": 0,
+     "new": 3,
+     "no_target": 0,
+     "outside_hours": 0,
+     "potential": 4,
+     "pushed": 0,
+     "stale_tape": 3,
+     "tracked_today": 7,
+     "trader_held": 0
+    },
+    "premarket": {
+     "pm_levels": {}
+    },
+    "qualifiers": [
+     "GGA",
+     "GGB"
+    ],
+    "ran": true,
+    "session": "2026-10-13",
+    "snapshot": {
+     "bytes": 1,
+     "error": null,
+     "http": 200,
+     "n": 3,
+     "wall_s": 0.5
+    },
+    "status": "ok",
+    "strip": {
+     "best_change_pct": 40.0,
+     "best_symbol": "GGA",
+     "n_population": 3,
+     "quiet": false,
+     "runners_100": 0,
+     "runners_80": 0
+    },
+    "tape_session": "rth",
+    "trader": {
+     "added": [],
+     "refresh": null,
+     "skips": [],
+     "tagged": [],
+     "who": [
+      "algo888"
+     ]
+    },
+    "types_meta": {
+     "as_of": "2026-10-13",
+     "complete": true,
+     "n": 1
+    },
+    "wall_s": 0.0
+   }
+  ],
+  "sent": [
+   [],
+   [
+    [
+     "owner@example.com",
+     {
+      "body": "broke 10.97 on the 5m bar closing 10:40 ET · stop 10.81 (−1.4%) · Quiet shallow flag; entry = the top of the pullback bar · 🧠 potential rang 10:31 ET · shares out 5.0M (Massive) · UNMEASURED — his setup, not a buy signal",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · 🚩 Bull Flag A+ entry · broke 10.97 · stop 10.81 (−1.4%) · Quiet shallow flag; entry = the top of the pullback bar"
+       }
+      ],
+      "kind": "gajjala_setup",
+      "tag": "gg-bull_flag-GGA",
+      "ticker": "GGA",
+      "title": "🚩 GGA · Bull Flag A+ entry",
+      "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+     }
+    ]
+   ]
+  ],
+  "sent_potential": [
+   [
+    [
+     "owner@example.com",
+     {
+      "body": "trigger 11.00 · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-bull_flag-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+     }
+    ],
+    [
+     "owner@example.com",
+     {
+      "body": "4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-kiss_fly-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · 💋 EMA Kiss & Fly — building · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA"
+     }
+    ],
+    [
+     "owner@example.com",
+     {
+      "body": "base 1 of 6 bars · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-horizontal_fade-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · ➖ Horizontal Fade — building · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA"
+     }
+    ]
+   ],
+   []
+  ],
+  "status": [
+   [
+    [
+     {
+      "aplus": 0,
+      "awaiting_answer": 0,
+      "broker_flagged": 0,
+      "candidates": 1,
+      "claimed_before": 0,
+      "dry": 0,
+      "failed": 0,
+      "late": 0,
+      "listed": 1,
+      "no_risk": 0,
+      "no_target": 0,
+      "not_aplus_variant": 0,
+      "pushed": 0,
+      "qualifiers": 1,
+      "shadow": 0,
+      "shadow_mode": 0,
+      "shadow_session": 0,
+      "suppressed_closed": 0,
+      "suppressed_exhausted": 0,
+      "suppressed_first15": 0,
+      "suppressed_halt": 0,
+      "suppressed_premarket": 0,
+      "suppressed_window": 0
+     },
+     "2026-10-13T14:31:00+00:00",
+     null
+    ]
+   ],
+   [
+    [
+     {
+      "aplus": 1,
+      "awaiting_answer": 0,
+      "broker_flagged": 0,
+      "candidates": 2,
+      "claimed_before": 0,
+      "dry": 0,
+      "failed": 0,
+      "late": 0,
+      "listed": 2,
+      "no_risk": 0,
+      "no_target": 0,
+      "not_aplus_variant": 0,
+      "pushed": 1,
+      "qualifiers": 2,
+      "shadow": 0,
+      "shadow_mode": 0,
+      "shadow_session": 0,
+      "suppressed_closed": 0,
+      "suppressed_exhausted": 0,
+      "suppressed_first15": 0,
+      "suppressed_halt": 0,
+      "suppressed_premarket": 0,
+      "suppressed_window": 0
+     },
+     "2026-10-13T14:41:00+00:00",
+     null
+    ]
+   ]
+  ],
+  "status_potential": [
+   [
+    [
+     {
+      "armed": 1,
+      "building": 2,
+      "claimed_before": 0,
+      "closed_day": 0,
+      "dry": 0,
+      "failed": 0,
+      "graveyard": 0,
+      "joined": 0,
+      "muted": 0,
+      "new": 3,
+      "no_target": 0,
+      "outside_hours": 0,
+      "potential": 3,
+      "pushed": 3,
+      "stale_tape": 0,
+      "tracked_today": 4,
+      "trader_held": 0
+     },
+     "2026-10-13T14:31:00+00:00",
+     null
+    ]
+   ],
+   [
+    [
+     {
+      "armed": 1,
+      "building": 3,
+      "claimed_before": 0,
+      "closed_day": 0,
+      "dry": 0,
+      "failed": 0,
+      "graveyard": 0,
+      "joined": 0,
+      "muted": 0,
+      "new": 3,
+      "no_target": 0,
+      "outside_hours": 0,
+      "potential": 4,
+      "pushed": 0,
+      "stale_tape": 3,
+      "tracked_today": 7,
+      "trader_held": 0
+     },
+     "2026-10-13T14:41:00+00:00",
+     null
+    ]
+   ]
+  ],
+  "writes": [
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|SEED|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T04:06:00-04:00"
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "setup": "kiss_fly",
+       "symbol": "SEED"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "$and": [
+       {
+        "$or": [
+         {
+          "status": {
+           "$ne": "running"
+          }
+         },
+         {
+          "claimed_at": {
+           "$lte": "2026-10-13T14:26:20+00:00"
+          }
+         }
+        ]
+       },
+       {
+        "$or": [
+         {
+          "last_cron_started_at": {
+           "$lte": "2026-10-13T14:27:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$lte": "2026-10-13T14:27:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$exists": false
+          }
+         }
+        ]
+       }
+      ],
+      "_id": "lease"
+     },
+     "upd": {
+      "$set": {
+       "claimed_at": "2026-10-13T14:31:00+00:00",
+       "held_by": "cron",
+       "last_cron_started_at": "2026-10-13T14:31:00+00:00",
+       "pid": "<pid>",
+       "started_at": "2026-10-13T14:31:00+00:00",
+       "status": "running",
+       "token": "<token>"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "find_one_and_update"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "types",
+      "as_of": "2026-10-13",
+      "attempted_on": "2026-10-13",
+      "calls": 1,
+      "complete": true,
+      "fetched_at": "2026-10-13T14:31:00+00:00",
+      "n": 1,
+      "pairs": [
+       [
+        "GGA",
+        "CS"
+       ]
+      ]
+     },
+     "q": {
+      "_id": "types"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 40.0
+      },
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "change_pct": 40.0,
+        "day_c": 11.2,
+        "day_h": 11.2,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:30:00",
+        "prev_close": 8.0,
+        "price": 11.2,
+        "split_check": "ok",
+        "symbol": "GGA",
+        "tape_session": "rth",
+        "type": "CS",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:31:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:31:00+00:00",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "date": "2026-10-13",
+       "held": false,
+       "split_check": "ok",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "date": "2026-10-13",
+       "float_massive": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "shares": 5000000.0
+       },
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "<wall>",
+       "date": "2026-10-13",
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       },
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "float_backoff"
+     },
+     "upd": {
+      "$set": {
+       "n": 0,
+       "until": 0.0
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGA",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:30",
+      "at": "2026-10-13T14:31:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:31:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 40.0,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "1 bars"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": true,
+        "reason": "",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "bull_flag",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "1 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "1.1%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 1.88% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": null,
+          "value": "second-half volume —×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [
+         "k6_decay"
+        ],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4_cycles",
+          "label": "K4 at least 2 contractions",
+          "need": "≥ 2",
+          "ok": false,
+          "value": "1 cycles"
+         },
+         {
+          "key": "k7_ratio",
+          "label": "K7 each cycle's range ≤ 0.75× the previous",
+          "need": "≤ 0.75× each",
+          "ok": true,
+          "value": "0.125"
+         },
+         {
+          "key": "k7_ema21",
+          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
+          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "ok": true,
+          "value": "10.88"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         }
+        ],
+        "cycles": 1,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "1 of 2 cycles",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.41 · 21 EMA 10.21"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "ok": false,
+          "value": "4.5% above the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "kiss_fly",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGA",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:31:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "armed",
+        "px": 10.9375,
+        "ready": true,
+        "reason": "",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "armed",
+       "first_px": 10.9375,
+       "first_reason": "",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "kiss_fly",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "bull_flag",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "armed",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "kiss_fly",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "building",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "base 1 of 6 bars",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "kiss_fly"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "horizontal_fade",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "building",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|10:31",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "2026-10-13|10:31"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:31",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest_cron",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:31",
+      "pointer": "latest_cron",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest_cron"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "lease",
+      "token": "<token>"
+     },
+     "upd": {
+      "$set": {
+       "done_at": "2026-10-13T14:31:00+00:00",
+       "status": "done"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "$and": [
+       {
+        "$or": [
+         {
+          "status": {
+           "$ne": "running"
+          }
+         },
+         {
+          "claimed_at": {
+           "$lte": "2026-10-13T14:36:20+00:00"
+          }
+         }
+        ]
+       },
+       {
+        "$or": [
+         {
+          "last_cron_started_at": {
+           "$lte": "2026-10-13T14:37:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$lte": "2026-10-13T14:37:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$exists": false
+          }
+         }
+        ]
+       }
+      ],
+      "_id": "lease"
+     },
+     "upd": {
+      "$set": {
+       "claimed_at": "2026-10-13T14:41:00+00:00",
+       "held_by": "cron",
+       "last_cron_started_at": "2026-10-13T14:41:00+00:00",
+       "pid": "<pid>",
+       "started_at": "2026-10-13T14:41:00+00:00",
+       "status": "running",
+       "token": "<token>"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "find_one_and_update"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 40.0
+      },
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "change_pct": 40.0,
+        "day_c": 11.2,
+        "day_h": 11.2,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:40:00",
+        "prev_close": 8.0,
+        "price": 11.2,
+        "split_check": "ok",
+        "symbol": "GGA",
+        "tape_session": "rth",
+        "type": "CS",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:41:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:41:00+00:00",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 37.5
+      },
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "change_pct": 37.5,
+        "day_c": 11.0,
+        "day_h": 11.0,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:40:00",
+        "prev_close": 8.0,
+        "price": 11.0,
+        "split_check": "ok",
+        "symbol": "GGB",
+        "tape_session": "rth",
+        "type": "unknown",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:41:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:41:00+00:00",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "date": "2026-10-13",
+       "held": false,
+       "split_check": "ok",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "date": "2026-10-13",
+       "float_massive": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "shares": 5000000.0
+       },
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "<wall>",
+       "date": "2026-10-13",
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       },
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "float_backoff"
+     },
+     "upd": {
+      "$set": {
+       "n": 0,
+       "until": 0.0
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGA",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:40",
+      "at": "2026-10-13T14:41:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 40.0,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": 0,
+        "base": {
+         "bars": 2,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:35"
+        },
+        "broke": true,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k11_volume",
+          "label": "K11 today's volume 3,000,000 ≥ 1,000,000",
+          "need": "",
+          "ok": true,
+          "value": ""
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": "2026-10-13 10:40",
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "",
+        "red_closes": 2,
+        "risk_pct": 1.4245014245014245,
+        "setup": "bull_flag",
+        "state": "aplus",
+        "stop": 10.8125,
+        "trigger": 10.96875,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 3,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:40"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "3 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": false,
+          "value": "max 250000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "3.9%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 2.61% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": false,
+          "value": "second-half volume 2.50×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 3 of 6 bars",
+        "red_closes": 2,
+        "risk_pct": 3.6111111111111107,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.84375,
+        "trigger": 11.25,
+        "unjudged": [],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": 0,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no pullback yet — the leg is still printing highs",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": null,
+        "trigger": 11.25,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": 0,
+        "base": {
+         "bars": 2,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:35"
+        },
+        "broke": true,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.50 · 21 EMA 10.27"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%)",
+          "ok": false,
+          "value": "flew without touching the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": "2026-10-13 10:40",
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [
+         "k5_kiss"
+        ],
+        "ready": false,
+        "reason": "near-kiss — flew without touching the 9 EMA",
+        "red_closes": 2,
+        "risk_pct": 1.4245014245014245,
+        "setup": "kiss_fly",
+        "state": "partial",
+        "stop": 10.8125,
+        "trigger": 10.96875,
+        "unjudged": [],
+        "variant": "near_kiss"
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGA",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        },
+        {
+         "c": 10.875,
+         "h": 10.9688,
+         "l": 10.8125,
+         "o": 10.9375,
+         "t": "2026-10-13 10:35",
+         "v": 80000.0
+        },
+        {
+         "c": 11.2,
+         "h": 11.25,
+         "l": 10.8438,
+         "o": 10.875,
+         "t": "2026-10-13 10:40",
+         "v": 250000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115,
+          10.5042,
+          10.64336
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438,
+          10.266307,
+          10.351188
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:41:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGB",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:30",
+      "at": "2026-10-13T14:41:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 37.5,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "1 bars"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": true,
+        "reason": "",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "bull_flag",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "1 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "1.1%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 1.88% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": null,
+          "value": "second-half volume —×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [
+         "k6_decay"
+        ],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4_cycles",
+          "label": "K4 at least 2 contractions",
+          "need": "≥ 2",
+          "ok": false,
+          "value": "1 cycles"
+         },
+         {
+          "key": "k7_ratio",
+          "label": "K7 each cycle's range ≤ 0.75× the previous",
+          "need": "≤ 0.75× each",
+          "ok": true,
+          "value": "0.125"
+         },
+         {
+          "key": "k7_ema21",
+          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
+          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "ok": true,
+          "value": "10.88"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         }
+        ],
+        "cycles": 1,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "1 of 2 cycles",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.41 · 21 EMA 10.21"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "ok": false,
+          "value": "4.5% above the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "kiss_fly",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGB",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:41:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "GG:2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$setOnInsert": {
+       "_id": "GG:2026-10-13|GGA|bull_flag",
+       "at": "2026-10-13T14:41:00+00:00",
+       "claimed_at": "<wall>",
+       "date": "2026-10-13",
+       "entry_bar_t": "2026-10-13 10:40",
+       "frame": "5m",
+       "kind": "gajjala_setup",
+       "mode": "live",
+       "price": 11.2,
+       "risk_pct": 1.4245014245014245,
+       "setup": "bull_flag",
+       "state": "claimed",
+       "stop": 10.8125,
+       "symbol": "GGA",
+       "trigger": 10.96875
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_alerts",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "GG:2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_alerts",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": null,
+        "px": 11.2,
+        "ready": false,
+        "reason": "",
+        "state": "aplus",
+        "stop": 10.8125,
+        "trigger": 10.96875
+       },
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        },
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:40",
+         "kind": null,
+         "state": "aplus"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": null,
+        "px": 11.2,
+        "ready": false,
+        "reason": "near-kiss — flew without touching the 9 EMA",
+        "state": "partial",
+        "stop": 10.8125,
+        "trigger": 10.96875
+       },
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        },
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:40",
+         "kind": null,
+         "state": "partial"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "armed",
+        "px": 10.9375,
+        "ready": true,
+        "reason": "",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "armed",
+       "first_px": 10.9375,
+       "first_reason": "",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "kiss_fly",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "bull_flag",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|bull_flag",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "kiss_fly",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|kiss_fly",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": "building",
+        "px": 11.2,
+        "ready": false,
+        "reason": "base 3 of 6 bars",
+        "state": "forming",
+        "stop": 10.84375,
+        "trigger": 11.25
+       },
+       "line": "GGA · ➖ Horizontal Fade · building · trigger 11.25 · stop 10.84",
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "base 1 of 6 bars",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "kiss_fly"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "horizontal_fade",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|horizontal_fade",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|10:41",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 1,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "2026-10-13|10:41"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 1,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:41",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest_cron",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 1,
+       "shadow": 0,
+       "shadow_mode": 0,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:41",
+      "pointer": "latest_cron",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest_cron"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "lease",
+      "token": "<token>"
+     },
+     "upd": {
+      "$set": {
+       "done_at": "2026-10-13T14:41:00+00:00",
+       "status": "done"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   }
+  ]
+ },
+ "shadow": {
+  "passes": [
+   {
+    "ah_carry": "skipped",
+    "alerts": {
+     "aplus": 0,
+     "awaiting_answer": 0,
+     "broker_flagged": 0,
+     "claimed_before": 0,
+     "dry": 0,
+     "failed": 0,
+     "late": 0,
+     "no_risk": 0,
+     "no_target": 0,
+     "not_aplus_variant": 0,
+     "pushed": 0,
+     "shadow": 0,
+     "shadow_mode": 1,
+     "shadow_session": 0,
+     "suppressed_closed": 0,
+     "suppressed_exhausted": 0,
+     "suppressed_first15": 0,
+     "suppressed_halt": 0,
+     "suppressed_premarket": 0,
+     "suppressed_window": 0
+    },
+    "aplus": [],
+    "at_et": "2026-10-13T10:31:00-04:00",
+    "bars": {
+     "failed": 0,
+     "loaded": 1,
+     "no_bars": 0,
+     "over_budget": 0
+    },
+    "bars_through_et": "10:30",
+    "counts": {
+     "ah_close_eq_last": 0,
+     "ah_rows": 0,
+     "band_ok": 1,
+     "change_ok": 1,
+     "dated_session": 1,
+     "held_split": 0,
+     "qualifiers": 1,
+     "rows": 1,
+     "split_failed": 0,
+     "trader_added": 0,
+     "trader_skipped": 0,
+     "trader_tagged": 0,
+     "type_ok": 1,
+     "type_out": 0,
+     "type_unknown": 0,
+     "vol_ok": 1
+    },
+    "dry": false,
+    "errors": [],
+    "floats": {
+     "attempted": 1,
+     "fetched": 0,
+     "rate_limited": false,
+     "skipped_backoff": false
+    },
+    "lease": {
+     "held_by": null,
+     "waited_s": 0.0,
+     "why": "claimed"
+    },
+    "n_listed": 1,
+    "n_read": 1,
+    "on_demand": false,
+    "postmarket": null,
+    "potential": {
+     "armed": 1,
+     "building": 2,
+     "claimed_before": 0,
+     "closed_day": 0,
+     "dry": 0,
+     "failed": 0,
+     "graveyard": 0,
+     "joined": 0,
+     "muted": 0,
+     "new": 3,
+     "no_target": 0,
+     "outside_hours": 0,
+     "potential": 3,
+     "pushed": 3,
+     "stale_tape": 0,
+     "tracked_today": 4,
+     "trader_held": 0
+    },
+    "premarket": {
+     "pm_levels": {}
+    },
+    "qualifiers": [
+     "GGA"
+    ],
+    "ran": true,
+    "session": "2026-10-13",
+    "snapshot": {
+     "bytes": 1,
+     "error": null,
+     "http": 200,
+     "n": 1,
+     "wall_s": 0.5
+    },
+    "status": "ok",
+    "strip": {
+     "best_change_pct": 40.0,
+     "best_symbol": "GGA",
+     "n_population": 1,
+     "quiet": false,
+     "runners_100": 0,
+     "runners_80": 0
+    },
+    "tape_session": "rth",
+    "trader": {
+     "added": [],
+     "refresh": null,
+     "skips": [],
+     "tagged": [],
+     "who": [
+      "algo888"
+     ]
+    },
+    "types_meta": {
+     "as_of": "2026-10-13",
+     "complete": true,
+     "n": 1
+    },
+    "wall_s": 0.0
+   },
+   {
+    "ah_carry": "skipped",
+    "alerts": {
+     "aplus": 1,
+     "awaiting_answer": 0,
+     "broker_flagged": 0,
+     "claimed_before": 0,
+     "dry": 0,
+     "failed": 0,
+     "late": 0,
+     "no_risk": 0,
+     "no_target": 0,
+     "not_aplus_variant": 0,
+     "pushed": 0,
+     "shadow": 1,
+     "shadow_mode": 1,
+     "shadow_session": 1,
+     "suppressed_closed": 0,
+     "suppressed_exhausted": 0,
+     "suppressed_first15": 0,
+     "suppressed_halt": 0,
+     "suppressed_premarket": 0,
+     "suppressed_window": 0
+    },
+    "aplus": [
+     "GGA:bull_flag"
+    ],
+    "at_et": "2026-10-13T10:41:00-04:00",
+    "bars": {
+     "failed": 0,
+     "loaded": 2,
+     "no_bars": 0,
+     "over_budget": 0
+    },
+    "bars_through_et": "10:40",
+    "counts": {
+     "ah_close_eq_last": 0,
+     "ah_rows": 0,
+     "band_ok": 3,
+     "change_ok": 2,
+     "dated_session": 3,
+     "held_split": 0,
+     "qualifiers": 2,
+     "rows": 3,
+     "split_failed": 0,
+     "trader_added": 0,
+     "trader_skipped": 0,
+     "trader_tagged": 0,
+     "type_ok": 3,
+     "type_out": 0,
+     "type_unknown": 2,
+     "vol_ok": 3
+    },
+    "dry": false,
+    "errors": [],
+    "floats": {
+     "attempted": 2,
+     "fetched": 0,
+     "rate_limited": false,
+     "skipped_backoff": false
+    },
+    "lease": {
+     "held_by": null,
+     "waited_s": 0.0,
+     "why": "claimed"
+    },
+    "n_listed": 2,
+    "n_read": 2,
+    "on_demand": false,
+    "postmarket": null,
+    "potential": {
+     "armed": 1,
+     "building": 3,
+     "claimed_before": 0,
+     "closed_day": 0,
+     "dry": 0,
+     "failed": 0,
+     "graveyard": 0,
+     "joined": 0,
+     "muted": 0,
+     "new": 3,
+     "no_target": 0,
+     "outside_hours": 0,
+     "potential": 4,
+     "pushed": 0,
+     "stale_tape": 3,
+     "tracked_today": 7,
+     "trader_held": 0
+    },
+    "premarket": {
+     "pm_levels": {}
+    },
+    "qualifiers": [
+     "GGA",
+     "GGB"
+    ],
+    "ran": true,
+    "session": "2026-10-13",
+    "snapshot": {
+     "bytes": 1,
+     "error": null,
+     "http": 200,
+     "n": 3,
+     "wall_s": 0.5
+    },
+    "status": "ok",
+    "strip": {
+     "best_change_pct": 40.0,
+     "best_symbol": "GGA",
+     "n_population": 3,
+     "quiet": false,
+     "runners_100": 0,
+     "runners_80": 0
+    },
+    "tape_session": "rth",
+    "trader": {
+     "added": [],
+     "refresh": null,
+     "skips": [],
+     "tagged": [],
+     "who": [
+      "algo888"
+     ]
+    },
+    "types_meta": {
+     "as_of": "2026-10-13",
+     "complete": true,
+     "n": 1
+    },
+    "wall_s": 0.0
+   }
+  ],
+  "sent": [
+   [],
+   []
+  ],
+  "sent_potential": [
+   [
+    [
+     "owner@example.com",
+     {
+      "body": "trigger 11.00 · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-bull_flag-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+     }
+    ],
+    [
+     "owner@example.com",
+     {
+      "body": "4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-kiss_fly-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · 💋 EMA Kiss & Fly — building · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA"
+     }
+    ],
+    [
+     "owner@example.com",
+     {
+      "body": "base 1 of 6 bars · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "items": [
+       {
+        "symbol": "GGA",
+        "text": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88"
+       }
+      ],
+      "kind": "gajjala_potential",
+      "tag": "gg-pot-horizontal_fade-GGA",
+      "ticker": "GGA",
+      "title": "🧠 GGA · ➖ Horizontal Fade — building · UNMEASURED",
+      "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA"
+     }
+    ]
+   ],
+   []
+  ],
+  "status": [
+   [
+    [
+     {
+      "aplus": 0,
+      "awaiting_answer": 0,
+      "broker_flagged": 0,
+      "candidates": 1,
+      "claimed_before": 0,
+      "dry": 0,
+      "failed": 0,
+      "late": 0,
+      "listed": 1,
+      "no_risk": 0,
+      "no_target": 0,
+      "not_aplus_variant": 0,
+      "pushed": 0,
+      "qualifiers": 1,
+      "shadow": 0,
+      "shadow_mode": 1,
+      "shadow_session": 0,
+      "suppressed_closed": 0,
+      "suppressed_exhausted": 0,
+      "suppressed_first15": 0,
+      "suppressed_halt": 0,
+      "suppressed_premarket": 0,
+      "suppressed_window": 0
+     },
+     "2026-10-13T14:31:00+00:00",
+     null
+    ]
+   ],
+   [
+    [
+     {
+      "aplus": 1,
+      "awaiting_answer": 0,
+      "broker_flagged": 0,
+      "candidates": 2,
+      "claimed_before": 0,
+      "dry": 0,
+      "failed": 0,
+      "late": 0,
+      "listed": 2,
+      "no_risk": 0,
+      "no_target": 0,
+      "not_aplus_variant": 0,
+      "pushed": 0,
+      "qualifiers": 2,
+      "shadow": 1,
+      "shadow_mode": 1,
+      "shadow_session": 1,
+      "suppressed_closed": 0,
+      "suppressed_exhausted": 0,
+      "suppressed_first15": 0,
+      "suppressed_halt": 0,
+      "suppressed_premarket": 0,
+      "suppressed_window": 0
+     },
+     "2026-10-13T14:41:00+00:00",
+     null
+    ]
+   ]
+  ],
+  "status_potential": [
+   [
+    [
+     {
+      "armed": 1,
+      "building": 2,
+      "claimed_before": 0,
+      "closed_day": 0,
+      "dry": 0,
+      "failed": 0,
+      "graveyard": 0,
+      "joined": 0,
+      "muted": 0,
+      "new": 3,
+      "no_target": 0,
+      "outside_hours": 0,
+      "potential": 3,
+      "pushed": 3,
+      "stale_tape": 0,
+      "tracked_today": 4,
+      "trader_held": 0
+     },
+     "2026-10-13T14:31:00+00:00",
+     null
+    ]
+   ],
+   [
+    [
+     {
+      "armed": 1,
+      "building": 3,
+      "claimed_before": 0,
+      "closed_day": 0,
+      "dry": 0,
+      "failed": 0,
+      "graveyard": 0,
+      "joined": 0,
+      "muted": 0,
+      "new": 3,
+      "no_target": 0,
+      "outside_hours": 0,
+      "potential": 4,
+      "pushed": 0,
+      "stale_tape": 3,
+      "tracked_today": 7,
+      "trader_held": 0
+     },
+     "2026-10-13T14:41:00+00:00",
+     null
+    ]
+   ]
+  ],
+  "writes": [
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|SEED|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T04:06:00-04:00"
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "setup": "kiss_fly",
+       "symbol": "SEED"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "$and": [
+       {
+        "$or": [
+         {
+          "status": {
+           "$ne": "running"
+          }
+         },
+         {
+          "claimed_at": {
+           "$lte": "2026-10-13T14:26:20+00:00"
+          }
+         }
+        ]
+       },
+       {
+        "$or": [
+         {
+          "last_cron_started_at": {
+           "$lte": "2026-10-13T14:27:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$lte": "2026-10-13T14:27:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$exists": false
+          }
+         }
+        ]
+       }
+      ],
+      "_id": "lease"
+     },
+     "upd": {
+      "$set": {
+       "claimed_at": "2026-10-13T14:31:00+00:00",
+       "held_by": "cron",
+       "last_cron_started_at": "2026-10-13T14:31:00+00:00",
+       "pid": "<pid>",
+       "started_at": "2026-10-13T14:31:00+00:00",
+       "status": "running",
+       "token": "<token>"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "find_one_and_update"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "types",
+      "as_of": "2026-10-13",
+      "attempted_on": "2026-10-13",
+      "calls": 1,
+      "complete": true,
+      "fetched_at": "2026-10-13T14:31:00+00:00",
+      "n": 1,
+      "pairs": [
+       [
+        "GGA",
+        "CS"
+       ]
+      ]
+     },
+     "q": {
+      "_id": "types"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 40.0
+      },
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "change_pct": 40.0,
+        "day_c": 11.2,
+        "day_h": 11.2,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:30:00",
+        "prev_close": 8.0,
+        "price": 11.2,
+        "split_check": "ok",
+        "symbol": "GGA",
+        "tape_session": "rth",
+        "type": "CS",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:31:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:31:00+00:00",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "date": "2026-10-13",
+       "held": false,
+       "split_check": "ok",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "date": "2026-10-13",
+       "float_massive": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "shares": 5000000.0
+       },
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$set": {
+       "at": "<wall>",
+       "date": "2026-10-13",
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       },
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "float_backoff"
+     },
+     "upd": {
+      "$set": {
+       "n": 0,
+       "until": 0.0
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGA",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:30",
+      "at": "2026-10-13T14:31:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:31:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 40.0,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "1 bars"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": true,
+        "reason": "",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "bull_flag",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "1 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "1.1%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 1.88% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": null,
+          "value": "second-half volume —×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [
+         "k6_decay"
+        ],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4_cycles",
+          "label": "K4 at least 2 contractions",
+          "need": "≥ 2",
+          "ok": false,
+          "value": "1 cycles"
+         },
+         {
+          "key": "k7_ratio",
+          "label": "K7 each cycle's range ≤ 0.75× the previous",
+          "need": "≤ 0.75× each",
+          "ok": true,
+          "value": "0.125"
+         },
+         {
+          "key": "k7_ema21",
+          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
+          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "ok": true,
+          "value": "10.88"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         }
+        ],
+        "cycles": 1,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "1 of 2 cycles",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.41 · 21 EMA 10.21"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "ok": false,
+          "value": "4.5% above the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "kiss_fly",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGA",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:31:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "armed",
+        "px": 10.9375,
+        "ready": true,
+        "reason": "",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "armed",
+       "first_px": 10.9375,
+       "first_reason": "",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "kiss_fly",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "bull_flag",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "armed",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "kiss_fly",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "building",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:31:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:31:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "base 1 of 6 bars",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:31:00+00:00",
+       "first_seen_et": "10:31",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "kiss_fly"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "horizontal_fade",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade",
+      "first_seen_mode": {
+       "$ne": "joined"
+      },
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "push": {
+        "at": "2026-10-13T14:31:00+00:00",
+        "at_et": "10:31",
+        "kind_at_push": "building",
+        "px": 10.9375,
+        "state": "claimed",
+        "stop": 10.875,
+        "trigger": 11.0
+       }
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade",
+      "push": {
+       "$exists": true
+      }
+     },
+     "upd": {
+      "$set": {
+       "push.at_et": "10:31",
+       "push.result": {
+        "failed": 0,
+        "sent": 1,
+        "skipped": null,
+        "total_targets": 1
+       },
+       "push.state": "pushed"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|10:31",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 1,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "2026-10-13|10:31"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 1,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:31",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest_cron",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 0,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 0,
+       "shadow_mode": 1,
+       "shadow_session": 0,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:31:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 1,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:30",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 1,
+       "change_ok": 1,
+       "dated_session": 1,
+       "held_split": 0,
+       "qualifiers": 1,
+       "rows": 1,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 1,
+       "type_out": 0,
+       "type_unknown": 0,
+       "vol_ok": 1
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:31:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 1,
+      "n_read": 1,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:31",
+      "pointer": "latest_cron",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 2,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 3,
+       "pushed": 3,
+       "stale_tape": 0,
+       "tracked_today": 4,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 1,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 1,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest_cron"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "lease",
+      "token": "<token>"
+     },
+     "upd": {
+      "$set": {
+       "done_at": "2026-10-13T14:31:00+00:00",
+       "status": "done"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "$and": [
+       {
+        "$or": [
+         {
+          "status": {
+           "$ne": "running"
+          }
+         },
+         {
+          "claimed_at": {
+           "$lte": "2026-10-13T14:36:20+00:00"
+          }
+         }
+        ]
+       },
+       {
+        "$or": [
+         {
+          "last_cron_started_at": {
+           "$lte": "2026-10-13T14:37:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$lte": "2026-10-13T14:37:00+00:00"
+          }
+         },
+         {
+          "last_cron_started_at": {
+           "$exists": false
+          },
+          "started_at": {
+           "$exists": false
+          }
+         }
+        ]
+       }
+      ],
+      "_id": "lease"
+     },
+     "upd": {
+      "$set": {
+       "claimed_at": "2026-10-13T14:41:00+00:00",
+       "held_by": "cron",
+       "last_cron_started_at": "2026-10-13T14:41:00+00:00",
+       "pid": "<pid>",
+       "started_at": "2026-10-13T14:41:00+00:00",
+       "status": "running",
+       "token": "<token>"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "find_one_and_update"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 40.0
+      },
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "change_pct": 40.0,
+        "day_c": 11.2,
+        "day_h": 11.2,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:40:00",
+        "prev_close": 8.0,
+        "price": 11.2,
+        "split_check": "ok",
+        "symbol": "GGA",
+        "tape_session": "rth",
+        "type": "CS",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:41:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:41:00+00:00",
+       "symbol": "GGA"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$inc": {
+       "n_passes": 1
+      },
+      "$max": {
+       "max_change_pct": 37.5
+      },
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "change_pct": 37.5,
+        "day_c": 11.0,
+        "day_h": 11.0,
+        "day_l": 8.0,
+        "day_o": 8.0,
+        "last_trade_et": "2026-10-13 10:40:00",
+        "prev_close": 8.0,
+        "price": 11.0,
+        "split_check": "ok",
+        "symbol": "GGB",
+        "tape_session": "rth",
+        "type": "unknown",
+        "vol_src": "min_av",
+        "volume": 3000000.0
+       },
+       "last_qualified_at": "2026-10-13T14:41:00+00:00",
+       "sessions.rth": true
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_qualified_at": "2026-10-13T14:41:00+00:00",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "date": "2026-10-13",
+       "held": false,
+       "split_check": "ok",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_scan",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "date": "2026-10-13",
+       "float_massive": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "shares": 5000000.0
+       },
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upd": {
+      "$set": {
+       "at": "<wall>",
+       "date": "2026-10-13",
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       },
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_daily",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "float_backoff"
+     },
+     "upd": {
+      "$set": {
+       "n": 0,
+       "until": 0.0
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGA",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:40",
+      "at": "2026-10-13T14:41:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 40.0,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": 0,
+        "base": {
+         "bars": 2,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:35"
+        },
+        "broke": true,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k11_volume",
+          "label": "K11 today's volume 3,000,000 ≥ 1,000,000",
+          "need": "",
+          "ok": true,
+          "value": ""
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": "2026-10-13 10:40",
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "",
+        "red_closes": 2,
+        "risk_pct": 1.4245014245014245,
+        "setup": "bull_flag",
+        "state": "aplus",
+        "stop": 10.8125,
+        "trigger": 10.96875,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 3,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:40"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "3 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": false,
+          "value": "max 250000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "3.9%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 2.61% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": false,
+          "value": "second-half volume 2.50×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 3 of 6 bars",
+        "red_closes": 2,
+        "risk_pct": 3.6111111111111107,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.84375,
+        "trigger": 11.25,
+        "unjudged": [],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": 0,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no pullback yet — the leg is still printing highs",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": null,
+        "trigger": 11.25,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": 0,
+        "base": {
+         "bars": 2,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:35"
+        },
+        "broke": true,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.50 · 21 EMA 10.27"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "2 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%)",
+          "ok": false,
+          "value": "flew without touching the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": "2026-10-13 10:40",
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [
+         "k5_kiss"
+        ],
+        "ready": false,
+        "reason": "near-kiss — flew without touching the 9 EMA",
+        "red_closes": 2,
+        "risk_pct": 1.4245014245014245,
+        "setup": "kiss_fly",
+        "state": "partial",
+        "stop": 10.8125,
+        "trigger": 10.96875,
+        "unjudged": [],
+        "variant": "near_kiss"
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:40",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGA",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        },
+        {
+         "c": 10.875,
+         "h": 10.9688,
+         "l": 10.8125,
+         "o": 10.9375,
+         "t": "2026-10-13 10:35",
+         "v": 80000.0
+        },
+        {
+         "c": 11.2,
+         "h": 11.25,
+         "l": 10.8438,
+         "o": 10.875,
+         "t": "2026-10-13 10:40",
+         "v": 250000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115,
+          10.5042,
+          10.64336
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438,
+          10.266307,
+          10.351188
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:41:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGA"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|GGB",
+      "as_of_bar_t15": "2026-10-13 10:30",
+      "as_of_bar_t5": "2026-10-13 10:30",
+      "at": "2026-10-13T14:41:00+00:00",
+      "ctx": {
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "refined": false,
+        "shares": 5000000,
+        "src": "shares_out_massive",
+        "status": "massive",
+        "suspect": null,
+        "suspect_text": null,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "last_halt_resume_et": null,
+       "psych": [],
+       "reg_gain_pct": 37.5,
+       "rotation": {
+        "text": "🔄 shares out ×0.6",
+        "x": 0.6
+       },
+       "squeeze_history": {
+        "daily_ok": false,
+        "halt_days": [],
+        "ledger_complete": false,
+        "ledger_from": null,
+        "n": 0,
+        "of": 30,
+        "range_days": [],
+        "sessions": [],
+        "text": "🎾 squeeze history: 0 of last 30 sessions (≥50% range or a halt) · no daily bars — halts only · no halt list yet"
+       }
+      },
+      "date": "2026-10-13",
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13"
+      },
+      "setups": {
+       "bull_flag": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000 vs cap 125000"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback 1–5 bars",
+          "need": "1–5",
+          "ok": true,
+          "value": "1 bars"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": 1,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": true,
+        "reason": "",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "bull_flag",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "horizontal_fade": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4",
+          "label": "K4 base 6–24 bars",
+          "need": "6–24",
+          "ok": false,
+          "value": "1 bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 base volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k6_tight",
+          "label": "K6 base range ≤ 8% of price",
+          "need": "≤ 8%",
+          "ok": true,
+          "value": "1.1%"
+         },
+         {
+          "key": "k6_merge",
+          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+          "need": "≤ 0.5%",
+          "ok": false,
+          "value": "EMAs 1.88% apart"
+         },
+         {
+          "key": "k6_decay",
+          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+          "need": "< 0.7×",
+          "ok": null,
+          "value": "second-half volume —×"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "horizontal_fade",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [
+         "k6_decay"
+        ],
+        "variant": null
+       },
+       "intraday_vcp": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k4_cycles",
+          "label": "K4 at least 2 contractions",
+          "need": "≥ 2",
+          "ok": false,
+          "value": "1 cycles"
+         },
+         {
+          "key": "k7_ratio",
+          "label": "K7 each cycle's range ≤ 0.75× the previous",
+          "need": "≤ 0.75× each",
+          "ok": true,
+          "value": "0.125"
+         },
+         {
+          "key": "k7_ema21",
+          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
+          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "ok": true,
+          "value": "10.88"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         }
+        ],
+        "cycles": 1,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "1 of 2 cycles",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "intraday_vcp",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "kiss_fly": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": {
+         "bars": 1,
+         "from_t": "2026-10-13 10:30",
+         "to_t": "2026-10-13 10:30"
+        },
+        "broke": false,
+        "criteria": [
+         {
+          "key": "k2",
+          "label": "K2 leg volume rising, each step ≤ 5×",
+          "need": "rising, no step above the cap",
+          "ok": true,
+          "value": "2 demand bars"
+         },
+         {
+          "key": "k3_vol",
+          "label": "K3 pullback volume ≤ 0.5× leg mean",
+          "need": "≤ 125000",
+          "ok": true,
+          "value": "max 100000"
+         },
+         {
+          "key": "k5_uptrend",
+          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
+          "need": "9 > 21, both rising",
+          "ok": true,
+          "value": "9 EMA 10.41 · 21 EMA 10.21"
+         },
+         {
+          "key": "k4",
+          "label": "K4 pullback ≤ 9 bars",
+          "need": "≤ 9",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5a_honor",
+          "label": "K5a every pullback bar closes at or above the 9 EMA",
+          "need": "close ≥ 9 EMA",
+          "ok": true,
+          "value": "1 bars"
+         },
+         {
+          "key": "k5_kiss",
+          "label": "K5 the pullback kissed the 9 EMA",
+          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "ok": false,
+          "value": "4.5% above the 9 EMA"
+         }
+        ],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": {
+         "bars": 2,
+         "e_t": "2026-10-13 10:25",
+         "s_t": "2026-10-13 10:20"
+        },
+        "meta": {
+         "structure_alive": true
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "red_closes": 1,
+        "risk_pct": 1.1363636363636365,
+        "setup": "kiss_fly",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0,
+        "unjudged": [],
+        "variant": null
+       },
+       "reversal_squeeze": {
+        "as_of_bar_t": "2026-10-13 10:30",
+        "bars_since_entry": null,
+        "base": null,
+        "broke": false,
+        "criteria": [],
+        "cycles": null,
+        "entry_bar_t": null,
+        "flag_k": null,
+        "frame": "5m",
+        "grade": null,
+        "leg": null,
+        "meta": {
+         "structure_alive": false
+        },
+        "missed": [],
+        "ready": false,
+        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "red_closes": 0,
+        "risk_pct": null,
+        "setup": "reversal_squeeze",
+        "state": "none",
+        "stop": null,
+        "trigger": null,
+        "unjudged": [],
+        "variant": null
+       }
+      },
+      "stopped_today": {},
+      "symbol": "GGB",
+      "tile": {
+       "bars15": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:30",
+         "v": 600000.0
+        }
+       ],
+       "bars5": [
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:05",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:10",
+         "v": 100000.0
+        },
+        {
+         "c": 10.0,
+         "h": 10.125,
+         "l": 9.875,
+         "o": 10.0,
+         "t": "2026-10-13 10:15",
+         "v": 100000.0
+        },
+        {
+         "c": 10.5,
+         "h": 10.5,
+         "l": 10.0,
+         "o": 10.0,
+         "t": "2026-10-13 10:20",
+         "v": 200000.0
+        },
+        {
+         "c": 11.0,
+         "h": 11.0,
+         "l": 10.5,
+         "o": 10.5,
+         "t": "2026-10-13 10:25",
+         "v": 300000.0
+        },
+        {
+         "c": 10.9375,
+         "h": 11.0,
+         "l": 10.875,
+         "o": 11.0,
+         "t": "2026-10-13 10:30",
+         "v": 100000.0
+        }
+       ],
+       "curves15": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          null,
+          10.1875
+         ]
+        }
+       ],
+       "curves5": [
+        {
+         "label": "9 EMA",
+         "tone": "ema9",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.1,
+          10.28,
+          10.4115
+         ]
+        },
+        {
+         "label": "21 EMA",
+         "tone": "ema21",
+         "values": [
+          10.0,
+          10.0,
+          10.0,
+          10.045455,
+          10.132231,
+          10.205438
+         ]
+        }
+       ],
+       "vol_avg15": null,
+       "vol_avg5": null
+      },
+      "updated_at": "2026-10-13T14:41:00+00:00"
+     },
+     "q": {
+      "_id": "2026-10-13|GGB"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_reads",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "SHADOW:GG:2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$setOnInsert": {
+       "_id": "SHADOW:GG:2026-10-13|GGA|bull_flag",
+       "at": "2026-10-13T14:41:00+00:00",
+       "claimed_at": "<wall>",
+       "date": "2026-10-13",
+       "entry_bar_t": "2026-10-13 10:40",
+       "frame": "5m",
+       "kind": "gajjala_setup",
+       "mode": "shadow",
+       "note": "shadow — not sent",
+       "price": 11.2,
+       "risk_pct": 1.4245014245014245,
+       "setup": "bull_flag",
+       "state": "shadow",
+       "stop": 10.8125,
+       "symbol": "GGA",
+       "trigger": 10.96875,
+       "would_push": {
+        "body": "broke 10.97 on the 5m bar closing 10:40 ET · stop 10.81 (−1.4%) · Quiet shallow flag; entry = the top of the pullback bar · 🧠 potential rang 10:31 ET · shares out 5.0M (Massive) · UNMEASURED — his setup, not a buy signal",
+        "items": [
+         {
+          "symbol": "GGA",
+          "text": "GGA · 🚩 Bull Flag A+ entry · broke 10.97 · stop 10.81 (−1.4%) · Quiet shallow flag; entry = the top of the pullback bar"
+         }
+        ],
+        "kind": "gajjala_setup",
+        "tag": "gg-bull_flag-GGA",
+        "ticker": "GGA",
+        "title": "🚩 GGA · Bull Flag A+ entry",
+        "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+       }
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_alerts",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": null,
+        "px": 11.2,
+        "ready": false,
+        "reason": "",
+        "state": "aplus",
+        "stop": 10.8125,
+        "trigger": 10.96875
+       },
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        },
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:40",
+         "kind": null,
+         "state": "aplus"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": null,
+        "px": 11.2,
+        "ready": false,
+        "reason": "near-kiss — flew without touching the 9 EMA",
+        "state": "partial",
+        "stop": 10.8125,
+        "trigger": 10.96875
+       },
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        },
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:40",
+         "kind": null,
+         "state": "partial"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|bull_flag"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "armed",
+        "px": 10.9375,
+        "ready": true,
+        "reason": "",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "armed",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "armed",
+       "first_px": 10.9375,
+       "first_reason": "",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "kiss_fly",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "bull_flag",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|bull_flag",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|kiss_fly"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "horizontal_fade"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "kiss_fly",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|kiss_fly",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGA|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:40",
+        "kind": "building",
+        "px": 11.2,
+        "ready": false,
+        "reason": "base 3 of 6 bars",
+        "state": "forming",
+        "stop": 10.84375,
+        "trigger": 11.25
+       },
+       "line": "GGA · ➖ Horizontal Fade · building · trigger 11.25 · stop 10.84",
+       "move_pct": 2.4,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:31:00+00:00",
+         "at_et": "10:31",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+       "vs_trigger_pct": 1.82
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|horizontal_fade"
+     },
+     "upd": {
+      "$set": {
+       "at": "2026-10-13T14:41:00+00:00",
+       "last": {
+        "at": "2026-10-13T14:41:00+00:00",
+        "at_et": "10:41",
+        "bar_t": "2026-10-13 10:30",
+        "kind": "building",
+        "px": 10.9375,
+        "ready": false,
+        "reason": "base 1 of 6 bars",
+        "state": "forming",
+        "stop": 10.875,
+        "trigger": 11.0
+       },
+       "line": "GGB · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88",
+       "move_pct": 0.0,
+       "state_path": [
+        {
+         "at": "2026-10-13T14:41:00+00:00",
+         "at_et": "10:41",
+         "bar_t": "2026-10-13 10:30",
+         "kind": "building",
+         "state": "forming"
+        }
+       ],
+       "updated_at": "2026-10-13T14:41:00+00:00",
+       "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGB",
+       "vs_trigger_pct": -0.57
+      },
+      "$setOnInsert": {
+       "date": "2026-10-13",
+       "first_bar_t": "2026-10-13 10:30",
+       "first_kind": "building",
+       "first_px": 10.9375,
+       "first_reason": "base 1 of 6 bars",
+       "first_risk_pct": 1.1363636363636365,
+       "first_seen": "2026-10-13T14:41:00+00:00",
+       "first_seen_et": "10:41",
+       "first_seen_mode": "normal",
+       "first_stop": 10.875,
+       "first_tells": {
+        "again": null,
+        "ah_move_pct": null,
+        "also": [
+         "bull_flag",
+         "kiss_fly"
+        ],
+        "float_shares": 5000000.0,
+        "float_text": "shares out 5.0M (Massive)",
+        "halts_n": null,
+        "halts_text": null,
+        "prior_date": null,
+        "prior_max_change_pct": null,
+        "rotation_text": "🔄 shares out ×0.6",
+        "rotation_x": 0.6,
+        "volume": 3000000.0
+       },
+       "first_trigger": 11.0,
+       "frame": "5m",
+       "setup": "horizontal_fade",
+       "symbol": "GGB"
+      }
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "2026-10-13|GGB|horizontal_fade",
+      "push": {
+       "$exists": false
+      }
+     },
+     "upd": {
+      "$set": {
+       "held": [
+        {
+         "at_et": "10:41",
+         "reason": "stale_tape"
+        }
+       ]
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_potentials",
+    "op": "update_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "2026-10-13|10:41",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 1,
+       "shadow_mode": 1,
+       "shadow_session": 1,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "2026-10-13|10:41"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 1,
+       "shadow_mode": 1,
+       "shadow_session": 1,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:41",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "doc": {
+      "_id": "latest_cron",
+      "ah_carry": "skipped",
+      "alerts": {
+       "aplus": 1,
+       "awaiting_answer": 0,
+       "broker_flagged": 0,
+       "claimed_before": 0,
+       "dry": 0,
+       "failed": 0,
+       "late": 0,
+       "no_risk": 0,
+       "no_target": 0,
+       "not_aplus_variant": 0,
+       "pushed": 0,
+       "shadow": 1,
+       "shadow_mode": 1,
+       "shadow_session": 1,
+       "suppressed_closed": 0,
+       "suppressed_exhausted": 0,
+       "suppressed_first15": 0,
+       "suppressed_halt": 0,
+       "suppressed_premarket": 0,
+       "suppressed_window": 0
+      },
+      "at": "2026-10-13T14:41:00+00:00",
+      "bars": {
+       "failed": 0,
+       "loaded": 2,
+       "no_bars": 0,
+       "over_budget": 0
+      },
+      "bars_through_et": "10:40",
+      "counts": {
+       "ah_close_eq_last": 0,
+       "ah_rows": 0,
+       "band_ok": 3,
+       "change_ok": 2,
+       "dated_session": 3,
+       "held_split": 0,
+       "qualifiers": 2,
+       "rows": 3,
+       "split_failed": 0,
+       "trader_added": 0,
+       "trader_skipped": 0,
+       "trader_tagged": 0,
+       "type_ok": 3,
+       "type_out": 0,
+       "type_unknown": 2,
+       "vol_ok": 3
+      },
+      "date": "2026-10-13",
+      "errors": [],
+      "finished_at": "2026-10-13T14:41:00+00:00",
+      "lease": {
+       "held_by": null,
+       "waited_s": 0.0,
+       "why": "claimed"
+      },
+      "n_listed": 2,
+      "n_read": 2,
+      "on_demand": false,
+      "pass_id": "2026-10-13|10:41",
+      "pointer": "latest_cron",
+      "postmarket": null,
+      "potential": {
+       "armed": 1,
+       "building": 3,
+       "claimed_before": 0,
+       "closed_day": 0,
+       "dry": 0,
+       "failed": 0,
+       "graveyard": 0,
+       "joined": 0,
+       "muted": 0,
+       "new": 3,
+       "no_target": 0,
+       "outside_hours": 0,
+       "potential": 4,
+       "pushed": 0,
+       "stale_tape": 3,
+       "tracked_today": 7,
+       "trader_held": 0
+      },
+      "premarket": {
+       "pm_levels": {}
+      },
+      "snapshot_meta": {
+       "bytes": 1,
+       "error": null,
+       "http": 200,
+       "n": 3,
+       "wall_s": 0.5
+      },
+      "status": "ok",
+      "strip": {
+       "best_change_pct": 40.0,
+       "best_symbol": "GGA",
+       "n_population": 3,
+       "quiet": false,
+       "runners_100": 0,
+       "runners_80": 0
+      },
+      "tape_session": "rth",
+      "trader": {
+       "added": [],
+       "refresh": null,
+       "skips": [],
+       "tagged": [],
+       "who": [
+        "algo888"
+       ]
+      },
+      "types_meta": {
+       "as_of": "2026-10-13",
+       "complete": true,
+       "n": 1
+      },
+      "wall_s": 0.0
+     },
+     "q": {
+      "_id": "latest_cron"
+     },
+     "upsert": true
+    },
+    "coll": "gajjala_passes",
+    "op": "replace_one"
+   },
+   {
+    "body": {
+     "q": {
+      "_id": "lease",
+      "token": "<token>"
+     },
+     "upd": {
+      "$set": {
+       "done_at": "2026-10-13T14:41:00+00:00",
+       "status": "done"
+      }
+     },
+     "upsert": false
+    },
+    "coll": "gajjala_state",
+    "op": "update_one"
+   }
+  ]
+ }
+}

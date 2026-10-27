@@ -622,6 +622,16 @@ def default_prefs() -> dict:
         # already-registered phones are flipped by scripts/owner_prefs_apply.py
         # at deploy (a data write). LIVE, not shadow. A MARKET kind. UNMEASURED.
         "gajjala_potential": False,
+        # 🚩 The 1-minute page's A+ and 🧠 potential (chart_maps/gajjala/
+        # run_1m.py, 2026-10-27, Ajay: "Can you create a new page, I would like
+        # you to do the same logic of Gajjalas but on 1 min candles please.").
+        # False for everyone AND deliberately NOT in OWNER_KEEP_SET: every
+        # 1-minute alert is recorded in SHADOW, never sent (GAJJALA_1M_PUSH_MODE,
+        # HIS CALL #1 — going live = that constant + the keep-set). They must
+        # still be here: a kind missing from default_prefs targets ZERO devices
+        # and renders no toggle. MARKET kinds. UNMEASURED.
+        "gajjala_1m_setup": False,
+        "gajjala_1m_potential": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

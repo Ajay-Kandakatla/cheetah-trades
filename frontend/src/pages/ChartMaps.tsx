@@ -1676,6 +1676,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            universe pass here, so the board controls and the grid are
            skipped. Must sit BEFORE the SupportLevels fallback below. */
         <GajjalaBoard />
+      ) : tab === 'gajjala_1m' ? (
+        /* 🚩 Gajjala's 1-min (Ajay 2026-10-27: "Can you create a new page, I
+           would like you to do the same logic of Gajjalas but on 1 min candles
+           please."). The SAME board on its own endpoint
+           (GET /chart-maps/gajjala-1m), every alert recorded in shadow. The
+           KEY is load-bearing (BUILD_SPEC27 §6): without it React REUSES the
+           🚩 Gajjala's board above (same component type, same slot) — its
+           state kept and no on-open POST for this page. Must sit BEFORE the
+           SupportLevels fallback below. */
+        <GajjalaBoard key="gajjala_1m" variant="gajjala_1m" />
       ) : tab === 'news' ? (
         /* 📰 News (Ajay 2026-09-24: "give me a bullish market or bearsish
            market … pull Macro calendar that has T1 and T2 tier events … which

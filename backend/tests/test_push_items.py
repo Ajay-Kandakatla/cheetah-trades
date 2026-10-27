@@ -376,7 +376,10 @@ def test_item_urls_match_each_kinds_single_push_url():
     assert R.item_url("tape_control", "NVDA") == "/sepa/NVDA?tab=tape&from=alerts"
     # WIDENED 2026-10-19 — 🌙 overnight_movers ("Can you do an over night scan for all the stocks they are all growing over night"; ships OFF, owner-only): 14 → 15 — the Support tab on Chart Maps (the key_level_alert precedent).
     assert R.item_url("overnight_movers", "NVDA") == "/chart-maps?tab=support&symbol=NVDA"
-    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 15
+    # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent): 15 → 17 — its tab, the sub resolved by the endpoint from focus.
+    assert R.item_url("gajjala_1m_setup", "NVDA") == R.item_url("gajjala_1m_potential", "NVDA") == \
+        "/chart-maps?tab=gajjala_1m&focus=NVDA"
+    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 17
 
 
 # ---------------------------------------------------------------------------

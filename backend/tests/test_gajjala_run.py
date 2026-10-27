@@ -102,6 +102,14 @@ def _no_override(monkeypatch):
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
 
 
+# WIDENED 2026-10-27 (BUILD_SPEC27 §3.6, the 🚩 1-minute page): run.main's cron path now spawns the detached GG1 loop —
+# no test here may reach the real spawn (tests/test_gajjala_run_1m_2026_10_27.py pins the hook itself)
+@pytest.fixture(autouse=True)
+def _no_1m_spawn(monkeypatch):
+    from chart_maps.gajjala import run_1m as R1
+    monkeypatch.setattr(R1, "spawn_loop", lambda *a, **k: True)
+
+
 @pytest.fixture
 def live(monkeypatch):
     monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")

@@ -137,6 +137,12 @@ ITEM_URL_BY_KIND = {
     # potential (chart_maps/gajjala/tab.resolve_sub, focus_potential); the
     # single push's url carries the sub itself (potential.deep_link).
     "gajjala_potential":    "/chart-maps?tab=gajjala&focus={sym}",
+    # 🚩 2026-10-27 — the 1-minute page's two kinds (recorded in shadow, never
+    # sent while GAJJALA_1M_PUSH_MODE is shadow): its tab, the sub resolved by the
+    # endpoint (tab.resolve_sub over the 1-minute store); the single payload's url
+    # carries the sub itself (alerts.compose / potential.deep_link, variant GG1).
+    "gajjala_1m_setup":     "/chart-maps?tab=gajjala_1m&focus={sym}",
+    "gajjala_1m_potential": "/chart-maps?tab=gajjala_1m&focus={sym}",
     # 🎢 / 🗺️ 2026-10-14 — the Tape tab, back-linked to Chart Maps
     # (orderflow/tape_burst_kinds.URL_FMT, pinned by test_tape_burst_kinds).
     "tape_burst_highbeta":  "/sepa/{sym}?tab=tape&from=chart-maps",

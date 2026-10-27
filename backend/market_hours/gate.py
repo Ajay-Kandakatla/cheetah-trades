@@ -123,6 +123,10 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # any claim). Its hour window (04:00–20:00 ET, never his first 15 minutes
     # after the open) lives in potential.window_reason — this set is the DAY.
     "gajjala_potential",
+    # 🚩 the 1-minute page's A+ / 🧠 potential (chart_maps/gajjala/run_1m.py,
+    # 2026-10-27) — read off live 1-minute bars, so MARKET kinds: silent on
+    # weekends and NYSE holidays. Recorded in shadow, never sent, until HIS CALL #1.
+    "gajjala_1m_setup", "gajjala_1m_potential",
     # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
     # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
     # (the cli's market-day gate already skips the pass; this drops at the

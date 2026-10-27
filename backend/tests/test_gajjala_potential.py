@@ -575,9 +575,28 @@ def test_NEGATIVE_the_potential_pass_never_touches_the_a_plus_kind_or_its_ledger
         n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
     code_strings = {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)
                     and id(n) not in docs}
-    assert not ({"GAJJALA_PUSH_MODE", "alerts_coll", "notify_gajjala_setup", "push_mode"} & idents)
+    # WIDENED 2026-10-27 (BUILD_SPEC27 §3.5, the 🚩 1-minute page): the gate reads `V.push_mode(var)` — the VARIANT's own
+    # switch (GAJJALA_1M_PUSH_MODE), only when the store is not GG5. A bare `push_mode` name (the A+ mode) stays banned,
+    # and every `push_mode` attribute must hang off the variant module `V`
+    names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
+    pm_owners = {n.value.id for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "push_mode"
+                 and isinstance(n.value, ast.Name)}
+    assert pm_owners <= {"V"} and "push_mode" not in names
+    assert not ({"GAJJALA_PUSH_MODE", "alerts_coll", "notify_gajjala_setup"} & idents)
     assert not [x for x in code_strings if "gajjala_alerts" in x or "gajjala_setup" in x]
     assert {p["kind"] for (_o, p), _k in send.calls} == {"gajjala_potential"}
+
+
+def test_NEGATIVE_the_gg5_potential_pass_never_reads_a_push_mode(monkeypatch, no_ab_sender):
+    """2026-10-27 (BUILD_SPEC27 §3.5): the variant's mode switch is read ONLY for a non-GG5 store — a GG5 pass with a
+    raising `variant.push_mode` still rings (and its counts carry no "shadow" key)."""
+    from chart_maps.gajjala import variant as V
+    monkeypatch.setattr(V, "push_mode", lambda *a, **k: (_ for _ in ()).throw(AssertionError("GG5 read a mode")))
+    st = fake_store()
+    seed(st)
+    send = Rec(OK_SEND)
+    out = go(st, at(10, 6), {"BBB": {"bull_flag": D.bull_flag(FX.bf_aplus())}, "AAA": one_per_setup()}, send=send)
+    assert out["pushed"] == len(send.calls) >= 1 and "shadow" not in out
 
 
 def test_also_forming_names_the_other_setups_of_the_same_name():

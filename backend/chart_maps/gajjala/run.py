@@ -185,11 +185,15 @@ class _RecordingColl:
 
 
 def dry_store(real_store=None):
-    """A GajjalaStore whose every collection reads through and records writes; `.writes` lists them."""
+    """A GajjalaStore whose every collection reads through and records writes; `.writes` lists them.
+    2026-10-27 (BUILD_SPEC27 §3.6): the dry store keeps the real store's `variant` (and its `shared` GG5 store, so the
+    shared GG5 state reads as one) and records each write under the PHYSICAL name — a GG1 dry run reads through the real shared
+    collections and its `writes` name `gajjala_1m_*` (GG5: physical = the name, unchanged)."""
     from . import store as ST
     real = real_store or ST.GajjalaStore()
     writes: list = []
-    st = ST.GajjalaStore(colls={n: _RecordingColl(n, real.coll(n), writes) for n in ST.ALL})
+    st = ST.GajjalaStore(colls={n: _RecordingColl(real.physical(n), real.coll(n), writes) for n in ST.ALL},
+                         variant=real.variant, shared=getattr(real, "shared", None))
     st.writes = writes
     st.dry = True                                               # run_pass skips the A8 owner check (nothing lands)
     return st
@@ -612,6 +616,23 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, *, on_deman
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+def _spawn_1m() -> None:
+    """🚩 The 1-minute page (2026-10-27, BUILD_SPEC27 §3.6 — Ajay "do the same logic of Gajjalas but on 1 min
+    candles"): at the end of the CRON pass, SPAWN the GG1 loop as a DETACHED child and return at once — never the loop
+    in-process (supercronic runs without -overlapping: a 🚩 job still running at the next tick makes it SKIP that live
+    pass). Only when run_1m.enabled() (the GAJJALA_1M_ENABLED constant and env). Fenced: one log line, never raises,
+    never changes the exit code. Not on --dry-run / --now / --on-demand / --symbols."""
+    try:
+        from . import run_1m as R1
+        if not R1.enabled():
+            log.info("gajjala 1m loop: off (GAJJALA_1M_ENABLED) — not spawned")
+            return
+        ok = R1.spawn_loop()
+        log.info("gajjala 1m loop: %s", "spawned" if ok else "spawn failed")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala 1m loop: spawn step failed: %s", type(exc).__name__)
+
+
 def dry_deps() -> Deps:
     """Every writer and sender a recorder (the store side is `dry_store`)."""
     sent: list = []
@@ -665,6 +686,8 @@ def main(argv=None) -> int:
         else:
             from . import trader_names as TN
             out = run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch), symbols=syms)
+            if not syms and not args.now:
+                _spawn_1m()                                     # 🚩 1-minute page (2026-10-27): the cron path only
     if args.json:
         print(json.dumps(out, default=str))
     elif args.on_demand:

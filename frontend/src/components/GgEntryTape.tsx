@@ -8,14 +8,25 @@
  * vertical rules, and dots where it filled and where it exited. EVERY word, number and percent on it is SERVED by
  * GET /chart-maps/gajjala/entry-tape (backend chart_maps/gajjala/tape.py — ENTRY_TAPE_WORDS, the ledger's own grade
  * texts); this file types none — only the glyphs for loading and for a failed read. UNMEASURED: a picture of what each
- * alert did, never a study (the 2026-10-14 study read no edge). */
+ * alert did, never a study (the 2026-10-14 study read no edge).
+ *
+ * 🚩 1-minute page (2026-10-27, BUILD_SPEC27 §3.8): the tape reads the route of the board it sits in — GgVariantContext
+ * (components/ggVariant.ts), so a 🚩 Gajjala's 1-min row reads GET /chart-maps/gajjala-1m/entry-tape (its own 1-minute
+ * bars) and never a 5-minute tape; 🚩 Gajjala's keeps GG_TAPE_PATH. The lite cache is keyed by route AND id (a 1-minute
+ * id has the same shape as a 5-minute one — the backend memo trap, BUILD_SPEC27 §6). */
 import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
+import { ggBase, useGgVariant, type GgVariantKey } from './ggVariant';
 import { layout, miniLayout, TapeChart, TapeSpark, TAPE_W, TAPE_H, SPARK_H, TAPE_DASH, TAPE_DOT_R,
   type TapeMark, type TapeCorners } from './TapeChart';
 import '../styles/gg_tape.css';
 
 export const GG_TAPE_PATH = '/chart-maps/gajjala/entry-tape';
+
+/** The 🕰️ tape route for a board variant: 🚩 Gajjala's → GG_TAPE_PATH; another page → its own base + /entry-tape. */
+export function ggTapePath(v: GgVariantKey): string {
+  return v === 'gajjala' ? GG_TAPE_PATH : `${ggBase(v)}/entry-tape`;
+}
 
 export type GgTapeBar = { t: number; o?: number | null; h?: number | null; l?: number | null; c: number; v?: number | null; s: string };
 export type GgTapeLine = { key: string; px: number; tone: string; label: string };
@@ -43,15 +54,16 @@ export function ggTapeMarks(p: GgTapePayload): TapeMark[] {
 export function GgEntryTape({ id, data: preset }: { id: string; data?: GgTapePayload | null }) {
   const [data, setData] = useState<GgTapePayload | null>(preset ?? null);
   const [err, setErr] = useState(false);
+  const path = ggTapePath(useGgVariant());
   useEffect(() => {
     if (preset) return;
     let live = true;
-    fetch(`${API}${GG_TAPE_PATH}?id=${encodeURIComponent(id)}`, { credentials: 'include' })
+    fetch(`${API}${path}?id=${encodeURIComponent(id)}`, { credentials: 'include' })
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then((j) => { if (live) setData(j); })
       .catch(() => { if (live) setErr(true); });
     return () => { live = false; };
-  }, [id, preset]);
+  }, [id, preset, path]);
 
   if (err) return <div className="ptt gg-tape" data-testid="gg-tape"><span className="pcw__dim">—</span></div>;
   if (!data) return <div className="ptt gg-tape" data-testid="gg-tape"><span className="pcw__dim">…</span></div>;
@@ -71,15 +83,16 @@ export function GgEntryTape({ id, data: preset }: { id: string; data?: GgTapePay
   );
 }
 
-/* The row's mini tape — fetched once per id per page life (lite), only when the row scrolls into view. */
+/* The row's mini tape — fetched once per (route, id) per page life (lite), only when the row scrolls into view. */
 const ggLiteCache = new Map<string, Promise<GgTapePayload>>();
-export function fetchGgLiteTape(id: string): Promise<GgTapePayload> {
-  let p = ggLiteCache.get(id);
+export function fetchGgLiteTape(id: string, path: string = GG_TAPE_PATH): Promise<GgTapePayload> {
+  const key = `${path}?id=${id}`;
+  let p = ggLiteCache.get(key);
   if (!p) {
-    p = fetch(`${API}${GG_TAPE_PATH}?id=${encodeURIComponent(id)}&lite=1`, { credentials: 'include' })
+    p = fetch(`${API}${path}?id=${encodeURIComponent(id)}&lite=1`, { credentials: 'include' })
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<GgTapePayload>; });
-    p.catch(() => ggLiteCache.delete(id));          // a failed fetch may retry on the next mount
-    ggLiteCache.set(id, p);
+    p.catch(() => ggLiteCache.delete(key));          // a failed fetch may retry on the next mount
+    ggLiteCache.set(key, p);
   }
   return p;
 }
@@ -91,6 +104,7 @@ export function GgEntryMiniTape({ id, onOpen, width = 100 }: { id: string; onOpe
   const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
   const [data, setData] = useState<GgTapePayload | null>(null);
   const [err, setErr] = useState(false);
+  const path = ggTapePath(useGgVariant());
   useEffect(() => {
     if (seen || !ref.current) return;
     const io = new IntersectionObserver((es) => {
@@ -102,9 +116,9 @@ export function GgEntryMiniTape({ id, onOpen, width = 100 }: { id: string; onOpe
   useEffect(() => {
     if (!seen) return;
     let live = true;
-    fetchGgLiteTape(id).then((j) => { if (live) setData(j); }).catch(() => { if (live) setErr(true); });
+    fetchGgLiteTape(id, path).then((j) => { if (live) setData(j); }).catch(() => { if (live) setErr(true); });
     return () => { live = false; };
-  }, [seen, id]);
+  }, [seen, id, path]);
 
   const g = data ? miniLayout(data.bars ?? [], (data.rules ?? []).slice(0, 1), width, SPARK_H) : null;
   return (

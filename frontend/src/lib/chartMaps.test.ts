@@ -25,13 +25,13 @@ import {
   ROOM_TABS, parseMinRoom,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
   DM_SORT_NEAREST, ATH_SORT_SLIPPING,
-  GAJJALA_OWN_PARAMS, tabSearch, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL,
+  GAJJALA_OWN_PARAMS, GAJJALA_TABS, tabSearch, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL,
   TAB_DEFAULT_MIN_TIER,
 } from './chartMaps';
 import { HB_OWN_PARAMS } from './highBeta';
 import { DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
-import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, parseGgTf } from './gajjala';
+import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, GG_TFS, ggTfs, parseGgTf } from './gajjala';
 import { parseTf } from './supportLevels';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -799,6 +799,9 @@ describe('the Earnings Flow tab', () => {
        // 🚩 Gajjala's 2026-10-13 — right after Down 10%+ today, mid-pack for
        // the same no-usage-yet reason (gajjala spec §7 #18, his call).
        'gajjala',
+       // WIDENED 2026-10-27 — 🚩 gajjala_1m right after 🚩 gajjala, before 🕯️
+       // doji_sweep (BUILD_SPEC27 §7 #10, his call).
+       'gajjala_1m',
        // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala: 🕯️ Doji Sweep,
        // mid-pack for the same no-usage-yet reason (doji spec §7 Q1, his call).
        'doji_sweep',
@@ -923,7 +926,8 @@ describe('the Support Levels tab', () => {
     // read (gauge, T1/T2 macro, sector rows, headlines), no tiles.
     // 2026-10-13: `gajjala` is the sixteenth — its own GET /chart-maps/gajjala
     // read (5-/15-minute setups the cron pass stores), with its own sub-tabs.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // WIDENED 2026-10-27: `gajjala_1m` is the seventeenth — its own GET /chart-maps/gajjala-1m read (BUILD_SPEC27).
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_1m', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1820,7 +1824,8 @@ describe('tab order — most-used first', () => {
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
     // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
-    expect(CM_TABS).toHaveLength(39);   // +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    // WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala (BUILD_SPEC27)
+    expect(CM_TABS).toHaveLength(40);   // +gajjala_1m 2026-10-27; +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2327,7 +2332,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep' && t !== 'gajjala_1m')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2590,8 +2595,9 @@ describe("🚩 Gajjala's tab registry", () => {
   it("sits once, right after 'high_beta' (2026-10-14; was 'drop10') and before 'ema_frames'", () => {
     expect(CM_TABS.filter((t) => t === 'gajjala')).toHaveLength(1);
     expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('high_beta') + 1);
-    // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
-    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m between them (BUILD_SPEC27)
+    expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
@@ -2690,6 +2696,93 @@ describe('tabSearch — gajjala drops its own params at the border (2026-10-13)'
     const next = sw('tab=zones&sort=room&tf=15m', 'support');
     expect(next.get('sort')).toBe('room');
     expect(next.get('tf')).toBe('15m');
+  });
+});
+
+/* 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.8). Ajay: "Can you create a new page, I would like you to
+ * do the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track record for it
+ * from today..". The same board on its own endpoint; its tab sits right after 🚩 Gajjala's and is not a tile board. */
+describe('🚩 Gajjala 1-minute tab registry (2026-10-27)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+  const HIS_1 = 'Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.';
+
+  it("sits once, right after 'gajjala' and right before 'doji_sweep'", () => {
+    const i = CM_TABS.indexOf('gajjala_1m');
+    expect(i).toBeGreaterThan(-1);
+    expect(CM_TABS.filter((t) => t === 'gajjala_1m')).toHaveLength(1);
+    expect(CM_TABS[i - 1]).toBe('gajjala');
+    expect(CM_TABS[i + 1]).toBe('doji_sweep');
+    expect(parseTab('gajjala_1m')).toBe('gajjala_1m');
+  });
+
+  it('is not a tile board (its own endpoint) — NEGATIVE: 🚩 gajjala still is not one either', () => {
+    expect(isBoardTab('gajjala_1m')).toBe(false);
+    expect(isBoardTab('gajjala')).toBe(false);
+    expect(GAJJALA_TABS).toEqual(['gajjala', 'gajjala_1m']);
+  });
+
+  it('TAB_META: the label and the blurb as BUILD_SPEC27 §3.8 writes them', () => {
+    const m = TAB_META.gajjala_1m;
+    expect(m.label).toBe("Gajjala's 1-min");
+    expect(m.blurb).toBe('\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here is recorded in shadow, never sent, until you say so; its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.');
+    for (const w of [HIS_1, 'shadow', 'Cheetah variant', 'UNMEASURED', 'Not advice.']) expect(m.blurb).toContain(w);
+  });
+
+  it('NEGATIVE: the blurb never says the b-word / "fake", never promises a ring, never claims an edge', () => {
+    const b = TAB_META.gajjala_1m.blurb;
+    expect(b).not.toMatch(new RegExp(['b' + 'ounce', 'fake'].join('|'), 'i'));
+    expect(b).not.toMatch(/rings your phone|phone rings|edge|win rate/i);
+    // NEGATIVE: the label is its own, never 🚩 Gajjala's
+    expect(TAB_META.gajjala_1m.label).not.toBe(TAB_META.gajjala.label);
+  });
+
+  it('NEGATIVE: gajjala → gajjala_1m drops sub / tf / sort (a 5-minute tf=15m means nothing on the 1-minute page)', () => {
+    const next = sw('tab=gajjala&sub=premarket&tf=15m&sort=change&universe=full', 'gajjala_1m');
+    expect(next.get('tab')).toBe('gajjala_1m');
+    for (const k of GAJJALA_OWN_PARAMS) expect(next.has(k)).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('NEGATIVE: gajjala_1m → gajjala drops them too (a tf=1m never reaches the 5-minute board)', () => {
+    const next = sw('tab=gajjala_1m&sub=bull_flag&tf=1m&sort=change', 'gajjala');
+    expect(next.get('tab')).toBe('gajjala');
+    for (const k of GAJJALA_OWN_PARAMS) expect(next.has(k)).toBe(false);
+    expect(parseGgTf(next.get('tf'))).toBeNull();
+  });
+
+  it('NEGATIVE: gajjala_1m → support drops them (the 🚩 border rule on the new tab)', () => {
+    const next = sw('tab=gajjala_1m&sub=bull_flag&tf=5m&symbol=AAPL', 'support');
+    for (const k of GAJJALA_OWN_PARAMS) expect(next.has(k)).toBe(false);
+    expect(next.get('symbol')).toBe('AAPL');
+  });
+
+  it('a click on gajjala_1m while ON gajjala_1m keeps sub / tf / sort', () => {
+    const next = sw('tab=gajjala_1m&sub=premarket&tf=1m&sort=change', 'gajjala_1m');
+    expect(next.get('sub')).toBe('premarket');
+    expect(next.get('tf')).toBe('1m');
+    expect(next.get('sort')).toBe('change');
+  });
+
+  it("parseGgTf: '1m' only where the page offers it — NEGATIVE: rejected for 🚩 Gajjala's", () => {
+    expect(parseGgTf('1m')).toBeNull();
+    expect(parseGgTf('1m', ['1m', '5m'])).toBe('1m');
+    expect(parseGgTf('5m', ['1m', '5m'])).toBe('5m');
+    expect(parseGgTf('15m', ['1m', '5m'])).toBeNull();
+    expect(parseGgTf('5m')).toBe('5m');
+    expect(parseGgTf('15m')).toBe('15m');
+    // NEGATIVE: an allowed list never admits a value that is not a frame
+    expect(parseGgTf('2m', ['2m', '5m'])).toBeNull();
+    expect(parseGgTf(null, ['1m'])).toBeNull();
+  });
+
+  it('ggTfs: the served variant.tfs (frames only, served order), else GG_TFS', () => {
+    expect(ggTfs({ variant: { key: 'gajjala_1m', tab: 'gajjala_1m', tfs: ['1m', '5m'] } })).toEqual(['1m', '5m']);
+    expect(ggTfs(null)).toBe(GG_TFS);
+    expect(ggTfs({ variant: null })).toBe(GG_TFS);
+    // NEGATIVE: a junk or empty served list never empties the toggle
+    expect(ggTfs({ variant: { key: 'x', tab: 'x', tfs: ['junk'] } })).toBe(GG_TFS);
+    expect(ggTfs({ variant: { key: 'x', tab: 'x', tfs: [] } })).toBe(GG_TFS);
+    expect(ggTfs({ variant: { key: 'x', tab: 'x', tfs: ['5m', 'junk', '1m'] } })).toEqual(['5m', '1m']);
   });
 });
 
@@ -2986,7 +3079,9 @@ describe('🕯️ Doji Sweep tab registry (2026-10-16)', () => {
 
   it("sits once, right after 'gajjala' and right before 'ema_frames'", () => {
     expect(CM_TABS.filter((t) => t === 'doji_sweep')).toHaveLength(1);
-    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    // WIDENED 2026-10-27 — 🕯️ doji_sweep now follows 🚩 gajjala_1m, which follows 🚩 gajjala (BUILD_SPEC27)
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
   });

@@ -32,7 +32,7 @@ import type { CmDojiSweepBoard, CmDojiSweepRead } from './dojiSweep';
 import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'doji_sweep';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_1m' | 'doji_sweep';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -138,6 +138,13 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // tabUsageKey counts it from the first open and the next re-cut moves it on
   // the evidence. Label and slot are his call (gajjala spec §7 #18).
   'gajjala',
+  // 🚩 Gajjala's 1-min (Ajay 2026-10-27: "Can you create a new page, I would
+  // like you to do the same logic of Gajjalas but on 1 min candles please." and
+  // "do everything and also add the track record for it from today.."). Right
+  // after 🚩 Gajjala's, before 🕯️ Doji Sweep — TAB ORDER IS EARNED; tabUsageKey
+  // counts it from the first open. Label and slot are his call (BUILD_SPEC27
+  // §7 #10).
+  'gajjala_1m',
   // 🕯️ Doji Sweep (Ajay 2026-10-16: "create me a new tab for Doji candle after
   // a sweep. For any stocks after a down trend. May be from all chart maps
   // especially on the 60% 70% down stocks"). Right after 🚩 Gajjala's, before
@@ -327,7 +334,11 @@ export function isBoardTab(t: CmTab): boolean {
     // on 5- and 15-minute bars — not a /chart-maps universe pass, so the board
     // loader and its daily sort / tier / room controls are skipped and
     // GajjalaBoard draws it with its own sub-tabs.
-    && t !== 'gajjala';
+    && t !== 'gajjala'
+    // 🚩 Gajjala's 1-min (2026-10-27) — the same board on its own read-only
+    // endpoint, GET /chart-maps/gajjala-1m, filled about once a minute by the
+    // 1-minute loop the 🚩 cron pass spawns. Not a universe pass either.
+    && t !== 'gajjala_1m';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -382,6 +393,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   gajjala: {
     label: "Gajjala's",
     blurb: 'Goverdhan Gajjala\u2019s five 5-minute setups over HIS scanner on the whole US market, with \u2600\uFE0F Premarket, \u{1F319} Post-market and \u{1F4D3} his Playbook \u2014 UNMEASURED, his rules as he described them, not a forecast. Ajay 2026-10-13: "Name the Tab Gajjala\'s he has multiple strategies..around this. He is volume and price action based traded with short squeeze. He also has premarket and post market analysis." and "Implement his full stategy do not assume anything." THE LIST is his scanner, run on one whole-market snapshot every 5 minutes from 04:00 to 20:00 ET on trading days: common stock and ADRs priced $0.10\u2013$100 with 1M+ shares traded today and up 25%+ on the prior regular close. A name stays listed 2 sessions (Cheetah default, not his) after it last qualified. THE SUB-TABS are his five setups \u2014 \u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze \u2014 each read on CLOSED 5-minute bars (the Fade on 15-minute first) with his 9 and 21 EMAs, plus the premarket movers, the after-hours movers and the Playbook: his own words with the video and timestamp they came from, what he avoids, and the exits he takes by hand (never computed here). EACH CARD shows the setup\u2019s state \u2014 A+ when every rule is met and the entry bar traded through the trigger and closed \u2014 the trigger, the stop and the risk, every criterion ticked or crossed with its number, and the float, the float rotation, halts, the $1 / $5 / $10 levels just above, and the \u23F3 first-15-minutes line (he does not trade the open). Numbers he never gave are Ajay\u2019s (K1\u2013K10, 2026-10-13). Every A+ entry rings your phone live since 2026-10-16 (your call \u2014 the 2026-10-14 study read no edge): once per name, setup and session, 09:45\u201316:00 and 16:00\u201320:00 ET, never pre-market or his first 15 minutes. The \u{1F9E0} Potential sub-tab rolls up every name still forming in one of the five setups (each setup sub-tab has its own \u{1F9E0} strip), with a \u{1F4C8} Track of what each did after it was first seen; a potential rings your phone live, once per name, setup and session, 04:00\u201320:00 ET, never his first 15 minutes \u2014 UNMEASURED, a potential, not an entry. UNMEASURED \u2014 nothing here trades or enters a lane. Not advice.',
+  },
+  // 🚩 Gajjala's 1-min (Ajay 2026-10-27, BUILD_SPEC27 §3.8). The same board on
+  // CLOSED 1-minute candles; every alert recorded in shadow, never sent (HIS
+  // CALL #1). Label = backend chart_maps/gajjala/constants.GG1M_TAB_LABEL; the
+  // blurb's 1- / 5-minute digits = variant.py GG1's frames. UNMEASURED.
+  gajjala_1m: {
+    label: "Gajjala's 1-min",
+    blurb: '\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here is recorded in shadow, never sent, until you say so; its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.',
   },
   // 🕯️ Doji Sweep (Ajay 2026-10-16). Every number on the BOARD is served; the
   // numbers in this blurb are pinned to doji_sweep_tab constants by the
@@ -1803,7 +1822,11 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
   // setups on 15-minute bars, his `tf=5m` opened Support on the 24-hour frame
   // (TF_ALIAS), his `sort=change` reached Back in Demand. Crossing INTO or OUT
   // OF gajjala drops all three; a click on the tab it is already on keeps them.
-  if (from !== t && (from === 'gajjala' || t === 'gajjala')) {
+  // 2026-10-27: the border rule runs over GAJJALA_TABS — 🚩 Gajjala's 1-min
+  // reads the same three params, and its `tf=1m` means nothing on the 5-minute
+  // board (nor his 5-minute `sub` / `sort` on the 1-minute one), so crossing
+  // gajjala ↔ gajjala_1m drops them too.
+  if (from !== t && (isGajjalaTab(from) || isGajjalaTab(t))) {
     for (const k of GAJJALA_OWN_PARAMS) next.delete(k);
   }
   // 🎢 High Beta's boxes / mode / green switch (`hb`, `hb_mode`, `hb_all`),
@@ -1846,6 +1869,11 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
 /** The params 🚩 Gajjala's reads with its own meanings — imported from
  *  lib/gajjala (which takes only TYPES from this module, so no runtime cycle). */
 export const GAJJALA_OWN_PARAMS: ReadonlyArray<string> = [GG_SUB_PARAM, GG_TF_PARAM, GG_SORT_PARAM];
+
+/** 🚩 The tabs GajjalaBoard draws (2026-10-27): 🚩 Gajjala's and 🚩 Gajjala's
+ *  1-min — one component, one border rule (tabSearch). */
+export const GAJJALA_TABS: ReadonlyArray<CmTab> = ['gajjala', 'gajjala_1m'];
+const isGajjalaTab = (t: string | null): boolean => !!t && (GAJJALA_TABS as ReadonlyArray<string>).includes(t);
 
 /** True for the ONE click the strip handles itself: an unmodified primary
  *  button. Every other click — ⌘ (mac), Ctrl (windows/linux), ⇧ (new window),

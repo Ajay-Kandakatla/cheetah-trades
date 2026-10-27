@@ -28,6 +28,14 @@ state "replayed") are their own line — never rang, never in any count of sent 
 
 Writes: ONLY `grade_step` (the 20:15 ET nightly's LAST step) writes, into gajjala_ledger. `today_read` (the 🏁 GET's
 "today so far") reads today's 1-minute bars and NEVER writes. `served_block` reads Mongo only.
+
+🚩 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.7 / WP-C). Ajay: "do everything and also add the track record for it
+from today..". The SAME ledger for the 1-minute page's store (`V.of(store)` = variant GG1, its own
+`gajjala_1m_potentials` / `_alerts` / `_ledger`): a 🧠 row is a tracker doc whose push state is one of the variant's
+`ledger_push_states` (GG1: "pushed" and "shadow" — every 1-minute potential is recorded in shadow, never sent; HIS CALL
+#2 pools them in the headline %), links via potential.deep_link(…, v), no ⏪ replay line, no session before
+GC.GG1M_RECORD_FROM read, and its served words from variant.WORDS_1M (`_variant_words`). GG5 (variant None / a GG5
+store) keeps every byte and every call shape. Operational accounting, UNMEASURED.
 """
 from __future__ import annotations
 
@@ -40,6 +48,7 @@ from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 from . import constants as GC
+from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.ledger")
 
@@ -253,7 +262,7 @@ def _merge(*parts) -> list:
 
 
 # ── rows (D1) ─────────────────────────────────────────────────────────────────────────────────────────────────────
-def alert_of(doc: dict, kind: str) -> Optional[dict]:
+def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
     """-> {id, date, symbol, setup, kind, line, at_utc (aware | None), at_et "HH:MM" | None, rang, trigger, stop, r,
     r_pct, thin, plan, price_at_alert, plan_source, first_seen_et, url} | None when the doc is not a row (D1).
 
@@ -263,12 +272,15 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
     ⏪ (DECISIONS11 D5): a `gajjala_replay` doc — `_id` == replay_id(date, SYM, setup) (no `#`), state "replayed",
     kind "aplus", an `alert` block — is the REPLAYED line (`id` = its `_id`; at / trigger / stop read from `alert`); a
     `REPLAY:` id in any other state is never a row and never reads live (C6).
-    Alert time (E3) = `push.at` / `at` → else `claimed_at` → else None (the row is "no alert time", never counted)."""
+    Alert time (E3) = `push.at` / `at` → else `claimed_at` → else None (the row is "no alert time", never counted).
+    `variant` (2026-10-27): a 🧠 row's push state is one of the variant's `ledger_push_states` (GG5: "pushed" only, as
+    always; the 1-minute page: "pushed" or "shadow"); links are the variant's deep link."""
     from . import alerts as AL
     from . import potential as PT
     from . import store as ST
     if not isinstance(doc, dict) or kind not in KINDS:
         return None
+    v = V.of(variant)
     sym = str(doc.get("symbol") or "").upper()
     setup = doc.get("setup")
     d = _as_date(doc.get("date")) if isinstance(doc.get("date"), str) else None
@@ -276,7 +288,7 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
         return None
     if kind == KINDS[0]:
         push = doc.get("push")
-        if not isinstance(push, dict) or push.get("state") != "pushed":
+        if not isinstance(push, dict) or push.get("state") not in v.ledger_push_states:
             return None
         if doc.get("first_seen_mode") == ST.JOINED_MODE:
             return None
@@ -293,7 +305,7 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
                 else PLAN_SOURCES[1]
         line = LINES[0]
         url = doc.get("url") if isinstance(doc.get("url"), str) and doc.get("url").startswith("/") else \
-            PT.deep_link(sym, setup)
+            PT.deep_link(sym, setup, v)
     else:
         _id = str(doc.get("_id") or "")
         state = doc.get("state")
@@ -314,7 +326,7 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
         first_et = None
         trig, stop, px, src = (src_doc.get("trigger"), src_doc.get("stop"), src_doc.get("price"),
                                PLAN_SOURCES[3])
-        url = PT.deep_link(sym, setup)
+        url = PT.deep_link(sym, setup, v)
     plan, r = plan_of(trig, stop)
     t, s = _num(trig), _num(stop)
     r_pct = round(float(_D(r) / _D(t) * 100), 4) if plan == PLANS[0] else None
@@ -337,7 +349,27 @@ def _sort_key(row: dict) -> tuple:
             setups.get(row.get("setup"), len(setups)), KINDS.index(row["kind"]) if row.get("kind") in KINDS else 9)
 
 
-def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[list] = None) -> list:
+def _variant_of(store, variant=None):
+    """The variant a ledger call reads for: the one handed in, else the store's own (GG5 for today's store)."""
+    return V.of(variant) if variant is not None else V.of(store)
+
+
+def _record_from(v) -> Optional[date]:
+    """The first session a variant's record reads — None for GG5 (its whole history); the 1-minute page:
+    GC.GG1M_RECORD_FROM (Ajay 2026-10-27 "add the track record for it from today") — no session before it is read."""
+    return None if V.is_gg5(v) else _as_date(GC.GG1M_RECORD_FROM)
+
+
+def _clip(sessions, v) -> list:
+    """`sessions` without any session before the variant's record start (GG5: unchanged)."""
+    start = _record_from(v)
+    out = list(sessions or [])
+    if start is None:
+        return out
+    return [d for d in out if (_as_date(d) or start) >= start]
+
+
+def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[list] = None, variant=None) -> list:
     """D1: every 🧠 push that rang + every A+ shadow / live A+ claim on these ET sessions, as alert_of dicts, ordered
     (date desc, at desc — no alert time last, symbol asc, SETUPS index, KINDS index). Raises LedgerReadError when
     either read is None. A doc that cannot be read as a row is skipped (logged) — the rest stand.
@@ -345,8 +377,14 @@ def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[lis
     replay doc) adds the store's replay_rows as the replayed line; each source keeps only its own lines (a REPLAY doc
     planted in gajjala_alerts is never a row); a replayed row carries `graded` = the doc's own pre-graded columns. A
     replay read that raises or answers None appends "replay" to `faults` and serves without the line (a store without
-    the method: no line, no fault)."""
-    sessions = list(sessions or [])
+    the method: no line, no fault).
+    2026-10-27 — another variant (`variant`, else the store's own): sessions before its record start are never read,
+    no replay line, alert_of with the variant (a row dated before the record start is dropped too)."""
+    v = _variant_of(store, variant)
+    gg5 = V.is_gg5(v)
+    sessions = list(sessions or []) if gg5 else _clip(sessions, v)
+    if not gg5:
+        with_replay = False                                     # the 1-minute page has no ⏪ replay (HIS CALL #15)
     pot = store.potential_pushes(sessions)
     al = store.alert_rows(sessions)
     if pot is None or al is None:
@@ -370,12 +408,14 @@ def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[lis
                               (rep, KINDS[1], (LINES[2],))):
         for doc in docs:
             try:
-                row = alert_of(doc, kind)
+                row = alert_of(doc, kind) if gg5 else alert_of(doc, kind, variant=v)
             except Exception as exc:                            # noqa: BLE001
                 log.warning("gajjala ledger: unreadable %s doc %s: %s", kind, (doc or {}).get("_id"),
                             type(exc).__name__)
                 continue
             if row is None or row["line"] not in lines or row["id"] in seen:
+                continue
+            if not gg5 and _clip([row["date"]], v) == []:       # dated before the record start: never a row
                 continue
             if row["line"] == LINES[2]:
                 row["graded"] = {h: (doc.get(h) if isinstance(doc.get(h), dict) else None)
@@ -386,15 +426,17 @@ def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[lis
     return out
 
 
-def count_today(pot_docs, ledger_docs=None) -> int:
+def count_today(pot_docs, ledger_docs=None, variant=None) -> int:
     """The 🏁 chip count (AMENDMENTS9 E5 "rows graded today"): today's 🧠 rows (alert_of(d, "potential") is not None)
     that carry a stored same-session grade in `ledger_docs` (the session's gajjala_ledger docs). No extra read; no
-    ledger docs given → 0 (the board's GET reads Mongo only — the nightly grades at LEDGER_GRADE_AT_ET)."""
+    ledger docs given → 0 (the board's GET reads Mongo only — the nightly grades at LEDGER_GRADE_AT_ET).
+    `variant` (2026-10-27): the variant's 🧠 rows (alert_of with it); None = GG5, the call as always."""
     graded = {d.get("_id") for d in ledger_docs or [] if isinstance(d, dict) and isinstance(d.get("same"), dict)}
     n = 0
     for d in pot_docs or []:
         try:
-            row = alert_of(d, KINDS[0])
+            row = alert_of(d, KINDS[0]) if variant is None or V.is_gg5(variant) else alert_of(d, KINDS[0],
+                                                                                             variant=variant)
         except Exception:                                       # noqa: BLE001
             row = None
         n += 1 if row is not None and row["id"] in graded else 0
@@ -1147,7 +1189,7 @@ def _span_label(k: str) -> str:
             "all": "All"}.get(k, k)                                                                      # W12
 
 
-def _sessions_for(span_k: str, session: date, store, faults: Optional[list] = None) -> list:
+def _sessions_for(span_k: str, session: date, store, faults: Optional[list] = None, v=None) -> list:
     """The span's sessions. On "all" a replay_dates read that answers None or raises appends "replay" to `faults`
     (served_block then serves REPLAY_FAULT_TEXT) — never folded silently into "no replayed sessions"."""
     from . import context as CX
@@ -1163,7 +1205,7 @@ def _sessions_for(span_k: str, session: date, store, faults: Optional[list] = No
     if dates is None:
         raise LedgerReadError("the alert dates could not be read")
     more = set(dates) | set(store.ledger_dates() or []) | {session.isoformat()}
-    rd = getattr(store, "replay_dates", None)                   # ⏪ DECISIONS11 D5: the replayed sessions too
+    rd = getattr(store, "replay_dates", None) if V.is_gg5(v) else None   # ⏪ DECISIONS11 D5 (GG5 only, 2026-10-27)
     if callable(rd):
         try:
             rdates = rd()
@@ -1545,7 +1587,7 @@ def aplus_block(ap: list, ap_days: list, has_replay: bool, prov: bool) -> dict:
 
 
 def served_block(store, session: date, now: datetime, *, span: str = "", is_today: bool = False,
-                 today: Optional[dict] = None, broker_text_of: Optional[Callable] = None) -> dict:
+                 today: Optional[dict] = None, broker_text_of: Optional[Callable] = None, variant=None) -> dict:
     """The 🏁 sub's served block (§3.8 shape; W1–W15). Mongo reads only; `today` = today_read's dict (provisional same
     cells for today's rows). Counts are per column: the headline (`counts["live"]`, `counts_text`) = the 🧠 pushes only;
     the shadow A+ line (`counts["shadow"]`, `shadow_text`) and the live A+ entries (`counts["entry"]`, `entries_text`,
@@ -1556,7 +1598,9 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     row serves `bucket` / `bucket_text` / `loss_text`; `categories` / `categories_timeline` count the SERVED rows
     (F6), the replayed ones apart (F13) — they never feed a count line or a %. Raises LedgerReadError on a read
     fault (the tab softens it into TRACK_RECORD_FAULT).
-    🚫 DECISIONS12 D2 — the row's broker tag from the tab's callable (owner only); rows_for untouched."""
+    🚫 DECISIONS12 D2 — the row's broker tag from the tab's callable (owner only); rows_for untouched.
+    🚩 `variant` (2026-10-27; else the store's own): the 1-minute page — no session before its record start, no ⏪
+    replay, its words (_variant_words). GG5 serves every byte as before."""
     from . import alerts as AL
     from . import tape as TP                                    # lazy: tape imports this module (DECISIONS11 D3)
     from . import trader_names as TN                            # 📌 2026-10-27 — the served tag words
@@ -1573,8 +1617,14 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     session = _as_date(session)
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
     faults: list = []
-    sessions = _sessions_for(span_k, session, store, faults)
-    rows = rows_for(sessions, store, with_replay=True, faults=faults)          # ⏪ DECISIONS11 D5
+    v = _variant_of(store, variant)
+    gg5 = V.is_gg5(v)
+    if gg5:
+        sessions = _sessions_for(span_k, session, store, faults)
+        rows = rows_for(sessions, store, with_replay=True, faults=faults)      # ⏪ DECISIONS11 D5
+    else:
+        sessions = _clip(_sessions_for(span_k, session, store, faults, v), v)
+        rows = rows_for(sessions, store, faults=faults, variant=v)
     stored_l = store.ledger_docs(sessions)
     if stored_l is None:
         raise LedgerReadError("the ledger could not be read")
@@ -1667,7 +1717,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     ap_prov = any((r["same"] or {}).get("provisional") for r in ap)      # the 🧠 any_prov is untouched
     tl_kinds = TP.views_block()["kinds"]
     rep_text = _replayed_text(counts["replayed"]["same"], counts["replayed"]["next"]) if has_replay else None
-    return {"title": TITLE, "rule_label": RULE_LABEL, "rule_text": rule_text(), "honesty": HONESTY, "span": span_k,
+    block = {"title": TITLE, "rule_label": RULE_LABEL, "rule_text": rule_text(), "honesty": HONESTY, "span": span_k,
             "spans": [{"key": k, "label": _span_label(k)} for k in GC.LEDGER_SPANS],
             "heads": [{"key": k, "label": lab} for k, lab in HEADS],
             "counts": counts,
@@ -1691,6 +1741,27 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             "kinds": _kinds(shown, ap_shown), "kind_param": KIND_PARAM, "kind_empty_text": KIND_EMPTY_TEXT,
             "categories_aplus": _categories(ap_shown),
             "aplus": aplus_block(ap, ap_days, has_replay, ap_prov)}
+    return block if gg5 else _variant_words(block, v)
+
+
+def _variant_words(block: dict, v) -> dict:
+    """🚩 2026-10-27 — the 1-minute page's served words over the SAME block (variant.WORDS_1M, numbers at call time):
+    title, honesty, the 🧠 rows' kind word (every one recorded in shadow, never sent), the headline counts lines led
+    by the counts lead, and the empty text. In place; GG5 never calls it."""
+    block["title"] = V.word("ledger_title", v)
+    block["honesty"] = V.word("ledger_honesty", v)
+    kind_word = V.word("ledger_kind_potential", v)
+    for d in block.get("days") or []:
+        for r in d.get("rows") or []:
+            if (r.get("kind"), r.get("line")) == (KINDS[0], LINES[0]):
+                r["kind_text"] = kind_word
+    lead = V.word("ledger_counts_lead", v)
+    ct = block.get("counts_text")
+    if isinstance(ct, dict):
+        block["counts_text"] = {h: (f"{lead} · {t}" if isinstance(t, str) else t) for h, t in ct.items()}
+    if block.get("empty_text") is not None:
+        block["empty_text"] = V.word("ledger_empty", v)
+    return block
 
 
 __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES", "LedgerReadError", "ledger_id",
