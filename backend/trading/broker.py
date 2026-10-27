@@ -8,8 +8,9 @@ get_broker() selection:
      external account. Switching later = env change + restart, no code.
 
 Both modules expose the SAME duck-typed surface (configured/account/clock/
-positions/open_orders/closed_orders_since/submit_bracket/submit_stop/
-replace_order/cancel_order/close_position/latest_trade/make_client_order_id)
+positions/open_orders/closed_orders_since/closed_orders_for/submit_bracket/
+submit_stop/replace_order/cancel_order/close_position/latest_trade/
+make_client_order_id)
 returning Alpaca-shaped dicts, so exit_engine / entries / auto_entry never
 know which one they hold. The sim additionally exposes process_fills() —
 its matching engine — which exit_engine.tick() duck-calls when present.

@@ -78,6 +78,7 @@ serving (a `frontend/dist` exists from a manual `npm run build`).
 | GET | `/indian-news` | `?symbol=` (optional) | `{symbol, items[], fetchedAt}` | populates `news._cache` under `__IN_*__` key | `news.indian_news` |
 | GET | `/trading/gajjala` | — (admin) | `{date, armed, mode, as_of, status, today[], recent[], journal}` — today's pushed 🚩 A+ alerts LEFT JOIN the lane docs, every row with a served `fate_text` | reads `gajjala_lane`, `gajjala_alerts`, the broker's positions (open rows' last) | `trading.gajjala_entry.tab_payload` |
 | POST | `/trading/gajjala/close/{symbol}` | path (admin, armed) | `{ok, state, symbol, errors[]}`; 400 `engine not armed` / `no open 🚩 Gajjala position on XYZ` | cancels the lane's order or flattens its position through `exit_engine.flatten` | `trading.gajjala_entry.close_now` |
+| GET | `/trading/status` → `lane_pnl` | — (admin) | {title, since, verdict_text, honesty_text, account, account_text, lanes_total, unexplained, unexplained_text, rows[], untraded_text, positions_text} — every word served | reads trade_journal, gajjala_lane, options_positions, zero_dte_positions, the broker's positions | `trading.journal.lane_pnl_block` |
 | POST | `/push/receipt` | `{push_id, endpoint, shown_at}` from the service worker after `showNotification` resolves — PUBLIC path (`_PUBLIC_API_PATHS`): the device's own subscription endpoint is the credential, validated against `push_subscriptions` (2026-10-21, Ajay "Oh man I did not get an A+ alert for it then today" on a sent-3 row) | `{ok, dup}` / 400 / 404 `unknown` (unknown endpoint, unknown push, another user's row — one answer) / 503 | appends ONE receipt per device `{sub: sha1(endpoint), device, shown_at, at}` to the `push_history` row the sender stamped with `push_id` (+ `targets`); never writes `sent`/`failed`/`total`; `/notifications/recent` serves `shown_on` (`text` "shown on 2 of 3 devices (Mac Chrome ×2); no receipt from iPhone Safari") and `/alerts` prints it verbatim — docs/notifications/push_delivery_receipts_2026_10_21.md | `push.receipts.record_receipt`, `push.receipts.shown_on` |
 
 **🚩 Auto-Pilot Gajjala lane (2026-10-20, `backend/trading/gajjala_entry.py`, `docs/trading_gajjala_lane.md`).**
@@ -106,6 +107,17 @@ entry sells `GG_PARTIAL_FRAC` half (VR 11.4, HIS CALL #24 / #25); no entry durin
 clean closed bar after the resume — the doc waits (VR 10.1, HIS CALL #26); an A+ risks `GG_DOUBLE_MULT` 2× once the
 lane's realized P&L this ET month covers `GG_CUSHION_LOSERS` 2 × the trade's single-rate risk, no loss streak, drawdown
 off (VR 11.7); all-in not built). The 🏁 grader is unchanged (+1R). UNMEASURED.
+
+**💵 Auto-Pilot P&L by lane (2026-10-27, `backend/trading/journal.py` lane_pnl, `docs/trading/lane_pnl_2026_10_27.md`).**
+Ajay: "Also in autopilot looks like Gajjala's strategy is making money.. Anyway you can can show me which tab made money or not?"
+`GET /trading/status` serves `lane_pnl` (`journal.lane_pnl_block` over the SAME `journal.summary()` + the broker's positions): one row per
+lane that traded, every word served, printed by the Dashboard's `LanePnlBlock`. `summary.by_strategy` gains `unbooked`, `first_ts`,
+`last_ts`, `label`, `url`, `link_text` per lane, plus a `zero_dte` row merged from `zero_dte_lane.journal_block()` and a `hot_pullback`
+tag inferred from `entry_reason.lane`. A new ledger kind `exit_fill` (`trading/exit_fills.py`, tick step (e2) + a dry-run-first
+back-fill CLI `python -m trading.exit_fills backfill --dry-run | --live`) books the broker's own fill of an engine market sell —
+journal-only: NOT read by the p.299 stop rule (`entries._closed_trade_stats`) or progressive sizing (`progressive.last_gains`).
+🚩 Gajjala trades pair by alert id (the lane's own `gajjala_exit` / `gajjala_lane` book); the breakeven add's stale journal docs are
+marked `superseded`, never deleted. UNMEASURED — a tally of what happened, not a study.
 
 **Module-level state in `main.py`:**
 - `cache: QuoteCache` — `_data` dict + `_ticks` deque per symbol (maxlen=`TICK_WINDOW`=64).

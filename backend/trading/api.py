@@ -487,6 +487,12 @@ def _mark_open(open_docs):
             if qty is not None:
                 unreal_dollars = round(qty * (last - ep), 2)
         out = dict(d)
+        if d.get("fill_wanted"):
+            # 2026-10-27 (BUILD_SPEC28 §3.14): the engine already sold this at market (no booked fill yet) —
+            # never a fake mark on a position the broker no longer holds.
+            out["mark"] = {"last": None, "unrealized_pct": None, "unrealized_dollars": None}
+            marked.append(out)
+            continue
         out["mark"] = {"last": last, "unrealized_pct": unreal_pct,
                        "unrealized_dollars": unreal_dollars}
         marked.append(out)

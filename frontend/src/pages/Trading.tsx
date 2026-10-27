@@ -41,6 +41,7 @@ import { OptionsLaneTab, type OptionsLaneStatus } from '../components/OptionsLan
 import { ZeroDteLaneTab } from '../components/ZeroDteLaneTab';
 import { GajjalaLaneTab } from '../components/GajjalaLaneTab';
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
+import { LanePnlBlock, type LanePnl } from '../components/LanePnlBlock';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
 import { RulesInfo } from '../components/RulesInfo';
@@ -155,6 +156,7 @@ type Status = {
     realized_dollars: number | null; total_pnl_dollars: number | null;
     total_pnl_pct: number | null; position_count: number;
   } | null;
+  /* 💵 P&L by lane (2026-10-27) — every word served by trading/journal.lane_pnl. */ lane_pnl?: LanePnl | null;
   regime: 'normal' | 'difficult';
   streak: { consecutive_losses: number; size_multiplier: number };
   positions: Position[];
@@ -2327,6 +2329,10 @@ export function TradingPage() {
               {status.engine.last_errors.slice(0, 4).join(' · ')}
             </div>
           )}
+
+          {/* b2. 💵 P&L by lane (2026-10-27, Ajay: "Anyway you can can show me which tab made money or not?") —
+              every word and number served by trading/journal.lane_pnl through /trading/status. */}
+          {status.lane_pnl && <LanePnlBlock data={status.lane_pnl} />}
 
           {/* c. Positions (portfolio) — now ABOVE the buyable list (Ajay 2026-06-26) */}
           <PositionsTable positions={status.positions || []}

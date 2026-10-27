@@ -34,6 +34,8 @@ round-trip:
 | `ratchet_breakeven` | `exit_engine.py` (p.308) | stop moved to breakeven at +3R; presence **between** entry and exit ⇒ the trade reached +3R and was protected |
 | `trade_closed` | `exit_engine.py` (p.299) | the exit with realized `gain_pct` and `leg` (`stop`/`take_profit`) |
 | `flatten` / `flatten_all` | `exit_engine.py` (p.302) | a **manual** exit — also closes a trade (leg `flatten`) |
+| `exit_fill` | `trading/exit_fills.py` (2026-10-27, BUILD_SPEC28) | the broker's fill of an engine market sell (`distribution_exit` / `watchdog_exit` / `hot_pullback_exit`, leg `force_exit`) or of a fill-less `flatten` (leg `flatten`): fill, sold qty, order ids, `source` `broker_fill` / `broker_fill_backfill` — **journal-only**; never read by the p.299 stop rule or progressive sizing |
+| `gajjala_exit` | `trading/gajjala_entry.py` | the 🚩 lane's own per-alert P&L: alert_id, exit_kind, exit_px, fill_px, qty, add_qty, pnl_usd, r_mult — the realized $ of an alert-paired 🚩 trade |
 | `auto_entry_blocked` / `_disabled` / `_error` | `auto_entry.py` | decisions that did **not** enter (the decision journal) |
 
 `dry_run=true` rows (a disarmed engine narrating what it *would* do) are
@@ -84,6 +86,30 @@ both are present and otherwise leave it `null` — **never invent a number**.
 `holding_days` is **calendar** days between entry and exit epochs (clearly
 labelled; weekends/holidays included).
 
+### 2-bis. 2026-10-27 additions (BUILD_SPEC28 — "which tab made money")
+
+- **`exit_fill` is an exit.** `_EXIT_KINDS = ("trade_closed", "flatten", "flatten_all", "exit_fill")`. A force-exit
+  `exit_fill` books `gain_dollars = sold qty × (fill − entry)` (the SOLD qty, never the planned entry qty);
+  `realized.source` = the row's `source`.
+- **2026-10-27, fix round.** Every `exit_fill` books the SOLD qty, a `flatten` leg included (a 6-share sale after a
+  56-share plan is −$6, not −$56). An `exit_fill` whose `detail.trade_id` is set and names another round trip never
+  closes this one, in the forward scan or the flatten supersede: an earlier same-symbol trade stays open with
+  `fill_wanted` instead of taking the later trade's sale (no double count, the unbooked flag stays).
+- **`fill_wanted`.** Every generic doc carries `fill_wanted` (null when booked). When the next exit-ish row after the
+  entry is a sent market sell (`distribution_exit` / `watchdog_exit` / `hot_pullback_exit`) or a `flatten` still
+  without a fill, the doc stays **open** with `fill_wanted = {kind, ts, epoch, last, held_qty, reason, queued,
+  window_end_ts}` (bounded at the next same-symbol entry). Its narrative ends "the broker's fill is not booked yet";
+  `GET /trading/journal` gives it no mark; `journal.unbooked_exits()` lists it for the matcher. Never an estimate.
+- **🚩 pairing by alert id.** A `gajjala` entry row resolves its alert id from `entry_reason.alert_id` (or the lane doc's
+  `order_id` / `add_order_id` when the reason was truncated); the breakeven add (`entry_reason.add`, or a
+  `-gg-add-` client order id) merges into its alert's trade (no doc of its own). The ONLY exit an alert-paired trade
+  uses is the lane's `gajjala_exit` row; realized $ / R come from it and the `gajjala_lane` doc
+  (`realized.source = "lane_book"`). A 🚩 entry with no resolvable alert id stays on the generic path.
+- **superseded (never deleted).** `reconcile()` marks a stale add doc already in `trade_journal`
+  `superseded: true, superseded_by: <main trade id>, superseded_reason: "🚩 breakeven add — merged into its alert's
+  trade"`; `load()` and `_summary_core()` skip it; nothing is ever deleted.
+- **Rows without epoch** (the 🔥 lane's `hot_pullback_exit`) get their epoch from `ts` before the oldest-first walk.
+
 ### 2a. Strategy lanes (`entry.strategy`, `entry.entry_reason`, `summary.by_strategy`)
 
 **Ask (Ajay 2026-09-05, verbatim):** *"Keep the minervini entries but also make
@@ -131,6 +157,14 @@ by_strategy: { <lane>: { n, open, closed, wins, losses, win_rate_pct,
   book-wide; this one is a per-lane arithmetic mean, labelled as such.
 - `realized_pnl` — summed `gain_dollars`.
 - Rates are `null` until a lane has a closed trade; `open` counts the rest.
+- 2026-10-27 (BUILD_SPEC28): every row also carries `unbooked` (open docs with `fill_wanted` + closed docs with a
+  null `gain_dollars`), `first_ts` / `last_ts` (the lane's first entry, its last exit-or-entry, ISO UTC), and the served
+  `label` / `url` / `link_text` (`journal.LANE_LABELS` / `LANE_LINKS`, default `/trading?view=journal`). Two lane rows
+  join: **`zero_dte`** merged from `zero_dte_lane.journal_block()` (n = open + closed — the missed orders excluded;
+  `expectancy_pct` = the lane's `avg_premium_return_pct`; `avg_r` null) and **`hot_pullback`** (tag inferred from
+  `entry_reason.lane == "hot_pullback"`; `entries.STRATEGIES` unchanged). `journal.lane_pnl` overlays the broker's open
+  P&L on these rows for `GET /trading/status` → `lane_pnl` (see `docs/trading/lane_pnl_2026_10_27.md`). UNMEASURED —
+  a tally, not a study.
 
 Small-sample rule applies per lane, harder: one catalyst buy a day means the
 `catalyst` row is anecdote for weeks.

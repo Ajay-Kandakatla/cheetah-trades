@@ -375,6 +375,22 @@ def closed_orders_since(iso_ts: str) -> list:
     return [_public(o) for o in rows[:500]]
 
 
+def closed_orders_for(symbol: str, after_iso: str, until_iso: Optional[str] = None) -> list:
+    """Terminal orders for ONE symbol submitted after `after_iso` (before
+    `until_iso`), oldest first — the sim mirror of broker_alpaca's
+    closed_orders_for (no page cap). Read-only."""
+    db = _require_db()
+    sym = (symbol or "").upper()
+    lo = after_iso or ""
+    rows = [o for o in db.sim_orders.find()
+            if (o.get("status") or "").lower() in TERMINAL_STATUSES
+            and (o.get("symbol") or "").upper() == sym
+            and lo < (o.get("submitted_at") or "")
+            and (until_iso is None or (o.get("submitted_at") or "") < until_iso)]
+    rows.sort(key=lambda o: o.get("submitted_at") or "")
+    return [_public(o) for o in rows]
+
+
 def latest_trade(symbol: str) -> Optional[float]:
     return _live_price_map([(symbol or "").upper()]).get((symbol or "").upper())
 

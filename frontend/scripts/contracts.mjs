@@ -9735,7 +9735,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9948,7 +9949,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10227,7 +10229,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10425,7 +10428,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10522,7 +10526,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10670,7 +10675,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10785,7 +10791,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10834,7 +10841,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10972,7 +10980,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11053,7 +11062,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11167,7 +11177,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11356,7 +11367,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11408,7 +11420,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11480,7 +11493,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11546,7 +11560,8 @@ const CONTRACTS = [
       // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11880,8 +11895,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // 2026-10-27: 🚩 1-minute page inserted — its ✨ (chart-maps-gajjala-1m-2026-10-27) took the FIRST slot the same day; FIRST → first two, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -12038,7 +12054,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (first !== ID) errs.push(`newFeatures.ts: '${ID}' must be the FIRST entry (found '${first}')`);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — FIRST → one of the first two, dated.
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
       if (!ent.includes("addedAt: '2026-10-27'")) errs.push('the ✨ must be dated 2026-10-27');
@@ -12227,8 +12245,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened to the top two, dated.
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened to the top three, dated.
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -12243,6 +12262,97 @@ const CONTRACTS = [
         if ((MODE === 'shadow') !== /\bshadow\b/.test(label)) errs.push(`${W} says shadow iff GAJJALA_1M_PUSH_MODE is "shadow" (it is ${MODE})`);
         errs.push(...wordErrs(W, label));
       }
+      return errs;
+    },
+  },
+  {
+    name: '💵 Auto-Pilot P&L by lane (2026-10-27)',
+    file: 'src/pages/Trading.tsx',
+    checks(tr) {
+      // Ajay 2026-10-27 ~17:15 ET: "Also in autopilot looks like Gajjala's strategy is making money.. Anyway you can can
+      // show me which tab made money or not?" (BUILD_SPEC28). Every check reads the REAL file: (a) Trading.tsx imports
+      // LanePnlBlock, types `lane_pnl` on Status and mounts the served block under the account line and above Positions;
+      // (b) LanePnlBlock formats no number, has no table / horizontal scroll, wraps (min-width 0 + flex-wrap), carries
+      // no JSX literal text and no b-word / "edge"; (c) the backend keeps the journal-only `exit_fill` kind, both lane
+      // merges, `lane_pnl`, the honesty line, the status + tick (e2) seams, a matcher that never trades or pushes and
+      // the read-only broker reader; (d) the ✨ FIRST, routed, dated, his words verbatim, UNMEASURED, "Not advice.";
+      // (e) the doc (HIS CALL / UNMEASURED, no # line in a shell block) and the SPECS paragraph; (f) the lane order
+      // carries zero_dte + hot_pullback. UNMEASURED — a tally of what happened, not a study.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const HIS = "Also in autopilot looks like Gajjala's strategy is making money.. Anyway you can can show me which tab made money or not?";
+      const ID = 'autopilot-lane-pnl-2026-10-27';
+      const EDGE = /\bedge\b/i;
+      const BOUNCE = /bounce/i;
+      const JSX_TEXT = />\s*[A-Za-z][^<>{}]*<\//;
+      const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/.*$/gm, '$1');
+      // self-tests — the regexes bite where they must and not where they must not
+      if (!JSX_TEXT.test('<b>closed</b>')) errs.push('self-test: the JSX-literal regex misses <b>closed</b>');
+      if (JSX_TEXT.test('<b>{data.verdict_text}</b>')) errs.push('self-test: the JSX-literal regex flags a served {expr}');
+      if (EDGE.test('ledger') || !EDGE.test('no Edge here')) errs.push('self-test: the edge regex must pass "ledger" and catch "Edge"');
+      // (a) Trading.tsx — import, Status type, the mount between the account line and Positions
+      if (!/import\s*\{[^}]*\bLanePnlBlock\b[^}]*\}\s*from\s*'\.\.\/components\/LanePnlBlock'/.test(tr)) errs.push("Trading.tsx no longer imports LanePnlBlock from '../components/LanePnlBlock'");
+      const MOUNT = 'status.lane_pnl && <LanePnlBlock data={status.lane_pnl} />';
+      const mAt = tr.indexOf(MOUNT);
+      const hdrAt = tr.indexOf('status.pnl_summary && status.pnl_summary.total_pnl_dollars != null');
+      const posAt = tr.indexOf('<PositionsTable positions={status.positions || []}');
+      if (mAt < 0) errs.push(`Trading.tsx lost the mount: ${MOUNT}`);
+      else if (!(hdrAt >= 0 && posAt >= 0 && hdrAt < mAt && mAt < posAt)) errs.push('the 💵 lane block must sit under the account line (pnl_summary header) and above <PositionsTable>');
+      const stAt = tr.indexOf('\ntype Status = {');
+      const stEnd = stAt < 0 ? -1 : tr.indexOf('\n};', stAt);
+      const stBody = stAt < 0 ? '' : tr.slice(stAt, stEnd < 0 ? undefined : stEnd);
+      if (!stBody.includes('lane_pnl?: LanePnl | null')) errs.push('type Status lacks `lane_pnl?: LanePnl | null`');
+      // (b) the component — prints served strings only, phone-safe
+      const lp = tryRead('src/components/LanePnlBlock.tsx', 'LanePnlBlock');
+      if (lp) {
+        for (const bad of ['toFixed(', 'toLocaleString(', 'Intl.', '<table', 'overflowX']) if (lp.includes(bad)) errs.push(`LanePnlBlock.tsx says ${bad} — it formats no number and never scrolls sideways`);
+        for (const need of ['minWidth: 0', "flexWrap: 'wrap'"]) if (!lp.includes(need)) errs.push(`LanePnlBlock.tsx lacks ${need} (430 px phone)`);
+        const code = stripComments(lp);
+        const lit = JSX_TEXT.exec(code);
+        if (lit) errs.push(`LanePnlBlock.tsx carries a JSX literal text node (${lit[0].slice(0, 40)}) — every word is served`);
+        if (BOUNCE.test(lp)) errs.push('LanePnlBlock.tsx says bounce — reversal, never bounce');
+        if (EDGE.test(lp)) errs.push('LanePnlBlock.tsx says "edge" — UNMEASURED, never claim an edge');
+      }
+      // (c) the backend seams — accounting only
+      const jn = tryRead('../backend/trading/journal.py', 'journal.py');
+      for (const need of ['_EXIT_KINDS = ("trade_closed", "flatten", "flatten_all", "exit_fill")', 'options_lane.journal_block()',
+        'zero_dte_lane.journal_block()', 'def lane_pnl(', 'LANE_PNL_HONESTY']) if (jn && !jn.includes(need)) errs.push(`journal.py lost: ${need}`);
+      const ee = tryRead('../backend/trading/exit_engine.py', 'exit_engine.py');
+      for (const need of ['out["lane_pnl"] = journal.lane_pnl_block(', 'summary["exit_fills"] = exit_fills.book(']) if (ee && !ee.includes(need)) errs.push(`exit_engine.py lost: ${need}`);
+      const ef = tryRead('../backend/trading/exit_fills.py', 'exit_fills.py');
+      for (const bad of ['submit_', 'cancel_order', 'replace_order', 'close_position', '_notify_autopilot']) if (ef.includes(bad)) errs.push(`exit_fills.py names ${bad} — the matcher never trades or pushes`);
+      const ba = tryRead('../backend/trading/broker_alpaca.py', 'broker_alpaca.py');
+      if (ba && !ba.includes('def closed_orders_for(')) errs.push('broker_alpaca.py lacks def closed_orders_for(');
+      // (d) the ✨ — FIRST, routed, dated, his words verbatim
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be the FIRST entry (found '${first}')`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
+      if (!ent.includes("route: '/trading?view=dashboard'")) errs.push('the 💵 ✨ must route to /trading?view=dashboard');
+      if (!ent.includes("addedAt: '2026-10-27'")) errs.push('the 💵 ✨ must be dated 2026-10-27');
+      const label = (/label: "([\s\S]*?)" \}/.exec(ent) || [])[1] || '';
+      if (!label.includes(HIS)) errs.push('the 💵 ✨ label must quote his sentence verbatim');
+      for (const w of ['UNMEASURED', 'Not advice.']) if (!label.includes(w)) errs.push(`the 💵 ✨ label must say ${w}`);
+      if (EDGE.test(label) || BOUNCE.test(label)) errs.push('the 💵 ✨ label says edge / bounce');
+      // (e) the doc + SPECS
+      const DOC = '../docs/trading/lane_pnl_2026_10_27.md';
+      const doc = tryRead(DOC, 'the lane P&L doc');
+      for (const need of ['HIS CALL', 'UNMEASURED']) if (doc && !doc.includes(need)) errs.push(`${DOC.slice(3)} must say ${need}`);
+      let inF = false, lang = '';
+      for (const l of doc.split('\n')) {
+        const f = /^\s*```(\w*)/.exec(l);
+        if (f) { if (inF) inF = false; else { inF = true; lang = f[1]; } continue; }
+        if (inF && ['bash', 'sh', 'zsh', 'shell', 'console'].includes(lang) && /^\s*#/.test(l)) errs.push(`${DOC.slice(3)} has a # line inside a shell block (his zsh): ${l.trim().slice(0, 50)}`);
+      }
+      const specs = tryRead('../SPECS.md', 'SPECS');
+      const OPENER = '**💵 Auto-Pilot P&L by lane (2026-10-27, `backend/trading/journal.py` lane_pnl, `docs/trading/lane_pnl_2026_10_27.md`).**';
+      if (specs && !specs.includes(OPENER)) errs.push(`SPECS.md lacks the paragraph opener ${OPENER}`);
+      // (f) the lane order — the existing JournalByStrategy pins stay; zero_dte + hot_pullback join
+      const jbs = tryRead('src/components/JournalByStrategy.tsx', 'JournalByStrategy');
+      const ord = (/export const STRATEGY_ORDER[^=]*=\s*\[([^\]]*)\]/.exec(jbs) || [])[1] || '';
+      for (const k of ["'zero_dte'", "'hot_pullback'"]) if (!ord.includes(k)) errs.push(`JournalByStrategy STRATEGY_ORDER lacks ${k}`);
       return errs;
     },
   },

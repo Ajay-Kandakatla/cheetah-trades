@@ -58,13 +58,14 @@ describe('JournalByStrategy — rows', () => {
   });
 
   // 2026-10-20: seven lanes (the 🚩 Gajjala lane joined, BUILD_SPEC17 §3.7) — the count is STRATEGY_ORDER's.
+  // 2026-10-27 (BUILD_SPEC28): nine lanes — 🎯 0DTE and 🔥 hot pullback joined (two renders → 18).
   it('an absent by_strategy block renders every lane muted, plus the honesty note (negative)', () => {
-    expect(STRATEGY_ORDER).toHaveLength(7);
+    expect(STRATEGY_ORDER).toHaveLength(9);
     render(<JournalByStrategy byStrategy={undefined} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(7);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(9);
     expect(screen.getByText(HONESTY_NOTE)).toBeInTheDocument();
     render(<JournalByStrategy byStrategy={null} />);
-    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(14);
+    expect(screen.getAllByText(NO_TRADES_TEXT)).toHaveLength(18);
   });
 
   it('a lane the server adds that we do not know still gets a row, after the canonical lanes', () => {
@@ -141,7 +142,10 @@ describe('JournalByStrategy — options lane (2026-09-06)', () => {
     render(<JournalByStrategy byStrategy={{ ...FULL, options_zone: { n: 2, open: 1, closed: 1, wins: 1, losses: 0, win_rate_pct: 100, avg_r: null, expectancy_pct: 38.5, realized_pnl: 231.0 } }} />);
     const rows = screen.getAllByRole('row').slice(1);
     const keys = rows.map((r) => r.getAttribute('data-strategy'));
-    expect(keys.indexOf('options_zone')).toBe(keys.indexOf('manual') - 1);
+    // 2026-10-27 (BUILD_SPEC28): 🎯 0DTE and 🔥 hot pullback now sit between Options and manual —
+    // Options stays before manual, directly before 🎯 0DTE.
+    expect(keys.indexOf('options_zone')).toBeLessThan(keys.indexOf('manual'));
+    expect(keys.indexOf('options_zone')).toBe(keys.indexOf('zero_dte') - 1);
     const o = screen.getByRole('row', { name: /🎛️ Options/ });
     expect(within(o).getByText('🎛️ Options')).toBeInTheDocument();
     expect(within(o).getByText('+38.5%')).toBeInTheDocument();
@@ -214,5 +218,35 @@ describe('JournalByStrategy — 🚩 Gajjala lane (2026-10-20)', () => {
     expect(m.blurb).not.toMatch(/bounc|TLSW|TTLAC|Minervini p\./i);
     render(<StrategyChip strategy="gajjala" />);
     expect(screen.getByTestId('strategy-chip')).toHaveTextContent('🚩 Gajjala');
+  });
+});
+
+/* 💵 P&L by lane (2026-10-27, BUILD_SPEC28 §3.15) — the journal now serves a
+   zero_dte row (merged from the 0DTE lane's own ledger) and a hot_pullback row
+   (journal-side tag). Both must read by name, after Options and before manual,
+   never as an unknown lane. */
+describe('JournalByStrategy — 🎯 0DTE + 🔥 hot pullback rows (2026-10-27)', () => {
+  it('zero_dte renders "🎯 0DTE" and hot_pullback "🔥 hot pullback", between Options and manual', () => {
+    render(<JournalByStrategy byStrategy={{
+      ...FULL,
+      zero_dte: { n: 61, open: 0, closed: 61, wins: 20, losses: 41, win_rate_pct: 32.8, avg_r: null, expectancy_pct: -4.1, realized_pnl: -692 },
+      hot_pullback: { n: 1, open: 1, closed: 0 },
+    }} />);
+    expect(within(rowOf(/🎯 0DTE/)).getByText('🎯 0DTE')).toBeInTheDocument();
+    expect(within(rowOf(/🔥 hot pullback/)).getByText('🔥 hot pullback')).toBeInTheDocument();
+    const keys = screen.getAllByRole('row').slice(1).map((r) => r.getAttribute('data-strategy'));
+    expect(keys.indexOf('zero_dte')).toBe(keys.indexOf('options_zone') + 1);
+    expect(keys.indexOf('hot_pullback')).toBe(keys.indexOf('manual') - 1);
+    // NEGATIVE: neither is shown as an unknown lane (underscores spaced).
+    expect(screen.queryByText(/zero dte|hot_pullback/)).toBeNull();
+  });
+
+  it('NEGATIVE: the new blurbs say UNMEASURED and never "bounce"', () => {
+    for (const k of ['zero_dte', 'hot_pullback']) {
+      const m = strategyMeta(k);
+      expect(m.blurb).toMatch(/UNMEASURED/);
+      expect(`${m.label} ${m.blurb}`).not.toMatch(/bounc/i);
+      expect(m.blurb).not.toMatch(/not one the page knows/);
+    }
   });
 });

@@ -411,7 +411,10 @@ def test_summary_by_strategy(db):
     cat = bs["catalyst"]
     assert cat == {"n": 1, "open": 1, "closed": 0, "wins": 0, "losses": 0,
                    "win_rate_pct": None, "avg_r": None, "expectancy_pct": None,
-                   "realized_pnl": 0.0}
+                   "realized_pnl": 0.0,
+                   # 2026-10-27 (BUILD_SPEC28 §3.6): the 💵 P&L-by-lane keys.
+                   "unbooked": 0, "first_ts": _ts(BASE + 1200), "last_ts": _ts(BASE + 1200),
+                   "label": "🗞️ catalyst", "url": "/trading?view=journal", "link_text": "→ Journal"}
     mv = bs["minervini"]                               # AAA: 12 sh, 182.40 -> 209.80
     assert mv["closed"] == 1 and mv["wins"] == 1 and mv["realized_pnl"] == 328.8
     assert mv["avg_r"] == round(328.8 / (12 * (182.40 - 169.63)), 2)

@@ -1283,3 +1283,72 @@ def test_gajjala_lane_2026_10_20_owner_numbers_and_seams():
     assert "broker_alpaca" not in gl and "get_broker" in gl, "the lane goes through the broker factory"
     assert 'tif="day"' in gl and 'order_intent="gg-" + setup' in gl and "TE.enter(" in gl
     assert "submit_bracket" not in gl, "the lane buys through entries.enter only"
+
+
+def _lane_pnl_pin_errors(jn: str, ef: str, eng: str, tick: str, entries_src: str, prog_src: str) -> list:
+    """The BUILD_SPEC28 accounting-only pins as a pure checker, so the test can prove each pin bites (NEGATIVES)."""
+    errs = []
+    for need in ('_EXIT_KINDS = ("trade_closed", "flatten", "flatten_all", "exit_fill")', "options_lane.journal_block()",
+                 "zero_dte_lane.journal_block()", "def lane_pnl(", "LANE_PNL_HONESTY"):
+        if need not in jn:
+            errs.append("journal.py lost: %s" % need)
+    for need in ('out["lane_pnl"] = journal.lane_pnl_block(', 'summary["exit_fills"] = exit_fills.book('):
+        if need not in eng:
+            errs.append("exit_engine.py lost: %s" % need)
+    for bad in ("submit_", "cancel_order", "replace_order", "close_position", "_notify_autopilot"):
+        if bad in ef:
+            errs.append("exit_fills.py names %s — accounting only" % bad)
+    if ef.count("delete_many(") != 1:
+        errs.append("exit_fills.py must call delete_many( exactly once (the scoped rollback)")
+    if '{"kind": "exit_fill", "detail.source": SOURCE_BACKFILL}' not in ef:
+        errs.append("exit_fills.py lost the scoped rollback filter")
+    for name, src in (("entries.py", entries_src), ("progressive.py", prog_src)):
+        if "exit_fill" in src:
+            errs.append("%s reads exit_fill — the p.299 stop / progressive sizing must never see it" % name)
+        if "trade_closed" not in src:
+            errs.append("%s no longer reads trade_closed" % name)
+    at = tick.find('summary["exit_fills"] = exit_fills.book(')
+    lo = tick.find("processed_order_ids=processed_ids[-PROCESSED_IDS_KEEP:]")
+    hi = tick.find('summary["auto_entry"] = auto_entry.run(')
+    if not (at >= 0 and lo >= 0 and hi >= 0 and lo < at < hi):
+        errs.append("tick step (e2) must sit after the streak's update_config and before (f) auto_entry")
+    return errs
+
+
+def test_lane_pnl_2026_10_27_accounting_only():
+    """Ajay 2026-10-27: "Also in autopilot looks like Gajjala's strategy is making money.. Anyway you can can show me
+    which tab made money or not?" (BUILD_SPEC28). The per-lane P&L is ACCOUNTING ONLY: engine-sell fills are booked as
+    the journal-only `exit_fill` kind (never `trade_closed`, which feeds the p.299 stop rule and progressive sizing),
+    the matcher never trades or pushes, the rollback is scoped, and tick step (e2) sits between (e) and (f)."""
+    import inspect
+    from trading import exit_engine as EE
+
+    def _rd(name):
+        with open(os.path.join(TRADING_DIR, name), encoding="utf-8") as fh:
+            return fh.read()
+
+    jn, ef, eng = _rd("journal.py"), _rd("exit_fills.py"), _rd("exit_engine.py")
+    entries_src, prog_src = _rd("entries.py"), _rd("progressive.py")
+    tick = inspect.getsource(EE.tick)
+    assert "def closed_orders_for(" in _rd("broker_alpaca.py")
+    assert _lane_pnl_pin_errors(jn, ef, eng, tick, entries_src, prog_src) == []
+
+    # NEGATIVES — every pin bites on a mutated copy.
+    def errs(**kw):
+        base = dict(jn=jn, ef=ef, eng=eng, tick=tick, entries_src=entries_src, prog_src=prog_src)
+        base.update(kw)
+        return _lane_pnl_pin_errors(**base)
+
+    assert errs(jn=jn.replace('"flatten_all", "exit_fill")', '"flatten_all")'))
+    assert errs(jn=jn.replace("zero_dte_lane.journal_block()", "zero_dte_lane.block()"))
+    assert errs(eng=eng.replace('out["lane_pnl"] = journal.lane_pnl_block(', 'out["lane_pnl"] = None  # ('))
+    assert errs(ef=ef + "\nbrk.close_position(sym)\n")
+    assert errs(ef=ef + "\nEE._notify_autopilot('x')\n")
+    assert errs(ef=ef + "\ndb.trade_ledger.delete_many({})\n")
+    assert errs(ef=ef.replace('{"kind": "exit_fill", "detail.source": SOURCE_BACKFILL}', '{"kind": "exit_fill"}'))
+    assert errs(entries_src=entries_src + '\nKINDS = ("trade_closed", "exit_fill")\n')
+    assert errs(prog_src=prog_src.replace("trade_closed", "trade_done"))
+    at = tick.index('summary["exit_fills"] = exit_fills.book(')
+    moved = tick[:at] + tick[at:].replace('summary["exit_fills"] = exit_fills.book(', "pass  # moved", 1) \
+        + '\nsummary["exit_fills"] = exit_fills.book(\n'
+    assert errs(tick=moved), "(e2) after (f) must fail the order pin"

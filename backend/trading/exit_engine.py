@@ -366,8 +366,16 @@ def _held_for_orders(err) -> bool:
 
 
 def ledger(kind: str, symbol: Optional[str] = None, detail: Optional[dict] = None,
-           dry_run: bool = False, cite: Optional[str] = None) -> dict:
-    row = {"ts": _utc_iso(), "epoch": time.time(), "kind": kind,
+           dry_run: bool = False, cite: Optional[str] = None,
+           at: Optional[datetime] = None) -> dict:
+    """`at` (2026-10-27, BUILD_SPEC28 — an aware datetime) stamps the row at
+    that moment instead of now: trading/exit_fills.py books a broker fill at
+    the broker's own filled_at. Omitted → ts/epoch = now (unchanged)."""
+    if at is not None:
+        ts, epoch = _utc_iso(at.astimezone(timezone.utc)), at.timestamp()
+    else:
+        ts, epoch = _utc_iso(), time.time()
+    row = {"ts": ts, "epoch": epoch, "kind": kind,
            "symbol": symbol, "detail": detail or {},
            "dry_run": bool(dry_run), "cite": cite}
     db = _db()
@@ -478,9 +486,32 @@ def account_starting_cash(acct: dict) -> float:
         return equity
 
 
+def account_baseline_ts(acct: dict) -> Optional[str]:
+    """The `snapshot_ts` of the persisted baseline `account_starting_cash`
+    reads (same key) — the "since" date of the P&L by lane (2026-10-27,
+    BUILD_SPEC28). None for the SIM (it reports `starting_cash` itself), when
+    no baseline was ever seeded, or when Mongo is unreadable. NEVER seeds."""
+    acct = acct or {}
+    if acct.get("starting_cash") is not None:
+        return None
+    key = str(acct.get("account_number") or acct.get("id") or _broker_mode())
+    coll = _baseline_coll()
+    if coll is None:
+        return None
+    try:
+        doc = coll.find_one({"account_key": key})
+        if doc is None:
+            return None
+        ts = doc.get("snapshot_ts")
+        return str(ts) if ts else None
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("account baseline ts read failed (%s): %s", key, exc)
+        return None
+
+
 # ── Account P&L summary (Auto-Pilot dashboard) ─────────────────────────────
 
-def pnl_summary(account, positions) -> dict:
+def pnl_summary(account, positions, option_cost_basis: float = 0.0) -> dict:
     """Account-level P&L roll-up for the Auto-Pilot dashboard (portfolio-style):
     what we STARTED with vs equity now, plus invested / unrealized / realized.
     Ajay 2026-06-18 ("I can't tell if we made money … how much did we enter
@@ -488,7 +519,11 @@ def pnl_summary(account, positions) -> dict:
 
     Identity for the SIM (no deposits/withdrawals):
         equity = starting_cash + realized + unrealized
-    so realized = total_pnl − unrealized."""
+    so realized = total_pnl − unrealized.
+
+    `option_cost_basis` (2026-10-27, BUILD_SPEC28 §8 #3): the held option
+    positions' cost basis — `positions` carries stock only, so without it the
+    options' full market value counted as unrealized gain."""
     acct = account or {}
     starting = float(acct.get("starting_cash") or 0)
     equity = float(acct.get("equity") or 0)
@@ -496,6 +531,7 @@ def pnl_summary(account, positions) -> dict:
     cost_basis = 0.0
     for p in positions or []:
         cost_basis += float(p.get("qty") or 0) * float(p.get("avg_entry") or 0)
+    cost_basis += float(option_cost_basis or 0)
     market_value = round(equity - cash, 2)               # authoritative (account equity)
     unreal = round(market_value - cost_basis, 2)
     total = round(equity - starting, 2) if starting else None
@@ -1389,6 +1425,21 @@ def tick(force: bool = False) -> dict:
     summary["streak"] = {"consecutive_losses": losses,
                          "size_multiplier": risk_rules.size_multiplier(losses)}
 
+    # (e2) engine-sell fills — ACCOUNTING ONLY (trading/exit_fills.py): a distribution_exit / watchdog_exit /
+    # hot_pullback_exit or fill-less flatten whose market sell has filled is booked as ONE exit_fill ledger row at
+    # the broker's fill, so the journal closes the round trip. Reads the broker, writes the ledger only; no order,
+    # no push, never touches the streak or processed_order_ids. Fenced like (f).
+    try:
+        from trading import exit_fills
+        held = {(p.get("symbol") or "").upper() for p in positions if (p.get("asset_class") or "") != "us_option"}
+        summary["exit_fills"] = exit_fills.book(broker, held_symbols=held,
+                                                skip_symbols={e["symbol"] for e in get_config()["flatten_queue"]},
+                                                lookback_days=FLATTEN_SENT_LOOKBACK_DAYS,
+                                                source=exit_fills.SOURCE_LIVE)
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("exit fills failed: %s", exc)
+        summary["errors"].append("exit_fills: %s" % exc)
+
     # (f) auto-entry — AFTER exit reconciliation, fully fenced: a buy-side
     # crash can never break stop protection above.
     try:
@@ -1604,8 +1655,12 @@ def status() -> dict:
                                "error": str(exc)}
     if not out["configured"]:
         return out
+    raw_positions = None
+    since_ts = None
+    opt_cost = 0.0
     try:
         acct = broker.account()
+        since_ts = account_baseline_ts(acct)
         out["account"] = {"equity": float(acct.get("equity") or 0),
                           "cash": float(acct.get("cash") or 0),
                           "buying_power": float(acct.get("buying_power") or 0),
@@ -1613,7 +1668,8 @@ def status() -> dict:
         out["market_open"] = bool(broker.clock().get("is_open"))
         out["regime"] = regime()
         orders = _flatten_orders(broker.open_orders())
-        for pos in broker.positions():
+        raw_positions = broker.positions()
+        for pos in raw_positions:
             if (pos.get("asset_class") or "") == "us_option":
                 continue                       # shown by the options lane block
             sym = (pos.get("symbol") or "").upper()
@@ -1693,6 +1749,11 @@ def status() -> dict:
                 "exit_queued": qe is not None,
                 "exit_queue_state": qe.get("state") if qe is not None else None,
             })
+        # The held option positions' cost basis (BUILD_SPEC28 §8 #3): the
+        # options are not in out["positions"], so pnl_summary needs it to keep
+        # their market value from reading as unrealized gain.
+        opt_cost = sum(float(p.get("cost_basis") or 0) for p in raw_positions
+                       if (p.get("asset_class") or "") == "us_option")
     except Exception as exc:                       # noqa: BLE001 — BrokerError is pre-scrubbed
         out["error"] = str(exc)
     # Real engine heartbeat (its 1-min tick), so the page can warn when order
@@ -1707,7 +1768,16 @@ def status() -> dict:
     # Count of OPEN positions with NO resting stop — "real risk uncovered now".
     out["unprotected"] = [p["symbol"] for p in out["positions"] if not p.get("protected")]
     # Portfolio-style account P&L (started-with vs now) for the dashboard header.
-    out["pnl_summary"] = pnl_summary(out.get("account"), out.get("positions"))
+    out["pnl_summary"] = pnl_summary(out.get("account"), out.get("positions"), option_cost_basis=opt_cost)
+    # 💵 P&L by lane (2026-10-27, BUILD_SPEC28): journal.lane_pnl_block — the
+    # ONE engine — over the same broker positions; accounting only.
+    try:
+        from trading import journal
+        out["lane_pnl"] = journal.lane_pnl_block(raw_positions, out["pnl_summary"], since_ts,
+                                                 lane_status={"options_zone": out.get("options_lane"),
+                                                              "zero_dte": out.get("zero_dte_lane")})
+    except Exception as exc:                       # noqa: BLE001
+        out["lane_pnl"] = {"error": "P&L by lane unavailable (%s)" % type(exc).__name__}
     return out
 
 

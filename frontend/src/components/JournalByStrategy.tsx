@@ -17,7 +17,7 @@
  */
 import type { CSSProperties } from 'react';
 
-export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual' | 'gajjala';
+export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual' | 'gajjala' | 'zero_dte' | 'hot_pullback';
 
 /** One lane's block in journal.summary.by_strategy. Every field optional —
  *  the API and the page deploy separately, and a lane the engine has never
@@ -39,8 +39,11 @@ export type StrategyMeta = { glyph: string; label: string; blurb: string };
 /** Fixed row order — the 🚩 Gajjala lane first (2026-10-20: "only use the
  *  Gajjalas strategies please" — the lane the Auto-Pilot trades now; BUILD_SPEC17
  *  HIS CALL #12), then the book lane, the two zone lanes, the catalyst lane, the
- *  options lane (2026-09-06), then hand entries. */
-export const STRATEGY_ORDER: StrategyKey[] = ['gajjala', 'minervini', 'demand_zone', 'breakout', 'catalyst', 'options_zone', 'manual'];
+ *  options lane (2026-09-06), then hand entries.
+ *  2026-10-27 (BUILD_SPEC28, 💵 P&L by lane): the 🎯 0DTE lane (merged in from
+ *  its own position ledger) and the 🔥 hot pullback lane (journal-side tag from
+ *  entry_reason.lane) get their own rows after Options, before manual. */
+export const STRATEGY_ORDER: StrategyKey[] = ['gajjala', 'minervini', 'demand_zone', 'breakout', 'catalyst', 'options_zone', 'zero_dte', 'hot_pullback', 'manual'];
 
 export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
   gajjala: {
@@ -67,6 +70,8 @@ export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
     glyph: '🎛️', label: 'Options',
     blurb: 'Paper calls / bull call spreads on the same demand-zone touch the stock lane buys (the alert gates); the row is merged in from the lane\'s own position ledger — owner rules, not the book.',
   },
+  zero_dte: { glyph: '🎯', label: '0DTE', blurb: "Paper same-day options on Signal Lab tags; the row is merged in from the lane's own position ledger — owner rules, UNMEASURED." },
+  hot_pullback: { glyph: '🔥', label: 'hot pullback', blurb: 'The 🔥 Hot Pullback paper lane — owner rules, UNMEASURED.' },
   manual: {
     glyph: '✋', label: 'manual',
     blurb: 'Entered by hand on this page (also every row from before 2026-09-05, which carried no lane tag).',

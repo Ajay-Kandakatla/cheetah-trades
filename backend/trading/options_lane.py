@@ -1175,6 +1175,11 @@ def journal_block() -> dict:
             log.warning("options_lane: journal read failed: %s", exc)
     b = {"n": 0, "open": 0, "closed": 0, "wins": 0, "losses": 0, "win_rate_pct": None,
          "avg_r": None, "expectancy_pct": None, "realized_pnl": 0.0}
+    # 💵 P&L by lane (2026-10-27, BUILD_SPEC28 §3.8): the lane's first entry / last close, None when empty.
+    firsts = [str(d.get("entry_ts")) for d in docs if d.get("entry_ts")]
+    lasts = [str(d.get("closed_ts") or d.get("entry_ts")) for d in docs if d.get("closed_ts") or d.get("entry_ts")]
+    b["first_ts"] = min(firsts) if firsts else None
+    b["last_ts"] = max(lasts) if lasts else None
     gains = []
     for d in docs:
         b["n"] += 1

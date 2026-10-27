@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-27 ~17:15 ET (verbatim in the label, his spelling kept): "Also in autopilot looks like Gajjala's strategy
+  // is making money.. Anyway you can can show me which tab made money or not?" (BUILD_SPEC28). ONE engine:
+  // trading/journal.py lane_pnl overlays the broker's open P&L and every served word on the SAME journal.summary()
+  // by_strategy; /trading/status serves it as `lane_pnl`, the Dashboard's LanePnlBlock prints it. Engine market sells
+  // book the broker's own fill as a journal-only `exit_fill` row (never trade_closed — the p.299 stop rule and
+  // progressive sizing stay byte-identical); each 🚩 alert is one trade. Paper, gross of fees. UNMEASURED — a tally,
+  // not a study. Pinned by scripts/contracts.mjs ("💵 Auto-Pilot P&L by lane (2026-10-27)").
+  { id: 'autopilot-lane-pnl-2026-10-27', addedAt: '2026-10-27', route: '/trading?view=dashboard',
+    label: "💵 Which Auto-Pilot lane made money: a block under the account line on the Auto-Pilot Dashboard — one row per lane that traded (🚩 Gajjala, 📈 Minervini SEPA, 🚀 breakout, 🧲 demand zone, 🎛️ Options, 🎯 0DTE, ✋ manual) with closed trades, wins / losses, realized $, open $ on what the broker holds now, the dates, and a link to the lane's tab, plus the part of the account no lane explains. Engine sells that never booked a fill now book the broker's own fill, and each 🚩 Gajjala alert is one trade (its breakeven add no longer counts twice). Paper, gross of fees. UNMEASURED — a tally of what happened, not a study. You said: “Also in autopilot looks like Gajjala's strategy is making money.. Anyway you can can show me which tab made money or not?” Not advice." },
   // Ajay 2026-10-27 ~17:45 ET (verbatim in the label, his spelling kept): "Can you sort the winds in Gajjals I can't seem to
   // tell the difference in that tab or show some greed flags on the wins rows". This ANSWERS HIS CALL Q11 of the 🏁
   // Track record (AMENDMENTS11 F13 was the planner's default — hidden): the served ✅ winner / ❌ loser flag

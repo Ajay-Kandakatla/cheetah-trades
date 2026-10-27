@@ -183,6 +183,34 @@ def closed_orders_since(iso_ts: str) -> list:
     return _request("GET", "/v2/orders", params=params) or []
 
 
+def closed_orders_for(symbol: str, after_iso: str, until_iso: Optional[str] = None) -> list:
+    """Terminal orders for ONE symbol submitted after `after_iso` (before `until_iso`), oldest first, every page
+    (Alpaca caps a page at 500; `after` advances to the last row's submitted_at). Read-only: GET /v2/orders. Bracket
+    legs appear as their own rows (nested off), like closed_orders_since."""
+    params = {"status": "closed", "symbols": symbol.upper(), "after": after_iso,
+              "direction": "asc", "limit": 500}
+    if until_iso:
+        params["until"] = until_iso
+    out, seen = [], set()
+    for _ in range(10):                            # pagination guard
+        page = _request("GET", "/v2/orders", params=dict(params)) or []
+        page = [o for o in page if isinstance(o, dict)]
+        for o in page:
+            oid = o.get("id")
+            if oid is not None and oid in seen:
+                continue
+            if oid is not None:
+                seen.add(oid)
+            out.append(o)
+        if len(page) < 500:
+            break
+        nxt = page[-1].get("submitted_at")
+        if not nxt or nxt == params["after"]:
+            break
+        params["after"] = nxt
+    return out
+
+
 def latest_trade(symbol: str) -> Optional[float]:
     """Last trade price from the Alpaca data API — the entries fallback when
     sepa.prices has nothing for the symbol. None when unavailable."""

@@ -756,6 +756,14 @@ def journal_block(docs: Optional[list] = None) -> dict:
     b = {"n": 0, "open": 0, "closed": 0, "missed": 0, "wins": 0, "losses": 0, "win_rate_pct": None,
          "avg_premium_return_pct": None, "realized_pnl": 0.0, "avg_stock_move_pct": None,
          "median_signal_to_fill_sec": None, "median_order_to_fill_sec": None}
+    # 💵 P&L by lane (2026-10-27, BUILD_SPEC28 §3.8): first fill / last close over the docs that traded
+    # (missed orders excluded), None when empty.
+    traded = [d for d in docs if d.get("status") != "missed"]
+    firsts = [str(d.get("fill_ts") or d.get("order_ts")) for d in traded if d.get("fill_ts") or d.get("order_ts")]
+    lasts = [str(d.get("closed_ts") or d.get("fill_ts") or d.get("order_ts")) for d in traded
+             if d.get("closed_ts") or d.get("fill_ts") or d.get("order_ts")]
+    b["first_ts"] = min(firsts) if firsts else None
+    b["last_ts"] = max(lasts) if lasts else None
     rets, moves, s2f, o2f = [], [], [], []
     for d in docs:
         b["n"] += 1
