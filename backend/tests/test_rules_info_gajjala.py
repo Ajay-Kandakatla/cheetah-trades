@@ -172,11 +172,17 @@ def test_every_number_in_the_text_is_a_constant_value(sec):
                 allowed |= {"%g" % x, "%d" % x if float(x).is_integer() else "%g" % x, "%.2f" % x,
                             "{:,}".format(int(x)), "%g" % (x * 100)}
     allowed |= {"%g" % (GC.PASS_CADENCE_SEC / 60), "15m", "5m"}
+    # WIDENED 2026-10-27 (BUILD_SPEC26 §3.3 / §4 WP-B): the 📌 trader clause rides the scanner pick — its re-read in
+    # minutes (TRADER_REFRESH_SEC / 60) is allowed, and the flagged handles are NAMES, not numbers (algo888 → no "888")
+    allowed.add("%g" % (GC.TRADER_REFRESH_SEC / 60))
     for t in (DTD.ET_RTH_OPEN, DTD.ET_RTH_CLOSE, DTD.ET_AFTERHOURS_CLOSE, ):
         allowed.add(t.strftime("%H:%M"))
     allowed.add("%02d:%02d" % (DTD.ET_RTH_OPEN.hour, DTD.ET_RTH_OPEN.minute + GC.NO_TRADE_AFTER_OPEN_MIN))
     allowed.add(GC.PASS_OPEN_ET)
     body = " ".join(sec["picks"] + sec["stops"] + sec["alerts"])
+    from chart_maps.gajjala import trader_names as TN                     # WIDENED 2026-10-27 — see above
+    for t in TN.flagged():
+        body = body.replace(str(t.get("handle") or ""), "")
     tokens = re.findall(r"\d{1,2}:\d{2}|\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?m?", body)
     bad = [tok for tok in tokens if tok not in allowed and tok.rstrip("m") not in allowed]
     assert bad == [], bad

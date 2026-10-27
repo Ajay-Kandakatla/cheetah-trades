@@ -243,3 +243,11 @@ TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18
 BROKER_NAME = "Fidelity"                 # Ajay 2026-10-17 ("In Fidelity")
 BROKER_FLAG_SEED = ()                    # Ajay 2026-10-17 — EMPTY: he withdrew WORX ("sorry I might be wrong about worx"); a name enters only when Fidelity itself refused it (his own add)
 BROKER_SYMBOL_MAX_LEN = 10               # TRANSPORT — MINE (DECISIONS12 D5: the ticker shape ^[A-Z][A-Z0-9.\-]{0,9}$ = one letter + up to 9)
+
+# 📌 trader names (2026-10-27, Ajay "Add them to Gajjals, they are pretty good")
+TRADER_TAG = "📌"                        # Cheetah default (MINE, not GG — the 📌 traders board's emoji)
+TRADER_NAMES_FRESH_SESSIONS = 2          # Cheetah default (MINE, not GG — HIS CALL #5): posted since 00:00 ET of the previous market session
+TRADER_NAMES_MAX = 10                    # Cheetah default (MINE, not GG — HIS CALL #5): names added per pass, newest mention first
+TRADER_REFRESH_SEC = PASS_CADENCE_SEC * 3   # derived — MINE (HIS CALL #5): the pass re-reads a flagged StockTwits account every 900 s
+TRADER_FETCH_PAGES = 1                   # TRANSPORT — MINE: one 30-message page per in-pass read
+TRADER_FETCH_TIMEOUT_SEC = 5.0           # TRANSPORT — MINE: worst case 3 profiles x 5 s, out of the pass's own bar budget

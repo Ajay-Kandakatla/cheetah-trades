@@ -81,6 +81,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
@@ -100,6 +105,7 @@
       "stop": 10.8125,
       "symbol": "GGA",
       "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
       "trigger": 10.96875,
       "variant_label": null
      }
@@ -166,7 +172,9 @@
     "quiet": false,
     "runners_100": 0,
     "runners_80": 0,
-    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "bull_flag",
    "sub_resolved_from": "param",
@@ -464,6 +472,7 @@
      ],
      "symbol": "GGA",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": null,
      "why": ""
     }
@@ -549,6 +558,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": null,
@@ -568,6 +582,7 @@
       "stop": 10.8125,
       "symbol": "GGA",
       "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
       "trigger": 10.96875,
       "variant_label": null
      }
@@ -2053,7 +2068,9 @@
     "quiet": false,
     "runners_100": 0,
     "runners_80": 0,
-    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "playbook",
    "sub_resolved_from": "param",
@@ -2213,6 +2230,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
@@ -2232,6 +2254,7 @@
       "stop": 10.8125,
       "symbol": "GGA",
       "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
       "trigger": 10.96875,
       "variant_label": null
      }
@@ -2285,7 +2308,9 @@
     "quiet": false,
     "runners_100": 0,
     "runners_80": 0,
-    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "potential",
    "sub_resolved_from": "param",
@@ -2606,6 +2631,7 @@
      ],
      "symbol": "GGA",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": null,
      "why": "base 3 of 6 bars"
     }
@@ -2648,6 +2674,7 @@
          "text": "10:36 trigger armed"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": -0.85,
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
@@ -2678,6 +2705,7 @@
          "text": "10:36 building"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": -0.85,
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
@@ -2708,6 +2736,7 @@
          "text": "10:36 building"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": -1.14,
        "vs_trigger_text": "-1.1% vs the trigger at first sight (11.00)"
       }

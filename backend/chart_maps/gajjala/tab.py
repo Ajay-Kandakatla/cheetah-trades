@@ -55,6 +55,7 @@ from zoneinfo import ZoneInfo
 
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
+from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
 from trading.broker import DOLLAR_DECIMALS, price_decimals, round_price   # the ONE stock price grid (2026-10-20)
 
@@ -63,7 +64,8 @@ log = logging.getLogger("chart_maps.gajjala.tab")
 ET = ZoneInfo("America/New_York")
 TILE_STATES = ("aplus", "triggered", "forming", "partial", "stopped")
 COUNT_STATES = ("aplus", "forming", "partial", "triggered", "stopped", "invalid", "none")
-LEGEND_KEYS = tuple(COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track")   # MINE (DECISIONS15 D1)
+# 📌 2026-10-27 (BUILD_SPEC26 §3.3): "trader" appended LAST — trader_names.legend_row()
+LEGEND_KEYS = tuple(COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track", "trader")   # MINE (DECISIONS15 D1)
 POTENTIAL_LEGEND_END = "not yet printed."           # MINE (DECISIONS15 D1) — the cut of potential.rules_lines()[0]
 POTENTIAL_LEGEND_TAIL = " Counted per symbol, not per setup."   # MINE (DECISIONS15 D1)
 
@@ -115,6 +117,8 @@ def count_legend() -> list:
                              "became of it since — a record, not a list to act on"),
     )
     by = {k: (w, t) for k, w, t in rows}
+    tr = TN.legend_row()                            # 📌 2026-10-27 — built by trader_names, never retyped here
+    by[tr["key"]] = (tr["word"], tr["text"])
     return [{"key": k, "word": by[k][0], "text": by[k][1]} for k in LEGEND_KEYS]
 MARKED_STATES = ("aplus", "triggered", "stopped")
 SUB_KEYS = tuple(k for k, _e, _l in GC.SUBS)
@@ -373,9 +377,11 @@ def strip_text(strip: dict) -> Optional[str]:
 
 def _strip_block(latest: Optional[dict]) -> dict:
     s = dict((latest or {}).get("strip") or {}) if isinstance(latest, dict) else {}
+    tb = (latest or {}).get("trader") if isinstance(latest, dict) else None   # 📌 the pass's trader block
     return {"runners_100": s.get("runners_100"), "runners_80": s.get("runners_80"),
             "best_change_pct": _f(s.get("best_change_pct")), "best_symbol": s.get("best_symbol"),
-            "quiet": s.get("quiet"), "text": strip_text(s)}
+            "quiet": s.get("quiet"), "text": strip_text(s),
+            "trader_text": TN.strip_text(tb), "trader_skip_text": TN.skip_text(tb)}
 
 
 # ── 🔄 scan on open · 🎯 A+ (2026-10-15, BUILD_SPEC5 §3.6 / §3.7, AMENDMENTS5 A10 / A11 / A13) ─────────────────────
@@ -1321,6 +1327,36 @@ def _broker_tag(out: dict, flags) -> None:
                                         if hit else None)
 
 
+def _trader_tag(out: dict, tags) -> None:
+    """📌 2026-10-27 — in place, the SAME walk as _broker_tag: every row that names a symbol (tiles, the 🧠 / 🎯 rows,
+    📈 track rows, 👀 watch symbols, 🌙 recap rows) gets `trader_text` — "📌 {handle}" when a flagged trader's posted
+    name put or tagged it on his list (trader_names.tag_map), None otherwise. Served to EVERY viewer (HIS CALL #10).
+    Nothing is removed or reordered."""
+    tags = tags if isinstance(tags, dict) else {}
+
+    def tag(rows):
+        for r in rows if isinstance(rows, list) else ():
+            if isinstance(r, dict):
+                sym = r.get("symbol")
+                r["trader_text"] = ((tags.get(str(sym).upper()) or {}).get("trader_text")
+                                    if isinstance(sym, str) and sym else None)
+
+    tag(out.get("tiles"))
+    for k in ("potential", "enterable"):
+        if isinstance(out.get(k), dict):
+            tag(out[k].get("rows"))
+    tr = out.get("track")
+    if isinstance(tr, dict):
+        for k in ("today", "yesterday"):
+            if isinstance(tr.get(k), dict):
+                tag(tr[k].get("rows"))
+    if isinstance(out.get("watch"), dict):
+        tag(out["watch"].get("symbols"))
+    pm = out.get("postmarket")
+    if isinstance(pm, dict) and isinstance(pm.get("recap"), dict):
+        tag(pm["recap"].get("rows"))
+
+
 def _soft(what: str, fn, *a, default=None, **kw):
     """D1 on the read path: a raising 🧠 potential / 📈 track piece logs and serves `default`; it never takes down the
     A+ board of any sub."""
@@ -1451,11 +1487,13 @@ def _track_row(doc: dict, entries: Optional[dict] = None) -> dict:
         else:
             push_text = PUSH_TEXT.get(ps)
     else:
-        held = [h.get("reason") for h in doc.get("held") or [] if isinstance(h, dict) and h.get("reason") in PT.HELD_WORDS]
+        held = [h.get("reason") for h in doc.get("held") or [] if isinstance(h, dict)
+                and (h.get("reason") in PT.HELD_WORDS or h.get("reason") in PT.TRADER_HELD)]
         if not held and doc.get("first_seen_mode") == PT.FIRST_SEEN_MODES[1]:
             held = [PT.JOIN_HELD[0]]                                # D9: a joined doc whose hold write was lost
         if held:
-            push_text = f"held: {PT.HELD_WORDS[held[-1]]}"
+            push_text = (TN.TRADER_HOLD_TEXT if held[-1] in PT.TRADER_HELD          # 📌 A2 2026-10-27, verbatim
+                         else f"held: {PT.HELD_WORDS[held[-1]]}")
     timeline = []
     for e in path:
         at_et = e.get("at_et") if isinstance(e.get("at_et"), str) else None
@@ -1808,6 +1846,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                      default=None) if LG else None)
         out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
+    tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
+    _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer
     _strip_private(out["tiles"])
     return _plain(out)
 

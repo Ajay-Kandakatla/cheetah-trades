@@ -85,7 +85,11 @@ async def trader_board(key: str, limit: int = Query(400, ge=1, le=2000)):
     record: those divisions permit concentration and leverage this app's own
     risk rules forbid.
 
-    Nothing here gates a scan, an alert or a lane.
+    Nothing here gates a scan, an alert or a lane — EXCEPT (2026-10-27, Ajay:
+    "Add them to Gajjals, they are pretty good"): 🚩 Gajjala's pass reads the
+    STORED posts of an account flagged `gajjala` (algo888, read off StockTwits)
+    and adds its fresh names to that scan's candidates
+    (chart_maps/gajjala/trader_names.py); this route still decides nothing.
     """
     if R.get(key) is None:
         return JSONResponse({"error": f"unknown trader '{key}'",

@@ -74,6 +74,10 @@ export type PassStatus = {
   /** 🧠 gajjala_potential only (2026-10-15): today's tracker docs, newest first
    *  (backend alert_status.read_gajjala_potentials). An older API omits it. */
   potential_items?: GgPotentialItem[] | null;
+  /** 🧠 gajjala_potential only (📌 2026-10-27, critic F2): the `trader_held`
+   *  counter's words — backend trader_names.TRADER_HOLD_TEXT, served only when
+   *  the latest pass counted one. Printed, never typed here. */
+  trader_held_text?: string | null;
   /** 🎢 🗺️ the two tape-burst passes only (2026-10-14): the clock their cron
    *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
    *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
@@ -111,6 +115,9 @@ export type GgPotentialItem = {
   date: string | null; symbol: string | null; setup?: string | null; at?: string | null;
   kind?: string | null; text?: string | null; url?: string | null;
   push_state?: string | null; push_at?: string | null; held?: string | null;
+  /** 📌 2026-10-27 (critic F2): a 📌 trader hold's served words
+   *  (trader_names.TRADER_HOLD_TEXT) — present only on such a row. */
+  held_text?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -408,7 +415,7 @@ const TAPE_HIDDEN_KEYS = ['dup_same', 'dup_earlier'];
  * "pushes delivered"; a send no device took is its own `no_target` chip.
  * `claimed_before` counts only a re-read doc that already carries a push.
  * `potential` (= armed + building) and `dry` stay in the hover title. */
-export function ggPotentialChipText(key: string, n: number): string | null {
+export function ggPotentialChipText(key: string, n: number, traderHeldText?: string | null): string | null {
   switch (key) {
     case 'tracked_today':     return `🧠 ${n} potentials today`;
     case 'new':               return `${n} new this pass`;
@@ -426,12 +433,16 @@ export function ggPotentialChipText(key: string, n: number): string | null {
     case 'no_target':         return `${n} no device took it (toggle off, quiet hours or none registered)`;
     case 'failed':            return `${n} send failed`;
     case 'graveyard':         return `${n} moved to the graveyard`;
+    /* 📌 2026-10-27 (critic F2): BUILD_SPEC26 A2's hold. Its words are SERVED
+     * (pass.trader_held_text); an older API without them keeps the page's
+     * generic counter words (the key, de-underscored). */
+    case 'trader_held':       return traderHeldText && traderHeldText.trim() ? `${n} ${traderHeldText}` : `${n} trader held`;
     default: return null;
   }
 }
 export const GAJJALA_POTENTIAL_KEYS = ['tracked_today', 'new', 'armed', 'building', 'muted', 'outside_hours',
                                        'closed_day', 'stale_tape', 'joined', 'claimed_before',
-                                       'no_target', 'failed', 'graveyard'];
+                                       'no_target', 'failed', 'graveyard', 'trader_held'];
 /* Every `held` reason of backend potential.HELD_WORDS (RULE_HELD + STORE_HELD)
  * plus D9's `joined_midsession` → the 🧠 list row's status word. A reason this
  * page does not know still prints, as "held: <its words>" — never dropped. */
@@ -742,7 +753,7 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
@@ -821,6 +832,8 @@ export function ggPotentialRowWord(it: GgPotentialItem): string {
     case 'claimed':   return 'sending';
     default: break;
   }
+  // 📌 2026-10-27 (critic F2): a hold whose words the backend serves prints them verbatim.
+  if (typeof it.held_text === 'string' && it.held_text.trim()) return it.held_text;
   const r = typeof it.held === 'string' ? it.held.trim() : '';
   if (r) return GG_POTENTIAL_HELD_ROW[r] ?? `held: ${r.replace(/_/g, ' ')}`;
   return 'not sent yet';

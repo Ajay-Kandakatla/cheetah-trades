@@ -89,8 +89,19 @@ def _cells(ap):
     return out
 
 
+def _drop_null_trader_text(o):
+    """WIDENED 2026-10-27 (BUILD_SPEC26 §3.3): every 🏁 row gained `trader_text` (the 📌 tag; null on these fixtures).
+    Dropping ONLY that key, and only where it is null, keeps the pre-BUILD_SPEC25 hashes exact — a non-null value
+    (or any other change) still moves them."""
+    if isinstance(o, dict):
+        return {k: _drop_null_trader_text(v) for k, v in o.items() if not (k == "trader_text" and v is None)}
+    if isinstance(o, list):
+        return [_drop_null_trader_text(v) for v in o]
+    return o
+
+
 def _sha_of(tr):
-    blob = json.dumps({k: tr[k] for k in PRE_KEYS}, sort_keys=True, ensure_ascii=False)
+    blob = json.dumps(_drop_null_trader_text({k: tr[k] for k in PRE_KEYS}), sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 

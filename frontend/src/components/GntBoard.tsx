@@ -30,6 +30,14 @@
  * not a link to X.
  *
  * Nothing here gates a scan, an alert or a lane.
+ *
+ * EXCEPT (2026-10-27, Ajay: "Add them to Gajjals, they are pretty good"): an
+ * account the registry flags for Gajjala's tab has its fresh names added to
+ * that scan's candidates, tagged on Gajjala's own board; GG's rules still
+ * decide every read and every A+. This board only prints what the server
+ * serves about it — `source_text`, `claim_text`, `gajjala_text`, `style` —
+ * and types none of those words itself; a new account's key is typed only in
+ * TRADER_TABS below.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -70,10 +78,20 @@ export type GntRefresh = {
   stored?: number | null; sources?: Record<string, number>; errors?: string[];
   recent_shape?: string | null; note?: string | null;
 };
+/** The SERVED profile block of a tracked account (traders/registry.py `profile`, 2026-10-27) — typed, not drawn. */
+export type GntProfile = {
+  user_id?: number | null; followers?: number | null; following?: number | null; joined?: string | null;
+  ideas?: number | null; bio?: string | null; read?: string | null;
+};
 export type GntPayload = {
   handle?: string; display?: string; profile_url?: string;
   usic?: { year?: number; division?: string; return_pct?: number; rank?: number;
-           source?: string; note?: string };
+           source?: string; note?: string } | null;
+  /** 2026-10-27: served by traders/feed.py board() — which service his posts are read from (a served key), the words
+   *  for it, the championship line (null when he claims none), the Gajjala line (null unless flagged), his own
+   *  style sentence and the profile block. The board prints each only when served. */
+  source?: string | null; source_text?: string | null; claim_text?: string | null;
+  gajjala_text?: string | null; style?: string | null; profile?: GntProfile | null;
   n_posts?: number; n_tickers?: number; n_fresh?: number; fresh_days?: number;
   newest_post_at?: string | null; newest_age_days?: number | null;
   tickers?: GntTicker[]; disclaimer?: string; error?: string;
@@ -141,6 +159,7 @@ export function zoneText(t: GntTicker): { text: string; tone: string; title: str
 export const TRADER_TABS: { key: string; label: string }[] = [
   { key: 'gnt', label: 'Tito Adhikary' },
   { key: 'martinluk', label: 'Martin Luk' },
+  { key: 'algo888', label: 'algo888' },
 ];
 
 export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string } = {}) {
@@ -191,7 +210,17 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
           <a className="gnt-handle" href={d?.profile_url} target="_blank" rel="noreferrer noopener">
             @{d?.handle ?? 'GnT_Trades'} ↗
           </a>
-          {u && (
+          {/* 2026-10-27: where his posts are read — the SERVED words, never typed here. */}
+          {d?.source_text ? (
+            <span className="gnt-dim" data-testid="gnt-source">{' · '}{d.source_text}</span>
+          ) : null}
+          {/* The championship line is SERVED (claim_text) when the API has it; the legacy
+              line below is for an older API only. A claim-less account prints nothing. */}
+          {d?.claim_text ? (
+            <span className="gnt-usic" title={u?.note} data-testid="gnt-claim">
+              {' · '}{d.claim_text}
+            </span>
+          ) : u && (
             <span className="gnt-usic" title={u.note}>
               {' · '}USIC {u.year} #{u.rank} · {u.return_pct}% ({u.division})
             </span>
@@ -231,6 +260,10 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
       </div>
 
       {u?.note && <div className="gnt-note gnt-dim">⚠️ {u.note}</div>}
+      {/* 2026-10-27: the SERVED Gajjala line (only on an account flagged for that scan) and
+          the SERVED style sentence — printed verbatim, nothing typed around them. */}
+      {d?.gajjala_text ? <div className="gnt-note" data-testid="gnt-gajjala">{d.gajjala_text}</div> : null}
+      {d?.style ? <div className="gnt-note gnt-dim" data-testid="gnt-style">{d.style}</div> : null}
 
       {enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}

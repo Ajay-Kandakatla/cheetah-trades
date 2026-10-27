@@ -186,6 +186,96 @@ them NEGATIVE), `GntBoard.test.tsx` (the served verdict, 4 tests) and the
 frontend contract *📌 GnT: latest-posts source restored + served verdict
 (2026-10-22)*.
 
+## 2026-10-27 — algo888 on StockTwits
+
+> Ajay, 2026-10-27 ~08:45 ET: *"Can you track this guy please? and his
+> tickers"* (https://stocktwits.com/algo888), then *"Add them to Gajjals, they
+> are pretty good"*.
+
+**What changed.** A third registry row, appended last (`DEFAULT_KEY` stays
+`gnt`): `algo888`, `"source": "stocktwits"`, `"usic": None`, `"gajjala": True`,
+`"curate": False`. GnT and Martin gain `"source": "x"`, `"gajjala": False`,
+`"curate": True` and their x.com `profile_url` — their behaviour is unchanged.
+
+**How he is read.** `stocktwits_client.fetch_user_stream` — the SAME page walk
+as the symbol streams (`_walk`, moved verbatim out of `fetch_stream`; every
+symbol log line is unchanged), the same Cloudflare-passing profiles and the
+same served failure sentences. `traders.feed.fetch_stocktwits` →
+`parse_stocktwits` turns his messages into posts the board already stores:
+
+- `_id` = `st<message id>` (never collides with a tweet id), `created_at`
+  from StockTwits' own UTC stamp, stored `+00:00`, `url` = his message page.
+- Only messages whose `user.username` IS `algo888`; an empty body is skipped;
+  the INNER message of a reshare is never read (someone else's, or an older
+  sentence of his).
+- HTML entities unescaped (`&#39;` → `'`, `&amp;` → `&`).
+- `sentiment` = HIS own label (`entities.sentiment.basic`) as found, `None`
+  when he set none — never inferred. `symbols_meta` keeps exchange /
+  instrument class / trade status per name.
+- `refresh()` dispatches on `source`: `"x"` runs the x line byte-identical
+  (pinned against a frozen copy of the stored posts); `"stocktwits"` reads
+  `TRADER_ST_PAGES = 2` pages (Cheetah default, mine — 60 messages per cron
+  read). The cron line is unchanged; `refresh_all` simply has three accounts.
+- The served verdict names the StockTwits stream (`refresh.note`): ok →
+  *"Latest posts checked … the StockTwits stream answered with N posts.
+  Checked twice a day, and by Gajjala's scan while it runs."*; dark →
+  *"⚠️ NOT tracking algo888's latest posts: at the … check the StockTwits
+  stream returned no posts — <the client's sentence> (it last answered …).
+  The names below are the stored archive."* An account that stored nothing
+  still exits the cron with rc=2.
+- `board()` serves `source`, `source_text`, `claim_text`, `profile` and
+  `gajjala_text`. **Bug fixed on the way:** `usic` fell back to GnT's
+  `USIC_2025`, so a claim-less trader would have served "+2,115.1%" — `usic`
+  now has no fallback, and `profile_url` comes from the registry row.
+
+**The real page (fixture `tests/fixtures/stocktwits_user_algo888_2026_10_27.json`,
+read 2026-10-27 ~08:59 ET):** 30 messages, all by algo888, 08:14–09:56 ET; 19
+carry names — GPUS ×15 (NYSEMkt), MXCT ×4 (NASDAQ), both "Stock"; his label
+Bullish ×27, none ×3; 7 reshares. His profile: 3,846 followers, following 0,
+joined 2019-06-06, 114,049 ideas. No championship claim anywhere, so no USIC
+line.
+
+**His own words (2026-10-27, ET):** *"$GPUS 75,000 purchase @ .1856
+pre=loading for the run up to .50 - .70 range then back to 1.00 - 1.25 push"*
+(08:28) · *"I used to pump  stockd with regulatity"* (08:52) · *"@WC25 That;s
+how I pump.... LOL"* (08:55) · *"$GPUS my 100,000 position is up huge!!!"*
+(09:41). His bio: *"DO NOT FOLLOW ME as I move in & out of da markets killing
+it like a sniper"*.
+
+**The prior is null or worse — UNMEASURED.** No study in this app has read his
+names. The closest class this app measured, promo-account first tags, came out
+INVERTED: −4.78pp median 5-session vs a matched placebo, CI [−7.19, −3.41]
+(`docs/catalysts/promo_tag_study_2026_09_21.md`). He self-describes pumping.
+
+**What joins Gajjala.** Nothing in this module decides anything. 🚩 Gajjala's
+pass reads his STORED posts and adds his fresh names to that scan's candidate
+list, tagged 📌 (`chart_maps/gajjala/trader_names.py`, documented in
+`docs/gajjala/trader_names_2026_10_27.md`); GG's rules decide every read and
+every A+. The traders DISCLAIMER, the feed docstring and the `/traders/{key}`
+docstring say so with this date.
+
+**The curator (A1).** His names do NOT enter the `full` universe:
+`traders/curate.py run` skips every row with `"curate": False` and names it in
+the run summary (`skipped_traders`). Putting him in the curator too is HIS CALL.
+
+**Verify.** Hermetic tests:
+
+```bash
+cd backend
+/usr/bin/find . -name __pycache__ -type d -prune -exec rm -rf {} +
+docker run --rm --network none --name cheetah-tmp-pytest-traders -v "$PWD/..":/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_trader_feed_stocktwits_2026_10_27.py tests/test_trader_feed.py tests/test_trader_feed_recent_shape_2026_10_22.py tests/test_trader_curate.py tests/test_stocktwits_client.py
+```
+
+After the deploy, on his surface:
+
+```bash
+docker compose exec cron python -m traders.feed refresh
+curl -s -H "X-User-Email: ajaykandakatla@gmail.com" http://127.0.0.1:8000/traders/algo888
+```
+
+Expect `n_posts` > 0, `usic` null, `source_text` "on StockTwits" and a
+`refresh.note` that names the StockTwits stream.
+
 ## Re-run
 
 ```

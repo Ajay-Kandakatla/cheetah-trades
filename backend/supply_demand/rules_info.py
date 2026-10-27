@@ -1142,6 +1142,19 @@ def _gg_potential_lines() -> list:
     return [str(x) for x in PT.rules_lines()]
 
 
+def _gg_trader_clause() -> str:
+    """📌 2026-10-27 (Ajay "Add them to Gajjals, they are pretty good"; BUILD_SPEC26 §3.3) — the scanner pick's trader
+    clause, built by chart_maps.gajjala.trader_names (never retyped here): " " + the clause, or "" when no trader is
+    flagged or the module cannot load (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import trader_names as TN
+        clause = TN.rules_clause()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala trader clause unavailable: %s", exc)
+        return ""
+    return " " + clause if clause else ""
+
+
 def _gajjala_section() -> dict:
     """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
     and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
@@ -1203,7 +1216,7 @@ def _gajjala_section() -> dict:
             % (_gg_v("SCAN_MIN_PRICE", "%.2f"), _gg_v("SCAN_MAX_PRICE"), _gg_n("SCAN_MIN_VOLUME"),
                _gg_v("SCAN_MIN_CHANGE_PCT"), types, GC.SCAN_UNKNOWN_TYPE_LABEL, cadence, GC.PASS_OPEN_ET,
                ah_close, GC.STAY_LISTED_SESSIONS, _gg_v("SA_BIG_RUNNER_PCT"), _gg_v("SA_RUNNER_PCT"),
-               _gg_v("SA_QUIET_BEST_PCT")),
+               _gg_v("SA_QUIET_BEST_PCT")) + _gg_trader_clause(),
             "Demand bar: close ≥ open +%s%% and range ≥ %s× the prior %s bars' average; volume rising bar to bar, "
             "no step over %s×. Pullback: lows no deeper than %s of the last demand bar's range under its high (%s "
             "only), volume ≤ %s× the leg's mean."

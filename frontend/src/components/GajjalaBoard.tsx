@@ -129,6 +129,12 @@
  * never typed) only for tiles that carry one; the served `vs.text` prints under the plan line as one line, verbatim.
  * The READ still moves at GG's closed bar (the pass) — the live words are display only. UNMEASURED — freshness, not an
  * edge.
+ *
+ * 📌 Trader tag (2026-10-27, BUILD_SPEC26 §3.4). Ajay: "Add them to Gajjals, they are pretty good". The names a tracked
+ * trader flagged for this tab posted join the scan as candidates. Each row that names a symbol prints its SERVED
+ * `trader_text` as a muted chip just BEFORE the 🚫 chip (tiles, the 🌙 recap, the 🎯 line, the 🧠 strip, 📈 Track, the
+ * 🏁 rows, 👀 watch), and the strip prints the SERVED `trader_text` / `trader_skip_text` lines after its own text. A
+ * TAG, never a filter; served to every viewer; the FE types no word and no trader's name. UNMEASURED.
  */
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -499,6 +505,12 @@ export default function GajjalaBoard() {
       {/* (1) situational-awareness strip — his read of the day (S8 43:39). */}
       <div className="gg-strip" data-testid="gg-strip" role="status">
         {strip?.text ? <span className="gg-strip-text" data-testid="gg-strip-text">{strip.text}</span> : null}
+        {servedText(strip?.trader_text) ? (
+          <span className="gg-strip-text gg-strip-trader" data-testid="gg-strip-trader">{strip?.trader_text}</span>
+        ) : null}
+        {servedText(strip?.trader_skip_text) ? (
+          <span className="gg-muted gg-strip-trader-skip" data-testid="gg-strip-trader-skip">{strip?.trader_skip_text}</span>
+        ) : null}
         {session?.badge ? <span className="cm-badge cm-badge-muted" data-testid="gg-session-badge">{session.badge}</span> : null}
         {session?.label ? <span className="gg-muted">{session.label}</span> : null}
         {asOfServed ? <span className="gg-muted" data-testid="gg-as-of">{asOfServed}</span>
@@ -628,6 +640,7 @@ export default function GajjalaBoard() {
                     <li key={`${r.symbol}-${r.text}`} data-testid={`gg-recap-row-${id}`}>
                       {href ? <Link to={href} className="gg-recap-link"><strong>{r.symbol}</strong> {r.text}</Link>
                             : <><strong>{r.symbol}</strong> {r.text}</>}
+                      <GgTraderChip text={r.trader_text} testid={`gg-trader-recap-${id}`} />
                       <GgBrokerChip text={r.broker_text} testid={`gg-broker-recap-${id}`} />
                     </li>
                   );
@@ -653,6 +666,7 @@ export default function GajjalaBoard() {
                     {' '}<ShortInterestChip symbol={t.symbol} />
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
+                    <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`} />
                     <GgBrokerChip text={t.broker_text} testid={`gg-broker-tile-${t.symbol}`} />
                     {/* The frame this card drew, when it is not the bar size the toggle shows (a ➖ Fade read
                         that fell back to 5-minute bars) — the served per-tile `tf`, never a guess. */}
@@ -783,6 +797,7 @@ function AplusBanner({ block }: { block: GgEnterable }) {
                 {href
                   ? <Link to={href} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</Link>
                   : <span className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</span>}
+                <GgTraderChip text={r.trader_text} testid={`gg-trader-aplus-${id}`} />
                 <GgBrokerChip text={r.broker_text} testid={`gg-broker-aplus-${id}`} />
               </Fragment>
             );
@@ -928,6 +943,7 @@ function PotentialStrip({ strip, onPick }: { strip: GgPotentialStrip; onPick: (s
                   {r.again && !againTold ? <span className="gg-pot-again" data-testid="gg-pot-again">↻</span> : null}
                   <Tells tells={r.tells} />
                 </button>
+                <GgTraderChip text={r.trader_text} testid={`gg-trader-pot-${r.symbol}-${r.setup}`} />
                 <GgBrokerChip text={r.broker_text} testid={`gg-broker-pot-${r.symbol}-${r.setup}`} />
               </li>
             );
@@ -952,6 +968,7 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
           return (
             <li key={id} className="gg-track-row" data-testid={`gg-track-row-${id}`}>
               {href ? <Link to={href} className="gg-track-text">{r.text}</Link> : <span className="gg-track-text">{r.text}</span>}
+              <GgTraderChip text={r.trader_text} testid={`gg-trader-track-${id}`} />
               <GgBrokerChip text={r.broker_text} testid={`gg-broker-track-${id}`} />
               {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
               {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
@@ -1020,6 +1037,7 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
       return (
         <td className="gg-tr-sym">
           {href ? <Link to={href}>{row.symbol}</Link> : row.symbol}
+          <GgTraderChip text={row.trader_text} testid={`gg-tr-trader-${row.key}`} />
           <GgBrokerChip text={row.broker_text} testid={`gg-tr-broker-${row.key}`} />
         </td>
       );
@@ -1288,6 +1306,7 @@ function WatchLine({ watch }: { watch: GgWatch }) {
         <span key={s.symbol}>
           {i ? ', ' : ''}
           <Link to={ggHref(s.href)!} data-testid={`gg-watch-tk-${s.symbol}`}>{s.symbol}</Link>
+          <GgTraderChip text={s.trader_text} testid={`gg-trader-watch-${s.symbol}`} />
           <GgBrokerChip text={s.broker_text} testid={`gg-broker-watch-${s.symbol}`} />
         </span>
       ))}
@@ -1302,6 +1321,20 @@ function WatchLine({ watch }: { watch: GgWatch }) {
 function GgBrokerChip({ text, testid }: { text: unknown; testid: string }) {
   if (typeof text !== 'string' || !text.trim()) return null;
   return <span className="cm-badge cm-badge-muted gg-broker" data-testid={testid}>{text}</span>;
+}
+
+/* ---- 📌 trader tag (2026-10-27, BUILD_SPEC26 §3.4) — a clone of GgBrokerChip; every word SERVED (trader_names.text_for),
+ * served to every viewer. A TAG: nothing hides, filters or mutes a row. ---- */
+
+/** 📌 the served trader tag beside a symbol — nothing unless the server sent a non-empty string. */
+function GgTraderChip({ text, testid }: { text: unknown; testid: string }) {
+  if (typeof text !== 'string' || !text.trim()) return null;
+  return <span className="cm-badge cm-badge-muted gg-trader" data-testid={testid}>{text}</span>;
+}
+
+/** A served strip line prints only when it is a non-empty string — null / "" / absent prints nothing. */
+function servedText(v: unknown): v is string {
+  return typeof v === 'string' && v.trim() !== '';
 }
 
 /** 🚫 the owner's strip (one line): the served words, his names each with ✕ (DELETE), one add field (POST) — or, when

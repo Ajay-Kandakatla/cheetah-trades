@@ -1,0 +1,4008 @@
+{
+ "user": {
+  "id": 2124563,
+  "username": "algo888",
+  "name": "algo888",
+  "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+  "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+  "join_date": "2019-06-06",
+  "official": false,
+  "identity": "User",
+  "classification": [],
+  "badges": [],
+  "home_country": "US",
+  "search_regions": [],
+  "followers": 3846,
+  "following": 0,
+  "ideas": 114049,
+  "watchlist_stocks_count": 249,
+  "like_count": 13308,
+  "plus_tier": "",
+  "premium_room": "",
+  "trade_app": false,
+  "trade_status": "PENDING_MFA"
+ },
+ "cursor": {
+  "more": true,
+  "since": 667436630,
+  "max": 667425573
+ },
+ "regions": [],
+ "filters": [],
+ "messages": [
+  {
+   "id": 667436630,
+   "body": "$MXCT nice",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$MXCT",
+      "symbol": "MXCT",
+      "symbol_display": "MXCT",
+      "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+      "deeplink": "symbol/MXCT"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " nice"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:56:49Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "price": "1.63"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667389844,
+     "body": "$MXCT Closing @ high of day = Explosive",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$MXCT",
+        "symbol": "MXCT",
+        "symbol_display": "MXCT",
+        "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+        "deeplink": "symbol/MXCT"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " Closing @ high of day = Explosive"
+       }
+      }
+     ],
+     "created_at": "2026-10-26T19:40:35Z",
+     "discussion": false,
+     "user": {
+      "id": 2124563,
+      "username": "algo888",
+      "name": "algo888",
+      "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "join_date": "2019-06-06",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "US",
+      "search_regions": [],
+      "followers": 3846,
+      "following": 0,
+      "ideas": 114049,
+      "watchlist_stocks_count": 249,
+      "like_count": 13308,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 645,
+      "subscribed_to_count": 0,
+      "following_stocks": 0,
+      "location": "Loss Wages, NV USA",
+      "bio": "Been Trading the markets since 1999 Equities momentum Swing and Day Trader with strong emphasis on Technical Harmonic Buy and Sell Signal patterns; pure technical trading: DO NOT FOLLOW ME as I move in & out of da markets killing it like a sniper",
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities"
+       ],
+       "approach": "Technical",
+       "approaches": [
+        "Technical"
+       ],
+       "holding_period": "Day Trader",
+       "holding_periods": [
+        "Day"
+       ],
+       "experience": "Professional",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [],
+       "approach": [
+        "Technical"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Day"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 2269,
+      "title": "StockTwits Web",
+      "url": "https://stocktwits.com"
+     },
+     "symbols": [
+      {
+       "id": 20466,
+       "symbol": "MXCT",
+       "symbol_mic": "MXCT.XNAS",
+       "symbol_display": "MXCT",
+       "exchange": "NASDAQ",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+       "title": "MaxCyte Inc",
+       "aliases": [],
+       "deeplink": "symbol/MXCT",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 476,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+       "sector": "HealthTechnology",
+       "industry": "Biotechnology",
+       "trending": false,
+       "trending_score": 1.78896,
+       "trends": null,
+       "trade_status": "WHOLE",
+       "features": {
+        "alerts_price": true,
+        "social_data": true,
+        "trending_messages": false,
+        "earnings": true
+       },
+       "cusip": "57777K106",
+       "isin": "US57777K1060",
+       "sentiment_change": 0.0,
+       "volume_change": 1550.0,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 20466,
+       "symbol": "MXCT",
+       "symbol_mic": "MXCT.XNAS",
+       "price": "1.51"
+      }
+     ],
+     "conversation": {
+      "parent_message_id": 667389844,
+      "in_reply_to_message_id": null,
+      "parent": true,
+      "replies": 1
+     },
+     "likes": {
+      "total": 2,
+      "user_ids": [
+       11149502,
+       3205605
+      ]
+     },
+     "mentioned_users": [],
+     "entities": {
+      "media": [
+       {
+        "id": 15264963,
+        "type": "gif",
+        "thumb": null,
+        "medium": null,
+        "large": null,
+        "original": null,
+        "url": null,
+        "height": null,
+        "width": null,
+        "ratio": null,
+        "provider": "giphy",
+        "provider_id": "SWVF41fAxIrwIyUr8b"
+       }
+      ],
+      "giphy": {
+       "id": "SWVF41fAxIrwIyUr8b"
+      },
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15275338,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": 656,
+      "width": 656,
+      "ratio": 1.0,
+      "provider": "giphy",
+      "provider_id": "l378giAZgxPw3eO52"
+     }
+    ],
+    "giphy": {
+     "id": "l378giAZgxPw3eO52"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     4970197
+    ]
+   },
+   "symbols": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "symbol_display": "MXCT",
+     "exchange": "NASDAQ",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+     "title": "MaxCyte Inc",
+     "aliases": [],
+     "deeplink": "symbol/MXCT",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 476,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+     "trade_status": "WHOLE",
+     "sentiment_change": 0.0,
+     "volume_change": 1550.0
+    }
+   ]
+  },
+  {
+   "id": 667436414,
+   "body": "$MXCT up huge and no pumpers??? LoL",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$MXCT",
+      "symbol": "MXCT",
+      "symbol_display": "MXCT",
+      "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+      "deeplink": "symbol/MXCT"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " up huge and no pumpers??? LoL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:55:35Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "price": "1.61"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667435572,
+     "body": "$MXCT Getting back in here wow",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$MXCT",
+        "symbol": "MXCT",
+        "symbol_display": "MXCT",
+        "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+        "deeplink": "symbol/MXCT"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " Getting back in here wow"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T13:50:27Z",
+     "discussion": false,
+     "user": {
+      "id": 2124563,
+      "username": "algo888",
+      "name": "algo888",
+      "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "join_date": "2019-06-06",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "US",
+      "search_regions": [],
+      "followers": 3846,
+      "following": 0,
+      "ideas": 114049,
+      "watchlist_stocks_count": 249,
+      "like_count": 13308,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 645,
+      "subscribed_to_count": 0,
+      "following_stocks": 0,
+      "location": "Loss Wages, NV USA",
+      "bio": "Been Trading the markets since 1999 Equities momentum Swing and Day Trader with strong emphasis on Technical Harmonic Buy and Sell Signal patterns; pure technical trading: DO NOT FOLLOW ME as I move in & out of da markets killing it like a sniper",
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities"
+       ],
+       "approach": "Technical",
+       "approaches": [
+        "Technical"
+       ],
+       "holding_period": "Day Trader",
+       "holding_periods": [
+        "Day"
+       ],
+       "experience": "Professional",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [],
+       "approach": [
+        "Technical"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Day"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 2095,
+      "title": "StockTwits For Android ",
+      "url": "http://www.stocktwits.com/mobile"
+     },
+     "symbols": [
+      {
+       "id": 20466,
+       "symbol": "MXCT",
+       "symbol_mic": "MXCT.XNAS",
+       "symbol_display": "MXCT",
+       "exchange": "NASDAQ",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+       "title": "MaxCyte Inc",
+       "aliases": [],
+       "deeplink": "symbol/MXCT",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 476,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+       "sector": "HealthTechnology",
+       "industry": "Biotechnology",
+       "trending": false,
+       "trending_score": 1.78896,
+       "trends": null,
+       "trade_status": "WHOLE",
+       "features": {
+        "alerts_price": true,
+        "social_data": true,
+        "trending_messages": false,
+        "earnings": true
+       },
+       "cusip": "57777K106",
+       "isin": "US57777K1060",
+       "sentiment_change": 0.0,
+       "volume_change": 1550.0,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 20466,
+       "symbol": "MXCT",
+       "symbol_mic": "MXCT.XNAS",
+       "price": "1.60"
+      }
+     ],
+     "likes": {
+      "total": 1,
+      "user_ids": [
+       4970197
+      ]
+     },
+     "mentioned_users": [],
+     "entities": {
+      "media": [],
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     8713717,
+     4970197
+    ]
+   },
+   "symbols": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "symbol_display": "MXCT",
+     "exchange": "NASDAQ",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+     "title": "MaxCyte Inc",
+     "aliases": [],
+     "deeplink": "symbol/MXCT",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 476,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+     "trade_status": "WHOLE",
+     "sentiment_change": 0.0,
+     "volume_change": 1550.0
+    }
+   ]
+  },
+  {
+   "id": 667436204,
+   "body": "@CantAffordMe IDIOT",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@CantAffordMe",
+      "user_id": 10326665,
+      "username": "CantAffordMe",
+      "deeplink": "/CantAffordMe"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " IDIOT"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:54:15Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "conversation": {
+    "parent_message_id": 667434074,
+    "in_reply_to_message_id": 667436069,
+    "parent": false,
+    "replies": 0
+   },
+   "mentioned_users": [
+    "@CantAffordMe"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": null,
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667436141,
+   "body": "@CantAffordMe nah, you&#39;re just slow..",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@CantAffordMe",
+      "user_id": 10326665,
+      "username": "CantAffordMe",
+      "deeplink": "/CantAffordMe"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " nah, you're just slow.."
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:53:55Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "conversation": {
+    "parent_message_id": 667434074,
+    "in_reply_to_message_id": 667436069,
+    "parent": false,
+    "replies": 0
+   },
+   "mentioned_users": [
+    "@CantAffordMe"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": null,
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667435911,
+   "body": "Stopped out @ the high",
+   "tokenized_body": [
+    {
+     "type": "text",
+     "data": {
+      "text": "Stopped out @ the high"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:52:30Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "conversation": {
+    "parent_message_id": 667435290,
+    "in_reply_to_message_id": 667435290,
+    "parent": false,
+    "replies": 0
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": null,
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667435572,
+   "body": "$MXCT Getting back in here wow",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$MXCT",
+      "symbol": "MXCT",
+      "symbol_display": "MXCT",
+      "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+      "deeplink": "symbol/MXCT"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Getting back in here wow"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:50:27Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "price": "1.60"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     4970197
+    ]
+   },
+   "reshares": {
+    "reshared_count": 1,
+    "user_ids": [
+     2124563
+    ]
+   },
+   "symbols": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "symbol_display": "MXCT",
+     "exchange": "NASDAQ",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+     "title": "MaxCyte Inc",
+     "aliases": [],
+     "deeplink": "symbol/MXCT",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 476,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+     "trade_status": "WHOLE",
+     "sentiment_change": 0.0,
+     "volume_change": 1550.0
+    }
+   ]
+  },
+  {
+   "id": 667435290,
+   "body": "$GPUS That&#39;s how you make : $$$\nLOL",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " That's how you make : $$$\nLOL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:48:52Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.2030"
+    }
+   ],
+   "conversation": {
+    "parent_message_id": 667435290,
+    "in_reply_to_message_id": null,
+    "parent": true,
+    "replies": 1
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15275024,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": 656,
+      "width": 369,
+      "ratio": 0.5625,
+      "provider": "giphy",
+      "provider_id": "e6q2C7qJxAaybjTuSD"
+     }
+    ],
+    "giphy": {
+     "id": "e6q2C7qJxAaybjTuSD"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     3759248,
+     7807390
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667434074,
+   "body": "$GPUS my 100,000 position is up huge!!!\nHeeeeehaaaaa $$$$!",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " my 100,000 position is up huge!!!\nHeeeeehaaaaa $$$$!"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:41:58Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.2029"
+    }
+   ],
+   "conversation": {
+    "parent_message_id": 667434074,
+    "in_reply_to_message_id": null,
+    "parent": true,
+    "replies": 1
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15274795,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": 656,
+      "width": 1166,
+      "ratio": 1.77744,
+      "provider": "giphy",
+      "provider_id": "kjiRLUaICO1Og"
+     }
+    ],
+    "giphy": {
+     "id": "kjiRLUaICO1Og"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 6,
+    "user_ids": [
+     8982479,
+     9789255,
+     3759248,
+     11028901,
+     10941076,
+     36248
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667433688,
+   "body": "$GPUS shsssss let them chase above .25 LOL",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " shsssss let them chase above .25 LOL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:40:01Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.2009"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667433540,
+     "body": "$GPUS hello 0.2",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$GPUS",
+        "symbol": "GPUS",
+        "symbol_display": "GPUS",
+        "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+        "deeplink": "symbol/GPUS"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " hello 0.2"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T13:39:17Z",
+     "discussion": false,
+     "user": {
+      "id": 8982479,
+      "username": "Investor_Scale",
+      "name": "Just Walking By",
+      "avatar_url": "https://avatars.stocktwits.com/production/8982479/thumb-1712166452.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/8982479/thumb-1712166452.png",
+      "join_date": "2024-04-03",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "NL",
+      "search_regions": [],
+      "followers": 80,
+      "following": 22,
+      "ideas": 3451,
+      "watchlist_stocks_count": 74,
+      "like_count": 2891,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 11,
+      "subscribed_to_count": 8,
+      "following_stocks": 0,
+      "location": "",
+      "bio": "I don’t give any financial advice, only my own opinion. Always do your own RESEARCH and DD!",
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities"
+       ],
+       "approach": "Momentum",
+       "approaches": [
+        "Momentum"
+       ],
+       "holding_period": "Position Trader",
+       "holding_periods": [
+        "Position Trader"
+       ],
+       "experience": "Professional",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [
+        "Professional"
+       ],
+       "approach": [
+        "Momentum"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Position Trader"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 1149,
+      "title": "StockTwits for iOS",
+      "url": "http://www.stocktwits.com/mobile"
+     },
+     "symbols": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "symbol_display": "GPUS",
+       "exchange": "NYSEMkt",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+       "title": "Hyperscale Data Inc.",
+       "aliases": [],
+       "deeplink": "symbol/GPUS",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 10285,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+       "sector": "ProducerManufacturing",
+       "industry": "ElectricalProducts",
+       "trending": false,
+       "trending_score": 6.99232,
+       "trends": null,
+       "features": {
+        "alerts_price": false,
+        "social_data": true,
+        "trending_messages": true,
+        "earnings": true
+       },
+       "cusip": "09175M507",
+       "isin": "US09175M5076",
+       "sentiment_change": 0.94,
+       "volume_change": 19.9,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "price": "0.2021"
+      }
+     ],
+     "likes": {
+      "total": 1,
+      "user_ids": [
+       10300459
+      ]
+     },
+     "mentioned_users": [],
+     "entities": {
+      "media": [],
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15274735,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": 656,
+      "width": 656,
+      "ratio": 1.0,
+      "provider": "giphy",
+      "provider_id": "d9lA6mIrGxX9WKNguV"
+     }
+    ],
+    "giphy": {
+     "id": "d9lA6mIrGxX9WKNguV"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     7807390,
+     5838041
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667433439,
+   "body": "$GPUS Fully Loaded for the 1.50 to 2.50 push!!!",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Fully Loaded for the 1.50 to 2.50 push!!!"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:38:51Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1980"
+    }
+   ],
+   "conversation": {
+    "parent_message_id": 667433439,
+    "in_reply_to_message_id": null,
+    "parent": true,
+    "replies": 1
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15274676,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": 656,
+      "width": 656,
+      "ratio": 1.0,
+      "provider": "giphy",
+      "provider_id": "Yl4hBClpaBMRZ0rYWO"
+     }
+    ],
+    "giphy": {
+     "id": "Yl4hBClpaBMRZ0rYWO"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667433063,
+   "body": "$MXCT Strong uptrend...",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$MXCT",
+      "symbol": "MXCT",
+      "symbol_display": "MXCT",
+      "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+      "deeplink": "symbol/MXCT"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Strong uptrend..."
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:36:37Z",
+   "discussion": false,
+   "source": {
+    "id": 2095,
+    "title": "StockTwits For Android ",
+    "url": "http://www.stocktwits.com/mobile"
+   },
+   "prices": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "price": "1.57"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     4970197,
+     1549238
+    ]
+   },
+   "symbols": [
+    {
+     "id": 20466,
+     "symbol": "MXCT",
+     "symbol_mic": "MXCT.XNAS",
+     "symbol_display": "MXCT",
+     "exchange": "NASDAQ",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/MXCT.webp",
+     "title": "MaxCyte Inc",
+     "aliases": [],
+     "deeplink": "symbol/MXCT",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 476,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "3a042f15-3bf6-4bb1-bc90-9ba1e62ee4a7",
+     "trade_status": "WHOLE",
+     "sentiment_change": 0.0,
+     "volume_change": 1550.0
+    }
+   ]
+  },
+  {
+   "id": 667429961,
+   "body": "$GPUS Higher Highs and Higher lows!!! HeeeeeHaaaaa $$$",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Higher Highs and Higher lows!!! HeeeeeHaaaaa $$$"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T13:08:08Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1914"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15273894,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "FSH4Ks5VNSESzcLYgo"
+     }
+    ],
+    "giphy": {
+     "id": "FSH4Ks5VNSESzcLYgo"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 3,
+    "user_ids": [
+     653314,
+     7807390,
+     10330183
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667429197,
+   "body": "$GPUS newbies dont know how to make money = Watch &amp; learn how its done!!!",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " newbies dont know how to make money = Watch & learn how its done!!!"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:59:17Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1918"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667429102,
+     "body": "$GPUS Everything under 1$ ia a bullshit🤮🤮🤮🤮",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$GPUS",
+        "symbol": "GPUS",
+        "symbol_display": "GPUS",
+        "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+        "deeplink": "symbol/GPUS"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " Everything under 1$ ia a bullshit🤮🤮🤮🤮"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T12:58:10Z",
+     "discussion": false,
+     "user": {
+      "id": 4761050,
+      "username": "jeni1988",
+      "name": "To the moon",
+      "avatar_url": "http://avatars.stocktwits.com/images/default_avatar_1_thumb.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/images/default_avatar_1_thumb.png",
+      "join_date": "2021-01-28",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "BG",
+      "search_regions": [],
+      "followers": 42,
+      "following": 32,
+      "ideas": 2399,
+      "watchlist_stocks_count": 164,
+      "like_count": 5262,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 1,
+      "subscribed_to_count": 1,
+      "following_stocks": 0,
+      "location": null,
+      "bio": null,
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [],
+       "approach": null,
+       "approaches": [],
+       "holding_period": null,
+       "holding_periods": [],
+       "experience": null,
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [],
+       "approach": [],
+       "risk_profile": [],
+       "holding_period": [],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 2095,
+      "title": "StockTwits For Android ",
+      "url": "http://www.stocktwits.com/mobile"
+     },
+     "symbols": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "symbol_display": "GPUS",
+       "exchange": "NYSEMkt",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+       "title": "Hyperscale Data Inc.",
+       "aliases": [],
+       "deeplink": "symbol/GPUS",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 10282,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+       "sector": "ProducerManufacturing",
+       "industry": "ElectricalProducts",
+       "trending": false,
+       "trending_score": 7.38115,
+       "trends": null,
+       "features": {
+        "alerts_price": false,
+        "social_data": true,
+        "trending_messages": true,
+        "earnings": true
+       },
+       "cusip": "09175M507",
+       "isin": "US09175M5076",
+       "sentiment_change": -0.07,
+       "volume_change": 18.74,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "price": "0.1920"
+      }
+     ],
+     "mentioned_users": [],
+     "entities": {
+      "media": [],
+      "sentiment": {
+       "basic": "Bearish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15273734,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "gTURHJs4e2Ies"
+     }
+    ],
+    "giphy": {
+     "id": "gTURHJs4e2Ies"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     10382779
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667429037,
+   "body": "$GPUS Cancelling an Offering = H U G E !!!!",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Cancelling an Offering = H U G E !!!!"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:57:22Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1920"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15273696,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "fSYmbgG5Ug8S11K0FU"
+     }
+    ],
+    "giphy": {
+     "id": "fSYmbgG5Ug8S11K0FU"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     10382779,
+     7807390
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667428905,
+   "body": "@WC25 That;s how I pump.... LOL",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@WC25",
+      "user_id": 3787067,
+      "username": "WC25",
+      "deeplink": "/WC25"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " That;s how I pump.... LOL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:55:49Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667428643,
+    "in_reply_to_message_id": 667428824,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@WC25"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667428813,
+   "body": "OTCBB stocks back in the day",
+   "tokenized_body": [
+    {
+     "type": "text",
+     "data": {
+      "text": "OTCBB stocks back in the day"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:54:38Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667428643,
+    "in_reply_to_message_id": 667428643,
+    "parent": false,
+    "replies": 0
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667428643,
+   "body": "$GPUS people here dont know me... I used to pump  stockd with regulatity from  \n.03 exploding to $8.00 early 2000&#39;s on Investorshub (IHUB)  \nLOL",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " people here dont know me... I used to pump  stockd with regulatity from  \n.03 exploding to $8.00 early 2000's on Investorshub (IHUB)  \nLOL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:52:43Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1928"
+    }
+   ],
+   "conversation": {
+    "parent_message_id": 667428643,
+    "in_reply_to_message_id": null,
+    "parent": true,
+    "replies": 2
+   },
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "parent_reshared_url": "/algo888/message/667428037",
+    "parent_reshared_message_id": 667428037,
+    "message": {
+     "id": 667428285,
+     "body": "$GPUS .20 - .25 Triggering = BOOOOOOOM it",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$GPUS",
+        "symbol": "GPUS",
+        "symbol_display": "GPUS",
+        "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+        "deeplink": "symbol/GPUS"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " .20 - .25 Triggering = BOOOOOOOM it"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T12:48:15Z",
+     "discussion": false,
+     "user": {
+      "id": 2124563,
+      "username": "algo888",
+      "name": "algo888",
+      "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "join_date": "2019-06-06",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "US",
+      "search_regions": [],
+      "followers": 3843,
+      "following": 0,
+      "ideas": 114036,
+      "watchlist_stocks_count": 249,
+      "like_count": 13308,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 645,
+      "subscribed_to_count": 0,
+      "following_stocks": 0,
+      "location": "Loss Wages, NV USA",
+      "bio": "Been Trading the markets since 1999 Equities momentum Swing and Day Trader with strong emphasis on Technical Harmonic Buy and Sell Signal patterns; pure technical trading: DO NOT FOLLOW ME as I move in & out of da markets killing it like a sniper",
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities"
+       ],
+       "approach": "Technical",
+       "approaches": [
+        "Technical"
+       ],
+       "holding_period": "Day Trader",
+       "holding_periods": [
+        "Day"
+       ],
+       "experience": "Professional",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [],
+       "approach": [
+        "Technical"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Day"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 2269,
+      "title": "StockTwits Web",
+      "url": "https://stocktwits.com"
+     },
+     "symbols": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "symbol_display": "GPUS",
+       "exchange": "NYSEMkt",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+       "title": "Hyperscale Data Inc.",
+       "aliases": [],
+       "deeplink": "symbol/GPUS",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 10282,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+       "sector": "ProducerManufacturing",
+       "industry": "ElectricalProducts",
+       "trending": false,
+       "trending_score": 7.38115,
+       "trends": null,
+       "features": {
+        "alerts_price": false,
+        "social_data": true,
+        "trending_messages": true,
+        "earnings": true
+       },
+       "cusip": "09175M507",
+       "isin": "US09175M5076",
+       "sentiment_change": -0.07,
+       "volume_change": 18.74,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "price": "0.1894"
+      }
+     ],
+     "likes": {
+      "total": 1,
+      "user_ids": [
+       10382779
+      ]
+     },
+     "mentioned_users": [],
+     "entities": {
+      "media": [],
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     10382779
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667428285,
+   "body": "$GPUS .20 - .25 Triggering = BOOOOOOOM it",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " .20 - .25 Triggering = BOOOOOOOM it"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:48:15Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1894"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667428037,
+     "body": "$GPUS 45 Degree climb on the Hourly... Signifies a no  selling pressure.... Something is cooking Baybeeeee",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$GPUS",
+        "symbol": "GPUS",
+        "symbol_display": "GPUS",
+        "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+        "deeplink": "symbol/GPUS"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " 45 Degree climb on the Hourly... Signifies a no  selling pressure.... Something is cooking Baybeeeee"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T12:45:27Z",
+     "discussion": false,
+     "user": {
+      "id": 2124563,
+      "username": "algo888",
+      "name": "algo888",
+      "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+      "join_date": "2019-06-06",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "US",
+      "search_regions": [],
+      "followers": 3843,
+      "following": 0,
+      "ideas": 114036,
+      "watchlist_stocks_count": 249,
+      "like_count": 13308,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 645,
+      "subscribed_to_count": 0,
+      "following_stocks": 0,
+      "location": "Loss Wages, NV USA",
+      "bio": "Been Trading the markets since 1999 Equities momentum Swing and Day Trader with strong emphasis on Technical Harmonic Buy and Sell Signal patterns; pure technical trading: DO NOT FOLLOW ME as I move in & out of da markets killing it like a sniper",
+      "website_url": null,
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities"
+       ],
+       "approach": "Technical",
+       "approaches": [
+        "Technical"
+       ],
+       "holding_period": "Day Trader",
+       "holding_periods": [
+        "Day"
+       ],
+       "experience": "Professional",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [],
+       "approach": [
+        "Technical"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Day"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 2269,
+      "title": "StockTwits Web",
+      "url": "https://stocktwits.com"
+     },
+     "symbols": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "symbol_display": "GPUS",
+       "exchange": "NYSEMkt",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+       "title": "Hyperscale Data Inc.",
+       "aliases": [],
+       "deeplink": "symbol/GPUS",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 10282,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+       "sector": "ProducerManufacturing",
+       "industry": "ElectricalProducts",
+       "trending": false,
+       "trending_score": 7.38115,
+       "trends": null,
+       "features": {
+        "alerts_price": false,
+        "social_data": true,
+        "trending_messages": true,
+        "earnings": true
+       },
+       "cusip": "09175M507",
+       "isin": "US09175M5076",
+       "sentiment_change": -0.07,
+       "volume_change": 18.74,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "price": "0.1879"
+      }
+     ],
+     "likes": {
+      "total": 2,
+      "user_ids": [
+       1549238,
+       10906378
+      ]
+     },
+     "mentioned_users": [],
+     "entities": {
+      "media": [
+       {
+        "id": 15273449,
+        "type": "gif",
+        "thumb": null,
+        "medium": null,
+        "large": null,
+        "original": null,
+        "url": null,
+        "height": null,
+        "width": null,
+        "ratio": null,
+        "provider": "giphy",
+        "provider_id": "l4MJnT4YXg3xt81tKn"
+       }
+      ],
+      "giphy": {
+       "id": "l4MJnT4YXg3xt81tKn"
+      },
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     10382779
+    ]
+   },
+   "reshares": {
+    "reshared_count": 1,
+    "user_ids": [
+     2124563
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667428192,
+   "body": "@CantAffordMe Chase it @ .25",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@CantAffordMe",
+      "user_id": 10326665,
+      "username": "CantAffordMe",
+      "deeplink": "/CantAffordMe"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Chase it @ .25"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:47:09Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667427375,
+    "in_reply_to_message_id": 667427782,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@CantAffordMe"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667428037,
+   "body": "$GPUS 45 Degree climb on the Hourly... Signifies a no  selling pressure.... Something is cooking Baybeeeee",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " 45 Degree climb on the Hourly... Signifies a no  selling pressure.... Something is cooking Baybeeeee"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:45:27Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1879"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15273449,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "l4MJnT4YXg3xt81tKn"
+     }
+    ],
+    "giphy": {
+     "id": "l4MJnT4YXg3xt81tKn"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 2,
+    "user_ids": [
+     1549238,
+     10906378
+    ]
+   },
+   "reshares": {
+    "reshared_count": 1,
+    "user_ids": [
+     2124563
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667427375,
+   "body": "$GPUS Countdown to the push above .20 - .25 range Then Blue skies ahead... The Trend is your friend..... $$$$",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Countdown to the push above .20 - .25 range Then Blue skies ahead... The Trend is your friend..... $$$$"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:37:51Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1883"
+    }
+   ],
+   "conversation": {
+    "parent_message_id": 667427375,
+    "in_reply_to_message_id": null,
+    "parent": true,
+    "replies": 1
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 1,
+    "user_ids": [
+     10111997
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667427201,
+   "body": "@steamclean Then you&#39;re just a scumbag. trolling around boards...  \nGet a life",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@steamclean",
+      "user_id": 8561619,
+      "username": "steamclean",
+      "deeplink": "/steamclean"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Then you're just a scumbag. trolling around boards...  \nGet a life"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:35:39Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667426073,
+    "in_reply_to_message_id": 667427099,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@steamclean"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667426956,
+   "body": "$GPUS Dont Buy it... Just watch it explode back to the  \n1.20&#39;s to 1.50 LOL",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Dont Buy it... Just watch it explode back to the  \n1.20's to 1.50 LOL"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:32:37Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1893"
+    }
+   ],
+   "reshare_message": {
+    "reshared_count": 1,
+    "reshared_deleted": false,
+    "reshared_user_deleted": false,
+    "parent_reshared_deleted": false,
+    "message": {
+     "id": 667426822,
+     "body": "$GPUS \nWhere is the exchange?",
+     "tokenized_body": [
+      {
+       "type": "cashTag",
+       "data": {
+        "text": "$GPUS",
+        "symbol": "GPUS",
+        "symbol_display": "GPUS",
+        "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+        "deeplink": "symbol/GPUS"
+       }
+      },
+      {
+       "type": "text",
+       "data": {
+        "text": " \nWhere is the exchange?"
+       }
+      }
+     ],
+     "created_at": "2026-10-27T12:31:02Z",
+     "discussion": false,
+     "user": {
+      "id": 10406802,
+      "username": "PivotalSaints",
+      "name": "Pivotal Saints-HeWhoLaughsLast",
+      "avatar_url": "https://avatars.stocktwits.com/production/10406802/thumb-1788349845.png",
+      "avatar_url_ssl": "https://avatars.stocktwits.com/production/10406802/thumb-1788349845.png",
+      "join_date": "2025-08-13",
+      "official": false,
+      "identity": "User",
+      "classification": [],
+      "badges": [],
+      "home_country": "US",
+      "search_regions": [],
+      "followers": 372,
+      "following": 52,
+      "ideas": 10890,
+      "watchlist_stocks_count": 50,
+      "like_count": 10656,
+      "plus_tier": "",
+      "premium_room": "",
+      "trade_app": false,
+      "trade_status": "PENDING_MFA",
+      "subscribers_count": 21,
+      "subscribed_to_count": 2,
+      "following_stocks": 0,
+      "location": "Unknown Sands Of Dune",
+      "bio": "Welcome to History Class. Who Am I? Your king and an outlaw/legend laughing from a Stocktwits prison. AKA Pivotal Saint. Financial advice? More like a meme that turned to a GAGillion, not liable on jokes. Freedom is an illusion. I AM 777",
+      "website_url": "https://pivotalsaint.com",
+      "trading_strategy": {
+       "assets_frequently_traded": [
+        "Equities",
+        "Futures"
+       ],
+       "approach": "Fundamental",
+       "approaches": [
+        "Fundamental"
+       ],
+       "holding_period": "Long Term Investor",
+       "holding_periods": [
+        "Long Term Investor"
+       ],
+       "experience": "Intermediate",
+       "interests": []
+      },
+      "trading_profile": {
+       "industry": [],
+       "trading_experience": [
+        "Intermediate"
+       ],
+       "approach": [
+        "Fundamental"
+       ],
+       "risk_profile": [],
+       "holding_period": [
+        "Long Term Investor"
+       ],
+       "capitalization_bias": [],
+       "long_short": [],
+       "asset_classes_traded": [
+        "Equities",
+        "Futures"
+       ],
+       "interests": []
+      }
+     },
+     "source": {
+      "id": 1149,
+      "title": "StockTwits for iOS",
+      "url": "http://www.stocktwits.com/mobile"
+     },
+     "symbols": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "symbol_display": "GPUS",
+       "exchange": "NYSEMkt",
+       "region": "US",
+       "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+       "title": "Hyperscale Data Inc.",
+       "aliases": [],
+       "deeplink": "symbol/GPUS",
+       "external_id": null,
+       "is_following": false,
+       "watchlist_count": 10283,
+       "has_pricing": true,
+       "instrument_class": "Stock",
+       "live_event": false,
+       "earnings_cta": "up_earn_tab",
+       "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+       "sector": "ProducerManufacturing",
+       "industry": "ElectricalProducts",
+       "trending": false,
+       "trending_score": 5.8771,
+       "trends": null,
+       "features": {
+        "alerts_price": false,
+        "social_data": true,
+        "trending_messages": true,
+        "earnings": true
+       },
+       "cusip": "09175M507",
+       "isin": "US09175M5076",
+       "sentiment_change": -0.07,
+       "volume_change": 18.74,
+       "should_seo_index": true
+      }
+     ],
+     "prices": [
+      {
+       "id": 35380,
+       "symbol": "GPUS",
+       "symbol_mic": "GPUS.XASE",
+       "price": "0.1893"
+      }
+     ],
+     "mentioned_users": [],
+     "entities": {
+      "media": [
+       {
+        "id": 15273170,
+        "type": "image",
+        "thumb": "https://media.stocktwits-cdn.com/api/3/media/15273170/thumb.webp",
+        "medium": "https://media.stocktwits-cdn.com/api/3/media/15273170/medium.webp",
+        "large": "https://media.stocktwits-cdn.com/api/3/media/15273170/large.webp",
+        "original": "https://media.stocktwits-cdn.com/api/3/media/15273170/original.png",
+        "url": "https://media.stocktwits-cdn.com/api/3/media/15273170/default.webp",
+        "height": 1188,
+        "width": 1284,
+        "ratio": 1.08081,
+        "provider": null,
+        "provider_id": null
+       }
+      ],
+      "chart": {
+       "id": 15273170,
+       "type": "image",
+       "thumb": "https://media.stocktwits-cdn.com/api/3/media/15273170/thumb.webp",
+       "medium": "https://media.stocktwits-cdn.com/api/3/media/15273170/medium.webp",
+       "large": "https://media.stocktwits-cdn.com/api/3/media/15273170/large.webp",
+       "original": "https://media.stocktwits-cdn.com/api/3/media/15273170/original.png",
+       "url": "https://media.stocktwits-cdn.com/api/3/media/15273170/default.webp",
+       "height": 1188,
+       "width": 1284,
+       "ratio": 1.08081
+      },
+      "sentiment": {
+       "basic": "Bullish"
+      },
+      "discussable": null
+     }
+    }
+   },
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 4,
+    "user_ids": [
+     8982479,
+     9789255,
+     3787067,
+     8183217
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667426628,
+   "body": "$GPUS 75,000 purchase @ .1856 pre=loading for the run up to .50 - .70 range then back to 1.00 - 1.25 push",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " 75,000 purchase @ .1856 pre=loading for the run up to .50 - .70 range then back to 1.00 - 1.25 push"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:28:48Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1893"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "likes": {
+    "total": 3,
+    "user_ids": [
+     8982479,
+     3787067,
+     8183217
+    ]
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667426229,
+   "body": "@steamclean salty because you lost?",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@steamclean",
+      "user_id": 8561619,
+      "username": "steamclean",
+      "deeplink": "/steamclean"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " salty because you lost?"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:23:27Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667426073,
+    "in_reply_to_message_id": 667426073,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@steamclean"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667426045,
+   "body": "$GPUS new weekly high @ .198",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " new weekly high @ .198"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:21:03Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1860"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15273014,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "h26f7dQPNqXRjAb54O"
+     }
+    ],
+    "giphy": {
+     "id": "h26f7dQPNqXRjAb54O"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  },
+  {
+   "id": 667425965,
+   "body": "@elsousio Good luck waiting from .17 LOL on no selling pressure !!!",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@elsousio",
+      "user_id": 1195401,
+      "username": "elsousio",
+      "deeplink": "/elsousio"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " Good luck waiting from .17 LOL on no selling pressure !!!"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:19:52Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667425078,
+    "in_reply_to_message_id": 667425857,
+    "parent": false,
+    "replies": 0
+   },
+   "mentioned_users": [
+    "@elsousio"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667425822,
+   "body": "@elsousio study the Daily Chart I posted",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@elsousio",
+      "user_id": 1195401,
+      "username": "elsousio",
+      "deeplink": "/elsousio"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " study the Daily Chart I posted"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:17:47Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667425078,
+    "in_reply_to_message_id": 667425750,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@elsousio"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667425656,
+   "body": "@elsousio ypu&#39;re not going to get your .17  \nsupport is rising @ .185",
+   "tokenized_body": [
+    {
+     "type": "mention",
+     "data": {
+      "text": "@elsousio",
+      "user_id": 1195401,
+      "username": "elsousio",
+      "deeplink": "/elsousio"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " ypu're not going to get your .17  \nsupport is rising @ .185"
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:15:43Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "conversation": {
+    "parent_message_id": 667425078,
+    "in_reply_to_message_id": 667425508,
+    "parent": false,
+    "replies": 1
+   },
+   "mentioned_users": [
+    "@elsousio"
+   ],
+   "entities": {
+    "media": [],
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   }
+  },
+  {
+   "id": 667425573,
+   "body": "$GPUS slap the ASK fools....",
+   "tokenized_body": [
+    {
+     "type": "cashTag",
+     "data": {
+      "text": "$GPUS",
+      "symbol": "GPUS",
+      "symbol_display": "GPUS",
+      "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+      "deeplink": "symbol/GPUS"
+     }
+    },
+    {
+     "type": "text",
+     "data": {
+      "text": " slap the ASK fools...."
+     }
+    }
+   ],
+   "created_at": "2026-10-27T12:14:26Z",
+   "discussion": false,
+   "source": {
+    "id": 2269,
+    "title": "StockTwits Web",
+    "url": "https://stocktwits.com"
+   },
+   "prices": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "price": "0.1860"
+    }
+   ],
+   "mentioned_users": [],
+   "entities": {
+    "media": [
+     {
+      "id": 15272900,
+      "type": "gif",
+      "thumb": null,
+      "medium": null,
+      "large": null,
+      "original": null,
+      "url": null,
+      "height": null,
+      "width": null,
+      "ratio": null,
+      "provider": "giphy",
+      "provider_id": "0A477fjlRXL1n2LVgJ"
+     }
+    ],
+    "giphy": {
+     "id": "0A477fjlRXL1n2LVgJ"
+    },
+    "sentiment": {
+     "basic": "Bullish"
+    },
+    "discussable": null
+   },
+   "user": {
+    "id": 2124563,
+    "username": "algo888",
+    "name": "algo888",
+    "avatar_url": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "avatar_url_ssl": "https://avatars.stocktwits.com/production/2124563/thumb-1576382179.png",
+    "join_date": "2019-06-06",
+    "official": false,
+    "identity": "User",
+    "classification": [],
+    "badges": [],
+    "home_country": "US",
+    "search_regions": [],
+    "followers": 3846,
+    "following": 0,
+    "ideas": 114049,
+    "watchlist_stocks_count": 249,
+    "like_count": 13308,
+    "plus_tier": "",
+    "premium_room": "",
+    "trade_app": false,
+    "trade_status": "PENDING_MFA"
+   },
+   "symbols": [
+    {
+     "id": 35380,
+     "symbol": "GPUS",
+     "symbol_mic": "GPUS.XASE",
+     "symbol_display": "GPUS",
+     "exchange": "NYSEMkt",
+     "region": "US",
+     "logo_url": "https://logos.stocktwits-cdn.com/GPUS.webp",
+     "title": "Hyperscale Data Inc.",
+     "aliases": [],
+     "deeplink": "symbol/GPUS",
+     "external_id": null,
+     "is_following": false,
+     "watchlist_count": 10287,
+     "has_pricing": true,
+     "instrument_class": "Stock",
+     "live_event": false,
+     "earnings_cta": "up_earn_tab",
+     "earnings_id": "4cebe839-a68e-4ba3-9115-3f2eff2f193e",
+     "sentiment_change": 0.94,
+     "volume_change": 19.9
+    }
+   ]
+  }
+ ],
+ "pinned_message": null,
+ "response": {
+  "status": 200
+ }
+}

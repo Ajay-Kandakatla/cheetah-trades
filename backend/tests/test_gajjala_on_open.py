@@ -592,7 +592,8 @@ def test_one_aplus_row_with_the_card_words_and_a_deep_link():
                    "stop": 3.95, "risk_pct": 4.13, "since_et": "10:30", "variant_label": None, "grade_label": None,
                    "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
                    "text": "GGA · 🚩 Bull Flag · trigger 4.12 · stop 3.95 (−4.1%) · A+ since 10:30 ET",
-                   "broker_text": None}     # WIDENED 2026-10-17: DECISIONS12 D2 / AMENDMENTS12 F4 — the 🚫 tag key (non-owner: null)
+                   "broker_text": None,     # WIDENED 2026-10-17: DECISIONS12 D2 / AMENDMENTS12 F4 — the 🚫 tag key (non-owner: null)
+                   "trader_text": None}     # WIDENED 2026-10-27: BUILD_SPEC26 §3.3 — the 📌 tag key (untagged: null)
     assert e["title"] == "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
     assert e["empty_text"] is None
 

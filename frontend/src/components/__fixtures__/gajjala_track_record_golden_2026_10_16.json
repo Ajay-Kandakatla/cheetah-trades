@@ -81,6 +81,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": null,
@@ -138,7 +143,9 @@
     "quiet": null,
     "runners_100": null,
     "runners_80": null,
-    "text": null
+    "text": null,
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "track_record",
    "sub_resolved_from": "param",
@@ -623,6 +630,7 @@
          "stop": 3.1,
          "symbol": "HCAI",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 3.3
         },
         {
@@ -662,6 +670,7 @@
          "stop": 5.3,
          "symbol": "TGL",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 5.6
         },
         {
@@ -701,6 +710,7 @@
          "stop": 2.2,
          "symbol": "PMI",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 2.4
         },
         {
@@ -740,6 +750,7 @@
          "stop": 1.75,
          "symbol": "XLAB",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 1.85
         }
        ]
@@ -1039,6 +1050,7 @@
         "stop": 3.1,
         "symbol": "HCAI",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 3.3
        },
        {
@@ -1078,6 +1090,7 @@
         "stop": 5.3,
         "symbol": "TGL",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 5.6
        },
        {
@@ -1117,6 +1130,7 @@
         "stop": 2.2,
         "symbol": "PMI",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 2.4
        },
        {
@@ -1156,6 +1170,7 @@
         "stop": 9.5,
         "symbol": "NOEN",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 9.99
        },
        {
@@ -1195,6 +1210,7 @@
         "stop": null,
         "symbol": "NPLN",
         "thin_text": null,
+        "trader_text": null,
         "trigger": null
        },
        {
@@ -1234,6 +1250,7 @@
         "stop": 1.75,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.85
        },
        {
@@ -1273,6 +1290,7 @@
         "stop": 1.75,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.85
        },
        {
@@ -1312,6 +1330,7 @@
         "stop": 1.7,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.81
        }
       ]
@@ -1358,6 +1377,7 @@
         "stop": 5.8,
         "symbol": "AHX",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 6.1
        },
        {
@@ -1397,6 +1417,7 @@
         "stop": 1.16,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.22
        }
       ]
@@ -1443,6 +1464,7 @@
         "stop": 1.11,
         "symbol": "RPL",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.23
        }
       ]
@@ -1632,6 +1654,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": null,
@@ -1689,7 +1716,9 @@
     "quiet": null,
     "runners_100": null,
     "runners_80": null,
-    "text": null
+    "text": null,
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "track_record",
    "sub_resolved_from": "param",
@@ -2174,6 +2203,7 @@
          "stop": 3.1,
          "symbol": "HCAI",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 3.3
         },
         {
@@ -2213,6 +2243,7 @@
          "stop": 5.3,
          "symbol": "TGL",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 5.6
         },
         {
@@ -2252,6 +2283,7 @@
          "stop": 2.2,
          "symbol": "PMI",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 2.4
         },
         {
@@ -2291,6 +2323,7 @@
          "stop": 1.75,
          "symbol": "XLAB",
          "thin_text": null,
+         "trader_text": null,
          "trigger": 1.85
         }
        ]
@@ -2590,6 +2623,7 @@
         "stop": 3.1,
         "symbol": "HCAI",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 3.3
        },
        {
@@ -2629,6 +2663,7 @@
         "stop": 5.3,
         "symbol": "TGL",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 5.6
        },
        {
@@ -2668,6 +2703,7 @@
         "stop": 2.2,
         "symbol": "PMI",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 2.4
        },
        {
@@ -2707,6 +2743,7 @@
         "stop": 9.5,
         "symbol": "NOEN",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 9.99
        },
        {
@@ -2746,6 +2783,7 @@
         "stop": null,
         "symbol": "NPLN",
         "thin_text": null,
+        "trader_text": null,
         "trigger": null
        },
        {
@@ -2785,6 +2823,7 @@
         "stop": 1.75,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.85
        },
        {
@@ -2824,6 +2863,7 @@
         "stop": 1.75,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.85
        },
        {
@@ -2863,6 +2903,7 @@
         "stop": 1.7,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.81
        }
       ]
@@ -3052,6 +3093,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": null,
@@ -3109,7 +3155,9 @@
     "quiet": null,
     "runners_100": null,
     "runners_80": null,
-    "text": null
+    "text": null,
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "track_record",
    "sub_resolved_from": "param",
@@ -3514,6 +3562,7 @@
         "stop": 5.8,
         "symbol": "AHX",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 6.1
        },
        {
@@ -3553,6 +3602,7 @@
         "stop": 1.16,
         "symbol": "XLAB",
         "thin_text": null,
+        "trader_text": null,
         "trigger": 1.22
        }
       ]

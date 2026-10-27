@@ -20,6 +20,7 @@ from tests.test_gajjala_potential_tab import build, day_store
 
 B_WORD = re.compile("b" + "ounc", re.I)
 TAB_DOC = Path(__file__).resolve().parents[2] / "docs" / "gajjala" / "gajjala_tab_2026_10_13.md"
+TRADER_DOC = Path(__file__).resolve().parents[2] / "docs" / "gajjala" / "trader_names_2026_10_27.md"   # 2026-10-27
 COUNT_KEYS = tuple(GT.COUNT_STATES) + ("awaiting_answer", "listed")    # the served `counts` keys, in order (pin)
 
 
@@ -31,7 +32,8 @@ def legend_by():
 def test_legend_keys_are_the_legend_keys_in_order_and_every_word_and_text_is_a_string():
     rows = GT.count_legend()
     assert tuple(r["key"] for r in rows) == GT.LEGEND_KEYS
-    assert GT.LEGEND_KEYS == tuple(GT.COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track")
+    # WIDENED 2026-10-27 (BUILD_SPEC26 §3.3): the 📌 "trader" row appended LAST
+    assert GT.LEGEND_KEYS == tuple(GT.COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track", "trader")
     for r in rows:
         assert set(r) == {"key", "word", "text"}
         assert isinstance(r["word"], str) and r["word"].strip(), r
@@ -43,7 +45,14 @@ def test_NEGATIVE_no_b_word_no_fake_and_no_digit_in_any_legend_text():
         for s in (r["word"], r["text"]):
             assert not B_WORD.search(s), r
             assert "fake" not in s.lower(), r
-        if r["key"] != "none":
+        if r["key"] == "trader":
+            # WIDENED 2026-10-27 (BUILD_SPEC26 §3.3 + A2): the 📌 row's two numbers are BUILT from constants (the
+            # fresh window and GG's floor in millions) — every digit in it is one of them, none typed
+            from chart_maps.gajjala import trader_names as TN
+            want = sorted({str(GC.TRADER_NAMES_FRESH_SESSIONS), str(GC.SCAN_MIN_VOLUME // 1_000_000)})
+            assert sorted(set(re.findall(r"\d+", r["text"]))) == want, r
+            assert r == TN.legend_row()
+        elif r["key"] != "none":
             assert not any(ch.isdigit() for ch in r["text"]), r          # no number is typed in a legend text
 
 
@@ -52,7 +61,7 @@ def test_words_are_the_counts_line_labels():
     assert words == {"aplus": "A+", "triggered": "triggered", "forming": "forming", "partial": "partial",
                      "stopped": "stopped", "invalid": "invalid", "none": "none",
                      "awaiting_answer": "awaiting your number", "listed": "listed", "potential": "🧠 Potential",
-                     "track": "📈 Track"}
+                     "track": "📈 Track", "trader": "📌 trader"}         # WIDENED 2026-10-27: the 📌 row
 
 
 # (2) his misreading, pinned the other way
@@ -184,4 +193,7 @@ def test_the_tab_doc_carries_every_served_legend_text_verbatim():
     doc = TAB_DOC.read_text(encoding="utf-8")
     assert "verbatim (generated from tab.count_legend(); keep in sync)" in doc
     for r in GT.count_legend():
-        assert f"| {r['word']} | {r['text']} |" in doc, r["key"]
+        # WIDENED 2026-10-27 (BUILD_SPEC26 §4 WP-B): the 📌 "trader" row is documented verbatim in its own doc
+        # (docs/gajjala/trader_names_2026_10_27.md) — the 10-13 tab doc is not this package's file
+        where = TRADER_DOC.read_text(encoding="utf-8") if r["key"] == "trader" else doc
+        assert f"| {r['word']} | {r['text']} |" in where, r["key"]

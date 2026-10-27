@@ -771,6 +771,24 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   mins filter."*). UNMEASURED. Doc + HIS CALL Q1–Q6: `docs/gajjala/k4_long_flags_float_2026_10_18.md`; contracts
   "🚩 K4 long flags + 🎾 float order (2026-10-18)"; ✨ `chart-maps-gajjala-float-sort-2026-10-18`,
   `chart-maps-gajjala-long-flags-2026-10-18`.
+- **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
+  https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
+  reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside
+  `run.run_pass` AFTER `scanner.scan_rows` (PURE, GG's, byte-identical — never says "trader") and BEFORE
+  `scanner.record_scan` (`TN.run_step`, FENCED: a raise leaves the scan as his scanner built it; `TN.recount` after the
+  split hold-out), ADDS his names posted in the last `TRADER_NAMES_FRESH_SESSIONS` market sessions (today included),
+  newest first, at most `TRADER_NAMES_MAX` a pass, that resolve in today's snapshot (`sepa.symbols.for_yahoo`) — inside
+  GG's `SCAN_MIN_PRICE`–`SCAN_MAX_PRICE` band and the instrument rule, never OTC, WITHOUT GG's change and volume floors
+  (HIS CALL #1). A name his scanner already lists is TAGGED, never duplicated. Rows carry `source "trader"`; the pass's
+  `qualifiers` stay GG-only. Served tag 📌 `trader_text` on every card, row and push (A+ / 🧠 body only, titles
+  unchanged), the strip's `trader_text` / `trader_skip_text` (skip reasons `SKIP_TEXT`), the legend row "trader" LAST,
+  the ℹ️ scanner clause (`_gg_trader_clause`, picks stay 8), the 🏁 row's `trader_text` from the claim doc. AMENDMENT A2:
+  a 📌 add's 🧠 push is HELD (`TRADER_HOLD_TEXT`) while the session volume the pass read is under `SCAN_MIN_VOLUME`; the
+  A+ is K11. The cron pass re-reads a flagged StockTwits account every `TRADER_REFRESH_SEC` (`trader_refresh` memo;
+  `main` passes `trader_fetch=TN.default_fetch`; tests, dry, replays and the on-open pass never fetch). Every TRADER_*
+  constant is tagged MINE; no SCAN_* / K* value changed. **UNMEASURED** — the closest class this app measured
+  (promo-account first tags) read INVERTED. Doc `docs/gajjala/trader_names_2026_10_27.md` (HIS CALLs #1–#10); contracts
+  "📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)"; ✨ `chart-maps-gajjala-trader-algo888-2026-10-27`.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a
@@ -877,6 +895,30 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   **UNMEASURED** — the 2026-10-14 study read NULL. Contracts: "🎯 A+ filter + win/loss charts on the 🏁 Track record
   (2026-10-26)"; ✨ `chart-maps-gajjala-aplus-filter-2026-10-26`. Doc: `docs/gajjala/track_record_2026_10_16.md`
   "🎯 A+ filter + the win/loss charts (2026-10-26)".
+
+### Chart Maps — 📌 Tracked traders — `traders/` (2026-09-12; algo888 2026-10-27)
+Public traders' posts on the 📌 tab (`GntBoard`, `TRADER_TABS` == `traders/registry.py` `TRADERS` keys in order;
+`DEFAULT_KEY` "gnt"). Their posts, NOT advice and NOT a portfolio (`registry.DISCLAIMER`, one sentence for every
+surface). **UNMEASURED** — no study in this app has read any tracked account's names.
+- **Registry** (`traders/registry.py`): gnt (Tito Adhikary, X), martinluk (Martin Luk, X), algo888 (StockTwits,
+  2026-10-27). Each row: `source` ("x" | "stocktwits"), `profile_url`, `usic` (a cited championship claim or None — a
+  claim-less account never serves GnT's), `gajjala` (feeds 🚩 Gajjala's list), `curate` (feeds the 08:00 curator into
+  `full`; algo888 `False` — AMENDMENT A1, HIS CALL #7), `style`, and for algo888 a cited `profile` + his own words.
+- **Readers** (`traders/feed.py`): x = `fetch` (x.com Relay record + key stream, syndication top posts; the
+  2026-10-22 restoration); stocktwits = `fetch_stocktwits` → `parse_stocktwits` over
+  `stocktwits_client.fetch_user_stream` (`USER_URL`, the same page walk as `fetch_stream` via `_walk`;
+  `TRADER_ST_PAGES` 2 pages per cron read; his own messages only — reshared inner messages never read; HTML entities
+  unescaped; `sentiment` = his own `entities.sentiment.basic` word or None). `refresh` dispatches on `source`; the x
+  path is byte-identical. Posts in Mongo `gnt_posts` (`_id` = post id, "st…" for StockTwits); every run's verdict in
+  `trader_feed_status` (with `source`), served as `refresh.note` in the account's own words (`refresh_note(…, source)`).
+- **Board** (`GET /traders/{key}`): `board()` serves `source`, `source_text`, `claim_text` (None without a claim),
+  `profile`, `gajjala_text` (flagged accounts only), `usic` with no fallback; the FE prints served values only.
+- **Schedule** (host-mounted crontab, unchanged): `40 7,17 * * * … traders.feed refresh` (exit 1 = PARTIAL, 2 = an
+  account stored nothing) and `0 8 * * * … traders.curate`; the 🚩 Gajjala pass also re-reads a flagged StockTwits
+  account (`TRADER_REFRESH_SEC`).
+- **Docs** `backend/docs/traders/gnt.md` (+ "## 2026-10-27 — algo888 on StockTwits"),
+  `docs/gajjala/trader_names_2026_10_27.md`; contracts "📌 GnT: latest-posts source restored + served verdict
+  (2026-10-22)" and "📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)".
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make

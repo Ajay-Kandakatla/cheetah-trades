@@ -31,6 +31,7 @@ import calendar
 import logging
 import time
 from typing import Optional
+from urllib.parse import quote
 
 log = logging.getLogger("stocktwits_client")
 
@@ -47,6 +48,8 @@ except Exception:  # pragma: no cover — dep is in requirements.txt
     _CurlTimeout = None  # type: ignore[assignment,misc]
 
 BASE_URL = "https://api.stocktwits.com/api/2/streams/symbol/{symbol}.json"
+# 2026-10-27: one ACCOUNT's stream (algo888 on the 📌 traders board).
+USER_URL = "https://api.stocktwits.com/api/2/streams/user/{username}.json"
 PAGE_SIZE = 30  # server-side cap per page; ?limit= above this is ignored
 
 # Profiles that pass the Cloudflare TLS check, best first. Chrome profiles
@@ -158,10 +161,12 @@ def _get_page(url: str, timeout: float):
     return None, reason, code
 
 
-def fetch_stream(symbol: str, *, max_pages: int = 1,
-                 stop_before_epoch: Optional[float] = None,
-                 timeout: float = 8.0) -> dict:
-    """Fetch up to ``max_pages`` × 30 messages for ``symbol``.
+def _walk(first_url: str, label: str, *, max_pages: int = 1,
+          stop_before_epoch: Optional[float] = None,
+          timeout: float = 8.0) -> dict:
+    """The page walk every stream shares (moved VERBATIM out of
+    ``fetch_stream`` on 2026-10-27 so the user stream reuses it; for a symbol
+    ``label`` is the upper-cased symbol, so every log line is unchanged).
 
     Returns ``{ok, reason, reason_code, messages, pages}`` where ``messages`` runs
     newest→oldest across pages and each message carries ``_epoch`` (parsed
@@ -170,25 +175,24 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
     ``stop_before_epoch`` is set, pagination stops once a page contains a
     message older than it — deeper pages are entirely older still.
     """
-    sym = symbol.upper()
     messages: list[dict] = []
     next_max = None
     pages = 0
     for _ in range(max(1, max_pages)):
-        url = BASE_URL.format(symbol=sym)
+        url = first_url
         if next_max:
             url += f"?max={next_max}"
         r, reason, reason_code = _get_page(url, timeout)
         if r is None:
             if pages == 0:
                 log.warning("stocktwits stream unavailable for %s: %s",
-                            sym, reason)
+                            label, reason)
                 return {"ok": False, "reason": reason,
                         "reason_code": reason_code, "messages": [],
                         "pages": 0}
             log.warning("stocktwits page %d failed for %s: %s "
                         "(keeping %d messages)",
-                        pages + 1, sym, reason, len(messages))
+                        pages + 1, label, reason, len(messages))
             break
         try:
             body = r.json() or {}
@@ -216,5 +220,34 @@ def fetch_stream(symbol: str, *, max_pages: int = 1,
             "messages": messages, "pages": pages}
 
 
-__all__ = ["fetch_stream", "parse_created_at", "PAGE_SIZE",
+def fetch_stream(symbol: str, *, max_pages: int = 1,
+                 stop_before_epoch: Optional[float] = None,
+                 timeout: float = 8.0) -> dict:
+    """Fetch up to ``max_pages`` × 30 messages for ``symbol``.
+
+    Returns ``{ok, reason, reason_code, messages, pages}`` where ``messages`` runs
+    newest→oldest across pages and each message carries ``_epoch`` (parsed
+    UTC ``created_at``). ``ok`` is False only when the FIRST page failed;
+    a later page failing keeps what was already fetched. When
+    ``stop_before_epoch`` is set, pagination stops once a page contains a
+    message older than it — deeper pages are entirely older still.
+    """
+    sym = symbol.upper()
+    return _walk(BASE_URL.format(symbol=sym), sym, max_pages=max_pages,
+                 stop_before_epoch=stop_before_epoch, timeout=timeout)
+
+
+def fetch_user_stream(username: str, *, max_pages: int = 1,
+                      stop_before_epoch: Optional[float] = None,
+                      timeout: float = 8.0) -> dict:
+    """One StockTwits ACCOUNT's own stream (2026-10-27, Ajay: "Can you track
+    this guy please? and his tickers" — algo888). Same walk, same return
+    shape, same served sentences as ``fetch_stream``; only the first URL and
+    the log label differ."""
+    return _walk(USER_URL.format(username=quote(username.strip(), safe="")),
+                 "@" + username, max_pages=max_pages,
+                 stop_before_epoch=stop_before_epoch, timeout=timeout)
+
+
+__all__ = ["fetch_stream", "fetch_user_stream", "parse_created_at", "PAGE_SIZE",
            "IMPERSONATE_PROFILES", "HAVE_CURL_CFFI", "REASON_CODES"]

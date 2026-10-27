@@ -323,7 +323,10 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
             "thin": bool(r_pct is not None and r_pct < GC.LEDGER_MIN_R_PCT), "plan": plan,
-            "price_at_alert": _num(px), "plan_source": src, "first_seen_et": first_et, "url": url}
+            "price_at_alert": _num(px), "plan_source": src, "first_seen_et": first_et, "url": url,
+            # 📌 2026-10-27: the flagged trader's key the claim / tracker doc carries (a ⏪ replay never has one)
+            "trader": (doc.get("trader") if line != LINES[2] and isinstance(doc.get("trader"), str)
+                       and doc.get("trader") else None)}
 
 
 def _sort_key(row: dict) -> tuple:
@@ -1556,6 +1559,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     🚫 DECISIONS12 D2 — the row's broker tag from the tab's callable (owner only); rows_for untouched."""
     from . import alerts as AL
     from . import tape as TP                                    # lazy: tape imports this module (DECISIONS11 D3)
+    from . import trader_names as TN                            # 📌 2026-10-27 — the served tag words
 
     def _broker(sym):
         if broker_text_of is None:
@@ -1629,7 +1633,8 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "plan_text": plan_text, "note": note, "href": row.get("url"),
                       "same": cells["same"], "next": cells["next"],
                       "replay_text": replay_text, "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
-                      "loss_text": lt, "broker_text": _broker(row["symbol"])})            # 🚫 DECISIONS12 D2
+                      "loss_text": lt, "broker_text": _broker(row["symbol"]),             # 🚫 DECISIONS12 D2
+                      "trader_text": TN.text_for(row.get("trader"))})                   # 📌 2026-10-27
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)

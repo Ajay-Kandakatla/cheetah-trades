@@ -78,10 +78,25 @@ return is also not a transferable track record: the USIC enhanced-growth
 divisions permit concentration and leverage that the rules in this app's own
 trading engine forbid, and his posts describe options day-trades, not the
 position sizing anything here is built on.
+
+EXCEPT (2026-10-27, Ajay: "Add them to Gajjals, they are pretty good"): 🚩
+Gajjala's pass reads the STORED posts of an account flagged `gajjala` and adds
+its fresh names to that scan's candidates (chart_maps/gajjala/trader_names.py);
+this module still decides nothing.
+
+A SECOND SOURCE (2026-10-27, Ajay: "Can you track this guy please? and his
+tickers" — https://stocktwits.com/algo888): an account whose registry row says
+`"source": "stocktwits"` is read off its own StockTwits stream through the
+house client (`stocktwits_client.fetch_user_stream`, the same page walk and
+served sentences as the symbol streams). `parse_stocktwits` keeps only HIS
+messages (never a reshared inner message, which is someone else's or an older
+sentence), unescapes the HTML entities StockTwits sends, and serves his own
+Bullish/Bearish label as found — never inferred. The x.com path is unchanged.
 """
 from __future__ import annotations
 
 import base64
+import html
 import json
 import logging
 import os
@@ -145,6 +160,17 @@ SNOWFLAKE_EPOCH_MS = 1288834974657
 # A post older than this is history, not an idea. His live posts are hours old;
 # most of the syndication cashtags are from 2022.
 FRESH_DAYS = 14
+
+# ── StockTwits accounts (2026-10-27, algo888) ────────────────────────────────
+# Pages per cron read of a StockTwits account. MINE (Cheetah default, not a
+# rule of his): 2 × 30 = 60 messages twice a day; the API caps a page at 30.
+TRADER_ST_PAGES = 2
+# Served when the stream answered but carried no post by the account itself.
+ST_EMPTY_ERROR = "the StockTwits stream answered with no posts by this account"
+# Where a tracked account posts, as the board prints it after the handle.
+SOURCE_TEXT = {"x": "on X", "stocktwits": "on StockTwits"}
+# Served on the board of an account flagged `gajjala` (his call, 2026-10-27).
+GAJJALA_TEXT = "📌 His fresh names join 🚩 Gajjala's scan as candidates — your call 2026-10-27 (“Add them to Gajjals, they are pretty good”); GG's rules decide every read and every A+."
 
 # $AAPL yes. Cashtags are upper-case 1-6 letters with an optional dot/dash.
 CASHTAG_RE = re.compile(r"\$([A-Z][A-Z.\-]{0,5})\b")
@@ -427,6 +453,94 @@ def fetch(recent_url: str = RECENT_URL, top_url: str = TOP_URL,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# STOCKTWITS — one account's own stream (2026-10-27, algo888)
+# ═══════════════════════════════════════════════════════════════════════════
+def parse_stocktwits(messages: list, handle: str) -> list[dict]:
+    """His messages off a StockTwits user stream, as posts the board stores.
+
+    Only messages whose author IS the tracked handle (the x reader's author
+    rule); a message with an empty body is skipped; `reshare_message` — the
+    inner message of a reshare, someone else's or an older sentence — is never
+    read. `sentiment` is HIS own Bullish/Bearish label (entities.sentiment.basic)
+    served as found, None when he set none — never inferred."""
+    from stocktwits_client import parse_created_at
+    out: list[dict] = []
+    want = (handle or "").lower()
+    for m in messages or []:
+        if not isinstance(m, dict) or m.get("id") is None:
+            continue
+        username = str(((m.get("user") or {}).get("username")) or "")
+        if username.lower() != want:
+            log.info("traders.gnt: skipped st%s by @%s on @%s's stream",
+                     m.get("id"), username, handle)
+            continue
+        text = _clean(html.unescape(m.get("body") or ""))
+        if not text:
+            continue
+        epoch = parse_created_at(m.get("created_at"))
+        syms = [str(x.get("symbol") or "").upper() for x in (m.get("symbols") or [])
+                if isinstance(x, dict) and x.get("symbol")]
+        tags: list[str] = []
+        for t in syms + cashtags(text):
+            if t and t not in tags:
+                tags.append(t)
+        basic = (((m.get("entities") or {}).get("sentiment")) or {}).get("basic")
+        out.append({
+            "id": f"st{m['id']}",
+            "text": text,
+            "created_at": (datetime.fromtimestamp(epoch, timezone.utc).isoformat()
+                           if epoch is not None else None),
+            "url": f"https://stocktwits.com/{handle}/message/{m['id']}",
+            "cashtags": tags,
+            "flags": flags(text),
+            "sentiment": basic if isinstance(basic, str) else None,
+            "source": "stocktwits",
+            "shape": "stocktwits_v2",
+            "author": username,
+            "symbols_meta": [{"symbol": x.get("symbol"), "exchange": x.get("exchange"),
+                              "instrument_class": x.get("instrument_class"),
+                              "trade_status": x.get("trade_status")}
+                             for x in (m.get("symbols") or []) if isinstance(x, dict)],
+        })
+    return out
+
+
+def fetch_stocktwits(handle: str, getter=None, *, pages: Optional[int] = None,
+                     timeout: Optional[float] = None) -> dict:
+    """One StockTwits account's latest posts. Never raises.
+
+    Same payload shape as `fetch()` so store / store_status / board read it
+    unchanged. `ok` is False when no post of his came back — the client's own
+    served sentence when the stream failed, ST_EMPTY_ERROR when it answered
+    empty, the exception's type name when anything raised."""
+    try:
+        if getter is None:
+            import stocktwits_client
+            getter = stocktwits_client.fetch_user_stream
+        kw: dict = {}
+        if pages is not None:
+            kw["max_pages"] = pages
+        if timeout is not None:
+            kw["timeout"] = timeout
+        r = getter(handle, **kw) or {}
+        if not r.get("ok"):
+            posts: list[dict] = []
+            errors = [r.get("reason") or ST_EMPTY_ERROR]
+        else:
+            posts = parse_stocktwits(r.get("messages") or [], handle)
+            errors = [] if posts else [ST_EMPTY_ERROR]
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("traders.gnt: stocktwits read failed for @%s: %s",
+                    handle, type(exc).__name__)
+        posts, errors = [], [f"{type(exc).__name__}"]
+    posts.sort(key=lambda p: p.get("created_at") or "", reverse=True)
+    return {"posts": posts, "ok": bool(posts),
+            "sources": {"recent": len(posts), "top": 0},
+            "recent_shape": "stocktwits_v2" if posts else None,
+            "errors": errors, "fetched_at": _now().isoformat()}
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # STORAGE — cumulative, so the history outgrows what either endpoint returns
 # ═══════════════════════════════════════════════════════════════════════════
 def store(payload: dict, coll=None, trader: str = "gnt") -> int:
@@ -502,6 +616,7 @@ def store_status(result: dict, status_coll=None) -> Optional[dict]:
            "sources": dict(result.get("sources") or {}),
            "errors": list(result.get("errors") or []),
            "recent_shape": result.get("recent_shape"),
+           "source": result.get("source") or "x",
            "last_ok_at": at if ok else prev.get("last_ok_at")}
     try:
         status_coll.replace_one({"_id": key}, doc, upsert=True)
@@ -538,10 +653,13 @@ def _when(iso: Optional[str]) -> str:
         return str(iso)
 
 
-def refresh_note(status: Optional[dict], display: str = "his") -> str:
+def refresh_note(status: Optional[dict], display: str = "his", source: str = "x") -> str:
     """ONE sentence on whether this board is actually tracking him, built from
     the stored verdict of the last refresh. SERVED: the board prints it
-    verbatim and types nothing of its own."""
+    verbatim and types nothing of its own.
+
+    2026-10-27: a StockTwits account (`source="stocktwits"`) names the
+    StockTwits stream; the x.com words are unchanged."""
     if not status:
         return ("No refresh recorded yet — the tracker runs twice a day and "
                 "writes its verdict here.")
@@ -549,6 +667,17 @@ def refresh_note(status: Optional[dict], display: str = "his") -> str:
     at = _when(status.get("at"))
     n_recent = int(src.get("recent") or 0)
     n_top = int(src.get("top") or 0)
+    if source == "stocktwits":
+        if status.get("ok"):
+            return (f"Latest posts checked {at}: the StockTwits stream answered with "
+                    f"{n_recent} posts. Checked twice a day, and by Gajjala's scan "
+                    f"while it runs.")
+        who = f"{display}'s" if display and display != "his" else "his"
+        errors = status.get("errors") or [ST_EMPTY_ERROR]
+        last = _when(status.get("last_ok_at"))
+        return (f"⚠️ NOT tracking {who} latest posts: at the {at} check the StockTwits "
+                f"stream returned no posts — {errors[0]} (it last answered {last}). "
+                f"The names below are the stored archive.")
     if status.get("ok"):
         return (f"Latest posts checked {at}: the x.com page answered with "
                 f"{n_recent} posts and the history source with {n_top}. "
@@ -564,14 +693,27 @@ def refresh_note(status: Optional[dict], display: str = "his") -> str:
             f"{_when(status.get('last_ok_at'))}). {history}")
 
 
-def refresh_block(status: Optional[dict], display: str = "his") -> dict:
+def refresh_block(status: Optional[dict], display: str = "his", source: str = "x") -> dict:
     """What board() serves about the last refresh. Same keys every time, so the
     frontend never branches on a missing field; `note` is the sentence."""
     st = status or {}
     return {"at": st.get("at"), "ok": st.get("ok"), "last_ok_at": st.get("last_ok_at"),
             "stored": st.get("stored"), "sources": st.get("sources") or {},
             "errors": st.get("errors") or [], "recent_shape": st.get("recent_shape"),
-            "note": refresh_note(status, display)}
+            "note": refresh_note(status, display, source)}
+
+
+def claim_text(usic: Optional[dict]) -> Optional[str]:
+    """A cited championship claim as ONE served line, e.g.
+    "USIC 2025 #1 · 2115.1% ($20,000+ Enhanced Growth)". `:g` so 969.0 prints
+    "969", as the frontend always printed it. No claim → None, never GnT's."""
+    if not usic:
+        return None
+    try:
+        return (f"USIC {usic['year']} #{usic['rank']} · {float(usic['return_pct']):g}% "
+                f"({usic['division']})")
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def age_days(iso: Optional[str], now: Optional[datetime] = None) -> Optional[int]:
@@ -723,10 +865,17 @@ def board(limit: int = 400, coll=None, trader: str = "gnt", status_coll=None) ->
     handle = who.get("handle") or HANDLE
     display = who.get("display") or DISPLAY
     status = read_status(key, status_coll) if status_coll is not None else None
+    source = who.get("source", "x")
     return {
         "key": who.get("key"), "handle": handle, "display": display,
-        "profile_url": recent_url(handle),
-        "usic": who.get("usic") or USIC_2025, "style": who.get("style"),
+        "profile_url": who.get("profile_url") or recent_url(handle),
+        # 2026-10-27: no fallback — a claim-less trader (algo888) once would
+        # have served GnT's +2,115.1%.
+        "usic": who.get("usic"), "style": who.get("style"),
+        "source": source, "source_text": SOURCE_TEXT.get(source),
+        "claim_text": claim_text(who.get("usic")),
+        "profile": who.get("profile"),
+        "gajjala_text": GAJJALA_TEXT if who.get("gajjala") is True else None,
         "n_posts": len(posts), "n_tickers": len(rows), "n_fresh": len(fresh),
         "fresh_days": FRESH_DAYS,
         "newest_post_at": newest,
@@ -736,13 +885,20 @@ def board(limit: int = 400, coll=None, trader: str = "gnt", status_coll=None) ->
         "disclaimer": R.DISCLAIMER,
         # 2026-10-22: whether the tracker is TRACKING is a served verdict, not
         # a typed "Checked twice a day".
-        "refresh": refresh_block(status, display),
+        "refresh": refresh_block(status, display, source),
     }
 
 
-def refresh(coll=None, trader: str = "gnt", status_coll=None) -> dict:
+def refresh(coll=None, trader: str = "gnt", status_coll=None, *,
+            pages: Optional[int] = None, timeout: Optional[float] = None) -> dict:
     """Fetch → store → record the verdict, for ONE trader. What the cron calls,
-    twice a day."""
+    twice a day.
+
+    2026-10-27: dispatches on the registry row's `source`. "x" (the default)
+    is the x.com + syndication read, byte-identical, and ignores
+    pages/timeout; "stocktwits" reads the account's own stream
+    (TRADER_ST_PAGES pages unless `pages` says otherwise; `timeout` None →
+    the client's default)."""
     from traders import registry as R
     who = R.get(trader) or {}
     handle = who.get("handle") or HANDLE
@@ -752,13 +908,18 @@ def refresh(coll=None, trader: str = "gnt", status_coll=None) -> dict:
         if db is not None:
             coll = coll if coll is not None else db[COLL]
             status_coll = status_coll if status_coll is not None else db[STATUS_COLL]
-    f = fetch(recent_url=recent_url(handle), top_url=top_url(handle), handle=handle)
+    source = who.get("source", "x")
+    if source == "stocktwits":
+        f = fetch_stocktwits(handle, pages=pages or TRADER_ST_PAGES, timeout=timeout)
+    else:
+        f = fetch(recent_url=recent_url(handle), top_url=top_url(handle), handle=handle)
     n = store(f, coll=coll, trader=key) if coll is not None else 0
     log.info("traders.feed[%s]: stored %s posts (ok=%s sources=%s shape=%s)",
              handle, n, f["ok"], f["sources"], f.get("recent_shape"))
     out = {"trader": key, "handle": handle, "stored": n,
            "ok": f["ok"], "sources": f["sources"], "errors": f["errors"],
-           "recent_shape": f.get("recent_shape"), "fetched_at": f["fetched_at"]}
+           "recent_shape": f.get("recent_shape"), "fetched_at": f["fetched_at"],
+           "source": source}
     if status_coll is not None:
         store_status(out, status_coll=status_coll)
     return out

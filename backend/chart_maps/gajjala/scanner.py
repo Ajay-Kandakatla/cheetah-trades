@@ -89,6 +89,34 @@ def row_type(sym: str, types: Optional[dict]) -> Optional[str]:
     return t if t else GC.SCAN_UNKNOWN_TYPE
 
 
+def type_verdict(sym: str, types: Optional[dict]) -> tuple:
+    """(type, verdict) — Ajay's round-A instrument rule for ONE symbol, extracted VERBATIM from `scan_rows`
+    (2026-10-27, so 📌 trader_names.resolve applies the same rule; scan_rows' output is byte-identical).
+    verdict "ok" | "unknown" | "out": the gate off → (None, "ok"); a symbol the map does not know → "out" under the
+    "drop" policy, else "unknown" (listed as "type unknown"); a known type outside SCAN_INSTRUMENT_TYPES → "out"."""
+    if GC.SCAN_INSTRUMENT_TYPES is None:
+        return None, "ok"
+    typ = row_type(sym, types)
+    if typ == GC.SCAN_UNKNOWN_TYPE:
+        return typ, ("out" if GC.SCAN_UNKNOWN_TYPE_POLICY == "drop" else "unknown")
+    if typ not in GC.SCAN_INSTRUMENT_TYPES:
+        return typ, "out"
+    return typ, "ok"
+
+
+def build_row(sym: str, row: dict, ep: dict, prev: float, typ: Optional[str], session_iso: str) -> dict:
+    """The scanner Row of one snapshot row whose print `ep` is dated the session and whose prior close `prev` > 0 —
+    extracted VERBATIM from `scan_rows` (2026-10-27; its output is byte-identical)."""
+    price = float(ep["price"])
+    vol, vol_src = _volume(row, session_iso, ep["session"])
+    return {"symbol": sym, "type": typ, "price": price, "prev_close": prev,
+            "change_pct": round((price / prev - 1) * 100, 4), "volume": vol, "vol_src": vol_src,
+            "day_o": _f(row.get("open")), "day_h": _f(row.get("high")), "day_l": _f(row.get("low")),
+            "day_c": _f(row.get("close")),
+            "last_trade_et": datetime.fromtimestamp(ep["epoch"], tz=ET).strftime("%Y-%m-%d %H:%M:%S"),
+            "tape_session": ep["session"]}
+
+
 def scan_rows(rows: dict, now, session, *, types: Optional[dict] = None) -> dict:
     """His scanner over every snapshot row. PURE.
 
@@ -102,7 +130,6 @@ def scan_rows(rows: dict, now, session, *, types: Optional[dict] = None) -> dict
     session_iso = _iso(session)
     tape = pass_tape_session(now)
     in_ah = tape == "afterhours"
-    types_on = GC.SCAN_INSTRUMENT_TYPES is not None
     counts = {"rows": 0, "dated_session": 0, "type_ok": 0, "type_out": 0, "type_unknown": 0, "band_ok": 0,
               "vol_ok": 0, "change_ok": 0, "qualifiers": 0, "held_split": 0, "split_failed": 0,
               "ah_rows": 0, "ah_close_eq_last": 0}
@@ -121,26 +148,15 @@ def scan_rows(rows: dict, now, session, *, types: Optional[dict] = None) -> dict
         if not prev or prev <= 0:
             continue
         counts["dated_session"] += 1
-        typ = None
-        if types_on:
-            typ = row_type(sym, types)
-            if typ == GC.SCAN_UNKNOWN_TYPE:
-                if GC.SCAN_UNKNOWN_TYPE_POLICY == "drop":
-                    counts["type_out"] += 1
-                    continue
-                counts["type_unknown"] += 1
-            elif typ not in GC.SCAN_INSTRUMENT_TYPES:
-                counts["type_out"] += 1
-                continue
+        typ, verdict = type_verdict(sym, types)
+        if verdict == "out":
+            counts["type_out"] += 1
+            continue
+        if verdict == "unknown":
+            counts["type_unknown"] += 1
         counts["type_ok"] += 1
-        price = float(ep["price"])
-        vol, vol_src = _volume(row, session_iso, ep["session"])
-        r = {"symbol": sym, "type": typ, "price": price, "prev_close": prev,
-             "change_pct": round((price / prev - 1) * 100, 4), "volume": vol, "vol_src": vol_src,
-             "day_o": _f(row.get("open")), "day_h": _f(row.get("high")), "day_l": _f(row.get("low")),
-             "day_c": _f(row.get("close")),
-             "last_trade_et": datetime.fromtimestamp(ep["epoch"], tz=ET).strftime("%Y-%m-%d %H:%M:%S"),
-             "tape_session": ep["session"]}
+        r = build_row(sym, row, ep, prev, typ, session_iso)
+        price, vol = r["price"], r["volume"]
         band = GC.SCAN_MIN_PRICE <= price <= GC.SCAN_MAX_PRICE
         if band:
             counts["band_ok"] += 1
@@ -353,5 +369,5 @@ def k10_names(result: dict) -> list:
     return [r["symbol"] for r in result.get("k10_candidates") or []]
 
 
-__all__ = ["pass_tape_session", "scan_rows", "hold_out_splits", "record_scan", "commit_ah_carry",
+__all__ = ["pass_tape_session", "type_verdict", "build_row", "scan_rows", "hold_out_splits", "record_scan", "commit_ah_carry",
            "listed_symbols", "graveyard_today", "fetch_type_map", "ensure_type_map", "row_type", "k10_names"]

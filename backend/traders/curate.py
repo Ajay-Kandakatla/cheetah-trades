@@ -212,7 +212,15 @@ def run(limit: int = MAX_ADDS_PER_RUN, coll=None, dry: bool = False) -> dict:
 
     seen_before = set(added_symbols(coll))
     candidates: dict[str, dict] = {}
+    skipped_traders: list[str] = []
     for t in R.TRADERS:
+        # 2026-10-27 (algo888): his ask was "Add them to Gajjals" — Gajjala's
+        # scan only. An account whose row says `"curate": False` never feeds
+        # the `full` universe; putting him in it is HIS CALL.
+        if t.get("curate") is False:
+            log.info("traders.curate: skipped %s (curate False — not curated into full)", t["key"])
+            skipped_traders.append(t["key"])
+            continue
         for row in F.tickers(F.stored(limit=600, trader=t["key"])):
             sym = row["symbol"]
             if sym in uni or sym in seen_before or sym in candidates:
@@ -243,7 +251,8 @@ def run(limit: int = MAX_ADDS_PER_RUN, coll=None, dry: bool = False) -> dict:
 
     log.info("traders.curate: %s added, %s rejected", len(added), len(rejected))
     return {"added": added, "rejected": rejected, "checked": len(candidates),
-            "universe_before": len(uni), "dry": dry}
+            "universe_before": len(uni), "dry": dry,
+            "skipped_traders": skipped_traders}
 
 
 if __name__ == "__main__":                                     # pragma: no cover

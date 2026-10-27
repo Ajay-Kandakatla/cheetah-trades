@@ -81,6 +81,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
@@ -100,6 +105,7 @@
       "stop": 10.421875,
       "symbol": "BBB",
       "text": "BBB · 💋 EMA Kiss & Fly · trigger 10.48 · stop 10.42 (−0.6%)",
+      "trader_text": null,
       "trigger": 10.484375,
       "variant_label": null
      }
@@ -152,6 +158,7 @@
        }
       ],
       "text": "EEE · trigger armed · trigger 10.95 · stop 10.89 (−0.6%) · first seen 10:31 ET",
+      "trader_text": null,
       "trigger": 10.953125
      },
      {
@@ -199,6 +206,7 @@
        }
       ],
       "text": "AAA · trigger armed · trigger 10.97 · stop 10.81 (−1.4%) · first seen 09:21 ET",
+      "trader_text": null,
       "trigger": 10.96875
      },
      {
@@ -226,6 +234,7 @@
        }
       ],
       "text": "JJJ · building · trigger 10.97 (not armed yet) · stop 10.81 (−1.4%) · first seen 09:21 ET",
+      "trader_text": null,
       "trigger": 10.96875
      }
     ],
@@ -268,7 +277,9 @@
     "quiet": false,
     "runners_100": 1,
     "runners_80": 3,
-    "text": "1 runner ≥100% · 3 ≥80% · best AAA +120.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+    "text": "1 runner ≥100% · 3 ≥80% · best AAA +120.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "bull_flag",
    "sub_resolved_from": "param",
@@ -593,6 +604,7 @@
      ],
      "symbol": "EEE",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -859,6 +871,7 @@
      ],
      "symbol": "AAA",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -1125,6 +1138,7 @@
      ],
      "symbol": "JJJ",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -1391,6 +1405,7 @@
      ],
      "symbol": "GGG",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -1659,6 +1674,7 @@
      ],
      "symbol": "FFF",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -1761,6 +1777,11 @@
      "key": "track",
      "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
      "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
     }
    ],
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
@@ -1780,6 +1801,7 @@
       "stop": 10.421875,
       "symbol": "BBB",
       "text": "BBB · 💋 EMA Kiss & Fly · trigger 10.48 · stop 10.42 (−0.6%)",
+      "trader_text": null,
       "trigger": 10.484375,
       "variant_label": null
      }
@@ -1833,7 +1855,9 @@
     "quiet": false,
     "runners_100": 1,
     "runners_80": 3,
-    "text": "1 runner ≥100% · 3 ≥80% · best AAA +120.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+    "text": "1 runner ≥100% · 3 ≥80% · best AAA +120.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
    },
    "sub": "potential",
    "sub_resolved_from": "param",
@@ -2180,6 +2204,7 @@
      ],
      "symbol": "EEE",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -2481,6 +2506,7 @@
      ],
      "symbol": "DDD",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -2794,6 +2820,7 @@
      ],
      "symbol": "AAA",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -3082,6 +3109,7 @@
      ],
      "symbol": "JJJ",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -3384,6 +3412,7 @@
      ],
      "symbol": "CCC",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -3682,6 +3711,7 @@
      ],
      "symbol": "HHH",
      "tf": "5m",
+     "trader_text": null,
      "vol_avg": {
       "label": "50-bar avg volume",
       "period": 50,
@@ -3741,6 +3771,7 @@
          "text": "10:31 trigger armed"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 82.4,
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
       },
@@ -3771,6 +3802,7 @@
          "text": "10:31 trigger armed"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 4.08,
        "vs_trigger_text": "+4.1% vs the trigger at first sight (10.95)"
       },
@@ -3801,6 +3833,7 @@
          "text": "09:36 building"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 4.23,
        "vs_trigger_text": "+4.2% vs the trigger at first sight (10.94)"
       },
@@ -3831,6 +3864,7 @@
          "text": "09:21 trigger armed"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 3.93,
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
@@ -3861,6 +3895,7 @@
          "text": "09:21 building"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 8.73,
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
@@ -3895,6 +3930,7 @@
          "text": "10:31 A+ — broke the trigger"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 8.73,
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
@@ -3925,6 +3961,7 @@
          "text": "09:21 building"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 3.93,
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       }
@@ -3966,6 +4003,7 @@
          "text": "10:01 stopped"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 3.93,
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
@@ -4004,6 +4042,7 @@
          "text": "09:21 🪦 graveyard 2026-10-13"
         }
        ],
+       "trader_text": null,
        "vs_trigger_pct": 8.73,
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       }
@@ -4016,12 +4055,14 @@
      {
       "broker_text": null,
       "href": "/chart-maps?tab=gajjala&sub=premarket&focus=PMX",
-      "symbol": "PMX"
+      "symbol": "PMX",
+      "trader_text": null
      },
      {
       "broker_text": null,
       "href": "/chart-maps?tab=gajjala&sub=premarket&focus=CARY",
-      "symbol": "CARY"
+      "symbol": "CARY",
+      "trader_text": null
      }
     ],
     "text": "👀 On his watch list, no structure yet — “if it's making some noise in pre-market I put them in my watch list … after hours moves from the past day, I'll keep them as well” (S8 13:21–14:34): PMX, CARY"

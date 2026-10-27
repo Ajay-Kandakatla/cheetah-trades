@@ -11,13 +11,15 @@ Collections
   gajjala_alerts    _id "GG:{date}|{SYM}|{setup}"   the push ledger (demand_alerts.claim_key docs)         none
   gajjala_halts     _id "{date}|{SYM}"         halts per session (live + 30-session backfill)              none
   gajjala_daily     _id "{date}|{SYM}"         squeeze history + the float read of the session             TTL 30 d
-  gajjala_state     _id "lease" | "float_backoff" | "types" | "broker_flags"                                  —
+  gajjala_state     _id "lease" | "float_backoff" | "types" | "broker_flags" | "trader_refresh"               —
                     lease = {status running|done, held_by cron|on_demand, token (the holder's uuid4 hex), claimed_at,
                     started_at + last_cron_started_at (CRON claims only — the tick clock, the min-gap clock),
                     od_started_at (on-open claims only), pid, done_at}
                     broker_flags = {added: [SYM…], removed: [SYM…], updated_at, by} — 🚫 his own "not eligible at
                     the broker" list (2026-10-17, DECISIONS12 D1); written ONLY by set_broker_flag (the owner's POST /
                     DELETE through the api). A TAG, never a filter: nothing in the pass reads it to gate a name.
+                    trader_refresh = {at, ok, stored} — 📌 the pass's last re-read of a flagged StockTwits account
+                    (2026-10-27, trader_names.maybe_refresh; at most every TRADER_REFRESH_SEC)
   gajjala_potentials _id "{date}|{SYM}|{setup}"  🧠 the potential tracker (2026-10-15) — first sighting + path    none
                     the push claim records the trigger / stop / price the push carried (`push.trigger/stop/px`,
                     2026-10-16) — the 🏁 ledger's plan

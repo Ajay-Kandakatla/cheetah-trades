@@ -51,6 +51,7 @@ from zoneinfo import ZoneInfo
 from daytrading.data import ET_AFTERHOURS_CLOSE, ET_PREMARKET_OPEN, ET_RTH_OPEN   # the house session clock
 
 from . import constants as GC
+from . import trader_names as TN                                 # 📌 A2 — the hold reason + its words (one source)
 
 log = logging.getLogger("chart_maps.gajjala.potential")
 
@@ -61,7 +62,8 @@ KIND_LABEL = {"armed": "trigger armed", "building": "building"}
 CONCEPT = ("strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the "
            "highs — this is the concept of all the moves", "S9 1:54:53")
 COUNT_KEYS = ("potential", "armed", "building", "new", "tracked_today", "pushed", "claimed_before", "muted",
-              "outside_hours", "closed_day", "stale_tape", "no_target", "failed", "dry", "graveyard", "joined")
+              "outside_hours", "closed_day", "stale_tape", "no_target", "failed", "dry", "graveyard", "joined",
+              "trader_held")                                     # 📌 A2 2026-10-27 — appended LAST
 HELD_WORDS = {"muted": f"his first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes", "outside_hours": "outside the push hours",
               "closed_day": "market closed", "stale_tape": f"no print in the last {GC.PASS_CADENCE_SEC // 60}-minute bar",
               "claim_error": "store error — retrying next pass",
@@ -69,6 +71,12 @@ HELD_WORDS = {"muted": f"his first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes", "outsi
 RULE_HELD = ("closed_day", "outside_hours", "muted", "stale_tape")   # refused by his window / the tape — P1 decides a re-ring
 STORE_HELD = ("claim_error",)                                        # a store fault — ALWAYS retried next pass (it never rang; K3)
 JOIN_HELD = ("joined_midsession",)                                   # D9 — tracked, NEVER rung
+# 📌 A2 (2026-10-27, BUILD_SPEC26 AMENDMENTS — GG's 1M floor stays on EVERY push): a 📌 trader ADD (row source "trader")
+# is tracked from its first sighting but its push is HELD while the session volume the pass read is under
+# GC.SCAN_MIN_VOLUME — the D9 path (`_hold`, the `held` list); it rings on the pass the volume clears it, while the
+# structure is the same unbroken one (D3), and never re-rings a sent push (K3). Its words are trader_names.TRADER_HOLD_TEXT
+# (the 📈 row serves it verbatim) — kept OUT of HELD_WORDS (the /alerts page words every HELD_WORDS key).
+TRADER_HELD = (TN.HOLD_REASON,)                                      # 2026-10-27 critic F2: the reason lives in trader_names
 FIRST_SEEN_MODES = ("normal", "joined")                              # D9 — `joined` = seen first by a mid-session join pass
 AGAIN_TEXT = "↻ also a potential last session"                       # W11
 CHEETAH_TAG = "(Cheetah default, not his)"
@@ -304,12 +312,15 @@ def row_text(sym, setup, read, kind, first_seen_et) -> str:
     return out
 
 
-def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text: Optional[str] = None) -> dict:
+def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text: Optional[str] = None,
+            trader_text: Optional[str] = None) -> dict:
     """The device payload (W3/W4 + AMENDMENTS4 D8): "UNMEASURED" in the TITLE; the body is the trigger / stop clause,
     then the TAIL (so the ~180-char lock screen shows it), then the session, the first sighting and the tells last.
     Every number is the read's own. 🚫 (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1): `broker_text` (tab.broker_text_for
     — the served word) when a non-empty str → the clause right BEFORE the TAIL and " · " + tab.BROKER_FLAG_ICON on the
-    title; anything else → the body and title of before. A TAG only: the push still rings."""
+    title; anything else → the body and title of before. A TAG only: the push still rings.
+    📌 (2026-10-27): `trader_text` (trader_names.text_for — the tag and his handle) when a non-empty str → its clause
+    right before the broker clause; the title is UNCHANGED (HIS CALL #4)."""
     from .tab import BROKER_FLAG_ICON, SESSION_BADGE
     sym = (sym or "").upper()
     read = read or {}
@@ -324,7 +335,8 @@ def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text:
         bits = [reason, f"trigger {_px(trig)} (not armed yet)" if trig is not None else "", stop_bit]
     v = values or {}
     bt = broker_text if isinstance(broker_text, str) and broker_text else ""
-    bits += [bt, TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
+    tt = trader_text if isinstance(trader_text, str) and trader_text else ""
+    bits += [tt, bt, TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
              f"first seen {first_seen_et} ET" if first_seen_et else "", v.get("float_text") or "",
              v.get("rotation_text") or ""]
     title = f"🧠 {sym} · {e} {label} — {kl} · UNMEASURED" + (f" · {BROKER_FLAG_ICON}" if bt else "")
@@ -448,14 +460,16 @@ def _pct_move(a, b) -> Optional[float]:
     return round((a / b - 1) * 100, 2) if a is not None and b is not None else None
 
 
-def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False, mode="normal", known=False) -> tuple:
+def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False, mode="normal", known=False,
+          trader: Optional[str] = None) -> tuple:
     """-> (doc | None, is_new). Creates the doc at the FIRST pass whose read is a potential; after that follows every
     state of that (symbol, setup) for the session, appending to `state_path` only when (state, kind) changes — so a
     replayed pass (same clock, same read) leaves the doc byte-identical. ONE `update_one` upsert with disjoint
     `$setOnInsert` / `$set`; never writes push / held / graveyard_on. The returned doc = the doc as read, merged with
     this pass's fields (`push` / `held` come ONLY from the read). Every stamp = the pass clock `now`. `known` = the
     pass already saw this doc on file (run_pass's session read): a None read then is a READ FAULT, never a new doc —
-    nothing is written (the timeline and the move survive) and the gate skips the name this pass."""
+    nothing is written (the timeline and the move survive) and the gate skips the name this pass. 📌 `trader`
+    (2026-10-27): the flagged trader's key, stamped on the INSERT only and only when truthy (the 🏁 ledger's tag)."""
     sym = (sym or "").upper()
     read = read if isinstance(read, dict) else {}
     existing = store.get_potential(session, sym, setup)
@@ -478,6 +492,8 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
                   "first_risk_pct": _num(read.get("risk_pct")), "first_bar_t": read.get("as_of_bar_t"),
                   "first_reason": read.get("reason") if isinstance(read.get("reason"), str) else "",
                   "first_tells": dict(values or {})}
+        if isinstance(trader, str) and trader:
+            insert["trader"] = trader
     base = existing or insert
     path = [dict(e) for e in (base.get("state_path") or []) if isinstance(e, dict)]
     state = read.get("state")
@@ -551,6 +567,8 @@ def eligible(doc: dict, is_new: bool, kind: Optional[str]) -> bool:
         return False
     if reasons & set(RULE_HELD):
         return GC.POTENTIAL_DEFER_REFUSED and _unbroken(doc)
+    if reasons & set(TRADER_HELD):                              # 📌 A2 — the floor decides at the gate, every pass
+        return _unbroken(doc)
     if not reasons:
         return _unbroken(doc)
     return bool(reasons & set(STORE_HELD))
@@ -618,7 +636,7 @@ def _frame_close(frames_obj) -> Optional[float]:
 
 
 def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Callable] = None, owner=None,
-             dry=False, tape=None, live_rows: Optional[dict] = None) -> dict:
+             dry=False, tape=None, live_rows: Optional[dict] = None, trader_hold: Optional[dict] = None) -> dict:
     """Track every potential of the pass and ring each FIRST sighting once (K3), live, owner-only.
 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames}; `ctx` = {SYM: the read doc's ctx}; `rows` = {SYM:
@@ -626,12 +644,17 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     frame has no close (D2: never the stored row). `send(owner, payload)` defaults to
     push.hooks.notify_gajjala_potential. `dry` → the gate runs, nothing is written or sent (counted "dry").
     The claim records the trigger / stop / price the push carried (`push.trigger/stop/px` — the 🏁 ledger's plan).
-    Never touches `gajjala_alerts`, never calls the A+ sender, never reads GAJJALA_PUSH_MODE. -> {COUNT_KEYS: int}."""
+    Never touches `gajjala_alerts`, never calls the A+ sender, never reads GAJJALA_PUSH_MODE. -> {COUNT_KEYS: int}.
+    📌 A2 (2026-10-27): `trader_hold` = {SYM: the session volume this pass read} for the 📌 ADDS (run.py — the number
+    K11 reads); a potential of one is HELD (TRADER_HELD, counted "trader_held") while it is under GC.SCAN_MIN_VOLUME.
+    A GG qualifier carrying the tag is never in it (it passed the floors)."""
     from . import alerts as AL
     from . import store as ST
     from . import tab as GT
     send = send or _default_send
+    from . import trader_names as TN
     ctx, rows, live_rows, frames = ctx or {}, rows or {}, live_rows or {}, frames or {}
+    trader_hold = {str(k).upper(): v for k, v in (trader_hold or {}).items()}
     counts = {k: 0 for k in COUNT_KEYS}
     # 🚫 DECISIONS12 D4 — his broker list, read ONCE per pass before the tracker read (a read fault → the seed); a TAG
     # on the body, never a gate; COUNT_KEYS unchanged (the A+ pass counts "broker_flagged")
@@ -691,9 +714,10 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     for _k, sym, setup, r, kind, values in pots:
         counts["potential"] += 1
         counts[kind] += 1
+        c = ctx.get(sym) or {}
         doc, is_new = track(store, session, sym, setup, r, kind, now, px=px_of(sym), values=values, dry=dry,
                             mode=FIRST_SEEN_MODES[1] if joining else FIRST_SEEN_MODES[0],
-                            known=doc_id(session, sym, setup) in today)
+                            known=doc_id(session, sym, setup) in today, trader=c.get("trader"))
         if doc is None:                                         # a read fault on a doc on file: skip, never re-create
             counts["failed"] += 1
             continue
@@ -709,6 +733,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             reason = ckey = window
         elif GC.POTENTIAL_FRESH_TAPE and not fresh_tape(frames.get(sym), now):
             reason = ckey = "stale_tape"
+        elif sym in trader_hold and TN.under_floor(trader_hold[sym]):
+            reason, ckey = TRADER_HELD[0], "trader_held"      # 📌 A2 — GG's 1M floor stays on every push
         if reason:
             counts[ckey] += 1
             if not dry:
@@ -733,7 +759,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
                 _hold(store, doc, STORE_HELD[0], now)
             continue
         payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
-                          broker_text=GT.broker_text_for(sym, flags))
+                          broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"))
         try:
             res = send(owner or AL._owner(), payload) or {}
         except Exception as exc:                                # noqa: BLE001
@@ -761,7 +787,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
 
 
 __all__ = ["KIND", "TAIL", "KIND_LABEL", "CONCEPT", "COUNT_KEYS", "HELD_WORDS", "RULE_HELD", "STORE_HELD", "JOIN_HELD",
-           "FIRST_SEEN_MODES", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
+           "FIRST_SEEN_MODES", "TRADER_HELD", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
            "doc_id", "deep_link", "line", "row_text", "compose", "window_reason", "fresh_tape", "pass_times",
            "push_note", "rules_lines", "defaults_clauses", "defaults_sentence", "track", "eligible", "mark_graveyard",
            "run_pass"]

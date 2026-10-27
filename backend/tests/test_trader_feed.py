@@ -214,6 +214,12 @@ def test_the_module_makes_no_forward_claim_and_gates_nothing():
     doc = " ".join((G.__doc__ or "").lower().split())
     assert "nothing here is a signal, a gate or a lane" in doc
     assert "no scan consumes it, no alert fires from it, nothing buys from it" in doc
+    # 2026-10-27 (widened, dated): Ajay "Add them to Gajjals, they are pretty
+    # good" — the docstring keeps both sentences above and names the ONE
+    # exception, so it can never read as "gates nothing" without it.
+    assert "except (2026-10-27" in doc
+    assert "chart_maps/gajjala/trader_names.py" in doc
+    assert "this module still decides nothing" in doc
     # and the caveat travels with the DATA, not only in a docstring nobody opens
     d = G.board(coll=_EmptyColl()).get("disclaimer", "")
     assert "not advice" in d.lower() and "not a portfolio" in d.lower()
@@ -244,8 +250,14 @@ def test_NEGATIVE_the_board_never_fetches_on_a_page_load():
 # Ajay: "Also track their mentions for me.. Martin Luk +969.8% (stocks)".
 def test_both_champions_are_registered_with_CITED_claims():
     from traders import registry as R
-    assert set(R.keys()) == {"gnt", "martinluk"}
+    # 2026-10-27 (widened, dated): algo888 (StockTwits) joins — Ajay "Can you
+    # track this guy please? and his tickers". He makes NO championship claim,
+    # so his `usic` is None and only the two champions are held to a cited one.
+    assert set(R.keys()) == {"gnt", "martinluk", "algo888"}
+    assert R.get("algo888")["usic"] is None
     for t in R.TRADERS:
+        if t["key"] == "algo888":
+            continue
         u = t["usic"]
         assert u["source"], f"{t['key']}: a championship claim needs its source"
         assert u["year"] == 2025 and u["rank"] == 1

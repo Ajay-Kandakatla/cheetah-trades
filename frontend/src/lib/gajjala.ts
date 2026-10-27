@@ -65,6 +65,12 @@
  * SERVED owner block `broker_flags` (null for anyone but the primary owner). GG_BROKER_PATH is the owner's add / remove
  * route (POST / DELETE; the board GET carries the list, so the FE never GETs it). Every word is served by tab.py — this
  * module types no word and never the broker's name. ggQuery is unchanged.
+ *
+ * 📌 Trader tag (2026-10-27, BUILD_SPEC26 §3.4). Ajay: "Add them to Gajjals, they are pretty good". The names a tracked
+ * trader flagged for this tab posted join the scan as candidates; every row / tile type gains the SERVED `trader_text`
+ * (tab / ledger via trader_names.text_for — served to EVERY viewer, null when untagged) and the strip the SERVED
+ * `trader_text` / `trader_skip_text` lines. A TAG: nothing hides, filters or counts a row here. This module types no
+ * word and no trader's name. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -206,6 +212,8 @@ export type GgPotentialRow = {
   text: string;
   /** 🚫 the served tag (tab.BROKER_FLAG_TEXT) when the name is on his list — owner only; null / absent → no chip. */
   broker_text?: string | null;
+  /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
+  trader_text?: string | null;
 };
 export type GgPotentialStrip = {
   title: string;
@@ -253,6 +261,8 @@ export type GgTrackRow = {
   href?: string | null;
   /** 🚫 the served tag — owner only; null / absent → no chip. */
   broker_text?: string | null;
+  /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
+  trader_text?: string | null;
 };
 export type GgTrackBlock = { date?: string; label?: string; title?: string | null; n?: number;
                              armed_n?: number; building_n?: number; pushed_n?: number;
@@ -265,7 +275,9 @@ export type GgTrack = {
   yesterday?: GgTrackBlock | null;
 };
 /** 👀 ☀️ / 🌙 names with no potential in any setup — display only, never pushed. */
-export type GgWatch = { text: string; symbols: { symbol: string; href: string; broker_text?: string | null }[] };
+export type GgWatch = { text: string; symbols: { symbol: string; href: string; broker_text?: string | null;
+  /** 📌 the served trader tag — every viewer; null / absent → no chip. */
+  trader_text?: string | null }[] };
 
 /* ---- 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.8 / §3.11) — every string SERVED; `state` is a CSS hook only. ---- */
 /** `no_risk` = trigger equal to the stop on the alert (AMENDMENTS9 E4) — listed, never counted. `no_time` = no
@@ -286,7 +298,9 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** ⏪ the served replayed chip (ledger.REPLAY_CHIP / REPLAY_CHIP_UNGATED) — null on the live / shadow lines. */
   replay_text?: string | null;
   /** 🚫 the served tag (ledger.served_block via the tab's callable) — owner only; null / absent → no chip. */
-  broker_text?: string | null };
+  broker_text?: string | null;
+  /** 📌 the served trader tag (ledger served row, trader_names.text_for) — null on an untagged or replayed row. */
+  trader_text?: string | null };
 /** ✅ / ❌ one served chip: `text` carries the ROW count (and " +r ⏪" when replayed rows share the bucket — F13);
  *  `n` / `n_replayed` are the served numbers (the FE prints `text` only, never composes a count). */
 export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: number | null };
@@ -380,7 +394,9 @@ export type GgVolAvg = ServedVolAvg;
  *  board's `tf` (a ➖ Fade read that fell back to 5-minute bars). */
 export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | null; gajjala?: GgRead | null;
   /** 🚫 the served tag — owner only; null / absent → no chip. */
-  broker_text?: string | null };
+  broker_text?: string | null;
+  /** 📌 the served trader tag — every viewer; null / absent → no chip. */
+  trader_text?: string | null };
 
 export type GgPlaybookItem = string | {
   text: string;
@@ -424,7 +440,9 @@ export type GgBoard = {
     on_demand?: boolean;
   };
   strip?: { runners_100?: number; runners_80?: number; best_change_pct?: number | null;
-            best_symbol?: string | null; quiet?: boolean; text?: string | null };
+            best_symbol?: string | null; quiet?: boolean; text?: string | null;
+            /** 📌 2026-10-27: the SERVED trader lines (trader_names.strip_text / skip_text) — null when nothing to say. */
+            trader_text?: string | null; trader_skip_text?: string | null };
   counts?: Partial<Record<GgState | 'awaiting_answer' | 'listed', number>>;
   counts_text?: string | null;
   /** ℹ️ 2026-10-18 (DECISIONS15 D1): the ONE served legend (tab.count_legend) — one {key, word, text} per word on the
@@ -452,7 +470,7 @@ export type GgBoard = {
     /** 🌙 A+ recap rows — `href` SERVED by tab.recap (= potential.deep_link, the setup card; 2026-10-16, DECISIONS10 D7);
      *  absent on an older API. The FE guards it with ggHref and composes none. */
     recap?: { title?: string | null; rows?: { symbol: string; setup?: string | null; text: string; href?: string | null;
-                                             broker_text?: string | null }[] } | null;
+                                             broker_text?: string | null; trader_text?: string | null }[] } | null;
   } | null;
   playbook?: GgPlaybook | null;
   /** 🧠 strip — setup subs only; absent on ☀️ / 🌙 / 📓 / 🧠 and on an older API. */
@@ -657,6 +675,8 @@ export type GgAplusRow = {
   text: string;
   /** 🚫 the served tag — owner only; null / absent → no chip. */
   broker_text?: string | null;
+  /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
+  trader_text?: string | null;
 };
 export type GgEnterable = { title?: string | null; rows: GgAplusRow[]; empty_text?: string | null; note?: string | null };
 export type GgScanResponse = {

@@ -147,6 +147,11 @@ class Deps:
     sleep: Callable = time.sleep
     refine_floats: bool = True                     # the Yahoo step (off in a dry run)
     clock: Callable = time.monotonic               # the budget clock
+    # 📌 2026-10-27 (Ajay "Add them to Gajjals, they are pretty good"; BUILD_SPEC26 §3.3): a flagged trader's stored
+    # posts (None = trader_names.default_posts) and the in-pass re-read (None = NO in-pass refresh — tests, replays,
+    # dry runs, the on-open pass; the cron path of main() passes trader_names.default_fetch)
+    trader_posts: Optional[Callable] = None
+    trader_fetch: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -287,6 +292,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import potential as PT
     from . import store as ST
     from . import detectors as D
+    from . import trader_names as TN
 
     deps = deps or Deps()
     now_given = now is not None
@@ -337,8 +343,14 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         tdoc = st.types_map() or {}
         out["types_meta"] = {"complete": bool(tdoc.get("complete")), "as_of": tdoc.get("as_of"), "n": tdoc.get("n")}
         result = SC.scan_rows(rows, now, session, types=types)
+        # 📌 2026-10-27 — a flagged trader's fresh names join the candidates AFTER his scanner and BEFORE the hold-out
+        # + the scan write (FENCED: a failure leaves `result` as the scanner built it)
+        out["trader"] = TN.run_step(st, now, session, rows, result, types=types, deps=deps, good=good,
+                                    refresh=(not dry and not on_demand and deps.trader_fetch is not None))
         mine()
         SC.record_scan(st, session, now, result, fetch_splits=deps.fetch_splits)
+        TN.recount(result)                                      # the hold-out rewrote counts["qualifiers"]
+        TN.trim_block(out["trader"], result)                    # critic F1: a split-held name leaves the 📌 block too
         mine()
         out["ah_carry"] = SC.commit_ah_carry(st, session, now, result, meta)
         try:
@@ -428,6 +440,13 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             post = {"rows": p_rows, "unchecked_n": unchecked}
 
         # the read docs the board serves
+        try:                                                    # 📌 tags: the window's scan docs, this pass's rows win
+            win_docs = st.scan_docs(SC._window(session))
+            tags = TN.tag_map(win_docs, result["qualifiers"])
+            trader_adds = TN.added_symbols(win_docs, result["qualifiers"])
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: trader tags unreadable: %s", type(exc).__name__)
+            tags, trader_adds = {}, set()
         alert_ctx: dict = {}
         pot_ctx: dict = {}
         for s, fr in frames.items():
@@ -438,6 +457,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                    "rotation": CX.rotation(row.get("volume"), fr_read), "halts": chip,
                    "psych": CX.psych_chips(row.get("price")), "squeeze_history": (hist.get("chips") or {}).get(s),
                    "last_halt_resume_et": (chip or {}).get("last_resume_et"), "reg_gain_pct": _reg_gain_pct(row)}
+            tag = tags.get(s)
+            if tag:                                             # keys only when tagged — untagged docs byte-unchanged
+                ctx.update(trader=tag["trader"], trader_text=tag["trader_text"])
             prior = st.get_read(session, s) or {}
             stopped = dict(prior.get("stopped_today") or {})
             for setup, r in (reads.get(s) or {}).items():
@@ -453,6 +475,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                         "listed": listed.get(s), "stopped_today": stopped}, now=now)
             alert_ctx[s] = {"float_text": (fr_read or {}).get("text"), "price": row.get("price"),
                             "last_halt_resume_et": ctx["last_halt_resume_et"], "reg_gain_pct": ctx["reg_gain_pct"]}
+            if tag:
+                alert_ctx[s].update(trader=tag["trader"], trader_text=tag["trader_text"])
             pot_ctx[s] = ctx                                    # 🧠 the SAME dict the read doc stores (tab reads it)
 
         push_dry = bool(dry or on_demand)                       # K2: an open never sends, claims or records a row
@@ -467,7 +491,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         out.update({"tape_session": result.get("tape_session"), "counts": result["counts"],
                     "strip": result["strip"], "n_listed": len(names), "n_read": len(reads), "bars": bar_stats,
                     "alerts": alerts, "floats": yahoo, "status": "ok" if good else "failed",
-                    "qualifiers": [q["symbol"] for q in result["qualifiers"]],
+                    "qualifiers": [q["symbol"] for q in result["qualifiers"] if q.get("source") != TN.SOURCE],
                     "premarket": {"pm_levels": pm_levels}, "postmarket": post,
                     "bars_through_et": _bars_through(frames),
                     "aplus": sorted(f"{s}:{k}" for s, rs in reads.items() for k, r in rs.items()
@@ -479,9 +503,11 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         # frame's latest close first, else THIS pass's row (a qualifier or the live snapshot) — never the stored row.
         live_rows = {s: (q_rows.get(s) or _row_from_snapshot(s, rows.get(s), session_iso)) for s in frames}
         try:
+            # A2 (2026-10-27): a 📌 add's push is HELD under GG's volume floor — sv, the number K11 reads
             out["potential"] = PT.run_pass(reads, frames, now, session, store=st, ctx=pot_ctx, rows=row_by,
                                            send=deps.send_potential, owner=deps.owner, dry=push_dry,
-                                           tape=result.get("tape_session"), live_rows=live_rows)
+                                           tape=result.get("tape_session"), live_rows=live_rows,
+                                           trader_hold={s: sv.get(s) for s in trader_adds if s in frames})
         except Exception:                                       # noqa: BLE001
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")
@@ -540,7 +566,7 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, *, on_deman
         return
     body = {k: out.get(k) for k in ("tape_session", "counts", "strip", "n_listed", "n_read", "bars", "alerts",
                                     "status", "errors", "wall_s", "premarket", "postmarket", "ah_carry", "potential",
-                                    "on_demand", "bars_through_et", "lease")}
+                                    "on_demand", "bars_through_et", "lease", "trader")}
     body["snapshot_meta"] = out.get("snapshot")
     body["types_meta"] = out.get("types_meta")
     body["finished_at"] = now + timedelta(seconds=float(out.get("wall_s") or 0))
@@ -637,7 +663,8 @@ def main(argv=None) -> int:
         if args.on_demand:
             out = run_on_demand(now, store=st, deps=Deps())
         else:
-            out = run_pass(now, store=st, deps=Deps(), symbols=syms)
+            from . import trader_names as TN
+            out = run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch), symbols=syms)
     if args.json:
         print(json.dumps(out, default=str))
     elif args.on_demand:

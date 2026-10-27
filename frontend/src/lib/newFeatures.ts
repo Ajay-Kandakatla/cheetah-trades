@@ -22,6 +22,19 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-27 ~08:45 ET (both lines verbatim in the label): "Can you track this guy please? and his tickers"
+  // (https://stocktwits.com/algo888), then "Add them to Gajjals, they are pretty good" (BUILD_SPEC26). backend
+  // traders/registry.py gains the algo888 row (source "stocktwits", usic None, gajjala True, curate False — AMENDMENT A1:
+  // never curated into `full`); traders/feed.py reads his own StockTwits stream through stocktwits_client.fetch_user_stream
+  // (reshared inner messages never read) and serves source_text / claim_text / gajjala_text, never GnT's claim on a
+  // claim-less account. chart_maps/gajjala/trader_names.py ADDS his fresh, snapshot-resolvable names to the pass's
+  // qualifier list AFTER scan_rows (byte-identical, GG's) and BEFORE record_scan — inside GG's price band and the
+  // instrument rule, without GG's change and volume floors (HIS CALL #1) — served tag 📌 on every card, row and push
+  // (GgTraderChip prints the served text). AMENDMENT A2: a 📌 add's 🧠 push is HELD under GG's 1M floor; the A+ is K11.
+  // The quote of his own post is message 667428905. UNMEASURED — the closest measured class (promo-account first tags)
+  // read INVERTED. Pinned by scripts/contracts.mjs ("📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)").
+  { id: 'chart-maps-gajjala-trader-algo888-2026-10-27', addedAt: '2026-10-27', route: '/chart-maps?tab=gajjala',
+    label: "📌 algo888 on StockTwits is tracked on the 📌 traders board, and the names he posted today or in the previous market session join 🚩 Gajjala's scan as candidates, tagged 📌 algo888 on every card, row and push — without GG's change and volume floors, inside GG's price band and your instrument rule, never OTC. GG's rules still decide every read, every 🧠 and every A+, and no push rings on one until today's volume clears GG's 1M floor. You said: “Can you track this guy please? and his tickers” and “Add them to Gajjals, they are pretty good”. His own post, 2026-10-27: “@WC25 That;s how I pump.... LOL”. UNMEASURED — no study in this app has read his names." },
   // Ajay 2026-10-26 ~20:30 ET + ~20:55 ET (both lines verbatim in the label, the double space after "a" kept), on
   // 🚩 Gajjala's 🏁 Track record. ledger.served_block (BUILD_SPEC25) now serves `kinds` (📋 every alert / 🎯 A+ only,
   // ROW counts), `kind_param` "kind", `kind_empty_text`, `categories_aplus` and an always-served `aplus` block: its own

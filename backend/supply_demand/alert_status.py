@@ -548,6 +548,37 @@ def _et_iso(x) -> Optional[str]:
 _POT_PUSH_STATES = ("pushed", "no_target", "failed", "claimed")
 
 
+def _gajjala_held_text(reason) -> Optional[str]:
+    """📌 2026-10-27 (BUILD_SPEC26 A2, critic F2): the FROZEN words of the 🧠 hold chart_maps.gajjala.trader_names owns
+    (trader_names.held_text — TRADER_HOLD_TEXT, never retyped here); None for every other reason. LAZY (this module
+    stays a leaf); a failed import is None — the page then words the reason as before."""
+    if not isinstance(reason, str) or not reason:
+        return None
+    try:
+        from chart_maps.gajjala import trader_names as TN
+        return TN.held_text(reason)
+    except Exception as exc:
+        log.warning("alert_status: trader hold words unavailable: %s", exc)
+        return None
+
+
+def _gajjala_trader_held_text(counts) -> Optional[str]:
+    """📌 2026-10-27 (critic F2): the 🧠 pass's `trader_held` counter chip words — TRADER_HOLD_TEXT, served only when
+    the latest pass counted one (a pass without it keeps its shape)."""
+    try:
+        n = int((counts or {}).get("trader_held") or 0)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    if n <= 0:
+        return None
+    try:
+        from chart_maps.gajjala import trader_names as TN
+        return TN.TRADER_HOLD_TEXT
+    except Exception as exc:
+        log.warning("alert_status: trader hold words unavailable: %s", exc)
+        return None
+
+
 def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
     """🧠 Today's potentials, newest first sighting first (2026-10-15).
 
@@ -564,7 +595,8 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
     (first_kind), text (doc.line — composed by potential.line, never
     recomposed here), url (doc.url when an internal path, else None),
     push_state ("pushed" | "no_target" | "failed" | "claimed" | None),
-    push_at (ET iso | None), held (the LAST `held` reason | None)}. A Mongo
+    push_at (ET iso | None), held (the LAST `held` reason | None)[, held_text — 📌 2026-10-27: the served words of a
+    📌 trader hold (trader_names.TRADER_HOLD_TEXT), present ONLY on such a row]}. A Mongo
     read, nothing scanned; never raises — a dead tracker is []."""
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -592,12 +624,16 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
         reason = last_held.get("reason")
         text = d.get("line")
         first_kind = d.get("first_kind")
-        out.append({"date": day, "symbol": str(d.get("symbol") or "").upper() or None,
-                    "setup": d.get("setup") or None, "at": _et_iso(d.get("first_seen")),
-                    "kind": first_kind if isinstance(first_kind, str) and first_kind else None,
-                    "text": text if isinstance(text, str) and text else None, "url": url,
-                    "push_state": state, "push_at": _et_iso(push.get("at")) if push else None,
-                    "held": reason if isinstance(reason, str) and reason else None})
+        item = {"date": day, "symbol": str(d.get("symbol") or "").upper() or None,
+                "setup": d.get("setup") or None, "at": _et_iso(d.get("first_seen")),
+                "kind": first_kind if isinstance(first_kind, str) and first_kind else None,
+                "text": text if isinstance(text, str) and text else None, "url": url,
+                "push_state": state, "push_at": _et_iso(push.get("at")) if push else None,
+                "held": reason if isinstance(reason, str) and reason else None}
+        words = _gajjala_held_text(item["held"])
+        if words:                                   # 📌 2026-10-27 critic F2: only a 📌 hold carries its served words
+            item["held_text"] = words
+        out.append(item)
     out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
     return out
 
@@ -633,6 +669,9 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
                                                    read_pass(GAJJALA_POTENTIAL_KIND, pass_coll)),
                                      potential_items=read_gajjala_potentials(potential_coll, et)),
     }
+    tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
+    if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
+        passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
     window = tape_window()
     for kind in TAPE_KINDS:
         passes[kind] = dict(_with_cadence(kind, read_pass(kind, pass_coll)), window=window)

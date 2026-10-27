@@ -9720,8 +9720,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
-      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen (found ${firstTwelve.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -9930,8 +9931,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
-      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first fifteen (found ${firstNine.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first sixteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const e = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -10206,8 +10208,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
-      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10401,8 +10404,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
-      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10495,8 +10499,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
-      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10640,8 +10645,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
-      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10752,8 +10758,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
-      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -10798,8 +10805,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
-      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -10933,8 +10941,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11011,8 +11020,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
         const entry = arr.slice(at, arr.indexOf('}', arr.indexOf('label:', at)) + 1);
@@ -11122,8 +11132,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
-      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -11261,9 +11272,11 @@ const CONTRACTS = [
       const errs = [];
       const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
       // 1. both readers, the constant sentence, the status store, the served note, the exit codes.
+      // 2026-10-27: board() passes the account's `source` to refresh_block (BUILD_SPEC26 §3.2 — the StockTwits words for
+      // algo888, the x words byte-unchanged) — the pin widened by that one argument, dated.
       for (const need of ['def _parse_recent_relay(', 'def _parse_recent_keystream(', 'def _parse_recent(html: str, handle',
         'RECENT_DARK_ERROR = (', 'STATUS_COLL = "trader_feed_status"', 'def store_status(', 'def read_status(',
-        'def refresh_note(', 'def refresh_block(', 'def exit_code(', '"refresh": refresh_block(status, display)']) {
+        'def refresh_note(', 'def refresh_block(', 'def exit_code(', '"refresh": refresh_block(status, display, source)']) {
         if (!src.includes(need)) errs.push(`traders/feed.py must keep ${need}`);
       }
       const boardSrc = src.slice(src.indexOf('def board('), src.indexOf('def refresh('));
@@ -11306,8 +11319,9 @@ const CONTRACTS = [
       // 2026-10-23: the 🔄 Gajjala scan-button ✨ (chart-maps-gajjala-scan-button-2026-10-23, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11355,8 +11369,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-scan-button-2026-10-23';
       // 2026-10-26: the 🕐 Support 1-minute + weekly frames ✨ (chart-maps-support-1min-weekly-frames-2026-10-26, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11424,8 +11439,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-support-1min-weekly-frames-2026-10-26';
       // 2026-10-26: the 🎯 A+ filter ✨ (chart-maps-gajjala-aplus-filter-2026-10-26, its own block, FIRST) lands above this one — the FIRST pin widened to the top two, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11487,8 +11503,9 @@ const CONTRACTS = [
       // 1. ✨ FIRST, both lines verbatim, UNMEASURED, no b-word / forecast word.
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
-      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      // 2026-10-27: the 📌 algo888 ✨ (chart-maps-gajjala-trader-algo888-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -11645,6 +11662,271 @@ const CONTRACTS = [
       if (gt && !/fails, never skips/.test(gt)) errs.push('GajjalaBoard.aplus_golden.test.tsx lost the never-skip golden guard');
       tryRead('src/components/GajjalaAplusCharts.test.tsx', 'the chart tests');
       tryRead('src/components/GajjalaBoard.aplus.test.tsx', 'the 🎯 board tests');
+      return errs;
+    },
+  },
+  {
+    name: "📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)",
+    file: '../backend/chart_maps/gajjala/trader_names.py',
+    checks(tn) {
+      // Ajay 2026-10-27 ~08:45 ET: "Can you track this guy please? and his tickers" (https://stocktwits.com/algo888), then
+      // "Add them to Gajjals, they are pretty good" (BUILD_SPEC26 + §8 AMENDMENTS A1–A2). Pinned, every check on the real
+      // file: (1) the registry row (source stocktwits, usic None, curate False — A1), exactly ONE gajjala True, DEFAULT_KEY
+      // gnt, the DISCLAIMER's dated exception; (2) the curator skips curate False (A1); (3) feed.py — the StockTwits reader,
+      // TRADER_ST_PAGES = 2, the x refresh line byte-identical, board() serves usic with NO GnT fallback, parse_stocktwits
+      // never reads reshare_message; (4) stocktwits_client — USER_URL, fetch_user_stream (exported), one shared _walk;
+      // (5) run.py — TN.run_step after SC.scan_rows and before SC.record_scan, TN.recount(result) after it, Deps default
+      // trader_fetch None, main passes trader_fetch=TN.default_fetch; scan_rows never says "trader"; (6) constants — every
+      // TRADER_* line tagged MINE, none in CHEETAH_DEFAULTS, GG's SCAN_* values unchanged; trader_names builds the A2 floor
+      // words from SCAN_MIN_VOLUME; (7) FE — TRADER_TABS keys == registry keys in order, GgTraderChip + the 7 testids, no
+      // typed trader name or 📌; (8) the ✨ FIRST (route, addedAt, both quotes, his post, the A2 floor clause, UNMEASURED,
+      // no b-word / FORBIDDEN_WORDS); (9) the docs, SPECS (headers not renamed), the tests with their NEGATIVES, no b-word in
+      // any new file; (10) the host-mounted crontab lines unchanged. UNMEASURED — no study has read his names.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+      const pyDef = (src, name) => {
+        const a = src.indexOf(`\ndef ${name}(`);
+        if (a < 0) return null;
+        const e = src.slice(a + 1).search(/\n(?:def |class |@|[A-Za-z_])/);
+        return src.slice(a, e < 0 ? undefined : a + 1 + e);
+      };
+      const HIS = ['Can you track this guy please? and his tickers', 'Add them to Gajjals, they are pretty good'];
+      const B_WORD = (s) => /bounc/i.test(s.replace(/useBounceRoom|BounceRoom|bounce_room/g, '')) || /\bfake\b/i.test(s);
+
+      // 1. the registry row, ONE flag, the default, the disclaimer.
+      const reg = tryRead('../backend/traders/registry.py', 'the registry');
+      const regCode = pyCode(reg);
+      const tblock = (/^TRADERS: list\[dict\] = \[([\s\S]*?)\n\]\n/m.exec(regCode) || [])[1] || '';
+      if (reg && !tblock) errs.push('traders/registry.py lost the TRADERS list');
+      const regKeys = [...tblock.matchAll(/"key": "([^"]+)"/g)].map((m) => m[1]);
+      if (reg && regKeys.join(',') !== 'gnt,martinluk,algo888') errs.push(`registry TRADERS keys must be gnt, martinluk, algo888 in that order (algo888 appended LAST) — got ${regKeys.join(', ')}`);
+      const aAt = tblock.indexOf('"key": "algo888"');
+      const aRow = aAt < 0 ? '' : tblock.slice(aAt, (tblock.indexOf('\n    },', aAt) + 1 || undefined));
+      if (reg && aAt < 0) errs.push('registry has no algo888 row');
+      for (const need of ['"source": "stocktwits"', '"usic": None', '"gajjala": True', '"curate": False', '"profile_url": "https://stocktwits.com/algo888"']) {
+        if (aRow && !aRow.includes(need)) errs.push(`the algo888 registry row must carry ${need}`);
+      }
+      const nFlag = (regCode.match(/"gajjala": True/g) || []).length;
+      if (reg && nFlag !== 1) errs.push(`exactly ONE registry row may carry "gajjala": True (found ${nFlag})`);
+      if (reg && (regCode.match(/"curate": True/g) || []).length !== 2) errs.push('gnt and martinluk must keep "curate": True (today\'s curator behaviour)');
+      if (reg && !/^DEFAULT_KEY = "gnt"$/m.test(reg)) errs.push('registry DEFAULT_KEY must stay "gnt"');
+      const disc = (/^DISCLAIMER = \(([\s\S]*?)\n\)/m.exec(reg) || [])[1];
+      const discText = disc ? [...disc.matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).join('') : '';
+      if (reg && !discText) errs.push('registry lost DISCLAIMER = (…)');
+      else if (reg && !discText.includes("Nothing here gates a scan, an alert or a lane — except that, by Ajay's 2026-10-27 call, an account flagged for Gajjala's tab has its fresh names ADDED to that scan's candidate list, tagged 📌; GG's own rules still decide every read and every A+.")) errs.push('the DISCLAIMER must end with the dated 2026-10-27 exception verbatim (§3.1)');
+
+      // 2. A1 — the curator skips a curate False row and names the skip.
+      const cur = tryRead('../backend/traders/curate.py', 'the curator');
+      const runCur = pyDef(pyCode(cur), 'run') || '';
+      if (cur && !runCur) errs.push('traders/curate.py lost def run(');
+      if (runCur && !/if t\.get\("curate"\) is False:/.test(runCur)) errs.push('curate.run must skip every trader whose t.get("curate") is False (A1)');
+      if (runCur && !/"skipped_traders": skipped_traders/.test(runCur)) errs.push('curate.run must name the skip in its summary as skipped_traders (A1)');
+
+      // 3. feed.py — the reader, the pages, the x line, board() with no GnT fallback.
+      const feed = tryRead('../backend/traders/feed.py', 'the feed');
+      for (const need of ['def parse_stocktwits(messages: list, handle: str)', 'def fetch_stocktwits(', 'def claim_text(',
+        'ST_EMPTY_ERROR = "the StockTwits stream answered with no posts by this account"',
+        'SOURCE_TEXT = {"x": "on X", "stocktwits": "on StockTwits"}']) {
+        if (feed && !feed.includes(need)) errs.push(`traders/feed.py must keep ${need}`);
+      }
+      if (feed && !/^TRADER_ST_PAGES = 2\b/m.test(feed)) errs.push('traders/feed.py must keep TRADER_ST_PAGES = 2');
+      if (feed && !/^GAJJALA_TEXT = "📌 His fresh names join 🚩 Gajjala's scan as candidates — your call 2026-10-27 \(“Add them to Gajjals, they are pretty good”\); GG's rules decide every read and every A\+\."$/m.test(feed)) errs.push('traders/feed.py GAJJALA_TEXT changed (FROZEN, §3.2)');
+      const refreshFn = pyDef(feed, 'refresh') || '';
+      if (feed && !refreshFn.split('\n').some((l) => l.trim() === 'f = fetch(recent_url=recent_url(handle), top_url=top_url(handle), handle=handle)')) errs.push('refresh() lost the x line byte-identical: f = fetch(recent_url=recent_url(handle), top_url=top_url(handle), handle=handle)');
+      if (refreshFn && !/fetch_stocktwits\(handle, pages=pages or TRADER_ST_PAGES, timeout=timeout\)/.test(refreshFn)) errs.push('refresh() must read a stocktwits account through fetch_stocktwits(handle, pages=pages or TRADER_ST_PAGES, …)');
+      const boardFn = pyDef(feed, 'board') || '';
+      if (feed && !boardFn) errs.push('traders/feed.py lost def board(');
+      if (boardFn && !boardFn.includes('"usic": who.get("usic"),')) errs.push('board() must serve "usic": who.get("usic"), — no fallback');
+      if (/or USIC_2025/.test(pyCode(feed))) errs.push('traders/feed.py serves `or USIC_2025` again — a claim-less trader would show GnT\'s +2,115.1%');
+      for (const k of ['"source": source', '"source_text": SOURCE_TEXT.get(source)', '"claim_text": claim_text(', '"profile": who.get("profile")', '"gajjala_text": GAJJALA_TEXT if who.get("gajjala") is True else None']) {
+        if (boardFn && !boardFn.includes(k)) errs.push(`board() must serve ${k}`);
+      }
+      const parseFn = pyDef(feed, 'parse_stocktwits') || '';
+      if (/reshare_message/.test(pyCode(parseFn))) errs.push('parse_stocktwits reads reshare_message — a reshared inner message is never his post');
+      const fetchAt = feed.indexOf('\ndef fetch('), stAt = feed.indexOf('\ndef fetch_stocktwits('), boardAt = feed.indexOf('\ndef board(');
+      if (feed && !(fetchAt >= 0 && stAt > fetchAt && stAt < boardAt)) errs.push('fetch_stocktwits must sit after fetch() and before board() (never between board and refresh)');
+
+      // 4. stocktwits_client — USER_URL, fetch_user_stream, ONE page walk.
+      const stc = tryRead('../backend/stocktwits_client.py', 'the StockTwits client');
+      if (stc && !stc.includes('USER_URL = "https://api.stocktwits.com/api/2/streams/user/{username}.json"')) errs.push('stocktwits_client.py must keep USER_URL');
+      if (stc && !/^def fetch_user_stream\(/m.test(stc)) errs.push('stocktwits_client.py must keep def fetch_user_stream(');
+      if (stc && !/^def _walk\(/m.test(stc)) errs.push('stocktwits_client.py must keep the ONE shared page walk def _walk(');
+      const allList = (/^__all__ = \[([\s\S]*?)\]/m.exec(stc) || [])[1] || '';
+      if (stc && !/"fetch_user_stream"/.test(allList)) errs.push('stocktwits_client.__all__ must export fetch_user_stream');
+      for (const fn of ['fetch_stream', 'fetch_user_stream']) {
+        const b = pyDef(stc, fn);
+        if (stc && (!b || !/return _walk\(/.test(b))) errs.push(`stocktwits_client.${fn} must return _walk(…) — one page walk, never a copy`);
+      }
+
+      // 5. run.py — the fenced step's place, the recount, the cron-only fetch; scan_rows never says trader.
+      const run = tryRead('../backend/chart_maps/gajjala/run.py', 'the pass');
+      const rp = pyCode(pyDef(run, 'run_pass') || '');
+      if (run && !rp) errs.push('run.py lost def run_pass(');
+      const iScan = rp.indexOf('SC.scan_rows('), iStep = rp.indexOf('TN.run_step('), iRec = rp.indexOf('SC.record_scan('), iRe = rp.indexOf('TN.recount(result)');
+      if (rp && !(iScan >= 0 && iStep > iScan && iRec > iStep && iRe > iRec)) errs.push('run_pass must call SC.scan_rows( → TN.run_step( → SC.record_scan( → TN.recount(result) in that order');
+      if (rp && !/refresh=\(not dry and not on_demand and deps\.trader_fetch is not None\)/.test(rp)) errs.push('TN.run_step refresh must be (not dry and not on_demand and deps.trader_fetch is not None)');
+      if (rp && !/q\.get\("source"\) != TN\.SOURCE/.test(rp)) errs.push('out["qualifiers"] must stay GG-only (q.get("source") != TN.SOURCE)');
+      if (run && !/^\s+trader_fetch: Optional\[Callable\] = None$/m.test(run)) errs.push('Deps.trader_fetch must default to None (no in-pass fetch in tests / dry / replays / on-open)');
+      const mainFn = pyCode(pyDef(run, 'main') || '');
+      if (run && !mainFn.includes('trader_fetch=TN.default_fetch')) errs.push('run.main (the cron path) must pass Deps(trader_fetch=TN.default_fetch)');
+      const scn = tryRead('../backend/chart_maps/gajjala/scanner.py', 'the scanner');
+      const sr = pyDef(scn, 'scan_rows');
+      if (scn && sr == null) errs.push('scanner.py lost def scan_rows(');
+      else if (sr && /trader/i.test(sr)) errs.push('scanner.scan_rows says "trader" — it is GG\'s, PURE and byte-identical');
+      for (const fn of ['type_verdict', 'build_row']) if (scn && pyDef(scn, fn) == null) errs.push(`scanner.py lost def ${fn}( (the verbatim extraction trader_names reuses)`);
+
+      // 6. constants — TRADER_* tagged MINE, never served as CHEETAH_DEFAULTS; SCAN_* unchanged; the A2 words built.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'the constants');
+      const TR = ['TRADER_TAG', 'TRADER_NAMES_FRESH_SESSIONS', 'TRADER_NAMES_MAX', 'TRADER_REFRESH_SEC', 'TRADER_FETCH_PAGES', 'TRADER_FETCH_TIMEOUT_SEC'];
+      for (const n of TR) {
+        const line = (new RegExp(`^${n} = [^\\n]*`, 'm').exec(gc) || [])[0];
+        if (gc && !line) errs.push(`constants.py lost ${n}`);
+        else if (line && !/MINE/.test(line)) errs.push(`constants.py ${n} must be tagged MINE (not GG's)`);
+      }
+      if (gc && !/^TRADER_REFRESH_SEC = PASS_CADENCE_SEC \* 3\b/m.test(gc)) errs.push('TRADER_REFRESH_SEC must stay derived: PASS_CADENCE_SEC * 3');
+      const cd = (/^CHEETAH_DEFAULTS = \(([\s\S]*?)\)/m.exec(gc) || [])[1] || '';
+      if (gc && /TRADER_/.test(cd)) errs.push('a TRADER_* constant joined CHEETAH_DEFAULTS — the rules clause says "Cheetah defaults" itself (§3.3)');
+      for (const [n, v] of [['SCAN_MIN_PRICE', '0.10'], ['SCAN_MAX_PRICE', '100.0'], ['SCAN_MIN_VOLUME', '1_000_000'],
+        ['SCAN_MIN_CHANGE_PCT', '25.0'], ['SCAN_INCLUDE_OTC', 'False'], ['SCAN_INSTRUMENT_TYPES', 'frozenset({"CS", "ADRC"})'],
+        ['SCAN_UNKNOWN_TYPE_POLICY', '"list"']]) {
+        if (gc && !gc.split('\n').some((l) => l.startsWith(`${n} = ${v} `) || l === `${n} = ${v}`)) errs.push(`GG's ${n} must stay ${v} — never changed by this build`);
+      }
+      if (tn && !/^_FLOOR_M = GC\.SCAN_MIN_VOLUME \/\/ 1_000_000\b/m.test(tn)) errs.push('trader_names._FLOOR_M must be built from GC.SCAN_MIN_VOLUME (never a typed 1M)');
+      if (tn && !/^TRADER_HOLD_TEXT = f"held: \{HOLD_WORDS\}"/m.test(tn)) errs.push('trader_names.TRADER_HOLD_TEXT must stay f"held: {HOLD_WORDS}" (A2, FROZEN)');
+      if (tn && !/^SOURCE = "trader"$/m.test(tn)) errs.push('trader_names.SOURCE must stay "trader"');
+      if (tn && !/t\.get\("gajjala"\) is True/.test(pyCode(tn))) errs.push('trader_names reads ONLY rows with t.get("gajjala") is True');
+      if (tn && /algo888/i.test(pyCode(tn))) errs.push('trader_names.py types a trader name in code — the registry flag decides who');
+
+      // 7. FE — the tabs follow the registry; the chip + its 7 testids; no typed trader name or 📌.
+      const gnt = tryRead('src/components/GntBoard.tsx', 'the 📌 board');
+      const tabs = (/export const TRADER_TABS[^=]*= \[([\s\S]*?)\];/.exec(gnt) || [])[1];
+      if (gnt && tabs == null) errs.push('GntBoard.tsx lost export const TRADER_TABS');
+      const tabKeys = [...(tabs || '').matchAll(/key: '([^']+)'/g)].map((m) => m[1]);
+      if (gnt && tabKeys.join(',') !== regKeys.join(',')) errs.push(`GntBoard TRADER_TABS keys (${tabKeys.join(', ')}) must equal the registry keys in order (${regKeys.join(', ')})`);
+      const gntRest = tsCode(gnt.replace(/export const TRADER_TABS[^=]*= \[[\s\S]*?\];/, ''));
+      if (gnt && /algo888|StockTwits/.test(gntRest)) errs.push('GntBoard.tsx types "algo888" / "StockTwits" outside TRADER_TABS — the source words are served');
+      const gb = tryRead('src/components/GajjalaBoard.tsx', 'the Gajjala board');
+      if (gb && !/^function GgTraderChip\(/m.test(gb)) errs.push('GajjalaBoard.tsx lost function GgTraderChip(');
+      for (const tid of ['gg-trader-tile-${', 'gg-trader-recap-${', 'gg-trader-aplus-${', 'gg-trader-pot-${', 'gg-trader-track-${', 'gg-tr-trader-${', 'gg-trader-watch-${']) {
+        if (gb && !gb.includes(`testid={\`${tid}`)) errs.push(`GajjalaBoard lost the 📌 chip testid ${tid}…}`);
+      }
+      if (gb && (gb.match(/<GgTraderChip /g) || []).length !== 7) errs.push(`GajjalaBoard must mount <GgTraderChip on exactly the 7 surfaces (found ${(gb.match(/<GgTraderChip /g) || []).length})`);
+      for (const tid of ['data-testid="gg-strip-trader"', 'data-testid="gg-strip-trader-skip"']) if (gb && !gb.includes(tid)) errs.push(`GajjalaBoard lost ${tid}`);
+      if (gb && /algo888/i.test(gb)) errs.push('GajjalaBoard.tsx types "algo888" — the tag is served');
+      if (gb && /📌/.test(tsCode(gb))) errs.push('GajjalaBoard.tsx types 📌 in code — the tag is served');
+      const cm = tryRead('src/lib/chartMaps.ts', 'the tab meta');
+      if (cm && !cm.includes('algo888 on StockTwits is tracked here too')) errs.push('TAB_META.gnt must carry the dated algo888 exception (§3.4)');
+      // 7b. /alerts (2026-10-27 critic F2) — the 📌 hold prints its SERVED words; trader_held is a 🧠 counter chip.
+      const al = tryRead('src/pages/Alerts.tsx', 'the /alerts page');
+      const potKeys = ((/export const GAJJALA_POTENTIAL_KEYS = \[([\s\S]*?)\];/.exec(al) || [])[1] || '').match(/'[a-z_]+'/g) || [];
+      if (al && !potKeys.includes("'trader_held'")) errs.push("Alerts.tsx GAJJALA_POTENTIAL_KEYS must carry 'trader_held' (A2's hold counter, a chip — never only the hover)");
+      if (al && !/it\.held_text/.test(al)) errs.push('Alerts.tsx ggPotentialRowWord must print the served held_text (A2) — never a typed 📌 hold word');
+      if (al && !/pass\?\.trader_held_text/.test(al)) errs.push('Alerts.tsx must word the trader_held chip from the served pass.trader_held_text');
+      if (al && /volume floor|📌/.test(tsCode(al))) errs.push('Alerts.tsx types the 📌 hold words — they are served (trader_names.TRADER_HOLD_TEXT)');
+      const ast_ = tryRead('../backend/supply_demand/alert_status.py', 'alert_status');
+      if (ast_ && !/TN\.held_text\(/.test(ast_)) errs.push('alert_status must serve held_text through trader_names.held_text (never retyped)');
+      if (ast_ && !/TN\.TRADER_HOLD_TEXT/.test(ast_)) errs.push('alert_status must serve trader_held_text = trader_names.TRADER_HOLD_TEXT');
+      if (tn && !/^HOLD_REASON = "trader_under_floor"\s*$/m.test(pyCode(tn))) errs.push('trader_names.HOLD_REASON must stay "trader_under_floor"');
+      const ptSrc = tryRead('../backend/chart_maps/gajjala/potential.py', 'potential');
+      if (ptSrc && !/^TRADER_HELD = \(TN\.HOLD_REASON,\)/m.test(ptSrc)) errs.push('potential.TRADER_HELD must be (TN.HOLD_REASON,) — one source for the reason');
+
+      // 8. the ✨ — FIRST, routed, dated, both lines verbatim, his post, the A2 clause, UNMEASURED, no b-word.
+      const ID = 'chart-maps-gajjala-trader-algo888-2026-10-27';
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
+      if (nf && firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstId || 'none'})`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else if (nf) {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = arr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = (/label: "([^"]*)"/.exec(e) || [])[1] || '';
+        const W = 'the 📌 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala'`);
+        if (!e.includes("addedAt: '2026-10-27'")) errs.push(`${W} must be dated 2026-10-27`);
+        for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote him verbatim in “…”: “${h}”`);
+        if (!label.includes('“@WC25 That;s how I pump.... LOL”')) errs.push(`${W} must quote his own post 667428905 verbatim`);
+        const m = (/^SCAN_MIN_VOLUME = ([\d_]+)/m.exec(gc) || [])[1];
+        const floorM = m ? Number(m.replace(/_/g, '')) / 1_000_000 : null;
+        if (floorM != null && !label.includes(`no push rings on one until today's volume clears GG's ${floorM}M floor`)) errs.push(`${W} must say the A2 clause with GG's floor from SCAN_MIN_VOLUME (${floorM}M)`);
+        if (!label.includes('UNMEASURED')) errs.push(`${W} must say UNMEASURED`);
+        if (B_WORD(label)) errs.push(`${W} says bounce / fake — reversal, never bounce`);
+        let forbidden = [];
+        try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : []; } catch { /* below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+        const rest = label.replace(/“[^”]*”/g, '');
+        for (const w of forbidden) if (rest.toLowerCase().includes(w.toLowerCase())) errs.push(`${W} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+      }
+
+      // 9. docs + SPECS + tests; no b-word in any new file.
+      const noHashInShell = (doc, who) => {
+        // a fence walker, never a regex pair: a closing ``` must not read as the opening of the next block.
+        let inF = false, lang = '';
+        for (const l of doc.split('\n')) {
+          const f = /^\s*```(\w*)/.exec(l);
+          if (f) { if (inF) inF = false; else { inF = true; lang = f[1]; } continue; }
+          if (inF && ['bash', 'sh', 'zsh', 'shell', 'console'].includes(lang) && /^\s*#/.test(l)) { errs.push(`${who} has a # line inside a shell block (his zsh): ${l.trim().slice(0, 50)}`); }
+        }
+      };
+      const gdoc = tryRead('../docs/gajjala/trader_names_2026_10_27.md', 'the gajjala doc');
+      for (const need of [...HIS, 'UNMEASURED', '"curate": False']) if (gdoc && !gdoc.replace(/\n>?[ \t]*/g, ' ').includes(need)) errs.push(`docs/gajjala/trader_names_2026_10_27.md must say ${need}`);
+      noHashInShell(gdoc, 'docs/gajjala/trader_names_2026_10_27.md');
+      const tdoc = tryRead('../backend/docs/traders/gnt.md', 'the GnT doc');
+      const ts = tdoc.indexOf('\n## 2026-10-27 — algo888 on StockTwits\n');
+      if (tdoc && ts < 0) errs.push('backend/docs/traders/gnt.md lacks "## 2026-10-27 — algo888 on StockTwits"');
+      else if (tdoc) {
+        const nx = tdoc.indexOf('\n## ', ts + 1);
+        const sec = tdoc.slice(ts, nx < 0 ? undefined : nx);
+        const flat = sec.replace(/\n>?[ \t]*/g, ' ');
+        for (const need of [...HIS, '"curate": False']) if (!flat.includes(need)) errs.push(`the gnt.md 2026-10-27 section must say ${need}`);
+        noHashInShell(sec, 'the gnt.md 2026-10-27 section');
+      }
+      const specs = tryRead('../SPECS.md', 'SPECS');
+      const gH = specs.indexOf("### Chart Maps — Gajjala's tab — `chart_maps/gajjala/` (2026-10-13)");
+      const fH = specs.indexOf("### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)");
+      const tH = specs.indexOf('### Chart Maps — 📌 Tracked traders — `traders/` (2026-09-12; algo888 2026-10-27)');
+      if (specs && (gH < 0 || fH < 0)) errs.push('SPECS.md lost the Gajjala / 🏁 headers (never renamed)');
+      if (specs && !(tH > fH && fH > gH)) errs.push('SPECS.md must carry "### Chart Maps — 📌 Tracked traders — `traders/` (2026-09-12; algo888 2026-10-27)" after the 🏁 section');
+      if (specs && gH >= 0 && fH > gH && !specs.slice(gH, fH).includes('- **📌 Trader names join the list** (2026-10-27')) errs.push('SPECS.md lacks the 📌 bullet at the end of the Gajjala section');
+      if (specs && !specs.includes('trader_names.py')) errs.push('SPECS.md must name chart_maps/gajjala/trader_names.py');
+      if (specs && !specs.includes(ID)) errs.push(`SPECS.md must name the ✨ ${ID}`);
+      const TESTS = [
+        ['../backend/tests/test_trader_feed_stocktwits_2026_10_27.py', ['test_NEGATIVE_a_message_by_another_username_is_not_his', 'test_NEGATIVE_an_empty_body_is_skipped',
+          'test_NEGATIVE_a_reshared_inner_message_is_never_a_post', 'test_NEGATIVE_a_dark_stream_is_not_ok_and_says_the_client_sentence',
+          'test_NEGATIVE_fetch_stocktwits_never_raises', 'test_NEGATIVE_the_x_refresh_path_is_byte_identical', 'test_NEGATIVE_a_claimless_trader_never_shows_gnts_2115',
+          'test_NEGATIVE_the_x_note_words_are_unchanged', 'test_NEGATIVE_a_dark_stocktwits_account_exits_2', 'test_NEGATIVE_a_curate_false_trader_never_reaches_full',
+          'test_a_curate_true_trader_is_curated_as_before', 'test_exactly_one_gajjala_flag_and_it_is_algo888', 'test_every_quote_in_his_style_is_his_own_words']],
+        ['../backend/tests/test_gajjala_trader_names_2026_10_27.py', ['test_NEGATIVE_two_sessions_later_nothing_is_fresh', 'test_NEGATIVE_a_post_after_now_is_ignored',
+          'test_NEGATIVE_market_tickers_never_join', 'test_NEGATIVE_an_unflagged_trader_never_adds', 'test_NEGATIVE_a_qualifier_is_tagged_never_duplicated',
+          'test_NEGATIVE_scan_rows_is_byte_identical_and_never_says_trader', 'test_NEGATIVE_a_below_floor_name_never_rings_an_aplus_k11',
+          'test_NEGATIVE_a_raising_fetch_never_fails_the_pass', 'test_NEGATIVE_dry_and_on_open_never_fetch', 'test_NEGATIVE_a_failed_snapshot_adds_nothing_and_says_nothing',
+          'test_NEGATIVE_default_deps_never_fetch_and_main_passes_default_fetch', 'test_NEGATIVE_every_number_in_the_strip_line_is_a_served_count',
+          'test_NEGATIVE_a_replayed_row_has_none', 'test_NEGATIVE_a_below_floor_trader_name_never_rings_the_potential_push',
+          'test_the_hold_clears_when_the_session_volume_crosses_the_floor', 'test_NEGATIVE_a_gg_qualifier_with_the_tag_is_never_held',
+          'test_rules_info_scanner_pick_carries_the_trader_clause_and_picks_stay_eight', 'test_new_constants_are_tagged_mine']],
+      ];
+      for (const [f, names] of TESTS) {
+        const t = tryRead(f, 'the backend tests');
+        for (const n of names) if (t && !t.includes(`def ${n}(`)) errs.push(`${f.replace('../backend/', '')} lost ${n}`);
+      }
+      const fe1 = tryRead('src/components/GntBoard.algo888.test.tsx', 'the 📌 board tests');
+      for (const n of ['NEGATIVE: a claim-less payload prints no USIC line', 'NEGATIVE: GntBoard.tsx types no "StockTwits" and no "algo888" outside TRADER_TABS']) if (fe1 && !fe1.includes(n)) errs.push(`GntBoard.algo888.test.tsx lost "${n}"`);
+      const fe2 = tryRead('src/components/GajjalaBoard.trader_chip.test.tsx', 'the chip tests');
+      for (const n of ['NEGATIVE: null / "" / whitespace / a non-string / absent trader_text → no chip on any surface', 'NEGATIVE: GajjalaBoard.tsx types no trader name anywhere and no 📌 in its code']) if (fe2 && !fe2.includes(n)) errs.push(`GajjalaBoard.trader_chip.test.tsx lost "${n}"`);
+      for (const [f, s] of [['trader_names.py', tn], ['docs/gajjala/trader_names_2026_10_27.md', gdoc], ['test_trader_feed_stocktwits_2026_10_27.py', tryRead('../backend/tests/test_trader_feed_stocktwits_2026_10_27.py', 'x')],
+        ['test_gajjala_trader_names_2026_10_27.py', tryRead('../backend/tests/test_gajjala_trader_names_2026_10_27.py', 'x')], ['GntBoard.algo888.test.tsx', fe1], ['GajjalaBoard.trader_chip.test.tsx', fe2]]) {
+        if (s && B_WORD(s)) errs.push(`${f} says bounce / fake — reversal, never bounce (internal hook names excepted)`);
+      }
+
+      // 10. the host-mounted crontab — no line changed (a deploy never ships it).
+      const cron = tryRead('../backend/crontab', 'crontab');
+      for (const l of ['40     7,17  *    *    *    /usr/local/bin/python -m traders.feed refresh',
+        '1-56/5 4-20  *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run']) {
+        if (cron && !cron.split('\n').includes(l)) errs.push(`the crontab line "${l.slice(0, 40)}…" changed — the host crontab is mounted, not shipped`);
+      }
       return errs;
     },
   },
