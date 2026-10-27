@@ -1962,6 +1962,14 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # the FE types no word; every other frame's payload is byte-identical.
     if weekly and own_bars and short_history:
         short_history["unit"] = f"{tf_spec_['bar_label']} bars"
+    # The 1-minute frame is today only (2026-10-26, seen live on NVDA: "Only
+    # 934 sessions of history — less than the 960 this window asks for"): its
+    # 960 is the extended day's CEILING, never an ask — a minute nobody traded
+    # is dropped, so a full day reads ~934 bars and the sentence would print on
+    # every name every day, in a unit (sessions) that is false on a minute
+    # chart. The ceiling frame makes no short-history claim.
+    if tf_key == tf_mod.M1_TODAY:
+        short_history = None
 
     return {
         **base,

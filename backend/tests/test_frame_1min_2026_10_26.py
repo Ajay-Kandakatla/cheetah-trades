@@ -325,3 +325,22 @@ def test_NEGATIVE_no_nan_and_no_bounce_in_a_1min_payload(tab):
     assert not out.get("error"), out.get("error")
     dump = json.dumps(out, allow_nan=False, ensure_ascii=False)
     assert "bounce" not in dump.lower()
+
+
+def test_NEGATIVE_a_full_minute_day_never_claims_short_history(tab, monkeypatch):
+    """Seen live 2026-10-26 (NVDA, 20:00 ET): 934 traded minutes of a 960-minute
+    extended day printed "Only 934 sessions of history — less than the 960 this
+    window asks for". The 960 is a ceiling, never an ask, and "sessions" is the
+    wrong unit on a minute chart: the frame serves no short-history claim.
+    The fixture day is complete, so 26 untraded minutes are dropped first."""
+    raw = tab["raw"]
+    today = raw.index[-1].normalize()
+    today_rows = raw.index[raw.index.normalize() == today]
+    gappy = raw.drop(today_rows[100:126])            # 26 untraded minutes of TODAY
+    monkeypatch.setattr(TF, "intraday_raw", lambda sym, key=None: gappy.copy())
+    out = S.for_symbol("ACME", "6m", tf="1min")
+    assert not out.get("error"), out.get("error")
+    assert 0 < len(out["tile"]["bars"]) < 960
+    assert out["short_history"] is None
+    assert "sessions of history" not in json.dumps(out, ensure_ascii=False)
+
