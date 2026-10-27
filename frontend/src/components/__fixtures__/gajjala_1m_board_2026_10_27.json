@@ -2123,6 +2123,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-27",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA",
          "id": "2026-10-27|GGA|bull_flag|aplus",
          "key": "2026-10-27-GGA-bull_flag-aplus",
@@ -2179,6 +2180,13 @@
      "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
      "total": 1
     },
+    "bucket_order": [
+     "win",
+     "loss",
+     "open",
+     "flat",
+     "out"
+    ],
     "categories": [
      {
       "key": "all",
@@ -2423,6 +2431,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA",
         "id": "2026-10-27|GGA|bull_flag|aplus",
         "key": "2026-10-27-GGA-bull_flag-aplus",
@@ -2463,6 +2472,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGA",
         "id": "2026-10-27|GGA|horizontal_fade|potential",
         "key": "2026-10-27-GGA-horizontal_fade-potential",
@@ -2503,6 +2513,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGB",
         "id": "2026-10-27|GGB|bull_flag|potential",
         "key": "2026-10-27-GGB-bull_flag-potential",
@@ -2543,6 +2554,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=kiss_fly&focus=GGB",
         "id": "2026-10-27|GGB|kiss_fly|potential",
         "key": "2026-10-27-GGB-kiss_fly-potential",
@@ -2583,6 +2595,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGB",
         "id": "2026-10-27|GGB|horizontal_fade|potential",
         "key": "2026-10-27-GGB-horizontal_fade-potential",
@@ -2674,6 +2687,20 @@
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 1 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
+    "sort_default": "wins",
+    "sort_param": "sort",
+    "sorts": [
+     {
+      "bucket_sort": true,
+      "key": "wins",
+      "label": "✅ wins first"
+     },
+     {
+      "bucket_sort": false,
+      "key": "rang",
+      "label": "🕰️ as rang"
+     }
+    ],
     "span": "today",
     "spans": [
      {

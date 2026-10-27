@@ -46,6 +46,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
 }));
 
 import GajjalaBoard from './GajjalaBoard';
+import { ggSortRows, ggTrSort } from '../lib/gajjala';
 
 /* tsc-safe source / fixture reads (the GajjalaBoard.potential.test precedent). */
 async function fsMod(): Promise<any> {
@@ -256,7 +257,11 @@ for (const [name, BOARDS] of SOURCES) {
         if (tr.today_text) expect(screen.getByTestId('gg-tr-today').textContent).toBe(tr.today_text);
         else expect(screen.queryByTestId('gg-tr-today')).toBeNull();
         const shownRows = within(sec).queryAllByTestId(/^gg-tr-row-/).map((r) => r.getAttribute('data-testid'));
-        expect(shownRows).toEqual(tr.days.flatMap((d: any) => d.rows.map((r: any) => `gg-tr-row-${r.key}`)));
+        // ✅ wins first (2026-10-27): the served order, reordered per day only by the served default sort chip (the golden
+        // serves `sorts` → wins on top of each day; the in-file FIXTURE serves none → the served order exactly)
+        const sortItem = ggTrSort(null, tr);
+        expect(shownRows).toEqual(tr.days.flatMap((d: any) => ggSortRows(d.rows, sortItem, tr.bucket_order).map((r: any) => `gg-tr-row-${r.key}`)));
+        if (!tr.sorts) expect(shownRows).toEqual(tr.days.flatMap((d: any) => d.rows.map((r: any) => `gg-tr-row-${r.key}`)));
         for (const d of tr.days) {
           expect(screen.getByTestId(`gg-tr-day-${d.date}`).textContent).toBe(d.label);
           const table = screen.getByTestId(`gg-tr-day-${d.date}`).parentElement!.querySelector('table.gg-tr-table')!;
@@ -281,8 +286,19 @@ for (const [name, BOARDS] of SOURCES) {
                 expect(el!.className).toContain('gg-tr-chip');
               } else expect(el, `${r.key} ${chip}`).toBeNull();
             }
-            // NEGATIVE (AMENDMENTS11 F13): no per-row ✅ / ❌ chip — bucket_text stays served, never drawn
+            // ✅ / ❌ 2026-10-27 (HIS CALL Q11 answered — AMENDMENTS11 F13 reversed by his word "show some greed flags on
+            // the wins rows"): a row that serves `flag_text` (win / loss) draws it in the Ticker cell, text exactly, with
+            // the served bucket as its CSS hook and the row tinted by the same bucket; NEGATIVE: a row serving none
+            // (open / flat / out, or an older API) draws no chip — nothing is composed from `bucket` or `bucket_text`
+            const flag = screen.queryByTestId(`gg-tr-flag-${r.key}`);
+            if (typeof r.flag_text === 'string' && r.flag_text.trim()) {
+              expect(flag, `${r.key} flag`).not.toBeNull();
+              expect(flag!.textContent).toBe(r.flag_text);
+              expect(flag!.className).toContain(`gg-tr-flag-${r.bucket}`);
+              expect(tr_el.className).toContain(`gg-tr-row-${r.bucket}`);
+            } else expect(flag, `${r.key} flag`).toBeNull();
             expect(screen.queryByTestId(`gg-tr-bucket-${r.key}`), `${r.key} bucket chip`).toBeNull();
+            expect(tr_el.className).toContain('gg-tr-row');
             // D12: a ❌ row's served loss facts are the sub-line right under it; every other row has none
             const loss = screen.queryByTestId(`gg-tr-loss-${r.key}`);
             if (typeof r.loss_text === 'string' && r.loss_text.trim()) {

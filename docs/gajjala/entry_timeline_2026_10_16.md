@@ -407,8 +407,12 @@ A thin-R row keeps its real bucket (win / loss) AND its thin chip — it stays o
 - `CATEGORY_PARAM` = `cat` rides the URL (`cat=loss`), FE-only — a chip click refetches nothing; default all; a span
   or view click keeps it, a sub click drops it. The filter keeps the replayed rows of that bucket (they never vanish
   under a filter). A filter that leaves nothing → `CATEGORY_EMPTY_TEXT` "No row in this category on this span."
-- No per-row ✅ / ❌ chip is drawn (AMENDMENTS11 F13, HIS CALL Q11, MINE): the Same / Through next session cells already
-  say WIN / LOSS. `bucket_text` stays served.
+- ~~No per-row ✅ / ❌ chip is drawn (AMENDMENTS11 F13, HIS CALL Q11, MINE)~~ — ANSWERED 2026-10-27 by his word ("Can
+  you sort the winds in Gajjals I can't seem to tell the difference in that tab or show some greed flags on the wins
+  rows"): the served flag (`flag_text` = `BUCKET_TEXT` on win / loss rows, `ledger.FLAG_BUCKETS`) IS drawn in the Ticker
+  cell, every row is tinted by its served bucket, and the served sort chips (`ledger.SORT_KEYS`, ✅ wins first = the
+  default) reorder each day's rows client-side. See `docs/gajjala/track_record_2026_10_16.md` § "✅ wins first + row
+  flags (2026-10-27)".
 
 ### Loss facts — `ledger.loss_facts` / `ledger.loss_text` (DECISIONS11 D12)
 
@@ -467,8 +471,11 @@ The five `LEDGER_LOSS_*` thresholds are MINE (HIS CALL Q13). The losers study th
   (DEFAULT, C1) vs cache-only (an empty tape until a nightly caches it).
 - **Q11 The per-row ✅ / ❌ chip** shown in the Kind cell (DEFAULT, D11's served `bucket_text`) vs hidden (the Same /
   Through-next cells already say WIN / LOSS — Rule #5 clutter on a dense table).
-  - AMENDMENTS11 F13 (MINE — the planner's default, not his): the shipped default is **hidden** — no per-row chip is
-    drawn; `bucket_text` stays served for later.
+  - AMENDMENTS11 F13 (MINE — the planner's default, not his): the shipped default was **hidden** — no per-row chip was
+    drawn; `bucket_text` stayed served for later.
+  - **ANSWERED 2026-10-27 (his word):** shown — the served flag on win / loss rows, the row tinted, plus the served sort
+    chips (wins first by default). His sentence, verbatim: "Can you sort the winds in Gajjals I can't seem to tell the
+    difference in that tab or show some greed flags on the wins rows".
 - **Q12 The bucket rule** (C8: the later decided column, else next flat, else same open, else "— no fill"; pending rows
   read "— no fill" until graded — DEFAULT) vs a separate "⏱ not graded yet" chip.
   - AMENDMENTS11 F7 (MINE): "open" only while the next column is still due (a replayed row whose next session was never

@@ -415,3 +415,55 @@ HIS CALLS (defaults shipped; nothing decided for him):
 - H12 `LEDGER_ROWS_MAX` 400 (MINE) cuts the oldest rows of the unfiltered list and the 🕰️ timeline on 10d / all; the A+
   list is not cut (`aplus.days`). Exempt A+ / raise the cap = his call.
 - H13 Wording "📋 every alert" / "🎯 A+ only" / "🎯 A+ wins vs losses" / "By alert day" / "{w}W {l}L" (MINE).
+
+## ✅ wins first + row flags (2026-10-27)
+
+Ajay, verbatim (his spelling kept), 2026-10-27 ~17:45 ET: "Can you sort the winds in Gajjals I can't seem to tell the difference in that tab or show some greed flags on the wins rows". This ANSWERS HIS CALL Q11 above (AMENDMENTS11 F13 —
+the hidden per-row chip — was the planner's default, not his).
+
+What is served (`ledger.served_block`; the GET never carries `sort` on the 🏁 sub; `tab.py` / the route unchanged):
+
+- each row: `flag_text` = `BUCKET_TEXT[bucket]` ("✅ winner" / "❌ loser") on the rows whose bucket is in
+  `FLAG_BUCKETS` (`win`, `loss`); `None` on every other row. `bucket` / `bucket_text` are unchanged.
+- the block: `sorts` = one chip per `SORT_KEYS` key — `{"key", "label", "bucket_sort"}` (`SORT_LABELS`: ✅ wins first ·
+  🕰️ as rang; `SORT_BY_BUCKET`: only "wins" sorts); `sort_param` = `SORT_PARAM` ("sort" — the board's own URL param; a
+  sub click drops it); `sort_default` = `SORT_KEYS[0]` = "wins" (his ask: the wins on top); `bucket_order` = `BUCKETS`
+  (win · loss · open · flat · out) — the order the FE sorts by.
+- the server NEVER reorders a row: the ledger stays chronological, as rang (the golden pins an "out" row before a win on
+  2026-10-16 — `tests/test_gajjala_track_record_sort_2026_10_27.py`). The 1-minute page serves the same block
+  (`_variant_words` leaves it alone).
+
+What the FE does (`lib/gajjala.ts` `ggTrSort` / `ggSortRows` / `ggTrRowClass`; `GajjalaBoard.tsx` `GgTrSorts`):
+
+- the chip in force = the URL `sort` when it is a served key, else the chip whose key is the served default; no served
+  chips (an older API) → no chip row and the served order. The FE types no sort key — the served `bucket_sort` boolean
+  decides whether a chip sorts.
+- a bucket sort = a STABLE sort of each served day's rows by the row's served `bucket` position in `bucket_order` (a
+  missing / unknown bucket sinks last; the served order is kept inside a bucket). The day grouping, the counts, the
+  categories and the 🎯 A+ chips never change; the ❌ loss sub-line stays glued under its row. The 🕰️ timeline sorts
+  the same way.
+- a chip click rewrites the URL only (`sort=rang`; the default clears the param) — `sort` never rides the 🏁 GET, so a
+  click fetches nothing. Every other sub keeps its served tile sort on the query.
+- the row: `className="gg-tr-row gg-tr-row-<bucket>"` (a CSS hook — `gajjala.css` tints win green with a green left
+  edge, loss red); the flag: `<span class="gg-tr-flag gg-tr-flag-<bucket>" data-testid="gg-tr-flag-<key>">` right after
+  the ticker, the served text only.
+- the Auto-Pilot 🚩 lane rows (`GajjalaLaneTab.tsx`) take the same tint from the SIGN of their served `pnl_usd` on
+  CLOSED rows only (`data-outcome` win / loss); an open row, a flat close or a row without a number carries none.
+
+HIS CALLS (defaults built): wins first is the DEFAULT on every 🏁 open (vs as rang by default with the chip to flip);
+the flag words are the served `BUCKET_TEXT` ("✅ winner" / "❌ loser", the same words as the category chips) rather than
+a 🟢 glyph; the loss rows are tinted red too (he asked for green on wins only — the red makes "the difference" he could
+not tell); the tint is a translucent wash so dark mode keeps it; open / flat / out rows stay untinted; the lane tab
+tints CLOSED rows only.
+
+Tests: BE `tests/test_gajjala_track_record_sort_2026_10_27.py` (words frozen + exported, the block, win / loss flags
+only — NEGATIVE: no flag elsewhere, NEGATIVE: the server never reorders, the 1-minute variant keeps the block, kinds /
+categories / heads untouched); FE `GajjalaBoard.wins_sort.test.tsx` (chips, default in force, the order, the flags,
+the glued loss line, ONE GET without `sort`; the 🕰️ click → served order, `?sort=rang`, no refetch; NEGATIVE: an unknown
+`?sort` → the default; NEGATIVE: no served chips → no chips + served order; NEGATIVE: a default naming no chip; the
+category filter composes; the three helpers' edge cases), `GajjalaBoard.track_record.test.tsx` (the golden's rows draw
+their served flags; the order = the served order under the served default chip), `GajjalaLaneTab.test.tsx` (the tint;
+NEGATIVE: open / flat / number-less rows). Goldens regenerated (`GG_WRITE_GOLDEN=1`: the 🏁 golden, the 1-minute golden,
+the GG5 identity fixtures) because the served block gained keys. ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`
+(FIRST). Contracts: "✅ wins first + row flags on the 🏁 Track record (2026-10-27)". UNMEASURED — a tint and an order,
+not a read.

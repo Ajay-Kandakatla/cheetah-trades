@@ -168,7 +168,7 @@ import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
-  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
+  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggPx, ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
@@ -233,7 +233,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
    * board of an older render). */
   const boardRef = useRef<GgBoard | null>(null);
 
-  const reqKey = ggQuery({ sub: urlSub, tf, focus, sort, span });
+  /* ✅ wins first (2026-10-27): on the 🏁 sub the URL `sort` is the FE-only row order (ggTrSort) — it never rides the GET,
+   * so a sort chip click refetches nothing; every other sub keeps its served tile sort on the query. */
+  const sortForGet = (s: GgSub | null) => (s === 'track_record' ? null : sort);
+  const reqKey = ggQuery({ sub: urlSub, tf, focus, sort: sortForGet(urlSub), span });
 
   useEffect(() => {
     if (adoptedKey.current === reqKey) { adoptedKey.current = null; return; }
@@ -259,7 +262,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         if (served && served !== params.get(GG_SUB_PARAM)) {
           const next = new URLSearchParams(params);
           next.set(GG_SUB_PARAM, served);
-          const nextKey = ggQuery({ sub: served, tf, focus, sort, span });
+          const nextKey = ggQuery({ sub: served, tf, focus, sort: sortForGet(served), span });
           if (nextKey !== reqKey) adoptedKey.current = nextKey;
           setParams(next, { replace: true });
         }
@@ -625,7 +628,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                           cat={cat}
                           onCat={(k) => setParam(GG_CAT_PARAM, k === board?.track_record?.categories?.[0]?.key ? null : k)}
                           kind={kind}
-                          onKind={(k) => setParam(GG_KIND_PARAM, k === board?.track_record?.kinds?.[0]?.key ? null : k)} />
+                          onKind={(k) => setParam(GG_KIND_PARAM, k === board?.track_record?.kinds?.[0]?.key ? null : k)}
+                          sort={sort}
+                          onSort={(k) => setParam(GG_SORT_PARAM, k === board?.track_record?.sort_default ? null : k)} />
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
@@ -1068,6 +1073,11 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
       return (
         <td className="gg-tr-sym">
           {href ? <Link to={href}>{row.symbol}</Link> : row.symbol}
+          {/* ✅ / ❌ 2026-10-27 (HIS CALL Q11 answered — F13 reversed by his word): the served flag, win / loss rows only. */}
+          {trChip(row.flag_text) ? (
+            <span className={`gg-tr-flag gg-tr-flag-${typeof row.bucket === 'string' ? row.bucket : ''}`}
+                  data-testid={`gg-tr-flag-${row.key}`}>{row.flag_text}</span>
+          ) : null}
           <GgTraderChip text={row.trader_text} testid={`gg-tr-trader-${row.key}`} />
           <GgBrokerChip text={row.broker_text} testid={`gg-tr-broker-${row.key}`} />
         </td>
@@ -1102,18 +1112,25 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
  *  🎯 (2026-10-26, BUILD_SPEC25 §3.5 + AMENDMENT A1): on the list view the served A+ chips sit under the view toggle and
  *  the served A+ block (GajjalaAplusCharts) is drawn ALWAYS when `tr.aplus` is served; the 🎯 chip narrows the ROW list
  *  only (rows = the served `aplus.days`) and hides the 🧠 counts / ⏪ / more lines while on. The timeline ignores `kind`. */
-function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kind, onKind }: {
+function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kind, onKind, sort, onSort }: {
   tr: GgTrackRecord | null; emptyNote: string | null; onSpan: (key: string) => void;
   view: string | null; onView: (key: string) => void; cat: string | null; onCat: (key: string) => void;
   kind: string | null; onKind: (key: string) => void;
+  /** ✅ wins first (2026-10-27): the URL `sort` (FE-only — it rides no GET) and the chip click; the chip in force is
+   *  ggTrSort (the served default when the URL names none). */
+  sort: string | null; onSort: (key: string) => void;
 }) {
   if (!tr) return emptyNote ? <div className="cm-note" data-testid="gg-tr-empty">{emptyNote}</div> : null;
   const heads = tr.heads || [];
   const tl = ggTimelineOn(tr, view);
+  const sortItem = ggTrSort(sort, tr);
   const kindOn = !tl && ggKindOn(kind, tr.kinds);
   const kindDays = kindOn ? ggKindDays(tr.days || [], kind, tr.kinds, tr.aplus) : (tr.days || []);
   const cats = kindOn && tr.categories_aplus ? tr.categories_aplus : tr.categories;
   const listDays = ggCatDays(kindDays, cat, cats);
+  /* ✅ wins first: each served day's rows in the order the chip in force asks (a stable sort by the served bucket order;
+   * the served order otherwise) — the day grouping, the counts and the chips never change. */
+  const shownDays = listDays.map((d) => ({ ...d, rows: ggSortRows(d.rows || [], sortItem, tr.bucket_order) }));
   const listCatEmpty = !tl && ggCatOn(cat, cats) && !listDays.length && kindDays.some((d) => !!d.rows?.length);
   const kindEmpty = kindOn && !tr.aplus && !kindDays.length;
   return (
@@ -1134,6 +1151,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
       <GgTrViews views={tr.views} on={tl} onView={onView} />
       {!tl ? <GgTrKinds kinds={tr.kinds} kind={kind} onKind={onKind} /> : null}
       <GgTrCats cats={tl ? tr.categories_timeline : cats} cat={cat} onCat={onCat} />
+      <GgTrSorts sorts={tr.sorts} on={sortItem} onSort={onSort} />
       {!tl && !kindOn && tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
       {!tl && !kindOn && tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
       {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
@@ -1144,7 +1162,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
       {!tl && tr.aplus ? <GajjalaAplusCharts block={tr.aplus} /> : null}
       {kindEmpty ? <div className="cm-note" data-testid="gg-tr-kind-empty">{tr.kind_empty_text}</div> : null}
       {listCatEmpty ? <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div> : null}
-      {tl ? <GgEntryTimeline tr={tr} cat={cat} /> : listDays.map((d) => (
+      {tl ? <GgEntryTimeline tr={tr} cat={cat} sortItem={sortItem} /> : shownDays.map((d) => (
         <div key={d.date} className="gg-tr-day">
           <h4 className="gg-pb-h" data-testid={`gg-tr-day-${d.date}`}>{d.label}</h4>
           <div className="gg-tr-scroll">
@@ -1153,7 +1171,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
               <tbody>
                 {(d.rows || []).map((r) => (
                   <Fragment key={r.key}>
-                    <tr data-testid={`gg-tr-row-${r.key}`}>
+                    <tr data-testid={`gg-tr-row-${r.key}`} className={ggTrRowClass(r)}>
                       {heads.map((h) => <TrRowCells key={h.key} row={r} head={h.key} />)}
                     </tr>
                     <GgTrLossLine row={r} heads={heads} />
@@ -1245,6 +1263,29 @@ function GgTrKinds({ kinds, kind, onKind }: {
   );
 }
 
+/** ✅ wins first (2026-10-27, GgTrKinds' clone). Ajay: "Can you sort the winds in Gajjals I can't seem to tell the
+ *  difference in that tab or show some greed flags on the wins rows". One house phase button per served sort chip, its
+ *  served label; the selected one is the chip in force (ggTrSort: the URL `sort` when it is a served key, else the
+ *  served default). A click reorders the rows client-side — no GET. No served chips (an older API) → nothing. */
+function GgTrSorts({ sorts, on, onSort }: {
+  sorts: GgTrackRecord['sorts']; on: ReturnType<typeof ggTrSort>; onSort: (key: string) => void;
+}) {
+  const items = (sorts || []).filter((s) => s && typeof s.key === 'string' && s.key && typeof s.label === 'string' && s.label);
+  if (!items.length) return null;
+  return (
+    <div className="cm-phase gg-tr-sorts" role="tablist" data-testid="gg-tr-sorts">
+      {items.map((s) => (
+        <button key={s.key} type="button" role="tab" aria-selected={s.key === on?.key}
+                data-testid={`gg-tr-sort-${s.key}`}
+                className={`cm-phase-btn${s.key === on?.key ? ' cm-phase-on' : ''}`}
+                onClick={() => onSort(s.key)}>
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** ❌ a row's served loss facts (ledger.loss_text, DECISIONS11 D12) as a sub-line row under it — the served string
  *  only; nothing when the row serves none (every non-loss row). `tape` = the 🕰️ table (one more column). */
 function GgTrLossLine({ row, heads, tape = false }: {
@@ -1262,7 +1303,9 @@ function GgTrLossLine({ row, heads, tape = false }: {
  *  `views.kinds`, in the SERVED order (days newest first, the panel's own grouping); a day without one is skipped;
  *  none at all → the served empty line. One table per day: the served heads + the served Tape head; each row = the
  *  🏁 cells + a lazy mini tape and a 📈 toggle that opens the full tape under the row (the Promo table's pattern). */
-function GgEntryTimeline({ tr, cat }: { tr: GgTrackRecord; cat: string | null }) {
+function GgEntryTimeline({ tr, cat, sortItem = null }: {
+  tr: GgTrackRecord; cat: string | null; sortItem?: ReturnType<typeof ggTrSort>;
+}) {
   const views = tr.views;
   if (!views) return null;
   const kinds = views.kinds || [];
@@ -1272,7 +1315,9 @@ function GgEntryTimeline({ tr, cat }: { tr: GgTrackRecord; cat: string | null })
     .filter((d) => d.rows.length > 0);
   if (!listed.length) return <div className="cm-note" data-testid="gg-tl-empty">{views.empty_text}</div>;
   /* ✅ / ❌ the same client-side filter as the list view, over the timeline's own served chips. */
-  const days = ggCatDays(listed, cat, tr.categories_timeline).map((d) => ({ d, rows: d.rows }));
+  /* ✅ wins first (2026-10-27): the same client-side sort as the list view, per day. */
+  const days = ggCatDays(listed, cat, tr.categories_timeline)
+    .map((d) => ({ d, rows: ggSortRows(d.rows, sortItem, tr.bucket_order) }));
   if (!days.length) return <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div>;
   return (
     <div className="gg-tl" data-testid="gg-tl">
@@ -1301,7 +1346,7 @@ function GgEntryTimelineRow({ row, heads, views }: {
   const toggle = () => setOpen((o) => !o);
   return (
     <Fragment>
-      <tr data-testid={`gg-tl-row-${row.key}`}>
+      <tr data-testid={`gg-tl-row-${row.key}`} className={ggTrRowClass(row)}>
         {heads.map((h) => <TrRowCells key={h.key} row={row} head={h.key} />)}
         <td className="ptt__mini-cell">
           {row.id ? (

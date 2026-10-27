@@ -894,6 +894,16 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   (AMENDMENT A1 — his second line answered H2); the 🎯 chip narrows the row list only; the 🕰️ timeline draws none of it.
   **UNMEASURED** — the 2026-10-14 study read NULL. Contracts: "🎯 A+ filter + win/loss charts on the 🏁 Track record
   (2026-10-26)"; ✨ `chart-maps-gajjala-aplus-filter-2026-10-26`. Doc: `docs/gajjala/track_record_2026_10_16.md`
+- **✅ wins first + row flags (2026-10-27)** — Ajay, verbatim: "Can you sort the winds in Gajjals I can't seem to tell the
+  difference in that tab or show some greed flags on the wins rows" (HIS CALL Q11 answered; AMENDMENTS11 F13 reversed).
+  `ledger.py` serves each row's `flag_text` (`BUCKET_TEXT` on `FLAG_BUCKETS` = win / loss rows, `None` elsewhere) and the
+  block's `sorts` (`SORT_KEYS` wins · rang, `SORT_LABELS`, `SORT_BY_BUCKET`), `sort_param` (`SORT_PARAM` "sort"),
+  `sort_default` ("wins") and `bucket_order` (`BUCKETS`); the server NEVER reorders a row. The FE (`ggTrSort` /
+  `ggSortRows` / `ggTrRowClass`, `GgTrSorts`) sorts each served day client-side over the served order, draws the served
+  flag in the Ticker cell, tints rows by their served bucket, and keeps `sort` off the 🏁 GET. The 🚩 lane rows take the
+  same tint from the sign of their closed `pnl_usd`. Contracts: "✅ wins first + row flags on the 🏁 Track record
+  (2026-10-27)"; ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`. Doc: `docs/gajjala/track_record_2026_10_16.md`
+  § "✅ wins first + row flags (2026-10-27)". UNMEASURED.
   "🎯 A+ filter + the win/loss charts (2026-10-26)".
 
 ### Chart Maps — 📌 Tracked traders — `traders/` (2026-09-12; algo888 2026-10-27)

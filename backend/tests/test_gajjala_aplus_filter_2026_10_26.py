@@ -94,7 +94,11 @@ def _drop_null_trader_text(o):
     Dropping ONLY that key, and only where it is null, keeps the pre-BUILD_SPEC25 hashes exact — a non-null value
     (or any other change) still moves them."""
     if isinstance(o, dict):
-        return {k: _drop_null_trader_text(v) for k, v in o.items() if not (k == "trader_text" and v is None)}
+        # 2026-10-27 (✅ wins first + row flags, HIS CALL Q11 answered): every row now serves `flag_text` (the ✅ winner /
+        # ❌ loser words on win / loss rows, None elsewhere) — a served row word the FE draws, outside the 🧠 headline this
+        # NEGATIVE pins; dropped from the hash the way a null trader_text is. Any other change still moves the sha.
+        return {k: _drop_null_trader_text(v) for k, v in o.items()
+                if not ((k == "trader_text" and v is None) or k == "flag_text")}
     if isinstance(o, list):
         return [_drop_null_trader_text(v) for v in o]
     return o

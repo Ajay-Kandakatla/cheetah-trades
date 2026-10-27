@@ -173,6 +173,21 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   color: var(--ink-subtle, #94a3b8);
 }
 .gg-tr-prov { font-style: italic; }
+/* ✅ wins first + the row flags (2026-10-27). Ajay: "Can you sort the winds in Gajjals I can't seem to tell the
+   difference in that tab or show some greed flags on the wins rows". A win row is tinted green with a green edge, a
+   loss row red with a red edge; the served ✅ / ❌ flag sits in the Ticker cell; the served sort chips sit with the
+   category chips. The bucket in the class is the SERVED one — CSS hooks only, every word on the row is served. */
+.gg-tr-table tr.gg-tr-row-win > td { background: rgba(34, 197, 94, 0.14); background: color-mix(in srgb, var(--positive, #22c55e) 14%, transparent); }
+.gg-tr-table tr.gg-tr-row-win > td:first-child { box-shadow: inset 3px 0 0 var(--positive, #22c55e); }
+.gg-tr-table tr.gg-tr-row-loss > td { background: rgba(239, 68, 68, 0.09); background: color-mix(in srgb, var(--negative, #ef4444) 9%, transparent); }
+.gg-tr-table tr.gg-tr-row-loss > td:first-child { box-shadow: inset 3px 0 0 var(--negative, #ef4444); }
+.gg-tr-flag {
+  display: inline-block; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 999px; font-size: 0.7rem;
+  font-weight: 600; border: 1px solid currentColor; white-space: nowrap;
+}
+.gg-tr-flag-win { color: var(--positive, #22c55e); }
+.gg-tr-flag-loss { color: var(--negative, #ef4444); }
+.gg-tr-sorts { margin-top: 0.1rem; flex-wrap: wrap; }
 .gg-tr-kind { display: inline-block; padding: 0 0.4rem; border-radius: 999px; font-size: 0.74rem; }
 .gg-tr-live { border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); }
 .gg-tr-chip {

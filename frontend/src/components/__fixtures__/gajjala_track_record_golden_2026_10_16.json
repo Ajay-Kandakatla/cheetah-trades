@@ -601,6 +601,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
          "id": "2026-10-16|HCAI|intraday_vcp|aplus",
          "key": "2026-10-16-HCAI-intraday_vcp-aplus",
@@ -641,6 +642,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
          "id": "2026-10-16|TGL|kiss_fly|aplus",
          "key": "2026-10-16-TGL-kiss_fly-aplus",
@@ -681,6 +683,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
          "id": "2026-10-16|PMI|bull_flag|aplus",
          "key": "2026-10-16-PMI-bull_flag-aplus",
@@ -721,6 +724,7 @@
          "bucket_text": "✅ winner",
          "date": "2026-10-16",
          "fill_px": 1.85,
+         "flag_text": "✅ winner",
          "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
          "id": "2026-10-16|XLAB|intraday_vcp|aplus",
          "key": "2026-10-16-XLAB-intraday_vcp-aplus",
@@ -777,6 +781,13 @@
      "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
      "total": 4
     },
+    "bucket_order": [
+     "win",
+     "loss",
+     "open",
+     "flat",
+     "out"
+    ],
     "categories": [
      {
       "key": "all",
@@ -1021,6 +1032,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
         "id": "2026-10-16|HCAI|intraday_vcp|aplus",
         "key": "2026-10-16-HCAI-intraday_vcp-aplus",
@@ -1061,6 +1073,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
         "id": "2026-10-16|TGL|kiss_fly|aplus",
         "key": "2026-10-16-TGL-kiss_fly-aplus",
@@ -1101,6 +1114,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
         "id": "2026-10-16|PMI|bull_flag|aplus",
         "key": "2026-10-16-PMI-bull_flag-aplus",
@@ -1141,6 +1155,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
         "id": "2026-10-16|NOEN|kiss_fly|potential",
         "key": "2026-10-16-NOEN-kiss_fly-potential",
@@ -1181,6 +1196,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
         "id": "2026-10-16|NPLN|bull_flag|potential",
         "key": "2026-10-16-NPLN-bull_flag-potential",
@@ -1221,6 +1237,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.85,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-16|XLAB|intraday_vcp|aplus",
         "key": "2026-10-16-XLAB-intraday_vcp-aplus",
@@ -1261,6 +1278,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-16|XLAB|intraday_vcp|potential",
         "key": "2026-10-16-XLAB-intraday_vcp-potential",
@@ -1301,6 +1319,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
         "id": "2026-10-16|XLAB|horizontal_fade|potential",
         "key": "2026-10-16-XLAB-horizontal_fade-potential",
@@ -1348,6 +1367,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-15",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
         "id": "2026-10-15|AHX|horizontal_fade|potential",
         "key": "2026-10-15-AHX-horizontal_fade-potential",
@@ -1388,6 +1408,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-15",
         "fill_px": 1.22,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-15|XLAB|intraday_vcp|potential",
         "key": "2026-10-15-XLAB-intraday_vcp-potential",
@@ -1435,6 +1456,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-12",
         "fill_px": 1.23,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=RPL",
         "id": "REPLAY:2026-10-12|RPL|bull_flag",
         "key": "REPLAY:2026-10-12-RPL-bull_flag",
@@ -1526,6 +1548,20 @@
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
+    "sort_default": "wins",
+    "sort_param": "sort",
+    "sorts": [
+     {
+      "bucket_sort": true,
+      "key": "wins",
+      "label": "✅ wins first"
+     },
+     {
+      "bucket_sort": false,
+      "key": "rang",
+      "label": "🕰️ as rang"
+     }
+    ],
     "span": "5d",
     "spans": [
      {
@@ -2174,6 +2210,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
          "id": "2026-10-16|HCAI|intraday_vcp|aplus",
          "key": "2026-10-16-HCAI-intraday_vcp-aplus",
@@ -2214,6 +2251,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
          "id": "2026-10-16|TGL|kiss_fly|aplus",
          "key": "2026-10-16-TGL-kiss_fly-aplus",
@@ -2254,6 +2292,7 @@
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-16",
          "fill_px": null,
+         "flag_text": null,
          "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
          "id": "2026-10-16|PMI|bull_flag|aplus",
          "key": "2026-10-16-PMI-bull_flag-aplus",
@@ -2294,6 +2333,7 @@
          "bucket_text": "✅ winner",
          "date": "2026-10-16",
          "fill_px": 1.85,
+         "flag_text": "✅ winner",
          "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
          "id": "2026-10-16|XLAB|intraday_vcp|aplus",
          "key": "2026-10-16-XLAB-intraday_vcp-aplus",
@@ -2350,6 +2390,13 @@
      "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
      "total": 4
     },
+    "bucket_order": [
+     "win",
+     "loss",
+     "open",
+     "flat",
+     "out"
+    ],
     "categories": [
      {
       "key": "all",
@@ -2594,6 +2641,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
         "id": "2026-10-16|HCAI|intraday_vcp|aplus",
         "key": "2026-10-16-HCAI-intraday_vcp-aplus",
@@ -2634,6 +2682,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
         "id": "2026-10-16|TGL|kiss_fly|aplus",
         "key": "2026-10-16-TGL-kiss_fly-aplus",
@@ -2674,6 +2723,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
         "id": "2026-10-16|PMI|bull_flag|aplus",
         "key": "2026-10-16-PMI-bull_flag-aplus",
@@ -2714,6 +2764,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
         "id": "2026-10-16|NOEN|kiss_fly|potential",
         "key": "2026-10-16-NOEN-kiss_fly-potential",
@@ -2754,6 +2805,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
         "id": "2026-10-16|NPLN|bull_flag|potential",
         "key": "2026-10-16-NPLN-bull_flag-potential",
@@ -2794,6 +2846,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.85,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-16|XLAB|intraday_vcp|aplus",
         "key": "2026-10-16-XLAB-intraday_vcp-aplus",
@@ -2834,6 +2887,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-16|XLAB|intraday_vcp|potential",
         "key": "2026-10-16-XLAB-intraday_vcp-potential",
@@ -2874,6 +2928,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
         "id": "2026-10-16|XLAB|horizontal_fade|potential",
         "key": "2026-10-16-XLAB-horizontal_fade-potential",
@@ -2965,6 +3020,20 @@
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
+    "sort_default": "wins",
+    "sort_param": "sort",
+    "sorts": [
+     {
+      "bucket_sort": true,
+      "key": "wins",
+      "label": "✅ wins first"
+     },
+     {
+      "bucket_sort": false,
+      "key": "rang",
+      "label": "🕰️ as rang"
+     }
+    ],
     "span": "today",
     "spans": [
      {
@@ -3289,6 +3358,13 @@
      "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
      "total": 0
     },
+    "bucket_order": [
+     "win",
+     "loss",
+     "open",
+     "flat",
+     "out"
+    ],
     "categories": [
      {
       "key": "all",
@@ -3533,6 +3609,7 @@
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-15",
         "fill_px": null,
+        "flag_text": null,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
         "id": "2026-10-15|AHX|horizontal_fade|potential",
         "key": "2026-10-15-AHX-horizontal_fade-potential",
@@ -3573,6 +3650,7 @@
         "bucket_text": "✅ winner",
         "date": "2026-10-15",
         "fill_px": 1.22,
+        "flag_text": "✅ winner",
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
         "id": "2026-10-15|XLAB|intraday_vcp|potential",
         "key": "2026-10-15-XLAB-intraday_vcp-potential",
@@ -3664,6 +3742,20 @@
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": null,
+    "sort_default": "wins",
+    "sort_param": "sort",
+    "sorts": [
+     {
+      "bucket_sort": true,
+      "key": "wins",
+      "label": "✅ wins first"
+     },
+     {
+      "bucket_sort": false,
+      "key": "rang",
+      "label": "🕰️ as rang"
+     }
+    ],
     "span": "yesterday",
     "spans": [
      {

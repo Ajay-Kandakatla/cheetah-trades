@@ -1003,6 +1003,16 @@ KIND_PARAM = "kind"
 KIND_KEYS = ("all", "aplus")                                                               # first = off
 KIND_LABELS = {"all": "📋 every alert", "aplus": "🎯 A+ only"}
 KIND_EMPTY_TEXT = "No 🎯 A+ alert on this span."
+# ✅ wins first + the per-row ✅ / ❌ flag (Ajay 2026-10-27, verbatim: "Can you sort the winds in Gajjals I can't seem to
+# tell the difference in that tab or show some greed flags on the wins rows") — this ANSWERS HIS CALL Q11 (AMENDMENTS11
+# F13 was MINE; his word reverses it): the served flag is DRAWN on win / loss rows (`flag_text`), the rows are tinted
+# by their served bucket, and the sort chips are served here. The sort is FE-only over the served `bucket_order`: the
+# server NEVER reorders a row (the ledger stays chronological, as rang — the golden pins it). ROW chips, never a %.
+SORT_PARAM = "sort"                                     # the board's own URL param; a sub click drops it (pickSub)
+SORT_KEYS = ("wins", "rang")                            # first = the default (his ask: the wins on top)
+SORT_LABELS = {"wins": "✅ wins first", "rang": "🕰️ as rang"}
+SORT_BY_BUCKET = {"wins": True, "rang": False}          # served per chip; the FE types no sort key
+FLAG_BUCKETS = (BUCKETS[0], BUCKETS[1])                 # win · loss — the only rows that carry a flag
 APLUS_LINES = (LINES[0], LINES[1])
 APLUS_TITLE = "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED"
 APLUS_LEADS = {"same": "A+ same session", "next": "A+ through next session"}
@@ -1493,6 +1503,12 @@ def _kinds(shown: list, ap_shown: list) -> list:
              "n_replayed": 0}]
 
 
+def _sorts() -> list:
+    """✅ wins first (Ajay 2026-10-27): one chip per SORT_KEYS key — its served label and whether it sorts by the served
+    bucket order (`bucket_sort`); the FE compares keys to the served default and types none of them."""
+    return [{"key": k, "label": SORT_LABELS[k], "bucket_sort": bool(SORT_BY_BUCKET[k])} for k in SORT_KEYS]
+
+
 def _aplus_cell(c: dict, h: str, detail: bool) -> dict:
     """One horizon's served chart cell from a counts dict: {total, decided, pct, loss_pct, pct_text, text, short_text,
     items}. `total` = Σ the counts (pct excluded); the % is of the decided rows only; loss_pct = 100 − pct (one
@@ -1683,6 +1699,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "plan_text": plan_text, "note": note, "href": row.get("url"),
                       "same": cells["same"], "next": cells["next"],
                       "replay_text": replay_text, "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
+                      "flag_text": BUCKET_TEXT[bucket] if bucket in FLAG_BUCKETS else None,  # ✅ / ❌ 2026-10-27 (Q11)
                       "loss_text": lt, "broker_text": _broker(row["symbol"]),             # 🚫 DECISIONS12 D2
                       "trader_text": TN.text_for(row.get("trader"))})                   # 📌 2026-10-27
     for ln in COUNT_LINES:
@@ -1740,6 +1757,9 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             # 🎯 BUILD_SPEC25 (Ajay 2026-10-26): the kind chips (ROW counts), the A+ rows' categories, the A+ block
             "kinds": _kinds(shown, ap_shown), "kind_param": KIND_PARAM, "kind_empty_text": KIND_EMPTY_TEXT,
             "categories_aplus": _categories(ap_shown),
+            # ✅ wins first (Ajay 2026-10-27): the served sort chips, the param, the default and the bucket order the
+            # FE sorts by — the rows above stay in the served (chronological) order; the server never reorders
+            "sorts": _sorts(), "sort_param": SORT_PARAM, "sort_default": SORT_KEYS[0], "bucket_order": list(BUCKETS),
             "aplus": aplus_block(ap, ap_days, has_replay, ap_prov)}
     return block if gg5 else _variant_words(block, v)
 
@@ -1776,4 +1796,5 @@ __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES"
            "fill_facts", "loss_facts", "loss_text", "replay_cell",
            "KIND_PARAM", "KIND_KEYS", "KIND_LABELS", "KIND_EMPTY_TEXT", "APLUS_LINES", "APLUS_TITLE", "APLUS_LEADS",
            "APLUS_SENT_TEXT", "APLUS_SHADOW_TEXT", "APLUS_REPLAYED_NOTE", "APLUS_HONESTY", "APLUS_CHART_KEYS",
-           "APLUS_CHART_TITLES", "APLUS_ITEM_LABELS", "NO_DECIDED_TEXT", "is_aplus_row", "aplus_block"]
+           "APLUS_CHART_TITLES", "APLUS_ITEM_LABELS", "NO_DECIDED_TEXT", "is_aplus_row", "aplus_block",
+           "SORT_PARAM", "SORT_KEYS", "SORT_LABELS", "SORT_BY_BUCKET", "FLAG_BUCKETS"]

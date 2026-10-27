@@ -442,3 +442,41 @@ describe("GajjalaLaneTab — GG's rules (2026-10-21)", () => {
     expect(`${block}\ntrail the 9 EMA`).toContain('EMA');
   });
 });
+
+/* ✅ / ❌ 2026-10-27 — Ajay: "show some greed flags on the wins rows". A CLOSED lane row is tinted by the SIGN of its served
+ * pnl_usd (data-outcome win / loss + a green / red tint); an open row, a flat close and a row without a number carry
+ * none. The number is served; the FE composes no word onto the row. */
+describe('🚩 lane rows — win / loss tint (2026-10-27)', () => {
+  const base = (id: string, symbol: string, over: Partial<GajjalaRow>): GajjalaRow => ({
+    id, symbol, setup_label: '🚩 Bull Flag', alert_et: '10:05', fate_text: 'served fate', pnl_text: 'served pnl', url: null,
+    closable: false, ...over,
+  } as GajjalaRow);
+  it('tints a closed winner green and a closed loser red; NEGATIVE: open, flat and number-less rows carry no tint', async () => {
+    const rows = [
+      base('GG:2026-10-20|WINA|bull_flag', 'WINA', { state: 'closed', pnl_usd: 398.4, pnl_text: '+$398.40 · +1.25R' }),
+      base('GG:2026-10-20|LOSB|bull_flag', 'LOSB', { state: 'closed', pnl_usd: -146.51, pnl_text: '−$146.51 · −1.75R' }),
+      base('GG:2026-10-20|OPNC|bull_flag', 'OPNC', { state: 'open', pnl_usd: 133.02, pnl_text: '+$133.02 open (last 4.55)' }),
+      base('GG:2026-10-20|FLTD|bull_flag', 'FLTD', { state: 'closed', pnl_usd: 0, pnl_text: '$0.00 · 0.00R' }),
+      base('GG:2026-10-20|NONE|bull_flag', 'NONE', { state: 'closed', pnl_usd: null, pnl_text: null }),
+      base('GG:2026-10-20|SKPF|bull_flag', 'SKPF', { state: 'skipped', pnl_usd: undefined, pnl_text: null }),
+    ];
+    stub(ok({ ...FIXTURE, today: rows }), []);
+    view();
+    await waitFor(() => { if (!rowOf('WINA')) throw new Error('no row'); });
+    expect(rowOf('WINA').getAttribute('data-outcome')).toBe('win');
+    expect(rowOf('WINA').style.background).toContain('rgba(63, 185, 80');
+    expect(rowOf('WINA').style.boxShadow).toContain('inset 3px 0 0');
+    expect(rowOf('LOSB').getAttribute('data-outcome')).toBe('loss');
+    expect(rowOf('LOSB').style.background).toContain('rgba(248, 81, 73');
+    for (const sym of ['OPNC', 'FLTD', 'NONE', 'SKPF']) {
+      expect(rowOf(sym).getAttribute('data-outcome'), sym).toBeNull();
+      expect(rowOf(sym).style.background, sym).toBe('');
+      expect(rowOf(sym).style.boxShadow, sym).toBe('');
+    }
+    // the served words still print untouched; nothing composed
+    expect(within(rowOf('WINA')).getByTestId('gg-lane-pnl').textContent).toBe('+$398.40 · +1.25R');
+    expect(within(rowOf('OPNC')).getByTestId('gg-lane-pnl').textContent).toBe('+$133.02 open (last 4.55)');
+    expect(within(rowOf('NONE')).getByTestId('gg-lane-pnl').textContent).toBe(DASH);
+    expect(document.body.textContent).not.toMatch(/NaN|null|undefined/);
+  });
+});

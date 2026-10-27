@@ -169,8 +169,11 @@ function Probe() {
   loc = { search: l.search };
   return null;
 }
+/* ✅ wins first (2026-10-27): the 🏁 list now sorts each day's rows by the served default chip (wins on top); this file pins
+ * the SERVED order and the category / timeline mechanics, so its 🏁 mounts ride `sort=rang` (the served as-rang chip —
+ * FE-only, it never reaches the GET). The default order is covered by GajjalaBoard.wins_sort.test.tsx + track_record. */
 const mount = (q: string) => render(
-  <MemoryRouter initialEntries={[`/chart-maps?${q}`]}><GajjalaBoard /><Probe /></MemoryRouter>);
+  <MemoryRouter initialEntries={[`/chart-maps?${q}${q.includes('track_record') ? '&sort=rang' : ''}`]}><GajjalaBoard /><Probe /></MemoryRouter>);
 const loaded = async (container: HTMLElement) =>
   waitFor(() => expect(container.querySelector('.gg-board')?.getAttribute('data-state')).toBe('loaded'));
 const urlKind = () => new URLSearchParams(loc.search).get(GG_KIND_PARAM);

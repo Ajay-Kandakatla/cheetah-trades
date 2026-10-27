@@ -302,9 +302,12 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   rang_text?: string | null; thin_text?: string | null;
   trigger?: number | null; stop?: number | null; fill_px?: number | null; plan_text: string; note?: string | null;
   href?: string | null; same: GgTrCell; next: GgTrCell;
-  /** ✅ / ❌ the row's served category (ledger.bucket_of — one of ledger.BUCKETS) and its served words (DECISIONS11 D11;
-   *  AMENDMENTS11 F13: `bucket_text` is served but not drawn — the Same / Through-next cells already say it). */
+  /** ✅ / ❌ the row's served category (ledger.bucket_of — one of ledger.BUCKETS) and its served words (DECISIONS11 D11).
+   *  `bucket` is also the row's tint hook (ggTrRowClass); `bucket_text` feeds the category chips. */
   bucket?: string | null; bucket_text?: string | null;
+  /** ✅ / ❌ 2026-10-27 (HIS CALL Q11 answered by his word — F13 reversed): the served flag DRAWN in the Ticker cell on
+   *  win / loss rows (ledger.FLAG_BUCKETS); null / absent on every other row → no chip. */
+  flag_text?: string | null;
   /** D12 the served loss facts (ledger.loss_text) — a string on bucket "loss" rows only, else null. */
   loss_text?: string | null;
   /** ⏪ the served replayed chip (ledger.REPLAY_CHIP / REPLAY_CHIP_UNGATED) — null on the live / shadow lines. */
@@ -338,7 +341,14 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   /** 🎯 the ✅ / ❌ chips over the A+ rows only (ledger._categories(aplus rows)) — the chips while 🎯 is on. */
   categories_aplus?: GgTrCategory[] | null;
   /** 🎯 the served A+ block (ledger.aplus_block): its own capped rows, pooled counts, sentences and the three charts. */
-  aplus?: GgTrAplus | null };
+  aplus?: GgTrAplus | null;
+  /** ✅ wins first (2026-10-27): the served sort chips (ledger._sorts), the param name, the served default key and the
+   *  served bucket order the FE sorts by (ledger.BUCKETS); absent on an older API → no chips, the served order. */
+  sorts?: GgTrSort[] | null; sort_param?: string | null; sort_default?: string | null;
+  bucket_order?: string[] | null };
+/** ✅ one served sort chip: `bucket_sort` says whether it orders the rows by the served `bucket_order` (a boolean —
+ *  the FE types no sort key); false / absent = the served order. */
+export type GgTrSort = { key: string; label: string; bucket_sort?: boolean | null };
 /** 🎯 one served A+ filter chip (`track_record.kinds[]` — NOT `views.kinds`, which is a list of row kinds). */
 export type GgTrKind = { key: string; text: string; n: number; n_replayed?: number | null };
 /** 🎯 one served chart item (ledger._aplus_cell items): `key` is a CSS hook, `label` / `text` are served words. */
@@ -398,6 +408,36 @@ export function ggKindDays(days: GgTrDay[], kind: string | null | undefined, kin
                            aplus: GgTrAplus | null | undefined): GgTrDay[] {
   if (!ggKindOn(kind, kinds)) return days;
   return Array.isArray(aplus?.days) ? aplus!.days : [];
+}
+
+/** ✅ wins first (2026-10-27): the served sort chip in force — the URL `sort` when it is a served key, else the chip
+ *  whose key is the served default; no served chips (an older API) → null = the served order. No key typed here. */
+export function ggTrSort(sort: string | null | undefined,
+                         tr: Pick<GgTrackRecord, 'sorts' | 'sort_default'> | null | undefined): GgTrSort | null {
+  const items = (tr?.sorts || []).filter((s): s is GgTrSort => !!s && typeof s.key === 'string' && s.key !== '');
+  if (!items.length) return null;
+  const picked = sort ? items.find((s) => s.key === sort) : undefined;
+  return picked || items.find((s) => s.key === tr?.sort_default) || null;
+}
+
+/** The rows of one served day in the order the chip asks: a bucket sort = a STABLE sort by the row's served `bucket`
+ *  position in the served `bucket_order` (a missing / unknown bucket sinks last, served order kept inside a bucket);
+ *  any other chip, no chip, or no served order → the rows exactly as served (the same array). */
+export function ggSortRows(rows: GgTrRow[], item: GgTrSort | null | undefined,
+                           order: readonly string[] | null | undefined): GgTrRow[] {
+  if (!item || !item.bucket_sort || !Array.isArray(order) || !order.length) return rows;
+  const rank = (r: GgTrRow): number => {
+    const i = typeof r.bucket === 'string' ? order.indexOf(r.bucket) : -1;
+    return i < 0 ? order.length : i;
+  };
+  return rows.map((r, i) => ({ r, i })).sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i).map((x) => x.r);
+}
+
+/** The row's tint hook (2026-10-27): `gg-tr-row` plus `gg-tr-row-<bucket>` when the row serves a bucket string — a CSS
+ *  hook only (gajjala.css tints win / loss); no bucket → the bare class. */
+export function ggTrRowClass(r: Pick<GgTrRow, 'bucket'> | null | undefined): string {
+  const b = r && typeof r.bucket === 'string' ? r.bucket.trim() : '';
+  return b ? `gg-tr-row gg-tr-row-${b}` : 'gg-tr-row';
 }
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */

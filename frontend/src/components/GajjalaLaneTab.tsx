@@ -207,8 +207,17 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
           <tr>{['name', 'setup', 'rang (ET)', 'what the lane did', 'P&L', '', ''].map((c, i) => <th key={i} style={head}>{c}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} data-row-id={row.id} aria-label={`${row.symbol} ${served(row.setup_label)}`}>
+          {rows.map((row) => {
+            /* ✅ / ❌ 2026-10-27 (Ajay: "show some greed flags on the wins rows"): a CLOSED row is tinted by the SIGN of its
+             * served pnl_usd — green with a green edge when it made money, red when it lost; an open row (its P&L still
+             * running), a flat close or a row without a number carries no tint. A CSS hook from a served number, no word. */
+            const outcome = row.state === 'closed' && typeof row.pnl_usd === 'number' && Number.isFinite(row.pnl_usd) && row.pnl_usd !== 0
+              ? (row.pnl_usd > 0 ? 'win' : 'loss') : null;
+            const tint = outcome === 'win' ? { background: 'rgba(63, 185, 80, 0.14)', boxShadow: `inset 3px 0 0 ${C.good}` }
+              : outcome === 'loss' ? { background: 'rgba(248, 81, 73, 0.09)', boxShadow: `inset 3px 0 0 ${C.bad}` } : undefined;
+            return (
+            <tr key={row.id} data-row-id={row.id} data-outcome={outcome ?? undefined} style={tint}
+                aria-label={`${row.symbol} ${served(row.setup_label)}`}>
               <td style={cell}>{row.url ? <Link to={row.url}>{row.symbol}</Link> : row.symbol}</td>
               <td style={cell}>{served(row.setup_label)}</td>
               <td style={cell}>{served(row.alert_et)}</td>
@@ -230,7 +239,8 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
                 ))}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

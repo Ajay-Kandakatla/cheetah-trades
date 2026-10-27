@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-27 ~17:45 ET (verbatim in the label, his spelling kept): "Can you sort the winds in Gajjals I can't seem to
+  // tell the difference in that tab or show some greed flags on the wins rows". This ANSWERS HIS CALL Q11 of the 🏁
+  // Track record (AMENDMENTS11 F13 was the planner's default — hidden): the served ✅ winner / ❌ loser flag
+  // (ledger.FLAG_BUCKETS → row `flag_text`) is now DRAWN in the Ticker cell, every row is tinted by its served bucket
+  // (gajjala.css .gg-tr-row-win / -loss), and the served sort chips (ledger.SORT_KEYS: ✅ wins first = the default ·
+  // 🕰️ as rang) reorder each served day's rows client-side over the served `bucket_order` — the server never reorders
+  // (the golden pins the chronological order). The Auto-Pilot 🚩 lane rows take the same tint from the SIGN of their
+  // served closed P&L. UNMEASURED. Pinned by scripts/contracts.mjs ("✅ wins first + row flags on the 🏁 Track record (2026-10-27)").
+  { id: 'chart-maps-gajjala-wins-sort-flags-2026-10-27', addedAt: '2026-10-27', route: '/chart-maps?tab=gajjala&sub=track_record',
+    label: "✅ Wins first on 🏁 Gajjala's Track record: every win row is tinted green with a ✅ winner flag beside the ticker, every loss row red with a ❌ loser flag, and the new sort chips put the wins on top of each day (🕰️ as rang switches back to the order they rang). The same on the 1-minute page, and the Auto-Pilot 🚩 Gajjala lane rows are tinted by their closed P&L. You said: “Can you sort the winds in Gajjals I can't seem to tell the difference in that tab or show some greed flags on the wins rows”. UNMEASURED — a tint and an order, not a read. Not advice." },
   // Ajay 2026-10-27 ~11:35 ET (both lines verbatim in the label): "Can you create a new page, I would like you to do the
   // same logic of Gajjalas but on 1 min candles please." then "do everything and also add the track record for it from
   // today.." (BUILD_SPEC27). ONE pipeline parametrized by a frozen Variant (backend chart_maps/gajjala/variant.py): GG5 =
