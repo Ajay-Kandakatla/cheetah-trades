@@ -1,6 +1,6 @@
 # Strategy lab 2026-10-29 (study doc)
 
-**Verdict: nothing is POSITIVE. All five candidates are UNMEASURED.** C5 short-term reversal (trial T01) is built, tested and calibrated. Its out-of-sample window (signals 2026-03-20 to 2026-10-21) is still sealed, because the prereg doc is not yet written or committed (HIS CALL #0). An outcome run attempted at 19:18 ET did not start for that reason, so T01 stays UNMEASURED. C1 to C4 need history the app does not store, so the script refused them before reading anything.
+**Verdict: nothing is POSITIVE. T01 (C5 short-term reversal) is NOT POSITIVE; C1 to C4 are UNMEASURED.** The prereg was committed as `d59dd653` at 19:26:52 ET, and T01's out-of-sample window (signals 2026-03-20 to 2026-10-21) was read once at 19:27:45 ET. It failed all three gates: A 0.277% per trade [-1.190, 1.767], B -0.007 pp at a 44.9% beat share, DSR 0.73. The audit agreed and its hand recompute matched 40 of 40 trades. C1 to C4 need history the app does not store, so the script refused them before reading anything.
 
 This is research only. No rule here is served, no lane or constant was changed, and no order was placed. Rules are described here, not advised.
 
@@ -32,13 +32,13 @@ How design v2 computes the gates:
 
 | trial | candidate | verdict | OOS mean net / trade | 95% CI (entry weeks) | placebo (B) | PSR / DSR | max drawdown | n |
 |---|---|---|---|---|---|---|---|---|
-| T01 | C5 short-term reversal | **UNMEASURED** (OOS sealed, prereg not committed; the outcome run attempted 19:18 ET did not start) | not read | not read | IS null calibration: 0 of 400 false passes | not computed (ledger empty, N = 1) | not computed | IS 14,600 trades / 61 entry weeks; OOS 0 read |
+| T01 | C5 short-term reversal | **NOT POSITIVE** (read once 2026-10-29 19:27 ET, prereg commit d59dd653; A, B and C all fail) | 0.277% (no_signal) | [-1.190, 1.767] | -0.007 pp [-1.171, 1.231], beat share 44.9% (95% needed) | PSR(0) = DSR 0.73 per entry day (N = 1) | -22.399% (daily book, 154 days) | OOS 7,446 trades / 31 entry weeks / 149 entry days; 0 flagged |
 | none | C1 all-time-high breakout, 10 x ATR(42) stop | **UNMEASURED** (refused, rc 3) | none | none | none | none | none | 0 |
 | none | C2 12-1 momentum, top decile | **UNMEASURED** (refused, rc 3) | none | none | none | none | none | 0 |
 | none | C3 earnings-announcement-return drift | **UNMEASURED** (refused, rc 3) | none | none | none | none | none | 0 |
 | none | C4 SPY above its 10-month SMA, else T-bills | **UNMEASURED** (refused, rc 3) | none | none | none | none | none | 0 |
 
-A refused candidate reads no bar and burns no DSR trial. The trial count N stays at 1: T01 is registered, with 0 OOS reads.
+A refused candidate reads no bar and burns no DSR trial. The trial count N is 1: T01, with its one OOS read.
 
 ## C5 short-term reversal (T01)
 
@@ -98,6 +98,8 @@ Sources: Jegadeesh (1990) and Lehmann (1990). De Groot, Huij and Zhou (2012, JBF
 
 **Power.** The test can only detect about 1.8% per 5-session trade. That is 4 to 6 times the published 0.30-0.50% per week, and the published figure is long-short. A null result would therefore be no surprise (design risk 1).
 
+This table was written before the read; the OOS column's numbers are in "T01 C5 outcome read — 2026-10-29 19:27 ET" below.
+
 ### Placebo and CI calibration (IS only; 200 random-selection nulls per window)
 Each null draws, on every IS signal day, the same number of names as that day's bottom decile, at random from the same eligible set. It uses their real outcomes.
 
@@ -115,15 +117,15 @@ On his IS data, gate B never fired on a random selection. The same-day excess CI
   - The full POSITIVE word fired at most once per drift.
 
 ### PSR / DSR
-- Not computed: the OOS is sealed.
-- The ledger is empty, so N = 1, and DSR equals PSR(0) by construction (test 18).
+- Outcome read (19:27 ET): PSR(0) = DSR = 0.732 per entry day, n 149, against 0.95. See the outcome section.
+- N = 1, so DSR equals PSR(0) by construction (test 18).
 - The per-entry-day Sharpe overstates PSR, because adjacent cohorts share 4 of 5 hold days. The outcome run prints the lag-1 autocorrelation and the range over the 5 non-overlapping sleeves beside it.
 
 ### Max drawdown
-Not computed. The daily book's CAGR, volatility and max drawdown are outcome-run lines. The IS block holds counts and dispersion only, by design.
+Outcome read: -22.399% on the daily book (154 days). See the outcome section.
 
 ### Verdict
-**UNMEASURED.** The outcome run is blocked until the prereg is written and committed (HIS CALL #0). An attempt at 19:18 ET did not start; see "T01 C5 outcome read" below.
+**NOT POSITIVE.** Read once at 19:27 ET after the prereg commit `d59dd653`; A, B and C all fail. An earlier attempt at 19:18 ET did not start. Both are written up below.
 
 ### Audit note (critic, 2026-10-29)
 - **Repairs 1, 2 and 4 hold.**
@@ -159,6 +161,8 @@ Not computed. The daily book's CAGR, volatility and max drawdown are outcome-run
   - The fact is true; only the cite needs fixing.
 
 ## T01 C5 outcome read, 2026-10-29 19:18 ET
+
+This attempt is kept as a record. It was superseded at 19:27 ET by the read in the next section.
 
 **Verdict: UNMEASURED.** The outcome run did not start. The out-of-sample window (signals 2026-03-20 to 2026-10-21, 31 entry weeks) is still sealed and was not read. There is no A, B or C result.
 
@@ -216,6 +220,115 @@ Not done:
 - The one-time OOS read is still owed, and it waits on HIS CALL #0.
 - No lane, gate, board or constant was changed, and no order was placed.
 
+## T01 C5 outcome read — 2026-10-29 19:27 ET, prereg commit d59dd6534258
+
+**Verdict: NOT POSITIVE.** The out-of-sample window (signals 2026-03-20 to 2026-10-21: 31 entry weeks, 149 entry days) was read once, at 19:27:45 ET. All three gates fail:
+- A: 0.277% per trade, CI [-1.190, 1.767], no_signal.
+- B: -0.007 pp against the placebo, at a 44.9% beat share.
+- C: DSR 0.73 against the 0.95 needed.
+
+No row was flagged, so the lines without flagged rows are identical. The audit verdict is also NOT POSITIVE, and its hand recompute matches 40 of 40 trades.
+
+### The seal
+- **Prereg.** `docs/research/strategy_lab_2026_10_29_prereg.md`, commit `d59dd653425873013669eda13e49a2f08f8e4ab6` on `study/strategy-lab-2026-10-29`, at 19:26:52 ET.
+- **Checksum.** sha256 `dc0cad2b5133afe16db6563286443ce392bc5a648a447f2a0373de33332fde03` is the same in the commit, the working copy and `stats.json`. The report writer re-checked it on the host after the run.
+- **The run.**
+  - It started 53 s after the commit, took 12.2 s and exited 0.
+  - It ran once. It is not to be run again, because the window is spent.
+- **What the commit holds.** 5 files: the prereg, the script, both test files and this study doc. The prereg's seal procedure says "commit ONLY this file". The audit found the script unchanged since that commit. This is noted by the report writer and is not an audit defect.
+- **Read-only.**
+  - The only attempted write was `price_cache.create_index`, a no-op.
+  - There were no fetches.
+  - There were 0 tier-2 trades.
+
+### Numbers (OOS gate lines)
+| line | value | 95% CI (entry weeks) | result |
+|---|---|---|---|
+| A: mean net per trade, all rows | 0.277% | [-1.190, 1.767] | no_signal: FAIL |
+| A: without flagged rows (0 of 7,446) | 0.277% | [-1.190, 1.767] | no_signal: FAIL |
+| B: strategy minus same-name, same-month placebo ([t-10, t-1] removed) | -0.007 pp | [-1.171, 1.231] | beat share 44.9%, 95% needed: FAIL |
+| B: without flagged rows | -0.007 pp | [-1.171, 1.231] | beat share 44.9%: FAIL |
+| C: DSR per entry day (N = 1, so DSR = PSR(0)) | 0.732 | n 149; SR 0.0506; skew 0.27; kurtosis 4.18 | 0.95 needed: FAIL |
+
+Beside A:
+- **Counts.**
+  - 7,446 trades in 31 entry weeks and 149 entry days.
+  - Exits: time 7,436, data_end 10, late 0.
+  - Skipped for no entry bar: 4.
+- **Per trade.**
+  - Win rate 48.3%; median trade -0.262%; gross mean 0.578%.
+  - Break-even cost of the point estimate: 28.8 bps per side, against the 15 bps applied.
+  - MAE p10 -14.755%. Stop-out rate n/a (no stop).
+- **Tail.** Top-1% share of total return: 1.474. The top 1% of trades (about 74) sum to 147% of the total net return, so the other 99% sum to a net loss.
+- **Gate C caveats.**
+  - The per-entry-day series has a lag-1 autocorrelation of 0.67, because adjacent cohorts share 4 of 5 hold days.
+  - PSR over the 5 non-overlapping sleeves ranges from 0.272 to 0.788.
+- **B pool.** A median of 11 placebo dates per trade (p10: 7). 80 trades had a pool holding only their own date.
+- **Daily book (154 days).**
+  - Max drawdown -22.399%.
+  - Volatility 29.3% annualised.
+  - CAGR 5.845%, annualised from 154 days.
+  - PSR(0) 0.604.
+- **MDE.** 1.816% per trade, from the IS week SD, set before the read.
+
+Printed by the script, never the verdict:
+- Same-day universe excess: 0.242 pp [-0.862, 1.279], no_signal.
+- A clustered by entry day instead of entry week: [-0.582, 1.152], no_signal.
+- A clustered by single trade: [0.060, 0.492], "separates".
+  - This CI treats the 7,446 trades as independent.
+  - Trades opened in the same week share most of their hold days, which is why gate A clusters by entry week. This line is not gate A.
+- Per-trade PSR(0) 0.99. It rests on the same independence assumption; gate C runs per entry day (prereg choice 3).
+- A without the 10 data_end rows: 0.275% [-1.174, 1.755], no_signal.
+- **IS block from the same run.** This is context, not a test.
+  - A 0.151% [-0.762, 1.018], no_signal, on 14,600 trades and 61 weeks.
+  - B 0.001 pp, beat share 49.9%.
+  - PSR(0) per entry day 0.719.
+  - Daily-book max drawdown -25.744%.
+- **Universe on this run.**
+  - 761 names were ever eligible over the full calendar. The calibration's 691 covered the IS only.
+  - 47 of the 761 have caches that stop.
+  - In the OOS, 6 universe-cohort rows straddle a flagged jump. None was selected.
+
+### Audit (critic, 2026-10-29 evening, after the read)
+**Audit verdict: NOT POSITIVE. No defect changes the verdict.**
+
+Recompute note:
+- **Trades.** The auditor recomputed 40 trades from the bars in a `--rm` container: 30 at random plus all 10 data_end rows. All 40 match the script exactly on r5, entry (t+1 open), exit (t+6 open), 15 bps per side and net.
+- **Universe and decile.** An independent rebuild on 6 dates matched 295 of 300 names. The 5 misses sit at ranks 501-503 in the rebuild, which skips the script's de-duplication. They are not lookahead.
+- **Bootstrap.** The auditor's own week bootstrap gives A [-1.21, 1.78], against the script's [-1.190, 1.767].
+
+Checks that pass:
+- **Seal.**
+  - The prereg sha256 matches in the commit, the working copy and `stats.json`.
+  - The script is unchanged since `d59dd653`.
+  - The commit (19:26:52 ET) precedes the run (19:27:45 ET).
+- **Split.** OOS signals run 2026-03-20 to 2026-10-21 (149 sessions, 31 weeks). The last IS exit is 2026-03-20, so nothing leaks from the IS into the OOS.
+- **Gates.**
+  - B's pool drops [t-10, t-1]; this was checked on synthetic data.
+  - Gate C is per entry day, n 149, N = 1, so DSR = PSR.
+  - The glitch rule is applied on both lines, with 0 rows flagged.
+- **Probe files.** They are in `scratchpad/audit/`.
+
+| # | severity | defect | fix (not applied: the script and the prereg are sealed) |
+|---|---|---|---|
+| 1 | LOW | `stats.is.clean.n_cohort_flagged` reads 6, but there are 0 IS cohort flags (`strategy_lab_2026_10_29.py:1405-1409`, `:1826`). `gate_block` gets the cohort for both splits, so the IS block prints the OOS count. Pools are keyed by split, so no gate changes. | Count the cohort flags inside the split. |
+| 2 | LOW | `skips.oos.scale_glitch_signal` = 5 (line 832) is the universe-wide count copied into the trade-skip slot. It is not a count of selected trades. | Rename the field, or say so in the doc. |
+| 3 | LOW (his call) | `ana.py` ran at 17:54 ET, before the 19:26:52 ET commit, on `bars.csv`, a full dump that includes the OOS window. It counted jumps and survivors only and computed no OOS returns. Prereg line 184 says "No OOS bar has been read". | A footnote on the prereg. This is his call; the prereg is the seal and is not edited here. |
+| 4 | LOW (reported only) | 10 data_end rows (UL, VALE, SIMO, TSEM, BLD). Their cache stops mid-window while the names still trade. | None. A without them is 0.275%. |
+
+### Not done
+- **The connector cross-check (HIS CALL #8).** It was not run.
+  - The runner reported that the three `workflow_run_*` tools were not available in its session.
+  - His call on sending his OOS arrays to the third-party connector is not on record.
+  - `connector_payloads.json` (no symbols) is ready. No connector results file was written.
+  - The in-script formula is the gate of record.
+- **The `report.md` copy.** The run's `report.md` stays in `scratchpad/strat/out/c5_reversal/`. It was not copied into this folder.
+
+### What changes
+- **One ledger row.** T01, NOT POSITIVE, in `strategy_lab_ledger.json` and `LEDGER.md`. N = 1: T01, with one OOS read.
+- **The window is spent.** 2026-03-20 to 2026-10-21 is no longer out-of-sample for C5 or any reversal-family variant (prereg). A successor runs on sessions after 2026-10-29 (Q02) or on the long history (HIS CALL #1).
+- **Nothing else.** No lane, gate, board, alert or constant was changed, and no order was placed.
+
 ## C1 to C4: refused (rc 3, nothing read, no ledger entry)
 
 | candidate | rules (frozen; the paper's own values) | sources | refusal (script's words) |
@@ -258,42 +371,44 @@ Not done:
 
 ## Open decisions (HIS CALL; none decided here)
 
-0. **Prereg.** Write `docs/research/strategy_lab_2026_10_29_prereg.md` in the house format, with these calibration numbers in it. The evening audit adds three lines it must state: N = 1 and why C1 to C4 are not counted in it, B's t-10 to t-1 placebo exclusion, and the defect 1 fix form. Then decide: commit it on the study branch so the T01 outcome run can start? Reading the OOS is irreversible (design risk 11).
-1. **Defect 1 fix form.** The script now holds (a), A and B must also pass with the flagged rows removed, plus a cap: above 5% flagged rows no verdict word is printed. The other option was (b), print no verdict word while any row is flagged. His call on the form is not on record.
+0. **Prereg.** Done. It was committed as `d59dd653` at 19:26:52 ET, and the T01 read ran at 19:27:45 ET. Still open (post-read audit defect 3): a footnote on prereg line 184. `ana.py` read a full bar dump at 17:54 ET, counting jumps and survivors only.
+1. **Defect 1 fix form.** The script holds (a): A and B must also pass with the flagged rows removed, plus a cap, so that above 5% flagged rows no verdict word is printed. The other option was (b), print no verdict word while any row is flagged. His call on the form is not on record. On T01's OOS, 0 rows were flagged, so the form did not affect this verdict.
 2. **History pull** for C1, C2 and C4 and a point-in-time universe (#1). The **C3 date source** (#2).
 3. **Gates.** Gate C series (#3, default per entry day). B pool (#4, default same-name, same-month, with t-10 to t-1 removed).
-4. **Costs** (#6). 15 bps per side as written, against the roughly 19 bps per side implied by de Groot's 75 bps a week. The outcome run prints the break-even cost.
-5. **Connector.** Send unlabeled OOS return arrays to it (#8)? And the DSR convention (#12, new).
+4. **Costs** (#6). 15 bps per side as written, against the roughly 19 bps per side implied by de Groot's 75 bps a week. T01's read printed a break-even of 28.8 bps per side for its point estimate. The CI includes 0 at either cost.
+5. **Connector.** Send unlabeled OOS return arrays to it (#8)? And the DSR convention (#12, new). T01's `connector_payloads.json` is ready and has not been sent.
 6. **Calibration remedy** (#11). The rates came in at or below nominal, so the default "keep the gate, print the rate" holds.
+7. **Post-read audit defects 1 and 2 (LOW).** Two `stats.json` labels mislead: `is.clean.n_cohort_flagged` prints the OOS count, and `skips.oos.scale_glitch_signal` is a universe count. Neither changes a gate. The script is sealed at `d59dd653`, so a fix belongs in a successor version.
 
 ## Conclusion
 
-Today's lab produced no measured result, and nothing in it supports changing a lane, a gate or a board.
+Nothing in today's lab is POSITIVE, and nothing in it supports changing a lane, a gate or a board.
 - Five candidates were pre-registered from published, replicated evidence.
 - Four (ATH breakout, 12-1 momentum, earnings drift, the SPY 10-month regime) cannot be tested on a rolling 2-year cache. They stay UNMEASURED.
-- The fifth, C5 weekly reversal (a rule that runs against his buy-strength frameworks), is built, tested and calibrated on his in-sample data.
-  - Its placebo gate never fired on 400 random selections (0/400).
-  - Its same-day excess CI held its nominal 5% (20/400).
-  - The out-of-sample read can only detect about 1.8% per trade, several times the published long-short figure, so a null would be the plain outcome.
-  - The audit found that 13 unadjusted-split rows can turn a pure null into POSITIVE. The script now holds a fix: A and B must pass with and without the flagged rows, and above 5% flagged rows no word is printed. His call on that form is not on record.
-- **The T01 outcome read was attempted at 19:18 ET and did not start.** The prereg is not written or committed (HIS CALL #0), so no OOS bar was read.
-  - T01 is UNMEASURED, not NOT POSITIVE: there is no A, B or C result.
-  - The evening audit agreed. It found the seal intact and the refusal correct.
-  - It added that the prereg must state N, because gate C does no deflating at N = 1, and the placebo's t-10 to t-1 exclusion.
+- **The fifth, T01 C5 weekly reversal, is NOT POSITIVE.** It is a rule that runs against his buy-strength frameworks. Its out-of-sample window was read once, at 19:27 ET, after the prereg commit `d59dd653`.
+  - **A.** 0.277% per trade after costs, CI [-1.190, 1.767]. The CI runs from about a 1.2% loss to about a 1.8% gain per trade, so the sign is not established.
+  - **B.** The rule did no better than the same names on random dates in the same month: -0.007 pp, beating 44.9% of the placebo sets against the 95% needed.
+  - **C.** DSR 0.73 against 0.95, at N = 1.
+  - **Trades.** The median trade lost 0.262%, and 48.3% of trades won. The top 1% of trades (about 74) sum to more than the whole net total.
+  - **Split glitches.** No row was flagged, so the verdict does not depend on the defect 1 fix form.
+  - **In-sample.** The same run's IS block is also null: 0.151% [-0.762, 1.018].
+- **What this does and does not show.** The read could only detect about 1.8% per trade, and the published figure is 0.30 to 0.50% a week, long-short. NOT POSITIVE means the rule failed its pre-registered test on this window. A test this coarse can neither confirm nor rule out an effect of the published size.
+- **The audit.** It agreed, and its hand recompute matched 40 of 40 trades. Its four defects are LOW, and none changes the verdict.
+- **The earlier attempt.** At 19:18 ET the outcome run did not start, because the prereg was not yet committed.
 
-"Improve until positive" cannot be met by tuning C5 on the same window: that is the data mining the DSR count exists to penalize. The honest routes are the queue: forward sessions after 2026-10-29, or the one-off longer history (his call).
+"Improve until positive" was not met. Tuning C5 on this window now would be the data mining the DSR count exists to penalize, and the window is spent for the reversal family. The routes left are in the queue: Q02, the same frozen rule on sessions after 2026-10-29 (not before June 2027), or the one-off longer history (his call).
 
 ## Next hypotheses
 
 These are in `QUEUE.md`, each with its source and pre-registered values. Each one adds a DSR trial, and N never resets.
-1. T01 outcome read: attempted 2026-10-29 19:18 ET, did not start. It is still owed, blocked on #0, and his call on the defect 1 fix form goes in the prereg.
+1. T01 outcome read: DONE 2026-10-29 19:27 ET, verdict NOT POSITIVE. Its window, 2026-03-20 to 2026-10-21, is now spent for the reversal family.
 2. T01's frozen rule on forward sessions only. It can be read once 30 entry weeks have accrued, not before June 2027.
 3. C1 ATH breakout (needs #1).
 4. C2 12-1 momentum (needs #1).
 5. C4 SPY 10-month SMA (needs #1).
 6. Single-stock time-series momentum, long only (needs #1).
 7. C3 EAR drift (needs #2).
-8. RSI(2), Connors: too small on the 2-year cache, and in the same family as T01.
+8. RSI(2), Connors: too small on the 2-year cache, and in the same family as T01, whose window is now read.
 9. Donchian 20/10, System 1 (futures-era evidence only).
 10. 8/21 EMA pullback: no values are registered because the source rule is ambiguous, so the next step is to ask him for his exact rule.
 
@@ -301,21 +416,24 @@ These are in `QUEUE.md`, each with its source and pre-registered values. Each on
 
 | what | where |
 |---|---|
-| script / tests | `/Users/ajay/clinet-test/wt-stratlab/backend/scripts/strategy_lab_2026_10_29.py`; `backend/tests/test_strategy_lab_2026_10_29.py`, `test_strategy_lab_repair_2026_10_29.py`. All untracked on `study/strategy-lab-2026-10-29` and not committed. |
-| study doc (re-run recipe) | `/Users/ajay/clinet-test/wt-stratlab/docs/studies/strategy_lab_2026_10_29.md` |
+| script / tests | `/Users/ajay/clinet-test/wt-stratlab/backend/scripts/strategy_lab_2026_10_29.py`; `backend/tests/test_strategy_lab_2026_10_29.py`, `test_strategy_lab_repair_2026_10_29.py`. Committed in `d59dd653` on `study/strategy-lab-2026-10-29`, unchanged since. |
+| prereg (the seal) | `/Users/ajay/clinet-test/wt-stratlab/docs/research/strategy_lab_2026_10_29_prereg.md`, commit `d59dd653425873013669eda13e49a2f08f8e4ab6`, sha256 `dc0cad2b…fde03` |
+| study doc (re-run recipe) | `/Users/ajay/clinet-test/wt-stratlab/docs/studies/strategy_lab_2026_10_29.md`. It is committed in `d59dd653`; this outcome section is a working-copy edit and is not committed. |
+| T01 outcome artefacts | `scratchpad/strat/out/c5_reversal/`: `report.md`, `stats.json`, `trades.json` (12.0M), `daily.csv`, `connector_payloads.json`, `run.log` |
+| post-read audit probes | `scratchpad/audit/` (`probe*.py`, `probe*.out`, `data_end.json`, `excluded.json`, `host_stats.py`) |
 | design / shortlist / literature | `scratchpad/strat/design.md`, `shortlist.md`, `lit.md` |
 | calibration artefacts | `scratchpad/strat/out/c5_reversal/calibration/` (`calibration.json`, `stats.json`, `report.md`, `run.log`) |
 | refusals | `scratchpad/strat/out/c{1..4}_*/status.json` |
 | audit probe | `scratchpad/strat/critic_re/glitch_up.py`, `glitch_up.out` |
 | connector cross-check | `scratchpad/strat/out/connector_xcheck_synthetic.json` |
-| ledger / queue | `/Users/ajay/clinet-test/eod-audits/research/LEDGER.md`, `QUEUE.md`. The machine ledger `strategy_lab_ledger.json` is written only by an outcome run and does not exist yet. |
+| ledger / queue | `/Users/ajay/clinet-test/eod-audits/research/LEDGER.md`, `QUEUE.md`. The machine ledger `strategy_lab_ledger.json` is written only by an outcome run. It holds one row, T01 NOT POSITIVE, written 2026-10-29 19:27 ET. |
 
 `scratchpad` = `/private/tmp/claude-501/-Users-ajay-clinet-test/656642d4-5050-4aec-a1a8-e7114785de7b/scratchpad`
 
 ## Reproduce: script, container recipe, re-run
 
 ### Where the code is
-- **Worktree.** `/Users/ajay/clinet-test/wt-stratlab`, branch `study/strategy-lab-2026-10-29`. Nothing is committed: the script, its tests and this doc are untracked, and `frontend/node_modules` is never added.
+- **Worktree.** `/Users/ajay/clinet-test/wt-stratlab`, branch `study/strategy-lab-2026-10-29`. Commit `d59dd653` (2026-10-29 19:26:52 ET) holds the prereg, the script, both test files and this doc. The T01 outcome section in this doc is a later working-copy edit and is not committed. `frontend/node_modules` is never added.
 - **Script.** `backend/scripts/strategy_lab_2026_10_29.py` (2,019 lines after the glitch fix).
   - Mongo access is read-only. `RS.block_writes` records writes as no-ops; the only attempted write is `price_cache.create_index`.
   - There is no network. `block_network()` is on, and the script refuses to run when a Massive key is in the environment. It never calls `prices.load_prices`.
@@ -368,7 +486,11 @@ Expected output lines:
 
 The SPY doc head rolls daily, so a later run sees a shorter IS head. Some IS counts may then differ slightly; as_of and oos_from stay frozen as dates.
 
-### 3. C5 outcome run: BLOCKED until HIS CALL #0
+### 3. C5 outcome run: RAN ONCE, 2026-10-29 19:27:45 ET; never run again
+- It ran with `HASH` = `d59dd653425873013669eda13e49a2f08f8e4ab6`. The host check's sums matched (`dc0cad2b…fde03`), it exited 0, and its verdict is NOT POSITIVE.
+- The OOS window is spent. The ledger now holds T01, and the script's ledger clash check (exit 2, before any bar read) exists to refuse a second T01 row.
+- The steps below are kept as the record of how it was run.
+
 Steps, in order:
 1. Write `docs/research/strategy_lab_2026_10_29_prereg.md`.
 2. Get his call on the defect 1 fix form. The script already holds form (a) plus the 5% no-word cap; record his call in the prereg, and change and re-test the code only if he picks otherwise. The prereg also states N = 1 (with why C1 to C4 are not counted) and B's t-10 to t-1 exclusion.
@@ -394,7 +516,8 @@ Artefacts:
 
 The connector cross-check of `connector_payloads.json` (Sharpe stats, DSR, tearsheet) runs only on HIS CALL #8. Its replies go to `connector_results.json`, with the formula and connector values side by side. The formula is the gate.
 
-After the run:
-- Add the T01 row to `LEDGER.md`.
-- Copy `report.md` beside this lab's report in `/Users/ajay/clinet-test/eod-audits/research/`.
-- Move Q01 off `QUEUE.md`.
+After the run (status 2026-10-29 evening):
+- Add the T01 row to `LEDGER.md`: done (NOT POSITIVE).
+- Copy `report.md` beside this lab's report in `/Users/ajay/clinet-test/eod-audits/research/`: not done. It is still at `$S/out/c5_reversal/report.md`.
+- Move Q01 off `QUEUE.md`: done. Q01a is marked DONE with the verdict.
+- Connector cross-check: not run. HIS CALL #8 is not on record, and the runner's session had no `workflow_run_*` tools.
