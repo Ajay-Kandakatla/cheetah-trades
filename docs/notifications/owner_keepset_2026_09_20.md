@@ -1,4 +1,86 @@
-# The owner keep-set — 2026-09-20
+# The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
+
+## 2026-10-29 — Gajjala-only: the keep-set is six kinds
+
+> "Only give me Gajjalas chart notifications from both tabs,
+>
+> I am missing out the ones in noise."
+
+What was ringing his phone in the 7 days before (`push_history`, sent > 0): `tape_burst_chartmaps` 337,
+`tape_burst_highbeta` 325, `gajjala_potential` 155, `pattern_alert` 25, `earnings_reaction` 21, Auto-Pilot notices 11
+(kind None), `gajjala_setup` 11, `ops_alert` 10, `price_alert` 9, `growth_demand_alert` 7, `key_level_alert` 6,
+`demand_alert` 5, `position_alert` 5, `hot_pullback_alert` 5, health 3. The Gajjala pings were buried under the tape
+bursts.
+
+`backend/push/subs.py` → `OWNER_KEEP_SET` is now EXACTLY:
+
+| kind | why it stays |
+| --- | --- |
+| `gajjala_setup` 🚩 | the 5-minute tab's A+ (live since 2026-10-16) |
+| `gajjala_potential` 🧠 | the 5-minute tab's potential (live since 2026-10-15) |
+| `gajjala_1m_setup` 🚩 | the 1-minute tab's A+, LIVE since 2026-10-29 ("from both tabs") |
+| `gajjala_1m_potential` 🧠 | the 1-minute tab's potential, LIVE since 2026-10-29 |
+| `position_alert` 🔴 | stops on stocks he OWNS: his 2026-09-09 answer to this same question ("not other") |
+| `ops_alert` 🩺 | host health (🔋 battery, ⏰ cron late), not a chart kind. Without it he never learns the alerts stopped (he approved the watchdog push 2026-10-06) |
+
+Everything else is OFF for the owner: `hot_pullback_alert`, `pattern_alert`, `demand_alert`, `potus_investment`,
+`growth_demand_alert`, `earnings_reaction`, `board_arrival`, `price_alert`, `key_level_alert`, `med_catalyst`,
+`tape_burst_highbeta`, `tape_burst_chartmaps`, `tape_control`, and every other boolean kind in `default_prefs()`. The
+comment above the set keeps one dated line per removed kind, so the next reader sees why each one was in and why it
+left.
+
+**No gate moved.** The pref kills an alert, not the cron: every muted kind keeps running, so the boards' 🔔 chips still
+fill. `default_prefs()` is unchanged, so other users keep their defaults (the four Gajjala kinds stay False for them).
+`owner_prefs()` and `prefs_for()` are unchanged in code; they derive from the set.
+
+**What this cannot mute.** Two senders push with kind None, so no pref reaches them: the 🩺 health digest
+(`observability/health_audit.py`) and the 🤖 Auto-Pilot notices from `trading/zone_edge_entry.py` and the catalyst
+entry. They are the one thing this change leaves ringing. Muting them is not in scope (BUILD_SPEC29 D8).
+
+### The apply script now applies owner_prefs() in full
+
+`backend/scripts/owner_prefs_apply.py` turns ON every kind in `OWNER_KEEP_SET` and OFF every key of `default_prefs()`
+whose value is a bool and is not in the set. The `quiet_hours*` keys are settings, not kinds, so they are never touched.
+The kinds in `RETIRED_2026_09_20` stay on the OFF list too. Both lists are derived from `push.subs`, never retyped. It
+is still dry by default, owner-only, idempotent, and keeps `--json`.
+
+### Runbook (after the push to main)
+
+```bash
+./deploy-cheetah-main.sh api
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+./deploy-cheetah-main.sh cron frontend
+```
+
+**The order matters (2026-10-29, critic F3).** Flip his prefs BEFORE the cron that sends the 1-minute alerts goes live.
+His four devices have `gajjala_1m_setup` and `gajjala_1m_potential` stored False. If `cron` deploys first, a live 1-minute
+A+ or 🧠 is claimed, the send matches 0 devices, and the alert settles `no_target`. The claim is spent, so every later pass
+reads it as already claimed and that alert never rings that day. So: deploy `api` (it carries the new `push.subs` and
+the script), apply, and only then deploy `cron frontend`.
+
+1. Deploy `api` alone. The cron still runs the old code, so the 1-minute page stays in shadow and sends nothing.
+2. The first run is dry. It prints the diff per device: on his four devices expect `tape_burst_highbeta True→False`,
+   `tape_burst_chartmaps True→False`, `gajjala_1m_setup False→True`, `gajjala_1m_potential False→True`, and the other
+   noise kinds flipping to False.
+3. `--apply` writes it.
+4. The third run must print `no change` for every device.
+5. Deploy `cron frontend`, with `cron` between ticks (:x2–:x4), so the 🚩 tick at the restart minute is not lost. The
+   first live 1-minute pass now finds his four devices ON.
+
+**The shadow-key guard stays.** On the 1-minute page a live A+ claim first checks for its `SHADOW:GG1:` twin. An A+ that
+the shadow already recorded earlier the same day never rings after the flip, so there is no double record and no late
+ring. Expect the 🚩 1-minute rows on /alerts to show `shadow_mode` 0 and a `pushed` count from the first live pass.
+
+Tests: `backend/tests/test_gajjala_only_pushes_2026_10_29.py`, `backend/tests/test_owner_prefs_apply.py`, and the
+predicted pin updates in the keep-set tests (`test_push_owner_keepset.py`, `test_new_alert_kinds.py`,
+`test_quality_alerts.py`, `test_price_alert_unpause_2026_09_21.py`, `test_growth_earnings_cron.py` and the per-kind
+registry tests).
+
+---
+
+The sections below are the 2026-09-20 history (the eight, then the widenings up to 2026-10-28).
 
 **2026-09-20.** Two asks, one day, opposite directions.
 

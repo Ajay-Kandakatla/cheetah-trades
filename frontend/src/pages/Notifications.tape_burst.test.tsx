@@ -64,10 +64,15 @@ describe('Notifications · 🎢 🗺️ tape-burst kinds', () => {
     expect(screen.getByText('Tape burst — Chart Maps')).toBeTruthy();
   });
 
-  it('each detail says ON FOR YOUR PHONE, quotes his ask verbatim, rings live, and says UNMEASURED', () => {
+  /* 2026-10-29 (BUILD_SPEC29 critic F1): the lead follows the keep-set — read here through the Essentials preset,
+     the page's contract-pinned mirror of backend push/subs.OWNER_KEEP_SET. Both kinds left it that day (Ajay: "Only
+     give me Gajjalas chart notifications from both tabs,"), so each leads OFF FOR YOUR PHONE. */
+  const onForHim = (k: string) => (PRESETS.find((p) => p.id === 'essentials')!.pref as any)[k] === true;
+  it('each detail leads with the keep-set state (OFF FOR YOUR PHONE since 2026-10-29), quotes his ask verbatim, rings live, and says UNMEASURED', () => {
     for (const k of KINDS) {
       const d = detail(k);
-      expect(d.startsWith('ON FOR YOUR PHONE — ')).toBe(true);
+      expect(onForHim(k)).toBe(false);
+      expect(d.startsWith(onForHim(k) ? 'ON FOR YOUR PHONE — ' : 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,")')).toBe(true);
       for (const phrase of [ASK, 'everyone else starts off', 'rings live', 'every burst listed on /alerts',
         'UNMEASURED — a description of prints, not a signal. Not advice.']) {
         expect(d).toContain(phrase);
@@ -75,10 +80,19 @@ describe('Notifications · 🎢 🗺️ tape-burst kinds', () => {
     }
   });
 
+  it('NEGATIVE (critic F1): a kind outside the keep-set never says ON FOR YOUR PHONE or claims the owner keep-set', () => {
+    for (const k of KINDS) {
+      const d = detail(k);
+      expect(d).not.toContain('ON FOR YOUR PHONE');
+      expect(d).not.toContain('owner keep-set');
+      expect(d).not.toMatch(/^ON /);
+    }
+  });
+
   it('NOT READ: what never reaches the push is said — the house floor and the poll budget on both, the cold first poll and ⚡\'s own record on 🎢', () => {
     for (const k of KINDS) {
       const d = detail(k);
-      expect(d).toContain('It rings live — nothing is held for a later switch-on.');
+      expect(d).toContain('rings live — nothing is held for a later switch-on.');
       expect(d).toContain('NOT READ: ');
       expect(d).toContain('names under the house share-price floor ($2) are not read');
       expect(d).toContain('names the poll’s time budget cuts are not read that poll');
@@ -124,10 +138,11 @@ describe('Notifications · 🎢 🗺️ tape-burst kinds', () => {
     expect(container.textContent).toContain('Tape burst — Chart Maps');
   });
 
-  it('the Essentials preset carries both: true and names them as ringing live', () => {
+  it('the Essentials preset carries both: false since 2026-10-29 and no longer names them', () => {
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): 🎢 / 🗺️ left the keep-set.
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
-    for (const k of KINDS) expect((ess.pref as any)[k]).toBe(true);
-    expect(ess.detail).toContain('🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live)');
+    for (const k of KINDS) expect((ess.pref as any)[k]).toBe(false);
+    expect(ess.detail).not.toContain('tape bursts');
     expect(ess.detail).not.toMatch(/tape bursts[^.]*shadow/);
     // NEGATIVE: ⚡ trade_flash stays killed (2026-09-08, "Also kill the tape burst") — it has no row and no preset key
     expect('trade_flash' in (ess.pref as any)).toBe(false);

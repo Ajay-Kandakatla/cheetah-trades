@@ -43,7 +43,9 @@ lane; every push says "UNMEASURED — a potential, not an entry; GG enters on th
 
 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.5): the same engine for a `variant.Variant` read off the store
 (`V.of(store)`): its tracker collection, deep link, push kind / tag ("gg1-pot-"), its primary frame's clock for the
-fresh-tape check and the price, its held words. Its 🧠 potentials are SHADOW (GAJJALA_1M_PUSH_MODE): the claim lands,
+fresh-tape check and the price, its held words. Its 🧠 potentials follow GAJJALA_1M_PUSH_MODE: LIVE since 2026-10-29
+(Ajay: "Only give me Gajjalas chart notifications from both tabs") — the claim lands and the variant's sender
+(hooks.notify_gajjala_1m_potential) rings once, as on GG5; in "shadow" (2026-10-27 … 2026-10-28, and on any flip back)
 the settle records state "shadow" with the payload it would have sent, the sender is NEVER called, and only that
 variant's counts carry "shadow". GG5 keeps every byte (its counts, words and sends).
 """
@@ -414,7 +416,8 @@ def _join_sentence(mute_end: str) -> str:
 
 def push_note(session, variant=None) -> str:
     """W15 — the tab's `push_potential.text`, under the narrowed A+ line. The 1-minute page (2026-10-27): its own frozen
-    sentence (variant.WORDS_1M "push_potential" — recorded in shadow, never sent), the same clock words, its cadence."""
+    sentence (variant.WORDS_1M "push_potential" — shadow 2026-10-27…28, live since 2026-10-29 by his call; the words
+    follow the mode at call time), the same clock words, its cadence."""
     w = _clock_words(session)
     if not V.is_gg5(variant):
         return V.word("push_potential", variant, open=w["open"], close=w["close"],
@@ -681,7 +684,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     A GG qualifier carrying the tag is never in it (it passed the floors).
     2026-10-27 (BUILD_SPEC27 §3.5): the variant is the store's (`V.of(store)`); signature unchanged. A non-GG5 variant
     in shadow (variant.push_mode — GAJJALA_1M_PUSH_MODE) claims as always, then SETTLES {"state": "shadow", "at_et",
-    "result": {"would_push": payload}} and counts "shadow" (a key ONLY its counts carry) — the sender is never called."""
+    "result": {"would_push": payload}} and counts "shadow" (a key ONLY its counts carry) — the sender is never called.
+    Live (the 1-minute page since 2026-10-29): the same send path as GG5, through the variant's sender."""
     from . import alerts as AL
     from . import store as ST
     from . import tab as GT
@@ -799,7 +803,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             continue
         payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
                           broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"), variant=var)
-        if shadow:                                              # recorded, NEVER sent (HIS CALL #1 of BUILD_SPEC27)
+        if shadow:                                              # recorded, NEVER sent (HIS CALL #1 of BUILD_SPEC27; live since 2026-10-29)
             counts["shadow"] += 1
             store.settle_potential_push(_id, {"state": "shadow", "at_et": _hhmm(now),
                                               "result": {"would_push": payload}})

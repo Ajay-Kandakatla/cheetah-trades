@@ -50,9 +50,12 @@ describe('Notifications · 🧬 med_catalyst', () => {
     expect(screen.getByText('Medical catalyst (FDA, Phase 3, hold)')).toBeTruthy();
   });
 
-  it('the detail says ON FOR YOUR PHONE, quotes the ask, and says NOT MEASURED / Not a recommendation', () => {
+  /* 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,") 🧬 left the keep-set, so the
+     entry leads OFF BY DEFAULT (the 🧬 contract's keep-set branch) and quotes the 2026-10-29 words. */
+  it('the detail says OFF BY DEFAULT since 2026-10-29, quotes the ask, and says NOT MEASURED / Not a recommendation', () => {
     const d = med()[0].detail;
-    for (const phrase of ['ON FOR YOUR PHONE', 'everyone else starts off', 'add right setup and alerts',
+    expect(d.startsWith('OFF BY DEFAULT — muted on your phone since 2026-10-29')).toBe(true);
+    for (const phrase of ['Only give me Gajjalas chart notifications from both tabs,', 'everyone else starts off', 'add right setup and alerts',
       'NOT MEASURED', 'setup: pending study', 'Not a recommendation']) {
       expect(d).toContain(phrase);
     }
@@ -76,17 +79,18 @@ describe('Notifications · 🧬 med_catalyst', () => {
     }
   });
 
-  it('NEGATIVE: the entry never says OFF BY DEFAULT while the keep-set carries the kind, and never "bounce"', () => {
+  it('NEGATIVE: the entry never says ON FOR YOUR PHONE now the keep-set dropped the kind, and never "bounce"', () => {
     const d = med()[0].detail;
-    expect(d).not.toContain('OFF BY DEFAULT');
+    expect(d).not.toContain('ON FOR YOUR PHONE');
     expect(d).not.toMatch(/bounce/i);
     expect(d).not.toMatch(/\b(Stop|Target|Entry)\b/);
   });
 
-  it('the Essentials preset carries med_catalyst: true and names it', () => {
+  it('the Essentials preset carries med_catalyst: false since 2026-10-29 and no longer names it', () => {
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): 🧬 left the keep-set.
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
-    expect((ess.pref as any).med_catalyst).toBe(true);
-    expect(ess.detail).toContain('🧬 medical catalysts (2026-09-29)');
+    expect((ess.pref as any).med_catalyst).toBe(false);
+    expect(ess.detail).not.toContain('🧬 medical catalysts');
   });
 
   it('NEGATIVE: the Trading-only preset turns it on and Household-only leaves it off (it is a trading kind)', () => {

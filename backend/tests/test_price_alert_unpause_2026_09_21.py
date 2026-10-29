@@ -107,7 +107,7 @@ def test_the_retired_registries_are_exactly_the_ten_and_the_four():
 # ── the keep-set / prefs side ────────────────────────────────────────────────
 def test_owner_prefs_turn_price_alert_on_and_nothing_else_leaked():
     p = subs.owner_prefs()
-    assert p["price_alert"] is True
+    assert p["price_alert"] is False          # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
     on = {k for k, v in p.items() if isinstance(v, bool) and v is True}
     assert on == set(subs.OWNER_KEEP_SET)
     for k, v in p.items():
@@ -119,8 +119,8 @@ def test_owner_prefs_turn_price_alert_on_and_nothing_else_leaked():
 
 def test_the_apply_script_reads_the_set_and_never_retypes_the_kind():
     from scripts import owner_prefs_apply as S
-    assert "price_alert" in S.on_kinds()
-    assert "price_alert" not in S.off_kinds()
+    assert "price_alert" not in S.on_kinds()  # NARROWED 2026-10-29 (the six-kind keep-set)
+    assert "price_alert" in S.off_kinds()
     assert S.on_kinds() == sorted(subs.OWNER_KEEP_SET)
     src = inspect.getsource(S.apply)
     assert "price_alert" not in src, "the writer stays list-driven, never per-kind"
@@ -202,13 +202,13 @@ def test_the_contracts_parser_reads_the_real_set():
     src = _subs_src()
     parsed = _keep_set_like_contracts(src)
     assert parsed == set(subs.OWNER_KEEP_SET)
-    assert "price_alert" in parsed, \
-        "the Essentials preset contract demands price_alert: true from this read"
+    # NARROWED 2026-10-29 — price_alert left the keep-set (the six); the parser still reads the real set
+    assert "price_alert" not in parsed and "gajjala_1m_setup" in parsed
     # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; SHADOW first): 12 → 13.
     # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (his K4 "High-Beta tab names + all Chart Maps names"; owner-only, LIVE): 13 → 15.
     # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only): 15 → 16.
     # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only): 16 → 17.
-    assert len(parsed) == 17     # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
+    assert len(parsed) == 6      # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six). Was 17: WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
 
 
 def test_NEGATIVE_a_comment_above_the_definition_hijacks_the_parser():

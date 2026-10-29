@@ -74,9 +74,11 @@ def test_NEGATIVE_not_in_the_keep_set_not_hard_stopped_not_retired():
     assert KIND not in subs.RETIRED_2026_09_20
 
 
-def test_NEGATIVE_owner_prefs_apply_neither_turns_it_on_nor_off():
+def test_NEGATIVE_owner_prefs_apply_never_turns_it_on():
+    """NARROWED 2026-10-29 (BUILD_SPEC29 D3): the script applies owner_prefs() in full — every bool kind outside the
+    keep-set is turned OFF, this one included (it ships OFF for him either way)."""
     from scripts import owner_prefs_apply as S
-    assert KIND not in S.on_kinds() and KIND not in S.off_kinds()
+    assert KIND not in S.on_kinds() and KIND in S.off_kinds()
 
 
 # ── push/hooks.py ────────────────────────────────────────────────────────────

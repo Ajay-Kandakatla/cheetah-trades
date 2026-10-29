@@ -125,8 +125,9 @@ describe('Notifications · 🚩 gajjala_setup', () => {
   it('the Essentials preset carries gajjala_setup: true and names it', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     expect((ess.pref as any).gajjala_setup).toBe(true);
-    // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
-    expect(ess.detail).toContain('🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16)');
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): the six-kind keep-set sentence
+    expect(ess.detail).toContain('🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min');
+    expect((ess.pref as any).gajjala_1m_setup).toBe(true);
     expect(ess.detail).not.toContain('shadow first');
   });
 

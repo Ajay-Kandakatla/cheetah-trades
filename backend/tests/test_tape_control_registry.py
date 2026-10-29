@@ -40,10 +40,11 @@ OTHER = "someone-else" + chr(64) + "example.com"
 # ── push/subs.py ─────────────────────────────────────────────────────────────
 def test_the_kind_is_owner_only_and_on_for_him(monkeypatch):
     monkeypatch.setenv("OWNER_EMAIL", OWNER)
-    assert TC.KIND in subs.OWNER_KEEP_SET
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
+    assert TC.KIND not in subs.OWNER_KEEP_SET
     assert subs.default_prefs()[TC.KIND] is False
-    assert subs.owner_prefs()[TC.KIND] is True
-    assert subs.prefs_for(OWNER)[TC.KIND] is True
+    assert subs.owner_prefs()[TC.KIND] is False
+    assert subs.prefs_for(OWNER)[TC.KIND] is False
 
 
 def test_NEGATIVE_prefs_for_anyone_else_is_off(monkeypatch):
@@ -59,7 +60,7 @@ def test_owner_prefs_apply_turns_it_on():
     doc = {"_id": 1, "user_email": OWNER, "label": "iPhone", "kind": "web",
            "endpoint": "https://push.example/aaa", "prefs": prefs}
     out = S.apply([doc], owner=OWNER, apply=False)
-    assert out["rows"][0]["changes"][TC.KIND] == [None, True]
+    assert out["rows"][0]["changes"][TC.KIND] == [None, False]      # NARROWED 2026-10-29 (the six-kind keep-set)
 
 
 def test_NEGATIVE_a_non_owner_device_is_untouched():
@@ -245,7 +246,7 @@ def test_the_rules_line_is_built_from_the_constants(today):
     assert "every %d min" % (AS.CADENCE_SEC[TC.KIND] // 60) in line
     assert "%s–%s ET" % (TF.WATCH_OPEN_ET.strftime("%H:%M"), TF.WATCH_CLOSE_ET.strftime("%H:%M")) in line
     assert TC.RULE_WORD in line and TC.UNMEASURED_NOTE in line
-    assert "ON for you by default" in line
+    assert "ships OFF" in line and "ON for you by default" not in line   # NARROWED 2026-10-29 — read from the keep-set
     banned = "|".join(("bo" + "un", "fa" + "ke", r"\bbuy\b", r"\benter", "shadow"))
     assert not re.search(banned, line, re.I)
 

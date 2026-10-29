@@ -54,10 +54,24 @@ import NotificationsPage, { CATEGORIES, PRESETS } from './Notifications';
 import { TAB_META } from '../lib/chartMaps';
 
 const RETIRED = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_education'];
-const KEEP_SET = ['hot_pullback_alert', 'pattern_alert', 'demand_alert', 'position_alert',
-  'potus_investment', 'growth_demand_alert', 'earnings_reaction', 'board_arrival',
-  // 🧬 2026-09-29: med_catalyst ships ON for the owner (backend OWNER_KEEP_SET).
-  'med_catalyst'];
+/* 2026-10-29 (BUILD_SPEC29 D1): the mirror of backend push/subs.OWNER_KEEP_SET is SIX kinds — Ajay: "Only give me
+   Gajjalas chart notifications from both tabs," / "I am missing out the ones in noise." The 2026-09-20 eight (and
+   🧬 med_catalyst, 2026-09-29) left it that day; 💼 position_alert stays (his 2026-09-09 answer), 🩺 ops_alert stays. */
+const KEEP_SET = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential',
+  'position_alert', 'ops_alert'];
+/* The kinds the preset turns on, sorted — the mirror check below compares THIS to the six. */
+const onKeys = (pref: Record<string, unknown>) => Object.entries(pref).filter(([, v]) => v === true).map(([k]) => k).sort();
+async function readSource(rel: string): Promise<string> {
+  const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+  const fs: any = mod?.default || mod;
+  const root = (globalThis as any).process?.cwd?.() || '.';
+  return fs.readFileSync(`${root}/${rel}`, 'utf8');
+}
+const backendKeepSet = (src: string): string[] => {
+  const m = /^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{([\s\S]*?)\}\)/m.exec(src);
+  if (!m) return [];
+  return [...m[1].replace(/#[^\n]*/g, '').matchAll(/["']([a-z0-9_]+)["']/g)].map((x) => x[1]).sort();
+};
 
 const draw = () => render(<MemoryRouter><NotificationsPage /></MemoryRouter>);
 
@@ -95,10 +109,12 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
      off (it is the single `False` in backend push.subs.default_prefs, pinned
      there by test_quality_alerts), so the guard now allows exactly that one
      category and no other. */
-  it('NEGATIVE: only the 💎 kind says OFF BY DEFAULT — every other kind is on', () => {
+  /* WIDENED 2026-10-29: 🧬 med_catalyst left the keep-set (BUILD_SPEC29 D1) and its 🧬 contract's keep-set branch
+     makes its entry lead OFF BY DEFAULT — the second, and still no other. */
+  it('NEGATIVE: only the 💎 and 🧬 kinds say OFF BY DEFAULT — no other kind', () => {
     const off = CATEGORIES.filter((c) => c.detail.includes('OFF BY DEFAULT'))
       .map((c) => c.key);
-    expect(off).toEqual(['capital_quality_upgrade']);
+    expect(off).toEqual(['capital_quality_upgrade', 'med_catalyst']);
     const { container } = draw();
     expect(container.textContent).not.toContain('the only notification in this app that ships off');
   });
@@ -128,15 +144,51 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     }
   });
 
-  it('the Essentials preset is the eight on and the retired four absent', () => {
+  it('the Essentials preset is the six on (exactly) and the retired four absent', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     for (const k of KEEP_SET) expect((ess.pref as any)[k]).toBe(true);
+    expect(onKeys(ess.pref as any)).toEqual([...KEEP_SET].sort());
+    // NEGATIVE: what left on 2026-10-29 is muted
+    for (const off of ['tape_burst_highbeta', 'tape_burst_chartmaps', 'pattern_alert', 'hot_pullback_alert',
+      'demand_alert', 'price_alert', 'key_level_alert', 'med_catalyst', 'tape_control', 'potus_investment',
+      'growth_demand_alert', 'earnings_reaction', 'board_arrival']) {
+      expect((ess.pref as any)[off], off).toBe(false);
+    }
     for (const k of RETIRED) expect(k in (ess.pref as any)).toBe(false);
     // NEGATIVE: what he killed on 2026-09-09 is still muted
     for (const off of ['zone_bounce_alert', 'supply_break_alert', 'promo_alert', 'todo_reminder']) {
       expect((ess.pref as any)[off]).toBe(false);
     }
-    expect(ess.detail).toContain('2026-09-20 keep-set');
+    expect(ess.detail).toContain('2026-10-29 keep-set');
+    expect(ess.detail).toContain('Only give me Gajjalas chart notifications from both tabs,');
+  });
+
+  /* 2026-10-29 (BUILD_SPEC29 critic F1): every row for a kind OUTSIDE the keep-set says so — none still tells him it is
+     on for his phone or "in the owner keep-set"; each muted kind that used to say so leads OFF FOR YOUR PHONE. */
+  it('NEGATIVE: no kind outside the keep-set says ON FOR YOUR PHONE / in the owner keep-set / ON BY DEFAULT for you', () => {
+    const outside = CATEGORIES.filter((c) => !KEEP_SET.includes(c.key as string));
+    expect(outside.length).toBeGreaterThan(20);
+    for (const c of outside) {
+      for (const bad of ['ON FOR YOUR PHONE', 'in the owner keep-set', 'ON BY DEFAULT for you']) {
+        expect(c.detail.includes(bad), `${c.key as string}: ${bad}`).toBe(false);
+      }
+    }
+    for (const k of ['price_alert', 'growth_demand_alert', 'potus_investment', 'earnings_reaction', 'board_arrival',
+      'tape_burst_highbeta', 'tape_burst_chartmaps', 'tape_control']) {
+      const d = CATEGORIES.find((c) => c.key === k)!.detail;
+      expect(d.startsWith('OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,")'), k).toBe(true);
+    }
+    // the keep-set kinds still lead ON (the check is not a blanket ban)
+    for (const k of ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential']) {
+      expect(CATEGORIES.find((c) => c.key === k)!.detail.startsWith('ON FOR YOUR PHONE'), k).toBe(true);
+    }
+  });
+
+  it('the KEEP_SET mirror equals the backend push/subs.OWNER_KEEP_SET (read from the file, never retyped there)', async () => {
+    const real = backendKeepSet(await readSource('../backend/push/subs.py'));
+    expect(real).toEqual([...KEEP_SET].sort());
+    // NEGATIVE: the parser ignores a kind named only in a comment
+    expect(backendKeepSet('OWNER_KEEP_SET: frozenset = frozenset({\n    # "tape_control" left\n    "ops_alert",\n})')).toEqual(['ops_alert']);
   });
 });
 

@@ -151,12 +151,20 @@ def gg1_iteration(st, now, *, send=None):
 
 
 def day():
-    """(GG5 store, GG1 store, the iteration's A+ counts, its 🧠 counts, the sender)."""
+    """(GG5 store, GG1 store, the iteration's A+ counts, its 🧠 counts, the sender).
+    2026-10-29: the fixture day (2026-10-27) WAS a shadow day — GAJJALA_1M_PUSH_MODE read "shadow" until Ajay's
+    "Only give me Gajjalas chart notifications from both tabs" — so its iteration runs under "shadow" (restored after);
+    the boards are then served with the constant as shipped ("live"): yesterday's shadow rows on today's live page."""
     g5 = gg5_store()
     g1 = gg1_store(g5)
     g1.record_pass(D27, PREV_ITER, {"status": "ok", "potential": {"tracked_today": 0, "joined": 0}},
                    hhmm=PREV_ITER.strftime("%H:%M:%S"))
-    al, pot, send = gg1_iteration(g1, NOW)
+    old = GC.GAJJALA_1M_PUSH_MODE
+    GC.GAJJALA_1M_PUSH_MODE = "shadow"
+    try:
+        al, pot, send = gg1_iteration(g1, NOW)
+    finally:
+        GC.GAJJALA_1M_PUSH_MODE = old
     return g5, g1, al, pot, send
 
 
@@ -221,8 +229,11 @@ def test_gg1_board_identity_tab_tf_and_the_served_variant_block(stores):
     assert vb == V.served_block(GG1) and vb["tfs"] == ["1m", "5m"]
     assert vb["title"] == V.word("title", GG1) and vb["honesty"] == V.word("honesty", GG1)
     assert vb["record_from"] == GC.GG1M_RECORD_FROM == D27.isoformat()
-    assert out["push"] == {"mode": "shadow", "text": V.word("push", GG1)}
-    assert out["push_potential"]["mode"] == "shadow" and out["push_potential"]["text"] == PT.push_note(D27, GG1)
+    # WIDENED 2026-10-29 — LIVE (Ajay "Only give me Gajjalas chart notifications from both tabs"): the push lines read
+    # the shipped mode at call time; the fixture day's rows stay shadow (below)
+    assert out["push"] == {"mode": "live", "text": V.word("push", GG1)}
+    assert out["push_potential"]["mode"] == "live" and out["push_potential"]["text"] == PT.push_note(D27, GG1)
+    assert "rings your phone since 2026-10-29" in out["push"]["text"]
     assert out["broker_flags"] is not None, "the owner's 🚫 strip (ONE list, read through the shared store)"
 
 
@@ -322,12 +333,14 @@ def test_ledger_rows_are_the_shadow_potential_and_the_shadow_aplus_with_the_1m_w
     rows = _rows(tr)
     pot = rows[LG.ledger_id("2026-10-27", "GGB", "bull_flag", "potential")]
     ap = rows[LG.ledger_id("2026-10-27", "GGA", "bull_flag", "aplus")]
-    assert pot["kind_text"] == V.word("ledger_kind_potential", GG1) == "🧠 shadow" and pot["line"] == "live"
+    # WIDENED 2026-10-29: the 🧠 kind word is read off the row's OWN push state (this fixture day was shadow)
+    assert pot["kind_text"] == V.word("ledger_kind_potential_shadow", GG1) == "🧠 shadow — never sent"
+    assert pot["line"] == "live"
     assert ap["kind_text"] == "A+ shadow — never sent" and ap["line"] == "shadow"
     assert pot["href"] == "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGB"
     assert ap["href"] == "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA"
     assert tr["title"] == V.word("ledger_title", GG1) and tr["honesty"] == V.word("ledger_honesty", GG1)
-    lead = V.word("ledger_counts_lead", GG1) + " · "
+    lead = V.word("ledger_counts_lead_shadow", GG1) + " · "                   # every 🧠 row of the span is shadow
     assert tr["counts_text"]["same"].startswith(lead) and tr["counts_text"]["next"].startswith(lead)
     assert tr["shadow_text"] and tr["aplus"]["total"] == 1 and tr["aplus"]["n_shadow"] == 1
     assert tr["today_text"].startswith("Today · through")
@@ -569,10 +582,13 @@ def test_the_two_kinds_are_the_variant_strings_and_registered_everywhere():
         assert seen == [("o@x", kind)], fn
 
 
-def test_NEGATIVE_the_1m_kinds_never_reach_the_owner_and_are_not_retired():
+def test_the_1m_kinds_reach_the_owner_only_and_are_not_retired():
+    """WIDENED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs": both kinds joined the
+    owner keep-set (was: NOT in it, shadow). NEGATIVE: still False for everyone else, never retired."""
     from push import subs
     for k in (GG1.push_kind_setup, GG1.push_kind_potential):
-        assert k not in subs.OWNER_KEEP_SET and subs.owner_prefs()[k] is False
+        assert k in subs.OWNER_KEEP_SET and subs.owner_prefs()[k] is True
+        assert subs.default_prefs()[k] is False
         assert k not in subs.DISABLED_ALERT_KINDS
 
 
@@ -588,10 +604,15 @@ def test_the_alerts_status_page_carries_both_1m_passes_with_a_60s_cadence():
 # ── ℹ️ Rules panel ───────────────────────────────────────────────────────────────────────────────────────────────
 def test_the_rules_clause_rides_the_section_note_built_from_the_variant(monkeypatch):
     from supply_demand import rules_info as RI
+    # UPDATED 2026-10-29 (BUILD_SPEC29 critic F2 — Ajay "Only give me Gajjalas chart notifications from both tabs,"):
+    # GAJJALA_1M_PUSH_MODE is "live", so the push half says the alerts ring his phone since V.LIVE_SINCE_1M and names
+    # the shadow days before it. The shadow sentence is pinned by the NEGATIVE below.
+    assert V.push_mode(GG1) == "live"
     want = (f"🚩 {V.frame_minutes(GG1.primary, GG1)}-minute page: the same rules on CLOSED "
             f"{V.frame_minutes(GG1.primary, GG1)}-minute bars (the Fade on {V.frame_minutes(GG1.slow, GG1)}-minute "
             f"first), about once a minute over the same list — a Cheetah variant by your call "
-            f"({GC.GG1M_RECORD_FROM}); its alerts are recorded in shadow, never sent.")
+            f"({GC.GG1M_RECORD_FROM}); its alerts ring your phone since {V.LIVE_SINCE_1M} by your call; from "
+            f"{GC.GG1M_RECORD_FROM} until then they were recorded in shadow, never sent.")
     sec = RI._gajjala_section()
     assert (" " + want + " UNMEASURED — no study here says these setups win. Not advice.") in sec["note"]
     assert sec["note"].endswith("Not advice.")
@@ -601,6 +622,20 @@ def test_the_rules_clause_rides_the_section_note_built_from_the_variant(monkeypa
     assert text.count("-minute page") == 1 and not re.search("b" + "ounc", text, re.I)
     monkeypatch.setattr(GC, "GG1M_RECORD_FROM", "2026-11-02")
     assert "by your call (2026-11-02)" in RI._gajjala_section()["note"]
+
+
+def test_NEGATIVE_the_rules_clause_never_says_never_sent_while_live_nor_rings_while_shadow(monkeypatch):
+    """2026-10-29 (critic F2): the clause follows the mode at call time — live never reads "are recorded in shadow,
+    never sent."; a mutated copy in shadow never reads "ring your phone"; junk in the constant reads shadow."""
+    from supply_demand import rules_info as RI
+    live = RI._gg_one_minute_clause()
+    assert "ring your phone since " + V.LIVE_SINCE_1M in live
+    assert "its alerts are recorded in shadow, never sent." not in live
+    for mode in ("shadow", "LIVE", None):
+        monkeypatch.setattr(GC, GG1.push_mode_const, mode)
+        sh = RI._gg_one_minute_clause()
+        assert sh.endswith("its alerts are recorded in shadow, never sent."), mode
+        assert "ring your phone" not in sh and V.LIVE_SINCE_1M not in sh, mode
 
 
 def test_NEGATIVE_a_broken_variant_module_drops_only_the_clause(monkeypatch):

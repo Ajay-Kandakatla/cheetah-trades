@@ -314,8 +314,9 @@ def test_the_kind_is_registered_everywhere_the_house_pattern_needs():
     from push import subs, recent
     from market_hours import gate
     assert subs.default_prefs()["med_catalyst"] is False, "everyone else starts off"
-    assert "med_catalyst" in subs.OWNER_KEEP_SET
-    assert subs.owner_prefs()["med_catalyst"] is True, "ON for his phone (HIS CALL #1)"
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
+    assert "med_catalyst" not in subs.OWNER_KEEP_SET
+    assert subs.owner_prefs()["med_catalyst"] is False
     assert "med_catalyst" in gate.MARKET_ALERT_KINDS and "med_catalyst" not in gate.PERSONAL_KINDS
     assert "med_catalyst" in recent.DIGEST_KINDS
 

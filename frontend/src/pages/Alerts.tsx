@@ -173,13 +173,16 @@ export const PASSES: { key: string; label: string; fallbackCadenceSec: number }[
 
 /* 🚩 / 🧠 Gajjala's 1-min page (2026-10-27, BUILD_SPEC27). Both ride the 🚩 line through the 1-minute loop its pass
  * spawns (chart_maps/gajjala/run_1m.py) — about once a minute, so backend CADENCE_SEC says 60 and a stamp older than
- * staleAfterSec(60) reads stale. Both kinds are SHADOW (recorded, never sent). HIS CALL #12: keep or drop these rows.
+ * staleAfterSec(60) reads stale. Shadow 2026-10-27 to 10-28; LIVE since 2026-10-29 by his call (BUILD_SPEC29 D2 —
+ * "Only give me Gajjalas chart notifications from both tabs,"). The labels carry no mode word: the 🚩 row's chips are
+ * gajjalaChipText's (its shadow words stay for a shadow count) and the 🧠 row's ggPotentialChipText's, with the same
+ * headline as the 5-minute rows (`pushed`). HIS CALL #12: keep or drop these rows.
  * 2026-10-27 (critic finding 1/2): their OWN strip, the TAPE_PASSES precedent — inside PASSES they turned the header
  * into "⚠ 2 of 9 passes" whenever the 1-minute page is switched off (GAJJALA_1M_ENABLED), and the "all 7 passes" line
  * speaks for the passes that can ring the phone. */
 export const GG1M_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
-  { key: 'gajjala_1m_setup',     label: '🚩 Gajjala 1-min A+ (shadow)',        fallbackCadenceSec: 60 },
-  { key: 'gajjala_1m_potential', label: '🧠 Gajjala 1-min potentials (shadow)', fallbackCadenceSec: 60 },
+  { key: 'gajjala_1m_setup',     label: '🚩 Gajjala 1-min A+ setups',  fallbackCadenceSec: 60 },
+  { key: 'gajjala_1m_potential', label: '🧠 Gajjala 1-min potentials', fallbackCadenceSec: 60 },
 ];
 
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
@@ -735,14 +738,17 @@ function PassStrip({ pass, meta, status, gate, today }: {
     tone = MUTED;
     if (win.open && win.close) when = `${when} — outside its ${win.open}–${win.close} ET window`;
   }
-  const ggp = meta.key === 'gajjala_potential';
+  /* 2026-10-29 (BUILD_SPEC29 D6): the 1-minute rows read the SAME counters (one pipeline, alerts.COUNT_KEYS /
+   * potential.COUNT_KEYS), so they print them the way the 5-minute rows do; the per-item lists stay 5-minute only
+   * (alert_status serves shadow_items / potential_items on those two passes alone). */
+  const ggp = meta.key === 'gajjala_potential' || meta.key === 'gajjala_1m_potential';
   // 🎚️ no counter chip on its row: every counter rides the hover "Also counted".
   const headlineDefs: { key: string; label: string; title?: string }[] = tc ? [] : tape ? HEADLINE_TAPE : ggp ? HEADLINE_POTENTIAL : HEADLINE;
   const headline = headlineDefs
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
   const headlineKeys = headlineDefs.map((h) => h.key);
-  const gg = meta.key === 'gajjala_setup';
+  const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup';
   const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
@@ -768,9 +774,9 @@ function PassStrip({ pass, meta, status, gate, today }: {
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
-    {gg ? <GajjalaShadowList items={pass?.shadow_items} today={today} /> : null}
+    {meta.key === 'gajjala_setup' ? <GajjalaShadowList items={pass?.shadow_items} today={today} /> : null}
     {/* 🧠 only: today's potentials, each with what its push did. */}
-    {ggp ? <GgPotentialList items={pass?.potential_items} today={today} /> : null}
+    {meta.key === 'gajjala_potential' ? <GgPotentialList items={pass?.potential_items} today={today} /> : null}
     {/* 🎚️ only: one served line per pinned name, then the served note. */}
     {tc ? <TapeControlPins pins={pass?.pins} note={pass?.note} today={today} /> : null}
     </>
@@ -1124,8 +1130,8 @@ export function AlertsPage() {
         <div data-testid="tape-control">
           <PassStrip meta={TAPE_CONTROL_PASS} pass={status?.passes?.[TAPE_CONTROL_PASS.key]} status={status} gate={gate} today={today} />
         </div>
-        {/* ── 🚩 🧠 the two 1-minute page passes (2026-10-27) — own strip, shadow, outside the header count ── */}
-        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gg1m-passes-head">🚩 🧠 Gajjala 1-min passes · shadow — recorded, never sent · not counted in the header</div>
+        {/* ── 🚩 🧠 the two 1-minute page passes (2026-10-27) — own strip, outside the header count; live since 2026-10-29 ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gg1m-passes-head">🚩 🧠 Gajjala 1-min passes · they ring your phone since 2026-10-29 · not counted in the header</div>
         <div data-testid="gg1m-passes">
           {GG1M_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />

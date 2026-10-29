@@ -205,6 +205,33 @@ def test_the_push_mode_line_is_tagged_his():
         assert bad != real and not _push_mode_tag_ok(bad), bad
 
 
+def test_the_1m_push_mode_line_is_tagged_his():
+    """2026-10-29 — HIS CALL #1 of the 1-minute page answered: the "live" line carries his words — the comment STARTS
+    "Ajay 2026-10-29" (the GG5 twin above). NEGATIVE: an untagged, MINE-tagged, Cheetah-default-tagged or his-words-gone
+    copy of the REAL source line fails (the flip is his call, not mine)."""
+    ln = dict((n, ln) for n, _v, ln in _assigns())["GAJJALA_1M_PUSH_MODE"]
+    real = LINES[ln - 1]
+    assert GC.GAJJALA_1M_PUSH_MODE == "live" and GC.GAJJALA_1M_PUSH_MODE in GC.PUSH_MODES
+    assert _push_mode_1m_tag_ok(real), real
+    assert _comment(ln).startswith("Ajay 2026-10-29")
+    code, _sep, _c = real.partition("#")
+    for bad in (code.rstrip(),                                                                   # untagged
+                _mutate_line(real, "# Ajay 2026-10-29", "# MINE"),                               # MINE-tagged
+                _mutate_line(real, "# Ajay 2026-10-29", "# Cheetah default"),                    # a Cheetah default
+                _mutate_line(real, "Only give me Gajjalas chart notifications from both tabs", "sure"),  # words gone
+                _mutate_line(real, "I am missing out the ones in noise.", "ok")):                # half his words
+        assert bad != real and not _push_mode_1m_tag_ok(bad), bad
+    # NEGATIVE: the GG5 line's tag does not satisfy the 1-minute check, and vice versa
+    gg5 = LINES[dict((n, ln) for n, _v, ln in _assigns())["GAJJALA_PUSH_MODE"] - 1]
+    assert not _push_mode_1m_tag_ok(gg5) and not _push_mode_tag_ok(real)
+
+
+def _push_mode_1m_tag_ok(line: str) -> bool:
+    c = line.split("#", 1)[1].strip() if "#" in line else ""
+    return (c.startswith("Ajay 2026-10-29") and "Only give me Gajjalas chart notifications from both tabs" in c
+            and "I am missing out the ones in noise." in c)
+
+
 def _push_mode_tag_ok(line: str) -> bool:
     c = line.split("#", 1)[1].strip() if "#" in line else ""
     return c.startswith("Ajay 2026-10-16") and "you alert me when that happens" in c

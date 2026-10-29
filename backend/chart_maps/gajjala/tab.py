@@ -51,7 +51,8 @@ to do the same logic of Gajjalas but on 1 min candles please." / "do everything 
 from today..". `build(…, variant=V.GG1)` serves the SAME board off the 1-minute page's store (variant.py GG1: its own
 `gajjala_1m_*` collections, GG5's scanner list / halts / daily / carry / post): its frames ("1m", the Fade on "5m"
 first), its cadence and stale words (variant.cadence_sec / stale_after_sec — never a typed number), its push lines
-(variant.WORDS_1M — every alert recorded in shadow, never sent), its links (potential.deep_link(…, v)), `tab` =
+(variant.WORDS_1M — shadow 2026-10-27…28, live since 2026-10-29 by his call; the words follow the mode), its links
+(potential.deep_link(…, v)), `tab` =
 "gajjala_1m" and ONE added key, `variant` (variant.served_block — title / honesty / tfs the FE prints). GG5 (variant
 None) serves every byte as before and never carries `variant`. A Cheetah variant — UNMEASURED.
 """

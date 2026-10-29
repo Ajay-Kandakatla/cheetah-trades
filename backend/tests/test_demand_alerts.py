@@ -488,7 +488,11 @@ def test_kind_is_demand_alert_with_a_default_pref_and_a_cron_line():
 def test_notifications_page_and_prefs_type_know_the_kind():
     page = (ROOT / "frontend/src/pages/Notifications.tsx").read_text()
     assert "key: 'demand_alert'" in page
-    assert "demand_alert: true" in page, "essentials preset keeps it on"
+    # 2026-10-29: muted by his call ("Only give me Gajjalas chart notifications from both tabs,") — the Essentials
+    # preset mirrors push/subs.OWNER_KEEP_SET, which no longer carries demand_alert. NEGATIVE: "true" here would mean
+    # the preset turned a muted kind back on.
+    assert "demand_alert: false" in page, "essentials preset mutes it since 2026-10-29"
+    assert "demand_alert: true" not in page
     prefs = (ROOT / "frontend/src/hooks/useNotificationPrefs.ts").read_text()
     assert "demand_alert?: boolean" in prefs
     feats = (ROOT / "frontend/src/lib/newFeatures.ts").read_text()

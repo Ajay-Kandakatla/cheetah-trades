@@ -422,8 +422,9 @@ def test_the_kind_is_registered_and_ships_ON_since_2026_09_20():
     assert W.KIND in prefs
     assert prefs[W.KIND] is True
     assert W.KIND not in subs.DISABLED_ALERT_KINDS
-    assert W.KIND in subs.OWNER_KEEP_SET
-    assert subs.owner_prefs()[W.KIND] is True
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six) — still ON in default_prefs for everyone else
+    assert W.KIND not in subs.OWNER_KEEP_SET
+    assert subs.owner_prefs()[W.KIND] is False
 
 
 def test_a_subscription_is_targeted_only_once_the_pref_is_True(monkeypatch):

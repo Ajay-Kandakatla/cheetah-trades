@@ -120,7 +120,10 @@ describe('Notifications · 🔔 price alerts are back (2026-09-21)', () => {
       'Price alerts are retired in the push switch and off in your Notifications, so even a real crossing will not reach your phone. Turn them back on?',
       'Yes to all..', 'ONCE per crossing', 're-arms only when price crosses back',
       '2026-09-21', 'on the day you set the alert', 'the message says so',
-      'Paused 2026-06-13', 'did not loosen', 'owner keep-set',
+      'Paused 2026-06-13', 'did not loosen',
+      /* 2026-10-29 (BUILD_SPEC29 critic F1): 🔔 left the keep-set — the lead says so in his words */
+      'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,")',
+      'ON BY DEFAULT for everyone else', 'muted on your phone again 2026-10-29',
       'Not a signal: a line you drew']) {
       expect(d).toContain(phrase);
     }
@@ -135,12 +138,17 @@ describe('Notifications · 🔔 price alerts are back (2026-09-21)', () => {
     // is for is that the 🔔 kind is not still described as off.
     expect(d).not.toContain('OFF BY DEFAULT');
     expect(d).toContain('ON BY DEFAULT');
+    // NEGATIVE (critic F1): outside the keep-set it never claims the keep-set or "for you"
+    expect(d).not.toContain('owner keep-set');
+    expect(d).not.toContain('ON BY DEFAULT for you');
+    expect(d).not.toContain('ON FOR YOUR PHONE');
   });
 
-  it('Essentials carries it and the derived presets follow the group', () => {
+  it('Essentials mutes it since 2026-10-29 and the derived presets follow the group', () => {
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): 🔔 left the keep-set.
     const ess: any = PRESETS.find((p) => p.id === 'essentials')!;
-    expect(ess.pref.price_alert).toBe(true);
-    expect(ess.detail).toContain('🔔 the price alerts you set (2026-09-21)');
+    expect(ess.pref.price_alert).toBe(false);
+    expect(ess.detail).not.toContain('🔔 the price alerts you set');
     expect(ess.detail).toContain('Everything else muted.');
     const pref = (id: string) => (PRESETS.find((p) => p.id === id)!.pref as any).price_alert;
     expect(pref('all_on')).toBe(true);

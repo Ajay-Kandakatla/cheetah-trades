@@ -83,8 +83,8 @@ export type NotificationPrefs = {
   gajjala_potential?: boolean;
   /* 🚩 / 🧠 Gajjala's 1-min page (2026-10-27, BUILD_SPEC27: "Can you create a new page, I would like you to do the
      same logic of Gajjalas but on 1 min candles please."). The same A+ entry / potential read on CLOSED 1-minute
-     candles. SHADOW (backend constants.GAJJALA_1M_PUSH_MODE, HIS CALL #1): recorded, never sent; False in
-     default_prefs, NOT in the owner keep-set. UNMEASURED. */
+     candles. Shadow 2026-10-27 to 10-28; LIVE since 2026-10-29 by his call (backend constants.GAJJALA_1M_PUSH_MODE,
+     BUILD_SPEC29 D2); False in default_prefs, in the owner keep-set. UNMEASURED. */
   gajjala_1m_setup?: boolean;
   gajjala_1m_potential?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's

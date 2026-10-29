@@ -14,8 +14,12 @@ GG5 = today's tab, every stored and served byte unchanged (tests/test_gajjala_va
 goldens prove it): `words(GG5)` is {} — GG5's words stay where they are. GG1's served words are WORDS_1M, frozen here,
 their numbers formatted at call time from the variant and constants (the FE prints them; it types none).
 
-A Cheetah variant — GG trades these setups on 5-minute bars. UNMEASURED: nothing has measured a 1-minute read, and every
-GG1 alert is recorded in SHADOW (GAJJALA_1M_PUSH_MODE), never sent, until Ajay says so (HIS CALL #1).
+A Cheetah variant — GG trades these setups on 5-minute bars. UNMEASURED: nothing has measured a 1-minute read. Every GG1
+alert was recorded in SHADOW, never sent, 2026-10-27 … 2026-10-28; since 2026-10-29 they ring his phone (GAJJALA_1M_PUSH_MODE
+"live" — HIS CALL #1 answered, Ajay: "Only give me Gajjalas chart notifications from both tabs, / I am missing out the
+ones in noise."). The words follow the MODE at call time: in "shadow" (a flip back is one word) `word()` serves
+WORDS_1M_SHADOW's sentence for each key it carries, so a served sentence never says "rings your phone" while nothing
+rings.
 """
 from __future__ import annotations
 
@@ -70,10 +74,50 @@ GG1 = Variant("gajjala_1m", "gajjala_1m", GC.GG1M_TAB_LABEL, "1m", "5m", (("1m",
               ("pushed", "shadow"))
 VARIANTS = (GG5, GG1)
 
-# GG1's served words — FROZEN (BUILD_SPEC27 §3.1). {p}/{s} = frame_minutes(primary/slow), {from} = GC.GG1M_RECORD_FROM,
-# {tail} = potential.TAIL (read at call time — potential imports this module); the rest are word()'s keyword args.
+# GG1's served words — FROZEN (BUILD_SPEC27 §3.1; LIVE words 2026-10-29). {p}/{s} = frame_minutes(primary/slow),
+# {from} = GC.GG1M_RECORD_FROM, {tail} = potential.TAIL (read at call time — potential imports this module); the rest are
+# word()'s keyword args. Ajay 2026-10-29: "Only give me Gajjalas chart notifications from both tabs," — the shadow period
+# (2026-10-27 … 2026-10-28) stays named, so no row of it ever reads as sent.
+LIVE_SINCE_1M = "2026-10-29"             # the day his words above flipped GAJJALA_1M_PUSH_MODE to "live"
+_HIS_WORDS_1M = "Only give me Gajjalas chart notifications from both tabs"
 WORDS_1M: Mapping = MappingProxyType({
     "title": "🚩 Gajjala's — the same rules on {p}-minute candles · Cheetah variant · UNMEASURED",
+    "honesty": ("GG trades these setups on {s}-minute bars; this page runs the same bar-count rules on {p}-minute bars "
+                "by your call ({from}). Its alerts ring your phone since " + LIVE_SINCE_1M + " by your call (\""
+                + _HIS_WORDS_1M + "\"); from {from} to 2026-10-28 they were recorded in shadow, never sent. Nothing "
+                "measured."),
+    "push": ("📲 Every A+ on this page rings your phone since " + LIVE_SINCE_1M + " by your call (\"" + _HIS_WORDS_1M
+             + "\") — once per name, setup and day; the A+ of {from} to 2026-10-28 were recorded in shadow, never "
+             "sent. UNMEASURED."),
+    "push_potential": ("🧠 Potentials on this page ring your phone since " + LIVE_SINCE_1M + " by your call — one push "
+                       "per name, setup and session the first time it is a potential, {open}–{close} ET on the "
+                       "{cad}-minute pass, never {rth_open}–{mute_end} (his first {n} minutes). From {from} to "
+                       "2026-10-28 they were recorded in shadow, never sent. {tail}."),
+    "held_stale_tape": "no print in the last {p}-minute bar",
+    "ledger_title": "🏁 Track record — every {p}-minute Gajjala alert since {from}, graded by GG's trade math · UNMEASURED",
+    "ledger_honesty": ("A ledger of this page's alerts: from {from} to 2026-10-28 they were recorded in shadow (never "
+                       "sent); since " + LIVE_SINCE_1M + " they ring your phone by your call. Each row's kind says "
+                       "which. The 🧠 potentials — shadow and sent — make the headline %; A+ rows keep their own lines, "
+                       "as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n "
+                       "early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); "
+                       "nothing has measured this page."),
+    # a 🧠 row's kind word is read off ITS OWN push state (ledger._variant_words): shadow / pushed; the neutral word only
+    # when a row carries neither — the A+ rows read KIND_TEXT by their line (the claim's own state), the neutral A+ word
+    # only when that has no entry
+    "ledger_kind_potential": "🧠 potential (1-minute)",
+    "ledger_kind_potential_shadow": "🧠 shadow — never sent",
+    "ledger_kind_potential_pushed": "🧠 live",
+    "ledger_kind_aplus": "A+ (1-minute)",
+    # the headline counts lead, read off the states of the span's 🧠 rows: none / shadow only / sent only / both
+    "ledger_counts_lead": "🧠 potentials",
+    "ledger_counts_lead_shadow": "🧠 shadow — recorded, never sent",
+    "ledger_counts_lead_pushed": "🧠 live — sent to your phone",
+    "ledger_counts_lead_mixed": "🧠 shadow (recorded, never sent) + live (sent)",
+    "ledger_empty": "No 1-minute alert recorded on this span yet (the record starts {from}).",
+})
+# The 2026-10-27 shadow sentences — served INSTEAD of WORDS_1M's for these keys while GAJJALA_1M_PUSH_MODE reads
+# "shadow" (fail closed: any value but "live"), so a flip back never leaves "rings your phone" on the page.
+WORDS_1M_SHADOW: Mapping = MappingProxyType({
     "honesty": ("GG trades these setups on {s}-minute bars; this page runs the same bar-count rules on {p}-minute bars "
                 "by your call ({from}). Every alert here is recorded in shadow, never sent, until you say so. Nothing "
                 "measured."),
@@ -81,17 +125,12 @@ WORDS_1M: Mapping = MappingProxyType({
     "push_potential": ("🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first "
                        "time it is a potential, {open}–{close} ET on the {cad}-minute pass, never {rth_open}–{mute_end} "
                        "(his first {n} minutes). Never sent until you say so. {tail}."),
-    "held_stale_tape": "no print in the last {p}-minute bar",
-    "ledger_title": ("🏁 Track record — every {p}-minute Gajjala alert, recorded in shadow since {from}, graded by GG's "
-                     "trade math · UNMEASURED"),
+    # 2026-10-29 (verifier LOW): the 🏁 honesty line follows the mode too — a flip back never leaves "ring your phone"
     "ledger_honesty": ("A ledger of this page's alerts as RECORDED — none reached your phone. The 🧠 potentials "
                        "recorded in shadow make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. "
                        "Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 "
                        "study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has "
                        "measured this page."),
-    "ledger_kind_potential": "🧠 shadow",
-    "ledger_counts_lead": "🧠 shadow — recorded, never sent",
-    "ledger_empty": "No 1-minute alert recorded on this span yet (the record starts {from}).",
 })
 
 
@@ -168,11 +207,13 @@ def words(v=None) -> Mapping:
 
 def word(key, v=None, **fmt) -> Optional[str]:
     """One served word of the variant, its numbers filled at call time ({p}, {s}, {from}, {tail} + `fmt`); None when
-    the variant has no such word (GG5 always)."""
+    the variant has no such word (GG5 always). In shadow mode a key WORDS_1M_SHADOW carries serves that sentence."""
     tpl = words(v).get(key)
     if tpl is None:
         return None
     vv = of(v)
+    if push_mode(vv) == "shadow" and key in WORDS_1M_SHADOW:   # 2026-10-29: the words follow the mode at call time
+        tpl = WORDS_1M_SHADOW[key]
     from .potential import TAIL
     args = {"p": frame_minutes(vv.primary, vv), "s": frame_minutes(vv.slow, vv), "from": GC.GG1M_RECORD_FROM,
             "tail": TAIL}

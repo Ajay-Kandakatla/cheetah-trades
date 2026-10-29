@@ -410,38 +410,46 @@ describe('ChartMaps mounts the 1-minute board (2026-10-27)', () => {
   });
 });
 
-describe('the two 1-minute kinds on /alerts, /notifications and the kind registry (2026-10-27, SHADOW)', () => {
+/* WIDENED 2026-10-29 (BUILD_SPEC29 D2/D6): the 1-minute kinds are LIVE since 2026-10-29 by his call — Ajay: "Only
+   give me Gajjalas chart notifications from both tabs," / "I am missing out the ones in noise." The labels drop
+   "(shadow)", the details say ON FOR YOUR PHONE / LIVE SINCE 2026-10-29, Essentials turns both on. */
+const HIS_29 = 'Only give me Gajjalas chart notifications from both tabs,';
+describe('the two 1-minute kinds on /alerts, /notifications and the kind registry (2026-10-27; LIVE since 2026-10-29)', () => {
   const KINDS = ['gajjala_1m_setup', 'gajjala_1m_potential'] as const;
 
-  it('alertKinds labels both — the shadow word in the label, the 🚩 / 🧠 emoji, the trading group', () => {
-    expect(ALERT_KINDS.gajjala_1m_setup).toEqual({ emoji: '\u{1F6A9}', label: 'Gajjala 1-min A+ (shadow)', group: 'trading' });
-    expect(ALERT_KINDS.gajjala_1m_potential).toEqual({ emoji: '\u{1F9E0}', label: 'Gajjala 1-min potential (shadow)', group: 'trading' });
-    expect(kindLabel('gajjala_1m_setup')).toBe('\u{1F6A9} Gajjala 1-min A+ (shadow)');
+  it('alertKinds labels both — no mode word in the label, the 🚩 / 🧠 emoji, the trading group', () => {
+    expect(ALERT_KINDS.gajjala_1m_setup).toEqual({ emoji: '\u{1F6A9}', label: 'Gajjala 1-min A+', group: 'trading' });
+    expect(ALERT_KINDS.gajjala_1m_potential).toEqual({ emoji: '\u{1F9E0}', label: 'Gajjala 1-min potential', group: 'trading' });
+    expect(kindLabel('gajjala_1m_setup')).toBe('\u{1F6A9} Gajjala 1-min A+');
+    // NEGATIVE: no registry label still says shadow
+    for (const k of KINDS) expect(ALERT_KINDS[k].label).not.toMatch(/shadow/i);
     // NEGATIVE: 🚩 Gajjala's own kinds keep their labels
     expect(ALERT_KINDS.gajjala_setup.label).toBe('Gajjala A+ setup');
     expect(ALERT_KINDS.gajjala_potential.label).toBe('Gajjala potential');
   });
 
-  it('Notifications: one row each, the BUILD_SPEC27 labels, SHADOW + UNMEASURED in the detail', () => {
-    const want: Record<string, string> = { gajjala_1m_setup: 'Gajjala 1-min A+ (shadow)', gajjala_1m_potential: 'Gajjala 1-min potential (shadow)' };
+  it('Notifications: one row each, the live labels, ON FOR YOUR PHONE / LIVE SINCE 2026-10-29 + UNMEASURED in the detail', () => {
+    const want: Record<string, string> = { gajjala_1m_setup: 'Gajjala 1-min A+', gajjala_1m_potential: 'Gajjala 1-min potential' };
     for (const k of KINDS) {
       const rows = CATEGORIES.filter((c) => c.key === k);
       expect(rows, k).toHaveLength(1);
       expect(rows[0].label).toBe(want[k]);
       expect(rows[0].group).toBe('trading');
-      expect(rows[0].detail).toMatch(/^SHADOW/);
+      expect(rows[0].detail).toMatch(/^ON FOR YOUR PHONE — LIVE SINCE 2026-10-29/);
+      expect(rows[0].detail).toContain(HIS_29);
       expect(rows[0].detail).toContain('UNMEASURED');
-      expect(rows[0].detail).toContain('never sent');
+      // the shadow days stay honest: recorded, never sent, 2026-10-27 to 10-28
+      expect(rows[0].detail).toContain('From 2026-10-27 to 10-28 it ran in shadow');
     }
   });
 
-  it('NEGATIVE: the details never promise a ring, never say OFF BY DEFAULT or the b-word, and Essentials does not switch them on', () => {
+  it('NEGATIVE: the details never say OFF BY DEFAULT, the b-word or the old shadow line, and Essentials switches them on', () => {
     for (const k of KINDS) {
       const d = CATEGORIES.find((c) => c.key === k)!.detail;
-      expect(d).not.toMatch(/ON FOR YOUR PHONE|rings your phone|LIVE SINCE|OFF BY DEFAULT/);
+      expect(d).not.toMatch(/OFF BY DEFAULT|this toggle changes nothing|until you say so|^SHADOW/);
       expect(d).not.toMatch(new RegExp('b' + 'ounce', 'i'));
       const ess = PRESETS.find((p) => p.id === 'essentials')!;
-      expect((ess.pref as Record<string, unknown>)[k]).not.toBe(true);
+      expect((ess.pref as Record<string, unknown>)[k]).toBe(true);
     }
   });
 
@@ -451,7 +459,7 @@ describe('the two 1-minute kinds on /alerts, /notifications and the kind registr
       const meta = GG1M_PASSES.find((m) => m.key === k);
       expect(meta, k).toBeTruthy();
       expect(meta!.fallbackCadenceSec).toBe(60);
-      expect(meta!.label).toContain('shadow');
+      expect(meta!.label).not.toMatch(/shadow/i);   // WIDENED 2026-10-29: live — no mode word in the row label
       expect(cadenceOf(undefined, meta!)).toBe(60);
     }
     expect(staleAfterSec(60)).toBe(300);

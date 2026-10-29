@@ -276,7 +276,9 @@ const CONTRACTS = [
       // the on-list is READ from the backend rather than retyped here: the two
       // drifting apart is exactly the silent mute this contract exists for.
       const keep = keepSet(read('../backend/push/subs.py'));
-      if (keep.length < 8) errs.push(`push/subs.OWNER_KEEP_SET parsed as ${keep.length} kinds — the 2026-09-20 keep-set is eight`);
+      // 2026-10-29 (BUILD_SPEC29 D1): the keep-set is SIX kinds now (Ajay: "Only give me Gajjalas chart notifications from both tabs,"); its exact
+      // members are pinned by the 🔕 Gajjala-only block. Here only: it parses, and Essentials carries every member.
+      if (!keep.length) errs.push('push/subs.OWNER_KEEP_SET did not parse');
       for (const on of keep) {
         if (!new RegExp(`${on}:\\s*true`).test(ess)) errs.push(`Essentials preset drops ${on} — it is in OWNER_KEEP_SET`);
       }
@@ -300,7 +302,10 @@ const CONTRACTS = [
       const errs = [];
       if (!/key:\s*'demand_alert'/.test(src)) errs.push("CATEGORIES lacks the demand_alert kind — it cannot be muted from the page");
       const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
-      if (!/demand_alert:\s*true/.test(ess)) errs.push('Essentials preset drops demand_alert');
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set.
+      // Essentials mirrors the keep-set: on iff demand_alert is a member.
+      const inKeep = keepSet(read('../backend/push/subs.py')).includes('demand_alert');
+      if (!new RegExp(`demand_alert:\\s*${inKeep}`).test(ess)) errs.push(`Essentials preset must carry demand_alert: ${inKeep} (it mirrors OWNER_KEEP_SET)`);
       return errs;
     },
   },
@@ -3145,9 +3150,7 @@ const CONTRACTS = [
       const dm = subs.match(/["']potus_investment["']\s*:\s*(True|False)/);
       if (!dm) errs.push('push/subs.py default_prefs must list potus_investment');
       else if (dm[1] !== 'True') errs.push('potus_investment must ship ON (True) in push/subs.py default_prefs — his 2026-09-20 "Yes for #1"');
-      if (!keepSet(subs).includes('potus_investment')) {
-        errs.push('potus_investment must sit in push/subs.OWNER_KEEP_SET — prefs_for() re-reads owner_prefs() on every re-registration and would mute it again');
-      }
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set. It stays ON in default_prefs for everyone else.
       const board = read('src/components/PotusBoard.tsx');
       if (!/editorial order, not a ranking/.test(board)) {
         errs.push('PotusBoard.tsx must state that the list order is editorial, not a ranking');
@@ -3433,9 +3436,7 @@ const CONTRACTS = [
       const dm = subs.match(/["']earnings_reaction["']\s*:\s*(True|False)/);
       if (!dm) errs.push('push/subs.py default_prefs must list earnings_reaction');
       else if (dm[1] !== 'True') errs.push('earnings_reaction must ship ON (True) in push/subs.py default_prefs');
-      if (!keepSet(subs).includes('earnings_reaction')) {
-        errs.push('earnings_reaction must sit in push/subs.OWNER_KEEP_SET — otherwise a re-registration mutes it');
-      }
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set. It stays ON in default_prefs for everyone else.
       const gate = read('../backend/market_hours/gate.py');
       const market = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
       if (!market.includes('earnings_reaction')) {
@@ -3511,9 +3512,7 @@ const CONTRACTS = [
       const dm = subs.match(/["']board_arrival["']\s*:\s*(True|False)/);
       if (!dm) errs.push('push/subs.py default_prefs must list board_arrival');
       else if (dm[1] !== 'True') errs.push('board_arrival must ship ON (True) in push/subs.py default_prefs');
-      if (!keepSet(subs).includes('board_arrival')) {
-        errs.push('board_arrival must sit in push/subs.OWNER_KEEP_SET');
-      }
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set. It stays ON in default_prefs for everyone else.
       const gate = read('../backend/market_hours/gate.py');
       if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes('board_arrival')) {
         errs.push('market_hours/gate.py must treat board_arrival as a MARKET kind — both boards are built from closed bars');
@@ -3898,9 +3897,7 @@ const CONTRACTS = [
     checks: (src) => {
       const errs = [];
       const subs = read('../backend/push/subs.py');
-      if (!keepSet(subs).includes('price_alert')) {
-        errs.push('price_alert left OWNER_KEEP_SET — a re-registered device would mute it again');
-      }
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set.
       for (const retired of ['_RETIRED_2026_06_13', 'RETIRED_2026_09_20']) {
         const set = pyFrozenSet(subs, retired) || [];
         if (set.includes('price_alert')) errs.push(`price_alert is back in ${retired} — he asked for it ON (2026-09-21)`);
@@ -3908,7 +3905,8 @@ const CONTRACTS = [
       if (!/key: 'price_alert'/.test(src)) errs.push('Notifications.tsx must offer the 🔔 Price alerts toggle');
       if (/price_alert is PAUSED/.test(src)) errs.push('the PAUSED note is stale — price alerts came back 2026-09-21');
       const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
-      if (!/price_alert:\s*true/.test(ess)) errs.push('Essentials preset must keep price_alert on — it is in OWNER_KEEP_SET');
+      const paKeep = keepSet(subs).includes('price_alert');
+      if (!new RegExp(`price_alert:\\s*${paKeep}`).test(ess)) errs.push(`Essentials preset must carry price_alert: ${paKeep} (it mirrors OWNER_KEEP_SET)`);
       const py = read('../backend/push/recent.py');
       const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
       if (!/def collapse_repeats\(/.test(pyCode)) errs.push('push/recent.py must build the fold server-side');
@@ -7335,7 +7333,7 @@ const CONTRACTS = [
         const dm = new RegExp(`["']${k}["']\\s*:\\s*(True|False)`).exec(subs);
         if (!dm) errs.push(`push/subs.py default_prefs must list "${k}"`);
         else if (dm[1] !== 'False') errs.push(`${k} must be False in push/subs.py default_prefs — owner-only, everyone else starts off`);
-        if (!keep.includes(k)) errs.push(`${k} must be in push/subs.OWNER_KEEP_SET — ON for him (his K4 answer, A12)`);
+        // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set.
         if (!market.includes(k)) errs.push(`market_hours/gate.py must treat ${k} as a MARKET kind (silent on closed days)`);
         if (personal.includes(k)) errs.push(`${k} must NOT be a PERSONAL kind`);
         const iu = new RegExp(`["']${k}["']\\s*:\\s*([^,\\n]+)`).exec(itemBlock);
@@ -7345,14 +7343,19 @@ const CONTRACTS = [
         if (!new RegExp(`key: '${k}'`).test(tapeBlock)) errs.push(`Alerts.tsx TAPE_PASSES must carry key: '${k}'`);
         if (new RegExp(`'${k}'`).test(passesBlock)) errs.push(`Alerts.tsx PASSES must NOT carry ${k} — it would join "all N passes" and read stale outside its window`);
         if (!new RegExp(`'${k}'`).test(chipsLine)) errs.push(`Alerts.tsx KIND_CHIPS must carry '${k}'`);
-        if (!new RegExp(`${k}:\\s*true`).test(ess)) errs.push(`Essentials must carry ${k}: true — it is in OWNER_KEEP_SET`);
+        if (!new RegExp(`${k}:\\s*${keep.includes(k)}`).test(ess)) errs.push(`Essentials must carry ${k}: ${keep.includes(k)} — it mirrors OWNER_KEEP_SET`);
 
         const nm = notif.match(new RegExp(`key: '${k}'[\\s\\S]*?' \\},\\n`));
         if (!nm) { errs.push(`${k} must be listed on the Notifications page — a kind the page cannot show cannot be muted`); continue; }
         const d = unesc(nm[0]);
-        for (const need of ['ON FOR YOUR PHONE', 'rings live', 'UNMEASURED', 'every burst listed on /alerts']) {
+        // 2026-10-29 (BUILD_SPEC29 critic F1): the lead follows push/subs.OWNER_KEEP_SET — ON FOR YOUR PHONE while the keep-set
+        // carries the kind, OFF FOR YOUR PHONE since 2026-10-29 once it left (Ajay: "Only give me Gajjalas chart notifications from both tabs,").
+        const LEAD = keep.includes(k) ? 'ON FOR YOUR PHONE' : 'OFF FOR YOUR PHONE since 2026-10-29';
+        const NOT_LEAD = keep.includes(k) ? 'OFF FOR YOUR PHONE' : 'ON FOR YOUR PHONE';
+        for (const need of [LEAD, 'rings live', 'UNMEASURED', 'every burst listed on /alerts']) {
           if (!d.includes(need)) errs.push(`the ${k} Notifications entry must say "${need}"`);
         }
+        if (d.includes(NOT_LEAD)) errs.push(`the ${k} Notifications entry says "${NOT_LEAD}" — push/subs.OWNER_KEEP_SET ${keep.includes(k) ? 'carries' : 'no longer carries'} it`);
         if (/shadow/i.test(d)) errs.push(`the ${k} Notifications entry says "shadow" — the kind rings live`);
         if (/every burst is sent|nothing is held back/i.test(d)) errs.push(`the ${k} Notifications entry says every burst is sent — the house floor, the poll budget and the cold first poll hold some back`);
         if (!d.includes('NOT READ:')) errs.push(`the ${k} Notifications entry must carry its NOT READ: sentence (what never reaches the push)`);
@@ -7481,7 +7484,8 @@ const CONTRACTS = [
       const dm = new RegExp(`["']${K}["']\\s*:\\s*(True|False)`).exec(subs);
       if (!dm) errs.push(`push/subs.py default_prefs must list "${K}"`);
       else if (dm[1] !== 'False') errs.push(`${K} must be False in push/subs.py default_prefs — owner-only, everyone else starts off`);
-      if (!keepSet(subs).includes(K)) errs.push(`${K} must be in push/subs.OWNER_KEEP_SET — "alert me" (DECISIONS7 D6)`);
+      // 2026-10-29: LEFT push/subs.OWNER_KEEP_SET (BUILD_SPEC29 D1 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"); the 🔕 Gajjala-only block pins the keep-set.
+      const tcKeep = keepSet(subs).includes(K);
       const gate = read('../backend/market_hours/gate.py');
       if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes(K)) errs.push(`market_hours/gate.py must treat ${K} as a MARKET kind (silent on closed days)`);
       if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes(K)) errs.push(`${K} must NOT be a PERSONAL kind`);
@@ -7503,7 +7507,7 @@ const CONTRACTS = [
       else if (chips.indexOf(K) < chips.indexOf('gajjala_potential')) errs.push(`Alerts.tsx KIND_CHIPS lists '${K}' before 'gajjala_potential' — it sits right after it`);
       const notif = read('src/pages/Notifications.tsx');
       const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
-      if (!new RegExp(`${K}:\\s*true`).test(ess)) errs.push(`Essentials must carry ${K}: true — it is in OWNER_KEEP_SET`);
+      if (!new RegExp(`${K}:\\s*${tcKeep}`).test(ess)) errs.push(`Essentials must carry ${K}: ${tcKeep} — it mirrors OWNER_KEEP_SET`);
 
       // 4. the Notifications entry.
       const nm = notif.match(new RegExp(`key: '${K}'[\\s\\S]*?' \\},\\n`));
@@ -7511,9 +7515,13 @@ const CONTRACTS = [
       else {
         const d = unesc(nm[0]);
         const W = `the ${K} Notifications entry`;
-        for (const need of ['ON FOR YOUR PHONE', 'rings live', 'UNMEASURED', 'tick rule', 'NOT READ:', ASK2]) {
+        // 2026-10-29 (BUILD_SPEC29 critic F1): the lead follows push/subs.OWNER_KEEP_SET (tcKeep), never a fixed ON.
+        const LEAD = tcKeep ? 'ON FOR YOUR PHONE' : 'OFF FOR YOUR PHONE since 2026-10-29';
+        const NOT_LEAD = tcKeep ? 'OFF FOR YOUR PHONE' : 'ON FOR YOUR PHONE';
+        for (const need of [LEAD, 'rings live', 'UNMEASURED', 'tick rule', 'NOT READ:', ASK2]) {
           if (!d.includes(need)) errs.push(`${W} must say "${need}"`);
         }
+        if (d.includes(NOT_LEAD)) errs.push(`${W} says "${NOT_LEAD}" — push/subs.OWNER_KEEP_SET ${tcKeep ? 'carries' : 'no longer carries'} it`);
         if (/shadow/i.test(d)) errs.push(`${W} says "shadow" — the kind rings live`);
         if (/OFF BY DEFAULT/.test(d)) errs.push(`${W} says OFF BY DEFAULT while the keep-set carries it`);
         if (BANNED.test(d)) errs.push(`${W} says the b-word or the sham word`);
@@ -9736,7 +9744,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 22) → slice(0, 23).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9950,7 +9959,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 19) → slice(0, 20).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10230,7 +10240,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 18) → slice(0, 19).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10429,7 +10440,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 13) → slice(0, 14).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10527,7 +10539,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 17) → slice(0, 18).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10676,7 +10689,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 14) → slice(0, 15).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10792,7 +10806,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 15) → slice(0, 16).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10842,7 +10857,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 11) → slice(0, 12).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10981,7 +10997,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 12) → slice(0, 13).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11063,7 +11080,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 10) → slice(0, 11).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11178,7 +11196,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 9) → slice(0, 10).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11368,7 +11387,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 8) → slice(0, 9).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11421,7 +11441,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 7) → slice(0, 8).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11494,7 +11515,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 6) → slice(0, 7).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11561,7 +11583,8 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — the 🚩 Gajjala 1-minute ✨ (chart-maps-gajjala-1m-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 5) → slice(0, 6).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11896,8 +11919,9 @@ const CONTRACTS = [
       // 2026-10-27: 🚩 1-minute page inserted — its ✨ (chart-maps-gajjala-1m-2026-10-27) took the FIRST slot the same day; FIRST → first two, dated.
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
-      if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 4) → slice(0, 5).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else if (nf) {
@@ -12055,8 +12079,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — FIRST → one of the first two, dated.
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 2) → slice(0, 3).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
       if (!ent.includes("addedAt: '2026-10-27'")) errs.push('the ✨ must be dated 2026-10-27');
@@ -12205,9 +12230,17 @@ const CONTRACTS = [
         const nt = tryRead('src/pages/Notifications.tsx', 'Notifications');
         const al = tryRead('src/pages/Alerts.tsx', 'Alerts');
         for (const k of [G1.kindSetup, G1.kindPot]) {
-          if (ak && !new RegExp(`^\\s*${k}:\\s*\\{[^\\n]*\\(shadow\\)`, 'm').test(ak)) errs.push(`alertKinds.ts must carry ${k} (its label says shadow)`);
+          // 2026-10-29 (BUILD_SPEC29 D6): the "(shadow)" label pins follow GAJJALA_1M_PUSH_MODE — shadow → the label says
+          // "(shadow)"; live → the kind is still registered and NO label says "(shadow)".
+          const akLine = (new RegExp(`^\\s*${k}:\\s*\\{[^\\n]*`, 'm').exec(ak) || [])[0] || '';
+          if (ak && !akLine) errs.push(`alertKinds.ts must carry ${k}`);
+          else if (ak && MODE === 'shadow' && !/\(shadow\)/.test(akLine)) errs.push(`alertKinds.ts must carry ${k} (its label says shadow)`);
+          else if (ak && MODE !== 'shadow' && /\(shadow\)/.test(akLine)) errs.push(`alertKinds.ts ${k} still says "(shadow)" — GAJJALA_1M_PUSH_MODE is ${MODE}`);
           if (np && !new RegExp(`^\\s*${k}\\?: boolean;`, 'm').test(np)) errs.push(`useNotificationPrefs.ts must declare ${k}?: boolean`);
-          if (nt && !new RegExp(`\\{ key: '${k}', label: '[^']*\\(shadow\\)'`).test(nt)) errs.push(`Notifications.tsx must carry a ${k} row whose label says shadow`);
+          const ntLabel = (new RegExp(`\\{ key: '${k}', label: '([^']*)'`).exec(nt) || [])[1];
+          if (nt && ntLabel == null) errs.push(`Notifications.tsx must carry a ${k} row`);
+          else if (nt && MODE === 'shadow' && !/\(shadow\)/.test(ntLabel)) errs.push(`Notifications.tsx must carry a ${k} row whose label says shadow`);
+          else if (nt && MODE !== 'shadow' && /\(shadow\)/.test(ntLabel)) errs.push(`Notifications.tsx ${k} label still says "(shadow)" — GAJJALA_1M_PUSH_MODE is ${MODE}`);
           if (al && !new RegExp(`\\{ key: '${k}',\\s*label: '[^']*',\\s*fallbackCadenceSec: ${CAD} \\}`).test(al)) errs.push(`Alerts.tsx must carry a ${k} pass row at fallbackCadenceSec: ${CAD} (= GG1M_CADENCE_SEC)`);
         }
       }
@@ -12246,8 +12279,9 @@ const CONTRACTS = [
       const firstId = ((/\{ id: '([^']+)'/.exec(arr)) || [])[1];
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened to the top two, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened to the top three, dated.
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstId || 'none'})`);
+      // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 3) → slice(0, 4).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
         const nextAt = arr.indexOf("{ id: '", at + 1);
@@ -12257,9 +12291,19 @@ const CONTRACTS = [
         if (!e.includes("route: '/chart-maps?tab=gajjala_1m'")) errs.push(`${W} must route to '/chart-maps?tab=gajjala_1m'`);
         if (!e.includes("addedAt: '2026-10-27'")) errs.push(`${W} must be dated 2026-10-27`);
         for (const h of HIS) if (!label.includes(`"${h}"`)) errs.push(`${W} must quote him verbatim: "${h}"`);
-        for (const need of ['UNMEASURED', 'Not advice.', 'Cheetah variant', 'never sent']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        for (const need of ['UNMEASURED', 'Not advice.', 'Cheetah variant']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
         if (FROM && !label.includes(FROM)) errs.push(`${W} must name the 🏁 start ${FROM} (= GG1M_RECORD_FROM)`);
-        if ((MODE === 'shadow') !== /\bshadow\b/.test(label)) errs.push(`${W} says shadow iff GAJJALA_1M_PUSH_MODE is "shadow" (it is ${MODE})`);
+        // 2026-10-29 (BUILD_SPEC29 D6): conditional on GAJJALA_1M_PUSH_MODE — shadow → "never sent" and the word shadow;
+        // live → the amended text (shadow 10-27 … 10-28, live since 10-29), never "never sent" / "(shadow)".
+        const AMENDED = 'shadow 2026-10-27 to 10-28, live since 2026-10-29 by his call';
+        if (MODE === 'shadow') {
+          if (!label.includes('never sent')) errs.push(`${W} must say "never sent" (GAJJALA_1M_PUSH_MODE is shadow)`);
+          if (!/\bshadow\b/.test(label)) errs.push(`${W} must say shadow (GAJJALA_1M_PUSH_MODE is shadow)`);
+        } else {
+          if (!label.includes(AMENDED)) errs.push(`${W} must carry the amended text "${AMENDED}" (GAJJALA_1M_PUSH_MODE is ${MODE})`);
+          if (label.includes('never sent')) errs.push(`${W} still says "never sent" — GAJJALA_1M_PUSH_MODE is ${MODE}`);
+          if (/\(shadow\)/.test(label)) errs.push(`${W} says "(shadow)" — GAJJALA_1M_PUSH_MODE is ${MODE}`);
+        }
         errs.push(...wordErrs(W, label));
       }
       return errs;
@@ -12327,7 +12371,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be the FIRST entry (found '${first}')`);
+      // WIDENED (2026-10-29: gajjala-only-pushes FIRST) — FIRST → one of the first two.
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
       if (!ent.includes("route: '/trading?view=dashboard'")) errs.push('the 💵 ✨ must route to /trading?view=dashboard');
@@ -12353,6 +12399,113 @@ const CONTRACTS = [
       const jbs = tryRead('src/components/JournalByStrategy.tsx', 'JournalByStrategy');
       const ord = (/export const STRATEGY_ORDER[^=]*=\s*\[([^\]]*)\]/.exec(jbs) || [])[1] || '';
       for (const k of ["'zero_dte'", "'hot_pullback'"]) if (!ord.includes(k)) errs.push(`JournalByStrategy STRATEGY_ORDER lacks ${k}`);
+      return errs;
+    },
+  },
+  {
+    name: '🔕 Gajjala-only pushes (2026-10-29)',
+    file: 'src/pages/Notifications.tsx',
+    checks(notif) {
+      // Ajay 2026-10-29 ~12:30 ET (verbatim, his spelling kept): "Only give me Gajjalas chart notifications from both
+      // tabs," / "I am missing out the ones in noise." (BUILD_SPEC29). Every check reads the REAL file: (1) the backend
+      // push/subs.OWNER_KEEP_SET parses to EXACTLY the six kinds; (2) chart_maps/gajjala/constants.GAJJALA_1M_PUSH_MODE
+      // is "live" and its comment starts "Ajay 2026-10-29" with both his lines; (3) the Essentials preset mirrors the six
+      // (on = the six, nothing else on); (4) no FE registry still labels a 1-minute kind "(shadow)" and the /alerts
+      // 1-minute eyebrow says shadow iff the mode is shadow; (5) the ✨ is NEW_FEATURES[0], dated, routed, his words
+      // verbatim; (6) the 1-minute doc says 2026-10-29 and live; (7) scripts/owner_prefs_apply.py types no kind name
+      // outside its docstring (it derives from subs — never a retyped list). No gate is read or changed here.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const HIS = ['Only give me Gajjalas chart notifications from both tabs,', 'I am missing out the ones in noise.'];
+      const SIX = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'position_alert', 'ops_alert'];
+      const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
+      // 1. the keep-set — exactly the six
+      const subs = tryRead('../backend/push/subs.py', 'subs.py');
+      const keep = keepSet(subs);
+      if (!sameSet(keep, SIX)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the six: ${SIX.join(', ')}`);
+      // 2. the 1-minute push mode — live, tagged his
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
+      const ml = /^GAJJALA_1M_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
+      if (!ml) errs.push('constants.py lost GAJJALA_1M_PUSH_MODE = "…"  # comment');
+      else {
+        if (ml[1] !== 'live') errs.push(`GAJJALA_1M_PUSH_MODE is "${ml[1]}" — his "from both tabs" (2026-10-29) is "live"`);
+        if (!ml[2].startsWith('Ajay 2026-10-29')) errs.push('the GAJJALA_1M_PUSH_MODE comment must START "Ajay 2026-10-29" (his call, not mine)');
+        for (const h of HIS) if (!ml[2].includes(h)) errs.push(`the GAJJALA_1M_PUSH_MODE comment must quote him verbatim: "${h}"`);
+      }
+      const MODE = ml ? ml[1] : null;
+      // 3. Essentials mirrors the six
+      const essAt = notif.indexOf("id: 'essentials'");
+      const ess = essAt < 0 ? '' : notif.slice(essAt, notif.indexOf("id: 'trading_only'"));
+      const pref = (/pref: \{([\s\S]*?)\n\s*\},/.exec(ess) || [])[1] || '';
+      if (!pref) errs.push("the Essentials preset (id: 'essentials') lost its pref: { … } literal");
+      const flags = [...pref.matchAll(/\b([a-z0-9_]+):\s*(true|false)\b/g)];
+      const onKeys = flags.filter((m) => m[2] === 'true').map((m) => m[1]);
+      if (pref && !sameSet(onKeys, keep.length ? keep : SIX)) errs.push(`Essentials turns ON [${onKeys.join(', ')}] — it must mirror OWNER_KEEP_SET exactly`);
+      for (const k of ['tape_burst_highbeta', 'tape_burst_chartmaps', 'pattern_alert', 'hot_pullback_alert', 'demand_alert']) {
+        if (pref && !new RegExp(`\\b${k}:\\s*false\\b`).test(pref)) errs.push(`Essentials must carry ${k}: false — it left the keep-set 2026-10-29`);
+      }
+      if (ess && !ess.includes('2026-10-29 keep-set')) errs.push('the Essentials detail must name the 2026-10-29 keep-set');
+      // 4. no "(shadow)" label on the live 1-minute kinds; the /alerts eyebrow follows the mode
+      const ak = tryRead('src/lib/alertKinds.ts', 'alertKinds');
+      if (MODE === 'live' && /\(shadow\)/.test(ak)) errs.push('alertKinds.ts still labels a kind "(shadow)" — the 1-minute kinds are live');
+      const al = tryRead('src/pages/Alerts.tsx', 'Alerts');
+      const gg1 = (/export const GG1M_PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(al) || [])[1] || '';
+      if (!gg1) errs.push('Alerts.tsx lost export const GG1M_PASSES = [ … ]');
+      if (MODE === 'live' && /shadow/i.test(gg1)) errs.push('Alerts.tsx GG1M_PASSES labels still say shadow — the 1-minute kinds are live');
+      const brow = (/data-testid="gg1m-passes-head">([^<]*)</.exec(al) || [])[1];
+      if (brow == null) errs.push('Alerts.tsx lost the gg1m-passes-head eyebrow');
+      else if ((MODE === 'shadow') !== /shadow/i.test(brow)) errs.push(`the /alerts 1-minute eyebrow says shadow iff GAJJALA_1M_PUSH_MODE is "shadow" (it is ${MODE})`);
+      for (const k of ['gajjala_1m_setup', 'gajjala_1m_potential']) {
+        const nm = notif.match(new RegExp(`\\{ key: '${k}'[\\s\\S]*?' \\},\\n`));
+        if (!nm) { errs.push(`Notifications.tsx lost the ${k} row`); continue; }
+        if (MODE === 'live') {
+          if (!nm[0].includes('LIVE SINCE 2026-10-29')) errs.push(`the ${k} detail must say LIVE SINCE 2026-10-29`);
+          if (/this toggle changes nothing|^\s*\{[^\n]*detail: 'SHADOW/m.test(nm[0])) errs.push(`the ${k} detail still says it is in shadow`);
+          for (const h of HIS) if (!nm[0].includes(h)) errs.push(`the ${k} detail must quote him verbatim: "${h}"`);
+        }
+      }
+      // 5. the ✨ — FIRST, dated, routed, his words verbatim
+      const ID = 'gajjala-only-pushes-2026-10-29';
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
+      const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
+      if (!ent.includes("addedAt: '2026-10-29'")) errs.push('the 🔕 ✨ must be dated 2026-10-29');
+      if (!ent.includes("route: '/notifications'")) errs.push("the 🔕 ✨ must route to '/notifications'");
+      const label = ((/label: "((?:[^"\\]|\\.)*)"/.exec(ent) || [])[1] || '').replace(/\\"/g, '"');
+      for (const h of HIS) if (!label.includes(`"${h}"`)) errs.push(`the 🔕 ✨ label must quote him verbatim: "${h}"`);
+      for (const w of ['UNMEASURED', 'Not advice.']) if (!label.includes(w)) errs.push(`the 🔕 ✨ label must say ${w}`);
+      if (/bounc/i.test(label) || /\bfake\b/i.test(label)) errs.push('the 🔕 ✨ label says bounce / fake');
+      // 6. the 1-minute doc
+      const doc = tryRead('../docs/gajjala/one_minute_page_2026_10_27.md', 'the 1-minute doc');
+      for (const need of ['2026-10-29', 'live']) if (doc && !doc.includes(need)) errs.push(`docs/gajjala/one_minute_page_2026_10_27.md must say "${need}"`);
+      // 7. owner_prefs_apply.py derives from subs — no kind name typed outside its docstring
+      const op = tryRead('../backend/scripts/owner_prefs_apply.py', 'owner_prefs_apply.py');
+      const dpAt = subs.indexOf('\ndef default_prefs(');
+      const dpEnd = dpAt < 0 ? -1 : subs.indexOf('\ndef ', dpAt + 1);
+      const dpBody = dpAt < 0 ? '' : subs.slice(dpAt, dpEnd < 0 ? undefined : dpEnd);
+      const kinds = new Set([...dpBody.matchAll(/["']([a-z0-9_]+)["']\s*:\s*(?:True|False)\b/g)].map((m) => m[1]).filter((k) => !k.startsWith('quiet_hours')));
+      for (const k of keep) kinds.add(k);
+      for (const k of (pyFrozenSet(subs, 'RETIRED_2026_09_20') || [])) kinds.add(k);
+      if (kinds.size < 10) errs.push(`parsed only ${kinds.size} kind names from push/subs.py default_prefs — the parse broke`);
+      const doc0 = /^\s*(?:[rRuU]?)("""|''')[\s\S]*?\1/.exec(op);
+      const code = (doc0 ? op.slice(doc0[0].length) : op).split('\n').map((l) => l.replace(/#.*$/, '')).join('\n');
+      const typed = [...code.matchAll(/["']([a-z0-9_]+)["']/g)].map((m) => m[1]).filter((x) => kinds.has(x));
+      if (op && typed.length) errs.push(`scripts/owner_prefs_apply.py types kind names outside its docstring (${[...new Set(typed)].join(', ')}) — derive from subs, never a retyped list`);
+      if (op && !/subs\.OWNER_KEEP_SET/.test(code)) errs.push('scripts/owner_prefs_apply.py must read subs.OWNER_KEEP_SET');
+      if (op && !/subs\.default_prefs\(\)/.test(code)) errs.push('scripts/owner_prefs_apply.py must read subs.default_prefs()');
+      // 8. (critic F1) no Notifications row for a kind OUTSIDE the keep-set still tells him it is on for his phone
+      const rows = [...notif.matchAll(/\{ key: '([a-z0-9_]+)'[\s\S]*?' \},\n/g)];
+      if (rows.length < 20) errs.push(`parsed only ${rows.length} Notifications rows — the parse broke`);
+      for (const [row, k] of rows) {
+        if (!keep.length || keep.includes(k)) continue;
+        for (const bad of ['ON FOR YOUR PHONE', 'in the owner keep-set', 'ON BY DEFAULT for you']) {
+          if (row.includes(bad)) errs.push(`the ${k} Notifications entry says "${bad}" — it left push/subs.OWNER_KEEP_SET 2026-10-29`);
+        }
+      }
       return errs;
     },
   },

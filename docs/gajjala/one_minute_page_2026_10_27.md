@@ -12,13 +12,50 @@ Ajay, 2026-10-27, about 11:35 ET:
 
 > "do everything and also add the track record for it from today.."
 
+## 2026-10-29 — LIVE (HIS CALL #1 answered)
+
+Ajay, 2026-10-29, about 12:30 ET:
+
+> "Only give me Gajjalas chart notifications from both tabs,
+>
+> I am missing out the ones in noise."
+
+"Both tabs" = 🚩 Gajjala's and this page. So, since 2026-10-29:
+
+- `GAJJALA_1M_PUSH_MODE = "live"` (its comment starts `Ajay 2026-10-29` and carries his words, pinned by
+  `tests/test_gajjala_constants.py::test_the_1m_push_mode_line_is_tagged_his`). An A+ calls
+  `push.hooks.notify_gajjala_1m_setup` once per name, setup and day; a first-sighting 🧠 potential calls
+  `notify_gajjala_1m_potential` once per name, setup and session. Same gates, same windows, same claims as before.
+- Both kinds joined the owner keep-set (`push/subs.OWNER_KEEP_SET`, now six kinds: see
+  `docs/notifications/owner_keepset_2026_09_20.md`, section 2026-10-29). `default_prefs()` still has both False for
+  everyone else.
+- **History stays honest.** 2026-10-27 to 2026-10-28 every 1-minute alert was recorded in shadow, never sent. Those rows
+  keep their shadow state. On the 🏁 Track record a 🧠 row's kind word is read from its OWN push state: "🧠 shadow —
+  never sent" for a shadow row, "🧠 live" for a pushed one, a neutral "🧠 potential (1-minute)" if it carries neither. The
+  A+ rows read their line, which is the claim's own state ("A+ shadow — never sent" / "🎯 A+ entry"). The counts lead
+  says shadow, live or both, from the rows of the span.
+- **The words follow the mode.** `variant.WORDS_1M` carries the live sentences (they name the shadow period and his
+  words). If the constant is ever flipped back, `variant.word()` serves the 2026-10-27 shadow sentences
+  (`WORDS_1M_SHADOW`) instead, so the page never says "rings your phone" while nothing rings.
+- **The shadow-key guard stays.** A live claim checks for its `SHADOW:GG1:` twin first. An A+ the shadow already recorded
+  that day never rings after the flip: no double record, no late ring. Pinned by
+  `tests/test_gajjala_only_pushes_2026_10_29.py::test_NEGATIVE_the_shadow_key_guard_refuses_the_live_claim`.
+- Not changed: every gate, window, threshold and the cron. The 🚩 Auto-Pilot lane still reads GG5 claims only.
+- The ℹ️ Rules panel clause (`backend/supply_demand/rules_info.py` `_gg_one_minute_clause`, a words-only edit, no gate)
+  follows the mode too: live, it says the alerts ring your phone since `variant.LIVE_SINCE_1M` and that the days from
+  `GG1M_RECORD_FROM` until then were recorded in shadow, never sent. Shadow, it says "its alerts are recorded in shadow,
+  never sent." Pinned both ways by `tests/test_gajjala_1m_page_2026_10_27.py`.
+- Deploy order: `api`, then `scripts.owner_prefs_apply` (dry, then `--apply`), then `cron frontend`. If the cron goes
+  live first, an alert is claimed while his devices still read the 1-minute kinds as off, and it is lost for the day.
+  The runbook is in `docs/notifications/owner_keepset_2026_09_20.md`.
+
 ## What it is
 
 The page runs the whole 🚩 pipeline on CLOSED 1-minute bars: GG's five setups, K1–K11, the A+ claim, the 🧠 potentials, the
 📈 track, and the 🏁 Track record with the 🎯 A+ filter and charts. The ➖ Fade reads 5-minute bars first, the same way the
 5-minute page reads 15-minute bars first. The page uses the same scanner list as 🚩 Gajjala's and reads about once a
-minute. **Every alert on this page is recorded in shadow and never sent.** The 🏁 record starts 2026-10-27
-(`GG1M_RECORD_FROM`), with no replay and no backfill.
+minute. **2026-10-27 to 2026-10-28 every alert on this page was recorded in shadow and never sent; since 2026-10-29 they
+are live** (see above). The 🏁 record starts 2026-10-27 (`GG1M_RECORD_FROM`), with no replay and no backfill.
 
 GG trades these setups on 5-minute bars, so this page is a Cheetah variant. His rules are counted in bars, and each one
 now counts 1-minute bars (HIS CALL #5).
@@ -37,7 +74,7 @@ potentials, ledger, tape and board are shared, and each takes a variant.
 | collections | `gajjala_*` | its own `gajjala_1m_*`; shared ones read from GG5 |
 | claim prefix | `GG:` | `GG1:` (shadow `SHADOW:GG1:`) |
 | push kinds | `gajjala_setup`, `gajjala_potential` | `gajjala_1m_setup`, `gajjala_1m_potential` |
-| push mode | `GAJJALA_PUSH_MODE` (live) | `GAJJALA_1M_PUSH_MODE` = "shadow" |
+| push mode | `GAJJALA_PUSH_MODE` (live) | `GAJJALA_1M_PUSH_MODE` = "live" since 2026-10-29 ("shadow" 2026-10-27 to 10-28) |
 | api base | `/chart-maps/gajjala` | `/chart-maps/gajjala-1m` |
 | entry tape | `LEDGER_TAPE_TF_MIN` | `GG1M_TAPE_TF_MIN` = 1 (up to `GG1M_TAPE_BARS_MAX` = 2,880 bars) |
 | stale after | `STALE_AFTER_SEC` | `GG1M_STALE_AFTER_SEC` = 300 |
@@ -105,13 +142,15 @@ container's environment (needs a recreate). Either one stops the spawn and every
 - The frontend types none of these words. `GajjalaBoard` takes `variant="gajjala_1m"` and is mounted with
   `key="gajjala_1m"`. Without the key, React would reuse the 🚩 board: it would keep that board's state and skip the
   on-open POST.
-- The /alerts page and the notification settings carry both kinds, labelled "(shadow)". Both kinds default to off and
-  neither is in the owner keep-set.
+- The /alerts page and the notification settings carry both kinds. They were labelled "(shadow)" until 2026-10-29; the
+  labels now read "Gajjala 1-min A+" and "Gajjala 1-min potential". Both kinds default to off for everyone else and are
+  ON for the owner through the six-kind keep-set.
 
 ## HIS CALL (defaults shipped; none decided for him)
 
-1. GG1 push mode is SHADOW for both kinds (`GAJJALA_1M_PUSH_MODE`). Going live means changing that constant and adding
-   the two kinds to OWNER_KEEP_SET.
+1. ~~GG1 push mode is SHADOW for both kinds (`GAJJALA_1M_PUSH_MODE`). Going live means changing that constant and
+   adding the two kinds to OWNER_KEEP_SET.~~ **ANSWERED 2026-10-29: "Only give me Gajjalas chart notifications from both
+   tabs"** — the constant is "live" and both kinds are in the keep-set. Going back is one word (the constant).
 2. The 🏁 headline % pools the 🧠 potentials recorded in shadow (never sent). The alternative is to count nothing until a
    kind is live.
 3. Names are GG5's listed names only, capped at 60 by today's change (`GG1M_MAX_NAMES`). The alternatives are every listed
@@ -127,7 +166,8 @@ container's environment (needs a recreate). Either one stops the spawn and every
 10. The tab sits right after 🚩, labelled "Gajjala's 1-min".
 11. The new cost: up to 60 Massive minute fetches per iteration, about 60 calls a minute. The options are fewer names, or
     a pass every 2 minutes.
-12. /alerts gains two rows that never ring while the kinds are shadow. Keep them or drop them. 2026-10-27 (critic
+12. /alerts gains two rows that never rang while the kinds were shadow (since 2026-10-29 they count `pushed`). Keep them
+    or drop them. 2026-10-27 (critic
     findings 1 and 2): the rows sit in their own strip (`GG1M_PASSES`, after the tape strips), outside the intraday
     "all 7 passes" header, so a switched-off 1-minute page never turns that header into a warning.
 13. Coverage: when GG5's pass runs past about 30 s, the minute that closes at the tick is read late.
@@ -166,7 +206,8 @@ lose the 🚩 tick at the restart minute.
    line, and there should be one "gajjala 1m loop" spawn line per slot.
 2. Run a read-only probe of the api container: the age of `gajjala_passes` "latest_cron" is under 300 s;
    `gajjala_1m_passes` has about 5 docs per slot with `wall_s` and `bars.over_budget`; every `gajjala_1m_alerts` id
-   starts `SHADOW:GG1:`; there is no push receipt for either 1-minute kind.
+   starts `SHADOW:GG1:`; there is no push receipt for either 1-minute kind. (That was the 2026-10-27 shadow check. Since
+   2026-10-29 a rung A+ is a `GG1:` id in state `pushed`, and both kinds leave push receipts.)
 
 ```bash
 docker exec -i -w /app cheetah-market-app-api-1 python - <<'EOF'

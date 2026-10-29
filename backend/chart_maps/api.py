@@ -580,8 +580,9 @@ async def chart_maps_gajjala_entry_tape(
 # please." / "do everything and also add the track record for it from today..". Three routes under the variant's api
 # base (chart_maps.gajjala.variant.GG1.api_base) — the SAME handlers' shape over the 1-minute page's store
 # (ST.for_variant(GG1)). The 🚩 routes above are untouched; the 🚫 broker list stays ONE list under
-# /chart-maps/gajjala/broker-flags and POST /chart-maps/live is shared. Every alert of that page is recorded in shadow,
-# never sent (GAJJALA_1M_PUSH_MODE). UNMEASURED.
+# /chart-maps/gajjala/broker-flags and POST /chart-maps/live is shared. That page's alerts were recorded in shadow, never
+# sent, 2026-10-27 … 2026-10-28; LIVE since 2026-10-29 (GAJJALA_1M_PUSH_MODE — Ajay: "Only give me Gajjalas chart
+# notifications from both tabs"). UNMEASURED.
 @router.get("/chart-maps/gajjala-1m")
 async def chart_maps_gajjala_1m(
     sub: str = Query("", description="the 🚩 Gajjala's subs (bull_flag default … track_record) — EMPTY with a `focus` "

@@ -271,15 +271,17 @@ def notify_gajjala_potential(*, owner: str, payload: dict) -> dict:
 def notify_gajjala_1m_setup(*, owner: str, payload: dict) -> dict:
     """🚩 gajjala_1m_setup — the 1-minute page's A+ (chart_maps/gajjala/alerts.py via variant GG1, 2026-10-27; Ajay:
     "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.").
-    Owner-scoped (send_to_user) under its own pref kind. Called only when GAJJALA_1M_PUSH_MODE is "live" — it ships in
-    SHADOW (HIS CALL #1): the pass records and never gets here. UNMEASURED."""
+    Owner-scoped (send_to_user) under its own pref kind. Called only when GAJJALA_1M_PUSH_MODE is "live" — LIVE since
+    2026-10-29 (Ajay: "Only give me Gajjalas chart notifications from both tabs"; shadow 2026-10-27 … 2026-10-28, when
+    the pass recorded and never got here). ON for his devices through OWNER_KEEP_SET. UNMEASURED."""
     return sender.send_to_user(owner, payload, kind="gajjala_1m_setup")
 
 
 def notify_gajjala_1m_potential(*, owner: str, payload: dict) -> dict:
     """🧠 gajjala_1m_potential — the 1-minute page's potential (chart_maps/gajjala/potential.py via variant GG1,
     2026-10-27). Owner-scoped (send_to_user) under its own pref kind. Called only when GAJJALA_1M_PUSH_MODE is "live"
-    — in shadow the pass settles the tracker doc "shadow" and never gets here (HIS CALL #1). UNMEASURED."""
+    — LIVE since 2026-10-29 (HIS CALL #1 answered: "from both tabs"); in shadow the pass settles the tracker doc
+    "shadow" and never gets here. ON for his devices through OWNER_KEEP_SET. UNMEASURED."""
     return sender.send_to_user(owner, payload, kind="gajjala_1m_potential")
 
 

@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  AlertsPage, GAJJALA_POTENTIAL_KEYS, GG_POTENTIAL_HELD_ROW, KIND_CHIPS, TAPE_CONTROL_PASS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText,
+  AlertsPage, GAJJALA_POTENTIAL_KEYS, GG1M_PASSES, GG_POTENTIAL_HELD_ROW, KIND_CHIPS, TAPE_CONTROL_PASS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText,
   capFloorPhrase, ggPotentialChipText, ggPotentialRowWord, passHealth, sessionLine, skipsToday,
   staleAfterSec, tapeBurstChipText, tapeWindow,
 } from './Alerts';
@@ -2209,5 +2209,68 @@ describe('Alerts page — the 🌙 overnight movers daily pass (2026-10-19)', ()
     }
     // NEGATIVE: never the raw kind id
     expect(within(r).queryByText('overnight_movers')).toBeNull();
+  });
+});
+
+/* 🚩 🧠 Gajjala's 1-minute passes LIVE (2026-10-29, BUILD_SPEC29 D6). Ajay: "Only give me Gajjalas chart notifications
+ * from both tabs," / "I am missing out the ones in noise." The two 1-minute rows read the SAME counters as the
+ * 5-minute rows (one pipeline: alerts.COUNT_KEYS / potential.COUNT_KEYS), so they print them the same way: the 🚩 row
+ * through gajjalaChipText (its shadow words stay for a historical shadow count), the 🧠 row through
+ * ggPotentialChipText with the "pushes delivered" headline. The labels and the strip eyebrow carry no shadow word. */
+describe('Alerts page — the 🚩 🧠 Gajjala 1-minute passes, live since 2026-10-29', () => {
+  const with1m = (setup: Record<string, unknown>, pot: Record<string, unknown>) => ({
+    ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      gajjala_1m_setup: { as_of: '2026-09-05T10:59:40-04:00', date: '2026-09-05', cadence_sec: 60, counts: setup },
+      gajjala_1m_potential: { as_of: '2026-09-05T10:59:41-04:00', date: '2026-09-05', cadence_sec: 60, counts: pot } } });
+
+  it('a live 🚩 1-minute pass prints its pushed count as the 5-minute row does — no shadow chip, no 🧬 words', async () => {
+    stubFetch({ rows: ROWS }, with1m({ candidates: 5, pushed: 2, shadow: 0, shadow_mode: 0, suppressed_first15: 1 }, {}));
+    draw();
+    const r = await screen.findByTestId('pass-gajjala_1m_setup');
+    expect(within(r).getByText('🚩 Gajjala 1-min A+ setups')).toBeInTheDocument();
+    expect(within(r).getByText('push calls 2')).toBeInTheDocument();
+    expect(within(r).getByText('1 A+ held: first 15 minutes')).toBeInTheDocument();
+    // NEGATIVE: no shadow word, no 🧬 medical words, no raw counter key
+    expect(within(r).queryByText(/shadow/)).not.toBeInTheDocument();
+    expect(within(r).queryByText(/🧬/)).not.toBeInTheDocument();
+    expect(within(r).queryByText(/suppressed first15/)).not.toBeInTheDocument();
+  });
+
+  it('a historical shadow count on the 🚩 1-minute row wears the 🚩 shadow words, never the 🧬 ones', async () => {
+    stubFetch({ rows: ROWS }, with1m({ candidates: 5, pushed: 0, shadow: 1, shadow_mode: 1, shadow_session: 3 }, {}));
+    draw();
+    const r = await screen.findByTestId('pass-gajjala_1m_setup');
+    expect(within(r).getByText('🚩 shadow — not sent: 3 A+ recorded today')).toBeInTheDocument();
+    expect(within(r).queryByText(/🧬|would have pushed/)).not.toBeInTheDocument();
+  });
+
+  it('a live 🧠 1-minute pass prints "pushes delivered" and the 🧠 chip words', async () => {
+    stubFetch({ rows: ROWS }, with1m({}, { tracked_today: 6, new: 2, pushed: 2, no_target: 1, armed: 1, building: 1 }));
+    draw();
+    const r = await screen.findByTestId('pass-gajjala_1m_potential');
+    expect(within(r).getByText('🧠 Gajjala 1-min potentials')).toBeInTheDocument();
+    expect(within(r).getByText('pushes delivered 2')).toBeInTheDocument();
+    expect(within(r).getByText('🧠 6 potentials today')).toBeInTheDocument();
+    // NEGATIVE: the "candidates / push calls" headline is not the 🧠 row's, and no shadow word
+    expect(within(r).queryByText(/push calls/)).not.toBeInTheDocument();
+    expect(within(r).queryByText(/shadow/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the 5-minute per-item lists never render under the 1-minute rows', async () => {
+    stubFetch({ rows: ROWS }, with1m({ candidates: 1, pushed: 1 }, { tracked_today: 1, pushed: 1 }));
+    draw();
+    const strip = await screen.findByTestId('gg1m-passes');
+    expect(within(strip).queryByTestId('gg-shadow-list')).not.toBeInTheDocument();
+    expect(within(strip).queryByTestId('gg-pot-list')).not.toBeInTheDocument();
+  });
+
+  it('the strip eyebrow says they ring your phone since 2026-10-29 — NEGATIVE: no shadow word, still outside the header', async () => {
+    stubFetch({ rows: ROWS }, with1m({}, {}));
+    draw();
+    const head = await screen.findByTestId('gg1m-passes-head');
+    expect(head.textContent).toContain('they ring your phone since 2026-10-29');
+    expect(head.textContent).toContain('not counted in the header');
+    expect(head.textContent).not.toMatch(/shadow|never sent/);
+    for (const m of GG1M_PASSES) expect(m.label).not.toMatch(/shadow/i);
   });
 });

@@ -2724,14 +2724,20 @@ describe('🚩 Gajjala 1-minute tab registry (2026-10-27)', () => {
   it('TAB_META: the label and the blurb as BUILD_SPEC27 §3.8 writes them', () => {
     const m = TAB_META.gajjala_1m;
     expect(m.label).toBe("Gajjala's 1-min");
-    expect(m.blurb).toBe('\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here is recorded in shadow, never sent, until you say so; its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.');
-    for (const w of [HIS_1, 'shadow', 'Cheetah variant', 'UNMEASURED', 'Not advice.']) expect(m.blurb).toContain(w);
+    expect(m.blurb).toBe('\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here rings your phone live since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); what it recorded 2026-10-27 to 10-28 was never sent. Its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.');
+    // WIDENED 2026-10-29 (BUILD_SPEC29 D2/D6): live since 2026-10-29 by his call — the blurb drops the word shadow
+    // (the contract: shadow iff GAJJALA_1M_PUSH_MODE is "shadow") and says what the shadow days were.
+    for (const w of [HIS_1, 'Only give me Gajjalas chart notifications from both tabs,', 'live since 2026-10-29',
+      '2026-10-27 to 10-28 was never sent', 'Cheetah variant', 'UNMEASURED', 'Not advice.']) expect(m.blurb).toContain(w);
+    expect(m.blurb).not.toMatch(/\bshadow\b/);
   });
 
   it('NEGATIVE: the blurb never says the b-word / "fake", never promises a ring, never claims an edge', () => {
     const b = TAB_META.gajjala_1m.blurb;
     expect(b).not.toMatch(new RegExp(['b' + 'ounce', 'fake'].join('|'), 'i'));
-    expect(b).not.toMatch(/rings your phone|phone rings|edge|win rate/i);
+    // WIDENED 2026-10-29: it rings live now ("rings your phone live since 2026-10-29") — the guard keeps the rest.
+    expect(b).not.toMatch(/phone rings|edge|win rate/i);
+    expect(b).not.toMatch(/until you say so|recorded in shadow/i);
     // NEGATIVE: the label is its own, never 🚩 Gajjala's
     expect(TAB_META.gajjala_1m.label).not.toBe(TAB_META.gajjala.label);
   });

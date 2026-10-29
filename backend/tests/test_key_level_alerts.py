@@ -736,9 +736,10 @@ def test_pref_is_ON_for_the_owner_and_OFF_for_everyone_else():
     list" / "No, close only". ON for his devices via OWNER_KEEP_SET; OFF in
     default_prefs, so nobody else starts receiving it."""
     from push import subs
-    assert "key_level_alert" in subs.OWNER_KEEP_SET
-    assert subs.owner_prefs()["key_level_alert"] is True
-    assert subs.prefs_for(subs._owner_email())["key_level_alert"] is True
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six) — OFF for him too now
+    assert "key_level_alert" not in subs.OWNER_KEEP_SET
+    assert subs.owner_prefs()["key_level_alert"] is False
+    assert subs.prefs_for(subs._owner_email())["key_level_alert"] is False
     assert subs.default_prefs()["key_level_alert"] is False
     assert subs.prefs_for("someone-else@example.com")["key_level_alert"] is False
     assert "key_level_alert" not in subs.DISABLED_ALERT_KINDS
@@ -770,7 +771,7 @@ def test_rules_panel_section_is_built_from_the_constants():
     # 🧱 2026-09-30: the pad line rides every section the pad touches, built by rules_info
     assert sec["stops"][1:] == [" ".join(RI._pad_lines())]
     assert "UNMEASURED" in blob and "bounc" not in blob.lower()
-    assert "(ON by default)" in blob and "ships OFF by default" not in blob
+    assert "(ON by default)" not in blob and "ships OFF by default" in blob   # NARROWED 2026-10-29 — read from the keep-set
     assert "OFF unless" not in blob, "owner_prefs() is the default, never his stored toggle"
     assert "%g%%" % KL.PIERCE_PCT in blob and "16:05–16:30" in blob and "13:05–13:30" in blob
     assert ("at most %d" % ZE.MAX_SINGLES_PER_PASS) in blob and ("up to %d names" % ZE.DIGEST_MAX) in blob

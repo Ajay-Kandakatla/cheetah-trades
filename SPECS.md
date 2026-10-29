@@ -960,9 +960,13 @@ the 5-minute setups read NULL.
   loop reads one closed 1-minute bar per iteration, at most 5 per slot, inside `GG1M_MINUTE_BUDGET_SEC` +
   `GG1M_SLOT_MARGIN_SEC`; its own lease (`GG1M_LEASE_SEC`). No crontab line. Kill switch `GAJJALA_1M_ENABLED` / env
   `GAJJALA_1M_ENABLED=0`. Nightly grades GG1 after GG5 (fenced).
-- **Shadow**: `GAJJALA_1M_PUSH_MODE` = "shadow" — every 1-minute A+ and 🧠 potential is recorded, never sent; both kinds
-  default_prefs False, not in OWNER_KEEP_SET (HIS CALL #1). The 🏁 Track record counts the shadow 🧠 potentials and shadow
-  A+ from `GG1M_RECORD_FROM` (2026-10-27) — no replay, no backfill.
+- **Live since 2026-10-29** (was Shadow 2026-10-27 … 2026-10-28): `GAJJALA_1M_PUSH_MODE` = "live" — Ajay: "Only give me
+  Gajjalas chart notifications from both tabs, / I am missing out the ones in noise." (HIS CALL #1 answered). Both kinds
+  default_prefs False for everyone else, ON for the owner through OWNER_KEEP_SET (now exactly six kinds: gajjala_setup,
+  gajjala_potential, gajjala_1m_setup, gajjala_1m_potential, position_alert, ops_alert). The shadow-key guard stays (a
+  key shadowed earlier the same day never rings after the flip). The 🏁 Track record counts the 🧠 potentials (shadow
+  and sent) and the A+ from `GG1M_RECORD_FROM` (2026-10-27) — no replay, no backfill; each 🧠 row's kind word is read
+  from its own push state. The served words follow the mode (`variant.WORDS_1M` / `WORDS_1M_SHADOW`).
 - **Routes**: `GET /chart-maps/gajjala-1m`, `POST /chart-maps/gajjala-1m/scan` (owner; stealth 404),
   `GET /chart-maps/gajjala-1m/entry-tape` (1-minute bars, up to `GG1M_TAPE_BARS_MAX`). Broker flags stay under
   `/chart-maps/gajjala/…`.

@@ -1,18 +1,20 @@
-"""Bring the owner's ALREADY-REGISTERED devices up to the 2026-09-20 keep-set.
+"""Bring the owner's ALREADY-REGISTERED devices up to the keep-set — in full.
 
-Ajay 2026-09-20: *"Default on for any change of todays features Bondes or Potus
-or explosive growth or Earnings I wanna see all of them."* and *"Remove
-volleyball and learning of stocks I do dont wanna see them they are spamming
-too much."*
+Ajay 2026-10-29: *"Only give me Gajjalas chart notifications from both tabs,
+I am missing out the ones in noise."* (earlier: 2026-09-20 *"Default on for any
+change of todays features…"* and *"Remove volleyball and learning of stocks…"*.)
 
 `push.subs.prefs_for()` only decides what a NEWLY registering device starts
-with. His three phones are already registered, so the code change alone leaves
-them exactly as they were: 🏛️ potus off, 📣 and ✨ absent, the four retired
-kinds still True in their stored prefs. This script is the data write that
-closes that gap — and nothing else. It:
+with. His four devices are already registered, so the code change alone leaves
+them exactly as they were — tape bursts and every other kind still True in
+their stored prefs. This script is the data write that closes that gap, and
+since 2026-10-29 it applies `subs.owner_prefs()` IN FULL — nothing else. It:
 
   * turns ON every kind in `subs.OWNER_KEEP_SET` (never a retyped list),
-  * turns OFF every kind in `subs.RETIRED_2026_09_20`,
+  * turns OFF every key of `subs.default_prefs()` whose value is a bool and
+    which is NOT in that set — excluding the `quiet_hours*` keys (settings,
+    never kinds) — plus every kind in `subs.RETIRED_2026_09_20` (no longer in
+    default_prefs, still stored on old devices),
   * touches ONLY documents whose `user_email` is the owner's,
   * prints what it would do and changes nothing unless `--apply` is passed.
 
@@ -26,7 +28,8 @@ Run it in the api container:
 Idempotent: a second `--apply` prints "no change" for every device.
 
 NOT A GATE AND NOT A RULE. It flips per-device preference flags — which KINDS
-may reach him. What any kind requires to fire is untouched.
+may reach him. What any kind requires to fire is untouched, and every muted
+kind's cron keeps running (the PREF kills an alert, not the cron).
 
 The arithmetic lives in `apply()`, which is pure over injected documents, so
 `backend/tests/test_owner_prefs_apply.py` pins it without a database.
@@ -61,9 +64,19 @@ def on_kinds() -> list[str]:
     return sorted(subs.OWNER_KEEP_SET)
 
 
+# The prefix of the quiet-hours SETTINGS in default_prefs (a bool switch and two
+# "HH:MM" strings) — settings, never kinds, so never flipped here.
+_SETTING_PREFIX = "quiet_hours"
+
+
 def off_kinds() -> list[str]:
-    """The kinds this script turns OFF — the retired set itself."""
-    return sorted(subs.RETIRED_2026_09_20)
+    """The kinds this script turns OFF — every bool key of default_prefs() not in
+    the keep-set (owner_prefs() reads False for each), minus the quiet-hours
+    settings, plus the retired set (gone from default_prefs, still stored)."""
+    keep = subs.OWNER_KEEP_SET
+    off = {k for k, v in subs.default_prefs().items()
+           if isinstance(v, bool) and k not in keep and not k.startswith(_SETTING_PREFIX)}
+    return sorted((off | set(subs.RETIRED_2026_09_20)) - set(keep))
 
 
 def apply(docs, *, owner: str, apply: bool, coll=None) -> dict:
@@ -139,7 +152,7 @@ def main(argv=None) -> int:
         print(json.dumps(out, indent=2, default=str))
         return 0
     print(f"keep-set ON : {', '.join(on_kinds())}")
-    print(f"retired OFF : {', '.join(off_kinds())}")
+    print(f"OFF         : {', '.join(off_kinds())}")
     for row in out["rows"]:
         head = f"{row['label']} · {row['kind']} · {row['endpoint']}…"
         if not row["changes"]:

@@ -59,21 +59,9 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
     # WIDENED 2026-09-25: 🔑 key_level_alert — "On: week + month + 52-week",
     # "Holdings + Signals list", "No, close only".
     assert subs.OWNER_KEEP_SET == frozenset({
-        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
-        "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert",
-        # WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
-        "med_catalyst",
-        # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
-        "ops_alert",
-        # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first). WIDENED 2026-10-16 — LIVE ("you alert me when that happens"); default_prefs stays False (AMENDMENTS10 F1, DECISIONS10 D1's True withdrawn).
-        "gajjala_setup",
-        # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
-        "gajjala_potential",
-        # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps ("I need a tape burst notification specific for High Beta stocks …"; answer "High-Beta tab names + all Chart Maps names"; OFF in default_prefs, ON for the owner via the keep-set, LIVE).
-        "tape_burst_highbeta", "tape_burst_chartmaps",
-        # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
-        "tape_control",
+        # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
+        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+        "position_alert", "ops_alert",
     })
 
 

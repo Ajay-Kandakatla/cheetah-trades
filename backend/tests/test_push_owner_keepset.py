@@ -67,18 +67,10 @@ def test_keep_set_is_the_2026_09_21_nine():
     ride the wave". DECISIONS4: a NEW kind, LIVE, owner-only, ON for his
     devices; False in default_prefs."""
     assert subs.OWNER_KEEP_SET == frozenset({
-        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
-        "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert", "med_catalyst",
-        "ops_alert",
-        # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first); WIDENED 2026-10-16 — LIVE ("you alert me when that happens"); default_prefs stays False (AMENDMENTS10 F1)
-        "gajjala_setup",
-        # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
-        "gajjala_potential",
-        # WIDENED 2026-10-14 — 🎢 / 🗺️ tape-burst kinds (owner-only, LIVE)
-        "tape_burst_highbeta", "tape_burst_chartmaps",
-        # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
-        "tape_control"})
+        # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
+        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+        "position_alert", "ops_alert",
+    })
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices
@@ -90,9 +82,10 @@ def test_the_four_widened_kinds_are_on_for_the_owner_not_just_registered():
     that is registered but outside the keep-set comes back muted. These four
     must be True there, not merely present."""
     p = subs.owner_prefs()
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six): the four 2026-09-20 kinds are OFF for him now
     for k in ("potus_investment", "growth_demand_alert", "earnings_reaction",
               "board_arrival"):
-        assert p[k] is True, k
+        assert p[k] is False, k
 
 def test_owner_prefs_mute_everything_outside_the_keep_set():
     p = subs.owner_prefs()

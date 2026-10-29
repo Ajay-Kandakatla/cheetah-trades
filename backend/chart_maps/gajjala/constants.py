@@ -258,7 +258,7 @@ TRADER_FETCH_TIMEOUT_SEC = 5.0           # TRANSPORT — MINE: worst case 3 prof
 # below is MINE (a Cheetah transport / page default) or derived — NO GG number is copied or changed here, and none of
 # his K-numbers moves. UNMEASURED: nothing has measured a 1-minute read.
 GAJJALA_1M_ENABLED = True                # MINE — kill switch; env GAJJALA_1M_ENABLED=0 also stops it (read by run.main + run_1m)
-GAJJALA_1M_PUSH_MODE = "shadow"          # MINE — HIS CALL #1: every 1-minute A+ and 🧠 potential recorded, never sent
+GAJJALA_1M_PUSH_MODE = "live"            # Ajay 2026-10-29 ("Only give me Gajjalas chart notifications from both tabs, / I am missing out the ones in noise." — HIS CALL #1 of the 1-minute page answered); "shadow" 2026-10-27…28 (recorded, never sent)
 GG1M_TAB_LABEL = "Gajjala's 1-min"       # MINE — HIS CALL #10
 GG1M_CADENCE_SEC = 60                    # TRANSPORT — one iteration per closed 1-minute bar
 GG1M_MAX_NAMES = 60                      # TRANSPORT — MINE (HIS CALL #3): names per iteration, top change first

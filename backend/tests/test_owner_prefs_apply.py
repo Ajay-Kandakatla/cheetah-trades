@@ -1,8 +1,12 @@
-"""`scripts.owner_prefs_apply` — the data write behind the 2026-09-20 keep-set.
+"""`scripts.owner_prefs_apply` — the data write behind the owner keep-set.
 
 The code change only decides what a NEWLY registered device starts with. His
-three phones are already registered, so this script is what actually turns
-🏛️ / 📣 / ✨ on and the retired learning + volleyball kinds off on them.
+phones are already registered, so this script is what actually flips them.
+2026-10-29 (Ajay: "Only give me Gajjalas chart notifications from both tabs, /
+I am missing out the ones in noise."): it applies `subs.owner_prefs()` IN FULL —
+ON = the six-kind keep-set, OFF = every other bool kind of default_prefs()
+(never the quiet-hours settings) + the retired set. Both lists are derived,
+never retyped.
 
 It is a write against his live devices, so the tests below are mostly
 NEGATIVE: dry by default, owner-scoped, idempotent, and refusing outright when
@@ -41,10 +45,15 @@ class FakeColl:
 
 
 def _docs():
-    """Three owner devices (one is the Mac app) + two other users'."""
+    """Three owner devices (one is the Mac app) + two other users'. The owner's
+    stored prefs are the 2026-10-28 shape: tape bursts + the 5-minute Gajjala
+    kinds ON, the 1-minute kinds OFF (shadow), two kinds absent, the retired
+    learning + volleyball kinds still True."""
     base = dict(subs.default_prefs())
-    stale = {**base, "potus_investment": False, "minervini_flashcards": True,
-             "vb_workout": True, "vb_supplement": True, "vb_education": True}
+    stale = {**base, "tape_burst_highbeta": True, "tape_burst_chartmaps": True, "tape_control": True,
+             "gajjala_setup": True, "gajjala_potential": True, "gajjala_1m_setup": False,
+             "gajjala_1m_potential": False, "quiet_hours_enabled": True,
+             "minervini_flashcards": True, "vb_workout": True, "vb_supplement": True, "vb_education": True}
     stale.pop("earnings_reaction", None)
     stale.pop("board_arrival", None)
     return [
@@ -64,8 +73,48 @@ def _docs():
 # ── the lists are the constants themselves ─────────────────────────────────
 def test_the_on_and_off_lists_are_never_retyped():
     assert S.on_kinds() == sorted(subs.OWNER_KEEP_SET)
-    assert S.off_kinds() == sorted(subs.RETIRED_2026_09_20)
+    d = subs.default_prefs()
+    want_off = {k for k, v in d.items() if isinstance(v, bool) and k not in subs.OWNER_KEEP_SET
+                and not k.startswith("quiet_hours")} | set(subs.RETIRED_2026_09_20)
+    assert S.off_kinds() == sorted(want_off)
     assert not set(S.on_kinds()) & set(S.off_kinds())
+
+
+def test_on_plus_off_is_owner_prefs_in_full():
+    """Every bool kind of owner_prefs() is covered: True ones are ON, False ones are OFF (2026-10-29)."""
+    op = subs.owner_prefs()
+    for k, v in op.items():
+        if not isinstance(v, bool) or k.startswith("quiet_hours"):
+            continue
+        assert (k in S.on_kinds()) is v and (k in S.off_kinds()) is (not v), k
+
+
+def test_NEGATIVE_a_keep_set_kind_never_appears_in_off_kinds():
+    for k in subs.OWNER_KEEP_SET:
+        assert k not in S.off_kinds(), k
+
+
+def test_NEGATIVE_no_quiet_hours_setting_is_ever_flipped():
+    assert [k for k in S.off_kinds() + S.on_kinds() if k.startswith("quiet_hours")] == []
+    assert "quiet_hours_enabled" in subs.default_prefs()          # the setting exists — it is skipped, not absent
+
+
+def test_the_retired_set_is_still_turned_off():
+    assert set(subs.RETIRED_2026_09_20) <= set(S.off_kinds())
+    for k in ("tape_burst_highbeta", "tape_burst_chartmaps", "pattern_alert", "hot_pullback_alert", "demand_alert"):
+        assert k in S.off_kinds(), k
+
+
+def test_NEGATIVE_the_script_carries_no_kind_name_outside_its_docstring():
+    """The lists are derived — no kind of default_prefs / the keep-set / the retired set is typed in the code."""
+    import ast
+    src = Path(S.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    doc = ast.get_docstring(tree)
+    kinds = set(subs.default_prefs()) | set(subs.OWNER_KEEP_SET) | set(subs.RETIRED_2026_09_20)
+    literals = {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)
+                and n.value != doc}
+    assert not (literals & kinds), sorted(literals & kinds)
 
 
 # ── dry run ────────────────────────────────────────────────────────────────
@@ -80,10 +129,15 @@ def test_dry_run_changes_nothing_but_reports_every_device():
     # the Mac device is one of the three, not skipped for being a mac row
     assert {r["kind"] for r in out["rows"]} == {"web", "mac"}
     for row in out["rows"]:
-        assert row["changes"]["potus_investment"] == [False, True]
-        assert row["changes"]["earnings_reaction"] == [None, True]
-        assert row["changes"]["board_arrival"] == [None, True]
+        assert row["changes"]["tape_burst_highbeta"] == [True, False]
+        assert row["changes"]["tape_burst_chartmaps"] == [True, False]
+        assert row["changes"]["gajjala_1m_setup"] == [False, True]
+        assert row["changes"]["gajjala_1m_potential"] == [False, True]
+        assert row["changes"]["earnings_reaction"] == [None, False]
         assert row["changes"]["minervini_flashcards"] == [True, False]
+        # NEGATIVE: an already-right kind and the quiet-hours setting are not in the diff
+        assert "gajjala_setup" not in row["changes"] and "position_alert" not in row["changes"]
+        assert not [k for k in row["changes"] if k.startswith("quiet_hours")]
 
 
 # ── apply ──────────────────────────────────────────────────────────────────
@@ -100,6 +154,13 @@ def test_apply_flips_exactly_the_two_lists_on_owner_devices_only():
             assert d["prefs"][k] is True, k
         for k in S.off_kinds():
             assert d["prefs"][k] is False, k
+        # 2026-10-29: the stored bool kinds now equal owner_prefs() — the tape bursts are OFF on his device
+        op = subs.owner_prefs()
+        for k, v in op.items():
+            if isinstance(v, bool) and not k.startswith("quiet_hours"):
+                assert d["prefs"][k] is v, k
+        assert d["prefs"]["tape_burst_highbeta"] is False and d["prefs"]["tape_burst_chartmaps"] is False
+        assert d["prefs"]["quiet_hours_enabled"] is True, "NEGATIVE: his quiet-hours setting is never touched"
         assert isinstance(d["updated_at"], int)
     # NEGATIVE: the other users' documents are byte-identical
     assert [dict(d) for d in coll.docs if d["user_email"] == OTHER] == others_before
@@ -112,8 +173,9 @@ def test_apply_touches_only_the_changed_keys_never_the_whole_prefs_dict():
         keys = set(upd["$set"]) - {"updated_at"}
         assert keys <= {f"prefs.{k}" for k in S.on_kinds() + S.off_kinds()}
         assert "prefs" not in upd["$set"], "never overwrite the whole dict"
-        # the four already-True keep-set kinds are not rewritten
-        assert "prefs.demand_alert" not in keys
+        # the already-True keep-set kinds are not rewritten; the quiet-hours settings never
+        assert "prefs.position_alert" not in keys and "prefs.gajjala_setup" not in keys
+        assert not [k for k in keys if k.startswith("prefs.quiet_hours")]
 
 
 def test_a_second_apply_is_a_no_op():
@@ -138,9 +200,11 @@ def test_a_truthy_non_boolean_pref_still_counts_as_a_change():
     """`1 == True` but `1 is not True` — a legacy integer must be rewritten to
     a real boolean, or `list_subscriptions` filtering can drift."""
     docs = _docs()[:1]
-    docs[0]["prefs"]["board_arrival"] = 1
+    docs[0]["prefs"]["gajjala_setup"] = 1
+    docs[0]["prefs"]["pattern_alert"] = 0
     out = S.apply(docs, owner=OWNER, apply=False)
-    assert out["rows"][0]["changes"]["board_arrival"] == [1, True]
+    assert out["rows"][0]["changes"]["gajjala_setup"] == [1, True]
+    assert out["rows"][0]["changes"]["pattern_alert"] == [0, False]
 
 
 def test_main_refuses_before_reading_a_device_when_the_env_disagrees(monkeypatch, capsys):
@@ -184,7 +248,7 @@ def test_main_is_dry_by_default_and_writes_only_with_apply(monkeypatch, capsys):
     assert coll.updates == [], "default run must be dry"
     assert "applied no" in out and "dry run" in out
     assert "untouched (not the owner): 2" in out
-    assert "potus_investment False→True" in out
+    assert "tape_burst_highbeta True→False" in out and "gajjala_1m_setup False→True" in out
 
     assert S.main(["--apply"]) == 0
     assert len(coll.updates) == 3

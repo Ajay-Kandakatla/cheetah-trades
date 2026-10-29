@@ -32,10 +32,13 @@ Writes: ONLY `grade_step` (the 20:15 ET nightly's LAST step) writes, into gajjal
 🚩 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.7 / WP-C). Ajay: "do everything and also add the track record for it
 from today..". The SAME ledger for the 1-minute page's store (`V.of(store)` = variant GG1, its own
 `gajjala_1m_potentials` / `_alerts` / `_ledger`): a 🧠 row is a tracker doc whose push state is one of the variant's
-`ledger_push_states` (GG1: "pushed" and "shadow" — every 1-minute potential is recorded in shadow, never sent; HIS CALL
-#2 pools them in the headline %), links via potential.deep_link(…, v), no ⏪ replay line, no session before
-GC.GG1M_RECORD_FROM read, and its served words from variant.WORDS_1M (`_variant_words`). GG5 (variant None / a GG5
-store) keeps every byte and every call shape. Operational accounting, UNMEASURED.
+`ledger_push_states` (GG1: "pushed" and "shadow" — the 1-minute potentials were recorded in shadow, never sent,
+2026-10-27 … 2026-10-28 and ring live since 2026-10-29; HIS CALL #2 pools both in the headline %), links via
+potential.deep_link(…, v), no ⏪ replay line, no session before GC.GG1M_RECORD_FROM read, and its served words from
+variant.WORDS_1M (`_variant_words`). 2026-10-29 (Ajay: "Only give me Gajjalas chart notifications from both tabs"): a
+GG1 🧠 row carries `push_state` (its tracker doc's push state) and its kind word is printed FROM it — "shadow" never
+reads as sent, "pushed" never as recorded-only; the A+ rows read KIND_TEXT by their line, which is the claim's own state.
+GG5 (variant None / a GG5 store) keeps every byte and every call shape. Operational accounting, UNMEASURED.
 """
 from __future__ import annotations
 
@@ -331,7 +334,10 @@ def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
     t, s = _num(trig), _num(stop)
     r_pct = round(float(_D(r) / _D(t) * 100), 4) if plan == PLANS[0] else None
     rid = str(doc.get("_id")) if line == LINES[2] else ledger_id(d.isoformat(), sym, setup, kind)   # ⏪ D5
-    return {"id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
+    extra = {}
+    if not V.is_gg5(v):                       # 2026-10-29: the 1-minute row's own push state (GG5 rows gain no key)
+        extra["push_state"] = (doc.get("push") or {}).get("state") if kind == KINDS[0] else doc.get("state")
+    return {**extra, "id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
             "thin": bool(r_pct is not None and r_pct < GC.LEDGER_MIN_R_PCT), "plan": plan,
@@ -1761,21 +1767,39 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             # FE sorts by — the rows above stay in the served (chronological) order; the server never reorders
             "sorts": _sorts(), "sort_param": SORT_PARAM, "sort_default": SORT_KEYS[0], "bucket_order": list(BUCKETS),
             "aplus": aplus_block(ap, ap_days, has_replay, ap_prov)}
-    return block if gg5 else _variant_words(block, v)
+    return block if gg5 else _variant_words(block, v, states={r["id"]: r.get("push_state") for r in rows
+                                                               if r.get("kind") == KINDS[0]})
 
 
-def _variant_words(block: dict, v) -> dict:
+POTENTIAL_STATE_WORD = {"shadow": "ledger_kind_potential_shadow", "pushed": "ledger_kind_potential_pushed"}
+LEAD_WORD = {frozenset(): "ledger_counts_lead", frozenset({"shadow"}): "ledger_counts_lead_shadow",
+             frozenset({"pushed"}): "ledger_counts_lead_pushed",
+             frozenset({"shadow", "pushed"}): "ledger_counts_lead_mixed"}
+
+
+def _variant_words(block: dict, v, states: Optional[dict] = None) -> dict:
     """🚩 2026-10-27 — the 1-minute page's served words over the SAME block (variant.WORDS_1M, numbers at call time):
-    title, honesty, the 🧠 rows' kind word (every one recorded in shadow, never sent), the headline counts lines led
-    by the counts lead, and the empty text. In place; GG5 never calls it."""
+    title, honesty, the rows' kind words, the headline counts lines led by the counts lead, and the empty text. In
+    place; GG5 never calls it. 2026-10-29: `states` = {🧠 row id: its push state} over EVERY 🧠 row of the span
+    (served_block's rows — the counts cover all of them, the served days may be capped); a 🧠 row's kind word and the
+    counts lead are printed FROM those states (shadow → "never sent", pushed → "live"), the neutral word when a row
+    carries neither; an A+ row keeps KIND_TEXT (its line IS the claim's state) and reads the neutral A+ word only when
+    KIND_TEXT has none. `states` None (a direct call) → each served 🧠 row's own `push_state`, else neutral."""
     block["title"] = V.word("ledger_title", v)
     block["honesty"] = V.word("ledger_honesty", v)
-    kind_word = V.word("ledger_kind_potential", v)
+    neutral = V.word("ledger_kind_potential", v)
+    served = []
     for d in block.get("days") or []:
         for r in d.get("rows") or []:
             if (r.get("kind"), r.get("line")) == (KINDS[0], LINES[0]):
-                r["kind_text"] = kind_word
-    lead = V.word("ledger_counts_lead", v)
+                st = states.get(r.get("id")) if isinstance(states, dict) else r.get("push_state")
+                served.append(st)
+                key = POTENTIAL_STATE_WORD.get(st)
+                r["kind_text"] = V.word(key, v) if key else neutral
+            elif r.get("kind") == KINDS[1] and (r.get("kind"), r.get("line")) not in KIND_TEXT:
+                r["kind_text"] = V.word("ledger_kind_aplus", v)
+    pool = states.values() if isinstance(states, dict) else served
+    lead = V.word(LEAD_WORD[frozenset(st for st in pool if st in POTENTIAL_STATE_WORD)], v)
     ct = block.get("counts_text")
     if isinstance(ct, dict):
         block["counts_text"] = {h: (f"{lead} · {t}" if isinstance(t, str) else t) for h, t in ct.items()}

@@ -171,12 +171,12 @@
     "title": "🧠 Potential — 1 trigger armed · 0 building · 1 first seen today · UNMEASURED"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say so. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ on this page rings your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\") — once per name, setup and day; the A+ of 2026-10-27 to 2026-10-28 were recorded in shadow, never sent. UNMEASURED."
    },
    "push_potential": {
-    "mode": "shadow",
-    "text": "🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). Never sent until you say so. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "mode": "live",
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -723,7 +723,7 @@
    ],
    "variant": {
     "api_base": "/chart-maps/gajjala-1m",
-    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Every alert here is recorded in shadow, never sent, until you say so. Nothing measured.",
+    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Its alerts ring your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\"); from 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. Nothing measured.",
     "key": "gajjala_1m",
     "label": "Gajjala's 1-min",
     "primary": "1m",
@@ -860,12 +860,12 @@
     "warming": false
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say so. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ on this page rings your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\") — once per name, setup and day; the A+ of 2026-10-27 to 2026-10-28 were recorded in shadow, never sent. UNMEASURED."
    },
    "push_potential": {
-    "mode": "shadow",
-    "text": "🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). Never sent until you say so. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "mode": "live",
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -1616,7 +1616,7 @@
    },
    "variant": {
     "api_base": "/chart-maps/gajjala-1m",
-    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Every alert here is recorded in shadow, never sent, until you say so. Nothing measured.",
+    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Its alerts ring your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\"); from 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. Nothing measured.",
     "key": "gajjala_1m",
     "label": "Gajjala's 1-min",
     "primary": "1m",
@@ -1754,12 +1754,12 @@
     "warming": false
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say so. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ on this page rings your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\") — once per name, setup and day; the A+ of 2026-10-27 to 2026-10-28 were recorded in shadow, never sent. UNMEASURED."
    },
    "push_potential": {
-    "mode": "shadow",
-    "text": "🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). Never sent until you say so. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "mode": "live",
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -2477,7 +2477,7 @@
         "id": "2026-10-27|GGA|horizontal_fade|potential",
         "key": "2026-10-27-GGA-horizontal_fade-potential",
         "kind": "potential",
-        "kind_text": "🧠 shadow",
+        "kind_text": "🧠 shadow — never sent",
         "line": "live",
         "loss_text": null,
         "next": {
@@ -2518,7 +2518,7 @@
         "id": "2026-10-27|GGB|bull_flag|potential",
         "key": "2026-10-27-GGB-bull_flag-potential",
         "kind": "potential",
-        "kind_text": "🧠 shadow",
+        "kind_text": "🧠 shadow — never sent",
         "line": "live",
         "loss_text": null,
         "next": {
@@ -2559,7 +2559,7 @@
         "id": "2026-10-27|GGB|kiss_fly|potential",
         "key": "2026-10-27-GGB-kiss_fly-potential",
         "kind": "potential",
-        "kind_text": "🧠 shadow",
+        "kind_text": "🧠 shadow — never sent",
         "line": "live",
         "loss_text": null,
         "next": {
@@ -2600,7 +2600,7 @@
         "id": "2026-10-27|GGB|horizontal_fade|potential",
         "key": "2026-10-27-GGB-horizontal_fade-potential",
         "kind": "potential",
-        "kind_text": "🧠 shadow",
+        "kind_text": "🧠 shadow — never sent",
         "line": "live",
         "loss_text": null,
         "next": {
@@ -2664,7 +2664,7 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of this page's alerts as RECORDED — none reached your phone. The 🧠 potentials recorded in shadow make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has measured this page.",
+    "honesty": "A ledger of this page's alerts: from 2026-10-27 to 2026-10-28 they were recorded in shadow (never sent); since 2026-10-29 they ring your phone by your call. Each row's kind says which. The 🧠 potentials — shadow and sent — make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has measured this page.",
     "kind_empty_text": "No 🎯 A+ alert on this span.",
     "kind_param": "kind",
     "kinds": [
@@ -2724,7 +2724,7 @@
       "label": "All"
      }
     ],
-    "title": "🏁 Track record — every 1-minute Gajjala alert, recorded in shadow since 2026-10-27, graded by GG's trade math · UNMEASURED",
+    "title": "🏁 Track record — every 1-minute Gajjala alert since 2026-10-27, graded by GG's trade math · UNMEASURED",
     "today_text": "Today · through 10:08 ET · not final",
     "views": {
      "default": "all",
@@ -2750,7 +2750,7 @@
    },
    "variant": {
     "api_base": "/chart-maps/gajjala-1m",
-    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Every alert here is recorded in shadow, never sent, until you say so. Nothing measured.",
+    "honesty": "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call (2026-10-27). Its alerts ring your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart notifications from both tabs\"); from 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. Nothing measured.",
     "key": "gajjala_1m",
     "label": "Gajjala's 1-min",
     "primary": "1m",

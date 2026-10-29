@@ -110,7 +110,8 @@ def test_numbers_are_read_at_call_time(monkeypatch):
 
 
 def test_the_mine_constants():
-    assert GC.GAJJALA_1M_ENABLED is True and GC.GAJJALA_1M_PUSH_MODE == "shadow"
+    # WIDENED 2026-10-29 — HIS CALL #1 answered (Ajay: "Only give me Gajjalas chart notifications from both tabs"): live
+    assert GC.GAJJALA_1M_ENABLED is True and GC.GAJJALA_1M_PUSH_MODE == "live" and V.push_mode(V.GG1) == "live"
     assert (GC.GG1M_CADENCE_SEC, GC.GG1M_MAX_NAMES, GC.GG1M_MINUTE_BUDGET_SEC, GC.GG1M_SLOT_MARGIN_SEC) == (60, 60, 35, 20)
     assert (GC.GG1M_LEASE_SEC, GC.GG1M_LEASE_MIN_GAP_SEC) == (55, 0)
     assert GC.GG1M_STALE_AFTER_SEC == max(300, 3 * GC.GG1M_CADENCE_SEC) == 300
@@ -147,16 +148,28 @@ def test_frame_minutes():
 def test_words_frozen_and_built_from_the_variant():
     assert dict(V.words(V.GG5)) == {} and V.word("title", V.GG5) is None               # NEGATIVE: GG5 words stay put
     assert V.word("title", V.GG1) == "🚩 Gajjala's — the same rules on 1-minute candles · Cheetah variant · UNMEASURED"
+    # WIDENED 2026-10-29 — LIVE words (Ajay: "Only give me Gajjalas chart notifications from both tabs"); the shadow
+    # period 2026-10-27 … 2026-10-28 stays named in each
     assert V.word("honesty", V.GG1) == (
         "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call "
-        "(2026-10-27). Every alert here is recorded in shadow, never sent, until you say so. Nothing measured.")
-    assert V.word("push", V.GG1) == ("A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say "
-                                     "so. UNMEASURED.")
+        "(2026-10-27). Its alerts ring your phone since 2026-10-29 by your call (\"Only give me Gajjalas chart "
+        "notifications from both tabs\"); from 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. "
+        "Nothing measured.")
+    assert V.word("push", V.GG1) == ("📲 Every A+ on this page rings your phone since 2026-10-29 by your call (\"Only "
+                                     "give me Gajjalas chart notifications from both tabs\") — once per name, setup "
+                                     "and day; the A+ of 2026-10-27 to 2026-10-28 were recorded in shadow, never sent. "
+                                     "UNMEASURED.")
     assert V.word("held_stale_tape", V.GG1) == "no print in the last 1-minute bar"
-    assert V.word("ledger_title", V.GG1) == ("🏁 Track record — every 1-minute Gajjala alert, recorded in shadow since "
-                                             "2026-10-27, graded by GG's trade math · UNMEASURED")
-    assert V.word("ledger_kind_potential", V.GG1) == "🧠 shadow"
-    assert V.word("ledger_counts_lead", V.GG1) == "🧠 shadow — recorded, never sent"
+    assert V.word("ledger_title", V.GG1) == ("🏁 Track record — every 1-minute Gajjala alert since 2026-10-27, graded "
+                                             "by GG's trade math · UNMEASURED")
+    assert V.word("ledger_kind_potential", V.GG1) == "🧠 potential (1-minute)"
+    assert V.word("ledger_kind_potential_shadow", V.GG1) == "🧠 shadow — never sent"
+    assert V.word("ledger_kind_potential_pushed", V.GG1) == "🧠 live"
+    assert V.word("ledger_kind_aplus", V.GG1) == "A+ (1-minute)"
+    assert V.word("ledger_counts_lead", V.GG1) == "🧠 potentials"
+    assert V.word("ledger_counts_lead_shadow", V.GG1) == "🧠 shadow — recorded, never sent"
+    assert V.word("ledger_counts_lead_pushed", V.GG1) == "🧠 live — sent to your phone"
+    assert V.word("ledger_counts_lead_mixed", V.GG1) == "🧠 shadow (recorded, never sent) + live (sent)"
     assert V.word("ledger_empty", V.GG1) == "No 1-minute alert recorded on this span yet (the record starts 2026-10-27)."
     assert V.word("nope", V.GG1) is None
     for k in V.WORDS_1M:
@@ -168,6 +181,28 @@ def test_words_frozen_and_built_from_the_variant():
 def test_NEGATIVE_the_words_cannot_be_rewritten():
     with pytest.raises(TypeError):
         V.WORDS_1M["title"] = "x"
+    with pytest.raises(TypeError):
+        V.WORDS_1M_SHADOW["push"] = "x"
+
+
+def test_a_flip_back_to_shadow_serves_the_2026_10_27_words_byte_for_byte(monkeypatch):
+    """2026-10-29: the words follow the mode at call time. NEGATIVE: in shadow no served push / honesty sentence says
+    "rings your phone"; the shadow sentences are the 2026-10-27 ones, unchanged."""
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")
+    assert V.word("push", V.GG1) == ("A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say "
+                                     "so. UNMEASURED.")
+    assert V.word("honesty", V.GG1) == (
+        "GG trades these setups on 5-minute bars; this page runs the same bar-count rules on 1-minute bars by your call "
+        "(2026-10-27). Every alert here is recorded in shadow, never sent, until you say so. Nothing measured.")
+    for k in ("push", "honesty", "ledger_honesty"):
+        assert "rings your phone" not in V.word(k, V.GG1) and "ring your phone" not in V.word(k, V.GG1), k
+    # 2026-10-29 (verifier LOW): the 🏁 honesty line has its shadow twin — the 2026-10-27 sentence, byte for byte
+    assert V.word("ledger_honesty", V.GG1).startswith("A ledger of this page's alerts as RECORDED — none reached your phone.")
+    assert set(V.WORDS_1M_SHADOW) <= set(V.WORDS_1M)
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "junk")                            # fail closed → shadow words
+    assert V.word("push", V.GG1).startswith("A+ on this page is in SHADOW")
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "live")
+    assert "rings your phone since 2026-10-29" in V.word("push", V.GG1)
 
 
 def test_served_block():
@@ -538,6 +573,7 @@ def test_NEGATIVE_the_same_0946_bar_on_5m_is_still_his_first_15():
 
 
 def test_gg1_shadow_run_pass_never_calls_send(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     monkeypatch.setattr(AL, "_default_send", boom)
     st, shared = gg1_store()
     send = Rec(AssertionError("sent"))
@@ -555,6 +591,7 @@ def test_gg1_shadow_run_pass_never_calls_send(monkeypatch):
 
 
 def test_NEGATIVE_gg1_with_no_sender_given_never_reaches_the_default(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     monkeypatch.setattr(AL, "_default_send", boom)
     st, _ = gg1_store()
     out = AL.run_pass({"GGA": {"bull_flag": _aplus()}}, _frames(), at(10, 41), S, store=st)
@@ -629,11 +666,18 @@ def test_held_words():
     assert PT.HELD_WORDS["stale_tape"] == "no print in the last 5-minute bar"            # NEGATIVE: GG5 unchanged
 
 
-def test_push_note_and_pass_times():
+def test_push_note_and_pass_times(monkeypatch):
     g1 = PT.push_note(S, V.GG1)
-    assert g1 == ("🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time "
-                  "it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). "
-                  "Never sent until you say so. " + PT.TAIL + ".")
+    # WIDENED 2026-10-29 — live (Ajay: "Only give me Gajjalas chart notifications from both tabs")
+    assert g1 == ("🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup "
+                  "and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never "
+                  "09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, "
+                  "never sent. " + PT.TAIL + ".")
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")                         # a flip back: the 10-27 words
+    assert PT.push_note(S, V.GG1) == (
+        "🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time "
+        "it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). "
+        "Never sent until you say so. " + PT.TAIL + ".")
     assert PT.push_note(S).startswith("🧠 Potentials ring your phone live")             # NEGATIVE: GG5 unchanged
     assert PT.pass_times(S, V.GG1) == ("04:01", "20:00")
     assert PT.pass_times(S) == PT.pass_times(S, V.GG5) == ("04:01", "19:56")
@@ -647,6 +691,7 @@ def _go(st, now, reads, *, send, frames):
 
 
 def test_gg1_potential_shadow_claims_settles_and_never_sends(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     monkeypatch.setattr(PT, "_default_send", boom)
     st, shared = gg1_store()
     seed(st)
@@ -666,7 +711,8 @@ def test_gg1_potential_shadow_claims_settles_and_never_sends(monkeypatch):
     assert again["shadow"] == 0 and send.calls == []                                   # once per name, setup, session
 
 
-def test_NEGATIVE_gg1_stale_1m_tape_is_held_with_the_1m_word():
+def test_NEGATIVE_gg1_stale_1m_tape_is_held_with_the_1m_word(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     st, _ = gg1_store()
     seed(st)
     now = at(10, 6)

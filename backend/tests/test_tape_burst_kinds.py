@@ -472,8 +472,9 @@ def test_prefs_owner_only_on_for_him_trade_flash_stays_off(monkeypatch):
     d = subs.default_prefs()
     for k in TBK.KINDS:
         assert d[k] is False, k
-        assert k in subs.OWNER_KEEP_SET and subs.owner_prefs()[k] is True, k
-        assert subs.prefs_for("ajaykandakatla@gmail.com")[k] is True
+        # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six) — 662 tape-burst pings in 7 days buried the Gajjala ones
+        assert k not in subs.OWNER_KEEP_SET and subs.owner_prefs()[k] is False, k
+        assert subs.prefs_for("ajaykandakatla@gmail.com")[k] is False
         assert subs.prefs_for("someone@else.com")[k] is False, "NEGATIVE: owner-only"
     assert subs.owner_prefs()["trade_flash"] is False and "trade_flash" not in subs.OWNER_KEEP_SET
 

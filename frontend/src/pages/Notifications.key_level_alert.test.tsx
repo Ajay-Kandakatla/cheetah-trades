@@ -96,10 +96,12 @@ describe('Notifications · 🔑 key level closed through (2026-09-25)', () => {
     expect(togglePref).toHaveBeenCalledWith('https://push.example/aaa', KIND);
   });
 
-  it('Essentials (the keep-set mirror) turns it on and names it — his 2026-09-25 answer', () => {
+  it('Essentials (the keep-set mirror) turns it OFF since 2026-10-29 — it left the keep-set', () => {
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): 🔑 left the keep-set.
     const ess: any = PRESETS.find((p) => p.id === 'essentials')!;
-    expect(ess.pref[KIND]).toBe(true);
-    expect(ess.detail).toMatch(/🔑 a close through a key level/);
+    expect(ess.pref[KIND]).toBe(false);
+    // NEGATIVE: the preset no longer names it as on
+    expect(ess.detail).not.toMatch(/🔑 a close through a key level/);
     // The derived presets follow the group like every other trading kind.
     const pref = (id: string) => (PRESETS.find((p) => p.id === id)!.pref as any)[KIND];
     expect(pref('all_off')).toBe(false);

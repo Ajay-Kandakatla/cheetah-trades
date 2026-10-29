@@ -33,8 +33,11 @@ UNMEASURED. Every body ends "UNMEASURED — his setup, not a buy signal". Nothin
 
 THE 1-MINUTE PAGE (2026-10-27, BUILD_SPEC27 §3.5 — Ajay "do the same logic of Gajjalas but on 1 min candles"): the SAME
 gate runs for a `variant.Variant` read off the store (`V.of(store)`): its claim prefix ("GG1:…" / "SHADOW:GG1:…"), its
-push kind / sender / mode switch (GAJJALA_1M_PUSH_MODE — shadow: recorded, never sent), its tab in the url, and its
-freshness clock (one 1-minute cadence + BAR_SETTLE_SEC). GG5 (today's tab) keeps every byte.
+push kind / sender / mode switch (GAJJALA_1M_PUSH_MODE — shadow 2026-10-27 … 2026-10-28: recorded, never sent; LIVE since
+2026-10-29, Ajay: "Only give me Gajjalas chart notifications from both tabs"), its tab in the url, and its freshness
+clock (one 1-minute cadence + BAR_SETTLE_SEC). GG5 (today's tab) keeps every byte. THE SHADOW-KEY GUARD STAYS on the live
+path: a live claim refuses a key whose `SHADOW:GG1:` twin is already on file, so an A+ the shadow recorded earlier the
+same day never rings after the flip (no double record, no late ring).
 """
 from __future__ import annotations
 
@@ -328,7 +331,7 @@ def _tag_prefix(v) -> str:
 # ── send ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 def _default_send(owner: str, payload: dict, variant=None) -> dict:
     """push.hooks' sender of the variant (GG5 notify_gajjala_setup — the shipped line; the 1-minute page's is named
-    by variant.GG1.send_setup and is never reached while its mode is shadow)."""
+    by variant.GG1.send_setup — live since 2026-10-29, and never reached while its mode is shadow)."""
     from push import hooks
     if V.is_gg5(variant):
         return hooks.notify_gajjala_setup(owner=owner, payload=payload)

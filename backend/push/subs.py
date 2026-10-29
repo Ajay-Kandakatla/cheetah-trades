@@ -317,102 +317,59 @@ def _backfill(db):
     _backfilled = True
 
 
-# ── The owner's keep-set (Ajay 2026-09-08) ──────────────────────────────────
-# "Also kill the tape burst and pankaj and also few others miscellaneous
-# notifications... I need just supply demand and also Sell signals and buy
-# signals accurately."
+# ── The owner's keep-set (Ajay 2026-09-08; REPLACED 2026-10-29) ─────────────
+# REPLACED 2026-10-29. Ajay: "Only give me Gajjalas chart notifications from
+# both tabs, / I am missing out the ones in noise." Measured on his phone over
+# the 7 days before (push_history, sent > 0): tape_burst_chartmaps 337,
+# tape_burst_highbeta 325, gajjala_potential 155 — the Gajjala pings were
+# buried under the tape bursts. For the OWNER only, a registering device now
+# starts with EXACTLY six kinds (owner_prefs() / prefs_for() derive from this
+# set; everyone else keeps default_prefs(), unchanged); his already-registered
+# devices are flipped by scripts/owner_prefs_apply.py (a data write):
+#   * the four Gajjala chart kinds — 🚩 A+ and 🧠 potential, on the 5-minute tab
+#     and on the 1-minute tab ("both tabs");
+#   * position_alert — his 2026-09-09 answer to this same question: the stops
+#     on stocks he OWNS were not "other";
+#   * ops_alert — host health (🔋 battery, ⏰ cron late), not a chart kind;
+#     without it he never learns the alerts stopped (watchdog push approved
+#     2026-10-06).
+# "The PREF kills an alert, not the cron": every muted kind keeps running for
+# the boards' 🔔 chips, and no gate moved — this narrows which KINDS reach him,
+# not what any kind requires to fire.
 #
-# A NEW device registration used to get default_prefs() — every kind ON — which
-# is exactly how his second phone ended up carrying 335 promo movers, 183 pivot
-# alerts and 105 flash cards in a week. For the OWNER only, a registering device
-# starts with these five and nothing else; everyone else keeps default_prefs().
-# Muting a kind is a data write; this is the floor a re-subscribe falls back to.
-# REPLACED 2026-09-09. Ajay: "Can you give me hot pull back alerts and chart
-# pattern Alerts and also Sameday deman alerts please... Kill all other.. I just
-# wanna these alerts.. Default turn these on from tomorrow." Asked whether the
-# stop alerts on stocks he OWNS counted as "other", he chose to keep them and
-# drop the todo reminders.
-#
-# WHAT LEFT: zone_bounce_alert, supply_break_alert, todo_reminder.
-#
-# SAID OUT LOUD, BECAUSE THE CODE SHOULD NOT PRETEND OTHERWISE: the three
-# scanning kinds he chose are the three this app has measured at or below a coin
-# flip — hot pullback 51.8% (interval includes zero), chart patterns 49.3%
-# against a 50% placebo, same-day demand arrivals 52%. He was shown those
-# numbers and asked for them anyway, as a watchlist. Each push carries its own
-# record so the screen never implies more than the measurement supports.
-#
-# WIDENED 2026-09-20. Ajay: "Default on for any change of todays features
-# Bondes or Potus or explosive growth or Earnings I wanna see all of them."
-# → 🏛️ potus_investment (his #1 Yes), 🚀 growth_demand_alert (already
-# delivering: 6 pushes / 18 device deliveries since 2026-09-11 — listed here so
-# a re-registration cannot mute it), 📣 earnings_reaction
-# (chart_maps/earnings_alerts.py), ✨ board_arrival (sepa/board_arrival.py).
-# The four 2026-09-09 kinds stay. "Never loosen a GATE" still stands: this
-# widens which KINDS reach him, not what any kind requires to fire.
-#
-# WIDENED 2026-09-21. Ajay, asked whether to turn price alerts back on now that
-# they fire once per crossing (the latch, 37cd469): "Yes to all..".
-# `price_alert` was PAUSED 2026-06-13 (`_RETIRED_2026_06_13`) and his stored
-# prefs carry it False; both chokepoints open here — this set for the code,
-# scripts/owner_prefs_apply.py for the data. "Never loosen a GATE" still
-# stands: this widens which KINDS reach him, not what any kind requires to
-# fire — the latch, ALERT_COOLDOWN_SEC and _threshold are untouched.
+# History of the kinds that LEFT on 2026-10-29 (one line each — why they were in):
+#   hot_pullback_alert   in 2026-09-09 ("Can you give me hot pull back alerts…") — removed 2026-10-29 (his "Only give me Gajjalas chart notifications…")
+#   pattern_alert        in 2026-09-09 (same ask, "chart pattern Alerts") — removed 2026-10-29 (same words)
+#   demand_alert         in 2026-09-09 (same ask, "Sameday deman alerts") — removed 2026-10-29 (same words)
+#   potus_investment     in 2026-09-20 (his "Yes for #1") — removed 2026-10-29 (same words)
+#   growth_demand_alert  in 2026-09-20 ("Default on for any change of todays features…") — removed 2026-10-29 (same words)
+#   earnings_reaction    in 2026-09-20 (same ask) — removed 2026-10-29 (same words)
+#   board_arrival        in 2026-09-20 (same ask) — removed 2026-10-29 (same words)
+#   price_alert          in 2026-09-21 ("Yes to all..", the latch) — removed 2026-10-29 (same words)
+#   key_level_alert      in 2026-09-25 ("On: week + month + 52-week") — removed 2026-10-29 (same words)
+#   med_catalyst         in 2026-09-29 ("…and add right setup and alerts") — removed 2026-10-29 (same words)
+#   tape_burst_highbeta  in 2026-10-14 ("I need a tape burst notification…") — removed 2026-10-29 (same words; 325 pings / 7 days)
+#   tape_burst_chartmaps in 2026-10-14 (same ask) — removed 2026-10-29 (same words; 337 pings / 7 days)
+#   tape_control         in 2026-10-16 ("…alert me when the Buyers are winning in tape for IREN today.") — removed 2026-10-29 (same words)
+# Left earlier: zone_bounce_alert, supply_break_alert, todo_reminder (2026-09-09).
 OWNER_KEEP_SET: frozenset = frozenset({
-    "hot_pullback_alert",  # 🔥 the flush-and-turn board
-    "pattern_alert",       # 📐 named bullish reversal patterns
-    "demand_alert",        # 🧲 SAME-DAY arrivals at a tested demand band only
-    "position_alert",      # 🔴 stop / supply reached on stocks he actually owns
-    "potus_investment",    # 🏛️ federal stake reported (2026-09-20, his #1 Yes)
-    "growth_demand_alert", # 🚀 explosive-growth board name at demand
-    "earnings_reaction",   # 📣 earnings beat + institutional buying
-    "board_arrival",       # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth
-    "price_alert",         # 🔔 a line HE drew on a ticker page (2026-09-21, "Yes to all..")
-    "key_level_alert",     # 🔑 close through a week/month/52w key level (2026-09-25, his "On: week + month + 52-week")
-    # 🧬 med_catalyst (catalysts/medical/alerts.py, 2026-09-29). Ajay: "can you
-    # add a new routine to scan for … amd trails or other medi cal nws … and
-    # add right setup and alerts". ON for the owner because he asked for alerts
-    # — the key_level_alert precedent (False in default_prefs, in this set).
-    # HIS CALL #1: one word turns it off (drop this line). A MARKET kind
-    # (market_hours.gate). UNMEASURED: every push says "not a buy signal" /
-    # "not a sell signal"; setup: pending study.
-    "med_catalyst",
-    # 🚩 gajjala_setup (chart_maps/gajjala/alerts.py, 2026-10-13). WIDENED
-    # 2026-10-13 — DECISIONS "Pushes: YES — owner-only kind gajjala_setup, A+
-    # triggers only … pref toggle in push/subs.py". ON for the owner (the
-    # med_catalyst precedent: False in default_prefs, in this set). WIDENED
-    # 2026-10-16 — LIVE (Ajay: "you alert me when that happens"): every A+
-    # entry in the window rings his phone. The study read NULL (2026-10-14) —
-    # his call.
-    # A MARKET kind (market_hours.gate). UNMEASURED: "his setup, not a buy signal".
+    # 🚩 gajjala_setup (chart_maps/gajjala/alerts.py, 2026-10-13) — LIVE since
+    # 2026-10-16 (Ajay: "you alert me when that happens"). A MARKET kind.
+    # UNMEASURED: "his setup, not a buy signal".
     "gajjala_setup",
-    # 🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15). WIDENED
-    # 2026-10-15 — Ajay: "Give me an alert all continous tracker on these
-    # specifically when I get alert I will jump on to ride the wave". DECISIONS4:
-    # a NEW kind, LIVE (not shadow), owner-only, ON for his devices (the
-    # med_catalyst precedent: False in default_prefs, in this set). One push per
-    # (date, symbol, setup) the first time a read is a potential (forming, the
-    # trigger not printed). A MARKET kind (market_hours.gate). UNMEASURED — "a
-    # potential, not an entry; GG enters on the reclaim of the highs".
+    # 🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15) — LIVE
+    # (Ajay: "Give me an alert all continous tracker on these specifically when
+    # I get alert I will jump on to ride the wave"). A MARKET kind. UNMEASURED.
     "gajjala_potential",
-    # 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (orderflow/
-    # tape_burst_kinds.py, 2026-10-14). WIDENED 2026-10-14 — Ajay: "I need a
-    # tape burst notification specific for High Beta stocks from the reselinet
-    # separately and also other tape bursts from the Chart Maps page", and
-    # asked which names: "High-Beta tab names + all Chart Maps names". ON for
-    # the owner, LIVE (the med_catalyst precedent: False in default_prefs, in
-    # this set). His registered phones are flipped by
-    # scripts/owner_prefs_apply.py at deploy. `trade_flash` stays OUT (his
-    # 2026-09-08 "kill the tape burst"). MARKET kinds. UNMEASURED — a
-    # description of prints.
-    "tape_burst_highbeta",
-    "tape_burst_chartmaps",
-    # 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16). WIDENED
-    # 2026-10-16 — Ajay: "I wwant you to alert me when the Buyers are winning in
-    # tape for IREN today." ON for the owner, LIVE (False in default_prefs, in
-    # this set); his phones flipped by scripts/owner_prefs_apply.py at deploy.
-    # A MARKET kind. UNMEASURED.
-    "tape_control",
+    # 🚩 gajjala_1m_setup + 🧠 gajjala_1m_potential (the 1-minute page,
+    # chart_maps/gajjala/run_1m.py, 2026-10-27). Shadow 2026-10-27 … 2026-10-28;
+    # LIVE since 2026-10-29 by his call ("from both tabs" —
+    # GAJJALA_1M_PUSH_MODE). MARKET kinds. UNMEASURED.
+    "gajjala_1m_setup",
+    "gajjala_1m_potential",
+    # 🔴 position_alert — stop / supply reached on stocks he actually owns
+    # (kept 2026-09-09 and again 2026-10-29).
+    "position_alert",
     # 🩺 ops_alert (ops/docker_watchdog.py -> /admin/ops/alert). 2026-10-06, Ajay
     # approved the watchdog push; without this a re-registering phone mutes it.
     # Host health, not a trading kind: it widens nothing any gate requires.
@@ -523,8 +480,9 @@ def default_prefs() -> dict:
         # FLIPPED ON 2026-09-20, same day, on his follow-up: "Default on for
         # any change of todays features Bondes or Potus or explosive growth or
         # Earnings I wanna see all of them" — and "Yes for #1", the his-call
-        # item that asked exactly this. It is in OWNER_KEEP_SET too, so a
-        # re-registered device cannot quietly mute it again.
+        # item that asked exactly this. It was in OWNER_KEEP_SET too until
+        # 2026-10-29 (his "Only give me Gajjalas chart notifications from both
+        # tabs" — OFF for his devices since; see the keep-set's history).
         #
         # STILL A HEURISTIC, and the push says so: a regex over headlines with
         # no measured record. The gate is unchanged and stays the tightest
@@ -556,9 +514,9 @@ def default_prefs() -> dict:
         # companies where whcih have very high quality.").
         #
         # SHIPS OFF — the first kind in this dict that did (🔑 key_level_alert
-        # below is OFF in these defaults too, but ON for the owner). It is deliberate and
-        # it was CHECKED rather than assumed: OWNER_KEEP_SET below is an explicit
-        # nine-kind list and this is not on it, so `owner_prefs()` returns False
+        # below is OFF in these defaults too). It is deliberate and
+        # it was CHECKED rather than assumed: OWNER_KEEP_SET is an explicit
+        # list (six kinds since 2026-10-29) and this is not on it, so `owner_prefs()` returns False
         # for his devices either way. His 2026-09-20 "default on for any change
         # of todays features" named the features that existed THAT DAY; a kind he
         # has not seen yet does not inherit that sentence. He turns it on at
@@ -581,7 +539,9 @@ def default_prefs() -> dict:
         # are broken for a stock.").
         #
         # OFF for everyone else (default_prefs); ON for HIS devices through
-        # OWNER_KEEP_SET. Asked 2026-09-25, he answered "On: week + month +
+        # OWNER_KEEP_SET 2026-09-25 … 2026-10-28, OFF for him too since
+        # 2026-10-29 (his "Only give me Gajjalas chart notifications…").
+        # Asked 2026-09-25, he answered "On: week + month +
         # 52-week", scope "Holdings + Signals list", and "No, close only" to
         # intraday pierce pings. His already-registered phones are flipped by
         # scripts/owner_prefs_apply.py (a data write). It must still be here: a
@@ -595,8 +555,9 @@ def default_prefs() -> dict:
         # 2026-09-29: "…and add right setup and alerts").
         #
         # OFF for everyone else (default_prefs); ON for HIS devices through
-        # OWNER_KEEP_SET (HIS CALL #1). His already-registered phones are
-        # flipped by scripts/owner_prefs_apply.py after the promote (a data
+        # OWNER_KEEP_SET (HIS CALL #1) 2026-09-29 … 2026-10-28, OFF for him too
+        # since 2026-10-29 (his "Only give me Gajjalas chart notifications…";
+        # scripts/owner_prefs_apply.py flips the stored prefs, a data
         # write). It must still be here: a kind missing from default_prefs
         # targets ZERO devices and renders no toggle.
         #
@@ -625,19 +586,22 @@ def default_prefs() -> dict:
         # 🚩 The 1-minute page's A+ and 🧠 potential (chart_maps/gajjala/
         # run_1m.py, 2026-10-27, Ajay: "Can you create a new page, I would like
         # you to do the same logic of Gajjalas but on 1 min candles please.").
-        # False for everyone AND deliberately NOT in OWNER_KEEP_SET: every
-        # 1-minute alert is recorded in SHADOW, never sent (GAJJALA_1M_PUSH_MODE,
-        # HIS CALL #1 — going live = that constant + the keep-set). They must
-        # still be here: a kind missing from default_prefs targets ZERO devices
-        # and renders no toggle. MARKET kinds. UNMEASURED.
+        # False for everyone else; ON for HIS devices through OWNER_KEEP_SET
+        # since 2026-10-29 (Ajay: "Only give me Gajjalas chart notifications
+        # from both tabs" — HIS CALL #1 answered: GAJJALA_1M_PUSH_MODE "live" +
+        # the keep-set). Shadow 2026-10-27 … 2026-10-28 (recorded, never sent).
+        # They must still be here: a kind missing from default_prefs targets
+        # ZERO devices and renders no toggle. MARKET kinds. UNMEASURED.
         "gajjala_1m_setup": False,
         "gajjala_1m_potential": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/
         # tape_burst_kinds.py, Ajay 2026-10-14). OFF for everyone else; ON for
-        # HIS devices through OWNER_KEEP_SET (owner-only — send_to_user targets
-        # him alone). It must still be here: a kind missing from default_prefs
+        # HIS devices through OWNER_KEEP_SET 2026-10-14 … 2026-10-28, OFF for him
+        # too since 2026-10-29 (his "Only give me Gajjalas chart notifications…",
+        # 662 tape-burst pings in the 7 days before; owner-only — send_to_user
+        # targets him alone). It must still be here: a kind missing from default_prefs
         # targets ZERO devices and renders no toggle. MARKET kinds. UNMEASURED.
         "tape_burst_highbeta": False,
         "tape_burst_chartmaps": False,

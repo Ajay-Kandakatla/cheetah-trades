@@ -59,10 +59,14 @@ describe('Notifications · 🎚️ tape_control', () => {
     expect(screen.getByText(LABEL)).toBeTruthy();
   });
 
-  it('the detail says ON FOR YOUR PHONE, quotes his message verbatim, rings live, names IREN and its date', () => {
+  /* 2026-10-29 (BUILD_SPEC29 critic F1): the lead follows the keep-set, read through the Essentials preset (the page's
+     contract-pinned mirror of backend push/subs.OWNER_KEEP_SET). 🎚️ left it that day, so it leads OFF FOR YOUR PHONE. */
+  const onForHim = () => (PRESETS.find((p) => p.id === 'essentials')!.pref as any).tape_control === true;
+  it('the detail leads with the keep-set state (OFF FOR YOUR PHONE since 2026-10-29), quotes his message verbatim, rings live, names IREN and its date', () => {
     const d = detail();
-    expect(d.startsWith('ON FOR YOUR PHONE — ')).toBe(true);
-    for (const phrase of [ASK, 'everyone else starts off', 'It rings live.', 'IREN — pinned for 2026-10-16',
+    expect(onForHim()).toBe(false);
+    expect(d.startsWith(onForHim() ? 'ON FOR YOUR PHONE — ' : 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,")')).toBe(true);
+    for (const phrase of [ASK, 'everyone else starts off', 'it rings live.', 'IREN — pinned for 2026-10-16',
       'every ring listed on /alerts with its ticker linked to its tape']) {
       expect(d).toContain(phrase);
     }
@@ -80,16 +84,19 @@ describe('Notifications · 🎚️ tape_control', () => {
     }
   });
 
-  it('the Essentials preset turns it ON and names it as ringing live', () => {
+  it('the Essentials preset turns it OFF since 2026-10-29 and no longer names it', () => {
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): 🎚️ left the keep-set.
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
-    expect((ess.pref as any).tape_control).toBe(true);
-    expect(ess.detail).toContain('🎚️ buyers in control on the tape for your pinned names (2026-10-16, it rings live)');
+    expect((ess.pref as any).tape_control).toBe(false);
+    expect(ess.detail).not.toContain('🎚️ buyers in control');
     expect(ess.detail.endsWith('. Everything else muted.')).toBe(true);
   });
 
   it('NEGATIVE: never OFF BY DEFAULT, never shadow, never the reversal b-word, never a buy signal or a forecast word', () => {
     const d = detail();
     expect(d).not.toContain('OFF BY DEFAULT');
+    expect(d).not.toContain('ON FOR YOUR PHONE');  /* critic F1: it left the keep-set 2026-10-29 */
+    expect(d).not.toContain('owner keep-set');
     expect(d).not.toMatch(/shadow/i);
     expect(d).not.toMatch(/boun/i);
     expect(d).not.toMatch(/\bfak[e]\b/i);

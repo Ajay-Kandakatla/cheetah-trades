@@ -106,9 +106,10 @@ def test_the_kinds_read_ON_for_the_owner_from_the_keep_set(sec):
     from push import subs
     prefs = subs.owner_prefs()
     a = " ".join(sec["alerts"])
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six): both kinds left the keep-set → the panel reads OFF, still read from push.subs
     for kind in (TBK.KIND_HIGHBETA, TBK.KIND_CHARTMAPS):
-        assert prefs.get(kind) is True, kind
-    assert a.count("ON for you by default, owner-only") == 2
+        assert prefs.get(kind) is False, kind
+    assert "ON for you" not in a and a.count("ships OFF") == 2
 
 
 def test_negative_a_kind_not_ON_never_claims_ON(monkeypatch):

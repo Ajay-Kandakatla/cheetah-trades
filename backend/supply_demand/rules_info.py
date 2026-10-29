@@ -1159,18 +1159,23 @@ def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
     chart_maps.gajjala.variant GG1 (its frames' minutes) and GC.GG1M_RECORD_FROM, never typed: " " + the clause, or ""
-    when the module cannot load (the panel never breaks on it)."""
+    when the module cannot load (the panel never breaks on it). 2026-10-29 (BUILD_SPEC29 critic F2, words only — Ajay
+    "Only give me Gajjalas chart notifications from both tabs,"): the push half follows V.push_mode(GG1) at call time,
+    the live date V.LIVE_SINCE_1M — never typed here."""
     try:
         from chart_maps.gajjala import constants as GC
         from chart_maps.gajjala import variant as V
         v = V.GG1
         p, s = V.frame_minutes(v.primary, v), V.frame_minutes(v.slow, v)
+        live = V.push_mode(v) == "live"
+        since = V.LIVE_SINCE_1M if live else None
     except Exception as exc:                                    # noqa: BLE001
         log.warning("rules_info: gajjala one-minute clause unavailable: %s", exc)
         return ""
+    push = ("its alerts ring your phone since %s by your call; from %s until then they were recorded in shadow, never "
+            "sent." % (since, GC.GG1M_RECORD_FROM)) if live else "its alerts are recorded in shadow, never sent."
     return (" 🚩 %d-minute page: the same rules on CLOSED %d-minute bars (the Fade on %d-minute first), about once a "
-            "minute over the same list — a Cheetah variant by your call (%s); its alerts are recorded in shadow, never "
-            "sent." % (p, p, s, GC.GG1M_RECORD_FROM))
+            "minute over the same list — a Cheetah variant by your call (%s); %s" % (p, p, s, GC.GG1M_RECORD_FROM, push))
 
 
 def _gajjala_section() -> dict:

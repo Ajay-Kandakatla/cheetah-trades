@@ -537,8 +537,9 @@ def test_the_kind_is_registered_on_by_default_and_is_a_market_kind():
     from push import subs
     from market_hours import gate
     assert subs.default_prefs()[BA.KIND] is True
-    assert subs.owner_prefs()[BA.KIND] is True
-    assert BA.KIND in subs.OWNER_KEEP_SET
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
+    assert subs.owner_prefs()[BA.KIND] is False
+    assert BA.KIND not in subs.OWNER_KEEP_SET
     assert BA.KIND not in subs.DISABLED_ALERT_KINDS
     assert BA.KIND in gate.MARKET_ALERT_KINDS
     assert BA.KIND not in gate.PERSONAL_KINDS

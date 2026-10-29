@@ -318,6 +318,7 @@ def test_NEGATIVE_a_held_or_unlisted_name_is_never_read():
 
 # ── one iteration end to end (shadow) ─────────────────────────────────────────────────────────────────────────────
 def test_iteration_records_the_1m_aplus_in_shadow_and_never_sends(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     db, shared, st = world(monkeypatch)
     d = deps()
     out = R1.run_iteration(NOW, store=st, deps=d)
@@ -527,6 +528,7 @@ def test_NEGATIVE_an_on_open_iteration_writes_no_alerts_row_and_rings_nothing(mo
 
 
 def test_shadow_potentials_are_claimed_settled_and_never_sent(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     db, shared, st = world(monkeypatch)
     st.record_pass(S, NOW - timedelta(seconds=60), {"potential": {"tracked_today": 0}}, hhmm="10:07:31")
     d = deps()

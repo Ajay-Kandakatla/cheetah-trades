@@ -35,18 +35,18 @@ export const CATEGORIES: CategoryDef[] = [
   { key: 'position_alert', label: 'Portfolio alerts', emoji: '💼', group: 'trading',
     detail: 'Stop / target hit on the positions you hold — the up/down moves on your portfolio that need action.' },
   { key: 'price_alert', label: 'Price alerts', emoji: '🔔', group: 'trading',
-    detail: 'ON BY DEFAULT for you since 2026-09-21 — asked "Price alerts are retired in the push switch and off in your Notifications, so even a real crossing will not reach your phone. Turn them back on?", you said "Yes to all..". '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); switch it on here. ON BY DEFAULT for everyone else. For you it came back 2026-09-21 — asked "Price alerts are retired in the push switch and off in your Notifications, so even a real crossing will not reach your phone. Turn them back on?", you said "Yes to all..". '
       + 'WHAT FIRES: a rule YOU set on a ticker page — a level (above / below a price) or a percent move — when the live print crosses its line. '
       + 'It fires ONCE per crossing and re-arms only when price crosses back over the line (shipped 2026-09-21); a price that just sits past the line never rings again. '
       + 'The percent kinds measure from the price on the day you set the alert, and the message says so ("vs $… when you set it", with that date). '
-      + 'Paused 2026-06-13 with the retired market-scan kinds; turned back on 2026-09-21 at your ask. It is in the owner keep-set, so a re-registered device cannot quietly mute it. '
+      + 'Paused 2026-06-13 with the retired market-scan kinds; turned back on 2026-09-21 at your ask; muted on your phone again 2026-10-29 at your ask. '
       + 'Turning it on widened WHICH KINDS reach you — it did not loosen what a rule needs to fire. Not a signal: a line you drew.' },
   { key: 'promo_alert', label: 'Promo-circuit movers', emoji: '🎪', group: 'trading',
     detail: 'A name tagged by the caught pump accounts moves ±8% vs the prior close — pre-market, regular and after-hours. Once per direction per day. The tag is the promotion: a do-not-chase radar.' },
   { key: 'demand_alert', label: 'Reversal at demand', emoji: '🧲', group: 'trading',
     detail: 'ONLY A REVERSAL REACHES YOU (since 2026-09-09): the day\'s low touched the band and price is already lifting off it. Falling into, settling into, reclaiming from below and resting inside all still LIST on the boards and send nothing. On top of that: not a falling knife, the turn\u2019s mood bullish, and the band floor never pierced. A $1B+ name from the demand board ARRIVES inside, or within 1% of, a tested demand band today (yesterday it closed outside) — one push per band per day — plus one digest per 5-min check of names newly 1–3% above a band and falling. Names that have been sitting in a band are the board\'s business, not a buzz. Gabbar-level names get the same "nearing" tier under Buyable alerts. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05: \"Need only alerts on stocks that have atleast 5% to Supply and also <1% bounce from demand zone\"): the push fires only when the first band overhead is at least 5% above the print (nothing overhead passes) and the print sits between the band floor and 1% above its top; the boards still list every name.' },
   { key: 'growth_demand_alert', label: 'Explosive growth at demand', emoji: '\u{1F680}', group: 'trading',
-    detail: 'ON BY DEFAULT for you since 2026-09-20 (same words: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them."). '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); switch it on here. ON BY DEFAULT for everyone else since 2026-09-20 (your words then: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them."). '
       + 'A name from the \u{1F680} Explosive Growth board \u2014 sales up 100%+ AND quarterly EPS up 100%+ year-over-year, with the quarter before it also growing \u2014 is INSIDE a tested demand band whose floor has never been pierced. You asked for this separately from regular supply and demand: \"I wanna know when ever these are in demand, separately just trackers.\" THE BOARD HAS NO MARKET-CAP FLOOR (your call, \"remove the 700M rule for this page\"), but the PUSH still passes your 2026-09-05 standing gates \u2014 at least 5% of room to the first band overhead, and the print between the band floor and 1% above its top \u2014 because a 100% sales grower with 2% of room is still a bad entry. The third gate is `intact`, the only one that ever measured (+8.6pp win rate over 31,861 events); an order block is carried in the body as a DISPLAY note and gates nothing, because the ICT study measured +0.03R over 6,004 signals. A name the trading engine will REFUSE to buy (under $2 a share, or a known cap under $700M) still reaches you \u2014 labelled \u26D4 in the push body rather than silently dropped. One push per symbol per band per day; 4 ring individually, the rest share a digest. THE 100/100 SCREEN WAS MEASURED 2026-09-21 \u2014 a lean, not a finding; the \u{1F680} board carries the numbers. Treat it as a watchlist ping.' },
   { key: 'hot_pullback_alert', label: 'Hot Pullback', emoji: '🔥', group: 'trading',
     detail: 'A name that had been HOT takes one hard flush into a tested demand band and turns the same day — pushed at 08:15 ET from the CLOSED session recorded the evening before, never a live re-scan (mid-day the board repaints). One push per name per signal day; 4 ring individually, the rest share a digest. HONEST RECORD, and the push repeats it: 51.8% win over 83 trades on 50 dates, expectancy +0.10R with a 95% interval of −0.19R to +0.41R that INCLUDES ZERO, and no gate inside the rule separates (the demand band itself measures p=0.198). You asked for this as a watchlist ping after seeing those numbers — treat it as one. The edge, such as it is, is gone by day 5.' },
@@ -57,22 +57,22 @@ export const CATEGORIES: CategoryDef[] = [
   { key: 'supply_break_alert', label: 'Breaking resistance → new highs', emoji: '🚀', group: 'trading',
     detail: 'A $1B+ name within 1% under the ceiling of its LAST supply band — nothing overhead, or the band sits at the 52-week high — or that broke it today (up to 3% through). Once per band per day; the strongest 3 per minute get their own push, the rest share one digest. Bands tested 2+ times only (the board on SEPA → Supply / Demand and Chart Maps → Deep Demand lists every band with its touch count). The near-demand side of the same every-minute check reuses the 🧲 demand-zone approach kind above. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05): pushes only when the NEXT band above the one being broken is at least 5% away (nothing overhead passes); the boards still list every name.' },
   { key: 'potus_investment', label: 'Federal stake reported', emoji: '\u{1F3DB}\uFE0F', group: 'trading',
-    detail: 'ON BY DEFAULT since 2026-09-20 \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
-      + 'You asked for the kind itself earlier the same day: "Anytime POTUS does new investments show me those." It is in the owner keep-set, so a re-registered device cannot quietly mute it. '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); switch it on here. ON BY DEFAULT for everyone else since 2026-09-20 \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
+      + 'You asked for the kind itself earlier the same day: "Anytime POTUS does new investments show me those." '
       + 'Turning it on widened WHICH KINDS reach you; it did not loosen what this one needs to fire \u2014 the gate below is unchanged. '
       + 'THIS IS A HEURISTIC, not a signal: a daily cron runs seven keyword searches and matches a REGEX over the headline TITLES. It has no measured record and nothing behind it has been backtested. '
       + 'The push gate is deliberately the tightest class and nothing looser \u2014 an EQUITY STAKE (not an award, not a contract, not "the administration is weighing a stake"), a NAMED federal agency (Commerce, DoD/Pentagon, DOE, Treasury) and a STATED size (a dollar figure or a percentage) in the SAME headline, plus a ticker that actually resolves. '
       + 'Everything looser \u2014 a federal award, a stake with no agency named, a headline whose company we could not turn into a ticker \u2014 still LISTS on Chart Maps \u2192 \u{1F3DB}\uFE0F POTUS as a candidate you read, and sends nothing. '
       + 'The watch NEVER edits the curated list: promoting a candidate onto it is a human edit of backend/political/disclosures.json. One push per ticker per headline url.' },
   { key: 'earnings_reaction', label: 'Earnings beat with institutional buying', emoji: '\u{1F4E3}', group: 'trading',
-    detail: 'ON BY DEFAULT \u2014 an owner setting, from 2026-09-20: "Also don\'t forget to alert me on earnings surprises I think stock witz also has it. I wanna make sure we are catching those in alerts as well." '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); switch it on here. ON BY DEFAULT for everyone else \u2014 your owner setting from 2026-09-20: "Also don\'t forget to alert me on earnings surprises I think stock witz also has it. I wanna make sure we are catching those in alerts as well." '
       + 'WHAT FIRES: the REACTED half of the Chart Maps \u25B8 Earnings Flow tab. A beat \u2014 this quarter\'s surprise above zero \u2014 whose reaction bar traded at least 1.5\u00D7 its 60-day median volume, closed in the top 40% of the bar\'s range, turned over at least $50M and finished up on the day. '
       + 'A miss never pushes, however violently the stock reacts, and neither does a pre-report run-up \u2014 the bar has to have printed. Once per report. Two slots: 08:25 and 17:35 ET. '
       + 'StockTwits has no earnings-surprise feed, so this reads your own earnings calendar and the filed surprise, not social chatter. '
       + 'The room to the first supply band is shown as context and does not gate this kind. '
       + 'NOT MEASURED: no forward study stands behind "beat + institutions bought". Not a recommendation \u2014 a watchlist ping.' },
   { key: 'board_arrival', label: 'New on \u{1F4C8} Bonde / \u{1F680} Explosive Growth', emoji: '\u2728', group: 'trading',
-    detail: 'ON BY DEFAULT \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); switch it on here. ON BY DEFAULT for everyone else \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
       + 'WHAT FIRES: a name ARRIVES on one of the two boards \u2014 \u{1F4C8} Bonde at 17:42 ET on a trading day, \u{1F680} Explosive Growth at 08:08 ET after the Sunday rebuild. '
       + 'It is one push per name per board, ever: a name that leaves a board and comes back is not rung again (the arrival ledger stamps a name once and keeps it). '
       + 'It is never the first cohort \u2014 the first pass after this ships records the baseline and sends nothing, so you are told about what is NEW, not about the 1,054 names already there. '
@@ -99,7 +99,7 @@ export const CATEGORIES: CategoryDef[] = [
      flips it off with one word. The numbers below are the build's defaults
      (HIS CALLs #2 / #7 / #8); the contract re-reads the keep-set. */
   { key: 'med_catalyst', label: 'Medical catalyst (FDA, Phase 3, hold)', emoji: '🧬', group: 'trading',
-    detail: 'ON FOR YOUR PHONE — you asked for alerts; everyone else starts off. You said: "can you add a new routine to scan for … amd trails or other medi cal nws and sector them separatively like new fdaapprovals or break throughs like mrnaresearch how to catch thsse sectorsand companiesand add right setup and alerts". '
+    detail: 'OFF BY DEFAULT — muted on your phone since 2026-10-29, your call: "Only give me Gajjalas chart notifications from both tabs,"; everyone else starts off too. Switch it on here. You first asked for the alerts: "can you add a new routine to scan for … amd trails or other medi cal nws and sector them separatively like new fdaapprovals or break throughs like mrnaresearch how to catch thsse sectorsand companiesand add right setup and alerts". '
       + 'WHAT FIRES: an FDA approval (not a tentative or generic one); a complete response letter, refuse-to-file or rejection; a Phase 3 or pivotal topline read that is clearly positive or clearly negative; a Breakthrough Therapy designation; a clinical hold placed. '
       + 'Only on a name whose prior close is at least $2 and whose 50-session median dollar volume is at least $5M a day, and only while the news is fresh — pre-market, after hours, or while the regular session has traded it for 10 minutes or less. '
       + 'One topline push per name per session, never a repeat of the same kind on the same name within 21 sessions, once per event. Every 5 minutes, 04:00–19:55 ET on trading days; weekend news rings Monday pre-market. '
@@ -143,8 +143,8 @@ export const CATEGORIES: CategoryDef[] = [
   /* 🎢 🗺️ orderflow/tape_burst_kinds.py (2026-10-14). Ajay: "I need a tape
      burst notification specific for High Beta stocks from the reselinet
      separately and also other tape bursts from the Chart Maps page". Two
-     owner-only kinds, ON for him: in backend push/subs.OWNER_KEEP_SET and False
-     in default_prefs for everyone else (the med_catalyst precedent). They ring
+     owner-only kinds, False in default_prefs for everyone else; OFF for him too
+     since 2026-10-29 (left push/subs.OWNER_KEEP_SET, BUILD_SPEC29 D1). They ring
      LIVE — nothing about them is shadow. The burst numbers are pinned by the
      contracts.mjs tape-burst block to orderflow/tape.py, the 150s to
      tape_burst_kinds.py, the window to trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET,
@@ -152,7 +152,7 @@ export const CATEGORIES: CategoryDef[] = [
      burst is sent": the NOT READ sentence names what never reaches the push
      (cold first poll, the house floor, the poll budget, ⚡'s own record). */
   { key: 'tape_burst_highbeta', label: 'Tape burst \u2014 High Beta', emoji: '\u{1F3A2}', group: 'trading',
-    detail: 'ON FOR YOUR PHONE \u2014 you said: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page"; everyone else starts off. It rings live \u2014 nothing is held for a later switch-on. '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); everyone else starts off too. Switched on here, it rings live \u2014 nothing is held for a later switch-on. You first asked for it: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page". '
       + 'WHAT IT WATCHES: every name on Chart Maps \u25B8 \u{1F3A2} High Beta, biggest drop today first, up to 150 names. '
       + 'NOT READ: the first poll after a cold start can watch nothing; names under the house share-price floor ($2) are not read; names the poll\u2019s time budget cuts are not read that poll; a burst \u26A1 trade flash already recorded is not sent again. '
       + 'WHAT FIRES: the same burst rule as \u26A1 trade flash \u2014 inside a 10-second window, $250K or more traded, 75% or more of it on one side, across 15+ regular prints (auction crosses, average-price and busted prints are left out) \u2014 anywhere in the day\u2019s range, no zone needed. '
@@ -160,7 +160,7 @@ export const CATEGORIES: CategoryDef[] = [
       + 'Every 5 minutes, 09:32\u201316:00 ET on trading days, silent on closed days; one push per poll, every burst listed on /alerts with each ticker linked to its tape. '
       + 'UNMEASURED \u2014 a description of prints, not a signal. Not advice.' },
   { key: 'tape_burst_chartmaps', label: 'Tape burst \u2014 Chart Maps', emoji: '\u{1F5FA}\uFE0F', group: 'trading',
-    detail: 'ON FOR YOUR PHONE \u2014 the same ask: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page"; everyone else starts off. It rings live \u2014 nothing is held for a later switch-on. '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); everyone else starts off too. Switched on here, it rings live \u2014 nothing is held for a later switch-on. You first asked for it, the same ask: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page". '
       + 'NOT READ: names under the house share-price floor ($2) are not read; names the poll\u2019s time budget cuts are not read that poll. '
       + 'WHAT IT WATCHES: the names the Chart Maps tabs served at their last load (today or the last session), a few from each tab in turn, up to 150 names \u2014 minus the names \u26A1 trade flash already watches at their zones and the names on the \u{1F3A2} High-Beta list (those ring as \u{1F3A2}). '
       + 'WHAT FIRES: the same burst rule as \u26A1 trade flash \u2014 inside a 10-second window, $250K or more traded, 75% or more of it on one side, across 15+ regular prints (auction crosses, average-price and busted prints are left out) \u2014 anywhere in the day\u2019s range, no zone needed. '
@@ -169,14 +169,14 @@ export const CATEGORIES: CategoryDef[] = [
       + 'UNMEASURED \u2014 a description of prints, not a signal. Not advice.' },
   /* 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16). Ajay: "Can you add
      a watcher tape for IREN please." then "I wwant you to alert me when the
-     Buyers are winning in tape for IREN today." One owner-only kind, ON for him
-     (backend push/subs.OWNER_KEEP_SET; False in default_prefs for everyone
-     else). LIVE — never shadow. The 30 minutes is tape.LATE_WINDOW_MIN, the
+     Buyers are winning in tape for IREN today." One owner-only kind, False in
+     default_prefs for everyone else; OFF for him too since 2026-10-29 (left
+     push/subs.OWNER_KEEP_SET, BUILD_SPEC29 D1). LIVE — never shadow. The 30 minutes is tape.LATE_WINDOW_MIN, the
      window trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET, the 5 minutes the
      trade-flash crontab step, IREN and its date tape_control.WATCH — all pinned
      by the contracts.mjs 🎚️ block. UNMEASURED. */
   { key: 'tape_control', label: 'Buyers in control on the tape — pinned names', emoji: '\u{1F39A}\uFE0F', group: 'trading',
-    detail: 'ON FOR YOUR PHONE — you said: "I wwant you to alert me when the Buyers are winning in tape for IREN today."; everyone else starts off. It rings live. '
+    detail: 'OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); everyone else starts off too. Switched on here, it rings live. You first asked for it: "I wwant you to alert me when the Buyers are winning in tape for IREN today." '
       + 'WHAT IT WATCHES: IREN — pinned for 2026-10-16, through that session’s close. '
       + 'WHAT FIRES: the Tape tab’s own buyers-in-control check — the session’s cumulative delta above zero AND the last 30 minutes’ delta at or above zero, regular prints only, pre-market counted, sides by the tick rule (the Tape tab classifies against the quote where it can, so the two can disagree). One push when it turns to buyers in control — the first poll that reads it — never again while it holds (a ring that reached no device is tried once more on the next poll), again only after a poll reads it lost. '
       + 'NOT READ: a poll that cannot read the tape (no prints, a provider failure, a pull cut off at the page cap, the poll’s time budget) never rings and never re-arms. '
@@ -198,16 +198,19 @@ export const CATEGORIES: CategoryDef[] = [
       + 'UNMEASURED — what moved overnight, not what to buy. Not advice.' },
   /* 🚩 / 🧠 Gajjala's 1-min page (2026-10-27, BUILD_SPEC27 §3.7–3.8). Ajay: "Can you create a new page, I would like
      you to do the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track
-     record for it from today..". Two kinds, both SHADOW (backend constants.GAJJALA_1M_PUSH_MODE, HIS CALL #1): False
-     in push/subs.default_prefs, NOT in OWNER_KEEP_SET, so nothing reaches a phone; the toggles exist so the switch is
-     here the day he goes live. UNMEASURED. */
-  { key: 'gajjala_1m_setup', label: 'Gajjala 1-min A+ (shadow)', emoji: '🚩', group: 'trading',
-    detail: 'SHADOW — recorded, never sent to any phone until you say so (your call). You said: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." '
-      + 'WHAT IS RECORDED: an A+ entry on \u{1F6A9} Gajjala’s 1-min page — his five setups, the same rules, read on CLOSED 1-minute candles (the Fade on 5-minute first) over the same scanner list as \u{1F6A9} Gajjala’s. Each one is listed on /alerts and in that page’s \u{1F3C1} Track record (from 2026-10-27), never rung; while the page is in shadow this toggle changes nothing. '
+     record for it from today..". Shadow 2026-10-27 to 10-28 (recorded, never sent); LIVE since 2026-10-29 by his call
+     (BUILD_SPEC29 D2 — backend constants.GAJJALA_1M_PUSH_MODE "live"): "Only give me Gajjalas chart notifications from
+     both tabs," / "I am missing out the ones in noise." False in push/subs.default_prefs (everyone else starts off),
+     in OWNER_KEEP_SET (on for his devices). UNMEASURED. */
+  { key: 'gajjala_1m_setup', label: 'Gajjala 1-min A+', emoji: '🚩', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-10-29, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. Mute it here. '
+      + 'The page itself is your ask: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." From 2026-10-27 to 10-28 it ran in shadow — those A+ were recorded on /alerts and in its \u{1F3C1} Track record, never sent, and stay listed that way. '
+      + 'WHAT FIRES: an A+ entry on \u{1F6A9} Gajjala’s 1-min page — his five setups, the same rules, read on CLOSED 1-minute candles (the Fade on 5-minute first) over the same scanner list as \u{1F6A9} Gajjala’s. Every A+ is its own push, listed on /alerts and in that page’s \u{1F3C1} Track record (from 2026-10-27). '
       + 'GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED. Not a recommendation.' },
-  { key: 'gajjala_1m_potential', label: 'Gajjala 1-min potential (shadow)', emoji: '\u{1F9E0}', group: 'trading',
-    detail: 'SHADOW — recorded, never sent to any phone until you say so (your call). You said: "do everything and also add the track record for it from today..". '
-      + 'WHAT IS RECORDED: the first time a listed name is a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session. Each one is listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27), never rung; while the page is in shadow this toggle changes nothing. '
+  { key: 'gajjala_1m_potential', label: 'Gajjala 1-min potential', emoji: '\u{1F9E0}', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-10-29, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. Mute it here. '
+      + 'You asked for the page and its record: "do everything and also add the track record for it from today..". From 2026-10-27 to 10-28 it ran in shadow — those potentials were recorded, never sent, and stay listed that way. '
+      + 'WHAT FIRES: the first time a listed name is a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session, each its own push, listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27). '
       + 'UNMEASURED — a potential, not an entry. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
@@ -531,25 +534,27 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     pref: Object.fromEntries(CATEGORIES.map(c => [c.key, false])) as any,
   },
   {
-    // Ajay 2026-09-09: "Can you give me hot pull back alerts and chart pattern
-    // Alerts and also Sameday deman alerts please... Kill all other.. I just
-    // wanna these alerts.. Default turn these on from tomorrow." Asked whether
-    // the stops on stocks he OWNS counted as "other", he kept those and dropped
-    // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
+    // Ajay 2026-10-29: "Only give me Gajjalas chart notifications from both tabs, I am missing out the ones in
+    // noise." (BUILD_SPEC29 D1). Mirrors backend/push/subs.OWNER_KEEP_SET exactly — the six kinds below, every
+    // other kind this preset ever turned on now false. History (each one removed 2026-10-29): the 2026-09-09 keep-set
+    // (🔥 hot pullback, 📐 patterns, 🧲 same-day demand; his "Kill all other.. I just wanna these alerts"), the
+    // 2026-09-20 widening (🏛️ / 🚀 / 📣 / ✨), 🔔 price alerts (09-21), 🔑 key levels (09-25), 🧬 medical (09-29),
+    // 🎢 / 🗺️ tape bursts (10-14) and 🎚️ tape control (10-16). 💼 stops on stocks he OWNS stay (his 2026-09-09 answer:
+    // not "other"); 🩺 host health stays (without it he never learns the alerts stopped).
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16), and 🧠 Gajjala potentials (2026-10-15, live), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live), and 🎚️ buyers in control on the tape for your pinned names (2026-10-16, it rings live). Everything else muted.',
+    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch. Everything else muted.',
     pref: {
-      hot_pullback_alert: true, pattern_alert: true,
-      demand_alert: true, position_alert: true,
-      price_alert: true, key_level_alert: true,
-      med_catalyst: true,
-      ops_alert: true,
-      gajjala_setup: true,
-      gajjala_potential: true,
-      tape_burst_highbeta: true, tape_burst_chartmaps: true,
-      tape_control: true,
-      potus_investment: true, growth_demand_alert: true,
-      earnings_reaction: true, board_arrival: true,
+      gajjala_setup: true, gajjala_potential: true,
+      gajjala_1m_setup: true, gajjala_1m_potential: true,
+      position_alert: true, ops_alert: true,
+      hot_pullback_alert: false, pattern_alert: false,
+      demand_alert: false,
+      price_alert: false, key_level_alert: false,
+      med_catalyst: false,
+      tape_burst_highbeta: false, tape_burst_chartmaps: false,
+      tape_control: false,
+      potus_investment: false, growth_demand_alert: false,
+      earnings_reaction: false, board_arrival: false,
       pivot_alert: false, promo_alert: false,
       zone_bounce_alert: false, supply_break_alert: false,
       market_hours_reminder: false,

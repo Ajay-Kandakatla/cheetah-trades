@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-29 ~12:30 ET (verbatim in the label, his spelling kept, the line break as " / "): "Only give me Gajjalas
+  // chart notifications from both tabs," / "I am missing out the ones in noise." (BUILD_SPEC29). backend
+  // push/subs.OWNER_KEEP_SET is exactly six kinds — gajjala_setup, gajjala_potential, gajjala_1m_setup,
+  // gajjala_1m_potential, position_alert, ops_alert — and scripts/owner_prefs_apply.py applies it to his registered
+  // devices; chart_maps/gajjala/constants.GAJJALA_1M_PUSH_MODE is "live" (HIS CALL #1 of the 1-minute page answered by
+  // "from both tabs"). No gate, cron or threshold changed: a muted kind keeps running for the boards. The kind-less
+  // senders (🩺 health digest, 🤖 Auto-Pilot notices) are not on a toggle. UNMEASURED. Pinned by scripts/contracts.mjs
+  // ("🔕 Gajjala-only pushes (2026-10-29)").
+  { id: 'gajjala-only-pushes-2026-10-29', addedAt: '2026-10-29', route: '/notifications',
+    label: "🔕 Only Gajjala's pushes reach your phone now: 🚩 A+ entries and 🧠 potentials from both 🚩 Gajjala's and 🚩 Gajjala's 1-min (the 1-minute page rings live from today, 2026-10-29 — it was shadow before), plus 💼 stops on stocks you own and 🩺 host health. Every other kind — the 🎢 / 🗺️ tape bursts, 📐 patterns, 📣 earnings, 🔔 price alerts, 🔑 key levels, 🧲 demand, 🔥 hot pullbacks and the rest — is muted on your devices; the boards still list everything, no gate changed, and a tap on /notifications turns any kind back on. The 🩺 health digest and 🤖 Auto-Pilot notices have no toggle and still send. You said: \"Only give me Gajjalas chart notifications from both tabs,\" / \"I am missing out the ones in noise.\" UNMEASURED. Not advice." },
   // Ajay 2026-10-27 ~17:15 ET (verbatim in the label, his spelling kept): "Also in autopilot looks like Gajjala's strategy
   // is making money.. Anyway you can can show me which tab made money or not?" (BUILD_SPEC28). ONE engine:
   // trading/journal.py lane_pnl overlays the broker's open P&L and every served word on the SAME journal.summary()
@@ -47,10 +57,11 @@ export const NEW_FEATURES: NewFeature[] = [
   // 🚩 Gajjala's, every stored and served byte unchanged; GG1 = the same engines on CLOSED ("1m", "5m") frames, its own
   // gajjala_1m_* collections, GG5's scanner list / halts / daily / broker list read shared. The 🚩 cron pass SPAWNS a
   // detached `run_1m --loop` (never in-process — the supercronic skip trap) that reads one closed 1-minute bar per
-  // iteration. Every GG1 A+ and 🧠 potential is SHADOW (GAJJALA_1M_PUSH_MODE, HIS CALL #1); the 🏁 record starts
+  // iteration. Every GG1 A+ and 🧠 potential was SHADOW 2026-10-27 to 10-28 and is LIVE since 2026-10-29
+  // (GAJJALA_1M_PUSH_MODE, HIS CALL #1 answered — the label amended that day); the 🏁 record starts
   // GG1M_RECORD_FROM. UNMEASURED. Pinned by scripts/contracts.mjs ("🚩 Gajjala 1-minute page (2026-10-27)").
   { id: 'chart-maps-gajjala-1m-2026-10-27', addedAt: '2026-10-27', route: '/chart-maps?tab=gajjala_1m',
-    label: "🚩 Gajjala's 1-minute page: his five setups, K1–K11, the A+ claim, the 🧠 potentials, the 📈 track and the 🏁 Track record (🎯 A+ filter + charts) on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute, over the same scanner list as 🚩 Gajjala's. Every alert is recorded in shadow, never sent; the 🏁 Track record starts today, 2026-10-27. A Cheetah variant — GG trades these on 5-minute bars. UNMEASURED. Ajay 2026-10-27: \"Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.\" / \"do everything and also add the track record for it from today..\" Not advice." },
+    label: "🚩 Gajjala's 1-minute page: his five setups, K1–K11, the A+ claim, the 🧠 potentials, the 📈 track and the 🏁 Track record (🎯 A+ filter + charts) on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute, over the same scanner list as 🚩 Gajjala's. Every alert is recorded in shadow 2026-10-27 to 10-28, live since 2026-10-29 by his call; the 🏁 Track record starts today, 2026-10-27. A Cheetah variant — GG trades these on 5-minute bars. UNMEASURED. Ajay 2026-10-27: \"Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.\" / \"do everything and also add the track record for it from today..\" Not advice." },
   // Ajay 2026-10-27 ~08:45 ET (both lines verbatim in the label): "Can you track this guy please? and his tickers"
   // (https://stocktwits.com/algo888), then "Add them to Gajjals, they are pretty good" (BUILD_SPEC26). backend
   // traders/registry.py gains the algo888 row (source "stocktwits", usic None, gajjala True, curate False — AMENDMENT A1:

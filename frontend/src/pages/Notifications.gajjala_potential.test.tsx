@@ -183,11 +183,11 @@ describe('Notifications · 🧠 gajjala_potential', () => {
   it('the Essentials preset carries gajjala_potential: true and names it live', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     expect((ess.pref as any).gajjala_potential).toBe(true);
-    expect(ess.detail).toContain('🧠 Gajjala potentials (2026-10-15, live)');
-    // NEGATIVE: the 🚩 line beside it keeps its own words — WIDENED 2026-10-16: Ajay flipped the A+ kind live
-    // ("you alert me when that happens"), so it reads live since 2026-10-16, never "shadow first".
+    // 2026-10-29 (BUILD_SPEC29 D1/D6 — Ajay: "Only give me Gajjalas chart notifications from both tabs,"): the Essentials detail is the
+    // six-kind keep-set sentence; it names the 🧠 potentials of both tabs.
+    expect(ess.detail).toContain('🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min');
     expect((ess.pref as any).gajjala_setup).toBe(true);
-    expect(ess.detail).toContain('🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16)');
+    expect((ess.pref as any).gajjala_1m_potential).toBe(true);
     expect(ess.detail).not.toContain('shadow first');
   });
 

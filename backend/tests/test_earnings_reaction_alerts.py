@@ -156,8 +156,9 @@ def test_the_kind_is_registered_and_ships_ON():
     from push import subs
     prefs = subs.default_prefs()
     assert EA.KIND in prefs and prefs[EA.KIND] is True
-    assert EA.KIND in subs.OWNER_KEEP_SET
-    assert subs.owner_prefs()[EA.KIND] is True
+    # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six) — still ON in default_prefs for everyone else
+    assert EA.KIND not in subs.OWNER_KEEP_SET
+    assert subs.owner_prefs()[EA.KIND] is False
     assert EA.KIND not in subs.DISABLED_ALERT_KINDS
 
 
