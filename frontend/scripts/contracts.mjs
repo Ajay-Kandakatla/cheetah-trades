@@ -9746,7 +9746,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 23) → slice(0, 24).
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 24) → slice(0, 25).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9962,7 +9963,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 20) → slice(0, 21).
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 21) → slice(0, 22).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10244,7 +10246,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 19) → slice(0, 20).
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 20) → slice(0, 21).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10445,7 +10448,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 14) → slice(0, 15).
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 15) → slice(0, 16).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10545,7 +10549,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 18) → slice(0, 19).
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 19) → slice(0, 20).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10696,7 +10701,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 15) → slice(0, 16).
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 16) → slice(0, 17).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10814,7 +10820,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 16) → slice(0, 17).
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 17) → slice(0, 18).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10866,7 +10873,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 12) → slice(0, 13).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 13) → slice(0, 14).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11007,7 +11015,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 13) → slice(0, 14).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 14) → slice(0, 15).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11091,7 +11100,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 11) → slice(0, 12).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 12) → slice(0, 13).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11208,7 +11218,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 10) → slice(0, 11).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 11) → slice(0, 12).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11400,7 +11411,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 9) → slice(0, 10).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 10) → slice(0, 11).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11455,7 +11467,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 8) → slice(0, 9).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 9) → slice(0, 10).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11530,7 +11543,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 7) → slice(0, 8).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 8) → slice(0, 9).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11599,7 +11613,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 6) → slice(0, 7).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 7) → slice(0, 8).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11903,7 +11918,10 @@ const CONTRACTS = [
       const gntRest = tsCode(gnt.replace(/export const TRADER_TABS[^=]*= \[[\s\S]*?\];/, ''));
       if (gnt && /algo888|StockTwits/.test(gntRest)) errs.push('GntBoard.tsx types "algo888" / "StockTwits" outside TRADER_TABS — the source words are served');
       const gb = tryRead('src/components/GajjalaBoard.tsx', 'the Gajjala board');
-      if (gb && !/^function GgTraderChip\(/m.test(gb)) errs.push('GajjalaBoard.tsx lost function GgTraderChip(');
+      // 2026-10-29: chip module — the definition moved to GgTraderChip.tsx; the board imports it and keeps its 7 mounts.
+      const gtc = tryRead('src/components/GgTraderChip.tsx', 'the source-tag chip module');
+      if (gtc && !/^function GgTraderChip\(/m.test(gtc)) errs.push('GgTraderChip.tsx lost function GgTraderChip(');
+      if (gb && !/^import \{ GgTraderChip \} from '\.\/GgTraderChip';$/m.test(gb)) errs.push("GajjalaBoard.tsx must import { GgTraderChip } from './GgTraderChip'");
       for (const tid of ['gg-trader-tile-${', 'gg-trader-recap-${', 'gg-trader-aplus-${', 'gg-trader-pot-${', 'gg-trader-track-${', 'gg-tr-trader-${', 'gg-trader-watch-${']) {
         if (gb && !gb.includes(`testid={\`${tid}`)) errs.push(`GajjalaBoard lost the 📌 chip testid ${tid}…}`);
       }
@@ -11936,7 +11954,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 5) → slice(0, 6).
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 6) → slice(0, 7).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12101,7 +12120,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — FIRST → one of the first two, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 3) → slice(0, 4).
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 4) → slice(0, 5).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12302,7 +12322,8 @@ const CONTRACTS = [
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened to the top three, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 4) → slice(0, 5).
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 5) → slice(0, 6).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12395,7 +12416,8 @@ const CONTRACTS = [
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // WIDENED (2026-10-29: gajjala-only-pushes FIRST) — FIRST → one of the first two.
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 2) → slice(0, 3).
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 3) → slice(0, 4).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12493,8 +12515,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // WIDENED (2026-10-29: track-record-tape FIRST) — NEW_FEATURES[0] → one of the first two.
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
+      // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 2) → slice(0, 3).
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -12544,7 +12567,8 @@ const CONTRACTS = [
       // both the plain and the 🎯 lists ride shownDays) AND the 🕰️ timeline; the cell markup exists once; (2) the list's
       // column sits right after the Ticker head; (3) the cell gates on the row's id ONLY — never on a kind, so every 🧠
       // potential row gets its mini; (4) the new bodies type no tape word, number or percent (GgEntryTape.tsx's own rule);
-      // (5) the ✨ is NEW_FEATURES[0], dated, routed, his words verbatim; (6) tape.py parse_id accepts the 🧠 kind BY THE
+      // (5) the ✨ is in the first two (NEW_FEATURES[0] until 2026-10-29's promo-names entry), dated, routed, his words
+      // verbatim; (6) tape.py parse_id accepts the 🧠 kind BY THE
       // CONSTANT (LG.KINDS[0]) and ENTRY_TAPE_WORDS carries the 🧠 sentences; the junk-id 404 text is unchanged; (7) the
       // mini's route follows the board on both pages; (8) no new px width in the CSS (the mini's own 100).
       const errs = [];
@@ -12623,7 +12647,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      // WIDENED (2026-10-29: promo-names FIRST) — NEW_FEATURES[0] → one of the first two.
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -12664,6 +12690,127 @@ const CONTRACTS = [
                        '.gg-tr-scroll { overflow-x: auto; max-width: 100%; }']) if (!css.includes(s)) errs.push(`gajjala.css lost: ${s}`);
       for (const m of css.matchAll(/\n([^{}\n]*ptt__[^{}\n]*)\{([^}]*)\}/g)) {
         if (/(?:^|[;\s])(?:min-|max-)?width:\s*\d+px/.test(m[2])) errs.push(`gajjala.css gives a Tape rule a px width (${m[1].trim()}) — the mini's own 100 only`);
+      }
+      return errs;
+    },
+  },
+  {
+    name: "🎪 Promo names on Gajjala's scan (2026-10-29)",
+    file: 'src/components/GajjalaBoard.tsx',
+    checks(board) {
+      // Ajay 2026-10-29 ~20:05 ET (verbatim, his spelling kept): "Also I see a some of stocks we see are also in Gajjalas
+      // page. Don't see some should we pull stocks from PROMO circuit by default every day they are having some good
+      // catched but I do wanna run them against Gajjalas strategies" (BUILD_SPEC32 D1–D5). Every check reads the REAL
+      // file: (1) backend chart_maps/gajjala/promo_names.py exists with SOURCE = "promo"; (2) constants.PROMO_NAMES_MAX is
+      // a number and is in CHEETAH_DEFAULTS (MINE, not GG); (3) the board keeps ONE chip component (GgTraderChip — no
+      // twin), it prints the served promo_text on the seven surfaces with their testids, the chip body types no text;
+      // (4) /alerts imports that SAME component and mounts it on the 🚩 shadow and 🧠 potential rows; (5) the ✨ is
+      // NEW_FEATURES[0], dated, routed, his words verbatim, INVERTED + UNMEASURED; (6) the doc says INVERTED and
+      // UNMEASURED; (7) no typed chip word in the FE (no 🎪 in code of the board, /alerts or lib/gajjala.ts; the board's
+      // only quoted "promo" string is the class); (8) css — the .gg-promo rule wraps at 430 px (min-width 0, no px width).
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const HIS = "Also I see a some of stocks we see are also in Gajjalas page. Don't see some should we pull stocks from PROMO circuit by default every day they are having some good catched but I do wanna run them against Gajjalas strategies";
+      // 1. the backend module, its own source
+      const pn = tryRead('../backend/chart_maps/gajjala/promo_names.py', 'promo_names.py');
+      if (pn && !/^SOURCE = "promo"\s*$/m.test(pyCode(pn))) errs.push('chart_maps/gajjala/promo_names.py must define SOURCE = "promo" (its own source, never "trader")');
+      // 2. the cap is MINE: a number, listed in CHEETAH_DEFAULTS
+      const cst = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
+      if (cst && !/^PROMO_NAMES_MAX = \d+\b/m.test(cst)) errs.push('constants.py lost PROMO_NAMES_MAX = <int>');
+      const cd = (/^CHEETAH_DEFAULTS = \(([\s\S]*?)\)/m.exec(cst) || [])[1];
+      if (cst && cd == null) errs.push('constants.py lost CHEETAH_DEFAULTS = (…)');
+      else if (cst && !/"PROMO_NAMES_MAX"/.test(cd)) errs.push('PROMO_NAMES_MAX must be in CHEETAH_DEFAULTS — the cap is a Cheetah default (MINE), not GG');
+      // 3. ONE chip component on the board, the served promo_text on seven surfaces
+      // 2026-10-29: chip module — the ONE chip now lives in src/components/GgTraderChip.tsx (its own file, like GrowthChip),
+      // so /alerts no longer pulls the whole board chunk. The pins MOVED there, never loosened: defined exactly once in that
+      // file AND nowhere else under src (no twin anywhere, tests excluded); exported; the board imports it and mounts it 7x;
+      // the module imports nothing from GajjalaBoard / PatternChart / gajjala.css.
+      const chip = tryRead('src/components/GgTraderChip.tsx', 'the source-tag chip module');
+      if (chip && (chip.match(/^function GgTraderChip\(/gm) || []).length !== 1) errs.push('GgTraderChip.tsx must define function GgTraderChip( exactly once — the ONE source-tag chip');
+      if (chip && !/^export \{ GgTraderChip \};$/m.test(chip)) errs.push('GgTraderChip.tsx must export { GgTraderChip }; (the board and /alerts reuse it)');
+      if (chip && /(?:from|import)\s+'[^'\n]*(?:GajjalaBoard|PatternChart|gajjala\.css)[^'\n]*'|import\(\s*'[^'\n]*(?:GajjalaBoard|PatternChart|gajjala\.css)/.test(tsCode(chip))) errs.push('GgTraderChip.tsx must import nothing from ./GajjalaBoard, ./PatternChart or gajjala.css — the chip module stays light');
+      if (chip && !/^import '\.\.\/styles\/ggTraderChip\.css';$/m.test(chip)) errs.push("GgTraderChip.tsx must import '../styles/ggTraderChip.css' (the chip carries its own 430 px rule)");
+      {
+        const walk = (dir) => readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true }).flatMap((d) => {
+          const rel = `${dir}/${d.name}`;
+          if (d.isDirectory()) return walk(rel);
+          return /\.tsx?$/.test(d.name) && !/\.test\.tsx?$/.test(d.name) ? [rel] : [];
+        });
+        for (const rel of walk('src')) {
+          if (rel === 'src/components/GgTraderChip.tsx') continue;
+          const s = read(rel);
+          if (/function GgTraderChip\(|const GgTraderChip\b/.test(s)) errs.push(`${rel} defines a second GgTraderChip — the ONE chip lives in GgTraderChip.tsx`);
+          if (/function GgPromoChip\(|const GgPromoChip\b/.test(s)) errs.push(`${rel} defines a twin GgPromoChip — one component prints both tags`);
+        }
+      }
+      if (!/^import \{ GgTraderChip \} from '\.\/GgTraderChip';$/m.test(board)) errs.push("GajjalaBoard.tsx must import { GgTraderChip } from './GgTraderChip'");
+      if ((board.match(/<GgTraderChip /g) || []).length !== 7) errs.push(`GajjalaBoard must mount <GgTraderChip on exactly the 7 surfaces (found ${(board.match(/<GgTraderChip /g) || []).length})`);
+      const PROMO_TIDS = ['gg-promo-tile-${', 'gg-promo-recap-${', 'gg-promo-aplus-${', 'gg-promo-pot-${', 'gg-promo-track-${', 'gg-tr-promo-${', 'gg-promo-watch-${'];
+      for (const tid of PROMO_TIDS) if (!board.includes(`promoTestid={\`${tid}`)) errs.push(`GajjalaBoard lost the 🎪 chip testid ${tid}…}`);
+      const pt = (board.match(/promoText=\{[a-z]+\.promo_text\}/g) || []).length;
+      if (pt !== 7) errs.push(`GajjalaBoard must pass the served promo_text on exactly the 7 chip mounts (found ${pt})`);
+      // 2026-10-29: chip module — the body checks read GgTraderChip.tsx (where the body now lives).
+      const a = chip.indexOf('\nfunction GgTraderChip(');
+      if (chip && a < 0) errs.push('GgTraderChip.tsx: the chip body is unreadable');
+      const body = a < 0 ? '' : tsCode(chip.slice(a, chip.indexOf('\n}\n', a + 1))).replace(/=>/g, '=');
+      if (body && [...body.matchAll(/>([^<>{}\n]+)</g)].map((m) => m[1].trim()).filter(Boolean).length) errs.push('GgTraderChip types JSX text — it prints the served props only');
+      if (chip && !/servedChip\(promoText, 'gg-promo', promoTestid\)/.test(chip)) errs.push("GgTraderChip must draw the 🎪 tag as servedChip(promoText, 'gg-promo', promoTestid)");
+      // 4. /alerts reuses the SAME component
+      const al = tryRead('src/pages/Alerts.tsx', 'the /alerts page');
+      // 2026-10-29: chip module — /alerts imports the chip module directly, and NOTHING from the board (code-split chunk).
+      if (al && !/^import \{ GgTraderChip \} from '\.\.\/components\/GgTraderChip';$/m.test(al)) errs.push("Alerts.tsx must import { GgTraderChip } from '../components/GgTraderChip' — the ONE chip, never a copy");
+      if (al && /from '\.\.\/components\/GajjalaBoard'/.test(al)) errs.push("Alerts.tsx must import nothing from '../components/GajjalaBoard' — it would pull the whole board chunk + gajjala.css into /alerts");
+      if (al && /function Gg(Promo|Trader)Chip\(/.test(al)) errs.push('Alerts.tsx defines its own source-tag chip — reuse the board component');
+      for (const tid of ['gg-alert-promo-shadow-${', 'gg-alert-promo-pot-${']) {
+        if (al && !al.includes(`<GgTraderChip promoText={it.promo_text} promoTestid={\`${tid}`)) errs.push(`Alerts.tsx lost the 🎪 chip ${tid}…} on its 🚩 row`);
+      }
+      // 5. the ✨ — FIRST, dated, routed, his words verbatim, the caveats
+      const ID = 'chart-maps-gajjala-promo-names-2026-10-29';
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
+      const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
+      if (!ent.includes("addedAt: '2026-10-29'")) errs.push('the 🎪 ✨ must be dated 2026-10-29');
+      if (!ent.includes("route: '/chart-maps'")) errs.push("the 🎪 ✨ must route to '/chart-maps'");
+      const label = ((/label: "((?:[^"\\]|\\.)*)"/.exec(ent) || [])[1] || '').replace(/\\"/g, '"');
+      if (!label.includes(`"${HIS}"`)) errs.push(`the 🎪 ✨ label must quote him verbatim: "${HIS.slice(0, 40)}…"`);
+      for (const need of ['INVERTED', 'UNMEASURED']) if (!label.includes(need)) errs.push(`the 🎪 ✨ label must say ${need}`);
+      if (/bounc/i.test(label)) errs.push('the 🎪 ✨ label says bounce');
+      // 6. the doc carries the caveats
+      const doc = tryRead('../docs/gajjala/promo_names_2026_10_29.md', 'the promo-names doc');
+      for (const need of ['INVERTED', 'UNMEASURED']) if (doc && !doc.includes(need)) errs.push(`docs/gajjala/promo_names_2026_10_29.md must say ${need}`);
+      if (doc && /bounc/i.test(doc)) errs.push('docs/gajjala/promo_names_2026_10_29.md says bounce');
+      // 7. no typed chip word in the FE
+      const gj = tryRead('src/lib/gajjala.ts', 'lib/gajjala.ts');
+      for (const [rel, src] of [['GajjalaBoard.tsx', board], ['GgTraderChip.tsx', chip], ['Alerts.tsx', al], ['lib/gajjala.ts', gj]]) {
+        if (src && /\u{1F3AA}|\\u\{1F3AA\}|\\uD83C\\uDFAA/iu.test(tsCode(src))) errs.push(`${rel} types 🎪 in code — the promo tag is served`);
+      }
+      for (const [rel, src] of [['GajjalaBoard.tsx', board], ['GgTraderChip.tsx', chip]]) {   // 2026-10-29: chip module (widened)
+        for (const m of tsCode(src).matchAll(/'([^'\n]*)'|"([^"\n]*)"/g)) {
+          const s = m[1] ?? m[2];
+          if (/promo/i.test(s) && s !== 'gg-promo') errs.push(`${rel} types a promo string ("${s.slice(0, 50)}") — the words are served`);
+        }
+      }
+      if (gj && (tsCode(gj).match(/promo_text\?: string \| null/g) || []).length !== 7) errs.push('lib/gajjala.ts must type promo_text on exactly the 7 row / tile types the chip reads (types only)');
+      // 8. css — the chip wraps at 430 px
+      // 2026-10-29: chip module — the rule moved verbatim to ggTraderChip.css (loaded by the chip on the board AND /alerts);
+      // the fixed-width guard is WIDENED to both stylesheets.
+      const css = tryRead('src/styles/ggTraderChip.css', 'css');
+      const rule = (/(^|\n)\s*\.gg-promo\s*\{([^}]*)\}/.exec(css) || [])[2];
+      if (rule == null) errs.push('ggTraderChip.css lost the .gg-promo rule (the 430 px wrap)');
+      else {
+        if (!/white-space:\s*normal/.test(rule)) errs.push('.gg-promo must be white-space: normal (.cm-badge is nowrap house-wide)');
+        if (!/(^|[;\s])min-width:\s*0\b/.test(rule)) errs.push('.gg-promo must carry min-width: 0');
+      }
+      for (const [rel, sheet] of [['ggTraderChip.css', css], ['gajjala.css', tryRead('src/styles/gajjala.css', 'css')]]) {
+        for (const m of ('\n' + sheet).matchAll(/\n([^{}\n]*\.gg-promo\b[^{}\n]*)\{([^}]*)\}/g)) {
+          if (/(?:^|[;\s])(?:min-|max-)?width:\s*\d*\.?\d+(px|rem|em)/.test(m[2])) errs.push(`${rel} gives the 🎪 chip a fixed width (${m[1].trim()})`);
+        }
       }
       return errs;
     },

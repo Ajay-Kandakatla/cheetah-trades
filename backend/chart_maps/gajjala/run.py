@@ -152,6 +152,10 @@ class Deps:
     # dry runs, the on-open pass; the cron path of main() passes trader_names.default_fetch)
     trader_posts: Optional[Callable] = None
     trader_fetch: Optional[Callable] = None
+    # 🎪 2026-10-29 (Ajay "should we pull stocks from PROMO circuit by default every day"; BUILD_SPEC32 D3): the stored
+    # Promo-circuit tags reader `(now) -> [tag doc]` (None = the step does not run and the pass doc gains NO key — tests,
+    # replays, dry runs; the cron and on-open paths of main() pass promo_names.default_tags)
+    promo_tags: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -297,6 +301,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import store as ST
     from . import detectors as D
     from . import trader_names as TN
+    from . import promo_names as PN
 
     deps = deps or Deps()
     now_given = now is not None
@@ -351,10 +356,17 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         # + the scan write (FENCED: a failure leaves `result` as the scanner built it)
         out["trader"] = TN.run_step(st, now, session, rows, result, types=types, deps=deps, good=good,
                                     refresh=(not dry and not on_demand and deps.trader_fetch is not None))
+        if deps.promo_tags is not None:                         # 🎪 2026-10-29 — the same fence, after the 📌 step;
+            pblock = PN.run_step(st, now, session, rows, result, types=types, reader=deps.promo_tags, good=good)
+            if pblock is not None:                              # unwired / empty → no "promo" key, no promo_* count
+                out["promo"] = pblock
         mine()
         SC.record_scan(st, session, now, result, fetch_splits=deps.fetch_splits)
         TN.recount(result)                                      # the hold-out rewrote counts["qualifiers"]
+        PN.recount(result)                                      # 🎪 qualifiers = GG's rows only (no-op without one)
         TN.trim_block(out["trader"], result)                    # critic F1: a split-held name leaves the 📌 block too
+        if "promo" in out:
+            PN.trim_block(out["promo"], result)
         mine()
         out["ah_carry"] = SC.commit_ah_carry(st, session, now, result, meta)
         try:
@@ -390,7 +402,22 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         # still ends inside its tick's window (names past it keep their last read) — never overruns into the next tick.
         budget = GC.ON_DEMAND_BUDGET_SEC if on_demand else max(0.0, GC.PASS_BUDGET_SEC - waited)
         left = max(0.0, budget - (deps.clock() - t0))
-        frames = B.frames_for(names, session, now, load_day=deps.load_day, budget_sec=left, stats=bar_stats)
+        # 🎪 2026-10-29 (critic F3): GG's own names are read BEFORE the 📌 / 🎪 adds — frames_for skips the names that
+        # would start past the deadline, so the adds go last, never GG's. A STABLE sort: with no add the order is
+        # sorted(listed) exactly. The window's scan docs are read here once (they serve the 📌 / 🎪 tags below too).
+        try:
+            win_docs, win_err = st.scan_docs(SC._window(session)), None
+        except Exception as exc:                                # noqa: BLE001
+            win_docs, win_err = None, exc
+        try:
+            add_syms = (TN.added_symbols(win_docs, result["qualifiers"])
+                        | PN.added_symbols(win_docs, result["qualifiers"])) if win_err is None else set()
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: add order unreadable: %s", type(exc).__name__)
+            add_syms = set()
+        frames = B.frames_for(sorted(names, key=lambda s: s in add_syms), session, now, load_day=deps.load_day,
+                              budget_sec=left, stats=bar_stats)
+        frames = {s: frames[s] for s in names if s in frames}   # every later step iterates in sorted(listed) order
         # K11 (2026-10-21, GG VR 0.4 "1M is a floor … it must SUSTAIN" — Ajay "keep what ever Gajjala says"): the
         # session volume THIS pass read (the qualifier row, else the snapshot row — scanner._volume); never the stored row.
         sv = {s: (q_rows.get(s) or _row_from_snapshot(s, rows.get(s), session_iso) or {}).get("volume") for s in frames}
@@ -445,12 +472,21 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
 
         # the read docs the board serves
         try:                                                    # 📌 tags: the window's scan docs, this pass's rows win
-            win_docs = st.scan_docs(SC._window(session))
+            if win_err is not None:
+                raise win_err
             tags = TN.tag_map(win_docs, result["qualifiers"])
             trader_adds = TN.added_symbols(win_docs, result["qualifiers"])
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala pass: trader tags unreadable: %s", type(exc).__name__)
             tags, trader_adds = {}, set()
+        try:                                                    # 🎪 2026-10-29 — the same read, its own fence
+            if win_err is not None:
+                raise win_err
+            ptags = PN.tag_map(win_docs, result["qualifiers"])
+            promo_adds = PN.added_symbols(win_docs, result["qualifiers"])
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: promo tags unreadable: %s", type(exc).__name__)
+            ptags, promo_adds = {}, set()
         alert_ctx: dict = {}
         pot_ctx: dict = {}
         for s, fr in frames.items():
@@ -464,6 +500,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             tag = tags.get(s)
             if tag:                                             # keys only when tagged — untagged docs byte-unchanged
                 ctx.update(trader=tag["trader"], trader_text=tag["trader_text"])
+            ptag = ptags.get(s)
+            if ptag:                                            # 🎪 the same rule: keys only when tagged
+                ctx.update(promo=True, promo_text=ptag["promo_text"])
             prior = st.get_read(session, s) or {}
             stopped = dict(prior.get("stopped_today") or {})
             for setup, r in (reads.get(s) or {}).items():
@@ -481,6 +520,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                             "last_halt_resume_et": ctx["last_halt_resume_et"], "reg_gain_pct": ctx["reg_gain_pct"]}
             if tag:
                 alert_ctx[s].update(trader=tag["trader"], trader_text=tag["trader_text"])
+            if ptag:
+                alert_ctx[s].update(promo=True, promo_text=ptag["promo_text"])
             pot_ctx[s] = ctx                                    # 🧠 the SAME dict the read doc stores (tab reads it)
 
         push_dry = bool(dry or on_demand)                       # K2: an open never sends, claims or records a row
@@ -495,7 +536,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         out.update({"tape_session": result.get("tape_session"), "counts": result["counts"],
                     "strip": result["strip"], "n_listed": len(names), "n_read": len(reads), "bars": bar_stats,
                     "alerts": alerts, "floats": yahoo, "status": "ok" if good else "failed",
-                    "qualifiers": [q["symbol"] for q in result["qualifiers"] if q.get("source") != TN.SOURCE],
+                    "qualifiers": [q["symbol"] for q in result["qualifiers"]
+                                   if q.get("source") != TN.SOURCE and q.get("source") != PN.SOURCE],
                     "premarket": {"pm_levels": pm_levels}, "postmarket": post,
                     "bars_through_et": _bars_through(frames),
                     "aplus": sorted(f"{s}:{k}" for s, rs in reads.items() for k, r in rs.items()
@@ -511,7 +553,10 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             out["potential"] = PT.run_pass(reads, frames, now, session, store=st, ctx=pot_ctx, rows=row_by,
                                            send=deps.send_potential, owner=deps.owner, dry=push_dry,
                                            tape=result.get("tape_session"), live_rows=live_rows,
-                                           trader_hold={s: sv.get(s) for s in trader_adds if s in frames})
+                                           trader_hold={s: sv.get(s) for s in trader_adds if s in frames},
+                                           # 🎪 the SAME hold for a 🎪 add — None (no count key) when no source ran
+                                           promo_hold=({s: sv.get(s) for s in promo_adds if s in frames}
+                                                       if ("promo" in out or promo_adds) else None))
         except Exception:                                       # noqa: BLE001
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")
@@ -571,6 +616,8 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, *, on_deman
     body = {k: out.get(k) for k in ("tape_session", "counts", "strip", "n_listed", "n_read", "bars", "alerts",
                                     "status", "errors", "wall_s", "premarket", "postmarket", "ah_carry", "potential",
                                     "on_demand", "bars_through_et", "lease", "trader")}
+    if "promo" in out:                                          # 🎪 2026-10-29 — only when the source ran (GG5 bytes)
+        body["promo"] = out["promo"]
     body["snapshot_meta"] = out.get("snapshot")
     body["types_meta"] = out.get("types_meta")
     body["finished_at"] = now + timedelta(seconds=float(out.get("wall_s") or 0))
@@ -589,6 +636,9 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, *, on_deman
         counts = dict(out.get("alerts") or {})
         counts.update({"candidates": out.get("n_read") or 0, "listed": out.get("n_listed") or 0,
                        "qualifiers": len(out.get("qualifiers") or [])})
+        pc = out.get("counts") if isinstance(out.get("counts"), dict) else {}
+        if "promo" in out and "promo_added" in pc:              # 🎪 the /alerts row's count — only when it ran
+            counts["promo_added"] = pc["promo_added"]
         reason = None if out.get("status") == "ok" else (
             "snapshot failed — listed names read off the stored scan" if out.get("status") == "failed"
             else "pass error: " + ", ".join(out.get("errors") or []))
@@ -682,10 +732,13 @@ def main(argv=None) -> int:
         st = ST.default()
         st.ensure_indexes()
         if args.on_demand:
-            out = run_on_demand(now, store=st, deps=Deps())
+            from . import promo_names as PN
+            out = run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags))
         else:
             from . import trader_names as TN
-            out = run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch), symbols=syms)
+            from . import promo_names as PN
+            out = run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags),
+                           symbols=syms)
             if not syms and not args.now:
                 _spawn_1m()                                     # 🚩 1-minute page (2026-10-27): the cron path only
     if args.json:

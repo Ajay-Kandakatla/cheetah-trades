@@ -242,10 +242,17 @@ describe('GajjalaBoard — 📌 NEGATIVES: nothing composed, nothing typed', () 
     const code = tsCode(src);
     expect(code).not.toContain('\u{1F4CC}');
     expect(code).not.toMatch(/\\u\{1F4CC\}|\\uD83D\\uDCCC/i);
+    // 2026-10-29: chip module — the chip body moved to GgTraderChip.tsx; the same checks read it there (never loosened).
+    expect(src).toMatch(/^import \{ GgTraderChip \} from '\.\/GgTraderChip';$/m);
+    const chip = await readSource('src/components/GgTraderChip.tsx');
+    expect(chip.toLowerCase()).not.toContain('algo888');
+    const chipCode = tsCode(chip);
+    expect(chipCode).not.toContain('\u{1F4CC}');
+    expect(chipCode).not.toMatch(/\\u\{1F4CC\}|\\uD83D\\uDCCC/i);
     // the chip prints only the served prop: its JSX has no text of its own
-    const a = src.indexOf('\nfunction GgTraderChip(');
+    const a = chip.indexOf('\nfunction GgTraderChip(');
     expect(a).toBeGreaterThan(-1);
-    const body = tsCode(src.slice(a, src.indexOf('\n}\n', a + 1))).replace(/=>/g, '=');
+    const body = tsCode(chip.slice(a, chip.indexOf('\n}\n', a + 1))).replace(/=>/g, '=');
     const texts = [...body.matchAll(/>([^<>{}\n]+)</g)].map((m) => m[1].trim()).filter(Boolean);
     expect(texts).toEqual([]);
   });
@@ -264,10 +271,13 @@ describe('GajjalaBoard — 📌 NEGATIVES: nothing composed, nothing typed', () 
     expect(chip.classList.contains('cm-badge')).toBe(true);
     expect(chip.getAttribute('style')).toBeNull();
     expect(chip.closest('.cm-tile-chips')).not.toBeNull();         // the existing wrapping row (gajjala.css chip-wrap rule)
-    const css = await readSource('src/styles/gajjala.css');
-    for (const m of css.matchAll(/([^{}]*\.gg-trader\b[^{}]*)\{([^}]*)\}/g)) {
-      expect(m[2]).not.toMatch(/(^|[;\s])(min-)?width\s*:/);
-      expect(m[2]).not.toMatch(/white-space:\s*nowrap/);
+    // 2026-10-29: chip module — widened to the chip's own sheet too.
+    for (const sheet of ['src/styles/gajjala.css', 'src/styles/ggTraderChip.css']) {
+      const css = await readSource(sheet);
+      for (const m of css.matchAll(/([^{}]*\.gg-trader\b[^{}]*)\{([^}]*)\}/g)) {
+        expect(m[2]).not.toMatch(/(^|[;\s])(min-)?width\s*:/);
+        expect(m[2]).not.toMatch(/white-space:\s*nowrap/);
+      }
     }
   });
 });

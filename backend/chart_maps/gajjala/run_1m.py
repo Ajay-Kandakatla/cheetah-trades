@@ -251,6 +251,7 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
     from . import store as ST
     from . import detectors as D
     from . import trader_names as TN
+    from . import promo_names as PN
 
     v = V.GG1
     deps = deps or Deps1m()
@@ -309,6 +310,11 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala 1m: trader adds unreadable: %s", type(exc).__name__)
             trader_adds = set()
+        try:                                                    # 🎪 adds (2026-10-29): the SAME hold, its own fence
+            promo_adds = PN.added_symbols(shared.scan_docs(SC._window(session)))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala 1m: promo adds unreadable: %s", type(exc).__name__)
+            promo_adds = set()
         reads: dict = {}
         sv: dict = {}
         alert_ctx: dict = {}
@@ -340,6 +346,8 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
                             "reg_gain_pct": ctx.get("reg_gain_pct")}
             if ctx.get("trader"):
                 alert_ctx[s].update(trader=ctx["trader"], trader_text=ctx.get("trader_text"))
+            if ctx.get("promo") is True:                        # 🎪 2026-10-29 — GG5's stored tag, nothing recomputed
+                alert_ctx[s].update(promo=True, promo_text=ctx.get("promo_text"))
             pot_ctx[s] = ctx
 
         push_dry = bool(dry or on_demand)
@@ -359,7 +367,9 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
             out["potential"] = PT.run_pass(reads, frames, now, session, store=st, ctx=pot_ctx, rows=today_rows,
                                            send=deps.send_potential, owner=deps.owner, dry=push_dry,
                                            tape=g5_pass.get("tape_session"), live_rows={},
-                                           trader_hold={s: sv.get(s) for s in trader_adds if s in frames})
+                                           trader_hold={s: sv.get(s) for s in trader_adds if s in frames},
+                                           promo_hold=({s: sv.get(s) for s in promo_adds if s in frames}
+                                                       if promo_adds else None))
         except Exception:                                       # noqa: BLE001
             log.exception("gajjala 1m: the potential gate failed")
             out["errors"].append("potential")

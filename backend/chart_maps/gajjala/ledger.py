@@ -337,6 +337,9 @@ def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
     extra = {}
     if not V.is_gg5(v):                       # 2026-10-29: the 1-minute row's own push state (GG5 rows gain no key)
         extra["push_state"] = (doc.get("push") or {}).get("state") if kind == KINDS[0] else doc.get("state")
+    if line != LINES[2] and doc.get("promo") is True:   # 🎪 2026-10-29: the claim / tracker doc's stamp — keys ONLY then
+        extra["promo"] = True
+        extra["promo_text"] = doc.get("promo_text") if isinstance(doc.get("promo_text"), str) else None
     return {**extra, "id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
@@ -1708,6 +1711,8 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "flag_text": BUCKET_TEXT[bucket] if bucket in FLAG_BUCKETS else None,  # ✅ / ❌ 2026-10-27 (Q11)
                       "loss_text": lt, "broker_text": _broker(row["symbol"]),             # 🚫 DECISIONS12 D2
                       "trader_text": TN.text_for(row.get("trader"))})                   # 📌 2026-10-27
+        if row.get("promo") is True:                                                     # 🎪 2026-10-29 — only then
+            built[-1]["promo_text"] = row.get("promo_text")
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)

@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-29 ~20:05 ET, verbatim in the label with his spelling kept (BUILD_SPEC32). The day's 🎪 Promo
+  // circuit names (stored tags only, shotgun accounts pruned, GG's price band and a dated snapshot, ordered by today's %
+  // change, cut at backend constants PROMO_NAMES_MAX) join 🚩 Gajjala's scan as candidates — source "promo"
+  // (chart_maps/gajjala/promo_names.py); a name already on GG's list is TAGGED, never double-added. GG's rules decide
+  // every read and every A+; the 1M floor holds every push. The served `promo_text` prints as a 🎪 chip right after the
+  // 📌 chip (ONE component, GajjalaBoard GgTraderChip) on tiles, 🏁 rows, the 🧠 strip and /alerts rows. Promo
+  // first-tags read INVERTED — a WATCHLIST feed, never an edge. UNMEASURED. Pinned by scripts/contracts.mjs ("🎪 Promo
+  // names on Gajjala's scan (2026-10-29)").
+  { id: 'chart-maps-gajjala-promo-names-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
+    label: "🎪 Promo circuit names now join 🚩 Gajjala's scan every day: the day's Promo-tagged names in GG's price band are added as candidates and run against Gajjala's own rules (his K-rules decide every read and every A+, and the 1M volume floor still holds every push); every Promo name on the list (added or already there) carries the 🎪 chip beside the 📌 chip on the cards, the 🏁 rows, the 🧠 strip and /alerts. You said: \"Also I see a some of stocks we see are also in Gajjalas page. Don't see some should we pull stocks from PROMO circuit by default every day they are having some good catched but I do wanna run them against Gajjalas strategies\" A watchlist feed, not an edge — Promo first tags read INVERTED in our study. UNMEASURED." },
   // Ajay 2026-10-29 ~19:50 ET (his first sentence verbatim in the label, his spelling kept): "I wanna see this kind of
   // graph in our Track record page this screenshot is from Promo circuit page." (BUILD_SPEC31). The 📋 list of the 🏁
   // Track record — the plain list and the 🎯 A+-filtered list, on 🚩 Gajjala's and on 🚩 Gajjala's 1-min — draws the

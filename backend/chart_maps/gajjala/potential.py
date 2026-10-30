@@ -61,6 +61,7 @@ from daytrading.data import ET_AFTERHOURS_CLOSE, ET_PREMARKET_OPEN, ET_RTH_OPEN 
 from . import constants as GC
 from . import variant as V
 from . import trader_names as TN                                 # 📌 A2 — the hold reason + its words (one source)
+from . import promo_names as PN                                  # 🎪 2026-10-29 — its own reason + words, the SAME hold
 
 log = logging.getLogger("chart_maps.gajjala.potential")
 
@@ -86,6 +87,12 @@ JOIN_HELD = ("joined_midsession",)                                   # D9 — tr
 # structure is the same unbroken one (D3), and never re-rings a sent push (K3). Its words are trader_names.TRADER_HOLD_TEXT
 # (the 📈 row serves it verbatim) — kept OUT of HELD_WORDS (the /alerts page words every HELD_WORDS key).
 TRADER_HELD = (TN.HOLD_REASON,)                                      # 2026-10-27 critic F2: the reason lives in trader_names
+# 🎪 2026-10-29 (BUILD_SPEC32 D2): a 🎪 Promo ADD (row source "promo") is held by the SAME mechanism — its own reason
+# (promo_names.HOLD_REASON) and words (promo_names.PROMO_HOLD_TEXT); its count "promo_held" is appended LAST, and ONLY
+# when the pass handed a promo_hold map (a pass without the source keeps COUNT_KEYS' shape byte for byte).
+PROMO_HELD = (PN.HOLD_REASON,)
+ADD_HELD = TRADER_HELD + PROMO_HELD                                  # every add's floor hold (eligible, the 📈 row)
+PROMO_COUNT_KEY = "promo_held"
 FIRST_SEEN_MODES = ("normal", "joined")                              # D9 — `joined` = seen first by a mid-session join pass
 AGAIN_TEXT = "↻ also a potential last session"                       # W11
 CHEETAH_TAG = "(Cheetah default, not his)"
@@ -330,7 +337,7 @@ def row_text(sym, setup, read, kind, first_seen_et) -> str:
 
 
 def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text: Optional[str] = None,
-            trader_text: Optional[str] = None, variant=None) -> dict:
+            trader_text: Optional[str] = None, promo_text: Optional[str] = None, variant=None) -> dict:
     """The device payload (W3/W4 + AMENDMENTS4 D8): "UNMEASURED" in the TITLE; the body is the trigger / stop clause,
     then the TAIL (so the ~180-char lock screen shows it), then the session, the first sighting and the tells last.
     Every number is the read's own. 🚫 (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1): `broker_text` (tab.broker_text_for
@@ -338,6 +345,8 @@ def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text:
     title; anything else → the body and title of before. A TAG only: the push still rings.
     📌 (2026-10-27): `trader_text` (trader_names.text_for — the tag and his handle) when a non-empty str → its clause
     right before the broker clause; the title is UNCHANGED (HIS CALL #4).
+    🎪 (2026-10-29): `promo_text` (promo_names.text_for) when a non-empty str → its clause right after the 📌 clause;
+    the title is UNCHANGED.
     `variant` (2026-10-27): its kind, deep link and tag prefix ("gg-pot-" GG5 / "gg1-pot-" the 1-minute page)."""
     from .tab import BROKER_FLAG_ICON, SESSION_BADGE
     var = V.of(variant)
@@ -355,7 +364,8 @@ def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text:
     v = values or {}
     bt = broker_text if isinstance(broker_text, str) and broker_text else ""
     tt = trader_text if isinstance(trader_text, str) and trader_text else ""
-    bits += [tt, bt, TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
+    pt = promo_text if isinstance(promo_text, str) and promo_text else ""
+    bits += [tt, pt, bt, TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
              f"first seen {first_seen_et} ET" if first_seen_et else "", v.get("float_text") or "",
              v.get("rotation_text") or ""]
     title = f"🧠 {sym} · {e} {label} — {kl} · UNMEASURED" + (f" · {BROKER_FLAG_ICON}" if bt else "")
@@ -490,7 +500,7 @@ def _pct_move(a, b) -> Optional[float]:
 
 
 def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False, mode="normal", known=False,
-          trader: Optional[str] = None) -> tuple:
+          trader: Optional[str] = None, promo: Optional[bool] = None, promo_text: Optional[str] = None) -> tuple:
     """-> (doc | None, is_new). Creates the doc at the FIRST pass whose read is a potential; after that follows every
     state of that (symbol, setup) for the session, appending to `state_path` only when (state, kind) changes — so a
     replayed pass (same clock, same read) leaves the doc byte-identical. ONE `update_one` upsert with disjoint
@@ -498,7 +508,8 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
     this pass's fields (`push` / `held` come ONLY from the read). Every stamp = the pass clock `now`. `known` = the
     pass already saw this doc on file (run_pass's session read): a None read then is a READ FAULT, never a new doc —
     nothing is written (the timeline and the move survive) and the gate skips the name this pass. 📌 `trader`
-    (2026-10-27): the flagged trader's key, stamped on the INSERT only and only when truthy (the 🏁 ledger's tag)."""
+    (2026-10-27): the flagged trader's key, stamped on the INSERT only and only when truthy (the 🏁 ledger's tag).
+    🎪 `promo` / `promo_text` (2026-10-29): the same rule — on the INSERT only, and only when `promo` is True."""
     sym = (sym or "").upper()
     read = read if isinstance(read, dict) else {}
     existing = store.get_potential(session, sym, setup)
@@ -523,6 +534,10 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
                   "first_tells": dict(values or {})}
         if isinstance(trader, str) and trader:
             insert["trader"] = trader
+        if promo is True:
+            insert["promo"] = True
+            if isinstance(promo_text, str) and promo_text:
+                insert["promo_text"] = promo_text
     base = existing or insert
     path = [dict(e) for e in (base.get("state_path") or []) if isinstance(e, dict)]
     state = read.get("state")
@@ -596,7 +611,7 @@ def eligible(doc: dict, is_new: bool, kind: Optional[str]) -> bool:
         return False
     if reasons & set(RULE_HELD):
         return GC.POTENTIAL_DEFER_REFUSED and _unbroken(doc)
-    if reasons & set(TRADER_HELD):                              # 📌 A2 — the floor decides at the gate, every pass
+    if reasons & set(ADD_HELD):                                 # 📌 A2 / 🎪 — the floor decides at the gate, every pass
         return _unbroken(doc)
     if not reasons:
         return _unbroken(doc)
@@ -670,7 +685,8 @@ def _frame_close(frames_obj) -> Optional[float]:
 
 
 def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Callable] = None, owner=None,
-             dry=False, tape=None, live_rows: Optional[dict] = None, trader_hold: Optional[dict] = None) -> dict:
+             dry=False, tape=None, live_rows: Optional[dict] = None, trader_hold: Optional[dict] = None,
+             promo_hold: Optional[dict] = None) -> dict:
     """Track every potential of the pass and ring each FIRST sighting once (K3), live, owner-only.
 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames}; `ctx` = {SYM: the read doc's ctx}; `rows` = {SYM:
@@ -682,6 +698,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     📌 A2 (2026-10-27): `trader_hold` = {SYM: the session volume this pass read} for the 📌 ADDS (run.py — the number
     K11 reads); a potential of one is HELD (TRADER_HELD, counted "trader_held") while it is under GC.SCAN_MIN_VOLUME.
     A GG qualifier carrying the tag is never in it (it passed the floors).
+    🎪 (2026-10-29): `promo_hold` = the same map for the 🎪 ADDS — the SAME hold (PROMO_HELD, counted "promo_held",
+    a key present ONLY when the map is not None). A 📌 add the Promo circuit also tagged stays in trader_hold.
     2026-10-27 (BUILD_SPEC27 §3.5): the variant is the store's (`V.of(store)`); signature unchanged. A non-GG5 variant
     in shadow (variant.push_mode — GAJJALA_1M_PUSH_MODE) claims as always, then SETTLES {"state": "shadow", "at_et",
     "result": {"would_push": payload}} and counts "shadow" (a key ONLY its counts carry) — the sender is never called.
@@ -696,9 +714,20 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     from . import trader_names as TN
     ctx, rows, live_rows, frames = ctx or {}, rows or {}, live_rows or {}, frames or {}
     trader_hold = {str(k).upper(): v for k, v in (trader_hold or {}).items()}
+    promo_hold = None if promo_hold is None else {str(k).upper(): v for k, v in promo_hold.items()}
     counts = {k: 0 for k in COUNT_KEYS}
     if shadow:
         counts["shadow"] = 0
+    if promo_hold is not None:
+        counts[PROMO_COUNT_KEY] = 0
+    # ONE hold mechanism for every add at GG's 1M floor: (reason, count key, {SYM: session volume}) per source
+    add_holds = ((TRADER_HELD[0], "trader_held", trader_hold), (PROMO_HELD[0], PROMO_COUNT_KEY, promo_hold))
+
+    def add_hold(sym):
+        for why, ckey, vols in add_holds:
+            if vols is not None and sym in vols and TN.under_floor(vols[sym]):
+                return why, ckey
+        return None
     # 🚫 DECISIONS12 D4 — his broker list, read ONCE per pass before the tracker read (a read fault → the seed); a TAG
     # on the body, never a gate; COUNT_KEYS unchanged (the A+ pass counts "broker_flagged")
     flags = frozenset(ST.broker_flags(store)[0])
@@ -760,7 +789,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
         c = ctx.get(sym) or {}
         doc, is_new = track(store, session, sym, setup, r, kind, now, px=px_of(sym), values=values, dry=dry,
                             mode=FIRST_SEEN_MODES[1] if joining else FIRST_SEEN_MODES[0],
-                            known=doc_id(session, sym, setup) in today, trader=c.get("trader"))
+                            known=doc_id(session, sym, setup) in today, trader=c.get("trader"),
+                            promo=c.get("promo"), promo_text=c.get("promo_text"))
         if doc is None:                                         # a read fault on a doc on file: skip, never re-create
             counts["failed"] += 1
             continue
@@ -776,8 +806,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             reason = ckey = window
         elif GC.POTENTIAL_FRESH_TAPE and not fresh_tape(frames.get(sym), now, var):
             reason = ckey = "stale_tape"
-        elif sym in trader_hold and TN.under_floor(trader_hold[sym]):
-            reason, ckey = TRADER_HELD[0], "trader_held"      # 📌 A2 — GG's 1M floor stays on every push
+        elif add_hold(sym) is not None:
+            reason, ckey = add_hold(sym)                        # 📌 A2 / 🎪 — GG's 1M floor stays on every push
         if reason:
             counts[ckey] += 1
             if not dry:
@@ -802,7 +832,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
                 _hold(store, doc, STORE_HELD[0], now)
             continue
         payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
-                          broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"), variant=var)
+                          broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"),
+                          promo_text=c.get("promo_text"), variant=var)
         if shadow:                                              # recorded, NEVER sent (HIS CALL #1 of BUILD_SPEC27; live since 2026-10-29)
             counts["shadow"] += 1
             store.settle_potential_push(_id, {"state": "shadow", "at_et": _hhmm(now),
@@ -835,7 +866,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
 
 
 __all__ = ["KIND", "TAIL", "KIND_LABEL", "CONCEPT", "COUNT_KEYS", "HELD_WORDS", "RULE_HELD", "STORE_HELD", "JOIN_HELD",
-           "FIRST_SEEN_MODES", "TRADER_HELD", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
+           "FIRST_SEEN_MODES", "TRADER_HELD", "PROMO_HELD", "ADD_HELD", "PROMO_COUNT_KEY", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
            "doc_id", "deep_link", "held_words", "line", "row_text", "compose", "window_reason", "fresh_tape", "pass_times",
            "push_note", "rules_lines", "defaults_clauses", "defaults_sentence", "track", "eligible", "mark_graveyard",
            "run_pass"]

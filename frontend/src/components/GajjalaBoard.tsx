@@ -136,6 +136,12 @@
  * 🏁 rows, 👀 watch), and the strip prints the SERVED `trader_text` / `trader_skip_text` lines after its own text. A
  * TAG, never a filter; served to every viewer; the FE types no word and no trader's name. UNMEASURED.
  *
+ * 🎪 Promo names on Gajjala's scan (2026-10-29, BUILD_SPEC32 D4). Ajay: "should we pull stocks from PROMO circuit by
+ * default every day ... I do wanna run them against Gajjalas strategies". The day's Promo-circuit names join the scan
+ * as candidates; the SAME GgTraderChip prints the SERVED `promo_text` right after the 📌 chip on all seven surfaces (a
+ * row both sources tagged shows both chips). A WATCHLIST feed for GG's rules, never an edge — Promo first-tags read
+ * INVERTED. The FE types no word. UNMEASURED.
+ *
  * 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.8). Ajay: "Can you create a new page, I would like you to do
  * the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track record for it from
  * today..". The SAME component draws it: `variant="gajjala_1m"` (ChartMaps mounts it with key="gajjala_1m", so a switch
@@ -153,6 +159,7 @@ import { GrowthChip } from './GrowthChip';
 import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { GgTraderChip } from './GgTraderChip';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
@@ -675,7 +682,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     <li key={`${r.symbol}-${r.text}`} data-testid={`gg-recap-row-${id}`}>
                       {href ? <Link to={href} className="gg-recap-link"><strong>{r.symbol}</strong> {r.text}</Link>
                             : <><strong>{r.symbol}</strong> {r.text}</>}
-                      <GgTraderChip text={r.trader_text} testid={`gg-trader-recap-${id}`} />
+                      <GgTraderChip text={r.trader_text} testid={`gg-trader-recap-${id}`}
+                                    promoText={r.promo_text} promoTestid={`gg-promo-recap-${id}`} />
                       <GgBrokerChip text={r.broker_text} testid={`gg-broker-recap-${id}`} />
                     </li>
                   );
@@ -701,7 +709,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     {' '}<ShortInterestChip symbol={t.symbol} />
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
-                    <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`} />
+                    <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`}
+                                  promoText={t.promo_text} promoTestid={`gg-promo-tile-${t.symbol}`} />
                     <GgBrokerChip text={t.broker_text} testid={`gg-broker-tile-${t.symbol}`} />
                     {/* The frame this card drew, when it is not the bar size the toggle shows (a ➖ Fade read
                         that fell back to 5-minute bars) — the served per-tile `tf`, never a guess. */}
@@ -833,7 +842,8 @@ function AplusBanner({ block }: { block: GgEnterable }) {
                 {href
                   ? <Link to={href} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</Link>
                   : <span className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</span>}
-                <GgTraderChip text={r.trader_text} testid={`gg-trader-aplus-${id}`} />
+                <GgTraderChip text={r.trader_text} testid={`gg-trader-aplus-${id}`}
+                              promoText={r.promo_text} promoTestid={`gg-promo-aplus-${id}`} />
                 <GgBrokerChip text={r.broker_text} testid={`gg-broker-aplus-${id}`} />
               </Fragment>
             );
@@ -979,7 +989,8 @@ function PotentialStrip({ strip, onPick }: { strip: GgPotentialStrip; onPick: (s
                   {r.again && !againTold ? <span className="gg-pot-again" data-testid="gg-pot-again">↻</span> : null}
                   <Tells tells={r.tells} />
                 </button>
-                <GgTraderChip text={r.trader_text} testid={`gg-trader-pot-${r.symbol}-${r.setup}`} />
+                <GgTraderChip text={r.trader_text} testid={`gg-trader-pot-${r.symbol}-${r.setup}`}
+                              promoText={r.promo_text} promoTestid={`gg-promo-pot-${r.symbol}-${r.setup}`} />
                 <GgBrokerChip text={r.broker_text} testid={`gg-broker-pot-${r.symbol}-${r.setup}`} />
               </li>
             );
@@ -1004,7 +1015,8 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
           return (
             <li key={id} className="gg-track-row" data-testid={`gg-track-row-${id}`}>
               {href ? <Link to={href} className="gg-track-text">{r.text}</Link> : <span className="gg-track-text">{r.text}</span>}
-              <GgTraderChip text={r.trader_text} testid={`gg-trader-track-${id}`} />
+              <GgTraderChip text={r.trader_text} testid={`gg-trader-track-${id}`}
+                            promoText={r.promo_text} promoTestid={`gg-promo-track-${id}`} />
               <GgBrokerChip text={r.broker_text} testid={`gg-broker-track-${id}`} />
               {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
               {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
@@ -1078,7 +1090,8 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
             <span className={`gg-tr-flag gg-tr-flag-${typeof row.bucket === 'string' ? row.bucket : ''}`}
                   data-testid={`gg-tr-flag-${row.key}`}>{row.flag_text}</span>
           ) : null}
-          <GgTraderChip text={row.trader_text} testid={`gg-tr-trader-${row.key}`} />
+          <GgTraderChip text={row.trader_text} testid={`gg-tr-trader-${row.key}`}
+                        promoText={row.promo_text} promoTestid={`gg-tr-promo-${row.key}`} />
           <GgBrokerChip text={row.broker_text} testid={`gg-tr-broker-${row.key}`} />
         </td>
       );
@@ -1418,7 +1431,8 @@ function WatchLine({ watch }: { watch: GgWatch }) {
         <span key={s.symbol}>
           {i ? ', ' : ''}
           <Link to={ggHref(s.href)!} data-testid={`gg-watch-tk-${s.symbol}`}>{s.symbol}</Link>
-          <GgTraderChip text={s.trader_text} testid={`gg-trader-watch-${s.symbol}`} />
+          <GgTraderChip text={s.trader_text} testid={`gg-trader-watch-${s.symbol}`}
+                        promoText={s.promo_text} promoTestid={`gg-promo-watch-${s.symbol}`} />
           <GgBrokerChip text={s.broker_text} testid={`gg-broker-watch-${s.symbol}`} />
         </span>
       ))}
@@ -1435,14 +1449,8 @@ function GgBrokerChip({ text, testid }: { text: unknown; testid: string }) {
   return <span className="cm-badge cm-badge-muted gg-broker" data-testid={testid}>{text}</span>;
 }
 
-/* ---- 📌 trader tag (2026-10-27, BUILD_SPEC26 §3.4) — a clone of GgBrokerChip; every word SERVED (trader_names.text_for),
- * served to every viewer. A TAG: nothing hides, filters or mutes a row. ---- */
-
-/** 📌 the served trader tag beside a symbol — nothing unless the server sent a non-empty string. */
-function GgTraderChip({ text, testid }: { text: unknown; testid: string }) {
-  if (typeof text !== 'string' || !text.trim()) return null;
-  return <span className="cm-badge cm-badge-muted gg-trader" data-testid={testid}>{text}</span>;
-}
+/* ---- 📌 / 🎪 source-tag chip — 2026-10-29: chip module. GgTraderChip (and its servedChip helper) moved verbatim to
+ * ./GgTraderChip.tsx (imported above) so /alerts reuses the ONE chip without pulling this board's chunk. ---- */
 
 /** A served strip line prints only when it is a non-empty string — null / "" / absent prints nothing. */
 function servedText(v: unknown): v is string {

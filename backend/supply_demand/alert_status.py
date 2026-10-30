@@ -477,6 +477,19 @@ def _gajjala_alerts_coll():
         return None
 
 
+def _promo_tag(item: dict, doc: dict) -> None:
+    """🎪 2026-10-29 (BUILD_SPEC32 D4, critic F3): a 🚩 shadow claim / 🧠 tracker doc stamped `promo` True (alerts.py
+    claim base, potential.track's INSERT — the ledger's rule) hands its row `promo` True + its served `promo_text`
+    (promo_names.text_for, printed by the page's 🎪 chip, never recomposed). An untagged doc → NO key (rows byte for
+    byte as before); a tag without words → `promo` alone (the chip prints nothing)."""
+    if doc.get("promo") is not True:
+        return
+    item["promo"] = True
+    text = doc.get("promo_text")
+    if isinstance(text, str) and text.strip():
+        item["promo_text"] = text
+
+
 def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
     """🚩 Today's shadow A+ records, newest first (2026-10-13, E3).
 
@@ -531,6 +544,7 @@ def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
                     "risk_pct": _finite(d.get("risk_pct")),
                     "text": text if isinstance(text, str) and text else None, "url": url,
                     "note": d.get("note") if isinstance(d.get("note"), str) else None})
+        _promo_tag(out[-1], d)                      # 🎪 2026-10-29 critic F3: the claim's served tag, only when tagged
     out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
     return out
 
@@ -577,9 +591,34 @@ def _gajjala_held_text(reason) -> Optional[str]:
         return None
     try:
         from chart_maps.gajjala import trader_names as TN
-        return TN.held_text(reason)
+        words = TN.held_text(reason)
     except Exception as exc:
         log.warning("alert_status: trader hold words unavailable: %s", exc)
+        words = None
+    if words:
+        return words
+    try:                                            # 🎪 2026-10-29 — promo_names.PROMO_HOLD_TEXT, the same rule
+        from chart_maps.gajjala import promo_names as PN
+        return PN.held_text(reason)
+    except Exception as exc:
+        log.warning("alert_status: promo hold words unavailable: %s", exc)
+        return None
+
+
+def _gajjala_promo_held_text(counts) -> Optional[str]:
+    """🎪 2026-10-29 (BUILD_SPEC32 D4): the 🧠 pass's `promo_held` counter chip words — promo_names.PROMO_HOLD_TEXT,
+    served only when the latest pass counted one (a pass without the key keeps its shape)."""
+    try:
+        n = int((counts or {}).get("promo_held") or 0)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    if n <= 0:
+        return None
+    try:
+        from chart_maps.gajjala import promo_names as PN
+        return PN.PROMO_HOLD_TEXT
+    except Exception as exc:
+        log.warning("alert_status: promo hold words unavailable: %s", exc)
         return None
 
 
@@ -617,7 +656,8 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
     recomposed here), url (doc.url when an internal path, else None),
     push_state ("pushed" | "no_target" | "failed" | "claimed" | None),
     push_at (ET iso | None), held (the LAST `held` reason | None)[, held_text — 📌 2026-10-27: the served words of a
-    📌 trader hold (trader_names.TRADER_HOLD_TEXT), present ONLY on such a row]}. A Mongo
+    📌 trader hold (trader_names.TRADER_HOLD_TEXT) or a 🎪 promo hold (promo_names.PROMO_HOLD_TEXT, 2026-10-29),
+    present ONLY on such a row]}. A Mongo
     read, nothing scanned; never raises — a dead tracker is []."""
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -654,6 +694,7 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
         words = _gajjala_held_text(item["held"])
         if words:                                   # 📌 2026-10-27 critic F2: only a 📌 hold carries its served words
             item["held_text"] = words
+        _promo_tag(item, d)                         # 🎪 2026-10-29 critic F3: the tracker doc's served tag
         out.append(item)
     out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
     return out
@@ -695,6 +736,9 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
+    pw = _gajjala_promo_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
+    if pw:                                          # 🎪 2026-10-29 — the same rule
+        passes[GAJJALA_POTENTIAL_KIND]["promo_held_text"] = pw
     window = tape_window()
     for kind in TAPE_KINDS:
         passes[kind] = dict(_with_cadence(kind, read_pass(kind, pass_coll)), window=window)

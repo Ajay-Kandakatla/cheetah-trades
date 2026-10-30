@@ -428,8 +428,11 @@ def test_NEGATIVE_default_deps_never_fetch_and_main_passes_default_fetch():
     dd = RUN.Deps()
     assert dd.trader_fetch is None and dd.trader_posts is None
     src = inspect.getsource(RUN.main)
-    assert "run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch), symbols=syms)" in src
-    assert "run_on_demand(now, store=st, deps=Deps())" in src                     # the open never re-reads
+    # WIDENED 2026-10-29 (BUILD_SPEC32 D3): the cron and on-open calls also wire the 🎪 stored-tags reader; the open
+    # still never re-reads a trader (no trader_fetch)
+    assert ("run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags),\n"
+            "                           symbols=syms)") in src
+    assert "run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags))" in src   # the open never re-reads
     assert "dry_deps()" in src and "trader_fetch" not in inspect.getsource(RUN.dry_deps)
     body = inspect.getsource(RUN.run_pass)
     i, j, k = body.index("SC.scan_rows("), body.index("TN.run_step("), body.index("SC.record_scan(")

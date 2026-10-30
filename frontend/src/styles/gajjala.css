@@ -286,3 +286,5 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-ap-no_entry { opacity: 0.35; }
 .gg-ap-other { opacity: 0.2; }
 .gg-ap-honesty { font-size: 0.74rem; line-height: 1.4; }
+/* 🎪 .gg-promo — 2026-10-29: chip module. The 430 px wrap rule moved verbatim to ggTraderChip.css (the chip's own
+   stylesheet, loaded by GgTraderChip.tsx on the board AND /alerts). */

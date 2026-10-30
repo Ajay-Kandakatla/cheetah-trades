@@ -50,6 +50,8 @@ import {
 } from '../lib/alertKinds';
 import { RulesInfo } from '../components/RulesInfo';
 import { EnterableChip } from '../components/EnterableChip';
+/* 🎪 2026-10-29 (BUILD_SPEC32 D4): the board's ONE source-tag chip, reused — it prints the served promo_text only. */
+import { GgTraderChip } from '../components/GgTraderChip';
 
 /* ── status (GET /alerts/status) ─────────────────────────────────────────── */
 
@@ -78,6 +80,10 @@ export type PassStatus = {
    *  counter's words — backend trader_names.TRADER_HOLD_TEXT, served only when
    *  the latest pass counted one. Printed, never typed here. */
   trader_held_text?: string | null;
+  /** 🧠 gajjala_potential only (🎪 2026-10-29, critic F3): the `promo_held`
+   *  counter's words — backend promo_names.PROMO_HOLD_TEXT, served only when
+   *  the latest pass counted one. Printed, never typed here. */
+  promo_held_text?: string | null;
   /** 🎢 🗺️ the two tape-burst passes only (2026-10-14): the clock their cron
    *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
    *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
@@ -106,6 +112,8 @@ export type GgShadowItem = {
   date: string | null; symbol: string | null; setup?: string | null; at?: string | null;
   entry_bar_t?: string | null; frame?: string | null; trigger?: number | null; stop?: number | null;
   risk_pct?: number | null; text?: string | null; url?: string | null; note?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — absent on an untagged row. */
+  promo?: boolean | null; promo_text?: string | null;
 };
 /** One 🧠 potential as the tracker recorded it (alert_status PotItem). `text`
  *  is the push's own line (potential.line) — printed, never recomposed; `url`
@@ -118,6 +126,8 @@ export type GgPotentialItem = {
   /** 📌 2026-10-27 (critic F2): a 📌 trader hold's served words
    *  (trader_names.TRADER_HOLD_TEXT) — present only on such a row. */
   held_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — absent on an untagged row. */
+  promo?: boolean | null; promo_text?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -429,7 +439,8 @@ const TAPE_HIDDEN_KEYS = ['dup_same', 'dup_earlier'];
  * "pushes delivered"; a send no device took is its own `no_target` chip.
  * `claimed_before` counts only a re-read doc that already carries a push.
  * `potential` (= armed + building) and `dry` stay in the hover title. */
-export function ggPotentialChipText(key: string, n: number, traderHeldText?: string | null): string | null {
+export function ggPotentialChipText(key: string, n: number, traderHeldText?: string | null,
+                                    promoHeldText?: string | null): string | null {
   switch (key) {
     case 'tracked_today':     return `🧠 ${n} potentials today`;
     case 'new':               return `${n} new this pass`;
@@ -451,12 +462,16 @@ export function ggPotentialChipText(key: string, n: number, traderHeldText?: str
      * (pass.trader_held_text); an older API without them keeps the page's
      * generic counter words (the key, de-underscored). */
     case 'trader_held':       return traderHeldText && traderHeldText.trim() ? `${n} ${traderHeldText}` : `${n} trader held`;
+    /* 🎪 2026-10-29 (critic F3): the 🎪 add's hold, the 📌 rule — its words
+     * are SERVED (pass.promo_held_text); an older API without them keeps the
+     * generic counter words (the key, de-underscored). */
+    case 'promo_held':        return promoHeldText && promoHeldText.trim() ? `${n} ${promoHeldText}` : `${n} promo held`;
     default: return null;
   }
 }
 export const GAJJALA_POTENTIAL_KEYS = ['tracked_today', 'new', 'armed', 'building', 'muted', 'outside_hours',
                                        'closed_day', 'stale_tape', 'joined', 'claimed_before',
-                                       'no_target', 'failed', 'graveyard', 'trader_held'];
+                                       'no_target', 'failed', 'graveyard', 'trader_held', 'promo_held'];
 /* Every `held` reason of backend potential.HELD_WORDS (RULE_HELD + STORE_HELD)
  * plus D9's `joined_midsession` → the 🧠 list row's status word. A reason this
  * page does not know still prints, as "held: <its words>" — never dropped. */
@@ -770,7 +785,7 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text, pass?.promo_held_text) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
@@ -826,6 +841,7 @@ export function GajjalaShadowList({ items, today }: { items: GgShadowItem[] | nu
              style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.76rem', lineHeight: 1.45 }}>
           <span className="mono" style={{ color: GOLD, fontWeight: 700, whiteSpace: 'nowrap' }}>{ggShadowTime(it)}</span>
           <GgShadowLine it={it} />
+          <GgTraderChip promoText={it.promo_text} promoTestid={`gg-alert-promo-shadow-${it.symbol}-${it.setup ?? ''}`} />
           <span className="mono" style={SKIP_CHIP}>{(typeof it.note === 'string' && it.note.trim()) || GG_SHADOW_NOTE_FALLBACK}</span>
         </div>
       ))}
@@ -879,6 +895,7 @@ export function GgPotentialList({ items, today }: { items: GgPotentialItem[] | n
              style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.76rem', lineHeight: 1.45 }}>
           <span className="mono" style={{ color: GOLD, fontWeight: 700, whiteSpace: 'nowrap' }}>{etFromIso(it.at) || '—'}</span>
           <GgPotentialLine it={it} />
+          <GgTraderChip promoText={it.promo_text} promoTestid={`gg-alert-promo-pot-${it.symbol}-${it.setup ?? ''}`} />
           <span className="mono" style={it.push_state === 'pushed' ? SMALL_CHIP : SKIP_CHIP}>{ggPotentialRowWord(it)}</span>
         </div>
       ))}

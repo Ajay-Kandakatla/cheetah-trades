@@ -147,6 +147,31 @@ def names_for(now, session, posts_by: dict) -> tuple:
 
 
 # ── resolve against the pass's snapshot (PURE but for the tag set on a qualifier row) ─────────────────────────────
+def candidate_row(key: str, rows: dict, session_iso: str, types: Optional[dict]) -> tuple:
+    """PURE. The ONE add check (📌 trader names; 🎪 promo_names reuses it, 2026-10-29) -> (Row, None) or (None, reason):
+    not_in_snapshot, not_dated_session (no print dated the session), no_prev_close, type_out (scanner.type_verdict),
+    out_of_band (GG's price band), in that order; else scanner.build_row's Row. GG's change and volume floors are NOT
+    applied (HIS CALL #1)."""
+    from sepa import prices
+    from . import scanner as SC
+    row = (rows or {}).get(key)
+    if not isinstance(row, dict):
+        return None, "not_in_snapshot"
+    ep = prices.extended_print(row)
+    if not ep or ep["date"] != session_iso:
+        return None, "not_dated_session"
+    prev = SC._f(row.get("prev_day_close"))
+    if not prev or prev <= 0:
+        return None, "no_prev_close"
+    typ, verdict = SC.type_verdict(key, types)
+    if verdict == "out":
+        return None, "type_out"
+    r = SC.build_row(key, row, ep, prev, typ, session_iso)
+    if not (GC.SCAN_MIN_PRICE <= r["price"] <= GC.SCAN_MAX_PRICE):
+        return None, "out_of_band"
+    return r, None
+
+
 def resolve(names: list, rows: dict, session, types: Optional[dict], qualifiers: list) -> dict:
     """-> {"added": [Row], "tagged": [SYM], "skips": [{symbol, trader, reason}]}. The snapshot key is
     sepa.symbols.for_yahoo(symbol) (BRK.B post ↔ BRK-B row). A name his scanner already lists: THAT row gets
@@ -154,8 +179,7 @@ def resolve(names: list, rows: dict, session, types: Optional[dict], qualifiers:
     not_dated_session (no print dated the session), no_prev_close, type_out (scanner.type_verdict), out_of_band (GG's
     price band) — else scanner.build_row's Row + {source, trader, trader_text} → added. GG's change and volume floors
     are NOT applied (HIS CALL #1)."""
-    from sepa import prices, symbols
-    from . import scanner as SC
+    from sepa import symbols
     session_iso = session.isoformat() if isinstance(session, (date, datetime)) else str(session)
     by_sym = {str(q.get("symbol")): q for q in qualifiers or [] if isinstance(q, dict)}
     added, tagged, skips = [], [], []
@@ -173,25 +197,9 @@ def resolve(names: list, rows: dict, session, types: Optional[dict], qualifiers:
                 pending[key] = (q, n["trader"], tt)
                 tagged.append(key)
             continue
-        row = (rows or {}).get(key)
-        if not isinstance(row, dict):
-            skip("not_in_snapshot")
-            continue
-        ep = prices.extended_print(row)
-        if not ep or ep["date"] != session_iso:
-            skip("not_dated_session")
-            continue
-        prev = SC._f(row.get("prev_day_close"))
-        if not prev or prev <= 0:
-            skip("no_prev_close")
-            continue
-        typ, verdict = SC.type_verdict(key, types)
-        if verdict == "out":
-            skip("type_out")
-            continue
-        r = SC.build_row(key, row, ep, prev, typ, session_iso)
-        if not (GC.SCAN_MIN_PRICE <= r["price"] <= GC.SCAN_MAX_PRICE):
-            skip("out_of_band")
+        r, why = candidate_row(key, rows, session_iso, types)
+        if why is not None:
+            skip(why)
             continue
         r.update({"source": SOURCE, "trader": n["trader"], "trader_text": tt})
         added.append(r)
@@ -398,6 +406,6 @@ def rules_clause() -> str:
 
 
 __all__ = ["SOURCE", "STATE_ID", "SKIP_REASONS", "SKIP_TEXT", "STRIP_TEXT", "SKIP_HEAD", "TRADER_HOLD_TEXT",
-           "HOLD_REASON", "FLOOR_CLAUSE", "flagged", "text_for", "window_start", "names_for", "resolve", "default_fetch",
+           "HOLD_REASON", "FLOOR_CLAUSE", "flagged", "text_for", "window_start", "names_for", "candidate_row", "resolve", "default_fetch",
            "default_posts", "maybe_refresh", "run_step", "recount", "trim_block", "held_text", "tag_map", "added_symbols", "under_floor",
            "strip_text", "skip_text", "legend_row", "rules_clause"]

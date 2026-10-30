@@ -801,6 +801,29 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   constant is tagged MINE; no SCAN_* / K* value changed. **UNMEASURED** — the closest class this app measured
   (promo-account first tags) read INVERTED. Doc `docs/gajjala/trader_names_2026_10_27.md` (HIS CALLs #1–#10); contracts
   "📌 algo888 tracked + his names into Gajjala's scan (2026-10-27)"; ✨ `chart-maps-gajjala-trader-algo888-2026-10-27`.
+- **🎪 Promo-circuit names join the list** (2026-10-29, Ajay: *"should we pull stocks from PROMO circuit by default every
+  day they are having some good catched but I do wanna run them against Gajjalas strategies"*).
+  `chart_maps/gajjala/promo_names.py` (SOURCE "promo", tag `PROMO_TAG` 🎪) reads the STORED `promo_circuit_tags` (one
+  Mongo read, never a sweep or a fetch; `Deps.promo_tags`, wired by `main` on the cron and on-open paths), keeps roster
+  accounts, prunes shotgun one-offs with `promo_circuit.prune_shotgun_tags` over the page's 14-day window, and takes the
+  tickers tagged on the session's ET date (first or later tag — the page's "today" rule). Right after the 📌 step and
+  before `scanner.record_scan` (`PN.run_step`, FENCED: a raise adds nothing and counts `promo_failed`), each name runs
+  the 📌 add check (`trader_names.candidate_row`: snapshot, dated print, prior close, instrument rule, GG's price band —
+  no change or volume floor for the ADD); the survivors are ordered by today's % change and the first
+  `PROMO_NAMES_MAX` 25 join (Cheetah default, in `CHEETAH_DEFAULTS`, HIS CALL #1), the rest COUNTED `promo_over_cap`;
+  the cap bounds the SESSION's listed 🎪 adds (`promo_names.listed_today`: an earlier pass's add keeps its slot, critic
+  F3), and `run.py` loads GG's own names before the 📌 / 🎪 adds.
+  A listed name (GG's or a 📌 add) is TAGGED (`promo` / `promo_text`; a 📌 row keeps `trader` too). GG's 1M floor stays
+  on every push: a 🎪 add's 🧠 push is HELD (`PT.PROMO_HELD`, `PROMO_HOLD_TEXT`, count `promo_held` only when a promo
+  map was handed) on GG5 and the 1-minute page; the A+ is K11. Counts `promo_added` / `promo_tagged` /
+  `promo_skipped` / `promo_over_cap` / `promo_failed` and the `promo` block appear ONLY when the source ran — an
+  unwired or empty source adds no key (the GG5 identity fixture is unchanged). Served: `promo_text` on tiles / rows /
+  claims / tracker docs / 🏁 rows and in the push bodies (titles unchanged), strip `promo_text` / `promo_skip_text`,
+  the legend row "promo" last (`tab.LEGEND_KEYS_PROMO`, only when the source ran), the ℹ️ note clause
+  (`_gg_promo_clause`), `/alerts/status` `promo_added` / `promo_held` / `promo_held_text`. **INVERTED** (Promo first
+  tags, `docs/catalysts/promo_tag_study_2026_09_21.md`) and **UNMEASURED** on GG's setups — a watchlist feed for his
+  rules, not an edge. Doc `docs/gajjala/promo_names_2026_10_29.md` (HIS CALLs #1–#6); contracts "🎪 Promo names on
+  Gajjala's scan (2026-10-29)"; ✨ `chart-maps-gajjala-promo-names-2026-10-29`.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a

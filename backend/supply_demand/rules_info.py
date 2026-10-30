@@ -1155,6 +1155,20 @@ def _gg_trader_clause() -> str:
     return " " + clause if clause else ""
 
 
+def _gg_promo_clause() -> str:
+    """🎪 2026-10-29 (Ajay "should we pull stocks from PROMO circuit by default every day"; BUILD_SPEC32 D4) — the
+    section note's 🎪 clause, built by chart_maps.gajjala.promo_names (never retyped here): " " + the clause, or ""
+    when the module cannot load (the panel never breaks on it). In the note (before the one-minute clause), not the
+    scanner pick: the pick's 📌 clause stays its last words."""
+    try:
+        from chart_maps.gajjala import promo_names as PN
+        clause = PN.rules_clause()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala promo clause unavailable: %s", exc)
+        return ""
+    return " " + clause if clause else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1316,6 +1330,7 @@ def _gajjala_section() -> dict:
                  "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13)."
                  + (" 🚫: XLAB and XELB (XELB under a dollar) went through at %s on 2026-10-16, so a price floor is "
                     "not the rule." % GC.BROKER_NAME)
+                 + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),
     }

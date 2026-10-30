@@ -138,7 +138,7 @@ OFF_BY_DEFAULT = ("HALT_CALM_BARS", "AH_EXHAUSTION_MAX_PCT")
 
 # labels the ℹ️ panel must say are Ajay's, not Gajjala's (DECISIONS round A)
 CHEETAH_DEFAULTS = ("STAY_LISTED_SESSIONS", "PSY_NEAR_PCT", "POTENTIAL_NEEDS_BASE", "POTENTIAL_FRESH_TAPE",
-                    "POTENTIAL_DEFER_REFUSED")
+                    "POTENTIAL_DEFER_REFUSED", "PROMO_NAMES_MAX")
 
 # push — DECISIONS round A shipped SHADOW (2026-10-13 … 16); Ajay flipped it LIVE 2026-10-16 — his call, not a measurement
 # (the 2026-10-14 study read NULL, docs/gajjala/study_2026_10_13.md). Every A+ entry is its own push, once per (symbol, setup, ET day)
@@ -251,6 +251,12 @@ TRADER_NAMES_MAX = 10                    # Cheetah default (MINE, not GG — HIS
 TRADER_REFRESH_SEC = PASS_CADENCE_SEC * 3   # derived — MINE (HIS CALL #5): the pass re-reads a flagged StockTwits account every 900 s
 TRADER_FETCH_PAGES = 1                   # TRANSPORT — MINE: one 30-message page per in-pass read
 TRADER_FETCH_TIMEOUT_SEC = 5.0           # TRANSPORT — MINE: worst case 3 profiles x 5 s, out of the pass's own bar budget
+
+# 🎪 Promo-circuit names (2026-10-29, Ajay "should we pull stocks from PROMO circuit by default every day … I do wanna
+# run them against Gajjalas strategies") — chart_maps/gajjala/promo_names.py; the add waives GG's change and volume
+# floors for the ADD only (the 📌 pattern); every K-rule and the 1M push floor are GG's, unchanged
+PROMO_TAG = "🎪"                         # Cheetah default (MINE, not GG — the 🎪 Promo circuit page's emoji)
+PROMO_NAMES_MAX = 25                     # Cheetah default (MINE, not GG — HIS CALL #1): 🎪 adds listed per session, today's % change first
 
 # 🚩 Gajjala's 1-minute page (Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of
 # Gajjalas but on 1 min candles please." / "do everything and also add the track record for it from today..") —

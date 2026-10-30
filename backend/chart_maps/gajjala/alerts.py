@@ -281,7 +281,7 @@ def potential_rang_at(store, session, sym: str, setup: str) -> Optional[str]:
 
 def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None,
             potential_at_et: Optional[str] = None, broker_text: Optional[str] = None,
-            trader_text: Optional[str] = None, variant=None) -> dict:
+            trader_text: Optional[str] = None, promo_text: Optional[str] = None, variant=None) -> dict:
     """The device payload of one A+ entry. Every number is the read's own (trigger / stop / risk_pct / entry bar).
     Body (AMENDMENTS10 F9 — numbers first): broke T on the bar · stop · the setup's entry words · 🧠 potential rang
     HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · the 🚫 broker tag · UNMEASURED;
@@ -290,6 +290,8 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     title; anything else → the body and title of before. A TAG only: the push still rings.
     📌 (2026-10-27, BUILD_SPEC26 §3.3): `trader_text` (trader_names.text_for — the tag and his handle) when a non-empty
     str → its clause between the after-hours tag and the broker clause; the title is UNCHANGED (HIS CALL #4).
+    🎪 (2026-10-29): `promo_text` (promo_names.text_for) when a non-empty str → its clause right after the 📌 clause;
+    the title is UNCHANGED.
     `variant` (2026-10-27): the kind, the url's tab and the tag prefix ("gg-" GG5 / "gg1-" the 1-minute page) and the
     frame a read without one is said on (its primary)."""
     v = V.of(variant)
@@ -310,7 +312,8 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
            if isinstance(potential_at_et, str) and _HHMM.fullmatch(potential_at_et) else "")
     bt = broker_text if isinstance(broker_text, str) and broker_text else ""
     tt = trader_text if isinstance(trader_text, str) and trader_text else ""
-    bits = [broke, stop_bit, words, pot, float_text, tape_tag, tt, bt, UNMEASURED_TAIL]
+    pt = promo_text if isinstance(promo_text, str) and promo_text else ""
+    bits = [broke, stop_bit, words, pot, float_text, tape_tag, tt, pt, bt, UNMEASURED_TAIL]
     body = " · ".join(b for b in bits if b)
     head = f"{sym} · {emoji} {label} A+ entry"
     line = " · ".join(b for b in (head, f"broke {_px(read.get('trigger'))}", stop_bit, words) if b)
@@ -445,6 +448,10 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
                 "risk_pct": r.get("risk_pct"), "price": c.get("price"), "kind": v.push_kind_setup}
         if c.get("trader"):                                     # 📌 2026-10-27 — the 🏁 ledger's tag (claim doc)
             base["trader"] = c["trader"]
+        if c.get("promo") is True:                              # 🎪 2026-10-29 — the same: keys only when tagged
+            base["promo"] = True
+            if isinstance(c.get("promo_text"), str) and c["promo_text"]:
+                base["promo_text"] = c["promo_text"]
         if r.get("variant") or r.get("grade"):
             state = "not_aplus_variant"                         # long flag / near-kiss / B — never rings (round C)
         elif LG.plan_of(r.get("trigger"), r.get("stop"))[0] != LG.PLANS[0]:
@@ -473,7 +480,8 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             continue
         pot_at = potential_rang_at(store, session, sym, setup)  # DECISIONS10 D2: after every refusal and the dry gate
         payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at,
-                          broker_text=broker_text_for(sym, flags), trader_text=c.get("trader_text"), variant=v)
+                          broker_text=broker_text_for(sym, flags), trader_text=c.get("trader_text"),
+                          promo_text=c.get("promo_text"), variant=v)
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
             sk = shadow_key(session, sym, setup, v)

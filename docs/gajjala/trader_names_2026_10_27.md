@@ -126,6 +126,7 @@ and its claim doc carries `trader: "algo888"`.
 6. Names join whatever his own Bullish/Bearish label says (the scan is long-only).
 7. Put him in the curator too (the `full` universe)? (A1: not today.)
 8. Also put algo888 on the 🎪 Promo Circuit roster? Not done.
+   2026-10-29: the 🎪 Promo-circuit names now join the list by the same pattern, their own source — `docs/gajjala/promo_names_2026_10_29.md` (this call is its HIS CALL #6).
 9. Semantics widened: the traders DISCLAIMER, the feed docstring and the GnT blurb no longer say "gates nothing" without
    the dated exception — wording above.
 10. The 📌 tag is served to every viewer (🚫 is owner-only). Owner-only instead?

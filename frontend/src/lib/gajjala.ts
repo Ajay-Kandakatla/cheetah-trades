@@ -72,6 +72,11 @@
  * `trader_text` / `trader_skip_text` lines. A TAG: nothing hides, filters or counts a row here. This module types no
  * word and no trader's name. UNMEASURED.
  *
+ * 🎪 Promo names on Gajjala's scan (2026-10-29, BUILD_SPEC32 D4). Ajay: "should we pull stocks from PROMO circuit by
+ * default every day". The day's Promo-circuit names join the scan as candidates (a WATCHLIST feed for GG's rules, never
+ * an edge: Promo first-tags read INVERTED); every row / tile type gains the SERVED `promo` / `promo_text` (absent when
+ * untagged). A TAG: nothing hides, filters or counts a row here. This module types no word. UNMEASURED.
+ *
  * 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.8). Ajay: "Can you create a new page, I would like you to do
  * the same logic of Gajjalas but on 1 min candles please." and "do everything and also add the track record for it from
  * today..". The same board, its own endpoint (components/ggVariant.ts GG_VARIANT_BASE): GgTf gains '1m', GgBoard.tab
@@ -226,6 +231,9 @@ export type GgPotentialRow = {
   broker_text?: string | null;
   /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
   trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — every viewer; absent → no chip. */
+  promo?: boolean | null;
+  promo_text?: string | null;
 };
 export type GgPotentialStrip = {
   title: string;
@@ -275,6 +283,9 @@ export type GgTrackRow = {
   broker_text?: string | null;
   /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
   trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — every viewer; absent → no chip. */
+  promo?: boolean | null;
+  promo_text?: string | null;
 };
 export type GgTrackBlock = { date?: string; label?: string; title?: string | null; n?: number;
                              armed_n?: number; building_n?: number; pushed_n?: number;
@@ -289,7 +300,9 @@ export type GgTrack = {
 /** 👀 ☀️ / 🌙 names with no potential in any setup — display only, never pushed. */
 export type GgWatch = { text: string; symbols: { symbol: string; href: string; broker_text?: string | null;
   /** 📌 the served trader tag — every viewer; null / absent → no chip. */
-  trader_text?: string | null }[] };
+  trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag — every viewer; absent → no chip. */
+  promo?: boolean | null; promo_text?: string | null }[] };
 
 /* ---- 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.8 / §3.11) — every string SERVED; `state` is a CSS hook only. ---- */
 /** `no_risk` = trigger equal to the stop on the alert (AMENDMENTS9 E4) — listed, never counted. `no_time` = no
@@ -315,7 +328,9 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** 🚫 the served tag (ledger.served_block via the tab's callable) — owner only; null / absent → no chip. */
   broker_text?: string | null;
   /** 📌 the served trader tag (ledger served row, trader_names.text_for) — null on an untagged or replayed row. */
-  trader_text?: string | null };
+  trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (ledger served row) — absent on an untagged row. */
+  promo?: boolean | null; promo_text?: string | null };
 /** ✅ / ❌ one served chip: `text` carries the ROW count (and " +r ⏪" when replayed rows share the bucket — F13);
  *  `n` / `n_replayed` are the served numbers (the FE prints `text` only, never composes a count). */
 export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: number | null };
@@ -448,7 +463,9 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
   /** 🚫 the served tag — owner only; null / absent → no chip. */
   broker_text?: string | null;
   /** 📌 the served trader tag — every viewer; null / absent → no chip. */
-  trader_text?: string | null };
+  trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag — every viewer; absent → no chip. */
+  promo?: boolean | null; promo_text?: string | null };
 
 export type GgPlaybookItem = string | {
   text: string;
@@ -531,7 +548,8 @@ export type GgBoard = {
     /** 🌙 A+ recap rows — `href` SERVED by tab.recap (= potential.deep_link, the setup card; 2026-10-16, DECISIONS10 D7);
      *  absent on an older API. The FE guards it with ggHref and composes none. */
     recap?: { title?: string | null; rows?: { symbol: string; setup?: string | null; text: string; href?: string | null;
-                                             broker_text?: string | null; trader_text?: string | null }[] } | null;
+                                             broker_text?: string | null; trader_text?: string | null;
+                                             promo?: boolean | null; promo_text?: string | null }[] } | null;
   } | null;
   playbook?: GgPlaybook | null;
   /** 🧠 strip — setup subs only; absent on ☀️ / 🌙 / 📓 / 🧠 and on an older API. */
@@ -749,6 +767,9 @@ export type GgAplusRow = {
   broker_text?: string | null;
   /** 📌 the served trader tag (trader_names.text_for) — every viewer; null / absent → no chip. */
   trader_text?: string | null;
+  /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — every viewer; absent → no chip. */
+  promo?: boolean | null;
+  promo_text?: string | null;
 };
 export type GgEnterable = { title?: string | null; rows: GgAplusRow[]; empty_text?: string | null; note?: string | null };
 export type GgScanResponse = {

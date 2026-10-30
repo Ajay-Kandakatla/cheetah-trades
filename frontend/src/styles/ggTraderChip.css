@@ -1,0 +1,6 @@
+/* 📌 / 🎪 source-tag chip (2026-10-29: chip module) — the chip carries its own stylesheet so /alerts styles it without
+   loading gajjala.css (the whole Gajjala board chunk). Moved verbatim from gajjala.css.
+   🎪 Promo tag (2026-10-29, BUILD_SPEC32 D4): the served promo words are longer than the 📌 tag, and .cm-badge is
+   nowrap house-wide. On every surface (the 🏁 cells, the recap, the 🎯 line, /alerts rows) the chip wraps inside its row
+   and never sets the row's minimum width — the 430 px phone rule of 2026-10-19. */
+.gg-promo { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }

@@ -66,6 +66,7 @@ from zoneinfo import ZoneInfo
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
+from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
 from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
 from trading.broker import DOLLAR_DECIMALS, price_decimals, round_price   # the ONE stock price grid (2026-10-20)
@@ -77,6 +78,9 @@ TILE_STATES = ("aplus", "triggered", "forming", "partial", "stopped")
 COUNT_STATES = ("aplus", "forming", "partial", "triggered", "stopped", "invalid", "none")
 # 📌 2026-10-27 (BUILD_SPEC26 §3.3): "trader" appended LAST — trader_names.legend_row()
 LEGEND_KEYS = tuple(COUNT_STATES) + ("awaiting_answer", "listed", "potential", "track", "trader")   # MINE (DECISIONS15 D1)
+# 🎪 2026-10-29 (BUILD_SPEC32 D4): "promo" appended LAST — promo_names.legend_row() — served ONLY when the board's pass
+# ran the Promo source or a 🎪 tag is on the list (a board without it keeps every legend byte)
+LEGEND_KEYS_PROMO = LEGEND_KEYS + ("promo",)
 POTENTIAL_LEGEND_END = "not yet printed."           # MINE (DECISIONS15 D1) — the cut of potential.rules_lines()[0]
 POTENTIAL_LEGEND_TAIL = " Counted per symbol, not per setup."   # MINE (DECISIONS15 D1)
 
@@ -93,14 +97,15 @@ def _as_sentence(clause: str) -> str:
     return c + "."
 
 
-def count_legend() -> list:
+def count_legend(promo: bool = False) -> list:
     """DECISIONS15 D1 — the ONE served legend: [{key, word, text}] for every word on the counts line, the 🧠 sub's
     number and the 📈 Track's number. Words = the FE's structural labels (A+, triggered, forming, partial, stopped,
     invalid, none, awaiting your number, listed, 🧠 Potential, 📈 Track). Texts in DECISIONS15's table, reusing served
     phrases: the rules_info A+ phrase ("every rule met and the entry bar closed"), potential.rules_lines()[0]'s first
     sentence (split at ". On top"), detectors.AWAITING_TEXT's spirit for awaiting. Pure, no clock, no Mongo.
     2026-10-18 critic fix: the potential text also carries potential.defaults_clauses()[0]'s base clause (worded for the
-    CURRENT POTENTIAL_NEEDS_BASE), so the legend follows the setting — DECISIONS15 D1 wins over BUILD_SPEC15's bare cut."""
+    CURRENT POTENTIAL_NEEDS_BASE), so the legend follows the setting — DECISIONS15 D1 wins over BUILD_SPEC15's bare cut.
+    🎪 2026-10-29: `promo` True → LEGEND_KEYS_PROMO (promo_names.legend_row() last); False → LEGEND_KEYS, byte for byte."""
     first = PT.rules_lines()[0]                     # at request time — the ONE 🧠 sentence, never retyped
     head, cut, _rest = first.partition(POTENTIAL_LEGEND_END)
     base = _as_sentence(PT.defaults_clauses()[0][2])   # the POTENTIAL_NEEDS_BASE clause, worded for its current value
@@ -130,7 +135,12 @@ def count_legend() -> list:
     by = {k: (w, t) for k, w, t in rows}
     tr = TN.legend_row()                            # 📌 2026-10-27 — built by trader_names, never retyped here
     by[tr["key"]] = (tr["word"], tr["text"])
-    return [{"key": k, "word": by[k][0], "text": by[k][1]} for k in LEGEND_KEYS]
+    keys = LEGEND_KEYS
+    if promo is True:
+        pr = PN.legend_row()                        # 🎪 2026-10-29 — built by promo_names, never retyped here
+        by[pr["key"]] = (pr["word"], pr["text"])
+        keys = LEGEND_KEYS_PROMO
+    return [{"key": k, "word": by[k][0], "text": by[k][1]} for k in keys]
 MARKED_STATES = ("aplus", "triggered", "stopped")
 SUB_KEYS = tuple(k for k, _e, _l in GC.SUBS)
 SUB_META = {k: (e, label) for k, e, label in GC.SUBS}
@@ -402,10 +412,14 @@ def strip_text(strip: dict) -> Optional[str]:
 def _strip_block(latest: Optional[dict]) -> dict:
     s = dict((latest or {}).get("strip") or {}) if isinstance(latest, dict) else {}
     tb = (latest or {}).get("trader") if isinstance(latest, dict) else None   # 📌 the pass's trader block
-    return {"runners_100": s.get("runners_100"), "runners_80": s.get("runners_80"),
-            "best_change_pct": _f(s.get("best_change_pct")), "best_symbol": s.get("best_symbol"),
-            "quiet": s.get("quiet"), "text": strip_text(s),
-            "trader_text": TN.strip_text(tb), "trader_skip_text": TN.skip_text(tb)}
+    out = {"runners_100": s.get("runners_100"), "runners_80": s.get("runners_80"),
+           "best_change_pct": _f(s.get("best_change_pct")), "best_symbol": s.get("best_symbol"),
+           "quiet": s.get("quiet"), "text": strip_text(s),
+           "trader_text": TN.strip_text(tb), "trader_skip_text": TN.skip_text(tb)}
+    pb = latest.get("promo") if isinstance(latest, dict) else None
+    if PN.ran(pb):                                  # 🎪 2026-10-29 — keys ONLY on a pass that ran the source
+        out.update(promo_text=PN.strip_text(pb), promo_skip_text=PN.skip_text(pb))
+    return out
 
 
 # ── 🔄 scan on open · 🎯 A+ (2026-10-15, BUILD_SPEC5 §3.6 / §3.7, AMENDMENTS5 A10 / A11 / A13) ─────────────────────
@@ -1400,6 +1414,36 @@ def _trader_tag(out: dict, tags) -> None:
         tag(pm["recap"].get("rows"))
 
 
+def _promo_tag(out: dict, ptags) -> None:
+    """🎪 2026-10-29 — in place, the SAME walk as _trader_tag: a row whose symbol the Promo circuit put or tagged on
+    his list (promo_names.tag_map) gains `promo_text`; every other row is left byte for byte (no key). Every viewer."""
+    ptags = ptags if isinstance(ptags, dict) else {}
+    if not ptags:
+        return
+
+    def tag(rows):
+        for r in rows if isinstance(rows, list) else ():
+            if isinstance(r, dict) and isinstance(r.get("symbol"), str) and r["symbol"]:
+                hit = ptags.get(r["symbol"].upper())
+                if hit:
+                    r["promo_text"] = hit.get("promo_text")
+
+    tag(out.get("tiles"))
+    for k in ("potential", "enterable"):
+        if isinstance(out.get(k), dict):
+            tag(out[k].get("rows"))
+    tr = out.get("track")
+    if isinstance(tr, dict):
+        for k in ("today", "yesterday"):
+            if isinstance(tr.get(k), dict):
+                tag(tr[k].get("rows"))
+    if isinstance(out.get("watch"), dict):
+        tag(out["watch"].get("symbols"))
+    pm = out.get("postmarket")
+    if isinstance(pm, dict) and isinstance(pm.get("recap"), dict):
+        tag(pm["recap"].get("rows"))
+
+
 def _soft(what: str, fn, *a, default=None, **kw):
     """D1 on the read path: a raising 🧠 potential / 📈 track piece logs and serves `default`; it never takes down the
     A+ board of any sub."""
@@ -1533,11 +1577,12 @@ def _track_row(doc: dict, entries: Optional[dict] = None, v=None) -> dict:
     else:
         hw = PT.held_words(v)                                       # GG5: HELD_WORDS itself (2026-10-27: per variant)
         held = [h.get("reason") for h in doc.get("held") or [] if isinstance(h, dict)
-                and (h.get("reason") in hw or h.get("reason") in PT.TRADER_HELD)]
+                and (h.get("reason") in hw or h.get("reason") in PT.ADD_HELD)]
         if not held and doc.get("first_seen_mode") == PT.FIRST_SEEN_MODES[1]:
             held = [PT.JOIN_HELD[0]]                                # D9: a joined doc whose hold write was lost
         if held:
             push_text = (TN.TRADER_HOLD_TEXT if held[-1] in PT.TRADER_HELD          # 📌 A2 2026-10-27, verbatim
+                         else PN.PROMO_HOLD_TEXT if held[-1] in PT.PROMO_HELD       # 🎪 2026-10-29, verbatim
                          else f"held: {hw[held[-1]]}")
     timeline = []
     for e in path:
@@ -1811,7 +1856,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
 
-    legend = count_legend()                                         # DECISIONS15 D1 — ONE served legend
+    ptags = _soft("promo tags", lambda: PN.tag_map(st.scan_docs(SC._window(session))), default={})
+    legend = count_legend(promo=PN.ran((spass or {}).get("promo")) or bool(ptags))   # D1 — ONE served legend
     pot_title = next(r["text"] for r in legend if r["key"] == "potential")
     subs = []
     for key, e, label in GC.SUBS:
@@ -1909,6 +1955,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
     _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer
+    _promo_tag(out, ptags)                                          # 🎪 2026-10-29 — the same walk, keys only when tagged
     _strip_private(out["tiles"])
     return _plain(out)
 
