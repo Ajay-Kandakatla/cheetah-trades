@@ -265,7 +265,15 @@ for (const [name, BOARDS] of SOURCES) {
         for (const d of tr.days) {
           expect(screen.getByTestId(`gg-tr-day-${d.date}`).textContent).toBe(d.label);
           const table = screen.getByTestId(`gg-tr-day-${d.date}`).parentElement!.querySelector('table.gg-tr-table')!;
-          expect([...table.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(tr.heads.map((h: any) => h.label));
+          // 📈 2026-10-29 (BUILD_SPEC31 D3): a payload serving `views` draws the served Tape head SECOND, right after the
+          // Ticker head; an older API (the in-file FIXTURE serves no views) → the served heads exactly, as shipped
+          const labels = tr.heads.map((h: any) => h.label);
+          const symAt = tr.heads.findIndex((h: any) => h.key === 'symbol');
+          if (tr.views) {
+            expect(symAt).toBe(0);
+            labels.splice(symAt + 1, 0, tr.views.tape_head);
+          }
+          expect([...table.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual(labels);
           for (const r of d.rows) {
             const tr_el = screen.getByTestId(`gg-tr-row-${r.key}`);
             for (const col of ['same', 'next'] as const) {
@@ -305,7 +313,7 @@ for (const [name, BOARDS] of SOURCES) {
               expect(r.bucket, `${r.key} loss_text on a non-loss row`).toBe('loss');
               expect(loss, `${r.key} loss line`).not.toBeNull();
               expect(loss!.textContent).toBe(r.loss_text);
-              expect(loss!.getAttribute('colspan')).toBe(String(tr.heads.length));
+              expect(loss!.getAttribute('colspan')).toBe(String(tr.heads.length + (tr.views ? 1 : 0)));   // 📈 2026-10-29: + the Tape column
               expect(loss!.closest('tr')!.className).toContain('gg-tr-sub');
               expect(loss!.closest('tr')!.previousElementSibling).toBe(tr_el);
             } else expect(loss, `${r.key} loss line`).toBeNull();

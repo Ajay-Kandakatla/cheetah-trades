@@ -304,11 +304,14 @@ describe('GajjalaBoard — ✅ / ❌ categories (golden)', () => {
     await loaded(container);
     const tr = BOARDS[DEFAULT_SPAN].track_record;
     const kindAt = tr.heads.findIndex((h: any) => h.key === 'kind');
+    const symAt = tr.heads.findIndex((h: any) => h.key === 'symbol');
     expect(kindAt).toBeGreaterThanOrEqual(0);
     const words = [...new Set(rowsOf(tr).map((r: any) => r.bucket_text).filter((x: any) => typeof x === 'string' && x))] as string[];
     expect(words.length).toBeGreaterThan(0);
     for (const r of rowsOf(tr)) {
-      const td = screen.getByTestId(`gg-tr-row-${r.key}`).querySelectorAll('td')[kindAt];
+      // 📈 2026-10-29 (BUILD_SPEC31 D3): the list's Tape cell sits right after the Ticker, so the Kind cell is one further on
+      const td = screen.getByTestId(`gg-tr-row-${r.key}`).querySelectorAll('td')[kindAt + (tr.views && kindAt > symAt ? 1 : 0)];
+      expect(td.querySelector('.gg-tr-kind'), `${r.key} kind cell`).not.toBeNull();
       for (const w of words) expect(td.textContent || '', `${r.key} kind cell`).not.toContain(w);
       expect(td.textContent || '').not.toMatch(/winner|loser/i);
     }

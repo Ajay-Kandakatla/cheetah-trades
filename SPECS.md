@@ -917,6 +917,16 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   (2026-10-27)"; ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`. Doc: `docs/gajjala/track_record_2026_10_16.md`
   § "✅ wins first + row flags (2026-10-27)". UNMEASURED.
   "🎯 A+ filter + the win/loss charts (2026-10-26)".
+- **📈 Tape column on the 🏁 list (2026-10-29)** — Ajay, verbatim: "I wanna see this kind of graph in our Track record
+  page this screenshot is from Promo circuit page." `tape.py` `parse_id` also reads a 🧠 id (`…|potential`, kind
+  `LG.KINDS[0]`; `kind_of` names it); the 🧠 tape is the A+ build over the ledger's own 🧠 row and its stored grades —
+  the ring at the first-seen bar, trigger / stop / +1R, the fill dot when graded entered, the exit dot — in its own
+  words (`ENTRY_TAPE_WORDS` `pot_*` = `POTENTIAL_TAPE_KEYS`); a no_risk / no_plan 🧠 row draws the bars and the ring
+  only with the served `LG.NO_RISK_TEXT` / `NO_PLAN_TEXT` sentence. Both routes (GG5 + `gajjala-1m`, 1-minute bars);
+  the mini never fetches; memo per id × lite. Every A+ payload byte-identical (sha256 pin), no new served key, goldens
+  unmoved. FE: the 📋 list draws the TAPE column second (after Ticker) on every row with an `id`. Tests:
+  `tests/test_gajjala_tape_potential_2026_10_29.py`. Doc: `docs/gajjala/track_record_2026_10_16.md` § "📈 Tape column
+  on the list (2026-10-29)". UNMEASURED.
 
 ### Chart Maps — 📌 Tracked traders — `traders/` (2026-09-12; algo888 2026-10-27)
 Public traders' posts on the 📌 tab (`GntBoard`, `TRADER_TABS` == `traders/registry.py` `TRADERS` keys in order;

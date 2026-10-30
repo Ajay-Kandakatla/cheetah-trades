@@ -467,3 +467,49 @@ NEGATIVE: open / flat / number-less rows). Goldens regenerated (`GG_WRITE_GOLDEN
 the GG5 identity fixtures) because the served block gained keys. ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`
 (FIRST). Contracts: "✅ wins first + row flags on the 🏁 Track record (2026-10-27)". UNMEASURED — a tint and an order,
 not a read.
+
+## 📈 Tape column on the list (2026-10-29)
+
+Ajay, verbatim (2026-10-29 ~19:50 ET, spelling kept): "I wanna see this kind of graph in our Track record page this
+screenshot is from Promo circuit page." (the screenshot: the Promo circuit table's TAPE column) and "I am unable
+understand from current track record. It seems like we have declined from Winning on the beginning of this page creation
+not sure why". Spec: `BUILD_SPEC31.md` (session scratchpad `gg_tr/`). UNMEASURED — a picture of what each alert did,
+graded by the ledger's own math; never a study. The decline question is answered in chat from the served record, not
+here (D7: its causes are HIS CALLs).
+
+- **D1 (BE, `backend/chart_maps/gajjala/tape.py`)** — `parse_id` also reads a 🧠 id `"{date}|{SYM}|{setup}|potential"`
+  (the kind is `LG.KINDS[0]`, never a typed string); `kind_of(id)` names the kind. The 🧠 tape is the SAME build as the
+  A+ tape: the row is `ledger.alert_of` over `store.potential_pushes` (the variant's push states — the 1-minute page's
+  shadow 🧠 rows are rows), the grades are the ledger's stored columns (GG's trade math as if entered at the trigger),
+  the window / bars / lines / rules / dots come from the one composer: the ring rule (solid) at the push time, trigger / stop / +1R from the graded plan, the fill dot when the grade recorded an entry, the exit
+  dot from the grade. A no_risk / no_plan 🧠 row draws the bars and the ring only (no levels) with the served sentence
+  (`LG.NO_RISK_TEXT` / `LG.NO_PLAN_TEXT` + "the bars and the ring only, no levels drawn"). Its words are ONE source:
+  `ENTRY_TAPE_WORDS` `pot_*` (`POTENTIAL_TAPE_KEYS`) — the ring ("🧠 potential rang HH:MM ET", on the 1-minute page's
+  shadow rows "recorded … shadow, never sent"), the plan, "entered at the trigger HH:MM ET · fill X" / "the trigger
+  never printed" (only once the through-next-session column holds a stored no_entry grade; 2026-10-29 critic fix: a
+  provisional same-session grade, or a graded same session with next still pending, is a live trade and claims
+  neither; an ungraded row claims neither), the legend,
+  the aria and the ring's label. The read ends with the 🏁 row's own cells. Junk ids keep today's 404 text; ⏪ replay
+  ids are unchanged; a 🧠 fault payload carries the 🧠 aria.
+- **D2** — no new served key: the FE keys the column off the already-served `views.tape_head` / `tape_toggle` /
+  `tape_toggle_title`; the three goldens and the GG5 identity fixture are unmoved. Every A+ tape payload (full + lite:
+  the 🏁 golden's live XLAB entry, the 10-15 shadow WIN, the 1-minute page's shadow A+) is pinned by sha256, captured
+  on the untouched tree before the change.
+- **D3 (FE)** — the 📋 list draws the TAPE column SECOND (right after Ticker) on every row with an `id` (A+ and 🧠), in
+  the plain list and the 🎯 A+-filtered list, on both boards; the cell is the 🕰️ row's cell (one shared component).
+
+Cost rules (unchanged): the mini (lite) NEVER fetches — completed days from `intraday_cache` only, today from the
+ledger's memo only (a memo miss is the `lite_today` note); only the full tape (the 📈 click) loads a completed day,
+once per (symbol, day) under a lock, through the house loader with no force. The memo is per id × full | lite (the kind
+is in the id, so a 🧠 tape never answers its A+ twin); the 1-minute page's memo is keyed per variant.
+
+HIS CALLS (defaults built): the column position (second, so the 430 px phone shows it without scrolling; the Promo page
+puts it third); 🧠 potentials included (every row with an id, not only the A+); the tooltip words (the served `title` =
+the read + "📈 click for the full tape").
+
+Tests: `backend/tests/test_gajjala_tape_potential_2026_10_29.py` (the A+ byte pin; a 🧠 WIN's ring / levels / dots /
+words; the same marks as its A+ twin; never printed; NEGATIVE: an ungraded row claims nothing; no_risk / no_plan draw no
+levels; NEGATIVE: no alert time no ring; NEGATIVE: the mini never calls the loader; the memo per id × mode; NEGATIVE:
+joined / unsent / off-file ids None, kinds never cross; the potentials read fault; the route's 200 / 404; the 1-minute
+route; the words clean; NEGATIVE: no typed kind string in `tape.py`). `tests/test_gajjala_entry_tape.py`
+`test_parse_id_reads_only_an_aplus_ledger_id` WIDENED (a 🧠 id now parses).

@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-29 ~19:50 ET (his first sentence verbatim in the label, his spelling kept): "I wanna see this kind of
+  // graph in our Track record page this screenshot is from Promo circuit page." (BUILD_SPEC31). The 📋 list of the 🏁
+  // Track record — the plain list and the 🎯 A+-filtered list, on 🚩 Gajjala's and on 🚩 Gajjala's 1-min — draws the
+  // Promo circuit table's TAPE column SECOND, right after the Ticker: the lazy mini tape (GgEntryMiniTape, lite — the
+  // mini never loads bars) + the 📈 toggle that opens the full tape under the row, for every row with an id (🚩 A+ AND
+  // 🧠 potential). ONE row component (GajjalaBoard GgTrTapeRow) for the list and the 🕰️ timeline; every word on the
+  // tape is served by backend chart_maps/gajjala/tape.py (ENTRY_TAPE_WORDS). UNMEASURED — a picture of what each alert
+  // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
+  { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
+    label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
   // Ajay 2026-10-29 ~12:30 ET (verbatim in the label, his spelling kept, the line break as " / "): "Only give me Gajjalas
   // chart notifications from both tabs," / "I am missing out the ones in noise." (BUILD_SPEC29). backend
   // push/subs.OWNER_KEEP_SET is exactly six kinds — gajjala_setup, gajjala_potential, gajjala_1m_setup,

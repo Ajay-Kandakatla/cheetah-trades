@@ -204,9 +204,11 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
    day tables (the 🏁 table look + the Promo table's Tape column and 📈 toggle). Every word on it is SERVED. */
 .gg-tr-views { margin-top: 0.1rem; }
 .gg-tl { display: flex; flex-direction: column; gap: 0.35rem; }
-.gg-tl-table .ptt__mini-cell { white-space: nowrap; vertical-align: middle; }
-.gg-tl-table .ptt__toggle { margin-left: 0.3rem; }
-.gg-tl-table .ptt__row td { padding: 0.3rem 0.2rem 0.5rem; white-space: normal; }
+/* 📈 2026-10-29 (BUILD_SPEC31 D3): the 📋 list draws the same Tape cell (GgTrTapeRow), so the three rules read every 🏁
+   table (.gg-tr-table — the timeline table carries it too); no new width (the mini's own 100). */
+.gg-tr-table .ptt__mini-cell { white-space: nowrap; vertical-align: middle; }
+.gg-tr-table .ptt__toggle { margin-left: 0.3rem; }
+.gg-tr-table .ptt__row td { padding: 0.3rem 0.2rem 0.5rem; white-space: normal; }
 
 /* ⏪ Replayed line + ✅ / ❌ categories (2026-10-16 night, DECISIONS11 D5 / D11 / D12). Ajay: "Would you be able to
    back test for the past week from his alerts any way to do so? build a pre historic timeline or so?" / "I want winners

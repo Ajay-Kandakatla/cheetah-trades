@@ -26,6 +26,16 @@ NEVER WRITES a gajjala collection. Cost rules:
 = GG1): bars at variant.tape_tf_min (GG1M_TAPE_TF_MIN — 1-minute bars, HIS CALL #8), capped at variant.tape_bars_max
 (GG1M_TAPE_BARS_MAX), its minute words from that number, and its memo keyed (variant key, id, full | lite) — a GG1 id
 has the SAME shape as a GG5 id, so a GG5 memo entry never answers it. GG5 keeps every byte and the (id, …) key.
+
+📈 THE 🧠 POTENTIAL TAPE (2026-10-29, BUILD_SPEC31 D1). Ajay, verbatim: "I wanna see this kind of graph in our Track
+record page this screenshot is from Promo circuit page." The 🏁 list's 🧠 rows ("{date}|{SYM}|{setup}|potential",
+LG.KINDS[0]) get the SAME build as an A+ row: the ledger's own 🧠 row (alert_of over store.potential_pushes, the
+variant's push states), its stored grades (GG's trade math as if entered at the trigger), the same window, bars, lines,
+rules and dots — only the words are the potential's own (POTENTIAL_TAPE_KEYS below: the ring, the plan, entered / never
+printed, the no-risk / no-plan sentence, the legend, the aria). A no_risk / no_plan 🧠 row draws the bars and the ring
+only (the composer's own rule: no levels without an ok plan). The cost rules are unchanged (the mini never fetches),
+the memo key carries the id (the kind is in it). Every A+ payload keeps every byte (the sha256 pin in
+tests/test_gajjala_tape_potential_2026_10_29.py).
 """
 from __future__ import annotations
 
@@ -77,7 +87,21 @@ ENTRY_TAPE_WORDS = {
     "not_found": "No A+ entry with that id on the 🏁 Track record.",
     "split": "A split is on file after this alert — the bars are adjusted, the alert's levels are as printed; the levels are not drawn.",
     "split_replayed": "A split is on file after this alert — the replayed bars print as traded before and after it, so the levels are not drawn.",   # AMENDMENTS11 A7
+    # 📈 2026-10-29 (BUILD_SPEC31 D1) — the 🧠 potential tape's own words (the A+ words above never move)
+    "pot_rang": "🧠 potential rang {hhmm} ET",
+    "pot_shadow": "🧠 potential recorded {hhmm} ET — shadow, never sent",
+    "pot_no_time": "🧠 potential · {why}",
+    "pot_plan": "{head} · trigger {trigger} · stop {stop}",
+    "pot_entered": "entered at the trigger {hhmm} ET · fill {px}",
+    "pot_never": "the trigger never printed",
+    "pot_no_levels": "{why} — the bars and the ring only, no levels drawn",
+    "pot_alert": "🧠 rang {hhmm} ET",
+    "pot_alert_shadow": "🧠 recorded {hhmm} ET",
+    "pot_legend": "{n}-minute closes · shaded = pre / post market · solid line = the 🧠 ring · dashed = the fill at the trigger · levels = trigger / stop / +{m}R",
+    "pot_legend_no_levels": "{n}-minute closes · shaded = pre / post market · solid line = the 🧠 ring",
+    "pot_aria": "{sym} {n}-minute tape around the 🧠 potential",
 }
+POTENTIAL_TAPE_KEYS = tuple(k for k in ENTRY_TAPE_WORDS if k.startswith("pot_"))   # the 🧠 tape's words (D1)
 VIEW_PARAM = "view"
 VIEWS = (("all", "📋 all alerts"), ("timeline", "🕰️ entries timeline"))      # DECISIONS11 D3 (served labels)
 VIEW_DEFAULT = VIEWS[0][0]
@@ -116,21 +140,27 @@ def _stamp(ms: int) -> str:
 
 
 def parse_id(_id) -> Optional[tuple]:
-    """A ledger A+ id "{YYYY-MM-DD}|{SYM}|{setup}|aplus" -> (date, SYM, setup); a 🧠 id, junk or a non-str -> None.
-    (Phase 2: a "REPLAY:" id is dispatched before this — replay_ref.)"""
+    """A ledger id "{YYYY-MM-DD}|{SYM}|{setup}|{kind}" with kind an A+ (LG.KINDS[1]) or — 2026-10-29, BUILD_SPEC31 D1 —
+    a 🧠 potential (LG.KINDS[0]) -> (date, SYM, setup); junk, another kind or a non-str -> None (kind_of names the
+    kind). (Phase 2: a "REPLAY:" id is dispatched before this — replay_ref.)"""
     if not isinstance(_id, str):
         return None
     parts = _id.split("|")
     if len(parts) != 4:
         return None
     d_s, sym, setup, kind = parts
-    if kind != LG.KINDS[1] or len(d_s) != 10 or not sym or sym != sym.strip().upper() or not setup.strip():
+    if kind not in (LG.KINDS[1], LG.KINDS[0]) or len(d_s) != 10 or not sym or sym != sym.strip().upper() or not setup.strip():
         return None
     try:
         d = date.fromisoformat(d_s)
     except ValueError:
         return None
     return d, sym, setup
+
+
+def kind_of(_id) -> Optional[str]:
+    """The kind of a ledger id parse_id reads (LG.KINDS[1] A+ | LG.KINDS[0] 🧠); anything else -> None."""
+    return _id.rsplit("|", 1)[-1] if parse_id(_id) is not None else None
 
 
 def replay_ref(_id) -> Optional[tuple]:
@@ -265,10 +295,11 @@ def fault_payload(_id, *, lite: bool = False, now: Optional[datetime] = None, ti
     """AMENDMENTS11 F19 — the tape that could not be built: every PAYLOAD_KEY present, no bars, the fault note.
     `variant` (2026-10-27): its bar size in the words (GG5 LEDGER_TAPE_TF_MIN)."""
     n = V.tape_tf_min(variant)
+    aria_key = "pot_aria" if kind_of(_id) == LG.KINDS[0] else "aria"          # 2026-10-29: a 🧠 id's own aria
     return {"id": _id if isinstance(_id, str) else "", "ticker": ticker, "tf": _w("tf", n=n), "lite": bool(lite),
             "bars": [], "n_bars": 0, "hlines": [], "rules": [], "dots": [], "axis": None, "legend": None,
             "read": None, "title": None, "tone": None, "note": ENTRY_TAPE_WORDS["fault"],
-            "aria": _w("aria", sym=ticker, n=n) if ticker else None, "as_of": LG._aware(now).isoformat()}
+            "aria": _w(aria_key, sym=ticker, n=n) if ticker else None, "as_of": LG._aware(now).isoformat()}
 
 
 def lite_of(full: dict) -> dict:
@@ -354,16 +385,20 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
     if parsed is None:
         return None
     d, sym, _setup = parsed
+    kind = kind_of(_id)                                         # 2026-10-29: A+ (as always) or a 🧠 potential (D1)
+    pot = kind == LG.KINDS[0]
     v = V.of(store)                                             # 2026-10-27: GG5 for today's store
     n, m = V.tape_tf_min(v), LG._m()
-    # 1. the row — the ledger's own reader (alert_of), each doc in its own try
-    docs = store.alert_rows([d])
+    # 1. the row — the ledger's own reader (alert_of), each doc in its own try; a 🧠 row from the 🧠 pushes the
+    #    ledger reads (the variant's push states), with the variant (the 1-minute page's shadow 🧠 rows are rows)
+    docs = store.potential_pushes([d]) if pot else store.alert_rows([d])
     if docs is None:
         return fault_payload(_id, lite=lite, now=now, ticker=sym, variant=v)
     row = None
     for doc in docs:
         try:
-            r = LG.alert_of(doc, LG.KINDS[1])
+            r = (LG.alert_of(doc, kind, variant=v) if pot and not V.is_gg5(v) else LG.alert_of(doc, kind) if pot
+                 else LG.alert_of(doc, LG.KINDS[1]))
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala tape: unreadable alert doc %s: %s", (doc or {}).get("_id"), type(exc).__name__)
             continue
@@ -462,15 +497,46 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
     else:
         note = None
     return _compose(_id, row, d, sym, bars, cs, cn, same or same_p, nxt, split=split, note=note, lite=lite, now=now,
-                    n=n)
+                    n=n, kind=kind)
+
+
+def _pot_words(row: dict, d: date, same: Optional[dict], nxt: Optional[dict], f: Optional[dict], read: str, n: int,
+               m: str) -> dict:
+    """📈 2026-10-29 (BUILD_SPEC31 D1) — a 🧠 row's own words over the SAME lines / rules / dots: the read leads with
+    the ring and the plan, then entered at the trigger / the trigger never printed (only once the next-session
+    column holds a stored no_entry grade — a provisional or same-only grade is still live and claims neither) / the
+    no-risk or no-plan sentence (LG.NO_RISK_TEXT / NO_PLAN_TEXT), then the 🏁 cells."""
+    at_iso = LG._iso_t(row.get("at_utc"))
+    shadow = row.get("push_state") == GC.PUSH_MODES[0]       # the 1-minute page's 🧠 recorded in shadow, never sent
+    if at_iso is None:
+        head = _w("pot_no_time", why=LG.NO_TIME_TEXT)
+    else:
+        head = _w("pot_shadow" if shadow else "pot_rang", hhmm=LG._when(at_iso, d))
+    ok = row.get("plan") == LG.PLANS[0]
+    if ok:
+        head = _w("pot_plan", head=head, trigger=LG._px(row["trigger"]), stop=LG._px(row["stop"]))
+        if f is not None and f.get("fill_t"):
+            entry = _w("pot_entered", hhmm=LG._when(f["fill_t"], d), px=LG._px(f["fill_px"]))
+        elif isinstance(nxt, dict) and nxt.get("entry") == "no_entry":
+            entry = ENTRY_TAPE_WORDS["pot_never"]
+        else:
+            entry = None
+    else:
+        entry = _w("pot_no_levels", why=LG.NO_RISK_TEXT if row.get("plan") == LG.PLANS[2] else LG.NO_PLAN_TEXT)
+    pread = "; ".join(x for x in (head, entry, read) if x)
+    return {"read": pread, "legend": _w("pot_legend" if ok else "pot_legend_no_levels", n=n, m=m),
+            "aria": _w("pot_aria", sym=row["symbol"], n=n),
+            "alert": "pot_alert_shadow" if shadow else "pot_alert"}
 
 
 def _compose(_id: str, row: dict, d: date, sym: str, bars: list, cs: dict, cn: dict, same: Optional[dict],
              nxt: Optional[dict], *, split: bool, note: Optional[str], lite: bool, now: datetime,
-             n: Optional[int] = None) -> dict:
+             n: Optional[int] = None, kind: Optional[str] = None) -> dict:
     """Steps 7–8 — ONE composer for the live / shadow tape and the ⏪ replayed tape: the read (the 🏁 cells), the
     trigger / stop / +1R lines, the alert / fill rules, the fill / exit dots, the axis and the tone. `n` (2026-10-27)
-    = the bar size in minutes of the words; None = LEDGER_TAPE_TF_MIN (GG5, as always)."""
+    = the bar size in minutes of the words; None = LEDGER_TAPE_TF_MIN (GG5, as always). `kind` (2026-10-29) =
+    LG.KINDS[0] for a 🧠 row: the same marks, the potential's own words (_pot_words); anything else = A+, every byte
+    as before."""
     n, m = (GC.LEDGER_TAPE_TF_MIN if n is None else n), LG._m()
     heads = dict(LG.HEADS)
     read = _w("read", same_head=heads["same"], same=_cell_text(cs), next_head=heads["next"], next=_cell_text(cn))
@@ -504,6 +570,12 @@ def _compose(_id: str, row: dict, d: date, sym: str, bars: list, cs: dict, cn: d
                          "label": _w("exit_stop", hhmm=LG._when(ex["exit_t"], d))})
     if split:                                               # F9: the bars are adjusted, the levels as printed
         hlines, dots = [], []
+    pw = _pot_words(row, d, same, nxt, f, read, n, m) if kind == LG.KINDS[0] else None
+    if pw is not None:                                      # 📈 D1: the 🧠 ring's own label, same rule
+        for r in rules:
+            if r["key"] == "alert":
+                r["label"] = _w(pw["alert"], hhmm=LG._when(r["at"], d))
+        read = pw["read"]
     axis, tone = None, None
     if bars:
         lo = min(x["l"] if x.get("l") is not None else x["c"] for x in bars)
@@ -516,9 +588,10 @@ def _compose(_id: str, row: dict, d: date, sym: str, bars: list, cs: dict, cn: d
         if ref is not None and not split:                   # F9: an adjusted close vs an as-printed level: no tone
             tone = "up" if bars[-1]["c"] >= ref else "dn"
     return {"id": _id, "ticker": sym, "tf": _w("tf", n=n), "lite": bool(lite), "bars": bars, "n_bars": len(bars),
-            "hlines": hlines, "rules": rules, "dots": dots, "axis": axis, "legend": _w("legend", n=n, m=m),
+            "hlines": hlines, "rules": rules, "dots": dots, "axis": axis,
+            "legend": pw["legend"] if pw is not None else _w("legend", n=n, m=m),
             "read": read, "title": read + "\n" + ENTRY_TAPE_WORDS["open_hint"], "tone": tone, "note": note,
-            "aria": _w("aria", sym=sym, n=n), "as_of": now.isoformat()}
+            "aria": pw["aria"] if pw is not None else _w("aria", sym=sym, n=n), "as_of": now.isoformat()}
 
 
 def _memo_ok(p: dict, notes: Optional[set] = None) -> bool:
@@ -580,7 +653,7 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
     return out
 
 
-__all__ = ["ENTRY_TAPE_WORDS", "VIEW_PARAM", "VIEWS", "VIEW_DEFAULT", "TIMELINE_EMPTY_TEXT", "TAPE_HEAD", "TAPE_TOGGLE",
+__all__ = ["ENTRY_TAPE_WORDS", "POTENTIAL_TAPE_KEYS", "kind_of", "VIEW_PARAM", "VIEWS", "VIEW_DEFAULT", "TIMELINE_EMPTY_TEXT", "TAPE_HEAD", "TAPE_TOGGLE",
            "PAYLOAD_KEYS", "LITE_KEYS", "views_block", "parse_id", "replay_ref", "bars5", "tape_bars", "entry_tape",
            "lite_of",
            "fault_payload"]

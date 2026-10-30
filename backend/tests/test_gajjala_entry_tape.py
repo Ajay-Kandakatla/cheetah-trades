@@ -585,7 +585,10 @@ def test_bars5_labels_the_right_edge_and_tags_the_session():
 
 def test_parse_id_reads_only_an_aplus_ledger_id():
     assert TP.parse_id(XLAB15_ID) == (D15, "XLAB", "intraday_vcp")
-    for bad in ("2026-10-15|XLAB|intraday_vcp|potential", "2026-10-15|XLAB|intraday_vcp", "GG:2026-10-15|XLAB|x",
+    # WIDENED 2026-10-29 (BUILD_SPEC31 D1): a 🧠 potential id is now read too (the 🏁 list's 🧠 tape) — its own
+    # tests: tests/test_gajjala_tape_potential_2026_10_29.py
+    assert TP.parse_id("2026-10-15|XLAB|intraday_vcp|potential") == (D15, "XLAB", "intraday_vcp")
+    for bad in ("2026-10-15|XLAB|intraday_vcp|other", "2026-10-15|XLAB|intraday_vcp", "GG:2026-10-15|XLAB|x",
                 None, 5, "", "2026-10-15||intraday_vcp|aplus", "2026-10-15|XLAB| |aplus", "x|XLAB|intraday_vcp|aplus"):
         assert TP.parse_id(bad) is None, bad
 

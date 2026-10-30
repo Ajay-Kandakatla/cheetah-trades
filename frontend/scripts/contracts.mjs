@@ -8864,7 +8864,7 @@ const CONTRACTS = [
         for (const n of ['TrCell', 'trChip', 'TrRowCells', 'TrackRecordPanel']) {
           const b = fnBody(n);
           if (b == null) errs.push(`GajjalaBoard lost ${n} (the 🏁 panel)`);
-          else if (/GgEntryTape|GgEntryMiniTape/.test(tsCode(b))) errs.push(`the 🏁 body ${n} names GgEntryTape / GgEntryMiniTape — the tape mounts only inside GgEntryTimeline (outside the scanned bodies)`);
+          else if (/GgEntryTape|GgEntryMiniTape/.test(tsCode(b))) errs.push(`the 🏁 body ${n} names GgEntryTape / GgEntryMiniTape — the tape mounts only outside the scanned bodies (GgEntryTimeline; since 2026-10-29 the shared GgTrTapeRow / GgTrTapeCell)`);
         }
       }
       const lib = tryRead('src/lib/gajjala.ts');
@@ -9745,7 +9745,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 22) → slice(0, 23).
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 23) → slice(0, 24).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9960,7 +9961,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 19) → slice(0, 20).
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 20) → slice(0, 21).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10241,7 +10243,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 18) → slice(0, 19).
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 19) → slice(0, 20).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10441,7 +10444,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 13) → slice(0, 14).
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 14) → slice(0, 15).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10540,7 +10544,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 17) → slice(0, 18).
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 18) → slice(0, 19).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10690,7 +10695,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 14) → slice(0, 15).
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 15) → slice(0, 16).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10807,7 +10813,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 15) → slice(0, 16).
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 16) → slice(0, 17).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10858,7 +10865,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 11) → slice(0, 12).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 12) → slice(0, 13).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10998,7 +11006,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 12) → slice(0, 13).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 13) → slice(0, 14).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11081,7 +11090,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 10) → slice(0, 11).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 11) → slice(0, 12).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11197,7 +11207,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 9) → slice(0, 10).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 10) → slice(0, 11).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11388,7 +11399,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 8) → slice(0, 9).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 9) → slice(0, 10).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11442,7 +11454,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 7) → slice(0, 8).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 8) → slice(0, 9).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11516,7 +11529,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 6) → slice(0, 7).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 7) → slice(0, 8).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11584,7 +11598,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 5) → slice(0, 6).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 6) → slice(0, 7).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11920,7 +11935,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened by one, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 4) → slice(0, 5).
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 5) → slice(0, 6).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12056,7 +12072,11 @@ const CONTRACTS = [
       for (const s of ['data-testid="gg-tr-sorts"', 'data-testid={`gg-tr-sort-${s.key}`}', 'data-testid={`gg-tr-flag-${row.key}`}',
         '<GgTrSorts sorts={tr.sorts} on={sortItem} onSort={onSort} />', 'const sortItem = ggTrSort(sort, tr);',
         'rows: ggSortRows(d.rows || [], sortItem, tr.bucket_order)', '.map((d) => ({ d, rows: ggSortRows(d.rows, sortItem, tr.bucket_order) }));',
-        '<tr data-testid={`gg-tr-row-${r.key}`} className={ggTrRowClass(r)}>', '<tr data-testid={`gg-tl-row-${row.key}`} className={ggTrRowClass(row)}>',
+        // 2026-10-29 (BUILD_SPEC31 D3, track-record-tape): the 📋 list and the 🕰️ timeline draw ONE row (GgTrTapeRow) — the two
+        // row tints became the shared row's one tint + both views mounting it (gg-tr = the list, gg-tl = the timeline).
+        '<tr data-testid={`${tid}-row-${row.key}`} className={ggTrRowClass(row)}>{cells}</tr>',
+        '<GgTrTapeRow key={r.key} row={r} heads={heads} views={tr.views} at={tapeAt} tid="gg-tr" />',
+        '<GgTrTapeRow row={row} heads={heads} views={views} at={heads.length} tid="gg-tl" />',
         '<GgEntryTimeline tr={tr} cat={cat} sortItem={sortItem} />',
         'onSort={(k) => setParam(GG_SORT_PARAM, k === board?.track_record?.sort_default ? null : k)}',
         "const sortForGet = (s: GgSub | null) => (s === 'track_record' ? null : sort);",
@@ -12080,7 +12100,8 @@ const CONTRACTS = [
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — FIRST → one of the first two, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 2) → slice(0, 3).
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 3) → slice(0, 4).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12280,7 +12301,8 @@ const CONTRACTS = [
       // 2026-10-27, evening: the ✅ wins-first + row flags ✨ (chart-maps-gajjala-wins-sort-flags-2026-10-27, its own block, FIRST) lands above — widened to the top two, dated.
       // 2026-10-27 (evening): the 💵 lane P&L ✨ (autopilot-lane-pnl-2026-10-27, its own block, FIRST) lands above — widened to the top three, dated.
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 3) → slice(0, 4).
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 4) → slice(0, 5).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12372,7 +12394,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // WIDENED (2026-10-29: gajjala-only-pushes FIRST) — FIRST → one of the first two.
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 2) → slice(0, 3).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12469,7 +12492,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      // WIDENED (2026-10-29: track-record-tape FIRST) — NEW_FEATURES[0] → one of the first two.
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
@@ -12505,6 +12530,140 @@ const CONTRACTS = [
         for (const bad of ['ON FOR YOUR PHONE', 'in the owner keep-set', 'ON BY DEFAULT for you']) {
           if (row.includes(bad)) errs.push(`the ${k} Notifications entry says "${bad}" — it left push/subs.OWNER_KEEP_SET 2026-10-29`);
         }
+      }
+      return errs;
+    },
+  },
+  {
+    name: '📈 Tape column on the 🏁 Track record (2026-10-29)',
+    file: 'src/components/GajjalaBoard.tsx',
+    checks(board) {
+      // Ajay 2026-10-29 ~19:50 ET (verbatim, his spelling kept): "I wanna see this kind of graph in our Track record page
+      // this screenshot is from Promo circuit page." (BUILD_SPEC31 D1–D5). Every check reads the REAL file: (1) ONE shared
+      // row (GgTrTapeRow) + ONE Tape cell (GgTrTapeCell) + ONE head (GgTrHead), mounted by the 📋 list (TrackRecordPanel —
+      // both the plain and the 🎯 lists ride shownDays) AND the 🕰️ timeline; the cell markup exists once; (2) the list's
+      // column sits right after the Ticker head; (3) the cell gates on the row's id ONLY — never on a kind, so every 🧠
+      // potential row gets its mini; (4) the new bodies type no tape word, number or percent (GgEntryTape.tsx's own rule);
+      // (5) the ✨ is NEW_FEATURES[0], dated, routed, his words verbatim; (6) tape.py parse_id accepts the 🧠 kind BY THE
+      // CONSTANT (LG.KINDS[0]) and ENTRY_TAPE_WORDS carries the 🧠 sentences; the junk-id 404 text is unchanged; (7) the
+      // mini's route follows the board on both pages; (8) no new px width in the CSS (the mini's own 100).
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const fnBody = (name) => {
+        const fa = board.indexOf(`\nfunction ${name}(`);
+        const ca = board.indexOf(`\nconst ${name} = `);
+        if (fa < 0 && ca < 0) return null;
+        const a = fa >= 0 ? fa : ca;
+        const e = board.indexOf(fa >= 0 ? '\n}\n' : ';\n', a + 1);
+        return board.slice(a, e < 0 ? undefined : e);
+      };
+      const HIS = 'I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.';
+      const code = tsCode(board);
+      // 1. ONE row / cell / head, both views mount it
+      const body = {};
+      for (const n of ['GgTrTapeRow', 'GgTrTapeCell', 'GgTrHead', 'ggTrTapeAt', 'GgEntryTimelineRow', 'GgEntryTimeline', 'TrackRecordPanel']) {
+        const b = fnBody(n);
+        if (b == null) errs.push(`GajjalaBoard lost function ${n}( (the 📈 Tape column)`);
+        body[n] = tsCode(b || '');
+      }
+      if (!/<GgEntryMiniTape id=\{row\.id\} onOpen=\{onToggle\} width=\{100\} \/>/.test(body.GgTrTapeCell)) errs.push('GgTrTapeCell must mount <GgEntryMiniTape id={row.id} onOpen={onToggle} width={100} /> — the Promo mini, its width 100');
+      if (!body.GgTrTapeCell.includes('<td className="ptt__mini-cell">')) errs.push('GgTrTapeCell must draw <td className="ptt__mini-cell"> (the Promo cell class)');
+      if (!/\{row\.id \? \(/.test(body.GgTrTapeCell)) errs.push('GgTrTapeCell must gate the mini + 📈 on {row.id ? ( … ) : null} — a row without an id prints an empty cell');
+      for (const s of ['title={views.tape_toggle_title}', '{views.tape_toggle}</button>']) if (!body.GgTrTapeCell.includes(s)) errs.push(`GgTrTapeCell lost the served toggle: ${s}`);
+      for (const s of ['<GgTrTapeCell ', '<GgEntryTape id={row.id} />', '<GgTrLossLine row={row} heads={heads} tape={!!views} />', 'cells.splice(at, 0, ']) {
+        if (!body.GgTrTapeRow.includes(s)) errs.push(`GgTrTapeRow lost: ${s}`);
+      }
+      if (!body.GgTrHead.includes('{views.tape_head}</th>') || !body.GgTrHead.includes('ths.splice(at, 0, ')) errs.push('GgTrHead must splice the served {views.tape_head} head in at `at`');
+      for (const s of ['<GgTrTapeRow key={r.key} row={r} heads={heads} views={tr.views} at={tapeAt} tid="gg-tr" />', '<GgTrHead heads={heads} views={tr.views} at={tapeAt} />', 'const tapeAt = ggTrTapeAt(heads);']) {
+        if (!body.TrackRecordPanel.includes(s)) errs.push(`TrackRecordPanel (the 📋 list — plain and 🎯) must carry: ${s}`);
+      }
+      if (/<tr data-testid=\{`gg-tr-row-/.test(body.TrackRecordPanel)) errs.push('TrackRecordPanel draws its own <tr> again — the list rows are the shared GgTrTapeRow (no second copy)');
+      if (!body.GgEntryTimelineRow.includes('<GgTrTapeRow row={row} heads={heads} views={views} at={heads.length} tid="gg-tl" />')) errs.push('GgEntryTimelineRow must be the shared GgTrTapeRow with the Tape cell last (the 🕰️ view unchanged)');
+      if (!body.GgEntryTimeline.includes('<GgTrHead heads={heads} views={views} at={heads.length} />')) errs.push('GgEntryTimeline must draw the shared GgTrHead (Tape last)');
+      for (const [needle, what] of [['ptt__mini-cell', 'the Tape cell class'], ['<GgEntryMiniTape ', 'the mini mount'], ['<GgEntryTape ', 'the full-tape mount'], ['{views.tape_head}', 'the Tape head']]) {
+        const n = code.split(needle).length - 1;
+        if (n !== 1) errs.push(`GajjalaBoard names ${what} (${needle}) ${n} times — ONE shared component, never a second copy`);
+      }
+      // 2. second, right after the Ticker
+      if (!/const GG_TR_TAPE_AFTER = 'symbol';/.test(code)) errs.push("GajjalaBoard must carry const GG_TR_TAPE_AFTER = 'symbol'; (the Tape column follows the Ticker head)");
+      if (!body.ggTrTapeAt.includes('return heads.findIndex((h) => h.key === GG_TR_TAPE_AFTER) + 1;')) errs.push('ggTrTapeAt must return the index right after the GG_TR_TAPE_AFTER head');
+      // 3. every row with an id — never a kind filter on the list's tape
+      for (const n of ['GgTrTapeRow', 'GgTrTapeCell', 'GgTrHead']) {
+        if (/\.kind\b|views\.kinds|LG_KIND|aplus/.test(body[n])) errs.push(`${n} reads a kind — the list's Tape column is for EVERY row with an id (🚩 A+ and 🧠 potential)`);
+      }
+      // 4. no typed tape word, number or percent in the new bodies (the GgEntryTape.tsx rule, extended)
+      const tpRaw = tryRead('../backend/chart_maps/gajjala/tape.py', 'tape.py');
+      const ew = /^ENTRY_TAPE_WORDS = \{([\s\S]*?)\n\}/m.exec(tpRaw);
+      if (!ew) errs.push('tape.py lost ENTRY_TAPE_WORDS = { … }');
+      const words = ew ? [...ew[1].matchAll(/^\s*"(\w+)":\s*"((?:[^"\\]|\\.)*)"/gm)].map((m) => [m[1], m[2]]) : [];
+      const head = (/^TAPE_HEAD = "([^"]*)"/m.exec(tpRaw) || [])[1];
+      const toggle = (/^TAPE_TOGGLE = "([^"]*)"/m.exec(tpRaw) || [])[1];
+      if (!head || !toggle) errs.push('tape.py lost TAPE_HEAD / TAPE_TOGGLE');
+      const phrases = new Set([head, toggle].filter(Boolean));
+      for (const [, v] of words) { const p = v.split('{')[0].trim(); if (p.length >= 4) phrases.add(p); }
+      for (const n of ['GgTrTapeRow', 'GgTrTapeCell', 'GgTrHead', 'ggTrTapeAt', 'GgEntryTimelineRow']) {
+        const b = body[n];
+        const fmt = /toFixed|Math\.|%|etStamp\(|toLocale|Intl\./.exec(b);
+        if (fmt) errs.push(`${n} composes a number / a percent / a date ("${fmt[0]}") — every tape string is served by tape.py`);
+        for (const m of b.matchAll(/>([^<>{}\n]+)</g)) {
+          const t = m[1].trim();
+          if (t && t !== '…' && t !== '—') errs.push(`${n} types the JSX text "${t}" — every word is served`);
+        }
+        const lits = [...b.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map((m) => (m[1] ?? m[2] ?? m[3]).replace(/\$\{[^}]*\}/g, ' '));
+        for (const s of lits) for (const p of phrases) {
+          const hit = p === head ? new RegExp(`\\b${p}\\b`).test(s) : s.includes(p);
+          if (hit) errs.push(`${n} types the served tape word "${p}" (in "${s.trim()}") — tape.py serves it`);
+        }
+      }
+      // 5. the ✨ — FIRST, dated, routed, his words verbatim
+      const ID = 'chart-maps-gajjala-track-record-tape-2026-10-29';
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
+      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
+      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
+      const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);
+      if (!ent.includes("addedAt: '2026-10-29'")) errs.push('the 📈 ✨ must be dated 2026-10-29');
+      if (!ent.includes("route: '/chart-maps'")) errs.push("the 📈 ✨ must route to '/chart-maps'");
+      const label = ((/label: "((?:[^"\\]|\\.)*)"/.exec(ent) || [])[1] || '').replace(/\\"/g, '"');
+      if (!label.includes(`"${HIS}"`)) errs.push(`the 📈 ✨ label must quote him verbatim: "${HIS}"`);
+      if (!label.includes('UNMEASURED')) errs.push('the 📈 ✨ label must say UNMEASURED');
+      if (/bounc/i.test(label) || /\bfake\b/i.test(label)) errs.push('the 📈 ✨ label says bounce / fake');
+      let forbidden = [];
+      try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+      if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+      for (const w of forbidden) if (label.toLowerCase().includes(w.toLowerCase())) errs.push(`the 📈 ✨ label says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+      // 6. tape.py — the 🧠 kind by the constant; the 🧠 sentences; the junk-id text unchanged
+      const pid = pyBody(tpRaw, 'parse_id');
+      if (!pid) errs.push('tape.py lost def parse_id(');
+      else {
+        const pc = pyCode(pid);
+        if (!/LG\.KINDS\[0\]/.test(pc)) errs.push('tape.parse_id must accept the 🧠 kind by the constant LG.KINDS[0] (BUILD_SPEC31 D1)');
+        if (!/LG\.KINDS\[1\]/.test(pc)) errs.push('tape.parse_id must keep accepting the A+ kind LG.KINDS[1]');
+        if (/["']potential["']|["']aplus["']/.test(pc)) errs.push('tape.parse_id types a kind string — read LG.KINDS');
+      }
+      const lg = tryRead('../backend/chart_maps/gajjala/ledger.py', 'ledger.py');
+      if (lg && !/^KINDS = \("potential", "aplus"\)/m.test(lg)) errs.push('ledger.KINDS must stay ("potential", "aplus") — KINDS[0] is the 🧠 kind the tape reads');
+      const potWords = words.filter(([, v]) => v.includes('🧠'));
+      if (potWords.length < 3) errs.push(`ENTRY_TAPE_WORDS carries ${potWords.length} 🧠 sentences — the potential tape's title / legend / aria words are served there (D1)`);
+      for (const need of ['the trigger never printed', 'entered at the trigger']) {
+        if (!words.some(([, v]) => v.includes(need))) errs.push(`ENTRY_TAPE_WORDS must carry the 🧠 sentence "${need}…" (D1)`);
+      }
+      if (!words.some(([k, v]) => k === 'not_found' && v === 'No A+ entry with that id on the 🏁 Track record.')) errs.push('ENTRY_TAPE_WORDS["not_found"] must stay "No A+ entry with that id on the 🏁 Track record." (junk ids keep the 404 text)');
+      if (/bounc|fake/i.test(words.map(([, v]) => v).join(' '))) errs.push('ENTRY_TAPE_WORDS says the b-word / "fake"');
+      // 7. the mini's route follows the board (🚩 Gajjala's / the 1-minute page)
+      const gt = tsCode(tryRead('src/components/GgEntryTape.tsx', 'GgEntryTape'));
+      if ((gt.match(/const path = ggTapePath\(useGgVariant\(\)\);/g) || []).length !== 2) errs.push('GgEntryTape.tsx: both the full tape and the mini must read const path = ggTapePath(useGgVariant()); (the route follows the board)');
+      // 8. css — the three Tape-cell rules read every 🏁 table; no new px width
+      const css = tryRead('src/styles/gajjala.css', 'css');
+      for (const s of ['.gg-tr-table .ptt__mini-cell { white-space: nowrap; vertical-align: middle; }', '.gg-tr-table .ptt__toggle { margin-left: 0.3rem; }',
+                       '.gg-tr-scroll { overflow-x: auto; max-width: 100%; }']) if (!css.includes(s)) errs.push(`gajjala.css lost: ${s}`);
+      for (const m of css.matchAll(/\n([^{}\n]*ptt__[^{}\n]*)\{([^}]*)\}/g)) {
+        if (/(?:^|[;\s])(?:min-|max-)?width:\s*\d+px/.test(m[2])) errs.push(`gajjala.css gives a Tape rule a px width (${m[1].trim()}) — the mini's own 100 only`);
       }
       return errs;
     },

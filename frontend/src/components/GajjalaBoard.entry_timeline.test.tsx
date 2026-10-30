@@ -174,18 +174,35 @@ describe('GajjalaBoard — 🕰️ entries timeline (golden)', () => {
     expect(btns.every((b) => b.className.includes('cm-phase-btn'))).toBe(true);
     // the toggle sits right after the span picker
     expect(box.previousElementSibling?.querySelector('[data-testid^="gg-tr-span-"]')).not.toBeNull();
-    // default view: every served row in the day tables, the count lines, no timeline, no tape
+    // default view: every served row in the day tables, the count lines, no timeline, no FULL tape
     const shown = within(screen.getByTestId('gg-track-record')).queryAllByTestId(/^gg-tr-row-/).map((r) => r.getAttribute('data-testid'));
     expect(shown).toEqual(tr.days.flatMap((d: any) => d.rows.map((r: any) => `gg-tr-row-${r.key}`)));
     expect(screen.getByTestId('gg-tr-counts-same').textContent).toBe(tr.counts_text.same);
     expect(screen.getByTestId('gg-tr-counts-next').textContent).toBe(tr.counts_text.next);
     expect(screen.queryByTestId('gg-tl')).toBeNull();
-    expect(screen.queryAllByTestId('mock-mini')).toHaveLength(0);
-    expect(miniMounts).toHaveLength(0);
+    // 📈 2026-10-29 (BUILD_SPEC31 D3): the 📋 list draws the Tape column too — one mini per served row with an id (A+ AND
+    // 🧠), in the served order; the full tape only on 📈 (none yet)
+    const withId = tr.days.flatMap((d: any) => d.rows).filter((r: any) => r.id);
+    expect(withId.length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('mock-mini').map((m) => m.getAttribute('data-id'))).toEqual(withId.map((r: any) => r.id));
+    expect(miniMounts.map((m) => m.id)).toEqual(withId.map((r: any) => r.id));
+    expect(screen.queryAllByTestId('mock-tape')).toHaveLength(0);
+    expect(tapeMounts).toHaveLength(0);
     const withViews = screen.getByTestId('gg-track-record').cloneNode(true) as HTMLElement;
     withViews.querySelector('[data-testid="gg-tr-views"]')!.remove();
+    // …and the Tape column (its head, its cells; the ❌ loss line spans it) — the toggle and the column are the only additions
+    for (const t of withViews.querySelectorAll('table.gg-tr-table')) {
+      const ths = [...t.querySelectorAll('thead th')];
+      expect(ths.filter((th) => th.textContent === tr.views.tape_head)).toHaveLength(1);
+      ths.find((th) => th.textContent === tr.views.tape_head)!.remove();
+    }
+    for (const td of withViews.querySelectorAll('td.ptt__mini-cell')) td.remove();
+    for (const td of withViews.querySelectorAll('tr.gg-tr-sub td')) {
+      expect(td.getAttribute('colspan')).toBe(String(tr.heads.length + 1));
+      td.setAttribute('colspan', String(tr.heads.length));
+    }
     unmount();
-    // the default view is byte-for-byte the panel without the block (the toggle is the only addition)
+    // the default view is byte-for-byte the panel without the block (the toggle + the Tape column are the only additions)
     const old = clone(BOARDS[DEFAULT_SPAN]);
     delete old.track_record.views;
     stub(BOARDS, () => old);

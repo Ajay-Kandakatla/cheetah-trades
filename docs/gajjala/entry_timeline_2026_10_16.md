@@ -497,3 +497,7 @@ The five `LEDGER_LOSS_*` thresholds are MINE (HIS CALL Q13). The losers study th
   its list does not hold).
 
 Q11, Q12 and Q14 are MINE (the planner's defaults, AMENDMENTS11 F13); D11's "(Ajay)" covers only his sentence.
+
+2026-10-29: the tape cell (the mini + 📈 toggle + full-tape row + the ❌ loss line) is SHARED with the 🏁 📋 list's new
+TAPE column — one component for both views; the 🧠 rows get their own tape there (`docs/gajjala/track_record_2026_10_16.md`
+§ "📈 Tape column on the list (2026-10-29)"). This 🕰️ view is unchanged.

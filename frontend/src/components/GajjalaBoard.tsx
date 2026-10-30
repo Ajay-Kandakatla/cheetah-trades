@@ -1133,6 +1133,8 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
   const shownDays = listDays.map((d) => ({ ...d, rows: ggSortRows(d.rows || [], sortItem, tr.bucket_order) }));
   const listCatEmpty = !tl && ggCatOn(cat, cats) && !listDays.length && kindDays.some((d) => !!d.rows?.length);
   const kindEmpty = kindOn && !tr.aplus && !kindDays.length;
+  /* 📈 (2026-10-29) the served Tape column, second — right after the Ticker (ggTrTapeAt); an older API (no views) → none. */
+  const tapeAt = ggTrTapeAt(heads);
   return (
     <section className="gg-track-record" data-testid="gg-track-record">
       <h3 className="gg-pb-h" data-testid="gg-tr-title">{tr.title}</h3>
@@ -1167,15 +1169,10 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
           <h4 className="gg-pb-h" data-testid={`gg-tr-day-${d.date}`}>{d.label}</h4>
           <div className="gg-tr-scroll">
             <table className="gg-tr-table">
-              <thead><tr>{heads.map((h) => <th key={h.key}>{h.label}</th>)}</tr></thead>
+              <GgTrHead heads={heads} views={tr.views} at={tapeAt} />
               <tbody>
                 {(d.rows || []).map((r) => (
-                  <Fragment key={r.key}>
-                    <tr data-testid={`gg-tr-row-${r.key}`} className={ggTrRowClass(r)}>
-                      {heads.map((h) => <TrRowCells key={h.key} row={r} head={h.key} />)}
-                    </tr>
-                    <GgTrLossLine row={r} heads={heads} />
-                  </Fragment>
+                  <GgTrTapeRow key={r.key} row={r} heads={heads} views={tr.views} at={tapeAt} tid="gg-tr" />
                 ))}
               </tbody>
             </table>
@@ -1287,7 +1284,7 @@ function GgTrSorts({ sorts, on, onSort }: {
 }
 
 /** ❌ a row's served loss facts (ledger.loss_text, DECISIONS11 D12) as a sub-line row under it — the served string
- *  only; nothing when the row serves none (every non-loss row). `tape` = the 🕰️ table (one more column). */
+ *  only; nothing when the row serves none (every non-loss row). `tape` = a table with the Tape column (one more column — the 🕰️ timeline, and the 📋 list since 2026-10-29). */
 function GgTrLossLine({ row, heads, tape = false }: {
   row: GgTrRow; heads: { key: string; label: string }[]; tape?: boolean;
 }) {
@@ -1326,7 +1323,7 @@ function GgEntryTimeline({ tr, cat, sortItem = null }: {
           <h4 className="gg-pb-h" data-testid={`gg-tl-day-${d.date}`}>{d.label}</h4>
           <div className="gg-tr-scroll">
             <table className="gg-tr-table gg-tl-table">
-              <thead><tr>{heads.map((h) => <th key={h.key}>{h.label}</th>)}<th>{views.tape_head}</th></tr></thead>
+              <GgTrHead heads={heads} views={views} at={heads.length} />
               <tbody>
                 {rows.map((r) => <GgEntryTimelineRow key={r.key} row={r} heads={heads} views={views} />)}
               </tbody>
@@ -1338,34 +1335,73 @@ function GgEntryTimeline({ tr, cat, sortItem = null }: {
   );
 }
 
-/** 🕰️ one timeline row: the 🏁 cells (TrRowCells), the mini tape cell, and — when 📈 is open — the full tape row. */
+/** 🕰️ one timeline row — the ONE shared tape row (GgTrTapeRow), the Tape cell last (the 🕰️ view as shipped). */
 function GgEntryTimelineRow({ row, heads, views }: {
   row: GgTrRow; heads: { key: string; label: string }[]; views: GgTrViewsBlock;
 }) {
+  return <GgTrTapeRow row={row} heads={heads} views={views} at={heads.length} tid="gg-tl" />;
+}
+
+/** 📈 Tape column on the 📋 list (2026-10-29, BUILD_SPEC31 D3). Ajay: "I wanna see this kind of graph in our Track record
+ *  page this screenshot is from Promo circuit page." The Promo table's TAPE column on every 🏁 row: it sits right after
+ *  the served head with this key (the Ticker), so the 430 px phone shows it without scrolling the table; no such head
+ *  → first. The 🕰️ view keeps its Tape column last. */
+const GG_TR_TAPE_AFTER = 'symbol';
+function ggTrTapeAt(heads: { key: string }[]): number {
+  return heads.findIndex((h) => h.key === GG_TR_TAPE_AFTER) + 1;
+}
+
+/** 📈 the ONE table head of the 🏁 list and the 🕰️ timeline: the served heads, the served Tape head at `at` (none when
+ *  the API serves no views). */
+function GgTrHead({ heads, views, at }: {
+  heads: { key: string; label: string }[]; views: GgTrViewsBlock | null | undefined; at: number;
+}) {
+  const ths = heads.map((h) => <th key={h.key}>{h.label}</th>);
+  if (views) ths.splice(at, 0, <th key={GG_TR_TAPE_KEY}>{views.tape_head}</th>);
+  return <thead><tr>{ths}</tr></thead>;
+}
+const GG_TR_TAPE_KEY = '__tape';
+
+/** 📈 the ONE Tape cell (the Promo table's pattern): the lazy mini tape (GgEntryMiniTape — its hover = the served title;
+ *  its route follows the board, useGgVariant) and the 📈 toggle, both opening the full tape; a row without an id → an
+ *  empty cell. `tid` = the view's test-id prefix (gg-tr = the 📋 list, gg-tl = the 🕰️ timeline). */
+function GgTrTapeCell({ row, views, open, onToggle, tid }: {
+  row: GgTrRow; views: GgTrViewsBlock; open: boolean; onToggle: () => void; tid: string;
+}) {
+  return (
+    <td className="ptt__mini-cell">
+      {row.id ? (
+        <>
+          <GgEntryMiniTape id={row.id} onOpen={onToggle} width={100} />
+          <button type="button" className={`ptt__toggle${open ? ' is-on' : ''}`}
+                  data-testid={`${tid}-open-${row.key}`} aria-expanded={open}
+                  title={views.tape_toggle_title} onClick={onToggle}>{views.tape_toggle}</button>
+        </>
+      ) : null}
+    </td>
+  );
+}
+
+/** 📈 the ONE 🏁 row shared by the 📋 list (both the plain and the 🎯 A+-filtered lists) and the 🕰️ timeline: the 🏁
+ *  cells (TrRowCells) with the Tape cell at `at`, the full tape row when 📈 is open, then the ❌ loss line (after the
+ *  expanded tape row). No served views (an older API) → the 🏁 cells and the loss line only, as shipped. */
+function GgTrTapeRow({ row, heads, views, at, tid }: {
+  row: GgTrRow; heads: { key: string; label: string }[]; views: GgTrViewsBlock | null | undefined; at: number; tid: string;
+}) {
   const [open, setOpen] = useState(false);
   const toggle = () => setOpen((o) => !o);
+  const cells = heads.map((h) => <TrRowCells key={h.key} row={row} head={h.key} />);
+  if (views) cells.splice(at, 0, <GgTrTapeCell key={GG_TR_TAPE_KEY} row={row} views={views} open={open} onToggle={toggle} tid={tid} />);
   return (
     <Fragment>
-      <tr data-testid={`gg-tl-row-${row.key}`} className={ggTrRowClass(row)}>
-        {heads.map((h) => <TrRowCells key={h.key} row={row} head={h.key} />)}
-        <td className="ptt__mini-cell">
-          {row.id ? (
-            <>
-              <GgEntryMiniTape id={row.id} onOpen={toggle} width={100} />
-              <button type="button" className={`ptt__toggle${open ? ' is-on' : ''}`}
-                      data-testid={`gg-tl-open-${row.key}`} aria-expanded={open}
-                      title={views.tape_toggle_title} onClick={toggle}>{views.tape_toggle}</button>
-            </>
-          ) : null}
-        </td>
-      </tr>
-      {open && row.id ? (
-        <tr className="ptt__row" data-testid={`gg-tl-tape-${row.key}`}>
+      <tr data-testid={`${tid}-row-${row.key}`} className={ggTrRowClass(row)}>{cells}</tr>
+      {views && open && row.id ? (
+        <tr className="ptt__row" data-testid={`${tid}-tape-${row.key}`}>
           <td colSpan={heads.length + 1}><GgEntryTape id={row.id} /></td>
         </tr>
       ) : null}
       {/* D12 — the loser's facts under its tape (after the expanded tape row when it is open). */}
-      <GgTrLossLine row={row} heads={heads} tape />
+      <GgTrLossLine row={row} heads={heads} tape={!!views} />
     </Fragment>
   );
 }
