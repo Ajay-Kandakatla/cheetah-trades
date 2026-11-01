@@ -42,9 +42,14 @@ import pytest
 @pytest.fixture(autouse=True, scope="session")
 def _never_touch_a_real_database():
     import os
-    prior = {k: os.environ.get(k) for k in ("MONGO_URL", "MONGO_DB")}
+    prior = {k: os.environ.get(k) for k in ("MONGO_URL", "MONGO_DB", "LUK_ENABLED")}
     os.environ["MONGO_URL"] = "mongodb://mongo.disabled-in-tests.invalid:27017"
     os.environ["MONGO_DB"] = "cheetah_test_should_never_exist"
+    # 🥇 2026-11-01 — Luk's kill switch ASSIGNED off for the whole session (never
+    # setdefault: an exported LUK_ENABLED=1 would spawn a REAL detached Luk pass
+    # from every gajjala RUN.main([]) test). Tests that exercise the spawn
+    # monkeypatch.setenv("LUK_ENABLED", "1") themselves. Restored on teardown.
+    os.environ["LUK_ENABLED"] = "0"
 
     try:
         import pymongo

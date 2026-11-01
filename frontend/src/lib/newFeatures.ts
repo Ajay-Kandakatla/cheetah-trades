@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "look at other winners of US stocks champion ship and
+  // pic the next best one like Gajjala. Implement their strategy please if they have online resources." and "I need
+  // something like Gajjlala that is exposed". 🥇 Luk's — Martin Luk (the 2025 US Investing Championship stock-division
+  // winner) — its own package backend chart_maps/luk/ (a detached child of the 🚩 5-minute pass via
+  // gajjala/run.py _spawn_luk, the only gajjala line touched), its own tab right after the 1-minute page. Every rule
+  // cites his own free sources (verified_rules.json); every alert is SHADOW (LUK_PUSH_MODE; no push kind exists for
+  // it); its 🏁 starts LUK_RECORD_FROM. UNMEASURED. Pinned by scripts/contracts.mjs ("🥇 Luk's tab (2026-11-01)").
+  { id: 'chart-maps-luk-2026-11-01', addedAt: '2026-11-01', route: '/chart-maps?tab=luk',
+    label: "🥇 Luk's — a new Chart Maps tab right after 🚩 Gajjala's 1-minute page: Martin Luk, the 2025 US Investing Championship winner (stock division), who sells nothing; every rule on the tab is his own words in free sources — his videos and his guest post. His three setups (↩️ Pullback reversal, 🔔 Opening range, 📦 Inside day), each card with its state, trigger, stop and risk; his three scans (☀️ Premarket, 🏆 Leader, ⚡ Potent) with the settings he showed; his 📓 Playbook with every rule cited to its source; and a 🏁 Track record that starts 2026-11-01. Every alert here is recorded in shadow, never sent — nothing new rings your phone and nothing trades. You said: “look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources.” and “I need something like Gajjlala that is exposed”. UNMEASURED. Not advice." },
   // Ajay 2026-11-01 (verbatim in the label, his spelling kept, the line breaks as " / "): "I would like you to create a
   // new tab for Gajjals when you modifiy with audit of End of day.. / Gajjals-Audited / So we can keep track of
   // improvements on this tab". A THIRD Variant (backend chart_maps/gajjala/variant.py GGA, tab gajjala_audited) riding

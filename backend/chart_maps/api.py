@@ -790,6 +790,87 @@ async def chart_maps_gajjala_audited_entry_tape(
     return await asyncio.to_thread(_run)
 
 
+# ── 🥇 Luk's (2026-11-01, BUILD SPEC luk-tab §3.11 / WP-C) ─────────────────────────────────────────────────────────
+# Ajay, verbatim: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
+# their strategy please if they have online resources. ... I need something like Gajjlala that is exposed". Two GET
+# routes under the variant's api base (chart_maps.luk.variant.LUK.api_base): the board (Mongo only + the ONE live
+# fan-out for the shown tiles) and one 🏁 row's entry tape. No scan POST (not asked — HIS CALL #20). Every Luk alert is
+# recorded in SHADOW, never sent; UNMEASURED. The 🚩 / 1-minute / audited routes above are untouched.
+@router.get("/chart-maps/luk")
+async def chart_maps_luk(
+    sub: str = Query("", description="pullback_reversal (default) | opening_range_high | inside_day_pdh | premarket | "
+                                     "leader | potent | playbook | track_record — EMPTY with a `focus` symbol = the "
+                                     "server picks the sub; an unknown value serves the default."),
+    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | 10d | all — an unknown "
+                                      "value serves the default; no session before the record start is read."),
+    focus: str = Query("", description="a symbol to deep-link to (its card first)."),
+    limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
+    email: Optional[str] = Depends(maybe_current_user),
+):
+    """🥇 Luk's board — Martin Luk's published pullback / opening-range method, built from his own words. Served from
+    Mongo ONLY (`luk.tab.build`) plus the same ONE live fan-out for the shown tiles' now-line (each step fenced). Every
+    Luk alert is recorded in SHADOW, never sent; UNMEASURED. Public read like the other boards; a raising build serves
+    200 with the fault note. Every argument is coerced (a direct call receives the Query OBJECT)."""
+    from rotation.api import _scrub
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
+    from .luk import tab as LT
+    GC = gajjala_consts
+    owner = bool(is_primary_admin(email if isinstance(email, str) else ""))
+
+    def _run():
+        lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
+        sub_s = sub if isinstance(sub, str) else ""
+        try:
+            out = LT.build(sub_s,
+                           span=span if isinstance(span, str) else "",
+                           focus=focus if isinstance(focus, str) else "",
+                           limit=max(1, min(lim, GC.TILE_LIMIT_MAX)), owner=owner)
+        except Exception as exc:                                    # never a 500
+            log.warning("chart-maps/luk: build failed: %s", type(exc).__name__)
+            return _scrub(LT.fault_payload(sub_s))
+        tiles = out.get("tiles") or []
+        if tiles:
+            try:
+                live = board_mod._live_snapshot(tiles)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/luk: live snapshot failed: %s", exc)
+                live = {}
+            try:
+                board_mod.attach_live_now(tiles, out, live=live)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/luk: live now-line failed: %s", exc)
+        return _scrub(out)
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/luk/entry-tape")
+async def chart_maps_luk_entry_tape(
+    id: str = Query("", description="a 🥇 🏁 row id ('{date}|{SYM}|{setup}|aplus')"),
+    lite: int = Query(0, ge=0, le=1, description="1 = the row's mini tape (the lite keys)"),
+):
+    """🕰️ ONE 🥇 A+ row's tape — `luk.tape.entry_tape` over the Luk store (gajjala.tape's payload shape, so the FE's
+    GgEntryTape draws it). Recorded in shadow, never sent; UNMEASURED. NEVER WRITES. 404 for an unknown id; a raising
+    build serves 200 with the fault note."""
+    from rotation.api import _scrub
+    from .gajjala import tape as GTP
+    from .luk import tape as LTP
+
+    def _run():
+        _id = id if isinstance(id, str) else ""
+        lt = isinstance(lite, int) and not isinstance(lite, bool) and lite == 1
+        try:
+            p = LTP.entry_tape(_id, lite=lt)
+        except Exception as exc:                                # never a 500
+            log.warning("chart-maps/luk/entry-tape: %s failed: %s", _id[:80], type(exc).__name__)
+            p = LTP.fault(_id, lite=lt)
+        if p is None:
+            return JSONResponse({"detail": GTP.ENTRY_TAPE_WORDS["not_found"]}, status_code=404)
+        return JSONResponse(_scrub(p))
+
+    return await asyncio.to_thread(_run)
+
+
 # ── 🚫 his broker list (2026-10-17, DECISIONS12 D5, AMENDMENTS12 F1 / F3) ─────────────────────────────────────────────
 # Ajay, verbatim: "ok then avoid showing me names that are not eligible in Fidelity then." / "Or just add a tag that not
 # eligible on Fidelity". A TAG, never a filter. Each route, in THIS order (R12): the primary-admin gate (a stealth 404

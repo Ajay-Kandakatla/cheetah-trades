@@ -12,11 +12,13 @@ const ASK = ['I would like you to create a new tab for Gajjals when you modifiy 
   'Gajjals-Audited', 'So we can keep track of improvements on this tab'];
 
 describe('🧪 Gajjala · Audited — tab slot (2026-11-01)', () => {
-  it('sits once: gajjala → gajjala_audited → gajjala_1m → doji_sweep', () => {
+  it('sits once: gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep', () => {
     expect(CM_TABS.filter((t) => t === 'gajjala_audited')).toHaveLength(1);
     expect(CM_TABS.indexOf('gajjala_audited')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala_audited') + 1);
-    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    // WIDENED 2026-11-01 — 🥇 luk right after gajjala_1m, before doji_sweep (luk spec §3.13, critique C4)
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
     expect(parseTab('gajjala_audited')).toBe('gajjala_audited');
     // NEGATIVE: the hyphenated endpoint spelling and his own spelling are not tab ids
     expect(parseTab('gajjala-audited')).not.toBe('gajjala_audited');

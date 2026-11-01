@@ -1592,6 +1592,8 @@ const CONTRACTS = [
         gajjala_1m: 'src/components/GajjalaBoard.tsx',
         // 2026-11-01: 🧪 Gajjala · Audited inserted — the same board component, variant="gajjala_audited".
         gajjala_audited: 'src/components/GajjalaBoard.tsx',
+        // 2026-11-01: 🥇 Luk's tab inserted — its own board component (LukBoard → LukCard / LukScreens).
+        luk: 'src/components/LukBoard.tsx',
       };
       /* A tab whose rows are not TICKERS has nothing for the chip to read.
        * Exempt only in writing, the NO_TOGGLE way below: the file must SAY so,
@@ -2186,6 +2188,8 @@ const CONTRACTS = [
         gajjala_1m: 'src/components/GajjalaBoard.tsx',
         // 2026-11-01: 🧪 Gajjala · Audited inserted — the same board component, variant="gajjala_audited".
         gajjala_audited: 'src/components/GajjalaBoard.tsx',
+        // 2026-11-01: 🥇 Luk's tab inserted — its own board component (LukBoard → LukCard / LukScreens).
+        luk: 'src/components/LukBoard.tsx',
       };
       /* Same written-exemption rule as the growth contract: a tab with no
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
@@ -2256,6 +2260,9 @@ const CONTRACTS = [
         gajjala_1m: /his setup state orders this board/,
         //   gajjala_audited (2026-11-01: 🧪 Gajjala · Audited inserted) — the same board component and the same reason.
         gajjala_audited: /his setup state orders this board/,
+        //   luk (2026-11-01: 🥇 Luk's tab inserted) — his setup state (A+ → triggered → forming → listed → stopped)
+        //           orders this board in the SERVED order; the 🧨 read is a chip on each card, never an ordering.
+        luk: /his setup state orders this board/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -5903,7 +5910,8 @@ const CONTRACTS = [
         // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 — 🕯️ took the slot between 🚩 and 〰️.
         // 2026-10-27: 🚩 1-minute page inserted — gajjala_1m follows gajjala, doji_sweep follows gajjala_1m.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — the four-way chain gajjala → gajjala_audited → gajjala_1m → doji_sweep (→ ema_frames).
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'doji_sweep' must follow 'gajjala_1m' and 'ema_frames' must follow 'doji_sweep'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted right after the 1-minute page — gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep (→ ema_frames).
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'luk' must follow 'gajjala_1m', 'doji_sweep' must follow 'luk' and 'ema_frames' must follow 'doji_sweep'");
       }
       if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
       if (/\n  gajjala: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry gajjala (🎯 n/a, the 📉 / 🔻 precedent)');
@@ -6704,6 +6712,8 @@ const CONTRACTS = [
         gajjala_1m: 'src/components/GajjalaBoard.tsx',
         // 2026-11-01: 🧪 Gajjala · Audited inserted — the same board component, variant="gajjala_audited".
         gajjala_audited: 'src/components/GajjalaBoard.tsx',
+        // 2026-11-01: 🥇 Luk's tab inserted — its own board component (LukBoard → LukCard / LukScreens).
+        luk: 'src/components/LukBoard.tsx',
       };
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
@@ -8006,7 +8016,8 @@ const CONTRACTS = [
         if (tabs.filter((t) => t === 'doji_sweep').length !== 1) errs.push("CM_TABS lists 'doji_sweep' more than once");
         // 2026-10-27: 🚩 1-minute page inserted — doji_sweep follows gajjala_1m, gajjala_1m follows gajjala.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m → doji_sweep.
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('gajjala_1m') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep.
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'luk', 'luk' right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
         if (tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'ema_frames' must sit right after 'doji_sweep'");
       }
       if (/\n  doji_sweep: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry doji_sweep (🎯 n/a)');
@@ -9760,7 +9771,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 24) → slice(0, 25).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 25) → slice(0, 26).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 26) → slice(0, 27).
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 27) → slice(0, 28).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9979,7 +9991,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 21) → slice(0, 22).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 23) → slice(0, 24).
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 24) → slice(0, 25).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10264,7 +10277,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 20) → slice(0, 21).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 21) → slice(0, 22).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 22) → slice(0, 23).
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 23) → slice(0, 24).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10468,7 +10482,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 17) → slice(0, 18).
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 18) → slice(0, 19).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10571,7 +10586,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 20) → slice(0, 21).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 21) → slice(0, 22).
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 22) → slice(0, 23).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10725,7 +10741,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 18) → slice(0, 19).
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 19) → slice(0, 20).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10846,7 +10863,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 19) → slice(0, 20).
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 20) → slice(0, 21).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10901,7 +10919,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 15) → slice(0, 16).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 16) → slice(0, 17).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11045,7 +11064,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 16) → slice(0, 17).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 17) → slice(0, 18).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11132,7 +11152,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 14) → slice(0, 15).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 15) → slice(0, 16).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11252,7 +11273,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 13) → slice(0, 14).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 14) → slice(0, 15).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11447,7 +11469,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 12) → slice(0, 13).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 13) → slice(0, 14).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11505,7 +11528,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 11) → slice(0, 12).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 12) → slice(0, 13).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11583,7 +11607,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 10) → slice(0, 11).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 11) → slice(0, 12).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11655,7 +11680,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 9) → slice(0, 10).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 10) → slice(0, 11).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11998,7 +12024,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 8) → slice(0, 9).
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 9) → slice(0, 10).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12166,7 +12193,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 6) → slice(0, 7).
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 7) → slice(0, 8).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12268,7 +12296,8 @@ const CONTRACTS = [
         if (tabs.filter((t) => t === 'gajjala_1m').length !== 1) errs.push("CM_TABS lists 'gajjala_1m' more than once");
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m.
         if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1) errs.push("CM_TABS: 'gajjala_1m' must sit right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
-        if (tabs.indexOf('doji_sweep') !== tabs.indexOf('gajjala_1m') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'gajjala_1m'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — luk right after gajjala_1m, doji_sweep right after luk.
+        if (tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_1m', and 'doji_sweep' right after 'luk'");
       }
       if (!/&& t !== 'gajjala_1m'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_1m' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_1m'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_1m'");
@@ -12376,7 +12405,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 7) → slice(0, 8).
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 8) → slice(0, 9).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12472,7 +12502,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 5) → slice(0, 6).
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 6) → slice(0, 7).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12573,7 +12604,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 4) → slice(0, 5).
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 5) → slice(0, 6).
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12707,7 +12739,8 @@ const CONTRACTS = [
       // WIDENED (2026-10-29: promo-names FIRST) — NEW_FEATURES[0] → one of the first two.
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 3) → slice(0, 4).
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 4) → slice(0, 5).
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12831,7 +12864,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — NEW_FEATURES[0] → one of the first two.
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 2) → slice(0, 3).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 3) → slice(0, 4).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13004,7 +13038,8 @@ const CONTRACTS = [
       else {
         if (tabs.filter((t) => t === 'gajjala_audited').length !== 1) errs.push("CM_TABS lists 'gajjala_audited' more than once");
         const at = (t) => tabs.indexOf(t);
-        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('doji_sweep') !== at('gajjala_1m') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → doji_sweep");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — the chain gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep.
+        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('luk') !== at('gajjala_1m') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep");
       }
       if (!/&& t !== 'gajjala_audited'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_audited' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_audited'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_audited'");
@@ -13068,7 +13103,9 @@ const CONTRACTS = [
           if (/GGA_PASSES|gga-passes|gajjala_audited/.test(inner)) errs.push('the audited pass sits INSIDE the gg1m-passes block — under "they ring your phone" [C4]');
           const head = al.indexOf('data-testid="gga-passes-head"');
           const div = al.indexOf('<div data-testid="gga-passes">');
-          const daily = al.indexOf('🗓️ Daily passes');
+          // RE-PINNED 2026-11-01: 🥇 Luk's strip comment names "🗓️ Daily passes" in prose — anchor on the RENDERED eyebrow (">🗓️ Daily passes<"), never a comment.
+          const daily = al.indexOf('>🗓️ Daily passes<');
+          if (daily < 0) errs.push('Alerts.tsx lost the rendered ">🗓️ Daily passes<" eyebrow');
           if (head < 0 || div < 0) errs.push('Alerts.tsx must render the gga-passes-head eyebrow and the <div data-testid="gga-passes"> strip');
           else {
             if (!(end <= head && head < div && (daily < 0 || div < daily))) errs.push('the 🧪 strip must sit AFTER the gg1m-passes block and BEFORE 🗓️ Daily passes');
@@ -13108,8 +13145,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-audited-2026-11-01';
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 1).map((m) => m[1]);
-      if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstIdsGga.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 1) → slice(0, 2).
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (🥇 luk went FIRST 2026-11-01; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
         const nextAt = nfArr.indexOf("{ id: '", at + 1);
@@ -13122,6 +13160,229 @@ const CONTRACTS = [
         for (const need of ['UNMEASURED', 'Not advice.', 'never hidden']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
         if (MODE === 'shadow' && !(label.includes('never sent') && /\bshadow\b/.test(label))) errs.push(`${W} must say shadow and "never sent" (GAJJALA_AUDITED_PUSH_MODE is shadow)`);
         if (FROM && !label.includes(FROM)) errs.push(`${W} must name the 🏁 start ${FROM} (= GGA_RECORD_FROM)`);
+        errs.push(...wordErrs(W, label));
+      }
+      return errs;
+    },
+  },
+  {
+    name: "🥇 Luk's tab (2026-11-01)",
+    file: 'src/lib/chartMaps.ts',
+    checks(cm) {
+      // Ajay 2026-11-01: "look at other winners of US stocks champion ship and pic the next best one like Gajjala.
+      // Implement their strategy please if they have online resources." … "I need something like Gajjlala that is
+      // exposed" (BUILD SPEC luk-tab rev 2 §3.13 / §5). Every check reads the REAL file: (0) chart_maps/luk/constants
+      // LUK_TAB "luk" / LUK_PUSH_MODE "shadow" / LUK_RECORD_FROM his ask date / LUK_KIND "luk_setup"; variant.LUK reads
+      // them (one source), api_base /chart-maps/luk, NO sender, lane False; GG's VARIANTS stays (GG5, GG1, GGA) — Luk is
+      // never a GG variant; alert_status LUK_KIND == LC's with its cadence DERIVED from 🚩's; no push kind, not in the
+      // keep-set, no crontab line; the ONLY gajjala file naming luk is run.py and it holds `_spawn_luk` exactly twice
+      // (the def + its one call); (1) CM_TABS — once, gajjala_1m → luk → doji_sweep, isBoardTab excludes it, the CmTab
+      // union carries it, no 🎯 kind, GAJJALA_TABS untouched; (2) TAB_META label == LUK_TAB_LABEL, the blurb quotes his
+      // ask verbatim, says shadow (iff the mode is shadow) / never sent / the record start / UNMEASURED / not advice,
+      // no b-word / FORBIDDEN_WORDS / edge; (3) ChartMaps mounts <LukBoard /> on tab === 'luk' BEFORE the SupportLevels
+      // fallback; lib/luk.ts LUK_TAB / LUK_BASE == the backend; BURST_EXEMPT.luk states its reason; (4) /alerts —
+      // LUK_PASSES is its OWN strip after the 🧪 strip and before the rendered 🗓️ Daily passes eyebrow, under a "never
+      // sent" eyebrow, in no other pass array, at 🚩's cadence; no /notifications toggle; (5) the ℹ️ section "luk"
+      // right before "doji_sweep"; (6) the doc + SPECS; (7) the ✨ FIRST, routed, dated, his words verbatim.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\(['"\\])/g, '$1');
+      const HIS = ['look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources.',
+        'I need something like Gajjlala that is exposed'];
+      const B_WORD = (s) => /bounc/i.test(s.replace(/useBounceRoom|BounceRoom|bounce_room/g, '')) || /\bfake\b/i.test(s);
+      let forbidden = [];
+      try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : []; } catch { /* below */ }
+      if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+      const wordErrs = (W, text) => {
+        const out = [];
+        if (B_WORD(text)) out.push(`${W} says bounce / fake — reversal, never bounce`);
+        const rest = text.replace(/“[^”]*”/g, '').replace(/"[^"]*"/g, '');
+        for (const w of forbidden) if (rest.toLowerCase().includes(w.toLowerCase())) out.push(`${W} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        if (/\bedge\b/i.test(rest)) out.push(`${W} says "edge" — UNMEASURED, never claim an edge`);
+        return out;
+      };
+      const field = (body, name) => {
+        const m = new RegExp(`\\b${name}: (?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`).exec(body);
+        return m ? unesc(m[1] ?? m[2]) : null;
+      };
+      const pyStr = (py, n) => { const m = new RegExp(`^${n} = "([^"]*)"`, 'm').exec(py); return m ? m[1] : null; };
+      const LUK_WORD = /\bluk\b|luk_|_luk\b|LUK_/i;
+      // self-tests — the helpers bite where they must and not where they must not
+      if (!wordErrs('t', 'it will bounce').length || wordErrs('t', 'a pullback reversal').length) errs.push('self-test: wordErrs must flag the b-word and pass "reversal"');
+      if (!wordErrs('t', 'no edge here').length || wordErrs('t', 'the hedge and the ledger').length) errs.push('self-test: wordErrs must flag "edge" as a word only');
+      if (field("  x: { label: '\\u{1F947} Luk\\'s', ", 'label') !== '🥇 Luk\'s') errs.push('self-test: field() must unescape \\u{…} and \\\'');
+      if (!LUK_WORD.test("x = 'luk'") || !LUK_WORD.test('LUK_KIND') || LUK_WORD.test('a fluke, Lukas') ) errs.push('self-test: LUK_WORD must match luk / LUK_* and not "fluke" / "Lukas"');
+
+      // 0. the backend truths.
+      const lc = tryRead('../backend/chart_maps/luk/constants.py', 'luk/constants.py');
+      const lv = tryRead('../backend/chart_maps/luk/variant.py', 'luk/variant.py');
+      const gv = tryRead('../backend/chart_maps/gajjala/variant.py', 'gajjala/variant.py');
+      const ast = tryRead('../backend/supply_demand/alert_status.py', 'alert_status.py');
+      const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
+      const TAB = pyStr(lc, 'LUK_TAB');
+      const LABEL = pyStr(lc, 'LUK_TAB_LABEL');
+      const MODE = pyStr(lc, 'LUK_PUSH_MODE');
+      const FROM = pyStr(lc, 'LUK_RECORD_FROM');
+      const KIND = pyStr(lc, 'LUK_KIND');
+      if ([TAB, LABEL, MODE, FROM, KIND].some((x) => x == null)) errs.push('luk/constants.py must carry LUK_TAB / LUK_TAB_LABEL / LUK_PUSH_MODE / LUK_RECORD_FROM / LUK_KIND = "<str>"');
+      if (TAB != null && TAB !== 'luk') errs.push(`LUK_TAB is "${TAB}" — the Chart Maps key is "luk"`);
+      if (MODE != null && MODE !== 'shadow') errs.push(`LUK_PUSH_MODE is "${MODE}" — Luk records in SHADOW; going live is HIS CALL #19 and a code change`);
+      if (FROM != null && FROM !== '2026-11-01') errs.push(`LUK_RECORD_FROM is ${FROM} — the record starts at his ask, 2026-11-01`);
+      if (KIND != null && KIND !== 'luk_setup') errs.push(`LUK_KIND is "${KIND}" — the /alerts pass-health row is "luk_setup"`);
+      const vm = /\nLUK = Variant\(([\s\S]*?)\)\n\n/.exec(lv);
+      if (!vm) errs.push('luk/variant.py must declare LUK = Variant(…)');
+      else {
+        const v = vm[1];
+        if (!/^"luk", LC\.LUK_TAB, LC\.LUK_TAB_LABEL,/.test(v.trim())) errs.push('variant.LUK must open Variant("luk", LC.LUK_TAB, LC.LUK_TAB_LABEL, … (one source)');
+        if (!v.includes('"/chart-maps/luk"')) errs.push('variant.LUK api_base must be "/chart-maps/luk"');
+        if (!/\bLC\.LUK_KIND\b/.test(v)) errs.push('variant.LUK kind must read LC.LUK_KIND');
+        if (!/"LUK_PUSH_MODE",\s*"",\s*""/.test(v)) errs.push('variant.LUK must carry NO sender ("LUK_PUSH_MODE", "", "") — it never sends');
+        if (!/"STALE_AFTER_SEC",\s*False\b/.test(v)) errs.push('variant.LUK lane must be False — nothing here enters a lane');
+        if (/notify_/.test(v)) errs.push('variant.LUK names a notify_ sender — it never sends');
+        if (!/record_from_const\s*=\s*"LUK_RECORD_FROM"/.test(v)) errs.push('variant.LUK must read its record start from LUK_RECORD_FROM');
+      }
+      if (!/^VARIANTS = \(GG5, GG1, GGA\)$/m.test(gv)) errs.push('gajjala/variant.py VARIANTS must stay (GG5, GG1, GGA) — Luk is never a GG variant');
+      if (LUK_WORD.test(gv)) errs.push('gajjala/variant.py names luk — GG\'s registry is untouched');
+      const AK = pyStr(ast, 'LUK_KIND');
+      if (AK == null || AK !== KIND) errs.push(`alert_status LUK_KIND (${AK}) must equal luk/constants.LUK_KIND (${KIND})`);
+      if (!/^CADENCE_SEC\[LUK_KIND\] = CADENCE_SEC\[GAJJALA_KIND\]$/m.test(ast)) errs.push('alert_status CADENCE_SEC[LUK_KIND] must be DERIVED from CADENCE_SEC[GAJJALA_KIND] (a child of the 🚩 pass)');
+      const CAD = Number((/^CADENCE_SEC\[GAJJALA_KIND\] = (\d+)/m.exec(ast) || [])[1]);
+      if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
+      // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
+      if (LUK_WORD.test(subs)) errs.push('push/subs.py names luk — Luk has NO push kind (HIS CALL #19)');
+      if (keepSet(subs).some((k) => LUK_WORD.test(k))) errs.push('OWNER_KEEP_SET carries a luk kind — the keep-set stays exactly six');
+      const cron = tryRead('../backend/crontab', 'crontab');
+      if (cron && LUK_WORD.test(cron)) errs.push('backend/crontab names luk — the pass is a detached child of the 🚩 line; the host crontab is never edited by a deploy');
+      // the ONE gajjala touch: run.py's fence (the structural AST pins live in tests/test_luk_gajjala_hook.py).
+      let gfiles = [];
+      try { gfiles = readdirSync(join(FRONTEND_ROOT, '../backend/chart_maps/gajjala')).filter((n) => n.endsWith('.py')); } catch { errs.push('backend/chart_maps/gajjala is unreadable'); }
+      const naming = gfiles.filter((n) => /luk/i.test(read(`../backend/chart_maps/gajjala/${n}`)));
+      if (gfiles.length && naming.join(',') !== 'run.py') errs.push(`the gajjala files naming luk must be exactly [run.py] (found [${naming.join(', ')}]) — every other GG file stays untouched`);
+      const run = gfiles.includes('run.py') ? read('../backend/chart_maps/gajjala/run.py') : '';
+      if (run) {
+        const n = (run.match(/_spawn_luk\b/g) || []).length;
+        if (n !== 2 || !/\ndef _spawn_luk\(\) -> None:/.test(run) || !/\n\s+_spawn_luk\(\)/.test(run)) errs.push(`gajjala/run.py must hold _spawn_luk exactly twice — the def and its one call (found ${n})`);
+      }
+
+      // 1. the slot.
+      const tabs = parseCmTabs(cm);
+      if (!tabs || !tabs.includes('luk')) errs.push("CM_TABS must carry 'luk'");
+      else {
+        if (tabs.filter((t) => t === 'luk').length !== 1) errs.push("CM_TABS lists 'luk' more than once");
+        const at = (t) => tabs.indexOf(t);
+        if (at('luk') !== at('gajjala_1m') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_1m' and right before 'doji_sweep'");
+      }
+      if (!/&& t !== 'luk'/.test(cm)) errs.push("isBoardTab must return false for 'luk' — it has its own endpoint");
+      if (!/\bCmTab = [^;]*'luk'/.test(cm)) errs.push("the CmTab union must carry 'luk'");
+      if (/\n  luk: '/.test(cm)) errs.push('ENTERABLE_KIND must NOT carry luk (🎯 n/a, the 🚩 precedent)');
+      if (!/export const GAJJALA_TABS: ReadonlyArray<CmTab> = \['gajjala', 'gajjala_audited', 'gajjala_1m'\];/.test(cm)) errs.push("GAJJALA_TABS must stay ['gajjala', 'gajjala_audited', 'gajjala_1m'] — Luk is not a GG tab");
+
+      // 2. TAB_META.
+      const metaAt = cm.indexOf('\n  luk: {');
+      const metaBody = metaAt < 0 ? '' : cm.slice(metaAt, cm.indexOf('\n  },', metaAt) + 5);
+      const mLabel = field(metaBody, 'label');
+      const mBlurb = field(metaBody, 'blurb');
+      if (mLabel == null || mBlurb == null) errs.push('TAB_META.luk { label, blurb } not found');
+      else {
+        const W = 'TAB_META.luk';
+        if (LABEL != null && mLabel !== LABEL) errs.push(`${W}.label "${mLabel}" != luk/constants.LUK_TAB_LABEL "${LABEL}"`);
+        for (const h of HIS) if (!mBlurb.includes(`"${h}"`)) errs.push(`${W}.blurb must quote his ask verbatim: "${h}"`);
+        for (const need of ['UNMEASURED', 'never sent']) if (!mBlurb.includes(need)) errs.push(`${W}.blurb must say "${need}"`);
+        if (!/not advice/i.test(mBlurb)) errs.push(`${W}.blurb must say not advice`);
+        if ((MODE === 'shadow') !== /\bshadow\b/.test(mBlurb)) errs.push(`${W}.blurb says shadow iff LUK_PUSH_MODE is "shadow" (it is ${MODE})`);
+        if (FROM && !mBlurb.includes(FROM)) errs.push(`${W}.blurb must name the 🏁 start ${FROM} (= LUK_RECORD_FROM)`);
+        errs.push(...wordErrs(W + '.blurb', mBlurb));
+      }
+
+      // 3. the mount, the FE constants, the ⚡ exemption.
+      const page = tryRead('src/pages/ChartMaps.tsx', 'ChartMaps');
+      const mount = page.search(/tab === 'luk' \? \(?[\s\S]{0,900}?<LukBoard \/>/);
+      if (page && mount < 0) errs.push("ChartMaps.tsx must mount <LukBoard /> on tab === 'luk'");
+      const fallback = page.indexOf('<SupportLevels');
+      if (page && mount >= 0 && fallback >= 0 && fallback < mount) errs.push("ChartMaps.tsx mounts <LukBoard /> AFTER the SupportLevels fallback — it would never render");
+      const ll = tryRead('src/lib/luk.ts', 'lib/luk.ts');
+      const llStr = (n) => (new RegExp(`export const ${n} = '([^']*)'`).exec(ll) || [])[1];
+      if (ll && llStr('LUK_TAB') !== TAB) errs.push(`lib/luk.ts LUK_TAB '${llStr('LUK_TAB')}' != luk/constants.LUK_TAB "${TAB}"`);
+      if (ll && llStr('LUK_BASE') !== '/chart-maps/luk') errs.push(`lib/luk.ts LUK_BASE '${llStr('LUK_BASE')}' != variant.LUK api_base "/chart-maps/luk"`);
+      const mb = tryRead('src/lib/momentumBurst.ts', 'momentumBurst');
+      if (mb && !/\n\s+luk: '[^'\n]*his setup state orders this board/.test(mb)) errs.push('momentumBurst BURST_EXEMPT.luk must state its reason ("his setup state orders this board …")');
+
+      // 4. /alerts — its OWN strip after the 🧪 strip, before the rendered daily eyebrow; no /notifications toggle.
+      const al = tryRead('src/pages/Alerts.tsx', 'Alerts');
+      if (al) {
+        const arr = (name) => { const m = new RegExp(`\\bconst ${name}\\b[^=]*=\\s*\\[([\\s\\S]*?)\\n\\];`).exec(al); return m ? m[1] : null; };
+        const lp = arr('LUK_PASSES');
+        if (lp == null) errs.push('Alerts.tsx must declare LUK_PASSES = [ … ]');
+        else if (Number.isFinite(CAD) && !new RegExp(`\\{ key: '${KIND}',\\s*label: '(?:[^'\\\\]|\\\\.)*',\\s*fallbackCadenceSec: ${CAD} \\}`).test(lp)) errs.push(`LUK_PASSES must carry { key: '${KIND}', label, fallbackCadenceSec: ${CAD} } (= alert_status CADENCE_SEC[GAJJALA_KIND])`);
+        for (const other of ['PASSES', 'GG1M_PASSES', 'GGA_PASSES', 'TAPE_PASSES', 'DAILY_PASSES']) {
+          const body = arr(other);
+          if (body && LUK_WORD.test(body)) errs.push(`Alerts.tsx ${other} carries the Luk pass — it lives in LUK_PASSES only (never in the header count, never under "they ring your phone")`);
+        }
+        const gga = al.indexOf('<div data-testid="gga-passes">');
+        const head = al.indexOf('data-testid="luk-passes-head"');
+        const div = al.indexOf('<div data-testid="luk-passes">');
+        const daily = al.indexOf('>🗓️ Daily passes<');
+        if (head < 0 || div < 0) errs.push('Alerts.tsx must render the luk-passes-head eyebrow and the <div data-testid="luk-passes"> strip');
+        else {
+          if (!(gga >= 0 && gga < head && head < div && daily >= 0 && div < daily)) errs.push('the 🥇 strip must sit AFTER the 🧪 gga-passes strip and BEFORE the rendered 🗓️ Daily passes eyebrow');
+          const headLine = al.slice(head, al.indexOf('</div>', head));
+          if (!headLine.includes('never sent')) errs.push('the luk-passes-head eyebrow must say "never sent"');
+          if (/ring your phone/.test(headLine)) errs.push('the luk-passes-head eyebrow says "ring your phone" — Luk\'s pass never rings');
+          if (!/LUK_PASSES\.map\(/.test(al.slice(div, div + 600))) errs.push('the luk-passes strip must render LUK_PASSES.map(…)');
+        }
+      }
+      for (const [rel, who] of [['src/lib/alertKinds.ts', 'alertKinds'], ['src/hooks/useNotificationPrefs.ts', 'useNotificationPrefs'], ['src/pages/Notifications.tsx', 'Notifications']]) {
+        const src = tryRead(rel, who);
+        if (src && LUK_WORD.test(src)) errs.push(`${rel} names luk — it is not a push kind and has no toggle`);
+      }
+
+      // 5. the ℹ️ section — "luk" right before "doji_sweep", built by _luk_section().
+      const ri = tryRead('../backend/supply_demand/rules_info.py', 'rules_info.py');
+      if (ri) {
+        const sk = /^SECTION_KEYS[^=]*=\s*\(([\s\S]*?)\n\)/m.exec(ri) || /SECTION_KEYS[^=]*=\s*\(([\s\S]*?)\n\s*\)/m.exec(ri);
+        const keys = sk ? [...sk[1].replace(/#[^\n]*/g, '').matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]) : [];
+        if (!keys.length) errs.push('rules_info.SECTION_KEYS could not be read');
+        else if (!keys.includes('luk') || keys.indexOf('doji_sweep') !== keys.indexOf('luk') + 1) errs.push('rules_info.SECTION_KEYS must carry "luk" immediately before "doji_sweep"');
+        if (!/\ndef _luk_section\(\) -> dict:/.test(ri) || !/out\["luk"\] = _luk_section\(\)/.test(ri)) errs.push('rules_info.py must define _luk_section() and serve it as out["luk"]');
+      }
+
+      // 6. the doc + SPECS.
+      const DOC = '../docs/luk/luk_tab_2026_11_01.md';
+      const doc = tryRead(DOC, 'the Luk doc');
+      const flat = doc.replace(/\n>?[ \t]*/g, ' ');
+      for (const need of ['HIS CALL', 'UNMEASURED', 'shadow', 'EXTERNAL', ...HIS]) if (doc && !flat.includes(need)) errs.push(`${DOC.slice(3)} must say ${need.slice(0, 60)}`);
+      if (doc && B_WORD(doc)) errs.push(`${DOC.slice(3)} says bounce / fake — reversal, never bounce`);
+      let inF = false, lang = '';
+      for (const l of doc.split('\n')) {
+        const f = /^\s*```(\w*)/.exec(l);
+        if (f) { if (inF) inF = false; else { inF = true; lang = f[1]; } continue; }
+        if (inF && ['bash', 'sh', 'zsh', 'shell', 'console'].includes(lang) && /^\s*#/.test(l)) errs.push(`${DOC.slice(3)} has a # line inside a shell block (his zsh): ${l.trim().slice(0, 50)}`);
+      }
+      const specs = tryRead('../SPECS.md', 'SPECS');
+      if (specs && !specs.split('\n').includes("### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)")) errs.push("SPECS.md must carry \"### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)\"");
+
+      // 7. the ✨ — FIRST, routed, dated, his words verbatim.
+      const ID = 'chart-maps-luk-2026-11-01';
+      const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
+      const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 1).map((m) => m[1]);
+      if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstIdsLuk.join(', ') || 'none'})`);
+      if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
+      const at = nfArr.indexOf(`{ id: '${ID}'`);
+      if (nf && at >= 0) {
+        const nextAt = nfArr.indexOf("{ id: '", at + 1);
+        const e = nfArr.slice(at, nextAt < 0 ? undefined : nextAt);
+        const label = field(e, 'label') || '';
+        const W = "the 🥇 Luk's ✨ entry";
+        if (!e.includes("route: '/chart-maps?tab=luk'")) errs.push(`${W} must route to '/chart-maps?tab=luk'`);
+        if (!e.includes("addedAt: '2026-11-01'")) errs.push(`${W} must be dated 2026-11-01`);
+        for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote him verbatim: “${h}”`);
+        for (const need of ['UNMEASURED', 'Not advice.']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (MODE === 'shadow' && !(label.includes('never sent') && /\bshadow\b/.test(label))) errs.push(`${W} must say shadow and "never sent" (LUK_PUSH_MODE is shadow)`);
+        if (FROM && !label.includes(FROM)) errs.push(`${W} must name the 🏁 start ${FROM} (= LUK_RECORD_FROM)`);
+        if (LABEL && !label.startsWith(LABEL)) errs.push(`${W} must open with the tab label "${LABEL}"`);
         errs.push(...wordErrs(W, label));
       }
       return errs;

@@ -206,6 +206,15 @@ export const GGA_PASSES: { key: string; label: string; fallbackCadenceSec: numbe
   { key: 'gajjala_audited_setup', label: '🧪 Gajjala · Audited A+ (shadow — recorded, never sent)', fallbackCadenceSec: 300 },
 ];
 
+/* 🥇 Luk's pass (2026-11-01, luk-tab spec §3.12 / WP-D). Ajay: "pic the next best one like Gajjala … Implement their
+ * strategy". Luk's pass is a detached child of the 🚩 5-minute pass (backend CADENCE derived = 300) and records in
+ * SHADOW — PASS HEALTH only, never a push kind, it never rings. Its OWN strip under its own "never sent" eyebrow,
+ * right after the 🧪 strip and before 🗓️ Daily passes: never in PASSES (the header count speaks for the passes that
+ * can ring), never in GG1M_PASSES / TAPE_PASSES / DAILY_PASSES, never a /notifications toggle (not a pref kind). */
+export const LUK_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+  { key: 'luk_setup', label: '🥇 Luk\'s pass', fallbackCadenceSec: 300 },
+];
+
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
  * notification specific for High Beta stocks from the reselinet separately and
  * also other tape bursts from the Chart Maps page". Both ride the
@@ -1169,6 +1178,13 @@ export function AlertsPage() {
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gga-passes-head">🧪 Gajjala · Audited pass · recorded in shadow, never sent · not counted in the header</div>
         <div data-testid="gga-passes">
           {GGA_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
+        </div>
+        {/* ── 🥇 Luk's pass (2026-11-01) — own strip: shadow, never rings; after the 🧪 strip, before the daily passes ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · recorded in shadow, never sent · not counted in the header</div>
+        <div data-testid="luk-passes">
+          {LUK_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>

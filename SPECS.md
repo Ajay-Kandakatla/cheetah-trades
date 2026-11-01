@@ -1066,6 +1066,63 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
 - Doc: `docs/gajjala/audited_variant_2026_11_01.md` (the registry with sources, the process, costs, recon semantics, the
   15 HIS CALLs, verification). Contract: "🧪 Gajjala · Audited tab (2026-11-01)". ✨ `chart-maps-gajjala-audited-2026-11-01`.
 
+### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
+Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
+their strategy please if they have online resources. ... I need something like Gajjlala that is exposed"*. Martin Luk:
+USIC $20k+ Stock 2025 winner (+969.8%), 2026 leader (+785.8% through Sep 30), 2024 6th (+283.1%); he sells nothing and
+every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`, before `doji_sweep`, label
+`LUK_TAB_LABEL`. **UNMEASURED. Shadow only** — every alert is recorded and never sent.
+- **Its own package, GG's generic primitives by import.** `Variant` instance `LUK` (`luk/variant.py`, claims `LUK:`,
+  never in GG's registry; `gajjala.variant.push_mode(LUK)` fails closed to "shadow"). `LukStore(GajjalaStore)` writes
+  only `luk_passes`, `luk_reads`, `luk_alerts`, `luk_state`, `luk_ledger`, `luk_daily`, `luk_screens`; every other GG
+  collection is a refusing stub; the lease numbers are Luk's own. Frames `1m · 5m · 60m` (60m = regular-session minutes,
+  clock-anchored; its ema9/ema21 are his hourly 9/21).
+- **Numbers = constants.** `chart_maps/luk/constants.py` is the ONLY number source; every line is tagged `LUK
+  <file>:<line> [ts]` (his words, byte copies under `tests/fixtures/luk/`, sha256-pinned), `LUK substack`, `LUK frame
+  U4/U5/U6`, `MINE (HIS CALL #n)`, `derived` or `EXTERNAL`. GG numbers are imported from `gajjala.constants`, never
+  retyped. `verified_rules.json` = the rules with sources and verbatim quotes (found at the cited line ±2).
+- **Screens** (`screens.py`): ☀️ Pre-market, 🏆 Leader, ⚡ Potent — his TradingView frames, STRICT comparisons, top
+  `LUK_SCREEN_TOP_N` each; formulas for 1-week volatility / price×volume / 1-month % / ADR (`sepa.adr`, 20 sessions) are
+  MINE. Cap unknown → kept, "cap unknown — not filtered". Closed daily bars only through Luk's OWN post-close
+  fetch (`load_prices(force=True)` at or after d 16:00 ET + `LUK_DAILY_TRUST_AFTER_SEC`, stored in `luk_daily`; the house
+  cache is never a close proof — `patch_latest_closes` re-stamps it), ≤ `LUK_DAILY_MAX_NEW_PER_PASS` new names per pass,
+  the rest "daily facts pending"; the QQQ/IWM words the same way once per session (`LUK_STATE_INDEX`).
+- **Setups** (`detectors.py`): ↩️ `pullback_reversal` (daily-9 pullback + a 5-minute low at the hourly 9 EMA, then the
+  first previous-bar-high break, never on the way down; 1-minute closes ≤ 09:45, 5-minute to 10:30), 🔔
+  `opening_range_high` (the 09:30 1-minute candle's high; 1-minute until 09:35, then 5-minute; 60 minutes), 📦
+  `inside_day_pdh` (strict inside day, prior-day high, any regular-session time). Stop: LOD; entry-to-LOD >
+  `LUK_LOD_SWITCH_PCT` → the 5-minute entry candle low; wider than `LUK_STOP_MAX_PCT` or half the 20-day ADR → `listed`;
+  > `LUK_NO_CHASE_PCT` above the LOD → `listed`. Every lookback through the break bar. A+ per frame: 5-minute = GG's
+  latest-closed-bar rule; 1-minute = closed after the previous pass's `LUK_STATE_BARS_THROUGH`, no stop touch since.
+  Market state (QQQ, IWM 9 vs 21 EMA) = a word, never a gate.
+- **Pass / costs.** ONE edit to the gajjala package: `_spawn_luk()` in `gajjala/run.py`, called right after
+  `_spawn_1m()` on the cron path only, spawns `python -m chart_maps.luk.run --child` DETACHED when `enabled()` and
+  `in_window()` (04:00–16:05 ET); fenced, never changes the exit code; pinned STRUCTURALLY
+  (`tests/test_luk_gajjala_hook.py`). Kill switch `LUK_ENABLED` / env `LUK_ENABLED=0` (conftest assigns "0"). Per pass:
+  1 snapshot + ≤ 8 daily fetches + ≤ 40 today-minute fetches + first-appearance prior-session loads + ≤ 60 grade loads;
+  ≈ 145 passes/day → worst case ≈ 7.1k calls/day + the measured prior loads; budget 120 s inside the 300 s slot
+  (`fits()`).
+- **Pushes: none.** `LUK_PUSH_MODE = "shadow"`, no push kind, no sender (`alerts.refuse_send` raises `NEVER_SENDS`),
+  `OWNER_KEEP_SET` stays six. `/alerts` shows one PASS-HEALTH row `luk_setup` (`alert_status.LUK_KIND`) under its own
+  "recorded in shadow, never sent" eyebrow.
+- **🏁 Track record** (`ledger.py`, graded inside the Luk pass, from `LUK_RECORD_FROM` 2026-11-01): fill = the first
+  1-minute bar ≥ 30 s after the alert at or above the trigger, from 09:30, same session; exit = the stop (−1.0R) or the
+  first daily close below the daily 9 EMA; 3R / 5R flags only; no max hold. Closed days only via `daily.closed_through`
+  (trusted row or one counted fetch; else deferred and retried). Operational accounting, not a backtest.
+- **Board keys** (`tab.build`): `tab, label, title, honesty, variant, session, pass, strip (folded: market_state,
+  push/record/external/cost/latency), subs (eight: ↩️ 🔔 📦 ☀️ 🏆 ⚡ 📓 🏁), sub, counts, counts_text, counts_legend,
+  tiles, screens, playbook, track_record`. The 📓 Playbook serves every rule with its cite, the SYNTHESIS §D HIS CALLs
+  and the external backtests as EXTERNAL.
+- **Routes**: `GET /chart-maps/luk?sub=&span=&focus=&limit=`, `GET /chart-maps/luk/entry-tape?id=&lite=`. No POST.
+- **ℹ️ panel**: section "🥇 Luk's" = `luk.playbook.rules_lines()`, before "doji_sweep"; fenced; no numeric literal in
+  `rules_info.py`.
+- **FE**: `LukBoard` (+ `LukCard` drawing `PatternChart`, `LukScreens`, `LukPlaybook`, `LukTrackRecord`,
+  `LukEntryTape` → `GgEntryTape({data})`, `LukStrip`, `styles/luk.css`); `lib/luk.ts` `LUK_BASE` ==
+  `variant.LUK.api_base`; the FE composes no word and no number.
+- Doc `docs/luk/luk_tab_2026_11_01.md` (every rule with its cite, screens and formulas, states, stop plan, 🏁 math, the
+  15 SYNTHESIS HIS CALLs + 30 build HIS CALLs, cost arithmetic with the measured `calls`, external backtests, traps).
+  Contract: "🥇 Luk's tab (2026-11-01)". ✨ `chart-maps-luk-2026-11-01`.
+
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
 sure you do a full scan."*, *"in the High Beta tab.I wanna able to sort my most volatile stocks"*). **UNMEASURED** —

@@ -712,6 +712,21 @@ def _spawn_1m() -> None:
         log.warning("gajjala 1m loop: spawn step failed: %s", type(exc).__name__)
 
 
+def _spawn_luk() -> None:
+    """🥇 Luk's (2026-11-01): at the end of the CRON pass, SPAWN the Luk pass as a DETACHED child (the run_1m rule —
+    never in-process). Only when chart_maps.luk.run.enabled(). Fenced: one log line, never raises, never changes the
+    exit code. Not on --dry-run / --now / --on-demand / --symbols."""
+    try:
+        from chart_maps.luk import run as LR
+        if not (LR.enabled() and LR.in_window()):                 # [fixed: C11] env/const off OR outside 04:00–16:05 ET → no child
+            log.info("luk pass: off or outside its window — not spawned")
+            return
+        ok = LR.spawn_child()
+        log.info("luk pass: %s", "spawned" if ok else "spawn failed")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("luk pass: spawn step failed: %s", type(exc).__name__)
+
+
 def dry_deps() -> Deps:
     """Every writer and sender a recorder (the store side is `dry_store`)."""
     sent: list = []
@@ -775,6 +790,7 @@ def main(argv=None) -> int:
                            symbols=syms)
             if not syms and not args.now:
                 _spawn_1m()                                     # 🚩 1-minute page (2026-10-27): the cron path only
+                _spawn_luk()                                    # 🥇 Luk's (2026-11-01): the same cron-only rule
     if args.json:
         print(json.dumps(out, default=str))
     elif args.on_demand:

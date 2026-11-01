@@ -87,6 +87,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
                 "zone_pad",
+                # 🥇 LUK'S (2026-11-01, BUILD SPEC luk-tab §3.12 / WP-D) — Martin
+                # Luk's published pullback / opening-range method. Its own section
+                # because every alert is recorded in shadow, never sent, and
+                # nothing here is measured. BEFORE "doji_sweep" so the doji_sweep /
+                # high_beta / gajjala / fallen / drop10 / short_interest pins stay put.
+                "luk",
                 # 🕯️ DOJI SWEEP (2026-10-16) — a doji whose low tested the prior
                 # 20-session low, in a downtrend. Its own section because it is
                 # UNMEASURED until the pre-registered study reads, gates nothing,
@@ -854,6 +860,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 🥇 Luk's ───────────────────────────────────────────
+    try:
+        out["luk"] = _luk_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: luk section unavailable: %s", exc)
+
     # ── 🕯️ Doji Sweep ──────────────────────────────────────
     try:
         out["doji_sweep"] = _doji_sweep_section()
@@ -1350,6 +1362,34 @@ def _gajjala_section() -> dict:
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),
     }
+
+
+# 🥇 2026-11-01 (BUILD SPEC luk-tab §3.12 / WP-D refix). The panel draws picks / stops / alerts, so the ONE list
+# luk.playbook.rules_lines() is split by the words it already serves, never by position: the line that says the
+# alert is recorded in shadow → alerts; the stop line (S2–S4) and the 🏁 exit / R-flag line → "Stops & targets";
+# every other line (his screens, the pass, the three setups, the A+ / listed rules, the index word) → picks.
+_LUK_ALERT_MARK = "recorded in shadow, never sent"
+_LUK_STOP_HEADS = ("Stop:", "\U0001F3C1")                     # 🏁
+
+
+def _luk_section() -> dict:
+    """🥇 Luk's — every line is luk.playbook.rules_lines() (every number formatted there from
+    `chart_maps.luk.constants`, never typed here); the title and emoji are LUK_TAB_LABEL's two halves; the note is
+    the Playbook's served title. Imported LAZILY, like the 🚩 section; a raising import or a raising rules_lines()
+    drops only this section (the caller's fence) and the panel still serves."""
+    from chart_maps.luk import constants as LC
+    from chart_maps.luk import playbook as LPB
+
+    emoji, _, name = LC.LUK_TAB_LABEL.partition(" ")
+    picks, stops, alerts = [], [], []
+    for line in LPB.rules_lines():
+        if _LUK_ALERT_MARK in line:
+            alerts.append(line)
+        elif line.startswith(_LUK_STOP_HEADS):
+            stops.append(line)
+        else:
+            picks.append(line)
+    return {"title": name, "emoji": emoji, "picks": picks, "stops": stops, "alerts": alerts, "note": LPB.TITLE}
 
 
 def _fallen_section() -> dict:

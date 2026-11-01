@@ -139,4 +139,6 @@ export const BURST_EXEMPT: Record<string, string> = {
   gajjala_1m: 'his setup state orders this board (A+ \u2192 forming \u2192 partial); the \u26A1 burst is a daily-volume read',
   // 🚩 Gajjala's Audited (2026-11-01): the same board with the EOD-audit fixes, the same reason.
   gajjala_audited: 'his setup state orders this board (A+ \u2192 forming \u2192 partial); the \u26A1 burst is a daily-volume read',
+  // 🥇 Luk's (2026-11-01, luk spec §3.13): his setup state orders the board; its own reason (his states differ from 🚩's).
+  luk: 'his setup state orders this board (A+ \u2192 triggered \u2192 forming \u2192 listed); the \u26A1 burst is a daily-volume read',
 };

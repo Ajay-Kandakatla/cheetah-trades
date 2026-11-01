@@ -161,9 +161,16 @@ GAJJALA_1M_POTENTIAL_KIND = "gajjala_1m_potential"
 # (tests/test_gajjala_audited_pass.py pins it equal to
 # chart_maps.gajjala.variant.GGA.push_kind_setup).
 GAJJALA_AUDITED_KIND = "gajjala_audited_setup"
+# 🥇 2026-11-01 — PASS HEALTH only, never a push kind, recorded in shadow.
+# Luk's pass (chart_maps/luk/run.py, a detached child of the 🚩 5-minute pass)
+# records its own pass doc so /alerts can show it ran. Nothing is ever sent:
+# no sender, no push kind, the owner keep-set is unchanged. Typed, not
+# imported: this file stays a module-level leaf (chart_maps.luk.constants.
+# LUK_KIND is the same string).
+LUK_KIND = "luk_setup"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
               GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND,
-              GAJJALA_AUDITED_KIND) + TAPE_KINDS + (
+              GAJJALA_AUDITED_KIND, LUK_KIND) + TAPE_KINDS + (
                   TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
@@ -196,6 +203,9 @@ CADENCE_SEC[GAJJALA_1M_POTENTIAL_KIND] = 60
 # 🧪 the audit overlay rides the 🚩 line (run.run_pass calls audited_pass.run_step)
 # → DERIVED, never typed: its cadence IS gajjala_setup's.
 CADENCE_SEC[GAJJALA_AUDITED_KIND] = CADENCE_SEC[GAJJALA_KIND]
+# 🥇 Luk's pass is spawned by the 🚩 line's pass (one child per tick) → DERIVED,
+# never typed: its cadence IS gajjala_setup's.
+CADENCE_SEC[LUK_KIND] = CADENCE_SEC[GAJJALA_KIND]
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
@@ -753,6 +763,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         passes[kind] = _with_cadence(kind, read_pass(kind, pass_coll))
     passes[GAJJALA_AUDITED_KIND] = _with_cadence(GAJJALA_AUDITED_KIND,      # 🧪 2026-11-01 — the audit overlay
                                                  read_pass(GAJJALA_AUDITED_KIND, pass_coll))
+    passes[LUK_KIND] = _with_cadence(LUK_KIND, read_pass(LUK_KIND, pass_coll))   # 🥇 2026-11-01 — shadow, never sent
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
@@ -776,7 +787,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
 
 
 __all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND",
-           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "LUK_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials",

@@ -76,6 +76,7 @@ import EmaFramesBoard from '../components/EmaFramesBoard';
 import PotusBoard from '../components/PotusBoard';
 import NewsTabBoard from '../components/NewsTabBoard';
 import GajjalaBoard from '../components/GajjalaBoard';
+import LukBoard from '../components/LukBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
@@ -1697,6 +1698,17 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            board above (same component type, same slot). Must sit BEFORE the
            SupportLevels fallback below. */
         <GajjalaBoard key="gajjala_audited" variant="gajjala_audited" />
+      ) : tab === 'luk' ? (
+        /* 🥇 Luk's (Ajay 2026-11-01: "look at other winners of US stocks
+           champion ship and pic the next best one like Gajjala. Implement
+           their strategy please if they have online resources." … "I need
+           something like Gajjlala that is exposed"). Martin Luk's published
+           method on its own read-only endpoint (GET /chart-maps/luk) the Luk
+           pass fills — his three setups, his three scans, his Playbook, the 🏁
+           record; every alert recorded in shadow, never sent. Its own
+           component (not GajjalaBoard). Must sit BEFORE the SupportLevels
+           fallback below. */
+        <LukBoard />
       ) : tab === 'news' ? (
         /* 📰 News (Ajay 2026-09-24: "give me a bullish market or bearsish
            market … pull Macro calendar that has T1 and T2 tier events … which

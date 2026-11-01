@@ -805,6 +805,9 @@ describe('the Earnings Flow tab', () => {
        // WIDENED 2026-10-27 — 🚩 gajjala_1m right after 🚩 gajjala, before 🕯️
        // doji_sweep (BUILD_SPEC27 §7 #10, his call).
        'gajjala_1m',
+       // WIDENED 2026-11-01 — 🥇 luk right after 🚩 gajjala_1m, before 🕯️
+       // doji_sweep (luk spec §7 #1, his call).
+       'luk',
        // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala: 🕯️ Doji Sweep,
        // mid-pack for the same no-usage-yet reason (doji spec §7 Q1, his call).
        'doji_sweep',
@@ -931,7 +934,8 @@ describe('the Support Levels tab', () => {
     // read (5-/15-minute setups the cron pass stores), with its own sub-tabs.
     // WIDENED 2026-10-27: `gajjala_1m` is the seventeenth — its own GET /chart-maps/gajjala-1m read (BUILD_SPEC27).
     // WIDENED 2026-11-01: `gajjala_audited` is the eighteenth — its own GET /chart-maps/gajjala-audited read (gg-audited spec §3.8).
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // WIDENED 2026-11-01: `luk` is the nineteenth — its own GET /chart-maps/luk read (luk spec §3.13).
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'luk', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1830,7 +1834,8 @@ describe('tab order — most-used first', () => {
     // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
     // WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala (BUILD_SPEC27)
     // WIDENED 2026-11-01 — 🧪 gajjala_audited after 🚩 gajjala (gg-audited spec §3.8)
-    expect(CM_TABS).toHaveLength(41);   // +gajjala_audited 2026-11-01; +gajjala_1m 2026-10-27; +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    // WIDENED 2026-11-01 — 🥇 luk after 🚩 gajjala_1m (luk spec §3.13)
+    expect(CM_TABS).toHaveLength(42);   // +luk 2026-11-01; +gajjala_audited 2026-11-01; +gajjala_1m 2026-10-27; +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2337,7 +2342,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep' && t !== 'gajjala_1m' && t !== 'gajjala_audited')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala; WIDENED 2026-11-01 — 🧪 gajjala_audited after 🚩 gajjala
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep' && t !== 'gajjala_1m' && t !== 'gajjala_audited' && t !== 'luk')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala; WIDENED 2026-11-01 — 🧪 gajjala_audited after 🚩 gajjala; WIDENED 2026-11-01 — 🥇 luk after 🚩 gajjala_1m
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2604,7 +2609,9 @@ describe("🚩 Gajjala's tab registry", () => {
     // WIDENED 2026-11-01 — 🧪 gajjala_audited right after 🚩 gajjala, before gajjala_1m (gg-audited spec §3.8)
     expect(CM_TABS.indexOf('gajjala_audited')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala_audited') + 1);
-    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    // WIDENED 2026-11-01 — 🥇 luk right after 🚩 gajjala_1m, before 🕯️ doji_sweep (luk spec §3.13)
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
@@ -2714,12 +2721,13 @@ describe('🚩 Gajjala 1-minute tab registry (2026-10-27)', () => {
   const HIS_1 = 'Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please.';
 
   // WIDENED 2026-11-01 — 🧪 gajjala_audited now sits between 🚩 gajjala and gajjala_1m (gg-audited spec §3.8)
-  it("sits once, right after 'gajjala_audited' and right before 'doji_sweep'", () => {
+  // WIDENED 2026-11-01 — 🥇 luk now sits between gajjala_1m and 🕯️ doji_sweep (luk spec §3.13)
+  it("sits once, right after 'gajjala_audited' and right before 'luk'", () => {
     const i = CM_TABS.indexOf('gajjala_1m');
     expect(i).toBeGreaterThan(-1);
     expect(CM_TABS.filter((t) => t === 'gajjala_1m')).toHaveLength(1);
     expect(CM_TABS[i - 1]).toBe('gajjala_audited');
-    expect(CM_TABS[i + 1]).toBe('doji_sweep');
+    expect(CM_TABS[i + 1]).toBe('luk');
     expect(parseTab('gajjala_1m')).toBe('gajjala_1m');
   });
 
@@ -3095,7 +3103,9 @@ describe('🕯️ Doji Sweep tab registry (2026-10-16)', () => {
     expect(CM_TABS.filter((t) => t === 'doji_sweep')).toHaveLength(1);
     // WIDENED 2026-10-27 — 🕯️ doji_sweep now follows 🚩 gajjala_1m, which follows 🚩 gajjala (BUILD_SPEC27)
     // WIDENED 2026-11-01 — 🧪 gajjala_audited sits between 🚩 gajjala and gajjala_1m (gg-audited spec §3.8)
-    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    // WIDENED 2026-11-01 — 🥇 luk sits between gajjala_1m and 🕯️ doji_sweep (luk spec §3.13)
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
     expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala_audited') + 1);
     expect(CM_TABS.indexOf('gajjala_audited')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);

@@ -31,8 +31,9 @@ import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } f
 import type { CmDojiSweepBoard, CmDojiSweepRead } from './dojiSweep';
 import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
+import { LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'doji_sweep';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'luk' | 'doji_sweep';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -152,6 +153,13 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // counts it from the first open. Label and slot are his call (BUILD_SPEC27
   // §7 #10).
   'gajjala_1m',
+  // 🥇 Luk's (Ajay 2026-11-01: "look at other winners of US stocks champion
+  // ship and pic the next best one like Gajjala. Implement their strategy
+  // please if they have online resources." … "I need something like Gajjlala
+  // that is exposed"). Right after 🚩 Gajjala's 1-min, before 🕯️ Doji Sweep —
+  // TAB ORDER IS EARNED; tabUsageKey counts it from the first open. Label and
+  // slot are his call (luk spec §7 #1).
+  'luk',
   // 🕯️ Doji Sweep (Ajay 2026-10-16: "create me a new tab for Doji candle after
   // a sweep. For any stocks after a down trend. May be from all chart maps
   // especially on the 60% 70% down stocks"). Right after 🚩 Gajjala's, before
@@ -349,7 +357,13 @@ export function isBoardTab(t: CmTab): boolean {
     // 🧪 Gajjala · Audited (2026-11-01) — the same board on its own read-only
     // endpoint, GET /chart-maps/gajjala-audited: 🚩 Gajjala's 5-minute reads
     // with the audit overlay. Not a universe pass either.
-    && t !== 'gajjala_audited';
+    && t !== 'gajjala_audited'
+    // 🥇 Luk's (2026-11-01) — its own read-only endpoint, GET /chart-maps/luk,
+    // filled by the Luk pass the 🚩 cron pass spawns (his three setups on 1- /
+    // 5- / 60-minute bars, his three scans, his Playbook, the 🏁 record). Not a
+    // universe pass, so the board loader and its controls are skipped and
+    // LukBoard draws it with its own sub-tabs.
+    && t !== 'luk';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -424,6 +438,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   gajjala_1m: {
     label: "Gajjala's 1-min",
     blurb: '\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here rings your phone live since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); what it recorded 2026-10-27 to 10-28 was never sent. Its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.',
+  },
+  // 🥇 Luk's (Ajay 2026-11-01, luk spec §3.13). Every word and number on the
+  // BOARD is served by backend chart_maps/luk/tab.py; this blurb carries his ask
+  // verbatim and no rule number. Label = backend chart_maps/luk/constants
+  // .LUK_TAB_LABEL. Every alert recorded in shadow, never sent. UNMEASURED.
+  luk: {
+    label: '\u{1F947} Luk\'s',
+    blurb: '\u{1F947} Martin Luk\u2019s published pullback / opening-range method, built from his own words in free sources. Ajay 2026-11-01: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources." and "I need something like Gajjlala that is exposed". WHO HE IS: the 2025 US Investing Championship winner (stock division). He sells nothing; every rule on this tab is his own words in free sources \u2014 his videos and his guest post \u2014 cited line by line on the \u{1F4D3} Playbook. THE SUB-TABS come in three groups: his three setups \u2014 \u21A9\uFE0F Pullback reversal, \u{1F514} Opening range, \u{1F4E6} Inside day \u2014 each card with its state, its trigger, its stop and its risk and every criterion ticked or crossed; his three scans \u2014 \u2600\uFE0F Premarket, \u{1F3C6} Leader, \u26A1 Potent \u2014 with the settings he showed; and \u{1F4D3} his Playbook with the \u{1F3C1} Track record. Every alert here is recorded in shadow, never sent. Its \u{1F3C1} Track record starts 2026-11-01. UNMEASURED \u2014 nothing here trades or enters a lane. Not advice.',
   },
   // 🕯️ Doji Sweep (Ajay 2026-10-16). Every number on the BOARD is served; the
   // numbers in this blurb are pinned to doji_sweep_tab constants by the
@@ -1857,6 +1879,13 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
   // and since 2026-10-14 b its column direction / view (`hb_dir`, `hb_view`),
   // mean nothing anywhere else — dropped crossing into or out of the tab, the
   // same border rule; a click on the tab it is already on keeps them.
+  // 🥇 Luk's `sub` / `span` (his eight sub-tabs, the 🏁 day picker) mean
+  // something else on every other board — the 🚩 border rule, its own constant
+  // (LUK_OWN_PARAMS; GAJJALA_TABS stays the three 🚩 pages): dropped crossing
+  // into or out of `luk`, kept on a click on the tab it is already on.
+  if (from !== t && (from === LUK_TAB || t === LUK_TAB)) {
+    for (const k of LUK_OWN_PARAMS) next.delete(k);
+  }
   if (from !== t && (from === 'high_beta' || t === 'high_beta')) {
     for (const k of HB_OWN_PARAMS) next.delete(k);
     // A header sort (`sort=hb_*`) is a 🎢 column: on any other tab board() serves
@@ -1898,6 +1927,8 @@ export const GAJJALA_OWN_PARAMS: ReadonlyArray<string> = [GG_SUB_PARAM, GG_TF_PA
  *  1-min — one component, one border rule (tabSearch). 2026-11-01: 🧪 Gajjala ·
  *  Audited joins, in CM_TABS order. */
 export const GAJJALA_TABS: ReadonlyArray<CmTab> = ['gajjala', 'gajjala_audited', 'gajjala_1m'];
+/** 🥇 The params Luk's reads with its own meanings (2026-11-01) — imported from lib/luk (types only flow back). */
+export const LUK_OWN_PARAMS: ReadonlyArray<string> = [LUK_SUB_PARAM, LUK_SPAN_PARAM];
 const isGajjalaTab = (t: string | null): boolean => !!t && (GAJJALA_TABS as ReadonlyArray<string>).includes(t);
 
 /** True for the ONE click the strip handles itself: an unmodified primary

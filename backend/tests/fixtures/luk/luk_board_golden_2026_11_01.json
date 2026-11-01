@@ -1,0 +1,1145 @@
+{
+ "default": {
+  "counts": {
+   "aplus": 1,
+   "forming": 1,
+   "listed": 3,
+   "listed_chase": 1,
+   "listed_stop_wide": 1,
+   "listed_window": 1,
+   "none": 5,
+   "screened": 1200,
+   "shortlist": 6,
+   "stopped": 1,
+   "triggered": 1
+  },
+  "counts_legend": [
+   {
+    "key": "aplus",
+    "text": "every rule of the setup met and the trigger bar traded through and closed — on the 1-minute frame closed since the previous pass with no stop touch since, on the 5-minute frame the latest closed bar",
+    "word": "A+"
+   },
+   {
+    "key": "triggered",
+    "text": "the trigger traded earlier today and no later bar touched the stop",
+    "word": "triggered earlier"
+   },
+   {
+    "key": "forming",
+    "text": "the context is met and the level is armed; no bar has taken it out yet",
+    "word": "forming"
+   },
+   {
+    "key": "listed",
+    "text": "broke, but one of his listing rules says not A+ — the reason is on the card",
+    "word": "listed"
+   },
+   {
+    "key": "stopped",
+    "text": "broke, then a later closed bar traded at or under the stop",
+    "word": "stopped"
+   },
+   {
+    "key": "none",
+    "text": "no context for the setup today — never carded",
+    "word": "no setup"
+   }
+  ],
+  "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "fault": false,
+  "fault_text": null,
+  "focus": null,
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "label": "🥇 Luk's",
+  "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
+  "pass": {
+   "as_of_et": "10:11 ET",
+   "at": "2026-11-03T15:11:07+00:00",
+   "bars_through_et": "10:10",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "on_demand": false,
+   "stale": false,
+   "stale_after_sec": 900,
+   "status": "ok",
+   "text": "pass 10:11 ET · bars through 10:10 · 4 read of 6 shortlisted · 1200 screened · 37 not screened yet",
+   "wall_s": 41.2,
+   "warming": false
+  },
+  "playbook": null,
+  "screens": null,
+  "session": {
+   "badge": "RTH",
+   "date": "2026-11-03",
+   "label": "today",
+   "refresh_sec": 300,
+   "tape": "rth"
+  },
+  "strip": {
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
+   "folded": true,
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "market_state": {
+    "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
+    "rows": [
+     {
+      "dist_text": "QQQ +1.0% vs its 9 EMA",
+      "symbol": "QQQ",
+      "text": "QQQ: 9 EMA over 21"
+     },
+     {
+      "dist_text": "IWM -1.0% vs its 9 EMA",
+      "symbol": "IWM",
+      "text": "IWM: 9 EMA under 21 — his not-favourable-for-longs read"
+     }
+    ],
+    "title": "🧭 Indices"
+   },
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
+  },
+  "sub": "pullback_reversal",
+  "subs": [
+   {
+    "emoji": "↩️",
+    "key": "pullback_reversal",
+    "label": "Pullback reversal",
+    "n": 3,
+    "title": "↩️ Pullback reversal — first breakout of the previous bar high after the flush into the hourly 9/21 EMA (VKNEJA5r8zw 1:56:39)"
+   },
+   {
+    "emoji": "🔔",
+    "key": "opening_range_high",
+    "label": "Opening range",
+    "n": 3,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+   },
+   {
+    "emoji": "📦",
+    "key": "inside_day_pdh",
+    "label": "Inside day",
+    "n": 1,
+    "title": "📦 Inside day — prior-day high after an inside day (lS9zbnLi1Gg 0:36:11)"
+   },
+   {
+    "emoji": "☀️",
+    "key": "premarket",
+    "label": "Premarket",
+    "n": 2,
+    "title": "☀️ Pre-market scan — his settings: cap > $100M · 10-day avg vol > 500K · price×vol > $50M · 1-week volatility > 3.5% · sorted by pre-market % change"
+   },
+   {
+    "emoji": "🏆",
+    "key": "leader",
+    "label": "Leader",
+    "n": 1,
+    "title": "🏆 Leader scan — his settings: cap > $100M · 10-day avg vol > 500K · 1-week price×vol > $300M · sorted by 1-month % change"
+   },
+   {
+    "emoji": "⚡",
+    "key": "potent",
+    "label": "Potent",
+    "n": 3,
+    "title": "⚡ Potent scan — his settings: price > 50 EMA · price ≥ 21 EMA · cap > $100M · 1-week volatility > 3.5% · price×vol > $50M · change from open outside ±0.5% · sorted by % change"
+   },
+   {
+    "emoji": "📓",
+    "key": "playbook",
+    "label": "Playbook",
+    "n": 67,
+    "title": "📓 Luk's Playbook — his own words, cited line by line · UNMEASURED"
+   },
+   {
+    "emoji": "🏁",
+    "key": "track_record",
+    "label": "Track record",
+    "n": 1,
+    "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED"
+   }
+  ],
+  "tab": "luk",
+  "tiles": [
+   {
+    "as_of_bar_t5": "2026-11-03 10:10",
+    "badges": [],
+    "bands": [],
+    "bars": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "bars5": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "chips": {
+     "adr_text": ">5% ADR (6.2%) — his preference, not a hard rule",
+     "cap_text": "$1.2B",
+     "confluence_text": "1 of his levels touched today: 9 EMA · prior high and gap not computed · anchored VWAP not computed (HIS CALL #7)",
+     "flush_text": "flushed 1.3% below the hourly 9 EMA at 09:40",
+     "screens_text": "☀️ #1 · ⚡ #3",
+     "small_cap_text": "small cap (<$5B) — his second list",
+     "tier_text": "Lead — 9 EMA > 21 EMA > 50 EMA",
+     "window_text": "his candle window: 1-minute candles to 09:45 ET, then 5-minute to 10:30 ET"
+    },
+    "criteria": [
+     {
+      "key": "trigger_break",
+      "label": "trigger break",
+      "need": "trigger_break need",
+      "ok": true,
+      "value": "trigger_break value"
+     }
+    ],
+    "curves": [],
+    "curves5": [],
+    "entry_bar_t": "2026-11-03 09:42",
+    "frame_text": "1-minute candle",
+    "gajjala": {
+     "setup": "pullback_reversal",
+     "state": "aplus"
+    },
+    "href": "/sepa/AAA?tab=supply",
+    "lines": [
+     {
+      "label": "BUY > 12.40",
+      "price": 12.4,
+      "text": "12.40",
+      "tone": "buy"
+     },
+     {
+      "label": "STOP 11.98",
+      "price": 11.98,
+      "text": "11.98",
+      "tone": "stop"
+     }
+    ],
+    "listed_why": null,
+    "markers": [],
+    "name": null,
+    "r_usd": 0.42,
+    "read_at_text": "read at 10:11 ET",
+    "risk_pct": 3.39,
+    "setup": "pullback_reversal",
+    "state": "aplus",
+    "state_label": "A+ — every rule met, the trigger bar traded through and closed",
+    "stats": [],
+    "stop": 11.98,
+    "stop_text": "stop 11.98 (−3.4%) · R $0.42",
+    "symbol": "AAA",
+    "tf": "5m",
+    "trigger": 12.4,
+    "trigger_text": "trigger 12.40 · broke on the 1-minute candle closing 09:42 ET",
+    "vol_avg": null,
+    "vol_avg5": null,
+    "why": null
+   },
+   {
+    "as_of_bar_t5": "2026-11-03 10:10",
+    "badges": [],
+    "bands": [],
+    "bars": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "bars5": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "chips": {
+     "adr_text": ">5% ADR (6.2%) — his preference, not a hard rule",
+     "cap_text": "$1.2B",
+     "confluence_text": "1 of his levels touched today: 9 EMA · prior high and gap not computed · anchored VWAP not computed (HIS CALL #7)",
+     "flush_text": "no touch of the hourly 9 EMA today",
+     "screens_text": null,
+     "small_cap_text": null,
+     "tier_text": "Lead — 9 EMA > 21 EMA > 50 EMA",
+     "window_text": "his candle window: 1-minute candles to 09:45 ET, then 5-minute to 10:30 ET"
+    },
+    "criteria": [
+     {
+      "key": "trigger_break",
+      "label": "trigger break",
+      "need": "trigger_break need",
+      "ok": true,
+      "value": "trigger_break value"
+     }
+    ],
+    "curves": [],
+    "curves5": [],
+    "entry_bar_t": "2026-11-03 09:55",
+    "frame_text": "5-minute candle",
+    "gajjala": {
+     "setup": "pullback_reversal",
+     "state": "listed"
+    },
+    "href": "/sepa/CCC?tab=supply",
+    "lines": [
+     {
+      "label": "TRIGGER 50.00",
+      "price": 50.0,
+      "text": "50.00",
+      "tone": "buy"
+     },
+     {
+      "label": "STOP 46.90",
+      "price": 46.9,
+      "text": "46.90",
+      "tone": "stop"
+     }
+    ],
+    "listed_why": "stop too wide by his rule — 6.2% > 5% of the trigger",
+    "markers": [],
+    "name": null,
+    "r_usd": 3.1,
+    "read_at_text": "read at 10:11 ET",
+    "risk_pct": 6.2,
+    "setup": "pullback_reversal",
+    "state": "listed",
+    "state_label": "listed — stop too wide by his rule — 6.2% > 5% of the trigger",
+    "stats": [],
+    "stop": 46.9,
+    "stop_text": "stop 46.90 (−6.2%) · R $3.10 · stop = the 5-minute entry candle low (entry-to-LOD > 5%)",
+    "symbol": "CCC",
+    "tf": "5m",
+    "trigger": 50.0,
+    "trigger_text": "trigger 50.00 · broke on the 5-minute candle closing 09:55 ET",
+    "vol_avg": null,
+    "vol_avg5": null,
+    "why": "stop too wide by his rule — 6.2% > 5% of the trigger"
+   },
+   {
+    "as_of_bar_t5": "2026-11-03 10:10",
+    "badges": [],
+    "bands": [],
+    "bars": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "bars5": [
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:35",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:40",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:45",
+      "v": 1000
+     },
+     {
+      "c": 12.3,
+      "h": 12.5,
+      "l": 11.9,
+      "o": 12.0,
+      "t": "2026-11-03 09:50",
+      "v": 1000
+     }
+    ],
+    "chips": {
+     "adr_text": "ADR 3.1% — under his 5% preference (not a rule)",
+     "cap_text": "cap unknown — not filtered",
+     "confluence_text": "1 of his levels touched today: 9 EMA · prior high and gap not computed · anchored VWAP not computed (HIS CALL #7)",
+     "flush_text": "touched the hourly 9 EMA at 09:45",
+     "screens_text": null,
+     "small_cap_text": null,
+     "tier_text": "Mediocre — in between",
+     "window_text": "his candle window: 1-minute candles to 09:45 ET, then 5-minute to 10:30 ET"
+    },
+    "criteria": [
+     {
+      "key": "trigger_break",
+      "label": "trigger break",
+      "need": "trigger_break need",
+      "ok": true,
+      "value": "trigger_break value"
+     }
+    ],
+    "curves": [],
+    "curves5": [],
+    "entry_bar_t": "2026-11-03 09:50",
+    "frame_text": "5-minute candle",
+    "gajjala": {
+     "setup": "pullback_reversal",
+     "state": "listed"
+    },
+    "href": "/sepa/BBB?tab=supply",
+    "lines": [
+     {
+      "label": "TRIGGER 20.00",
+      "price": 20.0,
+      "text": "20.00",
+      "tone": "buy"
+     },
+     {
+      "label": "STOP 19.20",
+      "price": 19.2,
+      "text": "19.20",
+      "tone": "stop"
+     }
+    ],
+    "listed_why": "more than 3% above the low of day — his no-chase rule",
+    "markers": [],
+    "name": null,
+    "r_usd": 0.8,
+    "read_at_text": "read at 10:11 ET",
+    "risk_pct": 4.0,
+    "setup": "pullback_reversal",
+    "state": "listed",
+    "state_label": "listed — more than 3% above the low of day — his no-chase rule",
+    "stats": [],
+    "stop": 19.2,
+    "stop_text": "stop 19.20 (−4.0%) · R $0.80",
+    "symbol": "BBB",
+    "tf": "5m",
+    "trigger": 20.0,
+    "trigger_text": "trigger 20.00 · broke on the 5-minute candle closing 09:50 ET",
+    "vol_avg": null,
+    "vol_avg5": null,
+    "why": "more than 3% above the low of day — his no-chase rule"
+   }
+  ],
+  "title": "🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own words · UNMEASURED",
+  "track_record": null,
+  "variant": {
+   "api_base": "/chart-maps/luk",
+   "key": "luk",
+   "label": "🥇 Luk's",
+   "primary": "5m",
+   "push_mode": "shadow",
+   "record_from": "2026-11-01",
+   "tab": "luk",
+   "tfs": [
+    "1m",
+    "5m",
+    "60m"
+   ]
+  }
+ },
+ "premarket": {
+  "counts": {
+   "aplus": 1,
+   "forming": 1,
+   "listed": 3,
+   "listed_chase": 1,
+   "listed_stop_wide": 1,
+   "listed_window": 1,
+   "none": 5,
+   "screened": 1200,
+   "shortlist": 6,
+   "stopped": 1,
+   "triggered": 1
+  },
+  "counts_legend": [
+   {
+    "key": "aplus",
+    "text": "every rule of the setup met and the trigger bar traded through and closed — on the 1-minute frame closed since the previous pass with no stop touch since, on the 5-minute frame the latest closed bar",
+    "word": "A+"
+   },
+   {
+    "key": "triggered",
+    "text": "the trigger traded earlier today and no later bar touched the stop",
+    "word": "triggered earlier"
+   },
+   {
+    "key": "forming",
+    "text": "the context is met and the level is armed; no bar has taken it out yet",
+    "word": "forming"
+   },
+   {
+    "key": "listed",
+    "text": "broke, but one of his listing rules says not A+ — the reason is on the card",
+    "word": "listed"
+   },
+   {
+    "key": "stopped",
+    "text": "broke, then a later closed bar traded at or under the stop",
+    "word": "stopped"
+   },
+   {
+    "key": "none",
+    "text": "no context for the setup today — never carded",
+    "word": "no setup"
+   }
+  ],
+  "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "fault": false,
+  "fault_text": null,
+  "focus": null,
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "label": "🥇 Luk's",
+  "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
+  "pass": {
+   "as_of_et": "10:11 ET",
+   "at": "2026-11-03T15:11:07+00:00",
+   "bars_through_et": "10:10",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "on_demand": false,
+   "stale": false,
+   "stale_after_sec": 900,
+   "status": "ok",
+   "text": "pass 10:11 ET · bars through 10:10 · 4 read of 6 shortlisted · 1200 screened · 37 not screened yet",
+   "wall_s": 41.2,
+   "warming": false
+  },
+  "playbook": null,
+  "screens": {
+   "considerations_text": "He is considering a $100M dollar-volume floor and filtering biotechs and buyouts/mergers out (iMBI3ZcQ6sU 1:17:58–1:18:43) — listed, not applied: HIS CALL",
+   "heads": [
+    {
+     "key": "rank",
+     "label": "#"
+    },
+    {
+     "key": "symbol",
+     "label": "Symbol"
+    },
+    {
+     "key": "price_text",
+     "label": "Price"
+    },
+    {
+     "key": "pm_chg_text",
+     "label": "Pre-market %"
+    },
+    {
+     "key": "cap_text",
+     "label": "Cap"
+    },
+    {
+     "key": "avg_vol_text",
+     "label": "10-day avg vol"
+    },
+    {
+     "key": "px_vol_text",
+     "label": "Price × vol"
+    },
+    {
+     "key": "vol_1w_text",
+     "label": "1-week volatility"
+    },
+    {
+     "key": "tier_text",
+     "label": "Tier"
+    },
+    {
+     "key": "adr_text",
+     "label": "ADR"
+    }
+   ],
+   "honesty": "His settings applied to the house snapshot and the cached daily bars; the 1-week, 1-month and ADR formulas are Cheetah's (HIS CALL #10) and a cap the house cache lacks is kept, not filtered (HIS CALL #12). A screen lists names — it is not a buy list. UNMEASURED.",
+   "key": "premarket",
+   "not_screened_text": "37 names not screened yet — their daily facts are pending (at most 8 new daily fetches per pass); 1200 screened on the last pass",
+   "rows": [
+    {
+     "adr_text": ">5% ADR (6.2%) — his preference, not a hard rule",
+     "avg_vol_text": "2.4M",
+     "cap_text": "$1.2B",
+     "chg_from_open_text": "+1.1%",
+     "chg_text": "+3.3%",
+     "criteria": [
+      {
+       "key": "cap",
+       "label": "Market cap",
+       "need": "> $100M",
+       "ok": true,
+       "value": "$1.2B"
+      },
+      {
+       "key": "avg_vol_10d",
+       "label": "10-day avg volume",
+       "need": "> 500K",
+       "ok": true,
+       "value": "2.4M"
+      },
+      {
+       "key": "px_vol",
+       "label": "Price × volume",
+       "need": "> $50M",
+       "ok": true,
+       "value": "$80M"
+      },
+      {
+       "key": "vol_1w_pct",
+       "label": "1-week volatility",
+       "need": "> 3.5%",
+       "ok": true,
+       "value": "5.10%"
+      }
+     ],
+     "href": "/sepa/AAA?tab=supply",
+     "pending_text": null,
+     "perf_1m_text": "+21.0%",
+     "pm_chg_text": "+4.2%",
+     "price_text": "12.30",
+     "px_vol_1w_text": "$400M",
+     "px_vol_text": "$80M",
+     "rank": 1,
+     "small_cap_text": null,
+     "symbol": "AAA",
+     "tier_text": "Lead — 9 EMA > 21 EMA > 50 EMA",
+     "vol_1w_text": "5.10%"
+    },
+    {
+     "adr_text": ">5% ADR (6.2%) — his preference, not a hard rule",
+     "avg_vol_text": "2.4M",
+     "cap_text": "cap unknown — not filtered",
+     "chg_from_open_text": "+1.1%",
+     "chg_text": "+3.3%",
+     "criteria": [
+      {
+       "key": "cap",
+       "label": "Market cap",
+       "need": "cap unknown — not filtered",
+       "ok": null,
+       "value": null
+      },
+      {
+       "key": "avg_vol_10d",
+       "label": "10-day avg volume",
+       "need": "> 500K",
+       "ok": true,
+       "value": "2.4M"
+      },
+      {
+       "key": "px_vol",
+       "label": "Price × volume",
+       "need": "> $50M",
+       "ok": true,
+       "value": "$80M"
+      },
+      {
+       "key": "vol_1w_pct",
+       "label": "1-week volatility",
+       "need": "> 3.5%",
+       "ok": true,
+       "value": "5.10%"
+      }
+     ],
+     "href": "/sepa/EEE?tab=supply",
+     "pending_text": null,
+     "perf_1m_text": "+21.0%",
+     "pm_chg_text": "+4.2%",
+     "price_text": "12.30",
+     "px_vol_1w_text": "$400M",
+     "px_vol_text": "$80M",
+     "rank": 2,
+     "small_cap_text": null,
+     "symbol": "EEE",
+     "tier_text": "Lead — 9 EMA > 21 EMA > 50 EMA",
+     "vol_1w_text": "5.10%"
+    }
+   ],
+   "sorted_by_text": "sorted by pre-market % change",
+   "title": "☀️ Pre-market scan — his settings: cap > $100M · 10-day avg vol > 500K · price×vol > $50M · 1-week volatility > 3.5% · sorted by pre-market % change"
+  },
+  "session": {
+   "badge": "RTH",
+   "date": "2026-11-03",
+   "label": "today",
+   "refresh_sec": 300,
+   "tape": "rth"
+  },
+  "strip": {
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
+   "folded": true,
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "market_state": {
+    "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
+    "rows": [
+     {
+      "dist_text": "QQQ +1.0% vs its 9 EMA",
+      "symbol": "QQQ",
+      "text": "QQQ: 9 EMA over 21"
+     },
+     {
+      "dist_text": "IWM -1.0% vs its 9 EMA",
+      "symbol": "IWM",
+      "text": "IWM: 9 EMA under 21 — his not-favourable-for-longs read"
+     }
+    ],
+    "title": "🧭 Indices"
+   },
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
+  },
+  "sub": "premarket",
+  "subs": [
+   {
+    "emoji": "↩️",
+    "key": "pullback_reversal",
+    "label": "Pullback reversal",
+    "n": 3,
+    "title": "↩️ Pullback reversal — first breakout of the previous bar high after the flush into the hourly 9/21 EMA (VKNEJA5r8zw 1:56:39)"
+   },
+   {
+    "emoji": "🔔",
+    "key": "opening_range_high",
+    "label": "Opening range",
+    "n": 3,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+   },
+   {
+    "emoji": "📦",
+    "key": "inside_day_pdh",
+    "label": "Inside day",
+    "n": 1,
+    "title": "📦 Inside day — prior-day high after an inside day (lS9zbnLi1Gg 0:36:11)"
+   },
+   {
+    "emoji": "☀️",
+    "key": "premarket",
+    "label": "Premarket",
+    "n": 2,
+    "title": "☀️ Pre-market scan — his settings: cap > $100M · 10-day avg vol > 500K · price×vol > $50M · 1-week volatility > 3.5% · sorted by pre-market % change"
+   },
+   {
+    "emoji": "🏆",
+    "key": "leader",
+    "label": "Leader",
+    "n": 1,
+    "title": "🏆 Leader scan — his settings: cap > $100M · 10-day avg vol > 500K · 1-week price×vol > $300M · sorted by 1-month % change"
+   },
+   {
+    "emoji": "⚡",
+    "key": "potent",
+    "label": "Potent",
+    "n": 3,
+    "title": "⚡ Potent scan — his settings: price > 50 EMA · price ≥ 21 EMA · cap > $100M · 1-week volatility > 3.5% · price×vol > $50M · change from open outside ±0.5% · sorted by % change"
+   },
+   {
+    "emoji": "📓",
+    "key": "playbook",
+    "label": "Playbook",
+    "n": 67,
+    "title": "📓 Luk's Playbook — his own words, cited line by line · UNMEASURED"
+   },
+   {
+    "emoji": "🏁",
+    "key": "track_record",
+    "label": "Track record",
+    "n": 1,
+    "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED"
+   }
+  ],
+  "tab": "luk",
+  "tiles": [],
+  "title": "🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own words · UNMEASURED",
+  "track_record": null,
+  "variant": {
+   "api_base": "/chart-maps/luk",
+   "key": "luk",
+   "label": "🥇 Luk's",
+   "primary": "5m",
+   "push_mode": "shadow",
+   "record_from": "2026-11-01",
+   "tab": "luk",
+   "tfs": [
+    "1m",
+    "5m",
+    "60m"
+   ]
+  }
+ },
+ "track_record": {
+  "counts": {
+   "aplus": 1,
+   "forming": 1,
+   "listed": 3,
+   "listed_chase": 1,
+   "listed_stop_wide": 1,
+   "listed_window": 1,
+   "none": 5,
+   "screened": 1200,
+   "shortlist": 6,
+   "stopped": 1,
+   "triggered": 1
+  },
+  "counts_legend": [
+   {
+    "key": "aplus",
+    "text": "every rule of the setup met and the trigger bar traded through and closed — on the 1-minute frame closed since the previous pass with no stop touch since, on the 5-minute frame the latest closed bar",
+    "word": "A+"
+   },
+   {
+    "key": "triggered",
+    "text": "the trigger traded earlier today and no later bar touched the stop",
+    "word": "triggered earlier"
+   },
+   {
+    "key": "forming",
+    "text": "the context is met and the level is armed; no bar has taken it out yet",
+    "word": "forming"
+   },
+   {
+    "key": "listed",
+    "text": "broke, but one of his listing rules says not A+ — the reason is on the card",
+    "word": "listed"
+   },
+   {
+    "key": "stopped",
+    "text": "broke, then a later closed bar traded at or under the stop",
+    "word": "stopped"
+   },
+   {
+    "key": "none",
+    "text": "no context for the setup today — never carded",
+    "word": "no setup"
+   }
+  ],
+  "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "fault": false,
+  "fault_text": null,
+  "focus": null,
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "label": "🥇 Luk's",
+  "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
+  "pass": {
+   "as_of_et": "10:11 ET",
+   "at": "2026-11-03T15:11:07+00:00",
+   "bars_through_et": "10:10",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "on_demand": false,
+   "stale": false,
+   "stale_after_sec": 900,
+   "status": "ok",
+   "text": "pass 10:11 ET · bars through 10:10 · 4 read of 6 shortlisted · 1200 screened · 37 not screened yet",
+   "wall_s": 41.2,
+   "warming": false
+  },
+  "playbook": null,
+  "screens": null,
+  "session": {
+   "badge": "RTH",
+   "date": "2026-11-03",
+   "label": "today",
+   "refresh_sec": 300,
+   "tape": "rth"
+  },
+  "strip": {
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
+   "folded": true,
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "market_state": {
+    "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
+    "rows": [
+     {
+      "dist_text": "QQQ +1.0% vs its 9 EMA",
+      "symbol": "QQQ",
+      "text": "QQQ: 9 EMA over 21"
+     },
+     {
+      "dist_text": "IWM -1.0% vs its 9 EMA",
+      "symbol": "IWM",
+      "text": "IWM: 9 EMA under 21 — his not-favourable-for-longs read"
+     }
+    ],
+    "title": "🧭 Indices"
+   },
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
+  },
+  "sub": "track_record",
+  "subs": [
+   {
+    "emoji": "↩️",
+    "key": "pullback_reversal",
+    "label": "Pullback reversal",
+    "n": 3,
+    "title": "↩️ Pullback reversal — first breakout of the previous bar high after the flush into the hourly 9/21 EMA (VKNEJA5r8zw 1:56:39)"
+   },
+   {
+    "emoji": "🔔",
+    "key": "opening_range_high",
+    "label": "Opening range",
+    "n": 3,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+   },
+   {
+    "emoji": "📦",
+    "key": "inside_day_pdh",
+    "label": "Inside day",
+    "n": 1,
+    "title": "📦 Inside day — prior-day high after an inside day (lS9zbnLi1Gg 0:36:11)"
+   },
+   {
+    "emoji": "☀️",
+    "key": "premarket",
+    "label": "Premarket",
+    "n": 2,
+    "title": "☀️ Pre-market scan — his settings: cap > $100M · 10-day avg vol > 500K · price×vol > $50M · 1-week volatility > 3.5% · sorted by pre-market % change"
+   },
+   {
+    "emoji": "🏆",
+    "key": "leader",
+    "label": "Leader",
+    "n": 1,
+    "title": "🏆 Leader scan — his settings: cap > $100M · 10-day avg vol > 500K · 1-week price×vol > $300M · sorted by 1-month % change"
+   },
+   {
+    "emoji": "⚡",
+    "key": "potent",
+    "label": "Potent",
+    "n": 3,
+    "title": "⚡ Potent scan — his settings: price > 50 EMA · price ≥ 21 EMA · cap > $100M · 1-week volatility > 3.5% · price×vol > $50M · change from open outside ±0.5% · sorted by % change"
+   },
+   {
+    "emoji": "📓",
+    "key": "playbook",
+    "label": "Playbook",
+    "n": 67,
+    "title": "📓 Luk's Playbook — his own words, cited line by line · UNMEASURED"
+   },
+   {
+    "emoji": "🏁",
+    "key": "track_record",
+    "label": "Track record",
+    "n": 1,
+    "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED"
+   }
+  ],
+  "tab": "luk",
+  "tiles": [],
+  "title": "🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own words · UNMEASURED",
+  "track_record": {
+   "counts": {
+    "closed_negative": 0,
+    "closed_positive": 0,
+    "ema9_exits": 0,
+    "entry_weeks": 0,
+    "filled": 0,
+    "mean_r_closed": null,
+    "n": 1,
+    "no_entry": 0,
+    "open": 0,
+    "reached_3r": 0,
+    "reached_5r": 0,
+    "stopped": 0
+   },
+   "counts_text": "1 A+ recorded · 0 filled · 0 stopped · 0 closed below the 9 EMA · 0 open · no closed row yet · 0 of 30 entry weeks",
+   "days": [
+    {
+     "date": "2026-11-03",
+     "label": "Tue 11-03",
+     "rows": [
+      {
+       "best_r": null,
+       "date": "2026-11-03",
+       "exit_text": "",
+       "fill_text": "not graded yet",
+       "flags_text": "",
+       "href": "/chart-maps?tab=luk&sub=pullback_reversal&focus=AAA",
+       "id": "2026-11-03|AAA|pullback_reversal|aplus",
+       "plan_text": "trigger 12.40 · stop 11.98 (−3.4%) · R $0.42",
+       "r": null,
+       "r_now": null,
+       "rang_text": "recorded 09:47 ET (regular session) — shadow, never sent",
+       "reached_3r": false,
+       "reached_5r": false,
+       "sessions": 0,
+       "setup": "pullback_reversal",
+       "state": "pending",
+       "symbol": "AAA",
+       "tape_id": "2026-11-03|AAA|pullback_reversal|aplus"
+      }
+     ]
+    }
+   ],
+   "empty_text": "No 🥇 A+ recorded in this span — every A+ is recorded in shadow, never sent.",
+   "fault": false,
+   "fault_text": null,
+   "honesty": "Every row is a shadow record — none reached your phone. Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).",
+   "n_rows": 1,
+   "record_from": "2026-11-01",
+   "rule_text": "Fill = the first 1-minute bar at least 30 s after the alert trading at or above the trigger, from the regular open — the same fill convention as 🚩's 🏁 (a Cheetah choice, for comparability). Stop = the alert's stop, a touch. Exit = the stop or the first daily close below the 9 EMA, whichever prints first — his stated exit (VKNEJA5r8zw 2:29:17). His partials at 3R and 5R are shown as flags, not applied (HIS CALL #5); no maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to 5 minutes after his bar closed (one Luk pass per 5 minutes), so a 🏁 fill is later than his would have been — a fact (HIS CALL #29).",
+   "span": "all",
+   "spans": [
+    "today",
+    "yesterday",
+    "5d",
+    "10d",
+    "all"
+   ],
+   "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED"
+  },
+  "variant": {
+   "api_base": "/chart-maps/luk",
+   "key": "luk",
+   "label": "🥇 Luk's",
+   "primary": "5m",
+   "push_mode": "shadow",
+   "record_from": "2026-11-01",
+   "tab": "luk",
+   "tfs": [
+    "1m",
+    "5m",
+    "60m"
+   ]
+  }
+ }
+}

@@ -158,6 +158,48 @@ def bulk_cached_frames(symbols) -> dict:
     return out
 
 
+def cached_frame_meta(symbol: str) -> Optional[dict]:
+    """{"frame": df, "cached_at": epoch s} of the ONE Mongo price-cache doc of
+    `symbol` — a read, NEVER a fetch, NEVER a write. ADDITIVE (🥇 Luk's tab,
+    2026-11-01, spec C2): `_mongo_get` / `load_prices` / `closed_daily_frame`
+    are untouched.
+
+    Why it exists: the cache doc is `{symbol, cached_at, bars}` and
+    `load_prices` / `patch_latest_closes` write today's PARTIAL bar into it
+    under the 20 h TTL (`closed_daily_frame`'s docstring names the trap), so a
+    caller that needs CLOSED days must judge the last bar's date against WHEN
+    the doc was written. `_mongo_get` hides `cached_at`; this returns it.
+
+    Same reshaping as `bulk_cached_frames` (DatetimeIndex; open / high / low /
+    close / volume, then `_cut_foreign_head` and `_drop_phantom_tail`). NO TTL
+    cut — the caller judges by date. None when the doc is absent, has no bars,
+    carries no numeric `cached_at`, or Mongo is down."""
+    sym = str(symbol or "").strip().upper()
+    if not sym:
+        return None
+    coll = _get_mongo()
+    if coll is None:
+        return None
+    try:
+        doc = coll.find_one({"symbol": sym})
+        if not doc:
+            return None
+        bars = doc.get("bars") or []
+        cached_at = doc.get("cached_at")
+        if not bars or isinstance(cached_at, bool) or not isinstance(cached_at, (int, float)):
+            return None
+        df = pd.DataFrame(bars)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.set_index("date")[["open", "high", "low", "close", "volume"]]
+        df = _drop_phantom_tail(_cut_foreign_head(df, sym))
+        if df is None or df.empty:
+            return None
+        return {"frame": df, "cached_at": float(cached_at)}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("cached_frame_meta read failed for %s: %s", sym, _scrub_key(exc))
+        return None
+
+
 def _mongo_put(symbol: str, df: pd.DataFrame) -> None:
     coll = _get_mongo()
     if coll is None:

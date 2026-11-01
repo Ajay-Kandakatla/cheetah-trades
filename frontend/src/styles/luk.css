@@ -1,0 +1,76 @@
+/* 🥇 Luk's tab (2026-11-01, luk spec §3.13). Tiles, badges, notes and the sub strip reuse the house cm-* / cat-* rules;
+   only what is new to this tab lives here (prefix luk-). */
+
+.luk-board { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
+.luk-title { font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
+.luk-honesty { font-size: 0.82rem; margin: 0; overflow-wrap: anywhere; }
+.luk-passline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.8rem; min-width: 0; }
+.luk-muted { color: var(--ink-subtle, #94a3b8); font-size: 0.78rem; }
+.luk-stale { color: var(--negative, #ef4444); font-size: 0.78rem; }
+.luk-line { margin: 0; font-size: 0.8rem; overflow-wrap: anywhere; }
+.luk-h { font-size: 0.95rem; margin: 0.2rem 0; }
+.luk-h4 { font-size: 0.85rem; margin: 0.3rem 0 0.15rem; }
+
+.luk-strip {
+  font-size: 0.82rem; padding: 0.35rem 0.6rem; min-width: 0;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+  background: var(--bg-surface, transparent);
+}
+.luk-strip-head { cursor: pointer; font-weight: 600; }
+.luk-market { list-style: none; margin: 0.3rem 0; padding: 0; }
+.luk-market li { overflow-wrap: anywhere; }
+
+.luk-subs { flex-wrap: wrap; }
+.luk-counts { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; font-size: 0.8rem; min-width: 0; }
+.luk-fold > summary { cursor: pointer; display: inline; }
+.luk-legend { margin: 0.2rem 0; padding-left: 1rem; font-size: 0.78rem; }
+
+/* 📱 Phone (430 px — the 🚩 2026-10-19 lesson): a grid item's default `min-width: auto` lets ONE unbreakable served
+   chip set the card's minimum and push the chart off the screen. The card never exceeds its column, and every served
+   chip, criterion and plan line wraps instead of widening it. */
+.luk-card { border-radius: 8px; min-width: 0; max-width: 100%; }
+.luk-card.luk-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
+.luk-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
+.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame {
+  white-space: normal; overflow-wrap: anywhere;
+}
+.luk-plan, .luk-criteria li, .luk-why, .luk-tr-row, .luk-pb-item { overflow-wrap: anywhere; }
+.luk-row-head { font-weight: 600; padding: 0.3rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; }
+/* 2026-11-01 — the 🚀 / 🩳 / 🧨 house chips on a card with no bars: wrap, never widen the card (📱 430 px). */
+.luk-house-chips { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; font-weight: 400; }
+
+.luk-extras { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.3rem 0.1rem 0.5rem; font-size: 0.78rem; min-width: 0; }
+.luk-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
+.luk-state {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600;
+  border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.luk-state-aplus, .luk-state-triggered { color: var(--positive, #22c55e); border-color: var(--positive, #22c55e); }
+.luk-state-stopped { color: var(--negative, #ef4444); border-color: var(--negative, #ef4444); }
+.luk-state-listed, .luk-state-forming { color: var(--ink-muted, #94a3b8); }
+.luk-frame {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px;
+  border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.luk-plan { margin: 0; font-variant-numeric: tabular-nums; }
+.luk-criteria { list-style: none; margin: 0; padding: 0; }
+.luk-criteria li { line-height: 1.35; }
+.luk-ok { color: var(--positive, #22c55e); }
+.luk-miss { color: var(--negative, #ef4444); }
+.luk-unjudged { color: var(--ink-subtle, #94a3b8); }
+
+.luk-table-wrap { max-width: 100%; overflow-x: auto; }
+.luk-table { border-collapse: collapse; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.luk-table th, .luk-table td { padding: 0.2rem 0.4rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
+.luk-criteria-inline li { white-space: normal; }
+
+.luk-pb-items { margin: 0.1rem 0 0.4rem; padding-left: 1rem; font-size: 0.8rem; }
+.luk-cite { color: var(--ink-subtle, #94a3b8); font-size: 0.74rem; overflow-wrap: anywhere; }
+.luk-pb-mine, .luk-pb-his_call, .luk-pb-consideration { font-style: italic; }
+
+.luk-spans .luk-span { cursor: pointer; text-decoration: none; }
+.luk-spans .luk-span.is-active { font-weight: 700; }
+.luk-tr-rows { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; }
+.luk-tr-row { padding: 0.15rem 0; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
+.luk-tape-toggle { background: none; border: none; cursor: pointer; padding: 0 0.2rem; }
+.luk-tr-tape { list-style: none; max-width: 100%; overflow-x: auto; }

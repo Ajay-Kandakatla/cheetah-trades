@@ -1,0 +1,2207 @@
+{
+ "schema": "luk.verified_rules/1",
+ "as_of": "2026-11-01",
+ "built_from": "eod-audits/research/champions_2026_11_01/SYNTHESIS.md §D + sweeps/martin-luk.md + the six transcripts (byte copies under backend/tests/fixtures/luk/); every quote matched to its fixture line; hand-maintained",
+ "status_labels": {
+  "confirmed_first_hand": "his words",
+  "confirmed_multi_source": "2+ sources",
+  "single_source": "1 source",
+  "contradicted": "sources disagree",
+  "unsupported": "no source",
+  "his_call": "his call — not applied",
+  "external": "external — not re-run here"
+ },
+ "applied_labels": {
+  "true": "applied",
+  "false": "not applied",
+  "listed": "listed, never applied"
+ },
+ "sources": [
+  {
+   "key": "L1",
+   "title": "+969% Return in 1 Year: The Pullback Strategy of a Trading Champion (TraderLion podcast)",
+   "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw",
+   "date": "2026-01-31",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "VKNEJA5r8zw.txt"
+  },
+  {
+   "key": "L2",
+   "title": "283% Gain in 1 Year (TraderLion podcast)",
+   "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg",
+   "date": "2025-04-06",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "lS9zbnLi1Gg.txt"
+  },
+  {
+   "key": "L3",
+   "title": "his own live stream (screener settings, 1:15–1:22)",
+   "url": "https://www.youtube.com/watch?v=iMBI3ZcQ6sU",
+   "date": "2026-10-28",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "iMBI3ZcQ6sU.txt"
+  },
+  {
+   "key": "L4",
+   "title": "his own live stream (QQQ extension, 1:02–1:05)",
+   "url": "https://www.youtube.com/watch?v=297D7gVsLY4",
+   "date": "2026-04-27",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "297D7gVsLY4.txt"
+  },
+  {
+   "key": "L5",
+   "title": "his own live stream (pullback entry, 1:45–1:50)",
+   "url": "https://www.youtube.com/watch?v=tx321OQ8iD0",
+   "date": "2026-06-24",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "tx321OQ8iD0.txt"
+  },
+  {
+   "key": "L6",
+   "title": "his own live stream (risk per trade, 2:12–2:15)",
+   "url": "https://www.youtube.com/watch?v=yvaMXQfOEWI",
+   "date": "2026-05-26",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "fixture": "yvaMXQfOEWI.txt"
+  },
+  {
+   "key": "L7",
+   "title": "Martin Luk: +283% USIC 2024 key lessons (his guest post, edited by Kyna Kosling)",
+   "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+   "date": "2025-02-01",
+   "kind": "first-hand text",
+   "first_hand": true,
+   "fixture": "substack_2025_02_01_quotes.md"
+  },
+  {
+   "key": "L8",
+   "title": "martinluk.com screeners page (fan site — 'Not by Martin. Built by a fan')",
+   "url": "https://martinluk.com/screeners/index.html",
+   "date": "read 2026-11-01",
+   "kind": "secondary",
+   "first_hand": false,
+   "fixture": "martin-luk.md",
+   "note": "the screener frames are stills of his own stream iMBI3ZcQ6sU ~1:17:44; checked against the frames"
+  },
+  {
+   "key": "X1",
+   "title": "rootchunhe/martin-luk-backtesting (independent backtest)",
+   "url": "https://github.com/rootchunhe/martin-luk-backtesting",
+   "date": "read 2026-11-01",
+   "kind": "external",
+   "first_hand": false,
+   "fixture": "luk_bt_readme.md"
+  },
+  {
+   "key": "X2",
+   "title": "zongfan2/TradingAgents PR #4 (independent replica)",
+   "url": "https://github.com/zongfan2/TradingAgents/pull/4",
+   "date": "2026-10-15",
+   "kind": "external",
+   "first_hand": false,
+   "fixture": "backtests-critiques.md"
+  },
+  {
+   "key": "X3",
+   "title": "US Investing Championship standings (financial-competitions.com)",
+   "url": "https://financial-competitions.com/previousstandings/2026/1/24/december-standings-2025",
+   "date": "2025-02-12 / 2026-01-24 / 2026-10-24",
+   "kind": "external",
+   "first_hand": false,
+   "fixture": "SYNTHESIS.md"
+  }
+ ],
+ "topics": [
+  {
+   "key": "universe",
+   "topic": "Universe / scans",
+   "verified": [
+    {
+     "id": "U1",
+     "kind": "rule",
+     "rule": "He mainly trades stocks with an average daily range over 5% — his preference, not a hard rule.",
+     "numbers": ">5% ADR (a chip, never a gate)",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "I mainly trade stocks with >5% ADR for this reason (as illustrated by most trades above), but this isn’t a hard rule."
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": [
+      "LUK_ADR_PREF_PCT"
+     ]
+    },
+    {
+     "id": "U2",
+     "kind": "rule",
+     "rule": "Three scans: the potent scan (the previous day's high performers), the pre-market scan (gap-ups) and the leader scan (the biggest movers of the past 30 days, on weekends).",
+     "numbers": "about 30 minutes a day; leader = past 30 days",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "I spend around 30 minutes a day scanning for the previous day’s high performers (‘potent scan’)",
+      "and pre-market gap-ups (‘pre-market scan’).",
+      "On weekends, I also scan for the biggest movers of the past 30 days (‘leader scan’)."
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "U3",
+     "kind": "rule",
+     "rule": "Watchlist tiers by EMA order — Lead 9 > 21 > 50, Lag 9 < 21 < 50, Mediocre in between — plus a small-cap list under $5B.",
+     "numbers": "9 / 21 / 50 EMA order; small cap < $5B",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "Lead: 9 EMA > 21 EMA > 50 EMA.",
+      "Mediocre: 9 EMA > 21 EMA < 50 EMA or 9 EMA < 21 EMA > 50 EMA.",
+      "Lag: 9 EMA < 21 EMA < 50 EMA.",
+      "One for small caps (<$5B market cap); and"
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": [
+      "LUK_SMALL_CAP_USD"
+     ]
+    },
+    {
+     "id": "U4",
+     "kind": "rule",
+     "rule": "☀️ Pre-market screen (his TradingView frame): US; market cap > $100M; 10-day average volume > 500K; price × volume > $50M; 1-week volatility > 3.5%; sorted by pre-market % change.",
+     "numbers": "cap > 100M · avg vol 10D > 500K · price×vol > 50M · volatility 1W > 3.5%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L3",
+       "url": "https://www.youtube.com/watch?v=iMBI3ZcQ6sU&t=4657s",
+       "first_hand": true,
+       "ts": "1:17:37",
+       "line": "542-544"
+      },
+      {
+       "key": "L8",
+       "url": "https://martinluk.com/screeners/index.html",
+       "first_hand": false,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "You still use your screening settings like the years before. I think so.",
+      "Mkt cap > 100M USD; Avg vol 10D > 500K; Price×vol > 50M USD; Volatility 1W > 3.5%"
+     ],
+     "quote_src": [
+      {
+       "key": "L3",
+       "ts": "1:17:37",
+       "line": "542-544",
+       "file": "iMBI3ZcQ6sU.txt"
+      },
+      {
+       "key": "L8",
+       "ts": "~1:17:44",
+       "line": "53",
+       "file": "martin-luk.md"
+      }
+     ],
+     "used_by": [
+      "LUK_SCREEN_MIN_CAP_USD",
+      "LUK_SCREEN_MIN_AVG_VOL_10D",
+      "LUK_SCREEN_MIN_PX_VOL_USD",
+      "LUK_SCREEN_MIN_VOL_1W_PCT",
+      "LUK_AVG_VOL_SESSIONS"
+     ],
+     "note": "the frame numbers are read off stills of his own stream; the transcription is the research sweep's"
+    },
+    {
+     "id": "U5",
+     "kind": "rule",
+     "rule": "🏆 Leader screen (his TradingView frame): US; market cap > $100M; 10-day average volume > 500K; 1-week price × volume > $300M; sorted by 1-month %.",
+     "numbers": "price×vol 1W > 300M",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L3",
+       "url": "https://www.youtube.com/watch?v=iMBI3ZcQ6sU&t=4657s",
+       "first_hand": true,
+       "ts": "1:17:37",
+       "line": "542-544"
+      },
+      {
+       "key": "L8",
+       "url": "https://martinluk.com/screeners/index.html",
+       "first_hand": false,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "Price×vol 1W > 300M USD; sorted by Perf % 1M descending"
+     ],
+     "quote_src": [
+      {
+       "key": "L8",
+       "ts": "~1:17:44",
+       "line": "54",
+       "file": "martin-luk.md"
+      }
+     ],
+     "used_by": [
+      "LUK_LEADER_MIN_PX_VOL_1W_USD"
+     ]
+    },
+    {
+     "id": "U6",
+     "kind": "rule",
+     "rule": "⚡ Potent screen (his TradingView frame): US; price > 50 EMA; price above the 21 EMA (built ≥, the fan site's reading — HIS CALL #9); market cap > $100M; 1-week volatility > 3.5%; price × volume > $50M; change from open outside ±0.5%; sorted by % change.",
+     "numbers": "price > EMA 50 · price ≥ EMA 21 · chg from open outside ±0.5%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L3",
+       "url": "https://www.youtube.com/watch?v=iMBI3ZcQ6sU&t=4657s",
+       "first_hand": true,
+       "ts": "1:17:37",
+       "line": "542-544"
+      },
+      {
+       "key": "L8",
+       "url": "https://martinluk.com/screeners/index.html",
+       "first_hand": false,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "Price > EMA 50; Price > EMA 21",
+      "Chg from open outside -0.5% to 0.5%; sorted by Chg % descending"
+     ],
+     "quote_src": [
+      {
+       "key": "L8",
+       "ts": "~1:17:44",
+       "line": "55",
+       "file": "martin-luk.md"
+      },
+      {
+       "key": "L8",
+       "ts": "~1:17:44",
+       "line": "55",
+       "file": "martin-luk.md"
+      }
+     ],
+     "used_by": [
+      "LUK_POTENT_CHG_FROM_OPEN_BAND_PCT",
+      "LUK_POTENT_EMAS"
+     ]
+    },
+    {
+     "id": "U7",
+     "kind": "rule",
+     "rule": "He is considering a $100M dollar-volume floor, filtering biotechs out of his potent list and excluding buyouts / mergers — his considerations, listed, not applied.",
+     "numbers": "$100M dollar volume (considered)",
+     "status": "confirmed_first_hand",
+     "his_call": true,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L3",
+       "url": "https://www.youtube.com/watch?v=iMBI3ZcQ6sU&t=4678s",
+       "first_hand": true,
+       "ts": "1:17:58",
+       "line": "547-559"
+      }
+     ],
+     "quotes": [
+      "trying to change the like the all the volume to like 100 million",
+      "I filter some biotechs out on my potential watch list",
+      "exclude the the buyouts or the the merger"
+     ],
+     "quote_src": [
+      {
+       "key": "L3",
+       "ts": "1:17:58",
+       "line": "547-550",
+       "file": "iMBI3ZcQ6sU.txt"
+      },
+      {
+       "key": "L3",
+       "ts": "1:18:23",
+       "line": "554-555",
+       "file": "iMBI3ZcQ6sU.txt"
+      },
+      {
+       "key": "L3",
+       "ts": "1:18:34",
+       "line": "556-559",
+       "file": "iMBI3ZcQ6sU.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_CONSIDERED_PX_VOL_USD",
+      "LUK_CONSIDERED_EXCLUDES"
+     ]
+    },
+    {
+     "id": "U8",
+     "kind": "rule",
+     "rule": "Within a hot theme: the fastest movers; among them he prioritises the highest dollar volume — not computed here.",
+     "numbers": "none",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1125s",
+       "first_hand": true,
+       "ts": "0:18:45",
+       "line": "407-409"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=11919s",
+       "first_hand": true,
+       "ts": "3:18:39",
+       "line": "4221-4223"
+      }
+     ],
+     "quotes": [
+      "I want to focus only fast moving stocks in the hawk setter",
+      "I would prioritize trading the one with the highest dollar volume"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:18:45",
+       "line": "407-409",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "3:18:39",
+       "line": "4221-4223",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [],
+     "note": "caption: 'hawk setter' = hot sector"
+    }
+   ]
+  },
+  {
+   "key": "entry",
+   "topic": "Entry",
+   "verified": [
+    {
+     "id": "E1",
+     "kind": "rule",
+     "rule": "Pullback trades wait for at least the daily 9 EMA.",
+     "numbers": "daily 9 EMA",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=2998s",
+       "first_hand": true,
+       "ts": "0:49:58",
+       "line": "1080-1082"
+      }
+     ],
+     "quotes": [
+      "when I'm trading the pullbacks, I'm going to wait at least on the daily 9 year"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:49:58",
+       "line": "1080-1082",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_PULLBACK_DAILY_EMA"
+     ],
+     "note": "caption: '9 year' = 9 EMA"
+    },
+    {
+     "id": "E2",
+     "kind": "rule",
+     "rule": "After a really fast flush into support at the hourly 9 / 21 EMA, the trigger is the first breakout of the previous bar's high on the 1-, 5- or 15-minute chart.",
+     "numbers": "hourly 9 / 21 EMA; 'really fast' has no number (HIS CALL #6)",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=6999s",
+       "first_hand": true,
+       "ts": "1:56:39",
+       "line": "2501-2509"
+      }
+     ],
+     "quotes": [
+      "really really really fast um um a a flush to the downside into the supports level which is on the hourly uh 9 and the 21 EMA",
+      "I will look at the 1 minute or the 5 minute or the 15 minute candle for the first breakout of the previous bar high"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "1:56:39",
+       "line": "2501-2505",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "1:56:58",
+       "line": "2506-2509",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_HOURLY_EMAS",
+      "LUK_TRIGGER"
+     ]
+    },
+    {
+     "id": "E3",
+     "kind": "rule",
+     "rule": "The 1-minute candle in the first 15 minutes, then the 5-minute candle to about 60 minutes after the open.",
+     "numbers": "15 min (1-minute) · 60 min (5-minute; 'maybe' — HIS CALL #5)",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=7049s",
+       "first_hand": true,
+       "ts": "1:57:29",
+       "line": "2518-2525"
+      }
+     ],
+     "quotes": [
+      "for the first 15 minute",
+      "I'm using the one minute um candle breakout for um 15 minutes to maybe the 60 minute um after the market open and I'm using the five minute candle breakout"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "1:57:29",
+       "line": "2518-2520",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "1:57:36",
+       "line": "2521-2526",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_ONE_MIN_UNTIL_MIN",
+      "LUK_FIVE_MIN_UNTIL_MIN"
+     ]
+    },
+    {
+     "id": "E4",
+     "kind": "rule",
+     "rule": "No chase: up more than 3% from the low of day → he avoids it.",
+     "numbers": "3% from the low of day",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1479s",
+       "first_hand": true,
+       "ts": "0:24:39",
+       "line": "546-548"
+      }
+     ],
+     "quotes": [
+      "if it's up for more than 3% from the low of day then I'm I'm just avoiding it"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:24:39",
+       "line": "546-548",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_NO_CHASE_PCT"
+     ]
+    },
+    {
+     "id": "E5",
+     "kind": "rule",
+     "rule": "Wait for the 5- or 15-minute candle breakout after support holds — never buy the dip on the way down.",
+     "numbers": "none",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L5",
+       "url": "https://www.youtube.com/watch?v=tx321OQ8iD0&t=6546s",
+       "first_hand": true,
+       "ts": "1:49:06",
+       "line": "696-702"
+      }
+     ],
+     "quotes": [
+      "Generally I wait for the 5-minute or the 15-minute candle breakouts. After the stock uh find support at the support level. So, I generally won't uh buy the dip on the way down."
+     ],
+     "quote_src": [
+      {
+       "key": "L5",
+       "ts": "1:49:06",
+       "line": "696-702",
+       "file": "tx321OQ8iD0.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "E6",
+     "kind": "rule",
+     "rule": "Opening-range high: the take-out of the first 1-minute candle's high, stop at its low (the low of day); the 1-minute chart until the first 5-minute candle forms, then the 5-minute.",
+     "numbers": "first 1-minute candle; 5-minute after it forms",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2320s",
+       "first_hand": true,
+       "ts": "0:38:40",
+       "line": "802-813"
+      },
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2418s",
+       "first_hand": true,
+       "ts": "0:40:18",
+       "line": "838-843"
+      }
+     ],
+     "quotes": [
+      "forms the one minute candle uh after the market open that's the opening range that the high of the candle will be the opening range highs and the low of the candle would be the low of day",
+      "takes out from the first minute candle high and this is the entry and the stop will be the low of day",
+      "I would use one minute very shortly after the open pretty much. Yeah. Before the first five minute candle is formed",
+      "after the fiveminute candle is formed, I would use the five minute"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:38:40",
+       "line": "802-807",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:39:00",
+       "line": "810-813",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:40:18",
+       "line": "838-841",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:40:26",
+       "line": "842-843",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_ORH_CANDLE_MIN",
+      "LUK_ORH_SWITCH_MIN"
+     ]
+    },
+    {
+     "id": "E7",
+     "kind": "rule",
+     "rule": "Prior-day-high breakout, best after an inside day.",
+     "numbers": "none",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2171s",
+       "first_hand": true,
+       "ts": "0:36:11",
+       "line": "752-754"
+      },
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2206s",
+       "first_hand": true,
+       "ts": "0:36:46",
+       "line": "763-766"
+      }
+     ],
+     "quotes": [
+      "enter it on when uh on a stock uh breaking the prior day highs",
+      "the day before it breakout is a inside day",
+      "I really love inside day"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:36:11",
+       "line": "752-754",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:36:46",
+       "line": "763-764",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:36:51",
+       "line": "765-766",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "E8",
+     "kind": "rule",
+     "rule": "The best pullback is the first one into support, within a base with higher lows, where several levels line up (the 9 / 21 / 50 / 150 EMA, anchored VWAP, prior highs). Here: the count of daily EMAs touched today is a chip; prior high, gap and anchored VWAP are not computed (HIS CALL #7).",
+     "numbers": "9 / 21 / 50 / 150 EMA (chip only)",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=4201s",
+       "first_hand": true,
+       "ts": "1:10:01",
+       "line": "1504-1516"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=4654s",
+       "first_hand": true,
+       "ts": "1:17:34",
+       "line": "1675-1680"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=7453s",
+       "first_hand": true,
+       "ts": "2:04:13",
+       "line": "2662-2664"
+      }
+     ],
+     "quotes": [
+      "if a trader buys uh buys at the anchor VW web and also there another trader buys at the 9 EMA and another one buys at the previous highs or any supports level",
+      "the first pullback into the supports level",
+      "the first pullback within a base the really the base with some higher lows"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "1:10:15",
+       "line": "1509-1513",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "1:17:40",
+       "line": "1677-1678",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "2:04:16",
+       "line": "2663-2664",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [],
+     "note": "caption: 'anchor VW web' = anchored VWAP"
+    }
+   ]
+  },
+  {
+   "key": "stop",
+   "topic": "Initial stop",
+   "verified": [
+    {
+     "id": "S1",
+     "kind": "rule",
+     "rule": "Stops of 1–5% (mostly), never more than half the stock's ADR (no more than 2.5% for a 5% ADR stock); over 80% of his 2024 stops were under 3.5%; a hard stop as soon as the order fills.",
+     "numbers": "1–5% · half the ADR · <3.5% for 80%+",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "As I become more experienced, I tightened my stops to 1–5% (mostly)",
+      "avoided exceeding half of the stock’s average daily range (ADR)",
+      "no more than a 2.5% stop for a 5% ADR stock, etc.",
+      "Over 80% of my trades in 2024 used stops of <3.5%.",
+      "I define my stop before entering a trade, and place a hard stop as soon as I’m filled"
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "S2",
+     "kind": "rule",
+     "rule": "Stops under half the stock's average daily range, 5% at most; rarely wider than 3% or 2.5%. Here: not A+ when the stop is wider than 5% of the trigger or half the 20-day ADR.",
+     "numbers": "max 5% · half the ADR · usually 2.5–3%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1093s",
+       "first_hand": true,
+       "ts": "0:18:13",
+       "line": "398-400"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1111s",
+       "first_hand": true,
+       "ts": "0:18:31",
+       "line": "403-405"
+      }
+     ],
+     "quotes": [
+      "I limit uh my stops at the uh less than 50% of these stocks average the ur so maximum will be 5%",
+      "I rarely would set my stop wider than 3% or even 2.5%"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:18:13",
+       "line": "398-400",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "0:18:31",
+       "line": "403-405",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_STOP_MAX_PCT",
+      "LUK_STOP_ADR_FRAC",
+      "LUK_STOP_USUAL_PCT"
+     ],
+     "note": "caption: 'average the ur' = average daily range"
+    },
+    {
+     "id": "S3",
+     "kind": "rule",
+     "rule": "Stop at the low of day about 60–70% of the time; otherwise the low of the breakout bar or of the previous bar.",
+     "numbers": "60–70% at the low of day",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=7098s",
+       "first_hand": true,
+       "ts": "1:58:18",
+       "line": "2534-2541"
+      }
+     ],
+     "quotes": [
+      "set the stop either at the low of day. I think maybe 60 to 70% at the low of day",
+      "Then I may set it to the low of the breakout bar or the low of the previous bar"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "1:58:18",
+       "line": "2534-2536",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "1:58:31",
+       "line": "2539-2541",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_STOP_LOD_SHARE",
+      "LUK_STOP_ALTS"
+     ]
+    },
+    {
+     "id": "S4",
+     "kind": "rule",
+     "rule": "When entry-to-low-of-day is more than 5%, the stop is the 5-minute entry candle's low.",
+     "numbers": "5% entry-to-LOD",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2282s",
+       "first_hand": true,
+       "ts": "0:38:02",
+       "line": "790-793"
+      }
+     ],
+     "quotes": [
+      "if it's more than 5% between my entry and the low of day, I would use the um 5 minute entry candle low"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:38:02",
+       "line": "790-793",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_LOD_SWITCH_PCT"
+     ]
+    }
+   ]
+  },
+  {
+   "key": "exits",
+   "topic": "Exits — stated, computed only for the 🏁 grade",
+   "verified": [
+    {
+     "id": "X1",
+     "kind": "rule",
+     "rule": "No strict sell rule; partial sells into strength at 3R or 5R. Here: 3R / 5R are 🏁 flags, never applied.",
+     "numbers": "3R / 5R",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=8857s",
+       "first_hand": true,
+       "ts": "2:27:37",
+       "line": "3155-3158"
+      }
+     ],
+     "quotes": [
+      "don't have a very strict cell rule. um I would sell partial into strength in uh when it's up three hour or five hour"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "2:27:37",
+       "line": "3155-3158",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_PARTIAL_R"
+     ],
+     "note": "caption: 'cell' = sell, 'three hour or five hour' = 3R or 5R"
+    },
+    {
+     "id": "X2",
+     "kind": "rule",
+     "rule": "Trims of about 15% each; the rest closed on the first daily close below the 9 EMA — the 🏁 grade's exit.",
+     "numbers": "15% trims · first close below the 9 EMA",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=8947s",
+       "first_hand": true,
+       "ts": "2:29:07",
+       "line": "3186-3191"
+      }
+     ],
+     "quotes": [
+      "at around 15% uh each",
+      "and then I closed this trade on the first close um below the 9 EMA"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "2:29:07",
+       "line": "3186",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "2:29:17",
+       "line": "3190-3191",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_TRIM_PCT",
+      "LUK_EXIT_RULE"
+     ]
+    },
+    {
+     "id": "X3",
+     "kind": "rule",
+     "rule": "Trims of 10–15% into strength; trims a position grown past 35% of the account.",
+     "numbers": "10–15% · 35%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2458s",
+       "first_hand": true,
+       "ts": "0:40:58",
+       "line": "853-864"
+      }
+     ],
+     "quotes": [
+      "the trim of the position is around 10 to 15%",
+      "larger than 35% is getting bigger and bigger and I would try to u trim it down"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:40:58",
+       "line": "853-854",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:41:29",
+       "line": "863-864",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_TRIM_RANGE_PCT",
+      "LUK_TRIM_PAST_PCT"
+     ]
+    },
+    {
+     "id": "X4",
+     "kind": "rule",
+     "rule": "Trails mostly on the 9 EMA; early in a strong move on the 21 or even the 50 EMA.",
+     "numbers": "9 / 21 / 50 EMA",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=2557s",
+       "first_hand": true,
+       "ts": "0:42:37",
+       "line": "884-890"
+      }
+     ],
+     "quotes": [
+      "I mostly I'm using the 9 EMA as the uh as my trailing uh moving averages",
+      "early stage of a move um I will use the 21 or even the 50 uh EMA for trailing"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:42:37",
+       "line": "884-885",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "0:42:54",
+       "line": "889-890",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_TRAIL_EMAS"
+     ]
+    },
+    {
+     "id": "X5",
+     "kind": "rule",
+     "rule": "Parabolic exit: sold everything when the day's dollar volume passed 50% of the prior day's by mid-session, the prior day's dollar volume was a 52-week high, near weekly resistance — not computed here.",
+     "numbers": "50% of the prior day · 52-week high",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=4665s",
+       "first_hand": true,
+       "ts": "1:17:45",
+       "line": "1603-1622"
+      }
+     ],
+     "quotes": [
+      "during the half of the day it already uh exceeds 50% of the previous trading day dollar volume",
+      "it's the the highest in in the past 52 weeks",
+      "near the the weekly uh 50 or like the week weekly uh resistance levels"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "1:17:45",
+       "line": "1603-1605",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "1:17:59",
+       "line": "1608-1609",
+       "file": "lS9zbnLi1Gg.txt"
+      },
+      {
+       "key": "L2",
+       "ts": "1:18:37",
+       "line": "1620-1622",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "X6",
+     "kind": "rule",
+     "rule": "His 2024 rule: a 9 EMA trailing-stop sell rule — the 🏁 exit's second cite.",
+     "numbers": "9 EMA",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "I didn’t follow my 9 EMA trailing stop sell rule and got punished for it."
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": []
+    }
+   ]
+  },
+  {
+   "key": "sizing",
+   "topic": "Sizing — listed, never applied",
+   "verified": [
+    {
+     "id": "Z1",
+     "kind": "rule",
+     "rule": "Risk per trade about 0.5% (2025); 0.5–1% (2024); about 0.3% now (the caption says 3%, his arithmetic says 0.3%); smaller size under $5.",
+     "numbers": "0.5% · 0.5–1% · 0.3%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=969s",
+       "first_hand": true,
+       "ts": "0:16:09",
+       "line": "359-360"
+      },
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      },
+      {
+       "key": "L6",
+       "url": "https://www.youtube.com/watch?v=yvaMXQfOEWI&t=8006s",
+       "first_hand": true,
+       "ts": "2:13:26",
+       "line": "575-579"
+      }
+     ],
+     "quotes": [
+      "my portfolio risk per trade is around 0.5%",
+      "And I keep account risk at 0.5–1% per trade.",
+      "except when trading stocks below $5, for which I reduce my position size.",
+      "now I'm using like on 3% risk per trade. And I think it's it's really small to me because even if I'm um losing 10 trades in a row, I would get a 3% draw down"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:16:09",
+       "line": "359-360",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L6",
+       "ts": "2:13:26",
+       "line": "575-579",
+       "file": "yvaMXQfOEWI.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_RISK_PER_TRADE_PCT",
+      "LUK_RISK_2026_PCT"
+     ],
+     "note": "the 2026 caption is ambiguous (HIS CALL #22): 10 losers × 0.3% = 3%"
+    },
+    {
+     "id": "Z2",
+     "kind": "rule",
+     "rule": "Positions of about 25–30%; worked example: $10,000 × 0.5% = $50 of risk, $50 ÷ 2.5% stop = a $2,000 (20%) position.",
+     "numbers": "25–30% · the $10,000 example",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1054s",
+       "first_hand": true,
+       "ts": "0:17:34",
+       "line": "385-386"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=11030s",
+       "first_hand": true,
+       "ts": "3:03:50",
+       "line": "3899-3912"
+      }
+     ],
+     "quotes": [
+      "my average sizing is around 25 to 30%",
+      "if I have a $10,000 account and I'm risking like 50 uh.5% of my account, it will be 50 bucks",
+      "So, it will be like a $2,000 position.",
+      "20% position"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:17:34",
+       "line": "385-386",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "3:03:50",
+       "line": "3899-3902",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "3:04:15",
+       "line": "3908",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "3:04:20",
+       "line": "3910",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_POSITION_PCT",
+      "LUK_SIZING_EXAMPLE"
+     ]
+    },
+    {
+     "id": "Z3",
+     "kind": "rule",
+     "rule": "A 35% position cap in 2024 (none since); gross exposure at most 280% long.",
+     "numbers": "35% · 280%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1001s",
+       "first_hand": true,
+       "ts": "0:16:41",
+       "line": "369-370"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=2474s",
+       "first_hand": true,
+       "ts": "0:41:14",
+       "line": "908-911"
+      }
+     ],
+     "quotes": [
+      "I don't like uh limit my portfolio sizing to 35%",
+      "at most it is 280% long"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:16:41",
+       "line": "369-370",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "0:41:28",
+       "line": "910-911",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_POSITION_CAP_2024_PCT",
+      "LUK_GROSS_MAX_PCT"
+     ]
+    },
+    {
+     "id": "Z4",
+     "kind": "rule",
+     "rule": "Never raise risk in a drawdown.",
+     "numbers": "none",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": "listed",
+     "sources": [
+      {
+       "key": "L6",
+       "url": "https://www.youtube.com/watch?v=yvaMXQfOEWI&t=8092s",
+       "first_hand": true,
+       "ts": "2:14:52",
+       "line": "596-597"
+      }
+     ],
+     "quotes": [
+      "never never increase your risk. When you are in a draw down"
+     ],
+     "quote_src": [
+      {
+       "key": "L6",
+       "ts": "2:14:52",
+       "line": "596-597",
+       "file": "yvaMXQfOEWI.txt"
+      }
+     ],
+     "used_by": []
+    }
+   ]
+  },
+  {
+   "key": "market",
+   "topic": "Market — a state word, never a gate",
+   "verified": [
+    {
+     "id": "M1",
+     "kind": "rule",
+     "rule": "His own trades' feedback first, then the indices — he reads QQQ and IWM every day.",
+     "numbers": "QQQ · IWM",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=13639s",
+       "first_hand": true,
+       "ts": "3:47:19",
+       "line": "4809-4818"
+      }
+     ],
+     "quotes": [
+      "your own trade feedback is the most important one",
+      "I also look at the cues and IWM uh I think every day"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "3:47:22",
+       "line": "4810-4811",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "3:47:42",
+       "line": "4817-4819",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_INDEX_SYMBOLS"
+     ],
+     "note": "caption: 'cues' = the Qs (QQQ)"
+    },
+    {
+     "id": "M2",
+     "kind": "rule",
+     "rule": "An example, not a threshold: QQQ almost 2% above its 9 EMA → not very aggressive on the long side. Served as prose; nothing applies it.",
+     "numbers": "none (an example)",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L4",
+       "url": "https://www.youtube.com/watch?v=297D7gVsLY4&t=3762s",
+       "first_hand": true,
+       "ts": "1:02:42",
+       "line": "338-346"
+      }
+     ],
+     "quotes": [
+      "Qs is almost 2% above the 9 EMA",
+      "I'm not going to like be very aggressive on the long side"
+     ],
+     "quote_src": [
+      {
+       "key": "L4",
+       "ts": "1:02:42",
+       "line": "338-339",
+       "file": "297D7gVsLY4.txt"
+      },
+      {
+       "key": "L4",
+       "ts": "1:02:58",
+       "line": "344-346",
+       "file": "297D7gVsLY4.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "M3",
+     "kind": "rule",
+     "rule": "Indices trending down with the 9 EMA under the 21 = not a favourable time for longs. Here: a state word for QQQ and IWM, never a gate (HIS CALL #8).",
+     "numbers": "9 / 21 EMA order",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": true,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=7059s",
+       "first_hand": true,
+       "ts": "1:57:39",
+       "line": "2458-2465"
+      }
+     ],
+     "quotes": [
+      "if the indices is uh trending down the 9 EMA is under the 21 favorable time for doing a long maybe it's the favorable time for doing a short"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "1:57:39",
+       "line": "2458-2465",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": [
+      "LUK_INDEX_EMAS"
+     ],
+     "note": "the caption drops the 'not' before 'favorable time for doing a long' (HIS CALL #22)"
+    },
+    {
+     "id": "M3-paraphrase",
+     "kind": "paraphrase",
+     "rule": "reversing into a declining 21 or 50 EMA — a resistance read, his words paraphrased (lS9zbnLi1Gg 1:58:04)",
+     "numbers": "21 / 50 EMA",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=7084s",
+       "first_hand": true,
+       "ts": "1:58:04",
+       "line": "2467"
+      }
+     ],
+     "quotes": [],
+     "quote_src": "paraphrase of lS9zbnLi1Gg 1:58:04 — his caption says it another way",
+     "used_by": []
+    }
+   ]
+  },
+  {
+   "key": "his_calls",
+   "topic": "HIS CALL — SYNTHESIS §D, none applied",
+   "verified": [
+    {
+     "id": "H1",
+     "kind": "rule",
+     "rule": "Entry implementation. His literal morning 1/5-min trigger measured −2.2% CAGR with 13% winners after spreads. The rootchunhe 15:55 close-confirm proxy measured 12.1% CAGR, Sharpe 0.83, roughly equal to QQQ. Options: one of them, or both as paper variants (https://github.com/rootchunhe/martin-luk-backtesting).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "287",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H2",
+     "kind": "rule",
+     "rule": "Risk per trade: 0.3%, 0.5% or 0.5-1%. He has used all three over time.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "288",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H3",
+     "kind": "rule",
+     "rule": "Position cap: a 35% cap (2024 rule; Kyna's Jan 2026 post) or no cap (2025, VKNEJA5r8zw 16:37-18:02).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "289",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H4",
+     "kind": "rule",
+     "rule": "Gross exposure / margin: up to 280% in his account; what the paper account allows.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "290",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H5",
+     "kind": "rule",
+     "rule": "Exit precedence among 3R/5R trims, the 9 EMA close, the 21/50 EMA early trail and the parabolic rule. He has no hard sell rule, and \"really extended on the 1-hour\" is undefined.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "291",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H6",
+     "kind": "rule",
+     "rule": "\"Really fast flush\" into hourly EMA support has no number.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "292",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H7",
+     "kind": "rule",
+     "rule": "Anchored VWAP anchor choice (base swing high/low, gap day, 250-day high per rootchunhe) is not specified.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "293",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H8",
+     "kind": "rule",
+     "rule": "Market gate as a hard rule. Whether M3 (index 9<21) becomes a gate, and what QQQ distance from its 9 EMA blocks longs (M2 is one example only).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "294",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H9",
+     "kind": "rule",
+     "rule": "Potent-screen industry exclusion list is not visible in the frames.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "295",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H10",
+     "kind": "rule",
+     "rule": "Earnings blackout of 5 days ~95% of the time comes from the fan FAQ only; it needs confirming from the stream.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "296",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H11",
+     "kind": "rule",
+     "rule": "Max hold: none stated by Luk; rootchunhe used 15 days (third-party).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "297",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H12",
+     "kind": "rule",
+     "rule": "Shorts: in or out of scope (his short rules: https://tradingresourcehub.substack.com/p/martin-luk-study-process).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "298",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H13",
+     "kind": "rule",
+     "rule": "Exposure building and watchlist tier overrides are by his judgment, with no rule.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "299",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H14",
+     "kind": "rule",
+     "rule": "Unread primary: his May 2025 X post on pullback entry tactics (cited by him at VKNEJA5r8zw 1:00:15).",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "300",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "H15",
+     "kind": "rule",
+     "rule": "Promotion: results are regime-bound (the ten best trades = 111% of P&L; 2025 is about a third of it; the 9 EMA is a fragile peak; no clean out-of-sample period). Any lane goes through the strategy-lab prereg (OOS + placebo + DSR) and paper only on HIS CALL.",
+     "numbers": "",
+     "status": "his_call",
+     "his_call": true,
+     "applied": false,
+     "sources": [],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "SYNTHESIS",
+       "file": "SYNTHESIS.md",
+       "line": "301",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    }
+   ]
+  },
+  {
+   "key": "record",
+   "topic": "Who he is",
+   "verified": [
+    {
+     "id": "R1",
+     "kind": "rule",
+     "rule": "US Investing Championship, $20,000+ stock division — 2024: 6th, +283.1%; 2025: 1st, +969.8%; 2026 through Sep 30: leading, +785.8%.",
+     "numbers": "+283.1% · +969.8% · +785.8%",
+     "status": "external",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "X3",
+       "url": "https://financial-competitions.com/previousstandings/2025/2/12/december-final-standings-2024",
+       "first_hand": false,
+       "ts": null,
+       "line": "95"
+      },
+      {
+       "key": "X3",
+       "url": "https://financial-competitions.com/previousstandings/2026/1/24/december-standings-2025",
+       "first_hand": false,
+       "ts": null,
+       "line": "98"
+      },
+      {
+       "key": "X3",
+       "url": "https://financial-competitions.com/previousstandings/2026/10/24/september-standings-2026",
+       "first_hand": false,
+       "ts": null,
+       "line": "102"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "X3",
+       "file": "SYNTHESIS.md",
+       "line": "95",
+       "ts": null
+      },
+      {
+       "key": "X3",
+       "file": "SYNTHESIS.md",
+       "line": "98",
+       "ts": null
+      },
+      {
+       "key": "X3",
+       "file": "SYNTHESIS.md",
+       "line": "102",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "R2",
+     "kind": "rule",
+     "rule": "He sells nothing — his X bio.",
+     "numbers": "none",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "R2",
+       "url": "https://x.com/martinlukkt",
+       "first_hand": true,
+       "ts": null,
+       "line": "12"
+      }
+     ],
+     "quotes": [
+      "NO PAID SUBSCRIPTIONS OR SERVICES"
+     ],
+     "quote_src": [
+      {
+       "key": "R2",
+       "ts": null,
+       "line": "12",
+       "file": "martin-luk.md"
+      }
+     ],
+     "used_by": [],
+     "note": "read through the fxtwitter API on 2026-11-01"
+    }
+   ]
+  },
+  {
+   "key": "stats",
+   "topic": "His own stats",
+   "verified": [
+    {
+     "id": "ST1",
+     "kind": "rule",
+     "rule": "2025: 209 winners and 731 losers; a 22% win rate.",
+     "numbers": "209 / 731 · 22%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=26s",
+       "first_hand": true,
+       "ts": "0:00:26",
+       "line": "10-11"
+      },
+      {
+       "key": "L1",
+       "url": "https://www.youtube.com/watch?v=VKNEJA5r8zw&t=1496s",
+       "first_hand": true,
+       "ts": "0:24:56",
+       "line": "552-553"
+      }
+     ],
+     "quotes": [
+      "I have a 209 winning trades and 731 losing trades",
+      "my win rate for is further decreased to 22%"
+     ],
+     "quote_src": [
+      {
+       "key": "L1",
+       "ts": "0:00:26",
+       "line": "10-11",
+       "file": "VKNEJA5r8zw.txt"
+      },
+      {
+       "key": "L1",
+       "ts": "0:24:56",
+       "line": "552-553",
+       "file": "VKNEJA5r8zw.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "ST2",
+     "kind": "rule",
+     "rule": "2024: 104 winners and 319 losers.",
+     "numbers": "104 / 319",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L2",
+       "url": "https://www.youtube.com/watch?v=lS9zbnLi1Gg&t=1605s",
+       "first_hand": true,
+       "ts": "0:26:45",
+       "line": "567"
+      }
+     ],
+     "quotes": [
+      "I have 104 winners and 319 losers"
+     ],
+     "quote_src": [
+      {
+       "key": "L2",
+       "ts": "0:26:45",
+       "line": "567",
+       "file": "lS9zbnLi1Gg.txt"
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "ST3",
+     "kind": "rule",
+     "rule": "2024 (his guest post): a 25% win rate, an 18-trade losing streak, a 30% drawdown June–August.",
+     "numbers": "25% · 18 · 30%",
+     "status": "confirmed_first_hand",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "L7",
+       "url": "https://tradingresourcehub.substack.com/p/martin-luk-283-usic-2024-key-lessons",
+       "first_hand": true,
+       "ts": null,
+       "line": null
+      }
+     ],
+     "quotes": [
+      "Last year’s win rate was 25%, and I suffered several losing streaks of 10 trades or more.",
+      "I also experienced the longest losing streak of my trading career: 18 consecutive losers.",
+      "Then, in June–August 2024, I suffered a 30% drawdown."
+     ],
+     "quote_src": [
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      },
+      {
+       "key": "L7",
+       "ts": null,
+       "line": null,
+       "file": "substack_2025_02_01_quotes.md"
+      }
+     ],
+     "used_by": []
+    }
+   ]
+  },
+  {
+   "key": "external",
+   "topic": "External backtests — EXTERNAL, not re-run here",
+   "verified": [
+    {
+     "id": "EX1",
+     "kind": "rule",
+     "rule": "rootchunhe/martin-luk-backtesting (point-in-time, after costs): the full strategy CAGR 12.1%, Sharpe 0.83, max drawdown -13%; QQQ on the same pool 19.9% / 0.83 / -35%; his morning-breakout entry: 13% winners, CAGR -2.2%, drawdown -59% after spreads.",
+     "numbers": "12.1% · 0.83 · -13% · 19.9% · -35% · 13% · -2.2% · -59%",
+     "status": "external",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "X1",
+       "url": "https://github.com/rootchunhe/martin-luk-backtesting",
+       "first_hand": false,
+       "ts": null,
+       "line": "122, 130, 173"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "X1",
+       "file": "luk_bt_readme.md",
+       "line": "122",
+       "ts": null
+      },
+      {
+       "key": "X1",
+       "file": "luk_bt_readme.md",
+       "line": "130",
+       "ts": null
+      },
+      {
+       "key": "X1",
+       "file": "luk_bt_readme.md",
+       "line": "173",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    },
+    {
+     "id": "EX2",
+     "kind": "rule",
+     "rule": "zongfan2/TradingAgents PR #4 (all three setups, 5-minute data): -58.3% total, -87.6% max drawdown, -0.009R per trade.",
+     "numbers": "-58.3% · -87.6% · -0.009R",
+     "status": "external",
+     "his_call": false,
+     "applied": false,
+     "sources": [
+      {
+       "key": "X2",
+       "url": "https://github.com/zongfan2/TradingAgents/pull/4",
+       "first_hand": false,
+       "ts": null,
+       "line": "14, 178"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [
+      {
+       "key": "X2",
+       "file": "backtests-critiques.md",
+       "line": "14",
+       "ts": null
+      },
+      {
+       "key": "X2",
+       "file": "backtests-critiques.md",
+       "line": "178",
+       "ts": null
+      }
+     ],
+     "used_by": []
+    }
+   ]
+  }
+ ]
+}
