@@ -150,6 +150,13 @@
  * GgVariantContext. The bar-size toggle runs over the SERVED `variant.tfs` (else GG_TFS), and the served `variant.title`
  * / `variant.honesty` print above the strip, verbatim — the FE types no word, frame or number of the 1-minute page.
  * Every alert there is recorded in shadow (served words say so). UNMEASURED.
+ *
+ * 🧪 Gajjala · Audited (2026-11-01, gg-audited spec §3.8). Ajay: "I would like you to create a new tab for Gajjals when
+ * you modifiy with audit of End of day.." "Gajjals-Audited" "So we can keep track of improvements on this tab". The SAME
+ * component again: `variant="gajjala_audited"` (ChartMaps key="gajjala_audited"). Three mount points only — the folded
+ * 🧪 strip under the page honesty, the held section after the 🎯 A+ line, the 🏁 compare above the Track record — each
+ * renders nothing when its served block is absent, so 🚩 Gajjala's and the 1-min page draw exactly as before. A held
+ * tile prints its served state_label with the served state as its class (gg-state-aplus_held). Shadow. UNMEASURED.
  */
 import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -182,6 +189,9 @@ import {
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
 import GajjalaAplusCharts from './GajjalaAplusCharts';
+import { GgAuditedStrip } from './GgAuditedStrip';
+import { GgAuditedHeld } from './GgAuditedHeld';
+import { GgAuditedCompare } from './GgAuditedCompare';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -542,6 +552,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {servedText(board?.variant?.honesty) ? (
         <div className="gg-muted gg-page-honesty" data-testid="gg-page-honesty">{board?.variant?.honesty}</div>
       ) : null}
+      {/* (0b) 🧪 2026-11-01: the audited page's served strip (audited_tab.audited_block) — folded; absent elsewhere. */}
+      <GgAuditedStrip block={board?.audited} />
       {/* (1) situational-awareness strip — his read of the day (S8 43:39). */}
       <div className="gg-strip" data-testid="gg-strip" role="status">
         {strip?.text ? <span className="gg-strip-text" data-testid="gg-strip-text">{strip.text}</span> : null}
@@ -623,12 +635,17 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
       {/* (3b) 🎯 the served A+ line — every sub, so on 🧠 Potential it leads the 📈 Track. */}
       {board?.enterable ? <AplusBanner block={board.enterable} /> : null}
+      {/* (3c) 🧪 2026-11-01: A+ held by the audit — listed, never hidden (audited_tab.held_block); absent elsewhere. */}
+      <GgAuditedHeld block={board?.held} />
 
       {err ? <div className="cm-note cm-note-err" data-testid="gg-error">Gajjala board: {err}</div> : null}
 
       {activeSub === 'playbook' ? (
         <PlaybookPanel pb={board?.playbook ?? null} />
       ) : activeSub === 'track_record' ? (
+        <>
+        {/* 🧪 2026-11-01: the served audited-vs-original block (audited_tab.compare_block); absent elsewhere. */}
+        <GgAuditedCompare block={board?.audited_compare} />
         <TrackRecordPanel tr={board?.track_record ?? null} emptyNote={board?.empty_note ?? null}
                           onSpan={(k) => setParam(GG_SPAN_PARAM, k)} view={view}
                           onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)}
@@ -638,6 +655,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                           onKind={(k) => setParam(GG_KIND_PARAM, k === board?.track_record?.kinds?.[0]?.key ? null : k)}
                           sort={sort}
                           onSort={(k) => setParam(GG_SORT_PARAM, k === board?.track_record?.sort_default ? null : k)} />
+        </>
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}

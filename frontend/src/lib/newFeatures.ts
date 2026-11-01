@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-01 (verbatim in the label, his spelling kept, the line breaks as " / "): "I would like you to create a
+  // new tab for Gajjals when you modifiy with audit of End of day.. / Gajjals-Audited / So we can keep track of
+  // improvements on this tab". A THIRD Variant (backend chart_maps/gajjala/variant.py GGA, tab gajjala_audited) riding
+  // 🚩 Gajjala's own 5-minute pass as an OVERLAY on its reads: the registry chart_maps/gajjala/audited_rules.py holds
+  // the 2026-10-30 pre-registered gates (G1 break-bar proof · G2 red closes · G4 stop-distance cap ON; G3 lane_only,
+  // applied nowhere). A removed A+ is served as held (aplus_held), never hidden. Every GGA alert is SHADOW
+  // (GAJJALA_AUDITED_PUSH_MODE; no push kind exists for it); its 🏁 starts GGA_RECORD_FROM with a served
+  // audited-vs-original block. 🚩 Gajjala's / 1-min stay byte-identical. UNMEASURED — the 10-30 replay read TOO SMALL.
+  // Pinned by scripts/contracts.mjs ("🧪 Gajjala · Audited tab (2026-11-01)").
+  { id: 'chart-maps-gajjala-audited-2026-11-01', addedAt: '2026-11-01', route: '/chart-maps?tab=gajjala_audited',
+    label: "🧪 Gajjala · Audited — a new tab right after 🚩 Gajjala's: the same pass, the same reads, the same cards, with 🚩's A+ filtered by the end-of-day audit rules. Three rules from the 2026-10-30 audit are ON here — break-bar proof (the break bar must close above the trigger on volume), red closes (too many red closes in a row at the end of the base) and a stop-distance cap (the 🎾 stop frozen at its first armed read); the ring-age rule is a paper-lane entry gate, listed but not applied. An A+ the audit removes is listed as held, never hidden. Every alert here is recorded in shadow, never sent — nothing new rings your phone and nothing trades. Its own 🏁 Track record starts 2026-11-01, side by side with 🚩's original A+ on the same sessions, and every later audit change lands here as a dated rule, off until your call. 🚩 Gajjala's itself is unchanged. You said: “I would like you to create a new tab for Gajjals when you modifiy with audit of End of day.. / Gajjals-Audited / So we can keep track of improvements on this tab”. UNMEASURED — the 2026-10-30 replay read too small. Not advice." },
   // Ajay 2026-11-01: "Do this task here: “Fix moat UNKNOWN label on full-data zero scores”". The rule lives in
   // backend/sepa/moat.py compute_moat (score 0 with >= 1 finite input = NONE); scoring itself unchanged.
   { id: 'sepa-moat-none-not-unknown-2026-11-01', addedAt: '2026-11-01', route: '/sepa',

@@ -41,6 +41,11 @@ takes it over — an open never makes a cron tick skip or refuse (C1). A taken-o
 every write of its tail and stops writing (status "superseded", exit 0 — A8). Closed bars only: an open between two
 passes reads the same closed bars; it adds the fresh snapshot (new scanner names), never a newer bar (C3).
 
+🧪 2026-11-01 — the audit overlay (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day..
+Gajjals-Audited"): after the pass summary and before the 🧠 gate, `audited_pass.run_step` reads THIS pass's reads, in its
+own fence, and writes ONLY the gajjala_audited_* collections (SHADOW, never sent; never a key of the summary, never an
+`errors` entry — a failure is logged).
+
 Every dependency is injected (`Deps`), so the tests run the real scanner, bars and detectors on fixture rows. UNMEASURED:
 nothing here trades, sizes or enters a lane.
 """
@@ -128,6 +133,12 @@ def _record_potential_status(counts: dict, now: datetime, reason: Optional[str] 
     return AS.record_pass(GC.POTENTIAL_PUSH_KIND, counts, now, reason=reason)
 
 
+def _record_audited_status(counts: dict, now: datetime, reason: Optional[str] = None) -> bool:
+    """🧪 2026-11-01 — the audit overlay's /alerts PASS-HEALTH row (not a push kind: nothing is ever sent)."""
+    from supply_demand import alert_status as AS
+    return AS.record_pass(AS.GAJJALA_AUDITED_KIND, counts, now, reason=reason)
+
+
 @dataclass
 class Deps:
     snapshot: Callable = _snapshot                 # () -> (rows, meta)
@@ -156,6 +167,11 @@ class Deps:
     # Promo-circuit tags reader `(now) -> [tag doc]` (None = the step does not run and the pass doc gains NO key — tests,
     # replays, dry runs; the cron and on-open paths of main() pass promo_names.default_tags)
     promo_tags: Optional[Callable] = None
+    # 🧪 2026-11-01 (the audit overlay, audited_pass.py): `(st) -> GGA store | None` (None = audited_pass.store_for's
+    # default — the real default store → for_variant(GGA), a dry store → a dry GGA store, any other store → skipped),
+    # and the overlay's /alerts pass-health row
+    audited_store: Optional[Callable] = None
+    record_audited_status: Callable = _record_audited_status
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -302,6 +318,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import detectors as D
     from . import trader_names as TN
     from . import promo_names as PN
+    from . import audited_pass as AP
 
     deps = deps or Deps()
     now_given = now is not None
@@ -545,6 +562,18 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         if al_failed:
             out["status"] = "error"
 
+        try:                                                    # 🧪 2026-11-01 — the audit overlay: reads THIS pass, writes ONLY gajjala_audited_*, never a key of `out`
+            mine()
+            gga = AP.store_for(st, deps)
+            if gga is not None:
+                AP.run_step(st, gga, reads, frames, now, session, alert_ctx=alert_ctx, owner=deps.owner, dry=dry,
+                            push_dry=push_dry,
+                            record_status=None if (dry or on_demand) else deps.record_audited_status)
+        except _Superseded:
+            raise
+        except Exception:                                       # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc and return stay byte-identical)
+            log.exception("gajjala pass: the audit overlay failed")
+
         # 🧠 potentials — AFTER the pass summary, in its OWN try (AMENDMENTS4 D1). D2: the price is the 5-minute
         # frame's latest close first, else THIS pass's row (a qualifier or the live snapshot) — never the stored row.
         live_rows = {s: (q_rows.get(s) or _row_from_snapshot(s, rows.get(s), session_iso)) for s in frames}
@@ -731,6 +760,11 @@ def main(argv=None) -> int:
         from . import store as ST
         st = ST.default()
         st.ensure_indexes()
+        try:                                                    # 🧪 2026-11-01 — the audit overlay's own collections only
+            from . import variant as V
+            ST.for_variant(V.GGA).ensure_indexes()
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala pass: the audited store's indexes failed: %s", type(exc).__name__)
         if args.on_demand:
             from . import promo_names as PN
             out = run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags))

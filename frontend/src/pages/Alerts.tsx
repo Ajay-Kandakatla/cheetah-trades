@@ -195,6 +195,17 @@ export const GG1M_PASSES: { key: string; label: string; fallbackCadenceSec: numb
   { key: 'gajjala_1m_potential', label: '🧠 Gajjala 1-min potentials', fallbackCadenceSec: 60 },
 ];
 
+/* 🧪 Gajjala · Audited (2026-11-01, gg-audited spec §3.8 [C4]). Ajay: "I would like you to create a new tab for Gajjals
+ * when you modifiy with audit of End of day.." "Gajjals-Audited" "So we can keep track of improvements on this tab".
+ * The audit overlay rides the 🚩 5-minute pass (backend CADENCE 300) and records every audited A+ in SHADOW — it never
+ * rings. So it gets its OWN strip under its own "never sent" eyebrow, after the 1-minute block: never under "they ring
+ * your phone", never in PASSES (the header count speaks for the passes that can ring), never a /notifications toggle
+ * (not a pref kind). Its counters are the 🚩 A+ gate's (one pipeline) and print with the 🚩 chip words. HIS CALL #11:
+ * keep or drop this row. */
+export const GGA_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+  { key: 'gajjala_audited_setup', label: '🧪 Gajjala · Audited A+ (shadow — recorded, never sent)', fallbackCadenceSec: 300 },
+];
+
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
  * notification specific for High Beta stocks from the reselinet separately and
  * also other tape bursts from the Chart Maps page". Both ride the
@@ -763,7 +774,7 @@ function PassStrip({ pass, meta, status, gate, today }: {
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
   const headlineKeys = headlineDefs.map((h) => h.key);
-  const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup';
+  const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup' || meta.key === 'gajjala_audited_setup';
   const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
@@ -1151,6 +1162,13 @@ export function AlertsPage() {
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gg1m-passes-head">🚩 🧠 Gajjala 1-min passes · they ring your phone since 2026-10-29 · not counted in the header</div>
         <div data-testid="gg1m-passes">
           {GG1M_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
+        </div>
+        {/* ── 🧪 the audited pass (2026-11-01) — own strip: it never rings; never under the 1-minute "they ring your phone" eyebrow ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gga-passes-head">🧪 Gajjala · Audited pass · recorded in shadow, never sent · not counted in the header</div>
+        <div data-testid="gga-passes">
+          {GGA_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>

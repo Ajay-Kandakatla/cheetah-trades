@@ -36,6 +36,11 @@ never ran". This module keeps the last pass's counters per kind:
                      (chart_maps/gajjala/run_1m.py, 2026-10-27) — no crontab
                      line of its own; both kinds are recorded in SHADOW, never
                      sent (GAJJALA_1M_PUSH_MODE)
+  gajjala_audited_setup
+                     written here by the 🧪 Gajjala · Audited overlay
+                     (chart_maps/gajjala/audited_pass.py, 2026-11-01), riding
+                     the 🚩 5-minute pass — a PASS-HEALTH row, not a push kind:
+                     every audited A+ is recorded in shadow, never sent
   tape_burst_highbeta / tape_burst_chartmaps
                      written here by orderflow.tape_burst_kinds.run_all
                      (2026-10-14), the 🎢 / 🗺️ kinds riding the
@@ -147,8 +152,18 @@ TAPE_CONTROL_KIND = "tape_control"
 # chart_maps.gajjala.variant.GG1.push_kind_setup / push_kind_potential).
 GAJJALA_1M_KIND = "gajjala_1m_setup"
 GAJJALA_1M_POTENTIAL_KIND = "gajjala_1m_potential"
+# 🧪 Gajjala · Audited (chart_maps/gajjala/audited_pass.py, 2026-11-01). Ajay:
+# "I would like you to create a new tab for Gajjals when you modifiy with audit
+# of End of day.. Gajjals-Audited". The audit overlay rides the 🚩 5-minute pass
+# and records its own pass doc — a PASS-HEALTH kind, NOT a push kind: nothing is
+# ever sent (GAJJALA_AUDITED_PUSH_MODE shadow + an explicit shadow mode). Typed,
+# not imported: this file stays a module-level leaf
+# (tests/test_gajjala_audited_pass.py pins it equal to
+# chart_maps.gajjala.variant.GGA.push_kind_setup).
+GAJJALA_AUDITED_KIND = "gajjala_audited_setup"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
-              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND) + TAPE_KINDS + (
+              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND,
+              GAJJALA_AUDITED_KIND) + TAPE_KINDS + (
                   TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
@@ -178,6 +193,9 @@ CADENCE_SEC[GAJJALA_POTENTIAL_KIND] = 300
 # by tests/test_gajjala_1m_page_2026_10_27.py; no crontab minute field to derive).
 CADENCE_SEC[GAJJALA_1M_KIND] = 60
 CADENCE_SEC[GAJJALA_1M_POTENTIAL_KIND] = 60
+# 🧪 the audit overlay rides the 🚩 line (run.run_pass calls audited_pass.run_step)
+# → DERIVED, never typed: its cadence IS gajjala_setup's.
+CADENCE_SEC[GAJJALA_AUDITED_KIND] = CADENCE_SEC[GAJJALA_KIND]
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
@@ -733,6 +751,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
     for kind in (GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND):     # 🚩 2026-10-27 — the 1-minute page (shadow)
         passes[kind] = _with_cadence(kind, read_pass(kind, pass_coll))
+    passes[GAJJALA_AUDITED_KIND] = _with_cadence(GAJJALA_AUDITED_KIND,      # 🧪 2026-11-01 — the audit overlay
+                                                 read_pass(GAJJALA_AUDITED_KIND, pass_coll))
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
@@ -756,7 +776,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
 
 
 __all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND",
-           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials",

@@ -175,6 +175,8 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                                 "gajjala_potential",
                                 # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — SEVENTEEN: two pass docs riding the run_1m loop
                                 "gajjala_1m_setup", "gajjala_1m_potential",
+                                # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — EIGHTEEN: the audit overlay's pass-health doc riding the 🚩 pass (shadow, never sent)
+                                "gajjala_audited_setup",
                                 "tape_burst_highbeta", "tape_burst_chartmaps",
                                 "tape_control",   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — FOURTEEN: rides trade-flash-watch, its own pass doc
                                 "earnings_reaction", "board_arrival:bonde",
@@ -321,13 +323,19 @@ def test_cadence_sec_matches_the_crontab():
                               # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — rides that same line
                               "tape_control": seconds(minute_field("sepa.cli trade-flash-watch")),
                               # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — no crontab line: one run_1m iteration per closed 1-minute bar
-                              "gajjala_1m_setup": GC1.GG1M_CADENCE_SEC, "gajjala_1m_potential": GC1.GG1M_CADENCE_SEC}
+                              "gajjala_1m_setup": GC1.GG1M_CADENCE_SEC, "gajjala_1m_potential": GC1.GG1M_CADENCE_SEC,
+                              # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — the audit overlay rides the 🚩 line: no crontab line of its own
+                              "gajjala_audited_setup": seconds(minute_field("chart_maps.gajjala.run"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "gajjala_audited_setup": 300,   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — rides the 🚩 line, recorded in shadow, never sent
                               "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
+    assert not [ln for ln in lines if "audited" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE (2026-11-01): the 🧪 audit overlay has no crontab line (it rides chart_maps.gajjala.run)"
+    assert AS.CADENCE_SEC["gajjala_audited_setup"] == AS.CADENCE_SEC[AS.GAJJALA_KIND]   # DERIVED, never typed
     assert not [ln for ln in lines if "run_1m" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE (2026-10-27): the 1-minute page has no crontab line (the 🚩 pass spawns its loop)"
     assert not [ln for ln in lines if "potential" in ln and not ln.lstrip().startswith("#")], \
@@ -411,12 +419,14 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
                                    "med_catalyst", "gajjala_setup",
                                    "gajjala_potential",   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                                    "tape_burst_highbeta", "tape_burst_chartmaps",
+                                   "gajjala_audited_setup",   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — an INTRADAY pass-health row riding the 🚩 line
                                    "gajjala_1m_setup", "gajjala_1m_potential",   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                                    "tape_control"}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "gajjala_audited_setup": 300,   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — rides the 🚩 line, recorded in shadow, never sent
                               "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
 

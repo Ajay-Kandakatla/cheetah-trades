@@ -1008,6 +1008,64 @@ the 5-minute setups read NULL.
 - Doc `docs/gajjala/one_minute_page_2026_10_27.md` (the 15 HIS CALLs, costs, verification); contract "🚩 Gajjala
   1-minute page (2026-10-27)"; ✨ `chart-maps-gajjala-1m-2026-10-27`.
 
+### Chart Maps — 🧪 Gajjala · Audited — `chart_maps/gajjala/audited_rules.py` (2026-11-01)
+Ajay 2026-11-01: *"I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
+Gajjals-Audited  So we can keep track of improvements on this tab"* (BUILD_SPEC gg-audited). Tab `gajjala_audited`, right
+after 🚩 Gajjala's, label `GGA_TAB_LABEL`. **UNMEASURED.** Every rule read TOO SMALL in the 2026-10-30 replay (LEDGER.md
+rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sent.
+- **An overlay, not a pipeline.** Variant `GGA` (`variant.py`, claims `GGA:`) has no scan, no cron line and no provider
+  call. A fenced step inside 🚩's 5-minute pass (`audited_pass.run_step`) does three things:
+  - It judges each GG5 **A+** read against the ON registry rules on the same Frames.
+  - It hands the survivors to `alerts.run_pass(…, mode="shadow")` on the audited store.
+  - It serves a removed A+ as `aplus_held` ("A+ on the original, held here by the audit"). It is never hidden.
+
+  GG5 and GG1 stay byte-identical: no key is added to `out` or to the pass doc, and the three goldens are not
+  regenerated.
+- **Registry** (`audited_rules.py`, `REGISTRY`, `AUDIT_VERSION`). The numbers come from the frozen prereg
+  (`eod-audits/research/2026-10-30_gajjala_gates_prereg.md`, sha `4ebc30d2…14b6`) and the ported study gate math (sha
+  `20bb1970…2798`, byte copies under `tests/fixtures/gajjala/`).
+  - **G1** break-bar proof (ON, `G1_K`)
+  - **G2** red closes (ON, `G2_MAX_RED` = `RED_CLOSES_WAIT`, `G2_RUN` "last" = the prereg; the replay read "longest", HIS CALL)
+  - **G3** ring age (lane_only, applied nowhere)
+  - **G4** stop-distance cap (ON, `G4_MAX_RISK_PCT`; on 🎾 the stop is frozen at the first armed read)
+
+  G1 and G2 are judged on the read's own frame, which is 15-minute for the Horizontal Fade (HIS CALL #14). The rules
+  fail closed.
+- **The process for a future audit.** An audit-derived modification becomes a registry entry with its eod-audits source.
+  It stays OFF until his call, then goes ON on this tab only. The 🚩 tab is never the target. A verdict is a LEDGER row
+  plus a `verdict` update. The words never flip on a count (`floor_reached`, `MEASURE_FLOOR_WEEKS`).
+- **Collections.** GGA writes only `gajjala_audited_overlay` (names with an A+ or an armed 🎾, TTL `READS_TTL_DAYS`),
+  `gajjala_audited_alerts`, `gajjala_audited_state` (`audit_latest`) and `gajjala_audited_ledger`. It borrows GG5's
+  reads, potentials, passes and replay (`Variant.borrows`).
+- **Costs.**
+  - The pass makes zero provider calls (a counter test).
+  - The nightly (`nightly.grade_audited`, after GG5 → GG1) COPIES GG5's graded columns when id, stamp, trigger, stop and
+    plan match (`copied_from: "gajjala_ledger"` inside the column). It then runs `grade_step` for the RESIDUAL only,
+    bounded by `LEDGER_BACKFILL_MAX_SYMBOL_DAYS` and served as `gajjala_audited.copy.residual`.
+- **Pushes.** None. The two locks are `GAJJALA_AUDITED_PUSH_MODE = "shadow"` and the explicit `mode="shadow"`. The
+  variant has no sender (`NEVER_SENDS`), no push/subs kind, and `OWNER_KEEP_SET` stays six. `/alerts` shows one
+  PASS-HEALTH row (`gajjala_audited_setup`) under its own "never sent" eyebrow.
+- **Board** (`tab.build(…, variant=GGA)`, `audited_tab.py`). It serves these keys:
+  - `audited`: the strip, with the registry, pass line, stale and `unaudited`
+  - `held`: the held-A+ section
+  - `audited_compare` on 🏁: original vs audited vs held on the same sessions and trade math, plus `recon`, `by_rule`
+    (with `by_rule_note`), `by_day` and `floor_reached`
+  - `counts.aplus_held`
+  - the tile's `gajjala.audit`
+
+  🏁 starts at `GGA_RECORD_FROM` (2026-11-01).
+- **Routes.**
+  - `GET /chart-maps/gajjala-audited`. On 🏁 only, `today_read` runs over `ST.for_variant(GGA)`.
+  - `POST /chart-maps/gajjala-audited/scan`: owner-only, stealth 404. It calls `on_demand.request()` with NO variant,
+    which is 🚩's on-open pass; the overlay rides it.
+  - `GET /chart-maps/gajjala-audited/entry-tape` reads the audited store.
+- **ℹ️ panel.** `rules_info._gg_audited_clause()` = `" " + audited_rules.rules_clause()`, placed after the one-minute
+  clause. Its source holds no numeric literal.
+- **FE.** `GajjalaBoard variant="gajjala_audited"` is mounted with `key="gajjala_audited"`. New components are
+  `GgAuditedStrip` (folded), `GgAuditedHeld` and `GgAuditedCompare`. `GG_VARIANT_BASE` == `GGA.api_base`.
+- Doc: `docs/gajjala/audited_variant_2026_11_01.md` (the registry with sources, the process, costs, recon semantics, the
+  15 HIS CALLs, verification). Contract: "🧪 Gajjala · Audited tab (2026-11-01)". ✨ `chart-maps-gajjala-audited-2026-11-01`.
+
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
 sure you do a full scan."*, *"in the High Beta tab.I wanna able to sort my most volatile stocks"*). **UNMEASURED** —

@@ -334,7 +334,12 @@ def _tag_prefix(v) -> str:
 # ── send ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 def _default_send(owner: str, payload: dict, variant=None) -> dict:
     """push.hooks' sender of the variant (GG5 notify_gajjala_setup — the shipped line; the 1-minute page's is named
-    by variant.GG1.send_setup — live since 2026-10-29, and never reached while its mode is shadow)."""
+    by variant.GG1.send_setup — live since 2026-10-29, and never reached while its mode is shadow). 🧪 2026-11-01: a
+    variant with NO sender (the audited tab, send_setup "") refuses — RuntimeError(audited_rules.NEVER_SENDS) — before
+    push.hooks is even imported (fail closed: no sender is ever looked up by an empty name)."""
+    if not V.is_gg5(variant) and not V.of(variant).send_setup:
+        from .audited_rules import NEVER_SENDS
+        raise RuntimeError(NEVER_SENDS)
     from push import hooks
     if V.is_gg5(variant):
         return hooks.notify_gajjala_setup(owner=owner, payload=payload)

@@ -1,0 +1,43 @@
+/* 🧪 Gajjala · Audited (2026-11-01) — the strip, the held section, the 🏁 compare, the held tile pill.
+ * Ajay 2026-11-01: "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day.."
+ * "Gajjals-Audited" "So we can keep track of improvements on this tab". Every word drawn here is served. */
+.gg-audited-strip {
+  margin: 0.35rem 0; padding: 0.35rem 0.6rem; border-radius: 6px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1)); font-size: 0.8rem; min-width: 0;
+}
+.gg-audited-summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; align-items: baseline; }
+.gg-audited-rules { list-style: none; margin: 0.4rem 0; padding: 0; display: grid; gap: 0.4rem; }
+.gg-audited-rule { min-width: 0; overflow-wrap: anywhere; padding-left: 0.5rem; border-left: 2px solid var(--line, rgba(255, 255, 255, 0.14)); }
+.gg-audited-rule-on { border-left-color: var(--gold, #b8935a); }
+.gg-audited-rule-id { font-weight: 700; margin-right: 0.4rem; }
+.gg-audited-rule-name { font-weight: 600; margin-right: 0.4rem; }
+.gg-audited-rule-status, .gg-audited-rule-verdict {
+  display: inline-block; margin-right: 0.35rem; padding: 0 0.4rem; border-radius: 999px; font-size: 0.72rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.18)); color: var(--ink-muted, #94a3b8);
+}
+.gg-audited-unmeasured { color: var(--amber, #f59e0b); font-size: 0.76rem; margin-top: 0.2rem; }
+.gg-audited-warn { color: var(--amber, #f59e0b); font-size: 0.76rem; margin-top: 0.2rem; }
+
+.gg-held {
+  display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; align-items: baseline; margin: 0.35rem 0;
+  padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed var(--amber, #f59e0b); min-width: 0;
+}
+.gg-held-title { font-weight: 600; }
+.gg-held-rows { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 0.25rem; }
+.gg-held-row { min-width: 0; overflow-wrap: anywhere; }
+.gg-held-line { margin-right: 0.4rem; }
+.gg-held-rule {
+  display: inline-block; margin-right: 0.3rem; padding: 0 0.4rem; border-radius: 999px; font-size: 0.72rem;
+  color: var(--amber, #f59e0b); border: 1px solid var(--amber, #f59e0b);
+}
+
+.gg-audited-compare { margin: 0.5rem 0; min-width: 0; overflow-x: auto; font-size: 0.8rem; }
+.gg-audited-compare-title { margin-bottom: 0.25rem; }
+.gg-audited-table { border-collapse: collapse; margin: 0.3rem 0; font-variant-numeric: tabular-nums; }
+.gg-audited-table th, .gg-audited-table td { padding: 0.15rem 0.5rem; text-align: right; white-space: nowrap; }
+.gg-audited-table th[scope='row'], .gg-audited-table td.gg-muted { text-align: left; }
+.gg-audited-table td.gg-muted { white-space: normal; min-width: 12rem; }
+.gg-audited-held-line { margin: 0.25rem 0; }
+
+/* the held tile pill — a muted amber: an A+ on the original, held here by the audit (never the A+ green). */
+.gg-state-aplus_held { color: var(--amber, #f59e0b); border-color: var(--amber, #f59e0b); opacity: 0.85; }

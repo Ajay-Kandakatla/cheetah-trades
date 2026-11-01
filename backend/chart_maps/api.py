@@ -683,6 +683,113 @@ async def chart_maps_gajjala_1m_entry_tape(
     return await asyncio.to_thread(_run)
 
 
+# ── 🧪 Gajjala · Audited (2026-11-01, BUILD_SPEC gg-audited §3.7 / WP-D) ─────────────────────────────────────────────
+# Ajay, verbatim: "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
+# Gajjals-Audited  So we can keep track of improvements on this tab". Three routes under the variant's api base
+# (chart_maps.gajjala.variant.GGA.api_base) — the SAME handlers' shape as the 1-minute page over the audited store
+# (ST.for_variant(GGA)). The audited tab is an OVERLAY on 🚩 Gajjala's own 5-minute pass (no pipeline of its own): its
+# scan on open is 🚩's on-open pass (the overlay rides it). Every audited alert is recorded in SHADOW, never sent; every
+# audit rule is UNMEASURED. The 🚩 and 1-minute routes above are untouched.
+@router.get("/chart-maps/gajjala-audited")
+async def chart_maps_gajjala_audited(
+    sub: str = Query("", description="the 🚩 Gajjala's subs (bull_flag default … track_record) — EMPTY with a `focus` "
+                                     "symbol = the server picks the sub; an unknown value serves the default."),
+    tf: str = Query("", description="5m | 15m — the tile bars (default 5m; 15m for the Horizontal Fade)."),
+    focus: str = Query("", description="a symbol to deep-link to."),
+    sort: str = Query("", description="☀️ Premarket only: volume (default, his ToS sort) | change."),
+    limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
+    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | 10d | all — an "
+                                      "unknown value serves the default; no session before the record start is read."),
+    email: Optional[str] = Depends(maybe_current_user),
+):
+    """🧪 Gajjala · Audited — 🚩 Gajjala's A+ reads filtered by the audit overlay (the registry in
+    chart_maps.gajjala.audited_rules). Served from Mongo ONLY (`gajjala.tab.build(…, variant=GGA)`) plus the same ONE
+    live fan-out for the shown tiles' now-line; on 🏁 only, ONE read of today's audited names (ledger.today_read over
+    the audited store). Every audited alert is recorded in SHADOW, never sent; every rule is UNMEASURED. Every argument
+    is coerced (a direct call receives the Query OBJECT). The owner (is_primary_admin) gets the 🚫 tags."""
+    from rotation.api import _scrub
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
+    from .gajjala import store as ST
+    from .gajjala import tab as GT
+    from .gajjala import variant as V
+    GC = gajjala_consts
+    owner = bool(is_primary_admin(email if isinstance(email, str) else ""))
+
+    def _run():
+        lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
+        sub_s, span_s = (sub if isinstance(sub, str) else ""), (span if isinstance(span, str) else "")
+        today = None
+        if sub_s.strip().lower() == GC.LEDGER_SUB:                   # 🏁 only — every other sub stays Mongo-only
+            try:
+                from .gajjala import ledger as LG
+                today = LG.today_read(None, span=span_s, store=ST.for_variant(V.GGA))
+            except Exception as exc:                                # the board serves without it
+                log.debug("chart-maps/gajjala-audited: track-record today read failed: %s", exc)
+                today = None
+        out = GT.build(sub_s,
+                       tf=tf if isinstance(tf, str) else "",
+                       focus=focus if isinstance(focus, str) else "",
+                       sort=sort if isinstance(sort, str) else "",
+                       limit=max(1, min(lim, GC.TILE_LIMIT_MAX)),
+                       span=span_s, today=today, owner=owner, variant=V.GGA)
+        tiles = out.get("tiles") or []
+        if tiles:
+            try:
+                live = board_mod._live_snapshot(tiles)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala-audited: live snapshot failed: %s", exc)
+                live = {}
+            try:
+                board_mod.attach_live_now(tiles, out, live=live)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala-audited: live now-line failed: %s", exc)
+        return _scrub(out)
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.post("/chart-maps/gajjala-audited/scan")
+async def chart_maps_gajjala_audited_scan(email: str = Depends(current_user_email)):
+    """🔄 The audited tab's scan on open — OWNER-ONLY (auth.is_admin_email; anyone else the stealth 404, as the 🚩
+    POST). The audited tab has no pass of its own: this is 🚩 Gajjala's on-open pass (gajjala.on_demand.request(),
+    GG5's child slot — NO variant), and the audit overlay rides it. Both push gates stay dry in that subprocess; the
+    audited alerts are recorded in shadow, never sent. This process never runs the pass."""
+    from auth import is_admin_email                                  # lazy: tests monkeypatch auth.is_admin_email
+    if not is_admin_email(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from rotation.api import _scrub
+    from .gajjala import on_demand as OD
+    return JSONResponse(_scrub(await asyncio.to_thread(OD.request)))
+
+
+@router.get("/chart-maps/gajjala-audited/entry-tape")
+async def chart_maps_gajjala_audited_entry_tape(
+    id: str = Query("", description="a 🏁 A+ row id of the audited tab (ledger_id '…|aplus')"),
+    lite: int = Query(0, ge=0, le=1, description="1 = the row's mini tape (t/c/s, every promo_tape.LITE_STRIDE-th bar)"),
+):
+    """🕰️ ONE audited A+ entry's tape — its bars at the variant's tape size, memo keyed per variant
+    (gajjala.tape.entry_tape over ST.for_variant(GGA)). Recorded in shadow, never sent; UNMEASURED. NEVER WRITES. 404
+    for an unknown id; a raising build serves 200 with the fault note."""
+    from rotation.api import _scrub
+    from .gajjala import store as ST
+    from .gajjala import tape as TP
+    from .gajjala import variant as V
+
+    def _run():
+        _id = id if isinstance(id, str) else ""
+        lt = isinstance(lite, int) and not isinstance(lite, bool) and lite == 1
+        try:
+            p = TP.entry_tape(_id, lite=lt, store=ST.for_variant(V.GGA))
+        except Exception as exc:                                # never a 500
+            log.warning("chart-maps/gajjala-audited/entry-tape: %s failed: %s", _id[:80], type(exc).__name__)
+            p = TP.fault_payload(_id, lite=lt, variant=V.GGA)
+        if p is None:
+            return JSONResponse({"detail": TP.ENTRY_TAPE_WORDS["not_found"]}, status_code=404)
+        return JSONResponse(_scrub(p))
+
+    return await asyncio.to_thread(_run)
+
+
 # ── 🚫 his broker list (2026-10-17, DECISIONS12 D5, AMENDMENTS12 F1 / F3) ─────────────────────────────────────────────
 # Ajay, verbatim: "ok then avoid showing me names that are not eligible in Fidelity then." / "Or just add a tag that not
 # eligible on Fidelity". A TAG, never a filter. Each route, in THIS order (R12): the primary-admin gate (a stealth 404

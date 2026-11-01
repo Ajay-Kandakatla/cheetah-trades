@@ -614,8 +614,17 @@ def test_the_rules_clause_rides_the_section_note_built_from_the_variant(monkeypa
             f"({GC.GG1M_RECORD_FROM}); its alerts ring your phone since {V.LIVE_SINCE_1M} by your call; from "
             f"{GC.GG1M_RECORD_FROM} until then they were recorded in shadow, never sent.")
     sec = RI._gajjala_section()
-    assert (" " + want + " UNMEASURED — no study here says these setups win. Not advice.") in sec["note"]
-    assert sec["note"].endswith("Not advice.")
+    # UPDATED 2026-11-01 (BUILD_SPEC gg-audited §3.7 / WP-D, Ajay "create a new tab for Gajjals … Gajjals-Audited"):
+    # rules_info now inserts the 🧪 audited-tab clause between the 1-minute clause and the UNMEASURED tail, so the
+    # pin is widened: the 1-minute clause is present, the audited clause follows it directly, the tail stays last.
+    from chart_maps.gajjala import audited_rules as AUD
+    assert (" " + want) in sec["note"]
+    assert (" " + want + " " + AUD.rules_clause() + " UNMEASURED — no study here says these setups win. Not advice."
+            ) in sec["note"]
+    assert sec["note"].endswith(" UNMEASURED — no study here says these setups win. Not advice.")
+    # NEGATIVE: the audited clause is said once and never ahead of the 1-minute clause
+    assert sec["note"].count(AUD.rules_clause()) == 1
+    assert sec["note"].index(want) < sec["note"].index(AUD.rules_clause())
     # NEGATIVE: picks stay 8, the stops and the alerts unchanged in number; the clause is said once
     assert len(sec["picks"]) == 8 and len(sec["stops"]) <= 6
     text = " ".join(sec["picks"] + sec["stops"] + sec["alerts"] + [sec["note"]])

@@ -277,3 +277,8 @@ GG1M_TAPE_TF_MIN = 1                     # TRANSPORT — MINE (HIS CALL #8): the
 GG1M_TAPE_BARS_MAX = LEDGER_TAPE_SESSIONS * (16 * 60 // GG1M_TAPE_TF_MIN)   # derived → 2,880
 GG1M_TILE_BARS_MAX = LEDGER_TAPE_BARS_MAX // LEDGER_TAPE_SESSIONS          # derived — MINE (HIS CALL #7): last 192 1-minute bars per card
 GG1M_RECORD_FROM = "2026-10-27"          # Ajay 2026-10-27 "add the track record for it from today" — no session before it is read
+
+# 🧪 Gajjala · Audited (Ajay 2026-11-01: "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited. So we can keep track of improvements on this tab") — chart_maps/gajjala/audited_rules.py holds every rule number with its prereg cite; nothing here is a GG number
+GAJJALA_AUDITED_PUSH_MODE = "shadow"     # Ajay 2026-11-01 (the ask above) — SHADOW: recorded, never sent; going live = HIS CALL (and a code change: audited_pass passes mode="shadow" explicitly)
+GGA_TAB_LABEL = "🧪 Gajjala · Audited"   # MINE — the main session's label (design #7); his words "Gajjals-Audited"
+GGA_RECORD_FROM = "2026-11-01"           # Ajay 2026-11-01 "So we can keep track of improvements on this tab" — the record starts at his ask; no session before it is read

@@ -1,0 +1,413 @@
+"""🧪 Gajjala · Audited — the served blocks of the audited tab (2026-11-01, BUILD_SPEC gg-audited §3.6 / WP-C).
+
+THE ASK (Ajay 2026-11-01, verbatim): "I would like you to create a new tab for Gajjals when you modifiy with audit of
+End of day.. Gajjals-Audited. So we can keep track of improvements on this tab".
+
+WHAT. `tab.build(…, variant=V.GGA)` serves 🚩 Gajjala's board off the SAME pass and the SAME reads (the GGA store
+borrows GG5's reads / potentials / passes); this module only lays the audit overlay the pass wrote
+(`gajjala_audited_overlay`, audited_pass.py) over those reads at serve time and serves four blocks:
+
+- `overlay_reads` — attaches an overlay entry to an A+ read ONLY when all three hold: the read is `aplus`, the entry's
+  `entry_bar_t` is the read's (the bar judged is the bar served), and the overlay's `pass_at` is at least the read's
+  `updated_at` (both are the pass clock — equal when the step ran on that pass). A failed audit turns the read into
+  the served-only state `aplus_held` (never stored on a GG5 doc). SHALLOW: a touched doc is a new dict with a new
+  `setups` dict; `tile` / `bars5` / `bars15` / curves stay the stored objects (nothing is copied, nothing mutated).
+  `n_unaudited` counts the A+ reads served without an audit (no fresh matching entry) — they show as the original.
+- `held_block` — the 🚩 A+ reads the audit held: the SAME gates as tab.aplus_block (rows come FROM aplus_block over
+  the held reads — freshness of the latest pass, the cron pass current, inside the window), each row + `held_by`,
+  `audit_text`, `frame`. A held A+ is listed, never hidden.
+- `audited_block` — the 🧪 strip: the registry rows (audited_rules.registry_rows — words only), the lane-only line,
+  the UNMEASURED line, the process line, the pass line (the GGA state doc audited_pass writes every pass), `stale`
+  when that doc is older than 🚩's latest pass (or missing, or not ok), and the unaudited count.
+- `compare_block` (🏁 only) — 🚩 original vs 🧪 audited over the GGA 🏁's own sessions, graded by the ONE ledger
+  (ledger._cell over the stored `same` column), gross ±1R by the 🏁 outcome; the held rows' counterfactual = the
+  original row's same-session grade (`no_original` when 🚩 has no row); `recon` (original_only / audited_only / both),
+  `by_rule` (+ its note: a held row counts under every rule it failed), `by_day`, `entry_weeks` over the WHOLE record
+  and `floor_reached` (a COUNT — `unmeasured_text` is ALWAYS served; no word flips by count).
+
+READS MONGO ONLY, never a provider. Every rule, number and sentence comes from audited_rules.py / variant.WORDS_GGA /
+the ledger — nothing here types a threshold. UNMEASURED — nothing here trades or enters a lane. Not advice.
+"""
+from __future__ import annotations
+
+import logging
+from datetime import date
+from typing import Optional
+
+from . import audited_rules as AUD
+from . import constants as GC
+from . import ledger as LG
+from . import tab as GT
+from . import variant as V
+
+log = logging.getLogger("chart_maps.gajjala.audited_tab")
+
+NO_ORIGINAL = "no_original"                                                     # §3.6 — the held row's outcome key
+NO_ORIGINAL_TEXT = "no original row — the original's send failed"              # §3.6 — served verbatim
+FILLED_STATES = ("win", "loss", "open", "flat")                                 # a fill printed (ledger.CELL_STATES)
+OPEN_FLAT_STATES = ("open", "flat")
+UNFILLED_STATES = ("no_entry",)
+SIDE_LABELS = {"original": "🚩 original", "audited": "🧪 audited"}              # §3.6 — served verbatim
+
+
+# ── overlay at serve time ─────────────────────────────────────────────────────────────────────────────────────────
+def _setups(doc) -> dict:
+    s = doc.get("setups") if isinstance(doc, dict) else None
+    return s if isinstance(s, dict) else {}
+
+
+def overlay_reads(reads_by: dict, st, session) -> tuple:
+    """(reads_by2, stats) — §3.6 [C2, C8]. A name with no overlay doc passes through as the SAME doc object; a touched
+    doc is `dict(doc)` with `setups = {**doc["setups"], **touched}` (shallow — the tile is shared by reference)."""
+    overlays: dict = {}
+    for o in st.overlays(session) or []:
+        if isinstance(o, dict) and o.get("symbol"):
+            overlays[str(o["symbol"]).upper()] = o
+    out: dict = {}
+    n_orig = n_aud = n_held = n_un = 0
+    for sym, doc in (reads_by or {}).items():
+        setups = _setups(doc)
+        ov = overlays.get(str(sym).upper())
+        entries = ov.get("setups") if isinstance(ov, dict) and isinstance(ov.get("setups"), dict) else {}
+        ov_at = GT._stamp_utc(ov.get("pass_at")) if isinstance(ov, dict) else None
+        upd = GT._stamp_utc(doc.get("updated_at")) if isinstance(doc, dict) else None
+        touched: dict = {}
+        for setup, r in setups.items():
+            if not isinstance(r, dict) or r.get("state") != "aplus":
+                continue                                            # (1) an audit never paints a non-A+ read
+            n_orig += 1
+            e = entries.get(setup)
+            if (not isinstance(e, dict) or e.get("entry_bar_t") != r.get("entry_bar_t")      # (2) the bar served
+                    or ov_at is None or upd is None or ov_at < upd):                       # (3) as fresh as the read
+                n_un += 1
+                continue
+            audit = {k: e[k] for k in AUD.AUDIT_SERVED_KEYS if k in e}
+            if audit.get("aplus") is True:
+                touched[setup] = dict(r, audit=audit)
+                n_aud += 1
+            else:                                                   # fail closed: anything but a pass is held
+                touched[setup] = dict(r, audit=audit, state=AUD.HELD_STATE)
+                n_held += 1
+        if touched:
+            doc2 = dict(doc)
+            doc2["setups"] = {**setups, **touched}
+            out[sym] = doc2
+        else:
+            out[sym] = doc
+    ats = [a for a in (GT._stamp_utc(o.get("pass_at")) for o in overlays.values()) if a is not None]
+    stats = {"n_aplus_original": n_orig, "n_aplus_audited": n_aud, "n_held": n_held, "n_unaudited": n_un,
+             "overlay_at": max(ats) if ats else None}
+    return out, stats
+
+
+# ── 🚩 A+ held by the audit ───────────────────────────────────────────────────────────────────────────────────────
+def _gate_open(latest: Optional[dict], now, *, in_window: bool, cron: Optional[dict], session: date, v) -> bool:
+    """tab.aplus_block's own gate (this session's pass, the cron pass within the variant's stale seconds, inside the
+    window) — read with the tab's own clocks; decides only WHICH empty sentence the held block serves."""
+    latest = latest if isinstance(latest, dict) else None
+    at = GT._at_utc(latest)
+    if cron is None and latest is not None and not latest.get("on_demand"):
+        cron = latest
+    c_at = GT._at_utc(cron)
+    c_age = (GT._et(now) - GT._et(c_at)).total_seconds() if c_at is not None else None
+    cron_ok = c_age is not None and c_age <= V.stale_after_sec(v)
+    this_session = latest is not None and at is not None and latest.get("date") == session.isoformat()
+    return bool(in_window and this_session and cron_ok)
+
+
+def held_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool, scan: dict, cron: Optional[dict],
+               session: date, v) -> dict:
+    """§3.6 — the held A+ section: rows FROM tab.aplus_block over the held reads (read as the A+ they were on 🚩), so
+    the freshness / cron / window gates are the banner's own; each row + `held_by` [{id, why}], `audit_text`."""
+    vv = V.of(v)
+    view: dict = {}
+    for sym, doc in (reads_by or {}).items():
+        held = {s: dict(r, state="aplus") for s, r in _setups(doc).items()
+                if isinstance(r, dict) and r.get("state") == AUD.HELD_STATE}
+        if held:
+            view[sym] = dict(doc, setups=held)
+    ab = GT.aplus_block(view, latest, now, in_window=in_window, scan=scan, cron=cron, session=session, v=vv)
+    rows = []
+    for row in ab.get("rows") or []:
+        r = _setups((reads_by or {}).get(row.get("symbol"))).get(row.get("setup")) or {}
+        audit = r.get("audit") if isinstance(r.get("audit"), dict) else {}
+        failed = [f for f in audit.get("failed") or [] if isinstance(f, dict)]
+        rows.append(dict(row, held_by=[{"id": f.get("id"), "why": f.get("why")} for f in failed],
+                         audit_text=audit.get("text"), frame=audit.get("frame") or row.get("frame")))
+    empty = None
+    if not rows:
+        empty = (V.word("held_empty", vv) if _gate_open(latest, now, in_window=in_window, cron=cron,
+                                                         session=session, v=vv)
+                 else ab.get("empty_text"))                         # the banner's served gate reason
+    return {"title": V.word("held_title", vv, n=len(rows)), "rows": rows, "empty_text": empty,
+            "note": V.word("process", vv)}
+
+
+# ── 🧪 the strip ──────────────────────────────────────────────────────────────────────────────────────────────────
+def _int(x) -> Optional[int]:
+    return x if isinstance(x, int) and not isinstance(x, bool) else None
+
+
+def audited_block(st, session: date, now, latest: Optional[dict], stats: Optional[dict]) -> dict:
+    """§3.6 — the registry, the lane-only / UNMEASURED / process lines, the pass line off the GGA state doc
+    (audited_pass.LATEST_ID), `stale` (the doc older than 🚩's latest pass, missing, or not ok) and the unaudited count."""
+    from . import audited_pass as AP
+    vv = V.GGA
+    g3 = AUD.by_id("G3")
+    params = dict(getattr(g3, "params", None) or {})
+    state = st.get_state(AP.LATEST_ID) or {}
+    s_at = GT._stamp_utc(state.get("at"))
+    l_at = GT._at_utc(latest)
+    ok = state.get("ok") is True
+    stale = bool(l_at is not None and (s_at is None or s_at < l_at or not ok))
+    pass_text = None
+    if s_at is not None and ok:
+        pass_text = V.word("pass_line", vv, hhmm=GT._et(s_at).strftime("%H:%M"),
+                           n_read=_int(state.get("n_read")) or 0,
+                           n_orig=_int(state.get("n_aplus_original")) or 0,
+                           n_aud=_int(state.get("n_aplus_audited")) or 0,
+                           n_held=_int(state.get("n_held")) or 0)
+    n_un = _int((stats or {}).get("n_unaudited")) if isinstance(stats, dict) else None
+    return {"title": V.word("strip_title", vv),
+            "registry": AUD.registry_rows(),
+            "on_ids": [r.id for r in AUD.on_rules()],
+            "lane_only_text": V.word("lane_only", vv, m=params.get("m", AUD.G3_MAX_AGE_MIN),
+                                     mr=params.get("missed_r", AUD.G3_MISSED_R)),
+            "unmeasured_text": V.word("unmeasured", vv, floor=AUD.MEASURE_FLOOR_WEEKS),
+            "process_text": V.word("process", vv),
+            "pass": {"at_et": GT._et(s_at).strftime("%H:%M") if s_at is not None else None,
+                     "ok": ok if state else None,
+                     "n_read": _int(state.get("n_read")),
+                     "n_aplus_original": _int(state.get("n_aplus_original")),
+                     "n_aplus_audited": _int(state.get("n_aplus_audited")),
+                     "n_held": _int(state.get("n_held")),
+                     "text": pass_text},
+            "stale": stale,
+            "stale_text": (V.word("pass_stale", vv, hhmm=GT._et(l_at).strftime("%H:%M")) if stale else None),
+            "unaudited": {"n": n_un, "text": V.word("unaudited_line", vv, n=n_un) if n_un else None}}
+
+
+# ── 🏁 audited vs original ────────────────────────────────────────────────────────────────────────────────────────
+def _docs_by_id(docs) -> dict:
+    if docs is None:
+        raise LG.LedgerReadError("the ledger could not be read")
+    return {d.get("_id"): d for d in docs if isinstance(d, dict)}
+
+
+def _state(row: dict, docs: dict, now, session: date, is_today: bool) -> str:
+    """The row's same-session state — ledger._cell over the stored `same` column (the 🏁's own word)."""
+    doc = docs.get(row["id"]) or {}
+    g = doc.get("same") if isinstance(doc.get("same"), dict) else None
+    return LG._cell(row, "same", g, False, now, session, is_today)["state"]
+
+
+def _held_docs(st, sessions) -> list:
+    got = st.held_rows(sessions)
+    if got is None:
+        raise LG.LedgerReadError("the held A+ rows could not be read")
+    out, seen = [], set()
+    for d in got:
+        if not isinstance(d, dict) or d.get("state") != AUD.HELD_ROW_STATE:
+            continue
+        sym, setup, day = str(d.get("symbol") or "").upper(), d.get("setup"), LG._as_date(d.get("date"))
+        if not sym or not isinstance(setup, str) or not setup or day is None:
+            continue
+        rid = LG.ledger_id(day.isoformat(), sym, setup, LG.KINDS[1])
+        if rid in seen:
+            continue
+        seen.add(rid)
+        audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
+        ids = [f.get("id") for f in audit.get("failed") or [] if isinstance(f, dict) and f.get("id")]
+        out.append({"id": rid, "date": day.isoformat(), "symbol": sym, "setup": setup, "held_by": ids})
+    return out
+
+
+def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
+    """{original, audited, held} rows of these sessions, each with its same-session `state`."""
+    shared = st.shared
+    orig = [r for r in LG.rows_for(sessions, shared) if r.get("kind") == LG.KINDS[1]]
+    aud = [r for r in LG.rows_for(sessions, st, variant=V.GGA) if r.get("kind") == LG.KINDS[1]]
+    odocs = _docs_by_id(shared.ledger_docs(sessions))
+    adocs = _docs_by_id(st.ledger_docs(sessions))
+    for r in orig:
+        r["state"] = _state(r, odocs, now, session, is_today)
+    for r in aud:
+        r["state"] = _state(r, adocs, now, session, is_today)
+    by_orig = {r["id"]: r for r in orig}
+    held = _held_docs(st, sessions)
+    for h in held:
+        o = by_orig.get(h["id"])
+        h["state"] = o["state"] if o is not None else NO_ORIGINAL
+        if o is None:
+            h["state_text"] = NO_ORIGINAL_TEXT
+        else:
+            doc = odocs.get(o["id"]) or {}
+            g = doc.get("same") if isinstance(doc.get("same"), dict) else None
+            h["state_text"] = LG._cell(o, "same", g, False, now, session, is_today)["text"]
+    return {"original": orig, "audited": aud, "held": held}
+
+
+def _tally(rows: list) -> dict:
+    c = {"n": len(rows), "filled": 0, "win": 0, "loss": 0, "open_flat": 0, "unfilled": 0, "pending": 0,
+         NO_ORIGINAL: 0}
+    for r in rows:
+        s = r.get("state")
+        if s in FILLED_STATES:
+            c["filled"] += 1
+        if s == "win":
+            c["win"] += 1
+        elif s == "loss":
+            c["loss"] += 1
+        elif s in OPEN_FLAT_STATES:
+            c["open_flat"] += 1
+        elif s in UNFILLED_STATES:
+            c["unfilled"] += 1
+        elif s == NO_ORIGINAL:
+            c[NO_ORIGINAL] += 1
+        else:
+            c["pending"] += 1                                       # pending / no plan / no risk / no time / split
+    decided = c["win"] + c["loss"]
+    r_mult = float(GC.LEDGER_R_MULT)
+    c["mean_r"] = round((c["win"] * r_mult - c["loss"] * 1.0) / decided, 4) if decided else None
+    c["win_pct"] = LG._win_pct(c)
+    return c
+
+
+def _wl_text(c: dict) -> str:
+    pct = f" ({c['win_pct']}%)" if c.get("win_pct") is not None else ""
+    return f"{c['win']} W / {c['loss']} L{pct}"
+
+
+def _mean_text(c: dict) -> str:
+    if c.get("mean_r") is None:
+        return "no decided trade yet"
+    return f"mean {c['mean_r']:+.2f}R over {c['win'] + c['loss']} decided"
+
+
+def _side(key: str, rows: list) -> dict:
+    c = _tally(rows)
+    label = SIDE_LABELS[key]
+    bits = [f"{label}: {c['n']} A+", _wl_text(c), f"{c['open_flat']} open or flat", f"{c['unfilled']} no entry"]
+    if c["pending"]:
+        bits.append(f"{c['pending']} not graded yet")
+    bits += [_mean_text(c), GT.UNMEASURED]
+    return {"key": key, "label": label, "n": c["n"], "filled": c["filled"], "win": c["win"], "loss": c["loss"],
+            "open_flat": c["open_flat"], "unfilled": c["unfilled"], "mean_r": c["mean_r"], "win_pct": c["win_pct"],
+            "text": " · ".join(bits)}
+
+
+def _held_side(rows: list) -> dict:
+    c = _tally(rows)
+    bits = [f"🚩 A+ held by the audit: {c['n']}", "what the original did: " + _wl_text(c),
+            f"{c['open_flat']} open or flat", f"{c['unfilled']} no entry"]
+    if c[NO_ORIGINAL]:
+        bits.append(f"{c[NO_ORIGINAL]} with no original row")
+    if c["pending"]:
+        bits.append(f"{c['pending']} not graded yet")
+    bits += [_mean_text(c), GT.UNMEASURED]
+    out_rows = []
+    for h in sorted(rows, key=lambda x: (x["date"], x["symbol"], GC.SETUPS.index(x["setup"])
+                                         if x["setup"] in GC.SETUPS else len(GC.SETUPS)), reverse=True):
+        label = GT._setup_label(h["setup"])
+        ids = list(h.get("held_by") or [])
+        out_rows.append({"date": h["date"], "symbol": h["symbol"], "setup": h["setup"], "setup_label": label,
+                         "held_by": ids, "outcome": h["state"], "outcome_text": h.get("state_text"),
+                         "text": (f"{h['date']} · {h['symbol']} · {label} · held by "
+                                  f"{', '.join(ids) if ids else '—'} · the original: {h.get('state_text') or '—'}")})
+    return {"n": c["n"], "win": c["win"], "loss": c["loss"], "open_flat": c["open_flat"], "unfilled": c["unfilled"],
+            NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"], "text": " · ".join(bits), "rows": out_rows}
+
+
+def _rule_ids(held: list) -> list:
+    reg = [r.id for r in AUD.REGISTRY]
+    ids = [r.id for r in AUD.on_rules()]
+    for h in held:
+        for i in h.get("held_by") or []:
+            if i not in ids:
+                ids.append(i)
+    return sorted(ids, key=lambda i: (reg.index(i) if i in reg else len(reg), str(i)))
+
+
+def _by_rule(held: list) -> list:
+    out = []
+    for rid in _rule_ids(held):
+        mine = [h for h in held if rid in (h.get("held_by") or [])]
+        c = _tally(mine)
+        rule = AUD.by_id(rid)
+        name = getattr(rule, "name", None) or rid
+        out.append({"id": rid, "n_held": c["n"], "win": c["win"], "loss": c["loss"], "unfilled": c["unfilled"],
+                    "text": (f"{rid} {name}: {c['n']} held · what the original did: {c['win']} W / {c['loss']} L · "
+                             f"{c['unfilled']} no entry · {GT.UNMEASURED}")})
+    return out
+
+
+def _by_day(sides: dict) -> list:
+    days = sorted({r["date"] for rows in sides.values() for r in rows}, reverse=True)
+    out = []
+    for d in days:
+        cell = {}
+        for k in ("original", "audited", "held"):
+            c = _tally([r for r in sides[k] if r["date"] == d])
+            cell[k] = {"n": c["n"], "win": c["win"], "loss": c["loss"]}
+        dd = LG._as_date(d)
+        label = LG._dow_md(dd) if dd is not None else d
+        o, a, h = cell["original"], cell["audited"], cell["held"]
+        out.append({"date": d, "label": label, **cell,
+                    "text": (f"{label}: 🚩 {o['n']} ({o['win']} W / {o['loss']} L) · 🧪 {a['n']} ({a['win']} W / "
+                             f"{a['loss']} L) · held {h['n']} ({h['win']} W / {h['loss']} L)")})
+    return out
+
+
+def _entry_weeks(audited: list) -> int:
+    weeks = set()
+    for r in audited:
+        if r.get("state") in FILLED_STATES:
+            d = LG._as_date(r.get("date"))
+            if d is not None:
+                weeks.add(tuple(d.isocalendar()[:2]))
+    return len(weeks)
+
+
+def compare_block(st, session: date, now, *, span: str = "", is_today: bool = False) -> dict:
+    """§3.6 [C5] — 🚩 original vs 🧪 audited on the GGA 🏁's own sessions (its record start clips them). Raises
+    ledger.LedgerReadError on a read fault (the tab softens it to None)."""
+    now = LG._aware(now)
+    session = LG._as_date(session)
+    span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
+    sessions = LG._clip(LG._sessions_for(span_k, session, st, [], V.GGA), V.GGA)
+    sides = _read_sides(st, sessions, now, session, is_today)
+    oid = {r["id"] for r in sides["original"]}
+    aid = {r["id"] for r in sides["audited"]}
+    hid = {h["id"] for h in sides["held"]}
+    original_only = len(oid - aid - hid)
+    audited_only = len((aid | hid) - oid)          # on this tab (audited or held) with no 🚩 row: the send failed
+    both = len(aid & hid)                          # held on one pass, audited A+ on a later one the same day
+    all_k = "all"
+    if span_k == all_k:
+        weeks = _entry_weeks(sides["audited"])
+    else:                                          # the floor counts the WHOLE record, never the span shown
+        rec = LG._clip(LG._sessions_for(all_k, session, st, [], V.GGA), V.GGA)
+        aud_all = [r for r in LG.rows_for(rec, st, variant=V.GGA) if r.get("kind") == LG.KINDS[1]]
+        adocs = _docs_by_id(st.ledger_docs(rec))
+        for r in aud_all:
+            r["state"] = _state(r, adocs, now, session, is_today)
+        weeks = _entry_weeks(aud_all)
+    floor = AUD.MEASURE_FLOOR_WEEKS
+    reached = weeks >= floor
+    vv = V.GGA
+    return {"title": V.word("compare_title", vv),
+            "honesty": V.word("compare_honesty", vv, r=float(GC.LEDGER_R_MULT), floor=floor, n=weeks),
+            "span": span_k,
+            "sides": [_side("original", sides["original"]), _side("audited", sides["audited"])],
+            "held": _held_side(sides["held"]),
+            "recon": {"original_only": original_only, "audited_only": audited_only, "both": both,
+                      "text": V.word("compare_recon", vv, original_only=original_only, audited_only=audited_only)},
+            "by_rule": _by_rule(sides["held"]),
+            "by_rule_note": V.word("by_rule_note", vv),
+            "by_day": _by_day(sides),
+            "entry_weeks": weeks, "floor_weeks": floor, "floor_reached": reached,
+            "unmeasured_text": (V.word("floor_reached", vv, n=weeks, floor=floor) if reached
+                                else V.word("unmeasured", vv, floor=floor))}
+
+
+__all__ = ["overlay_reads", "held_block", "audited_block", "compare_block", "NO_ORIGINAL", "NO_ORIGINAL_TEXT"]

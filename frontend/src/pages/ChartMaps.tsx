@@ -1686,6 +1686,17 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            state kept and no on-open POST for this page. Must sit BEFORE the
            SupportLevels fallback below. */
         <GajjalaBoard key="gajjala_1m" variant="gajjala_1m" />
+      ) : tab === 'gajjala_audited' ? (
+        /* 🧪 Gajjala · Audited (Ajay 2026-11-01: "I would like you to create a
+           new tab for Gajjals when you modifiy with audit of End of day.."
+           "Gajjals-Audited" "So we can keep track of improvements on this
+           tab"). The SAME board on its own endpoint
+           (GET /chart-maps/gajjala-audited): 🚩 Gajjala's reads filtered by the
+           audit overlay, every alert recorded in shadow. The KEY is
+           load-bearing, as for the 1-minute page: without it React REUSES the
+           board above (same component type, same slot). Must sit BEFORE the
+           SupportLevels fallback below. */
+        <GajjalaBoard key="gajjala_audited" variant="gajjala_audited" />
       ) : tab === 'news' ? (
         /* 📰 News (Ajay 2026-09-24: "give me a bullish market or bearsish
            market … pull Macro calendar that has T1 and T2 tier events … which

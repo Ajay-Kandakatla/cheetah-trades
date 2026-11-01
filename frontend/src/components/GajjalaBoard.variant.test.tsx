@@ -130,8 +130,9 @@ beforeEach(() => { userRet = OWNER; tracked.length = 0; _resetGgLiteCache(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); userRet = null; });
 
 describe('ggVariant — the endpoint base per page (2026-10-27)', () => {
-  it('GG_VARIANT_BASE == backend variant.py api_base for both pages', () => {
-    expect(GG_VARIANT_BASE).toEqual({ gajjala: '/chart-maps/gajjala', gajjala_1m: '/chart-maps/gajjala-1m' });
+  it('GG_VARIANT_BASE == backend variant.py api_base for all three pages', () => {
+    expect(GG_VARIANT_BASE).toEqual({ gajjala: '/chart-maps/gajjala', gajjala_1m: '/chart-maps/gajjala-1m', gajjala_audited: '/chart-maps/gajjala-audited' });
+    expect(ggBase('gajjala_audited')).toBe('/chart-maps/gajjala-audited');
     expect(ggBase('gajjala_1m')).toBe(P1);
     expect(ggBase('gajjala')).toBe(P5);
   });

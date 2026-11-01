@@ -83,6 +83,14 @@
  * 'gajjala_1m', and the 1-minute board serves a `variant` block (its title, its honesty line, its frames — every word
  * and every frame SERVED by variant.served_block); parseGgTf takes the allowed frames (the served `variant.tfs`, else
  * GG_TFS — a '1m' never reaches the 5-minute board). Every alert there is recorded in shadow. UNMEASURED.
+ *
+ * 🧪 Gajjala · Audited (2026-11-01, gg-audited spec §3.8). Ajay: "I would like you to create a new tab for Gajjals when
+ * you modifiy with audit of End of day.." "Gajjals-Audited" "So we can keep track of improvements on this tab".
+ * GgBoard.tab gains 'gajjala_audited'; the audited board serves `audited` (the 🧪 strip), `held` (A+ held by the
+ * audit — listed, never hidden), `audited_compare` (the 🏁 side by side) and a per-tile `gajjala.audit`. A held tile's
+ * state is the served 'aplus_held' (GgState stays — an unknown state is a string). The FE types every key below and
+ * no rule, number or sentence: all of it is served. `floor_reached` is a COUNT flag, never printed as a verdict.
+ * Shadow only. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -206,6 +214,91 @@ export type GgRead = {
   postmarket?: { text?: string | null; checked_text?: string | null; exhaustion_text?: string | null } | null;
   /** 🧠 sub tiles only: why this card is on the roll-up (§3.9 (b), W12). */
   potential?: GgPotentialTile | null;
+  /** 🧪 2026-11-01: the audit block — the audited board only (absent on 🚩 Gajjala's / 1-min). Served; the FE composes none. */
+  audit?: GgAudit | null;
+};
+
+/* ---- 🧪 Gajjala · Audited (2026-11-01, gg-audited spec §3.6 / §3.8) — every string and number SERVED. ---- */
+/** One rule a read failed: its id and the served why. */
+export type GgAuditFail = { id: string; why?: string | null };
+/** The per-tile audit block (backend audited_rules.judge, copied by audited_tab.overlay_reads). */
+export type GgAudit = {
+  aplus?: boolean | null;
+  original_aplus?: boolean | null;
+  rules?: string[] | null;
+  passed?: string[] | null;
+  failed?: GgAuditFail[] | null;
+  /** The frame the rules were judged on (the read's own). */
+  frame?: string | null;
+  values?: Record<string, Record<string, unknown> | null> | null;
+  text?: string | null;
+  version?: number | null;
+};
+/** One served registry row of the 🧪 strip (audited_rules.registry_rows) — words only. */
+export type GgAuditedRegistryRow = {
+  id: string;
+  name?: string | null;
+  rule?: string | null;
+  params_text?: string | null;
+  source_text?: string | null;
+  since?: string | null;
+  status?: string | null;
+  status_text?: string | null;
+  verdict?: string | null;
+  verdict_text?: string | null;
+  changes_text?: string | null;
+  applies?: boolean | null;
+  note?: string | null;
+};
+/** The 🧪 strip block (audited_tab.audited_block). */
+export type GgAuditedBlock = {
+  title?: string | null;
+  registry?: GgAuditedRegistryRow[] | null;
+  on_ids?: string[] | null;
+  lane_only_text?: string | null;
+  unmeasured_text?: string | null;
+  process_text?: string | null;
+  pass?: {
+    at_et?: string | null; ok?: boolean | null; n_read?: number | null; n_aplus_original?: number | null;
+    n_aplus_audited?: number | null; n_held?: number | null; text?: string | null;
+  } | null;
+  stale?: boolean | null;
+  stale_text?: string | null;
+  unaudited?: { n?: number | null; text?: string | null } | null;
+};
+/** A held row = the 🎯 A+ row shape + the rules that held it (audited_tab.held_block). */
+export type GgHeldRow = GgAplusRow & { held_by?: GgAuditFail[] | null; audit_text?: string | null };
+/** The held section (audited_tab.held_block). */
+export type GgHeldBlock = { title?: string | null; rows?: GgHeldRow[] | null; empty_text?: string | null; note?: string | null };
+/** One side of the 🏁 compare (original / audited). */
+export type GgAuditedSide = {
+  key: string; label?: string | null; n?: number | null; filled?: number | null; win?: number | null; loss?: number | null;
+  open_flat?: number | null; unfilled?: number | null; mean_r?: number | null; win_pct?: number | null; text?: string | null;
+};
+export type GgAuditedTally = { n?: number | null; win?: number | null; loss?: number | null };
+/** The 🏁 compare block (audited_tab.compare_block). `floor_reached` is a COUNT flag (entry weeks ≥ the lab's floor) —
+ *  never a verdict, never printed; `unmeasured_text` is ALWAYS the served words. */
+export type GgAuditedCompare = {
+  title?: string | null;
+  honesty?: string | null;
+  span?: string | null;
+  sides?: GgAuditedSide[] | null;
+  held?: {
+    n?: number | null; win?: number | null; loss?: number | null; open_flat?: number | null; unfilled?: number | null;
+    no_original?: number | null; mean_r?: number | null; text?: string | null;
+    rows?: { date?: string | null; symbol: string; setup?: string | null; setup_label?: string | null; held_by?: string[] | null;
+             outcome?: string | null; outcome_text?: string | null; text?: string | null }[] | null;
+  } | null;
+  recon?: { original_only?: number | null; audited_only?: number | null; both?: number | null; text?: string | null } | null;
+  by_rule?: { id: string; n_held?: number | null; win?: number | null; loss?: number | null; unfilled?: number | null;
+              text?: string | null }[] | null;
+  by_rule_note?: string | null;
+  by_day?: { date: string; label?: string | null; original?: GgAuditedTally | null; audited?: GgAuditedTally | null;
+             held?: GgAuditedTally | null; text?: string | null }[] | null;
+  entry_weeks?: number | null;
+  floor_weeks?: number | null;
+  floor_reached?: boolean | null;
+  unmeasured_text?: string | null;
 };
 
 /* ---- 🧠 Potential + 📈 Track (2026-10-15, BUILD_SPEC4 §3.9) — every string SERVED. ---- */
@@ -496,7 +589,7 @@ export type GgVariantBlock = {
 };
 
 export type GgBoard = {
-  tab: 'gajjala' | 'gajjala_1m';
+  tab: 'gajjala' | 'gajjala_1m' | 'gajjala_audited';
   /** 🚩 2026-10-27: the 1-minute page's served block; absent on 🚩 Gajjala's (and on an older API). */
   variant?: GgVariantBlock | null;
   sub: GgSub;
@@ -569,6 +662,10 @@ export type GgBoard = {
   broker_flags?: GgBrokerFlags | null;
   /** 🚫 the served graveyard tag line (present iff graveyard_text) — owner only; null when no graveyard name is listed. */
   graveyard_broker_text?: string | null;
+  /** 🧪 2026-11-01: the audited board only (absent elsewhere) — the 🧪 strip, the held section, the 🏁 compare. */
+  audited?: GgAuditedBlock | null;
+  held?: GgHeldBlock | null;
+  audited_compare?: GgAuditedCompare | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the

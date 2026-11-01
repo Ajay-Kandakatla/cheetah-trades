@@ -1,0 +1,856 @@
+"""🚩 Gajjala gates G1–G4 — the pre-registered replay (2026-10-30). READ-ONLY: Mongo reads, files under --out only.
+
+THE PREREG (frozen before any run): eod-audits/research/2026-10-30_gajjala_gates_prereg.md. Ajay 2026-10-29, verbatim:
+  "For the missing gaps please idenfity solutions that you fit appropriate for all … I would like you to take control
+   of the startegy an ideal one"
+Every variant value below is copied from that file; none is tuned here. 13 single-gate trials + 1 combined = 14.
+
+  G1 break-bar proof   A+ only when the 5-min break bar CLOSES above the trigger AND its volume ≥ k × the mean volume
+                       of the base bars, k ∈ G1_K.
+  G2 red closes        not A+ when the base has more than GC.RED_CLOSES_WAIT (GG's own 3) consecutive red closes.
+                       Read with the detectors' own `red_closes` (the RED_CLOSES_MODE "criterion" engine, ONE engine).
+  G3 stale / missed    no lane entry when the ring is older than m minutes at the tick (m ∈ G3_M_MIN) or the price at
+                       the tick is past trigger + MISSED_R × R (MISSED_R ∈ G3_MISSED_R). The tick = the 🏁 grader's
+                       fill minute; the price at the tick = its fill price.
+  G4 stop-distance cap not A+ when (trigger − stop)/trigger > c %, c ∈ G4_C_PCT; on 🎾 the stop is frozen at the first
+                       armed read (the first 5-min pass whose 🎾 read is `potential_kind` "armed" with the alert's
+                       trigger). A FILTER only: the trade's own stop and R are the alert's.
+
+COHORT. Every 🚩 A+ that RANG on the 5-minute page (gajjala_ledger kind "aplus", line "live") + the ⏪ replay rows
+(gajjala_replay, state "replayed") on sessions with no live row. The 1-minute page is never read. A row is a TRADE when
+its same-session 🏁 grade filled; R is the 🏁 grade's own math (win = +LEDGER_R_MULT R; loss = the stop; open / flat =
+its close) minus COST_BPS_PER_SIDE per side. A trade whose gate inputs cannot be read off the cached bars (no minutes
+on file, or today's detectors do not re-read the break at the claim's entry bar) leaves EVERY trial and the baseline
+(counted, printed).
+
+SPLIT. The cohort's sessions in date order; the first two-thirds (strategy lab OOS_NUM / OOS_DEN rule) are in-sample:
+each gate's variant with the highest in-sample mean net R is its pick (ties → prereg order); the combined rule = every
+gate's pick. The last third is read once, in this one run, for the picks, the combined rule and the baseline only —
+the per-trial table carries no out-of-sample column for a variant that was not picked.
+
+GATES OF RECORD (the strategy lab's in-script engines, imported): A = OOS mean net R > 0 with the whole-entry-week
+bootstrap CI (LAB.BOOT_DRAWS) above 0; B = the gate beats ≥ LAB.PLACEBO_BEAT_SHARE of PLACEBO_SETS random same-size
+draws from the same OOS cohort; C = DSR ≥ LAB.DSR_PASS (PSR against LAB.dsr_sr0 of the 14 trials' in-sample per-trade
+Sharpes). POSITIVE word = LAB.positive_verdict (TOO SMALL under LAB.MIN_CLUSTERS OOS entry weeks). SHIP word (the
+prereg's weaker rule): OOS mean ≥ the baseline's AND beat share ≥ SHIP_BEAT_SHARE → SHIP, else OFF; UNMEASURED when the
+OOS read has fewer than LAB.MIN_CLUSTERS entry weeks (the rule's mechanical answer is printed beside it).
+
+SAFETY. Refuses 09:30–16:00 ET on a weekday (gajjala_study.refused_window). Mongo through read-only handles (every
+write method raises; pymongo's own write methods are also patched to raise). trading.broker / alpaca can never be
+imported. Nothing is fetched: bars come from the app's intraday_cache only.
+
+RUN (a throwaway `docker run --rm` off the api image, outside RTH):
+  python -m scripts.gajjala_gates_study_2026_10_30 --out /out --prereg /prereg.md --sha <worktree HEAD>
+EXIT: 0 written · 2 refused (RTH, a broker module loaded, Mongo unreadable).
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import importlib.abc
+import json
+import os
+import sys
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from pathlib import Path
+from typing import Callable, Optional
+from zoneinfo import ZoneInfo
+
+import numpy as np
+import pandas as pd
+
+from chart_maps.gajjala import bars as BARS
+from chart_maps.gajjala import constants as GC
+from chart_maps.gajjala import detectors as D
+from chart_maps.gajjala import ledger as LG
+from chart_maps.gajjala import potential as PT
+from scripts import gajjala_losers as LS
+from scripts import gajjala_study as S
+from scripts import resiliency_study as RS
+from scripts import strategy_lab_2026_10_29 as LAB
+
+ET = ZoneInfo("America/New_York")
+STUDY = "gajjala_gates_2026_10_30"
+PREREG_NAME = "2026-10-30_gajjala_gates_prereg.md"
+
+# ── frozen in the prereg (copied, never tuned) ──────────────────────────────────────────────────────────────────────
+G1_K = (1.0, 1.5, 2.0)                  # prereg G1 "k ∈ {1.0, 1.5, 2.0}"
+G2_MAX_RED = GC.RED_CLOSES_WAIT         # prereg G2 "> 3 … No variants (GG's own number)" = the app's constant
+G3_M_MIN = (10, 20, 30)                 # prereg G3 "m ∈ {10, 20, 30}"
+G3_MISSED_R = (0.5, 1.0)                # prereg G3 "MISSED_R ∈ {0.5, 1.0}"
+G4_C_PCT = (8.0, 10.0, 12.0)            # prereg G4 "c ∈ {8 %, 10 %, 12 %}"
+COST_BPS_PER_SIDE = 10.0                # prereg Method "a conservative 10 bps/side cost"
+SHIP_BEAT_SHARE = 0.80                  # prereg Ship rule "beats ≥ 80 % of the placebo draws"
+N_TRIALS = 14                           # prereg "3 + 1 + 6 + 3 = 13 … plus 1 combined = 14"
+PLACEBO_SETS = LAB.PLACEBO_SETS         # prereg "1,000 draws" (= the lab's number)
+POSITIVE_BEAT_SHARE = LAB.PLACEBO_BEAT_SHARE   # prereg "beat ≥ 95 % of them"
+DSR_PASS = LAB.DSR_PASS                 # prereg "DSR ≥ 0.95"
+BOOT_DRAWS = LAB.BOOT_DRAWS             # the lab's A: 10,000 draws, whole entry weeks
+MIN_WEEKS = LAB.MIN_CLUSTERS            # the lab's TOO SMALL line (OOS entry weeks)
+SEED = 20261030                         # any fixed value — the prereg's date
+HORIZON = GC.LEDGER_HORIZONS[0]         # "same": the lane is flat at the close (no overnight hold)
+GATES = ("G1", "G2", "G3", "G4")
+SQUEEZE = "reversal_squeeze"
+
+BLOCKED_IMPORTS = ("trading.broker", "alpaca", "trading.gajjala_entry")
+WRITE_METHODS = ("insert_one", "insert_many", "update_one", "update_many", "replace_one", "delete_one", "delete_many",
+                 "find_one_and_update", "find_one_and_replace", "find_one_and_delete", "bulk_write", "create_index",
+                 "create_indexes", "drop", "drop_index", "drop_indexes", "rename", "aggregate_raw_batches")
+READ_METHODS = ("find", "find_one", "distinct", "count_documents")
+
+
+# ── safety ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+class _NoBroker(importlib.abc.MetaPathFinder):
+    def find_spec(self, name, path, target=None):
+        if any(name == b or name.startswith(b + ".") for b in BLOCKED_IMPORTS):
+            raise ImportError(f"{STUDY}: {name} is never imported by this study")
+        return None
+
+
+def broker_loaded() -> list:
+    return sorted(m for m in sys.modules if any(m == b or m.startswith(b + ".") for b in BLOCKED_IMPORTS))
+
+
+GRID_STUB_FLAG = "__gajjala_gates_display_stub__"
+
+
+def grid_stub():
+    """A DISPLAY-ONLY stand-in for `trading.broker`. The detectors import the broker's price grid only to print the
+    prices inside their criterion strings (tab._px); no number this study reads (trigger, stop, base, red_closes,
+    state, entry_bar_t) passes through it — tests pin that the reads are identical with the real module. Prices
+    print unrounded. It has no client, no order call, no key."""
+    import types
+    m = types.ModuleType("trading.broker")
+    m.DOLLAR_DECIMALS = 2
+    m.price_decimals = lambda px: 4
+    m.round_price = lambda px, how="nearest": float(px)
+    setattr(m, GRID_STUB_FLAG, True)
+    return m
+
+
+def install_no_broker() -> None:
+    """Block the real broker modules for the life of the process and put the display-only grid stub in their place."""
+    if not any(isinstance(f, _NoBroker) for f in sys.meta_path):
+        sys.meta_path.insert(0, _NoBroker())
+    sys.modules.setdefault("trading.broker", grid_stub())
+
+
+def real_broker_loaded() -> list:
+    return [m for m in broker_loaded() if not getattr(sys.modules.get(m), GRID_STUB_FLAG, False)]
+
+
+class ReadOnlyColl:
+    """A collection handle that can only read. Any other attribute raises."""
+
+    def __init__(self, coll):
+        self._c = coll
+
+    def __getattr__(self, name):
+        if name in READ_METHODS:
+            return getattr(self._c, name)
+        raise PermissionError(f"{STUDY}: {name} refused — Mongo is read-only here")
+
+
+def guard_pymongo_writes() -> None:
+    """Belt and braces: every pymongo Collection write method raises for the life of the process."""
+    from pymongo.collection import Collection
+
+    def refuse(name):
+        def fn(*_a, **_k):
+            raise PermissionError(f"{STUDY}: pymongo {name} refused — Mongo is read-only here")
+        return fn
+    for name in WRITE_METHODS:
+        if hasattr(Collection, name):
+            setattr(Collection, name, refuse(name))
+
+
+# ── R per trade (the 🏁 grade's own math + the prereg cost) ───────────────────────────────────────────────────────
+def trade_r(grade: Optional[dict], trigger, stop) -> Optional[dict]:
+    """{gross, cost, net, fill_px, exit_px, outcome} in R units (R = trigger − stop), or None when the column is not a
+    filled trade with a usable outcome. win → the grader's target; loss → the stop (a touch, Q0); open / flat → the
+    column's close (close_pct off the fill)."""
+    if not isinstance(grade, dict) or grade.get("entry") != "filled" or grade.get("reason") == "split":
+        return None
+    plan, r = LG.plan_of(trigger, stop)
+    fill = LG._num(grade.get("fill_px"))
+    if plan != LG.PLANS[0] or fill is None or not r:
+        return None
+    out = grade.get("outcome")
+    if out == "win":
+        exit_px = LG._num(grade.get("target_px"))
+    elif out == "loss":
+        exit_px = float(stop)
+    elif out in ("open", "flat"):
+        cp = LG._num(grade.get("close_pct"))
+        exit_px = None if cp is None else fill * (1 + cp / 100.0)
+    else:
+        exit_px = None
+    if exit_px is None:
+        return None
+    gross = (exit_px - fill) / r
+    cost = COST_BPS_PER_SIDE / 1e4 * (fill + exit_px) / r
+    return {"gross": gross, "cost": cost, "net": gross - cost, "fill_px": fill, "exit_px": exit_px, "outcome": out}
+
+
+# ── the four gates (pure) ───────────────────────────────────────────────────────────────────────────────────────────
+def g1_pass(F, j: int, trigger, base_idx, k: float) -> Optional[bool]:
+    """Break bar j CLOSES above the trigger AND its volume ≥ k × the mean volume of the base bars. None = no base."""
+    idx = list(base_idx or [])
+    if not idx or not (0 <= j < len(F.c)):
+        return None
+    mv = D._mean(F.v[i] for i in idx)
+    return D._and(D.gt(LG._D(F.c[j]), LG._D(trigger)), D.ge(F.v[j], D._mul(mv, k)))
+
+
+def g2_pass(red_closes) -> Optional[bool]:
+    """Pass unless the base ran MORE than GC.RED_CLOSES_WAIT red closes in a row (3 pass, 4 fail)."""
+    if isinstance(red_closes, bool) or not isinstance(red_closes, int):
+        return None
+    return D.le(red_closes, G2_MAX_RED)
+
+
+def last_red_run(F, idx) -> int:
+    """DESCRIPTIVE only: the length of the most recent run of consecutive red closes among `idx` (detectors._is_red)."""
+    last = cur = 0
+    for k in idx or []:
+        if D._is_red(F, k):
+            cur += 1
+            last = cur
+        else:
+            cur = 0
+    return last
+
+
+def ring_age_min(at_utc, grade: Optional[dict]) -> Optional[int]:
+    """Whole minutes from the ring to the 🏁 fill minute (the lane's tick), LG._whole_min (floor)."""
+    f = LG._parse_at((grade or {}).get("fill_t"))
+    at = at_utc if isinstance(at_utc, datetime) else LG._parse_at(at_utc)
+    if f is None or at is None:
+        return None
+    return LG._whole_min(LG._aware(at), f)
+
+
+def g3_pass(at_utc, grade: Optional[dict], trigger, stop, m: int, missed_r: float) -> Optional[bool]:
+    """Pass when the ring is at most m minutes old at the tick AND the price at the tick is not past trigger +
+    missed_r × R (the lane's `missed`, strict >)."""
+    age = ring_age_min(at_utc, grade)
+    plan, r = LG.plan_of(trigger, stop)
+    fill = LG._num((grade or {}).get("fill_px"))
+    if age is None or plan != LG.PLANS[0] or fill is None:
+        return None
+    missed = LG._D(fill) > LG._D(trigger) + LG._D(missed_r) * LG._D(r)
+    return bool(age <= m and not missed)
+
+
+def risk_pct(trigger, stop) -> Optional[Decimal]:
+    plan, r = LG.plan_of(trigger, stop)
+    if plan != LG.PLANS[0]:
+        return None
+    return LG._D(r) / LG._D(trigger) * 100
+
+
+def g4_pass(trigger, cap_stop, c_pct: float) -> Optional[bool]:
+    """Pass unless (trigger − stop)/trigger > c %. `cap_stop` = the alert's stop (🎾: frozen at the first armed read)."""
+    p = risk_pct(trigger, cap_stop)
+    return None if p is None else bool(p <= LG._D(c_pct))
+
+
+# ── trials ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+def _fmt(x) -> str:
+    return f"{x:g}"
+
+
+def single_trials() -> list:
+    """The 13 single-gate trials in prereg order."""
+    out = [{"id": f"G1_k{_fmt(k)}", "gate": "G1", "params": {"k": k}} for k in G1_K]
+    out.append({"id": "G2_red3", "gate": "G2", "params": {"max_red": G2_MAX_RED}})
+    out += [{"id": f"G3_m{m}_mr{_fmt(mr)}", "gate": "G3", "params": {"m": m, "missed_r": mr}}
+            for m in G3_M_MIN for mr in G3_MISSED_R]
+    out += [{"id": f"G4_c{_fmt(c)}", "gate": "G4", "params": {"c": c}} for c in G4_C_PCT]
+    return out
+
+
+def gate_ok(row: dict, trial: dict) -> bool:
+    """One trial on one judgeable row (a None input = the gate's proof is missing = not passed)."""
+    g, p = trial["gate"], trial["params"]
+    if g == "COMBINED":
+        return all(gate_ok(row, t) for t in trial["parts"])
+    if g == "G1":
+        v = row["g1"].get(_fmt(p["k"]))
+    elif g == "G2":
+        v = g2_pass(row.get("red_closes"))
+    elif g == "G3":
+        v = g3_pass(row["at_utc"], row["grade"], row["trigger"], row["stop"], p["m"], p["missed_r"])
+    elif g == "G4":
+        v = g4_pass(row["trigger"], row["cap_stop"], p["c"])
+    else:
+        raise ValueError(f"unknown gate {g}")
+    return v is True
+
+
+# ── statistics (the lab's engines) ──────────────────────────────────────────────────────────────────────────────────
+def mean_of(x) -> Optional[float]:
+    x = list(x)
+    return float(np.mean(x)) if x else None
+
+
+def week_ci(r: list, weeks: list) -> dict:
+    """The lab's A: whole-entry-week bootstrap of the mean (LAB.cluster_draws), 95% percentile CI, RS.verdict word."""
+    if not r:
+        return {"n": 0, "n_weeks": 0, "mean": None, "ci": None, "word": "too_small"}
+    d, nc = LAB.cluster_draws(np.asarray(r, dtype=float), list(weeks), draws=BOOT_DRAWS, seed=SEED)
+    ci = RS.ci_of(d, dp=LAB.VERDICT_DP)
+    return {"n": len(r), "n_weeks": int(nc), "mean": float(np.mean(r)),
+            "ci": [RS._r(ci[0], LAB.SHOW_DP), RS._r(ci[1], LAB.SHOW_DP)] if ci else None,
+            "ci_raw": ci, "word": RS.verdict(nc, ci)}
+
+
+def placebo_beat(pool: list, n_pass: int, gate_mean: Optional[float], *, sets: int = PLACEBO_SETS,
+                 seed: int = SEED) -> Optional[float]:
+    """The prereg placebo: `sets` random draws of the gate's pass COUNT from the same cohort (without replacement);
+    the share of draws whose mean the gate's mean beats (strict >, the lab's convention). None when the gate passes
+    nothing or the pool is empty."""
+    pool = np.asarray(pool, dtype=float)
+    if gate_mean is None or n_pass <= 0 or len(pool) == 0 or n_pass > len(pool):
+        return None
+    rng = np.random.default_rng(seed)
+    means = np.array([pool[rng.choice(len(pool), size=n_pass, replace=False)].mean() for _ in range(int(sets))])
+    return float(np.mean(gate_mean > means))
+
+
+def positive_word(ci: dict, beat: Optional[float], dsr: Optional[float]) -> dict:
+    a = bool(ci.get("mean") is not None and ci.get("ci_raw") and ci["mean"] > 0 and ci["ci_raw"][0] > 0)
+    b = bool(beat is not None and beat >= POSITIVE_BEAT_SHARE)
+    c = bool(dsr is not None and dsr >= DSR_PASS)
+    v = LAB.positive_verdict(a, b, c, ci.get("n_weeks"))
+    return {"word": v["word"], "A": a, "B": b, "C": c}
+
+
+def ship_word(gate_mean: Optional[float], base_mean: Optional[float], beat: Optional[float], n_weeks: int) -> dict:
+    """The prereg ship rule; UNMEASURED under MIN_WEEKS OOS entry weeks (the mechanical answer kept beside)."""
+    rule = bool(gate_mean is not None and base_mean is not None and gate_mean >= base_mean
+                and beat is not None and beat >= SHIP_BEAT_SHARE)
+    if gate_mean is None or int(n_weeks or 0) < MIN_WEEKS:
+        return {"word": "UNMEASURED", "rule": "SHIP" if rule else "OFF"}
+    return {"word": "SHIP" if rule else "OFF", "rule": "SHIP" if rule else "OFF"}
+
+
+def split_sessions(dates) -> dict:
+    """The lab's last-third rule over the cohort's sessions (date order)."""
+    s = sorted({str(d)[:10] for d in dates})
+    k = (len(s) * (LAB.OOS_DEN - LAB.OOS_NUM)) // LAB.OOS_DEN
+    return {"sessions": s, "is": s[:k], "oos": s[k:]}
+
+
+def pick(trials: list, scores: dict) -> Optional[dict]:
+    """The trial with the highest in-sample mean net R (ties → the first in prereg order); None when none scored."""
+    best = None
+    for t in trials:
+        m = scores.get(t["id"])
+        if m is not None and (best is None or m > scores[best["id"]]):
+            best = t
+    return best
+
+
+def analyse(rows: list, sessions=None) -> dict:
+    """rows = judgeable TRADE rows (each: date, net, week, the gate inputs); `sessions` = EVERY cohort session (the
+    prereg's "sessions ordered by date" — every A+ that rang, filled or not; default: the trade rows' own dates).
+    -> every number the outputs print."""
+    sp = split_sessions(sessions if sessions is not None else [r["date"] for r in rows])
+    is_rows = [r for r in rows if r["date"] in set(sp["is"])]
+    oos_rows = [r for r in rows if r["date"] in set(sp["oos"])]
+    singles = single_trials()
+    table = []
+    is_mean, is_sr = {}, {}
+    for t in singles:
+        got = [r["net"] for r in is_rows if gate_ok(r, t)]
+        is_mean[t["id"]] = mean_of(got)
+        is_sr[t["id"]] = LAB.moments(np.asarray(got, dtype=float))["sr"] if len(got) else None
+        table.append({"id": t["id"], "gate": t["gate"], "params": t["params"], "is_n": len(got),
+                      "is_cohort": len(is_rows), "is_mean": is_mean[t["id"]], "is_sr": is_sr[t["id"]]})
+    picks = {g: pick([t for t in singles if t["gate"] == g], is_mean) for g in GATES}
+    comb = {"id": "COMBINED", "gate": "COMBINED", "params": {g: (picks[g] or {}).get("params") for g in GATES},
+            "parts": [p for p in picks.values() if p is not None]}
+    got = [r["net"] for r in is_rows if comb["parts"] and gate_ok(r, comb)]
+    is_mean["COMBINED"] = mean_of(got)
+    is_sr["COMBINED"] = LAB.moments(np.asarray(got, dtype=float))["sr"] if len(got) else None
+    table.append({"id": "COMBINED", "gate": "COMBINED", "params": comb["params"], "is_n": len(got),
+                  "is_cohort": len(is_rows), "is_mean": is_mean["COMBINED"], "is_sr": is_sr["COMBINED"]})
+    trial_srs = [is_sr[t["id"]] for t in table]
+    base_r = [r["net"] for r in oos_rows]
+    base = week_ci(base_r, [r["week"] for r in oos_rows])
+    reads = {}
+    for key, t in list(picks.items()) + [("COMBINED", comb)]:
+        if t is None or (key == "COMBINED" and not comb["parts"]):
+            reads[key] = {"pick": None, "oos": week_ci([], []), "beat": None, "dsr": None,
+                          "positive": positive_word(week_ci([], []), None, None),
+                          "ship": ship_word(None, base["mean"], None, 0)}
+            continue
+        sel = [r for r in oos_rows if gate_ok(r, t)]
+        ci = week_ci([r["net"] for r in sel], [r["week"] for r in sel])
+        beat = placebo_beat(base_r, len(sel), ci["mean"])
+        defl = (LAB.deflated(np.asarray([r["net"] for r in sel], dtype=float), trial_srs) if len(sel)
+                else {"dsr": None, "psr0": None, "sr": None, "sr0": None, "N": len(trial_srs)})
+        reads[key] = {"pick": {"id": t["id"], "params": t["params"], "is_n": next(x["is_n"] for x in table
+                                                                                   if x["id"] == t["id"]),
+                               "is_mean": is_mean[t["id"]]},
+                      "oos": ci, "beat": beat, "dsr": defl.get("dsr"), "psr0": defl.get("psr0"),
+                      "sr": defl.get("sr"), "sr0": defl.get("sr0"),
+                      "positive": positive_word(ci, beat, defl.get("dsr")),
+                      "ship": ship_word(ci["mean"], base["mean"], beat, ci["n_weeks"])}
+    for x in table:
+        x["picked"] = any(rd["pick"] and rd["pick"]["id"] == x["id"] for rd in reads.values())
+    return {"split": sp, "is_n": len(is_rows), "oos_n": len(oos_rows), "table": table, "reads": reads,
+            "baseline_oos": base, "baseline_is_mean": mean_of(r["net"] for r in is_rows),
+            "n_trials": len(table), "trial_srs_finite": sum(1 for s in trial_srs if s is not None)}
+
+
+# ── inputs off the cached bars ──────────────────────────────────────────────────────────────────────────────────────
+def _base_idx(F, base: Optional[dict]) -> list:
+    if not isinstance(base, dict) or base.get("from_t") not in F.t or base.get("to_t") not in F.t:
+        return []
+    return list(range(F.t.index(base["from_t"]), F.t.index(base["to_t"]) + 1))
+
+
+def first_armed_stop(f5, j: int, trigger) -> tuple:
+    """(stop, bar_t) of the first 5-min pass before the break bar j whose 🎾 read is potential_kind "armed" with the
+    alert's trigger; (None, None) when no such pass."""
+    for n in range(f5.today.start + 1, j + 1):
+        rd = D.reversal_squeeze(S.prefix_frame(f5, n), float_read=S.STUDY_FLOAT)
+        if PT.potential_kind(rd) == "armed" and rd.get("trigger") is not None and rd.get("stop") is not None \
+                and LG._D(rd["trigger"]) == LG._D(trigger):
+            return float(rd["stop"]), rd.get("as_of_bar_t")
+    return None, None
+
+
+def break_inputs(sym: str, d: date, setup: str, entry_bar_t: str, frame: str, trigger, raw_prev, raw_today) -> dict:
+    """Re-read the break with today's detectors on the cached bars. -> {"why": None | reason, "g1": {k: bool|None},
+    "red_closes", "last_red_run", "base_n", "close", "vol", "base_mean_vol", "armed_stop", "armed_t", "reread_state",
+    "reread_trigger"}."""
+    out = {"why": None, "g1": {}, "red_closes": None, "last_red_run": None, "base_n": 0, "close": None, "vol": None,
+           "base_mean_vol": None, "armed_stop": None, "armed_t": None, "reread_state": None, "reread_trigger": None}
+    today = S.day_minutes(raw_today, d)
+    if today is None or len(today) == 0:
+        return dict(out, why="no cached minutes on the alert's session")
+    prev = raw_prev
+    if prev is not None and len(prev) and "session" in prev.columns:
+        prev = prev[prev["session"].isin(S.LIVE_SESSIONS)]
+    everything = S.utc_naive(S.session_bounds(d)["ah_close"]) + pd.Timedelta(days=1)
+    fr = BARS.build_frames(sym, d, everything, prev, today)
+    if fr is None:
+        return dict(out, why="no 5-minute bars built")
+    F = fr.f15 if frame == "15m" else fr.f5
+    if F is None or entry_bar_t not in F.t:
+        return dict(out, why="the claim's entry bar is not in the cached bars")
+    j = F.t.index(entry_bar_t)
+    if frame == "15m":
+        n15, n5 = j + 1, int(fr.f5.df.index.searchsorted(F.df.index[j], side="right"))
+    else:
+        n5 = j + 1
+        n15 = int(fr.f15.df.index.searchsorted(F.df.index[j], side="right")) if fr.f15 is not None else 0
+    frames = {"5m": S.prefix_frame(fr.f5, n5), "15m": S.prefix_frame(fr.f15, n15) if n15 else None}
+    rd = D.read_all(frames, {"symbol": sym, "float_read": S.STUDY_FLOAT}).get(setup) or {}
+    out["reread_state"], out["reread_trigger"] = rd.get("state"), rd.get("trigger")
+    if rd.get("entry_bar_t") != entry_bar_t:
+        return dict(out, why="today's detectors do not re-read the break at the claim's entry bar")
+    RF = fr.f15 if rd.get("frame") == "15m" else fr.f5
+    idx = _base_idx(RF, rd.get("base"))
+    jj = RF.t.index(entry_bar_t) if entry_bar_t in RF.t else j
+    out["g1"] = {_fmt(k): g1_pass(RF, jj, trigger, idx, k) for k in G1_K}
+    out["red_closes"] = rd.get("red_closes")
+    out["last_red_run"] = last_red_run(RF, idx)
+    out["base_n"] = len(idx)
+    out["close"], out["vol"] = RF.c[jj], RF.v[jj]
+    out["base_mean_vol"] = D._mean(RF.v[i] for i in idx)
+    if setup == SQUEEZE:
+        out["armed_stop"], out["armed_t"] = first_armed_stop(fr.f5, n5 - 1, trigger)
+    return out
+
+
+# ── Mongo (read-only) ───────────────────────────────────────────────────────────────────────────────────────────────
+def readonly_db():
+    from pymongo import MongoClient
+    client = MongoClient(os.getenv("MONGO_URL", "mongodb://mongo:27017"), serverSelectionTimeoutMS=5000)
+    return client[os.getenv("MONGO_DB", "cheetah")]
+
+
+def readonly_store(db):
+    from chart_maps.gajjala import store as ST
+    return ST.GajjalaStore(colls={n: ReadOnlyColl(db[n]) for n in (ST.LEDGER, ST.REPLAY, ST.ALERTS)})
+
+
+FETCHED: list = []                      # (sym, day, got) of every --fetch-missing GET this run (printed in the report)
+
+
+def readonly_day_loader(db, fetch: Optional[Callable] = None) -> Callable:
+    """(sym, day) → the cached 1-minute DataFrame or None — intraday_cache first (daytrading.data._mongo_get_day over a
+    read-only handle; never load_intraday, which fetches and WRITES on a miss). `fetch` (--fetch-missing): a session
+    the cache does not hold (the 🏁 nightly grades today's session off a live fetch that is never cached) is read ONCE
+    through the study's own as-printed GET (gajjala_study._fetch_minutes_http — no write anywhere)."""
+    from daytrading import data as DTD
+    from sepa.symbols import for_massive
+    ro = ReadOnlyColl(db["intraday_cache"])
+    DTD._get_mongo_coll = lambda: ro                      # the read path only; its index build is never reached
+    DTD._mongo_put_day = lambda *a, **k: None
+
+    def load(sym: str, day: date):
+        df = DTD._mongo_get_day(for_massive(sym), day)
+        if (df is None or len(df) == 0) and fetch is not None:
+            df = fetch(sym, day)
+            FETCHED.append((sym, day.isoformat(), df is not None and len(df) > 0))
+        return df
+    return load
+
+
+def cohort(docs: list, claim_of: Callable) -> tuple:
+    """docs (losers.read_mongo with replay) → (rows, notes). Live A+ rows + replayed rows on sessions with no live row."""
+    rows, notes = [], {"docs": len(docs or []), "not_aplus": 0, "replay_on_live_session": 0, "no_entry_bar": 0}
+    live_dates = set()
+    parsed = []
+    for doc in docs or []:
+        row = LS.row_of(doc)
+        if row is None or row.get("kind") != LG.KINDS[1] or row.get("line") not in (LG.LINES[0], LG.LINES[2]):
+            notes["not_aplus"] += 1
+            continue
+        parsed.append((doc, row))
+        if row["line"] == LG.LINES[0]:
+            live_dates.add(row["date"])
+    for doc, row in parsed:
+        if row["line"] == LG.LINES[2]:
+            if row["date"] in live_dates:
+                notes["replay_on_live_session"] += 1
+                continue
+            a = doc.get("alert") or {}
+            ebt, frame = a.get("entry_bar_t"), a.get("frame") or "5m"
+        else:
+            c = claim_of(row["date"], row["symbol"], row["setup"]) or {}
+            ebt, frame = c.get("entry_bar_t"), c.get("frame") or "5m"
+        if not ebt:
+            notes["no_entry_bar"] += 1
+        g = doc.get(HORIZON) if isinstance(doc.get(HORIZON), dict) else None
+        rows.append(dict(row, grade=g, entry_bar_t=ebt, frame=frame))
+    rows.sort(key=lambda r: (r["date"], r["at_utc"].timestamp() if r.get("at_utc") else 0.0, r["symbol"],
+                             r["setup"]))
+    return rows, notes
+
+
+def build(rows: list, load_day: Callable) -> tuple:
+    """Attach R and the gate inputs. -> (all rows, judgeable trade rows)."""
+    trades = []
+    for r in rows:
+        tr = trade_r(r.get("grade"), r.get("trigger"), r.get("stop"))
+        r["trade"] = tr
+        r["net"] = tr["net"] if tr else None
+        fill_t = LG._parse_at((r.get("grade") or {}).get("fill_t"))
+        r["week"] = LAB._week_monday(fill_t.astimezone(ET).date().isoformat()) if fill_t else None
+        r["ring_age_min"] = ring_age_min(r.get("at_utc"), r.get("grade"))
+        rp = risk_pct(r["trigger"], r["stop"])
+        r["risk_pct"] = float(rp) if rp is not None else None
+        if not r.get("entry_bar_t"):
+            r["inputs"] = {"why": "no entry bar on the claim", "g1": {}}
+        else:
+            d = date.fromisoformat(r["date"])
+            raw_today = load_day(r["symbol"], d)
+            raw_prev = load_day(r["symbol"], LG._prev_market_day(d))
+            r["inputs"] = break_inputs(r["symbol"], d, r["setup"], r["entry_bar_t"], r["frame"], r["trigger"],
+                                       raw_prev, raw_today)
+        inp = r["inputs"]
+        r["g1"] = inp.get("g1") or {}
+        r["red_closes"] = inp.get("red_closes")
+        r["cap_stop"] = (inp.get("armed_stop") if (r["setup"] == SQUEEZE and inp.get("armed_stop") is not None)
+                         else r.get("stop"))
+        r["judgeable"] = inp.get("why") is None
+        if tr is not None and r["judgeable"]:
+            trades.append(r)
+    return rows, trades
+
+
+# ── outputs ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+def _n(x, dp=3):
+    return "—" if x is None else (f"{x:.{dp}f}" if isinstance(x, float) else str(x))
+
+
+def _ci_text(ci, n_weeks=None) -> str:
+    """A CI over one entry week is the mean itself (one cluster resampled) — printed as no interval."""
+    if not ci or (n_weeks is not None and int(n_weeks) < 2):
+        return "no interval" + (f" ({int(n_weeks)} entry week)" if n_weeks is not None and int(n_weeks) < 2 else "")
+    return f"[{ci[0]:.3f}, {ci[1]:.3f}]"
+
+
+def _params_text(p) -> str:
+    if not isinstance(p, dict):
+        return "—"
+    if all(isinstance(v, dict) or v is None for v in p.values()):
+        return " · ".join(f"{g} {_params_text(v)}" for g, v in p.items())
+    return ", ".join(f"{k}={_fmt(v) if isinstance(v, float) else v}" for k, v in p.items())
+
+
+def write_outputs(out: Path, meta: dict, rows: list, trades: list, res: dict) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    row_keys = ("date", "symbol", "setup", "line", "rang", "at_et", "trigger", "stop", "risk_pct", "entry_bar_t",
+                "ring_age_min")
+    with (out / "rows.csv").open("w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(row_keys + ("split", "outcome", "net_r", "judgeable", "why", "red_closes", "last_red_run",
+                               "base_n", "close", "vol", "base_mean_vol", "armed_stop", "cap_stop")
+                   + tuple(t["id"] for t in single_trials()))
+        oos = set(res["split"]["oos"])
+        for r in rows:
+            inp = r.get("inputs") or {}
+            flags = [("1" if gate_ok(r, t) else "0") if (r["judgeable"] and r["trade"]) else ""
+                     for t in single_trials()]
+            w.writerow([r.get(k) for k in row_keys]
+                       + ["oos" if r["date"] in oos else "is", (r["trade"] or {}).get("outcome")
+                          or (r.get("grade") or {}).get("entry"), _n(r["net"], 4), int(r["judgeable"]),
+                          inp.get("why") or "", r.get("red_closes"), inp.get("last_red_run"), inp.get("base_n"),
+                          inp.get("close"), inp.get("vol"), inp.get("base_mean_vol"), inp.get("armed_stop"),
+                          r.get("cap_stop")] + flags)
+    write_trials(out / "trials.csv", res)
+    js = {"meta": meta, "result": res,
+          "rows": [{k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in r.items()
+                    if k not in ("grade",)} for r in rows]}
+    (out / "results.json").write_text(json.dumps(js, indent=2, default=str), encoding="utf-8")
+    (out / "report.md").write_text(render_md(meta, rows, trades, res), encoding="utf-8")
+
+
+def write_trials(path: Path, res: dict) -> None:
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(("trial", "gate", "params", "is_cohort", "is_n_pass", "is_mean_net_r", "is_sr_per_trade",
+                    "picked", "oos_n", "oos_mean_net_r", "oos_ci95"))
+        for t in res["table"]:
+            rd = res["reads"].get(t["gate"]) if t["gate"] != "COMBINED" else res["reads"]["COMBINED"]
+            show = bool(rd and rd["pick"] and rd["pick"]["id"] == t["id"])
+            w.writerow([t["id"], t["gate"], _params_text(t["params"]), t["is_cohort"], t["is_n"], _n(t["is_mean"], 4),
+                        _n(t["is_sr"], 4), int(t["picked"]), rd["oos"]["n"] if show else "sealed",
+                        _n(rd["oos"]["mean"], 4) if show else "sealed", _ci_text(rd["oos"]["ci"], rd["oos"]["n_weeks"]) if show else "sealed"])
+
+
+GATE_TEXT = {"G1": "G1 break-bar proof (close > trigger, vol ≥ k × base mean)",
+             "G2": f"G2 red closes (≤ {G2_MAX_RED} in a row)",
+             "G3": "G3 stale / missed at the tick (age ≤ m min, fill ≤ trigger + MISSED_R × R)",
+             "G4": "G4 stop-distance cap (risk ≤ c %, 🎾 stop frozen at the first armed read)",
+             "COMBINED": "Combined (every gate's in-sample pick)"}
+
+
+def gate_lines(res: dict) -> list:
+    out = ["| gate | in-sample pick (IS n · IS mean R) | OOS n (weeks) | OOS mean R | 95% CI (entry weeks) | baseline OOS "
+           "mean R | placebo beat | DSR (N 14) | POSITIVE | SHIP |", "|---|---|---|---|---|---|---|---|---|---|"]
+    base = res["baseline_oos"]
+    for key in GATES + ("COMBINED",):
+        rd = res["reads"][key]
+        p = rd["pick"]
+        pk = "none" if p is None else f"{_params_text(p['params'])} ({p['is_n']} · {_n(p['is_mean'])})"
+        o = rd["oos"]
+        ship = rd["ship"]["word"] + (f" (rule alone: {rd['ship']['rule']})" if rd["ship"]["word"] == "UNMEASURED"
+                                      else "")
+        pos = rd["positive"]["word"] + (" = UNMEASURED" if rd["positive"]["word"] == "TOO SMALL" else "")
+        out.append(f"| {GATE_TEXT[key]} | {pk} | {o['n']} ({o['n_weeks']}) | {_n(o['mean'])} | {_ci_text(o['ci'], o['n_weeks'])} | "
+                   f"{_n(base['mean'])} | {_n(rd['beat'])} | {_n(rd['dsr'])} | **{pos}** | **{ship}** |")
+    return out
+
+
+def render_md(meta: dict, rows: list, trades: list, res: dict) -> str:
+    sp = res["split"]
+    nj = [r for r in rows if r["trade"] and not r["judgeable"]]
+    why = {}
+    for r in nj:
+        why[r["inputs"].get("why")] = why.get(r["inputs"].get("why"), 0) + 1
+    live = sum(1 for r in rows if r["line"] == LG.LINES[0])
+    rep = len(rows) - live
+    sq = [r for r in trades if r["setup"] == SQUEEZE]
+    sq_armed = sum(1 for r in sq if (r.get("inputs") or {}).get("armed_stop") is not None)
+    diff_red = sum(1 for r in trades if r.get("red_closes") is not None and (r.get("inputs") or {}).get("last_red_run")
+                   is not None and g2_pass(r["red_closes"]) != g2_pass(r["inputs"]["last_red_run"]))
+    g1_none = sum(1 for r in trades if any(v is None for v in r["g1"].values()))
+    base = res["baseline_oos"]
+    out = [f"# 🚩 Gajjala gates G1–G4: the pre-registered replay ({meta['run_et'][:16]} ET)", "",
+           "**Verdict: every gate is TOO SMALL to read (UNMEASURED).** Nothing ships to the paper lane from this run."
+           if all(res["reads"][k]["ship"]["word"] == "UNMEASURED" for k in res["reads"]) else
+           "**Verdict: see the table; words per the prereg.**", "",
+           f"- Prereg: `{meta.get('prereg') or PREREG_NAME}` sha256 `{meta.get('prereg_sha256') or '—'}` (frozen before "
+           f"this run). Script `backend/scripts/gajjala_gates_study_2026_10_30.py` sha256 `{meta['script_sha256']}`, "
+           f"worktree HEAD `{meta.get('sha') or '—'}`.",
+           f"- Run {meta['run_et']} ET, outside 09:30–16:00 ET; a throwaway container, Mongo read-only handles, no "
+           f"broker import (display-only price-grid stub), bars = the app's intraday_cache"
+           + (f"; {len(meta.get('fetched') or [])} symbol-day(s) the cache lacks read once through the study's "
+              f"as-printed GET, never written: "
+              + ", ".join(f"{a} {b}" + ("" if c else " (no answer)") for a, b, c in meta["fetched"])
+              if meta.get("fetched") else "; nothing fetched") + ".",
+           f"- Cohort: {len(rows)} A+ rows that rang ({live} live 🏁 rows, {rep} ⏪ replay rows); "
+           f"{sum(1 for r in rows if r['trade'])} filled trades; {len(nj)} trades not judgeable "
+           f"({'; '.join(f'{k}: {v}' for k, v in why.items()) or 'none'}) — out of every trial and the baseline; "
+           f"**{len(trades)} trades read**.",
+           f"- Split (the lab's last-third rule over {len(sp['sessions'])} sessions): in-sample {sp['is'][0] if sp['is'] else '—'}"
+           f"…{sp['is'][-1] if sp['is'] else '—'} ({len(sp['is'])} sessions, {res['is_n']} trades); out-of-sample "
+           f"{sp['oos'][0] if sp['oos'] else '—'}…{sp['oos'][-1] if sp['oos'] else '—'} ({len(sp['oos'])} sessions, "
+           f"{res['oos_n']} trades, {base['n_weeks']} entry week(s)).",
+           f"- R = the 🏁 grade's same-session math minus {COST_BPS_PER_SIDE:g} bps per side. Baseline (no gate): "
+           f"in-sample mean {_n(res['baseline_is_mean'])} R; OOS mean {_n(base['mean'])} R, {_ci_text(base['ci'], base['n_weeks'])}.",
+           f"- **N honestly: {base['n']} OOS trades in {base['n_weeks']} entry week(s), against the lab's {MIN_WEEKS}-week "
+           f"floor.** A CI over fewer than {MIN_WEEKS} weeks is not an interval anyone should read.", "",
+           "## Per gate", ""]
+    out += gate_lines(res)
+    out += ["", f"POSITIVE = the strategy lab's A + B + C ({POSITIVE_BEAT_SHARE:.0%} placebo, DSR ≥ {DSR_PASS}); TOO SMALL "
+            f"under {MIN_WEEKS} OOS entry weeks. SHIP = the prereg's weaker rule (OOS mean ≥ baseline AND placebo beat "
+            f"≥ {SHIP_BEAT_SHARE:.0%}); UNMEASURED under {MIN_WEEKS} OOS entry weeks, the rule's mechanical answer "
+            f"beside it. DSR: PSR of the pick's OOS per-trade R against LAB.dsr_sr0 of the {res['n_trials']} trials' "
+            f"in-sample per-trade Sharpes ({res['trial_srs_finite']} finite).", "",
+            "## Per trial (in-sample; OOS sealed except the picks)", "",
+            "| trial | params | IS n pass / cohort | IS mean net R | IS SR | picked |", "|---|---|---|---|---|---|"]
+    for t in res["table"]:
+        out.append(f"| {t['id']} | {_params_text(t['params'])} | {t['is_n']} / {t['is_cohort']} | {_n(t['is_mean'])} | "
+                   f"{_n(t['is_sr'])} | {'yes' if t['picked'] else ''} |")
+    if meta.get("run_note"):
+        out += ["", "## Run history", "", meta["run_note"]]
+    out += ["", "## Judgement calls and caveats", "",
+            "- G2 reads the detectors' own `red_closes` (the longest run among the pullback / base bars — the "
+            "RED_CLOSES_MODE 'criterion' engine). The prereg says 'the base's last run'; on the trades read, the two "
+            f"readings disagree on **{diff_red}** trade(s).",
+            "- G3's tick = the 🏁 grader's fill minute (the lane enters at the first tick the tape trades the trigger); "
+            "the price at the tick = the grader's fill price. Ring age = whole minutes, floor (LG._whole_min).",
+            f"- G4 is a filter only; on 🎾 the cap reads the stop of the first armed read ({sq_armed} of {len(sq)} 🎾 "
+            "trades had one with the alert's trigger; the rest read the alert's stop). The trade's stop and R stay the "
+            "alert's.",
+            f"- G1: a break with no base bars reads 'no proof' (not passed): {g1_none} trade(s).",
+            "- In-sample pick = the highest in-sample mean net R; ties → prereg order.",
+            "- The live 🏁 grades were made at the 20:15 ET nightly on the live minute fetch; the gate inputs are re-read "
+            "on the intraday_cache copy of those minutes with TODAY's detectors.",
+            "- The study cache named in the run brief was not used: its scratch directory is gone (empty); the replay rows "
+            "carry their own stored grades.", ""]
+    return "\n".join(out) + "\n"
+
+
+def ledger_rows(res: dict, meta: dict) -> list:
+    """One LEDGER.md row per gate (+ the combined trial), in the ledger's column order."""
+    out = []
+    base = res["baseline_oos"]
+    for key in GATES + ("COMBINED",):
+        rd = res["reads"][key]
+        p = rd["pick"]
+        o = rd["oos"]
+        word = rd["positive"]["word"]
+        out.append(
+            f"| {meta['run_et'][:10]} | gates {key} | {GATE_TEXT[key]}; pick "
+            f"{_params_text(p['params']) if p else 'none'} (in-sample {res['split']['is'][0] if res['split']['is'] else '—'}"
+            f"…{res['split']['is'][-1] if res['split']['is'] else '—'}); R = 🏁 same-session math, "
+            f"{COST_BPS_PER_SIDE:g} bps per side | **{word}**{' (= UNMEASURED)' if word == 'TOO SMALL' else ''}; SHIP "
+            f"word **{rd['ship']['word']}** (rule alone {rd['ship']['rule']}). Read {meta['run_et'][:16]} ET{meta.get('ledger_note') or ''}, "
+            f"prereg 2026-10-30_gajjala_gates_prereg.md sha256 {str(meta.get('prereg_sha256') or '—')[:12]}… | "
+            f"{_n(o['mean'])} R (baseline {_n(base['mean'])} R) | {_ci_text(o['ci'], o['n_weeks'])} | {_n(rd['dsr'])} (N = 14 in "
+            f"this study) | OOS {o['n']} trades / {o['n_weeks']} entry week(s); IS {p['is_n'] if p else 0} | placebo "
+            f"beat {_n(rd['beat'])} (95% POSITIVE, 80% SHIP). Outputs: research/gajjala_gates_2026_10_30/. |")
+    return out
+
+
+def inputs_summary(rows: list, notes: dict) -> str:
+    """The --inputs-only smoke line: cohort and judgeability counts only — never an outcome, an R or a gate pass."""
+    why: dict = {}
+    for r in rows:
+        w = (r.get("inputs") or {}).get("why") or "judgeable"
+        why[w] = why.get(w, 0) + 1
+    sp = split_sessions(r["date"] for r in rows)
+    sq = [r for r in rows if r["setup"] == SQUEEZE and (r.get("inputs") or {}).get("why") is None]
+    return (f"rows {len(rows)} · sessions {len(sp['sessions'])} (IS {len(sp['is'])} / OOS {len(sp['oos'])}) · "
+            f"notes {notes} · inputs {why} · 🎾 judgeable {len(sq)}, armed read found "
+            f"{sum(1 for r in sq if r['inputs'].get('armed_stop') is not None)}")
+
+
+def render_only(args) -> int:
+    """Re-render the human files from a saved results.json (no Mongo, no bars, no outcome re-read)."""
+    js = json.loads(Path(args.render_only).read_text(encoding="utf-8"))
+    meta, res, rows = js["meta"], js["result"], js["rows"]
+    if args.run_note:
+        meta["run_note"] = Path(args.run_note).read_text(encoding="utf-8").strip()
+    meta["ledger_note"] = args.ledger_note or meta.get("ledger_note") or ""
+    trades = [r for r in rows if r.get("trade") and r.get("judgeable")]
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "report.md").write_text(render_md(meta, rows, trades, res), encoding="utf-8")
+    (out / "ledger_rows.md").write_text("\n".join(ledger_rows(res, meta)) + "\n", encoding="utf-8")
+    write_trials(out / "trials.csv", res)
+    print(f"re-rendered from {args.render_only} → {out}")
+    return 0
+
+
+def _sha256(p: Path) -> Optional[str]:
+    try:
+        return hashlib.sha256(p.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def main(argv=None, *, now: Optional[datetime] = None, docs: Optional[list] = None,
+         claim_of: Optional[Callable] = None, load_day: Optional[Callable] = None) -> int:
+    ap = argparse.ArgumentParser(prog="python -m scripts.gajjala_gates_study_2026_10_30", description=__doc__.splitlines()[0])
+    ap.add_argument("--out", required=True, metavar="DIR")
+    ap.add_argument("--prereg", metavar="FILE")
+    ap.add_argument("--sha", metavar="HEAD")
+    ap.add_argument("--fetch-missing", dest="fetch_missing", action="store_true",
+                    help="a session intraday_cache lacks: one as-printed Massive GET (never written)")
+    ap.add_argument("--render-only", dest="render_only", metavar="RESULTS_JSON",
+                    help="re-render report.md / trials.csv / ledger_rows.md from a results.json — reads no data")
+    ap.add_argument("--run-note", dest="run_note", metavar="FILE", help="a markdown file printed as the run history")
+    ap.add_argument("--ledger-note", dest="ledger_note", default="", help="text after the read time in the ledger rows")
+    ap.add_argument("--inputs-only", dest="inputs_only", action="store_true",
+                    help="smoke: read the cohort and the gate inputs, print their counts; no outcome, no R, no file")
+    args = ap.parse_args(argv)
+    if args.render_only:
+        return render_only(args)
+    now_et = (now or datetime.now(timezone.utc)).astimezone(ET)
+    if S.refused_window(now_et):
+        print("refused: 09:30–16:00 ET on a weekday — nothing read")
+        return 2
+    loaded = broker_loaded()
+    if loaded:
+        print(f"refused: a broker module is loaded ({', '.join(loaded)}) — nothing read")
+        return 2
+    if docs is None:                                            # the real run: lock imports and writes for the process
+        install_no_broker()
+        guard_pymongo_writes()
+        db = readonly_db()
+        store = readonly_store(db)
+        try:
+            docs = LS.read_mongo(store, include_replayed=True)
+        except Exception:                                       # noqa: BLE001
+            docs = None
+        if docs is None:
+            print("refused: the 🏁 ledger / replay could not be read — nothing written")
+            return 2
+        from chart_maps.gajjala import alerts as AL
+        coll = store.alerts_coll()
+        claim_of = claim_of or (lambda d, s, st: coll.find_one({"_id": AL.claim_key(d, s, st)}))
+        load_day = load_day or readonly_day_loader(db, S._fetch_minutes_http if args.fetch_missing else None)
+    rows, notes = cohort(docs, claim_of or (lambda *a: None))
+    rows, trades = build(rows, load_day or (lambda *a: None))
+    if args.inputs_only:
+        print(inputs_summary(rows, notes))
+        return 0
+    res = analyse(trades, [r["date"] for r in rows])
+    prereg = Path(args.prereg) if args.prereg else None
+    meta = {"study": STUDY, "run_et": now_et.strftime("%Y-%m-%d %H:%M:%S"), "sha": args.sha,
+            "prereg": PREREG_NAME, "prereg_sha256": _sha256(prereg) if prereg else None,
+            "script_sha256": _sha256(Path(__file__)), "notes": notes, "n_trials": N_TRIALS,
+            "frozen": {"G1_K": G1_K, "G2_MAX_RED": G2_MAX_RED, "G3_M_MIN": G3_M_MIN, "G3_MISSED_R": G3_MISSED_R,
+                       "G4_C_PCT": G4_C_PCT, "COST_BPS_PER_SIDE": COST_BPS_PER_SIDE,
+                       "SHIP_BEAT_SHARE": SHIP_BEAT_SHARE, "PLACEBO_SETS": PLACEBO_SETS,
+                       "POSITIVE_BEAT_SHARE": POSITIVE_BEAT_SHARE, "DSR_PASS": DSR_PASS, "BOOT_DRAWS": BOOT_DRAWS,
+                       "MIN_WEEKS": MIN_WEEKS, "SEED": SEED},
+            "broker_modules_after": real_broker_loaded(), "fetched": list(FETCHED),
+            "broker_stub": bool(getattr(sys.modules.get("trading.broker"), GRID_STUB_FLAG, False))}
+    out = Path(args.out)
+    write_outputs(out, meta, rows, trades, res)
+    (out / "ledger_rows.md").write_text("\n".join(ledger_rows(res, meta)) + "\n", encoding="utf-8")
+    for key in GATES + ("COMBINED",):
+        rd = res["reads"][key]
+        print(f"{key}: pick {_params_text((rd['pick'] or {}).get('params'))} · OOS n {rd['oos']['n']} "
+              f"({rd['oos']['n_weeks']} wk) · mean {_n(rd['oos']['mean'])} · base {_n(res['baseline_oos']['mean'])} · "
+              f"beat {_n(rd['beat'])} · DSR {_n(rd['dsr'])} · {rd['positive']['word']} · {rd['ship']['word']}")
+    print(f"rows {len(rows)} · trades read {len(trades)} · → {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

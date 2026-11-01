@@ -9,15 +9,21 @@
  * POSTs `${base}/scan`, and hands `base` to the 🕰️ entry tape through GgVariantContext (`${base}/entry-tape`), so a
  * 1-minute row never reads a 5-minute tape. The broker list stays ONE list under /chart-maps/gajjala/… (GG_BROKER_PATH).
  * UNMEASURED.
+ *
+ * 🧪 Gajjala · Audited (2026-11-01). Ajay: "I would like you to create a new tab for Gajjals when you modifiy with audit
+ * of End of day.." "Gajjals-Audited" "So we can keep track of improvements on this tab". A third page on the same board:
+ * `gajjala_audited` → GET /chart-maps/gajjala-audited (== backend variant.py GGA.api_base). The same 5-minute pass and
+ * the same reads as 🚩 Gajjala's, filtered by the audit overlay — every word of it SERVED. Shadow only. UNMEASURED.
  */
 import { createContext, useContext } from 'react';
 
-export type GgVariantKey = 'gajjala' | 'gajjala_1m';
+export type GgVariantKey = 'gajjala' | 'gajjala_1m' | 'gajjala_audited';
 
-/** The page's endpoint base — == backend variant.py GG5.api_base / GG1.api_base. */
+/** The page's endpoint base — == backend variant.py GG5.api_base / GG1.api_base / GGA.api_base. */
 export const GG_VARIANT_BASE: Readonly<Record<GgVariantKey, string>> = {
   gajjala: '/chart-maps/gajjala',
   gajjala_1m: '/chart-maps/gajjala-1m',
+  gajjala_audited: '/chart-maps/gajjala-audited',
 };
 
 /** A known variant key, else 'gajjala' (fail to 🚩 Gajjala's, as variant.of does). */

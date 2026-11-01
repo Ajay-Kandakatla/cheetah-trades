@@ -364,9 +364,10 @@ def _variant_of(store, variant=None):
 
 
 def _record_from(v) -> Optional[date]:
-    """The first session a variant's record reads — None for GG5 (its whole history); the 1-minute page:
-    GC.GG1M_RECORD_FROM (Ajay 2026-10-27 "add the track record for it from today") — no session before it is read."""
-    return None if V.is_gg5(v) else _as_date(GC.GG1M_RECORD_FROM)
+    """The first session a variant's record reads — None for GG5 (its whole history); another variant: the constant its
+    `record_from_const` names — the 1-minute page GC.GG1M_RECORD_FROM (Ajay 2026-10-27 "add the track record for it from
+    today"), the 🧪 audited tab GC.GGA_RECORD_FROM (2026-11-01) — no session before it is read."""
+    return None if V.is_gg5(v) else _as_date(getattr(GC, V.of(v).record_from_const))
 
 
 def _clip(sessions, v) -> list:

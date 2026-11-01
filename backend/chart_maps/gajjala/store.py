@@ -84,10 +84,14 @@ STATE = "gajjala_state"
 POTENTIALS = "gajjala_potentials"            # 🧠 the potential tracker (2026-10-15) — kept, no TTL
 LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-16) — one doc per rung alert; kept, no TTL
 REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4) — written ONLY by scripts/gajjala_replay.py --write; kept, no TTL
+OVERLAY = "gajjala_overlay"                    # 🧪 2026-11-01 — the audit overlay per (session, symbol); written ONLY by the GGA store as gajjala_audited_overlay; GG5 / GG1 never write it
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, REPLAY)
+# 🧪 2026-11-01: OVERLAY joins ALL before REPLAY (tests pin ALL[-1] == REPLAY — the order carries no meaning)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, REPLAY)
 # 2026-10-27 (BUILD_SPEC27 §3.4): what a variant WRITES under its own prefix vs what it READS from GG5 (ALL = OWN ∪ SHARED)
-OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY)
+# 🧪 2026-11-01: a variant may BORROW some OWN names (Variant.borrows — GGA reads GG5's reads / potentials / passes /
+# replay): a borrowed name resolves to GG5's collection through `shared`, and the variant never indexes or writes it
+OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY)
 SHARED = (SCAN, AH_CARRY, POST, HALTS, DAILY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
@@ -97,7 +101,8 @@ REPLAY_KEYS = frozenset({"date", "symbol", "setup", "kind", "state", "alert", "s
                          "float_gate", "detectors_sha", "detectors_sha256", "replayed_at", "caveats"})
 # retention per collection (None = kept): the TTL index reads `at`
 TTL_DAYS = {SCAN: GC.LEDGER_TTL_DAYS, AH_CARRY: GC.LEDGER_TTL_DAYS, POST: GC.LEDGER_TTL_DAYS,
-            PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS}
+            PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS,
+            OVERLAY: GC.READS_TTL_DAYS}                # 🧪 2026-11-01 — the overlay lives as long as the reads it audits
 _DAY_SEC = 86400
 # 🔄 the split lease (2026-10-15) — strings, not numbers
 LEASE_ID = "lease"
@@ -347,16 +352,17 @@ class GajjalaStore:
 
     def physical(self, name: str) -> str:
         """The Mongo collection a logical name resolves to: GG5 → the name; a variant's OWN name → its prefix
-        (gajjala_passes → gajjala_1m_passes); a SHARED name → GG5's name."""
+        (gajjala_passes → gajjala_1m_passes); a SHARED name → GG5's name; a BORROWED name (🧪 2026-11-01,
+        Variant.borrows) → GG5's name."""
         v = self.variant
-        if V.is_gg5(v) or name not in OWN:
+        if V.is_gg5(v) or name not in OWN or name in v.borrows:
             return name
         return v.store_prefix + name[len("gajjala"):]
 
     def coll(self, name: str):
         if name in self._injected:
             return self._injected[name]
-        if self.shared is not None and name in SHARED:
+        if self.shared is not None and (name in SHARED or name in self.variant.borrows):
             return self.shared.coll(name)
         phys = self.physical(name)
         if phys not in self._cache:
@@ -373,8 +379,15 @@ class GajjalaStore:
     # ── indexes ────────────────────────────────────────────────────────────────────────────────────────────────
     def ensure_indexes(self) -> None:
         """Idempotent: TTL on `at` where the spec keeps a retention, plus the read paths' keys. A variant store with a
-        `shared` GG5 store (2026-10-27) walks its OWN collections only (GG5's own run indexes the shared ones)."""
+        `shared` GG5 store (2026-10-27) walks its OWN collections only (GG5's own run indexes the shared ones), and
+        never a name it BORROWS (🧪 2026-11-01 — those are GG5's collections). OVERLAY is indexed ONLY by the GGA store
+        (🧪 2026-11-01 refix — `create_index` creates the collection, and GG5 / GG1 never write an overlay, so their
+        bare runs must not leave an empty `gajjala_overlay` / `gajjala_1m_overlay` on the live Mongo)."""
         for name in (OWN if self.shared is not None else ALL):
+            if self.shared is not None and name in self.variant.borrows:
+                continue
+            if name == OVERLAY and not V.is_audited(self.variant):
+                continue
             c = self.coll(name)
             if c is None:
                 continue
@@ -382,7 +395,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY, OVERLAY):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -921,6 +934,25 @@ class GajjalaStore:
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala.store: ledger write failed for %s: %s", _id, exc)
             return False
+
+    # ── 🧪 gajjala_overlay (2026-11-01 — the audit overlay; written ONLY by the GGA store's in-pass step) ─────────────
+    def upsert_overlay(self, session, sym: str, fields: dict, *, now: Optional[datetime] = None) -> None:
+        """One `$set` upsert of the (session, symbol) overlay doc: `fields` + date / symbol / `at` (the TTL clock)."""
+        self._upsert(OVERLAY, key(session, sym), dict(fields or {}, date=_iso(session), symbol=(sym or "").upper(),
+                                                      at=_utc(now)))
+
+    def get_overlay(self, session, sym: str) -> Optional[dict]:
+        return self._find_one(OVERLAY, {"_id": key(session, sym)})
+
+    def overlays(self, session) -> list:
+        return self._find(OVERLAY, {"date": _iso(session)})
+
+    def held_rows(self, sessions: Iterable) -> Optional[list]:
+        """🧪 The audited tab's held markers of these sessions (alerts rows in state audited_rules.HELD_ROW_STATE —
+        never a 🏁 row: their id carries `#`). None on a read fault / no handle ([] = none on file)."""
+        from . import audited_rules as AUD
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(ALERTS, {"date": {"$in": days}, "state": AUD.HELD_ROW_STATE})
 
     # ── ⏪ gajjala_replay (2026-10-16 night, DECISIONS11 D4 / D5 — written ONLY by scripts/gajjala_replay.py --write) ──
     def replay_rows(self, sessions: Iterable) -> Optional[list]:

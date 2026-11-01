@@ -55,6 +55,14 @@ first), its cadence and stale words (variant.cadence_sec / stale_after_sec — n
 (potential.deep_link(…, v)), `tab` =
 "gajjala_1m" and ONE added key, `variant` (variant.served_block — title / honesty / tfs the FE prints). GG5 (variant
 None) serves every byte as before and never carries `variant`. A Cheetah variant — UNMEASURED.
+
+🧪 GAJJALA · AUDITED (2026-11-01, BUILD_SPEC gg-audited §3.6 / WP-C). Ajay, verbatim: "I would like you to create a new
+tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited. So we can keep track of improvements on this
+tab". `build(…, variant=V.GGA)` serves the SAME board off 🚩's reads (the GGA store borrows them) with the audit overlay
+laid on at serve time (audited_tab.overlay_reads — an A+ whose audit failed serves the state `aplus_held`, listed and
+counted, never hidden) and three more keys: `audited` (the 🧪 strip), `held` (the held A+ section, the banner's own
+gates) and, on 🏁, `audited_compare`. Every edit here is guarded by `variant.is_audited(v)` — GG5 and GG1 serve every
+byte as before. UNMEASURED — shadow only, nothing here trades.
 """
 from __future__ import annotations
 
@@ -97,7 +105,7 @@ def _as_sentence(clause: str) -> str:
     return c + "."
 
 
-def count_legend(promo: bool = False) -> list:
+def count_legend(promo: bool = False, audited: bool = False) -> list:
     """DECISIONS15 D1 — the ONE served legend: [{key, word, text}] for every word on the counts line, the 🧠 sub's
     number and the 📈 Track's number. Words = the FE's structural labels (A+, triggered, forming, partial, stopped,
     invalid, none, awaiting your number, listed, 🧠 Potential, 📈 Track). Texts in DECISIONS15's table, reusing served
@@ -105,7 +113,8 @@ def count_legend(promo: bool = False) -> list:
     sentence (split at ". On top"), detectors.AWAITING_TEXT's spirit for awaiting. Pure, no clock, no Mongo.
     2026-10-18 critic fix: the potential text also carries potential.defaults_clauses()[0]'s base clause (worded for the
     CURRENT POTENTIAL_NEEDS_BASE), so the legend follows the setting — DECISIONS15 D1 wins over BUILD_SPEC15's bare cut.
-    🎪 2026-10-29: `promo` True → LEGEND_KEYS_PROMO (promo_names.legend_row() last); False → LEGEND_KEYS, byte for byte."""
+    🎪 2026-10-29: `promo` True → LEGEND_KEYS_PROMO (promo_names.legend_row() last); False → LEGEND_KEYS, byte for byte.
+    🧪 2026-11-01: `audited` True (the audited tab only) → one more row, `aplus_held`, right after A+; False → no byte moves."""
     first = PT.rules_lines()[0]                     # at request time — the ONE 🧠 sentence, never retyped
     head, cut, _rest = first.partition(POTENTIAL_LEGEND_END)
     base = _as_sentence(PT.defaults_clauses()[0][2])   # the POTENTIAL_NEEDS_BASE clause, worded for its current value
@@ -140,7 +149,23 @@ def count_legend(promo: bool = False) -> list:
         pr = PN.legend_row()                        # 🎪 2026-10-29 — built by promo_names, never retyped here
         by[pr["key"]] = (pr["word"], pr["text"])
         keys = LEGEND_KEYS_PROMO
+    if audited is True:                             # 🧪 2026-11-01 — the audited tab's held A+ (never on GG5 / GG1)
+        held = _held_state()
+        by[held] = (HELD_LEGEND_WORD, HELD_LEGEND_TEXT)
+        keys = keys[:1] + (held,) + keys[1:]
     return [{"key": k, "word": by[k][0], "text": by[k][1]} for k in keys]
+
+
+HELD_LEGEND_WORD = "A+ held"                                                    # 🧪 2026-11-01 (§3.6 edit 5) — MINE
+HELD_LEGEND_TEXT = "A+ on the original, held here by the audit"                 # 🧪 2026-11-01 (§3.6 edit 5)
+HELD_MARKER_LABEL = "A+ (original)"                                             # 🧪 2026-11-01 (§3.6 edit 3)
+HELD_RECAP_WORD = "A+ on the original — held here by the audit"                 # 🧪 2026-11-01 (§3.6 edit 4)
+
+
+def _held_state() -> str:
+    """🧪 2026-11-01 — audited_rules.HELD_STATE, imported lazily (the served-only state of the audited tab)."""
+    from chart_maps.gajjala import audited_rules as AUD
+    return AUD.HELD_STATE
 MARKED_STATES = ("aplus", "triggered", "stopped")
 SUB_KEYS = tuple(k for k, _e, _l in GC.SUBS)
 SUB_META = {k: (e, label) for k, e, label in GC.SUBS}
@@ -723,6 +748,9 @@ def state_label(read: dict) -> str:
         return " · ".join([head] + bits + [UNMEASURED])
     if st == "invalid":
         return f"invalid — {read.get('reason') or 'the structure died'} · {UNMEASURED}"
+    if (isinstance(read.get("audit"), dict) and isinstance(read["audit"].get("text"), str)
+            and st == _held_state()):                       # 🧪 2026-11-01 — the audit's own served words
+        return read["audit"]["text"]
     return f"none — {read.get('reason') or 'no setup today'} · {UNMEASURED}"
 
 
@@ -998,6 +1026,9 @@ def _state_key(g: dict, sym: str) -> tuple:
     if st == "partial":
         ch = _f((g.get("chips") or {}).get("change_pct"))
         return (4, float(len(g.get("missed") or [])), -ch if ch is not None else big, sym)
+    if "audit" in g and st == _held_state():                # 🧪 2026-11-01 — right after the A+, newest entry first
+        digits = "".join(ch for ch in str(g.get("entry_bar_t") or "") if ch.isdigit())
+        return (0.5, -float(digits) if digits else big, 0.0, sym)
     return (9, big, 0.0, sym)
 
 
@@ -1066,8 +1097,10 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         alt = _tile_frame(doc, other, vv)
         if alt["bars"]:
             fr = alt
-    markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": "A+"}]
-                       if read.get("state") in MARKED_STATES and read.get("entry_bar_t") else [], fr["bars"])
+    mlabel = ("A+" if read.get("state") in MARKED_STATES else
+              HELD_MARKER_LABEL if "audit" in read and read.get("state") == _held_state() else None)   # 🧪 2026-11-01
+    markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": mlabel}]
+                       if mlabel and read.get("entry_bar_t") else [], fr["bars"])
     chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
@@ -1079,6 +1112,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
               "grade_label": grade_label(read), "chips": chips, "listed": _listed_block(listed),
               "_last": _last_close(doc, read.get("frame") or vv.primary, vv) or _f(scan_row.get("price")),
               "_bars_to_go": _bars_to_go(read)})
+    if "audit" in read:                                              # 🧪 2026-11-01 — the audited tab's block, served
+        g["audit"] = read["audit"]
     if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
         g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
@@ -1186,10 +1221,17 @@ def recap(reads: list, v=None) -> dict:
     maths. Ordered by the entry bar; each row links its setup card (DECISIONS10 D7b — rendered in commit 2):
     `href` = potential.deep_link(sym, setup), the A+ push url."""
     rows = []
+    aud = V.is_audited(v)
     for doc in reads:
         sym = (doc.get("symbol") or "").upper()
         for setup in GC.SETUPS:
             r = (doc.get("setups") or {}).get(setup) or {}
+            if aud and r.get("state") == _held_state():           # 🧪 2026-11-01 — a held A+ is a recap row too
+                e, label = SUB_META[setup]
+                rows.append((r.get("entry_bar_t") or "", sym, setup,
+                             f"{e} {label} {HELD_RECAP_WORD} at {_hhmm(r.get('entry_bar_t')) or '—'} — broke "
+                             f"{_px(r.get('trigger'))}, stop {_px(r.get('stop'))}"))
+                continue
             if r.get("state") not in MARKED_STATES:
                 continue
             e, label = SUB_META[setup]
@@ -1750,6 +1792,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         st = _store(store)
     v = V.of(variant) if variant is not None else V.of(st)
     gg5 = V.is_gg5(v)
+    aud = V.is_audited(v)                       # 🧪 2026-11-01 — every audited edit below is guarded by this
     if owner is True:
         _bf, bfault = ST.broker_flags(st)
         flags = frozenset(_bf)
@@ -1771,6 +1814,10 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     if listed:
         reads = [d for d in reads if d["symbol"].upper() in listed]
     reads_by = {d["symbol"].upper(): d for d in reads}
+    astats = None
+    if aud:                                     # 🧪 the audit overlay laid on 🚩's reads at serve time (never stored)
+        from chart_maps.gajjala import audited_tab as AT
+        reads_by, astats = _soft("audit overlay", AT.overlay_reads, reads_by, st, session, default=(reads_by, None))
     scan_docs = [d for d in st.scan_docs([session]) if d.get("symbol")]
     scan_by = {d["symbol"].upper(): d for d in scan_docs}
     halts_by = {d["symbol"].upper(): d for d in st.halts(session) if d.get("symbol")}
@@ -1829,6 +1876,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     unlisted: dict = {}                                             # 🌀 reads counted, not carded (BUILD_SPEC18 D3)
     for setup in GC.SETUPS:
         tiles, c = [], {k: 0 for k in COUNT_STATES}
+        if aud:                                 # 🧪 a held A+ is counted under its own word, never folded into "none"
+            c[_held_state()] = 0
         c["awaiting_answer"] = 0
         held = _awaiting(setup)
         for sym, doc in reads_by.items():
@@ -1841,7 +1890,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
             if awaiting:
                 c["awaiting_answer"] += 1
                 continue
-            if state in TILE_STATES:
+            if state in (TILE_STATES + ((_held_state(),) if aud else ())):   # 🧪 a held A+ keeps its card
                 tile_syms.add(sym)                                      # it HAS structure — never on the 👀 line
                 if not _vcp_listed(setup, r):                           # D3: counted above, not carded
                     unlisted[setup] = unlisted.get(setup, 0) + 1
@@ -1857,7 +1906,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         per_setup[setup], counts_by[setup] = tiles, c
 
     ptags = _soft("promo tags", lambda: PN.tag_map(st.scan_docs(SC._window(session))), default={})
-    legend = count_legend(promo=PN.ran((spass or {}).get("promo")) or bool(ptags))   # D1 — ONE served legend
+    legend = count_legend(promo=PN.ran((spass or {}).get("promo")) or bool(ptags), audited=aud)   # D1 — ONE legend
     pot_title = next(r["text"] for r in legend if r["key"] == "potential")
     subs = []
     for key, e, label in GC.SUBS:
@@ -1873,6 +1922,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         counts = counts_by[sub_k]
     else:
         counts = {k: sum(c[k] for c in counts_by.values()) for k in list(COUNT_STATES) + ["awaiting_answer"]}
+        if aud:
+            counts[_held_state()] = sum(c.get(_held_state(), 0) for c in counts_by.values())
         counts["listed"] = len(listed) if listed else len(reads_by)
     out = {"tab": v.tab, "sub": sub_k, "sub_resolved_from": resolved, "tf": tf_k, "subs": subs,
            "session": sess, "pass": _pass_block(pass_doc, now, session, in_window, cron=cron, v=v),
@@ -1889,6 +1940,10 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                         v=v, default=None)
     out["enterable"] = _soft("A+ banner", aplus_block, reads_by, pass_doc, now, in_window=in_window,
                              scan=out["scan"] or {}, cron=cron, session=session, v=v, default=None)
+    if aud:                                     # 🧪 2026-11-01 — the strip and the held A+ section, every sub
+        out["audited"] = _soft("audit strip", AT.audited_block, st, session, now, latest, astats, default=None)
+        out["held"] = _soft("held A+", AT.held_block, reads_by, pass_doc, now, in_window=in_window,
+                            scan=out["scan"] or {}, cron=cron, session=session, v=v, default=None)
     try:
         out["graveyard_today"] = SC.graveyard_today(st, session)
     except Exception as exc:                                        # noqa: BLE001
@@ -1938,7 +1993,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                  for d in post_list]
         out.update({"tiles": tiles[:lim],
                     "postmarket": {"unchecked_n": unchecked, "unchecked_text": CX.unchecked_text(unchecked),
-                                   "recap": recap(reads, v)},
+                                   "recap": recap(list(reads_by.values()) if aud else reads, v)},
                     "empty_note": "No after-hours mover has passed his three after-hours checks yet."})
     elif sub_k == "playbook":
         from chart_maps.gajjala import playbook as PB
@@ -1952,6 +2007,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                      broker_text_of=lambda s: broker_text_for(s, flags),
                                      **({} if gg5 else {"variant": v}), default=None) if LG else None)
         out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
+        if aud:                                 # 🧪 2026-11-01 — audited vs 🚩 original, the 🏁's own sessions
+            out["audited_compare"] = _soft("audited compare", AT.compare_block, st, session, now, span=span_s,
+                                           is_today=is_today, default=None)
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
     _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer

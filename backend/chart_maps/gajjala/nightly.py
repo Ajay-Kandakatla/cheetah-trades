@@ -27,6 +27,16 @@ today.."): `main` then grades the GG1 record (`ledger.grade_step(store.for_varia
 AFTER GG5's run and only when "grade" is a step, in its OWN try: its summary lands under `gajjala_1m`, a failure there
 is logged and named under `gajjala_1m.error` — never in GG5's `errors`, never in the exit code. floats / halts / history
 are shared data GG5's run already warmed.
+
+🧪 Gajjala · Audited (2026-11-01 — Ajay "create a new tab for Gajjals when you modifiy with audit of End of day..
+Gajjals-Audited"): `main` then grades the GGA record (gajjala_audited_ledger) AFTER GG1, in its OWN try, under
+`gajjala_audited` — COPY FIRST: a GGA row with the same id · alert stamp · trigger · stop · plan as its 🚩 original is
+the same read at the same stamp through the ONE trade-math engine, so the original's current columns are COPIED
+(provenance `copied_from` / `copied_at` INSIDE each column — LEDGER_KEYS is closed), never re-fetched. Only the
+RESIDUAL — a GGA row with no matching 🚩 row (the original's send failed / no target), or whose original carries no
+current column (its grade deferred or failed that night) — is graded by `ledger.grade_step`, which skips every copied
+column without a load. The summary serves `copy.residual` (expected 0 most nights). A failure is named under
+`gajjala_audited.error`, never in GG5's `errors` or the exit code.
 """
 from __future__ import annotations
 
@@ -179,6 +189,94 @@ def grade_1m(now: datetime, *, store=None) -> dict:
         return {"error": f"grade: {type(exc).__name__}"}
 
 
+def copy_original_grades(gga, now: datetime, *, shared=None) -> dict:
+    """🧪 COPY FIRST (2026-11-01): for every GGA A+ row of the grade window (grade_step's sessions, clipped to the GGA
+    record) whose 🚩 original has the SAME id, alert stamp (`at_utc` — the pass clock on both claims), trigger, stop
+    and plan, every horizon column the original holds at LEDGER_GRADE_VERSION and the GGA doc does not is copied —
+    `dict(col, copied_from=store.LEDGER, copied_at=now)` — in the body grade_step writes. Never a provider call.
+    -> {rows, matched, copied_cols, written, residual, faulted, read_fault}; `residual` = GGA rows with no match, or a
+    match whose original holds no current column — each only while its GGA doc still lacks a current column (the rows
+    grade_step may load for). A read fault copies nothing."""
+    from . import ledger as LG
+    from . import store as ST
+    from . import variant as V
+    out = {"rows": 0, "matched": 0, "copied_cols": 0, "written": 0, "residual": 0, "faulted": 0, "read_fault": False}
+    shared = shared if shared is not None else getattr(gga, "shared", None)
+    sessions = LG._clip(CX.history_window(LG._next_market_day(default_session(now)),
+                                          GC.LEDGER_GRADE_LOOKBACK_SESSIONS), V.GGA)
+    try:
+        if shared is None:
+            raise LG.LedgerReadError("no 🚩 store to copy from")
+        mine = LG.rows_for(sessions, gga, variant=V.GGA)
+        orig = {r["id"]: r for r in LG.rows_for(sessions, shared)}
+        o_docs = shared.ledger_docs(sessions)
+        g_docs = gga.ledger_docs(sessions)
+        if o_docs is None or g_docs is None:
+            raise LG.LedgerReadError("a ledger could not be read")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala nightly: the audited copy could not read: %s", type(exc).__name__)
+        out["read_fault"] = True
+        return out
+    odocs = {d.get("_id"): d for d in o_docs if isinstance(d, dict)}
+    gdocs = {d.get("_id"): d for d in g_docs if isinstance(d, dict)}
+    out["rows"] = len(mine)
+    stamp = now.isoformat()
+    for row in mine:
+        try:
+            rid = row["id"]
+            o = orig.get(rid)
+            odoc, gdoc = odocs.get(rid) or {}, gdocs.get(rid) or {}
+            open_cols = any(LG._current(gdoc, h) is None for h in GC.LEDGER_HORIZONS)
+            if not (o is not None and o.get("at_utc") is not None and o.get("at_utc") == row.get("at_utc")
+                    and o.get("trigger") is not None and row.get("trigger") is not None
+                    and o.get("stop") is not None and row.get("stop") is not None
+                    and LG._D(o["trigger"]) == LG._D(row["trigger"]) and LG._D(o["stop"]) == LG._D(row["stop"])
+                    and o.get("plan") == row.get("plan")):
+                out["residual"] += int(open_cols)
+                continue
+            out["matched"] += 1
+            if not any(LG._current(odoc, h) is not None for h in GC.LEDGER_HORIZONS):
+                out["residual"] += int(open_cols)               # the 🚩 grade deferred / failed that night
+                continue
+            cols = {}
+            for h in GC.LEDGER_HORIZONS:
+                col = LG._current(odoc, h)
+                if col is not None and LG._current(gdoc, h) is None:
+                    cols[h] = dict(col, copied_from=ST.LEDGER, copied_at=stamp)
+            if not cols:
+                continue
+            body = {"date": row["date"], "symbol": row["symbol"], "setup": row["setup"], "kind": row["kind"],
+                    "line": row["line"], "alert": LG._alert_block(row), "graded_at": stamp,
+                    "version": GC.LEDGER_GRADE_VERSION}
+            body.update(cols)
+            if gga.upsert_ledger(rid, body):
+                out["copied_cols"] += len(cols)
+                out["written"] += 1
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala nightly: copying %s failed: %s", row.get("id"), type(exc).__name__)
+            out["faulted"] += 1
+    return out
+
+
+def grade_audited(now: datetime, *, store=None, load_day: Optional[Callable] = None,
+                  split_lookup: Optional[Callable] = None) -> dict:
+    """🧪 The audited record's grade (2026-11-01): {"copy": copy_original_grades(...), "grade": ledger.grade_step(<GGA
+    store>, now)} — the copy FIRST, the grade for the residual only. A store that is not the audited variant's is refused
+    (fail closed — this step never grades 🚩's own ledger). A raise → {"error": "grade: <Type>"} (logged). Never raises."""
+    try:
+        from . import ledger as LG
+        from . import store as ST
+        from . import variant as V
+        gga = store if store is not None else ST.for_variant(V.GGA)
+        if not V.is_audited(gga):                               # fail closed: this grade writes the GGA ledger ONLY
+            raise ValueError("not the audited store")
+        copied = copy_original_grades(gga, now)
+        return {"copy": copied, "grade": LG.grade_step(gga, now, load_day=load_day, split_lookup=split_lookup)}
+    except Exception as exc:                                    # noqa: BLE001
+        log.exception("gajjala nightly: the audited record's grade failed")
+        return {"error": f"grade: {type(exc).__name__}"}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="chart_maps.gajjala.nightly", description=__doc__.split("\n")[0])
     ap.add_argument("--session", help="YYYY-MM-DD (default: today ET, or the last market day)")
@@ -193,6 +291,7 @@ def main(argv=None) -> int:
     out = run(session, store=st, steps=steps)
     if "grade" in steps:                                         # 🚩 1-minute page (2026-10-27): after GG5, fenced
         out["gajjala_1m"] = grade_1m(datetime.now(timezone.utc))
+        out["gajjala_audited"] = grade_audited(datetime.now(timezone.utc))   # 🧪 2026-11-01: after GG5 + GG1, fenced
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

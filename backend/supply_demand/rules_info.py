@@ -1192,6 +1192,21 @@ def _gg_one_minute_clause() -> str:
             "minute over the same list — a Cheetah variant by your call (%s); %s" % (p, p, s, GC.GG1M_RECORD_FROM, push))
 
 
+def _gg_audited_clause() -> str:
+    """🧪 2026-11-01 (Ajay "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
+    Gajjals-Audited  So we can keep track of improvements on this tab"; BUILD_SPEC gg-audited §3.7 / WP-D) — the
+    section note's ONE clause on the audited tab, built by chart_maps.gajjala.audited_rules.rules_clause() (every rule
+    number formatted from that registry's constants, never typed here): " " + the clause, or "" when the module cannot
+    load or the clause raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import audited_rules as AUD
+        clause = AUD.rules_clause()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala audited clause unavailable: %s", exc)
+        return ""
+    return " " + clause if isinstance(clause, str) and clause else ""
+
+
 def _gajjala_section() -> dict:
     """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
     and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
@@ -1332,6 +1347,7 @@ def _gajjala_section() -> dict:
                     "not the rule." % GC.BROKER_NAME)
                  + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
+                 + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),
     }
 

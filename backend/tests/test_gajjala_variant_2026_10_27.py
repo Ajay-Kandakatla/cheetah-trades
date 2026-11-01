@@ -50,7 +50,8 @@ def boom(*_a, **_k):
 
 # ── variant.py ───────────────────────────────────────────────────────────────────────────────────────────────────
 def test_the_two_variants_as_the_spec_writes_them():
-    assert V.VARIANTS == (V.GG5, V.GG1)
+    # WIDENED 2026-11-01 — 🧪 the audited tab (GGA) joins LAST (Ajay "Gajjals-Audited"; tests/test_gajjala_audited_variant.py)
+    assert V.VARIANTS == (V.GG5, V.GG1, V.GGA)
     assert (V.GG5.key, V.GG5.tab, V.GG5.primary, V.GG5.slow, V.GG5.tfs) == ("gajjala", "gajjala", "5m", "15m",
                                                                            ("5m", "15m"))
     assert (V.GG1.key, V.GG1.tab, V.GG1.primary, V.GG1.slow, V.GG1.tfs) == ("gajjala_1m", "gajjala_1m", "1m", "5m",
@@ -70,6 +71,9 @@ def test_the_two_variants_as_the_spec_writes_them():
 def test_lookups():
     assert V.by_key("gajjala_1m") is V.GG1 and V.by_key("gajjala") is V.GG5
     assert V.by_tab("gajjala_1m") is V.GG1 and V.by_tab("gajjala") is V.GG5
+    # WIDENED 2026-11-01 — the 🧪 audited tab's lookups; GG5 / GG1 resolve as before
+    assert V.by_key("gga") is V.GGA and V.by_tab("gajjala_audited") is V.GGA
+    assert V.for_api_base("/chart-maps/gajjala-audited/scan") is V.GGA
     assert V.for_api_base("/chart-maps/gajjala-1m") is V.GG1
     assert V.for_api_base("/chart-maps/gajjala-1m/scan") is V.GG1
     assert V.for_api_base("/chart-maps/gajjala-1m/entry-tape?id=x") is V.GG1
@@ -232,7 +236,8 @@ def test_gg1_physical_names():
         "gajjala_passes": "gajjala_1m_passes", "gajjala_reads": "gajjala_1m_reads",
         "gajjala_alerts": "gajjala_1m_alerts", "gajjala_state": "gajjala_1m_state",
         "gajjala_potentials": "gajjala_1m_potentials", "gajjala_ledger": "gajjala_1m_ledger",
-        "gajjala_replay": "gajjala_1m_replay"}
+        "gajjala_replay": "gajjala_1m_replay",
+        "gajjala_overlay": "gajjala_1m_overlay"}       # WIDENED 2026-11-01 — 🧪 OVERLAY joins OWN; GG1 never writes it
     assert {st.physical(n) for n in ST.SHARED} == set(ST.SHARED)                # NEGATIVE: shared keep GG5's names
 
 
