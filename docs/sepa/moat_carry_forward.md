@@ -126,10 +126,29 @@ from the 481 fresh blobs the backfill did not touch (their moat is unchanged).
   fundamentals request** ("Quote not found": TMHC, VSCO, CPRX, KW, XOMA,
   SNBR, THR…). The 404s still failed on a re-read 10 minutes later.
 - 86 have inputs and score 0 — e.g. Ford (ROE −18%, gross margin 7%, FCF
-  negative, net debt/EBITDA 18×) and CIFR. `compute_moat` labels ANY score
-  of 0 "UNKNOWN" (tier 0), so the chip reads "no data" although the data is
-  there. That label rule is pre-existing and was not changed here (a
-  filter-visible change — his call).
+  negative, net debt/EBITDA 18×) and CIFR. `compute_moat` labelled ANY score
+  of 0 "UNKNOWN" (tier 0), so the chip read "no data" although the data was
+  there. **Fixed 2026-11-01** (below).
+
+## 2026-11-01 — a score of 0 from data is NONE
+
+`compute_moat` now labels a score of 0 with ≥ 1 finite input **NONE / tier 1**
+(red "🏰 NONE 0"; the ⚠ partial flag still marks < 4 inputs). UNKNOWN /
+tier 0 ("🏰 no data") is only 0 finite inputs — ETFs, a Yahoo 404.
+`data_completeness` now counts finite values only (a NaN was counted as an
+input; `_scale_band` already scored it 0). Scoring is unchanged, and the
+`_scale_band` docstring now says what `allow_negative_zero` does: nothing,
+with today's bands — a negative FCF or growth scores 0 either way.
+
+Census 2026-11-01 12:26 ET, served blobs 3,788: 450 tier 0, of which **79
+had inputs and move to NONE** (F, CIFR, FCEL, CSIQ, ACTU…); 371 have 0
+inputs and stay UNKNOWN. The /sepa moat filter is not affected: its chips
+are Some+ (≥ 2), Narrow+ (≥ 3) and Wide (4), which exclude tier 0 and tier 1
+alike; the moat sort reads the score, which stays 0.
+
+Stored moats relabel on their next read — the 79 were re-read the same day
+(`moat-backfill --mode refresh --symbols … --restart`), the rest on the
+Sunday refresh pass. Tests: `backend/tests/test_moat_zero_score_label.py`.
 
 A 404'd name that later scores keeps its moat through the next 404:
 `lost_inputs` never lets a 0-of-6 read replace a moat that had inputs.

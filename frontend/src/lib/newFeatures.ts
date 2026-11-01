@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-01: "Do this task here: “Fix moat UNKNOWN label on full-data zero scores”". The rule lives in
+  // backend/sepa/moat.py compute_moat (score 0 with >= 1 finite input = NONE); scoring itself unchanged.
+  { id: 'sepa-moat-none-not-unknown-2026-11-01', addedAt: '2026-11-01', route: '/sepa',
+    label: '🏰 A moat score of 0 that came FROM data now reads “🏰 NONE 0”, not “no data”. Ford read all 6 of 6 inputs (ROE −18%, gross margin 7%, negative free cash flow, net debt 18× EBITDA) and the card still said “yfinance is missing fundamentals”. 79 names moved; “no data” is now only names with nothing to read (ETFs, names Yahoo has no fundamentals for). The 🏰 Some+ / Narrow+ / Wide filters pick exactly the same names as before. You said: “Fix moat UNKNOWN label on full-data zero scores”.' },
   // Ajay 2026-10-29 ~20:05 ET, verbatim in the label with his spelling kept (BUILD_SPEC32). The day's 🎪 Promo
   // circuit names (stored tags only, shotgun accounts pruned, GG's price band and a dated snapshot, ordered by today's %
   // change, cut at backend constants PROMO_NAMES_MAX) join 🚩 Gajjala's scan as candidates — source "promo"

@@ -9747,7 +9747,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 23) → slice(0, 24).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 24) → slice(0, 25).
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 25) → slice(0, 26).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9964,7 +9965,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 20) → slice(0, 21).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 21) → slice(0, 22).
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 22) → slice(0, 23).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10247,7 +10249,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 20) → slice(0, 21).
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 21) → slice(0, 22).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10449,7 +10452,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 15) → slice(0, 16).
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 16) → slice(0, 17).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10550,7 +10554,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 19) → slice(0, 20).
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 20) → slice(0, 21).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10702,7 +10707,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 16) → slice(0, 17).
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 17) → slice(0, 18).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10821,7 +10827,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 17) → slice(0, 18).
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 18) → slice(0, 19).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10874,7 +10881,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 13) → slice(0, 14).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 14) → slice(0, 15).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11016,7 +11024,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 14) → slice(0, 15).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 15) → slice(0, 16).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11101,7 +11110,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 12) → slice(0, 13).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 13) → slice(0, 14).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11219,7 +11229,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 11) → slice(0, 12).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 12) → slice(0, 13).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11412,7 +11423,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 10) → slice(0, 11).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 11) → slice(0, 12).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11468,7 +11480,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 9) → slice(0, 10).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 10) → slice(0, 11).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11544,7 +11557,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 8) → slice(0, 9).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 9) → slice(0, 10).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11614,7 +11628,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 7) → slice(0, 8).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 8) → slice(0, 9).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11955,7 +11970,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 6) → slice(0, 7).
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 7) → slice(0, 8).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12121,7 +12137,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 4) → slice(0, 5).
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 5) → slice(0, 6).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12323,7 +12340,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-10-29: gajjala-only-pushes FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 5) → slice(0, 6).
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 6) → slice(0, 7).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12417,7 +12435,8 @@ const CONTRACTS = [
       // WIDENED (2026-10-29: gajjala-only-pushes FIRST) — FIRST → one of the first two.
       // WIDENED +1 (2026-10-29: track-record-tape FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 3) → slice(0, 4).
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 4) → slice(0, 5).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12516,7 +12535,8 @@ const CONTRACTS = [
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // WIDENED (2026-10-29: track-record-tape FIRST) — NEW_FEATURES[0] → one of the first two.
       // WIDENED +1 (2026-10-29: promo-names FIRST) — slice(0, 2) → slice(0, 3).
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 3) → slice(0, 4).
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12648,7 +12668,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
       const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
       // WIDENED (2026-10-29: promo-names FIRST) — NEW_FEATURES[0] → one of the first two.
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 2) → slice(0, 3).
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12770,8 +12791,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-promo-names-2026-10-29';
       const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
       const arr = nf.slice(nf.indexOf('NEW_FEATURES: NewFeature[] = ['));
-      const first = (/\{ id: '([^']+)'/.exec(arr) || [])[1];
-      if (nf && first !== ID) errs.push(`newFeatures.ts: '${ID}' must be NEW_FEATURES[0] (found '${first}')`);
+      // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — NEW_FEATURES[0] → one of the first two.
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
       const ent = at < 0 ? '' : arr.slice(at, nextAt < 0 ? undefined : nextAt);

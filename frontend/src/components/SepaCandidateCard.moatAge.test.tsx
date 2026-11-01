@@ -88,3 +88,41 @@ describe('🏰 moat chip — as-of line', () => {
     expect(title).not.toContain('Moat data as of');
   });
 });
+
+/* 🏰 2026-11-01: a score of 0 FROM data is served as NONE / tier 1 (Ford) —
+ * the chip reads "NONE 0" in red with the scored tooltip, never "no data". */
+describe('🏰 moat chip — a zero score from data', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  async function moatChip(moat: unknown): Promise<Element> {
+    stubFetch();
+    render(
+      <MemoryRouter>
+        <SepaCandidateCard row={ROW(moat) as any} onSelect={() => {}} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByText('▸ why-buy & signals'));
+    return waitFor(() => {
+      const el = Array.from(document.querySelectorAll('.sepa-flag[role="button"]'))
+        .find((n) => (n.textContent || '').startsWith('🏰'));
+      expect(el).toBeTruthy();
+      return el!;
+    });
+  }
+
+  it('NONE / tier 1 with score 0 renders red "NONE 0" and the scored tooltip', async () => {
+    const chip = await moatChip(MOAT({ score: 0, label: 'NONE', tier: 1, as_of: AS_OF,
+      narrative: 'No measurable moat fingerprint — likely commodity / cyclical.' }));
+    expect(chip.textContent).toContain('🏰 NONE 0');
+    expect(chip.className).toContain('sepa-flag--bad');
+    const title = chip.getAttribute('title') || '';
+    expect(title).toContain('why this scored 0/100');
+    expect(title).not.toContain('missing fundamentals');
+  });
+
+  it('NEGATIVE: tier 0 (0 inputs) still reads "no data", muted', async () => {
+    const chip = await moatChip(MOAT({ score: 0, label: 'UNKNOWN', tier: 0, data_completeness: 0 }));
+    expect(chip.textContent).toContain('🏰 no data');
+    expect(chip.className).toContain('sepa-flag--muted');
+  });
+});

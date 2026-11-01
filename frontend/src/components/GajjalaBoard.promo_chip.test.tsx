@@ -296,9 +296,10 @@ describe('📱 the 🎪 chip on the phone — wraps, never widens its row', () =
 /* ✨ FIRST (BUILD_SPEC32 D5): his words verbatim, spelling kept; routed to /chart-maps; the caveats on the label. */
 const HIS = "Also I see a some of stocks we see are also in Gajjalas page. Don't see some should we pull stocks from PROMO circuit by default every day they are having some good catched but I do wanna run them against Gajjalas strategies";
 
-describe('✨ the 🎪 entry is NEW_FEATURES[0]', () => {
-  it('first, dated 2026-10-29, routed /chart-maps, his words verbatim, INVERTED + UNMEASURED on the label', () => {
-    const f = NEW_FEATURES[0];
+describe('✨ the 🎪 entry is NEW_FEATURES[1]', () => {
+  it('second (the 🏰 moat entry went first 2026-11-01), dated 2026-10-29, routed /chart-maps, his words verbatim, INVERTED + UNMEASURED on the label', () => {
+    expect(NEW_FEATURES[0].id).toBe('sepa-moat-none-not-unknown-2026-11-01');
+    const f = NEW_FEATURES[1];
     expect(f.id).toBe('chart-maps-gajjala-promo-names-2026-10-29');
     expect(f.addedAt).toBe('2026-10-29');
     expect(f.route).toBe('/chart-maps');
@@ -308,9 +309,9 @@ describe('✨ the 🎪 entry is NEW_FEATURES[0]', () => {
     expect(f.label).not.toMatch(/bounc/i);
   });
 
-  it('NEGATIVE: the entry is not duplicated, and the 📈 tape entry is now second', () => {
+  it('NEGATIVE: the entry is not duplicated, and the 📈 tape entry is now third', () => {
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-promo-names-2026-10-29').length).toBe(1);
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-track-record-tape-2026-10-29');
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-track-record-tape-2026-10-29');
   });
 });
 

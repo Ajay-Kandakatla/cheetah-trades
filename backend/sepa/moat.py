@@ -251,10 +251,11 @@ def compute_moat(symbol: str, *, breaker: bool = True) -> Optional[dict]:
     # Count how many of the 5 underlying metrics had data. Lets the UI
     # show "partial" indicators when score is computed from 2-3 of 5
     # rather than treating a sparse-data 30 the same as a full-data 30.
+    # A NaN is not data (_scale_band already scores it 0) — count finite only.
     data_completeness = sum(1 for v in (
         roe_pct, gm_pct, om_pct, fcf_margin_pct,
         net_debt_ebitda, rev_growth_pct,
-    ) if v is not None)
+    ) if isinstance(v, (int, float)) and math.isfinite(v))
     # 6 inputs feeding 5 components — full data = 6.
     is_partial = 0 < data_completeness < 4   # fewer than 4 metrics = partial
 
@@ -264,11 +265,16 @@ def compute_moat(symbol: str, *, breaker: bool = True) -> Optional[dict]:
         label, tier = "NARROW", 3
     elif score >= 40:
         label, tier = "SOME", 2
-    elif score > 0:
+    elif score > 0 or data_completeness > 0:
+        # 2026-11-01: a score of 0 FROM DATA is "no moat", not "no data" —
+        # Ford (6 of 6 inputs: ROE -18%, gross margin 7%, FCF negative, net
+        # debt/EBITDA 18x) used to read UNKNOWN and the card said "yfinance is
+        # missing fundamentals". 79 served names moved on the day.
         label, tier = "NONE", 1
     else:
-        # Could not score at all — distinguish UNKNOWN from NONE so the UI
-        # doesn't paint every data-missing ticker as red.
+        # Could not score at all (0 of 6 inputs: an ETF, a Yahoo 404) —
+        # distinguish UNKNOWN from NONE so the UI doesn't paint every
+        # data-missing ticker as red.
         label, tier = "UNKNOWN", 0
 
     narrative = _narrative(
@@ -313,9 +319,13 @@ def _scale_band(value: Optional[float],
                 allow_negative_zero: bool = False) -> int:
     """Return the score from the first band whose threshold `value` clears.
 
-    `bands` is ordered high-threshold first. When value is missing (None),
-    return 0. Negative values return 0 unless `allow_negative_zero` is set
-    (in which case they get the lowest band's score).
+    `bands` is ordered high-threshold first. When value is missing (None or
+    NaN), return 0. A negative value returns 0 at once unless
+    `allow_negative_zero` is set; with the flag it reaches the band loop,
+    where it clears only a band whose threshold is itself negative. No band
+    in this module has one (FCF and growth both bottom out at 0), so today a
+    negative value scores 0 either way. Documented 2026-11-01; the scoring
+    itself is unchanged.
     """
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return 0
