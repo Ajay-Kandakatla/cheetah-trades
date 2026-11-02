@@ -568,7 +568,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             if gga is not None:
                 AP.run_step(st, gga, reads, frames, now, session, alert_ctx=alert_ctx, owner=deps.owner, dry=dry,
                             push_dry=push_dry,
-                            record_status=None if (dry or on_demand) else deps.record_audited_status)
+                            record_status=None if (dry or on_demand) else deps.record_audited_status,
+                            strip=result.get("strip"))
         except _Superseded:
             raise
         except Exception:                                       # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc and return stay byte-identical)

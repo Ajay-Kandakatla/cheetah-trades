@@ -26,6 +26,9 @@ Collections
   gajjala_ledger    _id "{date}|{SYM}|{setup}|{kind}"  🏁 the Track record (2026-10-16) — graded nightly          none
   gajjala_replay    _id "REPLAY:{date}|{SYM}|{setup}"  ⏪ replayed A+ rows (2026-10-16 night, DECISIONS11 D4) —
                     written ONLY by scripts/gajjala_replay.py --write (pre-graded; the nightly never re-grades)   none
+  gajjala_exits     _id "{date}|{SYM}|{setup}|aplus"  🧪 (2026-11-01) the alternative-exit grades (T3 / T5) of the
+                    audited 🏁 rows — written ONLY by the GGA store (gajjala_audited_exits, audited_exits.grade_exits,
+                    the nightly); GG5 / GG1 never index or write it; closed keys EXITS_KEYS + the exit columns   none
 
 🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
 added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
@@ -85,16 +88,20 @@ POTENTIALS = "gajjala_potentials"            # 🧠 the potential tracker (2026-
 LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-16) — one doc per rung alert; kept, no TTL
 REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4) — written ONLY by scripts/gajjala_replay.py --write; kept, no TTL
 OVERLAY = "gajjala_overlay"                    # 🧪 2026-11-01 — the audit overlay per (session, symbol); written ONLY by the GGA store as gajjala_audited_overlay; GG5 / GG1 never write it
+EXITS = "gajjala_exits"                        # 🧪 2026-11-01 — alternative-exit grades of the audited 🏁 rows; written ONLY by the GGA store as gajjala_audited_exits; kept, no TTL
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
-# 🧪 2026-11-01: OVERLAY joins ALL before REPLAY (tests pin ALL[-1] == REPLAY — the order carries no meaning)
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, REPLAY)
+# 🧪 2026-11-01: OVERLAY and EXITS join ALL before REPLAY (tests pin ALL[-1] == REPLAY — the order carries no meaning)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, EXITS, REPLAY)
 # 2026-10-27 (BUILD_SPEC27 §3.4): what a variant WRITES under its own prefix vs what it READS from GG5 (ALL = OWN ∪ SHARED)
 # 🧪 2026-11-01: a variant may BORROW some OWN names (Variant.borrows — GGA reads GG5's reads / potentials / passes /
 # replay): a borrowed name resolves to GG5's collection through `shared`, and the variant never indexes or writes it
-OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY)
+OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS)
 SHARED = (SCAN, AH_CARRY, POST, HALTS, DAILY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
+# 🧪 2026-11-01: the fixed top-level keys of an exits doc (upsert_exits refuses any other key but the exit columns
+# its caller names — audited_rules.EXIT_COLS)
+EXITS_KEYS = frozenset({"date", "symbol", "setup", "kind", "alert", "graded_at", "version"})
 LEDGER_ALERT_STATES = ("shadow", "pushed")     # the A+ rows the ledger reads (ledger.alert_of filters the ids)
 # ⏪ the only top-level keys a replay doc may carry besides `_id` (upsert_replay refuses any other — BUILD_SPEC11 §3.12)
 REPLAY_KEYS = frozenset({"date", "symbol", "setup", "kind", "state", "alert", "same", "next", "bars5", "universe",
@@ -382,11 +389,12 @@ class GajjalaStore:
         `shared` GG5 store (2026-10-27) walks its OWN collections only (GG5's own run indexes the shared ones), and
         never a name it BORROWS (🧪 2026-11-01 — those are GG5's collections). OVERLAY is indexed ONLY by the GGA store
         (🧪 2026-11-01 refix — `create_index` creates the collection, and GG5 / GG1 never write an overlay, so their
-        bare runs must not leave an empty `gajjala_overlay` / `gajjala_1m_overlay` on the live Mongo)."""
+        bare runs must not leave an empty `gajjala_overlay` / `gajjala_1m_overlay` on the live Mongo). EXITS the same
+        (🧪 2026-11-01 — written only by the GGA nightly; no TTL)."""
         for name in (OWN if self.shared is not None else ALL):
             if self.shared is not None and name in self.variant.borrows:
                 continue
-            if name == OVERLAY and not V.is_audited(self.variant):
+            if name in (OVERLAY, EXITS) and not V.is_audited(self.variant):
                 continue
             c = self.coll(name)
             if c is None:
@@ -395,7 +403,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY, OVERLAY):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -953,6 +961,32 @@ class GajjalaStore:
         from . import audited_rules as AUD
         days = [_iso(s) for s in sessions or []]
         return self._find_or_none(ALERTS, {"date": {"$in": days}, "state": AUD.HELD_ROW_STATE})
+
+    # ── 🧪 gajjala_exits (2026-11-01 — the alternative-exit grades; written ONLY by audited_exits.grade_exits) ───────
+    def exits_docs(self, sessions: Iterable) -> Optional[list]:
+        """🧪 The exits docs of these sessions. None on a read fault / no handle ([] = none on file)."""
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(EXITS, {"date": {"$in": days}})
+
+    def upsert_exits(self, _id: str, sets: dict, *, cols) -> bool:
+        """THE exits write: one `update_one({_id}, {$set: sets}, upsert=True)` on gajjala_exits — refused (logged,
+        False) on any store but the audited variant's, an empty / non-string id, or a top-level key outside
+        EXITS_KEYS ∪ `cols` (the caller's exit columns); never touches another collection. False on a fault."""
+        allowed = EXITS_KEYS | set(cols or ())
+        bad = set(sets or {}) - allowed
+        if not V.is_audited(self.variant) or not sets or bad or not isinstance(_id, str) or not _id:
+            log.warning("gajjala.store: refused exits write %s (variant %s, keys outside EXITS_KEYS: %s)", _id,
+                        getattr(self.variant, "key", None), sorted(bad))
+            return False
+        c = self.coll(EXITS)
+        if c is None:
+            return False
+        try:
+            c.update_one({"_id": _id}, {"$set": dict(sets)}, upsert=True)
+            return True
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: exits write failed for %s: %s", _id, exc)
+            return False
 
     # ── ⏪ gajjala_replay (2026-10-16 night, DECISIONS11 D4 / D5 — written ONLY by scripts/gajjala_replay.py --write) ──
     def replay_rows(self, sessions: Iterable) -> Optional[list]:

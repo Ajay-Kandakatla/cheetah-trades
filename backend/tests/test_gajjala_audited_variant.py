@@ -22,7 +22,11 @@ from chart_maps.gajjala import variant as V
 
 FMT = dict(p=5, s=15, tail="tail", floor=AUD.MEASURE_FLOOR_WEEKS, m=AUD.G3_MAX_AGE_MIN, mr=AUD.G3_MISSED_R,
            r=GC.LEDGER_R_MULT, n=0, hhmm="10:41", n_read=1, n_orig=1, n_aud=1, n_held=0, original_only=0,
-           audited_only=0, open="04:00", close="20:00", cad=5, rth_open="09:30", mute_end="09:45")
+           audited_only=0, open="04:00", close="20:00", cad=5, rth_open="09:30", mute_end="09:45",
+           w="1 winner", l="2 losers", u=0, rule="T5 21 EMA trail", ww=1, wl=0, gw=0, gl=1, fired=3, alone=2)
+PER_RULE_KEYS = ("per_rule_title", "per_rule_with", "per_rule_held", "per_rule_cap_held", "per_rule_gg_math",
+                 "per_rule_delta_filter", "per_rule_delta_exit", "per_rule_not_graded", "per_rule_not_judged",
+                 "per_rule_no_rows", "per_rule_t4_fired", "per_rule_t1_tie")
 EDGE = re.compile(r"\bedge\b", re.I)
 B_WORD = re.compile("b" + "ounc", re.I)
 
@@ -174,3 +178,31 @@ def test_record_from_generalised():
     assert LG._record_from(V.GGA) == date(2026, 11, 1)
     assert LG._record_from(V.GG1) == date(2026, 10, 27)                          # unchanged
     assert LG._record_from(V.GG5) is None
+
+
+def test_the_per_rule_words_2026_11_01():
+    """SPEC gg-audited-mods §3.4 — Ajay 2026-11-01 "But keep a track record too to see the winners and loster"."""
+    g = V.GGA
+    assert all(k in V.WORDS_GGA for k in PER_RULE_KEYS)
+    assert V.word("per_rule_title", g) == ("🧪 Rule by rule — what each change would have done on the same A+ · "
+                                           "counts, not verdicts · UNMEASURED")
+    assert V.word("per_rule_with", g) == "with the rule"
+    assert V.word("per_rule_held", g) == "held by the rule — what the original did"
+    assert V.word("per_rule_cap_held", g) == "held — cap reached — what the original did"
+    assert V.word("per_rule_gg_math", g) == "GG's math on the same rows"
+    assert V.word("per_rule_delta_filter", g, w="0 winners", l="1 loser", u=0) == "removed 0 winners and 1 loser · 0 never filled"
+    assert V.word("per_rule_delta_exit", g, rule="T5 21 EMA trail", ww=1, wl=2, gw=3, gl=0, n=3) == (
+        "T5 21 EMA trail: 1 W / 2 L · GG's math: 3 W / 0 L on the same 3")
+    assert V.word("per_rule_not_graded", g) == "not graded yet — exit grades land the night after the session"
+    assert V.word("per_rule_not_judged", g, n=4) == "4 recorded before this rule joined — not judged"
+    assert V.word("per_rule_no_rows", g) == "no A+ judged on this rule yet"
+    assert V.word("per_rule_t4_fired", g, fired=3, alone=2) == "fired on 3 rung bars · alone on 2"
+    assert V.word("per_rule_t1_tie", g, n=1) == "1 held on a tied bar — 🚩's ring order broke the tie"
+    assert V.word("by_rule_note", g) == ("a held A+ counts under every rule it failed — these rows can sum past the "
+                                         "held total")                                  # kept as the footnote
+    # sentences only: no digit typed into any per-rule template (every number is a caller kwarg)
+    for k in PER_RULE_KEYS:
+        assert not re.search(r"\d", V.WORDS_GGA[k]), k
+    # NEGATIVE: GG5 / GG1 serve none of them
+    assert all(V.word(k, V.GG5) is None for k in PER_RULE_KEYS)
+    assert all(k not in V.WORDS_1M for k in PER_RULE_KEYS)

@@ -39,5 +39,12 @@
 .gg-audited-table td.gg-muted { white-space: normal; min-width: 12rem; }
 .gg-audited-held-line { margin: 0.25rem 0; }
 
+/* 🧪 Rule by rule (2026-11-01) — Ajay: "But keep a track record too to see the winners and loster". ONE table of served
+ * sentences; on his phone (430 px) the table scrolls inside .gg-audited-compare (overflow-x: auto; min-width: 0), never
+ * the page, and every cell wraps (a long served sentence never sets the column width). */
+.gg-audited-per-rule td { white-space: normal; overflow-wrap: anywhere; min-width: 9rem; max-width: 18rem; vertical-align: top; text-align: left; }
+.gg-audited-per-rule th[scope='row'] { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+.gg-audited-per-rule thead th { text-align: left; }
+
 /* the held tile pill — a muted amber: an A+ on the original, held here by the audit (never the A+ green). */
 .gg-state-aplus_held { color: var(--amber, #f59e0b); border-color: var(--amber, #f59e0b); opacity: 0.85; }

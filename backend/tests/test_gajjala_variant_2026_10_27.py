@@ -237,7 +237,8 @@ def test_gg1_physical_names():
         "gajjala_alerts": "gajjala_1m_alerts", "gajjala_state": "gajjala_1m_state",
         "gajjala_potentials": "gajjala_1m_potentials", "gajjala_ledger": "gajjala_1m_ledger",
         "gajjala_replay": "gajjala_1m_replay",
-        "gajjala_overlay": "gajjala_1m_overlay"}       # WIDENED 2026-11-01 — 🧪 OVERLAY joins OWN; GG1 never writes it
+        "gajjala_overlay": "gajjala_1m_overlay",       # WIDENED 2026-11-01 — 🧪 OVERLAY joins OWN; GG1 never writes it
+        "gajjala_exits": "gajjala_1m_exits"}           # WIDENED 2026-11-01 — WP-C EXITS joins OWN (spec §3.3)
     assert {st.physical(n) for n in ST.SHARED} == set(ST.SHARED)                # NEGATIVE: shared keep GG5's names
 
 

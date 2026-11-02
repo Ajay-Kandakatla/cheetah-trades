@@ -35,7 +35,7 @@ from tests.test_gajjala_variant_gg5_identity import BOARD, board_text, scenario,
 
 ET = ZoneInfo("America/New_York")
 NOW_B = at(10, 42)                                     # the identity board's clock (the 10:41 pass is current)
-GGA_OWN = (ST.ALERTS, ST.STATE, ST.LEDGER, ST.OVERLAY)
+GGA_OWN = (ST.ALERTS, ST.STATE, ST.LEDGER, ST.OVERLAY, ST.EXITS)
 B_WORD = re.compile("b" + "ounc", re.I)
 EDGE = re.compile(r"\bedge\b", re.I)
 NEW_KEYS = ("audited", "held", "audited_compare")
@@ -129,8 +129,8 @@ def test_a_g1_held_aplus_is_a_card_a_count_a_legend_row_and_a_held_row_never_on_
     b = GT.build(setup, now=NOW_B, store=gga, owner=True)
     assert b["tab"] == "gajjala_audited"
     assert b["variant"]["title"] == V.WORDS_GGA["title"]
-    assert [r["id"] for r in b["audited"]["registry"]] == ["G1", "G2", "G3", "G4"]
-    assert b["audited"]["on_ids"] == ["G1", "G2", "G4"]
+    assert [r["id"] for r in b["audited"]["registry"]] == [r.id for r in AUD.REGISTRY]   # WP-A pins the 12 ids
+    assert b["audited"]["on_ids"] == [r.id for r in AUD.on_rules()] and "G3" not in b["audited"]["on_ids"]
     assert b["audited"]["lane_only_text"] and "G3" in b["audited"]["lane_only_text"]
     assert b["audited"]["unmeasured_text"] == V.word("unmeasured", V.GGA, floor=AUD.MEASURE_FLOOR_WEEKS)
     assert b["audited"]["pass"]["text"].startswith("🧪 audit overlay ran on the 10:41 ET pass")
@@ -377,24 +377,34 @@ NOW_C = datetime(2026, 11, 4, 12, 0, tzinfo=ET)
 SETUP = "bull_flag"
 
 
-def _claim(sym, *, variant=None, state="shadow", d=D1, trigger=10.0, stop=9.0):
-    ck = AL.claim_key(d, sym, SETUP, variant)
+def _claim(sym, *, variant=None, state="shadow", d=D1, trigger=10.0, stop=9.0, bar=None, audit=None, setup=SETUP):
+    ck = AL.claim_key(d, sym, setup, variant)
     _id = SHADOW_CLAIM_PREFIX + ck if state == "shadow" else ck
-    return {"_id": _id, "state": state, "date": d.isoformat(), "symbol": sym, "setup": SETUP,
-            "at": datetime.combine(d, datetime.min.time().replace(hour=15), tzinfo=timezone.utc).isoformat(),
-            "trigger": trigger, "stop": stop, "price": trigger}
+    doc = {"_id": _id, "state": state, "date": d.isoformat(), "symbol": sym, "setup": setup,
+           "at": datetime.combine(d, datetime.min.time().replace(hour=15), tzinfo=timezone.utc).isoformat(),
+           "trigger": trigger, "stop": stop, "price": trigger}
+    if bar is not None:
+        doc["entry_bar_t"] = bar
+    if audit is not None:
+        doc["audit"] = audit
+    return doc
 
 
-def _grade(sym, outcome, d=D1):
+def _grade(sym, outcome, d=D1, setup=SETUP):
     g = {"entry": "no_entry"} if outcome == "no_entry" else {"entry": "filled", "outcome": outcome}
-    return {"_id": LG.ledger_id(d.isoformat(), sym, SETUP, LG.KINDS[1]), "date": d.isoformat(), "symbol": sym,
-            "setup": SETUP, "same": dict(g, version=GC.LEDGER_GRADE_VERSION)}
+    return {"_id": LG.ledger_id(d.isoformat(), sym, setup, LG.KINDS[1]), "date": d.isoformat(), "symbol": sym,
+            "setup": setup, "same": dict(g, version=GC.LEDGER_GRADE_VERSION)}
 
 
-def _held(sym, ids, d=D1, state=None):
-    return {"_id": f"{AL.claim_key(d, sym, SETUP, V.GGA)}#{AUD.HELD_ROW_STATE}", "date": d.isoformat(),
-            "symbol": sym, "setup": SETUP, "state": state or AUD.HELD_ROW_STATE,
-            "audit": {"failed": [{"id": i, "why": "w"} for i in ids], "passed": [], "version": 1}}
+def _held(sym, ids, d=D1, state=None, bar=None, passed=(), tie=None, setup=SETUP):
+    a = {"failed": [{"id": i, "why": "w"} for i in ids], "passed": list(passed), "version": 1}
+    if tie is not None:
+        a["values"] = {"T1": {"tie": tie}}
+    doc = {"_id": f"{AL.claim_key(d, sym, setup, V.GGA)}#{AUD.HELD_ROW_STATE}", "date": d.isoformat(),
+           "symbol": sym, "setup": setup, "state": state or AUD.HELD_ROW_STATE, "audit": a}
+    if bar is not None:
+        doc["entry_bar_t"] = bar
+    return doc
 
 
 def stores(g5_alerts, g5_ledger, a_alerts, a_ledger):
@@ -425,8 +435,10 @@ def test_compare_arithmetic_original_audited_held_by_rule_by_day():
     h = c["held"]
     assert (h["n"], h["loss"], h["win"], h[AT.NO_ORIGINAL]) == (1, 1, 0, 0)
     assert h["rows"][0]["outcome"] == "loss" and h["rows"][0]["held_by"] == ["G4"]
-    br = {r["id"]: r for r in c["by_rule"]}
-    assert (br["G4"]["n_held"], br["G4"]["loss"]) == (1, 1) and br["G1"]["n_held"] == 0
+    assert "by_rule" not in c                                      # NEGATIVE: the held-only table is gone (§3.4)
+    pr = {r["key"]: r for r in c["per_rule"]}
+    # BBB's marker failed G4 (its other filters unrecorded) — no bar on either claim → the marker by fallback
+    assert (pr["G4"]["other"]["n"], pr["G4"]["other"]["loss"]) == (1, 1) and pr["G1"]["other"]["n"] == 0
     assert c["by_rule_note"] == V.word("by_rule_note", V.GGA)
     for k, side in (("original", o), ("audited", a), ("held", h)):
         assert sum(d[k]["n"] for d in c["by_day"]) == side["n"]
@@ -454,8 +466,9 @@ def test_compare_recon_original_only_audited_only_no_original_and_both():
     assert c3["held"][AT.NO_ORIGINAL] == 1 and _identity(c3)
     assert c3["recon"]["audited_only"] == 1 and c3["recon"]["both"] == 0   # a held row with no original counts here
     assert c3["recon"]["original_only"] == 0
-    br = {r["id"]: r["n_held"] for r in c3["by_rule"]}
-    assert br == {"G1": 1, "G2": 1, "G4": 1}                       # one held row counts under every rule it failed
+    pr = {r["key"]: r for r in c3["per_rule"]}                    # EEE has no original: no_original on G1 + G2
+    assert {k: pr[k]["other"][AT.NO_ORIGINAL] for k in ("G1", "G2", "G4")} == {"G1": 1, "G2": 1, "G4": 0}
+    assert {k: pr[k]["other"]["n"] for k in ("G1", "G2", "G4")} == {"G1": 0, "G2": 0, "G4": 1}
     # held on one pass, audited A+ later the same day
     c4 = AT.compare_block(base_world(extra_g5=[_claim("FFF")], extra_g5l=[_grade("FFF", "win")],
                                      extra_a=[_claim("FFF", variant=V.GGA), _held("FFF", ["G2"])]),
@@ -540,3 +553,273 @@ def test_no_edge_word_in_the_new_blocks_and_no_b_word_anywhere(world):
         assert not [s for s in strings(blob) if EDGE.search(s)]
     for whole in (b, c):
         assert not [s for s in strings(whole) if B_WORD.search(s)]
+
+
+# ── 🧪 the per-rule table (SPEC gg-audited-mods §3.4 / WP-D, 2026-11-01) ─────────────────────────────────────────────
+# Ajay 2026-11-01: "Yes make the changes in audited please" · "But keep a track record too to see the winners and loster"
+B1040, B0805, B1115 = "2026-11-03 10:40", "2026-11-03 08:05", "2026-11-03 11:15"
+UN_MEASURED = re.compile(r"(?<!un)measured", re.I)
+VCP = AUD.T3_SETUPS[0]
+KEYS_12 = ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2", "T3_2R", "T3_3R", "T5"]
+
+
+def _filters():
+    return [r.id for r in AUD.filter_rules()]
+
+
+def _aud(failed=(), *, t1=True, tie=None):
+    """A claim / marker audit block as audited_pass stores it: `passed` = every other filter rule (T1 only when it was
+    judged — a read another rule held carries no T1)."""
+    ids = [i for i in _filters() if t1 or i != "T1"]
+    a = {"passed": [i for i in ids if i not in failed], "failed": [{"id": i, "why": "w"} for i in failed],
+         "rules": ids, "values": {}, "version": AUD.AUDIT_VERSION, "frame": "5m"}
+    if tie is not None:
+        a["values"]["T1"] = {"tie": tie}
+    return a
+
+
+def _mk(sym, *, gg5_bar=B1040, outcome="win", setup=SETUP, claim=None, marker=None, gga_outcome=None):
+    """(g5 claim, g5 grade, gga docs, gga grades) for one name: `claim` = (bar, audit|None), `marker` = (bar, audit)."""
+    g5 = [_claim(sym, bar=gg5_bar, setup=setup)]
+    g5l = [_grade(sym, outcome, setup=setup)]
+    a, al = [], []
+    if claim is not None:
+        a.append(_claim(sym, variant=V.GGA, bar=claim[0], audit=claim[1], setup=setup))
+        if gga_outcome is not None:
+            al.append(_grade(sym, gga_outcome, setup=setup))
+    if marker is not None:
+        m = _held(sym, [], bar=marker[0], setup=setup)
+        m["audit"] = marker[1]
+        a.append(m)
+    return g5, g5l, a, al
+
+
+def _world(*names, exits=()):
+    g5, g5l, a, al = [], [], [], []
+    for n in names:
+        g5 += n[0]
+        g5l += n[1]
+        a += n[2]
+        al += n[3]
+    st = stores(g5, g5l, a, al)
+    st._injected[ST.EXITS] = FakeColl(list(exits))
+    return st
+
+
+def _pr(st):
+    c = AT.compare_block(st, date(2026, 11, 4), NOW_C, span="5d")
+    return c, {r["key"]: r for r in c["per_rule"]}
+
+
+def _no_orig(row):
+    return row["with"][AT.NO_ORIGINAL] + row["other"][AT.NO_ORIGINAL]
+
+
+def test_per_rule_rows_are_one_per_on_rule_in_registry_order_and_by_rule_is_gone():
+    c, pr = _pr(_world())
+    assert [r["key"] for r in c["per_rule"]] == KEYS_12 and "G3" not in pr          # G3 lane-only: never a row
+    assert [r["key"] for r in c["per_rule"]] == [k for r in AUD.on_rules() for k in (
+        [AUD.exit_col_key(r.id, m) for m in AUD.T3_R_MULTS] if r.id == "T3" else
+        [AUD.exit_col_key(r.id)] if r.kind == AUD.KIND_EXIT else [r.id])]
+    assert c["per_rule_title"] == V.word("per_rule_title", V.GGA)
+    assert c["by_rule_note"] == V.word("by_rule_note", V.GGA)
+    assert "by_rule" not in c                                                          # NEGATIVE
+    assert {r["kind"] for r in c["per_rule"]} == {AUD.KIND_FILTER, AT.KIND_CAP, AUD.KIND_EXIT}
+    assert pr["T1"]["kind"] == AT.KIND_CAP and pr["T5"]["kind"] == AUD.KIND_EXIT and pr["G1"]["kind"] == "filter"
+    for r in c["per_rule"]:
+        assert set(r) == {"key", "id", "name", "kind", "label", "with", "other", "not_judged", "fired_alone",
+                          "tie_held", "delta_text", "text"}
+        for side in ("with", "other"):
+            assert set(r[side]) == {"label", "n", "win", "loss", "unfilled", "open_flat", "pending", AT.NO_ORIGINAL,
+                                    "mean_r", "text"}
+        assert r["text"] == (f"{r['label']} · {r['with']['text']} · {r['other']['text']} · {r['delta_text']} · "
+                             f"{GT.UNMEASURED}")
+    # an empty record: every filter row says so in words, the T4 row still names its fire counts
+    assert pr["G1"]["delta_text"] == V.word("per_rule_no_rows", V.GGA)
+    assert V.word("per_rule_t4_fired", V.GGA, fired=0, alone=0) in pr["T4"]["other"]["text"]
+    assert pr["T5"]["delta_text"] == V.word("per_rule_no_rows", V.GGA)
+
+
+def test_a_filter_row_counts_the_originals_outcome_with_and_held():
+    st = _world(_mk("AAA", outcome="win", claim=(B1040, _aud())),
+                _mk("BBB", outcome="loss", marker=(B1040, _aud(("G4",), t1=False))))
+    _c, pr = _pr(st)
+    g4 = pr["G4"]
+    assert (g4["with"]["n"], g4["with"]["win"], g4["other"]["n"], g4["other"]["loss"]) == (1, 1, 1, 1)
+    assert g4["delta_text"] == V.word("per_rule_delta_filter", V.GGA, w="0 winners", l="1 loser", u=0)
+    assert g4["with"]["label"] == V.word("per_rule_with", V.GGA)
+    assert g4["other"]["label"] == V.word("per_rule_held", V.GGA)
+    assert g4["not_judged"] == 0 and g4["fired_alone"] is None and g4["tie_held"] is None
+    assert (pr["G1"]["with"]["n"], pr["G1"]["other"]["n"]) == (2, 0)                  # BBB passed G1 (held by G4)
+    assert pr["G1"]["delta_text"] == V.word("per_rule_delta_filter", V.GGA, w="0 winners", l="0 losers", u=0)
+    # a held read carries no T1 → T1 judged AAA only; BBB is not_judged on T1, never with / held
+    t1 = pr["T1"]
+    assert (t1["with"]["n"], t1["other"]["n"], t1["not_judged"]) == (1, 0, 1)
+    assert t1["delta_text"].endswith(V.word("per_rule_not_judged", V.GGA, n=1))
+    assert t1["other"]["label"] == V.word("per_rule_cap_held", V.GGA)
+
+
+def test_c1_the_gapper_a_premarket_marker_never_scores_the_rth_original():
+    """🚩 rang CCC on 10:40; a legacy 08:05 marker (failed T2 + H1) and the 10:40 audited claim (passed) share its id."""
+    st = _world(_mk("CCC", outcome="win", claim=(B1040, _aud()), marker=(B0805, _aud(("T2", "H1"), t1=False))))
+    _c, pr = _pr(st)
+    t2 = pr["T2"]
+    assert (t2["with"]["n"], t2["with"]["win"], t2["other"]["n"]) == (1, 1, 0)        # the 10:40 record scores it
+    assert t2["other"][AT.NO_ORIGINAL] == 1 and _no_orig(t2) == 1                      # the 08:05 marker lands ONCE
+    assert pr["H1"]["other"]["n"] == 0 and pr["H1"]["other"][AT.NO_ORIGINAL] == 1
+    assert pr["G1"]["with"]["n"] == 1 and _no_orig(pr["G1"]) == 1                      # once on every rule it judged
+    assert "1 no original row" in t2["other"]["text"]
+    assert pr["T1"]["with"]["n"] == 1 and _no_orig(pr["T1"]) == 0                      # the marker never judged T1
+
+
+def test_c1_NEGATIVE_marker_on_the_bar_wins_and_a_later_claim_is_no_original():
+    st = _world(_mk("DDD", outcome="loss", marker=(B1040, _aud(("G2",), t1=False)), claim=(B1115, _aud())))
+    _c, pr = _pr(st)
+    g2 = pr["G2"]
+    assert (g2["other"]["n"], g2["other"]["loss"], g2["with"]["n"]) == (1, 1, 0)
+    assert g2["with"][AT.NO_ORIGINAL] == 1 and _no_orig(g2) == 1                       # the 11:15 claim
+    assert g2["delta_text"] == V.word("per_rule_delta_filter", V.GGA, w="0 winners", l="1 loser", u=0)
+
+
+def test_c1_an_original_with_no_bar_falls_back_to_the_marker_then_the_claim():
+    st = _world(_mk("EEE", gg5_bar=None, outcome="loss", marker=(B0805, _aud(("G1",), t1=False)),
+                    claim=(B1040, _aud())),
+                _mk("FFF", gg5_bar=None, outcome="win", claim=(B1040, _aud())))
+    _c, pr = _pr(st)
+    g1 = pr["G1"]
+    assert (g1["other"]["n"], g1["other"]["loss"]) == (1, 1)                           # EEE: the marker first
+    assert (g1["with"]["n"], g1["with"]["win"]) == (1, 1)                              # FFF: the claim
+    assert g1["with"][AT.NO_ORIGINAL] == 1                                             # EEE's claim was not taken
+
+
+def test_c1_NEGATIVE_a_record_on_a_different_bar_never_scores_and_a_claim_without_audit_is_not_judged():
+    st = _world(_mk("GGG", outcome="win", claim=(B1115, _aud(("G4",)))),              # wrong bar → no record
+                _mk("HHH", outcome="loss", claim=(B1040, None)))                       # recorded before the audit
+    _c, pr = _pr(st)
+    for k in _filters():
+        r = pr[k]
+        assert (r["with"]["n"], r["other"]["n"], r["not_judged"]) == (0, 0, 2), k
+    assert pr["G4"]["other"][AT.NO_ORIGINAL] == 1 and pr["G1"]["with"][AT.NO_ORIGINAL] == 1
+    assert _no_orig(pr["G2"]) == 1                                                     # HHH (no audit) never counts
+    assert pr["G1"]["delta_text"] == (V.word("per_rule_no_rows", V.GGA) + " · "
+                                      + V.word("per_rule_not_judged", V.GGA, n=2))
+
+
+def test_c2_the_t4_row_serves_fired_and_fired_alone():
+    st = _world(_mk("T4A", outcome="win", marker=(B1040, _aud(("T4",), t1=False))),
+                _mk("T4B", outcome="loss", marker=(B1040, _aud(("T4",), t1=False))),
+                _mk("T4C", outcome="no_entry", marker=(B1040, _aud(("T4", "G2"), t1=False))))
+    c, pr = _pr(st)
+    t4 = pr["T4"]
+    assert t4["other"]["n"] == 3 and t4["fired_alone"] == 2
+    assert V.word("per_rule_t4_fired", V.GGA, fired=3, alone=2) in t4["other"]["text"]
+    assert t4["delta_text"] == V.word("per_rule_delta_filter", V.GGA, w="1 winner", l="1 loser", u=1)
+    assert [r["key"] for r in c["per_rule"] if r["fired_alone"] is not None] == ["T4"]  # NEGATIVE: T4 only
+    assert pr["G2"]["fired_alone"] is None and "fired on" not in pr["G2"]["other"]["text"]
+
+
+def test_c3_the_t1_row_counts_the_tie_held():
+    st = _world(_mk("TIE", outcome="win", marker=(B1040, _aud(("T1",), tie=True))),
+                _mk("NOT", outcome="loss", marker=(B1040, _aud(("T1",), tie=False))),
+                _mk("INN", outcome="win", claim=(B1040, _aud())))
+    c, pr = _pr(st)
+    t1 = pr["T1"]
+    assert (t1["with"]["n"], t1["other"]["n"], t1["tie_held"]) == (1, 2, 1)
+    assert V.word("per_rule_t1_tie", V.GGA, n=1) in t1["other"]["text"]
+    assert t1["other"]["label"] == V.word("per_rule_cap_held", V.GGA)
+    assert t1["delta_text"] == V.word("per_rule_delta_filter", V.GGA, w="1 winner", l="1 loser", u=0)
+    assert [r["key"] for r in c["per_rule"] if r["tie_held"] is not None] == ["T1"]    # NEGATIVE: T1 only
+    # NEGATIVE: no tie → the tie words never print
+    _c2, pr2 = _pr(_world(_mk("NOT", outcome="loss", marker=(B1040, _aud(("T1",), tie=False)))))
+    assert pr2["T1"]["tie_held"] == 0 and "tied bar" not in pr2["T1"]["other"]["text"]
+
+
+def _exit_doc(sym, setup, cols):
+    return {"_id": LG.ledger_id(D1.isoformat(), sym, setup, LG.KINDS[1]), "date": D1.isoformat(), "symbol": sym,
+            "setup": setup, "kind": LG.KINDS[1], "version": 1, **cols}
+
+
+def test_exit_rows_score_the_exit_grade_beside_ggs_math_on_the_same_rows():
+    win2 = {"entry": "filled", "outcome": "win", "r": 2.0, "r_mult": 2.0}
+    t5 = {"entry": "filled", "outcome": "loss", "r": -0.4, "reason": "ema21_close"}
+    st = _world(_mk("VCP", setup=VCP, claim=(B1040, _aud()), gga_outcome="win"),
+                _mk("BFL", claim=(B1040, _aud()), gga_outcome="loss"),
+                exits=[_exit_doc("VCP", VCP, {AUD.exit_col_key("T3", AUD.T3_R_MULTS[0]): win2,
+                                              AUD.exit_col_key("T5"): t5})])
+    _c, pr = _pr(st)
+    k2, k3 = (AUD.exit_col_key("T3", m) for m in AUD.T3_R_MULTS)
+    r2 = pr[k2]
+    assert (r2["with"]["n"], r2["with"]["win"], r2["with"]["mean_r"]) == (1, 1, 2.0)   # NEGATIVE: bull flag not in T3
+    assert (r2["other"]["n"], r2["other"]["win"]) == (1, 1)                            # GG's math, the same row
+    assert r2["other"]["label"] == V.word("per_rule_gg_math", V.GGA) and r2["kind"] == AUD.KIND_EXIT
+    assert r2["delta_text"] == V.word("per_rule_delta_exit", V.GGA, rule=r2["label"], ww=1, wl=0, gw=1, gl=0, n=1)
+    assert f"+{AUD.T3_R_MULTS[0]:g}R" in r2["label"] and GT._setup_label(VCP) in r2["label"]
+    r3 = pr[k3]
+    assert r3["with"]["pending"] == 1 and r3["delta_text"] == V.word("per_rule_not_graded", V.GGA)
+    assert "1 not graded yet" in r3["with"]["text"]
+    t5r = pr["T5"]
+    assert t5r["with"]["n"] == 2 and t5r["with"]["loss"] == 1 and t5r["with"]["pending"] == 1
+    assert t5r["with"]["mean_r"] == -0.4                                               # the stored R, not ±1
+    assert (t5r["other"]["n"], t5r["other"]["win"], t5r["other"]["loss"]) == (2, 1, 1)
+    assert t5r["not_judged"] == 0 and t5r["fired_alone"] is None and t5r["tie_held"] is None
+
+
+def test_exit_rows_entry_words_and_unfilled():
+    st = _world(_mk("NOE", setup=VCP, claim=(B1040, _aud()), gga_outcome="no_entry"),
+                exits=[_exit_doc("NOE", VCP, {AUD.exit_col_key("T5"): {"entry": "no_entry", "outcome": None,
+                                                                        "r": None},
+                                              AUD.exit_col_key("T3", AUD.T3_R_MULTS[0]): {"entry": None,
+                                                                                           "reason": "no_frame"}})])
+    _c, pr = _pr(st)
+    assert pr["T5"]["with"]["unfilled"] == 1 and pr["T5"]["with"]["mean_r"] is None
+    k2 = AUD.exit_col_key("T3", AUD.T3_R_MULTS[0])
+    assert pr[k2]["with"]["pending"] == 1 and pr[k2]["delta_text"] == V.word("per_rule_not_graded", V.GGA)
+
+
+def test_per_rule_read_faults_raise_and_the_tab_softens_them():
+    st = _world(_mk("AAA", claim=(B1040, _aud())))
+    st._injected[ST.EXITS] = FakeColl(fail=True)
+    with pytest.raises(LG.LedgerReadError):
+        AT.compare_block(st, date(2026, 11, 4), NOW_C, span="5d")
+    assert GT.build(GC.LEDGER_SUB, now=NOW_C, store=st)["audited_compare"] is None
+
+    class _None:
+        def alert_rows(self, sessions):
+            return None
+    with pytest.raises(LG.LedgerReadError):
+        AT._original_bars(_None(), [D1])
+    with pytest.raises(LG.LedgerReadError):
+        AT._claim_audits(_None(), [D1])
+
+
+def test_the_claim_readers_take_only_their_own_claims():
+    st = _world(_mk("AAA", claim=(B1040, _aud()), marker=(B0805, _aud(("G1",), t1=False))))
+    ca = AT._claim_audits(st, [D1])
+    rid = LG.ledger_id(D1.isoformat(), "AAA", SETUP, LG.KINDS[1])
+    assert list(ca) == [rid] and ca[rid]["entry_bar_t"] == B1040                        # NEGATIVE: never the `#held`
+    assert ca[rid]["audit"]["passed"] == _filters()
+    ob = AT._original_bars(st.shared, [D1])
+    assert ob == {rid: B1040}
+    # NEGATIVE: a 🚩 GG1 / GGA claim planted in the GG5 collection is never an original's bar
+    stray = _claim("ZZZ", variant=V.GG1, bar=B1040)
+    st.shared._injected[ST.ALERTS].docs[stray["_id"]] = stray
+    assert AT._original_bars(st.shared, [D1]) == {rid: B1040}
+
+
+def test_per_rule_is_json_native_and_free_of_the_forbidden_words():
+    st = _world(_mk("AAA", outcome="win", claim=(B1040, _aud())),
+                _mk("T4A", outcome="loss", marker=(B1040, _aud(("T4",), t1=False))),
+                _mk("TIE", outcome="no_entry", marker=(B1040, _aud(("T1",), tie=True))),
+                _mk("VCP", setup=VCP, claim=(B1040, _aud()), gga_outcome="win"),
+                exits=[_exit_doc("VCP", VCP, {AUD.exit_col_key("T5"): {"entry": "filled", "outcome": "win",
+                                                                        "r": 0.6667}})])
+    c, _rows = _pr(st)
+    json.dumps(c["per_rule"], allow_nan=False)                                         # no default= — JSON-native
+    assert not [p for p, _k, v in walk(c) if isinstance(v, Decimal)]
+    for s in strings({"t": c["per_rule_title"], "r": c["per_rule"]}):
+        assert "None" not in s and not EDGE.search(s) and not B_WORD.search(s), s
+        assert not UN_MEASURED.search(s), s
+    b = GT.build(GC.LEDGER_SUB, now=NOW_C, store=st)
+    assert [r["key"] for r in b["audited_compare"]["per_rule"]] == KEYS_12
+    assert "by_rule" not in b["audited_compare"]
+    json.dumps(GT._plain(b), allow_nan=False)

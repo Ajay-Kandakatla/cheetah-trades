@@ -1066,6 +1066,7 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   `GgAuditedStrip` (folded), `GgAuditedHeld` and `GgAuditedCompare`. `GG_VARIANT_BASE` == `GGA.api_base`.
 - Doc: `docs/gajjala/audited_variant_2026_11_01.md` (the registry with sources, the process, costs, recon semantics, the
   15 HIS CALLs, verification). Contract: "🧪 Gajjala · Audited tab (2026-11-01)". ✨ `chart-maps-gajjala-audited-2026-11-01`.
+- **2026-11-01 modifications** (*"Yes make the changes in audited please"* / *"But keep a track record too to see the winners and loster"*): eight entries ON on 🧪 only (filters T1 T2 A1 H1 T4 A2, exit grades T3 T5; prereg `PREREG2_SHA256`, `AUDIT_VERSION` 2), judged only on the bars 🚩 would ring (`alerts.refusal`), a per-rule winners/losers table on the 🧪 🏁 (`per_rule`, replaces `by_rule`), exit grades one night later from warm cache only (`gajjala_audited_exits`, 0 provider calls); UNMEASURED, shadow; doc `docs/gajjala/audited_modifications_2026_11_01.md` (HIS CALLs #16–#25).
 
 ### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
 Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement

@@ -208,6 +208,21 @@ WORDS_GGA: Mapping = MappingProxyType({
     "pass_stale": ("⚠ the audit overlay did not run on the latest 🚩 pass ({hhmm} ET) — the cards carry the original "
                    "reads; the audit waits for the next pass"),
     "unaudited_line": "{n} A+ on the original carry no audit on this pass — shown as the original reads them",
+    # 🧪 2026-11-01 — the 🏁 per-rule table (SPEC gg-audited-mods §3.4; Ajay "But keep a track record too to see the
+    # winners and loster"). Sentences only — every number is a caller kwarg (audited_tab._per_rule counts them).
+    "per_rule_title": ("🧪 Rule by rule — what each change would have done on the same A+ · counts, not verdicts · "
+                       "UNMEASURED"),
+    "per_rule_with": "with the rule",
+    "per_rule_held": "held by the rule — what the original did",
+    "per_rule_cap_held": "held — cap reached — what the original did",
+    "per_rule_gg_math": "GG's math on the same rows",
+    "per_rule_delta_filter": "removed {w} and {l} · {u} never filled",
+    "per_rule_delta_exit": "{rule}: {ww} W / {wl} L · GG's math: {gw} W / {gl} L on the same {n}",
+    "per_rule_not_graded": "not graded yet — exit grades land the night after the session",
+    "per_rule_not_judged": "{n} recorded before this rule joined — not judged",
+    "per_rule_no_rows": "no A+ judged on this rule yet",
+    "per_rule_t4_fired": "fired on {fired} rung bars · alone on {alone}",
+    "per_rule_t1_tie": "{n} held on a tied bar — 🚩's ring order broke the tie",
 })
 
 

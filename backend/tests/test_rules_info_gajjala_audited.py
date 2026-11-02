@@ -99,3 +99,29 @@ def test_NEGATIVE_an_empty_or_non_string_clause_adds_nothing(monkeypatch, junk):
 def test_NEGATIVE_no_reversal_ban_word_in_the_note():
     assert not re.search("b" + "ounc", _note(), re.I)
     assert not re.search("b" + "ounc", RI._gg_audited_clause(), re.I)
+
+
+def test_the_clause_names_all_twelve_entries_and_the_exit_grades():
+    """2026-11-01 (SPEC gg-audited-mods §3.1, Ajay "Yes make the changes in audited please"): the clause follows the
+    twelve-entry registry — the nine filters before "Exit grades", T3 / T5 after it, G3 as the lane-only gate."""
+    from chart_maps.gajjala import audited_rules as AUD
+    clause = RI._gg_audited_clause()
+    assert len(AUD.REGISTRY) == 12
+    for r in AUD.REGISTRY:
+        assert f"{r.id} {r.name}" in clause, r.id
+    ex = clause.index("Exit grades on its 🏁 beside GG's math:")
+    for r in AUD.filter_rules():
+        assert clause.index(f"{r.id} {r.name}") < ex, r.id
+    for r in AUD.exit_rules():
+        assert clause.index(f"{r.id} {r.name}") > ex, r.id
+    assert [r.id for r in AUD.exit_rules()] == ["T3", "T5"]
+    assert "None" not in clause and not re.search(r"\bedge\b", clause, re.I)
+
+
+def test_NEGATIVE_an_off_rule_leaves_the_clause(monkeypatch):
+    import dataclasses
+    from chart_maps.gajjala import audited_rules as AUD
+    off = dataclasses.replace(AUD.T4, status=AUD.STATUS_OFF)
+    monkeypatch.setattr(AUD, "REGISTRY", tuple(off if r.id == "T4" else r for r in AUD.REGISTRY))
+    clause = RI._gg_audited_clause()
+    assert "T4 regime gate" not in clause and "T2 first-hour block" in clause

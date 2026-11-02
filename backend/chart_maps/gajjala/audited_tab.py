@@ -22,8 +22,20 @@ borrows GG5's reads / potentials / passes); this module only lays the audit over
 - `compare_block` (🏁 only) — 🚩 original vs 🧪 audited over the GGA 🏁's own sessions, graded by the ONE ledger
   (ledger._cell over the stored `same` column), gross ±1R by the 🏁 outcome; the held rows' counterfactual = the
   original row's same-session grade (`no_original` when 🚩 has no row); `recon` (original_only / audited_only / both),
-  `by_rule` (+ its note: a held row counts under every rule it failed), `by_day`, `entry_weeks` over the WHOLE record
-  and `floor_reached` (a COUNT — `unmeasured_text` is ALWAYS served; no word flips by count).
+  `per_rule` (+ `per_rule_title` and `by_rule_note`), `by_day`, `entry_weeks` over the WHOLE record and
+  `floor_reached` (a COUNT — `unmeasured_text` is ALWAYS served; no word flips by count).
+
+PER RULE (2026-11-01 modifications, SPEC gg-audited-mods §3.4 / WP-D; Ajay 2026-11-01 "But keep a track record too to
+see the winners and loster"). ONE row per ON rule, registry order (G3 is lane-only, never a row; T3 one row per
+AUD.T3_R_MULTS). Universe of a FILTER row (T1 included) = the 🚩 originals of the span; each original is scored by the
+🧪 record on ITS OWN bar [C1] — the held marker whose `entry_bar_t` is the original's, else the audited claim on that
+bar, else (an original with no `entry_bar_t`, an older row) the marker, then the claim; no record → `not_judged`.
+A 🧪 record no original takes is ONE `no_original` count on the side its verdict on that rule names. The outcome is
+the ORIGINAL's same-session state; `with` = the rule passed it, `other` = the rule held it. T4 serves `fired` (=
+other.n) and `fired_alone` (only T4 failed) [C2]; T1 serves `tie_held` (held on a bar tied by 🚩's ring order) [C3].
+An EXIT row (T3 per R multiple, T5) scores the audited rows by the nightly exit grade (`gajjala_audited_exits`,
+`with`) beside GG's math on the SAME rows (`other`); a missing grade is `pending` ("not graded yet"). Counts only —
+every sentence from variant.WORDS_GGA, never a verdict.
 
 READS MONGO ONLY, never a provider. Every rule, number and sentence comes from audited_rules.py / variant.WORDS_GGA /
 the ledger — nothing here types a threshold. UNMEASURED — nothing here trades or enters a lane. Not advice.
@@ -34,9 +46,11 @@ import logging
 from datetime import date
 from typing import Optional
 
+from . import alerts as AL
 from . import audited_rules as AUD
 from . import constants as GC
 from . import ledger as LG
+from . import store as ST
 from . import tab as GT
 from . import variant as V
 
@@ -217,9 +231,69 @@ def _held_docs(st, sessions) -> list:
             continue
         seen.add(rid)
         audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
-        ids = [f.get("id") for f in audit.get("failed") or [] if isinstance(f, dict) and f.get("id")]
-        out.append({"id": rid, "date": day.isoformat(), "symbol": sym, "setup": setup, "held_by": ids})
+        v = _verdicts(audit) or {"passed": [], "failed": [], "rules": [], "tie": False}
+        out.append({"id": rid, "date": day.isoformat(), "symbol": sym, "setup": setup, "held_by": v["failed"],
+                    "entry_bar_t": d.get("entry_bar_t"), "passed_by": v["passed"], "rules": v["rules"],
+                    "t1_tie": v["tie"]})
     return out
+
+
+def _verdicts(audit) -> Optional[dict]:
+    """{passed: [ids], failed: [ids], rules: [ids], tie: bool} of one stored audit block; None when there is none
+    (a record written before the claim carried its audit — `not_judged` on every rule)."""
+    if not isinstance(audit, dict):
+        return None
+    vals = audit.get("values") if isinstance(audit.get("values"), dict) else {}
+    t1 = vals.get("T1") if isinstance(vals.get("T1"), dict) else {}
+    return {"passed": [p for p in audit.get("passed") or [] if isinstance(p, str) and p],
+            "failed": [f.get("id") for f in audit.get("failed") or [] if isinstance(f, dict) and f.get("id")],
+            "rules": [r for r in audit.get("rules") or [] if isinstance(r, str) and r],
+            "tie": t1.get("tie") is True}
+
+
+def _claim_audits(st, sessions) -> dict:
+    """{ledger id: {audit, entry_bar_t}} of the 🧪 shadow claims of these sessions — read off the GGA alerts docs
+    directly (ledger.alert_of drops both keys) [C1]. None from the store → LedgerReadError."""
+    got = st.alert_rows(sessions)
+    if got is None:
+        raise LG.LedgerReadError("the audited claims could not be read")
+    prefix = AL.SHADOW_CLAIM_PREFIX + V.GGA.claim_prefix + ":"
+    out: dict = {}
+    for d in got:
+        rid = _claim_id(d, (prefix,))
+        if rid is not None and rid not in out:
+            out[rid] = {"audit": d.get("audit") if isinstance(d.get("audit"), dict) else None,
+                        "entry_bar_t": d.get("entry_bar_t")}
+    return out
+
+
+def _original_bars(shared, sessions) -> dict:
+    """{ledger id: entry_bar_t} of the 🚩 claims of these sessions (`GG:` live or `SHADOW:GG:` shadow) — a READ of the
+    GG5 alerts collection, the one rows_for(sessions, shared) already reads [C1]. None → LedgerReadError."""
+    got = shared.alert_rows(sessions)
+    if got is None:
+        raise LG.LedgerReadError("the original claims could not be read")
+    p = V.GG5.claim_prefix + ":"
+    out: dict = {}
+    for d in got:
+        rid = _claim_id(d, (p, AL.SHADOW_CLAIM_PREFIX + p))
+        if rid is not None and rid not in out:
+            out[rid] = d.get("entry_bar_t")
+    return out
+
+
+def _claim_id(d, prefixes: tuple) -> Optional[str]:
+    """The 🏁 ledger id of one claim doc — None unless its `_id` starts with one of `prefixes`, carries no `#`, its
+    state is one the ledger reads, and it has a symbol / setup / date."""
+    if not isinstance(d, dict):
+        return None
+    _id = str(d.get("_id") or "")
+    if "#" in _id or not _id.startswith(prefixes) or d.get("state") not in ST.LEDGER_ALERT_STATES:
+        return None
+    sym, setup, day = str(d.get("symbol") or "").upper(), d.get("setup"), LG._as_date(d.get("date"))
+    if not sym or not isinstance(setup, str) or not setup or day is None:
+        return None
+    return LG.ledger_id(day.isoformat(), sym, setup, LG.KINDS[1])
 
 
 def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
@@ -233,6 +307,14 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
         r["state"] = _state(r, odocs, now, session, is_today)
     for r in aud:
         r["state"] = _state(r, adocs, now, session, is_today)
+    obars = _original_bars(shared, sessions)
+    claims = _claim_audits(st, sessions)
+    for r in orig:
+        r["entry_bar_t"] = obars.get(r["id"])
+    for r in aud:
+        c = claims.get(r["id"]) or {}
+        r["audit"] = c.get("audit")
+        r["entry_bar_t"] = c.get("entry_bar_t")
     by_orig = {r["id"]: r for r in orig}
     held = _held_docs(st, sessions)
     for h in held:
@@ -247,7 +329,9 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
     return {"original": orig, "audited": aud, "held": held}
 
 
-def _tally(rows: list) -> dict:
+def _tally(rows: list, r_of=None) -> dict:
+    """Counts of `rows` by their `state`; `mean_r` over decided rows = ±LEDGER_R_MULT (GG's math) — or, with `r_of`
+    (an exit grade's own R per row), the mean of `r_of(row)` over the decided rows that carry a number."""
     c = {"n": len(rows), "filled": 0, "win": 0, "loss": 0, "open_flat": 0, "unfilled": 0, "pending": 0,
          NO_ORIGINAL: 0}
     for r in rows:
@@ -267,8 +351,13 @@ def _tally(rows: list) -> dict:
         else:
             c["pending"] += 1                                       # pending / no plan / no risk / no time / split
     decided = c["win"] + c["loss"]
-    r_mult = float(GC.LEDGER_R_MULT)
-    c["mean_r"] = round((c["win"] * r_mult - c["loss"] * 1.0) / decided, 4) if decided else None
+    if r_of is None:
+        r_mult = float(GC.LEDGER_R_MULT)
+        c["mean_r"] = round((c["win"] * r_mult - c["loss"] * 1.0) / decided, 4) if decided else None
+    else:
+        rs = [LG._num(r_of(r)) for r in rows if r.get("state") in ("win", "loss")]
+        rs = [float(x) for x in rs if x is not None]
+        c["mean_r"] = round(sum(rs) / len(rs), 4) if rs else None
     c["win_pct"] = LG._win_pct(c)
     return c
 
@@ -318,26 +407,163 @@ def _held_side(rows: list) -> dict:
             NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"], "text": " · ".join(bits), "rows": out_rows}
 
 
-def _rule_ids(held: list) -> list:
-    reg = [r.id for r in AUD.REGISTRY]
-    ids = [r.id for r in AUD.on_rules()]
-    for h in held:
-        for i in h.get("held_by") or []:
-            if i not in ids:
-                ids.append(i)
-    return sorted(ids, key=lambda i: (reg.index(i) if i in reg else len(reg), str(i)))
+# ── 🧪 per rule (SPEC gg-audited-mods §3.4) ──────────────────────────────────────────────────────────────────────
+KIND_CAP = "cap"                                                                # the T1 row's served kind (a filter)
 
 
-def _by_rule(held: list) -> list:
+def _bar(x) -> Optional[str]:
+    return str(x) if x is not None and str(x) else None
+
+
+def _attribute(sides: dict) -> tuple:
+    """([(original row, verdicts | None)], [unmatched record verdicts]) — [C1] each 🚩 original scored by the 🧪 record
+    on ITS bar: the held marker on that bar, else the audited claim on that bar, else (an original with no bar) the
+    marker, then the claim. A record no original takes is returned once in the second list (None verdicts dropped)."""
+    markers = {h["id"]: h for h in sides["held"]}
+    claims = {a["id"]: a for a in sides["audited"]}
+    taken: set = set()
+    pairs = []
+    for o in sides["original"]:
+        m, c = markers.get(o["id"]), claims.get(o["id"])
+        ob = _bar(o.get("entry_bar_t"))
+        rec = None
+        if ob is not None:
+            if m is not None and _bar(m.get("entry_bar_t")) == ob:
+                rec = ("m", m)
+            elif c is not None and _bar(c.get("entry_bar_t")) == ob:
+                rec = ("c", c)
+        else:
+            rec = ("m", m) if m is not None else (("c", c) if c is not None else None)
+        if rec is None:
+            pairs.append((o, None))
+            continue
+        taken.add((rec[0], o["id"]))
+        pairs.append((o, _rec_verdicts(*rec)))
+    loose = [_rec_verdicts("m", m) for i, m in markers.items() if ("m", i) not in taken]
+    loose += [_rec_verdicts("c", c) for i, c in claims.items() if ("c", i) not in taken]
+    return pairs, [v for v in loose if v is not None]
+
+
+def _rec_verdicts(kind: str, rec: dict) -> Optional[dict]:
+    if kind == "m":
+        return {"passed": list(rec.get("passed_by") or []), "failed": list(rec.get("held_by") or []),
+                "rules": list(rec.get("rules") or []), "tie": rec.get("t1_tie") is True}
+    return _verdicts(rec.get("audit"))
+
+
+def _side_text(label: str, c: dict) -> str:
+    bits = [f"{label}: {c['n']} A+", f"{c['win']} W / {c['loss']} L", f"{c['unfilled']} no entry"]
+    if c["open_flat"]:
+        bits.append(f"{c['open_flat']} open or flat")
+    if c["pending"]:
+        bits.append(f"{c['pending']} not graded yet")
+    if c[NO_ORIGINAL]:
+        bits.append(f"{c[NO_ORIGINAL]} no original row")
+    bits.append(_mean_text(c))
+    return " · ".join(bits)
+
+
+def _pr_side(label: str, rows: list, *, no_original: int = 0, r_of=None, extra: Optional[str] = None) -> dict:
+    c = _tally(rows, r_of=r_of)
+    c[NO_ORIGINAL] = no_original
+    text = _side_text(label, c)
+    if extra:
+        text += " · " + extra
+    return {"label": label, "n": c["n"], "win": c["win"], "loss": c["loss"], "unfilled": c["unfilled"],
+            "open_flat": c["open_flat"], "pending": c["pending"], NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"],
+            "text": text}
+
+
+def _with_not_judged(delta: str, n: int) -> str:
+    return delta + " · " + V.word("per_rule_not_judged", V.GGA, n=n) if n else delta
+
+
+def _pr_row(key: str, rid: str, kind: str, label: str, w: dict, o: dict, delta: str, *, not_judged: int,
+            fired_alone=None, tie_held=None) -> dict:
+    return {"key": key, "id": rid, "name": getattr(AUD.by_id(rid), "name", None) or rid, "kind": kind,
+            "label": label, "with": w, "other": o, "not_judged": not_judged, "fired_alone": fired_alone,
+            "tie_held": tie_held, "delta_text": delta,
+            "text": f"{label} · {w['text']} · {o['text']} · {delta} · {GT.UNMEASURED}"}
+
+
+def _filter_row(rule, pairs: list, loose: list) -> dict:
+    rid = rule.id
+    vv = V.GGA
+    with_rows, other_rows, recs_held = [], [], []
+    not_judged = 0
+    for o, v in pairs:
+        if v is not None and rid in v["passed"]:
+            with_rows.append(o)
+        elif v is not None and rid in v["failed"]:
+            other_rows.append(o)
+            recs_held.append(v)
+        else:
+            not_judged += 1                         # no record on the bar / recorded before the rule joined
+    no_w = sum(1 for v in loose if rid in v["passed"])
+    no_o = sum(1 for v in loose if rid in v["failed"])
+    is_t1, is_t4 = rid == "T1", rid == "T4"
+    fired_alone = sum(1 for v in recs_held if v["failed"] == [rid]) if is_t4 else None
+    tie_held = sum(1 for v in recs_held if v["tie"]) if is_t1 else None
+    extra = None
+    if is_t4:
+        extra = V.word("per_rule_t4_fired", vv, fired=len(other_rows), alone=fired_alone)
+    elif is_t1 and tie_held:
+        extra = V.word("per_rule_t1_tie", vv, n=tie_held)
+    w = _pr_side(V.word("per_rule_with", vv), with_rows, no_original=no_w)
+    other = _pr_side(V.word("per_rule_cap_held" if is_t1 else "per_rule_held", vv), other_rows, no_original=no_o,
+                     extra=extra)
+    if w["n"] + other["n"] == 0:
+        delta = V.word("per_rule_no_rows", vv)
+    else:
+        delta = V.word("per_rule_delta_filter", vv, w=LG._plural(other["win"], "winner", "winners"),
+                       l=LG._plural(other["loss"], "loser", "losers"), u=other["unfilled"])
+    label = f"{rid} {getattr(rule, 'name', None) or rid}"
+    return _pr_row(rid, rid, KIND_CAP if is_t1 else AUD.KIND_FILTER, label, w, other,
+                   _with_not_judged(delta, not_judged), not_judged=not_judged, fired_alone=fired_alone,
+                   tie_held=tie_held)
+
+
+def _exit_rows(rule, audited: list, exits_by_id: dict) -> list:
+    vv = V.GGA
+    rid = rule.id
+    is_t3 = rid == "T3"
+    rows = [r for r in audited if r.get("setup") in AUD.T3_SETUPS] if is_t3 else list(audited)
     out = []
-    for rid in _rule_ids(held):
-        mine = [h for h in held if rid in (h.get("held_by") or [])]
-        c = _tally(mine)
-        rule = AUD.by_id(rid)
+    for k in (AUD.T3_R_MULTS if is_t3 else (None,)):
+        col = AUD.exit_col_key(rid, k)
+        graded = []
+        for r in rows:
+            doc = exits_by_id.get(r["id"]) or {}
+            g = doc.get(col) if isinstance(doc.get(col), dict) else None
+            graded.append({"state": LG._state_of(g) if g is not None else "pending",
+                           "r": g.get("r") if g is not None else None})
         name = getattr(rule, "name", None) or rid
-        out.append({"id": rid, "n_held": c["n"], "win": c["win"], "loss": c["loss"], "unfilled": c["unfilled"],
-                    "text": (f"{rid} {name}: {c['n']} held · what the original did: {c['win']} W / {c['loss']} L · "
-                             f"{c['unfilled']} no entry · {GT.UNMEASURED}")})
+        label = (f"{rid} {name} +{k:g}R · {' · '.join(GT._setup_label(s) for s in AUD.T3_SETUPS)}" if is_t3
+                 else f"{rid} {name}")
+        w = _pr_side(V.word("per_rule_with", vv), graded, r_of=lambda x: x.get("r"))
+        other = _pr_side(V.word("per_rule_gg_math", vv), rows)
+        if not rows:
+            delta = V.word("per_rule_no_rows", vv)
+        elif w["pending"] == w["n"]:
+            delta = V.word("per_rule_not_graded", vv)
+        else:
+            delta = V.word("per_rule_delta_exit", vv, rule=label, ww=w["win"], wl=w["loss"], gw=other["win"],
+                           gl=other["loss"], n=w["n"])
+        out.append(_pr_row(col, rid, AUD.KIND_EXIT, label, w, other, delta, not_judged=0))
+    return out
+
+
+def _per_rule(sides: dict, exits_by_id: dict, now, session: date, is_today: bool) -> list:
+    """§3.4 — ONE row per ON rule in registry order (lane-only G3 never a row; T3 one row per AUD.T3_R_MULTS). Every
+    number a COUNT, every sentence served. `now` / `session` / `is_today` are the 🏁's own clocks — the states on the
+    sides were read with them (ledger._cell)."""
+    pairs, loose = _attribute(sides)
+    out = []
+    for rule in AUD.on_rules():
+        if getattr(rule, "kind", AUD.KIND_FILTER) == AUD.KIND_EXIT:
+            out += _exit_rows(rule, sides["audited"], exits_by_id or {})
+        else:
+            out.append(_filter_row(rule, pairs, loose))
     return out
 
 
@@ -376,6 +602,10 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
     sessions = LG._clip(LG._sessions_for(span_k, session, st, [], V.GGA), V.GGA)
     sides = _read_sides(st, sessions, now, session, is_today)
+    exits = st.exits_docs(sessions)
+    if exits is None:
+        raise LG.LedgerReadError("the audited exit grades could not be read")
+    exits_by_id = {d.get("_id"): d for d in exits if isinstance(d, dict)}
     oid = {r["id"] for r in sides["original"]}
     aid = {r["id"] for r in sides["audited"]}
     hid = {h["id"] for h in sides["held"]}
@@ -402,7 +632,8 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
             "held": _held_side(sides["held"]),
             "recon": {"original_only": original_only, "audited_only": audited_only, "both": both,
                       "text": V.word("compare_recon", vv, original_only=original_only, audited_only=audited_only)},
-            "by_rule": _by_rule(sides["held"]),
+            "per_rule_title": V.word("per_rule_title", vv),
+            "per_rule": _per_rule(sides, exits_by_id, now, session, is_today),
             "by_rule_note": V.word("by_rule_note", vv),
             "by_day": _by_day(sides),
             "entry_weeks": weeks, "floor_weeks": floor, "floor_reached": reached,

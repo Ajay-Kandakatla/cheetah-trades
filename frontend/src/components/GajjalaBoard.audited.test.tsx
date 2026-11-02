@@ -36,6 +36,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
 }));
 
 import GajjalaBoard from './GajjalaBoard';
+import { GgAuditedCompare } from './GgAuditedCompare';
 import ChartMaps from '../pages/ChartMaps';
 
 const clone = (x: any) => JSON.parse(JSON.stringify(x));
@@ -56,15 +57,19 @@ const VARIANT_GGA = {
   honesty: "The same scanner, the same bars, the same detectors as \u{1F6A9} Gajjala's — served honesty line · UNMEASURED.",
   tfs: ['5m', '15m'], primary: '5m', slow: '15m', api_base: PA, record_from: '2026-11-01',
 };
-const REG = ['G1', 'G2', 'G3', 'G4'].map((id) => ({
+/* The registry as served from 2026-11-01: G1–G4 + the eight modifications (T1 T2 A1 H1 T4 A2 = filters, T3 T5 =
+ * exits), every row carrying a `kind` WORD. G3 stays lane-only → on_ids = the other eleven. */
+const REG_IDS = ['G1', 'G2', 'G3', 'G4', 'T1', 'T2', 'A1', 'H1', 'T4', 'A2', 'T3', 'T5'];
+const EXIT_IDS = ['T3', 'T5'];
+const REG = REG_IDS.map((id) => ({
   id, name: `name-${id}`, rule: `rule text ${id}`, params_text: `params ${id}`, source_text: `source ${id} prereg row`,
   since: `since-${id}`, status: id === 'G3' ? 'lane_only' : 'on', status_text: id === 'G3' ? 'lane only — not applied' : 'ON',
   verdict: 'UNMEASURED', verdict_text: `verdict ${id} UNMEASURED`, changes_text: `changes ${id}`, applies: id !== 'G3',
-  note: `note ${id}`,
+  note: `note ${id}`, kind: EXIT_IDS.includes(id) ? 'exit' : 'filter',
 }));
 const AUDITED = {
   title: '\u{1F9EA} What is different here',
-  registry: REG, on_ids: ['G1', 'G2', 'G4'],
+  registry: REG, on_ids: REG_IDS.filter((id) => id !== 'G3'),
   lane_only_text: 'served lane-only line — registered here, not applied on this tab. UNMEASURED.',
   unmeasured_text: 'served unmeasured line — the replay read TOO SMALL.',
   process_text: 'served process line — the 🚩 tab is never the target.',
@@ -86,6 +91,43 @@ const HELD = {
   note: 'served held note — an audit-derived modification becomes a registry entry.',
 };
 const HELD_LABEL = '\u{1F6A9} A+ on the original, held here by: G1 — the break bar closed 1.30 vs trigger 1.31 · UNMEASURED';
+/* 🧪 Rule by rule (2026-11-01) — test data shaped like audited_tab._per_rule. The served TEXTS carry odd numbers
+ * ("0.6667", "fired on 3 rung bars · alone on 2", "removed 1 winner and 2 losers") that any arithmetic would change, and
+ * the numeric fields deliberately DISAGREE with the texts (n 5 vs "3 A+"; fired_alone 7; tie_held 9) — the FE must print
+ * the texts and never compose from the numbers. No served text in the T1 / T4 rows contains a 7 or a 9. */
+const SIDE_NUMS = { n: 5, win: 4, loss: 4, unfilled: 4, open_flat: 4, pending: 4, no_original: 4, mean_r: 0.123456 };
+const prSide = (label: string, text: string) => ({ ...SIDE_NUMS, label, text });
+const PR_WITH = 'with the rule';
+const PR_HELD = 'held by the rule — what the original did';
+const PR_CAP = 'held — cap reached — what the original did';
+const PR_GGM = "GG's math on the same rows";
+const PER_RULE_KEYS = ['G1', 'G2', 'G4', 'T1', 'T2', 'A1', 'H1', 'T4', 'A2', 'T3_2R', 'T3_3R', 'T5'];
+const PER_RULE: any[] = PER_RULE_KEYS.map((key) => {
+  const id = key.split('_')[0];
+  const exit = EXIT_IDS.includes(id);
+  const row: any = {
+    key, id, name: `name-${id}`, kind: exit ? 'exit' : key === 'T1' ? 'cap' : 'filter', label: `${key} served label`,
+    with: prSide(PR_WITH, `${PR_WITH}: 3 A+ · 2 W / 1 L · 0 no entry · mean +0.6667R`),
+    other: prSide(exit ? PR_GGM : PR_HELD, `${exit ? PR_GGM : PR_HELD}: 3 A+ · 1 W / 2 L · 0 no entry · mean −0.3333R`),
+    not_judged: 4, fired_alone: null, tie_held: null,
+    delta_text: exit ? `${key} served label: 2 W / 1 L · GG's math: 1 W / 2 L on the same 3` : 'removed 1 winner and 2 losers · 0 never filled',
+    text: `${key} served full sentence · UNMEASURED`,
+  };
+  if (key === 'T4' || key === 'T1') row.with = prSide(PR_WITH, `${PR_WITH}: 2 A+ · 1 W / 1 L · 0 no entry · mean +0.5000R`);
+  if (key === 'T4') {
+    row.fired_alone = 7;
+    row.other = prSide(PR_HELD, `${PR_HELD}: 3 A+ · 1 W / 2 L · 0 no entry · mean −0.3333R · fired on 3 rung bars · alone on 2`);
+  }
+  if (key === 'T1') {
+    row.tie_held = 9;
+    row.other = prSide(PR_CAP, `${PR_CAP}: 2 A+ · 1 W / 1 L · 0 no entry · mean +0.0000R · 1 held on a tied bar — \u{1F6A9}'s ring order broke the tie`);
+  }
+  if (key === 'T3_3R') {
+    row.with = prSide(PR_WITH, `${PR_WITH}: 0 A+ · 0 W / 0 L · 0 no entry · 3 not graded yet · mean —`);
+    row.delta_text = 'not graded yet — exit grades land the night after the session';
+  }
+  return row;
+});
 const COMPARE = {
   title: '\u{1F9EA} Audited vs \u{1F6A9} original — the same sessions, the same trade math · UNMEASURED',
   honesty: 'served compare honesty — gross, as the 🏁 ledger grades. UNMEASURED until the record holds the floor; 1 so far.',
@@ -98,8 +140,8 @@ const COMPARE = {
           rows: [{ date: '2026-11-03', symbol: 'BKYI', setup: 'bull_flag', setup_label: '\u{1F6A9} Bull Flag', held_by: ['G1'],
                    outcome: 'loss', outcome_text: 'loss on the original', text: 'BKYI held by G1 — loss on the original' }] },
   recon: { original_only: 1, audited_only: 1, both: 0, text: '1 A+ on the original with no audited or held row · 1 audited with no original row · UNMEASURED' },
-  by_rule: [{ id: 'G1', n_held: 2, win: 1, loss: 1, unfilled: 0, text: 'served G1 rule line' },
-            { id: 'G4', n_held: 2, win: 0, loss: 1, unfilled: 1, text: 'served G4 rule line' }],
+  per_rule_title: '\u{1F9EA} Rule by rule — what each change would have done on the same A+ · counts, not verdicts · UNMEASURED',
+  per_rule: PER_RULE,
   by_rule_note: 'a held A+ counts under every rule it failed — these rows can sum past the held total',
   by_day: [{ date: '2026-11-03', label: 'Mon 11-03', original: { n: 7, win: 3, loss: 2 }, audited: { n: 4, win: 2, loss: 1 },
              held: { n: 3, win: 1, loss: 1 }, text: 'served day line' }],
@@ -206,7 +248,7 @@ describe('GajjalaBoard variant="gajjala_audited" — its own endpoint (2026-11-0
 });
 
 describe('🧪 the strip — served `audited`, folded by default (Rule #5)', () => {
-  it('renders the four served registry rows (id / rule / source / since / verdict / note) and the served lines', async () => {
+  it('renders the twelve served registry rows (id / rule / source / since / verdict / note) and the served lines', async () => {
     stub();
     const { container } = mount('tab=gajjala_audited&sub=bull_flag', 'gajjala_audited');
     await loaded(container);
@@ -217,7 +259,13 @@ describe('🧪 the strip — served `audited`, folded by default (Rule #5)', () 
       const row = within(strip).getByTestId(`gg-audited-rule-${r.id}`);
       for (const w of [r.id, r.rule, r.source_text, r.since, r.verdict_text, r.note, r.status_text]) expect(row.textContent).toContain(w);
     }
-    expect(strip.querySelectorAll('.gg-audited-rule')).toHaveLength(4);
+    expect(strip.querySelectorAll('.gg-audited-rule')).toHaveLength(12);
+    expect([...strip.querySelectorAll('.gg-audited-rule')].map((li) => li.getAttribute('data-testid')))
+      .toEqual(REG_IDS.map((id) => `gg-audited-rule-${id}`));
+    // NEGATIVE: `kind` is a served WORD the strip does not print — never as a number, never as a word of its own
+    expect(AUDITED.on_ids).toHaveLength(11);
+    expect(strip.textContent || '').not.toMatch(/\b(filter|exit|kind)\b/);
+    expect(strip.querySelector('[data-testid^="gg-audited-rule-kind"]')).toBeNull();
     expect(within(strip).getByTestId('gg-audited-lane-only').textContent).toBe(AUDITED.lane_only_text);
     expect(within(strip).getByTestId('gg-audited-unmeasured').textContent).toBe(AUDITED.unmeasured_text);
     expect(within(strip).getByTestId('gg-audited-process').textContent).toBe(AUDITED.process_text);
@@ -304,7 +352,7 @@ describe('🚩 held — A+ held by the audit, listed, never hidden', () => {
 });
 
 describe('🏁 the compare block — every number served, floor_reached never a verdict', () => {
-  it('prints the served sides / held / recon / by_rule + note / by_day / honesty / unmeasured', async () => {
+  it('prints the served sides / held / recon / per_rule + note / by_day / honesty / unmeasured', async () => {
     stub();
     const { container } = mount('tab=gajjala_audited&sub=track_record', 'gajjala_audited');
     await loaded(container);
@@ -319,8 +367,10 @@ describe('🏁 the compare block — every number served, floor_reached never a 
     expect(within(cmp).getByTestId('gg-audited-compare-held').textContent).toContain(COMPARE.held.text);
     expect(within(cmp).getByTestId('gg-audited-compare-held-BKYI-bull_flag').textContent).toBe(COMPARE.held.rows[0].text);
     expect(within(cmp).getByTestId('gg-audited-recon').textContent).toBe(COMPARE.recon.text);
-    const g4 = within(cmp).getByTestId('gg-audited-by-rule-G4');
-    expect([...g4.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['2', '0', '1', '1', 'served G4 rule line']);
+    const g4 = within(cmp).getByTestId('gg-audited-per-rule-G4');
+    expect(g4.querySelector('th')?.textContent).toBe(PER_RULE[2].label);
+    expect([...g4.querySelectorAll('td')].map((td) => td.textContent))
+      .toEqual([PER_RULE[2].with.text, PER_RULE[2].other.text, PER_RULE[2].delta_text]);
     expect(within(cmp).getByTestId('gg-audited-by-rule-note').textContent).toBe(COMPARE.by_rule_note);
     const day = within(cmp).getByTestId('gg-audited-by-day-2026-11-03');
     expect(day.textContent).toContain('Mon 11-03');
@@ -352,6 +402,164 @@ describe('🏁 the compare block — every number served, floor_reached never a 
     await loaded(container);
     await sleep(20);
     expect(screen.queryByTestId('gg-audited-compare')).toBeNull();
+  });
+});
+
+/* 🧪 Rule by rule (2026-11-01). Ajay: "Yes make the changes in audited please" and "But keep a track record too to see
+ * the winners and loster". ONE served per-rule table replaces the held-only by_rule table; the FE prints served words. */
+describe('🧪 Rule by rule — the served per_rule table (2026-11-01)', () => {
+  const cmpOf = (patch: (b: any) => void = () => {}) => { const b: any = clone(COMPARE); patch(b); return b; };
+  const ruleTable = (root: ParentNode) => root.querySelector('[data-testid="gg-audited-per-rule"]') as HTMLElement | null;
+
+  it('ONE table, one row per served row in served order; every cell = label / with.text / other.text / delta_text verbatim', async () => {
+    stub();
+    const { container } = mount('tab=gajjala_audited&sub=track_record', 'gajjala_audited');
+    await loaded(container);
+    const cmp = await screen.findByTestId('gg-audited-compare');
+    expect(cmp.querySelectorAll('[data-testid="gg-audited-per-rule"]')).toHaveLength(1);
+    const table = ruleTable(cmp)!;
+    const rows = [...table.querySelectorAll('tbody tr')];
+    expect(rows.map((r) => r.getAttribute('data-testid'))).toEqual(PER_RULE_KEYS.map((k) => `gg-audited-per-rule-${k}`));
+    PER_RULE.forEach((pr, i) => {
+      expect(rows[i].querySelector('th')?.textContent).toBe(pr.label);
+      expect([...rows[i].querySelectorAll('td')].map((td) => td.textContent)).toEqual([pr.with.text, pr.other.text, pr.delta_text]);
+    });
+    // the odd served numbers survive verbatim (any rounding / summing would change them)
+    expect(within(table).getByTestId('gg-audited-per-rule-T4').textContent).toContain('fired on 3 rung bars · alone on 2');
+    expect(within(table).getByTestId('gg-audited-per-rule-G1').textContent).toContain('removed 1 winner and 2 losers');
+    expect(within(table).getByTestId('gg-audited-per-rule-G1').textContent).toContain('+0.6667R');
+    expect(within(table).getByTestId('gg-audited-per-rule-T3_3R').textContent).toContain('not graded yet — exit grades land');
+    // structural head only
+    expect([...table.querySelectorAll('thead th')].map((th) => th.textContent))
+      .toEqual(['rule', 'with the rule', "held / GG's math", 'what changed']);
+    // the served title above the table, the served note below it
+    const title = within(cmp).getByTestId('gg-audited-per-rule-title');
+    expect(title.textContent).toBe(COMPARE.per_rule_title);
+    const note = within(cmp).getByTestId('gg-audited-by-rule-note');
+    expect(note.textContent).toBe(COMPARE.by_rule_note);
+    expect(title.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(table.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('NEGATIVE: fired_alone 7 / tie_held 9 and the disagreeing side numbers never reach the DOM — only served texts', () => {
+    render(<GgAuditedCompare block={cmpOf()} />);
+    const t4 = screen.getByTestId('gg-audited-per-rule-T4');
+    const t1 = screen.getByTestId('gg-audited-per-rule-T1');
+    expect(t4.textContent).not.toMatch(/7/);
+    expect(t1.textContent).not.toMatch(/9/);
+    const table = ruleTable(document)!;
+    const txt = table.textContent || '';
+    // a row's cells are EXACTLY its served strings — nothing else is left over
+    const served = ["rule", "with the rule", "held / GG's math", 'what changed',
+      ...PER_RULE.flatMap((r) => [r.label, r.with.text, r.other.text, r.delta_text])];
+    expect(leftover(txt, served)).toBe('');
+    // the numeric fields (n 5, win 4, mean_r 0.123456, not_judged 4) are never printed on their own
+    expect(txt).not.toContain('0.123456');
+    expect(txt).not.toMatch(/\b5 A\+/);
+    expect(txt).not.toMatch(/undefined|null|NaN/);
+    // the row's full `text` is not printed either (its parts are)
+    expect(txt).not.toContain('served full sentence');
+  });
+
+  it('NEGATIVE: no legacy by_rule table — a payload WITH a by_rule key renders nothing for it', () => {
+    const legacy = [{ id: 'G1', n_held: 2, win: 1, loss: 1, unfilled: 0, text: 'served G1 legacy rule line' },
+                    { id: 'G4', n_held: 2, win: 0, loss: 1, unfilled: 1, text: 'served G4 legacy rule line' }];
+    render(<GgAuditedCompare block={cmpOf((b) => { b.by_rule = legacy; delete b.per_rule; })} />);
+    const cmp = screen.getByTestId('gg-audited-compare');
+    const byRuleIds = [...cmp.querySelectorAll('[data-testid^="gg-audited-by-rule"]')].map((e) => e.getAttribute('data-testid'));
+    expect(byRuleIds).toEqual(['gg-audited-by-rule-note']);
+    expect(cmp.textContent).not.toContain('legacy rule line');
+    expect(ruleTable(cmp)).toBeNull();
+    cleanup();
+    // both keys served → only the per_rule table, still nothing from by_rule
+    render(<GgAuditedCompare block={cmpOf((b) => { b.by_rule = legacy; })} />);
+    const again = screen.getByTestId('gg-audited-compare');
+    expect(ruleTable(again)).not.toBeNull();
+    expect(again.textContent).not.toContain('legacy rule line');
+    expect([...again.querySelectorAll('[data-testid^="gg-audited-by-rule"]')].map((e) => e.getAttribute('data-testid')))
+      .toEqual(['gg-audited-by-rule-note']);
+  });
+
+  it('NEGATIVE: absent / empty / null per_rule → no table and no title; the rest of the compare intact', () => {
+    for (const patch of [(b: any) => { delete b.per_rule; }, (b: any) => { b.per_rule = []; }, (b: any) => { b.per_rule = null; },
+                         (b: any) => { b.per_rule = [null, { label: 'no key' }, 'junk']; }]) {
+      render(<GgAuditedCompare block={cmpOf(patch)} />);
+      const cmp = screen.getByTestId('gg-audited-compare');
+      expect(ruleTable(cmp)).toBeNull();
+      expect(within(cmp).queryByTestId('gg-audited-per-rule-title')).toBeNull();
+      expect(cmp.textContent).not.toContain('no key');
+      expect(within(cmp).getByTestId('gg-audited-compare-title').textContent).toBe(COMPARE.title);
+      expect(within(cmp).getByTestId('gg-audited-side-original')).toBeTruthy();
+      expect(within(cmp).getByTestId('gg-audited-recon').textContent).toBe(COMPARE.recon.text);
+      expect(within(cmp).getByTestId('gg-audited-by-rule-note').textContent).toBe(COMPARE.by_rule_note);
+      expect(within(cmp).getByTestId('gg-audited-by-day-2026-11-03')).toBeTruthy();
+      expect(within(cmp).getByTestId('gg-audited-compare-unmeasured').textContent).toBe(COMPARE.unmeasured_text);
+      cleanup();
+    }
+  });
+
+  it('NEGATIVE: a row without served sides / delta prints empty cells (no crash, no composed words); no label → its key', () => {
+    render(<GgAuditedCompare block={cmpOf((b) => {
+      b.per_rule = [{ key: 'A2', with: null, other: { n: 3, win: 1, loss: 2 }, delta_text: '', fired_alone: 7, tie_held: 9 }];
+    })} />);
+    const row = screen.getByTestId('gg-audited-per-rule-A2');
+    expect(row.querySelector('th')?.textContent).toBe('A2');
+    expect([...row.querySelectorAll('td')].map((td) => td.textContent)).toEqual(['', '', '']);
+    // the served numbers (n 3, 1 W, 2 L, fired_alone 7, tie_held 9) are never composed into words — only the key prints
+    expect(row.textContent).toBe('A2');
+  });
+});
+
+/* 📱 his phone (430 px): jsdom has no layout, so these are SOURCE guards on the stylesheet the compare imports — the
+ * section scrolls the table inside itself and every per-rule cell wraps. The NEGATIVE mutations show each matcher
+ * rejects a stylesheet that lost the rule. */
+describe('📱 the compare section on the phone — source guards on ggAudited.css', () => {
+  async function readCss(): Promise<string> {
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    const root = (globalThis as any).process?.cwd?.() || '.';
+    return fs.readFileSync(`${root}/src/styles/ggAudited.css`, 'utf8');
+  }
+  /** The declarations of the `.gg-audited-compare { … }` rule (not `-title`). */
+  const compareRule = (src: string): string | null => {
+    const m = src.match(/(^|\n)\s*\.gg-audited-compare\s*\{([^}]*)\}/);
+    return m ? m[2] : null;
+  };
+  /** The declarations of the `.gg-audited-per-rule td { … }` rule. */
+  const cellRule = (src: string): string | null => {
+    const m = src.match(/(^|\n)\s*\.gg-audited-per-rule td\s*\{([^}]*)\}/);
+    return m ? m[2] : null;
+  };
+  const ok = (src: string): boolean => {
+    const c = compareRule(src);
+    const td = cellRule(src);
+    return !!c && /overflow-x:\s*auto\b/.test(c) && /min-width:\s*0\b/.test(c)
+      && !!td && /overflow-wrap:\s*anywhere\b/.test(td) && /white-space:\s*normal\b/.test(td);
+  };
+
+  it('.gg-audited-compare scrolls inside itself (overflow-x: auto; min-width: 0); per-rule cells wrap anywhere', async () => {
+    const src = await readCss();
+    expect(compareRule(src)).toMatch(/overflow-x:\s*auto\b/);
+    expect(compareRule(src)).toMatch(/min-width:\s*0\b/);
+    expect(cellRule(src)).toMatch(/overflow-wrap:\s*anywhere\b/);
+    expect(cellRule(src)).toMatch(/white-space:\s*normal\b/);
+    expect(src).toMatch(/\.gg-audited-per-rule th\[scope='row'\]\s*\{[^}]*white-space:\s*normal/);
+    expect(ok(src)).toBe(true);
+  });
+
+  it('NEGATIVE: a stylesheet that lost any one of the rules fails the same guard', async () => {
+    const src = await readCss();
+    const mutations = [
+      src.replace(/(\.gg-audited-compare\s*\{[^}]*)overflow-x:\s*auto/, '$1overflow-x: visible'),
+      src.replace(/(\.gg-audited-compare\s*\{[^}]*)min-width:\s*0/, '$1min-width: auto'),
+      src.replace(/(\.gg-audited-per-rule td\s*\{[^}]*)overflow-wrap:\s*anywhere/, '$1overflow-wrap: normal'),
+      src.replace(/(\.gg-audited-per-rule td\s*\{[^}]*)white-space:\s*normal/, '$1white-space: nowrap'),
+      src.replace(/\.gg-audited-per-rule td\s*\{/, '.gg-audited-per-rule-gone td {'),
+    ];
+    for (const m of mutations) {
+      expect(m).not.toBe(src);
+      expect(ok(m)).toBe(false);
+    }
   });
 });
 

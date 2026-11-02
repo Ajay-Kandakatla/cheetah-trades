@@ -460,9 +460,11 @@ def _blank(horizon: str) -> dict:
             "end_t": None, "end_date": None, "through_t": None, "bars_n": 0}
 
 
-def grade(alert: dict, bars_1m: list, bounds: Optional[dict], horizon: str) -> dict:
+def grade(alert: dict, bars_1m: list, bounds: Optional[dict], horizon: str, *, r_mult=None) -> dict:
     """GG's trade math (D2–D4 + Q0 + E1) for one column. `bars_1m` = [(t_utc START, o, h, l, c)] ascending; `bounds`
-    = session_bounds(…) (today_read may cut same_end). -> the grade dict (every time an aware-UTC ISO string)."""
+    = session_bounds(…) (today_read may cut same_end). -> the grade dict (every time an aware-UTC ISO string).
+    🧪 2026-11-01 `r_mult` (audited_exits T3 only): the target multiple of R; None = GC.LEDGER_R_MULT — every caller
+    that does not pass it is byte-identical."""
     if horizon not in GC.LEDGER_HORIZONS:
         raise ValueError(f"horizon {horizon!r} not in {GC.LEDGER_HORIZONS}")
     out = _blank(horizon)
@@ -493,7 +495,7 @@ def grade(alert: dict, bars_1m: list, bounds: Optional[dict], horizon: str) -> d
     if i0 is None:
         return dict(out, entry="no_entry", reason="no_entry")
     fill = max(trig, _D(elig[i0][1]))
-    target = fill + _D(GC.LEDGER_R_MULT) * (trig - stop)
+    target = fill + _D(GC.LEDGER_R_MULT if r_mult is None else r_mult) * (trig - stop)
     exit_i, outcome, reason = None, None, None
     for i in range(i0, len(elig)):
         _t, _o, h, lo, _c = elig[i]

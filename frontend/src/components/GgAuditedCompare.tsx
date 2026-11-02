@@ -5,13 +5,20 @@
  * End of day.." "Gajjals-Audited" "So we can keep track of improvements on this tab".
  *
  * Draws the SERVED `audited_compare` block (backend chart_maps/gajjala/audited_tab.compare_block): the served title, a
- * table of the served `sides`, the served held line and its rows, the served reconciliation line, the per-rule rows
- * with the served note (a held A+ counts under every rule it failed), the per-day rows, the served honesty and the
- * served UNMEASURED line. NO arithmetic — every number is printed as served; the column heads are structural words.
+ * table of the served `sides`, the served held line and its rows, the served reconciliation line, the 🧪 Rule by rule
+ * table (served `per_rule_title` above, ONE row per served `per_rule` row printing `label`, `with.text`, `other.text`
+ * and `delta_text` verbatim, the served `by_rule_note` below), the per-day rows, the served honesty and the served
+ * UNMEASURED line.
+ *
+ * Ajay 2026-11-01: "Yes make the changes in audited please" and "But keep a track record too to see the winners and
+ * loster" — the per-rule table REPLACES the held-only `by_rule` table (a legacy `by_rule` key renders nothing).
+ * `fired_alone` / `tie_held` are already inside the served `other.text` and are never recomposed here. NO arithmetic — every number is printed as served; the column heads are structural words.
  * `floor_reached` is a COUNT flag and is NEVER printed as a verdict: the words are the served `unmeasured_text`.
  * An absent block renders nothing. Shadow only. UNMEASURED.
  */
-import type { GgAuditedCompare as GgAuditedCompareBlock, GgAuditedSide, GgAuditedTally } from '../lib/gajjala';
+import type {
+  GgAuditedCompare as GgAuditedCompareBlock, GgAuditedPerRuleRow, GgAuditedPerRuleSide, GgAuditedSide, GgAuditedTally,
+} from '../lib/gajjala';
 import '../styles/ggAudited.css';
 
 const said = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
@@ -19,13 +26,17 @@ const said = (v: unknown): v is string => typeof v === 'string' && v.trim() !== 
 const num = (v: unknown): string => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '—');
 const tally = (t: GgAuditedTally | null | undefined): string =>
   t ? `${num(t.n)} · ${num(t.win)} W · ${num(t.loss)} L` : '—';
+/** A per-rule side prints ONLY its served sentence (it opens with the served side label) — no number composed here. */
+const sideText = (s: GgAuditedPerRuleSide | null | undefined): string | null =>
+  s && typeof s === 'object' && said(s.text) ? s.text : null;
 
 export function GgAuditedCompare({ block }: { block?: GgAuditedCompareBlock | null }) {
   if (!block || typeof block !== 'object') return null;
   const sides = (Array.isArray(block.sides) ? block.sides : []).filter((s): s is GgAuditedSide => !!s && said(s.key));
   const held = block.held && typeof block.held === 'object' ? block.held : null;
   const heldRows = (Array.isArray(held?.rows) ? held!.rows! : []).filter((r) => !!r && said(r.symbol));
-  const byRule = (Array.isArray(block.by_rule) ? block.by_rule : []).filter((r) => !!r && said(r.id));
+  const perRule = (Array.isArray(block.per_rule) ? block.per_rule : [])
+    .filter((r): r is GgAuditedPerRuleRow => !!r && typeof r === 'object' && said(r.key));
   const byDay = (Array.isArray(block.by_day) ? block.by_day : []).filter((r) => !!r && said(r.date));
   const sideLabel = (k: string): string => {
     const s = sides.find((x) => x.key === k);
@@ -68,19 +79,25 @@ export function GgAuditedCompare({ block }: { block?: GgAuditedCompareBlock | nu
       {block.recon && said(block.recon.text) ? (
         <div className="gg-muted" data-testid="gg-audited-recon">{block.recon.text}</div>
       ) : null}
-      {byRule.length ? (
-        <table className="gg-audited-table" data-testid="gg-audited-by-rule">
-          <thead><tr><th>rule</th><th>held</th><th>W</th><th>L</th><th>unfilled</th><th></th></tr></thead>
-          <tbody>
-            {byRule.map((r) => (
-              <tr key={r.id} data-testid={`gg-audited-by-rule-${r.id}`}>
-                <th scope="row">{r.id}</th>
-                <td>{num(r.n_held)}</td><td>{num(r.win)}</td><td>{num(r.loss)}</td><td>{num(r.unfilled)}</td>
-                <td className="gg-muted">{said(r.text) ? r.text : null}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {perRule.length ? (
+        <>
+          {said(block.per_rule_title) ? (
+            <div className="gg-audited-compare-title" data-testid="gg-audited-per-rule-title"><strong>{block.per_rule_title}</strong></div>
+          ) : null}
+          <table className="gg-audited-table gg-audited-per-rule" data-testid="gg-audited-per-rule">
+            <thead><tr><th>rule</th><th>with the rule</th><th>held / GG's math</th><th>what changed</th></tr></thead>
+            <tbody>
+              {perRule.map((r) => (
+                <tr key={r.key} data-testid={`gg-audited-per-rule-${r.key}`}>
+                  <th scope="row">{said(r.label) ? r.label : r.key}</th>
+                  <td>{sideText(r.with)}</td>
+                  <td>{sideText(r.other)}</td>
+                  <td className="gg-muted">{said(r.delta_text) ? r.delta_text : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       ) : null}
       {said(block.by_rule_note) ? <div className="gg-muted" data-testid="gg-audited-by-rule-note">{block.by_rule_note}</div> : null}
       {byDay.length ? (

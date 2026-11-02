@@ -37,6 +37,13 @@ RESIDUAL — a GGA row with no matching 🚩 row (the original's send failed / n
 current column (its grade deferred or failed that night) — is graded by `ledger.grade_step`, which skips every copied
 column without a load. The summary serves `copy.residual` (expected 0 most nights). A failure is named under
 `gajjala_audited.error`, never in GG5's `errors` or the exit code.
+🧪 EXIT GRADES (2026-11-01, Ajay "But keep a track record too to see the winners and loster"): after the copy and the
+grade, `audited_exits.grade_exits` grades T3 (fixed 2R / 3R on the 🌀 Intraday VCP) and T5 (the 21 EMA trail) into
+gajjala_audited_exits, in its OWN inner try (`gajjala_audited.exits.error` — never hides copy / grade). ONE night late
+by design: `load_intraday` never caches today and fetches a cold past day (daytrading/data.py:241-253), so a row of
+tonight's session is `deferred_today`, and a row is loaded only when BOTH its symbol-days (the session + the market
+day before, the EMA warm-up) are already in `intraday_cache` (a cache READ first, `audited_exits.is_warm`) — a cold
+row is `deferred_cold`, never fetched (HIS CALL #21). Zero provider calls on that step.
 """
 from __future__ import annotations
 
@@ -259,10 +266,14 @@ def copy_original_grades(gga, now: datetime, *, shared=None) -> dict:
 
 
 def grade_audited(now: datetime, *, store=None, load_day: Optional[Callable] = None,
-                  split_lookup: Optional[Callable] = None) -> dict:
+                  split_lookup: Optional[Callable] = None, exits_load: Optional[Callable] = None,
+                  exits_warm: Optional[Callable] = None) -> dict:
     """🧪 The audited record's grade (2026-11-01): {"copy": copy_original_grades(...), "grade": ledger.grade_step(<GGA
-    store>, now)} — the copy FIRST, the grade for the residual only. A store that is not the audited variant's is refused
-    (fail closed — this step never grades 🚩's own ledger). A raise → {"error": "grade: <Type>"} (logged). Never raises."""
+    store>, now), "exits": audited_exits.grade_exits(<GGA store>, now)} — the copy FIRST, the grade for the residual
+    only, then the exit grades (one night late, warm cache only — the module docstring). A store that is not the audited
+    variant's is refused (fail closed — this step never grades 🚩's own ledger). A raise in the copy or the grade →
+    {"error": "grade: <Type>"} (logged); a raise in the exits step → "exits": {"error": "exits: <Type>"} beside the
+    copy and the grade (its OWN try). Never raises."""
     try:
         from . import ledger as LG
         from . import store as ST
@@ -271,7 +282,14 @@ def grade_audited(now: datetime, *, store=None, load_day: Optional[Callable] = N
         if not V.is_audited(gga):                               # fail closed: this grade writes the GGA ledger ONLY
             raise ValueError("not the audited store")
         copied = copy_original_grades(gga, now)
-        return {"copy": copied, "grade": LG.grade_step(gga, now, load_day=load_day, split_lookup=split_lookup)}
+        graded = LG.grade_step(gga, now, load_day=load_day, split_lookup=split_lookup)
+        try:
+            from . import audited_exits as AX
+            exits = AX.grade_exits(gga, now, load_df=exits_load, warm=exits_warm)
+        except Exception as exc:                                # noqa: BLE001
+            log.exception("gajjala nightly: the audited exit grades failed")
+            exits = {"error": f"exits: {type(exc).__name__}"}
+        return {"copy": copied, "grade": graded, "exits": exits}
     except Exception as exc:                                    # noqa: BLE001
         log.exception("gajjala nightly: the audited record's grade failed")
         return {"error": f"grade: {type(exc).__name__}"}

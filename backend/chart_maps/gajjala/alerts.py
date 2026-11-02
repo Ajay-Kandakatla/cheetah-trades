@@ -412,6 +412,35 @@ def _candidates(reads: dict) -> list:
     return out
 
 
+def refusal(r: dict, sym: str, entry_t: str, frames, now, session, ctx: Optional[dict], v, coll, *,
+            closed=None) -> Optional[str]:
+    """Why run_pass would NOT claim this A+ read, or None (= it would claim it, subject only to the atomic `_claim`).
+
+    🧪 2026-11-01 — ONE mechanical extraction of run_pass's per-candidate refusal chain (same order, same states):
+    not_aplus_variant | no_risk | claimed_before / late | suppressed_closed | window_reason(...) |
+    extra_suppression(...). run_pass calls it (its states are byte-identical); the audited overlay
+    (audited_pass.run_step) calls it to judge ONLY the A+ bars the pass would ring. `r` carries its setup
+    (`r["setup"]`, the candidate's); `frames` = THIS symbol's Frames (or None); `ctx` = THIS symbol's alert ctx; `v` =
+    the variant (its claim prefix and clock); `coll` = the variant store's alerts collection; `closed` =
+    `_closed_reason(now)` computed ONCE by the caller (None = open)."""
+    from . import ledger as LG
+    if r.get("variant") or r.get("grade"):
+        return "not_aplus_variant"                              # long flag / near-kiss / B — never rings (round C)
+    if LG.plan_of(r.get("trigger"), r.get("stop"))[0] != LG.PLANS[0]:
+        return "no_risk"                                        # 2026-10-20: trigger = stop (or no stop under it) — the
+        #                                                         detectors refuse it first; this gate is the second lock
+    if not pushable(r, frames, now, v):
+        # a 15-minute bar stays "latest" for three passes: the pass after the one that claimed it is a repeat,
+        # not a late A+
+        setup = r.get("setup")
+        key = claim_key(session, sym, setup, v)
+        claimed = _exists(coll, key) or _exists(coll, shadow_key(session, sym, setup, v))
+        return "claimed_before" if claimed else "late"
+    if closed:
+        return "suppressed_closed"
+    return window_reason(entry_t, session, r.get("frame") or v.primary) or extra_suppression(r, ctx, session)
+
+
 def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: Optional[Callable] = None,
              owner: Optional[str] = None, dry: bool = False, ctx: Optional[dict] = None,
              mode: Optional[str] = None) -> dict:
@@ -422,7 +451,6 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     defaults to push.hooks.notify_gajjala_setup. `dry` → nothing claimed, recorded or sent (counted "dry").
     -> counts (COUNT_KEYS). 2026-10-27: the variant is the store's (`V.of(store)` — GG5 for today's store): its claim
     prefix, kind, freshness clock, default mode (push_mode(v)) and default sender; the signature is unchanged."""
-    from . import ledger as LG
     from . import store as ST
     from .tab import broker_text_for
     v = V.of(store)
@@ -457,21 +485,8 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             base["promo"] = True
             if isinstance(c.get("promo_text"), str) and c["promo_text"]:
                 base["promo_text"] = c["promo_text"]
-        if r.get("variant") or r.get("grade"):
-            state = "not_aplus_variant"                         # long flag / near-kiss / B — never rings (round C)
-        elif LG.plan_of(r.get("trigger"), r.get("stop"))[0] != LG.PLANS[0]:
-            state = "no_risk"                                   # 2026-10-20: trigger = stop (or no stop under it) — the
-            #                                                     detectors refuse it first; this gate is the second lock
-        elif not pushable(r, frames.get(sym) if isinstance(frames, dict) else None, now, v):
-            # a 15-minute bar stays "latest" for three passes: the pass after the one that claimed it is a repeat,
-            # not a late A+
-            claimed = _exists(coll, key) or _exists(coll, shadow_key(session, sym, setup, v))
-            state = "claimed_before" if claimed else "late"
-        elif closed:
-            state = "suppressed_closed"
-        else:
-            state = window_reason(entry_t, session, r.get("frame") or v.primary) or extra_suppression(
-                r, ctx.get(sym), session)
+        state = refusal(dict(r, setup=setup), sym, entry_t, frames.get(sym) if isinstance(frames, dict) else None,
+                        now, session, ctx.get(sym), v, coll, closed=closed)
         if state == "claimed_before":
             counts[state] += 1
             continue
@@ -519,5 +534,5 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
 
 
 __all__ = ["KIND", "push_mode", "max_entry_age_sec", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
-           "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "run_pass", "shadow_session_count", "COUNT_KEYS",
+           "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "refusal", "run_pass", "shadow_session_count", "COUNT_KEYS",
            "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT"]

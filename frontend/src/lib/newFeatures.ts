@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "Yes make the changes in audited please" and "But keep a
+  // track record too to see the winners and loster". The eight 2026-11-01 modifications are registered ON on 🧪 only
+  // (backend chart_maps/gajjala/audited_rules.py REGISTRY = the 12-id tuple, AUDIT_VERSION 2, the second frozen prereg
+  // PREREG2_PATH / PREREG2_SHA256): six FILTERS on the A+ read (T1 daily entry cap · T2 first-hour block · A1 time cut ·
+  // H1 regular hours only · T4 regime gate · A2 volume-spike skip) and two EXIT grades beside GG's math (T3 fixed
+  // target on the Intraday VCP · T5 21 EMA trail, chart_maps/gajjala/audited_exits.py, graded one night after the
+  // session from warm intraday_cache days only). 🧪 judges only the bars 🚩 would ring (alerts.refusal). The 🏁 compare
+  // serves ONE per-rule table (audited_tab._per_rule, replaces by_rule). Still SHADOW, never sent; 🚩 unchanged.
+  // UNMEASURED. Pinned by scripts/contracts.mjs ("🧪 Gajjala · Audited tab (2026-11-01)", section 9).
+  { id: 'chart-maps-gajjala-audited-modifications-2026-11-01', addedAt: '2026-11-01', route: '/chart-maps?tab=gajjala_audited&sub=track_record',
+    label: "🧪 Gajjala · Audited — eight more changes are ON on this tab (🚩 Gajjala's itself is unchanged). Six remove an A+ here, which is then listed as held, never hidden: a daily entry cap, a first-hour block, a time cut, regular hours only, a regime gate (stand down on a quiet day) and a volume-spike skip. Two are exit grades beside GG's own math: a fixed target on the Intraday VCP and a 21 EMA trail. The 🏁 Track record now keeps the winners and losers rule by rule: for every change, the A+ it kept and the A+ it held, graded the same way, so you can see which change would have saved a loser or cost a winner. The exit grades land one night after the session, from minute bars already saved — no new data calls. Every alert here is recorded in shadow, never sent: nothing new rings your phone and nothing trades. You said: “Yes make the changes in audited please” and “But keep a track record too to see the winners and loster”. UNMEASURED — each change is a dated rule in the 2026-11-01 pre-registration; this record is the measurement. Not advice." },
   // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "Lets make it live. also alerts too." 🥇 Luk's alerts
   // go LIVE — HIS CALL #19 of the 🥇 Luk's tab answered: backend chart_maps/luk/constants.LUK_PUSH_MODE "live"
   // (LUK_LIVE_SINCE / LUK_LIVE_WORDS); a real MARKET push kind `luk_setup` (push/subs OWNER_KEEP_SET seventh kind +

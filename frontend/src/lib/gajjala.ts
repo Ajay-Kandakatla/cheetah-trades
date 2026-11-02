@@ -249,6 +249,8 @@ export type GgAuditedRegistryRow = {
   changes_text?: string | null;
   applies?: boolean | null;
   note?: string | null;
+  /** "filter" | "exit" (audited_rules.KINDS, 2026-11-01) — a word, never printed as a number. */
+  kind?: string | null;
 };
 /** The 🧪 strip block (audited_tab.audited_block). */
 export type GgAuditedBlock = {
@@ -276,6 +278,20 @@ export type GgAuditedSide = {
   open_flat?: number | null; unfilled?: number | null; mean_r?: number | null; win_pct?: number | null; text?: string | null;
 };
 export type GgAuditedTally = { n?: number | null; win?: number | null; loss?: number | null };
+/** One side of a 🧪 per-rule row (audited_tab._per_rule): `with` the rule, or `other` = held by it / GG's math on the
+ *  same rows. Every number is a COUNT as served; `text` is the served sentence and the ONLY thing the FE prints. */
+export type GgAuditedPerRuleSide = {
+  label?: string | null; n?: number | null; win?: number | null; loss?: number | null; unfilled?: number | null;
+  open_flat?: number | null; pending?: number | null; no_original?: number | null; mean_r?: number | null;
+  text?: string | null;
+};
+/** One 🧪 per-rule row (audited_tab._per_rule, 2026-11-01). `fired_alone` (T4 only) and `tie_held` (T1 only) are
+ *  already inside the served `other.text` — never recomposed by the FE. */
+export type GgAuditedPerRuleRow = {
+  key: string; id?: string | null; name?: string | null; kind?: string | null; label?: string | null;
+  with?: GgAuditedPerRuleSide | null; other?: GgAuditedPerRuleSide | null; not_judged?: number | null;
+  fired_alone?: number | null; tie_held?: number | null; delta_text?: string | null; text?: string | null;
+};
 /** The 🏁 compare block (audited_tab.compare_block). `floor_reached` is a COUNT flag (entry weeks ≥ the lab's floor) —
  *  never a verdict, never printed; `unmeasured_text` is ALWAYS the served words. */
 export type GgAuditedCompare = {
@@ -290,8 +306,9 @@ export type GgAuditedCompare = {
              outcome?: string | null; outcome_text?: string | null; text?: string | null }[] | null;
   } | null;
   recon?: { original_only?: number | null; audited_only?: number | null; both?: number | null; text?: string | null } | null;
-  by_rule?: { id: string; n_held?: number | null; win?: number | null; loss?: number | null; unfilled?: number | null;
-              text?: string | null }[] | null;
+  /** 🧪 Rule by rule (2026-11-01, replaces the held-only `by_rule`): ONE row per ON rule, every sentence served. */
+  per_rule?: GgAuditedPerRuleRow[] | null;
+  per_rule_title?: string | null;
   by_rule_note?: string | null;
   by_day?: { date: string; label?: string | null; original?: GgAuditedTally | null; audited?: GgAuditedTally | null;
              held?: GgAuditedTally | null; text?: string | null }[] | null;
