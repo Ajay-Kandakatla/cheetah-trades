@@ -60,7 +60,8 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
     # "Holdings + Signals list", "No, close only".
     assert subs.OWNER_KEEP_SET == frozenset({
         # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
-        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+        # WIDENED 2026-11-01: six → seven — 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too."; LIVE, owner keep-set)
+        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential", "luk_setup",
         "position_alert", "ops_alert",
     })
 

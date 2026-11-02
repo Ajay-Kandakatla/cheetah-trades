@@ -97,9 +97,10 @@ class NoSendPathTest(unittest.TestCase):
         # key_level_alert (his "On: week + month + 52-week"), also untouched here.
         # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1:
         # the six) — this path never touches any of them either.
+        # WIDENED 2026-11-01 — 🥇 luk_setup (Ajay: 'Lets make it live. also alerts too.') — this path never touches it either.
         self.assertEqual(set(subs.OWNER_KEEP_SET),
                          {"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                          "position_alert", "ops_alert"})
+                          "luk_setup", "position_alert", "ops_alert"})
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):
         """NEGATIVE — no kind reaches his phone from this package by accident.

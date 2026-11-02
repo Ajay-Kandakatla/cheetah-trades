@@ -207,10 +207,13 @@ export const GGA_PASSES: { key: string; label: string; fallbackCadenceSec: numbe
 ];
 
 /* 🥇 Luk's pass (2026-11-01, luk-tab spec §3.12 / WP-D). Ajay: "pic the next best one like Gajjala … Implement their
- * strategy". Luk's pass is a detached child of the 🚩 5-minute pass (backend CADENCE derived = 300) and records in
- * SHADOW — PASS HEALTH only, never a push kind, it never rings. Its OWN strip under its own "never sent" eyebrow,
- * right after the 🧪 strip and before 🗓️ Daily passes: never in PASSES (the header count speaks for the passes that
- * can ring), never in GG1M_PASSES / TAPE_PASSES / DAILY_PASSES, never a /notifications toggle (not a pref kind). */
+ * strategy". Luk's pass is a detached child of the 🚩 5-minute pass (backend CADENCE derived = 300). LIVE since
+ * 2026-11-01 by his call — Ajay 2026-11-01: "Lets make it live. also alerts too." (backend luk/constants.LUK_PUSH_MODE
+ * "live"; anything else = shadow, recorded and never sent). A pref kind since that day: alertKinds.ts,
+ * useNotificationPrefs.ts and the /notifications row (off in default_prefs, in the owner keep-set). Its OWN strip
+ * right after the 🚩 1-minute block and before the 🧪 strip; its counters print with the 🚩 A+ chip words (one
+ * pipeline). Never in PASSES — the header count is HIS CALL — and never in GG1M_PASSES / TAPE_PASSES / DAILY_PASSES.
+ * The label carries no mode word (the 1-minute rule above); renaming it = HIS CALL #9. */
 export const LUK_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'luk_setup', label: '🥇 Luk\'s pass', fallbackCadenceSec: 300 },
 ];
@@ -783,7 +786,9 @@ function PassStrip({ pass, meta, status, gate, today }: {
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
   const headlineKeys = headlineDefs.map((h) => h.key);
-  const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup' || meta.key === 'gajjala_audited_setup';
+  /* 2026-11-01 (luk-live spec §3.7): 🥇 luk_setup reads the same COUNT_KEYS (Luk's gate imports GA's) → the 🚩 A+ words. */
+  const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup' || meta.key === 'gajjala_audited_setup'
+    || meta.key === 'luk_setup';
   const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
@@ -1174,17 +1179,17 @@ export function AlertsPage() {
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>
+        {/* ── 🥇 Luk's pass (2026-11-01) — own strip, outside the header count; LIVE since 2026-11-01 by his call ("Lets make it live. also alerts too."); right after the 1-minute block, before the 🧪 strip ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · rings your phone since 2026-11-01 · not counted in the header</div>
+        <div data-testid="luk-passes">
+          {LUK_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
+        </div>
         {/* ── 🧪 the audited pass (2026-11-01) — own strip: it never rings; never under the 1-minute "they ring your phone" eyebrow ── */}
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="gga-passes-head">🧪 Gajjala · Audited pass · recorded in shadow, never sent · not counted in the header</div>
         <div data-testid="gga-passes">
           {GGA_PASSES.map((meta) => (
-            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
-          ))}
-        </div>
-        {/* ── 🥇 Luk's pass (2026-11-01) — own strip: shadow, never rings; after the 🧪 strip, before the daily passes ── */}
-        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · recorded in shadow, never sent · not counted in the header</div>
-        <div data-testid="luk-passes">
-          {LUK_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>

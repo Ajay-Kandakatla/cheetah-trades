@@ -13,7 +13,8 @@
  * (LukPlaybook) or the 🏁 Track record (LukTrackRecord). A block the server did not send renders nothing.
  *
  * The FE composes NO word and NO number: every visible string is a served field; the only FE strings are structural
- * (aria labels, "ⓘ", the loading / error glyphs). Every alert is recorded in shadow, never sent. UNMEASURED. */
+ * (aria labels, "ⓘ", the loading / error glyphs). Every 🥇 A+ rings his phone since 2026-11-01 by his call; shadow =
+ * recorded, never sent. UNMEASURED. */
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';

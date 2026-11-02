@@ -143,6 +143,11 @@ ITEM_URL_BY_KIND = {
     # carries the sub itself (alerts.compose / potential.deep_link, variant GG1).
     "gajjala_1m_setup":     "/chart-maps?tab=gajjala_1m&focus={sym}",
     "gajjala_1m_potential": "/chart-maps?tab=gajjala_1m&focus={sym}",
+    # 🥇 2026-11-01 — a Luk's A+ (LIVE by his call, Ajay: "Lets make it live. also
+    # alerts too."): its tab, the sub resolved by chart_maps/luk/tab.resolve_sub
+    # from the day's claim; the single push's url carries the sub itself
+    # (luk/alerts.compose).
+    "luk_setup":            "/chart-maps?tab=luk&focus={sym}",
     # 🎢 / 🗺️ 2026-10-14 — the Tape tab, back-linked to Chart Maps
     # (orderflow/tape_burst_kinds.URL_FMT, pinned by test_tape_burst_kinds).
     "tape_burst_highbeta":  "/sepa/{sym}?tab=tape&from=chart-maps",

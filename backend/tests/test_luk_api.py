@@ -90,11 +90,14 @@ def test_NEGATIVE_the_gajjala_routes_are_the_same_set():
     assert V.for_api_base(BASE) is None                                     # GG's registry never names Luk
 
 
-def test_the_docstrings_say_shadow_never_sent_and_unmeasured():
+def test_the_docstrings_say_live_since_the_go_live_unmeasured_and_name_the_shadow_fallback():
+    # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): live + the date, the shadow fallback still named
     from chart_maps import api as API
     for fn in (API.chart_maps_luk, API.chart_maps_luk_entry_tape):
-        doc = fn.__doc__ or ""
-        assert "shadow" in doc.lower() and "never sent" in doc and "UNMEASURED" in doc, fn.__name__
+        doc = " ".join((fn.__doc__ or "").split())
+        assert "live" in doc and "2026-11-01" in doc and "UNMEASURED" in doc, fn.__name__
+        assert "shadow = recorded, never sent" in doc, fn.__name__
+        assert "Every Luk alert is recorded in SHADOW" not in doc                   # NEGATIVE: the old claim is gone
 
 
 def test_NEGATIVE_the_luk_get_never_names_gajjala_tab_build_or_a_trigger():
@@ -163,7 +166,7 @@ def test_the_real_build_serves_through_the_route(client, monkeypatch, live):
     real = LT.build
     monkeypatch.setattr(LT, "build", lambda sub, **k: real(sub, now=NOW, store=st, **k))
     body = client.get(BASE, params={"sub": "pullback_reversal"}).json()
-    assert body["tab"] == "luk" and body["variant"]["push_mode"] == "shadow"
+    assert body["tab"] == "luk" and body["variant"]["push_mode"] == "live"         # FLIPPED 2026-11-01 (go-live)
     assert [s["key"] for s in body["subs"]] == [k for k, _e, _l in __import__("chart_maps.luk.constants",
                                                                                fromlist=["SUBS"]).SUBS]
     assert body["tiles"] and body["fault"] is False

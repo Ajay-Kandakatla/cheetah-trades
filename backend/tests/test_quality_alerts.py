@@ -143,7 +143,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
                    # WIDENED 2026-10-19 (BUILD_SPEC16 WP-B — overnight_movers ships OFF)
                    "overnight_movers",
                    # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent) — OFF, not in OWNER_KEEP_SET
-                   "gajjala_1m_setup", "gajjala_1m_potential"}, \
+                   "gajjala_1m_setup", "gajjala_1m_potential",
+                   # WIDENED 2026-11-01: 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too.") — OFF in default_prefs, ON for the owner through OWNER_KEEP_SET
+                   "luk_setup"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 
@@ -159,7 +161,8 @@ def test_NEGATIVE_the_keep_set_itself_did_not_move():
     eleven (🔑 key_level_alert joined 2026-09-25 on his own answer; 🧬 med_catalyst 2026-09-29)."""
     assert subs.OWNER_KEEP_SET == frozenset({
         # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
-        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+        # WIDENED 2026-11-01: six → seven — 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too."; LIVE, owner keep-set)
+        "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential", "luk_setup",
         "position_alert", "ops_alert",
     })
 

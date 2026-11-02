@@ -13,7 +13,9 @@ shape (never raises); an unknown id -> None (the route 404s).
 NEVER WRITES. Cost rules (gajjala.tape's): completed days through `gajjala.tape._completed_day` (the house loader, no
 force — a cached day never fetches) on the full tape, `_cached_day` (intraday_cache only) on the mini; today through
 `gajjala.ledger._today_load` on the full tape only (the mini never fetches). Each payload memoised per (id, full | lite)
-for GC.LEDGER_TAPE_MEMO_SEC. Every row is a shadow record, never sent; UNMEASURED.
+for GC.LEDGER_TAPE_MEMO_SEC. The alert rule and the legend's record word follow the row's OWN line
+(`gajjala.ledger.LINES`, as `ledger.rang_text` does): "live" = it rang his phone, anything else = the shadow words
+(2026-11-01 go-live). UNMEASURED.
 """
 from __future__ import annotations
 
@@ -28,7 +30,7 @@ import pandas as pd
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import tape as GT
 from chart_maps.gajjala import variant as V
-from chart_maps.gajjala.ledger import ET, SETTLE, UTC, _aware, _iso_t, _num, _px, _today_load
+from chart_maps.gajjala.ledger import ET, LINES, SETTLE, UTC, _aware, _iso_t, _num, _px, _today_load
 from daytrading import data as dt_data
 
 from . import constants as LC
@@ -48,6 +50,7 @@ TAPE_WORDS = {
     "fill_line": "fill {px}",
     "exit_line": "closed below the {ema} EMA {px}",
     "alert": "recorded {hhmm} ET — shadow, never sent",
+    "alert_live": "rang {hhmm} ET — sent to your phone",
     "fill": "fill {hhmm}",
     "fill_dot": "fill {px} at {hhmm}",
     "exit_stop": "stopped {hhmm}",
@@ -57,8 +60,10 @@ TAPE_WORDS = {
     "axis_lo": "lo {px}",
     "axis_end": "{stamp} · {px}",
     "tf": "{n}min · pre/post market",
-    "legend": ("{n}-minute closes · shaded = pre / post market · solid line = the shadow record · dashed = the fill · "
+    "legend": ("{n}-minute closes · shaded = pre / post market · solid line = {record} · dashed = the fill · "
                "levels = trigger / stop / fill · dots = the fill, the exit and his {partials} flags"),
+    "record": "the shadow record",
+    "record_live": "the alert that rang your phone",
     "aria": "{sym} {n}-minute tape around the 🥇 A+ entry",
     "read": "{rang}; {plan}; {fill}{exit}{flags}",
     "open_hint": "📈 click for the full tape",
@@ -66,6 +71,8 @@ TAPE_WORDS = {
     "today_failed": "Today's tape could not be read on this open — the next re-read tries again.",
     "lite_today": "Today's bars are not in the mini yet — 📈 loads the full tape.",
 }
+ALERT_WORD = {LINES[0]: "alert_live", LINES[1]: "alert"}      # by the row's own line (ledger.RANG_TEXT's rule)
+RECORD_WORD = {LINES[0]: "record_live", LINES[1]: "record"}
 _NO_MEMO = ("fault", "today_failed", "lite_today")
 
 _MEMO: dict = {}                  # {(LUK.key, id, "full" | "lite"): (clock(), payload)}
@@ -74,6 +81,11 @@ _LOCK = threading.Lock()
 
 def _w(key: str, **kw) -> str:
     return TAPE_WORDS[key].format(**kw)
+
+
+def _line(row: dict) -> str:
+    """The row's own line; anything not a known line word -> the shadow line (ledger.rang_text's fallback)."""
+    return row.get("line") if row.get("line") in ALERT_WORD else LINES[1]
 
 
 def parse_id(_id) -> Optional[tuple]:
@@ -195,7 +207,7 @@ def _build(_id: str, *, lite: bool, now: datetime, store, load_day: Optional[Cal
     at_iso = _iso_t(row.get("at_utc"))
     if at_iso is not None:
         rules.append({"key": "alert", "at": at_iso, "style": "solid", "tone": "alert",
-                      "label": _w("alert", hhmm=_when(at_iso, d))})
+                      "label": _w(ALERT_WORD[_line(row)], hhmm=_when(at_iso, d))})
     ema = int(LC.LUK_PULLBACK_DAILY_EMA)
     if filled:
         fpx = float(f["fill_px"])
@@ -247,7 +259,8 @@ def _build(_id: str, *, lite: bool, now: datetime, store, load_day: Optional[Cal
         note = None
     return {"id": _id, "ticker": sym, "tf": _w("tf", n=n), "lite": bool(lite), "bars": bars, "n_bars": len(bars),
             "hlines": hlines, "rules": rules, "dots": dots, "axis": axis,
-            "legend": _w("legend", n=n, partials=LL.partials_text()), "read": read,
+            "legend": _w("legend", n=n, partials=LL.partials_text(),
+                         record=TAPE_WORDS[RECORD_WORD[_line(row)]]), "read": read,
             "title": read + "\n" + TAPE_WORDS["open_hint"], "tone": tone, "note": note,
             "aria": _w("aria", sym=sym, n=n), "as_of": now.isoformat()}
 

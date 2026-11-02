@@ -96,6 +96,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // UNMEASURED.
   gajjala_1m_setup:     { emoji: '🚩', label: 'Gajjala 1-min A+',        group: 'trading' },
   gajjala_1m_potential: { emoji: '🧠', label: 'Gajjala 1-min potential', group: 'trading' },
+  // 🥇 Luk's A+ (2026-11-01, chart_maps/luk/alerts.py) — LIVE since 2026-11-01 by his call: "Lets make it live. also
+  // alerts too." (backend luk/constants.LUK_PUSH_MODE "live"). Off in default_prefs, in the owner keep-set since
+  // 2026-11-01. The label carries no mode word: a row's own push state says sent or not. UNMEASURED — his setup,
+  // not a buy signal.
+  luk_setup:            { emoji: '🥇', label: "Luk's A+",                group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

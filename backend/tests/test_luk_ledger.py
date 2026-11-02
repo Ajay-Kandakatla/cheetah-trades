@@ -67,6 +67,14 @@ def alert_doc(sym="ABC", setup="pullback_reversal", d=D, at=None, trig=10.0, sto
             "state": state, "at": at.isoformat(), "note": GA.SHADOW_NOTE}
 
 
+def pushed_doc(sym="ABC", setup="pullback_reversal", d=D, at=None, **kw) -> dict:
+    """A LIVE claim settled "pushed" (go-live 2026-11-01): the house claim key, mode live, the sender's result."""
+    doc = alert_doc(sym=sym, setup=setup, d=d, at=at, state="pushed", _id=GA.claim_key(d, sym, setup, LUK), **kw)
+    doc.update(mode="live", result={"sent": 1, "failed": 0, "total_targets": 1, "skipped": 0})
+    doc.pop("note", None)
+    return doc
+
+
 def make_store(alerts=(), ledger=(), fail_alerts=False):
     colls = {n: FakeColl() for n in LS.LOGICAL}
     colls[GS.ALERTS] = FakeColl(list(alerts), fail=fail_alerts)
@@ -534,6 +542,7 @@ def test_served_block_words_counts_and_row_texts():
     assert rows["OPN"]["exit_text"] == "open · +0.8R after 2 sessions" and rows["OPN"]["flags_text"] == ""
     assert rows["NOE"]["state"] == "no_entry" and rows["NOE"]["exit_text"] == ""
     assert rows["STP"]["plan_text"] == "trigger 10.00 · stop 9.50 (−5.0%) · R $0.50"
+    # by the row's OWN line (2026-11-01): a shadow claim keeps the shadow words whatever the mode
     assert rows["STP"]["rang_text"] == "recorded 10:00 ET (regular session) — shadow, never sent"
     assert b["n_rows"] == 4 and b["days"][0]["label"] == "Mon 11-02"
 
@@ -580,7 +589,8 @@ def test_NEGATIVE_the_package_imports_only_the_allowed_gajjala_ledger_names():
     import ast
     import inspect
     allowed = {"bars_from_frame", "_default_load_day", "_today_load", "plan_of", "rang_of", "_D", "_num", "_aware",
-               "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC"}
+               "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC",
+               "LINES"}   # WIDENED 2026-11-01 (go-live): GG's 🏁 line words ("live" / "shadow"), imported never retyped
     from chart_maps.luk import tape as LT
     for mod in (LL, LT):
         tree = ast.parse(inspect.getsource(mod))
@@ -667,3 +677,91 @@ def test_NEGATIVE_the_house_cache_being_set_changes_nothing(cache, cache_row, fe
         assert o2["deferred_daily"] == 1 and o2["extended"] == 0 and d2["walk"] is None
     else:
         assert o2["extended"] == 1 and d2["walk"]["r_now"] == pytest.approx((10.2 - 10.0) / 0.5)
+
+
+# ── 2026-11-01 go-live (Ajay: "Lets make it live. also alerts too.") — pushed claims are rows too ─────────────────────
+def test_row_states_are_the_gajjala_ledger_alert_states_and_the_lines_are_ggs():
+    assert LL.ROW_STATES == GS.LEDGER_ALERT_STATES == ("shadow", "pushed")
+    assert LL.LINE_OF == {"shadow": LG.LINES[1], "pushed": LG.LINES[0]} == {"shadow": "shadow", "pushed": "live"}
+
+
+def test_a_pushed_claim_is_a_row_on_the_live_line():
+    r = row_for(pushed_doc(at=et(D, 10, 0, 15)))
+    assert r["line"] == "live" and r["push_state"] == "pushed"
+    assert r["id"] == "2026-11-02|ABC|pullback_reversal|aplus" and r["plan"] == "ok"
+    assert r["at_et"] == "10:00"                              # the claim's `at` (the pass clock), never the settle
+    s = row_for(alert_doc())
+    assert s["line"] == "shadow" and s["push_state"] == "shadow"
+    assert set(r) == set(s)                                   # every other row key unchanged
+
+
+def test_a_pushed_row_and_a_shadow_row_grade_by_the_same_math():
+    bars = merge(flat(D, (9, 30), (10, 5), 9.9), [bar(D, 10, 6, 10.02, 10.3, 10.0, 10.2)],
+                 flat(D, (10, 7), (15, 59), 10.2))
+    at = et(D, 10, 0, 15)
+    fp, fs = LL.fill(row_for(pushed_doc(at=at)), bars), LL.fill(row_for(alert_doc(at=at)), bars)
+    assert fp == fs and fp["entry"] == "filled"
+    assert (fp["fill_px"], fp["fill_t"]) == _gg_fill(alert_doc(at=at), bars)
+
+
+@pytest.mark.parametrize("over", [
+    {"state": "claimed"},                                                      # in flight
+    {"state": "failed"},
+    {"state": "no_target"},
+    {"_id": GA.claim_key(D, "ABC", "pullback_reversal", LUK) + "#late"},      # a refusal id
+    {"_id": GA.claim_key(D, "ABC", "pullback_reversal", LUK) + "#suppressed_closed"},
+    {"_id": GA.shadow_key(D, "ABC", "pullback_reversal", LUK)},               # a pushed doc under the SHADOW key
+    {"_id": GA.claim_key(D, "ABC", "pullback_reversal", None)},               # GG's claim key, not Luk's
+    {"setup": "bull_flag"},
+    {"date": PRE.isoformat(), "_id": GA.claim_key(PRE, "ABC", "pullback_reversal", LUK)},
+])
+def test_NEGATIVE_a_doc_that_is_not_a_luk_pushed_claim_is_not_a_row(over):
+    assert LL.row_of(dict(pushed_doc(), **over)) is None
+
+
+def test_NEGATIVE_a_shadow_doc_under_the_claim_key_is_not_a_row():
+    doc = alert_doc(_id=GA.claim_key(D, "ABC", "pullback_reversal", LUK))
+    assert LL.row_of(doc) is None
+
+
+def test_rows_for_reads_both_states_and_served_rows_say_which():
+    st = make_store([pushed_doc(sym="LIV"), alert_doc(sym="SHD"),
+                     dict(pushed_doc(sym="FLD"), state="failed"),
+                     dict(pushed_doc(sym="NOT"), state="no_target")])
+    assert sorted(r["symbol"] for r in LL.rows_for([D], st)) == ["LIV", "SHD"]
+    b = LL.served_block(st, D, et(D, 12, 0), span="today")
+    rows = {r["symbol"]: r for dd in b["days"] for r in dd["rows"]}
+    assert rows["LIV"]["rang_text"] == "rang 10:00 ET (regular session) — sent to your phone"
+    assert rows["SHD"]["rang_text"] == "recorded 10:00 ET (regular session) — shadow, never sent"
+    assert "never sent" not in rows["LIV"]["rang_text"]       # NEGATIVE: a rung row never says never sent
+
+
+def test_rang_text_by_line_and_without_a_time():
+    assert LL.rang_text({"line": "live", "at_et": "09:41", "rang": "rth"}) == \
+        "rang 09:41 ET (regular session) — sent to your phone"
+    assert LL.rang_text({"line": "shadow", "at_et": "09:41", "rang": "rth"}) == \
+        "recorded 09:41 ET (regular session) — shadow, never sent"
+    assert LL.rang_text({"line": "live", "at_et": None}) == "rang — no alert time on file"
+    assert LL.rang_text({"line": "shadow", "at_et": None}) == "recorded — no alert time on file"
+    assert LL.rang_text({"line": "junk", "at_et": "09:41"}).startswith("recorded")   # NEGATIVE: unknown → shadow
+
+
+def test_honesty_and_empty_follow_the_mode(monkeypatch):
+    st = make_store()
+    live = LL.served_block(st, D, et(D, 12, 0), span="today")
+    assert LC.LUK_PUSH_MODE == "live"
+    assert live["empty_text"] == LL.EMPTY_TEXT_LIVE == "No 🥇 A+ in this span — none rang, none was recorded."
+    assert LC.LUK_LIVE_SINCE in live["honesty"] and f'("{LC.LUK_LIVE_WORDS}")' in live["honesty"]
+    assert live["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).")
+    assert "{" not in live["honesty"]
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    sh = LL.served_block(st, D, et(D, 12, 0), span="today")
+    assert sh["empty_text"] == LL.EMPTY_TEXT_SHADOW and "never sent" in sh["empty_text"]
+    assert sh["honesty"].startswith("Every row is a shadow record — none reached your phone.")
+    assert LC.LUK_LIVE_WORDS not in sh["honesty"]                                  # NEGATIVE: no live quote in shadow
+    assert "rings" not in sh["honesty"] and "rang" not in sh["honesty"]
+
+
+def test_NEGATIVE_a_junk_mode_serves_the_shadow_words(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "LIVE")
+    assert LL.honesty() is LL.HONESTY_SHADOW and LL.empty_text() is LL.EMPTY_TEXT_SHADOW

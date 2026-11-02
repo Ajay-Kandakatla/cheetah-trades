@@ -27,8 +27,9 @@ from tests.test_gajjala_potential import Rec, bf_armed, seed
 from tests.test_gajjala_run import S, at
 from tests.test_gajjala_variant_2026_10_27 import _aplus, _frames, boom, frame_1m, gg1_store
 
-SIX = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                 "position_alert", "ops_alert"})
+# WIDENED 2026-11-01: six → SEVEN — 🥇 luk_setup joined (Ajay 2026-11-01: "Lets make it live. also alerts too.").
+SEVEN = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                   "luk_setup", "position_alert", "ops_alert"})
 GAJJALA_FOUR = ("gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential")
 OK_SEND = {"sent": 1, "failed": 0, "total_targets": 1}
 OWNER = "owner-local-part" + chr(64) + "example.com"
@@ -41,16 +42,16 @@ def _no_override(monkeypatch):
 
 
 # ── D1: the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────
-def test_the_keep_set_is_exactly_the_six():
-    assert subs.OWNER_KEEP_SET == SIX
+def test_the_keep_set_is_exactly_the_seven():
+    assert subs.OWNER_KEEP_SET == SEVEN
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
-def test_owner_prefs_is_true_for_exactly_the_six_and_false_for_every_other_bool():
+def test_owner_prefs_is_true_for_exactly_the_seven_and_false_for_every_other_bool():
     op = subs.owner_prefs()
-    assert {k for k, v in op.items() if v is True} == SIX
+    assert {k for k, v in op.items() if v is True} == SEVEN
     for k, v in op.items():
-        if isinstance(v, bool) and k not in SIX:
+        if isinstance(v, bool) and k not in SEVEN:
             assert v is False, k
     # the non-bool settings ride through untouched (the quiet-hours clock)
     d = subs.default_prefs()
@@ -79,7 +80,7 @@ def test_prefs_for_the_owner_is_owner_prefs_and_anyone_else_gets_the_defaults(mo
     monkeypatch.setenv("OWNER_EMAIL", OWNER)
     assert subs.prefs_for(OWNER) == subs.owner_prefs()
     assert subs.prefs_for(OWNER.upper()) == subs.owner_prefs()
-    assert subs.prefs_for(OTHER) == subs.default_prefs()            # NEGATIVE: another user never gets the six
+    assert subs.prefs_for(OTHER) == subs.default_prefs()            # NEGATIVE: another user never gets the seven
     assert subs.prefs_for(None) == subs.default_prefs()
 
 
@@ -90,10 +91,10 @@ def test_both_1m_kinds_are_live_market_kinds_never_retired():
     assert (V.GG1.push_kind_setup, V.GG1.push_kind_potential) == ("gajjala_1m_setup", "gajjala_1m_potential")
 
 
-def test_NEGATIVE_a_seventh_kind_breaks_the_pin(monkeypatch):
+def test_NEGATIVE_an_eighth_kind_breaks_the_pin(monkeypatch):
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     with pytest.raises(AssertionError):
-        test_the_keep_set_is_exactly_the_six()
+        test_the_keep_set_is_exactly_the_seven()
 
 
 def test_the_keep_set_comment_carries_his_words_and_each_removed_kind_once():

@@ -161,8 +161,35 @@ def test_rules_lines_are_served_sentences():
     assert isinstance(lines, list) and len(lines) >= 8
     assert all(isinstance(ln, str) and ln.strip() for ln in lines)
     blob = " ".join(lines)
-    for w in ("shadow, never sent", "UNMEASURED", "Pullback reversal", "never a gate", "listed, not A+"):
+    # FLIPPED 2026-11-01 (go-live, Ajay: "Lets make it live. also alerts too."): the live clause, not the shadow one
+    for w in (PB.ALERT_CLAUSE_LIVE % (LC.LUK_LIVE_SINCE, LC.LUK_LIVE_WORDS), "UNMEASURED", "Pullback reversal",
+              "never a gate", "listed, not A+"):
         assert w in blob, w
+    assert "never sent" not in blob                                     # NEGATIVE: false while live
+
+
+def test_the_shadow_twin_of_the_alert_clause(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    blob = " ".join(PB.rules_lines())
+    assert "Every alert is recorded in shadow, never sent." in blob and LC.LUK_LIVE_WORDS not in blob
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "junk")                  # NEGATIVE: junk → shadow (fail closed)
+    assert PB.alert_clause() == PB.ALERT_CLAUSE_SHADOW
+
+
+@pytest.mark.parametrize("mode", ["live", "shadow"])
+def test_the_alert_line_mark_starts_the_clause_in_both_modes(monkeypatch, mode):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", mode)
+    clause = PB.alert_clause()
+    assert clause.startswith(PB.ALERT_LINE_MARK) and PB.ALERT_LINE_MARK == "Every alert"
+    first = PB.rules_lines()[0]
+    assert clause in first and first.count(PB.ALERT_LINE_MARK) == 1
+    assert sum(PB.ALERT_LINE_MARK in ln for ln in PB.rules_lines()) == 1     # NEGATIVE: no other line carries it
+
+
+def test_the_live_clause_quotes_his_words_by_name():
+    c = PB.alert_clause()
+    assert c == ('Every alert here rings your phone since ' + LC.LUK_LIVE_SINCE + ' by your call ("'
+                 + LC.LUK_LIVE_WORDS + '") — once per name, setup and session.')
 
 
 def test_every_number_in_the_rules_lines_is_a_constant_value():

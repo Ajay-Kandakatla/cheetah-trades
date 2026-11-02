@@ -285,6 +285,15 @@ def notify_gajjala_1m_potential(*, owner: str, payload: dict) -> dict:
     return sender.send_to_user(owner, payload, kind="gajjala_1m_potential")
 
 
+def notify_luk_setup(*, owner: str, payload: dict) -> dict:
+    """🥇 luk_setup — a 🥇 Luk's A+ (chart_maps/luk/alerts.py via chart_maps.luk.variant.LUK, 2026-11-01). Ajay
+    2026-11-01: "Lets make it live. also alerts too." (HIS CALL #19 of the Luk tab answered). Owner-scoped
+    (send_to_user) under its own pref kind, so the closed-day drop, quiet hours and the /notifications toggle all apply
+    at the sender. Called only when LUK_PUSH_MODE is "live" — in shadow the pass records and never gets here. ON for his
+    devices through OWNER_KEEP_SET. UNMEASURED — every body ends "his setup, not a buy signal"; never a trade."""
+    return sender.send_to_user(owner, payload, kind="luk_setup")
+
+
 def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
     """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
     over night scan for all the stocks they are all growing over night". Owner-

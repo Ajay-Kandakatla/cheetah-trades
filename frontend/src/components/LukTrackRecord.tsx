@@ -4,7 +4,8 @@
  * daily close below the 9 EMA, the 3R / 5R flags). The served span chips (?span=), the served counts line, the served
  * rule text folded under ⓘ, the served honesty line, then the served days → rows: plan / fill / exit / flags / rang
  * texts, verbatim. A 📈 toggle per row mounts LukEntryTape (GET /chart-maps/luk/entry-tape — the Luk route only).
- * A shadow record, never a study: this file types no word and no number. */
+ * Each row rang his phone since 2026-11-01 by his call, or (shadow) was recorded, never sent — the served line says
+ * which. A record, never a study: this file types no word and no number. */
 import { Fragment, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LUK_SPAN_PARAM, lukSpan, lukText, type LukTrackRecord as LukTrackRecordBlock, type LukTrRow } from '../lib/luk';

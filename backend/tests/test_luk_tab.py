@@ -193,21 +193,44 @@ def test_payload_keys_and_the_variant_block():
     assert out["tab"] == LC.LUK_TAB == "luk" and out["label"] == LC.LUK_TAB_LABEL
     v = out["variant"]
     assert v == {"key": "luk", "tab": "luk", "label": LC.LUK_TAB_LABEL, "api_base": "/chart-maps/luk",
-                 "record_from": LC.LUK_RECORD_FROM, "push_mode": "shadow", "tfs": ["1m", "5m", "60m"],
-                 "primary": "5m"}
+                 "record_from": LC.LUK_RECORD_FROM, "push_mode": "live", "tfs": ["1m", "5m", "60m"],
+                 "primary": "5m"}                         # FLIPPED 2026-11-01: "Lets make it live. also alerts too."
     assert out["fault"] is False and out["fault_text"] is None
+
+
+def test_NEGATIVE_the_variant_block_follows_the_patched_shadow_fallback(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    assert _build()["variant"]["push_mode"] == "shadow"
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "LIVE")                    # junk → shadow (fail closed)
+    assert T.variant_block()["push_mode"] == "shadow"
 
 
 def test_title_and_honesty_are_the_spec_words_verbatim():
     out = _build()
     assert out["title"] == ("🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own "
                             "words · UNMEASURED")
+    # FLIPPED 2026-11-01 (go-live): the one mode sentence quotes LUK_LIVE_WORDS by name
+    assert out["honesty"] == (
+        "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He "
+        "sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his "
+        "selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop "
+        "and one exit he stated. Every alert here rings your phone since " + LC.LUK_LIVE_SINCE + " by your call (\""
+        + LC.LUK_LIVE_WORDS + "\"). Nothing here is measured, trades, sizes or enters a lane.")
+    assert "never sent" not in out["honesty"]                          # NEGATIVE: false while live
+    assert T.fault_payload()["honesty"] == out["honesty"]
+
+
+def test_the_shadow_twin_of_the_honesty_line(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    out = _build()
     assert out["honesty"] == (
         "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He "
         "sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his "
         "selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop "
         "and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, "
         "sizes or enters a lane.")
+    assert LC.LUK_LIVE_WORDS not in out["honesty"] and "rings" not in out["honesty"]
+    assert T.fault_payload()["honesty"] == out["honesty"]
 
 
 def test_every_served_text_is_non_empty_for_the_fixture_store():
@@ -468,7 +491,13 @@ def test_the_strip_is_folded_and_carries_the_index_words():
     assert list(rows) == list(LC.LUK_INDEX_SYMBOLS)
     assert rows["QQQ"]["text"] == MS.WORD_OVER.format(sym="QQQ")
     assert rows["IWM"]["text"] == MS.WORD_UNDER.format(sym="IWM")
-    assert "never sent" in s["push_text"] and "HIS CALL #19" in s["push_text"]
+    # FLIPPED 2026-11-01 (go-live): the push line quotes him by name and serves the cadence fact, never a typed number
+    assert s["push_text"] == T.push_text()
+    assert LC.LUK_LIVE_SINCE in s["push_text"] and f'("{LC.LUK_LIVE_WORDS}")' in s["push_text"]
+    assert "UNMEASURED" in s["push_text"] and f"up to {T._cad_min()} minutes" in s["push_text"]
+    assert s["push_text"].startswith("📲 Every 🥇 A+ rings your phone since ")
+    assert "never sent" not in s["push_text"] and "{" not in s["push_text"]          # NEGATIVE: false while live
+    assert s["latency_text"] == T.latency_text()                                      # the tab keeps the latency fact
     assert LC.LUK_RECORD_FROM in s["record_text"] and "EXTERNAL, not re-run here" in s["external_text"]
     assert s["cost_text"].endswith(" Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · "
                                    "caps 1.")
@@ -561,3 +590,24 @@ def test_NEGATIVE_no_luk_href_is_bare_or_lowercase():
     for h in hrefs:
         sym = h.split("/sepa/", 1)[1].split("?", 1)[0]
         assert h == f"/sepa/{sym}?tab=supply" and sym == sym.upper(), h
+
+
+# ── 2026-11-01 go-live (Ajay: "Lets make it live. also alerts too.") — the shadow twin of the push line ───────────────
+def test_the_shadow_twin_of_the_push_line(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    s = _build()["strip"]
+    assert s["push_text"] == T.PUSH_TEXT_SHADOW == "📵 Every 🥇 A+ is recorded in shadow, never sent, until you say so. UNMEASURED."
+    assert "rings" not in s["push_text"] and LC.LUK_LIVE_WORDS not in s["push_text"]
+
+
+def test_NEGATIVE_the_shadow_line_never_claims_no_kind_or_no_sender():
+    """The old "no push kind, no sender, keep-set unchanged" clause is false after the go-live even in shadow."""
+    for t in (T.PUSH_TEXT_SHADOW, T.PUSH_TEXT_LIVE, T.HONESTY_SHADOW, T.HONESTY_LIVE):
+        assert "no push kind" not in t and "no sender" not in t and "keep-set is unchanged" not in t
+
+
+def test_NEGATIVE_the_push_line_types_no_number_but_the_served_cadence():
+    live = T.PUSH_TEXT_LIVE.replace("1-minute trigger", "")                # the frame's name, not a number
+    nums = set(re.findall(r"\d+", live)) | set(re.findall(r"\d+", T.PUSH_TEXT_SHADOW))
+    assert nums == set()                                                    # every number is a {name}
+    assert str(T._cad_min()) == str(V.cadence_sec(LUK) // 60)

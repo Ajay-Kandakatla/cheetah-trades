@@ -8,6 +8,7 @@ Its own package, modeled on chart_maps/gajjala/ and reusing that package's GENER
 concept): constants.py is the ONLY number source (every line tagged with his words' file:line, MINE, derived or
 EXTERNAL); verified_rules.json is the cited rule registry; variant.py is its own `Variant` instance (LUK) of GG's
 frozen dataclass; playbook.py serves the 📓 Playbook and the ℹ️ panel lines; tiers.py his Lead / Mediocre / Lag
-watchlists; market_state.py the QQQ / IWM state word (never a gate). Every alert is recorded in shadow, never sent.
+watchlists; market_state.py the QQQ / IWM state word (never a gate). Every 🥇 A+ rings his phone since 2026-11-01 by his word
+(Ajay 2026-11-01: "Lets make it live. also alerts too." — LUK_PUSH_MODE live; shadow = recorded, never sent).
 UNMEASURED: nothing here trades, sizes or enters a lane.
 """

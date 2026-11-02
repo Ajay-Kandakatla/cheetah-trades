@@ -1365,10 +1365,11 @@ def _gajjala_section() -> dict:
 
 
 # 🥇 2026-11-01 (BUILD SPEC luk-tab §3.12 / WP-D refix). The panel draws picks / stops / alerts, so the ONE list
-# luk.playbook.rules_lines() is split by the words it already serves, never by position: the line that says the
-# alert is recorded in shadow → alerts; the stop line (S2–S4) and the 🏁 exit / R-flag line → "Stops & targets";
-# every other line (his screens, the pass, the three setups, the A+ / listed rules, the index word) → picks.
-_LUK_ALERT_MARK = "recorded in shadow, never sent"
+# luk.playbook.rules_lines() is split by the words it already serves, never by position: the line carrying
+# luk.playbook.ALERT_LINE_MARK (its mode clause — 2026-11-01 go-live, Ajay: "Lets make it live. also alerts too.": the
+# mark is read from the playbook by name in BOTH modes, never retyped here) → alerts; the stop line (S2–S4) and the 🏁
+# exit / R-flag line → "Stops & targets"; every other line (his screens, the pass, the three setups, the A+ / listed
+# rules, the index word) → picks.
 _LUK_STOP_HEADS = ("Stop:", "\U0001F3C1")                     # 🏁
 
 
@@ -1381,9 +1382,10 @@ def _luk_section() -> dict:
     from chart_maps.luk import playbook as LPB
 
     emoji, _, name = LC.LUK_TAB_LABEL.partition(" ")
+    mark = LPB.ALERT_LINE_MARK
     picks, stops, alerts = [], [], []
     for line in LPB.rules_lines():
-        if _LUK_ALERT_MARK in line:
+        if mark in line:
             alerts.append(line)
         elif line.startswith(_LUK_STOP_HEADS):
             stops.append(line)

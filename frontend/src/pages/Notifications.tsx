@@ -212,6 +212,15 @@ export const CATEGORIES: CategoryDef[] = [
       + 'You asked for the page and its record: "do everything and also add the track record for it from today..". From 2026-10-27 to 10-28 it ran in shadow — those potentials were recorded, never sent, and stay listed that way. '
       + 'WHAT FIRES: the first time a listed name is a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session, each its own push, listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27). '
       + 'UNMEASURED — a potential, not an entry. Not a recommendation.' },
+  /* 🥇 Luk's A+ (2026-11-01, luk-live spec §3.7). LIVE since 2026-11-01 by his call — Ajay 2026-11-01: "Lets make it
+     live. also alerts too." (backend chart_maps/luk/constants.LUK_PUSH_MODE "live"). False in push/subs.default_prefs
+     (everyone else starts off), in OWNER_KEEP_SET (on for his devices). The 5 below = the served cadence fact (the tab
+     serves the same minutes); no other number. UNMEASURED. */
+  { key: 'luk_setup', label: "Luk's A+", emoji: '🥇', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-11-01, your call: "Lets make it live. also alerts too."; everyone else starts off. Mute it here. '
+      + 'WHAT FIRES: an A+ on 🥇 Luk\'s tab — Martin Luk\'s published pullback reversal, opening range and inside-day entries read on CLOSED 1- and 5-minute candles, only when the entry bar is inside the regular session, once per name, setup and session, each its own push, listed on /alerts and in that tab\'s 🏁 Track record (from 2026-11-01). '
+      + 'A 1-minute trigger can ring up to 5 minutes after its bar closed. '
+      + 'UNMEASURED — his setup, not a buy signal. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -541,11 +550,14 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // 2026-09-20 widening (🏛️ / 🚀 / 📣 / ✨), 🔔 price alerts (09-21), 🔑 key levels (09-25), 🧬 medical (09-29),
     // 🎢 / 🗺️ tape bursts (10-14) and 🎚️ tape control (10-16). 💼 stops on stocks he OWNS stay (his 2026-09-09 answer:
     // not "other"); 🩺 host health stays (without it he never learns the alerts stopped).
+    // 2026-11-01 (luk-live spec §3.7): + 🥇 luk_setup — the keep-set is SEVEN kinds; Ajay 2026-11-01: "Lets make it
+    // live. also alerts too."
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch. Everything else muted.',
+    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too."). Everything else muted.',
     pref: {
       gajjala_setup: true, gajjala_potential: true,
       gajjala_1m_setup: true, gajjala_1m_potential: true,
+      luk_setup: true,
       position_alert: true, ops_alert: true,
       hot_pullback_alert: false, pattern_alert: false,
       demand_alert: false,

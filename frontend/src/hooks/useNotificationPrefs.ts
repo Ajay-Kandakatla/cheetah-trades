@@ -87,6 +87,10 @@ export type NotificationPrefs = {
      BUILD_SPEC29 D2); False in default_prefs, in the owner keep-set. UNMEASURED. */
   gajjala_1m_setup?: boolean;
   gajjala_1m_potential?: boolean;
+  /* 🥇 Luk's A+ (2026-11-01, backend chart_maps/luk/alerts.py). LIVE since 2026-11-01 by his call — Ajay: "Lets make
+     it live. also alerts too." (backend luk/constants.LUK_PUSH_MODE "live"); False in default_prefs, in the owner
+     keep-set since 2026-11-01. UNMEASURED. */
+  luk_setup?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
      range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
      notification specific for High Beta stocks from the reselinet

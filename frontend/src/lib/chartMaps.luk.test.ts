@@ -37,18 +37,24 @@ describe('🥇 Luk\'s — not a tile board, not a 🚩 page', () => {
 
 describe('🥇 Luk\'s — TAB_META', () => {
   const m = TAB_META.luk;
-  it('the label and his ask verbatim, shadow, never sent, UNMEASURED, 2026-11-01', () => {
+  /* 2026-11-01 (luk-live spec §3.7): Ajay "Lets make it live. also alerts too." — the blurb says live + his quote. */
+  it('the label and his asks verbatim, rings your phone since 2026-11-01 + the quote, UNMEASURED, 2026-11-01', () => {
     expect(m.label).toBe("🥇 Luk's");
-    for (const w of [...ASK, 'recorded in shadow, never sent', 'UNMEASURED', 'starts 2026-11-01', 'Not advice.']) {
+    for (const w of [...ASK, 'rings your phone since 2026-11-01', '"Lets make it live. also alerts too."',
+      'UNMEASURED', 'starts 2026-11-01', 'Not advice.']) {
       expect(m.blurb).toContain(w);
     }
+  });
+  it('NEGATIVE: the shadow sentence is gone now that it is live', () => {
+    expect(m.blurb).not.toContain('recorded in shadow, never sent');
+    expect(m.blurb).not.toMatch(/never sent/);
   });
   it('NEGATIVE: no b-word, no "edge", no house forecast word (chart_maps/high_beta_tab.FORBIDDEN_WORDS), no win rate', () => {
     const b = `${m.label} ${m.blurb}`;
     expect(b).not.toMatch(new RegExp(['b' + 'ounce', 'fake', 'rebound', 'will reverse', 'poised', 'expected to', 'likely to',
       'potential to', "won't drop", 'won’t drop', 'predict'].join('|'), 'i'));
     expect(b).not.toMatch(/\bedge\b/i);
-    expect(b).not.toMatch(/win rate|rings your phone/i);
+    expect(b).not.toMatch(/win rate/i);
     expect(m.label).not.toBe(TAB_META.gajjala.label);
   });
 });

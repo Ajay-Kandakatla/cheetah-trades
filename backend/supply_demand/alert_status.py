@@ -161,12 +161,12 @@ GAJJALA_1M_POTENTIAL_KIND = "gajjala_1m_potential"
 # (tests/test_gajjala_audited_pass.py pins it equal to
 # chart_maps.gajjala.variant.GGA.push_kind_setup).
 GAJJALA_AUDITED_KIND = "gajjala_audited_setup"
-# 🥇 2026-11-01 — PASS HEALTH only, never a push kind, recorded in shadow.
-# Luk's pass (chart_maps/luk/run.py, a detached child of the 🚩 5-minute pass)
-# records its own pass doc so /alerts can show it ran. Nothing is ever sent:
-# no sender, no push kind, the owner keep-set is unchanged. Typed, not
-# imported: this file stays a module-level leaf (chart_maps.luk.constants.
-# LUK_KIND is the same string).
+# 🥇 2026-11-01 — the Luk pass's PASS-HEALTH row AND, since 2026-11-01 (Ajay:
+# "Lets make it live. also alerts too."), a real push kind
+# (push/subs.OWNER_KEEP_SET). Luk's pass (chart_maps/luk/run.py, a detached
+# child of the 🚩 5-minute pass) records its own pass doc so /alerts can show
+# it ran. The kind string is typed here, equal to
+# chart_maps.luk.constants.LUK_KIND: this file stays a module-level leaf.
 LUK_KIND = "luk_setup"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
               GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND,
@@ -763,7 +763,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         passes[kind] = _with_cadence(kind, read_pass(kind, pass_coll))
     passes[GAJJALA_AUDITED_KIND] = _with_cadence(GAJJALA_AUDITED_KIND,      # 🧪 2026-11-01 — the audit overlay
                                                  read_pass(GAJJALA_AUDITED_KIND, pass_coll))
-    passes[LUK_KIND] = _with_cadence(LUK_KIND, read_pass(LUK_KIND, pass_coll))   # 🥇 2026-11-01 — shadow, never sent
+    passes[LUK_KIND] = _with_cadence(LUK_KIND, read_pass(LUK_KIND, pass_coll))   # 🥇 2026-11-01 — LIVE (his call)
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw

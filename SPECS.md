@@ -995,8 +995,9 @@ the 5-minute setups read NULL.
   `GAJJALA_1M_ENABLED=0`. Nightly grades GG1 after GG5 (fenced).
 - **Live since 2026-10-29** (was Shadow 2026-10-27 … 2026-10-28): `GAJJALA_1M_PUSH_MODE` = "live" — Ajay: "Only give me
   Gajjalas chart notifications from both tabs, / I am missing out the ones in noise." (HIS CALL #1 answered). Both kinds
-  default_prefs False for everyone else, ON for the owner through OWNER_KEEP_SET (now exactly six kinds: gajjala_setup,
-  gajjala_potential, gajjala_1m_setup, gajjala_1m_potential, position_alert, ops_alert). The shadow-key guard stays (a
+  default_prefs False for everyone else, ON for the owner through OWNER_KEEP_SET (exactly six 2026-10-29 … 2026-11-01:
+  gajjala_setup, gajjala_potential, gajjala_1m_setup, gajjala_1m_potential, position_alert, ops_alert; seven since
+  2026-11-01 — `luk_setup`). The shadow-key guard stays (a
   key shadowed earlier the same day never rings after the flip). The 🏁 Track record counts the 🧠 potentials (shadow
   and sent) and the A+ from `GG1M_RECORD_FROM` (2026-10-27) — no replay, no backfill; each 🧠 row's kind word is read
   from its own push state. The served words follow the mode (`variant.WORDS_1M` / `WORDS_1M_SHADOW`).
@@ -1102,9 +1103,12 @@ every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`
   1 snapshot + ≤ 8 daily fetches + ≤ 40 today-minute fetches + first-appearance prior-session loads + ≤ 60 grade loads;
   ≈ 145 passes/day → worst case ≈ 7.1k calls/day + the measured prior loads; budget 120 s inside the 300 s slot
   (`fits()`).
-- **Pushes: none.** `LUK_PUSH_MODE = "shadow"`, no push kind, no sender (`alerts.refuse_send` raises `NEVER_SENDS`),
-  `OWNER_KEEP_SET` stays six. `/alerts` shows one PASS-HEALTH row `luk_setup` (`alert_status.LUK_KIND`) under its own
-  "recorded in shadow, never sent" eyebrow.
+- **Pushes: LIVE since 2026-11-01** (Ajay: "Lets make it live. also alerts too." — HIS CALL #19 answered):
+  `LUK_PUSH_MODE` = "live", kind `luk_setup` (push/subs default False, OWNER_KEEP_SET seventh kind,
+  hooks.notify_luk_setup, a MARKET kind), the LUK Variant's `send_setup`; the live branch of `luk/alerts.run_pass` =
+  GG's (shadow-key guard, one claim per session/symbol/setup, pushed / no_target / failed settled); shadow = the
+  fail-closed fallback. `/alerts` row `luk_setup` beside the 🚩 1-minute block. The 🏁 grades pushed and shadow rows,
+  each row's own line says which.
 - **🏁 Track record** (`ledger.py`, graded inside the Luk pass, from `LUK_RECORD_FROM` 2026-11-01): fill = the first
   1-minute bar ≥ 30 s after the alert at or above the trigger, from 09:30, same session; exit = the stop (−1.0R) or the
   first daily close below the daily 9 EMA; 3R / 5R flags only; no max hold. Closed days only via `daily.closed_through`

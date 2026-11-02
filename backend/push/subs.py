@@ -323,9 +323,11 @@ def _backfill(db):
 # the 7 days before (push_history, sent > 0): tape_burst_chartmaps 337,
 # tape_burst_highbeta 325, gajjala_potential 155 — the Gajjala pings were
 # buried under the tape bursts. For the OWNER only, a registering device now
-# starts with EXACTLY six kinds (owner_prefs() / prefs_for() derive from this
-# set; everyone else keeps default_prefs(), unchanged); his already-registered
-# devices are flipped by scripts/owner_prefs_apply.py (a data write):
+# starts with EXACTLY six kinds (2026-10-29 … 2026-11-01; SEVEN since 2026-11-01
+# — 🥇 luk_setup, Ajay: "Lets make it live. also alerts too.") (owner_prefs() /
+# prefs_for() derive from this set; everyone else keeps default_prefs(),
+# unchanged); his already-registered devices are flipped by
+# scripts/owner_prefs_apply.py (a data write):
 #   * the four Gajjala chart kinds — 🚩 A+ and 🧠 potential, on the 5-minute tab
 #     and on the 1-minute tab ("both tabs");
 #   * position_alert — his 2026-09-09 answer to this same question: the stops
@@ -367,6 +369,12 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # GAJJALA_1M_PUSH_MODE). MARKET kinds. UNMEASURED.
     "gajjala_1m_setup",
     "gajjala_1m_potential",
+    # 🥇 luk_setup (chart_maps/luk/alerts.py, 2026-11-01) — LIVE since
+    # 2026-11-01 by his call (Ajay 2026-11-01: "Lets make it live. also alerts
+    # too." — HIS CALL #19 of the 🥇 Luk's tab answered). The keep-set is
+    # SEVEN kinds from this day (six 2026-10-29 … 2026-11-01). A MARKET kind.
+    # UNMEASURED: his setup, not a buy signal.
+    "luk_setup",
     # 🔴 position_alert — stop / supply reached on stocks he actually owns
     # (kept 2026-09-09 and again 2026-10-29).
     "position_alert",
@@ -594,6 +602,14 @@ def default_prefs() -> dict:
         # ZERO devices and renders no toggle. MARKET kinds. UNMEASURED.
         "gajjala_1m_setup": False,
         "gajjala_1m_potential": False,
+        # 🥇 A Luk's A+ (chart_maps/luk/alerts.py via chart_maps.luk.variant.LUK,
+        # 2026-11-01). False for everyone else; ON for HIS devices through
+        # OWNER_KEEP_SET + scripts/owner_prefs_apply.py since 2026-11-01 (Ajay:
+        # "Lets make it live. also alerts too." — HIS CALL #19 answered:
+        # LUK_PUSH_MODE "live" + the keep-set). It must still be here: a kind
+        # missing from default_prefs targets ZERO devices and renders no toggle.
+        # A MARKET kind. UNMEASURED.
+        "luk_setup": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

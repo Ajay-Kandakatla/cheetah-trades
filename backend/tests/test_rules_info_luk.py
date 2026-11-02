@@ -4,7 +4,8 @@ Ajay 2026-11-01, verbatim: "look at other winners of US stocks champion ship and
 Implement their strategy please if they have online resources."
 
 The section is luk.playbook.rules_lines() split into the house shape the panel draws (picks / stops / alerts + note),
-by the words each line already serves — never by position and never retyped: the shadow line → alerts; the stop line
+by the words each line already serves — never by position and never retyped: the line carrying
+luk.playbook.ALERT_LINE_MARK (live or shadow — 2026-11-01 go-live, Ajay: "Lets make it live. also alerts too.") → alerts; the stop line
 (S2–S4) and the 🏁 exit line → "Stops & targets"; the rest → picks. Key "luk" sits right BEFORE "doji_sweep" so the
 doji_sweep → high_beta → gajjala → fallen chain and the tail pins hold. NEGATIVES: a raising import / a raising
 rules_lines() drops only this section and the panel still serves; no numeric literal in the section source; not a pad
@@ -65,7 +66,10 @@ def test_every_served_line_lands_exactly_once_in_served_order(sec):
 
 
 def test_the_buckets_carry_the_right_rules(sec):
-    assert all("recorded in shadow, never sent" in a for a in sec["alerts"])
+    # FLIPPED 2026-11-01 (go-live): the alerts line is the one carrying the playbook's mark, its live clause quoting him
+    assert len(sec["alerts"]) == 1 and LPB.ALERT_LINE_MARK in sec["alerts"][0]
+    assert LC.LUK_LIVE_WORDS in sec["alerts"][0] and LC.LUK_LIVE_SINCE in sec["alerts"][0]
+    assert "never sent" not in sec["alerts"][0]
     assert any("Not advice" in a and "UNMEASURED" in a for a in sec["alerts"])
     stop = [s for s in sec["stops"] if s.startswith("Stop:")]
     assert len(stop) == 1 and "low of day" in stop[0]
@@ -75,6 +79,28 @@ def test_the_buckets_carry_the_right_rules(sec):
     for word in ("Pre-market screen", "Pullback reversal", "Opening range", "Inside day", "Listed, never A+", "A+ ="):
         assert word in p, word
     assert not any("recorded in shadow" in x for x in sec["picks"] + sec["stops"])
+    assert not any(LPB.ALERT_LINE_MARK in x for x in sec["picks"] + sec["stops"])      # NEGATIVE: no other line
+
+
+@pytest.mark.parametrize("mode", ["live", "shadow", "LIVE"])
+def test_the_alerts_bucket_is_the_marked_line_in_both_modes(monkeypatch, mode):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", mode)
+    s = RI.sections()["luk"]
+    lines = LPB.rules_lines()
+    marked = [ln for ln in lines if LPB.ALERT_LINE_MARK in ln]
+    assert s["alerts"] == marked and len(marked) == 1
+    assert LPB.alert_clause().startswith(LPB.ALERT_LINE_MARK) and LPB.alert_clause() in marked[0]
+    assert not any(LPB.ALERT_LINE_MARK in x for x in s["picks"] + s["stops"])            # NEGATIVE
+    if mode == "live":
+        assert LC.LUK_LIVE_WORDS in s["alerts"][0]
+    else:
+        assert "recorded in shadow, never sent" in s["alerts"][0] and LC.LUK_LIVE_WORDS not in s["alerts"][0]
+
+
+def test_NEGATIVE_the_mark_is_never_retyped_in_rules_info():
+    src = inspect.getsource(RI)
+    assert not hasattr(RI, "_LUK_ALERT_MARK")
+    assert '"Every alert"' not in src and "recorded in shadow, never sent" not in inspect.getsource(RI._luk_section)
 
 
 def test_numbers_move_with_the_constants(monkeypatch):
@@ -86,12 +112,13 @@ def test_numbers_move_with_the_constants(monkeypatch):
 
 
 def test_the_split_reads_words_never_positions(monkeypatch):
-    synthetic = ["x recorded in shadow, never sent y", "a pick", "Stop: here", "🏁 graded", "mid Stop: is a pick"]
+    synthetic = ["x " + LPB.ALERT_LINE_MARK + " y", "a pick", "Stop: here", "🏁 graded", "mid Stop: is a pick",
+                 "recorded in shadow, never sent — no mark: a pick"]
     monkeypatch.setattr(LPB, "rules_lines", lambda: list(synthetic))
     sec = RI._luk_section()
-    assert sec["alerts"] == ["x recorded in shadow, never sent y"]
+    assert sec["alerts"] == ["x " + LPB.ALERT_LINE_MARK + " y"]
     assert sec["stops"] == ["Stop: here", "🏁 graded"]
-    assert sec["picks"] == ["a pick", "mid Stop: is a pick"]
+    assert sec["picks"] == ["a pick", "mid Stop: is a pick", "recorded in shadow, never sent — no mark: a pick"]
 
 
 def test_NEGATIVE_no_numeric_literal_in_the_section_source():
@@ -100,7 +127,7 @@ def test_NEGATIVE_no_numeric_literal_in_the_section_source():
     lits = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant)
             and isinstance(n.value, (int, float)) and not isinstance(n.value, bool)]
     assert lits == []
-    assert isinstance(RI._LUK_ALERT_MARK, str) and all(isinstance(h, str) for h in RI._LUK_STOP_HEADS)
+    assert all(isinstance(h, str) for h in RI._LUK_STOP_HEADS) and "LPB.ALERT_LINE_MARK" in src
     for typed in ("LUK_STOP_MAX_PCT", "LUK_LOD_SWITCH_PCT", "LUK_NO_CHASE_PCT", "%"):
         assert typed not in src, typed
 

@@ -10,9 +10,13 @@ What it is NOT for: `gajjala.variant.served_block / word / words` and `gajjala.l
 hand the Luk store or this variant to gajjala.ledger / gajjala.tab; Luk serves its own words
 (tests/test_luk_variant.py pins the allowed gajjala.ledger names).
 
-Push mode fails CLOSED: `gajjala.variant.push_mode(LUK)` looks up "LUK_PUSH_MODE" on GC, finds nothing, and says
-"shadow" whatever LC.LUK_PUSH_MODE holds; `push_mode()` here reads LC and says "live" only for exactly "live". Every Luk
-alert is recorded in shadow, never sent (HIS CALL #19 — going live is a code change and his word).
+Push mode — LIVE by his word since LC.LUK_LIVE_SINCE (Ajay 2026-11-01: "Lets make it live. also alerts too." — HIS
+CALL #19 answered): every 🥇 A+ rings his phone through `send_setup` = "notify_luk_setup" (push.hooks, reached by
+`gajjala.alerts._default_send(owner, payload, LUK)`). `send_potential` stays "" — no Luk potential kind exists
+("luk_potential" is a placeholder registered nowhere). The ONE reader of the mode is `push_mode()` here: it reads LC and
+says "live" only for exactly "live" (fail closed — anything else records in shadow, never sent).
+`gajjala.variant.push_mode(LUK)` looks up "LUK_PUSH_MODE" on GC, finds nothing, and says "shadow" whatever LC holds —
+it is NOT the reader of a Luk surface.
 """
 from __future__ import annotations
 
@@ -20,7 +24,7 @@ from chart_maps.gajjala.variant import Variant
 from chart_maps.luk import constants as LC
 
 LUK = Variant("luk", LC.LUK_TAB, LC.LUK_TAB_LABEL, "5m", "60m", (("1m", "1min"), ("5m", "5min"), ("60m", "60min")),
-              "PASS_CADENCE_SEC", "luk", "LUK", LC.LUK_KIND, "luk_potential", "LUK_PUSH_MODE", "", "",
+              "PASS_CADENCE_SEC", "luk", "LUK", LC.LUK_KIND, "luk_potential", "LUK_PUSH_MODE", "notify_luk_setup", "",
               "/chart-maps/luk", "LEDGER_TAPE_TF_MIN", "LEDGER_TAPE_BARS_MAX", "STALE_AFTER_SEC", False, (),
               borrows=(), record_from_const="LUK_RECORD_FROM")
 

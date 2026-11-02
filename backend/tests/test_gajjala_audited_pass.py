@@ -474,7 +474,7 @@ def test_the_pass_health_kind_is_registered_and_no_phone_can_receive_it():
     i = AS.PASS_KINDS.index(AS.GAJJALA_1M_POTENTIAL_KIND)
     assert AS.PASS_KINDS[i + 1] == k                             # after the 1-minute pair (their pin stays)
     assert k not in subs.default_prefs() and k not in subs.OWNER_KEEP_SET     # NEGATIVE
-    assert len(subs.OWNER_KEEP_SET) == 6                         # NEGATIVE: the keep-set stays SIX
+    assert len(subs.OWNER_KEEP_SET) == 7                         # NEGATIVE: the 🧪 kind adds none (WIDENED 2026-11-01: six → seven — 🥇 luk_setup, Ajay 2026-11-01: "Lets make it live. also alerts too.")
     assert not [n for n in dir(hooks) if "audited" in n]         # NEGATIVE: no sender
     assert k not in recent.ITEM_URL_BY_KIND                      # NEGATIVE: no push url
     p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=at(10, 42))

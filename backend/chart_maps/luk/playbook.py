@@ -23,6 +23,7 @@ from typing import Optional
 
 from chart_maps.gajjala import constants as GC
 from chart_maps.luk import constants as LC
+from chart_maps.luk import variant as VL
 
 log = logging.getLogger("chart_maps.luk.playbook")
 
@@ -37,6 +38,19 @@ MINE_CITE = "MINE — a Cheetah formula ({h})"
 EXTERNAL_TAIL = " — EXTERNAL, not re-run here"
 _YT = re.compile(r"[?&]v=([A-Za-z0-9_-]+)")
 _SEC_PER_MIN = 60                          # a unit, not a rule
+# 2026-11-01 go-live (Ajay: "Lets make it live. also alerts too."): the words rules_lines()[0]'s mode clause STARTS with
+# in BOTH modes — supply_demand.rules_info classifies the ℹ️ alerts line by this name, never a retyped phrase
+ALERT_LINE_MARK = "Every alert"
+ALERT_CLAUSE_LIVE = (ALERT_LINE_MARK + " here rings your phone since %s by your call (\"%s\") — once per name, setup "
+                     "and session.")
+ALERT_CLAUSE_SHADOW = ALERT_LINE_MARK + " is recorded in shadow, never sent."
+
+
+def alert_clause() -> str:
+    """The ℹ️ alerts sentence of the mode (luk.variant.push_mode(), read at call time; not "live" → shadow)."""
+    if VL.push_mode() == "live":
+        return ALERT_CLAUSE_LIVE % (LC.LUK_LIVE_SINCE, LC.LUK_LIVE_WORDS)
+    return ALERT_CLAUSE_SHADOW
 _THOUSAND, _MILLION, _BILLION = 1_000, 1_000_000, 1_000_000_000   # units, not rules
 
 # (key, title, registry ids) — the §3.10 order. "sizing" and "formulas" gain items built from the constants.
@@ -237,8 +251,8 @@ def rules_lines() -> list:
     syms = " and ".join(LC.LUK_INDEX_SYMBOLS)
     return [
         ("Martin Luk's own published rules (US Investing Championship stock-division winner; he sells nothing), every rule "
-         "cited line by line on the 📓 Playbook. Every alert is recorded in shadow, never sent. UNMEASURED — nothing "
-         "here trades, sizes or enters a lane. Not advice."),
+         "cited line by line on the 📓 Playbook. " + alert_clause() + " UNMEASURED — nothing here trades, sizes or "
+         "enters a lane. Not advice."),
         ("☀️ Pre-market screen: market cap > %s, %s, price × volume > %s, 1-week volatility > %s%%, sorted by "
          "pre-market %% change. 🏆 Leader: market cap > %s, %s, 1-week price × volume > %s, sorted by 1-month %%. "
          "⚡ Potent: price above the %d EMA and at or above the %d EMA, market cap > %s, 1-week volatility > %s%%, "

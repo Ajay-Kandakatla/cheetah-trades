@@ -7,6 +7,10 @@ The pass's ORCHESTRATION is pinned here over in-memory stores and faked steps (t
 their own files): the 16-step order, every provider dependency counted in `calls`, the [fixed: C1] bars-through clock
 (written to luk_state, read by the next pass's detectors), a dry pass that lands nothing, the lease, the switch, the
 window, the slot arithmetic, the detached child and the CLI refusals. NEGATIVES throughout.
+
+PATCHED 2026-11-01 (go-live, Ajay: "Lets make it live. also alerts too."): the pass pins below run with
+LC.LUK_PUSH_MODE = "shadow" (an autouse fixture — the 10-29 pattern: the real gate's default sender would otherwise reach
+push.sender) and a sender that explodes if reached; the live pin at the bottom re-patches both.
 """
 from __future__ import annotations
 
@@ -34,6 +38,21 @@ from tests.test_gajjala_store import FakeColl
 ET = ZoneInfo("America/New_York")
 DAY = "2026-11-03"                                   # a Tuesday, a market day
 PRIOR = "2026-11-02"
+
+
+OWNER = "owner-local-part" + chr(64) + "example.com"
+
+
+def _boom(*_a, **_k):
+    raise AssertionError("the sender was called")
+
+
+@pytest.fixture(autouse=True)
+def _shadow_by_default(monkeypatch):
+    from push import hooks
+    monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    monkeypatch.setattr(hooks, "notify_luk_setup", _boom, raising=False)
 
 
 def at(hhmm: str, sec: int = 0, day: str = DAY) -> datetime:
@@ -608,3 +627,56 @@ def test_NEGATIVE_the_dry_index_loader_never_writes_the_house_cache(monkeypatch)
     assert got is not None and len(got) == len(df)
     monkeypatch.setattr(P, "_fetch", lambda sym, period: None)
     assert LR._dry_index_loader("QQQ") is None
+
+
+# ── 2026-11-01 go-live (Ajay: "Lets make it live. also alerts too.") ─────────────────────────────────────────────────
+def _live(monkeypatch) -> list:
+    from chart_maps.gajjala import alerts as GA
+    from push import hooks
+    seen: list = []
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+    monkeypatch.setattr(hooks, "notify_luk_setup",
+                        lambda **k: seen.append(k) or {"sent": 1, "failed": 0, "total_targets": 1}, raising=False)
+    monkeypatch.setattr(GA, "_owner", lambda: OWNER)
+    return seen
+
+
+def test_live_the_pass_rings_each_aplus_once_through_the_default_sender(monkeypatch):
+    seen = _live(monkeypatch)
+    spies = fake_steps(monkeypatch, t1=at("09:35"), t5=at("09:35"), read=_aplus())
+    st, colls = mk_store()
+    out = LR.run_pass(at("09:36", 7), store=st, deps=fake_deps())
+    assert out["status"] == "ok" and out["errors"] == []
+    assert out["alerts"]["pushed"] == 2 and out["alerts"]["shadow"] == 0 and out["alerts"]["shadow_mode"] == 0
+    assert {d["state"] for d in colls[GS.ALERTS].docs.values()} == {"pushed"}
+    assert not [k for k in colls[GS.ALERTS].docs if k.startswith("SHADOW:")]       # NEGATIVE: no shadow row
+    assert len(seen) == 2 and all(k["owner"] == OWNER and k["payload"]["kind"] == LC.LUK_KIND for k in seen)
+    assert len(spies["grade"]) == 1                                                  # the 🏁 step still runs once
+    # once per name / setup / session is the gate's own pin (tests/test_luk_alerts.py); a second pass here is refused
+    # by the lease's min gap before it reaches the gate
+
+
+def test_NEGATIVE_live_a_dry_pass_sends_nothing(monkeypatch):
+    seen = _live(monkeypatch)
+    fake_steps(monkeypatch, t1=at("09:35"), t5=at("09:35"), read=_aplus())
+    real, colls = mk_store()
+    st = ST.dry_store(real)
+    deps = LR.dry_deps()
+    base = fake_deps()
+    for k in ("snapshot", "types", "caps", "cached", "load_day", "index_loader", "grade_load_day"):
+        setattr(deps, k, getattr(base, k))
+    out = LR.run_pass(at("09:36", 7), store=st, deps=deps, dry=True)
+    assert out["alerts"]["dry"] == 2 and out["alerts"]["pushed"] == 0 and seen == []
+    assert all(c.writes == 0 and c.docs == {} for c in colls.values())
+
+
+def test_the_run_module_passes_no_owner_send_or_mode():
+    """luk/run.py never passes owner= / send= / mode=: the defaults carry live (GA._owner, GA._default_send(…, LUK),
+    luk.variant.push_mode())."""
+    import ast
+    import inspect
+    tree = ast.parse(inspect.getsource(LR))
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "run_pass" and isinstance(n.func.value, ast.Name) and n.func.value.id == "AL"]
+    assert len(calls) == 1
+    assert not {k.arg for k in calls[0].keywords} & {"owner", "send", "mode"}

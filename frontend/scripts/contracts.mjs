@@ -9772,7 +9772,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 25) → slice(0, 26).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 26) → slice(0, 27).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 27) → slice(0, 28).
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 28) → slice(0, 29).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -9992,7 +9993,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 23) → slice(0, 24).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 24) → slice(0, 25).
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 25) → slice(0, 26).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first seventeen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10278,7 +10280,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 21) → slice(0, 22).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 23) → slice(0, 24).
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 24) → slice(0, 25).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10483,7 +10486,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 18) → slice(0, 19).
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 19) → slice(0, 20).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10587,7 +10591,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 20) → slice(0, 21).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 21) → slice(0, 22).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 22) → slice(0, 23).
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 23) → slice(0, 24).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10742,7 +10747,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 19) → slice(0, 20).
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 20) → slice(0, 21).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10864,7 +10870,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 20) → slice(0, 21).
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 21) → slice(0, 22).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10920,7 +10927,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 16) → slice(0, 17).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 17) → slice(0, 18).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11065,7 +11073,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 17) → slice(0, 18).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 18) → slice(0, 19).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11153,7 +11162,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 15) → slice(0, 16).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 16) → slice(0, 17).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11274,7 +11284,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 14) → slice(0, 15).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 15) → slice(0, 16).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11470,7 +11481,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 13) → slice(0, 14).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 14) → slice(0, 15).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11529,7 +11541,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 12) → slice(0, 13).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 13) → slice(0, 14).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11608,7 +11621,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 11) → slice(0, 12).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 12) → slice(0, 13).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11681,7 +11695,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 10) → slice(0, 11).
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 11) → slice(0, 12).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12025,7 +12040,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 9) → slice(0, 10).
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 10) → slice(0, 11).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12194,7 +12210,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 7) → slice(0, 8).
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 8) → slice(0, 9).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12406,7 +12423,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 8) → slice(0, 9).
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 9) → slice(0, 10).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first four in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12503,7 +12521,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 5) → slice(0, 6).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 6) → slice(0, 7).
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 7) → slice(0, 8).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12548,12 +12567,15 @@ const CONTRACTS = [
       const errs = [];
       const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
       const HIS = ['Only give me Gajjalas chart notifications from both tabs,', 'I am missing out the ones in noise.'];
-      const SIX = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-01 (luk-live spec main-session) — Ajay 2026-11-01: "Lets make it live. also alerts too." — 🥇
+      // luk_setup joined: the keep-set is SEVEN kinds (six 2026-10-29 … 2026-11-01). Its own block "🥇 Luk's alerts go
+      // live (2026-11-01)" pins the seventh kind's registry; this block still pins the 10-29 six are all in it.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
-      // 1. the keep-set — exactly the six
+      // 1. the keep-set — exactly the seven
       const subs = tryRead('../backend/push/subs.py', 'subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SIX)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the six: ${SIX.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the seven: ${SEVEN.join(', ')}`);
       // 2. the 1-minute push mode — live, tagged his
       const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
       const ml = /^GAJJALA_1M_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
@@ -12571,7 +12593,7 @@ const CONTRACTS = [
       if (!pref) errs.push("the Essentials preset (id: 'essentials') lost its pref: { … } literal");
       const flags = [...pref.matchAll(/\b([a-z0-9_]+):\s*(true|false)\b/g)];
       const onKeys = flags.filter((m) => m[2] === 'true').map((m) => m[1]);
-      if (pref && !sameSet(onKeys, keep.length ? keep : SIX)) errs.push(`Essentials turns ON [${onKeys.join(', ')}] — it must mirror OWNER_KEEP_SET exactly`);
+      if (pref && !sameSet(onKeys, keep.length ? keep : SEVEN)) errs.push(`Essentials turns ON [${onKeys.join(', ')}] — it must mirror OWNER_KEEP_SET exactly`);
       for (const k of ['tape_burst_highbeta', 'tape_burst_chartmaps', 'pattern_alert', 'hot_pullback_alert', 'demand_alert']) {
         if (pref && !new RegExp(`\\b${k}:\\s*false\\b`).test(pref)) errs.push(`Essentials must carry ${k}: false — it left the keep-set 2026-10-29`);
       }
@@ -12605,7 +12627,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 5) → slice(0, 6).
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 6) → slice(0, 7).
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first three entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12740,7 +12763,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 4) → slice(0, 5).
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 5) → slice(0, 6).
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12865,7 +12889,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-01: moat-none-not-unknown FIRST) — NEW_FEATURES[0] → one of the first two.
       // WIDENED +1 (2026-11-01: gajjala-audited FIRST) — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 3) → slice(0, 4).
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 4) → slice(0, 5).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first two (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13009,7 +13034,7 @@ const CONTRACTS = [
       if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
       // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
       if (/gajjala_audited/.test(subs)) errs.push('push/subs.py names gajjala_audited — the audited tab has NO push kind (HIS CALL #1)');
-      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly six');
+      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly seven (🥇 luk_setup joined 2026-11-01; 🧪 never)');
       const cron = tryRead('../backend/crontab', 'crontab');
       if (cron && /audited/.test(cron)) errs.push('backend/crontab names the audit — the overlay rides the 🚩 line; the host crontab is never edited by a deploy');
       // the registry + the frozen sources [C1]
@@ -13146,8 +13171,9 @@ const CONTRACTS = [
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       // WIDENED +1 (2026-11-01: luk FIRST) — slice(0, 1) → slice(0, 2).
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (🥇 luk went FIRST 2026-11-01; found ${firstIdsGga.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 2) → slice(0, 3).
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first three in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
         const nextAt = nfArr.indexOf("{ id: '", at + 1);
@@ -13184,6 +13210,13 @@ const CONTRACTS = [
       // LUK_PASSES is its OWN strip after the 🧪 strip and before the rendered 🗓️ Daily passes eyebrow, under a "never
       // sent" eyebrow, in no other pass array, at 🚩's cadence; no /notifications toggle; (5) the ℹ️ section "luk"
       // right before "doji_sweep"; (6) the doc + SPECS; (7) the ✨ FIRST, routed, dated, his words verbatim.
+      // AMENDED 2026-11-01 (luk-live spec main-session) — Ajay 2026-11-01: "Lets make it live. also alerts too." (HIS
+      // CALL #19 answered): LUK_PUSH_MODE "live" with his dated words as its comment; variant.LUK sends through
+      // notify_luk_setup (send_potential stays ""); push/subs names luk_setup (keep-set + default_prefs False) and no
+      // other luk kind; the blurb / the /alerts eyebrow / the ✨ say live iff the mode is live and shadow iff shadow; the
+      // 🥇 strip sits right after the 🚩 1-minute strip and before the 🧪 eyebrow; the /notifications registries name
+      // luk_setup; the doc carries the GO-LIVE section; the tab's ✨ is second (the go-live ✨ went FIRST). The push
+      // registry itself is pinned by its own block "🥇 Luk's alerts go live (2026-11-01)".
       const errs = [];
       const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
       const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
@@ -13228,7 +13261,15 @@ const CONTRACTS = [
       const KIND = pyStr(lc, 'LUK_KIND');
       if ([TAB, LABEL, MODE, FROM, KIND].some((x) => x == null)) errs.push('luk/constants.py must carry LUK_TAB / LUK_TAB_LABEL / LUK_PUSH_MODE / LUK_RECORD_FROM / LUK_KIND = "<str>"');
       if (TAB != null && TAB !== 'luk') errs.push(`LUK_TAB is "${TAB}" — the Chart Maps key is "luk"`);
-      if (MODE != null && MODE !== 'shadow') errs.push(`LUK_PUSH_MODE is "${MODE}" — Luk records in SHADOW; going live is HIS CALL #19 and a code change`);
+      // FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): was "shadow" (HIS CALL #19) — now "live", tagged his.
+      const LIVE_WORDS = 'Lets make it live. also alerts too.';
+      if (MODE != null && MODE !== 'live') errs.push(`LUK_PUSH_MODE is "${MODE}" — his 2026-11-01 word "${LIVE_WORDS}" is "live"`);
+      const mlc = /^LUK_PUSH_MODE = "[^"]*"\s*#\s*(.*)$/m.exec(lc);
+      if (!mlc) errs.push('luk/constants.py lost LUK_PUSH_MODE = "…"  # comment');
+      else {
+        if (!mlc[1].startsWith('Ajay 2026-11-01: "')) errs.push('the LUK_PUSH_MODE comment must START `Ajay 2026-11-01: "` (his call, not mine)');
+        if (!mlc[1].includes(LIVE_WORDS)) errs.push(`the LUK_PUSH_MODE comment must quote him verbatim: "${LIVE_WORDS}"`);
+      }
       if (FROM != null && FROM !== '2026-11-01') errs.push(`LUK_RECORD_FROM is ${FROM} — the record starts at his ask, 2026-11-01`);
       if (KIND != null && KIND !== 'luk_setup') errs.push(`LUK_KIND is "${KIND}" — the /alerts pass-health row is "luk_setup"`);
       const vm = /\nLUK = Variant\(([\s\S]*?)\)\n\n/.exec(lv);
@@ -13238,9 +13279,11 @@ const CONTRACTS = [
         if (!/^"luk", LC\.LUK_TAB, LC\.LUK_TAB_LABEL,/.test(v.trim())) errs.push('variant.LUK must open Variant("luk", LC.LUK_TAB, LC.LUK_TAB_LABEL, … (one source)');
         if (!v.includes('"/chart-maps/luk"')) errs.push('variant.LUK api_base must be "/chart-maps/luk"');
         if (!/\bLC\.LUK_KIND\b/.test(v)) errs.push('variant.LUK kind must read LC.LUK_KIND');
-        if (!/"LUK_PUSH_MODE",\s*"",\s*""/.test(v)) errs.push('variant.LUK must carry NO sender ("LUK_PUSH_MODE", "", "") — it never sends');
+        // FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): the A+ sender is hooks.notify_luk_setup; no potential sender.
+        if (!/"LUK_PUSH_MODE",\s*"notify_luk_setup",\s*""/.test(v)) errs.push('variant.LUK must carry ("LUK_PUSH_MODE", "notify_luk_setup", "") — the A+ rings through hooks.notify_luk_setup, no potential sender');
         if (!/"STALE_AFTER_SEC",\s*False\b/.test(v)) errs.push('variant.LUK lane must be False — nothing here enters a lane');
-        if (/notify_/.test(v)) errs.push('variant.LUK names a notify_ sender — it never sends');
+        const notif = [...v.matchAll(/notify_[a-z0-9_]+/g)].map((x) => x[0]);
+        if (notif.join(',') !== 'notify_luk_setup') errs.push(`variant.LUK must name exactly one sender, notify_luk_setup (found [${notif.join(', ')}])`);
         if (!/record_from_const\s*=\s*"LUK_RECORD_FROM"/.test(v)) errs.push('variant.LUK must read its record start from LUK_RECORD_FROM');
       }
       if (!/^VARIANTS = \(GG5, GG1, GGA\)$/m.test(gv)) errs.push('gajjala/variant.py VARIANTS must stay (GG5, GG1, GGA) — Luk is never a GG variant');
@@ -13250,9 +13293,17 @@ const CONTRACTS = [
       if (!/^CADENCE_SEC\[LUK_KIND\] = CADENCE_SEC\[GAJJALA_KIND\]$/m.test(ast)) errs.push('alert_status CADENCE_SEC[LUK_KIND] must be DERIVED from CADENCE_SEC[GAJJALA_KIND] (a child of the 🚩 pass)');
       const CAD = Number((/^CADENCE_SEC\[GAJJALA_KIND\] = (\d+)/m.exec(ast) || [])[1]);
       if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
-      // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
-      if (LUK_WORD.test(subs)) errs.push('push/subs.py names luk — Luk has NO push kind (HIS CALL #19)');
-      if (keepSet(subs).some((k) => LUK_WORD.test(k))) errs.push('OWNER_KEEP_SET carries a luk kind — the keep-set stays exactly six');
+      // FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): ONE device-facing kind, luk_setup — in the
+      // keep-set and False in default_prefs; NEGATIVE — no other luk kind (no potential push exists), no cron line.
+      const lukKeep = keepSet(subs).filter((k) => LUK_WORD.test(k));
+      if (lukKeep.join(',') !== 'luk_setup') errs.push(`OWNER_KEEP_SET must carry exactly one luk kind, luk_setup (found [${lukKeep.join(', ')}])`);
+      const dpAtL = subs.indexOf('\ndef default_prefs(');
+      const dpEndL = dpAtL < 0 ? -1 : subs.indexOf('\ndef ', dpAtL + 1);
+      const dpL = dpAtL < 0 ? '' : subs.slice(dpAtL, dpEndL < 0 ? undefined : dpEndL);
+      if (!/"luk_setup":\s*False\b/.test(dpL)) errs.push('push/subs.default_prefs() must carry "luk_setup": False — everyone else starts off; a kind missing there targets ZERO devices');
+      const subsLuk = new Set([...subs.replace(/#[^\n]*/g, '').matchAll(/["']([a-z0-9_]*luk[a-z0-9_]*)["']/gi)].map((x) => x[1]));
+      if ([...subsLuk].join(',') !== 'luk_setup') errs.push(`push/subs.py code names luk kinds [${[...subsLuk].join(', ')}] — only luk_setup exists`);
+      if (/luk_potential/.test(subs)) errs.push('push/subs.py names luk_potential — no Luk potential kind exists (HIS CALL #4)');
       const cron = tryRead('../backend/crontab', 'crontab');
       if (cron && LUK_WORD.test(cron)) errs.push('backend/crontab names luk — the pass is a detached child of the 🚩 line; the host crontab is never edited by a deploy');
       // the ONE gajjala touch: run.py's fence (the structural AST pins live in tests/test_luk_gajjala_hook.py).
@@ -13289,9 +13340,12 @@ const CONTRACTS = [
         const W = 'TAB_META.luk';
         if (LABEL != null && mLabel !== LABEL) errs.push(`${W}.label "${mLabel}" != luk/constants.LUK_TAB_LABEL "${LABEL}"`);
         for (const h of HIS) if (!mBlurb.includes(`"${h}"`)) errs.push(`${W}.blurb must quote his ask verbatim: "${h}"`);
-        for (const need of ['UNMEASURED', 'never sent']) if (!mBlurb.includes(need)) errs.push(`${W}.blurb must say "${need}"`);
+        if (!mBlurb.includes('UNMEASURED')) errs.push(`${W}.blurb must say "UNMEASURED"`);
         if (!/not advice/i.test(mBlurb)) errs.push(`${W}.blurb must say not advice`);
         if ((MODE === 'shadow') !== /\bshadow\b/.test(mBlurb)) errs.push(`${W}.blurb says shadow iff LUK_PUSH_MODE is "shadow" (it is ${MODE})`);
+        // FLIPPED 2026-11-01: "never sent" iff shadow; live = "rings your phone since 2026-11-01" + his words verbatim.
+        if ((MODE === 'shadow') !== mBlurb.includes('never sent')) errs.push(`${W}.blurb says "never sent" iff LUK_PUSH_MODE is "shadow" (it is ${MODE})`);
+        if (MODE === 'live' && !(mBlurb.includes('rings your phone since 2026-11-01') && mBlurb.includes(`"${LIVE_WORDS}"`))) errs.push(`${W}.blurb must say "rings your phone since 2026-11-01" and quote him verbatim: "${LIVE_WORDS}"`);
         if (FROM && !mBlurb.includes(FROM)) errs.push(`${W}.blurb must name the 🏁 start ${FROM} (= LUK_RECORD_FROM)`);
         errs.push(...wordErrs(W + '.blurb', mBlurb));
       }
@@ -13309,7 +13363,8 @@ const CONTRACTS = [
       const mb = tryRead('src/lib/momentumBurst.ts', 'momentumBurst');
       if (mb && !/\n\s+luk: '[^'\n]*his setup state orders this board/.test(mb)) errs.push('momentumBurst BURST_EXEMPT.luk must state its reason ("his setup state orders this board …")');
 
-      // 4. /alerts — its OWN strip after the 🧪 strip, before the rendered daily eyebrow; no /notifications toggle.
+      // 4. /alerts — its OWN strip; MOVED 2026-11-01 (live): right after the 🚩 1-minute strip and before the 🧪 eyebrow,
+      //    before the rendered daily eyebrow; the /notifications registries name luk_setup (a pref kind since 2026-11-01).
       const al = tryRead('src/pages/Alerts.tsx', 'Alerts');
       if (al) {
         const arr = (name) => { const m = new RegExp(`\\bconst ${name}\\b[^=]*=\\s*\\[([\\s\\S]*?)\\n\\];`).exec(al); return m ? m[1] : null; };
@@ -13320,22 +13375,34 @@ const CONTRACTS = [
           const body = arr(other);
           if (body && LUK_WORD.test(body)) errs.push(`Alerts.tsx ${other} carries the Luk pass — it lives in LUK_PASSES only (never in the header count, never under "they ring your phone")`);
         }
-        const gga = al.indexOf('<div data-testid="gga-passes">');
+        const gg1 = al.indexOf('<div data-testid="gg1m-passes">');
+        const ggaHead = al.indexOf('data-testid="gga-passes-head"');
         const head = al.indexOf('data-testid="luk-passes-head"');
         const div = al.indexOf('<div data-testid="luk-passes">');
         const daily = al.indexOf('>🗓️ Daily passes<');
         if (head < 0 || div < 0) errs.push('Alerts.tsx must render the luk-passes-head eyebrow and the <div data-testid="luk-passes"> strip');
         else {
-          if (!(gga >= 0 && gga < head && head < div && daily >= 0 && div < daily)) errs.push('the 🥇 strip must sit AFTER the 🧪 gga-passes strip and BEFORE the rendered 🗓️ Daily passes eyebrow');
+          if (!(gg1 >= 0 && gg1 < head && head < div && ggaHead > div && daily >= 0 && div < daily)) errs.push('the 🥇 strip must sit AFTER the 🚩 gg1m-passes strip, BEFORE the 🧪 gga-passes-head eyebrow and BEFORE the rendered 🗓️ Daily passes eyebrow');
           const headLine = al.slice(head, al.indexOf('</div>', head));
-          if (!headLine.includes('never sent')) errs.push('the luk-passes-head eyebrow must say "never sent"');
-          if (/ring your phone/.test(headLine)) errs.push('the luk-passes-head eyebrow says "ring your phone" — Luk\'s pass never rings');
+          if ((MODE === 'shadow') !== headLine.includes('never sent')) errs.push(`the luk-passes-head eyebrow says "never sent" iff LUK_PUSH_MODE is "shadow" (it is ${MODE})`);
+          if ((MODE === 'live') !== headLine.includes('rings your phone since 2026-11-01')) errs.push(`the luk-passes-head eyebrow says "rings your phone since 2026-11-01" iff LUK_PUSH_MODE is "live" (it is ${MODE})`);
+          if (/they ring your phone/.test(headLine)) errs.push('the luk-passes-head eyebrow says "they ring your phone" — that phrase is the 🚩 1-minute eyebrow\'s (the 🧪 sibling rule)');
           if (!/LUK_PASSES\.map\(/.test(al.slice(div, div + 600))) errs.push('the luk-passes strip must render LUK_PASSES.map(…)');
         }
       }
+      if (al) {
+        const lpBody = (new RegExp(`\\bconst LUK_PASSES\\b[^=]*=\\s*\\[([\\s\\S]*?)\\n\\];`).exec(al) || [])[1] || '';
+        const lpLabel = (/label: '((?:[^'\\]|\\.)*)'/.exec(lpBody) || [])[1];
+        if (lpLabel !== "🥇 Luk\\'s pass") errs.push(`LUK_PASSES label is '${lpLabel}' — it stays '🥇 Luk\\'s pass' (no mode word; a rename = HIS CALL #9)`);
+      }
+      // FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): luk_setup is a pref kind — every registry names
+      // it; NEGATIVE — none names a luk kind other than luk_setup.
       for (const [rel, who] of [['src/lib/alertKinds.ts', 'alertKinds'], ['src/hooks/useNotificationPrefs.ts', 'useNotificationPrefs'], ['src/pages/Notifications.tsx', 'Notifications']]) {
         const src = tryRead(rel, who);
-        if (src && LUK_WORD.test(src)) errs.push(`${rel} names luk — it is not a push kind and has no toggle`);
+        if (!src) continue;
+        if (!/\bluk_setup\??:/.test(src) && !/key: 'luk_setup'/.test(src)) errs.push(`${rel} must name luk_setup — it is a push kind with its own toggle since 2026-11-01`);
+        const other = [...new Set([...src.matchAll(/\b(luk_[a-z0-9_]+)\b/g)].map((x) => x[1]))].filter((k) => k !== 'luk_setup');
+        if (other.length) errs.push(`${rel} names luk kinds [${other.join(', ')}] — only luk_setup exists`);
       }
 
       // 5. the ℹ️ section — "luk" right before "doji_sweep", built by _luk_section().
@@ -13353,6 +13420,9 @@ const CONTRACTS = [
       const doc = tryRead(DOC, 'the Luk doc');
       const flat = doc.replace(/\n>?[ \t]*/g, ' ');
       for (const need of ['HIS CALL', 'UNMEASURED', 'shadow', 'EXTERNAL', ...HIS]) if (doc && !flat.includes(need)) errs.push(`${DOC.slice(3)} must say ${need.slice(0, 60)}`);
+      // 2026-11-01 (live): the GO-LIVE section, dated, with his words verbatim.
+      if (doc && !/^## 2026-11-01 — GO-LIVE\b/m.test(doc)) errs.push(`${DOC.slice(3)} must carry a "## 2026-11-01 — GO-LIVE …" section`);
+      if (doc && !flat.includes(LIVE_WORDS)) errs.push(`${DOC.slice(3)} must quote him verbatim: "${LIVE_WORDS}"`);
       if (doc && B_WORD(doc)) errs.push(`${DOC.slice(3)} says bounce / fake — reversal, never bounce`);
       let inF = false, lang = '';
       for (const l of doc.split('\n')) {
@@ -13367,8 +13437,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-luk-2026-11-01';
       const nf = tryRead('src/lib/newFeatures.ts', 'the ✨');
       const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 1).map((m) => m[1]);
-      if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found ${firstIdsLuk.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-01: luk-live-pushes FIRST — Ajay: "Lets make it live. also alerts too.") — slice(0, 1) → slice(0, 2).
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first two in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13381,9 +13452,229 @@ const CONTRACTS = [
         for (const h of HIS) if (!label.includes(`“${h}”`)) errs.push(`${W} must quote him verbatim: “${h}”`);
         for (const need of ['UNMEASURED', 'Not advice.']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
         if (MODE === 'shadow' && !(label.includes('never sent') && /\bshadow\b/.test(label))) errs.push(`${W} must say shadow and "never sent" (LUK_PUSH_MODE is shadow)`);
+        // AMENDED 2026-11-01: live → "rings your phone since 2026-11-01" + his words; never "never sent" / shadow.
+        if (MODE === 'live' && !(label.includes('rings your phone since 2026-11-01') && label.includes(`“${LIVE_WORDS}”`))) errs.push(`${W} must say "rings your phone since 2026-11-01" and quote him verbatim: “${LIVE_WORDS}” (LUK_PUSH_MODE is live)`);
+        if (MODE === 'live' && (label.includes('never sent') || /\bshadow\b/.test(label))) errs.push(`${W} still says shadow / "never sent" — LUK_PUSH_MODE is live`);
         if (FROM && !label.includes(FROM)) errs.push(`${W} must name the 🏁 start ${FROM} (= LUK_RECORD_FROM)`);
         if (LABEL && !label.startsWith(LABEL)) errs.push(`${W} must open with the tab label "${LABEL}"`);
         errs.push(...wordErrs(W, label));
+      }
+      return errs;
+    },
+  },
+  {
+    name: "🥇 Luk's alerts go live (2026-11-01)",
+    file: '../backend/chart_maps/luk/constants.py',
+    checks(lc) {
+      // Ajay 2026-11-01 (verbatim, his spelling kept): "Lets make it live. also alerts too." (luk-live spec rev 2 — HIS
+      // CALL #19 of the 🥇 Luk's tab answered; the pattern = main 9aa6ef1e, the 1-minute go-live). Every check reads the
+      // REAL file: (1) push/subs.OWNER_KEEP_SET parses to EXACTLY the seven (the six of 2026-10-29 + luk_setup) and
+      // default_prefs()["luk_setup"] is False; (2) luk/constants LUK_PUSH_MODE "live" / LUK_LIVE_SINCE "2026-11-01" /
+      // LUK_LIVE_WORDS his words, each comment STARTING `Ajay 2026-11-01: "` with his words; (3) push/hooks
+      // notify_luk_setup sends kind "luk_setup" through sender.send_to_user, and no luk potential sender exists; (4)
+      // market_hours/gate MARKET_ALERT_KINDS carries luk_setup, PERSONAL_KINDS does not; (5) push/recent's url for
+      // luk_setup is its tab and ITEM_URL_BY_KIND holds 18 kinds; (6) the Essentials preset turns luk_setup on, its detail
+      // dated with his words; the /notifications row says LIVE SINCE 2026-11-01 with his words; (7) no Luk surface says
+      // "never sent" while live (the blurb, the /alerts eyebrow, the registries' luk rows, the two ✨, the tab's live
+      // honesty + push line, the Playbook's live clause); (8) luk/alerts reaches the sender ONLY through
+      // gajjala.alerts._default_send and imports no push module; refuse_send / NEVER_SENDS are gone; (9) the doc's GO-LIVE
+      // section names the kind, the seven, the freshness window by name and the runbook; SPECS says LIVE; (10)
+      // owner_prefs_apply still derives (no luk name in its code); (11) NEGATIVE — 🧪 GGA still carries no sender and no
+      // audited kind is in the keep-set or hooks; (12) the go-live ✨ is FIRST, routed, dated, his words verbatim.
+      // No gate, threshold or number is read or changed here.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\(['"\\])/g, '$1');
+      const field = (body, name) => {
+        const m = new RegExp(`\\b${name}: (?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`).exec(body);
+        return m ? unesc(m[1] ?? m[2]) : null;
+      };
+      const HIS = 'Lets make it live. also alerts too.';
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'position_alert', 'ops_alert'];
+      const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
+      /** the source of a top-level python NAME = … assignment, up to the next top-level statement. */
+      const pyBlock = (py, n) => {
+        const at = py.search(new RegExp(`^${n} = `, 'm'));
+        if (at < 0) return null;
+        const rest = py.slice(at + 1);
+        const end = rest.search(/\n(?=[A-Za-z_@])/);
+        return py.slice(at, end < 0 ? undefined : at + 1 + end);
+      };
+      const pyConst = (py, n) => { const m = new RegExp(`^${n} = "([^"]*)"\\s*#\\s*(.*)$`, 'm').exec(py); return m ? { v: m[1], c: m[2] } : null; };
+      // self-tests — the helpers bite where they must and not where they must not
+      if (!sameSet(['a', 'b'], ['b', 'a']) || sameSet(['a', 'b'], ['a', 'b', 'c'])) errs.push('self-test: sameSet must compare as sets of equal size');
+      if (pyBlock('X = (1,\n     2)\nY = 3\n', 'X') !== 'X = (1,\n     2)') errs.push('self-test: pyBlock must stop at the next top-level statement');
+      const pc = pyConst('A = "live"   # Ajay 2026-11-01: "x"', 'A');
+      if (!pc || pc.v !== 'live' || !pc.c.startsWith('Ajay 2026-11-01: "')) errs.push('self-test: pyConst must read value + comment');
+      if (keepSet('OWNER_KEEP_SET = frozenset({\n  # "luk_potential" moved\n  "a",\n})').join(',') !== 'a') errs.push('self-test: keepSet must ignore a kind named only in a comment');
+
+      // 1. the keep-set — exactly the seven; default_prefs False for everyone else.
+      const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
+      const keep = keepSet(subs);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the seven: ${SEVEN.join(', ')}`);
+      const ksAt = subs.search(/^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{/m);
+      const ksBody = ksAt < 0 ? '' : subs.slice(ksAt, subs.indexOf('})', ksAt));
+      if (!ksBody.includes(HIS.split(' also')[0]) || !/"luk_setup",/.test(ksBody)) errs.push('OWNER_KEEP_SET must carry "luk_setup" under its own dated comment quoting him (inside the braces, the pattern of every kind)');
+      const dpAt = subs.indexOf('\ndef default_prefs(');
+      const dpEnd = dpAt < 0 ? -1 : subs.indexOf('\ndef ', dpAt + 1);
+      const dp = dpAt < 0 ? '' : subs.slice(dpAt, dpEnd < 0 ? undefined : dpEnd);
+      if (!/"luk_setup":\s*False\b/.test(dp)) errs.push('push/subs.default_prefs() must carry "luk_setup": False — ON only through OWNER_KEEP_SET');
+      if (/"luk_setup":\s*True\b/.test(dp)) errs.push('push/subs.default_prefs() turns luk_setup ON for everyone — it is his phone only');
+      const disabled = pyFrozenSet(subs, 'DISABLED_ALERT_KINDS') || [];
+      if (disabled.includes('luk_setup')) errs.push('push/subs.DISABLED_ALERT_KINDS carries luk_setup — it is live');
+
+      // 2. the constants — his dated word on each.
+      for (const [n, want] of [['LUK_PUSH_MODE', 'live'], ['LUK_LIVE_SINCE', '2026-11-01'], ['LUK_LIVE_WORDS', HIS]]) {
+        const k = pyConst(lc, n);
+        if (!k) { errs.push(`luk/constants.py lost ${n} = "…"  # comment`); continue; }
+        if (k.v !== want) errs.push(`${n} is "${k.v}" — must be "${want}" (Ajay 2026-11-01: "${HIS}")`);
+        if (!k.c.startsWith('Ajay 2026-11-01: "')) errs.push(`the ${n} comment must START \`Ajay 2026-11-01: "\` — his word, not mine`);
+        if (!k.c.includes(HIS)) errs.push(`the ${n} comment must quote him verbatim: "${HIS}"`);
+      }
+      const rf = pyConst(lc, 'LUK_RECORD_FROM');
+      if (!rf || rf.v !== '2026-11-01' || !rf.c.startsWith('Ajay design #7')) errs.push('LUK_RECORD_FROM must stay "2026-11-01" tagged Ajay design #7 (byte-identical)');
+
+      // 3. the sender.
+      const hooks = tryRead('../backend/push/hooks.py', 'push/hooks.py');
+      const hAt = hooks.indexOf('\ndef notify_luk_setup(*, owner: str, payload: dict) -> dict:');
+      const hEnd = hAt < 0 ? -1 : hooks.indexOf('\ndef ', hAt + 1);
+      const hBody = hAt < 0 ? '' : hooks.slice(hAt, hEnd < 0 ? undefined : hEnd);
+      if (hAt < 0) errs.push('push/hooks.py must define notify_luk_setup(*, owner: str, payload: dict) -> dict');
+      else if (!/return sender\.send_to_user\(owner, payload, kind="luk_setup"\)/.test(hBody)) errs.push('notify_luk_setup must return sender.send_to_user(owner, payload, kind="luk_setup") — the ONE sender, its own pref kind');
+      if (/def notify_luk_(?!setup\b)/.test(hooks) || /luk_potential/.test(hooks)) errs.push('push/hooks.py defines a luk sender other than notify_luk_setup — only the A+ rings (HIS CALL #4)');
+
+      // 4. the closed-day gate.
+      const gate = tryRead('../backend/market_hours/gate.py', 'market_hours/gate.py');
+      const mk = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
+      const pk = pyFrozenSet(gate, 'PERSONAL_KINDS') || [];
+      if (!mk.length) errs.push('market_hours/gate.MARKET_ALERT_KINDS did not parse');
+      else if (!mk.includes('luk_setup')) errs.push('market_hours/gate.MARKET_ALERT_KINDS must carry luk_setup — silent on weekends and NYSE holidays');
+      if (pk.includes('luk_setup')) errs.push('market_hours/gate.PERSONAL_KINDS carries luk_setup — it is a MARKET kind');
+
+      // 5. the push url.
+      const rec = tryRead('../backend/push/recent.py', 'push/recent.py');
+      const ruAt = rec.indexOf('\nITEM_URL_BY_KIND = {');
+      const ru = ruAt < 0 ? '' : rec.slice(ruAt, rec.indexOf('\n}', ruAt));
+      const urlKinds = [...ru.replace(/#[^\n]*/g, '').matchAll(/^\s*"([a-z0-9_]+)":/gm)].map((x) => x[1]);
+      if (!ru) errs.push('push/recent.py lost ITEM_URL_BY_KIND = { … }');
+      else {
+        if (urlKinds.length !== 18) errs.push(`push/recent.ITEM_URL_BY_KIND holds ${urlKinds.length} kinds — 18 since 2026-11-01 (17 + luk_setup)`);
+        if (!/^\s*"luk_setup":\s*"\/chart-maps\?tab=luk&focus=\{sym\}",/m.test(ru)) errs.push('push/recent.ITEM_URL_BY_KIND["luk_setup"] must be "/chart-maps?tab=luk&focus={sym}"');
+      }
+
+      // 6. the page — Essentials + the /notifications row.
+      const notif = tryRead('src/pages/Notifications.tsx', 'Notifications');
+      const essAt = notif.indexOf("id: 'essentials'");
+      const ess = essAt < 0 ? '' : notif.slice(essAt, notif.indexOf("id: 'trading_only'"));
+      if (!/\bluk_setup:\s*true\b/.test(ess)) errs.push('the Essentials preset must carry luk_setup: true — it mirrors OWNER_KEEP_SET');
+      const essDetail = field(ess, 'detail') || '';
+      if (!essDetail.includes('2026-10-29 keep-set') || !essDetail.includes('2026-11-01') || !essDetail.includes(HIS)) errs.push(`the Essentials detail must keep "2026-10-29 keep-set" and add 2026-11-01 with his words: "${HIS}"`);
+      const lrow = (notif.match(/\{ key: 'luk_setup'[\s\S]*?' \},\n/) || [])[0] || '';
+      if (!lrow) errs.push('Notifications.tsx lost the luk_setup row');
+      else {
+        if (!lrow.includes('LIVE SINCE 2026-11-01')) errs.push('the luk_setup row must say LIVE SINCE 2026-11-01');
+        if (!lrow.includes(HIS)) errs.push(`the luk_setup row must quote him verbatim: "${HIS}"`);
+        if (!/UNMEASURED/.test(lrow) || !/not a buy signal/.test(lrow)) errs.push('the luk_setup row must say UNMEASURED and "not a buy signal"');
+      }
+
+      // 7. no Luk surface says "never sent" while live.
+      const LIVE = (pyConst(lc, 'LUK_PUSH_MODE') || {}).v === 'live';
+      if (LIVE) {
+        const surfaces = [];
+        const cm = tryRead('src/lib/chartMaps.ts', 'chartMaps');
+        const metaAt = cm.indexOf('\n  luk: {');
+        surfaces.push(['TAB_META.luk.blurb', metaAt < 0 ? '' : field(cm.slice(metaAt, cm.indexOf('\n  },', metaAt)), 'blurb') || '']);
+        const al = tryRead('src/pages/Alerts.tsx', 'Alerts');
+        const head = al.indexOf('data-testid="luk-passes-head"');
+        surfaces.push(['the /alerts luk-passes-head eyebrow', head < 0 ? '' : al.slice(head, al.indexOf('</div>', head))]);
+        const ak = tryRead('src/lib/alertKinds.ts', 'alertKinds');
+        surfaces.push(['alertKinds.luk_setup', (/^\s*luk_setup:[^\n]*$/m.exec(ak) || [''])[0]]);
+        surfaces.push(['the /notifications luk_setup row', lrow]);
+        const tab = tryRead('../backend/chart_maps/luk/tab.py', 'luk/tab.py');
+        const pb = tryRead('../backend/chart_maps/luk/playbook.py', 'luk/playbook.py');
+        for (const [src, n, who] of [[tab, 'PUSH_TEXT_LIVE', 'luk/tab.py'], [tab, 'HONESTY_LIVE', 'luk/tab.py'], [pb, 'ALERT_CLAUSE_LIVE', 'luk/playbook.py']]) {
+          const b = pyBlock(src, n);
+          if (b == null) errs.push(`${who} lost ${n} = … (the live sentence, picked by luk.variant.push_mode())`);
+          else surfaces.push([`${who} ${n}`, b]);
+        }
+        const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+        const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+        for (const id of ['luk-live-pushes-2026-11-01', 'chart-maps-luk-2026-11-01']) {
+          const at = nfArr.indexOf(`{ id: '${id}'`);
+          const nx = at < 0 ? -1 : nfArr.indexOf("{ id: '", at + 1);
+          surfaces.push([`the ✨ '${id}'`, at < 0 ? '' : field(nfArr.slice(at, nx < 0 ? undefined : nx), 'label') || '']);
+        }
+        for (const [who, text] of surfaces) {
+          if (!text) { errs.push(`${who} not found`); continue; }
+          if (text.includes('never sent')) errs.push(`${who} says "never sent" — LUK_PUSH_MODE is live (shadow words only in the fallback sentence)`);
+        }
+        if (!/rings your phone/.test(surfaces[0][1]) || !/rings your phone/.test(surfaces[1][1])) errs.push('the blurb and the /alerts eyebrow must say "rings your phone" while live');
+      }
+
+      // 8. luk/alerts — the ONE sender path.
+      const la = tryRead('../backend/chart_maps/luk/alerts.py', 'luk/alerts.py');
+      if (la) {
+        const code = la.replace(/^\s*(?:[rRuU]?)("""|''')[\s\S]*?\1/, '').split('\n').map((l) => l.replace(/#.*$/, '')).join('\n');
+        if (!/\bGA\._default_send\(\s*o,\s*p,\s*LUK\s*\)/.test(code)) errs.push('luk/alerts.run_pass must default its sender to GA._default_send(o, p, LUK) — the ONE sender path (LUK.send_setup)');
+        if (/^\s*(?:from|import)\s+(?:push|portfolio)\b/m.test(code) || /from\s+push\s+import|import\s+push\./.test(code)) errs.push('luk/alerts.py imports a push / portfolio module directly — the sender is reached through GA._default_send only');
+        if (/\bdef refuse_send\b|^NEVER_SENDS\s*=/m.test(code)) errs.push('luk/alerts.py still defines refuse_send / NEVER_SENDS — the live branch replaced them');
+        if (!/GA\._settle\(/.test(code) || !/GA\._exists\(/.test(code)) errs.push('luk/alerts.py live branch must settle through GA._settle and guard on the SHADOW: key through GA._exists (🚩\'s shape)');
+      }
+
+      // 9. the doc + SPECS.
+      const doc = tryRead('../docs/luk/luk_tab_2026_11_01.md', 'the Luk doc');
+      const gAt = doc.search(/^## 2026-11-01 — GO-LIVE\b/m);
+      const gNext = gAt < 0 ? -1 : doc.indexOf('\n## ', gAt + 1);
+      const golive = gAt < 0 ? '' : doc.slice(gAt, gNext < 0 ? undefined : gNext).replace(/\n>?[ \t]*/g, ' ');
+      if (!golive) errs.push('docs/luk/luk_tab_2026_11_01.md must carry "## 2026-11-01 — GO-LIVE …"');
+      else {
+        for (const need of [HIS, 'luk_setup', 'OWNER_KEEP_SET', 'SEVEN', 'max_entry_age_sec(LUK)', 'PASS_CADENCE_SEC', 'BAR_SETTLE_SEC', 'scripts.owner_prefs_apply', '--apply', 'cron frontend', 'None or False', 'shadow']) {
+          if (!golive.includes(need)) errs.push(`the GO-LIVE section must say "${need}"`);
+        }
+        const ap = golive.indexOf('deploy-cheetah-main.sh api'), dr = golive.indexOf('--apply'), cr = golive.indexOf('deploy-cheetah-main.sh cron frontend');
+        if (!(ap >= 0 && ap < dr && dr < cr)) errs.push('the GO-LIVE runbook order is api → owner_prefs_apply (dry, --apply, dry) → cron frontend (critic F3)');
+      }
+      const specs = tryRead('../SPECS.md', 'SPECS');
+      if (specs && !specs.includes('**Pushes: LIVE since 2026-11-01**')) errs.push('SPECS.md 🥇 section must say **Pushes: LIVE since 2026-11-01**');
+      if (specs && /\*\*Pushes: none\.\*\*/.test(specs.slice(specs.indexOf("### Chart Maps — 🥇 Luk's tab")))) errs.push('SPECS.md 🥇 section still says **Pushes: none.**');
+
+      // 10. owner_prefs_apply still derives.
+      const op = tryRead('../backend/scripts/owner_prefs_apply.py', 'owner_prefs_apply.py');
+      const doc0 = /^\s*(?:[rRuU]?)("""|''')[\s\S]*?\1/.exec(op);
+      const opCode = (doc0 ? op.slice(doc0[0].length) : op).split('\n').map((l) => l.replace(/#.*$/, '')).join('\n');
+      if (op && /luk/i.test(opCode)) errs.push('scripts/owner_prefs_apply.py names luk outside its docstring — it derives from subs');
+      if (op && !/subs\.OWNER_KEEP_SET/.test(opCode)) errs.push('scripts/owner_prefs_apply.py must read subs.OWNER_KEEP_SET');
+      if (op && !(doc0 && doc0[0].includes('2026-11-01') && doc0[0].includes('luk_setup'))) errs.push('scripts/owner_prefs_apply.py docstring must carry the dated 2026-11-01 luk_setup paragraph (re-run after the api deploy, before cron)');
+
+      // 11. NEGATIVE — 🧪 stays shadow: no sender, no kind in the keep-set or hooks.
+      const gv = tryRead('../backend/chart_maps/gajjala/variant.py', 'gajjala/variant.py');
+      const gga = (/\nGGA = Variant\(([\s\S]*?)\)\n/.exec(gv) || [])[1] || '';
+      if (!gga) errs.push('gajjala/variant.py lost GGA = Variant(…)');
+      else if (!/"GAJJALA_AUDITED_PUSH_MODE",\s*"",\s*""/.test(gga)) errs.push('GGA must still carry NO sender ("GAJJALA_AUDITED_PUSH_MODE", "", "") — he did not name 🧪');
+      if (keep.some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — 🧪 stays shadow');
+      if (/gajjala_audited/.test(hooks)) errs.push('push/hooks.py names gajjala_audited — 🧪 never sends');
+
+      // 12. the go-live ✨ — FIRST, routed, dated, his words verbatim.
+      const ID = 'luk-live-pushes-2026-11-01';
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const first = (/\{ id: '([^']+)'/.exec(nfArr) || [])[1];
+      if (nf && first !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found '${first}')`);
+      if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+      const at = nfArr.indexOf(`{ id: '${ID}'`);
+      if (nf && at >= 0) {
+        const nx = nfArr.indexOf("{ id: '", at + 1);
+        const e = nfArr.slice(at, nx < 0 ? undefined : nx);
+        const label = field(e, 'label') || '';
+        const W = 'the 🥇 go-live ✨';
+        if (!e.includes("route: '/chart-maps?tab=luk'")) errs.push(`${W} must route to '/chart-maps?tab=luk'`);
+        if (!e.includes("addedAt: '2026-11-01'")) errs.push(`${W} must be dated 2026-11-01`);
+        if (!label.includes(`“${HIS}”`)) errs.push(`${W} must quote him verbatim: “${HIS}”`);
+        for (const need of ['UNMEASURED', 'Not advice.', 'not a buy signal', 'rings your phone']) if (!label.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (/bounc/i.test(label) || /\bfake\b/i.test(label)) errs.push(`${W} says bounce / fake — reversal, never bounce`);
+        if (/\bedge\b/i.test(label.replace(/“[^”]*”/g, ''))) errs.push(`${W} says "edge" — UNMEASURED, never claim an edge`);
       }
       return errs;
     },

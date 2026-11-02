@@ -7,8 +7,10 @@ their strategy please if they have online resources. ... I need something like G
 Every served sentence is composed HERE or in the module that owns it (ledger.py's 🏁 words, screens.py's screen titles,
 playbook.py's Playbook, market_state.py's index words, detectors.py's listing reasons) — the FE prints what it is given.
 Every number in a template is a constants name read at call time (chart_maps.luk.constants, or GC's cadence through the
-LUK variant). The word is "reversal", never the b-word; the word "edge" is never served. Every alert is recorded in
-shadow, never sent. UNMEASURED: nothing here trades, sizes or enters a lane.
+LUK variant). The word is "reversal", never the b-word; the word "edge" is never served. Every 🥇 A+ rings his phone
+since LC.LUK_LIVE_SINCE by his word (Ajay 2026-11-01: "Lets make it live. also alerts too."); the push / honesty words
+follow luk.variant.push_mode() at call time (anything but "live" serves the shadow words: recorded, never sent).
+UNMEASURED: nothing here trades, sizes or enters a lane.
 
 Reused by import (one engine per concept): gajjala.tab's formatters (`_px`, `_pct`, `_hhmm`, `_et`, `_plain`, `_f`),
 its `_session_block` (minus GG's first-15-minutes keys — Luk trades the first candle), `_pass_block` (as_of / stale /
@@ -36,11 +38,13 @@ log = logging.getLogger("chart_maps.luk.tab")
 
 # ── the board's own words (every number a constants name, formatted at call time) ──────────────────────────────────
 TITLE = ("🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own words · UNMEASURED")
-HONESTY = ("2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). "
-           "He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; "
-           "his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the "
-           "stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, "
-           "trades, sizes or enters a lane.")
+_HONESTY = ("2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep "
+            "30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 "
+            "Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is "
+            "the entry, the stop and one exit he stated. {mode} Nothing here is measured, trades, sizes or enters a "
+            "lane.")
+HONESTY_LIVE = _HONESTY.replace("{mode}", "Every alert here rings your phone since {since} by your call (\"{words}\").")
+HONESTY_SHADOW = _HONESTY.replace("{mode}", "Every alert is recorded in shadow, never sent.")
 FAULT_TEXT = "🥇 The board could not be read this time — the next re-read tries again."
 PASS_TEXT = ("pass {hhmm} ET · bars through {through} · {n_read} read of {shortlist} shortlisted · {screened} screened "
              "· {not_screened} not screened yet")
@@ -48,8 +52,10 @@ PASS_NONE_TEXT = "no 🥇 pass on file for this session yet — it runs every {c
 THROUGH_NONE = "—"
 LATENCY_TEXT = ("a {one}-minute trigger is read on the next {cad}-minute pass — up to {cad} minutes after its bar closed — "
                 "and still rings when no later bar touched the stop")
-PUSH_TEXT = ("📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is "
-             "unchanged (HIS CALL #19).")
+PUSH_TEXT_LIVE = ("📲 Every 🥇 A+ rings your phone since {since} by your call (\"{words}\") — once per name, setup and "
+                  "session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to "
+                  "{cad} minutes after its bar closed. UNMEASURED.")
+PUSH_TEXT_SHADOW = "📵 Every 🥇 A+ is recorded in shadow, never sent, until you say so. UNMEASURED."
 RECORD_TEXT = ("🏁 The Track record starts {from_}: every 🥇 A+ recorded here is graded by Luk's trade math — the stop "
                "or the first daily close below the {ema} EMA.")
 EXTERNAL_TEXT = ("External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted "
@@ -193,6 +199,20 @@ def session_block(now, session: date, is_today: bool, in_window: bool) -> dict:
     return out
 
 
+def honesty() -> str:
+    """The board's honesty line of the mode (luk.variant.push_mode(), read at call time)."""
+    if VL.push_mode() == "live":
+        return HONESTY_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS)
+    return HONESTY_SHADOW
+
+
+def push_text() -> str:
+    """The strip's push line of the mode; {cad} = the served pass cadence (_cad_min), never a typed number."""
+    if VL.push_mode() == "live":
+        return PUSH_TEXT_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS, cad=_cad_min())
+    return PUSH_TEXT_SHADOW
+
+
 def latency_text() -> str:
     return LATENCY_TEXT.format(one=V.frame_minutes("1m", LUK), cad=_cad_min())
 
@@ -240,7 +260,7 @@ def strip_block(latest: Optional[dict], session: date) -> dict:
     ms = (latest or {}).get("market_state") if this else None
     if not (isinstance(ms, dict) and isinstance(ms.get("rows"), list)):
         ms = MS.block({})
-    return {"folded": True, "market_state": ms, "push_text": PUSH_TEXT,
+    return {"folded": True, "market_state": ms, "push_text": push_text(),
             "record_text": RECORD_TEXT.format(from_=LC.LUK_RECORD_FROM, ema=LC.LUK_PULLBACK_DAILY_EMA),
             "external_text": EXTERNAL_TEXT, "cost_text": cost_text(latest if this else None),
             "latency_text": latency_text()}
@@ -519,7 +539,7 @@ def _clip_focus(tiles: list, focus: str, limit: int) -> list:
 def fault_payload(sub: str = "") -> dict:
     """The board when building it raised: 200 with the fault note (the route never 500s)."""
     s = (sub or "").strip().lower() if isinstance(sub, str) else ""
-    return {"tab": LC.LUK_TAB, "label": LC.LUK_TAB_LABEL, "title": TITLE, "honesty": HONESTY,
+    return {"tab": LC.LUK_TAB, "label": LC.LUK_TAB_LABEL, "title": TITLE, "honesty": honesty(),
             "variant": variant_block(), "session": None, "pass": None, "strip": None, "subs": [],
             "sub": s if s in SUB_KEYS else LC.DEFAULT_SUB, "counts": None, "counts_text": None,
             "counts_legend": counts_legend(), "tiles": [], "order_note": ORDER_NOTE, "screens": None,
@@ -557,7 +577,7 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
             for k, e, lab in LC.SUBS]
     counts, counts_text = counts_block(reads, latest, session)
     f = (focus or "").strip().upper() if isinstance(focus, str) else ""
-    out = {"tab": LC.LUK_TAB, "label": LC.LUK_TAB_LABEL, "title": TITLE, "honesty": HONESTY,
+    out = {"tab": LC.LUK_TAB, "label": LC.LUK_TAB_LABEL, "title": TITLE, "honesty": honesty(),
            "variant": variant_block(), "session": session_block(now, session, is_today, in_window),
            "pass": pass_block(latest, cron, now, session, in_window), "strip": strip_block(latest, session),
            "subs": subs, "sub": sub_k, "counts": counts, "counts_text": counts_text,
@@ -570,6 +590,7 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
     return GT._plain(out)
 
 
-__all__ = ["TITLE", "HONESTY", "FAULT_TEXT", "PAYLOAD_KEYS", "TILE_STATES", "build", "fault_payload", "session_for",
+__all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TEXT_SHADOW", "honesty", "push_text",
+           "FAULT_TEXT", "PAYLOAD_KEYS", "TILE_STATES", "build", "fault_payload", "session_for",
            "tile_of", "tiles_for", "resolve_sub", "counts_block", "pass_block", "strip_block", "screen_block",
            "latency_text", "cost_text"]

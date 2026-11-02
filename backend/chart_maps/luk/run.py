@@ -15,11 +15,13 @@ THE PASS (run_pass, 16 steps). 1 window → 2 lease (luk_state, Luk's own number
 (daily.warm: the TRUST rule decides cache hit vs fetch, ≤ LUK_DAILY_MAX_NEW_PER_PASS fetches, LUK_DAILY_WARM_BUDGET_SEC)
 → 8 his three screens → luk_screens → 9 QQQ / IWM state words (Luk's own fetch, ONCE per session: luk_state
 LUK_STATE_INDEX, REFIX 2026-11-01) → 10 the shortlist (+ names carried in forming / triggered) → 11 closed 1m / 5m / 60m frames (the pass budget left) → 12 the three detectors, the 1-minute A+ clock =
-the PREVIOUS pass's bars-through read off luk_state ([fixed: C1]) → luk_reads → 13 the SHADOW gate (alerts.run_pass)
+the PREVIOUS pass's bars-through read off luk_state ([fixed: C1]) → luk_reads → 13 the A+ gate (alerts.run_pass — live since 2026-11-01)
 → 14 the 🏁 grade step (ledger.grade_step; skipped on a dry run) → 15 this pass's bars-through written to luk_state
 (the next pass's clock) → 16 the pass doc + the /alerts PASS-HEALTH row (LUK_KIND) → the lease released.
 Every provider dependency is counted in the summary's `calls` block (the cost arithmetic of §3.15 is measured, never
-typed). Nothing is ever sent (alerts.NEVER_SENDS). UNMEASURED: nothing here trades, sizes or enters a lane.
+typed). Since 2026-11-01 every fresh, in-session 🥇 A+ rings his phone by his word (Ajay 2026-11-01: "Lets make it
+live. also alerts too." — alerts.run_pass's live branch, the default sender and owner); any other LUK_PUSH_MODE records
+in shadow, never sent. UNMEASURED: nothing here trades, sizes or enters a lane.
 
 CLI: `--child` (the cron child), `--dry-run` (dry store + dry deps: every write recorded, nothing lands; prints `calls`),
 `--json`, `--now ISO` (refused without --dry-run, exit 2; a naive stamp is ET), `--symbols A,B` (narrow the names read).

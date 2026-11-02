@@ -64,7 +64,9 @@ def phrase_at(phrase: str, file: str, line, pad: int = 2) -> bool:
 
 
 # ── the tag checker ──────────────────────────────────────────────────────────────────────────────────────────────
-TAG = re.compile(r"^(LUK |MINE\b|derived\b|EXTERNAL\b|Ajay design #\d+)")
+# WIDENED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): his dated word is a tag of its own
+TAG = re.compile(r'^(LUK |MINE\b|derived\b|EXTERNAL\b|Ajay design #\d+|Ajay \d{4}-\d{2}-\d{2}: ")')
+HIS_WORD = re.compile(r'^Ajay \d{4}-\d{2}-\d{2}: "')
 LUK_FILE_CITE = re.compile(r"^LUK (?:frame U\d )?(?P<file>[\w.-]+\.(?:txt|md)):(?P<line>\d+(?:-\d+)?)\b.*?\"(?P<q>[^\"]+)\"")
 LUK_SUBSTACK = re.compile(r"^LUK substack \"(?P<q>[^\"]+)\"")
 # the spec's MINE / derived numbers (§3.1 + §7) — never his
@@ -78,7 +80,8 @@ MINE_NAMES = frozenset({
     "LUK_INSTRUMENT_TYPES", "LUK_TRIGGER_WINDOW_END_MIN", "LUK_PDH_WINDOW", "SETUPS", "SUBS", "DEFAULT_SUB",
     "LUK_SOURCE_SHA256",
 })
-DESIGN_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_RECORD_FROM"})     # Ajay's design points #9 / #7
+DESIGN_NAMES = frozenset({"LUK_RECORD_FROM"})     # Ajay's design point #7
+HIS_CALL_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_LIVE_SINCE", "LUK_LIVE_WORDS"})   # his dated word (2026-11-01: "Lets make it live. also alerts too.")
 # derived from GC by NAME (never retyped): constant → the GC attribute it must be
 GC_DERIVED = {
     "LUK_PASS_OPEN_ET": "PASS_OPEN_ET", "LUK_LEASE_SEC": "LEASE_SEC",
@@ -116,6 +119,9 @@ def tag_errors(src: str) -> list:
         if name in DESIGN_NAMES and not c.startswith("Ajay design #"):
             errs.append((name, "Ajay's design point not tagged as such"))
             continue
+        if name in HIS_CALL_NAMES and not HIS_WORD.match(c):
+            errs.append((name, "his word not tagged as such"))
+            continue
         if c.startswith("LUK "):
             m, s = LUK_FILE_CITE.match(c), LUK_SUBSTACK.match(c)
             if m:
@@ -142,7 +148,7 @@ def test_every_assignment_carries_a_resolving_tag():
 
 def test_every_mine_and_design_name_exists():
     names = {n for n, _v, _l in assigns(SRC)}
-    assert MINE_NAMES <= names and DESIGN_NAMES <= names
+    assert MINE_NAMES <= names and DESIGN_NAMES <= names and HIS_CALL_NAMES <= names
 
 
 def test_negative_an_untagged_line_fails():
@@ -167,10 +173,53 @@ def test_negative_a_mine_number_filed_as_his_fails():
 
 
 def test_negative_a_design_point_filed_as_mine_fails():
-    bad = SRC.replace("LUK_PUSH_MODE = \"shadow\"                    # Ajay design #9",
-                      "LUK_PUSH_MODE = \"shadow\"                    # MINE")
+    # RETARGETED 2026-11-01: LUK_PUSH_MODE is his dated word now (HIS_CALL_NAMES); LUK_RECORD_FROM stays design #7
+    bad = SRC.replace('LUK_RECORD_FROM = "2026-11-01"              # Ajay design #7',
+                      'LUK_RECORD_FROM = "2026-11-01"              # MINE')
     assert bad != SRC
-    assert ("LUK_PUSH_MODE", "Ajay's design point not tagged as such") in tag_errors(bad)
+    assert ("LUK_RECORD_FROM", "Ajay's design point not tagged as such") in tag_errors(bad)
+
+
+def _push_mode_line() -> str:
+    return next(ln for ln in SRC.splitlines() if ln.startswith("LUK_PUSH_MODE = "))
+
+
+def _retag(line: str, comment: str) -> str:
+    return line[:line.find("  #")] + "  # " + comment
+
+
+def test_negative_his_word_filed_as_mine_fails():
+    line = _push_mode_line()
+    bad = SRC.replace(line, _retag(line, "MINE"))
+    assert bad != SRC and ("LUK_PUSH_MODE", "his word not tagged as such") in tag_errors(bad)
+
+
+def test_negative_his_word_filed_as_a_design_point_fails():
+    line = _push_mode_line()
+    bad = SRC.replace(line, _retag(line, "Ajay design #9"))
+    assert bad != SRC and ("LUK_PUSH_MODE", "his word not tagged as such") in tag_errors(bad)
+
+
+def test_negative_his_word_without_the_quote_fails():
+    line = _push_mode_line()
+    bad = SRC.replace(line, _retag(line, "Ajay 2026-11-01: his call"))
+    # no opening quote → not even a tag (TAG requires `Ajay yyyy-mm-dd: "`), so the checker stops at "untagged"
+    assert bad != SRC and ("LUK_PUSH_MODE", "untagged") in tag_errors(bad)
+    assert not HIS_WORD.match("Ajay 2026-11-01: his call")
+
+
+def test_negative_the_live_words_filed_as_mine_fails():
+    line = next(ln for ln in SRC.splitlines() if ln.startswith("LUK_LIVE_WORDS = "))
+    bad = SRC.replace(line, _retag(line, "MINE"))
+    assert bad != SRC and ("LUK_LIVE_WORDS", "his word not tagged as such") in tag_errors(bad)
+
+
+def test_negative_the_old_tag_regex_reads_his_word_as_untagged():
+    """The TAG extension is load-bearing: under the pre-2026-11-01 regex every HIS_CALL_NAMES line is untagged."""
+    old = re.compile(r"^(LUK |MINE\b|derived\b|EXTERNAL\b|Ajay design #\d+)")
+    lines = {n: comment_of(SRC, ln) for n, _v, ln in assigns(SRC) if n in HIS_CALL_NAMES}
+    assert set(lines) == HIS_CALL_NAMES
+    assert all(not old.match(c) and TAG.match(c) for c in lines.values())
 
 
 def test_negative_a_cite_at_the_wrong_line_fails():
@@ -212,7 +261,10 @@ def test_his_numbers_as_he_said_them():
 
 
 def test_the_cheetah_numbers_and_the_design_points():
-    assert LC.LUK_PUSH_MODE == "shadow" and LC.LUK_RECORD_FROM == "2026-11-01" and LC.LUK_ENABLED is True
+    # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): shadow → live
+    assert LC.LUK_PUSH_MODE == "live" and LC.LUK_RECORD_FROM == "2026-11-01" and LC.LUK_ENABLED is True
+    assert LC.LUK_LIVE_SINCE == "2026-11-01"
+    assert LC.LUK_LIVE_WORDS == "Lets make it live. also alerts too."
     assert (LC.LUK_TAB, LC.LUK_TAB_LABEL, LC.LUK_KIND) == ("luk", "🥇 Luk's", "luk_setup")
     assert (LC.LUK_PASS_OPEN_ET, LC.LUK_PASS_CLOSE_ET) == ("04:00", "16:05")
     assert (LC.LUK_PASS_BUDGET_SEC, LC.LUK_SLOT_MARGIN_SEC, LC.LUK_SHORTLIST_MAX, LC.LUK_SCREEN_TOP_N) == (120, 20, 40, 25)
@@ -225,6 +277,13 @@ def test_the_cheetah_numbers_and_the_design_points():
     assert LC.LUK_STATE_INDEX == "index_state" and LC.LUK_STATE_INDEX != LC.LUK_STATE_BARS_THROUGH
     assert LC.LUK_TRIGGER_WINDOW_END_MIN == LC.LUK_FIVE_MIN_UNTIL_MIN
     assert LC.LUK_LEASE_MIN_GAP_SEC == LC.LUK_PASS_BUDGET_SEC
+
+
+def test_the_push_mode_line_quotes_his_live_words_by_name():
+    c = comment_of(SRC, next(ln for n, _v, ln in assigns(SRC) if n == "LUK_PUSH_MODE"))
+    assert c.startswith('Ajay 2026-11-01: "') and LC.LUK_LIVE_WORDS in c
+    for name in ("LUK_LIVE_SINCE", "LUK_LIVE_WORDS"):
+        assert LC.LUK_LIVE_WORDS in comment_of(SRC, next(ln for n, _v, ln in assigns(SRC) if n == name))
 
 
 def test_the_budget_fits_inside_one_tick():

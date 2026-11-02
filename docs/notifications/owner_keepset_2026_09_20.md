@@ -1,5 +1,67 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-01 — 🥇 luk_setup joins: the keep-set is seven kinds
+
+> "Lets make it live. also alerts too."
+
+Ajay, 2026-11-01, on the 🥇 Luk's tab (HIS CALL #19 of that tab answered). From this day `OWNER_KEEP_SET` in
+`backend/push/subs.py` holds SEVEN kinds: the six of 2026-10-29 (below, kept as history) plus one row:
+
+| kind | why it stays |
+| --- | --- |
+| `luk_setup` 🥇 | 🥇 Luk's A+, LIVE since 2026-11-01 ("Lets make it live. also alerts too.") |
+
+Where the kind is registered (the one push stack, no parallel sender):
+
+- `push/subs.py` — the seventh kind INSIDE the `OWNER_KEEP_SET` braces with its own dated comment, the head sentence
+  amended ("six 2026-10-29 … 2026-11-01; SEVEN since 2026-11-01"), and `default_prefs()["luk_setup"] = False`, so
+  every other user starts OFF. It must be in `default_prefs()`: a kind missing there targets zero devices and renders no
+  toggle.
+- `push/hooks.py` — `notify_luk_setup(owner, payload)` calls `sender.send_to_user(..., kind="luk_setup")`, owner-scoped.
+  The closed-day drop, quiet hours and the /notifications toggle all apply at the sender.
+- `market_hours/gate.py` — `luk_setup` is in `MARKET_ALERT_KINDS`: silent on weekends and NYSE holidays.
+- `push/recent.py` — `ITEM_URL_BY_KIND["luk_setup"] = "/chart-maps?tab=luk&focus={sym}"` (`ITEM_KINDS` 17 → 18).
+- `scripts/owner_prefs_apply.py` — code unchanged. ON / OFF are derived from `push.subs`, so `luk_setup` is ON for his
+  devices by derivation; the docstring carries the dated paragraph.
+
+Only the 🥇 A+ rings. There is no Luk potential kind (`luk_potential` is registered nowhere). 🧪 Gajjala · Audited stays
+shadow and is not in the keep-set. No gate moved. UNMEASURED: his setup, not a buy signal.
+
+### Runbook (after the push to main)
+
+```bash
+./deploy-cheetah-main.sh api
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+./deploy-cheetah-main.sh cron frontend
+```
+
+1. Deploy `api` alone. The cron still runs the old code, so Luk's pass stays in shadow and sends nothing.
+2. The first run is dry. On each of his four devices expect exactly one change: `luk_setup None→True` or
+   `luk_setup False→True`. `None` means the api has not stamped `default_prefs()` into that row yet. `False` means
+   `push.subs._backfill` already did (the first `list_subscriptions` call of the new api process stamps
+   `default_prefs()` on every row, so any push after the api deploy turns `None` into `False`). Both are the expected
+   diff. Stop only if any OTHER kind moves.
+3. `--apply` writes it.
+4. The third run must print `no change` for every device.
+5. Deploy `cron frontend`, with `cron` between ticks (:x2–:x4).
+
+**The order matters (the 2026-10-29 critic F3, restated for Luk).** His devices do not have `luk_setup` ON until the
+apply. If `cron` deploys first, the first live 🥇 A+ is claimed, the send matches 0 devices, and the alert settles
+`no_target`. The claim is spent (one per session, symbol and setup), so every later pass reads it as already claimed
+and that alert never rings that day. So: `api`, apply, then `cron frontend`.
+
+Tests: `backend/tests/test_luk_push_kind_2026_11_01.py` (seven exactly; the quote inside the braces and in the head;
+owner ON, default OFF, another user OFF; a MARKET kind; the url and `ITEM_KINDS` 18; the hook calls `send_to_user` once;
+NEGATIVE `luk_potential` nowhere; NEGATIVE the 🧪 kind still absent; `apply()` `None→True` and `False→True`; a second
+apply changes nothing; the script types no kind name outside its docstring) and the six → seven re-pins in the keep-set
+tests (`test_gajjala_only_pushes_2026_10_29.py`, `test_push_owner_keepset.py`, `test_new_alert_kinds.py`,
+`test_quality_alerts.py`, `test_gajjala_audited_pass.py`, `test_price_alert_unpause_2026_09_21.py`,
+`test_growth_earnings_cron.py`), `test_push_items.py` (17 → 18) and `test_alert_status_luk.py` (inverted).
+
+---
+
 ## 2026-10-29 — Gajjala-only: the keep-set is six kinds
 
 > "Only give me Gajjalas chart notifications from both tabs,

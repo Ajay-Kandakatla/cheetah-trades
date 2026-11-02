@@ -21,7 +21,11 @@ Provenance tag that STARTS the comment of every assignment line (tests/test_luk_
   derived            = computed from another constant here, from GC (chart_maps.gajjala.constants) or the house clock
                        (LUK_SOURCE_SHA256: computed from the fixture bytes themselves)
   EXTERNAL           = a third party's number, quoted, never applied
-Nothing here is measured, trades, sizes or gates a push: every alert of this tab is recorded in shadow, never sent.
+  Ajay <yyyy-mm-dd>: "<his words>"
+                     = his dated word verbatim — the constant exists because he said so on that day (LUK_PUSH_MODE,
+                       LUK_LIVE_SINCE, LUK_LIVE_WORDS)
+Nothing here is measured, trades, sizes or gates a push beyond his own screens: since LUK_LIVE_SINCE every 🥇 A+ rings
+his phone by his word (LUK_LIVE_WORDS); any other LUK_PUSH_MODE value records in shadow, never sent.
 """
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala.audited_rules import MEASURE_FLOOR_WEEKS   # the strategy lab's 30-entry-week floor (🏁 count)
@@ -30,10 +34,12 @@ from daytrading.data import ET_RTH_CLOSE, ET_RTH_OPEN
 # ── the tab ───────────────────────────────────────────────────────────────────────────────────────────────────────
 LUK_TAB_LABEL = "🥇 Luk's"                 # MINE (HIS CALL #1) — the tab label and its slot right after gajjala_1m
 LUK_TAB = "luk"                             # MINE (HIS CALL #1) — the Chart Maps tab key
-LUK_PUSH_MODE = "shadow"                    # Ajay design #9 — SHADOW; going live = HIS CALL #19 (and a code change)
+LUK_PUSH_MODE = "live"                      # Ajay 2026-11-01: "Lets make it live. also alerts too." — HIS CALL #19 answered (was Ajay design #9 SHADOW); anything but "live" = shadow (recorded, never sent)
+LUK_LIVE_SINCE = "2026-11-01"               # Ajay 2026-11-01: "Lets make it live. also alerts too." — the day his words flipped LUK_PUSH_MODE (a Sunday: no session ran in shadow)
+LUK_LIVE_WORDS = "Lets make it live. also alerts too."   # Ajay 2026-11-01: "Lets make it live. also alerts too." — his words verbatim, spelling kept; every served "by your call" quotes THIS name, never a retyped copy
 LUK_RECORD_FROM = "2026-11-01"              # Ajay design #7 — the deploy date; no 🏁 session before it is read
 LUK_ENABLED = True                          # MINE (HIS CALL #23) kill switch; env LUK_ENABLED=0 also stops it
-LUK_KIND = "luk_setup"                      # MINE (HIS CALL #19) — the /alerts PASS-HEALTH row only, never a push kind
+LUK_KIND = "luk_setup"                      # MINE (HIS CALL #19, answered 2026-11-01) — the push kind (push/subs.py: OWNER_KEEP_SET + default_prefs False) AND the /alerts pass-health row
 
 # ── the pass (transport) ──────────────────────────────────────────────────────────────────────────────────────────
 LUK_PASS_OPEN_ET = GC.PASS_OPEN_ET          # derived (HIS CALL #3) — 04:00, the 🚩 pass's own open

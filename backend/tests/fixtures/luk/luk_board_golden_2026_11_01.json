@@ -49,7 +49,7 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
@@ -95,7 +95,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "pullback_reversal",
@@ -569,7 +569,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "shadow",
+   "push_mode": "live",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [
@@ -629,7 +629,7 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
@@ -824,7 +824,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "premarket",
@@ -895,7 +895,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "shadow",
+   "push_mode": "live",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [
@@ -955,7 +955,7 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
@@ -1001,7 +1001,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent — no push kind, no sender, the owner keep-set is unchanged (HIS CALL #19).",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "track_record",
@@ -1110,10 +1110,10 @@
      ]
     }
    ],
-   "empty_text": "No 🥇 A+ recorded in this span — every A+ is recorded in shadow, never sent.",
+   "empty_text": "No 🥇 A+ in this span — none rang, none was recorded.",
    "fault": false,
    "fault_text": null,
-   "honesty": "Every row is a shadow record — none reached your phone. Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).",
+   "honesty": "Rows are alerts that rang your phone (live) or were recorded in shadow (never sent) — each row's own line says which; since 2026-11-01 every 🥇 A+ rings by your call (\"Lets make it live. also alerts too.\"). Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).",
    "n_rows": 1,
    "record_from": "2026-11-01",
    "rule_text": "Fill = the first 1-minute bar at least 30 s after the alert trading at or above the trigger, from the regular open — the same fill convention as 🚩's 🏁 (a Cheetah choice, for comparability). Stop = the alert's stop, a touch. Exit = the stop or the first daily close below the 9 EMA, whichever prints first — his stated exit (VKNEJA5r8zw 2:29:17). His partials at 3R and 5R are shown as flags, not applied (HIS CALL #5); no maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to 5 minutes after his bar closed (one Luk pass per 5 minutes), so a 🏁 fill is later than his would have been — a fact (HIS CALL #29).",
@@ -1132,7 +1132,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "shadow",
+   "push_mode": "live",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [

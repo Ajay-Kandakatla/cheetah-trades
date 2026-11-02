@@ -27,6 +27,12 @@ Run it in the api container:
 
 Idempotent: a second `--apply` prints "no change" for every device.
 
+2026-11-01 (Ajay: "Lets make it live. also alerts too."): `luk_setup` joined
+OWNER_KEEP_SET — re-run after the api deploy, before cron. The dry-run shows
+`luk_setup None→True` on a device the api has not touched since the deploy, or
+`False→True` on one `push.subs._backfill` already stamped — both are the
+expected diff. The code is unchanged: ON / OFF are still derived from subs.
+
 NOT A GATE AND NOT A RULE. It flips per-device preference flags — which KINDS
 may reach him. What any kind requires to fire is untouched, and every muted
 kind's cron keeps running (the PREF kills an alert, not the cron).

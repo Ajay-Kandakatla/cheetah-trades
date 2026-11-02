@@ -794,8 +794,9 @@ async def chart_maps_gajjala_audited_entry_tape(
 # Ajay, verbatim: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
 # their strategy please if they have online resources. ... I need something like Gajjlala that is exposed". Two GET
 # routes under the variant's api base (chart_maps.luk.variant.LUK.api_base): the board (Mongo only + the ONE live
-# fan-out for the shown tiles) and one 🏁 row's entry tape. No scan POST (not asked — HIS CALL #20). Every Luk alert is
-# recorded in SHADOW, never sent; UNMEASURED. The 🚩 / 1-minute / audited routes above are untouched.
+# fan-out for the shown tiles) and one 🏁 row's entry tape. No scan POST (not asked — HIS CALL #20). Every 🥇 A+ rings
+# his phone since 2026-11-01 by his word (Ajay 2026-11-01: "Lets make it live. also alerts too." — LUK_PUSH_MODE live;
+# shadow = recorded, never sent); UNMEASURED. The 🚩 / 1-minute / audited routes above are untouched.
 @router.get("/chart-maps/luk")
 async def chart_maps_luk(
     sub: str = Query("", description="pullback_reversal (default) | opening_range_high | inside_day_pdh | premarket | "
@@ -809,8 +810,8 @@ async def chart_maps_luk(
 ):
     """🥇 Luk's board — Martin Luk's published pullback / opening-range method, built from his own words. Served from
     Mongo ONLY (`luk.tab.build`) plus the same ONE live fan-out for the shown tiles' now-line (each step fenced). Every
-    Luk alert is recorded in SHADOW, never sent; UNMEASURED. Public read like the other boards; a raising build serves
-    200 with the fault note. Every argument is coerced (a direct call receives the Query OBJECT)."""
+    🥇 A+ rings his phone since 2026-11-01 by his word (LUK_PUSH_MODE live; shadow = recorded, never sent); UNMEASURED.
+    Public read like the other boards; a raising build serves 200 with the fault note. Every argument is coerced (a direct call receives the Query OBJECT)."""
     from rotation.api import _scrub
     from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
     from .luk import tab as LT
@@ -850,8 +851,9 @@ async def chart_maps_luk_entry_tape(
     lite: int = Query(0, ge=0, le=1, description="1 = the row's mini tape (the lite keys)"),
 ):
     """🕰️ ONE 🥇 A+ row's tape — `luk.tape.entry_tape` over the Luk store (gajjala.tape's payload shape, so the FE's
-    GgEntryTape draws it). Recorded in shadow, never sent; UNMEASURED. NEVER WRITES. 404 for an unknown id; a raising
-    build serves 200 with the fault note."""
+    GgEntryTape draws it). Every 🥇 A+ rings his phone since 2026-11-01 by his word (LUK_PUSH_MODE live; shadow =
+    recorded, never sent); UNMEASURED. NEVER WRITES. 404 for an unknown id; a raising build serves 200 with the fault
+    note."""
     from rotation.api import _scrub
     from .gajjala import tape as GTP
     from .luk import tape as LTP

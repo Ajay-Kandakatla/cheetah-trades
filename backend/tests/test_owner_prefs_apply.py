@@ -4,7 +4,8 @@ The code change only decides what a NEWLY registered device starts with. His
 phones are already registered, so this script is what actually flips them.
 2026-10-29 (Ajay: "Only give me Gajjalas chart notifications from both tabs, /
 I am missing out the ones in noise."): it applies `subs.owner_prefs()` IN FULL —
-ON = the six-kind keep-set, OFF = every other bool kind of default_prefs()
+ON = the keep-set (six kinds 2026-10-29 … 2026-11-01; seven since 2026-11-01 — 🥇 luk_setup,
+Ajay 2026-11-01: "Lets make it live. also alerts too."), OFF = every other bool kind of default_prefs()
 (never the quiet-hours settings) + the retired set. Both lists are derived,
 never retyped.
 

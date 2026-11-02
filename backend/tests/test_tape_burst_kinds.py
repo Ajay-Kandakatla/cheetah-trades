@@ -489,7 +489,8 @@ def test_item_urls_for_both_kinds_match_the_builder():
     # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only): 13 → 14.
     # WIDENED 2026-10-19 — 🌙 overnight_movers ("Can you do an over night scan for all the stocks they are all growing over night"; ships OFF, owner-only): 14 → 15.
     # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent): 15 → 17.
-    assert len(R.ITEM_KINDS) == 17
+    # WIDENED 2026-11-01: 🥇 luk_setup (Ajay "Lets make it live. also alerts too."; LIVE, owner keep-set): 17 → 18
+    assert len(R.ITEM_KINDS) == 18
     assert "?tab=tape&from=chart-maps" in (ROOT / "backend/orderflow/tape_burst_kinds.py").read_text()
 
 

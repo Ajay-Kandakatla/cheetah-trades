@@ -1,7 +1,9 @@
 """chart_maps/luk/variant.py — 🥇 Luk's `Variant` INSTANCE of GG's frozen dataclass (BUILD SPEC luk-tab §3.3, WP-A1).
 
 Pins: GG's registry is untouched (by_key / by_tab / VARIANTS); `gajjala.variant.push_mode(LUK)` fails CLOSED to
-"shadow" even when LC.LUK_PUSH_MODE is patched to "live" (GC has no LUK_PUSH_MODE); the generic numbers read GC's
+"shadow" whatever LC.LUK_PUSH_MODE holds (GC has no LUK_PUSH_MODE — it is NOT the Luk reader); Luk's own reader is
+"live" since 2026-11-01 (Ajay: "Lets make it live. also alerts too.") and "shadow" for anything but exactly "live";
+send_setup = "notify_luk_setup" reached through `gajjala.alerts._default_send(…, LUK)`; the generic numbers read GC's
 names. NEGATIVE: `gajjala.ledger._record_from(LUK)` and `gajjala.variant.served_block(LUK)` raise — so an import guard
 over every chart_maps/luk/*.py allows only the GENERIC gajjala.ledger names and never V.served_block / word / words.
 """
@@ -23,7 +25,8 @@ from chart_maps.luk.variant import LUK
 
 PKG = pathlib.Path(LV.__file__).resolve().parent
 LEDGER_ALLOWED = frozenset({"bars_from_frame", "_default_load_day", "_today_load", "plan_of", "rang_of", "_D", "_num",
-                            "_aware", "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC"})
+                            "_aware", "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC",
+                            "LINES"})   # WIDENED 2026-11-01 (go-live): the 🏁 row line words, imported never retyped
 VARIANT_FORBIDDEN = frozenset({"served_block", "word", "words", "_WORDS"})
 LEDGER_MOD = "chart_maps.gajjala.ledger"
 VARIANT_MOD = "chart_maps.gajjala.variant"
@@ -35,8 +38,9 @@ def test_the_instance():
     assert (LUK.primary, LUK.slow, LUK.tfs) == ("5m", "60m", ("1m", "5m", "60m"))
     assert LUK.rules_map == {"1m": "1min", "5m": "5min", "60m": "60min"}
     assert (LUK.store_prefix, LUK.claim_prefix, LUK.push_kind_setup) == ("luk", "LUK", LC.LUK_KIND)
-    assert (LUK.send_setup, LUK.send_potential, LUK.lane, LUK.ledger_push_states, LUK.borrows) == ("", "", False, (),
-                                                                                                    ())
+    # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): send_setup "" → "notify_luk_setup"
+    assert (LUK.send_setup, LUK.send_potential, LUK.lane, LUK.ledger_push_states, LUK.borrows) == (
+        "notify_luk_setup", "", False, (), ())
     assert (LUK.api_base, LUK.record_from_const, LUK.push_mode_const) == ("/chart-maps/luk", "LUK_RECORD_FROM",
                                                                           "LUK_PUSH_MODE")
     assert hasattr(LC, LUK.record_from_const) and hasattr(LC, LUK.push_mode_const)
@@ -66,19 +70,52 @@ def test_the_gate_primitives_take_it_as_is():
     assert GA.max_entry_age_sec(LUK) == GC.PASS_CADENCE_SEC + GC.BAR_SETTLE_SEC == 330
 
 
-def test_push_mode_is_shadow():
-    assert V.push_mode(LUK) == "shadow" and LV.push_mode() == "shadow"
+def test_push_mode_is_live_by_his_word():
+    # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): Luk's own reader says live
+    assert LV.push_mode() == "live" and LC.LUK_PUSH_MODE == "live"
+    assert V.push_mode(LUK) == "shadow"                     # GG's reader: GC has no LUK_PUSH_MODE — NOT the reader
     assert not hasattr(GC, "LUK_PUSH_MODE")
+
+
+def test_NEGATIVE_no_luk_potential_sender():
+    assert LUK.send_potential == "" and LUK.push_kind_potential == "luk_potential"
+    from push import hooks
+    assert not hasattr(hooks, "notify_luk_potential")
+
+
+def test_the_default_send_resolves_notify_luk_setup_by_name(monkeypatch):
+    from push import hooks
+    seen = []
+    monkeypatch.setattr(hooks, "notify_luk_setup", lambda **k: seen.append(k) or {"sent": 1}, raising=False)
+    owner = "owner-local-part" + chr(64) + "example.com"
+    assert GA._default_send(owner, {"title": "t"}, LUK) == {"sent": 1}
+    assert seen == [{"owner": owner, "payload": {"title": "t"}}]
+
+
+def test_NEGATIVE_the_audited_variant_still_refuses_to_send():
+    from chart_maps.gajjala.audited_rules import NEVER_SENDS
+    with pytest.raises(RuntimeError) as e:
+        GA._default_send("o", {"title": "t"}, V.GGA)
+    assert str(e.value) == NEVER_SENDS
+
+
+def test_NEGATIVE_an_empty_send_setup_refuses(monkeypatch):
+    import dataclasses
+    from chart_maps.gajjala.audited_rules import NEVER_SENDS
+    mute = dataclasses.replace(LUK, send_setup="")
+    with pytest.raises(RuntimeError) as e:
+        GA._default_send("o", {"title": "t"}, mute)
+    assert str(e.value) == NEVER_SENDS
 
 
 def test_ggs_push_mode_stays_shadow_under_a_live_patch_of_lc(monkeypatch):
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
     assert V.push_mode(LUK) == "shadow"                     # GC has no LUK_PUSH_MODE → fail closed
     assert GA.push_mode(LUK) == "shadow"                    # the gate's reader too
-    assert LV.push_mode() == "live"                         # Luk's own reader follows LC (no sender exists anyway)
+    assert LV.push_mode() == "live"                         # Luk's own reader follows LC
 
 
-@pytest.mark.parametrize("junk", ["LIVE", " live", None, "", "on", True])
+@pytest.mark.parametrize("junk", ["LIVE", " live", None, "", "on", True, "shadow"])
 def test_negative_lucks_own_reader_says_live_only_for_exactly_live(monkeypatch, junk):
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", junk)
     assert LV.push_mode() == "shadow"

@@ -1,18 +1,23 @@
-"""🥇 Luk's shadow gate (chart_maps/luk/alerts.py — BUILD_SPEC §3.8, WP-A4, 2026-11-01).
+"""🥇 Luk's A+ gate (chart_maps/luk/alerts.py — BUILD_SPEC §3.8, WP-A4, 2026-11-01; LIVE 2026-11-01).
 
 Ajay 2026-11-01: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
-their strategy please if they have online resources."
+their strategy please if they have online resources." Ajay 2026-11-01 (the go-live): "Lets make it live. also alerts
+too."
 
-Pins: one shadow claim per (date, SYM, setup) with the would-push payload and SHADOW_NOTE; a repeat → claimed_before;
-the freshness clock = gajjala.alerts.max_entry_age_sec(LUK) = 330 s ([fixed: C1] a 1-minute A+ 4 minutes old is
-recorded, 6 minutes old is late); the first candle is NOT suppressed (Luk trades it); an entry bar outside the regular
-session → #suppressed_outside_rth; nothing is ever sent (refuse_send raises and is never reached); the counters are
-gajjala.alerts.COUNT_KEYS exactly. NEGATIVES throughout.
+THE SHADOW SECTION (the fail-closed fallback — an autouse fixture patches LC.LUK_PUSH_MODE to "shadow" and makes the
+sender explode): one shadow claim per (date, SYM, setup) with the would-push payload and SHADOW_NOTE; a repeat →
+claimed_before; the freshness clock = gajjala.alerts.max_entry_age_sec(LUK) = 330 s ([fixed: C1] a 1-minute A+ 4
+minutes old is recorded, 6 minutes old is late); the first candle is NOT suppressed (Luk trades it); an entry bar outside
+the regular session → #suppressed_outside_rth; the counters are gajjala.alerts.COUNT_KEYS exactly.
+THE LIVE SECTION (go-live 2026-11-01, mirrors tests/test_gajjala_only_pushes_2026_10_29.py D2): each A+ calls the
+sender ONCE with the 🥇 payload and settles "pushed"; the shadow-key guard; late / suppressed_window /
+suppressed_closed / failed / no_target / dry never ring twice or at all. NEGATIVES throughout.
 """
 from __future__ import annotations
 
 import ast
 import inspect
+import pathlib
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -24,11 +29,43 @@ from chart_maps.gajjala import store as GS
 from chart_maps.luk import alerts as AL
 from chart_maps.luk import constants as LC
 from chart_maps.luk import store as ST
+from chart_maps.luk import variant as VL
 from chart_maps.luk.variant import LUK
 from tests.test_gajjala_store import FakeColl
 
 ET = ZoneInfo("America/New_York")
 DAY = "2026-11-03"                                   # a Tuesday, a market day
+OWNER = "owner-local-part" + chr(64) + "example.com"
+OK_SEND = {"sent": 1, "failed": 0, "total_targets": 1}
+
+
+def boom(*_a, **_k):
+    raise AssertionError("the sender was called")
+
+
+@pytest.fixture(autouse=True)
+def _shadow_by_default(monkeypatch):
+    """PATCHED 2026-11-01 (go-live): the shadow pins below run with LC.LUK_PUSH_MODE = "shadow" (the fail-closed
+    fallback) and a sender that explodes if reached; the live section re-patches both."""
+    monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    from push import hooks
+    monkeypatch.setattr(hooks, "notify_luk_setup", boom, raising=False)
+
+
+def live(monkeypatch, result=None, *, raise_exc=None) -> list:
+    """LC.LUK_PUSH_MODE = "live" (the shipped value) + hooks.notify_luk_setup recording each call → the calls list."""
+    from push import hooks
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+    seen: list = []
+
+    def _send(**k):
+        seen.append(k)
+        if raise_exc is not None:
+            raise raise_exc
+        return dict(OK_SEND) if result is None else result
+    monkeypatch.setattr(hooks, "notify_luk_setup", _send, raising=False)
+    return seen
 
 
 def at(hhmm: str, sec: int = 0) -> datetime:
@@ -154,31 +191,21 @@ def test_NEGATIVE_an_unreadable_stamp_is_outside():
     assert AL.outside_rth(None, DAY, "1m") is True and AL.outside_rth("junk", DAY, "5m") is True
 
 
-# ── never sends ──────────────────────────────────────────────────────────────────────────────────────────────────
-def test_refuse_send_raises_never_sends():
-    with pytest.raises(RuntimeError) as e:
-        AL.refuse_send("owner", {"title": "x"})
-    assert str(e.value) == AL.NEVER_SENDS and "never sends" in AL.NEVER_SENDS
-
-
-def test_NEGATIVE_refuse_send_is_never_reached_and_nothing_is_sent(monkeypatch):
-    seen: list = []
-    monkeypatch.setattr(AL, "refuse_send", lambda *a, **k: seen.append(a))
+# ── the shadow fallback never sends ───────────────────────────────────────────────────────────────────────────────
+def test_NEGATIVE_shadow_never_reaches_the_sender():
     st, _coll = mk_store()
-    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st)
-    assert c["shadow"] == 1 and seen == []
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER)   # the sender is `boom`
+    assert c["shadow"] == 1 and c["shadow_mode"] == 1
     assert c["pushed"] == 0 and c["failed"] == 0 and c["no_target"] == 0
 
 
-def test_NEGATIVE_the_gate_has_no_sender_no_owner_no_live_branch():
-    src = inspect.getsource(AL)
-    tree = ast.parse(src)
-    mods = {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | {
-        a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
-    assert not any(m and m.startswith(("push", "portfolio")) for m in mods)
-    assert "notify_" not in src and "_default_send" not in src and "_owner" not in src
-    params = inspect.signature(AL.run_pass).parameters
-    assert "send" not in params and "owner" not in params and "mode" not in params
+def test_the_shipped_constant_is_live_and_this_section_patches_it(monkeypatch):
+    import importlib
+    import chart_maps.luk.constants as fresh
+    src = pathlib.Path(fresh.__file__).read_text(encoding="utf-8")
+    assert 'LUK_PUSH_MODE = "live"' in src                              # shipped LIVE (Ajay 2026-11-01)
+    assert LC.LUK_PUSH_MODE == "shadow" and VL.push_mode() == "shadow"   # the autouse patch, the fallback words
+    assert importlib.import_module("chart_maps.luk.constants") is LC
 
 
 # ── counters, dry, shapes ────────────────────────────────────────────────────────────────────────────────────────
@@ -224,10 +251,191 @@ def test_compose_reads_the_read_only_and_says_unmeasured():
     assert p["body"].endswith("UNMEASURED — his setup, not a buy signal")
     assert p["url"] == "/chart-maps?tab=luk&sub=opening_range_high&focus=ABC" and p["tag"] == "luk-opening_range_high-ABC"
     assert p["kind"] == LUK.push_kind_setup and p["ticker"] == "ABC"
-    words = " ".join([p["title"], p["body"], p["items"][0]["text"]] + list(AL.ENTRY_WORDS.values()) + [AL.NEVER_SENDS])
+    words = " ".join([p["title"], p["body"], p["items"][0]["text"]] + list(AL.ENTRY_WORDS.values()))
     assert "boun" not in words.lower() and " edge" not in words.lower()   # NEGATIVE: "reversal", never the b-word
 
 
 def test_NEGATIVE_compose_drops_a_missing_number_never_guesses():
     p = AL.compose(aplus(risk_pct=None, r_usd=None), "ABC", session=DAY)
     assert "(−" not in p["body"] and "R $" not in p["body"]
+
+
+# ── LIVE (go-live 2026-11-01 — Ajay: "Lets make it live. also alerts too.") ───────────────────────────────────────
+KEY = f"LUK:{DAY}|ABC|opening_range_high"
+
+
+def test_live_one_aplus_calls_the_sender_once_with_the_luk_payload(monkeypatch):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER, ctx={"ABC": {"price": 10.05}})
+    assert c["pushed"] == 1 and c["shadow"] == 0 and c["shadow_mode"] == 0 and c["shadow_session"] == 0, c
+    assert len(seen) == 1 and seen[0]["owner"] == OWNER
+    p = seen[0]["payload"]
+    assert p["title"] == "🥇 ABC · Opening range A+ entry" and p["kind"] == "luk_setup" == LC.LUK_KIND
+    assert p["tag"] == "luk-opening_range_high-ABC"
+    assert p["url"] == "/chart-maps?tab=luk&sub=opening_range_high&focus=ABC"
+    assert p == AL.compose(aplus(), "ABC", {"price": 10.05}, session=DAY)
+    assert KEY == GA.claim_key(DAY, "ABC", "opening_range_high", LUK)
+    doc = coll.docs[KEY]
+    assert doc["state"] == "pushed" and doc["at"] == at("09:36").isoformat() and doc["mode"] == "live"
+    assert doc["result"]["sent"] == 1 and doc["result"]["total_targets"] == 1
+    assert not [k for k in coll.docs if k.startswith("SHADOW:")]          # NEGATIVE: no shadow row when live
+
+
+def test_live_the_default_owner_is_the_house_owner(monkeypatch):
+    seen = live(monkeypatch)
+    monkeypatch.setattr(GA, "_owner", lambda: OWNER)
+    st, _coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st)
+    assert c["pushed"] == 1 and seen[0]["owner"] == OWNER
+
+
+def test_live_an_injected_send_is_used_and_the_hook_is_not(monkeypatch):
+    seen_hook = live(monkeypatch)
+    sent = []
+    st, _coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER,
+            send=lambda o, p: sent.append((o, p)) or OK_SEND)
+    assert c["pushed"] == 1 and len(sent) == 1 and sent[0][0] == OWNER and seen_hook == []
+
+
+def test_NEGATIVE_live_a_second_pass_is_claimed_before_and_never_rings_twice(monkeypatch):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    reads = {"ABC": {"opening_range_high": aplus()}}
+    run(reads, at("09:36"), st, owner=OWNER)
+    c = run(reads, at("09:37"), st, owner=OWNER)
+    assert c["claimed_before"] == 1 and c["pushed"] == 0 and len(seen) == 1
+    c = run(reads, at("09:41"), st, owner=OWNER)                          # stale now: the key on file → a repeat
+    assert c["claimed_before"] == 1 and c["late"] == 0 and len(seen) == 1
+
+
+def test_NEGATIVE_the_shadow_key_guard_refuses_the_live_claim(monkeypatch):
+    """A key shadowed earlier the same session (before the flip) never rings after it."""
+    st, coll = mk_store()
+    first = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER)     # autouse: shadow
+    assert first["shadow"] == 1
+    seen = live(monkeypatch)                                              # the flip, mid-session
+    again = run({"ABC": {"opening_range_high": aplus()}}, at("09:37"), st, owner=OWNER)
+    assert again["claimed_before"] == 1 and again["pushed"] == 0 and seen == []
+    assert KEY not in coll.docs
+    ok = run({"ABC": {"inside_day_pdh": aplus("09:36", setup="inside_day_pdh")}}, at("09:37"), st, owner=OWNER)
+    assert ok["pushed"] == 1 and len(seen) == 1                           # control: a different setup rings
+
+
+def test_NEGATIVE_live_only_aplus_reads_reach_the_sender(monkeypatch):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    reads = {"ABC": {s: dict(aplus(), state=s) for s in ("triggered", "forming", "listed", "stopped", "none")}}
+    c = run(reads, at("09:36"), st, owner=OWNER)
+    assert c["aplus"] == 0 and c["pushed"] == 0 and seen == [] and coll.docs == {}
+
+
+def test_NEGATIVE_live_a_stale_read_is_late_and_never_rings(monkeypatch):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus("09:32")}}, at("09:38"), st, owner=OWNER)   # 6 minutes on 1m
+    assert c["late"] == 1 and c["pushed"] == 0 and seen == []
+    assert list(coll.docs) == [f"{KEY}#late"]
+
+
+@pytest.mark.parametrize("delta,rings", [(5, False), (-5, True)])
+def test_live_the_five_minute_freshness_boundary_by_name(monkeypatch, delta, rings):
+    """[C8] a 5-minute A+ bar read GA.max_entry_age_sec(LUK) ± 5 s after its close — the window by NAME."""
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus("09:40", frame="5m")}},
+            at("09:40", GA.max_entry_age_sec(LUK) + delta), st, owner=OWNER)
+    if rings:
+        assert c["pushed"] == 1 and len(seen) == 1 and coll.docs[KEY]["state"] == "pushed"
+    else:
+        assert c["late"] == 1 and c["pushed"] == 0 and seen == [] and KEY not in coll.docs
+
+
+@pytest.mark.parametrize("bar,frame,session", [("09:34", "5m", DAY), ("09:30", "1m", DAY), ("16:05", "5m", DAY)])
+def test_NEGATIVE_live_an_entry_bar_outside_the_regular_session_never_rings(monkeypatch, bar, frame, session):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus(bar, frame=frame)}}, at(bar, 60), st, owner=OWNER)
+    assert c["suppressed_window"] == 1 and c["pushed"] == 0 and seen == []
+    assert KEY not in coll.docs and f"{KEY}#{AL.SUPPRESSED_OUTSIDE_RTH}" in coll.docs
+
+
+def test_NEGATIVE_live_a_half_day_bar_after_13_00_never_rings(monkeypatch):
+    from supply_demand.timeframes import HALF_DAYS
+    half = sorted(HALF_DAYS)[0]
+    seen = live(monkeypatch)
+    monkeypatch.setattr(GA, "_closed_reason", lambda _now: None)          # the half day itself is a market day
+    st, _coll = mk_store()
+    now = datetime.fromisoformat(f"{half}T13:06:00").replace(tzinfo=ET)
+    c = AL.run_pass({"ABC": {"opening_range_high": aplus(frame="5m", entry_bar_t=f"{half} 13:05")}}, {}, now, half,
+                    store=st, owner=OWNER)
+    assert c["suppressed_window"] == 1 and c["pushed"] == 0 and seen == []
+
+
+def test_NEGATIVE_live_a_closed_day_is_suppressed_closed_no_claim_no_send(monkeypatch):
+    seen = live(monkeypatch)
+    monkeypatch.setattr(GA, "_closed_reason", lambda _now: "weekend")
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER)
+    assert c["suppressed_closed"] == 1 and c["pushed"] == 0 and seen == []
+    assert KEY not in coll.docs and coll.docs[f"{KEY}#suppressed_closed"]["state"] == "suppressed_closed"
+
+
+def test_live_a_raising_sender_settles_failed(monkeypatch):
+    seen = live(monkeypatch, raise_exc=ValueError("down"))
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER)
+    assert c["failed"] == 1 and c["pushed"] == 0 and len(seen) == 1
+    assert coll.docs[KEY]["state"] == "failed" and coll.docs[KEY]["result"] == {"error": "ValueError"}
+
+
+def test_live_zero_targets_settles_no_target_and_zero_sent_settles_failed(monkeypatch):
+    live(monkeypatch, result={"sent": 0, "failed": 0, "total_targets": 0})
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER)
+    assert c["no_target"] == 1 and c["pushed"] == 0 and coll.docs[KEY]["state"] == "no_target"
+    live(monkeypatch, result={"sent": 0, "failed": 1, "total_targets": 1})
+    st2, coll2 = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st2, owner=OWNER)
+    assert c["failed"] == 1 and coll2.docs[KEY]["state"] == "failed"
+
+
+def test_NEGATIVE_live_dry_claims_nothing_and_sends_nothing(monkeypatch):
+    seen = live(monkeypatch)
+    st, coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER, dry=True)
+    assert c["dry"] == 1 and c["pushed"] == 0 and seen == [] and coll.docs == {} and coll.writes == 0
+
+
+@pytest.mark.parametrize("junk", ["junk", "LIVE", None, ""])
+def test_a_junk_mode_falls_back_to_lucks_own_reader(monkeypatch, junk):
+    seen = live(monkeypatch)
+    st, _coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER, mode=junk)
+    assert c["pushed"] == 1 and len(seen) == 1                            # VL.push_mode() == "live"
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
+    st2, _c2 = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st2, owner=OWNER, mode=junk)
+    assert c["shadow"] == 1 and len(seen) == 1                            # NEGATIVE: the fallback never sends
+
+
+def test_an_explicit_mode_overrides_the_constant(monkeypatch):
+    seen = live(monkeypatch)
+    st, _coll = mk_store()
+    c = run({"ABC": {"opening_range_high": aplus()}}, at("09:36"), st, owner=OWNER, mode="shadow")
+    assert c["shadow"] == 1 and seen == []
+
+
+def test_NEGATIVE_the_gate_reaches_the_sender_only_through_gajjala_default_send():
+    src = inspect.getsource(AL)
+    tree = ast.parse(src)
+    mods = {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | {
+        a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+    assert not any(m and m.startswith(("push", "portfolio")) for m in mods)
+    code = ast.unparse(ast.Module(body=tree.body[1:], type_ignores=[]))      # the module docstring names the hook
+    assert "notify_" not in code and "GA._default_send(o, p, LUK)" in code and "GA._owner()" in code
+    assert not hasattr(AL, "refuse_send") and not hasattr(AL, "NEVER_SENDS") and not hasattr(AL, "MODE")
+    assert "refuse_send" not in AL.__all__ and "NEVER_SENDS" not in AL.__all__
+    params = inspect.signature(AL.run_pass).parameters
+    assert all(p in params for p in ("send", "owner", "mode", "dry", "ctx", "store"))

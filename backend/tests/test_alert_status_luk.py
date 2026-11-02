@@ -2,12 +2,16 @@
 
 Ajay 2026-11-01: "pic the next best one like Gajjala … Implement their strategy".
 
-`LUK_KIND = "luk_setup"` is a PASS-HEALTH kind only: Luk's pass records its own pass doc so /alerts can say it ran.
-It is never a push kind — no sender, no notify_* hook, no pref, and the owner keep-set stays exactly six.
+`LUK_KIND = "luk_setup"` is Luk's pass-health row: Luk's pass records its own pass doc so /alerts can say it ran.
 Its cadence is DERIVED from the 🚩 pass it rides (never typed).
 
-NEGATIVES: push/subs.py and push/hooks.py never name "luk"; OWNER_KEEP_SET has six; "luk_setup" sits in the
-test_alert_status literal exactly once; the kind is not a daily pass; the conftest kill switch is ASSIGNED "0".
+INVERTED 2026-11-01 (Ajay 2026-11-01: "Lets make it live. also alerts too." — HIS CALL #19 answered): the same
+string is now ALSO a LIVE push kind — push/hooks.notify_luk_setup, default_prefs False, the owner keep-set's
+SEVENTH kind. Was: "never a push kind — no sender, no notify_* hook, no pref, the keep-set stays exactly six".
+
+NEGATIVES: push/subs.py and push/hooks.py name only "luk_setup" (never a "luk_potential"); OWNER_KEEP_SET has
+seven; "luk_setup" sits in the test_alert_status literal exactly once; the kind is not a daily pass; the conftest
+kill switch is ASSIGNED "0".
 """
 from __future__ import annotations
 
@@ -86,21 +90,25 @@ def test_NEGATIVE_not_a_daily_pass_and_no_schedule_slot():
     assert AS.LUK_KIND not in AS.schedule_map()
 
 
-def test_NEGATIVE_push_subs_and_hooks_never_name_luk():
+def test_push_subs_and_hooks_name_luk_setup_and_no_other_luk_kind():
+    # INVERTED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): subs/hooks now DO name luk — the one kind.
     for rel in ("push/subs.py", "push/hooks.py"):
         src = (BACKEND / rel).read_text(encoding="utf-8")
         assert src, rel
-        assert not re.search("luk", src, re.I), rel
+        assert '"luk_setup"' in src, rel
+        assert not re.search("luk_potential", src, re.I), rel                # NEGATIVE: no Luk potential kind
     from push import hooks
-    assert not [n for n in dir(hooks) if "luk" in n.lower()], "NEGATIVE: no notify_luk sender"
+    assert [n for n in dir(hooks) if "luk" in n.lower()] == ["notify_luk_setup"]
+    assert callable(hooks.notify_luk_setup)
 
 
-def test_NEGATIVE_the_owner_keep_set_is_still_exactly_six_and_has_no_luk_kind():
+def test_the_owner_keep_set_is_seven_with_luk_setup_and_default_prefs_off():
+    # INVERTED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): was "still exactly six and has no luk kind".
     from push import subs
-    assert len(subs.OWNER_KEEP_SET) == 6
-    assert AS.LUK_KIND not in subs.OWNER_KEEP_SET
-    assert AS.LUK_KIND not in subs.default_prefs()
-    assert not [k for k in subs.OWNER_KEEP_SET if "luk" in k.lower()]
+    assert len(subs.OWNER_KEEP_SET) == 7
+    assert AS.LUK_KIND in subs.OWNER_KEEP_SET
+    assert subs.default_prefs()[AS.LUK_KIND] is False                        # NEGATIVE: never ON for anyone else
+    assert [k for k in subs.OWNER_KEEP_SET if "luk" in k.lower()] == [AS.LUK_KIND]
 
 
 def test_NEGATIVE_luk_setup_sits_in_the_pass_kind_literal_exactly_once():

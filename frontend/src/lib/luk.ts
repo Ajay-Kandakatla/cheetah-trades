@@ -7,7 +7,8 @@
  * Martin Luk's published pullback / opening-range method, built from his own words. The board is ONE read-only GET
  * (GET /chart-maps/luk, backend chart_maps/luk/tab.py) the Luk pass fills; this module holds the route names, the
  * payload TYPES, and the URL helpers. Every word and every number the board prints is SERVED — nothing here types a
- * rule, a level, a threshold or a sentence. Pushes: none — every alert is recorded in shadow, never sent.
+ * rule, a level, a threshold or a sentence. Pushes: every 🥇 A+ rings his phone since 2026-11-01 by his call ("Lets
+ * make it live. also alerts too."); shadow = recorded, never sent.
  * UNMEASURED.
  *
  * Takes only TYPES from ./chartMaps (which imports the param names from here for its border rule), so there is no

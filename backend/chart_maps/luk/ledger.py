@@ -1,10 +1,14 @@
-"""🏁 Luk's Track record — every 🥇 A+ recorded in shadow, graded by LUK's trade math (BUILD_SPEC §3.9, WP-B, 2026-11-01).
+"""🏁 Luk's Track record — every 🥇 A+ that rang (live) or was recorded (shadow), graded by LUK's trade math (BUILD_SPEC
+§3.9, WP-B, 2026-11-01; both states since the go-live 2026-11-01).
 
 Ajay 2026-11-01: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
 their strategy please if they have online resources."
 
-ROWS. Every `luk_alerts` SHADOW claim (`SHADOW:LUK:{date}|SYM|setup`, state "shadow" — never a `#state` refusal) dated
-on or after LC.LUK_RECORD_FROM. A doc dated before it is never a row. Every row is a shadow record: none reached a phone.
+ROWS. Every `luk_alerts` claim in ROW_STATES (= gajjala.store.LEDGER_ALERT_STATES) dated on or after LC.LUK_RECORD_FROM:
+a SHADOW claim (`SHADOW:LUK:{date}|SYM|setup`, state "shadow" — recorded, never sent) or, since the go-live (Ajay
+2026-11-01: "Lets make it live. also alerts too."), a LIVE claim (`LUK:{date}|SYM|setup`, state "pushed" — it reached his
+phone). Each row carries its own `line` (gajjala.ledger.LINES words: "live" / "shadow") and its own `push_state`. Never a
+`#state` refusal, a claim in flight ("claimed"), a "failed" / "no_target" settle, or a doc dated before the record.
 
 THE TRADE MATH (his words where he gave them; the rest is a Cheetah choice, listed as a HIS CALL):
 - FILL — the house convention of 🚩's 🏁 (gajjala/ledger.py `grade`, re-implemented here and pinned equal on a shared
@@ -28,8 +32,8 @@ REFIX 2026-11-01 (WP-A2 follow-up): the grader no longer reads the house daily c
 re-stamped by `patch_latest_closes`, so it proves nothing about the bar dated `d`); the old `untrusted` step counter
 (the house-cache stamp rule) is replaced by `not_settled`; `graded_from.daily_cached_at` = the fetch time.
 
-Writes: ONLY `grade_step` writes, into luk_ledger. `served_block` reads Mongo only. Operational accounting of shadow
-records, never a backtest; UNMEASURED.
+Writes: ONLY `grade_step` writes, into luk_ledger. `served_block` reads Mongo only. Operational accounting of alerts as
+recorded (live and shadow), never a backtest; UNMEASURED.
 """
 from __future__ import annotations
 
@@ -43,12 +47,13 @@ from chart_maps.gajjala import alerts as GA
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import store as GS
 from chart_maps.gajjala import variant as V
-from chart_maps.gajjala.ledger import (ET, SETTLE, UTC, _D, _aware, _default_load_day, _iso_t, _num, _px,
+from chart_maps.gajjala.ledger import (ET, LINES, SETTLE, UTC, _D, _aware, _default_load_day, _iso_t, _num, _px,
                                        bars_from_frame, plan_of, rang_of)
 from daytrading.data import ET_RTH_OPEN
 
 from . import constants as LC
 from . import daily as DL
+from . import variant as VL
 from .variant import LUK
 
 log = logging.getLogger("chart_maps.luk.ledger")
@@ -58,6 +63,9 @@ KIND = "aplus"
 EXITS = ("stop", "ema9_close")
 OPEN = "open"
 STATE_SHADOW = "shadow"
+STATE_PUSHED = "pushed"                                          # 2026-11-01 go-live: a live claim that rang
+ROW_STATES = (STATE_SHADOW, STATE_PUSHED)                        # = gajjala.store.LEDGER_ALERT_STATES (pinned equal)
+LINE_OF = {STATE_SHADOW: LINES[1], STATE_PUSHED: LINES[0]}       # GG's 🏁 line words ("shadow" / "live"), never retyped
 PLAN_OK, NO_PLAN, NO_RISK = "ok", "no_plan", "no_risk"            # gajjala.ledger.plan_of's answers
 FILLED, NO_ENTRY = "filled", "no_entry"
 FINAL_ENTRIES = (NO_ENTRY, NO_PLAN, NO_RISK)
@@ -160,16 +168,19 @@ def _flag_key(m) -> str:
 
 # ── rows ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 def row_of(doc: dict) -> Optional[dict]:
-    """A luk_alerts shadow claim → the row dict | None when the doc is not a row (wrong state, a `#state` refusal, an
-    id that is not the house shadow key of its own date / symbol / setup, a setup not his, a date before the record)."""
-    if not isinstance(doc, dict) or doc.get("state") != STATE_SHADOW:
+    """A luk_alerts shadow or pushed claim → the row dict | None when the doc is not a row (a state outside ROW_STATES,
+    a `#state` refusal, an id that is not the house key of its own state — the shadow key for "shadow", the claim key
+    for "pushed" — of its own date / symbol / setup, a setup not his, a date before the record)."""
+    state = doc.get("state") if isinstance(doc, dict) else None
+    if state not in ROW_STATES:
         return None
     sym = str(doc.get("symbol") or "").upper()
     setup = doc.get("setup")
     d = _as_date(doc.get("date")) if isinstance(doc.get("date"), str) else None
     if not sym or setup not in LC.SETUPS or d is None or d < record_from():
         return None
-    if str(doc.get("_id") or "") != GA.shadow_key(d, sym, setup, LUK):
+    want = GA.shadow_key(d, sym, setup, LUK) if state == STATE_SHADOW else GA.claim_key(d, sym, setup, LUK)
+    if str(doc.get("_id") or "") != want:
         return None
     at = _parse_at(doc.get("at")) or _parse_at(doc.get("claimed_at"))
     plan, r = plan_of(doc.get("trigger"), doc.get("stop"))
@@ -179,7 +190,8 @@ def row_of(doc: dict) -> Optional[dict]:
             "at_utc": at, "at_et": at.astimezone(ET).strftime("%H:%M") if at else None, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r_usd": r, "r_pct": r_pct, "plan": plan,
             "price_at_alert": _num(doc.get("price")), "frame": doc.get("frame"),
-            "url": f"/chart-maps?tab={LUK.tab}&sub={setup}&focus={sym}"}
+            "url": f"/chart-maps?tab={LUK.tab}&sub={setup}&focus={sym}", "line": LINE_OF[state],
+            "push_state": state}
 
 
 def _sort_key(row: dict) -> tuple:
@@ -191,8 +203,8 @@ def _sort_key(row: dict) -> tuple:
 
 
 def rows_for(sessions, store) -> list:
-    """Every shadow A+ claim on these ET sessions (clipped to ≥ LUK_RECORD_FROM) as row dicts, ordered (date desc,
-    at desc, symbol, SETUPS order). Raises LedgerReadError when luk_alerts cannot be read."""
+    """Every shadow or pushed A+ claim on these ET sessions (clipped to ≥ LUK_RECORD_FROM) as row dicts, ordered
+    (date desc, at desc, symbol, SETUPS order). Raises LedgerReadError when luk_alerts cannot be read."""
     days = clip(sessions)
     if not days:
         return []
@@ -538,13 +550,18 @@ RULE_TEXT = (
     "maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to {lag} "
     "minutes after his bar closed (one Luk pass per {lag} minutes), so a 🏁 fill is later than his would have been — "
     "a fact (HIS CALL #29).")
-HONESTY = ("Every row is a shadow record — none reached your phone. Operational accounting of alerts as recorded, not "
-           "a backtest. UNMEASURED until the strategy lab's {floor}-entry-week floor ({n} entry weeks so far).")
+HONESTY_LIVE = ("Rows are alerts that rang your phone (live) or were recorded in shadow (never sent) — each row's own "
+                "line says which; since {since} every 🥇 A+ rings by your call (\"{words}\"). Operational accounting of "
+                "alerts as recorded, not a backtest. UNMEASURED until the strategy lab's {floor}-entry-week floor ({n} "
+                "entry weeks so far).")
+HONESTY_SHADOW = ("Every row is a shadow record — none reached your phone. Operational accounting of alerts as recorded, "
+                  "not a backtest. UNMEASURED until the strategy lab's {floor}-entry-week floor ({n} entry weeks so far).")
 COUNTS_TEXT = ("{n} A+ recorded · {filled} filled · {stopped} stopped · {ema9} closed below the {ema} EMA · {open} open "
                "· {mean} · {entry_weeks} of {floor} entry weeks")
 MEAN_TEXT = "mean {mean_r:+.2f}R over {closed} closed"
 MEAN_NONE_TEXT = "no closed row yet"
-EMPTY_TEXT = "No 🥇 A+ recorded in this span — every A+ is recorded in shadow, never sent."
+EMPTY_TEXT_LIVE = "No 🥇 A+ in this span — none rang, none was recorded."
+EMPTY_TEXT_SHADOW = "No 🥇 A+ recorded in this span — every A+ is recorded in shadow, never sent."
 FAULT_TEXT = "The 🏁 record could not be read this time — the next re-read tries again."
 FILL_TEXT = "filled {px} at {hhmm}"
 NO_ENTRY_TEXT = "no entry — the trigger never traded from the regular open to the close"
@@ -555,9 +572,11 @@ EXIT_STOP_TEXT = "stopped {hhmm} · {r}"
 EXIT_EMA9_TEXT = "closed below the {ema} EMA on {md} · {r} · {sessions}"
 EXIT_OPEN_TEXT = "open · {r} after {sessions}"
 PLAN_TEXT = "trigger {trigger} · stop {stop} (−{pct:.1f}%) · R ${r}"
-RANG_TEXT = "recorded {hhmm} ET ({when}) — shadow, never sent"
+RANG_TEXT_LIVE = "rang {hhmm} ET ({when}) — sent to your phone"
+RANG_TEXT_SHADOW = "recorded {hhmm} ET ({when}) — shadow, never sent"
+RANG_TEXT = {LINES[0]: RANG_TEXT_LIVE, LINES[1]: RANG_TEXT_SHADOW}        # by the row's own line
 RANG_WHEN = {"pre": "pre-market", "rth": "regular session", "ah": "after hours"}
-RANG_NONE_TEXT = "recorded — no alert time on file"
+RANG_NONE_TEXT = {LINES[0]: "rang — no alert time on file", LINES[1]: "recorded — no alert time on file"}
 
 
 def _ema_n() -> int:
@@ -583,8 +602,19 @@ def rule_text() -> str:
     return RULE_TEXT.format(settle=int(GC.BAR_SETTLE_SEC), ema=_ema_n(), partials=partials_text(), lag=_lag_min())
 
 
+def honesty() -> str:
+    """The honesty template of the mode (luk.variant.push_mode(), read at call time)."""
+    return HONESTY_LIVE if VL.push_mode() == "live" else HONESTY_SHADOW
+
+
+def empty_text() -> str:
+    """The empty-span sentence of the mode (read at call time)."""
+    return EMPTY_TEXT_LIVE if VL.push_mode() == "live" else EMPTY_TEXT_SHADOW
+
+
 def honesty_text(n_weeks: int) -> str:
-    return HONESTY.format(floor=int(LC.MEASURE_FLOOR_WEEKS), n=int(n_weeks))
+    return honesty().format(floor=int(LC.MEASURE_FLOOR_WEEKS), n=int(n_weeks), since=LC.LUK_LIVE_SINCE,
+                            words=LC.LUK_LIVE_WORDS)
 
 
 def flags_text(w: Optional[dict]) -> str:
@@ -601,9 +631,11 @@ def plan_text(row: dict) -> Optional[str]:
 
 
 def rang_text(row: dict) -> str:
+    """By the row's OWN line ("live" = it rang; anything else = the shadow words)."""
+    line = row.get("line") if row.get("line") in RANG_TEXT else LINES[1]
     if not row.get("at_et"):
-        return RANG_NONE_TEXT
-    return RANG_TEXT.format(hhmm=row["at_et"], when=RANG_WHEN.get(row.get("rang"), RANG_WHEN["rth"]))
+        return RANG_NONE_TEXT[line]
+    return RANG_TEXT[line].format(hhmm=row["at_et"], when=RANG_WHEN.get(row.get("rang"), RANG_WHEN["rth"]))
 
 
 def state_of(row: dict, doc: Optional[dict]) -> str:
@@ -667,7 +699,7 @@ def cells(row: dict, doc: Optional[dict]) -> dict:
 
 
 def counts_of(served: list, entry_weeks: int) -> tuple:
-    """(counts, counts_text) over the served rows. mean_r_closed is a shadow count, never a measurement."""
+    """(counts, counts_text) over the served rows. mean_r_closed is an operational count, never a measurement."""
     by = {k: sum(1 for c in served if c["state"] == k) for k in ("stopped", EXITS[1], OPEN, NO_ENTRY)}
     filled = by["stopped"] + by[EXITS[1]] + by[OPEN]
     closed = [c["r"] for c in served if c["state"] in ("stopped", EXITS[1]) and c.get("r") is not None]
@@ -722,7 +754,7 @@ def served_block(store, session, now, *, span: str = "") -> dict:
     spans = list(LC.LUK_LEDGER_SPANS)
     span_k = span if span in spans else LC.LUK_LEDGER_SPAN_DEFAULT
     base = {"title": title_text(), "rule_text": rule_text(), "span": span_k, "spans": spans,
-            "empty_text": EMPTY_TEXT, "fault": False, "fault_text": None, "record_from": record_from().isoformat()}
+            "empty_text": empty_text(), "fault": False, "fault_text": None, "record_from": record_from().isoformat()}
     record = record_sessions(max(session, now.astimezone(ET).date()))
     try:
         rows = rows_for(record, store)
@@ -748,6 +780,6 @@ def served_block(store, session, now, *, span: str = "") -> dict:
     return dict(base, honesty=honesty_text(weeks), counts=counts, counts_text=text, days=days, n_rows=len(shown))
 
 
-__all__ = ["ROW_ID", "EXITS", "OPEN", "LEDGER_KEYS", "GRADE_VERSION", "LedgerReadError", "row_id", "row_of",
+__all__ = ["ROW_ID", "EXITS", "OPEN", "LEDGER_KEYS", "STATE_SHADOW", "STATE_PUSHED", "ROW_STATES", "LINE_OF", "GRADE_VERSION", "LedgerReadError", "row_id", "row_of",
            "rows_for", "fill", "fill_window", "walk", "grade_step", "served_block", "title_text", "rule_text",
-           "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip"]
+           "honesty", "empty_text", "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip"]

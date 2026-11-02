@@ -127,6 +127,9 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # 2026-10-27) — read off live 1-minute bars, so MARKET kinds: silent on
     # weekends and NYSE holidays. Recorded in shadow, never sent, until HIS CALL #1.
     "gajjala_1m_setup", "gajjala_1m_potential",
+    # 🥇 Luk's A+ (chart_maps/luk/alerts.py, 2026-11-01) — read off live 1-/5-minute bars, a MARKET kind: silent on
+    # weekends and NYSE holidays; LIVE by his call 2026-11-01 (Ajay: "Lets make it live. also alerts too.").
+    "luk_setup",
     # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
     # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
     # (the cli's market-day gate already skips the pass; this drops at the

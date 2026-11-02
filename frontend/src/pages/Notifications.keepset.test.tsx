@@ -56,10 +56,12 @@ import { TAB_META } from '../lib/chartMaps';
 const RETIRED = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_education'];
 /* 2026-10-29 (BUILD_SPEC29 D1): the mirror of backend push/subs.OWNER_KEEP_SET is SIX kinds — Ajay: "Only give me
    Gajjalas chart notifications from both tabs," / "I am missing out the ones in noise." The 2026-09-20 eight (and
-   🧬 med_catalyst, 2026-09-29) left it that day; 💼 position_alert stays (his 2026-09-09 answer), 🩺 ops_alert stays. */
+   🧬 med_catalyst, 2026-09-29) left it that day; 💼 position_alert stays (his 2026-09-09 answer), 🩺 ops_alert stays.
+   WIDENED 2026-11-01 (luk-live spec §3.7): SEVEN — + 🥇 luk_setup, Ajay 2026-11-01: "Lets make it live. also alerts
+   too." (six 2026-10-29 … 2026-11-01). */
 const KEEP_SET = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential',
-  'position_alert', 'ops_alert'];
-/* The kinds the preset turns on, sorted — the mirror check below compares THIS to the six. */
+  'luk_setup', 'position_alert', 'ops_alert'];
+/* The kinds the preset turns on, sorted — the mirror check below compares THIS to the seven. */
 const onKeys = (pref: Record<string, unknown>) => Object.entries(pref).filter(([, v]) => v === true).map(([k]) => k).sort();
 async function readSource(rel: string): Promise<string> {
   const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
@@ -144,8 +146,9 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     }
   });
 
-  it('the Essentials preset is the six on (exactly) and the retired four absent', () => {
+  it('the Essentials preset is the seven on (exactly) and the retired four absent', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
+    expect(KEEP_SET).toHaveLength(7);
     for (const k of KEEP_SET) expect((ess.pref as any)[k]).toBe(true);
     expect(onKeys(ess.pref as any)).toEqual([...KEEP_SET].sort());
     // NEGATIVE: what left on 2026-10-29 is muted
@@ -161,6 +164,12 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     }
     expect(ess.detail).toContain('2026-10-29 keep-set');
     expect(ess.detail).toContain('Only give me Gajjalas chart notifications from both tabs,');
+    // 2026-11-01: the 🥇 addition is dated and quotes him; the 10-29 history stays
+    expect(ess.detail).toContain('2026-11-01');
+    expect(ess.detail).toContain('Lets make it live. also alerts too.');
+    expect(ess.detail).toContain("🥇 Luk's A+");
+    // NEGATIVE: no Luk potential kind is turned on (none exists)
+    expect('luk_potential' in (ess.pref as any)).toBe(false);
   });
 
   /* 2026-10-29 (BUILD_SPEC29 critic F1): every row for a kind OUTSIDE the keep-set says so — none still tells him it is
@@ -179,7 +188,7 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
       expect(d.startsWith('OFF FOR YOUR PHONE since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,")'), k).toBe(true);
     }
     // the keep-set kinds still lead ON (the check is not a blanket ban)
-    for (const k of ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential']) {
+    for (const k of ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup']) {
       expect(CATEGORIES.find((c) => c.key === k)!.detail.startsWith('ON FOR YOUR PHONE'), k).toBe(true);
     }
   });

@@ -15,8 +15,9 @@ from chart_maps.gajjala import tape as GT
 from chart_maps.luk import constants as LC
 from chart_maps.luk import ledger as LL
 from chart_maps.luk import tape as LT
+from chart_maps.gajjala.ledger import LINES
 from tests.test_luk_ledger import (B_WORD, D, D2, EDGE, FILL, _ledger_doc, _strings, _walk, alert_doc, bar, et, flat,
-                                   make_store, merge)
+                                   make_store, merge, pushed_doc)
 
 ID = "2026-11-02|ABC|pullback_reversal|aplus"
 
@@ -45,8 +46,8 @@ def _never(*_a, **_k):
     raise AssertionError("the mini tape must never fetch today")
 
 
-def _store(walk=None):
-    a = alert_doc()
+def _store(walk=None, live=False):
+    a = pushed_doc() if live else alert_doc()
     w = walk or _walk(exit="stop", state="stopped", exit_t=et(D, 10, 40).isoformat(), exit_date=D.isoformat(),
                       r=-1.0, sessions=1, reached_3r=True, reached_3r_t=et(D, 10, 20).isoformat())
     return make_store([a], [_ledger_doc(a, FILL, w)])
@@ -68,8 +69,43 @@ def test_the_payload_has_gg_entry_tape_keys_and_luks_marks():
     r3 = next(d for d in p["dots"] if d["key"] == "r3")
     assert r3["px"] == pytest.approx(10.0 + 3 * 0.5) and r3["label"] == "+3R 11.50 at 10:20"
     assert p["rules"][0]["label"] == "recorded 10:00 ET — shadow, never sent"
+    assert "solid line = the shadow record" in p["legend"]
     assert "stopped 10:40 · −1.0R" in p["read"] and "+3R reached" in p["read"]
     assert p["tone"] == "dn" and p["note"] is None and p["aria"] == "ABC 5-minute tape around the 🥇 A+ entry"
+
+
+def _full(live):
+    return LT.entry_tape(ID, now=et(D2, 12, 0), store=_store(live=live), load_day=Loader({D: _bars()}),
+                         today_load=lambda s, d: ([], False))
+
+
+def test_a_pushed_row_that_rang_his_phone_says_so_on_the_tape():
+    """2026-11-01 go-live: LL.rows_for yields PUSHED rows (line "live"); the tape's alert rule + legend follow it."""
+    p = _full(live=True)
+    assert tuple(p) == GT.PAYLOAD_KEYS and p["rules"][0]["key"] == "alert"
+    assert p["rules"][0]["label"] == "rang 10:00 ET — sent to your phone"
+    assert "solid line = the alert that rang your phone" in p["legend"]
+    assert p["read"].startswith("rang 10:00 ET") and "sent to your phone" in p["read"]
+
+
+def test_NEGATIVE_a_live_tape_never_says_shadow_or_never_sent():
+    p = _full(live=True)
+    for s in _strings(p):
+        assert "never sent" not in s and "shadow" not in s, s
+
+
+def test_NEGATIVE_a_shadow_tape_never_says_it_rang_his_phone():
+    p = _full(live=False)
+    for s in _strings(p):
+        assert "sent to your phone" not in s and "rang your phone" not in s, s
+
+
+def test_the_line_maps_reuse_ggs_line_words_and_unknown_falls_back_to_shadow():
+    assert set(LT.ALERT_WORD) == set(LT.RECORD_WORD) == {LINES[0], LINES[1]}
+    assert LT._line({"line": LINES[0]}) == LINES[0]
+    for bad in (None, "", "replayed", "LIVE", 1):                        # NEGATIVE: never upgrades to the live words
+        assert LT._line({"line": bad}) == LINES[1], bad
+    assert LT._line({}) == LINES[1]
 
 
 def test_an_ema9_exit_draws_its_level_and_dot():

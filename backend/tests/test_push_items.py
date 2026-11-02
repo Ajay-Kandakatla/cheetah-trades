@@ -379,7 +379,9 @@ def test_item_urls_match_each_kinds_single_push_url():
     # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent): 15 → 17 — its tab, the sub resolved by the endpoint from focus.
     assert R.item_url("gajjala_1m_setup", "NVDA") == R.item_url("gajjala_1m_potential", "NVDA") == \
         "/chart-maps?tab=gajjala_1m&focus=NVDA"
-    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 17
+    # WIDENED 2026-11-01: 🥇 luk_setup (Ajay "Lets make it live. also alerts too."; LIVE, owner keep-set): 17 → 18 — its tab, the sub resolved by the endpoint from focus.
+    assert R.item_url("luk_setup", "NVDA") == "/chart-maps?tab=luk&focus=NVDA"
+    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 18
 
 
 # ---------------------------------------------------------------------------

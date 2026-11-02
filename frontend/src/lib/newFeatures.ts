@@ -22,15 +22,26 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "Lets make it live. also alerts too." 🥇 Luk's alerts
+  // go LIVE — HIS CALL #19 of the 🥇 Luk's tab answered: backend chart_maps/luk/constants.LUK_PUSH_MODE "live"
+  // (LUK_LIVE_SINCE / LUK_LIVE_WORDS); a real MARKET push kind `luk_setup` (push/subs OWNER_KEEP_SET seventh kind +
+  // default_prefs False, push/hooks.notify_luk_setup, market_hours/gate MARKET_ALERT_KINDS, push/recent url); the LUK
+  // Variant's send_setup; the live branch of luk/alerts.run_pass = 🚩's (shadow-key guard, one claim per session /
+  // symbol / setup). Only the A+ rings (no Luk potential kind); 🧪 Gajjala · Audited stays shadow. UNMEASURED. Pinned by
+  // scripts/contracts.mjs ("🥇 Luk's alerts go live (2026-11-01)").
+  { id: 'luk-live-pushes-2026-11-01', addedAt: '2026-11-01', route: '/chart-maps?tab=luk',
+    label: "🥇 Luk's alerts are live: every A+ on 🥇 Luk's tab now rings your phone — Martin Luk's pullback reversal, opening range and inside-day entries, read on closed 1- and 5-minute candles, only when the entry bar is inside the regular session, once per name, setup and session. On for your phone (/notifications → 🥇 Luk's A+; the Essentials preset carries it); everyone else starts off. Every alert is listed on /alerts in its own 🥇 strip right under the 🚩 1-minute block, and graded in the tab's 🏁 Track record from 2026-11-01. Only the A+ rings; 🧪 Gajjala · Audited is unchanged; nothing trades. You said: “Lets make it live. also alerts too.” UNMEASURED — his setup, not a buy signal. Not advice." },
   // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "look at other winners of US stocks champion ship and
   // pic the next best one like Gajjala. Implement their strategy please if they have online resources." and "I need
   // something like Gajjlala that is exposed". 🥇 Luk's — Martin Luk (the 2025 US Investing Championship stock-division
   // winner) — its own package backend chart_maps/luk/ (a detached child of the 🚩 5-minute pass via
   // gajjala/run.py _spawn_luk, the only gajjala line touched), its own tab right after the 1-minute page. Every rule
-  // cites his own free sources (verified_rules.json); every alert is SHADOW (LUK_PUSH_MODE; no push kind exists for
-  // it); its 🏁 starts LUK_RECORD_FROM. UNMEASURED. Pinned by scripts/contracts.mjs ("🥇 Luk's tab (2026-11-01)").
+  // cites his own free sources (verified_rules.json); its 🏁 starts LUK_RECORD_FROM. AMENDED 2026-11-01 (luk-live
+  // spec main-session): every 🥇 A+ rings his phone since 2026-11-01 by his word (LUK_PUSH_MODE "live", kind
+  // luk_setup — the go-live has its own ✨ above); was "recorded in shadow, never sent". UNMEASURED. Pinned by
+  // scripts/contracts.mjs ("🥇 Luk's tab (2026-11-01)").
   { id: 'chart-maps-luk-2026-11-01', addedAt: '2026-11-01', route: '/chart-maps?tab=luk',
-    label: "🥇 Luk's — a new Chart Maps tab right after 🚩 Gajjala's 1-minute page: Martin Luk, the 2025 US Investing Championship winner (stock division), who sells nothing; every rule on the tab is his own words in free sources — his videos and his guest post. His three setups (↩️ Pullback reversal, 🔔 Opening range, 📦 Inside day), each card with its state, trigger, stop and risk; his three scans (☀️ Premarket, 🏆 Leader, ⚡ Potent) with the settings he showed; his 📓 Playbook with every rule cited to its source; and a 🏁 Track record that starts 2026-11-01. Every alert here is recorded in shadow, never sent — nothing new rings your phone and nothing trades. You said: “look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources.” and “I need something like Gajjlala that is exposed”. UNMEASURED. Not advice." },
+    label: "🥇 Luk's — a new Chart Maps tab right after 🚩 Gajjala's 1-minute page: Martin Luk, the 2025 US Investing Championship winner (stock division), who sells nothing; every rule on the tab is his own words in free sources — his videos and his guest post. His three setups (↩️ Pullback reversal, 🔔 Opening range, 📦 Inside day), each card with its state, trigger, stop and risk; his three scans (☀️ Premarket, 🏆 Leader, ⚡ Potent) with the settings he showed; his 📓 Playbook with every rule cited to its source; and a 🏁 Track record that starts 2026-11-01. Every A+ here rings your phone since 2026-11-01 by your call (“Lets make it live. also alerts too.”) — nothing trades. You said: “look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources.” and “I need something like Gajjlala that is exposed”. UNMEASURED. Not advice." },
   // Ajay 2026-11-01 (verbatim in the label, his spelling kept, the line breaks as " / "): "I would like you to create a
   // new tab for Gajjals when you modifiy with audit of End of day.. / Gajjals-Audited / So we can keep track of
   // improvements on this tab". A THIRD Variant (backend chart_maps/gajjala/variant.py GGA, tab gajjala_audited) riding
