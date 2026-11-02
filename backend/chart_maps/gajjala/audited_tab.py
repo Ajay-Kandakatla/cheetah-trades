@@ -296,8 +296,30 @@ def _claim_id(d, prefixes: tuple) -> Optional[str]:
     return LG.ledger_id(day.isoformat(), sym, setup, LG.KINDS[1])
 
 
+def _rank(setup) -> int:
+    return GC.SETUPS.index(setup) if setup in GC.SETUPS else len(GC.SETUPS)
+
+
+def _cols(docs: dict, rid) -> tuple:
+    """(same, next) stored grade columns of one ledger id (None where absent)."""
+    doc = docs.get(rid) or {}
+    return tuple(doc.get(h) if isinstance(doc.get(h), dict) else None for h in GC.LEDGER_HORIZONS)
+
+
+def _dedupe_side(rows: list, docs: dict) -> None:
+    """🔁 2026-11-02 (Ajay: one count per stock per day) — THE ledger engine over one side's rows, in place: `dup_of` =
+    the counted row's id, else None. Partition (date, symbol, count line), as on the 🏁."""
+    facts = [LG.trade_facts(r, *_cols(docs, r["id"]), group=(r["date"], r["symbol"], LG._count_line(r)),
+                            rank=_rank(r.get("setup"))) for r in rows]
+    dups = LG.dedupe_trades([f for f in facts if f])
+    for r in rows:
+        r["dup_of"] = dups.get(r["id"])
+
+
 def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
-    """{original, audited, held} rows of these sessions, each with its same-session `state`."""
+    """{original, audited, held} rows of these sessions, each with its same-session `state`. 🔁 2026-11-02: every row
+    carries `dup_of` — each side dedupes over its OWN rows; a held row over its ORIGINAL's facts (a held doc carries no
+    ring time or plan), the partition being the held rows themselves (never inherited from the original side)."""
     shared = st.shared
     orig = [r for r in LG.rows_for(sessions, shared) if r.get("kind") == LG.KINDS[1]]
     aud = [r for r in LG.rows_for(sessions, st, variant=V.GGA) if r.get("kind") == LG.KINDS[1]]
@@ -315,6 +337,8 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
         c = claims.get(r["id"]) or {}
         r["audit"] = c.get("audit")
         r["entry_bar_t"] = c.get("entry_bar_t")
+    _dedupe_side(orig, odocs)
+    _dedupe_side(aud, adocs)
     by_orig = {r["id"]: r for r in orig}
     held = _held_docs(st, sessions)
     for h in held:
@@ -326,13 +350,23 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
             doc = odocs.get(o["id"]) or {}
             g = doc.get("same") if isinstance(doc.get("same"), dict) else None
             h["state_text"] = LG._cell(o, "same", g, False, now, session, is_today)["text"]
+    facts_held = [LG.trade_facts(o, *_cols(odocs, o["id"]), group=(h["date"], h["symbol"], LG._count_line(o)),
+                                 rank=_rank(h.get("setup")))
+                  for h in held for o in [by_orig.get(h["id"])] if o is not None]
+    dups_held = LG.dedupe_trades([f for f in facts_held if f])
+    for h in held:
+        h["dup_of"] = dups_held.get(h["id"])                  # None on a NO_ORIGINAL held row
     return {"original": orig, "audited": aud, "held": held}
 
 
 def _tally(rows: list, r_of=None) -> dict:
     """Counts of `rows` by their `state`; `mean_r` over decided rows = ±LEDGER_R_MULT (GG's math) — or, with `r_of`
-    (an exit grade's own R per row), the mean of `r_of(row)` over the decided rows that carry a number."""
-    c = {"n": len(rows), "filled": 0, "win": 0, "loss": 0, "open_flat": 0, "unfilled": 0, "pending": 0,
+    (an exit grade's own R per row), the mean of `r_of(row)` over the decided rows that carry a number. 🔁 2026-11-02:
+    THE one filter point — a duplicate row (`dup_of` set) is dropped first and counted in `n_dup`; `n` = counted rows."""
+    kept = [r for r in rows if not r.get("dup_of")]
+    n_dup = len(rows) - len(kept)
+    rows = kept
+    c = {"n": len(rows), "n_dup": n_dup, "filled": 0, "win": 0, "loss": 0, "open_flat": 0, "unfilled": 0, "pending": 0,
          NO_ORIGINAL: 0}
     for r in rows:
         s = r.get("state")
@@ -380,7 +414,8 @@ def _side(key: str, rows: list) -> dict:
     if c["pending"]:
         bits.append(f"{c['pending']} not graded yet")
     bits += [_mean_text(c), GT.UNMEASURED]
-    return {"key": key, "label": label, "n": c["n"], "filled": c["filled"], "win": c["win"], "loss": c["loss"],
+    return {"key": key, "label": label, "n": c["n"], "n_dup": c["n_dup"], "filled": c["filled"], "win": c["win"],
+            "loss": c["loss"],
             "open_flat": c["open_flat"], "unfilled": c["unfilled"], "mean_r": c["mean_r"], "win_pct": c["win_pct"],
             "text": " · ".join(bits)}
 
@@ -401,10 +436,11 @@ def _held_side(rows: list) -> dict:
         ids = list(h.get("held_by") or [])
         out_rows.append({"date": h["date"], "symbol": h["symbol"], "setup": h["setup"], "setup_label": label,
                          "held_by": ids, "outcome": h["state"], "outcome_text": h.get("state_text"),
+                         "dup_of": h.get("dup_of"),                                    # 🔁 listed, never hidden
                          "text": (f"{h['date']} · {h['symbol']} · {label} · held by "
                                   f"{', '.join(ids) if ids else '—'} · the original: {h.get('state_text') or '—'}")})
-    return {"n": c["n"], "win": c["win"], "loss": c["loss"], "open_flat": c["open_flat"], "unfilled": c["unfilled"],
-            NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"], "text": " · ".join(bits), "rows": out_rows}
+    return {"n": c["n"], "n_dup": c["n_dup"], "win": c["win"], "loss": c["loss"], "open_flat": c["open_flat"],
+            "unfilled": c["unfilled"], NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"], "text": " · ".join(bits), "rows": out_rows}
 
 
 # ── 🧪 per rule (SPEC gg-audited-mods §3.4) ──────────────────────────────────────────────────────────────────────
@@ -434,10 +470,13 @@ def _attribute(sides: dict) -> tuple:
                 rec = ("c", c)
         else:
             rec = ("m", m) if m is not None else (("c", c) if c is not None else None)
+        if rec is not None:
+            taken.add((rec[0], o["id"]))      # 🔁 a duplicate original still takes its record (never a false no_original)
+        if o.get("dup_of"):
+            continue                          # 🔁 2026-11-02: a duplicate original is neither with- nor held- scored
         if rec is None:
             pairs.append((o, None))
             continue
-        taken.add((rec[0], o["id"]))
         pairs.append((o, _rec_verdicts(*rec)))
     loose = [_rec_verdicts("m", m) for i, m in markers.items() if ("m", i) not in taken]
     loose += [_rec_verdicts("c", c) for i, c in claims.items() if ("c", i) not in taken]
@@ -469,7 +508,8 @@ def _pr_side(label: str, rows: list, *, no_original: int = 0, r_of=None, extra: 
     text = _side_text(label, c)
     if extra:
         text += " · " + extra
-    return {"label": label, "n": c["n"], "win": c["win"], "loss": c["loss"], "unfilled": c["unfilled"],
+    return {"label": label, "n": c["n"], "n_dup": c["n_dup"], "win": c["win"], "loss": c["loss"],
+            "unfilled": c["unfilled"],
             "open_flat": c["open_flat"], "pending": c["pending"], NO_ORIGINAL: c[NO_ORIGINAL], "mean_r": c["mean_r"],
             "text": text}
 
@@ -536,7 +576,8 @@ def _exit_rows(rule, audited: list, exits_by_id: dict) -> list:
             doc = exits_by_id.get(r["id"]) or {}
             g = doc.get(col) if isinstance(doc.get(col), dict) else None
             graded.append({"state": LG._state_of(g) if g is not None else "pending",
-                           "r": g.get("r") if g is not None else None})
+                           "r": g.get("r") if g is not None else None,
+                           "dup_of": r.get("dup_of")})          # 🔁 2026-11-02: _tally drops a duplicate
         name = getattr(rule, "name", None) or rid
         label = (f"{rid} {name} +{k:g}R · {' · '.join(GT._setup_label(s) for s in AUD.T3_SETUPS)}" if is_t3
                  else f"{rid} {name}")

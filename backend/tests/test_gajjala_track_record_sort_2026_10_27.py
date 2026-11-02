@@ -56,6 +56,9 @@ def test_every_served_row_flags_win_and_loss_rows_only():
     for span in ("today", "5d", "yesterday"):
         for r in _rows_of(_tr(span)):
             seen.add(r["bucket"])
+            if r.get("dup_of"):                                  # 2026-11-02 🔁: a duplicate keeps its bucket, never a flag
+                assert r["flag_text"] is None and r["dup_text"], r["key"]
+                continue
             if r["bucket"] in LG.FLAG_BUCKETS:
                 assert r["flag_text"] == LG.BUCKET_TEXT[r["bucket"]], r["key"]
                 assert r["flag_text"] in ("✅ winner", "❌ loser")

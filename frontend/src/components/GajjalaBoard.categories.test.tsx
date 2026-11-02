@@ -110,9 +110,11 @@ function numbersServed(el: HTMLElement, served: string[]) {
 }
 
 const rowsOf = (tr: any) => (tr.days || []).flatMap((d: any) => d.rows || []);
-/** The served list filtered by bucket, days left empty dropped (what the board must show). */
+/** The served list filtered by bucket, days left empty dropped (what the board must show).
+ *  2026-11-02: a served 🔁 duplicate row (`dup_of`) is never under a bucket chip (ggCatDays,
+ *  spec §3.4) — the regenerated 🏁 golden carries one (XLAB 🌀), so it is excluded here too. */
 const listOf = (tr: any, key: string) => (tr.days || [])
-  .map((d: any) => ({ d, rows: (d.rows || []).filter((r: any) => r.bucket === key) }))
+  .map((d: any) => ({ d, rows: (d.rows || []).filter((r: any) => r.bucket === key && !r.dup_of) }))
   .filter((x: any) => x.rows.length);
 const timelineOf = (tr: any) => (tr.days || [])
   .map((d: any) => ({ d, rows: (d.rows || []).filter((r: any) => tr.views.kinds.includes(r.kind)) }))
@@ -395,7 +397,11 @@ describe('GajjalaBoard — ✅ / ❌ categories (NEGATIVES on clones of the gold
     expect(f.flatMap((d: any) => d.rows).every((r: any) => r.bucket === key)).toBe(true);
     expect(f.every((d: any) => d.rows.length > 0)).toBe(true);
     expect(f.flatMap((d: any) => d.rows.map((r: any) => r.key)))
-      .toEqual(rowsOf(tr).filter((r: any) => r.bucket === key).map((r: any) => r.key));
+      .toEqual(rowsOf(tr).filter((r: any) => r.bucket === key && !r.dup_of).map((r: any) => r.key));   // 2026-11-02: a 🔁 dup row never under a chip
+    // NEGATIVE (2026-11-02): the golden's served 🔁 duplicate row never appears under its own bucket chip
+    const dup = rowsOf(tr).find((r: any) => r.dup_of);
+    expect(dup).toBeTruthy();
+    expect(ggCatDays(days, dup.bucket, cats).flatMap((d: any) => d.rows.map((r: any) => r.key))).not.toContain(dup.key);
     // a served key with no row on the span filters to nothing (the board then prints the served empty note)
     const none = cats.slice(1).map((c: any) => c.key).find((k: string) => !rowsOf(tr).some((r: any) => r.bucket === k));
     if (none) { expect(ggCatOn(none, cats)).toBe(true); expect(ggCatDays(days, none, cats)).toEqual([]); }

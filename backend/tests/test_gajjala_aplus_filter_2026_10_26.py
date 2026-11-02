@@ -36,9 +36,22 @@ INT = re.compile(r"\d+")
 # 11 — frozen from 4d4058c9 before BUILD_SPEC25 (step 0: the untouched code, hermetic cheetah-api:latest container)
 PRE_KEYS = ("counts", "counts_text", "shadow_text", "entries_text", "replayed_text", "days", "categories",
             "categories_timeline", "more_text")
+# RE-PINNED 2026-11-02 (🔁 one count per stock per day, Ajay 2026-11-02; SPEC luk-track §4 WP-A test 3 [C1]) — ONLY
+# `today` and `5d`: golden_store() is the REAL 10-16 tape, where XLAB 🌀 intraday_vcp 09:01 is a duplicate of ➖
+# horizontal_fade 08:51 (clause a — both fill the 09:45 ET minute). Every PRE_KEYS path that moved, before → after:
+#   today: counts.live.same.win 2 → 1 · counts.live.next.pending 3 → 2 · counts_text.same "2 wins …" → "1 win … · 1
+#          duplicate of the same stock not counted · today not final" · counts_text.next "3 not graded yet" → "2 not
+#          graded yet · 1 duplicate of the same stock not counted" · categories[win].n 3 → 2, .text "✅ winners 3" →
+#          "✅ winners 2" · days[0].rows[6] (XLAB 🌀) dup_of → "2026-10-16|XLAB|horizontal_fade|potential", dup_text →
+#          "🔁 same trade as the 08:51 ➖ Horizontal Fade ring — not counted"
+#   5d:    counts.live.same.win 3 → 2 · counts.live.next.pending 5 → 4 · counts_text.same / .next the same tails ·
+#          categories[win].n 4 → 3, .text "✅ winners 4 +1 ⏪" → "✅ winners 3 +1 ⏪" · days[0].rows[6] the same keys
+#   before: today 6880c02375217be276ae5e17ee1da1890f979ec42165d69f2f31649d46bd701f
+#           5d    1bdd7cd0ff696eeaae94c1cb064df869e0c09145f2dec0dda5c257996910e2f5
+# `cat_store` and `yesterday` hold NO same-(date, symbol, line) pair and stay BYTE-EXACT — the rule is inert there.
 PRE_SHA = {"cat_store": "13dd7c4bc1d834b61ffccf6c11b217833d17df10e5938b7f074b155a497345d7",
-           "today": "6880c02375217be276ae5e17ee1da1890f979ec42165d69f2f31649d46bd701f",
-           "5d": "1bdd7cd0ff696eeaae94c1cb064df869e0c09145f2dec0dda5c257996910e2f5",
+           "today": "4f2bf4929d1d0a98b13b53934795774190031d7d027c5b8dd2c6ed58dfd11123",
+           "5d": "393ac4583a50fd5022b8e1069acfe929c2444fad6f347f4a1928b8a433a08724",
            "yesterday": "3cbf5949f79765dc58a452fb2139efda93f8b94223963d69fb700f2903d1ce48"}
 
 
@@ -97,8 +110,10 @@ def _drop_null_trader_text(o):
         # 2026-10-27 (✅ wins first + row flags, HIS CALL Q11 answered): every row now serves `flag_text` (the ✅ winner /
         # ❌ loser words on win / loss rows, None elsewhere) — a served row word the FE draws, outside the 🧠 headline this
         # NEGATIVE pins; dropped from the hash the way a null trader_text is. Any other change still moves the sha.
+        # WIDENED 2026-11-02 (🔁 one count per stock per day, SPEC luk-track §3.1.3): every row now serves `dup_of` /
+        # `dup_text` — dropped ONLY where None (a set value — a real duplicate — still moves the sha)
         return {k: _drop_null_trader_text(v) for k, v in o.items()
-                if not ((k == "trader_text" and v is None) or k == "flag_text")}
+                if not ((k in ("trader_text", "dup_of", "dup_text") and v is None) or k == "flag_text")}
     if isinstance(o, list):
         return [_drop_null_trader_text(v) for v in o]
     return o
@@ -281,6 +296,26 @@ def test_NEGATIVE_the_headline_is_byte_equal_to_the_pre_build_spec25_payload():
     assert got == PRE_SHA
 
 
+def test_the_xlab_10_16_pair_counts_once_on_the_golden_store():
+    """2026-11-02 (🔁 Ajay: "make sure you are not accounting for duplicates of the same stock as winner unless it did
+    the same pattern again and met all the criteria on the same day") — the REAL 10-16 tape: ➖ 08:51 and 🌀 09:01 both
+    fill 09:45 ET → ONE counted win; the 🌀 row stays listed, chipped, unflagged."""
+    LG._TODAY_MEMO.clear()
+    LG._TODAY_SPLIT.clear()
+    tr = board(golden_store(), "today")["track_record"]
+    rows = {r["id"]: r for d in tr["days"] for r in d["rows"]}
+    hf, vcp = rows["2026-10-16|XLAB|horizontal_fade|potential"], rows["2026-10-16|XLAB|intraday_vcp|potential"]
+    assert tr["counts"]["live"]["same"]["win"] == 2 - 1 and tr["dup_counts"]["live"] == 1
+    assert tr["dup_counts"] == {"live": 1, "shadow": 0, "entry": 0, "replayed": 0}
+    assert vcp["dup_of"] == hf["id"] and vcp["flag_text"] is None and vcp["bucket"] == "win"
+    assert vcp["dup_text"] == "🔁 same trade as the 08:51 ➖ Horizontal Fade ring — not counted"
+    assert hf["dup_of"] is None and hf["dup_text"] is None and hf["flag_text"] == "✅ winner"   # NEGATIVE: the first counts
+    # NEGATIVE: the 🎯 A+ entry on the same stock-day is its own ledger — never a duplicate of a 🧠 row
+    ap = rows["2026-10-16|XLAB|intraday_vcp|aplus"]
+    assert ap["dup_of"] is None and tr["counts"]["entry"]["same"]["win"] == 1
+    assert tr["counts_text"]["same"].endswith("1 duplicate of the same stock not counted · today not final")
+
+
 def test_NEGATIVE_the_default_lead_counts_text_is_the_headline_line():
     c = dict(LG._counts_blank("same"), win=2, loss=1, no_entry=3, open=1, pending=2)
     assert LG._counts_text(c, "same", False) == ("Same session: 2 wins · 1 loss · 67% won · 3 no entry · 1 open · "
@@ -389,7 +424,8 @@ def test_the_frozen_aplus_words():
         "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the "
         "🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded "
         "by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no "
-        "edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.")
+        "edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that."
+        + " " + LG.DUP_RULE_TEXT)                                   # WIDENED 2026-11-02 (🔁 one count per stock per day)
     assert LG.APLUS_CHART_KEYS == ("outcomes", "by_setup", "by_day")
     assert LG.APLUS_CHART_TITLES == {"outcomes": "🎯 A+ wins vs losses", "by_setup": "By setup",
                                      "by_day": "By alert day"}

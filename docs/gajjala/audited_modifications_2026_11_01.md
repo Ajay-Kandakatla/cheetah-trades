@@ -180,6 +180,15 @@ settled (`AL._settle(..., {"audit": …})`), and never overwritten by a later pa
   `not_judged` for every rule.
 - **`no_original`**: a 🧪 record (claim or marker) whose bar matches NO original of the same id. Counted once on the
   row; the recon already lists the "different bar" case.
+- **🔁 One count per stock per day (2026-11-02).** Each side (🚩 original, 🧪 audited) dedupes over its OWN rows
+  with the ledger's engine (`ledger.dedupe_trades`, partition date / symbol / count line). A duplicate original is
+  neither with- nor held-scored on any rule row (its record is still marked taken, so it never becomes a false
+  `no_original`). The HELD side dedupes over ITS OWN rows, reading each held row's facts from its ORIGINAL row (a held
+  doc carries no ring time or plan) — never inherited from the original side: a stock-day held once is counted once
+  on the held side whatever the original side decided; a `no_original` held row is never a duplicate. `_tally` is the
+  one filter point (`n` = counted rows, `n_dup` served on every side, held and per-rule side); `recon` stays id-set
+  arithmetic over ALL ids, so the identity reads `o.n + o.n_dup == a.n + a.n_dup + held.n + held.n_dup +
+  original_only − audited_only − both`. `compare_honesty` ends with the rule.
 
 ### Filter rows (G1 G2 G4 T1 T2 A1 H1 T4 A2)
 

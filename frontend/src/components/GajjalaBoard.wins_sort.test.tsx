@@ -237,4 +237,13 @@ describe('lib/gajjala — ggTrSort / ggSortRows / ggTrRowClass (2026-10-27)', ()
     expect(ggTrRowClass({ bucket: '  ' })).toBe('gg-tr-row');
     expect(ggTrRowClass(null)).toBe('gg-tr-row');
   });
+  it('🔁 2026-11-02: a served duplicate (dup_of) sinks last under wins first and adds the -dup hook; NEGATIVE: none without dup_of', () => {
+    const rows: any[] = [{ key: 'd', bucket: 'win', dup_of: 'x|W|bull_flag|potential' }, { key: 'o', bucket: 'out', dup_of: null },
+                         { key: 'w', bucket: 'win' }];
+    expect(ggSortRows(rows, SORTS[0], BUCKET_ORDER).map((r) => r.key)).toEqual(['w', 'o', 'd']);
+    expect(ggSortRows(rows, SORTS[1], BUCKET_ORDER)).toBe(rows);
+    expect(ggTrRowClass(rows[0])).toBe('gg-tr-row gg-tr-row-win gg-tr-row-dup');
+    expect(ggTrRowClass(rows[1])).toBe('gg-tr-row gg-tr-row-out');
+    expect(ggTrRowClass(rows[2])).toBe('gg-tr-row gg-tr-row-win');
+  });
 });

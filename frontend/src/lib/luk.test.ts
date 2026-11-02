@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  LUK_BASE, LUK_REFRESH_FALLBACK_MS, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB, LUK_TAPE_PATH,
+  LUK_BASE, LUK_CAT_PARAM, LUK_REFRESH_FALLBACK_MS, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB, LUK_TAPE_PATH,
   lukChartTile, lukHref, lukLegendRows, lukMark, lukQuery, lukRefreshMs, lukScreenCols, lukSpan, lukText, parseLukSub,
   type LukScreen, type LukTile,
 } from './luk';
+import { GG_CAT_PARAM, GG_SORT_PARAM } from './gajjala';
 
 /* 🥇 Luk's FE plumbing (2026-11-01, luk spec §3.13). Ajay: "look at other winners of US stocks champion ship and pic the
  * next best one like Gajjala. Implement their strategy please if they have online resources." The parsers, the hrefs,
@@ -59,6 +60,29 @@ describe('lukHref / lukQuery', () => {
   it('NEGATIVE: blanks are dropped and nothing else rides', () => {
     const q = lukQuery({ sub: ' ', span: '', focus: null, ...({ universe: 'full', tf: '5m' } as any) });
     expect(q).toBe('');
+  });
+});
+
+/* 🏁 2026-11-02 (Ajay: "Can you make Luk's track record similar to Gajjal's") — the 🏁 ✅ / ❌ category chip and the ✅
+ * wins-first chip ride the URL as 🚩's do (backend ledger.CATEGORY_PARAM / SORT_PARAM), FE-only. */
+describe('luk — the 🏁 chip params (2026-11-02)', () => {
+  it('cat / sort == 🚩\'s param names (== backend ledger.CATEGORY_PARAM / SORT_PARAM)', () => {
+    expect(LUK_CAT_PARAM).toBe('cat');
+    expect(LUK_SORT_PARAM).toBe('sort');
+    expect(LUK_CAT_PARAM).toBe(GG_CAT_PARAM);
+    expect(LUK_SORT_PARAM).toBe(GG_SORT_PARAM);
+  });
+  it('NEGATIVE: never on the GET — lukQuery drops cat / sort', () => {
+    const q = lukQuery({ sub: 'track_record', span: '5d', ...({ cat: 'win', sort: 'rang' } as any) });
+    expect(q).toBe('sub=track_record&span=5d');
+    const p = new URLSearchParams(q);
+    expect(p.has(LUK_CAT_PARAM)).toBe(false);
+    expect(p.has(LUK_SORT_PARAM)).toBe(false);
+  });
+  it('NEGATIVE: a sub click (lukHref) carries no cat / sort', () => {
+    const p = new URLSearchParams(lukHref('track_record').split('?')[1]);
+    expect(p.has(LUK_CAT_PARAM)).toBe(false);
+    expect(p.has(LUK_SORT_PARAM)).toBe(false);
   });
 });
 

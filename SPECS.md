@@ -940,6 +940,16 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   (2026-10-27)"; ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`. Doc: `docs/gajjala/track_record_2026_10_16.md`
   § "✅ wins first + row flags (2026-10-27)". UNMEASURED.
   "🎯 A+ filter + the win/loss charts (2026-10-26)".
+- **🔁 One count per stock per day (2026-11-02)** — Ajay, verbatim: "make sure you are not accounting for duplicates of
+  the same stock as winner unless it did the same pattern again and met all the criteria on the same day". ONE pure
+  engine `ledger.dedupe_trades` over `ledger.trade_facts`, partition `dup_group` = (date, symbol, count line); the first
+  ring counts; a later ring is a duplicate on (a) the same fill minute, (b) the same trigger and stop, (c) a trade held
+  while the first was running (a filled later ring judged by its fill — its own when over before the first filled; an
+  unfilled one by its ring). Duplicates stay listed (`dup_of`, `dup_text` 🔁 chip), lose the ✅/❌ flag, leave every
+  count, %, chart and bucket chip (📋 all counts every row); `dup_counts`, `aplus.n_dup`, a count-line tail, his rule in
+  `HONESTY` / `rule_text` / `APLUS_HONESTY`. No grade, gate or claim moves. Tests:
+  `tests/test_gajjala_ledger_dedupe_2026_11_02.py`. Doc: `docs/gajjala/track_record_2026_10_16.md` § "🔁 One count per
+  stock per day (2026-11-02)". UNMEASURED.
 - **📈 Tape column on the 🏁 list (2026-10-29)** — Ajay, verbatim: "I wanna see this kind of graph in our Track record
   page this screenshot is from Promo circuit page." `tape.py` `parse_id` also reads a 🧠 id (`…|potential`, kind
   `LG.KINDS[0]`; `kind_of` names it); the 🧠 tape is the A+ build over the ledger's own 🧠 row and its stored grades —
@@ -1067,6 +1077,10 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
 - Doc: `docs/gajjala/audited_variant_2026_11_01.md` (the registry with sources, the process, costs, recon semantics, the
   15 HIS CALLs, verification). Contract: "🧪 Gajjala · Audited tab (2026-11-01)". ✨ `chart-maps-gajjala-audited-2026-11-01`.
 - **2026-11-01 modifications** (*"Yes make the changes in audited please"* / *"But keep a track record too to see the winners and loster"*): eight entries ON on 🧪 only (filters T1 T2 A1 H1 T4 A2, exit grades T3 T5; prereg `PREREG2_SHA256`, `AUDIT_VERSION` 2), judged only on the bars 🚩 would ring (`alerts.refusal`), a per-rule winners/losers table on the 🧪 🏁 (`per_rule`, replaces `by_rule`), exit grades one night later from warm cache only (`gajjala_audited_exits`, 0 provider calls); UNMEASURED, shadow; doc `docs/gajjala/audited_modifications_2026_11_01.md` (HIS CALLs #16–#25).
+- **🔁 One count per stock per day (2026-11-02)** on the 🧪 🏁: each side dedupes over its own rows with the ledger's
+  engine; the held side over its own rows from the ORIGINALS' facts (never inherited); a duplicate original is never
+  rule-scored; `_tally` drops duplicates (`n_dup` served); identity `o.n + o.n_dup == a.n + a.n_dup + held.n + held.n_dup
+  + original_only − audited_only − both`. Doc `docs/gajjala/audited_modifications_2026_11_01.md` § Attribution.
 
 ### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
 Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
@@ -1114,6 +1128,10 @@ every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`
   1-minute bar ≥ 30 s after the alert at or above the trigger, from 09:30, same session; exit = the stop (−1.0R) or the
   first daily close below the daily 9 EMA; 3R / 5R flags only; no max hold. Closed days only via `daily.closed_through`
   (trusted row or one counted fetch; else deferred and retried). Operational accounting, not a backtest.
+  **2026-11-02**: one count per stock per day (Ajay: "make sure you are not accounting for duplicates of the same stock
+  as winner unless it did the same pattern again and met all the criteria on the same day") — the 🥇 ledger's adapter
+  feeds `gajjala.ledger.dedupe_trades` (partition date / symbol / line); a duplicate is listed and chipped 🔁, never
+  counted; the 🏁 serves 🚩's shape (heads, views, categories, sorts, charts) through the shared components.
 - **Board keys** (`tab.build`): `tab, label, title, honesty, variant, session, pass, strip (folded: market_state,
   push/record/external/cost/latency), subs (eight: ↩️ 🔔 📦 ☀️ 🏆 ⚡ 📓 🏁), sub, counts, counts_text, counts_legend,
   tiles, screens, playbook, track_record`. The 📓 Playbook serves every rule with its cite, the SYNTHESIS §D HIS CALLs
@@ -1121,8 +1139,8 @@ every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`
 - **Routes**: `GET /chart-maps/luk?sub=&span=&focus=&limit=`, `GET /chart-maps/luk/entry-tape?id=&lite=`. No POST.
 - **ℹ️ panel**: section "🥇 Luk's" = `luk.playbook.rules_lines()`, before "doji_sweep"; fenced; no numeric literal in
   `rules_info.py`.
-- **FE**: `LukBoard` (+ `LukCard` drawing `PatternChart`, `LukScreens`, `LukPlaybook`, `LukTrackRecord`,
-  `LukEntryTape` → `GgEntryTape({data})`, `LukStrip`, `styles/luk.css`); `lib/luk.ts` `LUK_BASE` ==
+- **FE**: `LukBoard` (+ `LukCard` drawing `PatternChart`, `LukScreens`, `LukPlaybook`, `LukTrackRecord` (🚩's shared 🏁 row; 📈 opens
+  `GgEntryTape` on the Luk route via `GgVariantContext` 'luk' — `LukEntryTape` deleted 2026-11-02), `LukStrip`, `styles/luk.css`); `lib/luk.ts` `LUK_BASE` ==
   `variant.LUK.api_base`; the FE composes no word and no number.
 - Doc `docs/luk/luk_tab_2026_11_01.md` (every rule with its cite, screens and formulas, states, stop plan, 🏁 math, the
   15 SYNTHESIS HIS CALLs + 30 build HIS CALLs, cost arithmetic with the measured `calls`, external backtests, traps).

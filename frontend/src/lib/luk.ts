@@ -16,6 +16,7 @@
 import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
+import type { GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
 
 /** The tab id (== backend chart_maps/luk/constants.LUK_TAB). */
 export const LUK_TAB = 'luk';
@@ -24,6 +25,12 @@ export const LUK_BASE = '/chart-maps/luk';
 /** The params 🥇 Luk's reads with its OWN meanings — dropped crossing into or out of the tab (chartMaps.tabSearch). */
 export const LUK_SUB_PARAM = 'sub';
 export const LUK_SPAN_PARAM = 'span';
+/** 🏁 2026-11-02 (Ajay: "Can you make Luk's track record similar to Gajjal's") — the ✅ / ❌ category chip and the ✅ wins
+ *  first chip (== backend gajjala/ledger.CATEGORY_PARAM / SORT_PARAM, served on the 🥇 block as `category_param` /
+ *  `sort_param`). FE-only: never on the GET (lukQuery carries sub / span / focus only); the served first chip / the
+ *  served `sort_default` ride no param. Dropped crossing into or out of the tab (LUK_OWN_PARAMS). */
+export const LUK_CAT_PARAM = 'cat';
+export const LUK_SORT_PARAM = 'sort';
 /** The house focus param (lib/growthArrivals FOCUS_PARAM) — a deep link to one name; the server picks its sub. */
 export const LUK_FOCUS_PARAM = 'focus';
 /** The 🏁 entry-tape route — the SAME payload shape as 🚩's (gajjala.tape.PAYLOAD_KEYS), drawn by GgEntryTape. */
@@ -86,18 +93,33 @@ export type LukScreen = {
 export type LukPlaybookItem = { text: string; cite_text?: string | null; url?: string | null; kind?: string | null };
 export type LukPlaybookSection = { key: string; title: string; items: LukPlaybookItem[] };
 export type LukPlaybook = { title: string; sections: LukPlaybookSection[] };
-export type LukTrRow = {
-  id: string; date?: string | null; symbol: string; setup?: string | null; setup_label?: string | null;
-  at_et?: string | null; href?: string | null; url?: string | null;
-  rang_text?: string | null; plan_text?: string | null; fill_text?: string | null; exit_text?: string | null;
-  flags_text?: string | null;
+/** 🏁 one served row (2026-11-02: the 🚩 row shape — GgTrRow — so the SHARED 🏁 table draws it): every 🚩 key the
+ *  table reads (key, setup_label, kind_text, at_text, rang_text, plan_text, bucket, flag_text, dup_of / dup_text …)
+ *  plus Luk's own served cells under its served heads (`fill`, `exit` — drawn by the shared generic cell) and the
+ *  served Luk texts. Luk serves no `same` / `next` horizon cell (its one horizon is its own exit). */
+export type LukTrRow = GgTrRow & {
+  fill?: GgTrCell | null; exit?: GgTrCell | null; state?: string | null;
+  r?: number | null; r_now?: number | null; best_r?: number | null; sessions?: number | null;
+  reached_3r?: boolean | null; reached_5r?: boolean | null;
+  url?: string | null; fill_text?: string | null; exit_text?: string | null; flags_text?: string | null;
+  tape_id?: string | null;
 };
 export type LukTrDay = { date: string; label?: string | null; rows: LukTrRow[] };
 export type LukSpan = string | { key: string; label: string };
+/** 🏁 the served block (backend luk/ledger.served_block). Since 2026-11-02 it serves 🚩's keys too — heads, views (the
+ *  Tape head / toggle; no 🕰️ item), categories, sorts, bucket_order, the GajjalaAplusCharts-shaped `charts` block, the
+ *  cap's `more_text` and `counts.dup` (one count per stock per day). An older block without them still renders. */
 export type LukTrackRecord = {
   title: string; rule_text?: string | null; honesty?: string | null; counts_text?: string | null;
-  counts?: Record<string, number | null> | null;
+  counts?: ({ dup?: number | null; n?: number | null } & Record<string, number | null>) | null;
   spans?: LukSpan[] | null; span?: string | null; days?: LukTrDay[] | null; empty_text?: string | null;
+  n_rows?: number | null; fault?: boolean | null; fault_text?: string | null; record_from?: string | null;
+  heads?: { key: string; label: string }[] | null;
+  views?: GgTrViews | null;
+  categories?: GgTrCategory[] | null; category_param?: string | null; category_empty_text?: string | null;
+  sorts?: GgTrSort[] | null; sort_param?: string | null; sort_default?: string | null; bucket_order?: string[] | null;
+  charts?: GgTrAplus | null;
+  more_text?: string | null;
 };
 export type LukPass = {
   as_of_et?: string | null; bars_through_et?: string | null; stale?: boolean | null; stale_text?: string | null;

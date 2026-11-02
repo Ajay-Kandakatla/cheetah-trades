@@ -60,8 +60,24 @@ describe('🥇 Luk\'s — TAB_META', () => {
 });
 
 describe('🥇 Luk\'s — the border rule (tabSearch over LUK_OWN_PARAMS)', () => {
-  it('LUK_OWN_PARAMS = sub, span', () => {
-    expect(LUK_OWN_PARAMS).toEqual(['sub', 'span']);
+  it('LUK_OWN_PARAMS = sub, span, cat, sort (2026-11-02: + the 🏁 category / wins-first chips)', () => {
+    expect(LUK_OWN_PARAMS).toEqual(['sub', 'span', 'cat', 'sort']);
+  });
+  it('NEGATIVE (2026-11-02): luk → zones drops the 🏁 cat / sort; other params ride', () => {
+    const next = sw('tab=luk&sub=track_record&span=5d&cat=win&sort=rang&universe=full', 'zones');
+    for (const k of ['sub', 'span', 'cat', 'sort']) expect(next.has(k)).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+  it('NEGATIVE (2026-11-02): another tab → luk drops a stray cat / sort', () => {
+    const next = sw('tab=zones&cat=win&sort=change', 'luk');
+    expect(next.get('tab')).toBe('luk');
+    expect(next.has('cat')).toBe(false);
+    expect(next.has('sort')).toBe(false);
+  });
+  it('a click on luk itself keeps cat / sort (2026-11-02)', () => {
+    const next = sw('tab=luk&sub=track_record&cat=loss&sort=rang', 'luk');
+    expect(next.get('cat')).toBe('loss');
+    expect(next.get('sort')).toBe('rang');
   });
   it('NEGATIVE: luk → zones drops sub / span; other params ride', () => {
     const next = sw('tab=luk&sub=premarket&span=5d&universe=full', 'zones');

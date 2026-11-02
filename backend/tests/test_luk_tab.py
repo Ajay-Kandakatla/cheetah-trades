@@ -296,6 +296,14 @@ def test_every_number_in_the_text_is_a_constant_value():
     data = {str(v) for v in c.values() if isinstance(v, int)} | {str(v) for v in tr["counts"].values()
                                                                     if isinstance(v, int)}
     data |= {"10:11", "10:10", "4", "6", "1200", "37", "1", "3", "12", "2"}            # the fixture pass doc's values
+    # WIDENED 2026-11-02 (🏁 like 🚩's): the served charts block's counts and every chart cell's numbers are counts too
+    ch = tr.get("charts") or {}
+    data |= {str(v) for c in (ch.get("counts") or {}).values() for v in c.values() if isinstance(v, int)}
+    for chart in ch.get("charts") or []:
+        for cell in (chart.get("bars") or []) + [g.get("exit") for g in (chart.get("rows") or [])
+                                                 + (chart.get("cols") or [])]:
+            data |= {str(cell[k]) for k in ("pct", "decided", "total", "loss_pct")
+                     if isinstance((cell or {}).get(k), int)}
     allowed = _allowed_numbers() | data
     for text in (out["counts_text"], tr["rule_text"], tr["counts_text"], out["pass"]["text"],
                  out["pass"]["latency_text"], out["strip"]["cost_text"], out["strip"]["record_text"]):
@@ -387,7 +395,10 @@ def test_subs_are_the_eight_in_order_and_n_equals_the_rows():
     pb = _build(T.PLAYBOOK_SUB)["playbook"]
     assert n[T.PLAYBOOK_SUB] == sum(len(s["items"]) for s in pb["sections"]) == len(PB.all_items()) > 0
     tr = _build(T.TRACK_SUB)["track_record"]
-    assert n[T.TRACK_SUB] == tr["n_rows"] == sum(len(d["rows"]) for d in tr["days"]) == 1
+    # RESTATED 2026-11-02 (🏁 like 🚩's, spec §3.3.6): n_rows = the rows ON THE SPAN (== counts.n; == the rows listed
+    # under the LUK_LEDGER_ROWS_MAX cap — this fixture is under it)
+    assert n[T.TRACK_SUB] == tr["n_rows"] == tr["counts"]["n"] == sum(len(d["rows"]) for d in tr["days"]) == 1
+    assert tr["more_text"] is None
     assert n == {"pullback_reversal": 3, "opening_range_high": 3, "inside_day_pdh": 1, "premarket": 2, "leader": 1,
                  "potent": 3, "playbook": n[T.PLAYBOOK_SUB], "track_record": 1}
 

@@ -99,6 +99,14 @@ VARIANTS = (GG5, GG1, GGA)
 # (2026-10-27 … 2026-10-28) stays named, so no row of it ever reads as sent.
 LIVE_SINCE_1M = "2026-10-29"             # the day his words above flipped GAJJALA_1M_PUSH_MODE to "live"
 _HIS_WORDS_1M = "Only give me Gajjalas chart notifications from both tabs"
+# 🔁 2026-11-02 (Ajay: one count per stock per day) — typed HERE because variant.py cannot import ledger at module level;
+# MUST equal ledger.DUP_RULE_TEXT byte for byte (tests/test_gajjala_ledger_dedupe_2026_11_02.py pins it). No brace, no
+# digit: the words are .format()ed.
+DUP_RULE_TEXT = ("One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same "
+                 "stock as winner unless it did the same pattern again and met all the criteria on the same day\". A "
+                 "name that rang again the same day is listed and chipped, never counted twice, unless the later ring "
+                 "set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held "
+                 "while the first was still running. A duplicate stays out of every count, % and chart.")
 WORDS_1M: Mapping = MappingProxyType({
     "title": "🚩 Gajjala's — the same rules on {p}-minute candles · Cheetah variant · UNMEASURED",
     "honesty": ("GG trades these setups on {s}-minute bars; this page runs the same bar-count rules on {p}-minute bars "
@@ -119,7 +127,7 @@ WORDS_1M: Mapping = MappingProxyType({
                        "which. The 🧠 potentials — shadow and sent — make the headline %; A+ rows keep their own lines, "
                        "as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n "
                        "early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); "
-                       "nothing has measured this page."),
+                       "nothing has measured this page. " + DUP_RULE_TEXT),                      # 🔁 2026-11-02
     # a 🧠 row's kind word is read off ITS OWN push state (ledger._variant_words): shadow / pushed; the neutral word only
     # when a row carries neither — the A+ rows read KIND_TEXT by their line (the claim's own state), the neutral A+ word
     # only when that has no entry
@@ -149,7 +157,7 @@ WORDS_1M_SHADOW: Mapping = MappingProxyType({
                        "recorded in shadow make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. "
                        "Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 "
                        "study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has "
-                       "measured this page."),
+                       "measured this page. " + DUP_RULE_TEXT),                                  # 🔁 2026-11-02
 })
 
 
@@ -172,7 +180,8 @@ WORDS_GGA: Mapping = MappingProxyType({
                      "· UNMEASURED"),
     "ledger_honesty": ("A ledger of this tab's audited A+ as RECORDED — none reached your phone. No 🧠 row here: the "
                        "audit is a filter on the A+ read only. Graded by GG's own trade math — the same math as 🚩 "
-                       "Gajjala's 🏁 — not a backtest, small n. Nothing has measured these rules."),
+                       "Gajjala's 🏁 — not a backtest, small n. Nothing has measured these rules. " + DUP_RULE_TEXT),
+                                                                                                # 🔁 2026-11-02
     "ledger_kind_potential": "🧠 — not recorded on this tab",
     "ledger_kind_potential_shadow": "🧠 — not recorded on this tab",
     "ledger_kind_potential_pushed": "🧠 — not recorded on this tab",
@@ -198,7 +207,8 @@ WORDS_GGA: Mapping = MappingProxyType({
     "compare_title": "🧪 Audited vs 🚩 original — the same sessions, the same trade math · UNMEASURED",
     "compare_honesty": ("Gross, as the 🏁 ledger grades (+{r:g}R target, the stop a touch); mean R over decided rows "
                         "only, W = +{r:g}R, L = −1R. A held A+ shows what it did on the original — the rule's effect, "
-                        "day by day. UNMEASURED until the record holds {floor} entry weeks; {n} so far."),
+                        "day by day. UNMEASURED until the record holds {floor} entry weeks; {n} so far. "
+                        + DUP_RULE_TEXT),                                                       # 🔁 2026-11-02
     "compare_recon": ("{original_only} A+ on the original with no audited or held row (the overlay did not run on "
                       "that pass) · {audited_only} audited with no original row (the original's send failed — the "
                       "same read, kept here) · UNMEASURED"),

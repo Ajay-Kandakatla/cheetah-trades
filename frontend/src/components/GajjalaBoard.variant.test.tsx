@@ -130,15 +130,19 @@ beforeEach(() => { userRet = OWNER; tracked.length = 0; _resetGgLiteCache(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); userRet = null; });
 
 describe('ggVariant — the endpoint base per page (2026-10-27)', () => {
-  it('GG_VARIANT_BASE == backend variant.py api_base for all three pages', () => {
-    expect(GG_VARIANT_BASE).toEqual({ gajjala: '/chart-maps/gajjala', gajjala_1m: '/chart-maps/gajjala-1m', gajjala_audited: '/chart-maps/gajjala-audited' });
+  // WIDENED 2026-11-02: + `luk` (== luk/variant.py LUK.api_base) — the 📈 tape inside 🥇 Luk's 🏁 reads Luk's route.
+  it('GG_VARIANT_BASE == backend variant.py api_base for all three pages + luk/variant.py LUK', () => {
+    expect(GG_VARIANT_BASE).toEqual({ gajjala: '/chart-maps/gajjala', gajjala_1m: '/chart-maps/gajjala-1m', gajjala_audited: '/chart-maps/gajjala-audited', luk: '/chart-maps/luk' });
+    expect(ggBase('luk')).toBe('/chart-maps/luk');
+    expect(ggVariantKey('luk')).toBe('luk');
+    expect(ggTapePath('luk')).toBe('/chart-maps/luk/entry-tape');
     expect(ggBase('gajjala_audited')).toBe('/chart-maps/gajjala-audited');
     expect(ggBase('gajjala_1m')).toBe(P1);
     expect(ggBase('gajjala')).toBe(P5);
   });
 
   it('NEGATIVE: an unknown / missing key is 🚩 Gajjala’s (fail to GG5, as variant.of does)', () => {
-    for (const k of [undefined, null, '', 'gajjala_5m', 'GAJJALA_1M', 'toString', 42]) {
+    for (const k of [undefined, null, '', 'gajjala_5m', 'GAJJALA_1M', 'toString', 42, 'LUK', 'luk ', 'luk_1m']) {
       expect(ggVariantKey(k)).toBe('gajjala');
       expect(ggBase(k)).toBe(P5);
     }

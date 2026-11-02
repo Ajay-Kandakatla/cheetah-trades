@@ -440,7 +440,12 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** 📌 the served trader tag (ledger served row, trader_names.text_for) — null on an untagged or replayed row. */
   trader_text?: string | null;
   /** 🎪 2026-10-29: the served Promo-circuit tag (ledger served row) — absent on an untagged row. */
-  promo?: boolean | null; promo_text?: string | null };
+  promo?: boolean | null; promo_text?: string | null;
+  /** 🔁 One count per stock per day (2026-11-02, Ajay: "make sure you are not accounting for duplicates of the same stock
+   *  as winner unless it did the same pattern again and met all the criteria on the same day"): `dup_of` = the id of the
+   *  counted row this one duplicates (ledger.dedupe_trades), `dup_text` = its served 🔁 chip; null / absent on a counted
+   *  row. A duplicate is listed, never counted; it serves no ✅ / ❌ flag. */
+  dup_of?: string | null; dup_text?: string | null };
 /** ✅ / ❌ one served chip: `text` carries the ROW count (and " +r ⏪" when replayed rows share the bucket — F13);
  *  `n` / `n_replayed` are the served numbers (the FE prints `text` only, never composes a count). */
 export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: number | null };
@@ -470,6 +475,8 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   /** ✅ wins first (2026-10-27): the served sort chips (ledger._sorts), the param name, the served default key and the
    *  served bucket order the FE sorts by (ledger.BUCKETS); absent on an older API → no chips, the served order. */
   sorts?: GgTrSort[] | null; sort_param?: string | null; sort_default?: string | null;
+  /** 🔁 (2026-11-02) the served duplicate counts per count line (ledger.served_block) — absent on an older API. */
+  dup_counts?: Record<string, number> | null;
   bucket_order?: string[] | null };
 /** ✅ one served sort chip: `bucket_sort` says whether it orders the rows by the served `bucket_order` (a boolean —
  *  the FE types no sort key); false / absent = the served order. */
@@ -481,16 +488,20 @@ export type GgTrApItem = { key: string; label: string; n: number; text: string }
 /** 🎯 one served chart cell (ledger._aplus_cell): every number and sentence served; the FE draws geometry only. */
 export type GgTrApCell = { total: number; decided: number; pct: number | null; loss_pct: number | null; pct_text: string;
   text: string; short_text: string; items: GgTrApItem[] };
-/** 🎯 one served by-setup row / by-day column — a cell per horizon. */
-export type GgTrApGroup = { key: string; label: string; same: GgTrApCell; next: GgTrApCell };
+/** 🎯 one served by-setup row / by-day column — a cell per horizon. 🥇 (2026-11-02): Luk's block serves its one
+ *  horizon under its own key (`exit`), so the cell keys are the SERVED horizon keys (GajjalaAplusCharts reads by key). */
+export type GgTrApGroup = { key: string; label: string; same?: GgTrApCell; next?: GgTrApCell; [h: string]: unknown };
 export type GgTrApChart =
   | { key: 'outcomes'; title: string; bars: (GgTrApCell & { key: string; label: string })[] }
   | { key: 'by_setup'; title: string; rows: GgTrApGroup[] }
   | { key: 'by_day'; title: string; cols: GgTrApGroup[] };
 /** 🎯 ledger.aplus_block — always served beside the 🏁 list; `days` = its OWN capped A+ rows (the built row dicts). */
 export type GgTrAplus = { title: string; total: number; n_sent: number; n_shadow: number;
-  counts: { same: Record<string, number | null>; next: Record<string, number | null> };
-  counts_text: { same: string; next: string } | null; split_text?: string | null; replayed_note?: string | null;
+  /** 🔁 (2026-11-02) the duplicates left out of the block's counts; 🥇 / 🚩 counts + lines are keyed by the SERVED
+   *  horizon keys (🚩 same / next, 🥇 exit) — the FE prints a line per served horizon key only. */
+  n_dup?: number | null;
+  counts: Record<string, Record<string, number | null>>;
+  counts_text: Record<string, string | null> | null; split_text?: string | null; replayed_note?: string | null;
   more_text?: string | null; empty_text?: string | null; honesty: string; horizons: { key: string; label: string }[];
   horizon_default: string; charts: GgTrApChart[]; days: GgTrDay[] };
 /** 🕰️ tape.views_block() — every label SERVED; `kinds` = the row kinds the timeline lists (the FE picks none itself). */
@@ -511,12 +522,13 @@ export function ggCatOn(cat: string | null | undefined, cats: GgTrCategory[] | n
 
 /** ✅ / ❌ the served days filtered client-side by the SERVED row `bucket` (DECISIONS11 D11): only rows with
  *  `bucket === cat`, a day left empty is dropped; filter off (ggCatOn false: null / "all" = the first served key /
- *  unknown / no served chips) → the days unchanged (the same array). */
+ *  unknown / no served chips) → the days unchanged (the same array). 🔁 (2026-11-02): a duplicate row (served
+ *  `dup_of`) is never under a bucket chip — it is not counted there; "📋 all" still lists it. */
 export function ggCatDays(days: GgTrDay[], cat: string | null | undefined,
                           cats?: GgTrCategory[] | null): GgTrDay[] {
   if (!ggCatOn(cat, cats)) return days;
   return (days || [])
-    .map((d) => ({ ...d, rows: (d.rows || []).filter((r) => !!r && r.bucket === cat) }))
+    .map((d) => ({ ...d, rows: (d.rows || []).filter((r) => !!r && r.bucket === cat && !ggTrIsDup(r)) }))
     .filter((d) => d.rows.length > 0);
 }
 
@@ -545,13 +557,20 @@ export function ggTrSort(sort: string | null | undefined,
   return picked || items.find((s) => s.key === tr?.sort_default) || null;
 }
 
+/** 🔁 (2026-11-02) the row is a served duplicate: `dup_of` is a non-empty string. */
+export function ggTrIsDup(r: Pick<GgTrRow, 'dup_of'> | null | undefined): boolean {
+  return !!r && typeof r.dup_of === 'string' && r.dup_of.trim() !== '';
+}
+
 /** The rows of one served day in the order the chip asks: a bucket sort = a STABLE sort by the row's served `bucket`
  *  position in the served `bucket_order` (a missing / unknown bucket sinks last, served order kept inside a bucket);
- *  any other chip, no chip, or no served order → the rows exactly as served (the same array). */
+ *  any other chip, no chip, or no served order → the rows exactly as served (the same array). 🔁 (2026-11-02): a
+ *  duplicate row (served `dup_of`) sinks last under a bucket sort, the served order kept among the duplicates. */
 export function ggSortRows(rows: GgTrRow[], item: GgTrSort | null | undefined,
                            order: readonly string[] | null | undefined): GgTrRow[] {
   if (!item || !item.bucket_sort || !Array.isArray(order) || !order.length) return rows;
   const rank = (r: GgTrRow): number => {
+    if (ggTrIsDup(r)) return order.length;
     const i = typeof r.bucket === 'string' ? order.indexOf(r.bucket) : -1;
     return i < 0 ? order.length : i;
   };
@@ -559,10 +578,12 @@ export function ggSortRows(rows: GgTrRow[], item: GgTrSort | null | undefined,
 }
 
 /** The row's tint hook (2026-10-27): `gg-tr-row` plus `gg-tr-row-<bucket>` when the row serves a bucket string — a CSS
- *  hook only (gajjala.css tints win / loss); no bucket → the bare class. */
-export function ggTrRowClass(r: Pick<GgTrRow, 'bucket'> | null | undefined): string {
+ *  hook only (gajjala.css tints win / loss); no bucket → the bare class. 🔁 (2026-11-02): plus `gg-tr-row-dup` on a
+ *  served duplicate (gajjala.css drops its tint). */
+export function ggTrRowClass(r: Pick<GgTrRow, 'bucket' | 'dup_of'> | null | undefined): string {
   const b = r && typeof r.bucket === 'string' ? r.bucket.trim() : '';
-  return b ? `gg-tr-row gg-tr-row-${b}` : 'gg-tr-row';
+  const base = b ? `gg-tr-row gg-tr-row-${b}` : 'gg-tr-row';
+  return ggTrIsDup(r) ? `${base} gg-tr-row-dup` : base;
 }
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */

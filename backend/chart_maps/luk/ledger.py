@@ -49,6 +49,15 @@ from chart_maps.gajjala import store as GS
 from chart_maps.gajjala import variant as V
 from chart_maps.gajjala.ledger import (ET, LINES, SETTLE, UTC, _D, _aware, _default_load_day, _iso_t, _num, _px,
                                        bars_from_frame, plan_of, rang_of)
+# 🏁 like 🚩's + 🔁 one count per stock per day (Ajay 2026-11-02, spec luk-track §3.3.2): the 🚩 served-block words and
+# helpers and THE one dedupe engine, imported never retyped (GG's RANG_TEXT / NO_TIME_TEXT are aliased: this module's
+# own names keep their meaning — the long rang sentence on the tape read line, the "not graded" fill word)
+from chart_maps.gajjala.ledger import (APLUS_CHART_KEYS, APLUS_CHART_TITLES, BUCKET_TEXT, BUCKETS, CATEGORY_EMPTY_TEXT,
+                                       CATEGORY_PARAM, DUP_RULE_TEXT, DUP_TEXT, FLAG_BUCKETS, KIND_TEXT,
+                                       SORT_KEYS, SORT_PARAM, _aplus_cell, _categories, _counts_blank, _counts_text,
+                                       _dow_md, _plural, _sorts, _win_pct, dedupe_trades, dup_count_text)
+from chart_maps.gajjala.ledger import NO_TIME_TEXT as GG_NO_TIME_TEXT
+from chart_maps.gajjala.ledger import RANG_TEXT as GG_RANG_TEXT
 from daytrading.data import ET_RTH_OPEN
 
 from . import constants as LC
@@ -156,10 +165,6 @@ def _hhmm(iso_t) -> Optional[str]:
 def _md(d) -> str:
     dd = _as_date(d)
     return f"{dd:%m-%d}" if dd else "—"
-
-
-def _plural(n: int, one: str, many: str) -> str:
-    return f"{n} {one if n == 1 else many}"
 
 
 def _flag_key(m) -> str:
@@ -578,6 +583,29 @@ RANG_TEXT = {LINES[0]: RANG_TEXT_LIVE, LINES[1]: RANG_TEXT_SHADOW}        # by t
 RANG_WHEN = {"pre": "pre-market", "rth": "regular session", "ah": "after hours"}
 RANG_NONE_TEXT = {LINES[0]: "rang — no alert time on file", LINES[1]: "recorded — no alert time on file"}
 
+# 🏁 like 🚩's (Ajay 2026-11-02, verbatim: "Can you make Luk's track record similar to Gajjal's and also can you make sure
+# you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the
+# criteria on the same day") — spec luk-track §3.3.3: the 🚩-shaped block's Luk words (MINE unless named). Win / loss on
+# 🥇 = the sign of R at Luk's own exit (HIS CALL #9); a close exactly at the fill = ➖ flat, out of the % (HIS CALL #8).
+LUK_HK = "exit"                                   # MINE — the one horizon key the charts block serves (Luk has no same / next)
+HEADS = (("symbol", "Ticker"), ("setup", "Setup"), ("at", "Alert"), ("kind", "Kind"),
+         ("plan", "Trigger · stop · R"), ("fill", "Fill"), ("exit", "Exit · R · sessions"))
+KIND_TEXT_LIVE = "🥇 A+ — sent to your phone"        # the shadow word = gajjala.ledger.KIND_TEXT[("aplus", "shadow")]
+KIND_TEXT_SHADOW = KIND_TEXT[(KIND, LINES[1])]     # imported, never retyped ("A+ shadow — never sent")
+OUTCOME_LABEL = "Through Luk's exit (the stop or the first daily close below the {ema} EMA)"
+CHARTS_TITLE = "🥇 A+ wins vs losses — every 🥇 A+ on the span, graded by Luk's exit · UNMEASURED"
+CHART_TITLES = dict(APLUS_CHART_TITLES, **{APLUS_CHART_KEYS[0]: "🥇 A+ wins vs losses"})   # 🚩's keys; the 🥇 emoji
+CHARTS_LEAD = "A+ through Luk's exit"
+CHARTS_SPLIT = "{sent} sent to your phone"
+CHARTS_SPLIT_SHADOW = "{n} recorded in shadow (never sent)"          # joined " · " only when n > 0
+CHARTS_EMPTY_TEXT = "No 🥇 A+ on this span."
+CHARTS_HONESTY = ("Every 🥇 A+ on the span — sent or recorded in shadow — in one %, graded by Luk's exit: a win is a "
+                  "closed row above its fill, a loss a closed row below it (every stop is one R down); open rows and a "
+                  "close exactly at the fill stay out of the %. Operational accounting of alerts as recorded, not a "
+                  "backtest; small n. UNMEASURED.") + " " + DUP_RULE_TEXT
+MORE_TEXT = "+{n} more rows — the counts above cover all {total}"
+TAPE_TOGGLE_TITLE = "the full tape — the alert, the fill, the trigger / stop, the exit and the {partials} marks"
+
 
 def _ema_n() -> int:
     return int(LC.LUK_PULLBACK_DAILY_EMA)
@@ -599,7 +627,9 @@ def title_text() -> str:
 
 
 def rule_text() -> str:
-    return RULE_TEXT.format(settle=int(GC.BAR_SETTLE_SEC), ema=_ema_n(), partials=partials_text(), lag=_lag_min())
+    """The ⓘ text + (2026-11-02) the one-count-per-stock-per-day rule (gajjala.ledger.DUP_RULE_TEXT, imported)."""
+    return (RULE_TEXT.format(settle=int(GC.BAR_SETTLE_SEC), ema=_ema_n(), partials=partials_text(), lag=_lag_min())
+            + " " + DUP_RULE_TEXT)
 
 
 def honesty() -> str:
@@ -613,8 +643,9 @@ def empty_text() -> str:
 
 
 def honesty_text(n_weeks: int) -> str:
+    """The mode's honesty + (2026-11-02) DUP_RULE_TEXT, appended AFTER .format (his words carry no brace)."""
     return honesty().format(floor=int(LC.MEASURE_FLOOR_WEEKS), n=int(n_weeks), since=LC.LUK_LIVE_SINCE,
-                            words=LC.LUK_LIVE_WORDS)
+                            words=LC.LUK_LIVE_WORDS) + " " + DUP_RULE_TEXT
 
 
 def flags_text(w: Optional[dict]) -> str:
@@ -688,6 +719,11 @@ def cells(row: dict, doc: Optional[dict]) -> dict:
                                               sessions=_plural(int(w.get("sessions") or 0), "session", "sessions"))
         else:
             exit_text = PENDING_TEXT
+    bucket = bucket_of(st, r)
+    ft = flags_text(w)
+    filled = st in ("stopped", EXITS[1], OPEN)
+    at_et = row.get("at_et")
+    line = row.get("line")
     return {"id": row["id"], "date": row["date"], "symbol": row["symbol"], "setup": row["setup"],
             "href": row.get("url"), "state": st, "r": r,
             "r_now": (_num(w.get("r_now")) if st == OPEN and w else None),
@@ -695,26 +731,102 @@ def cells(row: dict, doc: Optional[dict]) -> dict:
             "sessions": (int(w.get("sessions") or 0) if w else 0),
             **{_flag_key(m): bool(w and w.get(_flag_key(m))) for m in LC.LUK_PARTIAL_R},
             "rang_text": rang_text(row), "plan_text": plan_text(row), "fill_text": fill_text,
-            "exit_text": exit_text, "flags_text": flags_text(w), "tape_id": row["id"]}
+            "exit_text": exit_text, "flags_text": ft, "tape_id": row["id"],
+            # 🏁 like 🚩's (2026-11-02, spec luk-track §3.3.4) — additive: the 🚩 row keys the shared table reads
+            "key": row["id"].replace("|", "-"), "setup_label": setup_label(row["setup"]), "kind": KIND, "line": line,
+            "kind_text": KIND_TEXT_LIVE if line == LINES[0] else KIND_TEXT_SHADOW,
+            "at_et": at_et,
+            "at_text": f"{at_et} ET" if at_et and isinstance(row.get("at_utc"), datetime) else GG_NO_TIME_TEXT,
+            "rang": row.get("rang"), "thin_text": None,
+            "trigger": row.get("trigger"), "stop": row.get("stop"),
+            "fill_px": _num(f.get("fill_px")) if filled else None, "note": None,
+            "fill": {"state": FILLED if filled else st, "text": fill_text, "sub_text": None, "provisional": False},
+            "exit": ({"state": bucket, "text": exit_text, "sub_text": ft or None, "provisional": False} if filled
+                     else None),
+            "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
+            "flag_text": BUCKET_TEXT[bucket] if bucket in FLAG_BUCKETS else None,
+            "loss_text": None, "broker_text": None, "trader_text": None, "dup_of": None, "dup_text": None}
+
+
+def setup_label(setup: str) -> str:
+    """"↩️ Pullback reversal" — the setup's emoji + label from LC.SUBS (never retyped)."""
+    for key, emoji, label in LC.SUBS:
+        if key == setup:
+            return f"{emoji} {label}".strip()
+    return str(setup)
+
+
+def bucket_of(state: str, r) -> str:
+    """The row's ✅ / ❌ bucket (gajjala.ledger.BUCKETS words) by the sign of R at Luk's exit (HIS CALL #9): a closed row
+    (stopped / ema9_close) with r > 0 → win, r < 0 (every stop is −1.0) → loss, r == 0 → flat (HIS CALL #8); an open
+    row → open; anything else (no entry / no plan / no risk / no time / pending) → out."""
+    if state in ("stopped", EXITS[1]) and _num(r) is not None:
+        v = float(r)
+        return BUCKETS[0] if v > 0 else BUCKETS[1] if v < 0 else BUCKETS[3]
+    if state == "stopped":
+        return BUCKETS[1]
+    if state == OPEN:
+        return BUCKETS[2]
+    return BUCKETS[4]
+
+
+def track_row(row: dict, doc: Optional[dict]) -> dict:
+    """The 🏁 table row = cells() with the SHORT E1 rang chip (gajjala.ledger.RANG_TEXT — HIS CALL #13); cells() keeps
+    the long "rang HH:MM ET — sent to your phone" sentence for the tape's read line (luk/tape.py)."""
+    return dict(cells(row, doc), rang_text=GG_RANG_TEXT.get(row.get("rang")))
+
+
+def _trade_facts(row: dict, doc: Optional[dict]) -> Optional[dict]:
+    """🔁 THE adapter (spec luk-track §3.3.5): a Luk row + its luk_ledger doc → the neutral trade facts
+    gajjala.ledger.dedupe_trades reads, or None when the row is never counted (no aware ring time, plan not ok). The
+    clause lives in dedupe_trades only — this never judges. group = (date, symbol, line): live and shadow are two
+    ledgers, as on 🚩 (HIS CALL #18). filled: None = not graded yet, False = no entry, True = filled (fill_t);
+    decided_t = the stop minute (exit "stop") or that day's regular close (exit "ema9_close"), else None (open)."""
+    at = row.get("at_utc")
+    if not isinstance(at, datetime) or row.get("plan") != PLAN_OK:
+        return None
+    doc = doc if isinstance(doc, dict) and doc.get("version") == GRADE_VERSION else {}
+    f = doc.get("fill") if isinstance(doc.get("fill"), dict) else None
+    w = doc.get("walk") if isinstance(doc.get("walk"), dict) else {}
+    filled, fill_t, decided_t = None, None, None
+    if f is not None:
+        filled = f.get("entry") == FILLED
+        if filled:
+            fill_t = _parse_at(f.get("fill_t"))
+            if w.get("exit") == EXITS[0]:
+                decided_t = _parse_at(w.get("exit_t"))
+            elif w.get("exit") == EXITS[1]:
+                xd = _as_date(w.get("exit_date"))
+                decided_t = close_utc(xd) if xd is not None else None
+    order = {s: i for i, s in enumerate(LC.SETUPS)}
+    return {"id": row["id"], "group": (row["date"], row["symbol"], row.get("line")), "at": _aware(at),
+            "filled": filled, "fill_t": fill_t, "decided_t": decided_t, "trigger": row.get("trigger"),
+            "stop": row.get("stop"), "rank": order.get(row.get("setup"), len(order))}
 
 
 def counts_of(served: list, entry_weeks: int) -> tuple:
-    """(counts, counts_text) over the served rows. mean_r_closed is an operational count, never a measurement."""
+    """(counts, counts_text) over the served rows. mean_r_closed is an operational count, never a measurement.
+    🔁 2026-11-02: `n` = every row given (listed); every other tally counts only the COUNTED rows (no `dup_of`);
+    `dup` = the duplicates left out, named on the counts line's tail (gajjala.ledger.dup_count_text)."""
+    n_all = len(served)
+    served = [c for c in served if not c.get("dup_of")]
+    n_dup = n_all - len(served)
     by = {k: sum(1 for c in served if c["state"] == k) for k in ("stopped", EXITS[1], OPEN, NO_ENTRY)}
     filled = by["stopped"] + by[EXITS[1]] + by[OPEN]
     closed = [c["r"] for c in served if c["state"] in ("stopped", EXITS[1]) and c.get("r") is not None]
     mean_r = round(sum(closed) / len(closed), 4) if closed else None
-    out = {"n": len(served), "filled": filled, "no_entry": by[NO_ENTRY], "stopped": by["stopped"],
+    out = {"n": n_all, "filled": filled, "no_entry": by[NO_ENTRY], "stopped": by["stopped"],
            "ema9_exits": by[EXITS[1]], "open": by[OPEN],
            "closed_positive": sum(1 for r in closed if r > 0), "closed_negative": sum(1 for r in closed if r < 0),
-           "mean_r_closed": mean_r, "entry_weeks": int(entry_weeks)}
+           "mean_r_closed": mean_r, "entry_weeks": int(entry_weeks), "dup": n_dup}
     for m in LC.LUK_PARTIAL_R:
         out[_flag_key(m)] = sum(1 for c in served if c.get(_flag_key(m)))
     mean = MEAN_TEXT.format(mean_r=mean_r, closed=len(closed)) if mean_r is not None else MEAN_NONE_TEXT
     out_text = COUNTS_TEXT.format(n=out["n"], filled=filled, stopped=out["stopped"], ema9=out["ema9_exits"],
                                   ema=_ema_n(), open=out["open"], mean=mean, entry_weeks=int(entry_weeks),
                                   floor=int(LC.MEASURE_FLOOR_WEEKS))
-    return out, out_text
+    tail = dup_count_text(n_dup)
+    return out, out_text + (" · " + tail if tail else "")
 
 
 def entry_weeks(served_all: list) -> int:
@@ -746,9 +858,120 @@ def span_sessions(span: str, session: date, record: list) -> list:
     return sorted(clip(days))
 
 
+def _chart_counts(rows: list) -> dict:
+    """🥇 one counts dict over the COUNTED rows given (gajjala.ledger._counts_blank("same") + "flat"), tallied by the
+    served bucket (win / loss / flat / open) else the fill state (no_entry / no_plan / no_risk / no_time / pending);
+    thin stays 0 (no thin rule on 🥇 — HIS CALL #7). pct = gajjala.ledger._win_pct."""
+    c = dict(_counts_blank("same"), flat=0)
+    for r in rows:
+        b = r.get("bucket")
+        k = b if b in (BUCKETS[0], BUCKETS[1], BUCKETS[2], BUCKETS[3]) else r.get("state")
+        if k in c and k not in ("pct", "thin"):
+            c[k] += 1
+    c["pct"] = _win_pct(c)
+    return c
+
+
+def _chart_cell(rows: list, detail: bool) -> dict:
+    return _aplus_cell(_chart_counts(rows), LUK_HK, detail, mid_k="open")
+
+
+def charts_block(shown: list) -> dict:
+    """🥇 the GajjalaAplusCharts-shaped block (spec luk-track §3.3.7) over EVERY row on the span (never the capped
+    list): every 🥇 row is an A+ (sent or shadow) in one %, by Luk's exit, under the ONE horizon key LUK_HK (no toggle:
+    `horizons` empty). Duplicates (🔁) are out of every count, % and chart; `total` / `n_sent` / `n_shadow` stay row
+    counts. Charts: outcomes (one bar) · by_setup (LC.SETUPS order — never by %; only setups with a counted row) ·
+    by_day (dates ascending)."""
+    counted = [r for r in shown if not r.get("dup_of")]
+    n_dup = len(shown) - len(counted)
+    n_sent = sum(1 for r in shown if r.get("line") == LINES[0])
+    n_shadow = sum(1 for r in shown if r.get("line") == LINES[1])
+    c = _chart_counts(counted)
+    charts: list = []
+    if shown:
+        outcomes = {"key": APLUS_CHART_KEYS[0], "title": CHART_TITLES[APLUS_CHART_KEYS[0]],
+                    "bars": [dict(_aplus_cell(c, LUK_HK, True, mid_k="open"), key=LUK_HK,
+                                  label=OUTCOME_LABEL.format(ema=_ema_n()))]}
+        by_s: dict = {}
+        for r in counted:
+            by_s.setdefault(r["setup"], []).append(r)
+        by_setup = {"key": APLUS_CHART_KEYS[1], "title": CHART_TITLES[APLUS_CHART_KEYS[1]],
+                    "rows": [{"key": k, "label": setup_label(k), LUK_HK: _chart_cell(by_s[k], False)}
+                             for k in LC.SETUPS if k in by_s]}
+        by_d: dict = {}
+        for r in counted:
+            by_d.setdefault(r["date"], []).append(r)
+        by_day = {"key": APLUS_CHART_KEYS[2], "title": CHART_TITLES[APLUS_CHART_KEYS[2]],
+                  "cols": [{"key": d_iso, "label": _dow_md(_as_date(d_iso)), LUK_HK: _chart_cell(by_d[d_iso], False)}
+                           for d_iso in sorted(by_d)]}
+        charts = [outcomes, by_setup, by_day]
+        counts_text = {LUK_HK: _counts_text(c, "same", False, lead=CHARTS_LEAD, dup=n_dup)}
+        split_text = CHARTS_SPLIT.format(sent=n_sent) + (
+            " · " + CHARTS_SPLIT_SHADOW.format(n=n_shadow) if n_shadow > 0 else "")
+        empty = None
+    else:
+        counts_text = split_text = None
+        empty = CHARTS_EMPTY_TEXT
+    return {"title": CHARTS_TITLE, "total": len(shown), "n_sent": n_sent, "n_shadow": n_shadow, "n_dup": n_dup,
+            "counts": {LUK_HK: c}, "counts_text": counts_text, "split_text": split_text, "replayed_note": None,
+            "more_text": None, "empty_text": empty, "honesty": CHARTS_HONESTY, "horizons": [],
+            "horizon_default": LUK_HK, "charts": charts, "days": []}
+
+
+def views_block() -> dict:
+    """The served view block (gajjala.tape's words, imported lazily — tape imports the gajjala ledger): NO view toggle
+    on 🥇 (`items` empty — no 🕰️ timeline), only the Tape column's head / toggle / title."""
+    from chart_maps.gajjala.tape import TAPE_HEAD, TAPE_TOGGLE, VIEW_DEFAULT, VIEW_PARAM
+    return {"param": VIEW_PARAM, "default": VIEW_DEFAULT, "items": [], "kinds": [KIND], "empty_text": None,
+            "tape_head": TAPE_HEAD, "tape_toggle": TAPE_TOGGLE,
+            "tape_toggle_title": TAPE_TOGGLE_TITLE.format(partials=partials_text())}
+
+
+def mark_dups(shown: list, docs: dict, rows_by_id: dict) -> dict:
+    """🔁 (spec luk-track §3.3.6 step 2) — gajjala.ledger.dedupe_trades over the rows' facts (the ONE engine); marks each
+    served row in place: `dup_of` (the counted row's id), `dup_text` (its at_et / setup_label), no ✅ / ❌ flag on a
+    duplicate. -> {duplicate id: counted id}."""
+    facts = [_trade_facts(rows_by_id[c["id"]], docs.get(c["id"])) for c in shown if c["id"] in rows_by_id]
+    dups = dedupe_trades([f for f in facts if f])
+    by_id = {c["id"]: c for c in shown}
+    for c in shown:
+        first = by_id.get(dups.get(c["id"])) if c["id"] in dups else None
+        if first is None:
+            continue
+        c["dup_of"] = first["id"]
+        c["dup_text"] = DUP_TEXT.format(at=first.get("at_et") or GG_NO_TIME_TEXT, setup=first.get("setup_label"))
+        c["flag_text"] = None
+    return dups
+
+
+def _days_capped(shown: list) -> tuple:
+    """(days, listed) — the rows by alert date (served order: newest first), capped at LC.LUK_LEDGER_ROWS_MAX rows in
+    all, the OLDEST cut first. Only the list is cut — the counts, the chips and the charts cover every row."""
+    days: list = []
+    listed = 0
+    for c in shown:
+        if listed >= int(LC.LUK_LEDGER_ROWS_MAX):
+            break
+        if not days or days[-1]["date"] != c["date"]:
+            days.append({"date": c["date"], "label": _dow_md(_as_date(c["date"])), "rows": []})
+        days[-1]["rows"].append(c)
+        listed += 1
+    return days, listed
+
+
+def _static_keys() -> dict:
+    return {"heads": [{"key": k, "label": lab} for k, lab in HEADS], "views": views_block(),
+            "category_param": CATEGORY_PARAM, "category_empty_text": CATEGORY_EMPTY_TEXT, "sorts": _sorts(),
+            "sort_param": SORT_PARAM, "sort_default": SORT_KEYS[0], "bucket_order": list(BUCKETS)}
+
+
 def served_block(store, session, now, *, span: str = "") -> dict:
     """The 🏁 block the tab serves (Mongo only): title, rule_text, honesty, span / spans, counts + counts_text,
-    days [{date, label, rows}], n_rows, empty_text, fault (+ fault_text)."""
+    days [{date, label, rows}], n_rows, empty_text, fault (+ fault_text) — and (2026-11-02, 🏁 like 🚩's) heads, views,
+    categories, sorts, bucket order, more_text and the `charts` block, every row 🚩-shaped. ORDER (spec §3.3.6): every
+    row on the span → 🔁 dedupe marks → counts / categories / charts over EVERY row on the span → only THEN the list is
+    capped (LUK_LEDGER_ROWS_MAX, oldest cut first, more_text). n_rows = rows on the span (== counts.n; == rows listed
+    under the cap)."""
     now = _aware(now)
     session = _as_date(session) or now.astimezone(ET).date()
     spans = list(LC.LUK_LEDGER_SPANS)
@@ -764,22 +987,25 @@ def served_block(store, session, now, *, span: str = "") -> dict:
     except LedgerReadError:
         out, text = counts_of([], 0)
         return dict(base, honesty=honesty_text(0), counts=out, counts_text=text, days=[], n_rows=0, fault=True,
-                    fault_text=FAULT_TEXT)
+                    fault_text=FAULT_TEXT, categories=_categories([]), more_text=None, charts=charts_block([]),
+                    **_static_keys())
     docs = {d.get("_id"): d for d in docs_l if isinstance(d, dict)}
-    served_all = [cells(r, docs.get(r["id"])) for r in rows]
+    served_all = [track_row(r, docs.get(r["id"])) for r in rows]
     weeks = entry_weeks(served_all)
     want = {d.isoformat() for d in span_sessions(span_k, session, record)}
-    shown = [c for c in served_all if c["date"] in want]
-    counts, text = counts_of(shown, weeks)
-    days: list = []
-    for c in shown:
-        if not days or days[-1]["date"] != c["date"]:
-            dd = _as_date(c["date"])
-            days.append({"date": c["date"], "label": f"{dd:%a} {dd:%m-%d}", "rows": []})
-        days[-1]["rows"].append(c)
-    return dict(base, honesty=honesty_text(weeks), counts=counts, counts_text=text, days=days, n_rows=len(shown))
+    shown = [c for c in served_all if c["date"] in want]                       # (1) every row on the span
+    mark_dups(shown, docs, {r["id"]: r for r in rows})                          # (2) 🔁 the one engine
+    counts, text = counts_of(shown, weeks)                                      # (3) every row on the span
+    categories = _categories(shown)                                             # (4) every row on the span
+    charts = charts_block(shown)
+    days, listed = _days_capped(shown)                                          # (5) only now the list is cut
+    cut = len(shown) - listed
+    more_text = MORE_TEXT.format(n=cut, total=len(shown)) if cut > 0 else None
+    return dict(base, honesty=honesty_text(weeks), counts=counts, counts_text=text, days=days, n_rows=len(shown),
+                categories=categories, more_text=more_text, charts=charts, **_static_keys())
 
 
 __all__ = ["ROW_ID", "EXITS", "OPEN", "LEDGER_KEYS", "STATE_SHADOW", "STATE_PUSHED", "ROW_STATES", "LINE_OF", "GRADE_VERSION", "LedgerReadError", "row_id", "row_of",
            "rows_for", "fill", "fill_window", "walk", "grade_step", "served_block", "title_text", "rule_text",
-           "honesty", "empty_text", "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip"]
+           "honesty", "empty_text", "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip",
+           "bucket_of", "setup_label", "track_row", "charts_block", "views_block", "mark_dups", "LUK_HK", "HEADS"]

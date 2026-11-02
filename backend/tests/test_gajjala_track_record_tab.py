@@ -62,9 +62,12 @@ W3 = ("A ledger of the alerts as sent, graded by GG's own trade math — not a b
       "line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 "
       "study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this "
       "record does not change that."
-      # WIDENED 2026-10-16 (night): DECISIONS11 D11 — the chips count rows (P26)
-      " The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
-      "unchanged.")
+      # REPLACED 2026-11-02 (Ajay: one count per stock per day, SPEC luk-track §3.1.7): the rows sentence → his rule
+      " The winners / losers chips count ROWS, one per stock per day since your word of 2026-11-02 (\"make sure you "
+      "are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all "
+      "the criteria on the same day\"): a name that rang on two setups the same day is two rows and ONE count — the "
+      "duplicate is chipped 🔁 and out of every count, % and chart; a 🧠 push and its 🎯 A+ entry are two ledgers, each "
+      "counted once.")
 
 
 @pytest.fixture(autouse=True)
@@ -325,9 +328,12 @@ def test_NEGATIVE_the_shadow_line_never_moves_the_live_percentage(store):
     assert {r["symbol"] for r in shadow} == {"PMI", "TGL", "HCAI"} and all(r["kind_text"] == "A+ shadow — never sent"
                                                                            for r in shadow)
     c = tr["counts"]["live"]["same"]
-    assert sum(c[k] for k in c if k != "pct") == len(live)
+    # 2026-11-02 (🔁 one count per stock per day): XLAB 🌀 09:01 is a duplicate of ➖ 08:51 (both fill 09:45) — listed,
+    # never tallied, so the live counts cover every live row MINUS the one duplicate (2 wins → 1)
+    assert tr["dup_counts"]["live"] == 1 and tr["dup_counts"]["shadow"] == 0
+    assert sum(c[k] for k in c if k != "pct") == len(live) - tr["dup_counts"]["live"]
     assert tr["counts"]["shadow"]["same"]["no_entry"] == 3 and tr["shadow_text"].startswith("A+ shadow (never sent")
-    assert c["win"] == 2 and c["pct"] == 100 and c["no_plan"] == 1 and c["no_entry"] == 1
+    assert c["win"] == 1 and c["pct"] == 100 and c["no_plan"] == 1 and c["no_entry"] == 1
 
 
 def live_entry_doc(d, sym, setup, at, *, trigger, stop, price):

@@ -31,7 +31,7 @@ import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } f
 import type { CmDojiSweepBoard, CmDojiSweepRead } from './dojiSweep';
 import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
-import { LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
+import { LUK_CAT_PARAM, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'luk' | 'doji_sweep';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -1928,8 +1928,10 @@ export const GAJJALA_OWN_PARAMS: ReadonlyArray<string> = [GG_SUB_PARAM, GG_TF_PA
  *  1-min — one component, one border rule (tabSearch). 2026-11-01: 🧪 Gajjala ·
  *  Audited joins, in CM_TABS order. */
 export const GAJJALA_TABS: ReadonlyArray<CmTab> = ['gajjala', 'gajjala_audited', 'gajjala_1m'];
-/** 🥇 The params Luk's reads with its own meanings (2026-11-01) — imported from lib/luk (types only flow back). */
-export const LUK_OWN_PARAMS: ReadonlyArray<string> = [LUK_SUB_PARAM, LUK_SPAN_PARAM];
+/** 🥇 The params Luk's reads with its own meanings (2026-11-01) — imported from lib/luk (types only flow back).
+ *  2026-11-02: + the 🏁 ✅ / ❌ category chip and the ✅ wins-first chip (`cat`, `sort`) — Luk's 🏁 now draws 🚩's
+ *  chips; carried across they would filter / reorder another board. */
+export const LUK_OWN_PARAMS: ReadonlyArray<string> = [LUK_SUB_PARAM, LUK_SPAN_PARAM, LUK_CAT_PARAM, LUK_SORT_PARAM];
 const isGajjalaTab = (t: string | null): boolean => !!t && (GAJJALA_TABS as ReadonlyArray<string>).includes(t);
 
 /** True for the ONE click the strip handles itself: an unmodified primary

@@ -26,7 +26,16 @@ from chart_maps.luk.variant import LUK
 PKG = pathlib.Path(LV.__file__).resolve().parent
 LEDGER_ALLOWED = frozenset({"bars_from_frame", "_default_load_day", "_today_load", "plan_of", "rang_of", "_D", "_num",
                             "_aware", "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC",
-                            "LINES"})   # WIDENED 2026-11-01 (go-live): the 🏁 row line words, imported never retyped
+                            "LINES",    # WIDENED 2026-11-01 (go-live): the 🏁 row line words, imported never retyped
+                            # WIDENED 2026-11-02 (spec luk-track §3.3.2 + the A+ chart keys / titles): 🏁 like 🚩's +
+                            # 🔁 one count per stock per day — GG's served-block words, helpers and THE one dedupe
+                            # engine, imported never retyped. Still NOT allowed: grade / _record_from / rows_for /
+                            # filled_grade (Luk has its own fill).
+                            "dedupe_trades", "dup_count_text", "DUP_RULE_TEXT", "DUP_TEXT", "_aplus_cell",
+                            "_counts_blank", "_counts_text", "_categories", "_sorts", "_win_pct", "_dow_md", "_plural",
+                            "BUCKETS", "BUCKET_TEXT", "FLAG_BUCKETS", "CATEGORY_PARAM", "CATEGORY_EMPTY_TEXT",
+                            "SORT_PARAM", "SORT_KEYS", "KIND_TEXT", "RANG_TEXT", "NO_TIME_TEXT", "KIND_EMPTY_TEXT",
+                            "APLUS_CHART_KEYS", "APLUS_CHART_TITLES"})
 VARIANT_FORBIDDEN = frozenset({"served_block", "word", "words", "_WORDS"})
 LEDGER_MOD = "chart_maps.gajjala.ledger"
 VARIANT_MOD = "chart_maps.gajjala.variant"
@@ -170,6 +179,9 @@ def test_no_luk_module_reaches_ggs_variant_words_or_ledger_internals(path):
     ("import chart_maps.gajjala.ledger as GL\nGL.rows_for(1)", ("ledger", "rows_for")),
     ("from chart_maps.gajjala import variant as V\nV.served_block(1)", ("variant", "served_block")),
     ("from chart_maps.gajjala.variant import word", ("variant", "word")),
+    ("from chart_maps.gajjala.ledger import filled_grade", ("ledger", "filled_grade")),         # 2026-11-02: Luk has its own fill
+    ("from chart_maps.gajjala import ledger as GL\nGL._aplus_counts([])", ("ledger", "_aplus_counts")),  # 2026-11-02
+    ("from chart_maps.gajjala.ledger import _aplus_charts", ("ledger", "_aplus_charts")),       # 2026-11-02
 ])
 def test_negative_the_import_guard_catches(src, hit):
     assert hit in guard_errors(src)

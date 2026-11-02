@@ -34,7 +34,7 @@
 .luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame {
   white-space: normal; overflow-wrap: anywhere;
 }
-.luk-plan, .luk-criteria li, .luk-why, .luk-tr-row, .luk-pb-item { overflow-wrap: anywhere; }
+.luk-plan, .luk-criteria li, .luk-why, .luk-pb-item { overflow-wrap: anywhere; }
 .luk-row-head { font-weight: 600; padding: 0.3rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; }
 /* 2026-11-01 — the 🚀 / 🩳 / 🧨 house chips on a card with no bars: wrap, never widen the card (📱 430 px). */
 .luk-house-chips { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; font-weight: 400; }
@@ -70,7 +70,9 @@
 
 .luk-spans .luk-span { cursor: pointer; text-decoration: none; }
 .luk-spans .luk-span.is-active { font-weight: 700; }
-.luk-tr-rows { list-style: none; margin: 0; padding: 0; font-size: 0.8rem; }
-.luk-tr-row { padding: 0.15rem 0; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
-.luk-tape-toggle { background: none; border: none; cursor: pointer; padding: 0 0.2rem; }
-.luk-tr-tape { list-style: none; max-width: 100%; overflow-x: auto; }
+/* 🏁 2026-11-02 — Luk's 🏁 draws 🚩's table (gajjala.css .gg-tr-*). 📱 430 px: the section never exceeds its column and a
+   served string in a cell wraps instead of widening the page (🚩's cells are nowrap); the table may still scroll inside
+   .gg-tr-scroll like 🚩's. The mini tape cell keeps its one line. */
+.luk-tr { min-width: 0; }
+.luk-tr .gg-tr-table td { white-space: normal; overflow-wrap: anywhere; }
+.luk-tr .gg-tr-table .ptt__mini-cell { white-space: nowrap; }

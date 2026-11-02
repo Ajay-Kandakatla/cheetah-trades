@@ -1096,6 +1096,10 @@ function TrCell({ cell, testid }: { cell: GgTrCell | null | undefined; testid: s
 /** A served row chip (E1 rang / E4 thin R) prints only when it is a non-empty string — null / absent prints nothing. */
 const trChip = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
 
+/** 🥇 (2026-11-02) a served cell under a head key the switch below does not name (Luk's `fill` / `exit`): the row's value
+ *  under that key when it is a served cell (an object with a string `text`), else null. Typeof of a value — no word. */
+const trCellOf = (row: GgTrRow, head: string): GgTrCell | null => { const v = (row as unknown as Record<string, unknown>)[head]; return v && typeof v === typeof {} && typeof (v as GgTrCell).text === typeof '' ? (v as GgTrCell) : null; };
+
 function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
   switch (head) {
     case 'symbol': {
@@ -1108,6 +1112,8 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
             <span className={`gg-tr-flag gg-tr-flag-${typeof row.bucket === 'string' ? row.bucket : ''}`}
                   data-testid={`gg-tr-flag-${row.key}`}>{row.flag_text}</span>
           ) : null}
+          {/* 🔁 2026-11-02 one count per stock per day: the served duplicate chip (ledger.DUP_TEXT), verbatim. */}
+          {trChip(row.dup_text) ? <span className="gg-tr-chip gg-tr-dup" data-testid={`gg-tr-dup-${row.key}`}>{row.dup_text}</span> : null}
           <GgTraderChip text={row.trader_text} testid={`gg-tr-trader-${row.key}`}
                         promoText={row.promo_text} promoTestid={`gg-tr-promo-${row.key}`} />
           <GgBrokerChip text={row.broker_text} testid={`gg-tr-broker-${row.key}`} />
@@ -1132,7 +1138,7 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
     );
     case 'same': return <TrCell cell={row.same} testid={`gg-tr-same-${row.key}`} />;
     case 'next': return <TrCell cell={row.next} testid={`gg-tr-next-${row.key}`} />;
-    default: return <td />;
+    default: { const c = trCellOf(row, head); return c ? <TrCell cell={c} testid={`gg-tr-${head}-${row.key}`} /> : <td />; }
   }
 }
 
@@ -1614,3 +1620,8 @@ function PlaybookPanel({ pb }: { pb: GgPlaybook | null }) {
     </div>
   );
 }
+
+/* 🥇 Luk's 🏁 (2026-11-02, Ajay: "Can you make Luk's track record similar to Gajjal's"): the 🏁 pieces LukTrackRecord
+ * draws through — the SAME components, never a copy. A trailing export so every declaration stays `function NAME(`
+ * (the contract body scanners find them by that text). */
+export { TrCell, TrRowCells, GgTrCats, GgTrSorts, GgTrViews, GgTrHead, GgTrTapeRow, ggTrTapeAt };

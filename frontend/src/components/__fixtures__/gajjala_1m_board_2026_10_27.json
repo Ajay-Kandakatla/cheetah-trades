@@ -2122,6 +2122,8 @@
          "bucket": "out",
          "bucket_text": "— no fill / not graded",
          "date": "2026-10-27",
+         "dup_of": null,
+         "dup_text": null,
          "fill_px": null,
          "flag_text": null,
          "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA",
@@ -2160,7 +2162,7 @@
       }
      ],
      "empty_text": null,
-     "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+     "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
      "horizon_default": "same",
      "horizons": [
       {
@@ -2173,6 +2175,7 @@
       }
      ],
      "more_text": null,
+     "n_dup": 0,
      "n_sent": 0,
      "n_shadow": 1,
      "replayed_note": null,
@@ -2220,9 +2223,9 @@
      },
      {
       "key": "out",
-      "n": 5,
+      "n": 3,
       "n_replayed": 0,
-      "text": "— no fill / not graded 5"
+      "text": "— no fill / not graded 3"
      }
     ],
     "categories_aplus": [
@@ -2340,14 +2343,14 @@
        "no_risk": 0,
        "no_time": 0,
        "pct": null,
-       "pending": 4,
+       "pending": 2,
        "split": 0,
        "thin": 0,
        "win": 0
       },
       "same": {
        "loss": 0,
-       "no_entry": 4,
+       "no_entry": 2,
        "no_plan": 0,
        "no_risk": 0,
        "no_time": 0,
@@ -2414,8 +2417,8 @@
      }
     },
     "counts_text": {
-     "next": "🧠 shadow — recorded, never sent · Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 4 not graded yet",
-     "same": "🧠 shadow — recorded, never sent · Same session: 0 wins · 0 losses · no graded entry yet · 4 no entry · 0 open · today not final"
+     "next": "🧠 shadow — recorded, never sent · Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 2 not graded yet · 2 duplicates of the same stock not counted",
+     "same": "🧠 shadow — recorded, never sent · Same session: 0 wins · 0 losses · no graded entry yet · 2 no entry · 0 open · 2 duplicates of the same stock not counted · today not final"
     },
     "days": [
      {
@@ -2430,6 +2433,8 @@
         "bucket": "out",
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
+        "dup_of": null,
+        "dup_text": null,
         "fill_px": null,
         "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA",
@@ -2471,6 +2476,8 @@
         "bucket": "out",
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
+        "dup_of": null,
+        "dup_text": null,
         "fill_px": null,
         "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGA",
@@ -2512,6 +2519,8 @@
         "bucket": "out",
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
+        "dup_of": null,
+        "dup_text": null,
         "fill_px": null,
         "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGB",
@@ -2553,6 +2562,8 @@
         "bucket": "out",
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
+        "dup_of": "2026-10-27|GGB|bull_flag|potential",
+        "dup_text": "🔁 same trade as the 10:08 🚩 Bull Flag ring — not counted",
         "fill_px": null,
         "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=kiss_fly&focus=GGB",
@@ -2594,6 +2605,8 @@
         "bucket": "out",
         "bucket_text": "— no fill / not graded",
         "date": "2026-10-27",
+        "dup_of": "2026-10-27|GGB|bull_flag|potential",
+        "dup_text": "🔁 same trade as the 10:08 🚩 Bull Flag ring — not counted",
         "fill_px": null,
         "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGB",
@@ -2631,6 +2644,12 @@
       ]
      }
     ],
+    "dup_counts": {
+     "entry": 0,
+     "live": 2,
+     "replayed": 0,
+     "shadow": 0
+    },
     "empty_text": null,
     "entries_text": null,
     "grade_at_et": "20:15",
@@ -2664,7 +2683,7 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of this page's alerts: from 2026-10-27 to 2026-10-28 they were recorded in shadow (never sent); since 2026-10-29 they ring your phone by your call. Each row's kind says which. The 🧠 potentials — shadow and sent — make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has measured this page.",
+    "honesty": "A ledger of this page's alerts: from 2026-10-27 to 2026-10-28 they were recorded in shadow (never sent); since 2026-10-29 they ring your phone by your call. Each row's kind says which. The 🧠 potentials — shadow and sent — make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. Graded by GG's own trade math on 1-minute bars — not a backtest, small n early. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has measured this page. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
     "kind_empty_text": "No 🎯 A+ alert on this span.",
     "kind_param": "kind",
     "kinds": [
@@ -2685,7 +2704,7 @@
     "replayed_note": null,
     "replayed_text": null,
     "rule_label": "ⓘ how each alert is graded",
-    "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
+    "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 1 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
     "sort_default": "wins",
     "sort_param": "sort",

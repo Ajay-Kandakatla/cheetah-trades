@@ -422,9 +422,12 @@ def base_world(extra_g5=(), extra_g5l=(), extra_a=(), extra_al=()):
 
 
 def _identity(c):
+    # REWRITTEN 2026-11-02 (🔁 one count per stock per day, SPEC luk-track §3.2 [C5]): `recon` is id-set arithmetic
+    # over ALL ids (untouched) while `n` counts the COUNTED rows — the identity holds in the n + n_dup form
     o, a = c["sides"]
-    r = c["recon"]
-    return o["n"] == a["n"] + c["held"]["n"] + r["original_only"] - r["audited_only"] - r["both"]
+    r, h = c["recon"], c["held"]
+    return (o["n"] + o["n_dup"] == a["n"] + a["n_dup"] + h["n"] + h["n_dup"] + r["original_only"] - r["audited_only"]
+            - r["both"])
 
 
 def test_compare_arithmetic_original_audited_held_by_rule_by_day():
@@ -630,8 +633,8 @@ def test_per_rule_rows_are_one_per_on_rule_in_registry_order_and_by_rule_is_gone
         assert set(r) == {"key", "id", "name", "kind", "label", "with", "other", "not_judged", "fired_alone",
                           "tie_held", "delta_text", "text"}
         for side in ("with", "other"):
-            assert set(r[side]) == {"label", "n", "win", "loss", "unfilled", "open_flat", "pending", AT.NO_ORIGINAL,
-                                    "mean_r", "text"}
+            assert set(r[side]) == {"label", "n", "n_dup", "win", "loss", "unfilled", "open_flat", "pending",
+                                    AT.NO_ORIGINAL, "mean_r", "text"}           # n_dup: 🔁 2026-11-02
         assert r["text"] == (f"{r['label']} · {r['with']['text']} · {r['other']['text']} · {r['delta_text']} · "
                              f"{GT.UNMEASURED}")
     # an empty record: every filter row says so in words, the T4 row still names its fire counts

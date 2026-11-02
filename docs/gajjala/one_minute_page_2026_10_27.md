@@ -145,6 +145,11 @@ container's environment (needs a recreate). Either one stops the spawn and every
 - The /alerts page and the notification settings carry both kinds. They were labelled "(shadow)" until 2026-10-29; the
   labels now read "Gajjala 1-min A+" and "Gajjala 1-min potential". Both kinds default to off for everyone else and are
   ON for the owner through the six-kind keep-set.
+- 🔁 2026-11-02 (Ajay: one count per stock per day): the 1-minute 🏁 serves the SAME block and the SAME dedupe as
+  the 5-minute 🏁 (`ledger.dedupe_trades`, partition date / symbol / count line) — a duplicate is listed and chipped
+  🔁, never counted; its honesty (`WORDS_1M["ledger_honesty"]` and its shadow twin) ends with `DUP_RULE_TEXT`. The
+  1-minute and 5-minute 🏁s stay separate ledgers. See `docs/gajjala/track_record_2026_10_16.md` § "🔁 One count per
+  stock per day (2026-11-02)".
 
 ## HIS CALL (defaults shipped; none decided for him)
 

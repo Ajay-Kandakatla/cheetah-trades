@@ -1067,9 +1067,207 @@
   "tiles": [],
   "title": "🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own words · UNMEASURED",
   "track_record": {
+   "bucket_order": [
+    "win",
+    "loss",
+    "open",
+    "flat",
+    "out"
+   ],
+   "categories": [
+    {
+     "key": "all",
+     "n": 1,
+     "n_replayed": 0,
+     "text": "📋 all 1"
+    },
+    {
+     "key": "win",
+     "n": 0,
+     "n_replayed": 0,
+     "text": "✅ winners 0"
+    },
+    {
+     "key": "loss",
+     "n": 0,
+     "n_replayed": 0,
+     "text": "❌ losers 0"
+    },
+    {
+     "key": "open",
+     "n": 0,
+     "n_replayed": 0,
+     "text": "⏳ open 0"
+    },
+    {
+     "key": "flat",
+     "n": 0,
+     "n_replayed": 0,
+     "text": "➖ flat 0"
+    },
+    {
+     "key": "out",
+     "n": 1,
+     "n_replayed": 0,
+     "text": "— no fill / not graded 1"
+    }
+   ],
+   "category_empty_text": "No row in this category on this span.",
+   "category_param": "cat",
+   "charts": {
+    "charts": [
+     {
+      "bars": [
+       {
+        "decided": 0,
+        "items": [
+         {
+          "key": "win",
+          "label": "wins",
+          "n": 0,
+          "text": "0 wins"
+         },
+         {
+          "key": "loss",
+          "label": "losses",
+          "n": 0,
+          "text": "0 losses"
+         },
+         {
+          "key": "other",
+          "label": "other",
+          "n": 1,
+          "text": "1 other · 1 not graded yet"
+         }
+        ],
+        "key": "exit",
+        "label": "Through Luk's exit (the stop or the first daily close below the 9 EMA)",
+        "loss_pct": null,
+        "pct": null,
+        "pct_text": "no graded entry yet",
+        "short_text": "0W 0L",
+        "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+        "total": 1
+       }
+      ],
+      "key": "outcomes",
+      "title": "🥇 A+ wins vs losses"
+     },
+     {
+      "key": "by_setup",
+      "rows": [
+       {
+        "exit": {
+         "decided": 0,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 0,
+           "text": "0 wins"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses"
+          },
+          {
+           "key": "other",
+           "label": "other",
+           "n": 1,
+           "text": "1 other"
+          }
+         ],
+         "loss_pct": null,
+         "pct": null,
+         "pct_text": "no graded entry yet",
+         "short_text": "0W 0L",
+         "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+         "total": 1
+        },
+        "key": "pullback_reversal",
+        "label": "↩️ Pullback reversal"
+       }
+      ],
+      "title": "By setup"
+     },
+     {
+      "cols": [
+       {
+        "exit": {
+         "decided": 0,
+         "items": [
+          {
+           "key": "win",
+           "label": "wins",
+           "n": 0,
+           "text": "0 wins"
+          },
+          {
+           "key": "loss",
+           "label": "losses",
+           "n": 0,
+           "text": "0 losses"
+          },
+          {
+           "key": "other",
+           "label": "other",
+           "n": 1,
+           "text": "1 other"
+          }
+         ],
+         "loss_pct": null,
+         "pct": null,
+         "pct_text": "no graded entry yet",
+         "short_text": "0W 0L",
+         "text": "0 wins · 0 losses · no graded entry yet · 1 other",
+         "total": 1
+        },
+        "key": "2026-11-03",
+        "label": "Tue 11-03"
+       }
+      ],
+      "key": "by_day",
+      "title": "By alert day"
+     }
+    ],
+    "counts": {
+     "exit": {
+      "flat": 0,
+      "loss": 0,
+      "no_entry": 0,
+      "no_plan": 0,
+      "no_risk": 0,
+      "no_time": 0,
+      "open": 0,
+      "pct": null,
+      "pending": 1,
+      "thin": 0,
+      "win": 0
+     }
+    },
+    "counts_text": {
+     "exit": "A+ through Luk's exit: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 open · 1 not graded yet"
+    },
+    "days": [],
+    "empty_text": null,
+    "honesty": "Every 🥇 A+ on the span — sent or recorded in shadow — in one %, graded by Luk's exit: a win is a closed row above its fill, a loss a closed row below it (every stop is one R down); open rows and a close exactly at the fill stay out of the %. Operational accounting of alerts as recorded, not a backtest; small n. UNMEASURED. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+    "horizon_default": "exit",
+    "horizons": [],
+    "more_text": null,
+    "n_dup": 0,
+    "n_sent": 0,
+    "n_shadow": 1,
+    "replayed_note": null,
+    "split_text": "0 sent to your phone · 1 recorded in shadow (never sent)",
+    "title": "🥇 A+ wins vs losses — every 🥇 A+ on the span, graded by Luk's exit · UNMEASURED",
+    "total": 1
+   },
    "counts": {
     "closed_negative": 0,
     "closed_positive": 0,
+    "dup": 0,
     "ema9_exits": 0,
     "entry_weeks": 0,
     "filled": 0,
@@ -1088,24 +1286,52 @@
      "label": "Tue 11-03",
      "rows": [
       {
+       "at_et": "09:47",
+       "at_text": "09:47 ET",
        "best_r": null,
+       "broker_text": null,
+       "bucket": "out",
+       "bucket_text": "— no fill / not graded",
        "date": "2026-11-03",
+       "dup_of": null,
+       "dup_text": null,
+       "exit": null,
        "exit_text": "",
+       "fill": {
+        "provisional": false,
+        "state": "pending",
+        "sub_text": null,
+        "text": "not graded yet"
+       },
+       "fill_px": null,
        "fill_text": "not graded yet",
+       "flag_text": null,
        "flags_text": "",
        "href": "/chart-maps?tab=luk&sub=pullback_reversal&focus=AAA",
        "id": "2026-11-03|AAA|pullback_reversal|aplus",
+       "key": "2026-11-03-AAA-pullback_reversal-aplus",
+       "kind": "aplus",
+       "kind_text": "A+ shadow — never sent",
+       "line": "shadow",
+       "loss_text": null,
+       "note": null,
        "plan_text": "trigger 12.40 · stop 11.98 (−3.4%) · R $0.42",
        "r": null,
        "r_now": null,
-       "rang_text": "recorded 09:47 ET (regular session) — shadow, never sent",
+       "rang": "rth",
+       "rang_text": "rang RTH",
        "reached_3r": false,
        "reached_5r": false,
        "sessions": 0,
        "setup": "pullback_reversal",
+       "setup_label": "↩️ Pullback reversal",
        "state": "pending",
+       "stop": 11.98,
        "symbol": "AAA",
-       "tape_id": "2026-11-03|AAA|pullback_reversal|aplus"
+       "tape_id": "2026-11-03|AAA|pullback_reversal|aplus",
+       "thin_text": null,
+       "trader_text": null,
+       "trigger": 12.4
       }
      ]
     }
@@ -1113,10 +1339,55 @@
    "empty_text": "No 🥇 A+ in this span — none rang, none was recorded.",
    "fault": false,
    "fault_text": null,
-   "honesty": "Rows are alerts that rang your phone (live) or were recorded in shadow (never sent) — each row's own line says which; since 2026-11-01 every 🥇 A+ rings by your call (\"Lets make it live. also alerts too.\"). Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).",
+   "heads": [
+    {
+     "key": "symbol",
+     "label": "Ticker"
+    },
+    {
+     "key": "setup",
+     "label": "Setup"
+    },
+    {
+     "key": "at",
+     "label": "Alert"
+    },
+    {
+     "key": "kind",
+     "label": "Kind"
+    },
+    {
+     "key": "plan",
+     "label": "Trigger · stop · R"
+    },
+    {
+     "key": "fill",
+     "label": "Fill"
+    },
+    {
+     "key": "exit",
+     "label": "Exit · R · sessions"
+    }
+   ],
+   "honesty": "Rows are alerts that rang your phone (live) or were recorded in shadow (never sent) — each row's own line says which; since 2026-11-01 every 🥇 A+ rings by your call (\"Lets make it live. also alerts too.\"). Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far). One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+   "more_text": null,
    "n_rows": 1,
    "record_from": "2026-11-01",
-   "rule_text": "Fill = the first 1-minute bar at least 30 s after the alert trading at or above the trigger, from the regular open — the same fill convention as 🚩's 🏁 (a Cheetah choice, for comparability). Stop = the alert's stop, a touch. Exit = the stop or the first daily close below the 9 EMA, whichever prints first — his stated exit (VKNEJA5r8zw 2:29:17). His partials at 3R and 5R are shown as flags, not applied (HIS CALL #5); no maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to 5 minutes after his bar closed (one Luk pass per 5 minutes), so a 🏁 fill is later than his would have been — a fact (HIS CALL #29).",
+   "rule_text": "Fill = the first 1-minute bar at least 30 s after the alert trading at or above the trigger, from the regular open — the same fill convention as 🚩's 🏁 (a Cheetah choice, for comparability). Stop = the alert's stop, a touch. Exit = the stop or the first daily close below the 9 EMA, whichever prints first — his stated exit (VKNEJA5r8zw 2:29:17). His partials at 3R and 5R are shown as flags, not applied (HIS CALL #5); no maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to 5 minutes after his bar closed (one Luk pass per 5 minutes), so a 🏁 fill is later than his would have been — a fact (HIS CALL #29). One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+   "sort_default": "wins",
+   "sort_param": "sort",
+   "sorts": [
+    {
+     "bucket_sort": true,
+     "key": "wins",
+     "label": "✅ wins first"
+    },
+    {
+     "bucket_sort": false,
+     "key": "rang",
+     "label": "🕰️ as rang"
+    }
+   ],
    "span": "all",
    "spans": [
     "today",
@@ -1125,7 +1396,19 @@
     "10d",
     "all"
    ],
-   "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED"
+   "title": "🏁 Track record — every 🥇 A+ recorded here since 2026-11-01, graded by Luk's trade math · UNMEASURED",
+   "views": {
+    "default": "all",
+    "empty_text": null,
+    "items": [],
+    "kinds": [
+     "aplus"
+    ],
+    "param": "view",
+    "tape_head": "Tape",
+    "tape_toggle": "📈",
+    "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop, the exit and the 3R and 5R marks"
+   }
   },
   "variant": {
    "api_base": "/chart-maps/luk",

@@ -526,7 +526,9 @@ def test_served_block_words_counts_and_row_texts():
     assert "at least 30 s after the alert" in b["rule_text"] and "partials at 3R and 5R" in b["rule_text"]
     assert ("The alert itself can print up to 5 minutes after his bar closed (one Luk pass per 5 minutes), so a 🏁 "
             "fill is later than his would have been — a fact (HIS CALL #29).") in b["rule_text"]
-    assert b["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (1 entry weeks so far).")
+    # MOVED 2026-11-02 (🔁 one count per stock per day): the honesty ends with gajjala.ledger.DUP_RULE_TEXT
+    assert b["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (1 entry weeks so far). "
+                                 + LG.DUP_RULE_TEXT)
     c = b["counts"]
     assert (c["n"], c["filled"], c["no_entry"], c["stopped"], c["ema9_exits"], c["open"]) == (4, 3, 1, 1, 1, 1)
     assert (c["closed_positive"], c["closed_negative"], c["reached_3r"], c["reached_5r"]) == (1, 1, 1, 0)
@@ -542,8 +544,12 @@ def test_served_block_words_counts_and_row_texts():
     assert rows["OPN"]["exit_text"] == "open · +0.8R after 2 sessions" and rows["OPN"]["flags_text"] == ""
     assert rows["NOE"]["state"] == "no_entry" and rows["NOE"]["exit_text"] == ""
     assert rows["STP"]["plan_text"] == "trigger 10.00 · stop 9.50 (−5.0%) · R $0.50"
-    # by the row's OWN line (2026-11-01): a shadow claim keeps the shadow words whatever the mode
-    assert rows["STP"]["rang_text"] == "recorded 10:00 ET (regular session) — shadow, never sent"
+    # by the row's OWN line (2026-11-01): a shadow claim keeps the shadow words whatever the mode — MOVED 2026-11-02
+    # (HIS CALL #13): the served row's rang_text is the SHORT E1 chip; the long sentence stays on cells() (the tape)
+    assert rows["STP"]["rang_text"] == LG.RANG_TEXT["rth"] == "rang RTH"
+    assert rows["STP"]["kind_text"] == LG.KIND_TEXT[("aplus", "shadow")]
+    assert LL.cells(row_for(alert_doc(sym="STP")), None)["rang_text"] == \
+        "recorded 10:00 ET (regular session) — shadow, never sent"
     assert b["n_rows"] == 4 and b["days"][0]["label"] == "Mon 11-02"
 
 
@@ -590,7 +596,13 @@ def test_NEGATIVE_the_package_imports_only_the_allowed_gajjala_ledger_names():
     import inspect
     allowed = {"bars_from_frame", "_default_load_day", "_today_load", "plan_of", "rang_of", "_D", "_num", "_aware",
                "_iso_t", "_px", "_pct", "SETTLE", "ONE_MIN", "ET", "UTC",
-               "LINES"}   # WIDENED 2026-11-01 (go-live): GG's 🏁 line words ("live" / "shadow"), imported never retyped
+               "LINES",   # WIDENED 2026-11-01 (go-live): GG's 🏁 line words ("live" / "shadow"), imported never retyped
+               # WIDENED 2026-11-02 (🏁 like 🚩's + 🔁 one count per stock per day, spec luk-track §3.3.2): the 🚩
+               # served-block words / helpers and THE one dedupe engine — imported, never a parallel copy
+               "dedupe_trades", "dup_count_text", "DUP_RULE_TEXT", "DUP_TEXT", "_aplus_cell", "_counts_blank",
+               "_counts_text", "_categories", "_sorts", "_win_pct", "_dow_md", "_plural", "BUCKETS", "BUCKET_TEXT",
+               "FLAG_BUCKETS", "CATEGORY_PARAM", "CATEGORY_EMPTY_TEXT", "SORT_PARAM", "SORT_KEYS", "KIND_TEXT",
+               "RANG_TEXT", "NO_TIME_TEXT", "APLUS_CHART_KEYS", "APLUS_CHART_TITLES"}
     from chart_maps.luk import tape as LT
     for mod in (LL, LT):
         tree = ast.parse(inspect.getsource(mod))
@@ -731,9 +743,16 @@ def test_rows_for_reads_both_states_and_served_rows_say_which():
     assert sorted(r["symbol"] for r in LL.rows_for([D], st)) == ["LIV", "SHD"]
     b = LL.served_block(st, D, et(D, 12, 0), span="today")
     rows = {r["symbol"]: r for dd in b["days"] for r in dd["rows"]}
-    assert rows["LIV"]["rang_text"] == "rang 10:00 ET (regular session) — sent to your phone"
-    assert rows["SHD"]["rang_text"] == "recorded 10:00 ET (regular session) — shadow, never sent"
-    assert "never sent" not in rows["LIV"]["rang_text"]       # NEGATIVE: a rung row never says never sent
+    # MOVED 2026-11-02 (HIS CALL #13): the served row carries the SHORT E1 chip + the kind word; the long sentence
+    # stays on cells() (the tape's read line)
+    assert rows["LIV"]["rang_text"] == rows["SHD"]["rang_text"] == "rang RTH"
+    assert rows["LIV"]["kind_text"] == LL.KIND_TEXT_LIVE == "🥇 A+ — sent to your phone"
+    assert rows["SHD"]["kind_text"] == LG.KIND_TEXT[("aplus", "shadow")] == "A+ shadow — never sent"
+    assert "never sent" not in rows["LIV"]["kind_text"]       # NEGATIVE: a rung row never says never sent
+    cl = {r["symbol"]: LL.cells(r, None) for r in LL.rows_for([D], st)}
+    assert cl["LIV"]["rang_text"] == "rang 10:00 ET (regular session) — sent to your phone"
+    assert cl["SHD"]["rang_text"] == "recorded 10:00 ET (regular session) — shadow, never sent"
+    assert "never sent" not in cl["LIV"]["rang_text"]
 
 
 def test_rang_text_by_line_and_without_a_time():
@@ -752,16 +771,290 @@ def test_honesty_and_empty_follow_the_mode(monkeypatch):
     assert LC.LUK_PUSH_MODE == "live"
     assert live["empty_text"] == LL.EMPTY_TEXT_LIVE == "No 🥇 A+ in this span — none rang, none was recorded."
     assert LC.LUK_LIVE_SINCE in live["honesty"] and f'("{LC.LUK_LIVE_WORDS}")' in live["honesty"]
-    assert live["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far).")
+    assert live["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far). "
+                                    + LG.DUP_RULE_TEXT)          # MOVED 2026-11-02: + the 🔁 rule
     assert "{" not in live["honesty"]
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
     sh = LL.served_block(st, D, et(D, 12, 0), span="today")
     assert sh["empty_text"] == LL.EMPTY_TEXT_SHADOW and "never sent" in sh["empty_text"]
     assert sh["honesty"].startswith("Every row is a shadow record — none reached your phone.")
     assert LC.LUK_LIVE_WORDS not in sh["honesty"]                                  # NEGATIVE: no live quote in shadow
-    assert "rings" not in sh["honesty"] and "rang" not in sh["honesty"]
+    # MOVED 2026-11-02: the 🔁 rule ("a name that rang again") is appended to both modes — the MODE's own words never
+    # say rang / rings in shadow
+    assert sh["honesty"].endswith(" " + LG.DUP_RULE_TEXT)
+    own = sh["honesty"][:-len(" " + LG.DUP_RULE_TEXT)]
+    assert "rings" not in own and "rang" not in own
 
 
 def test_NEGATIVE_a_junk_mode_serves_the_shadow_words(monkeypatch):
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", "LIVE")
     assert LL.honesty() is LL.HONESTY_SHADOW and LL.empty_text() is LL.EMPTY_TEXT_SHADOW
+
+
+# ── 2026-11-02 — 🏁 like 🚩's + 🔁 one count per stock per day (spec luk-track §3.3, WP-B) ──────────────────────────
+# Ajay 2026-11-02, verbatim: "Can you make Luk's track record similar to Gajjal's and also can you make sure you are not
+# accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria
+# on the same day". Every fixture is SYNTHETIC; NEGATIVES are marked.
+def _ring(sym, setup, at, trig, stop, live=True, d=D):
+    return (pushed_doc if live else alert_doc)(sym=sym, setup=setup, d=d, at=at, trig=trig, stop=stop)
+
+
+def _filled(d, hh, mm, px):
+    return {"entry": "filled", "fill_px": px, "fill_t": et(d, hh, mm).isoformat(), "fill_date": d.isoformat()}
+
+
+def _stopped(d, hh, mm):
+    return _walk(exit="stop", state="stopped", exit_t=et(d, hh, mm).isoformat(), exit_date=d.isoformat(), r=-1.0,
+                 sessions=1)
+
+
+def _vg_store(second_at=(9, 46), second_plan=(14.80, 13.96), second_fill=(9, 48), second_stop=(10, 6),
+              first_fill=(9, 43), first_stop=(10, 6), second_live=True):
+    """VG 11-02-like: ↩️ pullback_reversal 09:41 + 🔔 opening_range_high 09:46, same day, DIFFERENT triggers, filled on
+    different minutes, both stopped (default: one stop minute 10:06 ET = 15:06Z)."""
+    a1 = _ring("VG", "pullback_reversal", et(D, 9, 41), 14.50, 13.96)
+    a2 = _ring("VG", "opening_range_high", et(D, *second_at), second_plan[0], second_plan[1], live=second_live)
+    led = [_ledger_doc(a1, _filled(D, *first_fill, 14.50), _stopped(D, *first_stop)),
+           _ledger_doc(a2, _filled(D, *second_fill, second_plan[0]), _stopped(D, *second_stop))]
+    return make_store([a1, a2], led), row_for(a1)["id"], row_for(a2)["id"]
+
+
+def _rows(b) -> dict:
+    return {r["id"]: r for dd in b["days"] for r in dd["rows"]}
+
+
+def test_vg_like_second_ring_filled_before_the_first_was_stopped_is_one_count():
+    st, first, second = _vg_store()
+    b = LL.served_block(st, D, et(D, 20, 0), span="today")
+    c = b["counts"]
+    assert (c["n"], c["stopped"], c["dup"], c["filled"], c["closed_negative"]) == (2, 1, 1, 1, 1)
+    rows = _rows(b)
+    assert rows[second]["dup_of"] == first and rows[first]["dup_of"] is None
+    assert rows[second]["dup_text"] == "🔁 same trade as the 09:41 ↩️ Pullback reversal ring — not counted"
+    assert rows[second]["flag_text"] is None and rows[second]["bucket"] == "loss"      # listed, bucket kept, no flag
+    assert rows[first]["flag_text"] == LG.BUCKET_TEXT["loss"] == "❌ loser" and rows[first]["dup_text"] is None
+    assert b["counts_text"].endswith(" · 1 duplicate of the same stock not counted")
+    assert b["counts_text"].startswith("2 A+ recorded · 1 filled · 1 stopped")
+    bar0 = b["charts"]["charts"][0]["bars"][0]
+    assert {i["key"]: i["n"] for i in bar0["items"]}["loss"] == 1 and bar0["total"] == 1
+    assert b["charts"]["n_dup"] == 1 and b["charts"]["total"] == 2
+    assert b["charts"]["counts_text"]["exit"].endswith("1 duplicate of the same stock not counted")
+    cats = {k["key"]: k["n"] for k in b["categories"]}
+    assert cats["loss"] == 1 and cats["all"] == 2                           # 📋 all = every listed row
+    assert b["n_rows"] == 2 == sum(len(dd["rows"]) for dd in b["days"])     # a duplicate stays LISTED
+
+
+def test_NEGATIVE_a_second_ring_after_the_first_was_stopped_is_its_own_count():
+    st, first, second = _vg_store(first_stop=(10, 12), second_at=(10, 30), second_plan=(15.20, 14.90),
+                                  second_fill=(10, 35), second_stop=(10, 50))
+    b = LL.served_block(st, D, et(D, 20, 0), span="today")
+    assert b["counts"]["dup"] == 0 and b["counts"]["stopped"] == 2
+    rows = _rows(b)
+    assert [rows[i]["flag_text"] for i in (first, second)] == ["❌ loser", "❌ loser"]
+    assert rows[second]["dup_of"] is None and rows[second]["dup_text"] is None
+    assert "duplicate" not in b["counts_text"]
+
+
+def test_NEGATIVE_a_second_ring_over_before_the_first_filled_is_its_own_count():
+    st, first, second = _vg_store(first_fill=(10, 10), first_stop=(10, 40), second_fill=(9, 50),
+                                  second_stop=(10, 5))
+    b = LL.served_block(st, D, et(D, 20, 0), span="today")
+    assert b["counts"]["dup"] == 0 and b["counts"]["stopped"] == 2
+    assert _rows(b)[second]["dup_of"] is None
+
+
+def test_NEGATIVE_live_and_shadow_rows_of_one_stock_day_are_two_ledgers():
+    st, first, second = _vg_store(second_live=False)
+    b = LL.served_block(st, D, et(D, 20, 0), span="today")
+    assert b["counts"]["dup"] == 0 and b["counts"]["stopped"] == 2
+    rows = _rows(b)
+    assert rows[first]["line"] == "live" and rows[second]["line"] == "shadow"
+
+
+def test_NEGATIVE_the_same_plan_on_another_fill_minute_is_still_a_duplicate():
+    """Clause (b): one trigger + stop = one trade, even when the second ring filled after the first was stopped."""
+    st, first, second = _vg_store(first_stop=(10, 12), second_at=(10, 30), second_plan=(14.50, 13.96),
+                                  second_fill=(10, 35), second_stop=(10, 50))
+    b = LL.served_block(st, D, et(D, 20, 0), span="today")
+    assert b["counts"]["dup"] == 1 and _rows(b)[second]["dup_of"] == first
+
+
+def test_trade_facts_adapter_reads_only_luks_own_fill_and_walk():
+    a = _ring("VG", "pullback_reversal", et(D, 9, 41), 14.50, 13.96)
+    r = row_for(a)
+    assert LL._trade_facts(r, None)["filled"] is None                               # not graded yet = unknown
+    nf = LL._trade_facts(r, _ledger_doc(a, {"entry": "no_entry"}, None))
+    assert nf["filled"] is False and nf["fill_t"] is None and nf["decided_t"] is None
+    st = LL._trade_facts(r, _ledger_doc(a, _filled(D, 9, 43, 14.5), _stopped(D, 10, 6)))
+    assert (st["filled"], st["fill_t"], st["decided_t"]) == (True, et(D, 9, 43), et(D, 10, 6))
+    assert st["group"] == (D.isoformat(), "VG", "live") and st["rank"] == LC.SETUPS.index("pullback_reversal")
+    em = LL._trade_facts(r, _ledger_doc(a, _filled(D, 9, 43, 14.5),
+                                        _walk(exit="ema9_close", exit_date=D3.isoformat(), r=1.2)))
+    assert em["decided_t"] == LL.close_utc(D3)
+    op = LL._trade_facts(r, _ledger_doc(a, _filled(D, 9, 43, 14.5), _walk(r_now=0.4)))
+    assert op["filled"] is True and op["decided_t"] is None                          # open = never decided
+    old = dict(_ledger_doc(a, _filled(D, 9, 43, 14.5), _stopped(D, 10, 6)), version=LC.LUK_GRADE_VERSION + 1)
+    assert LL._trade_facts(r, old)["filled"] is None                                 # NEGATIVE: another schema
+    # NEGATIVE: never counted → no facts
+    assert LL._trade_facts(dict(r, at_utc=None), None) is None
+    assert LL._trade_facts(dict(r, plan="no_plan"), None) is None
+
+
+def _shape_store():
+    win = _ring("WIN", "inside_day_pdh", et(D, 10, 0), 10.0, 9.5)
+    los = _ring("LOS", "pullback_reversal", et(D, 10, 1), 10.0, 9.5, live=False)
+    opn = _ring("OPN", "opening_range_high", et(D, 10, 2), 10.0, 9.5)
+    noe = _ring("NOE", "pullback_reversal", et(D, 10, 3), 10.0, 9.5)
+    flt = _ring("FLT", "pullback_reversal", et(D, 10, 4), 10.0, 9.5)
+    led = [_ledger_doc(win, FILL, _walk(exit="ema9_close", state="ema9_close", exit_date=D2.isoformat(), r=2.3,
+                                        sessions=2, reached_3r=False)),
+           _ledger_doc(los, FILL, _stopped(D, 10, 30)),
+           _ledger_doc(opn, FILL, _walk(r_now=0.8, sessions=1)),
+           _ledger_doc(noe, {"entry": "no_entry"}, None),
+           _ledger_doc(flt, FILL, _walk(exit="ema9_close", state="ema9_close", exit_date=D2.isoformat(), r=0.0,
+                                        sessions=2))]
+    return make_store([win, los, opn, noe, flt], led)
+
+
+def test_row_shape_is_ggs_and_the_bucket_is_the_sign_of_r_at_luks_exit():
+    b = LL.served_block(_shape_store(), D2, et(D2, 20, 0), span="5d")
+    rows = {r["symbol"]: r for dd in b["days"] for r in dd["rows"]}
+    subs = {k: (e, lab) for k, e, lab in LC.SUBS}
+    for r in rows.values():
+        assert r["key"] == r["id"].replace("|", "-") and "|" not in r["key"]
+        assert r["setup_label"] == f"{subs[r['setup']][0]} {subs[r['setup']][1]}"
+        assert r["rang_text"] == LG.RANG_TEXT[r["rang"]] and r["at_text"] == f"{r['at_et']} ET"
+        assert r["thin_text"] is None                                     # NEGATIVE: no thin rule on 🥇
+        assert r["kind"] == "aplus" and r["fill"]["text"] == r["fill_text"] and r["fill"]["provisional"] is False
+        for k in ("symbol", "setup_label", "at_text", "kind_text", "plan_text"):   # what the shared table reads
+            assert isinstance(r[k], str) and r[k], k
+        for h, _lab in LL.HEADS:
+            if h in ("fill", "exit"):
+                assert r[h] is None or isinstance(r[h].get("text"), str), h
+        assert r["loss_text"] is None and r["broker_text"] is None and r["trader_text"] is None
+    assert rows["LOS"]["kind_text"] == LG.KIND_TEXT[("aplus", "shadow")]
+    assert rows["WIN"]["kind_text"] == LL.KIND_TEXT_LIVE
+    want = {"WIN": ("win", "✅ winner"), "LOS": ("loss", "❌ loser"), "OPN": ("open", None), "NOE": ("out", None),
+            "FLT": ("flat", None)}                                       # FLT: r == 0 → ➖ flat, never flagged
+    assert {s: (rows[s]["bucket"], rows[s]["flag_text"]) for s in want} == want
+    assert all(rows[s]["bucket_text"] == LG.BUCKET_TEXT[rows[s]["bucket"]] for s in want)
+    assert rows["NOE"]["exit"] is None and rows["NOE"]["fill"]["state"] == "no_entry"   # NEGATIVE: unfilled → no exit
+    assert rows["WIN"]["exit"] == {"state": "win", "text": rows["WIN"]["exit_text"], "sub_text": None,
+                                   "provisional": False}
+    assert rows["OPN"]["exit"]["state"] == "open" and rows["WIN"]["fill"]["state"] == "filled"
+    assert rows["WIN"]["fill_px"] == 10.0 and rows["NOE"]["fill_px"] is None
+    assert [h["key"] for h in b["heads"]] == [k for k, _l in LL.HEADS]
+
+
+def test_NEGATIVE_bucket_of_every_state():
+    assert LL.bucket_of("stopped", -1.0) == "loss" and LL.bucket_of("stopped", None) == "loss"
+    assert LL.bucket_of("ema9_close", 0.4) == "win" and LL.bucket_of("ema9_close", -0.2) == "loss"
+    assert LL.bucket_of("ema9_close", 0.0) == "flat" and LL.bucket_of("open", None) == "open"
+    for st in ("no_entry", "no_plan", "no_risk", "no_time", "pending", "junk"):
+        assert LL.bucket_of(st, None) == "out", st
+
+
+def test_charts_block_one_horizon_luks_exit_setups_in_order():
+    b = LL.served_block(_shape_store(), D2, et(D2, 20, 0), span="5d")
+    ch = b["charts"]
+    assert ch["horizons"] == [] and ch["horizon_default"] == "exit" == LL.LUK_HK
+    assert ch["title"] == LL.CHARTS_TITLE and ch["honesty"].endswith(LG.DUP_RULE_TEXT)
+    assert [c["key"] for c in ch["charts"]] == list(LG.APLUS_CHART_KEYS)
+    outcomes, by_setup, by_day = ch["charts"]
+    assert [x["key"] for x in outcomes["bars"]] == ["exit"]
+    assert outcomes["bars"][0]["label"] == "Through Luk's exit (the stop or the first daily close below the 9 EMA)"
+    rows = [r for dd in b["days"] for r in dd["rows"]]
+    cell = LG._aplus_cell(LL._chart_counts(rows), "exit", True, mid_k="open")
+    assert {k: v for k, v in outcomes["bars"][0].items() if k not in ("key", "label")} == cell
+    # inside_day_pdh (1 win = 100%) is LATER in LC.SETUPS than pullback_reversal (1 loss) — order, never by %
+    assert [r["key"] for r in by_setup["rows"]] == [s for s in LC.SETUPS if s in {r["setup"] for r in rows}]
+    assert by_setup["rows"][-1]["key"] == "inside_day_pdh" and by_setup["rows"][-1]["exit"]["pct"] == 100
+    assert [c["key"] for c in by_day["cols"]] == [D.isoformat()] and by_day["cols"][0]["label"] == "Mon 11-02"
+    assert ch["counts"]["exit"]["win"] == 1 and ch["counts"]["exit"]["loss"] == 1
+    assert ch["counts"]["exit"]["flat"] == 1 and ch["counts"]["exit"]["open"] == 1
+    assert ch["counts"]["exit"]["no_entry"] == 1 and ch["counts"]["exit"]["pct"] == 50
+    assert ch["split_text"] == "4 sent to your phone · 1 recorded in shadow (never sent)"
+    assert ch["counts_text"]["exit"].startswith("A+ through Luk's exit: 1 win · 1 loss · 50% won")
+    assert ch["empty_text"] is None and ch["n_dup"] == 0 and ch["total"] == 5
+
+
+def test_charts_by_day_ascending_and_split_without_shadow():
+    a1 = _ring("AAA", "pullback_reversal", et(D, 10, 0), 10.0, 9.5)
+    a2 = _ring("BBB", "pullback_reversal", et(D2, 10, 0), 10.0, 9.5, d=D2)
+    st = make_store([a1, a2], [_ledger_doc(a1, FILL, _stopped(D, 10, 30))])
+    ch = LL.served_block(st, D2, et(D2, 20, 0), span="5d")["charts"]
+    assert [c["key"] for c in ch["charts"][2]["cols"]] == [D.isoformat(), D2.isoformat()]
+    assert ch["split_text"] == "2 sent to your phone"                  # NEGATIVE: no shadow part when n == 0
+
+
+def test_NEGATIVE_charts_empty_span():
+    ch = LL.served_block(_shape_store(), D3, et(D3, 20, 0), span="today")["charts"]
+    assert ch["empty_text"] == LL.CHARTS_EMPTY_TEXT and ch["charts"] == [] and ch["total"] == 0
+    assert ch["counts_text"] is None and ch["split_text"] is None
+
+
+def test_views_categories_and_sorts_are_ggs():
+    from chart_maps.gajjala import tape as GT
+    b = LL.served_block(_shape_store(), D2, et(D2, 20, 0), span="5d")
+    v = b["views"]
+    assert v["items"] == [] and v["tape_head"] == GT.TAPE_HEAD and v["tape_toggle"] == GT.TAPE_TOGGLE
+    assert v["param"] == GT.VIEW_PARAM and v["default"] == GT.VIEW_DEFAULT and v["kinds"] == ["aplus"]
+    assert LL.partials_text() in v["tape_toggle_title"]
+    rows = [r for dd in b["days"] for r in dd["rows"]]
+    assert b["categories"] == LG._categories(rows)
+    assert b["sorts"] == LG._sorts() and b["bucket_order"] == list(LG.BUCKETS)
+    assert b["sort_default"] == LG.SORT_KEYS[0] and b["sort_param"] == LG.SORT_PARAM
+    assert b["category_param"] == LG.CATEGORY_PARAM and b["category_empty_text"] == LG.CATEGORY_EMPTY_TEXT
+
+
+def test_the_cap_cuts_only_the_list_never_the_counts():
+    n = int(LC.LUK_LEDGER_ROWS_MAX) + 1
+    assert LC.LUK_LEDGER_ROWS_MAX == LG.GC.LEDGER_ROWS_MAX
+    old = _ring("OLDW", "pullback_reversal", et(D, 10, 0), 10.0, 9.5)        # the OLDEST row = the cut one, a WIN
+    rest = [_ring(f"S{i:03d}", "pullback_reversal", et(D2, 10, 0), 10.0, 9.5, d=D2) for i in range(n - 1)]
+    led = [_ledger_doc(old, FILL, _walk(exit="ema9_close", state="ema9_close", exit_date=D.isoformat(), r=1.5,
+                                        sessions=1))]
+    b = LL.served_block(make_store([old] + rest, led), D2, et(D2, 20, 0), span="5d")
+    listed = [r for dd in b["days"] for r in dd["rows"]]
+    assert len(listed) == LC.LUK_LEDGER_ROWS_MAX and "OLDW" not in {r["symbol"] for r in listed}
+    assert b["more_text"] == f"+1 more rows — the counts above cover all {n}"
+    assert b["counts"]["n"] == n == b["n_rows"]
+    assert b["counts"]["ema9_exits"] == 1 and b["counts"]["closed_positive"] == 1      # the cut win still counts
+    assert b["charts"]["counts"]["exit"]["win"] == 1 and b["charts"]["total"] == n
+    assert {c["key"]: c["n"] for c in b["categories"]}["win"] == 1
+
+
+def test_NEGATIVE_under_the_cap_no_more_text():
+    b = LL.served_block(_shape_store(), D2, et(D2, 20, 0), span="5d")
+    listed = sum(len(dd["rows"]) for dd in b["days"])
+    assert b["more_text"] is None and b["n_rows"] == b["counts"]["n"] == listed == 5
+
+
+def test_words_end_with_the_one_count_rule_and_carry_no_digit():
+    b = LL.served_block(_shape_store(), D2, et(D2, 20, 0), span="5d")
+    assert b["rule_text"].endswith(" " + LG.DUP_RULE_TEXT) and b["honesty"].endswith(" " + LG.DUP_RULE_TEXT)
+    assert not re.search(r"\d", LG.DUP_RULE_TEXT) and not re.search(r"\d", LL.CHARTS_HONESTY)
+    for s in (LL.CHARTS_TITLE, LL.CHARTS_HONESTY, LL.CHARTS_EMPTY_TEXT, LL.KIND_TEXT_LIVE, LL.MORE_TEXT,
+              LL.TAPE_TOGGLE_TITLE, LL.OUTCOME_LABEL, LL.CHARTS_LEAD):
+        assert not B_WORD.search(s) and not EDGE.search(s), s
+    for s in _strings(b):
+        assert not B_WORD.search(s) and not EDGE.search(s), s
+
+
+def test_NEGATIVE_a_read_fault_still_serves_the_static_shape():
+    b = LL.served_block(make_store([alert_doc()], fail_alerts=True), D, et(D, 20, 0))
+    assert b["fault"] is True and b["days"] == [] and b["more_text"] is None
+    assert b["charts"]["empty_text"] == LL.CHARTS_EMPTY_TEXT and b["counts"]["dup"] == 0
+    assert b["heads"] and b["sorts"] == LG._sorts()
+
+
+def test_NEGATIVE_docs_name_no_live_LukEntryTape_component_2026_11_02():
+    """2026-11-02: WP-D deleted LukEntryTape.tsx (📈 = the shared GgEntryTape via GgVariantContext 'luk').
+    SPECS.md and the 🥇 doc may name it only as deleted — never as a live component."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    assert not (root / "frontend/src/components/LukEntryTape.tsx").exists()
+    for rel in ("SPECS.md", "docs/luk/luk_tab_2026_11_01.md"):
+        for line in (root / rel).read_text().splitlines():
+            if "LukEntryTape" in line:
+                assert "LukEntryTape` deleted 2026-11-02" in line, (rel, line)

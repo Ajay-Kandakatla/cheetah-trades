@@ -382,3 +382,59 @@ describe('GajjalaAplusCharts — NEGATIVES', () => {
     expect(txt).not.toMatch(/bounc/i);
   });
 });
+
+/* 🥇 Luk's 🏁 charts block (2026-11-02, Ajay: "Can you make Luk's track record similar to Gajjal's"). Luk serves ONE
+ * horizon under its own key (`exit` — through Luk's exit) with `horizons: []`: one counts line per SERVED horizon key, no
+ * toggle, every chart drawn from the `exit` cell. SYNTHETIC — the test plays ledger.charts_block. */
+const LUK = (): GgTrAplus => {
+  const exit = cell(3, 2, 1);
+  const grp = (key: string, label: string, c: GgTrApCell): GgTrApGroup => ({ key, label, exit: c });
+  return {
+    title: "🥇 A+ through Luk's exit — served title", total: 6, n_sent: 6, n_shadow: 0, n_dup: 1,
+    counts: { exit: { win: 3, loss: 2, open: 1, pct: 60 } },
+    counts_text: { exit: "A+ through Luk's exit: 3 wins · 2 losses · 60% won · 1 open · 1 duplicate of the same stock not counted",
+                   same: 'a stray served key outside the served horizons' },
+    split_text: null, replayed_note: null, more_text: null, empty_text: null, honesty: 'served Luk charts honesty',
+    horizons: [], horizon_default: 'exit', days: [],
+    charts: [
+      { key: 'outcomes', title: 'served outcomes title', bars: [{ ...exit, key: 'exit', label: "served through Luk's exit" }] },
+      { key: 'by_setup', title: 'served by setup title', rows: [grp('pullback', '↩️ Pullback', cell(2, 1, 0)), grp('breakout', '🔔 Breakout', cell(1, 1, 1))] },
+      { key: 'by_day', title: 'served by day title', cols: [grp('2026-10-30', 'Fri 10-30', cell(1, 1, 0)), grp('2026-11-02', 'Mon 11-02', cell(2, 1, 1))] },
+    ] as any,
+  };
+};
+
+describe("GajjalaAplusCharts — Luk's one served horizon key (2026-11-02)", () => {
+  it("horizons [] + horizon_default 'exit' → ONE counts line gg-ap-counts-exit (served bytes), NO toggle, charts drawn from the exit cell", () => {
+    const b = LUK();
+    render(<GajjalaAplusCharts block={b} />);
+    const lines = screen.queryAllByTestId(/^gg-ap-counts-/);
+    expect(lines.map((l) => l.getAttribute('data-testid'))).toEqual(['gg-ap-counts-exit']);
+    expect(lines[0].textContent).toBe(b.counts_text!.exit);
+    expect(screen.queryByTestId('gg-ap-hs')).toBeNull();                                  // no toggle
+    expect(screen.getByTestId('gg-ap-pct-exit').textContent).toBe((b.charts[0] as any).bars[0].pct_text);
+    expect(screen.getByTestId('gg-ap-text-pullback').textContent).toBe(cell(2, 1, 0).text);
+    expect(screen.getByTestId('gg-ap-text-breakout').textContent).toBe(cell(1, 1, 1).text);
+    expect(screen.queryAllByTestId(/^gg-ap-col-/).map((c) => c.getAttribute('data-testid'))).toEqual(['gg-ap-col-2026-10-30', 'gg-ap-col-2026-11-02']);
+    expect(rects(screen.getByTestId('gg-ap-svg-pullback')).length).toBe(2);                // win + loss, the zero "other" skipped
+    textNodesServed(screen.getByTestId('gg-ap'), servedStrings(b));
+  });
+  it('NEGATIVE: a counts_text key outside the served horizons prints nothing (the stray `same` here)', () => {
+    render(<GajjalaAplusCharts block={LUK()} />);
+    expect(screen.queryByTestId('gg-ap-counts-same')).toBeNull();
+    expect(screen.queryByTestId('gg-ap-counts-next')).toBeNull();
+  });
+  it('NEGATIVE: no horizons and no horizon_default → no counts line at all; a blank served line → no line', () => {
+    render(<GajjalaAplusCharts block={{ ...LUK(), horizon_default: '' } as GgTrAplus} />);
+    expect(screen.queryAllByTestId(/^gg-ap-counts-/)).toEqual([]);
+    render(<GajjalaAplusCharts block={{ ...LUK(), counts_text: { exit: '  ' } }} />);
+    expect(screen.queryAllByTestId(/^gg-ap-counts-/)).toEqual([]);
+  });
+  it('🚩 unchanged: the same / next block prints its two lines in the served horizon order, the stray key never', () => {
+    const b = SAMPLE();
+    b.counts_text = { ...b.counts_text!, exit: 'a stray key on a 🚩 block' };
+    render(<GajjalaAplusCharts block={b} />);
+    expect(screen.queryAllByTestId(/^gg-ap-counts-/).map((l) => l.getAttribute('data-testid'))).toEqual(['gg-ap-counts-same', 'gg-ap-counts-next']);
+    expect(screen.getByTestId('gg-ap-hs')).toBeTruthy();
+  });
+});

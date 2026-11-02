@@ -540,9 +540,18 @@ def test_provisional_today_rows_say_so_and_count():
     assert hf["same"] == {"state": "win", "text": "WIN · best +103.2% so far", "sub_text": "+1R at 09:49 · not final",
                           "provisional": True}
     assert hf["plan_text"] == "trigger 1.81 → fill 1.89 at 09:45 · stop 1.70 · +1R 2.00" and hf["fill_px"] == 1.89
-    assert b["counts"]["live"]["same"]["win"] == 2 and b["counts"]["live"]["same"]["pct"] == 100
-    assert b["counts_text"]["same"] == ("Same session: 2 wins · 0 losses · 100% won · 0 no entry · 0 open"
-                                        " · today not final")
+    # RE-PINNED 2026-11-02 (🔁 one count per stock per day, SPEC luk-track §3.1, clause a): the XLAB pair fills the
+    # SAME 09:45 minute — one trade, 2 wins → 1 counted + 1 duplicate; both rows still listed, both still graded WIN
+    vcp = rows["intraday_vcp"]
+    assert vcp["same"]["state"] == "win" and hf["dup_text"] is None and hf["dup_of"] is None
+    assert vcp["dup_of"] == "2026-10-16|XLAB|horizontal_fade|potential"
+    assert vcp["dup_text"] == LG.DUP_TEXT.format(at="08:51", setup=hf["setup_label"])
+    assert hf["flag_text"] is not None and vcp["flag_text"] is None              # NEGATIVE: a duplicate is never flagged
+    assert b["dup_counts"] == {"live": 1, "shadow": 0, "entry": 0, "replayed": 0}
+    assert b["counts"]["live"]["same"]["win"] == 1 and b["counts"]["live"]["same"]["pct"] == 100
+    assert b["counts"]["live"]["same"]["win"] != 2                               # NEGATIVE: the old double count
+    assert b["counts_text"]["same"] == ("Same session: 1 win · 0 losses · 100% won · 0 no entry · 0 open"
+                                        " · 1 duplicate of the same stock not counted · today not final")
     assert b["today_text"] == "Today · through 12:24 ET · not final"        # 12:25 − settle, floored: what was read
     _assert_clean(b)
 
@@ -657,7 +666,13 @@ F3_HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math —
 
 def test_honesty_has_no_never_sent_lie():
     from chart_maps.high_beta_tab import FORBIDDEN_WORDS
-    assert LG.HONESTY == F3_HONESTY
+    # RE-PINNED 2026-11-02 (🔁 SPEC luk-track §3.1.7): F3 up to the rows sentence, then his rule replaces "two rows"
+    old = (" The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
+           "unchanged.")
+    assert LG.HONESTY.startswith(F3_HONESTY[:F3_HONESTY.index(old)])
+    assert LG.HONESTY != F3_HONESTY and old not in LG.HONESTY                   # NEGATIVE: the old sentence is gone
+    assert "The winners / losers chips count ROWS" in LG.HONESTY                # the contracts' pinned phrase
+    assert LG.DUP_RULE_WORDS in LG.HONESTY and LG.HONESTY.endswith("each counted once.")
     assert "The A+ line was never sent" not in LG.HONESTY                       # NEGATIVE: false since the flip
     assert "A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes" in LG.HONESTY
     assert "A+ entries sent live count like the 🧠 pushes" not in LG.HONESTY    # NEGATIVE: F3 withdrew the pooling
@@ -925,8 +940,12 @@ def test_NEGATIVE_a_split_on_the_next_session_never_overwrites_a_trade_the_same_
             "target", "2026-10-19", "same")
         assert doc["next"]["end_date"] == "2026-10-19" and doc["next"]["horizon"] == "next"
     b = LG.served_block(st, D19, et(D19, 20, 30), span="all", is_today=True)
-    assert b["counts"]["live"]["next"]["win"] == 2 and b["counts"]["live"]["next"]["split"] == 0
-    assert b["counts_text"]["next"].startswith("Through next session: 2 wins · 0 losses · 100% won")
+    # RE-PINNED 2026-11-02 (🔁 SPEC luk-track §3.1, clause a): one 09:45 fill = one trade — 1 counted, 1 duplicate;
+    # the split guard still copies BOTH rows' WIN (the loop above), only the count moves
+    assert b["counts"]["live"]["next"]["win"] == 1 and b["counts"]["live"]["next"]["split"] == 0
+    assert b["dup_counts"]["live"] == 1
+    assert b["counts_text"]["next"].startswith("Through next session: 1 win · 0 losses · 100% won")
+    assert b["counts_text"]["next"].endswith(" · 1 duplicate of the same stock not counted")
     assert " split" not in b["counts_text"]["next"]
     cell = b["days"][0]["rows"][0]["next"]
     assert cell["state"] == "win"

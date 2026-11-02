@@ -181,6 +181,13 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-tr-table tr.gg-tr-row-win > td:first-child { box-shadow: inset 3px 0 0 var(--positive, #22c55e); }
 .gg-tr-table tr.gg-tr-row-loss > td { background: rgba(239, 68, 68, 0.09); background: color-mix(in srgb, var(--negative, #ef4444) 9%, transparent); }
 .gg-tr-table tr.gg-tr-row-loss > td:first-child { box-shadow: inset 3px 0 0 var(--negative, #ef4444); }
+/* 🔁 One count per stock per day (2026-11-02). Ajay: "make sure you are not accounting for duplicates of the same stock as
+   winner unless it did the same pattern again and met all the criteria on the same day". A served duplicate row is
+   listed, never counted: no tint, no edge, dimmed (AFTER the win / loss tints so it wins at equal specificity); its
+   served 🔁 chip wraps inside the Ticker cell (the 📱 430 px rule — a served string never widens the page). */
+.gg-tr-table tr.gg-tr-row-dup > td { background: none; opacity: 0.65; box-shadow: none; }
+.gg-tr-table tr.gg-tr-row-dup > td:first-child { box-shadow: none; }
+.gg-tr-dup { color: var(--ink-subtle, #94a3b8); white-space: normal; overflow-wrap: anywhere; }
 .gg-tr-flag {
   display: inline-block; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 999px; font-size: 0.7rem;
   font-weight: 600; border: 1px solid currentColor; white-space: nowrap;

@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-02 (verbatim in the label, his spelling kept): "Can you make Luk's track record similar to Gajjal's and also can you make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day". Item 1: 🥇 Luk's 🏁 serves 🚩's shape
+  // (backend chart_maps/luk/ledger.served_block — heads, views, categories, sorts, bucket_order, the charts block, the
+  // row cap LUK_LEDGER_ROWS_MAX) and draws through the SAME pieces (GajjalaBoard's exported GgTr*, GajjalaAplusCharts,
+  // GgVariantContext 'luk'); Luk's grading math (fill / walk) untouched. Item 2: one count per stock per day on all
+  // four 🏁s — ONE pure engine chart_maps/gajjala/ledger.dedupe_trades (partition date / symbol / count line; the
+  // first ring counts; a later ring is a duplicate on the same fill minute, the same trigger and stop, or a trade held
+  // while the first was running); a duplicate is LISTED with dup_of + dup_text (🔁 chip), out of every count, %, chart,
+  // bucket chip and 🧪 per-rule attribution; dup_counts / aplus.n_dup / the counts-line tail served. No grade, gate,
+  // threshold, claim or push changed; nothing under trading/. UNMEASURED. Pinned by scripts/contracts.mjs ("🏁 One count
+  // per stock per day + 🥇 Luk's 🏁 like 🚩's (2026-11-02)").
+  { id: 'luk-track-record-one-count-per-stock-2026-11-02', addedAt: '2026-11-02', route: '/chart-maps?tab=luk&sub=track_record',
+    label: "🏁 One count per stock per day on every Track record — 🚩 Gajjala's, the 1-minute page, 🧪 Audited (rule by rule too) and 🥇 Luk's: a name that rang again the same day stays listed with a 🔁 chip and is out of every count and chart, unless the later ring set up again — its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. The counts line says how many were left out; no row is hidden. And 🥇 Luk's 🏁 now reads like 🚩 Gajjala's: the ✅ / ❌ chips, wins first with green and red row flags, the 📈 Tape column with the minute tape behind every row, the A+ wins-vs-losses charts always on the page, one table per day — the same pieces, graded by Luk's own trade math (the fill, then the stop or the first daily close below his 9 EMA). You said: “Can you make Luk's track record similar to Gajjal's and also can you make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day”. No rule, gate or push changed. UNMEASURED. Not advice." },
   // Ajay 2026-11-01 (verbatim in the label, his spelling kept): "Yes make the changes in audited please" and "But keep a
   // track record too to see the winners and loster". The eight 2026-11-01 modifications are registered ON on 🧪 only
   // (backend chart_maps/gajjala/audited_rules.py REGISTRY = the 12-id tuple, AUDIT_VERSION 2, the second frozen prereg

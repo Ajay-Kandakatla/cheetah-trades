@@ -62,6 +62,7 @@ LUK_LEDGER_SPANS = GC.LEDGER_SPANS          # derived — the 🏁 day picker sp
 LUK_LEDGER_SPAN_DEFAULT = GC.LEDGER_SPAN_DEFAULT   # derived — "5d"
 LUK_FILL_FROM_ET = ET_RTH_OPEN              # derived (HIS CALL #16) — the 🏁 fill window opens at the regular open
 LUK_FILL_TO_ET = ET_RTH_CLOSE               # derived (HIS CALL #16) — and closes at the regular close
+LUK_LEDGER_ROWS_MAX = GC.LEDGER_ROWS_MAX     # derived (2026-11-02) — the 🏁 list cap (= 🚩's GC.LEDGER_ROWS_MAX), the counts still cover every row on the span
 
 # ── frames ───────────────────────────────────────────────────────────────────────────────────────────────────────
 LUK_HOURLY_SESSIONS = 10                    # MINE — ≥ 70 hourly bars for the 21 EMA warm-up (~7 RTH bars a session)

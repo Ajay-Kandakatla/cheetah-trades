@@ -195,11 +195,14 @@ export default function GajjalaAplusCharts({ block }: { block: GgTrAplus | null 
       : keys[0] ?? block.horizon_default;
   const charts = (Array.isArray(block.charts) ? block.charts : []).filter((c) => !!c && !!drawOf(c.key));
   const toggle = horizons.length > 0 && charts.some((c) => drawOf(c.key)!.toggle);
+  const lineKeys = keys.length ? keys : (has(block.horizon_default) ? [block.horizon_default] : []);
   return (
     <section className="gg-ap" data-testid="gg-ap">
       {has(block.title) ? <h4 className="gg-pb-h gg-ap-title" data-testid="gg-ap-title">{block.title}</h4> : null}
-      {has(block.counts_text?.same) ? <div className="cm-foot" data-testid="gg-ap-counts-same">{block.counts_text!.same}</div> : null}
-      {has(block.counts_text?.next) ? <div className="cm-foot" data-testid="gg-ap-counts-next">{block.counts_text!.next}</div> : null}
+      {/* 🥇 (2026-11-02) one served counts line per SERVED horizon key (🚩 same / next; 🥇 its one key, horizon_default,
+          when no toggle is served) — a counts_text key outside them prints nothing. */}
+      {lineKeys.map((k) => has(block.counts_text?.[k])
+        ? <div key={k} className="cm-foot" data-testid={`gg-ap-counts-${k}`}>{block.counts_text![k]}</div> : null)}
       {has(block.split_text) ? <div className="gg-muted" data-testid="gg-ap-split">{block.split_text}</div> : null}
       {has(block.replayed_note) ? <div className="gg-muted" data-testid="gg-ap-replayed-note">{block.replayed_note}</div> : null}
       {toggle ? (

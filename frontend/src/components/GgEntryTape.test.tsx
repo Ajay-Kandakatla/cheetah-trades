@@ -3,7 +3,9 @@
  * no word, number or percent (the contracts check 2 regex). */
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GgEntryTape, GgEntryMiniTape, GG_TAPE_PATH, ggTapeMarks, _resetGgLiteCache, type GgTapePayload } from './GgEntryTape';
+import { GgEntryTape, GgEntryMiniTape, GG_TAPE_PATH, ggTapeMarks, ggTapePath, _resetGgLiteCache, type GgTapePayload } from './GgEntryTape';
+import { GG_VARIANT_BASE, GgVariantContext, ggBase, ggVariantKey } from './ggVariant';
+import { LUK_BASE, LUK_TAPE_PATH } from '../lib/luk';
 import { TAPE_DASH, TAPE_H } from './TapeChart';
 
 const T0 = Date.UTC(2026, 9, 14, 19, 0);        // 15:00 ET
@@ -220,5 +222,36 @@ describe('GgEntryTape.tsx source — types no word, number or percent (contracts
     expect(scan(src.replace('label: h.label', 'label: h.px.toFixed(2)')).join(' ')).toContain('banned toFixed');
     expect(scan(src.replace("? ' is-clickable' : ''", "? ' is-clickable' : '%'")).join(' ')).toContain('banned %');
     expect(scan(src.replace('<span className="pcw__dim">…</span>', '<span className="pcw__dim">Loading the tape</span>')).join(' ')).toContain('JSX text "Loading the tape"');
+  });
+});
+
+/* 🥇 Luk's 🏁 (2026-11-02, Ajay: "Can you make Luk's track record similar to Gajjal's"): the shared 🏁 row mounts the
+ * tape under GgVariantContext 'luk', so the tape must read Luk's own route — never a 🚩 one. */
+describe("ggVariant 'luk' — the tape inside Luk's 🏁 reads /chart-maps/luk/entry-tape (2026-11-02)", () => {
+  it("ggTapePath('luk') === '/chart-maps/luk/entry-tape' === lib/luk LUK_TAPE_PATH; the base == LUK_BASE", () => {
+    expect(ggTapePath('luk')).toBe('/chart-maps/luk/entry-tape');
+    expect(ggTapePath('luk')).toBe(LUK_TAPE_PATH);
+    expect(GG_VARIANT_BASE.luk).toBe(LUK_BASE);
+    expect(ggBase('luk')).toBe(LUK_BASE);
+    expect(ggTapePath('gajjala')).toBe(GG_TAPE_PATH);                                    // 🚩 unchanged
+    expect(ggTapePath('gajjala_1m')).toBe('/chart-maps/gajjala-1m/entry-tape');
+  });
+  it("NEGATIVE: ggVariantKey('luk') === 'luk'; an unknown key still falls to 'gajjala'", () => {
+    expect(ggVariantKey('luk')).toBe('luk');
+    expect(ggVariantKey('LUK')).toBe('gajjala');
+    expect(ggVariantKey('luk_1m')).toBe('gajjala');
+    expect(ggVariantKey(null)).toBe('gajjala');
+    expect(ggBase('bogus')).toBe('/chart-maps/gajjala');
+  });
+  it("the full tape under GgVariantContext 'luk' fetches the Luk route; NEGATIVE: no URL ever names /gajjala", async () => {
+    const id = '2026-11-02|VG|pullback|aplus';
+    const p = payload({ id });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => p }));
+    render(<GgVariantContext.Provider value="luk"><GgEntryTape id={id} /></GgVariantContext.Provider>);
+    await waitFor(() => expect(screen.getByTestId('gg-tape-read').textContent).toBe(p.read));
+    const urls = (fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(urls.length).toBe(1);
+    expect(urls[0].endsWith(`${LUK_TAPE_PATH}?id=${encodeURIComponent(id)}`)).toBe(true);
+    expect(urls.some((u: string) => u.includes('/gajjala'))).toBe(false);
   });
 });

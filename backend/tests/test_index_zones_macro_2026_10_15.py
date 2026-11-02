@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import copy
 import sys
+import threading
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -604,14 +605,28 @@ def test_T10_NEGATIVE_a_tiles_row_never_reaches_the_strip_and_warming_fetches_it
 # T11 the default loader's scope (Revision 1, finding 1)
 # ---------------------------------------------------------------------------
 def _recorders(monkeypatch):
+    """Record the two price readers, but ONLY calls made on the test's own thread.
+
+    2026-11-02 (order-dependent red in the full run, passes alone): `warm` calls
+    its loader synchronously, yet a daemon worker an EARLIER test started (the
+    demand-reentry `warm-*` scan, bounce_room's zones worker, a tab warm …) can
+    still be running and calling `prices.load_prices` while this test holds the
+    patch — its symbol then lands in `calls["load_prices"]` and the NEGATIVE
+    below goes red for a call `warm` never made. A foreign-thread call is still
+    served a frame, it is just not `warm`'s call. If `warm` ever moved its reads
+    off-thread, the exact `closed_daily_frame` lists below would go empty → red.
+    """
     calls = {"load_prices": [], "closed_daily_frame": []}
+    me = threading.get_ident()
 
     def lp(sym, *a, **kw):
-        calls["load_prices"].append((sym, a, kw))
+        if threading.get_ident() == me:
+            calls["load_prices"].append((sym, a, kw))
         return _frame()
 
     def cdf(sym, *a, **kw):
-        calls["closed_daily_frame"].append((sym, a, kw))
+        if threading.get_ident() == me:
+            calls["closed_daily_frame"].append((sym, a, kw))
         return _frame()
 
     monkeypatch.setattr(P, "load_prices", lp)
@@ -640,6 +655,33 @@ def test_T11_NEGATIVE_no_zone_store_doc_means_no_cache_read_for_any_symbol(monke
     assert calls["load_prices"] == [], "load_prices reads the shared cache"
     assert [c[0] for c in calls["closed_daily_frame"]] == list(IZ.STRIP_SYMBOLS)
     assert all(c[2]["use_cache"] is False for c in calls["closed_daily_frame"])
+
+
+def test_T11_NEGATIVE_a_stray_worker_thread_read_is_not_counted_as_warms(monkeypatch):
+    """The order-dependence fix (2026-11-02): a daemon worker left running by an
+    earlier test that reads `prices.load_prices` during `warm` is NOT `warm`'s
+    read — the recorder ignores it, and the no-cache-read NEGATIVE stays exact."""
+    calls = _recorders(monkeypatch)
+    stray = threading.Thread(target=lambda: P.load_prices("AAPL", period="2y"))
+    stray.start()
+    stray.join()
+    IZ.warm(coll=FakeColl(), store_docs={}, today=date(2026, 10, 16), now=NOW_0415,
+            namer=lambda s: s)
+    assert calls["load_prices"] == [], "the stray worker's AAPL read is not warm's"
+    assert [c[0] for c in calls["closed_daily_frame"]] == list(IZ.STRIP_SYMBOLS)
+
+
+def test_T11_NEGATIVE_the_recorder_still_counts_a_same_thread_cache_read(monkeypatch):
+    """The thread filter cannot hide a real cache read: a load_prices call on the
+    test's own thread (where `warm` runs its loader) is recorded."""
+    calls = _recorders(monkeypatch)
+    P.load_prices("TLT", period="2y")
+    assert [c[0] for c in calls["load_prices"]] == ["TLT"]
+    calls["load_prices"].clear()
+    IZ.warm(coll=FakeColl(), store_docs={"SPY": spy_doc()}, today=date(2026, 10, 16),
+            now=NOW_0415, namer=lambda s: s)
+    assert [c[0] for c in calls["load_prices"]] == ["SPY"], \
+        "a zone_store doc → the cached read IS recorded"
 
 
 # ---------------------------------------------------------------------------

@@ -21,9 +21,11 @@ const byId = (id: string) => NEW_FEATURES.find((x) => x.id === id)!;
 describe("✨ the 🥇 Luk's go-live entry", () => {
   const f = byId(LIVE_ID);
 
-  it('is second (the 🧪 audited-modifications ✨ went FIRST 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
-    expect(NEW_FEATURES[1].id).toBe(LIVE_ID);
+  // WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …")
+  it('is third (the 🏁 one-count ✨ went FIRST 2026-11-02, the 🧪 audited-modifications ✨ 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
+    expect(NEW_FEATURES[0].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
+    expect(NEW_FEATURES[2].id).toBe(LIVE_ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -58,8 +60,8 @@ describe("✨ the 🥇 Luk's go-live entry", () => {
 describe("✨ the 🥇 Luk's tab entry", () => {
   const f = byId(ID);
 
-  it('is third (the 🧪 audited-modifications ✨ then the go-live went first 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[2].id).toBe(ID);
+  it('is fourth (the 🏁 one-count ✨ 2026-11-02, then the 🧪 audited-modifications ✨ and the go-live 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
+    expect(NEW_FEATURES[3].id).toBe(ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -88,9 +90,9 @@ describe("✨ the 🥇 Luk's tab entry", () => {
     expect(f.label).not.toMatch(/poised|expected to|likely to|predict|will reverse/i);
   });
 
-  it('NEGATIVE: listed once; the 🧪 audited entry moved to fourth, not dropped', () => {
+  it('NEGATIVE: listed once; the 🧪 audited entry moved to fifth, not dropped', () => {
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-audited-2026-11-01');
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-audited-2026-11-01');
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });

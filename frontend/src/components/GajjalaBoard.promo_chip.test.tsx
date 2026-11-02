@@ -302,14 +302,17 @@ const HIS = "Also I see a some of stocks we see are also in Gajjalas page. Don't
 // [3] → [4], the 🏰 moat [2] → [3], the 🧪 audited [1] → [2], the 🥇 luk tab [0] → [1].
 // WIDENED +1 (2026-11-01: the 🧪 audited-modifications ✨ went FIRST — Ajay: "Yes make the changes in audited please") — the
 // 🎪 entry [4] → [5], the 🏰 moat [3] → [4], the 🧪 audited [2] → [3], the 🥇 luk tab [1] → [2], the 🥇 luk-live [0] → [1].
-describe('✨ the 🎪 entry is NEW_FEATURES[5]', () => {
-  it('sixth (the 🧪 audited-modifications entry, the 🥇 Luk go-live entry, the 🥇 Luk tab entry, the 🧪 audited entry then the 🏰 moat entry went first 2026-11-01), dated 2026-10-29, routed /chart-maps, his words verbatim, INVERTED + UNMEASURED on the label', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
-    expect(NEW_FEATURES[1].id).toBe('luk-live-pushes-2026-11-01');
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-luk-2026-11-01');
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-audited-2026-11-01');
-    expect(NEW_FEATURES[4].id).toBe('sepa-moat-none-not-unknown-2026-11-01');
-    const f = NEW_FEATURES[5];
+// WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — the 🎪 entry [5] → [6], the 🏰 moat [4] → [5], the 🧪 audited [3] → [4], the 🥇 luk tab [2] → [3], the 🥇
+// luk-live [1] → [2], the 🧪 audited-modifications [0] → [1].
+describe('✨ the 🎪 entry is NEW_FEATURES[6]', () => {
+  it('seventh (the 🏁 one-count entry 2026-11-02, the 🧪 audited-modifications entry, the 🥇 Luk go-live entry, the 🥇 Luk tab entry, the 🧪 audited entry then the 🏰 moat entry went first 2026-11-01), dated 2026-10-29, routed /chart-maps, his words verbatim, INVERTED + UNMEASURED on the label', () => {
+    expect(NEW_FEATURES[0].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
+    expect(NEW_FEATURES[2].id).toBe('luk-live-pushes-2026-11-01');
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-luk-2026-11-01');
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-audited-2026-11-01');
+    expect(NEW_FEATURES[5].id).toBe('sepa-moat-none-not-unknown-2026-11-01');
+    const f = NEW_FEATURES[6];
     expect(f.id).toBe('chart-maps-gajjala-promo-names-2026-10-29');
     expect(f.addedAt).toBe('2026-10-29');
     expect(f.route).toBe('/chart-maps');
@@ -319,9 +322,9 @@ describe('✨ the 🎪 entry is NEW_FEATURES[5]', () => {
     expect(f.label).not.toMatch(/bounc/i);
   });
 
-  it('NEGATIVE: the entry is not duplicated, and the 📈 tape entry is now seventh', () => {
+  it('NEGATIVE: the entry is not duplicated, and the 📈 tape entry is now eighth', () => {
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-promo-names-2026-10-29').length).toBe(1);
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-track-record-tape-2026-10-29');
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-track-record-tape-2026-10-29');
   });
 });
 

@@ -238,6 +238,8 @@ docker rm -f cheetah-tmp-gl-api
 - Q11 After-hours and pre-market prints are inside the next-session walk (DEFAULT); vs regular-session prints only.
 - Q12 A fill after the structure died (the card says invalid) still counts (DEFAULT); vs no entry.
 - Q13 Counted per alert (XLAB = 3 rows over two days, DEFAULT); vs per ticker per day (the first alert only).
+  **ANSWERED 2026-11-02 by his word — reversed for COUNTING; rows stay per alert** (see "🔁 One count per stock per
+  day (2026-11-02)" below).
 - Q14 A push that reached no device (`no_target`) or failed is not a row (DEFAULT).
 - Q15 The next-session column ends at the next market day's 16:00 ET (DEFAULT); vs a fixed N-minute / N-session window.
 - **Q16 The R floor** (AMENDMENTS9 E4, MINE): R under `LEDGER_MIN_R_PCT` 0.5% of the trigger = "thin R" — graded,
@@ -513,3 +515,72 @@ levels; NEGATIVE: no alert time no ring; NEGATIVE: the mini never calls the load
 joined / unsent / off-file ids None, kinds never cross; the potentials read fault; the route's 200 / 404; the 1-minute
 route; the words clean; NEGATIVE: no typed kind string in `tape.py`). `tests/test_gajjala_entry_tape.py`
 `test_parse_id_reads_only_an_aplus_ledger_id` WIDENED (a 🧠 id now parses).
+
+## 🔁 One count per stock per day (2026-11-02)
+
+Ajay 2026-11-02, verbatim: "Can you make Luk's track record similar to Gajjal's and also can you make sure you are not
+accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on
+the same day"
+
+A COUNTING rule over the served rows on all four 🏁s (🚩 5-minute, 🚩 1-minute, 🧪 Audited incl. its per-rule table,
+🥇 Luk). No grade, gate, threshold or claim moves; nothing under `trading/`; the pusher's claim (`alerts.py`
+`claim_key`, once per symbol / setup / ET day) is untouched.
+
+**The engine** — ONE pure function, `ledger.dedupe_trades(trades) -> {duplicate id: counted id}`, over neutral facts
+(`ledger.trade_facts` on 🚩 / 🧪; the 🥇 ledger ships its own adapter and imports the same function):
+
+- Partition `ledger.dup_group(row)` = (date, symbol, `_count_line(row)`): live 🧠 / shadow / 🎯 entry / ⏪ replayed are
+  four ledgers — a 🧠 push and its 🎯 A+ entry never dedupe each other, a shadow row never dedupes a live row, a
+  replay never dedupes anything live (🥇: (date, symbol, line)).
+- Rows ordered by ring time (ties: `GC.SETUPS` order, then id). The FIRST ring is the counted one.
+- A later row is a DUPLICATE of the first counted row C of its group (clause order (a) → (b) → (c), the served
+  `dup_of` names that C) when:
+  - (a) it filled on the same minute as C; or
+  - (b) its trigger AND stop equal C's; or
+  - (c) its trade overlapped C's: a later row that FILLED is a duplicate when it filled before C's trade was decided
+    (C open / flat / ungraded = never decided that day → duplicate) — EXCEPT when the later trade was itself decided
+    no later than C's fill minute (over before C even filled: wholly its own trade, counted); a later row that did NOT
+    fill (no entry / pending / unknown) is a duplicate when it RANG before C was decided.
+- A counted row that can never fill (no plan, or both stored columns say no entry) blocks nothing by (c).
+- Otherwise the later ring is a genuine second pattern and counts. Symmetric for losses; an unfilled duplicate leaves
+  the "no entry" tally too.
+
+**What the page serves.** A duplicate stays LISTED with `dup_of` + `dup_text` ("🔁 same trade as the HH:MM <setup>
+ring — not counted"), loses its ✅/❌ `flag_text`, keeps its `bucket`, and is out of every count, %, chart, category
+chip (📋 all still counts every listed row) and 🧪 per-rule attribution. New keys: `dup_counts` {live, shadow, entry,
+replayed} after `counts`; `aplus.n_dup`; the count lines gain the tail "· N duplicate(s) of the same stock not counted"
+(before "· today not final"); `HONESTY` replaces the rows sentence with his rule (the phrase "The winners / losers chips
+count ROWS" kept); `rule_text()` and `APLUS_HONESTY` end with `DUP_RULE_TEXT`. Pending rows block conservatively: a
+same-day second ring stays a duplicate until the nightly grades the first ring's next column — the counts move with the
+nightly, as they already do; verify live on a closed session.
+
+**Prior read** (read-only probe 2026-11-02 over the live ledgers, the critic's method; `probe_dedupe_v3.py`):
+
+| ledger | reading of clause (c) | duplicates (by clause) | win rows → counted | loss rows → counted |
+|---|---|---|---|---|
+| 🚩 5-min | v1 — the first draft (any later ring before the first's decision) | 63 (c 40 · a 22 · b 1) | 162 → 140 | 181 → 160 |
+| 🚩 5-min | **v2 — as built (DEFAULT)** | 49 (c 25 · a 23 · b 1) | 162 → 147 | 181 → 165 |
+| 🚩 5-min | (a)+(b) only | 24 (a 23 · b 1) | 162 → 153 | 181 → 171 |
+| 🚩 1-min | v1 | 28 (c 17 · a 11) | 45 → 40 | 54 → 46 |
+| 🚩 1-min | **v2 (DEFAULT)** | 27 (c 16 · a 11) | 45 → 40 | 54 → 47 |
+| 🚩 1-min | (a)+(b) only | 11 (a 11) | 45 → 40 | 54 → 49 |
+| 🥇 Luk | v1 = v2 | 1 (VG, c) | — | 2 stopped → 1 |
+| 🥇 Luk | (a)+(b) only | 0 | — | 2 stopped → 2 |
+
+The live cases: XLAB 10-16 🌀 09:01 = duplicate of ➖ 08:51 (a — both fill 09:45 ET); NCPL 10-30 🌀 🧠 10:31 COUNTED
+(own plan 2.21 / 2.15, filled 10:33, +1R 10:52 == the ➖ fill minute — over before the ➖ trade filled). Accounting,
+not a study: UNMEASURED stays on every title.
+
+**Goldens regenerated** (every delta traced to the named rows): 🏁 golden = XLAB 10-16 🌀 duplicate of ➖ (a) on
+`today` / `5d`; 1-minute golden = GGB 10-27 kiss_fly (b) + horizontal_fade (c, the first's next still pending)
+duplicates of bull_flag; GG5 board = GGA 10-13 🧠 kiss_fly + horizontal_fade duplicates of bull_flag on both the live
+and shadow halves, its A+ untouched. The GG5 WRITES fixture is byte-identical. `PRE_SHA` re-pinned for `today` / `5d`
+only (XLAB); `cat_store` / `yesterday` stay byte-exact.
+
+**Tests**: `backend/tests/test_gajjala_ledger_dedupe_2026_11_02.py` (the pure engine incl. the NCPL `<=` boundary,
+served_block on two A+ of one pass clock, the genuine-second-pattern / same-plan / two-ledger NEGATIVES, the words,
+the HONESTY layout under the contract's lazy regex, the 🧪 sides and the held side).
+
+HIS CALLs (defaults built): partition per kind (#1); the counted row = the first ring (#2); losses collapse too (#3);
+clause (c) v2 vs v1 vs a+b (#4 — the real decision; the NCPL line above); no dup category chip (#5); the tail and chip
+words (#6, MINE); live and shadow separate (#18); an unfilled later ring is a duplicate too (#19).

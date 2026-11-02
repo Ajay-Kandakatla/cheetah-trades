@@ -954,6 +954,22 @@ def today_read(now: Optional[datetime] = None, *, span: str = "", store=None, lo
 # ── the served block (§3.7, §3.10 W1–W15) ─────────────────────────────────────────────────────────────────────────
 TITLE = "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED"        # W1
 RULE_LABEL = "ⓘ how each alert is graded"                                                               # W2a
+# 🔁 One count per stock per day (Ajay 2026-11-02) — a COUNTING rule over the served rows; no grade, gate or threshold moves
+DUP_RULE_WORDS = ("make sure you are not accounting for duplicates of the same stock as winner unless it did the same "
+                  "pattern again and met all the criteria on the same day")                      # his words verbatim
+DUP_RULE_TEXT = ("One count per stock per day — your rule: \"" + DUP_RULE_WORDS + "\". A name that rang again the same "
+                 "day is listed and chipped, never counted twice, unless the later ring set up again: its own fill "
+                 "minute, its own trigger and stop, and a trade of its own, not one held while the first was still "
+                 "running. A duplicate stays out of every count, % and chart.")   # NO digit, NO brace (variant words are .format()ed)
+DUP_TEXT = "🔁 same trade as the {at} {setup} ring — not counted"          # the duplicate row's chip (MINE, HIS CALL #6)
+DUP_COUNT_ONE, DUP_COUNT_MANY = "duplicate of the same stock not counted", "duplicates of the same stock not counted"
+
+
+def dup_count_text(n: int) -> Optional[str]:
+    """The counts lines' tail — None when n <= 0, else "N duplicate(s) of the same stock not counted"."""
+    return _plural(int(n), DUP_COUNT_ONE, DUP_COUNT_MANY) if n and int(n) > 0 else None
+
+
 # W3 — WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); AMENDMENTS10 F3: the live
 # A+ entries sit on their own 🎯 line, never pooled with the 🧠 % (an A+ exists only once its trade survived the entry bar)
 HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n "
@@ -961,9 +977,11 @@ HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math — no
            "their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. "
            "The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo "
            "(docs/gajjala/study_2026_10_13.md); this record does not change that."
-           # W3 — WIDENED 2026-10-16 (night): DECISIONS11 D11 — the chips count rows
-           " The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
-           "unchanged.")                                                                                    # W3
+           # W3 — REPLACED 2026-11-02, his word: the chips count ROWS, one count per stock per day
+           " The winners / losers chips count ROWS, one per stock per day since your word of 2026-11-02 (\""
+           + DUP_RULE_WORDS +
+           "\"): a name that rang on two setups the same day is two rows and ONE count — the duplicate is chipped 🔁 "
+           "and out of every count, % and chart; a 🧠 push and its 🎯 A+ entry are two ledgers, each counted once.")
 HEADS = (("symbol", "Ticker"), ("setup", "Setup"), ("at", "Alert"), ("kind", "Kind"),
          ("plan", "Trigger → fill · stop"), ("same", "Same session"), ("next", "Through next session"))  # W11
 KIND_TEXT = {("potential", "live"): "🧠 live", ("aplus", "shadow"): "A+ shadow — never sent",
@@ -1036,6 +1054,7 @@ APLUS_HONESTY = ("Pooled: the A+ alerts sent to your phone and the shadow-period
                  "n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the "
                  "five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this "
                  "record does not change that.")
+APLUS_HONESTY += " " + DUP_RULE_TEXT        # 🔁 2026-11-02 — his rule appended; the BUILD_SPEC25 §3.1 text above stays frozen
 APLUS_CHART_KEYS = ("outcomes", "by_setup", "by_day")
 APLUS_CHART_TITLES = {"outcomes": "🎯 A+ wins vs losses", "by_setup": "By setup", "by_day": "By alert day"}
 APLUS_ITEM_LABELS = {"win": "wins", "loss": "losses", "open": "open", "flat": "flat", "no_entry": "no entry",
@@ -1070,10 +1089,11 @@ def _categories(rows: list) -> list:
     """D11 / C10 / AMENDMENTS11 F6 + F13 — one chip per CATEGORY_KEYS key over the SERVED rows given: `n` = the rows
     on the lines live / shadow / entry (every non-replayed row; "all" = all of them), `n_replayed` = the ⏪ replayed
     rows of that bucket, counted APART (they filter in with their bucket, never in a sent count); `text` =
-    _category_text. Row counts only — never a %."""
+    _category_text. Row counts only — never a %. 🔁 2026-11-02: "📋 all" counts every listed row; a bucket chip counts
+    the COUNTED rows only (a duplicate — `dup_of` set — is listed under "all", never in a winners / losers chip)."""
     out = []
     for k in CATEGORY_KEYS:
-        mine = [r for r in rows if k == CATEGORY_KEYS[0] or r.get("bucket") == k]
+        mine = [r for r in rows if k == CATEGORY_KEYS[0] or (r.get("bucket") == k and not r.get("dup_of"))]
         r_n = sum(1 for r in mine if r.get("line") == LINES[2])
         n = len(mine) - r_n
         out.append({"key": k, "text": _category_text(k, n, r_n), "n": n, "n_replayed": r_n})
@@ -1192,7 +1212,7 @@ def rule_text() -> str:
     from daytrading.data import ET_RTH_CLOSE
     rth = _t(ET_RTH_CLOSE)
     lo, hi = _t(GC.LEDGER_FILL_FROM_ET), _t(GC.LEDGER_FILL_TO_ET)
-    return (f"GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar "
+    text = (f"GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar "
             f"from {lo} ET to {hi} ET (your answer: from {lo} ET only) that starts {GC.BAR_SETTLE_SEC} s or more after "
             f"the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened "
             f"above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +{_m()}R (R = trigger − "
@@ -1203,6 +1223,7 @@ def rule_text() -> str:
             f"after-hours and pre-market prints included. The % is the best high after the fill against the fill; the "
             f"small % is the column's last close against the fill. No entry and no plan are listed, never counted; a "
             f"thin R (under {GC.LEDGER_MIN_R_PCT:g}% of the trigger) is graded and kept out of the %.")
+    return text + " " + DUP_RULE_TEXT                                                  # 🔁 2026-11-02 — his rule, appended
 
 
 def _span_label(k: str) -> str:
@@ -1398,36 +1419,45 @@ def _wl(c: dict, pct: bool = True) -> str:
     return s + " · " + (f"{p}% won" if p is not None else NO_DECIDED_TEXT)
 
 
-def _counts_text(c: dict, h: str, provisional: bool, lead: Optional[str] = None) -> str:
+def _dup_tail(dup: int) -> str:
+    """🔁 2026-11-02 — " · N duplicate(s) of the same stock not counted", "" when none (every line byte-identical)."""
+    t = dup_count_text(dup)
+    return f" · {t}" if t else ""
+
+
+def _counts_text(c: dict, h: str, provisional: bool, lead: Optional[str] = None, dup: int = 0) -> str:
     """W4 / W4n — `lead` (🎯 BUILD_SPEC25: APLUS_LEADS[h]) replaces "Same session" / "Through next session"; the default
-    (None) is the headline's own line, byte for byte."""
+    (None) is the headline's own line, byte for byte. 🔁 `dup` (2026-11-02): the duplicates left out of `c`, as a tail
+    after the extras and BEFORE " · today not final"; 0 → byte-identical."""
     if h == "same":
         head = "Same session" if lead is None else lead
-        s = f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['open']} open" + _extras(c, h)
+        s = f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['open']} open" + _extras(c, h) + _dup_tail(dup)
         return s + (" · today not final" if provisional else "")
     head = "Through next session" if lead is None else lead
-    return f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)  # W4n
+    return (f"{head}: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)
+            + _dup_tail(dup))                                                                       # W4n
 
 
-def _line_text(head: str, cs: dict, cn: dict, pct: bool = True, pending_text: str = "not graded yet") -> str:
+def _line_text(head: str, cs: dict, cn: dict, pct: bool = True, pending_text: str = "not graded yet",
+               dup: int = 0) -> str:
     return (f"{head}: same session {_wl(cs, pct)} · {cs['no_entry']} no entry · "
             f"{cs['open']} open{_extras(cs, 'same', pending_text)}; through next session {_wl(cn, pct)} · "
-            f"{cn['flat']} flat{_extras(cn, 'next', pending_text)}")
+            f"{cn['flat']} flat{_extras(cn, 'next', pending_text)}") + _dup_tail(dup)
 
 
-def _shadow_text(cs: dict, cn: dict) -> str:
-    return _line_text("A+ shadow (never sent, not in the %)", cs, cn)                                 # W5
+def _shadow_text(cs: dict, cn: dict, dup: int = 0) -> str:
+    return _line_text("A+ shadow (never sent, not in the %)", cs, cn, dup=dup)                        # W5
 
 
-def _entries_text(cs: dict, cn: dict) -> str:
+def _entries_text(cs: dict, cn: dict, dup: int = 0) -> str:
     """AMENDMENTS10 F3 — the live A+ entries' own line (the shadow line's template, its own head)."""
-    return _line_text(ENTRIES_HEAD, cs, cn)
+    return _line_text(ENTRIES_HEAD, cs, cn, dup=dup)
 
 
-def _replayed_text(cs: dict, cn: dict) -> str:
+def _replayed_text(cs: dict, cn: dict, dup: int = 0) -> str:
     """DECISIONS11 D5 — the ⏪ replayed line (the shadow line's template, its own head), NEVER a %. Its pending word is
     REPLAY_NOT_GRADED_TEXT (the nightly never grades a replay doc, so "not graded yet" would be false)."""
-    return _line_text(REPLAYED_HEAD, cs, cn, pct=False, pending_text=REPLAY_NOT_GRADED_TEXT)
+    return _line_text(REPLAYED_HEAD, cs, cn, pct=False, pending_text=REPLAY_NOT_GRADED_TEXT, dup=dup)
 
 
 def _count_line(row: dict) -> str:
@@ -1441,6 +1471,81 @@ def _count_line(row: dict) -> str:
     if row.get("kind") == KINDS[1]:
         return COUNT_LINES[2]
     return COUNT_LINES[0]
+
+
+# ── 🔁 one count per stock per day (Ajay 2026-11-02) — THE engine; the 🥇 ledger and 🧪 import it ──────────────────────
+def dup_group(row: dict) -> tuple:
+    """(date, symbol, _count_line(row)) — live 🧠 / shadow / 🎯 entry / ⏪ replayed are four ledgers: a 🧠 push and its A+
+    never dedupe each other, a shadow row never dedupes a live row, a replay never dedupes anything live."""
+    return (row["date"], row["symbol"], _count_line(row))
+
+
+def trade_facts(row: dict, same: Optional[dict], nxt: Optional[dict], *, group, rank: int) -> Optional[dict]:
+    """The 🚩 adapter → the neutral facts dedupe_trades reads, or None when the row is never a trade (no aware ring
+    time, plan != PLANS[0]). filled: True when filled_grade(same, nxt) is not None; False when both stored columns say
+    no_entry; None = unknown (nothing stored yet / next still pending) — conservative. fill_t = that grade's fill_t
+    (aware); decided_t = its exit_t when its outcome is in DECIDED, else None. The adapter never judges."""
+    at = row.get("at_utc")
+    if not isinstance(at, datetime) or row.get("plan") != PLANS[0]:
+        return None
+    g = filled_grade(same, nxt)
+    if g is not None:
+        filled, fill_t = True, _parse_at(g.get("fill_t"))
+        decided_t = _parse_at(g.get("exit_t")) if g.get("outcome") in DECIDED else None
+    else:
+        both_no = all(isinstance(x, dict) and x.get("entry") == ENTRIES[1] for x in (same, nxt))
+        filled, fill_t, decided_t = (False if both_no else None), None, None
+    return {"id": row["id"], "group": group, "at": _aware(at), "filled": filled, "fill_t": fill_t,
+            "decided_t": decided_t, "trigger": row.get("trigger"), "stop": row.get("stop"), "rank": int(rank)}
+
+
+def _same_trade(c: dict, t: dict) -> bool:
+    """Is the later trade `t` the SAME trade as the counted `c`? Clause order (a) → (b) → (c) is the contract.
+    (a) both filled on the same minute; (b) the same trigger AND stop; (c) its trade overlapped c's: a later row that
+    FILLED is judged by its fill — a duplicate when it filled before c was decided (c never decided → duplicate),
+    except when it was itself decided no later than c's fill minute (over before c even filled: its own trade); a later
+    row that did NOT fill is judged by its ring — a duplicate when it rang before c was decided. A counted row that can
+    never fill (filled False) blocks nothing by (c)."""
+    if c.get("fill_t") is not None and t.get("fill_t") is not None and c["fill_t"] == t["fill_t"]:
+        return True                                                                                  # (a)
+    nums = [_num(x) for x in (c.get("trigger"), c.get("stop"), t.get("trigger"), t.get("stop"))]
+    if all(x is not None for x in nums) and _D(nums[0]) == _D(nums[2]) and _D(nums[1]) == _D(nums[3]):
+        return True                                                                                  # (b)
+    if c.get("filled") is False:                                                                     # (c)
+        return False
+    c_dec = c.get("decided_t")
+    if t.get("filled") is True and t.get("fill_t") is not None:
+        if t.get("decided_t") is not None and c.get("fill_t") is not None and t["decided_t"] <= c["fill_t"]:
+            return False
+        return c_dec is None or t["fill_t"] < c_dec
+    return c_dec is None or t["at"] < c_dec
+
+
+def dedupe_trades(trades: list) -> dict:
+    """PURE. -> {duplicate id: counted id}. Per group: order by (at, rank, id); walk; a row is a duplicate of the FIRST
+    counted row C (in counted order) for which _same_trade(C, row); else it is counted. None entries and entries without
+    an aware `at` are ignored. The result is independent of the input order."""
+    groups: dict = {}
+    for t in trades or []:
+        if not isinstance(t, dict) or not isinstance(t.get("at"), datetime) or t["at"].tzinfo is None:
+            continue
+        groups.setdefault(t["group"], []).append(t)
+    out: dict = {}
+    for _g, ts in groups.items():
+        ts = sorted(ts, key=lambda x: (x["at"].timestamp(), int(x.get("rank") or 0), str(x["id"])))
+        counted: list = []
+        for t in ts:
+            hit = next((c for c in counted if _same_trade(c, t)), None)
+            if hit is not None:
+                out[t["id"]] = hit["id"]
+            else:
+                counted.append(t)
+    return out
+
+
+def _setup_rank(setup) -> int:
+    """The tie-break of one pass clock: GC.SETUPS order, an unknown setup after every known one."""
+    return GC.SETUPS.index(setup) if setup in GC.SETUPS else len(GC.SETUPS)
 
 
 def _empty_text(span_k: str, sessions: list) -> str:
@@ -1521,10 +1626,11 @@ def _sorts() -> list:
     return [{"key": k, "label": SORT_LABELS[k], "bucket_sort": bool(SORT_BY_BUCKET[k])} for k in SORT_KEYS]
 
 
-def _aplus_cell(c: dict, h: str, detail: bool) -> dict:
+def _aplus_cell(c: dict, h: str, detail: bool, mid_k: Optional[str] = None) -> dict:
     """One horizon's served chart cell from a counts dict: {total, decided, pct, loss_pct, pct_text, text, short_text,
     items}. `total` = Σ the counts (pct excluded); the % is of the decided rows only; loss_pct = 100 − pct (one
-    rounding). items: win + loss ALWAYS, the rest only when n > 0; Σ items.n == total."""
+    rounding). items: win + loss ALWAYS, the rest only when n > 0; Σ items.n == total. `mid_k` (2026-11-02, the 🥇
+    block's one horizon): the middle item's key; None = "open" on the same session, "flat" otherwise (every 🚩 call)."""
     total = sum(int(v) for k, v in c.items() if k != "pct")
     w, lo = int(c["win"]), int(c["loss"])
     decided = w + lo
@@ -1542,7 +1648,7 @@ def _aplus_cell(c: dict, h: str, detail: bool) -> dict:
              item("loss", lo, _plural(lo, "loss", "losses")
                   + (f" ({loss_pct}% of the {decided} decided)" if detail and loss_pct is not None else ""))]
     if detail:
-        mid_k = "open" if h == GC.LEDGER_HORIZONS[0] else "flat"
+        mid_k = mid_k or ("open" if h == GC.LEDGER_HORIZONS[0] else "flat")
         mid, ne = int(c[mid_k]), int(c["no_entry"])
         other = total - w - lo - mid - ne
         if mid > 0:
@@ -1589,16 +1695,20 @@ def _aplus_charts(ap: list) -> list:
 
 def aplus_block(ap: list, ap_days: list, has_replay: bool, prov: bool) -> dict:
     """🎯 the always-served A+ block (BUILD_SPEC25 §3.2): pooled live + shadow counts of EVERY A+ row on the span (never
-    cut by LEDGER_ROWS_MAX), the house sentences, the three charts and its own capped rows (`days`)."""
+    cut by LEDGER_ROWS_MAX), the house sentences, the three charts and its own capped rows (`days`). 🔁 2026-11-02: the
+    counts, the counts lines and the charts read the COUNTED rows (a duplicate — `dup_of` set — stays listed); `n_dup`
+    = the duplicates; `total`, `n_sent`, `n_shadow`, `days` and `more_text` stay row counts."""
     heads = dict(HEADS)
-    counts = _aplus_counts(ap)
+    counted = [r for r in ap if not r.get("dup_of")]
+    n_dup = len(ap) - len(counted)
+    counts = _aplus_counts(counted)
     n_sent = sum(1 for r in ap if r.get("line") == LINES[0])
     n_shadow = sum(1 for r in ap if r.get("line") == LINES[1])
     shown_n = sum(len(d["rows"]) for d in ap_days)
     cut = len(ap) - shown_n
     if ap:
         counts_text = {h: _counts_text(counts[h], h, prov if h == GC.LEDGER_HORIZONS[0] else False,
-                                       lead=APLUS_LEADS[h]) for h in GC.LEDGER_HORIZONS}
+                                       lead=APLUS_LEADS[h], dup=n_dup) for h in GC.LEDGER_HORIZONS}
         split_text = APLUS_SENT_TEXT.format(n=n_sent) + (
             " · " + APLUS_SHADOW_TEXT.format(n=n_shadow) if n_shadow > 0 else "")
         more_text = f"+{cut} more A+ rows — the counts above cover all {len(ap)}" if cut > 0 else None
@@ -1606,12 +1716,14 @@ def aplus_block(ap: list, ap_days: list, has_replay: bool, prov: bool) -> dict:
     else:
         counts_text = split_text = more_text = None
         empty_text = KIND_EMPTY_TEXT
-    return {"title": APLUS_TITLE, "total": len(ap), "n_sent": n_sent, "n_shadow": n_shadow, "counts": counts,
+    return {"title": APLUS_TITLE, "total": len(ap), "n_sent": n_sent, "n_shadow": n_shadow, "n_dup": n_dup,
+            "counts": counts,
             "counts_text": counts_text, "split_text": split_text,
             "replayed_note": APLUS_REPLAYED_NOTE if has_replay else None, "more_text": more_text,
             "empty_text": empty_text, "honesty": APLUS_HONESTY,
             "horizons": [{"key": h, "label": heads[h]} for h in GC.LEDGER_HORIZONS],
-            "horizon_default": GC.LEDGER_HORIZONS[0], "charts": _aplus_charts(ap), "days": ap_days if ap else []}
+            "horizon_default": GC.LEDGER_HORIZONS[0], "charts": _aplus_charts(counted),
+            "days": ap_days if ap else []}
 
 
 def served_block(store, session: date, now: datetime, *, span: str = "", is_today: bool = False,
@@ -1661,7 +1773,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     s_iso = session.isoformat()
     counts = {ln: {h: _counts_blank(h) for h in GC.LEDGER_HORIZONS} for ln in COUNT_LINES}
     any_prov = False
-    built = []
+    built, facts = [], []
     for row in rows:
         replayed = row.get("line") == LINES[2]
         doc = stored.get(row["id"]) or {}
@@ -1680,9 +1792,11 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                     g, prov = grades_today[row["id"]], True
                 cells[h] = _cell(row, h, g, prov, now, session, is_today)
             gs[h] = g
-            _tally_into(counts[_count_line(row)][h], cells[h]["state"], bool(row.get("thin")))   # THE thin rule
             if prov and _count_line(row) == COUNT_LINES[0]:
                 any_prov = True
+        # 🔁 2026-11-02: the row's neutral trade facts (the tally waits for dedupe_trades, below)
+        facts.append(trade_facts(row, gs.get("same"), gs.get("next"), group=dup_group(row),
+                                 rank=_setup_rank(row["setup"])))
         plan_text, fill_px = _plan_text(row, gs.get("same"), gs.get("next"))
         e, label = AL.SETUP_META.get(row["setup"], ("", row["setup"]))
         note = (f"trigger as first seen {row.get('first_seen_et')} ET (the ring was {row.get('at_et')} ET)"
@@ -1713,9 +1827,26 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "replay_text": replay_text, "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
                       "flag_text": BUCKET_TEXT[bucket] if bucket in FLAG_BUCKETS else None,  # ✅ / ❌ 2026-10-27 (Q11)
                       "loss_text": lt, "broker_text": _broker(row["symbol"]),             # 🚫 DECISIONS12 D2
-                      "trader_text": TN.text_for(row.get("trader"))})                   # 📌 2026-10-27
+                      "trader_text": TN.text_for(row.get("trader")),                    # 📌 2026-10-27
+                      "dup_of": None, "dup_text": None})                                # 🔁 2026-11-02 (set below)
         if row.get("promo") is True:                                                     # 🎪 2026-10-29 — only then
             built[-1]["promo_text"] = row.get("promo_text")
+    # 🔁 one count per stock per day (Ajay 2026-11-02): a duplicate is listed + chipped, never tallied, never flagged
+    dups = dedupe_trades([f for f in facts if f])
+    by_id = {b["id"]: b for b in built}
+    dup_counts = {ln: 0 for ln in COUNT_LINES}
+    for row, b in zip(rows, built):
+        ln = _count_line(row)
+        first = dups.get(b["id"])
+        if first is not None:
+            c_row = by_id.get(first) or {}
+            b["dup_of"] = first
+            b["dup_text"] = DUP_TEXT.format(at=c_row.get("at_et") or NO_TIME_TEXT, setup=c_row.get("setup_label"))
+            b["flag_text"] = None
+            dup_counts[ln] += 1
+            continue
+        for h in GC.LEDGER_HORIZONS:
+            _tally_into(counts[ln][h], b[h]["state"], bool(row.get("thin")))                    # THE thin rule
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)
@@ -1747,16 +1878,18 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     ap_shown = [r for d in ap_days for r in d["rows"]]
     ap_prov = any((r["same"] or {}).get("provisional") for r in ap)      # the 🧠 any_prov is untouched
     tl_kinds = TP.views_block()["kinds"]
-    rep_text = _replayed_text(counts["replayed"]["same"], counts["replayed"]["next"]) if has_replay else None
+    rep_text = (_replayed_text(counts["replayed"]["same"], counts["replayed"]["next"], dup=dup_counts["replayed"])
+                if has_replay else None)
     block = {"title": TITLE, "rule_label": RULE_LABEL, "rule_text": rule_text(), "honesty": HONESTY, "span": span_k,
             "spans": [{"key": k, "label": _span_label(k)} for k in GC.LEDGER_SPANS],
             "heads": [{"key": k, "label": lab} for k, lab in HEADS],
-            "counts": counts,
-            "counts_text": {"same": _counts_text(counts["live"]["same"], "same", any_prov),
-                            "next": _counts_text(counts["live"]["next"], "next", False)},
-            "shadow_text": _shadow_text(counts["shadow"]["same"], counts["shadow"]["next"]) if has_shadow else None,
-            "entries_text": (_entries_text(counts["entry"]["same"], counts["entry"]["next"]) if has_entry
-                             else None),                                                       # AMENDMENTS10 F3
+            "counts": counts, "dup_counts": dup_counts,                                  # 🔁 2026-11-02
+            "counts_text": {"same": _counts_text(counts["live"]["same"], "same", any_prov, dup=dup_counts["live"]),
+                            "next": _counts_text(counts["live"]["next"], "next", False, dup=dup_counts["live"])},
+            "shadow_text": (_shadow_text(counts["shadow"]["same"], counts["shadow"]["next"], dup=dup_counts["shadow"])
+                            if has_shadow else None),
+            "entries_text": (_entries_text(counts["entry"]["same"], counts["entry"]["next"], dup=dup_counts["entry"])
+                             if has_entry else None),                                          # AMENDMENTS10 F3
             "today_text": today_text, "days": days,
             "more_text": f"+{extra} more rows — the counts above cover all {len(built)}" if extra > 0 else None,  # W14
             "empty_text": None if built else _empty_text(span_k, sessions), "grade_at_et": at,
@@ -1829,4 +1962,5 @@ __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES"
            "KIND_PARAM", "KIND_KEYS", "KIND_LABELS", "KIND_EMPTY_TEXT", "APLUS_LINES", "APLUS_TITLE", "APLUS_LEADS",
            "APLUS_SENT_TEXT", "APLUS_SHADOW_TEXT", "APLUS_REPLAYED_NOTE", "APLUS_HONESTY", "APLUS_CHART_KEYS",
            "APLUS_CHART_TITLES", "APLUS_ITEM_LABELS", "NO_DECIDED_TEXT", "is_aplus_row", "aplus_block",
-           "SORT_PARAM", "SORT_KEYS", "SORT_LABELS", "SORT_BY_BUCKET", "FLAG_BUCKETS"]
+           "SORT_PARAM", "SORT_KEYS", "SORT_LABELS", "SORT_BY_BUCKET", "FLAG_BUCKETS",
+           "dedupe_trades", "trade_facts", "dup_group", "dup_count_text", "DUP_RULE_WORDS", "DUP_RULE_TEXT", "DUP_TEXT"]

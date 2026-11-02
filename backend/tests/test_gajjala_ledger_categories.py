@@ -384,9 +384,17 @@ def test_NEGATIVE_F6_the_chips_never_exceed_the_rows_shown(monkeypatch):
 
 # ── 12. HONESTY gains the ONE sentence; loss_text rides only the losers ──────────────────────────────────────────────
 def test_honesty_is_f3_plus_the_rows_sentence():
-    sentence = (" The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
-                "unchanged.")
-    assert LG.HONESTY == F3_HONESTY and LG.HONESTY.endswith(sentence) and LG.HONESTY.count(sentence) == 1
+    # REPLACED 2026-11-02 (🔁 one count per stock per day, SPEC luk-track §3.1.7): the F3 text stays, the rows sentence
+    # is now his rule — the pinned phrase kept, his words verbatim; the old "two rows" sentence is gone (NEGATIVE)
+    old = (" The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
+           "unchanged.")
+    f3 = F3_HONESTY[:F3_HONESTY.index(old)]
+    sentence = (" The winners / losers chips count ROWS, one per stock per day since your word of 2026-11-02 (\""
+                + LG.DUP_RULE_WORDS + "\"): a name that rang on two setups the same day is two rows and ONE count — "
+                "the duplicate is chipped 🔁 and out of every count, % and chart; a 🧠 push and its 🎯 A+ entry are "
+                "two ledgers, each counted once.")
+    assert LG.HONESTY == f3 + sentence and LG.HONESTY.count(sentence) == 1
+    assert old not in LG.HONESTY                                                     # NEGATIVE: the old sentence
     assert served(cat_store())["honesty"] == LG.HONESTY
 
 
