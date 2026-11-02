@@ -530,11 +530,24 @@ describe('📱 the compare section on the phone — source guards on ggAudited.c
     const m = src.match(/(^|\n)\s*\.gg-audited-per-rule td\s*\{([^}]*)\}/);
     return m ? m[2] : null;
   };
+  /** The body of the phone `@media (max-width: 720px) { … }` block (2026-11-01: stacked per-rule rows, no sideways scroll). */
+  const phoneBlock = (src: string): string | null => {
+    const m = src.match(/@media \(max-width:\s*720px\)\s*\{([\s\S]*?)\n\}/);
+    return m ? m[1] : null;
+  };
+  const phoneOk = (src: string): boolean => {
+    const ph = phoneBlock(src);
+    return !!ph
+      && /\.gg-audited-per-rule tr\s*\{[^}]*display:\s*block\b/.test(ph)
+      && /\.gg-audited-per-rule th\[scope='row'\],\s*\.gg-audited-per-rule td\s*\{[^}]*display:\s*block\b/.test(ph)
+      && /\.gg-audited-per-rule th\[scope='row'\],\s*\.gg-audited-per-rule td\s*\{[^}]*min-width:\s*0\b/.test(ph);
+  };
   const ok = (src: string): boolean => {
     const c = compareRule(src);
     const td = cellRule(src);
     return !!c && /overflow-x:\s*auto\b/.test(c) && /min-width:\s*0\b/.test(c)
-      && !!td && /overflow-wrap:\s*anywhere\b/.test(td) && /white-space:\s*normal\b/.test(td);
+      && !!td && /overflow-wrap:\s*anywhere\b/.test(td) && /white-space:\s*normal\b/.test(td)
+      && phoneOk(src);
   };
 
   it('.gg-audited-compare scrolls inside itself (overflow-x: auto; min-width: 0); per-rule cells wrap anywhere', async () => {
@@ -547,6 +560,13 @@ describe('📱 the compare section on the phone — source guards on ggAudited.c
     expect(ok(src)).toBe(true);
   });
 
+  it('📱 under 720 px every per-rule row stacks (tr, th and td display: block; no sideways scroll) — 2026-11-01', async () => {
+    const src = await readCss();
+    expect(phoneBlock(src)).not.toBeNull();
+    expect(phoneOk(src)).toBe(true);
+    expect(phoneBlock(src)).toMatch(/\.gg-audited-per-rule thead\s*\{[^}]*display:\s*none\b/);
+  });
+
   it('NEGATIVE: a stylesheet that lost any one of the rules fails the same guard', async () => {
     const src = await readCss();
     const mutations = [
@@ -555,6 +575,10 @@ describe('📱 the compare section on the phone — source guards on ggAudited.c
       src.replace(/(\.gg-audited-per-rule td\s*\{[^}]*)overflow-wrap:\s*anywhere/, '$1overflow-wrap: normal'),
       src.replace(/(\.gg-audited-per-rule td\s*\{[^}]*)white-space:\s*normal/, '$1white-space: nowrap'),
       src.replace(/\.gg-audited-per-rule td\s*\{/, '.gg-audited-per-rule-gone td {'),
+      // 📱 the phone block lost, or its rows back to table-row (the sideways scroll returns)
+      src.replace(/@media \(max-width:\s*720px\)\s*\{[\s\S]*?\n\}\n/, ''),
+      src.replace(/(@media \(max-width:\s*720px\)[\s\S]*?\.gg-audited-per-rule tr\s*\{[^}]*)display:\s*block/, '$1display: table-row'),
+      src.replace(/(@media \(max-width:\s*720px\)[\s\S]*?\.gg-audited-per-rule td\s*\{[^}]*)min-width:\s*0/, '$1min-width: 9rem'),
     ];
     for (const m of mutations) {
       expect(m).not.toBe(src);
