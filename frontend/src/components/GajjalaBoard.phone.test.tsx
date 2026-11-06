@@ -88,3 +88,44 @@ describe('📱 Gajjala card on the phone — served chips wrap instead of wideni
     expect(rule!.decl).not.toMatch(/overflow-wrap:\s*anywhere/);
   });
 });
+
+/* 📱 2026-11-05 — the 🏁 Ticker cell at 430 px (the 🧪 Audit column, spec gg-track-parity WP-C step 4): the Ticker cell
+ * carries the ✅ / ❌ flag, the 📌 trader and 🎪 promo chips; with both chips it measured 192 px and pushed the third
+ * column 62 px past the 408 px box. The ≤ 430 px rule lets the cell and its badges wrap. Source guards + NEGATIVES. */
+function trTickerPhoneRule(src: string): { cell: string; badges: string } | null {
+  const m = src.match(/@media \(max-width: 430px\) \{([\s\S]*?)\n\}/);
+  if (!m) return null;
+  const cell = m[1].match(/\.gg-tr-table td:first-child \{([^}]*)\}/);
+  const badges = m[1].match(/\.gg-tr-table td:first-child \.cm-badge, \.gg-tr-table td:first-child \.gg-tr-flag \{([^}]*)\}/);
+  return cell && badges ? { cell: cell[1], badges: badges[1] } : null;
+}
+
+describe('📱 the 🏁 Ticker cell wraps at 430 px so the 🧪 Audit column stays in the box', () => {
+  it('the ≤ 430 px rule un-nowraps the Ticker cell (min-width: 0, overflow-wrap: anywhere) and its badges', async () => {
+    const rule = trTickerPhoneRule(await css());
+    expect(rule).not.toBeNull();
+    expect(rule!.cell).toMatch(/white-space:\s*normal/);
+    expect(rule!.cell).toMatch(/min-width:\s*0/);
+    expect(rule!.cell).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule!.badges).toMatch(/white-space:\s*normal/);
+    expect(rule!.badges).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+
+  it('the desktop rule keeps the 🏁 cells nowrap (the fix is scoped to the phone width)', async () => {
+    const src = await css();
+    const before = src.slice(0, src.indexOf('@media (max-width: 430px)'));
+    expect(before).toMatch(/\.gg-tr-table td \{[^}]*white-space:\s*nowrap/);
+  });
+
+  it('NEGATIVE: the pre-fix stylesheet has no 430 px Ticker-cell rule', () => {
+    expect(trTickerPhoneRule(PRE_FIX)).toBeNull();
+    expect(trTickerPhoneRule(PRE_FIX + '\n.gg-tr-table td { white-space: nowrap; }')).toBeNull();
+  });
+
+  it('NEGATIVE: a 430 px rule that keeps nowrap on the badges would fail', () => {
+    const bad = PRE_FIX + `\n@media (max-width: 430px) {\n  .gg-tr-table td:first-child { white-space: normal; min-width: 0; overflow-wrap: anywhere; }\n  .gg-tr-table td:first-child .cm-badge, .gg-tr-table td:first-child .gg-tr-flag { white-space: nowrap; }\n}`;
+    const rule = trTickerPhoneRule(bad);
+    expect(rule).not.toBeNull();
+    expect(rule!.badges).not.toMatch(/white-space:\s*normal/);
+  });
+});

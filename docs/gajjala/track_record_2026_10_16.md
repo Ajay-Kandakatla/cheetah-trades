@@ -584,3 +584,16 @@ the HONESTY layout under the contract's lazy regex, the 🧪 sides and the held 
 HIS CALLs (defaults built): partition per kind (#1); the counted row = the first ring (#2); losses collapse too (#3);
 clause (c) v2 vs v1 vs a+b (#4 — the real decision; the NCPL line above); no dup category chip (#5); the tail and chip
 words (#6, MINE); live and shadow separate (#18); an unfilled later ring is a duplicate too (#19).
+
+## 🧪 The audited page's 🏁 (2026-11-05)
+
+Ajay 2026-11-05: "its hard to tell which ones won in Gajjlas Audit page" / "Why are the other winners not having
+charts?". The 🧪 Gajjala · Audited 🏁 now lists **🚩's own A+ rows**. `audited_tab.track_block` calls this page's
+`ledger.served_block` over 🚩's store with `variant=V.GGA` (sessions from `GC.GGA_RECORD_FROM`, the GGA words, links to
+`tab=gajjala_audited`). Each row's ✅ / ❌, cells, dedupe, categories and 🎯 charts are therefore 🚩's, from the ONE ledger.
+The block gains one served column, `audit` ("🧪 Audit", right after the Ticker): the audit's call on that row's bar,
+passed / held by the rule ids / not judged / not read. That column is added on the GGA block only. **No byte of 🚩's
+block moved**: `served_block` is untouched, no 5-minute or 1-minute served key changed, and the three goldens and the
+GG5 identity suite run green with no regen. The 🧪 route does no today read, so today's rows there read "not read yet".
+Design, words and HIS CALLs #26–#35: `docs/gajjala/audited_modifications_2026_11_01.md` § "🏁 rows on the 🧪 Track
+record (2026-11-05)".

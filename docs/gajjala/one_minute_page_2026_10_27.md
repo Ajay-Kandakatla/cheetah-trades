@@ -151,6 +151,41 @@ container's environment (needs a recreate). Either one stops the spawn and every
   1-minute and 5-minute 🏁s stay separate ledgers. See `docs/gajjala/track_record_2026_10_16.md` § "🔁 One count per
   stock per day (2026-11-02)".
 
+## 🏁 parity with 🚩's 5-minute 🏁 (2026-11-05)
+
+Ajay, 2026-11-05: "Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar track
+record."
+
+**Measured that night: the two pages had not drifted apart, so nothing was rebuilt.** The check used one owner GET of
+each 🏁 on `span=5d`: 213 rows over 5 days with 13 A+ on the 5-minute page, and 209 rows with 15 A+ on the 1-minute
+page. Both blocks serve the same keys:
+
+- the block keys and the row keys (no difference)
+- `heads`, `views`, `sorts`, `bucket_order` and `spans` (equal)
+- the key sets of `categories`, `kinds`, `aplus` and `aplus.charts` (equal)
+- `rule_text` and `rule_label` (equal)
+
+Only the served words differ, by design. `variant.WORDS_1M` sets the title, the honesty line, the lead of the counts
+lines and the empty text.
+
+The pins:
+
+- `backend/tests/test_gajjala_track_parity_2026_11_05.py` checks every `GC.LEDGER_SPANS` value. It runs
+  `ledger.served_block` over the two existing fixture stores: the 🏁 golden's `golden_store` and the 1-minute fixture
+  day. The key sets above must be equal. The row keys must be equal except `promo` / `promo_text`, which a row carries
+  only when it is 🎪-tagged. The `heads`, `views`, `sorts`, `sort_default`, `bucket_order`, `category_param`,
+  `kind_param`, `spans`, `rule_text`, `rule_label` and `grade_at_et` values must be equal. The `aplus` keys and the
+  order of the A+ charts must match.
+- The words check uses ONE store, the golden without its ⏪ replay, read under both variants. Inside that test only,
+  the 1-minute record start is moved back to the store's first session, so both variants read the same rows. The
+  top-level served strings that differ must all be among `title`, `honesty`, `counts_text` and `empty_text`. A row may
+  differ only in its deep link's `tab=` and its 🧠 kind word.
+- NEGATIVES: a key added to one block only is caught, whether it is added to the block directly or through a patched
+  `served_block`. So are a row key, each pinned value, an `aplus` key, a reordered chart list and a moved served word.
+- `frontend/src/components/GajjalaBoard.variant.test.tsx`, block "🏁 parity": the two goldens' `track_record` key
+  sets are equal. The same served 🏁 mounts the same `gg-tr-*` testids on both boards, with the Tape head right after
+  the Ticker. NEGATIVE: a block without `views` (an older API) shows no Tape head on either page.
+
 ## HIS CALL (defaults shipped; none decided for him)
 
 1. ~~GG1 push mode is SHADOW for both kinds (`GAJJALA_1M_PUSH_MODE`). Going live means changing that constant and

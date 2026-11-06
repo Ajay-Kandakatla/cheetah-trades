@@ -176,11 +176,16 @@ WORDS_GGA: Mapping = MappingProxyType({
     "push_potential": ("🧠 Potentials shown here are 🚩 Gajjala's own, for context — this tab records no potential "
                        "and sends nothing. {tail}."),
     "held_stale_tape": "no print in the last {p}-minute bar",
-    "ledger_title": ("🏁 Track record — every audited A+ since {from}, recorded in shadow, graded by GG's trade math "
+    # 🧪 2026-11-05 (SPEC gg-track-parity §3.2; Ajay: "its hard to tell which ones won in Gajjlas Audit page") — the 🏁
+    # lists 🚩's own A+ rows on the sessions this tab records, each with the audit's call in a 🧪 Audit column.
+    "ledger_title": ("🏁 Track record — every 🚩 A+ since {from}, each with the audit's call, graded by GG's trade math "
                      "· UNMEASURED"),
-    "ledger_honesty": ("A ledger of this tab's audited A+ as RECORDED — none reached your phone. No 🧠 row here: the "
-                       "audit is a filter on the A+ read only. Graded by GG's own trade math — the same math as 🚩 "
-                       "Gajjala's 🏁 — not a backtest, small n. Nothing has measured these rules. " + DUP_RULE_TEXT),
+    "ledger_honesty": ("The rows are 🚩 Gajjala's own A+ on the sessions this tab records — sent to your phone by that "
+                       "tab and graded by GG's own trade math, the same ✅ / ❌ as 🚩's 🏁. The 🧪 Audit column says "
+                       "what this tab's rules did with each one: passed every rule, or held by the rules named — the "
+                       "reason per rule is in the held list below; what the original then did stays in its cells. No "
+                       "🧠 row here: the audit is a filter on the A+ read only. Today's rows are graded tonight, never "
+                       "read live here. Nothing has measured these rules. " + DUP_RULE_TEXT),
                                                                                                 # 🔁 2026-11-02
     "ledger_kind_potential": "🧠 — not recorded on this tab",
     "ledger_kind_potential_shadow": "🧠 — not recorded on this tab",
@@ -190,7 +195,22 @@ WORDS_GGA: Mapping = MappingProxyType({
     "ledger_counts_lead_shadow": "🧠 — none on this tab (A+ only)",
     "ledger_counts_lead_pushed": "🧠 — none on this tab (A+ only)",
     "ledger_counts_lead_mixed": "🧠 — none on this tab (A+ only)",
-    "ledger_empty": "No audited A+ recorded on this span yet (the record starts {from}).",
+    "ledger_empty": "No 🚩 A+ on this span (the record starts {from}).",
+    # 🧪 2026-11-05 — the 🏁 row's 🧪 Audit cell (ids only — the why sentences stay in the compare's held list, HIS
+    # CALL #31) and the exit-grade sub-line of a passed row (numbers are kwargs: k = AUD.T3_R_MULTS, ema = AUD.T5_EMA)
+    "ledger_audit_head": "🧪 Audit",
+    "row_audit_passed": "🧪 passed every rule",
+    "row_audit_passed_none_on": "no rule was on when it was judged",
+    "row_audit_held": "🧪 held by {ids}",
+    "row_audit_not_judged": "🧪 not judged",
+    "row_audit_not_judged_sub": "no audit record on this bar",
+    "row_audit_not_read": "🧪 audit not read this time — the next re-read tries again",
+    "row_exit_t3": "T3 +{k:g}R",
+    "row_exit_t5": "T5 {ema} EMA trail",
+    "row_exit_pending": "not graded yet",
+    "row_exit_no_plan": "no plan",
+    "row_exit_no_risk": "no risk",
+    "row_exit_split": "split",
     "strip_title": "🧪 What is different here",
     "lane_only": ("G3 (ring age ≤ {m} min at the tick, MISSED_R {mr}) is a paper-lane ENTRY gate, not a read — "
                   "registered here, not applied on this tab; the lane itself still trades 🚩 Gajjala's A+ only. "

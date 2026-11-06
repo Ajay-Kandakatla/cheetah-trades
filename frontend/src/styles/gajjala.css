@@ -295,3 +295,12 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-ap-honesty { font-size: 0.74rem; line-height: 1.4; }
 /* 🎪 .gg-promo — 2026-10-29: chip module. The 430 px wrap rule moved verbatim to ggTraderChip.css (the chip's own
    stylesheet, loaded by GgTraderChip.tsx on the board AND /alerts). */
+
+/* 📱 2026-11-05 (🏁 three Track records alike — the 🧪 Audit column, verified at 430 px): the Ticker cell carries the
+   served ✅ / ❌ flag, the 📌 trader and 🎪 promo chips; on a day with both chips it measured 192 px and pushed the
+   third column (Tape · 🧪 Audit) 62 px past the box. Below 430 px the Ticker cell and its badges wrap instead of
+   widening the row — a served string never reshapes the layout (the 2026-10-19 phone rule). Desktop untouched. */
+@media (max-width: 430px) {
+  .gg-tr-table td:first-child { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+  .gg-tr-table td:first-child .cm-badge, .gg-tr-table td:first-child .gg-tr-flag { white-space: normal; overflow-wrap: anywhere; }
+}

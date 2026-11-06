@@ -23,7 +23,8 @@ from chart_maps.gajjala import variant as V
 FMT = dict(p=5, s=15, tail="tail", floor=AUD.MEASURE_FLOOR_WEEKS, m=AUD.G3_MAX_AGE_MIN, mr=AUD.G3_MISSED_R,
            r=GC.LEDGER_R_MULT, n=0, hhmm="10:41", n_read=1, n_orig=1, n_aud=1, n_held=0, original_only=0,
            audited_only=0, open="04:00", close="20:00", cad=5, rth_open="09:30", mute_end="09:45",
-           w="1 winner", l="2 losers", u=0, rule="T5 21 EMA trail", ww=1, wl=0, gw=0, gl=1, fired=3, alone=2)
+           w="1 winner", l="2 losers", u=0, rule="T5 21 EMA trail", ww=1, wl=0, gw=0, gl=1, fired=3, alone=2,
+           ids="G1, A1", k=AUD.T3_R_MULTS[0], ema=AUD.T5_EMA)            # 2026-11-05 [C3]: the 🏁 audit-column words
 PER_RULE_KEYS = ("per_rule_title", "per_rule_with", "per_rule_held", "per_rule_cap_held", "per_rule_gg_math",
                  "per_rule_delta_filter", "per_rule_delta_exit", "per_rule_not_graded", "per_rule_not_judged",
                  "per_rule_no_rows", "per_rule_t4_fired", "per_rule_t1_tie")
@@ -106,9 +107,10 @@ def test_the_exact_words():
     assert V.word("title", V.GGA) == ("🧪 Gajjala · Audited — 🚩 Gajjala's A+ reads, filtered by the audit overlay · "
                                       "UNMEASURED")
     assert "{p}" not in V.word("honesty", V.GGA) and "5-minute pass" in V.word("honesty", V.GGA)
-    assert V.word("ledger_title", V.GGA) == ("🏁 Track record — every audited A+ since 2026-11-01, recorded in shadow, "
-                                             "graded by GG's trade math · UNMEASURED")
-    assert V.word("ledger_empty", V.GGA) == "No audited A+ recorded on this span yet (the record starts 2026-11-01)."
+    # 2026-11-05 (SPEC gg-track-parity §3.2): the 🧪 🏁 lists 🚩's own A+ rows with the audit's call
+    assert V.word("ledger_title", V.GGA) == ("🏁 Track record — every 🚩 A+ since 2026-11-01, each with the audit's "
+                                             "call, graded by GG's trade math · UNMEASURED")
+    assert V.word("ledger_empty", V.GGA) == "No 🚩 A+ on this span (the record starts 2026-11-01)."
     assert V.word("held_stale_tape", V.GGA) == "no print in the last 5-minute bar"
     assert V.word("compare_honesty", V.GGA, r=2.0, floor=30, n=0).startswith(
         "Gross, as the 🏁 ledger grades (+2R target, the stop a touch)")

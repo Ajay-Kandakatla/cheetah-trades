@@ -940,6 +940,22 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   (2026-10-27)"; ✨ `chart-maps-gajjala-wins-sort-flags-2026-10-27`. Doc: `docs/gajjala/track_record_2026_10_16.md`
   § "✅ wins first + row flags (2026-10-27)". UNMEASURED.
   "🎯 A+ filter + the win/loss charts (2026-10-26)".
+- **🏁 Gajjala's three Track records read alike (2026-11-05)** — Ajay, verbatim: "Can you make both Gajjala's track
+  record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar track record." and "its hard to tell which ones won in
+  Gajjlas Audit page". The 🧪 🏁 listed only an A+ that passed every ON rule (none since 2026-11-01), so its page showed
+  count tables and no ticker. Now the 🧪 🏁 = `ledger.served_block` over the SHARED store (🚩's own A+ rows for the
+  🧪 record's sessions, the ONE ledger's ✅/❌, dedupe, charts, Tape) plus ONE served `audit` cell per row
+  (`audited_tab.track_block` / `row_audits` / `_audit_cell`; words `variant.WORDS_GGA` `row_audit_*` / `row_exit_*`:
+  passed every rule · held by {ids} · not judged · not read; T3 / T5 exit words as sub_text where served). The audit is
+  read ONCE per GET in `tab.py` and handed to both the rows and the compare; a failed read leaves 🚩's rows listed with
+  NOT_READ cells (compare absent); the 🧪 route does no live today read (`today=None`, HIS CALL #28). The 1-minute 🏁
+  measured no drift from 🚩's shape — PINNED (`tests/test_gajjala_track_parity_2026_11_05.py`, every `LEDGER_SPANS`
+  value). FE: `GgTrRow.audit`, rows mount before the compare tables, `ggAudited.css` state hooks, `gajjala.css` ≤ 430 px
+  Ticker-cell wrap. ✅/❌, categories and charts on 🧪 stay 🚩's grade of the original (HIS CALL #32); 🧠 rows not
+  listed on 🧪 (HIS CALL #26). No GG5 / GG1 fixture byte moved; no grade, gate, rule, threshold, claim or push changed.
+  ✨ `chart-maps-gajjala-track-records-alike-2026-11-05`. Docs: `docs/gajjala/audited_modifications_2026_11_01.md`
+  § "🏁 rows on the 🧪 Track record (2026-11-05)", `docs/gajjala/one_minute_page_2026_10_27.md` § "🏁 parity with 🚩's
+  5-minute 🏁 (2026-11-05)". UNMEASURED.
 - **🔁 One count per stock per day (2026-11-02)** — Ajay, verbatim: "make sure you are not accounting for duplicates of
   the same stock as winner unless it did the same pattern again and met all the criteria on the same day". ONE pure
   engine `ledger.dedupe_trades` over `ledger.trade_facts`, partition `dup_group` = (date, symbol, count line); the first

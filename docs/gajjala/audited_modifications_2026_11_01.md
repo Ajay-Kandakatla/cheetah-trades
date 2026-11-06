@@ -304,3 +304,94 @@ These continue the 15 in `docs/gajjala/audited_variant_2026_11_01.md`.
 
 Out of scope, unchanged, still his: #1 live 🧪 pushes, #2 G2 last vs longest, #6 🧠 armed-only, #13 any stop cap on
 🚩, the K1–K10 audit items, and anything on the paper lane.
+
+## 🏁 rows on the 🧪 Track record (2026-11-05)
+
+Ajay 2026-11-05, verbatim: "Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar
+track record. It looks like our Gajjals 5 min had better win yesterday and today... I would like you to audit but its
+hard to tell which ones won in Gajjlas Audit page". The trigger: "Why are the other winners not having charts?"
+
+**The answer to the trigger, in one line.** The 🧪 🏁 listed ONLY an A+ that passed every ON audit rule. None has
+since 11-01 (all 10 🚩 originals on 11-02…11-05 were HELD), so its A+ block had 0 rows and no chart. The "winners" on
+that page were text lines in the compare's held list, not rows, so nothing was drawn for them. Now the 🧪 🏁 lists 🚩's
+own A+ rows, and their charts come back through the same `aplus.charts`. Nothing new is drawn.
+
+**What the rows are.** `audited_tab.track_block` serves 🚩's own served 🏁 block, `ledger.served_block(st.shared, …,
+variant=V.GGA)`. That gives 🚩's rows, 🚩's grades from the ONE ledger (`gajjala_ledger`), 🚩's dedupe, and GGA's clip
+(no session before `GC.GGA_RECORD_FROM`), words and `tab=gajjala_audited` links. The block adds ONE served column,
+`audit` ("🧪 Audit"), right after the Ticker, so the FE's Tape splice keeps it third on the phone. Each row's ✅ / ❌ is
+🚩's grade of the original. The `same` / `next` cells, `flag_text`, `bucket` and `dup_of` are byte-equal to 🚩's own 🏁
+(pinned). No 🧠 row is listed (`GGA.ledger_push_states = ()`). The 🧠 zero lines (`counts_text`) and the 🎯 kind chips are
+served null on this tab.
+
+**The audit column's words** (`audited_tab.row_audits` → `_audit_cell`). Each call reads the 🧪 record on the row's own
+bar, through the SAME `_record_of` the per-rule table scores with (extracted from `_attribute`; per_rule pinned
+unchanged):
+
+- "🧪 held by G1, G4": the rule ids only. The reason per rule stays in the compare's held list below, one place each
+  (HIS CALL #31).
+- "🧪 passed every rule": the verdict is the stored `aplus` boolean (`audited_rules._finish`). A claim judged while
+  every rule was OFF reads "🧪 passed every rule" plus "no rule was on when it was judged". A passed row with a nightly
+  exit doc gets the T3 / T5 exit grades as its sub-line, for example "T3 +2R: ✅ winner +2.0R · T3 +3R: not graded yet ·
+  T5 21 EMA trail: ❌ loser -1.0R". The labels come from `AUD.T3_R_MULTS` / `AUD.T5_EMA`. The state words come from
+  `EXIT_STATE_TEXT`, which has a word for every `ledger.CELL_STATES` member (no_plan / no_risk / split are pinned equal to
+  the ledger's own `_cell` text).
+- "🧪 not judged" plus "no audit record on this bar": no record on the row's bar, a record on another bar, or a record
+  with no verdict (written before the audit key).
+- "🧪 audit not read this time — the next re-read tries again": the audit read failed (below).
+
+**ONE read, fail-visible.** The tab reads the audit ONCE per 🏁 build (`audited_tab.read_span`) and hands that dict
+to both blocks. `track_block` never reads the audit itself. If the read raises (a LedgerReadError, or a malformed
+stored grade), 🚩's rows are still listed, each with the "not read" cell, and `audited_compare` is served null. The
+read is never re-run inside a block. If the row cells alone fail, the rows keep "not read" cells and the compare is
+still served. If the SHARED ledger fails, the 🏁 serves `TRACK_RECORD_FAULT`, as before. A "not read" cell on the live
+page means a read fault to chase.
+
+**No today read.** The GGA route no longer calls `ledger.today_read` on any sub. A row of today reads the ledger's own
+"not read yet · graded tonight `GC.LEDGER_GRADE_AT_ET` ET", and `today_text` is the ledger's W6 sentence. A today read
+over the SHARED store would be 🚩's whole today read (🧠 + A+ names): up to `GC.LEDGER_TODAY_MAX` = 60 minute loads and
+`GC.LEDGER_TODAY_BUDGET_SEC` = 15 s per cold GET. Its memo, `GC.LEDGER_TODAY_MEMO_SEC` = 300 s, equals the board's
+refresh cadence, so an open 🧪 tab would re-pay that read beside 🚩's own on every refresh (HIS CALL #28).
+
+**The "all"-span sessions.** `read_span` reads the sessions served_block reads over the SHARED store (every 🚩 A+
+session ≥ the record start), together with the GGA store's own claim / marker dates. On today / yesterday / 5d / 10d
+both are the same calendar window. On "all", a 🚩 A+ on a session where the overlay wrote nothing now counts
+`recon.original_only` instead of dropping out. That is a correction, not a rule change, and the compare's other keys
+are unchanged.
+
+UNMEASURED: the rows measure nothing, and no rule, gate, threshold or registry default moved. Tests:
+`backend/tests/test_gajjala_audited_track_2026_11_05.py`.
+
+### HIS CALL (defaults built; nothing decided for him), continuing #25
+
+26. **🧠 rows on the 🧪 🏁**: NOT listed by default (`GGA.ledger_push_states = ()`; 🚩's 🧠 rows are outside the
+    audit's A+ scope). Listing them = flip that tuple.
+27. **Audited-only rows** (a 🧪 claim with no 🚩 row, because the original's send failed; `recon.audited_only`, 0 on
+    11-05): NOT listed as rows by default; the recon sentence counts them.
+28. **Today's rows on the 🧪 🏁**: no live read by default (`today=None`). A row of today reads "not read yet — graded
+    tonight `GC.LEDGER_GRADE_AT_ET` ET" until the nightly grades it, and the page loads nothing. The alternatives, with
+    their cost: (a) `today_read` over the SHARED store, which is 🚩's whole today read (🧠 + A+ names, ≤ 60 minute loads
+    / 15 s per cold GET; memo 300 s = the board's refresh, so an open 🧪 tab re-pays it every refresh beside 🚩's own);
+    (b) a `kinds=` filter on `ledger.today_read` for A+ names only, which changes a shared-engine signature and needs its
+    own spec. Either one is a single route line in api.py.
+29. **The 🧠 zero lines (`counts_text`) and the 🎯 kind chips**: dropped on the 🧪 🏁 by default (served null, since no
+    🧠 row exists on this tab), vs kept as served_block gives them.
+30. **The rows mount BEFORE the compare / per-rule / by-day tables**: rows first by default (his "hard to tell which ones
+    won"); the tables keep their internal order.
+31. **Where the per-rule WHY sentences live**: by default the row's 🧪 cell carries the rule ids only ("🧪 held by G1,
+    A1") and the compare's held list keeps the sentences. Up to 4 sentences per row in the third column at 430 px is
+    clutter. The alternatives: put the sentences in the cell's sub_text (the held list then repeats them), or fold the
+    held list away and keep the sentences only in the cell.
+32. **The ✅ / ❌ flag, the categories and the charts on the 🧪 🏁 are 🚩's grade of the original** (the ONE ledger),
+    never the T3 / T5 exit grade; the exit words are a sub-line on a passed row only. Grading the 🧪 list by an exit
+    rule is a semantic change.
+33. **The audit call as a COLUMN after the Ticker** (default; the FE's Tape splice keeps it third) vs a chip inside the
+    Ticker cell.
+34. **The 🏁 sub chip count on 🧪** stays `count_today` over 🧠 rows (0), unchanged. Counting 🚩's A+ graded today
+    there is a semantic change.
+35. **Wording (MINE)**: "🧪 passed every rule" · "🧪 held by {ids}" · "🧪 not judged" · "🧪 audit not read this time" ·
+    "T3 +{k}R" / "T5 {ema} EMA trail". A claim judged while every rule was OFF reads "🧪 passed every rule · no rule was
+    on when it was judged", because the stored `aplus` is the verdict. The alternative is "🧪 not judged".
+
+Out of scope unless he asks: today's 🧠 rows showing "—" in the Tape column (the tape.py cost rule, AMENDMENTS11 F8,
+lite_today), and #1 live 🧪 pushes, #2 G2 last vs longest, #16–#25 as listed above.

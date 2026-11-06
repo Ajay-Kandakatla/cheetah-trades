@@ -3,6 +3,7 @@
  * record, dated, his two sentences verbatim (his spelling kept), every modification named by its REGISTRY name (read
  * from backend chart_maps/gajjala/audited_rules.py, never typed here), shadow / never sent, UNMEASURED, Not advice.
  * The contract "🧪 Gajjala · Audited tab (2026-11-01)" section 9 pins the same from the source. */
+// WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST — Ajay: "Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar track record.")
 import { describe, expect, it } from 'vitest';
 import { NEW_FEATURES } from './newFeatures';
 
@@ -22,9 +23,10 @@ const ruleName = (py: string, id: string): string | null => {
 
 describe('✨ the 🧪 audited-modifications entry', () => {
   // WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …")
-  it('is second (the 🏁 one-count ✨ went FIRST 2026-11-02), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[1].id).toBe(ID);
+  it('is third (the 🏁 records-alike ✨ 2026-11-05 and the 🏁 one-count ✨ 2026-11-02 went first), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[1].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[2].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');

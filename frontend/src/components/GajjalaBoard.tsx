@@ -644,8 +644,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         <PlaybookPanel pb={board?.playbook ?? null} />
       ) : activeSub === 'track_record' ? (
         <>
-        {/* 🧪 2026-11-01: the served audited-vs-original block (audited_tab.compare_block); absent elsewhere. */}
-        <GgAuditedCompare block={board?.audited_compare} />
+        {/* 🧪 2026-11-05 (gg-track-parity, HIS CALL #30 default): the 🏁 rows FIRST — on 🧪 they are 🚩's A+ with the
+          * served 🧪 Audit cell (audited_tab.track_block); the compare / per-rule / by-day tables follow. A null
+          * audited_compare (🚩 / 1-min) renders nothing, so the order is a no-op there. */}
         <TrackRecordPanel tr={board?.track_record ?? null} emptyNote={board?.empty_note ?? null}
                           onSpan={(k) => setParam(GG_SPAN_PARAM, k)} view={view}
                           onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)}
@@ -655,6 +656,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                           onKind={(k) => setParam(GG_KIND_PARAM, k === board?.track_record?.kinds?.[0]?.key ? null : k)}
                           sort={sort}
                           onSort={(k) => setParam(GG_SORT_PARAM, k === board?.track_record?.sort_default ? null : k)} />
+        {/* 🧪 2026-11-01: the served audited-vs-original block (audited_tab.compare_block); absent elsewhere. */}
+        <GgAuditedCompare block={board?.audited_compare} />
         </>
       ) : board ? (
         <>

@@ -3,7 +3,7 @@
 Ajay 2026-11-01, verbatim: "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
 Gajjals-Audited  So we can keep track of improvements on this tab".
 
-GET /chart-maps/gajjala-audited builds with variant=GGA (on 🏁 only, today_read over ST.for_variant(GGA)); the POST
+GET /chart-maps/gajjala-audited builds with variant=GGA (no today read on ANY sub since 2026-11-05 [C2]); the POST
 scan is owner-only (stealth 404) and is 🚩 Gajjala's own on-open pass — OD.request() with NO variant (the overlay
 rides GG5's pass; there is no audited child slot); the entry tape reads ST.for_variant(GGA), 404 on an unknown id,
 200 with the fault note on a raising build. NEGATIVES: non-owner 404 whatever the body, the Depends OBJECT is a
@@ -112,15 +112,16 @@ def test_get_builds_with_the_audited_variant_and_no_today_read_off_the_track_rec
     assert k["today"] is None and today.calls == []                       # NEGATIVE: Mongo-only off 🏁
 
 
-def test_get_on_the_track_record_reads_today_over_the_audited_store(client, build, today):
+def test_get_on_the_track_record_does_no_today_read(client, build, today):
+    """2026-11-05 [C2] (SPEC gg-track-parity §3.3) — the 🧪 🏁 lists 🚩's own A+ rows; a today read over the SHARED
+    store would re-pay 🚩's whole today read (🧠 + A+) on every refresh. Default: none (HIS CALL #28)."""
     r = client.get(BASE, params={"sub": GC.LEDGER_SUB, "span": "10d"}, headers=_hdr(DOUG))
     assert r.status_code == 200
-    (a, k), = today.calls
-    assert a == (None,) and k["span"] == "10d"
-    assert k["store"] is ST.for_variant(V.GGA)
-    assert k["store"] is not ST.default() and k["store"] is not ST.for_variant(V.GG1)   # NEGATIVE: never GG5's / GG1's
+    assert today.calls == []                                               # NEGATIVE: never ANY store's today read
     (_a, bk), = build.calls
-    assert bk["today"] == {"today": True} and bk["variant"] is V.GGA and bk["span"] == "10d"
+    assert bk["today"] is None and bk["variant"] is V.GGA and bk["span"] == "10d"
+    from chart_maps import api as API
+    assert "today_read" not in inspect.getsource(API.chart_maps_gajjala_audited).split('"""')[-1]
 
 
 def test_NEGATIVE_a_raising_today_read_still_serves_the_board(client, build, monkeypatch):

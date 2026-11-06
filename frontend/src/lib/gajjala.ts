@@ -441,6 +441,10 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   trader_text?: string | null;
   /** 🎪 2026-10-29: the served Promo-circuit tag (ledger served row) — absent on an untagged row. */
   promo?: boolean | null; promo_text?: string | null;
+  /** 🧪 (2026-11-05, gg-track-parity) the served audit call on this 🚩 A+ row — served by audited_tab.track_block on the
+   *  🧪 Gajjala · Audited 🏁 only, under the served head key "audit"; drawn by TrRowCells' default branch (TrCell).
+   *  `state` (passed / held / not_judged / not_read) is a CSS hook only; absent on 🚩 / 1-min rows. */
+  audit?: GgTrCell | null;
   /** 🔁 One count per stock per day (2026-11-02, Ajay: "make sure you are not accounting for duplicates of the same stock
    *  as winner unless it did the same pattern again and met all the criteria on the same day"): `dup_of` = the id of the
    *  counted row this one duplicates (ledger.dedupe_trades), `dup_text` = its served 🔁 chip; null / absent on a counted
@@ -452,7 +456,8 @@ export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: 
 export type GgTrDay = { date: string; label: string; rows: GgTrRow[]; more_n?: number | null };
 export type GgTrackRecord = { title: string; rule_label?: string | null; rule_text?: string | null; honesty?: string | null; span: string;
   spans: { key: string; label: string }[]; heads: { key: string; label: string }[];
-  counts_text: { same: string; next: string }; shadow_text?: string | null;
+  /** 🧠 the served count lines — null on the 🧪 🏁 (2026-11-05: no 🧠 row on that tab, HIS CALL #29 default). */
+  counts_text?: { same: string; next: string } | null; shadow_text?: string | null;
   /** 🎯 the live A+ entries' own line (ledger.served_block, AMENDMENTS10 F3 — never pooled with the 🧠 %); served,
    *  null when no live A+ entry is on the span (2026-10-16). */
   entries_text?: string | null; today_text?: string | null;

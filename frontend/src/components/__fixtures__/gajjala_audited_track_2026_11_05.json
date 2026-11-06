@@ -1,0 +1,1438 @@
+{
+ "_note": "gg-track-parity WP-C 2026-11-05: HAND-BUILT test data. `track_record` = the 🧪 🏁 block per spec §3.4 (🚩's A+ rows + the served `audit` cell; counts_text / kinds null) over the shape of the owner GET tr_gajjala-audited.json + tr_gajjala.json rows (2026-11-05 ~21:00 CST); every word stands in for a served word. `track_record_empty` = tonight's served 0-row 🧪 block, verbatim.",
+ "track_record": {
+  "title": "🏁 Track record — every 🚩 A+ since 2026-11-01, each with the audit's call, graded by GG's trade math · UNMEASURED",
+  "rule_label": "ⓘ how each alert is graded",
+  "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+  "honesty": "The rows are 🚩 Gajjala's own A+ on the sessions this tab records — sent to your phone by that tab and graded by GG's own trade math, the same ✅ / ❌ as 🚩's 🏁. The 🧪 Audit column says what this tab's rules did with each one: passed every rule, or held by the rules named — the reason per rule is in the held list below; what the original then did stays in its cells. No 🧠 row here: the audit is a filter on the A+ read only. Today's rows are graded tonight, never read live here. Nothing has measured these rules. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+  "span": "5d",
+  "spans": [
+   {
+    "key": "today",
+    "label": "Today"
+   },
+   {
+    "key": "yesterday",
+    "label": "Yesterday"
+   },
+   {
+    "key": "5d",
+    "label": "Last 5 sessions"
+   },
+   {
+    "key": "10d",
+    "label": "Last 10 sessions"
+   },
+   {
+    "key": "all",
+    "label": "All"
+   }
+  ],
+  "heads": [
+   {
+    "key": "symbol",
+    "label": "Ticker"
+   },
+   {
+    "key": "audit",
+    "label": "🧪 Audit"
+   },
+   {
+    "key": "setup",
+    "label": "Setup"
+   },
+   {
+    "key": "at",
+    "label": "Alert"
+   },
+   {
+    "key": "kind",
+    "label": "Kind"
+   },
+   {
+    "key": "plan",
+    "label": "Trigger → fill · stop"
+   },
+   {
+    "key": "same",
+    "label": "Same session"
+   },
+   {
+    "key": "next",
+    "label": "Through next session"
+   }
+  ],
+  "counts": {
+   "live": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "shadow": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "entry": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "replayed": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   }
+  },
+  "dup_counts": {
+   "live": 1,
+   "shadow": 0,
+   "entry": 1,
+   "replayed": 0
+  },
+  "counts_text": null,
+  "shadow_text": null,
+  "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 1 win · 1 loss · 50% won · 1 no entry · 0 open; through next session 1 win · 1 loss · 50% won · 0 flat · 1 not graded yet",
+  "today_text": "Today · not read on this open — graded tonight 20:15 ET",
+  "days": [
+   {
+    "date": "2026-11-05",
+    "label": "Thu 2026-11-05 · today",
+    "more_n": null,
+    "rows": [
+     {
+      "key": "2026-11-05-HUHU-reversal_squeeze-aplus",
+      "id": "2026-11-05|HUHU|reversal_squeeze|aplus",
+      "date": "2026-11-05",
+      "symbol": "HUHU",
+      "setup": "reversal_squeeze",
+      "setup_label": "🎾 Reversal Squeeze",
+      "kind": "aplus",
+      "line": "live",
+      "kind_text": "🎯 A+ entry",
+      "at_et": "14:46",
+      "at_text": "14:46 ET",
+      "rang": "rth",
+      "rang_text": "rang RTH",
+      "thin_text": null,
+      "trigger": 0.443,
+      "stop": 0.4332,
+      "fill_px": null,
+      "plan_text": "trigger 0.443 · stop 0.4332",
+      "note": null,
+      "href": "/chart-maps?tab=gajjala_audited&sub=reversal_squeeze&focus=HUHU",
+      "same": {
+       "state": "pending",
+       "text": "not read yet",
+       "sub_text": "graded tonight 20:15 ET",
+       "provisional": false
+      },
+      "next": {
+       "state": "pending",
+       "text": "after Fri 11-06's close",
+       "sub_text": "graded Fri 11-06 20:15 ET",
+       "provisional": false
+      },
+      "replay_text": null,
+      "bucket": "out",
+      "bucket_text": "— no fill / not graded",
+      "flag_text": null,
+      "loss_text": null,
+      "broker_text": null,
+      "trader_text": null,
+      "dup_of": null,
+      "dup_text": null,
+      "audit": {
+       "state": "held",
+       "text": "🧪 held by T2, A1",
+       "sub_text": null,
+       "provisional": false
+      }
+     }
+    ]
+   },
+   {
+    "date": "2026-11-04",
+    "label": "Wed 2026-11-04",
+    "more_n": null,
+    "rows": [
+     {
+      "key": "2026-11-04-MERC-intraday_vcp-aplus",
+      "id": "2026-11-04|MERC|intraday_vcp|aplus",
+      "date": "2026-11-04",
+      "symbol": "MERC",
+      "setup": "intraday_vcp",
+      "setup_label": "🌀 Intraday VCP",
+      "kind": "aplus",
+      "line": "live",
+      "kind_text": "🎯 A+ entry",
+      "at_et": "11:56",
+      "at_text": "11:56 ET",
+      "rang": "rth",
+      "rang_text": "rang RTH",
+      "thin_text": null,
+      "trigger": 0.2298,
+      "stop": 0.2233,
+      "fill_px": 0.2298,
+      "plan_text": "trigger 0.2298 → fill 0.2298 at 11:57 · stop 0.2233 · +1R 0.2363",
+      "note": null,
+      "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=MERC",
+      "same": {
+       "state": "win",
+       "text": "WIN · best +21.5%",
+       "sub_text": "+1R at 12:01 · close +7.5%",
+       "provisional": false
+      },
+      "next": {
+       "state": "win",
+       "text": "WIN · best +21.5%",
+       "sub_text": "+1R at 12:01 · close +7.7%",
+       "provisional": false
+      },
+      "replay_text": null,
+      "bucket": "win",
+      "bucket_text": "✅ winner",
+      "flag_text": "✅ winner",
+      "loss_text": null,
+      "broker_text": null,
+      "trader_text": "📌 algo888",
+      "dup_of": null,
+      "dup_text": null,
+      "audit": {
+       "state": "passed",
+       "text": "🧪 passed every rule",
+       "sub_text": "T3 +2R: ✅ winner +2.0R · T3 +3R: ❌ loser -1.0R · T5 21 EMA trail: not graded yet",
+       "provisional": false
+      }
+     }
+    ]
+   },
+   {
+    "date": "2026-11-03",
+    "label": "Tue 2026-11-03",
+    "more_n": null,
+    "rows": [
+     {
+      "key": "2026-11-03-CNSY-intraday_vcp-aplus",
+      "id": "2026-11-03|CNSY|intraday_vcp|aplus",
+      "date": "2026-11-03",
+      "symbol": "CNSY",
+      "setup": "intraday_vcp",
+      "setup_label": "🌀 Intraday VCP",
+      "kind": "aplus",
+      "line": "live",
+      "kind_text": "🎯 A+ entry",
+      "at_et": "19:46",
+      "at_text": "19:46 ET",
+      "rang": "ah",
+      "rang_text": "rang AH",
+      "thin_text": null,
+      "trigger": 1.32,
+      "stop": 1.3,
+      "fill_px": null,
+      "plan_text": "trigger 1.32 · stop 1.30",
+      "note": null,
+      "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=CNSY",
+      "same": {
+       "state": "no_entry",
+       "text": "no entry",
+       "sub_text": "the trigger never traded 09:45–16:00 ET after the alert",
+       "provisional": false
+      },
+      "next": {
+       "state": "no_entry",
+       "text": "no entry",
+       "sub_text": "the trigger never traded 09:45–16:00 ET after the alert",
+       "provisional": false
+      },
+      "replay_text": null,
+      "bucket": "out",
+      "bucket_text": "— no fill / not graded",
+      "flag_text": null,
+      "loss_text": null,
+      "broker_text": null,
+      "trader_text": null,
+      "dup_of": null,
+      "dup_text": null,
+      "promo_text": "🎪 promo · first tag 10:18 ET · @stock_catcher · tier B",
+      "audit": {
+       "state": "not_judged",
+       "text": "🧪 not judged",
+       "sub_text": "no audit record on this bar",
+       "provisional": false
+      }
+     },
+     {
+      "key": "2026-11-03-JDZG-intraday_vcp-aplus",
+      "id": "2026-11-03|JDZG|intraday_vcp|aplus",
+      "date": "2026-11-03",
+      "symbol": "JDZG",
+      "setup": "intraday_vcp",
+      "setup_label": "🌀 Intraday VCP",
+      "kind": "aplus",
+      "line": "live",
+      "kind_text": "🎯 A+ entry",
+      "at_et": "10:13",
+      "at_text": "10:13 ET",
+      "rang": "rth",
+      "rang_text": "rang RTH",
+      "thin_text": null,
+      "trigger": 2.41,
+      "stop": 2.33,
+      "fill_px": 2.41,
+      "plan_text": "trigger 2.41 → fill 2.41 at 10:13 · stop 2.33 · +1R 2.49",
+      "note": null,
+      "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=JDZG",
+      "same": {
+       "state": "loss",
+       "text": "LOSS · best +1.7%",
+       "sub_text": "stop at 10:31 · close -4.1%",
+       "provisional": false
+      },
+      "next": {
+       "state": "loss",
+       "text": "LOSS · best +1.7%",
+       "sub_text": "stop at 10:31 · close -6.2%",
+       "provisional": false
+      },
+      "replay_text": null,
+      "bucket": "loss",
+      "bucket_text": "❌ loser",
+      "flag_text": null,
+      "loss_text": "stopped 18 min after the fill · high +0.5R through the stop minute · filled 1 min after it rang",
+      "broker_text": null,
+      "trader_text": null,
+      "dup_of": "2026-11-03|JDZG|reversal_squeeze|aplus",
+      "dup_text": "🔁 same trade as the 10:12 🎾 Reversal Squeeze ring — not counted",
+      "audit": {
+       "state": "held",
+       "text": "🧪 held by G1, G4",
+       "sub_text": null,
+       "provisional": false
+      }
+     },
+     {
+      "key": "2026-11-03-JDZG-reversal_squeeze-aplus",
+      "id": "2026-11-03|JDZG|reversal_squeeze|aplus",
+      "date": "2026-11-03",
+      "symbol": "JDZG",
+      "setup": "reversal_squeeze",
+      "setup_label": "🎾 Reversal Squeeze",
+      "kind": "aplus",
+      "line": "live",
+      "kind_text": "🎯 A+ entry",
+      "at_et": "10:12",
+      "at_text": "10:12 ET",
+      "rang": "rth",
+      "rang_text": "rang RTH",
+      "thin_text": null,
+      "trigger": 2.41,
+      "stop": 2.33,
+      "fill_px": 2.41,
+      "plan_text": "trigger 2.41 → fill 2.41 at 10:13 · stop 2.33 · +1R 2.49",
+      "note": null,
+      "href": "/chart-maps?tab=gajjala_audited&sub=reversal_squeeze&focus=JDZG",
+      "same": {
+       "state": "loss",
+       "text": "LOSS · best +1.7%",
+       "sub_text": "stop at 10:31 · close -4.1%",
+       "provisional": false
+      },
+      "next": {
+       "state": "loss",
+       "text": "LOSS · best +1.7%",
+       "sub_text": "stop at 10:31 · close -6.2%",
+       "provisional": false
+      },
+      "replay_text": null,
+      "bucket": "loss",
+      "bucket_text": "❌ loser",
+      "flag_text": "❌ loser",
+      "loss_text": "stopped 18 min after the fill · high +0.5R through the stop minute · filled 1 min after it rang",
+      "broker_text": null,
+      "trader_text": null,
+      "dup_of": null,
+      "dup_text": null,
+      "audit": {
+       "state": "held",
+       "text": "🧪 held by G1",
+       "sub_text": null,
+       "provisional": false
+      }
+     }
+    ]
+   }
+  ],
+  "more_text": null,
+  "empty_text": null,
+  "grade_at_et": "20:15",
+  "views": {
+   "param": "view",
+   "default": "all",
+   "items": [
+    {
+     "key": "all",
+     "label": "📋 all alerts"
+    },
+    {
+     "key": "timeline",
+     "label": "🕰️ entries timeline"
+    }
+   ],
+   "kinds": [
+    "aplus"
+   ],
+   "empty_text": "No A+ entry in this span — the 🧠 alerts are under 📋 all alerts.",
+   "tape_head": "Tape",
+   "tape_toggle": "📈",
+   "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop / +1R"
+  },
+  "replayed_text": null,
+  "replayed_note": null,
+  "categories": [
+   {
+    "key": "all",
+    "text": "📋 all 5",
+    "n": 5,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 2",
+    "n": 2,
+    "n_replayed": 0
+   }
+  ],
+  "categories_timeline": [
+   {
+    "key": "all",
+    "text": "📋 all 5",
+    "n": 5,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 2",
+    "n": 2,
+    "n_replayed": 0
+   }
+  ],
+  "category_param": "cat",
+  "category_empty_text": "No row in this category on this span.",
+  "kinds": null,
+  "kind_param": "kind",
+  "kind_empty_text": null,
+  "categories_aplus": [
+   {
+    "key": "all",
+    "text": "📋 all 5",
+    "n": 5,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 1",
+    "n": 1,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 2",
+    "n": 2,
+    "n_replayed": 0
+   }
+  ],
+  "sorts": [
+   {
+    "key": "wins",
+    "label": "✅ wins first",
+    "bucket_sort": true
+   },
+   {
+    "key": "rang",
+    "label": "🕰️ as rang",
+    "bucket_sort": false
+   }
+  ],
+  "sort_param": "sort",
+  "sort_default": "wins",
+  "bucket_order": [
+   "win",
+   "loss",
+   "open",
+   "flat",
+   "out"
+  ],
+  "aplus": {
+   "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
+   "total": 4,
+   "n_sent": 4,
+   "n_shadow": 0,
+   "n_dup": 1,
+   "counts": {
+    "same": {
+     "win": 5,
+     "loss": 2,
+     "no_entry": 6,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": 71
+    },
+    "next": {
+     "win": 4,
+     "loss": 2,
+     "no_entry": 6,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 1,
+     "thin": 0,
+     "split": 0,
+     "pct": 67
+    }
+   },
+   "counts_text": null,
+   "split_text": null,
+   "replayed_note": null,
+   "more_text": null,
+   "empty_text": null,
+   "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+   "horizons": [
+    {
+     "key": "same",
+     "label": "Same session"
+    },
+    {
+     "key": "next",
+     "label": "Through next session"
+    }
+   ],
+   "horizon_default": "same",
+   "charts": [
+    {
+     "key": "outcomes",
+     "title": "🎯 A+ wins vs losses",
+     "bars": [
+      {
+       "total": 4,
+       "decided": 2,
+       "pct": 50,
+       "loss_pct": 50,
+       "pct_text": "50% won · 2 decided",
+       "text": "1 win · 1 loss · 50% won · 2 other",
+       "short_text": "1W 1L",
+       "items": [
+        {
+         "key": "win",
+         "label": "wins",
+         "n": 1,
+         "text": "1 win (50% of the 2 decided)"
+        },
+        {
+         "key": "loss",
+         "label": "losses",
+         "n": 1,
+         "text": "1 loss (50% of the 2 decided)"
+        },
+        {
+         "key": "no_entry",
+         "label": "no entry",
+         "n": 1,
+         "text": "1 no entry"
+        },
+        {
+         "key": "other",
+         "label": "other",
+         "n": 1,
+         "text": "1 other · 1 not graded yet"
+        }
+       ],
+       "key": "same",
+       "label": "Same session"
+      },
+      {
+       "total": 4,
+       "decided": 2,
+       "pct": 50,
+       "loss_pct": 50,
+       "pct_text": "50% won · 2 decided",
+       "text": "1 win · 1 loss · 50% won · 2 other",
+       "short_text": "1W 1L",
+       "items": [
+        {
+         "key": "win",
+         "label": "wins",
+         "n": 1,
+         "text": "1 win (50% of the 2 decided)"
+        },
+        {
+         "key": "loss",
+         "label": "losses",
+         "n": 1,
+         "text": "1 loss (50% of the 2 decided)"
+        },
+        {
+         "key": "no_entry",
+         "label": "no entry",
+         "n": 1,
+         "text": "1 no entry"
+        },
+        {
+         "key": "other",
+         "label": "other",
+         "n": 1,
+         "text": "1 other · 1 not graded yet"
+        }
+       ],
+       "key": "next",
+       "label": "Through next session"
+      }
+     ]
+    }
+   ],
+   "days": [
+    {
+     "date": "2026-11-05",
+     "label": "Thu 2026-11-05 · today",
+     "more_n": null,
+     "rows": [
+      {
+       "key": "2026-11-05-HUHU-reversal_squeeze-aplus",
+       "id": "2026-11-05|HUHU|reversal_squeeze|aplus",
+       "date": "2026-11-05",
+       "symbol": "HUHU",
+       "setup": "reversal_squeeze",
+       "setup_label": "🎾 Reversal Squeeze",
+       "kind": "aplus",
+       "line": "live",
+       "kind_text": "🎯 A+ entry",
+       "at_et": "14:46",
+       "at_text": "14:46 ET",
+       "rang": "rth",
+       "rang_text": "rang RTH",
+       "thin_text": null,
+       "trigger": 0.443,
+       "stop": 0.4332,
+       "fill_px": null,
+       "plan_text": "trigger 0.443 · stop 0.4332",
+       "note": null,
+       "href": "/chart-maps?tab=gajjala_audited&sub=reversal_squeeze&focus=HUHU",
+       "same": {
+        "state": "pending",
+        "text": "not read yet",
+        "sub_text": "graded tonight 20:15 ET",
+        "provisional": false
+       },
+       "next": {
+        "state": "pending",
+        "text": "after Fri 11-06's close",
+        "sub_text": "graded Fri 11-06 20:15 ET",
+        "provisional": false
+       },
+       "replay_text": null,
+       "bucket": "out",
+       "bucket_text": "— no fill / not graded",
+       "flag_text": null,
+       "loss_text": null,
+       "broker_text": null,
+       "trader_text": null,
+       "dup_of": null,
+       "dup_text": null,
+       "audit": {
+        "state": "held",
+        "text": "🧪 held by T2, A1",
+        "sub_text": null,
+        "provisional": false
+       }
+      }
+     ]
+    },
+    {
+     "date": "2026-11-04",
+     "label": "Wed 2026-11-04",
+     "more_n": null,
+     "rows": [
+      {
+       "key": "2026-11-04-MERC-intraday_vcp-aplus",
+       "id": "2026-11-04|MERC|intraday_vcp|aplus",
+       "date": "2026-11-04",
+       "symbol": "MERC",
+       "setup": "intraday_vcp",
+       "setup_label": "🌀 Intraday VCP",
+       "kind": "aplus",
+       "line": "live",
+       "kind_text": "🎯 A+ entry",
+       "at_et": "11:56",
+       "at_text": "11:56 ET",
+       "rang": "rth",
+       "rang_text": "rang RTH",
+       "thin_text": null,
+       "trigger": 0.2298,
+       "stop": 0.2233,
+       "fill_px": 0.2298,
+       "plan_text": "trigger 0.2298 → fill 0.2298 at 11:57 · stop 0.2233 · +1R 0.2363",
+       "note": null,
+       "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=MERC",
+       "same": {
+        "state": "win",
+        "text": "WIN · best +21.5%",
+        "sub_text": "+1R at 12:01 · close +7.5%",
+        "provisional": false
+       },
+       "next": {
+        "state": "win",
+        "text": "WIN · best +21.5%",
+        "sub_text": "+1R at 12:01 · close +7.7%",
+        "provisional": false
+       },
+       "replay_text": null,
+       "bucket": "win",
+       "bucket_text": "✅ winner",
+       "flag_text": "✅ winner",
+       "loss_text": null,
+       "broker_text": null,
+       "trader_text": "📌 algo888",
+       "dup_of": null,
+       "dup_text": null,
+       "audit": {
+        "state": "passed",
+        "text": "🧪 passed every rule",
+        "sub_text": "T3 +2R: ✅ winner +2.0R · T3 +3R: ❌ loser -1.0R · T5 21 EMA trail: not graded yet",
+        "provisional": false
+       }
+      }
+     ]
+    },
+    {
+     "date": "2026-11-03",
+     "label": "Tue 2026-11-03",
+     "more_n": null,
+     "rows": [
+      {
+       "key": "2026-11-03-CNSY-intraday_vcp-aplus",
+       "id": "2026-11-03|CNSY|intraday_vcp|aplus",
+       "date": "2026-11-03",
+       "symbol": "CNSY",
+       "setup": "intraday_vcp",
+       "setup_label": "🌀 Intraday VCP",
+       "kind": "aplus",
+       "line": "live",
+       "kind_text": "🎯 A+ entry",
+       "at_et": "19:46",
+       "at_text": "19:46 ET",
+       "rang": "ah",
+       "rang_text": "rang AH",
+       "thin_text": null,
+       "trigger": 1.32,
+       "stop": 1.3,
+       "fill_px": null,
+       "plan_text": "trigger 1.32 · stop 1.30",
+       "note": null,
+       "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=CNSY",
+       "same": {
+        "state": "no_entry",
+        "text": "no entry",
+        "sub_text": "the trigger never traded 09:45–16:00 ET after the alert",
+        "provisional": false
+       },
+       "next": {
+        "state": "no_entry",
+        "text": "no entry",
+        "sub_text": "the trigger never traded 09:45–16:00 ET after the alert",
+        "provisional": false
+       },
+       "replay_text": null,
+       "bucket": "out",
+       "bucket_text": "— no fill / not graded",
+       "flag_text": null,
+       "loss_text": null,
+       "broker_text": null,
+       "trader_text": null,
+       "dup_of": null,
+       "dup_text": null,
+       "promo_text": "🎪 promo · first tag 10:18 ET · @stock_catcher · tier B",
+       "audit": {
+        "state": "not_judged",
+        "text": "🧪 not judged",
+        "sub_text": "no audit record on this bar",
+        "provisional": false
+       }
+      },
+      {
+       "key": "2026-11-03-JDZG-intraday_vcp-aplus",
+       "id": "2026-11-03|JDZG|intraday_vcp|aplus",
+       "date": "2026-11-03",
+       "symbol": "JDZG",
+       "setup": "intraday_vcp",
+       "setup_label": "🌀 Intraday VCP",
+       "kind": "aplus",
+       "line": "live",
+       "kind_text": "🎯 A+ entry",
+       "at_et": "10:13",
+       "at_text": "10:13 ET",
+       "rang": "rth",
+       "rang_text": "rang RTH",
+       "thin_text": null,
+       "trigger": 2.41,
+       "stop": 2.33,
+       "fill_px": 2.41,
+       "plan_text": "trigger 2.41 → fill 2.41 at 10:13 · stop 2.33 · +1R 2.49",
+       "note": null,
+       "href": "/chart-maps?tab=gajjala_audited&sub=intraday_vcp&focus=JDZG",
+       "same": {
+        "state": "loss",
+        "text": "LOSS · best +1.7%",
+        "sub_text": "stop at 10:31 · close -4.1%",
+        "provisional": false
+       },
+       "next": {
+        "state": "loss",
+        "text": "LOSS · best +1.7%",
+        "sub_text": "stop at 10:31 · close -6.2%",
+        "provisional": false
+       },
+       "replay_text": null,
+       "bucket": "loss",
+       "bucket_text": "❌ loser",
+       "flag_text": null,
+       "loss_text": "stopped 18 min after the fill · high +0.5R through the stop minute · filled 1 min after it rang",
+       "broker_text": null,
+       "trader_text": null,
+       "dup_of": "2026-11-03|JDZG|reversal_squeeze|aplus",
+       "dup_text": "🔁 same trade as the 10:12 🎾 Reversal Squeeze ring — not counted",
+       "audit": {
+        "state": "held",
+        "text": "🧪 held by G1, G4",
+        "sub_text": null,
+        "provisional": false
+       }
+      },
+      {
+       "key": "2026-11-03-JDZG-reversal_squeeze-aplus",
+       "id": "2026-11-03|JDZG|reversal_squeeze|aplus",
+       "date": "2026-11-03",
+       "symbol": "JDZG",
+       "setup": "reversal_squeeze",
+       "setup_label": "🎾 Reversal Squeeze",
+       "kind": "aplus",
+       "line": "live",
+       "kind_text": "🎯 A+ entry",
+       "at_et": "10:12",
+       "at_text": "10:12 ET",
+       "rang": "rth",
+       "rang_text": "rang RTH",
+       "thin_text": null,
+       "trigger": 2.41,
+       "stop": 2.33,
+       "fill_px": 2.41,
+       "plan_text": "trigger 2.41 → fill 2.41 at 10:13 · stop 2.33 · +1R 2.49",
+       "note": null,
+       "href": "/chart-maps?tab=gajjala_audited&sub=reversal_squeeze&focus=JDZG",
+       "same": {
+        "state": "loss",
+        "text": "LOSS · best +1.7%",
+        "sub_text": "stop at 10:31 · close -4.1%",
+        "provisional": false
+       },
+       "next": {
+        "state": "loss",
+        "text": "LOSS · best +1.7%",
+        "sub_text": "stop at 10:31 · close -6.2%",
+        "provisional": false
+       },
+       "replay_text": null,
+       "bucket": "loss",
+       "bucket_text": "❌ loser",
+       "flag_text": "❌ loser",
+       "loss_text": "stopped 18 min after the fill · high +0.5R through the stop minute · filled 1 min after it rang",
+       "broker_text": null,
+       "trader_text": null,
+       "dup_of": null,
+       "dup_text": null,
+       "audit": {
+        "state": "held",
+        "text": "🧪 held by G1",
+        "sub_text": null,
+        "provisional": false
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "track_record_empty": {
+  "title": "🏁 Track record — every audited A+ since 2026-11-01, recorded in shadow, graded by GG's trade math · UNMEASURED",
+  "rule_label": "ⓘ how each alert is graded",
+  "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+  "honesty": "A ledger of this tab's audited A+ as RECORDED — none reached your phone. No 🧠 row here: the audit is a filter on the A+ read only. Graded by GG's own trade math — the same math as 🚩 Gajjala's 🏁 — not a backtest, small n. Nothing has measured these rules. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+  "span": "5d",
+  "spans": [
+   {
+    "key": "today",
+    "label": "Today"
+   },
+   {
+    "key": "yesterday",
+    "label": "Yesterday"
+   },
+   {
+    "key": "5d",
+    "label": "Last 5 sessions"
+   },
+   {
+    "key": "10d",
+    "label": "Last 10 sessions"
+   },
+   {
+    "key": "all",
+    "label": "All"
+   }
+  ],
+  "heads": [
+   {
+    "key": "symbol",
+    "label": "Ticker"
+   },
+   {
+    "key": "setup",
+    "label": "Setup"
+   },
+   {
+    "key": "at",
+    "label": "Alert"
+   },
+   {
+    "key": "kind",
+    "label": "Kind"
+   },
+   {
+    "key": "plan",
+    "label": "Trigger → fill · stop"
+   },
+   {
+    "key": "same",
+    "label": "Same session"
+   },
+   {
+    "key": "next",
+    "label": "Through next session"
+   }
+  ],
+  "counts": {
+   "live": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "shadow": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "entry": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "replayed": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   }
+  },
+  "dup_counts": {
+   "live": 0,
+   "shadow": 0,
+   "entry": 0,
+   "replayed": 0
+  },
+  "counts_text": {
+   "same": "🧠 — none on this tab (A+ only) · Same session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 open",
+   "next": "🧠 — none on this tab (A+ only) · Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat"
+  },
+  "shadow_text": null,
+  "entries_text": null,
+  "today_text": null,
+  "days": [],
+  "more_text": null,
+  "empty_text": "No audited A+ recorded on this span yet (the record starts 2026-11-01).",
+  "grade_at_et": "20:15",
+  "views": {
+   "param": "view",
+   "default": "all",
+   "items": [
+    {
+     "key": "all",
+     "label": "📋 all alerts"
+    },
+    {
+     "key": "timeline",
+     "label": "🕰️ entries timeline"
+    }
+   ],
+   "kinds": [
+    "aplus"
+   ],
+   "empty_text": "No A+ entry in this span — the 🧠 alerts are under 📋 all alerts.",
+   "tape_head": "Tape",
+   "tape_toggle": "📈",
+   "tape_toggle_title": "the full tape — the alert, the fill, the trigger / stop / +1R"
+  },
+  "replayed_text": null,
+  "replayed_note": null,
+  "categories": [
+   {
+    "key": "all",
+    "text": "📋 all 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 0",
+    "n": 0,
+    "n_replayed": 0
+   }
+  ],
+  "categories_timeline": [
+   {
+    "key": "all",
+    "text": "📋 all 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 0",
+    "n": 0,
+    "n_replayed": 0
+   }
+  ],
+  "category_param": "cat",
+  "category_empty_text": "No row in this category on this span.",
+  "kinds": [
+   {
+    "key": "all",
+    "text": "📋 every alert 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "aplus",
+    "text": "🎯 A+ only 0",
+    "n": 0,
+    "n_replayed": 0
+   }
+  ],
+  "kind_param": "kind",
+  "kind_empty_text": "No 🎯 A+ alert on this span.",
+  "categories_aplus": [
+   {
+    "key": "all",
+    "text": "📋 all 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "win",
+    "text": "✅ winners 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "loss",
+    "text": "❌ losers 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "open",
+    "text": "⏳ open 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "flat",
+    "text": "➖ flat 0",
+    "n": 0,
+    "n_replayed": 0
+   },
+   {
+    "key": "out",
+    "text": "— no fill / not graded 0",
+    "n": 0,
+    "n_replayed": 0
+   }
+  ],
+  "sorts": [
+   {
+    "key": "wins",
+    "label": "✅ wins first",
+    "bucket_sort": true
+   },
+   {
+    "key": "rang",
+    "label": "🕰️ as rang",
+    "bucket_sort": false
+   }
+  ],
+  "sort_param": "sort",
+  "sort_default": "wins",
+  "bucket_order": [
+   "win",
+   "loss",
+   "open",
+   "flat",
+   "out"
+  ],
+  "aplus": {
+   "title": "🎯 A+ only — every A+ alert, sent or shadow, graded by GG's trade math · UNMEASURED",
+   "total": 0,
+   "n_sent": 0,
+   "n_shadow": 0,
+   "n_dup": 0,
+   "counts": {
+    "same": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "open": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "pct": null
+    },
+    "next": {
+     "win": 0,
+     "loss": 0,
+     "no_entry": 0,
+     "flat": 0,
+     "no_plan": 0,
+     "no_risk": 0,
+     "no_time": 0,
+     "pending": 0,
+     "thin": 0,
+     "split": 0,
+     "pct": null
+    }
+   },
+   "counts_text": null,
+   "split_text": null,
+   "replayed_note": null,
+   "more_text": null,
+   "empty_text": "No 🎯 A+ alert on this span.",
+   "honesty": "Pooled: the A+ alerts sent to your phone and the shadow-period A+ (never sent) in one %, on its own line — the 🧠 headline % is unchanged. An A+ exists only once the trade survived its entry bar. Small n, a ledger graded by GG's own trade math — not a backtest of a strategy. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+   "horizons": [
+    {
+     "key": "same",
+     "label": "Same session"
+    },
+    {
+     "key": "next",
+     "label": "Through next session"
+    }
+   ],
+   "horizon_default": "same",
+   "charts": [],
+   "days": []
+  }
+ }
+}

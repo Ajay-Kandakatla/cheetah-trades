@@ -550,3 +550,97 @@ describe('the REAL 1-minute payload (WP-C golden gajjala_1m_board_2026_10_27.jso
     }
   });
 });
+
+/* ── 🏁 parity — the 1-minute 🏁 vs 🚩's 5-minute 🏁 (SPEC gg-track-parity §4 WP-B, 2026-11-05) ─────────────────────
+ * Ajay 2026-11-05: "Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar track
+ * record." Measured that night (F2): no drift — the same keys, only the served words differ (WORDS_1M). PINS ONLY:
+ * the two backend goldens' track_record key sets are equal (the backend pin is tests/test_gajjala_track_parity_2026_11_05.py);
+ * the same served 🏁 mounts the same gg-tr-* testids on both boards; the real 1-minute golden mounts the 🚩 structure.
+ * NEGATIVE: a block without `views` (an older API) draws no Tape head on either page. */
+describe('🏁 parity — the 1-minute 🏁 vs 🚩 5-minute 🏁 (2026-11-05)', () => {
+  const TR5: Record<string, any> = (trGolden as any).boards;
+  const tr1 = (): any => REAL?.boards?.track_record;
+  const trIds = (c: HTMLElement): string[] => Array.from(new Set(Array.from(c.querySelectorAll('[data-testid^="gg-tr-"]'))
+    .map((e) => e.getAttribute('data-testid') as string))).sort();
+  const theads = (c: HTMLElement): string[][] => Array.from(c.querySelectorAll('.gg-tr-table thead'))
+    .map((h) => Array.from(h.querySelectorAll('th')).map((th) => th.textContent || ''));
+  const mountTr = async (board: any, one: boolean): Promise<HTMLElement> => {
+    const b = clone(board);
+    b.session = { ...b.session, refresh_sec: 0 };
+    stub(one ? { gg1: () => b } : { gg5: () => b });
+    const { container } = one ? mount('tab=gajjala_1m&sub=track_record', 'gajjala_1m') : mount('tab=gajjala&sub=track_record');
+    await loaded(container);
+    await waitFor(() => expect(screen.getByTestId('gg-track-record')).toBeTruthy());
+    return container;
+  };
+
+  it('the two goldens serve the same track_record keys on every 5-minute span; heads / views / sorts / bucket order / params / spans equal', () => {
+    expect(tr1(), `${REAL_REL} is missing`).toBeTruthy();
+    const one = tr1().track_record;
+    expect(Object.keys(TR5).sort()).toEqual(['5d', 'today', 'yesterday']);
+    for (const [span, b] of Object.entries(TR5)) {
+      const five = b.track_record;
+      expect(Object.keys(one).sort(), span).toEqual(Object.keys(five).sort());
+      for (const k of ['heads', 'views', 'sorts', 'sort_default', 'bucket_order', 'category_param', 'kind_param', 'spans',
+                       'rule_text', 'rule_label', 'grade_at_et']) {
+        expect(one[k], `${span}: ${k}`).toEqual(five[k]);
+      }
+      expect(Object.keys(one.aplus).sort(), span).toEqual(Object.keys(five.aplus).sort());
+    }
+    // the served words DO differ (WORDS_1M) — the 1-minute title is its own
+    expect(one.title).not.toBe(TR5['5d'].track_record.title);
+  });
+
+  it('the same served 🏁 mounts the same gg-tr-* testids on both boards: views, cats, sorts, kinds, entries, a row, the Tape head', async () => {
+    const c5 = await mountTr(trBoard(false), false);
+    const ids5 = trIds(c5);
+    const heads5 = theads(c5);
+    cleanup();
+    const c1 = await mountTr(trBoard(true), true);
+    const ids1 = trIds(c1);
+    expect(ids1).toEqual(ids5);
+    for (const id of ['gg-tr-views', 'gg-tr-cats', 'gg-tr-sorts', 'gg-tr-kinds', 'gg-tr-entries', 'gg-tr-title']) {
+      expect(ids1, id).toContain(id);
+    }
+    expect(ids1.some((id) => id.startsWith('gg-tr-row-'))).toBe(true);
+    const tape = TR5D.track_record.views.tape_head;
+    expect(theads(c1)).toEqual(heads5);
+    expect(heads5.length).toBeGreaterThan(0);
+    for (const h of theads(c1)) expect(h[1]).toBe(tape);          // the Tape head right after the Ticker, both pages
+  });
+
+  it('the REAL 1-minute golden mounts the 🚩 🏁 structure: views, cats, sorts, kinds, a row, the Tape head after the Ticker', async () => {
+    expect(tr1(), `${REAL_REL} is missing`).toBeTruthy();
+    for (const [board, one] of [[tr1(), true], [TR5['5d'], false]] as const) {
+      const c = await mountTr(board, one);
+      const ids = trIds(c);
+      for (const id of ['gg-tr-views', 'gg-tr-cats', 'gg-tr-sorts', 'gg-tr-kinds', 'gg-tr-title', 'gg-tr-rule']) {
+        expect(ids, `${one ? '1m' : '5m'}: ${id}`).toContain(id);
+      }
+      expect(ids.some((id) => id.startsWith('gg-tr-row-')), one ? '1m' : '5m').toBe(true);
+      const hs = theads(c);
+      expect(hs.length).toBeGreaterThan(0);
+      for (const h of hs) expect(h[1], one ? '1m' : '5m').toBe(board.track_record.views.tape_head);
+      cleanup();
+    }
+  });
+
+  it('NEGATIVE: a block without views draws no Tape head on either page (and no 📋 / 🕰️ chips); the rows still render', async () => {
+    for (const one of [false, true]) {
+      const b = trBoard(one);
+      const tape = b.track_record.views.tape_head;
+      delete b.track_record.views;
+      const c = await mountTr(b, one);
+      const n = b.track_record.heads.length;
+      const hs = theads(c);
+      expect(hs.length, one ? '1m' : '5m').toBeGreaterThan(0);
+      for (const h of hs) {
+        expect(h, one ? '1m' : '5m').toHaveLength(n);
+        expect(h, one ? '1m' : '5m').not.toContain(tape);
+      }
+      expect(screen.queryByTestId('gg-tr-views')).toBeNull();
+      expect(trIds(c).some((id) => id.startsWith('gg-tr-row-'))).toBe(true);
+      cleanup();
+    }
+  });
+});

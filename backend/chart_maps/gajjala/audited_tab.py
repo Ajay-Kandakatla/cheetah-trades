@@ -37,6 +37,21 @@ An EXIT row (T3 per R multiple, T5) scores the audited rows by the nightly exit 
 `with`) beside GG's math on the SAME rows (`other`); a missing grade is `pending` ("not graded yet"). Counts only —
 every sentence from variant.WORDS_GGA, never a verdict.
 
+🏁 ROWS (2026-11-05, SPEC gg-track-parity §3.1 / WP-A). Ajay, verbatim: "Can you make both Gajjala's track record and
+Gajjalas 1 min and Gajjalas AUDIT HAVE similar track record. It looks like our Gajjals 5 min had better win yesterday
+and today... I would like you to audit but its hard to tell which ones won in Gajjlas Audit page" (trigger: "Why are the
+other winners not having charts?" — the 🧪 🏁 listed only an A+ that passed every ON rule, 0 since 11-01, so its A+
+block drew no chart; the winners were text lines of the compare's held list, never rows). `track_block` serves 🚩's
+OWN served 🏁 block (`ledger.served_block(st.shared, …, variant=GGA)` — 🚩's rows, 🚩's grades from the ONE ledger,
+🚩's dedupe, GGA's clip / words / links) plus ONE served column `audit` right after the Ticker: the audit's call on the
+row's own bar (`row_audits` — the SAME record `_attribute` scores per rule, via `_record_of`): passed every rule (the
+stored `aplus` is the verdict; zero rules on reads "no rule was on"), held by the rule ids (the why sentences stay in the
+compare's held list — HIS CALL #31), or not judged; a passed row with an exits doc carries the T3 / T5 exit-grade words
+(`EXIT_STATE_TEXT`, a word for every ledger.CELL_STATES member). The audit is read ONCE per build (`read_span` — the
+SHARED store's sessions ∪ the GGA store's own, so an overlay-silent 🚩 session counts `original_only`) and HANDED to
+both 🏁 blocks; `track_block` never reads it — a failed read lists 🚩's rows with NOT_READ_CELL, never an empty 🏁.
+No today read on this tab (HIS CALL #28): today's rows carry the ledger's own "not read yet — graded tonight" words.
+
 READS MONGO ONLY, never a provider. Every rule, number and sentence comes from audited_rules.py / variant.WORDS_GGA /
 the ledger — nothing here types a threshold. UNMEASURED — nothing here trades or enters a lane. Not advice.
 """
@@ -62,6 +77,17 @@ FILLED_STATES = ("win", "loss", "open", "flat")                                 
 OPEN_FLAT_STATES = ("open", "flat")
 UNFILLED_STATES = ("no_entry",)
 SIDE_LABELS = {"original": "🚩 original", "audited": "🧪 audited"}              # §3.6 — served verbatim
+# 🧪 2026-11-05 (SPEC gg-track-parity §3.1) — the 🏁 row's audit column
+AUDIT_HEAD_KEY = "audit"                                                        # the served head key and row cell key
+AUDIT_STATES = ("passed", "held", "not_judged", "not_read")                     # the cell's `state` (a CSS hook)
+NOT_READ_CELL = {"state": AUDIT_STATES[3], "text": V.word("row_audit_not_read", V.GGA), "sub_text": None,
+                 "provisional": False}                                          # the audit read failed this time
+# [C4] a word for EVERY ledger.CELL_STATES member — the ledger owns the words (BUCKET_TEXT / APLUS_ITEM_LABELS /
+# NO_TIME_TEXT; no_plan / no_risk / split pinned equal to the `text` ledger._cell serves for that state)
+EXIT_STATE_TEXT = {**{k: LG.BUCKET_TEXT[k] for k in ("win", "loss", "open", "flat")},
+                   "no_entry": LG.APLUS_ITEM_LABELS["no_entry"], "no_time": LG.NO_TIME_TEXT,
+                   "no_plan": V.word("row_exit_no_plan", V.GGA), "no_risk": V.word("row_exit_no_risk", V.GGA),
+                   "split": V.word("row_exit_split", V.GGA), "pending": V.word("row_exit_pending", V.GGA)}
 
 
 # ── overlay at serve time ─────────────────────────────────────────────────────────────────────────────────────────
@@ -231,7 +257,7 @@ def _held_docs(st, sessions) -> list:
             continue
         seen.add(rid)
         audit = d.get("audit") if isinstance(d.get("audit"), dict) else {}
-        v = _verdicts(audit) or {"passed": [], "failed": [], "rules": [], "tie": False}
+        v = _verdicts(audit) or {"passed": [], "failed": [], "rules": [], "tie": False, "ok": False}
         out.append({"id": rid, "date": day.isoformat(), "symbol": sym, "setup": setup, "held_by": v["failed"],
                     "entry_bar_t": d.get("entry_bar_t"), "passed_by": v["passed"], "rules": v["rules"],
                     "t1_tie": v["tie"]})
@@ -239,8 +265,9 @@ def _held_docs(st, sessions) -> list:
 
 
 def _verdicts(audit) -> Optional[dict]:
-    """{passed: [ids], failed: [ids], rules: [ids], tie: bool} of one stored audit block; None when there is none
-    (a record written before the claim carried its audit — `not_judged` on every rule)."""
+    """{passed: [ids], failed: [ids], rules: [ids], tie: bool, ok: bool} of one stored audit block; None when there is
+    none (a record written before the claim carried its audit — `not_judged` on every rule). `ok` (2026-11-05 [C6]) =
+    the ONE stored verdict audited_rules._finish wrote (`aplus is True`) — never re-derived from the lists."""
     if not isinstance(audit, dict):
         return None
     vals = audit.get("values") if isinstance(audit.get("values"), dict) else {}
@@ -248,7 +275,7 @@ def _verdicts(audit) -> Optional[dict]:
     return {"passed": [p for p in audit.get("passed") or [] if isinstance(p, str) and p],
             "failed": [f.get("id") for f in audit.get("failed") or [] if isinstance(f, dict) and f.get("id")],
             "rules": [r for r in audit.get("rules") or [] if isinstance(r, str) and r],
-            "tie": t1.get("tie") is True}
+            "tie": t1.get("tie") is True, "ok": audit.get("aplus") is True}
 
 
 def _claim_audits(st, sessions) -> dict:
@@ -460,16 +487,7 @@ def _attribute(sides: dict) -> tuple:
     taken: set = set()
     pairs = []
     for o in sides["original"]:
-        m, c = markers.get(o["id"]), claims.get(o["id"])
-        ob = _bar(o.get("entry_bar_t"))
-        rec = None
-        if ob is not None:
-            if m is not None and _bar(m.get("entry_bar_t")) == ob:
-                rec = ("m", m)
-            elif c is not None and _bar(c.get("entry_bar_t")) == ob:
-                rec = ("c", c)
-        else:
-            rec = ("m", m) if m is not None else (("c", c) if c is not None else None)
+        rec = _record_of(o, markers, claims)
         if rec is not None:
             taken.add((rec[0], o["id"]))      # 🔁 a duplicate original still takes its record (never a false no_original)
         if o.get("dup_of"):
@@ -483,10 +501,26 @@ def _attribute(sides: dict) -> tuple:
     return pairs, [v for v in loose if v is not None]
 
 
+def _record_of(o: dict, markers: dict, claims: dict) -> Optional[tuple]:
+    """("m", marker) | ("c", claim) | None — the 🧪 record on the original's OWN bar [C1]: the held marker on that bar,
+    else the audited claim on that bar, else (an original with no bar) the marker, then the claim. Extracted from
+    _attribute 2026-11-05 (byte-identical semantics) — row_audits reads the SAME record the per-rule table scores."""
+    m, c = markers.get(o["id"]), claims.get(o["id"])
+    ob = _bar(o.get("entry_bar_t"))
+    if ob is not None:
+        if m is not None and _bar(m.get("entry_bar_t")) == ob:
+            return ("m", m)
+        if c is not None and _bar(c.get("entry_bar_t")) == ob:
+            return ("c", c)
+        return None
+    return ("m", m) if m is not None else (("c", c) if c is not None else None)
+
+
 def _rec_verdicts(kind: str, rec: dict) -> Optional[dict]:
     if kind == "m":
         return {"passed": list(rec.get("passed_by") or []), "failed": list(rec.get("held_by") or []),
-                "rules": list(rec.get("rules") or []), "tie": rec.get("t1_tie") is True}
+                "rules": list(rec.get("rules") or []), "tie": rec.get("t1_tie") is True,
+                "ok": False}                                    # 2026-11-05 [C6]: a held marker never passed
     return _verdicts(rec.get("audit"))
 
 
@@ -635,18 +669,38 @@ def _entry_weeks(audited: list) -> int:
     return len(weeks)
 
 
-def compare_block(st, session: date, now, *, span: str = "", is_today: bool = False) -> dict:
-    """§3.6 [C5] — 🚩 original vs 🧪 audited on the GGA 🏁's own sessions (its record start clips them). Raises
-    ledger.LedgerReadError on a read fault (the tab softens it to None)."""
+def read_span(st, session: date, now, *, span: str = "", is_today: bool = False) -> dict:
+    """🧪 2026-11-05 [C1, C5] — the ONE audit read of a 🏁 build, handed to both 🏁 blocks: {"span", "sessions",
+    "sides" (_read_sides), "exits_by_id"}. `sessions` = the list served_block reads over the SHARED store (every 🚩 A+
+    session ≥ the record start) ∪ the GGA store's own claim / marker dates (no audited-only claim lost); on today /
+    yesterday / 5d / 10d both are the same calendar window — only "all" differs. Raises (LedgerReadError, or anything a
+    stored doc throws) — the TAB softens it."""
     now = LG._aware(now)
     session = LG._as_date(session)
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
-    sessions = LG._clip(LG._sessions_for(span_k, session, st, [], V.GGA), V.GGA)
+    shared = LG._clip(LG._sessions_for(span_k, session, st.shared, [], V.GGA), V.GGA)
+    own = LG._clip(LG._sessions_for(span_k, session, st, [], V.GGA), V.GGA)
+    sessions = sorted(set(shared) | set(own))
     sides = _read_sides(st, sessions, now, session, is_today)
     exits = st.exits_docs(sessions)
     if exits is None:
         raise LG.LedgerReadError("the audited exit grades could not be read")
-    exits_by_id = {d.get("_id"): d for d in exits if isinstance(d, dict)}
+    return {"span": span_k, "sessions": sessions, "sides": sides,
+            "exits_by_id": {d.get("_id"): d for d in exits if isinstance(d, dict)}}
+
+
+def compare_block(st, session: date, now, *, span: str = "", is_today: bool = False,
+                  read: Optional[dict] = None) -> dict:
+    """§3.6 [C5] — 🚩 original vs 🧪 audited on the 🏁's sessions (read_span's: the record start clips them). `read` =
+    the tab's ONE read_span dict (2026-11-05); None → this block reads it itself (direct callers). Raises
+    ledger.LedgerReadError on a read fault (the tab softens it to None)."""
+    now = LG._aware(now)
+    session = LG._as_date(session)
+    if read is None:
+        read = read_span(st, session, now, span=span, is_today=is_today)
+    span_k = read["span"]
+    sides = read["sides"]
+    exits_by_id = read["exits_by_id"]
     oid = {r["id"] for r in sides["original"]}
     aid = {r["id"] for r in sides["audited"]}
     hid = {h["id"] for h in sides["held"]}
@@ -682,4 +736,86 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
                                 else V.word("unmeasured", vv, floor=floor))}
 
 
-__all__ = ["overlay_reads", "held_block", "audited_block", "compare_block", "NO_ORIGINAL", "NO_ORIGINAL_TEXT"]
+# ── 🏁 rows: 🚩's own A+ with the audit's call (2026-11-05, SPEC gg-track-parity §3.1) ────────────────────────────────
+def row_audits(sides: dict, exits_by_id: dict) -> dict:
+    """{original id: audit cell} for EVERY original row (a duplicate too — listed, never counted): the record on the
+    row's own bar (_record_of — the one the per-rule table scores), its verdicts, its cell."""
+    markers = {h["id"]: h for h in sides["held"]}
+    claims = {a["id"]: a for a in sides["audited"]}
+    out: dict = {}
+    for o in sides["original"]:
+        rec = _record_of(o, markers, claims)
+        v = _rec_verdicts(*rec) if rec is not None else None
+        out[o["id"]] = _audit_cell(v, o.get("setup"), o["id"], exits_by_id or {})
+    return out
+
+
+def _audit_cell(v: Optional[dict], setup, rid: str, exits_by_id: dict) -> dict:
+    """{state, text, sub_text, provisional} — held (ids only [C7]) / passed (the stored `aplus` [C6]; the exit-grade
+    sub-line, or "no rule was on" when the claim was judged with every rule OFF) / not_judged (no record on the bar, or
+    a record with no verdict)."""
+    vv = V.GGA
+    if v is not None and v.get("failed"):
+        return {"state": AUDIT_STATES[1], "text": V.word("row_audit_held", vv, ids=", ".join(v["failed"])),
+                "sub_text": None, "provisional": False}
+    if v is not None and v.get("ok"):
+        sub = _exit_line(rid, setup, exits_by_id) if v.get("rules") else V.word("row_audit_passed_none_on", vv)
+        return {"state": AUDIT_STATES[0], "text": V.word("row_audit_passed", vv), "sub_text": sub,
+                "provisional": False}
+    return {"state": AUDIT_STATES[2], "text": V.word("row_audit_not_judged", vv),
+            "sub_text": V.word("row_audit_not_judged_sub", vv), "provisional": False}
+
+
+def _exit_line(rid: str, setup, exits_by_id: dict) -> Optional[str]:
+    """The passed row's T3 / T5 exit grades in words ("T3 +2R: ✅ winner +2.0R · … · T5 21 EMA trail: …") — the SAME
+    state engine _exit_rows reads (ledger._state_of; a missing column is "pending"); None when no exits doc exists."""
+    doc = (exits_by_id or {}).get(rid)
+    if not isinstance(doc, dict):
+        return None
+    vv = V.GGA
+    cols = [("T3", k) for k in AUD.T3_R_MULTS] if setup in AUD.T3_SETUPS else []
+    cols.append(("T5", None))
+    bits = []
+    for col_id, k in cols:
+        g = doc.get(AUD.exit_col_key(col_id, k))
+        g = g if isinstance(g, dict) else None
+        state = LG._state_of(g) if g else "pending"
+        word = EXIT_STATE_TEXT.get(state) or EXIT_STATE_TEXT["pending"]
+        r = LG._num(g.get("r")) if g and state in LG.DECIDED else None
+        tail = f" {r:+.1f}R" if r is not None else ""
+        label = (V.word("row_exit_t3", vv, k=k) if col_id == "T3" else V.word("row_exit_t5", vv, ema=AUD.T5_EMA))
+        bits.append(f"{label}: {word}{tail}")
+    return " · ".join(bits)
+
+
+def track_block(st, session: date, now, *, span: str = "", is_today: bool = False, today: Optional[dict] = None,
+                broker_text_of=None, read: Optional[dict] = None) -> dict:
+    """The 🧪 🏁: 🚩's served block over the SHARED store with GGA's clip / words / links, + the audit column (head
+    "🧪 Audit" right after the Ticker). NEVER reads the audit itself [C1]: `read` is the tab's read_span dict, or None
+    = the audit was not read this time → every row's cell is NOT_READ_CELL (the rows stay). Raises only what
+    served_block raises (LedgerReadError on the SHARED ledger → the tab serves TRACK_RECORD_FAULT)."""
+    block = LG.served_block(st.shared, session, now, span=span, is_today=is_today, today=today,
+                            broker_text_of=broker_text_of, variant=V.GGA)
+    heads = list(block["heads"])
+    i = next(j for j, h in enumerate(heads) if h["key"] == LG.HEADS[0][0]) + 1
+    heads.insert(i, {"key": AUDIT_HEAD_KEY, "label": V.word("ledger_audit_head", V.GGA)})
+    block["heads"] = heads
+    audits = None
+    if isinstance(read, dict):
+        try:
+            audits = row_audits(read["sides"], read["exits_by_id"])
+        except Exception as exc:                                    # noqa: BLE001 — [C1] fail VISIBLE, never empty
+            log.warning("gajjala audited: row audits failed: %s", type(exc).__name__)
+            audits = None
+    for day in (block.get("days") or []) + ((block.get("aplus") or {}).get("days") or []):
+        for r in day.get("rows") or []:                             # the same dicts in both lists — set in place
+            r[AUDIT_HEAD_KEY] = (dict(NOT_READ_CELL) if audits is None
+                                 else audits.get(r["id"]) or _audit_cell(None, r.get("setup"), r["id"], {}))
+    block["counts_text"] = None                 # HIS CALL #29 default: no 🧠 row on this tab → no zero 🧠 lines
+    block["kinds"] = None                       # HIS CALL #29: the 🎯 chip is a no-op on an A+-only list
+    block["kind_empty_text"] = None
+    return block
+
+
+__all__ = ["overlay_reads", "held_block", "audited_block", "compare_block", "read_span", "track_block", "row_audits",
+           "EXIT_STATE_TEXT", "NOT_READ_CELL", "AUDIT_HEAD_KEY", "AUDIT_STATES", "NO_ORIGINAL", "NO_ORIGINAL_TEXT"]

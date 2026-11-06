@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import hand from './__fixtures__/gajjala_board_2026_10_13.json';
 import trGolden from './__fixtures__/gajjala_track_record_golden_2026_10_16.json';
+import trackFix from './__fixtures__/gajjala_audited_track_2026_11_05.json';
 import type { CurrentUser } from '../hooks/useUser';
 import { TAB_META } from '../lib/chartMaps';
 import { _resetGgLiteCache } from './GgEntryTape';
@@ -35,7 +36,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
   useBounceRoom: () => ({ map: new Map(), payload: null, loading: false, error: null, pending: 0 }),
 }));
 
-import GajjalaBoard from './GajjalaBoard';
+import GajjalaBoard, { ggTrTapeAt } from './GajjalaBoard';
 import { GgAuditedCompare } from './GgAuditedCompare';
 import ChartMaps from '../pages/ChartMaps';
 
@@ -187,7 +188,7 @@ function ggaTrBoard(opts: { blocks?: boolean; tab?: string } = {}): any {
 type Call = { method: string; path: string; url: string; q: URLSearchParams };
 let calls: Call[] = [];
 const RULES = { sections: { gajjala: { title: 'R', emoji: '\u{1F6A9}', picks: [], stops: [], alerts: [], note: 'N' } } };
-function stub(boards: { gga?: (q: URLSearchParams) => any; gg5?: (q: URLSearchParams) => any } = {}) {
+function stub(boards: { gga?: (q: URLSearchParams) => any; gg5?: (q: URLSearchParams) => any; gg1?: (q: URLSearchParams) => any } = {}) {
   calls = [];
   const spy = vi.fn(async (url: string, init?: RequestInit) => {
     const u = new URL(String(url), 'http://x');
@@ -198,6 +199,7 @@ function stub(boards: { gga?: (q: URLSearchParams) => any; gg5?: (q: URLSearchPa
     if (u.pathname.endsWith('/entry-tape')) return ok({ id: 'x', bars: [], rules: [], lite: true });
     if (u.pathname.endsWith(PA)) return ok((boards.gga || ((q) => (q.get('sub') === 'track_record' ? ggaTrBoard() : ggaBoard())))(u.searchParams));
     if (u.pathname.endsWith(P5)) return ok((boards.gg5 || (() => ggaBoard({ blocks: false, tab: 'gajjala' })))(u.searchParams));
+    if (boards.gg1 && u.pathname.endsWith(P1)) return ok(boards.gg1(u.searchParams));
     if (u.pathname.endsWith('/supply-demand/rules')) return ok(RULES);
     return ok({});
   });
@@ -208,7 +210,7 @@ const ends = (p: string) => calls.filter((c) => c.path.endsWith(p));
 const getsTo = (p: string) => ends(p).filter((c) => c.method === 'GET');
 const postsTo = (p: string) => ends(p).filter((c) => c.method === 'POST');
 const sleep = (ms: number) => act(() => new Promise<void>((r) => setTimeout(r, ms)));
-const mount = (q: string, variant?: 'gajjala' | 'gajjala_audited') => render(
+const mount = (q: string, variant?: 'gajjala' | 'gajjala_1m' | 'gajjala_audited') => render(
   <MemoryRouter initialEntries={[`/chart-maps?${q}`]}>
     {variant ? <GajjalaBoard variant={variant} /> : <GajjalaBoard />}
   </MemoryRouter>);
@@ -378,9 +380,10 @@ describe('🏁 the compare block — every number served, floor_reached never a 
     expect(day.textContent).toContain('4 · 2 W · 1 L');
     expect(within(cmp).getByTestId('gg-audited-compare-honesty').textContent).toBe(COMPARE.honesty);
     expect(within(cmp).getByTestId('gg-audited-compare-unmeasured').textContent).toBe(COMPARE.unmeasured_text);
-    // the compare block sits above the Track record panel
+    // 🧪 2026-11-05 (gg-track-parity, HIS CALL #30 default): the 🏁 rows FIRST, the compare block below them
     const tr = screen.getByTestId('gg-track-record');
-    expect(cmp.compareDocumentPosition(tr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tr.compareDocumentPosition(cmp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cmp.compareDocumentPosition(tr) & Node.DOCUMENT_POSITION_FOLLOWING).toBeFalsy();
   });
 
   it('NEGATIVE: floor_reached true is never printed as a verdict — only the served unmeasured words', async () => {
@@ -690,5 +693,273 @@ describe('ChartMaps mounts the audited board (2026-11-01)', () => {
     expect(ends(PA)).toHaveLength(0);
     expect(screen.queryByTestId('gg-audited-strip')).toBeNull();
     expect(screen.queryByTestId('gg-held')).toBeNull();
+  });
+});
+
+/* 🧪 2026-11-05 (gg-track-parity WP-C). Ajay: "Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas
+ * AUDIT HAVE similar track record ... its hard to tell which ones won in Gajjlas Audit page"; trigger: "Why are the other
+ * winners not having charts?". The 🧪 🏁 now serves 🚩's own A+ rows (audited_tab.track_block) with a served `audit`
+ * cell under the served head "audit"; the FE draws it through TrRowCells' default branch (TrCell) — no new component.
+ * Fixture: __fixtures__/gajjala_audited_track_2026_11_05.json — HAND-BUILT test data (spec §3.4) + tonight's served
+ * 0-row block verbatim. Every assertion compares against a served string; nothing is composed. */
+describe('🧪 🏁 — 🚩 A+ rows with the served 🧪 Audit cell (2026-11-05)', () => {
+  const TRK: any = (trackFix as any).track_record;
+  const TRK_EMPTY: any = (trackFix as any).track_record_empty;
+  const rowsOf = (tr: any): any[] => tr.days.flatMap((d: any) => d.rows);
+  const row = (sym: string, setup: string): any => rowsOf(TRK).find((r: any) => r.symbol === sym && r.setup === setup);
+  const HELD_R = row('HUHU', 'reversal_squeeze');
+  const PASSED_R = row('MERC', 'intraday_vcp');
+  const NJ_R = row('CNSY', 'intraday_vcp');
+  const LOSS_R = row('JDZG', 'reversal_squeeze');
+  const DUP_R = row('JDZG', 'intraday_vcp');
+  const trackBoard = (patch: (tr: any) => void = () => {}, tr: any = TRK) => {
+    const b = ggaTrBoard(); b.track_record = clone(tr); patch(b.track_record); return b;
+  };
+  const open = async (q = '', patch: (tr: any) => void = () => {}, tr: any = TRK) => {
+    stub({ gga: () => trackBoard(patch, tr) });
+    const r = mount(`tab=gajjala_audited&sub=track_record${q}`, 'gajjala_audited');
+    await loaded(r.container);
+    return r;
+  };
+  const cellOf = (r: any) => screen.getByTestId(`gg-tr-audit-${r.key}`);
+
+  it('fixture sanity: one held / passed / not_judged row, one duplicate, one pending row of today; counts / kinds null', () => {
+    expect([HELD_R, PASSED_R, NJ_R, LOSS_R, DUP_R].every(Boolean)).toBe(true);
+    expect(HELD_R.audit.state).toBe('held');
+    expect(HELD_R.audit.sub_text).toBeNull();
+    expect(PASSED_R.audit.state).toBe('passed');
+    expect(typeof PASSED_R.audit.sub_text).toBe('string');
+    expect(NJ_R.audit.state).toBe('not_judged');
+    expect(DUP_R.dup_of).toBe(LOSS_R.id);
+    expect(HELD_R.same.state).toBe('pending');
+    expect(HELD_R.same.provisional).toBe(false);
+    expect(TRK.counts_text).toBeNull();
+    expect(TRK.kinds).toBeNull();
+    expect(TRK.heads[1].key).toBe('audit');
+    expect(TRK_EMPTY.days).toEqual([]);
+  });
+
+  it('order: the 🏁 section PRECEDES the compare block on the 🧪 🏁', async () => {
+    await open();
+    const tr = screen.getByTestId('gg-track-record');
+    const cmp = screen.getByTestId('gg-audited-compare');
+    expect(tr.compareDocumentPosition(cmp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('every row: gg-tr-audit-<key> prints the served text verbatim, the served sub_text in <small>, the state class', async () => {
+    await open();
+    for (const r of rowsOf(TRK)) {
+      const td = cellOf(r);
+      expect(td.tagName).toBe('TD');
+      expect(td.firstChild?.textContent).toBe(r.audit.text);
+      expect(td.classList.contains('gg-tr-cell')).toBe(true);
+      expect(td.classList.contains(`gg-tr-${r.audit.state}`)).toBe(true);
+      expect(td.classList.contains('gg-tr-prov')).toBe(false);
+      const small = td.querySelector('small');
+      if (r.audit.sub_text) expect(small?.textContent).toBe(r.audit.sub_text);
+      else expect(small).toBeNull();
+      // NEGATIVE: nothing composed — the cell is exactly the served strings
+      expect(leftover(td.textContent || '', [r.audit.text, r.audit.sub_text || ''].filter(Boolean))).toBe('');
+    }
+    expect(cellOf(PASSED_R).classList.contains('gg-tr-passed')).toBe(true);
+    expect(cellOf(PASSED_R).querySelector('small')?.textContent).toBe(PASSED_R.audit.sub_text);
+    expect(cellOf(NJ_R).classList.contains('gg-tr-not_judged')).toBe(true);
+  });
+
+  it('NEGATIVE: a held row renders NO <small> (ids only in the cell; the why sentences stay in the held list)', async () => {
+    await open();
+    for (const r of [HELD_R, LOSS_R, DUP_R]) {
+      const td = cellOf(r);
+      expect(td.classList.contains('gg-tr-held')).toBe(true);
+      expect(td.querySelector('small')).toBeNull();
+      expect(td.textContent).toBe(r.audit.text);
+    }
+  });
+
+  it('heads: Ticker · Tape · 🧪 Audit · Setup … — the Tape <th> at index 1, the audit <th> at index 2', async () => {
+    await open();
+    expect(ggTrTapeAt(TRK.heads)).toBe(1);
+    const sec = screen.getByTestId('gg-track-record');
+    const ths = [...(sec.querySelector('.gg-tr-table thead tr') as HTMLElement).querySelectorAll('th')].map((th) => th.textContent);
+    const labels = TRK.heads.map((h: any) => h.label);
+    expect(ths).toEqual([labels[0], TRK.views.tape_head, ...labels.slice(1)]);
+    expect(ths[1]).toBe(TRK.views.tape_head);
+    expect(ths[2]).toBe(TRK.heads[1].label);
+    // the row's cells ride the same order: the audit cell is the third <td>
+    const tr = screen.getByTestId(`gg-tr-row-${PASSED_R.key}`);
+    expect(tr.querySelectorAll(':scope > td')[2].getAttribute('data-testid')).toBe(`gg-tr-audit-${PASSED_R.key}`);
+  });
+
+  it('the 🕰️ timeline (?view=timeline) renders the same served cell', async () => {
+    await open('&view=timeline');
+    const tl = screen.getByTestId('gg-tl');
+    for (const r of rowsOf(TRK)) {
+      const td = within(tl).getByTestId(`gg-tr-audit-${r.key}`);
+      expect(td.firstChild?.textContent).toBe(r.audit.text);
+      expect(td.classList.contains(`gg-tr-${r.audit.state}`)).toBe(true);
+    }
+  });
+
+  it('kinds / counts_text null: no 🎯 chips, no 🧠 count lines — while the entries line and the A+ charts render', async () => {
+    await open();
+    expect(screen.queryByTestId('gg-tr-kinds')).toBeNull();
+    expect(screen.queryByTestId('gg-tr-kind-empty')).toBeNull();
+    expect(screen.queryByTestId('gg-tr-counts-same')).toBeNull();
+    expect(screen.queryByTestId('gg-tr-counts-next')).toBeNull();
+    expect(screen.getByTestId('gg-tr-entries').textContent).toBe(TRK.entries_text);
+    expect(screen.getByTestId('gg-ap')).toBeTruthy();
+    expect(screen.getByTestId('gg-ap-chart-outcomes')).toBeTruthy();
+    expect(screen.queryByTestId('gg-ap-empty')).toBeNull();
+    expect(screen.getByTestId('gg-tr-title').textContent).toBe(TRK.title);
+    expect(screen.getByTestId('gg-tr-honesty').textContent).toBe(TRK.honesty);
+    // the ✅ / ❌ served chips over the rows
+    expect(screen.getByTestId('gg-tr-cat-win').textContent).toBe(TRK.categories[1].text);
+    expect(screen.getByTestId('gg-tr-cat-loss').textContent).toBe(TRK.categories[2].text);
+  });
+
+  it('the duplicate row keeps its 🔁 chip AND its audit cell; it serves no ✅ / ❌ flag', async () => {
+    await open();
+    expect(screen.getByTestId(`gg-tr-dup-${DUP_R.key}`).textContent).toBe(DUP_R.dup_text);
+    expect(cellOf(DUP_R).textContent).toBe(DUP_R.audit.text);
+    expect(screen.queryByTestId(`gg-tr-flag-${DUP_R.key}`)).toBeNull();
+    expect(screen.getByTestId(`gg-tr-flag-${LOSS_R.key}`).textContent).toBe(LOSS_R.flag_text);
+    expect(screen.getByTestId(`gg-tr-flag-${PASSED_R.key}`).textContent).toBe(PASSED_R.flag_text);
+  });
+
+  it('✅ wins first orders by the served bucket order; the audit cell rides its row; ?sort=rang = the served order', async () => {
+    const day = TRK.days.find((d: any) => d.date === '2026-11-03');
+    const keysIn = () => [...(screen.getByTestId('gg-tr-day-2026-11-03').parentElement as HTMLElement)
+      .querySelectorAll('tbody tr[data-testid^="gg-tr-row-"]')].map((tr) => tr.getAttribute('data-testid'));
+    await open();
+    // served order: CNSY (out) · JDZG dup · JDZG loss → the loss first, then the out row, the duplicate last (ggSortRows)
+    expect(day.rows.map((r: any) => r.key)).toEqual([NJ_R.key, DUP_R.key, LOSS_R.key]);
+    expect(TRK.bucket_order.indexOf('loss')).toBeLessThan(TRK.bucket_order.indexOf('out'));
+    expect(keysIn()).toEqual([LOSS_R, NJ_R, DUP_R].map((r: any) => `gg-tr-row-${r.key}`));
+    expect(keysIn()).not.toEqual(day.rows.map((r: any) => `gg-tr-row-${r.key}`));
+    for (const r of day.rows) {
+      const tr = screen.getByTestId(`gg-tr-row-${r.key}`);
+      expect(within(tr).getByTestId(`gg-tr-audit-${r.key}`).firstChild?.textContent).toBe(r.audit.text);
+    }
+    cleanup();
+    await open('&sort=rang');
+    expect(keysIn()).toEqual(day.rows.map((r: any) => `gg-tr-row-${r.key}`));
+  });
+
+  it("today's pending row prints the served 'not read yet' words, never a provisional mark; the served today line", async () => {
+    await open();
+    const same = screen.getByTestId(`gg-tr-same-${HELD_R.key}`);
+    expect(same.firstChild?.textContent).toBe(HELD_R.same.text);
+    expect(same.querySelector('small')?.textContent).toBe(HELD_R.same.sub_text);
+    expect(same.classList.contains('gg-tr-pending')).toBe(true);
+    expect(same.classList.contains('gg-tr-prov')).toBe(false);
+    expect(screen.getByTestId('gg-tr-today').textContent).toBe(TRK.today_text);
+    expect(screen.getByTestId('gg-track-record').querySelectorAll('.gg-tr-prov')).toHaveLength(0);
+  });
+
+  it('NEGATIVE: heads without "audit" → no gg-tr-audit-* even though every row carries `audit`', async () => {
+    await open('', (tr) => { tr.heads = tr.heads.filter((h: any) => h.key !== 'audit'); });
+    expect(document.querySelectorAll('[data-testid^="gg-tr-audit-"]')).toHaveLength(0);
+    expect(screen.getByTestId(`gg-tr-row-${PASSED_R.key}`)).toBeTruthy();
+    expect(screen.getByTestId('gg-track-record').textContent).not.toContain(PASSED_R.audit.text);
+  });
+
+  it('NEGATIVE: a row without `audit` (absent or null) under the head → an empty third cell, no audit test id, no crash', async () => {
+    await open('', (tr) => { delete tr.days[0].rows[0].audit; tr.days[1].rows[0].audit = null; });
+    for (const r of [HELD_R, PASSED_R]) {
+      expect(screen.queryByTestId(`gg-tr-audit-${r.key}`)).toBeNull();
+      const td = screen.getByTestId(`gg-tr-row-${r.key}`).querySelectorAll(':scope > td')[2];
+      expect(td.textContent).toBe('');
+      expect(td.className).toBe('');
+    }
+    // the other rows keep theirs
+    expect(cellOf(NJ_R).firstChild?.textContent).toBe(NJ_R.audit.text);
+  });
+
+  it("NEGATIVE: tonight's served 0-row block renders its empty_text exactly as today — no row, no audit cell", async () => {
+    await open('', () => {}, TRK_EMPTY);
+    expect(screen.getByTestId('gg-tr-empty').textContent).toBe(TRK_EMPTY.empty_text);
+    expect(document.querySelectorAll('[data-testid^="gg-tr-row-"]')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-testid^="gg-tr-audit-"]')).toHaveLength(0);
+    expect(screen.getByTestId('gg-ap-empty').textContent).toBe(TRK_EMPTY.aplus.empty_text);
+    // its served counts lines still print (the older block serves them)
+    expect(screen.getByTestId('gg-tr-counts-same').textContent).toBe(TRK_EMPTY.counts_text.same);
+    expect(screen.getByTestId('gg-tr-counts-next').textContent).toBe(TRK_EMPTY.counts_text.next);
+  });
+
+  it('NEGATIVE: an older block WITH counts_text still prints both served lines verbatim', async () => {
+    const lines = { same: 'served same-session line · 1 · 2', next: 'served next-session line · 3 · 4' };
+    await open('', (tr) => { tr.counts_text = { ...lines }; });
+    expect(screen.getByTestId('gg-tr-counts-same').textContent).toBe(lines.same);
+    expect(screen.getByTestId('gg-tr-counts-next').textContent).toBe(lines.next);
+  });
+
+  it('NEGATIVE: no number composed — the head row is exactly the served labels; no NaN / undefined anywhere', async () => {
+    await open();
+    const sec = screen.getByTestId('gg-track-record');
+    const head = sec.querySelector('.gg-tr-table thead tr') as HTMLElement;
+    expect(leftover(head.textContent || '', [...TRK.heads.map((h: any) => h.label), TRK.views.tape_head])).toBe('');
+    expect(sec.textContent || '').not.toMatch(/undefined|null|NaN|\[object/);
+  });
+
+  it("NEGATIVE: 🚩 Gajjala's 🏁 is unchanged by the swap — no compare, no audit column, Setup third after the Tape", async () => {
+    const g5 = () => { const b = clone(TR5D); b.session = { ...b.session, refresh_sec: 0 }; b.tab = 'gajjala'; return b; };
+    stub({ gg5: g5 });
+    const { container } = mount('tab=gajjala&sub=track_record');
+    await loaded(container);
+    expect(getsTo(PA)).toHaveLength(0);
+    expect(screen.getByTestId('gg-track-record')).toBeTruthy();
+    expect(screen.queryByTestId('gg-audited-compare')).toBeNull();
+    expect(document.querySelectorAll('[data-testid^="gg-tr-audit-"]')).toHaveLength(0);
+    const ths = [...(container.querySelector('.gg-tr-table thead tr') as HTMLElement).querySelectorAll('th')].map((th) => th.textContent);
+    expect(ths[0]).toBe(TR5D.track_record.heads[0].label);
+    expect(ths[1]).toBe(TR5D.track_record.views.tape_head);
+    expect(ths[2]).toBe(TR5D.track_record.heads[1].label);
+    expect(TR5D.track_record.heads.some((h: any) => h.key === 'audit')).toBe(false);
+  });
+
+  it("NEGATIVE: the 1-minute 🏁 is unchanged by the swap — no compare, no audit column", async () => {
+    const g1 = () => { const b = clone(TR5D); b.session = { ...b.session, refresh_sec: 0 }; b.tab = 'gajjala_1m'; return b; };
+    stub({ gg1: g1 });
+    const { container } = mount('tab=gajjala_1m&sub=track_record', 'gajjala_1m');
+    await loaded(container);
+    expect(getsTo(P1).length).toBeGreaterThan(0);
+    expect(getsTo(PA)).toHaveLength(0);
+    expect(screen.getByTestId('gg-track-record')).toBeTruthy();
+    expect(screen.queryByTestId('gg-audited-compare')).toBeNull();
+    expect(document.querySelectorAll('[data-testid^="gg-tr-audit-"]')).toHaveLength(0);
+  });
+});
+
+/* 📱 the audit cell's CSS hooks (2026-11-05) — source guards on ggAudited.css; NEGATIVE: a lost hook fails the guard. */
+describe('🧪 audit cell CSS hooks — ggAudited.css (2026-11-05)', () => {
+  async function readCss(): Promise<string> {
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    const root = (globalThis as any).process?.cwd?.() || '.';
+    return fs.readFileSync(`${root}/src/styles/ggAudited.css`, 'utf8');
+  }
+  const hooksOk = (src: string): boolean =>
+    /\.gg-tr-cell\.gg-tr-held\s*\{[^}]*color:/.test(src)
+    && /\.gg-tr-cell\.gg-tr-passed\s*\{[^}]*color:/.test(src)
+    && /\.gg-tr-cell\.gg-tr-not_judged,\s*\.gg-tr-cell\.gg-tr-not_read\s*\{[^}]*color:/.test(src)
+    // 📱 the audit cell wraps (the 🏁 td is nowrap) — a passed row's exit line must never set the column width
+    && /td\.gg-tr-cell\.gg-tr-not_read\s*\{[^}]*white-space:\s*normal\b[^}]*overflow-wrap:\s*anywhere\b[^}]*max-width:/.test(src);
+
+  it('held / passed / not_judged / not_read each carry a colour hook; the audit cell wraps (📱)', async () => {
+    expect(hooksOk(await readCss())).toBe(true);
+  });
+
+  it('NEGATIVE: a stylesheet that lost any one hook fails the guard', async () => {
+    const src = await readCss();
+    for (const m of [
+      src.replace('.gg-tr-cell.gg-tr-held', '.gg-tr-cell.gg-tr-held-gone'),
+      src.replace('.gg-tr-cell.gg-tr-passed', '.gg-tr-cell.gg-tr-passed-gone'),
+      src.replace('.gg-tr-cell.gg-tr-not_read {', '.gg-tr-cell.gg-tr-not_read-gone {'),
+      src.replace(/(td\.gg-tr-cell\.gg-tr-not_read\s*\{[^}]*)white-space:\s*normal/, '$1white-space: nowrap'),
+      src.replace(/(td\.gg-tr-cell\.gg-tr-not_read\s*\{[^}]*)max-width:[^;]*;/, '$1'),
+    ]) {
+      expect(m).not.toBe(src);
+      expect(hooksOk(m)).toBe(false);
+    }
   });
 });

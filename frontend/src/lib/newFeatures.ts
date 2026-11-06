@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-05 (verbatim in the label, his spelling kept): "Can you make both Gajjala's track record and Gajjalas 1 min
+  // and Gajjalas AUDIT HAVE similar track record." and "its hard to tell which ones won in Gajjlas Audit page". The 🧪
+  // page's 🏁 used to list only an A+ that passed EVERY ON rule (none since 2026-11-01) — the winners he saw were compare-
+  // table lines with no ticker. Now the 🧪 🏁 = the ONE ledger's served_block over 🚩's own A+ rows for the 🧪 record's
+  // sessions (backend chart_maps/gajjala/audited_tab.track_block — never a second grader; the ✅/❌, dedupe, charts and
+  // Tape are 🚩's) plus ONE served `audit` cell per row (chart_maps/gajjala/variant.WORDS_GGA row_audit_* / row_exit_*:
+  // passed every rule · held by {ids} · not judged · not read; T3 / T5 exit words as sub_text where served); the audit is
+  // read ONCE per GET and a failed read leaves 🚩's rows listed; the 🧪 route does no live today read (HIS CALL #28). The
+  // 1-minute 🏁 measured no drift from 🚩's shape and is PINNED (test_gajjala_track_parity_2026_11_05.py). FE: GgTrRow.audit
+  // typed, rows mount before the compare tables, ggAudited.css state hooks, gajjala.css ≤ 430 px Ticker-cell wrap. No
+  // grade, gate, rule, threshold, claim or push changed; 🧪 still shadow. UNMEASURED. Pinned by scripts/contracts.mjs
+  // ("🏁 Gajjala's three Track records read alike (2026-11-05)").
+  { id: 'chart-maps-gajjala-track-records-alike-2026-11-05', addedAt: '2026-11-05', route: '/chart-maps?tab=gajjala_audited&sub=track_record',
+    label: "🏁 Gajjala's three Track records now read alike — 🚩 Gajjala's, the 1-minute page and 🧪 Audited: the 🧪 page lists 🚩's own A+ rows for its sessions with the same ✅ / ❌ grade, charts, chips and Tape column, plus a 🧪 Audit column on every row saying passed every rule, held by which rule, or not judged (the exit grades named where served), so which ones won is readable per ticker; the 1-minute page's 🏁 is pinned to 🚩's shape. Ajay: “Can you make both Gajjala's track record and Gajjalas 1 min and Gajjalas AUDIT HAVE similar track record.” and “its hard to tell which ones won in Gajjlas Audit page”. No grade, gate, rule or push changed; 🧪 still rings nothing. UNMEASURED. Not advice." },
   // Ajay 2026-11-02 (verbatim in the label, his spelling kept): "Can you make Luk's track record similar to Gajjal's and also can you make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day". Item 1: 🥇 Luk's 🏁 serves 🚩's shape
   // (backend chart_maps/luk/ledger.served_block — heads, views, categories, sorts, bucket_order, the charts block, the
   // row cap LUK_LEDGER_ROWS_MAX) and draws through the SAME pieces (GajjalaBoard's exported GgTr*, GajjalaAplusCharts,

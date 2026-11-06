@@ -63,6 +63,9 @@ laid on at serve time (audited_tab.overlay_reads — an A+ whose audit failed se
 counted, never hidden) and three more keys: `audited` (the 🧪 strip), `held` (the held A+ section, the banner's own
 gates) and, on 🏁, `audited_compare`. Every edit here is guarded by `variant.is_audited(v)` — GG5 and GG1 serve every
 byte as before. UNMEASURED — shadow only, nothing here trades.
+🧪 2026-11-05 (SPEC gg-track-parity §3.3): on 🏁 the audited tab serves 🚩's OWN A+ rows (audited_tab.track_block over
+the shared store) with a 🧪 Audit column; the audit is read ONCE (audited_tab.read_span) and handed to both 🏁 blocks —
+a failed read lists the rows with a "not read" cell and serves `audited_compare` None (never re-read in a block).
 """
 from __future__ import annotations
 
@@ -2002,14 +2005,22 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     elif sub_k == GC.LEDGER_SUB:
         LG = _ledger()
         span_s = span if isinstance(span, str) else ""
-        out["track_record"] = (_soft("track record", LG.served_block, st, session, now, span=span_s,
-                                     is_today=is_today, today=today if isinstance(today, dict) else None,
-                                     broker_text_of=lambda s: broker_text_for(s, flags),
-                                     **({} if gg5 else {"variant": v}), default=None) if LG else None)
-        out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
-        if aud:                                 # 🧪 2026-11-01 — audited vs 🚩 original, the 🏁's own sessions
-            out["audited_compare"] = _soft("audited compare", AT.compare_block, st, session, now, span=span_s,
-                                           is_today=is_today, default=None)
+        if aud:     # 🧪 2026-11-05 — 🚩's A+ rows with the audit's call per row; the audit read ONCE, handed to both
+            read = _soft("audited read", AT.read_span, st, session, now, span=span_s, is_today=is_today, default=None)
+            out["track_record"] = (_soft("track record", AT.track_block, st, session, now, span=span_s,
+                                         is_today=is_today, today=today if isinstance(today, dict) else None,
+                                         broker_text_of=lambda s: broker_text_for(s, flags), read=read,
+                                         default=None) if LG else None)
+            out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT  # W16
+            out["audited_compare"] = (_soft("audited compare", AT.compare_block, st, session, now, span=span_s,
+                                            is_today=is_today, read=read, default=None)
+                                      if read is not None else None)   # [C1] a failed read never re-runs
+        else:       # GG5 / GG1 — byte-identical to before
+            out["track_record"] = (_soft("track record", LG.served_block, st, session, now, span=span_s,
+                                         is_today=is_today, today=today if isinstance(today, dict) else None,
+                                         broker_text_of=lambda s: broker_text_for(s, flags),
+                                         **({} if gg5 else {"variant": v}), default=None) if LG else None)
+            out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT  # W16
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
     _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer

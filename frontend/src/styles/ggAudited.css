@@ -57,3 +57,16 @@
 
 /* the held tile pill — a muted amber: an A+ on the original, held here by the audit (never the A+ green). */
 .gg-state-aplus_held { color: var(--amber, #f59e0b); border-color: var(--amber, #f59e0b); opacity: 0.85; }
+
+/* 🧪 2026-11-05 (gg-track-parity) the 🏁 row's served 🧪 Audit cell (audited_tab.track_block) — `state` hooks only; the
+ * words are served. Held = the muted amber of the held pill; passed = gold; not judged / not read = subtle ink. */
+.gg-tr-cell.gg-tr-held { color: var(--amber, #f59e0b); }
+.gg-tr-cell.gg-tr-passed { color: var(--gold, #b8935a); font-weight: 600; }
+.gg-tr-cell.gg-tr-not_judged, .gg-tr-cell.gg-tr-not_read { color: var(--ink-subtle, #94a3b8); }
+/* 📱 the 🧪 Audit cell wraps (the 🏁 table's cells are nowrap): measured at 430 px on the fixture, a passed row's served
+ * exit line set a 472 px column. These four states are the audit cell's only (never a ledger state), so 🚩 / 1-min
+ * cells are untouched. */
+.gg-tr-table td.gg-tr-cell.gg-tr-held, .gg-tr-table td.gg-tr-cell.gg-tr-passed,
+.gg-tr-table td.gg-tr-cell.gg-tr-not_judged, .gg-tr-table td.gg-tr-cell.gg-tr-not_read {
+  white-space: normal; overflow-wrap: anywhere; min-width: 7rem; max-width: 10rem;
+}

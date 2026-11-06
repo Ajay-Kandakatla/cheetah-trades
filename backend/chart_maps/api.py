@@ -704,12 +704,12 @@ async def chart_maps_gajjala_audited(
 ):
     """🧪 Gajjala · Audited — 🚩 Gajjala's A+ reads filtered by the audit overlay (the registry in
     chart_maps.gajjala.audited_rules). Served from Mongo ONLY (`gajjala.tab.build(…, variant=GGA)`) plus the same ONE
-    live fan-out for the shown tiles' now-line; on 🏁 only, ONE read of today's audited names (ledger.today_read over
-    the audited store). Every audited alert is recorded in SHADOW, never sent; every rule is UNMEASURED. Every argument
-    is coerced (a direct call receives the Query OBJECT). The owner (is_primary_admin) gets the 🚫 tags."""
+    live fan-out for the shown tiles' now-line; no today read on any sub (2026-11-05, HIS CALL #28): today's 🚩 rows
+    read 'not read yet — graded tonight' on the 🧪 🏁. Every audited alert is recorded in SHADOW, never sent; every
+    rule is UNMEASURED. Every argument is coerced (a direct call receives the Query OBJECT). The owner
+    (is_primary_admin) gets the 🚫 tags."""
     from rotation.api import _scrub
     from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
-    from .gajjala import store as ST
     from .gajjala import tab as GT
     from .gajjala import variant as V
     GC = gajjala_consts
@@ -718,14 +718,7 @@ async def chart_maps_gajjala_audited(
     def _run():
         lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
         sub_s, span_s = (sub if isinstance(sub, str) else ""), (span if isinstance(span, str) else "")
-        today = None
-        if sub_s.strip().lower() == GC.LEDGER_SUB:                   # 🏁 only — every other sub stays Mongo-only
-            try:
-                from .gajjala import ledger as LG
-                today = LG.today_read(None, span=span_s, store=ST.for_variant(V.GGA))
-            except Exception as exc:                                # the board serves without it
-                log.debug("chart-maps/gajjala-audited: track-record today read failed: %s", exc)
-                today = None
+        today = None                    # 🧪 2026-11-05 [C2]: no today read on ANY sub — HIS CALL #28 flips one line
         out = GT.build(sub_s,
                        tf=tf if isinstance(tf, str) else "",
                        focus=focus if isinstance(focus, str) else "",
