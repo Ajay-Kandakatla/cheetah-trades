@@ -227,3 +227,15 @@ IS scale (at signal bars, per variant-row): stop median 0.1 % · 5-min ATR 0.122
 4. Commit this prereg (byte-identical copy at `docs/research/spy_levels_2026_11_05_prereg.md`), the sha file, the script and the test on `feat/spy-levels-lane-2026-11-05`.
 5. Stage 3 outcome — ONCE, outside 09:00–16:30 ET, in a throwaway `--rm` container on `cheetah-market-app_default` with the worktree backend mounted read-only: `--mode outcome --cohort-stats /strat/out/fetch/stats.json --prereg /research/2026-11-05_spy_levels_prereg.md --prereg-commit <hash> --ledger /research/strategy_lab_ledger.json --out /strat/out/outcome`.
 6. LEDGER.md rows (the candidate's three side words + one family line), and one paragraph in `docs/supply_demand/index_zones.md` stating the verdict and that the strip still gates nothing.
+
+## Amendment A1 (2026-11-06 00:0x ET — written BEFORE any OOS number existed)
+
+Stage 3 run #1 (`--prereg-commit f9feb00dda6d`, container `spy-levels-outcome`, 23:58 ET 2026-11-05) crashed with
+`TypeError: 'bool' object is not callable` at the `fallback` block of the `next_or_flatten` variants
+(`main()`'s network flag `block=True` shadowed the module function `block()`; that branch runs only in outcome mode,
+so the smoke and IS stages never reached it). No OOS statistic was computed, printed or written: `out/outcome/` is
+empty, `strategy_lab_ledger.json` unchanged (1 entry), the log holds only the traceback. Fix: the flag is renamed
+`net_block` in `main()` / `run_fetch()` and the tests; no decision logic, value, cohort or seal changed. Guard:
+`test_13_no_parameter_of_main_or_run_fetch_shadows_a_module_callable` (+ its NEGATIVE). New script sha256
+`84096282f9ceed70e540ac519f1a834ff7ac92626e1104b3c5335f834bc1eaf3`. Stage 3 is re-run ONCE with the commit that carries this amendment as `--prereg-commit`. The seal is
+intact: the OOS half has still not been read into any number.

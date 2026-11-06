@@ -446,7 +446,7 @@ def test_06c_NEG_is_mode_never_touches_an_oos_weekday(tmp_path):
     cs = _cohort(tmp_path, daily, cohort_first.isoformat(), as_of.isoformat())
     rc = S.main(["--mode", "is", "--as-of", as_of.isoformat(), "--out", str(tmp_path / "is"),
                  "--cohort-stats", str(cs), "--draws", "100", "--placebo-sets", "50"],
-                now=NIGHT, load_day=load, daily=daily, block=False, colls=(None, None))
+                now=NIGHT, load_day=load, daily=daily, net_block=False, colls=(None, None))
     assert rc == 0
     st = json.loads((tmp_path / "is" / "stats.json").read_text())
     assert st["data"]["split"]["is"]["n_usable"] > 0 and st["data"]["split"]["oos"]["n_usable"] == 0
@@ -702,7 +702,7 @@ def test_09b_pick_null_refuses_and_keeps_the_oos_sealed(tmp_path, monkeypatch):
     daily = _daily(end="2026-07-24")
     cs = _cohort(tmp_path, daily, cohort_first.isoformat(), as_of.isoformat())
     rc = S.main(_outcome_args(tmp_path, prereg, ledger=led, cs=cs) + ["--draws", "100"],
-                now=NIGHT, load_day=load, daily=daily, block=False, colls=(None, None))
+                now=NIGHT, load_day=load, daily=daily, net_block=False, colls=(None, None))
     assert rc == 3 and not (tmp_path / "o").exists() and json.loads(led.read_text()) == []
 
 
@@ -808,7 +808,7 @@ def test_09e_fetch_mode_writes_stats_and_an_exact_daily_csv(tmp_path):
     daily = _daily(end="2026-11-04")
     rc = S.main(["--mode", "fetch", "--as-of", "2026-11-04", "--out",
                  str(tmp_path / "out" / "fetch"), "--cache-only"], now=NIGHT, daily=daily,
-                cached=lambda d: None, fetch_loader=lambda d: None, block=False,
+                cached=lambda d: None, fetch_loader=lambda d: None, net_block=False,
                 colls=(None, None), sleep=lambda s: None)
     assert rc == 0
     st = json.loads((tmp_path / "out" / "fetch" / "stats.json").read_text())
@@ -919,3 +919,26 @@ def test_12_prereg_sha_pins_the_committed_copy():
     if not doc.is_file() or not S.SHA_FILE.is_file():
         pytest.skip("the prereg doc or the sha file is not written yet (WP-B)")
     assert hashlib.sha256(doc.read_bytes()).hexdigest() == S.read_sha_file()
+
+
+# ---- Amendment A1 (2026-11-05, stage 3 run #1 crashed): a parameter must never shadow a module callable ----
+def _shadowed_params(fn, module) -> set:
+    """The names of fn's parameters that are also callables in the module namespace (a shadowing bug)."""
+    import inspect
+    callables = {n for n, v in vars(module).items() if callable(v) and not n.startswith("__")}
+    return set(inspect.signature(fn).parameters) & callables
+
+
+def test_13_no_parameter_of_main_or_run_fetch_shadows_a_module_callable():
+    """Stage 3 run #1 crashed: main(block=True) shadowed block() in the outcome-only fallback branch
+    (`TypeError: 'bool' object is not callable`); smoke / IS never run that branch. The flag is now net_block."""
+    assert _shadowed_params(S.main, S) == set()
+    assert _shadowed_params(S.run_fetch, S) == set()
+    assert "net_block" in __import__("inspect").signature(S.main).parameters
+
+
+def test_13_NEGATIVE_the_guard_catches_a_shadowing_parameter():
+    import types
+    m = types.ModuleType("fake"); m.block = lambda *a, **k: None   # a module callable
+    def main(argv=None, *, block=True): return block
+    assert _shadowed_params(main, m) == {"block"}
