@@ -1,0 +1,259 @@
+# SPY levels study — outcome (2026-11-04)
+
+Every number below is a measurement on closed bars; nothing here orders, gates or alerts anything.
+
+The bounds of overlapping FINE bands are merged for the trigger only; the strip's own band list is unchanged.
+
+Scale (at signal bars, per variant-row): stop median 0.105 % vs 5-min ATR 0.119 %; day range median (per session) 0.875 %.
+
+IS pick: fine|touch_reverse|2R|vwap_off
+
+## IS
+
+- `pdhl|cross|next_or_flatten|vwap_off` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.038 % CI [-0.114, 0.034] · win 0.221 · stop-out 0.718 · target 0.043 · room/risk 6.120 · risk 0.122 %
+- `pdhl|cross|next_or_flatten|vwap_off` · **long** · no_signal · trades 75 · weeks 44 · mean -0.098 % CI [-0.229, 0.006] · win 0.173 · stop-out 0.773 · target 0.000 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|next_or_flatten|vwap_off` · **short** · no_signal · trades 88 · weeks 45 · mean 0.013 % CI [-0.071, 0.110] · win 0.261 · stop-out 0.670 · target 0.080 · room/risk 6.120 · risk 0.148 %
+  - fallback (no next level, flattened): trades 102 · mean -0.015 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.035 % CI [-0.111, 0.037] · win 0.227 · stop-out 0.712 · target 0.043 · room/risk 5.969 · risk 0.124 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **long** · no_signal · trades 76 · weeks 44 · mean -0.091 % CI [-0.225, 0.010] · win 0.184 · stop-out 0.763 · target 0.000 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **short** · no_signal · trades 87 · weeks 44 · mean 0.014 % CI [-0.071, 0.112] · win 0.264 · stop-out 0.667 · target 0.080 · room/risk 5.874 · risk 0.149 %
+  - fallback (no next level, flattened): trades 103 · mean -0.011 %
+- `pdhl|cross|2R|vwap_off` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.020 % CI [-0.088, 0.040] · win 0.362 · stop-out 0.607 · target 0.337 · room/risk 6.120 · risk 0.122 %
+- `pdhl|cross|2R|vwap_off` · **long** · no_signal · trades 75 · weeks 44 · mean -0.053 % CI [-0.186, 0.052] · win 0.293 · stop-out 0.667 · target 0.280 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|2R|vwap_off` · **short** · no_signal · trades 88 · weeks 45 · mean 0.009 % CI [-0.047, 0.068] · win 0.420 · stop-out 0.557 · target 0.386 · room/risk 6.120 · risk 0.148 %
+- `pdhl|cross|2R|vwap_on` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.017 % CI [-0.087, 0.042] · win 0.368 · stop-out 0.601 · target 0.344 · room/risk 5.969 · risk 0.124 %
+- `pdhl|cross|2R|vwap_on` · **long** · no_signal · trades 76 · weeks 44 · mean -0.049 % CI [-0.185, 0.053] · win 0.303 · stop-out 0.658 · target 0.289 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|2R|vwap_on` · **short** · no_signal · trades 87 · weeks 44 · mean 0.010 % CI [-0.048, 0.072] · win 0.425 · stop-out 0.552 · target 0.391 · room/risk 5.874 · risk 0.149 %
+- `pdhl|cross|flatten_only|vwap_off` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.036 % CI [-0.112, 0.038] · win 0.227 · stop-out 0.724 · target 0.000 · room/risk 6.120 · risk 0.122 %
+- `pdhl|cross|flatten_only|vwap_off` · **long** · no_signal · trades 75 · weeks 44 · mean -0.098 % CI [-0.229, 0.006] · win 0.173 · stop-out 0.773 · target 0.000 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|flatten_only|vwap_off` · **short** · no_signal · trades 88 · weeks 45 · mean 0.017 % CI [-0.070, 0.118] · win 0.273 · stop-out 0.682 · target 0.000 · room/risk 6.120 · risk 0.148 %
+- `pdhl|cross|flatten_only|vwap_on` · **pooled** · no_signal · trades 163 · weeks 52 · mean -0.033 % CI [-0.108, 0.042] · win 0.233 · stop-out 0.718 · target 0.000 · room/risk 5.969 · risk 0.124 %
+- `pdhl|cross|flatten_only|vwap_on` · **long** · no_signal · trades 76 · weeks 44 · mean -0.091 % CI [-0.225, 0.010] · win 0.184 · stop-out 0.763 · target 0.000 · room/risk 6.038 · risk 0.100 %
+- `pdhl|cross|flatten_only|vwap_on` · **short** · no_signal · trades 87 · weeks 44 · mean 0.018 % CI [-0.068, 0.121] · win 0.276 · stop-out 0.678 · target 0.000 · room/risk 5.874 · risk 0.149 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **pooled** · inverted · trades 164 · weeks 52 · mean -0.044 % CI [-0.085, -0.005] · win 0.152 · stop-out 0.835 · target 0.067 · room/risk 12.124 · risk 0.057 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **long** · no_signal · trades 92 · weeks 46 · mean -0.025 % CI [-0.059, 0.014] · win 0.185 · stop-out 0.815 · target 0.054 · room/risk 9.126 · risk 0.056 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **short** · no_signal · trades 72 · weeks 45 · mean -0.068 % CI [-0.155, 0.007] · win 0.111 · stop-out 0.861 · target 0.083 · room/risk 14.433 · risk 0.062 %
+  - fallback (no next level, flattened): trades 70 · mean -0.072 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **pooled** · no_signal · trades 124 · weeks 52 · mean -0.043 % CI [-0.095, 0.020] · win 0.145 · stop-out 0.839 · target 0.056 · room/risk 9.968 · risk 0.064 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **long** · no_signal · trades 70 · weeks 41 · mean -0.014 % CI [-0.079, 0.089] · win 0.157 · stop-out 0.829 · target 0.057 · room/risk 10.763 · risk 0.060 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **short** · inverted · trades 54 · weeks 35 · mean -0.080 % CI [-0.154, -0.015] · win 0.130 · stop-out 0.852 · target 0.056 · room/risk 9.968 · risk 0.075 %
+  - fallback (no next level, flattened): trades 77 · mean -0.053 %
+- `pdhl|touch_reverse|2R|vwap_off` · **pooled** · no_signal · trades 164 · weeks 52 · mean -0.027 % CI [-0.064, 0.005] · win 0.372 · stop-out 0.616 · target 0.360 · room/risk 12.124 · risk 0.057 %
+- `pdhl|touch_reverse|2R|vwap_off` · **long** · no_signal · trades 92 · weeks 46 · mean -0.007 % CI [-0.035, 0.024] · win 0.359 · stop-out 0.630 · target 0.326 · room/risk 9.126 · risk 0.056 %
+- `pdhl|touch_reverse|2R|vwap_off` · **short** · no_signal · trades 72 · weeks 45 · mean -0.054 % CI [-0.133, 0.007] · win 0.389 · stop-out 0.597 · target 0.403 · room/risk 14.433 · risk 0.062 %
+- `pdhl|touch_reverse|2R|vwap_on` · **pooled** · inverted · trades 124 · weeks 52 · mean -0.035 % CI [-0.071, -0.001] · win 0.331 · stop-out 0.661 · target 0.315 · room/risk 9.968 · risk 0.064 %
+- `pdhl|touch_reverse|2R|vwap_on` · **long** · no_signal · trades 70 · weeks 41 · mean -0.020 % CI [-0.052, 0.017] · win 0.357 · stop-out 0.629 · target 0.329 · room/risk 10.763 · risk 0.060 %
+- `pdhl|touch_reverse|2R|vwap_on` · **short** · no_signal · trades 54 · weeks 35 · mean -0.055 % CI [-0.126, 0.004] · win 0.296 · stop-out 0.704 · target 0.296 · room/risk 9.968 · risk 0.075 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **pooled** · no_signal · trades 164 · weeks 52 · mean -0.037 % CI [-0.084, 0.015] · win 0.152 · stop-out 0.848 · target 0.000 · room/risk 12.124 · risk 0.057 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **long** · no_signal · trades 92 · weeks 46 · mean -0.030 % CI [-0.063, 0.007] · win 0.185 · stop-out 0.815 · target 0.000 · room/risk 9.126 · risk 0.056 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **short** · no_signal · trades 72 · weeks 45 · mean -0.045 % CI [-0.147, 0.063] · win 0.111 · stop-out 0.889 · target 0.000 · room/risk 14.433 · risk 0.062 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **pooled** · no_signal · trades 124 · weeks 52 · mean -0.047 % CI [-0.098, 0.017] · win 0.145 · stop-out 0.855 · target 0.000 · room/risk 9.968 · risk 0.064 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **long** · no_signal · trades 70 · weeks 41 · mean -0.021 % CI [-0.083, 0.080] · win 0.157 · stop-out 0.843 · target 0.000 · room/risk 10.763 · risk 0.060 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **short** · inverted · trades 54 · weeks 35 · mean -0.081 % CI [-0.156, -0.014] · win 0.130 · stop-out 0.870 · target 0.000 · room/risk 9.968 · risk 0.075 %
+- `fine|cross|next_or_flatten|vwap_off` · **pooled** · inverted · trades 99 · weeks 41 · mean -0.127 % CI [-0.230, -0.044] · win 0.182 · stop-out 0.818 · target 0.101 · room/risk 7.611 · risk 0.120 %
+- `fine|cross|next_or_flatten|vwap_off` · **long** · inverted · trades 55 · weeks 32 · mean -0.153 % CI [-0.322, -0.024] · win 0.200 · stop-out 0.800 · target 0.091 · room/risk 5.813 · risk 0.110 %
+- `fine|cross|next_or_flatten|vwap_off` · **short** · no_signal · trades 44 · weeks 26 · mean -0.096 % CI [-0.180, 0.000] · win 0.159 · stop-out 0.841 · target 0.114 · room/risk 9.477 · risk 0.168 %
+  - fallback (no next level, flattened): trades 21 · mean -0.044 %
+- `fine|cross|next_or_flatten|vwap_on` · **pooled** · inverted · trades 76 · weeks 40 · mean -0.143 % CI [-0.280, -0.027] · win 0.197 · stop-out 0.803 · target 0.118 · room/risk 6.021 · risk 0.158 %
+- `fine|cross|next_or_flatten|vwap_on` · **long** · inverted · trades 42 · weeks 28 · mean -0.234 % CI [-0.444, -0.091] · win 0.167 · stop-out 0.833 · target 0.071 · room/risk 4.853 · risk 0.113 %
+- `fine|cross|next_or_flatten|vwap_on` · **short** · no_signal · trades 34 · weeks 25 · mean -0.031 % CI [-0.175, 0.144] · win 0.235 · stop-out 0.765 · target 0.176 · room/risk 6.049 · risk 0.222 %
+  - fallback (no next level, flattened): trades 15 · mean -0.072 %
+- `fine|cross|2R|vwap_off` · **pooled** · inverted · trades 99 · weeks 41 · mean -0.126 % CI [-0.226, -0.049] · win 0.253 · stop-out 0.747 · target 0.232 · room/risk 7.611 · risk 0.120 %
+- `fine|cross|2R|vwap_off` · **long** · inverted · trades 55 · weeks 32 · mean -0.161 % CI [-0.327, -0.048] · win 0.255 · stop-out 0.745 · target 0.236 · room/risk 5.813 · risk 0.110 %
+- `fine|cross|2R|vwap_off` · **short** · no_signal · trades 44 · weeks 26 · mean -0.083 % CI [-0.165, 0.007] · win 0.250 · stop-out 0.750 · target 0.227 · room/risk 9.477 · risk 0.168 %
+- `fine|cross|2R|vwap_on` · **pooled** · inverted · trades 76 · weeks 40 · mean -0.152 % CI [-0.281, -0.044] · win 0.250 · stop-out 0.750 · target 0.224 · room/risk 6.021 · risk 0.158 %
+- `fine|cross|2R|vwap_on` · **long** · inverted · trades 42 · weeks 28 · mean -0.238 % CI [-0.445, -0.101] · win 0.190 · stop-out 0.810 · target 0.167 · room/risk 4.853 · risk 0.113 %
+- `fine|cross|2R|vwap_on` · **short** · no_signal · trades 34 · weeks 25 · mean -0.045 % CI [-0.173, 0.100] · win 0.324 · stop-out 0.676 · target 0.294 · room/risk 6.049 · risk 0.222 %
+- `fine|cross|flatten_only|vwap_off` · **pooled** · inverted · trades 99 · weeks 41 · mean -0.132 % CI [-0.237, -0.042] · win 0.141 · stop-out 0.859 · target 0.000 · room/risk 7.611 · risk 0.120 %
+- `fine|cross|flatten_only|vwap_off` · **long** · inverted · trades 55 · weeks 32 · mean -0.158 % CI [-0.331, -0.022] · win 0.164 · stop-out 0.836 · target 0.000 · room/risk 5.813 · risk 0.110 %
+- `fine|cross|flatten_only|vwap_off` · **short** · no_signal · trades 44 · weeks 26 · mean -0.100 % CI [-0.197, 0.017] · win 0.114 · stop-out 0.886 · target 0.000 · room/risk 9.477 · risk 0.168 %
+- `fine|cross|flatten_only|vwap_on` · **pooled** · no_signal · trades 76 · weeks 40 · mean -0.133 % CI [-0.286, 0.022] · win 0.145 · stop-out 0.855 · target 0.000 · room/risk 6.021 · risk 0.158 %
+- `fine|cross|flatten_only|vwap_on` · **long** · inverted · trades 42 · weeks 28 · mean -0.251 % CI [-0.458, -0.117] · win 0.119 · stop-out 0.881 · target 0.000 · room/risk 4.853 · risk 0.113 %
+- `fine|cross|flatten_only|vwap_on` · **short** · no_signal · trades 34 · weeks 25 · mean 0.014 % CI [-0.195, 0.303] · win 0.176 · stop-out 0.824 · target 0.000 · room/risk 6.049 · risk 0.222 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **pooled** · no_signal · trades 83 · weeks 40 · mean -0.035 % CI [-0.080, 0.019] · win 0.169 · stop-out 0.819 · target 0.072 · room/risk 12.799 · risk 0.079 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **long** · no_signal · trades 44 · weeks 27 · mean -0.011 % CI [-0.078, 0.066] · win 0.250 · stop-out 0.750 · target 0.068 · room/risk 10.294 · risk 0.075 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **short** · no_signal · trades 39 · weeks 25 · mean -0.061 % CI [-0.118, 0.014] · win 0.077 · stop-out 0.897 · target 0.077 · room/risk 13.437 · risk 0.081 %
+  - fallback (no next level, flattened): trades 17 · mean -0.048 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **pooled** · no_signal · trades 60 · weeks 35 · mean 0.007 % CI [-0.089, 0.122] · win 0.250 · stop-out 0.733 · target 0.083 · room/risk 8.252 · risk 0.103 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **long** · no_signal · trades 32 · weeks 22 · mean -0.062 % CI [-0.156, 0.037] · win 0.312 · stop-out 0.688 · target 0.062 · room/risk 4.442 · risk 0.075 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **short** · too_small · trades 28 · weeks 22 · mean 0.086 % CI [-0.086, 0.301] · win 0.179 · stop-out 0.786 · target 0.107 · room/risk 9.619 · risk 0.109 %
+  - fallback (no next level, flattened): trades 12 · mean -0.033 %
+- `fine|touch_reverse|2R|vwap_off` · **pooled** · no_signal · trades 83 · weeks 40 · mean -0.029 % CI [-0.062, 0.006] · win 0.313 · stop-out 0.663 · target 0.289 · room/risk 12.799 · risk 0.079 %
+- `fine|touch_reverse|2R|vwap_off` · **long** · no_signal · trades 44 · weeks 27 · mean 0.013 % CI [-0.036, 0.065] · win 0.455 · stop-out 0.545 · target 0.386 · room/risk 10.294 · risk 0.075 %
+- `fine|touch_reverse|2R|vwap_off` · **short** · inverted · trades 39 · weeks 25 · mean -0.077 % CI [-0.115, -0.033] · win 0.154 · stop-out 0.795 · target 0.179 · room/risk 13.437 · risk 0.081 %
+- `fine|touch_reverse|2R|vwap_on` · **pooled** · no_signal · trades 60 · weeks 35 · mean 0.003 % CI [-0.071, 0.089] · win 0.350 · stop-out 0.633 · target 0.233 · room/risk 8.252 · risk 0.103 %
+- `fine|touch_reverse|2R|vwap_on` · **long** · no_signal · trades 32 · weeks 22 · mean 0.004 % CI [-0.092, 0.125] · win 0.469 · stop-out 0.531 · target 0.312 · room/risk 4.442 · risk 0.075 %
+- `fine|touch_reverse|2R|vwap_on` · **short** · too_small · trades 28 · weeks 22 · mean 0.002 % CI [-0.098, 0.136] · win 0.214 · stop-out 0.750 · target 0.143 · room/risk 9.619 · risk 0.109 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **pooled** · no_signal · trades 83 · weeks 40 · mean -0.017 % CI [-0.075, 0.051] · win 0.157 · stop-out 0.831 · target 0.000 · room/risk 12.799 · risk 0.079 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **long** · no_signal · trades 44 · weeks 27 · mean 0.003 % CI [-0.075, 0.092] · win 0.227 · stop-out 0.773 · target 0.000 · room/risk 10.294 · risk 0.075 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **short** · no_signal · trades 39 · weeks 25 · mean -0.039 % CI [-0.116, 0.069] · win 0.077 · stop-out 0.897 · target 0.000 · room/risk 13.437 · risk 0.081 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **pooled** · no_signal · trades 60 · weeks 35 · mean 0.049 % CI [-0.083, 0.222] · win 0.233 · stop-out 0.750 · target 0.000 · room/risk 8.252 · risk 0.103 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **long** · no_signal · trades 32 · weeks 22 · mean -0.064 % CI [-0.159, 0.041] · win 0.281 · stop-out 0.719 · target 0.000 · room/risk 4.442 · risk 0.075 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **short** · too_small · trades 28 · weeks 22 · mean 0.177 % CI [-0.074, 0.517] · win 0.179 · stop-out 0.786 · target 0.000 · room/risk 9.619 · risk 0.109 %
+
+## OOS
+
+- `pdhl|cross|next_or_flatten|vwap_off` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.052 % CI [-0.094, -0.007] · win 0.230 · stop-out 0.733 · target 0.036 · room/risk 4.830 · risk 0.147 %
+- `pdhl|cross|next_or_flatten|vwap_off` · **long** · NOT POSITIVE · trades 90 · weeks 45 · mean -0.037 % CI [-0.086, 0.015] · win 0.267 · stop-out 0.711 · target 0.044 · room/risk 4.394 · risk 0.125 %
+- `pdhl|cross|next_or_flatten|vwap_off` · **short** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.071 % CI [-0.139, 0.010] · win 0.187 · stop-out 0.760 · target 0.027 · room/risk 5.774 · risk 0.174 %
+  - fallback (no next level, flattened): trades 107 · mean -0.053 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.054 % CI [-0.095, -0.009] · win 0.230 · stop-out 0.739 · target 0.036 · room/risk 4.802 · risk 0.147 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **long** · NOT POSITIVE · trades 89 · weeks 45 · mean -0.037 % CI [-0.087, 0.015] · win 0.270 · stop-out 0.719 · target 0.045 · room/risk 4.385 · risk 0.124 %
+- `pdhl|cross|next_or_flatten|vwap_on` · **short** · NOT POSITIVE · trades 76 · weeks 43 · mean -0.074 % CI [-0.141, 0.004] · win 0.184 · stop-out 0.763 · target 0.026 · room/risk 5.774 · risk 0.174 %
+  - fallback (no next level, flattened): trades 108 · mean -0.055 %
+- `pdhl|cross|2R|vwap_off` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.033 % CI [-0.068, 0.003] · win 0.339 · stop-out 0.636 · target 0.297 · room/risk 4.830 · risk 0.147 %
+- `pdhl|cross|2R|vwap_off` · **long** · NOT POSITIVE · trades 90 · weeks 45 · mean -0.021 % CI [-0.067, 0.026] · win 0.378 · stop-out 0.611 · target 0.322 · room/risk 4.394 · risk 0.125 %
+- `pdhl|cross|2R|vwap_off` · **short** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.047 % CI [-0.101, 0.010] · win 0.293 · stop-out 0.667 · target 0.267 · room/risk 5.774 · risk 0.174 %
+- `pdhl|cross|2R|vwap_on` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.035 % CI [-0.070, 0.001] · win 0.339 · stop-out 0.642 · target 0.297 · room/risk 4.802 · risk 0.147 %
+- `pdhl|cross|2R|vwap_on` · **long** · NOT POSITIVE · trades 89 · weeks 45 · mean -0.021 % CI [-0.067, 0.026] · win 0.382 · stop-out 0.618 · target 0.326 · room/risk 4.385 · risk 0.124 %
+- `pdhl|cross|2R|vwap_on` · **short** · NOT POSITIVE · trades 76 · weeks 43 · mean -0.051 % CI [-0.105, 0.004] · win 0.289 · stop-out 0.671 · target 0.263 · room/risk 5.774 · risk 0.174 %
+- `pdhl|cross|flatten_only|vwap_off` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.050 % CI [-0.094, -0.001] · win 0.224 · stop-out 0.739 · target 0.000 · room/risk 4.830 · risk 0.147 %
+- `pdhl|cross|flatten_only|vwap_off` · **long** · NOT POSITIVE · trades 90 · weeks 45 · mean -0.039 % CI [-0.088, 0.013] · win 0.256 · stop-out 0.722 · target 0.000 · room/risk 4.394 · risk 0.125 %
+- `pdhl|cross|flatten_only|vwap_off` · **short** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.063 % CI [-0.139, 0.029] · win 0.187 · stop-out 0.760 · target 0.000 · room/risk 5.774 · risk 0.174 %
+- `pdhl|cross|flatten_only|vwap_on` · **pooled** · NOT POSITIVE · trades 165 · weeks 52 · mean -0.052 % CI [-0.096, -0.002] · win 0.224 · stop-out 0.745 · target 0.000 · room/risk 4.802 · risk 0.147 %
+- `pdhl|cross|flatten_only|vwap_on` · **long** · NOT POSITIVE · trades 89 · weeks 45 · mean -0.039 % CI [-0.089, 0.013] · win 0.258 · stop-out 0.730 · target 0.000 · room/risk 4.385 · risk 0.124 %
+- `pdhl|cross|flatten_only|vwap_on` · **short** · NOT POSITIVE · trades 76 · weeks 43 · mean -0.067 % CI [-0.141, 0.024] · win 0.184 · stop-out 0.763 · target 0.000 · room/risk 5.774 · risk 0.174 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **pooled** · NOT POSITIVE · trades 159 · weeks 52 · mean -0.068 % CI [-0.092, -0.040] · win 0.082 · stop-out 0.899 · target 0.013 · room/risk 11.293 · risk 0.068 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **long** · NOT POSITIVE · trades 87 · weeks 48 · mean -0.074 % CI [-0.103, -0.041] · win 0.069 · stop-out 0.908 · target 0.023 · room/risk 7.135 · risk 0.068 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_off` · **short** · NOT POSITIVE · trades 72 · weeks 42 · mean -0.059 % CI [-0.099, -0.009] · win 0.097 · stop-out 0.889 · target 0.000 · room/risk 15.571 · risk 0.065 %
+  - fallback (no next level, flattened): trades 75 · mean -0.046 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **pooled** · NOT POSITIVE · trades 129 · weeks 52 · mean -0.047 % CI [-0.079, -0.012] · win 0.132 · stop-out 0.822 · target 0.031 · room/risk 9.583 · risk 0.074 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **long** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.027 % CI [-0.075, 0.027] · win 0.147 · stop-out 0.813 · target 0.027 · room/risk 6.743 · risk 0.066 %
+- `pdhl|touch_reverse|next_or_flatten|vwap_on` · **short** · NOT POSITIVE · trades 54 · weeks 39 · mean -0.074 % CI [-0.111, -0.033] · win 0.111 · stop-out 0.833 · target 0.037 · room/risk 11.108 · risk 0.081 %
+  - fallback (no next level, flattened): trades 84 · mean -0.031 %
+- `pdhl|touch_reverse|2R|vwap_off` · **pooled** · NOT POSITIVE · trades 159 · weeks 52 · mean -0.041 % CI [-0.063, -0.019] · win 0.277 · stop-out 0.711 · target 0.289 · room/risk 11.293 · risk 0.068 %
+- `pdhl|touch_reverse|2R|vwap_off` · **long** · NOT POSITIVE · trades 87 · weeks 48 · mean -0.037 % CI [-0.066, -0.007] · win 0.299 · stop-out 0.678 · target 0.322 · room/risk 7.135 · risk 0.068 %
+- `pdhl|touch_reverse|2R|vwap_off` · **short** · NOT POSITIVE · trades 72 · weeks 42 · mean -0.046 % CI [-0.078, -0.010] · win 0.250 · stop-out 0.750 · target 0.250 · room/risk 15.571 · risk 0.065 %
+- `pdhl|touch_reverse|2R|vwap_on` · **pooled** · NOT POSITIVE · trades 129 · weeks 52 · mean -0.030 % CI [-0.059, -0.000] · win 0.295 · stop-out 0.690 · target 0.310 · room/risk 9.583 · risk 0.074 %
+- `pdhl|touch_reverse|2R|vwap_on` · **long** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.035 % CI [-0.068, 0.001] · win 0.293 · stop-out 0.680 · target 0.320 · room/risk 6.743 · risk 0.066 %
+- `pdhl|touch_reverse|2R|vwap_on` · **short** · NOT POSITIVE · trades 54 · weeks 39 · mean -0.024 % CI [-0.072, 0.030] · win 0.296 · stop-out 0.704 · target 0.296 · room/risk 11.108 · risk 0.081 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **pooled** · NOT POSITIVE · trades 159 · weeks 52 · mean -0.066 % CI [-0.091, -0.036] · win 0.082 · stop-out 0.906 · target 0.000 · room/risk 11.293 · risk 0.068 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **long** · NOT POSITIVE · trades 87 · weeks 48 · mean -0.071 % CI [-0.102, -0.034] · win 0.069 · stop-out 0.920 · target 0.000 · room/risk 7.135 · risk 0.068 %
+- `pdhl|touch_reverse|flatten_only|vwap_off` · **short** · NOT POSITIVE · trades 72 · weeks 42 · mean -0.059 % CI [-0.099, -0.009] · win 0.097 · stop-out 0.889 · target 0.000 · room/risk 15.571 · risk 0.065 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **pooled** · NOT POSITIVE · trades 129 · weeks 52 · mean -0.041 % CI [-0.077, -0.003] · win 0.132 · stop-out 0.837 · target 0.000 · room/risk 9.583 · risk 0.074 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **long** · NOT POSITIVE · trades 75 · weeks 43 · mean -0.023 % CI [-0.073, 0.034] · win 0.147 · stop-out 0.827 · target 0.000 · room/risk 6.743 · risk 0.066 %
+- `pdhl|touch_reverse|flatten_only|vwap_on` · **short** · NOT POSITIVE · trades 54 · weeks 39 · mean -0.067 % CI [-0.110, -0.015] · win 0.111 · stop-out 0.852 · target 0.000 · room/risk 11.108 · risk 0.081 %
+- `fine|cross|next_or_flatten|vwap_off` · **pooled** · NOT POSITIVE · trades 104 · weeks 46 · mean -0.010 % CI [-0.065, 0.047] · win 0.269 · stop-out 0.702 · target 0.048 · room/risk 7.583 · risk 0.136 %
+- `fine|cross|next_or_flatten|vwap_off` · **long** · NOT POSITIVE · trades 53 · weeks 31 · mean -0.061 % CI [-0.125, 0.009] · win 0.245 · stop-out 0.717 · target 0.019 · room/risk 7.785 · risk 0.138 %
+- `fine|cross|next_or_flatten|vwap_off` · **short** · TOO SMALL · trades 51 · weeks 29 · mean 0.042 % CI [-0.046, 0.135] · win 0.294 · stop-out 0.686 · target 0.078 · room/risk 7.527 · risk 0.130 %
+  - fallback (no next level, flattened): trades 14 · mean 0.045 %
+- `fine|cross|next_or_flatten|vwap_on` · **pooled** · NOT POSITIVE · trades 74 · weeks 39 · mean -0.039 % CI [-0.102, 0.027] · win 0.270 · stop-out 0.703 · target 0.041 · room/risk 6.571 · risk 0.156 %
+- `fine|cross|next_or_flatten|vwap_on` · **long** · TOO SMALL · trades 34 · weeks 25 · mean -0.086 % CI [-0.155, -0.018] · win 0.265 · stop-out 0.706 · target 0.029 · room/risk 7.262 · risk 0.148 %
+- `fine|cross|next_or_flatten|vwap_on` · **short** · TOO SMALL · trades 40 · weeks 25 · mean 0.002 % CI [-0.092, 0.109] · win 0.275 · stop-out 0.700 · target 0.050 · room/risk 5.158 · risk 0.169 %
+  - fallback (no next level, flattened): trades 8 · mean 0.104 %
+- `fine|cross|2R|vwap_off` · **pooled** · NOT POSITIVE · trades 104 · weeks 46 · mean -0.048 % CI [-0.088, -0.006] · win 0.327 · stop-out 0.654 · target 0.298 · room/risk 7.583 · risk 0.136 %
+- `fine|cross|2R|vwap_off` · **long** · NOT POSITIVE · trades 53 · weeks 31 · mean -0.077 % CI [-0.128, -0.027] · win 0.283 · stop-out 0.679 · target 0.226 · room/risk 7.785 · risk 0.138 %
+- `fine|cross|2R|vwap_off` · **short** · TOO SMALL · trades 51 · weeks 29 · mean -0.018 % CI [-0.080, 0.047] · win 0.373 · stop-out 0.627 · target 0.373 · room/risk 7.527 · risk 0.130 %
+- `fine|cross|2R|vwap_on` · **pooled** · NOT POSITIVE · trades 74 · weeks 39 · mean -0.062 % CI [-0.116, -0.008] · win 0.297 · stop-out 0.689 · target 0.270 · room/risk 6.571 · risk 0.156 %
+- `fine|cross|2R|vwap_on` · **long** · TOO SMALL · trades 34 · weeks 25 · mean -0.084 % CI [-0.153, -0.014] · win 0.294 · stop-out 0.676 · target 0.235 · room/risk 7.262 · risk 0.148 %
+- `fine|cross|2R|vwap_on` · **short** · TOO SMALL · trades 40 · weeks 25 · mean -0.044 % CI [-0.119, 0.040] · win 0.300 · stop-out 0.700 · target 0.300 · room/risk 5.158 · risk 0.169 %
+- `fine|cross|flatten_only|vwap_off` · **pooled** · NOT POSITIVE · trades 104 · weeks 46 · mean -0.017 % CI [-0.074, 0.042] · win 0.250 · stop-out 0.731 · target 0.000 · room/risk 7.583 · risk 0.136 %
+- `fine|cross|flatten_only|vwap_off` · **long** · NOT POSITIVE · trades 53 · weeks 31 · mean -0.064 % CI [-0.128, 0.006] · win 0.226 · stop-out 0.736 · target 0.000 · room/risk 7.785 · risk 0.138 %
+- `fine|cross|flatten_only|vwap_off` · **short** · TOO SMALL · trades 51 · weeks 29 · mean 0.032 % CI [-0.057, 0.126] · win 0.275 · stop-out 0.725 · target 0.000 · room/risk 7.527 · risk 0.130 %
+- `fine|cross|flatten_only|vwap_on` · **pooled** · NOT POSITIVE · trades 74 · weeks 39 · mean -0.037 % CI [-0.104, 0.032] · win 0.257 · stop-out 0.730 · target 0.000 · room/risk 6.571 · risk 0.156 %
+- `fine|cross|flatten_only|vwap_on` · **long** · TOO SMALL · trades 34 · weeks 25 · mean -0.092 % CI [-0.161, -0.024] · win 0.235 · stop-out 0.735 · target 0.000 · room/risk 7.262 · risk 0.148 %
+- `fine|cross|flatten_only|vwap_on` · **short** · TOO SMALL · trades 40 · weeks 25 · mean 0.009 % CI [-0.092, 0.124] · win 0.275 · stop-out 0.725 · target 0.000 · room/risk 5.158 · risk 0.169 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **pooled** · NOT POSITIVE · trades 91 · weeks 42 · mean -0.016 % CI [-0.060, 0.034] · win 0.154 · stop-out 0.846 · target 0.088 · room/risk 14.989 · risk 0.066 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **long** · NOT POSITIVE · trades 49 · weeks 32 · mean -0.029 % CI [-0.084, 0.036] · win 0.122 · stop-out 0.878 · target 0.082 · room/risk 15.263 · risk 0.067 %
+- `fine|touch_reverse|next_or_flatten|vwap_off` · **short** · TOO SMALL · trades 42 · weeks 26 · mean -0.002 % CI [-0.067, 0.080] · win 0.190 · stop-out 0.810 · target 0.095 · room/risk 14.107 · risk 0.064 %
+  - fallback (no next level, flattened): trades 11 · mean -0.031 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **pooled** · NOT POSITIVE · trades 54 · weeks 32 · mean -0.024 % CI [-0.080, 0.044] · win 0.130 · stop-out 0.852 · target 0.074 · room/risk 17.697 · risk 0.050 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **long** · TOO SMALL · trades 31 · weeks 23 · mean -0.038 % CI [-0.102, 0.040] · win 0.097 · stop-out 0.871 · target 0.065 · room/risk 18.104 · risk 0.049 %
+- `fine|touch_reverse|next_or_flatten|vwap_on` · **short** · TOO SMALL · trades 23 · weeks 16 · mean -0.006 % CI [-0.096, 0.117] · win 0.174 · stop-out 0.826 · target 0.087 · room/risk 17.697 · risk 0.055 %
+  - fallback (no next level, flattened): trades 7 · mean -0.006 %
+- `fine|touch_reverse|2R|vwap_off` · **pooled** · NOT POSITIVE · trades 91 · weeks 42 · mean -0.026 % CI [-0.053, 0.003] · win 0.352 · stop-out 0.637 · target 0.341 · room/risk 14.989 · risk 0.066 %
+- `fine|touch_reverse|2R|vwap_off` · **long** · NOT POSITIVE · trades 49 · weeks 32 · mean -0.030 % CI [-0.068, 0.010] · win 0.327 · stop-out 0.653 · target 0.327 · room/risk 15.263 · risk 0.067 %
+- `fine|touch_reverse|2R|vwap_off` · **short** · TOO SMALL · trades 42 · weeks 26 · mean -0.020 % CI [-0.059, 0.021] · win 0.381 · stop-out 0.619 · target 0.357 · room/risk 14.107 · risk 0.064 %
+- `fine|touch_reverse|2R|vwap_on` · **pooled** · NOT POSITIVE · trades 54 · weeks 32 · mean -0.043 % CI [-0.078, -0.005] · win 0.278 · stop-out 0.704 · target 0.278 · room/risk 17.697 · risk 0.050 %
+- `fine|touch_reverse|2R|vwap_on` · **long** · TOO SMALL · trades 31 · weeks 23 · mean -0.051 % CI [-0.094, -0.002] · win 0.226 · stop-out 0.742 · target 0.226 · room/risk 18.104 · risk 0.049 %
+- `fine|touch_reverse|2R|vwap_on` · **short** · TOO SMALL · trades 23 · weeks 16 · mean -0.034 % CI [-0.091, 0.029] · win 0.348 · stop-out 0.652 · target 0.348 · room/risk 17.697 · risk 0.055 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **pooled** · NOT POSITIVE · trades 91 · weeks 42 · mean -0.040 % CI [-0.076, 0.004] · win 0.110 · stop-out 0.879 · target 0.000 · room/risk 14.989 · risk 0.066 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **long** · NOT POSITIVE · trades 49 · weeks 32 · mean -0.063 % CI [-0.106, -0.008] · win 0.061 · stop-out 0.918 · target 0.000 · room/risk 15.263 · risk 0.067 %
+- `fine|touch_reverse|flatten_only|vwap_off` · **short** · TOO SMALL · trades 42 · weeks 26 · mean -0.013 % CI [-0.072, 0.056] · win 0.167 · stop-out 0.833 · target 0.000 · room/risk 14.107 · risk 0.064 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **pooled** · NOT POSITIVE · trades 54 · weeks 32 · mean -0.051 % CI [-0.096, 0.004] · win 0.093 · stop-out 0.870 · target 0.000 · room/risk 17.697 · risk 0.050 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **long** · TOO SMALL · trades 31 · weeks 23 · mean -0.089 % CI [-0.121, -0.049] · win 0.032 · stop-out 0.903 · target 0.000 · room/risk 18.104 · risk 0.049 %
+- `fine|touch_reverse|flatten_only|vwap_on` · **short** · TOO SMALL · trades 23 · weeks 16 · mean 0.001 % CI [-0.092, 0.114] · win 0.174 · stop-out 0.826 · target 0.000 · room/risk 17.697 · risk 0.055 %
+
+## Candidate
+
+- variant `fine|touch_reverse|2R|vwap_off`
+- pooled: NOT POSITIVE
+- long: NOT POSITIVE
+- short: TOO SMALL
+- ship word: OFF
+
+## Options overlay (approximation)
+
+- `pdhl|cross|next_or_flatten|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -7.081 USD/contract, CI [-17.358, 4.174]
+  - delta_0.50: mean -10.116 USD/contract, CI [-24.798, 5.963]
+- `pdhl|cross|next_or_flatten|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -7.473 USD/contract, CI [-17.786, 3.814]
+  - delta_0.50: mean -10.675 USD/contract, CI [-25.409, 5.448]
+- `pdhl|cross|2R|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -2.256 USD/contract, CI [-10.930, 6.613]
+  - delta_0.50: mean -3.223 USD/contract, CI [-15.614, 9.447]
+- `pdhl|cross|2R|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -2.647 USD/contract, CI [-11.322, 6.344]
+  - delta_0.50: mean -3.782 USD/contract, CI [-16.175, 9.063]
+- `pdhl|cross|flatten_only|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -6.597 USD/contract, CI [-17.549, 5.520]
+  - delta_0.50: mean -9.424 USD/contract, CI [-25.070, 7.885]
+- `pdhl|cross|flatten_only|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -6.988 USD/contract, CI [-17.979, 5.164]
+  - delta_0.50: mean -9.983 USD/contract, CI [-25.684, 7.377]
+- `pdhl|touch_reverse|next_or_flatten|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -11.252 USD/contract, CI [-17.245, -4.535]
+  - delta_0.50: mean -16.074 USD/contract, CI [-24.636, -6.478]
+- `pdhl|touch_reverse|next_or_flatten|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -6.163 USD/contract, CI [-14.081, 2.333]
+  - delta_0.50: mean -8.804 USD/contract, CI [-20.116, 3.332]
+- `pdhl|touch_reverse|2R|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -4.634 USD/contract, CI [-10.007, 0.786]
+  - delta_0.50: mean -6.619 USD/contract, CI [-14.296, 1.123]
+- `pdhl|touch_reverse|2R|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -1.918 USD/contract, CI [-8.914, 5.269]
+  - delta_0.50: mean -2.740 USD/contract, CI [-12.735, 7.528]
+- `pdhl|touch_reverse|flatten_only|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -10.794 USD/contract, CI [-17.025, -3.756]
+  - delta_0.50: mean -15.420 USD/contract, CI [-24.322, -5.365]
+- `pdhl|touch_reverse|flatten_only|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -4.846 USD/contract, CI [-13.453, 4.589]
+  - delta_0.50: mean -6.922 USD/contract, CI [-19.219, 6.555]
+- `fine|cross|next_or_flatten|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean 3.740 USD/contract, CI [-9.971, 18.225]
+  - delta_0.50: mean 5.343 USD/contract, CI [-14.244, 26.036]
+- `fine|cross|next_or_flatten|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -3.484 USD/contract, CI [-18.947, 12.607]
+  - delta_0.50: mean -4.977 USD/contract, CI [-27.067, 18.010]
+- `fine|cross|2R|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -5.929 USD/contract, CI [-15.813, 4.433]
+  - delta_0.50: mean -8.470 USD/contract, CI [-22.590, 6.333]
+- `fine|cross|2R|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -9.382 USD/contract, CI [-22.460, 3.902]
+  - delta_0.50: mean -13.402 USD/contract, CI [-32.086, 5.575]
+- `fine|cross|flatten_only|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean 2.086 USD/contract, CI [-11.875, 16.767]
+  - delta_0.50: mean 2.980 USD/contract, CI [-16.965, 23.953]
+- `fine|cross|flatten_only|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -3.221 USD/contract, CI [-19.395, 13.496]
+  - delta_0.50: mean -4.602 USD/contract, CI [-27.707, 19.281]
+- `fine|touch_reverse|next_or_flatten|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean 1.757 USD/contract, CI [-9.076, 14.280]
+  - delta_0.50: mean 2.510 USD/contract, CI [-12.965, 20.400]
+- `fine|touch_reverse|next_or_flatten|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean 0.232 USD/contract, CI [-13.491, 17.082]
+  - delta_0.50: mean 0.331 USD/contract, CI [-19.273, 24.403]
+- `fine|touch_reverse|2R|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -0.522 USD/contract, CI [-7.250, 6.461]
+  - delta_0.50: mean -0.746 USD/contract, CI [-10.358, 9.229]
+- `fine|touch_reverse|2R|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -4.563 USD/contract, CI [-12.964, 4.756]
+  - delta_0.50: mean -6.519 USD/contract, CI [-18.519, 6.794]
+- `fine|touch_reverse|flatten_only|vwap_off`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -3.924 USD/contract, CI [-12.962, 6.770]
+  - delta_0.50: mean -5.605 USD/contract, CI [-18.517, 9.672]
+- `fine|touch_reverse|flatten_only|vwap_on`: approximation: delta-scaled share moves; premium, theta, gamma and the MAX_SPREAD_PCT = 25 % cap are not modelled; share-level costs only
+  - delta_0.35: mean -6.295 USD/contract, CI [-17.365, 7.220]
+  - delta_0.50: mean -8.993 USD/contract, CI [-24.807, 10.315]
+

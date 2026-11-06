@@ -217,6 +217,9 @@ tiles.
 
 ## What this is not
 
+**Measured once, 2026-11-05 (the SPY levels study — `docs/research/spy_levels_2026_11_05_prereg.md` + `spy_levels_2026_11_05_outcome.md`, script `backend/scripts/spy_levels_study_2026_11_05.py`):** the FINE bands of this strip (their bounds union-merged for the trigger; the strip's own list unchanged) and the previous RTH session's high/low were read as ENTRY rules on SPY 5-minute closed bars in 24 pre-registered variants, one sealed out-of-sample read. The pre-registered pick (`fine|touch_reverse|2R|vwap_off`) measured NOT POSITIVE out of sample (-0.026%/trade over 91 trades, stop-out 0.64, placebo not beaten); every FINE-band cross variant was INVERTED in sample. So the word below stands.
+
+
 It gates nothing, alerts nothing, orders nothing, enters no lane and claims
 **no edge** — **nothing on this strip is measured as an edge.** Every measured
 structural S/D read this month came back null: `band_structure` no_signal,
