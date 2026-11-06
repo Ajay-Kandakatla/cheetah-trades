@@ -1282,7 +1282,7 @@ def read_sha_file(path: Path = SHA_FILE) -> Optional[str]:
 
 
 def main(argv=None, *, now=None, load_day=None, daily=None, fetch_loader=None, cached=None,
-         block=True, colls=None, sleep=time.sleep) -> int:
+         net_block=True, colls=None, sleep=time.sleep) -> int:
     a = parse_args(argv)
     now_et = (now or datetime.now(tz=ET)).astimezone(ET)
     out = Path(a.out)
@@ -1321,7 +1321,7 @@ def main(argv=None, *, now=None, load_day=None, daily=None, fetch_loader=None, c
                 return _rc3(clash)
     if a.mode == "fetch":
         return run_fetch(a, now_et, as_of, out, fetch_loader=fetch_loader, cached=cached,
-                         daily=daily, block=block, colls=colls, sleep=sleep)
+                         daily=daily, net_block=net_block, colls=colls, sleep=sleep)
     cs = json.loads(Path(a.cohort_stats).read_text(encoding="utf-8"))
     cdata = cs.get("data") or {}
     if not cdata.get("cohort_first") or not cdata.get("daily_csv"):
@@ -1336,7 +1336,7 @@ def main(argv=None, *, now=None, load_day=None, daily=None, fetch_loader=None, c
             prior = prior_srs(a.ledger)
         except (OSError, ValueError) as exc:
             return _rc3(f"the prior trial SRs are unreadable ({exc}); nothing read.")
-    if block:
+    if net_block:
         block_network_and_writes()
     load_day = load_day or cache_loader()
     daily = daily if daily is not None else load_daily(cdata["daily_csv"])
@@ -1455,10 +1455,10 @@ def main(argv=None, *, now=None, load_day=None, daily=None, fetch_loader=None, c
     return 0
 
 
-def run_fetch(a, now_et, as_of, out, *, fetch_loader=None, cached=None, daily=None, block=True,
+def run_fetch(a, now_et, as_of, out, *, fetch_loader=None, cached=None, daily=None, net_block=True,
               colls=None, sleep=time.sleep) -> int:
     from_day = from_day_of(as_of)
-    if a.cache_only and block:
+    if a.cache_only and net_block:
         block_network_and_writes()
     cached = cached or (lambda d: DATA._mongo_get_day(SYMBOL, d))
     loader = fetch_loader or (lambda d: DATA.load_intraday_range(SYMBOL, d, d))
@@ -1475,7 +1475,7 @@ def run_fetch(a, now_et, as_of, out, *, fetch_loader=None, cached=None, daily=No
     daily = daily[daily.index < pd.Timestamp(now_et.date())]
     csv = out.parent.parent / "data" / (DAILY_CSV_CACHE_ONLY if a.cache_only else DAILY_CSV)
     save_daily(daily, csv)
-    ref = daily if a.cache_only else (price_cache_frame() if block else None)
+    ref = daily if a.cache_only else (price_cache_frame() if net_block else None)
     fid_daily = daily_fidelity(daily, ref)
     load_day = cache_loader(cached)
     all_days = weekdays(daily.index.min().date(), as_of)
