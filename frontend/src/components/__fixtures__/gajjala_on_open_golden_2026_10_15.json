@@ -437,7 +437,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGA?tab=supply",
+     "href": "/sepa/GGA?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 10.97",
@@ -2602,7 +2602,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGA?tab=supply",
+     "href": "/sepa/GGA?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 11.25",

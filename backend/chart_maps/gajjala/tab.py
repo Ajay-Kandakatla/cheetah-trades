@@ -79,6 +79,7 @@ from chart_maps.gajjala import potential as PT                # 🧠 the ONE pot
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
 from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
+from supply_demand import timeframes as TF                   # 🚩 2026-11-06 — the Support-tab frame keys, read BY NAME (chart_href)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
 from trading.broker import DOLLAR_DECIMALS, price_decimals, round_price   # the ONE stock price grid (2026-10-20)
 
@@ -967,6 +968,20 @@ def _tile_frame(doc: dict, tf: str, v=None) -> dict:
             "curves": list(tile.get(f"curves{suf}") or []), "vol_avg": tile.get(f"vol_avg{suf}")}
 
 
+def chart_href(sym: str, tf: Optional[str], v=None) -> str:
+    """The card's click target (Ajay 2026-11-06): the house ticker page's Supply / Demand tab (chart_maps.board._href,
+    unchanged for every other board) opened on the Support-tab frame of the frame the card is DRAWN on — `tf` when it
+    is one of the variant's frames, else its primary (a bar-less ☀️/🌙 tile). The key is read off supply_demand.timeframes
+    BY NAME (GC.CHART_FRAME_KEY_CONST) at call time: GG5 "5m" → M5_TODAY, "15m" → M15, the 1-minute page "1m" → M1_TODAY.
+    Never the bare "5m" (the Support tab's alias for the 24-hour frame) and never "1m" (its one-month window).
+    This helper holds the module's ONE call of the board's _href (the contract counts it); the tile builders call this."""
+    from chart_maps import board as board_mod
+    vv = V.of(v)
+    t = tf if tf in vv.tfs else vv.primary
+    key = getattr(TF, GC.CHART_FRAME_KEY_CONST[t])
+    return f"{board_mod._href(sym)}&{GC.CHART_TF_PARAM}={key}"
+
+
 def _last_close(doc: dict, frame: str, v=None) -> Optional[float]:
     bars = _tile_frame(doc, frame, v).get("bars") or []
     for b in reversed(bars):
@@ -1090,7 +1105,6 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
     is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
     "read at …" chip, 2026-10-15)."""
-    from chart_maps import board as board_mod
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
     vv = V.of(v)
@@ -1120,7 +1134,7 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
         g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
-    return {"symbol": sym, "name": doc.get("name"), "href": board_mod._href(sym), "tf": fr["tf"], "bars": fr["bars"],
+    return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
             "vol_avg": vol_avg, "bands": [], "lines": _tile_lines(read), "markers": markers, "stats": stats,
             "why": read.get("reason") or "", "badges": [], "curves": fr["curves"], "gajjala": g}
 
@@ -1137,7 +1151,6 @@ def _strip_private(tiles: list) -> None:
 def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: dict, sess: dict,
                listed: Optional[dict], halt_doc=None, daily=None, extra: dict, v=None) -> dict:
     """A ☀️ / 🌙 row: the name's bars when it is listed (its read doc), its list facts in words, no setup lines."""
-    from chart_maps import board as board_mod
     doc = doc or {}
     fr = _tile_frame(doc, tf, v) if doc else {"bars": [], "curves": [], "vol_avg": None}
     read = {"setup": sub, "state": "forming"}
@@ -1147,7 +1160,7 @@ def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: di
     g.update(extra)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
-    return {"symbol": sym, "name": doc.get("name"), "href": board_mod._href(sym), "bars": fr["bars"],
+    return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr.get("tf"), v), "bars": fr["bars"],
             "vol_avg": fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None, "bands": [],
             "lines": [], "markers": [], "stats": stats, "why": "", "badges": [], "curves": fr["curves"],
             "gajjala": g}

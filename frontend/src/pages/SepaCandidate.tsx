@@ -6,7 +6,7 @@ import { resolveBack } from '../lib/navSource';
 import { TABS, resolveSepaTab, scrollActiveTabIntoView, type Tab } from '../lib/sepaTabs';
 import { ipoAgeLabel } from '../lib/ipoAge';
 import { SupportLevels } from '../components/SupportLevels';
-import { SEPA_SUPPLY_WINDOW } from '../lib/supportLevels';
+import { SEPA_SUPPLY_WINDOW, parseTf, parseWindow, retiredTf } from '../lib/supportLevels';
 // Supply/demand + flow chips — ported from the SEPA list card so the
 // single-ticker research view has the same 🐋 whales / 📋 SEC / conviction /
 // political / 🌍 macro / insider+valuation surface (user 2026-05-30:
@@ -335,14 +335,26 @@ export function SepaCandidatePage() {
   // Was 6 months here (Ajay 2026-09-02) while Chart Maps opened on 3m; since
   // 2026-09-06 both open on 1 year ("make support default to 1 year on all
   // the tabs"), one constant in supportLevels.ts.
-  const [supportWin, setSupportWin] = useState<string>(SEPA_SUPPLY_WINDOW);
+  // 🚩 2026-11-06 (Ajay: "If I click on Gajjalas tab stocks show me "Gajjalas chart" in supply and demand of his view by
+  // default mainly.."). A deep-linked frame (?tf=, the Support tab's own name, backend gajjala/constants.CHART_TF_PARAM)
+  // and zoom (?window=) set the FIRST paint only — the page's chart state stays plain after it (the comment below says
+  // why), and a later /sepa → /sepa navigation does not re-read them (App.tsx keys nothing on :symbol).
+  // THE ZOOM IS THE LINK'S OWN OR THE HOUSE 1 YEAR — never the frame's picker pin (6m on 5m_today):
+  // SupportLevels seeds the window "The big picture" comes back to from the window this tab MOUNTS on
+  // (components/SupportLevels.tsx mountWindow, 2026-09-23); a 6m mount would send daily back at 6 MONTHS, the narrowing
+  // that fix removed. Chart Maps lands a bare ?tf= the same way (pages/ChartMaps.tsx parseWindow(params.get('window'))).
+  // parseTf: unknown → daily; a retired key → its successor AND the page says so.
+  const landed = new URLSearchParams(location.search);                       // read by the three initialisers only
+  const [supportWin, setSupportWin] = useState<string>(() =>
+    landed.get('window') ? parseWindow(landed.get('window')) : SEPA_SUPPLY_WINDOW);
   /* The chart's timeframe. Without this the ticker page dropped the tf half
    * of every Intraday pick — onView was never passed, the component fell back
    * to onWindow(v.window) alone, and "15 min · today from the open" snapped
    * straight back to "1 month" (Ajay 2026-08-31, on ACN: "unble to select the
    * 15 min session from Open"). Plain state, not URL — this page's own zoom
    * was already plain state. */
-  const [supportTf, setSupportTf] = useState('daily');
+  const [supportTf, setSupportTf] = useState<string>(() => parseTf(landed.get('tf')));
+  const [supportTfRetired, setSupportTfRetired] = useState(() => retiredTf(landed.get('tf')));
   // Active tab is derived from the URL: ?tab= wins, then a legacy #hash, else
   // Supply / Demand (resolveSepaTab — the single fallback, 2026-09-03).
   // Switching tabs rewrites ?tab= in place (replace, no history spam) so a
@@ -1796,8 +1808,9 @@ export function SepaCandidatePage() {
                   window={supportWin}
                   tf={supportTf}
                   onSymbol={(s) => navigate(`/sepa/${encodeURIComponent(s)}?tab=supply`)}
-                  onWindow={setSupportWin}
-                  onView={(w, t) => { setSupportWin(w); setSupportTf(t); }}
+                  retired={supportTfRetired}
+                  onWindow={(w) => { setSupportWin(w); setSupportTfRetired(null); }}
+                  onView={(w, t) => { setSupportWin(w); setSupportTf(t); setSupportTfRetired(null); }}
                 />
                 <div className="sepa-tab-help" style={{ marginTop: '1.2rem' }}>
                   <strong>Supply / Demand context</strong> — who this company

@@ -172,7 +172,7 @@ def test_invalid_and_none_reads_are_counted_never_tiled():
 def test_tile_carries_lines_marker_curves_vol_avg_and_words():
     out = GT.build("bull_flag", now=NOW, store=ordering_store())
     t = out["tiles"][0]
-    assert t["href"] == "/sepa/BBB?tab=supply"
+    assert t["href"] == "/sepa/BBB?tab=supply&tf=5m_today" == GT.chart_href("BBB", "5m")   # 🚩 2026-11-06 — his frame rides the href
     assert t["lines"] == [{"price": 4.12, "label": "BUY > 4.12", "tone": "buy", "text": "4.12"},      # `text` since 2026-10-21 (NUAI)
                           {"price": 3.95, "label": "STOP 3.95", "tone": "stop", "text": "3.95"}]
     assert t["markers"] == [{"date": "2026-10-13 10:30", "kind": "buy", "label": "A+"}]

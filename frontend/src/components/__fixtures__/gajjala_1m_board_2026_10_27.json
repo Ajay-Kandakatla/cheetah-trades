@@ -471,7 +471,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGA?tab=supply",
+     "href": "/sepa/GGA?tab=supply&tf=1min",
      "lines": [
       {
        "label": "BUY > 10.97",
@@ -687,7 +687,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGB?tab=supply",
+     "href": "/sepa/GGB?tab=supply&tf=1min",
      "lines": [
       {
        "label": "BUY > 10.94",
@@ -1189,7 +1189,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGB?tab=supply",
+     "href": "/sepa/GGB?tab=supply&tf=1min",
      "lines": [
       {
        "label": "BUY > 10.94",
@@ -1435,7 +1435,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGA?tab=supply",
+     "href": "/sepa/GGA?tab=supply&tf=1min",
      "lines": [
       {
        "label": "TRIGGER 11.25",

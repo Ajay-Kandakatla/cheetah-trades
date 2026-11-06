@@ -282,3 +282,14 @@ GG1M_RECORD_FROM = "2026-10-27"          # Ajay 2026-10-27 "add the track record
 GAJJALA_AUDITED_PUSH_MODE = "shadow"     # Ajay 2026-11-01 (the ask above) — SHADOW: recorded, never sent; going live = HIS CALL (and a code change: audited_pass passes mode="shadow" explicitly)
 GGA_TAB_LABEL = "🧪 Gajjala · Audited"   # MINE — the main session's label (design #7); his words "Gajjals-Audited"
 GGA_RECORD_FROM = "2026-11-01"           # Ajay 2026-11-01 "So we can keep track of improvements on this tab" — the record starts at his ask; no session before it is read
+
+# 📐 Gajjala's chart on the stock page (Ajay 2026-11-06: "If I click on Gajjalas tab stocks show me "Gajjalas chart" in
+# supply and demand of his view by default mainly.. Like if he looks at 24 hours or 2 week or anything else that is what I
+# would like to see"). The served tile href opens the house ticker page's Supply / Demand tab on the frame the card is
+# DRAWN on. Values are supply_demand/timeframes.py NAMES, resolved by chart_maps.gajjala.tab.chart_href with getattr at
+# call time (this file imports nothing from supply_demand — test_gajjala_constants pins its imports); a retired key cannot
+# ship (the test pins each name is a TIMEFRAMES key whose bar_label matches the frame's minutes). His view = verified_rules
+# topics[3].verified[0] T1 "5-minute primary, 15-minute secondary; 1/2/3/10-minute tried and rejected". The chart under
+# it draws the HOUSE averages (chart_maps.board.MA_SPECS: 9 EMA / 20 SMA / 200 SMA), not his 21 EMA — HIS CALL, not built.
+CHART_FRAME_KEY_CONST = {"1m": "M1_TODAY", "5m": "M5_TODAY", "15m": "M15"}   # Ajay 2026-11-06 — the 5-minute card opens today's 5-minute frame (M5_TODAY), not the 24-hour one he also named = MINE (HIS CALL #1); 15m → the two-week 15-minute frame; 1m → today to the minute (the 1-minute page)
+CHART_TF_PARAM = "tf"                    # TRANSPORT — the Support tab's own query name (frontend pages/ChartMaps.tsx + pages/SepaCandidate.tsx read `?tf=`; the FE contract pins equality)

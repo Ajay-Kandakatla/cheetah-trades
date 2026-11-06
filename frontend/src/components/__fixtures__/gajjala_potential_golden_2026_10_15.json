@@ -575,7 +575,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/EEE?tab=supply",
+     "href": "/sepa/EEE?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 10.95",
@@ -842,7 +842,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/AAA?tab=supply",
+     "href": "/sepa/AAA?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 10.97",
@@ -1109,7 +1109,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/JJJ?tab=supply",
+     "href": "/sepa/JJJ?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 10.97",
@@ -1376,7 +1376,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGG?tab=supply",
+     "href": "/sepa/GGG?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 11.00",
@@ -1645,7 +1645,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/FFF?tab=supply",
+     "href": "/sepa/FFF?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 10.97",
@@ -2175,7 +2175,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/EEE?tab=supply",
+     "href": "/sepa/EEE?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 10.95",
@@ -2477,7 +2477,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/DDD?tab=supply",
+     "href": "/sepa/DDD?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 6.25",
@@ -2791,7 +2791,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/AAA?tab=supply",
+     "href": "/sepa/AAA?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "BUY > 10.97",
@@ -3080,7 +3080,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/JJJ?tab=supply",
+     "href": "/sepa/JJJ?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 10.97",
@@ -3383,7 +3383,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/CCC?tab=supply",
+     "href": "/sepa/CCC?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 10.94",
@@ -3682,7 +3682,7 @@
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/HHH?tab=supply",
+     "href": "/sepa/HHH?tab=supply&tf=5m_today",
      "lines": [
       {
        "label": "TRIGGER 10.48",

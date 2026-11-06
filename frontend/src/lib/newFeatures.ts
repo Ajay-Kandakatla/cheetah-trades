@@ -22,6 +22,19 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-06 (verbatim in the label, his spelling kept): "If I click on Gajjalas tab stocks show me "Gajjalas chart"
+  // in supply and demand of his view by default mainly.." and "Like if he looks at 24 hours or 2 week or anything else that
+  // is what I would like to see". The served 🚩 tile href now carries the Support-tab frame KEY of the frame the card is
+  // DRAWN on (backend chart_maps/gajjala/tab.chart_href — the ONE board_mod._href(sym) call in that module — from the NAME
+  // map gajjala/constants.CHART_FRAME_KEY_CONST resolved against supply_demand/timeframes at call time: "5m" → M5_TODAY,
+  // "15m" → M15, "1m" → M1_TODAY; never the bare "5m", the 24-hour alias). The stock page (pages/SepaCandidate.tsx) reads
+  // ?tf= / ?window= ONCE on first paint into its plain state and hands `retired` to the ONE <SupportLevels>; the landed zoom
+  // is the link's own window or the house 1 year (SEPA_SUPPLY_WINDOW, never windowForFrame's 6m — SupportLevels remembers
+  // the MOUNT window as what "The big picture" comes back to). The chart under his frame draws the HOUSE averages
+  // (board.MA_SPECS), not his 21 EMA (HIS CALL #7). No gate, rule, threshold, claim or push changed. UNMEASURED. Pinned by
+  // scripts/contracts.mjs ("🚩 Gajjala's chart on the stock page (2026-11-06)").
+  { id: 'chart-maps-gajjala-chart-frame-2026-11-06', addedAt: '2026-11-06', route: '/chart-maps?tab=gajjala',
+    label: "🚩 Gajjala's chart opens on his frame — Ajay: “If I click on Gajjalas tab stocks show me \"Gajjalas chart\" in supply and demand of his view by default mainly..” and “Like if he looks at 24 hours or 2 week or anything else that is what I would like to see”. A click on a 🚩 card now lands on the stock page's Supply / Demand tab on the frame the card is drawn on: 5-minute bars, today, for the 🚩 cards; 15-minute bars, the last two weeks, for a card drawn on the 15m toggle; 1-minute bars, today, on the 1-minute page — his own order (verified_rules topics[3].verified[0]: the 5-minute chart first, 15-minute second). The chart under it still draws the house averages (9 EMA / 20 SMA / 200 SMA), not his 21 EMA. The frame picker still changes it, and “The big picture” comes back at the house 1 year; the link only sets where the page opens. Nothing here trades, gates or rings. UNMEASURED. Not advice." },
   // Ajay 2026-11-05 (verbatim in the label, his spelling kept): "Can you make both Gajjala's track record and Gajjalas 1 min
   // and Gajjalas AUDIT HAVE similar track record." and "its hard to tell which ones won in Gajjlas Audit page". The 🧪
   // page's 🏁 used to list only an A+ that passed EVERY ON rule (none since 2026-11-01) — the winners he saw were compare-

@@ -824,6 +824,26 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   tags, `docs/catalysts/promo_tag_study_2026_09_21.md`) and **UNMEASURED** on GG's setups — a watchlist feed for his
   rules, not an edge. Doc `docs/gajjala/promo_names_2026_10_29.md` (HIS CALLs #1–#6); contracts "🎪 Promo names on
   Gajjala's scan (2026-10-29)"; ✨ `chart-maps-gajjala-promo-names-2026-10-29`.
+- **🚩 Gajjala's chart on the stock page (2026-11-06)** — Ajay, verbatim: "If I click on Gajjalas tab stocks show me
+  "Gajjalas chart" in supply and demand of his view by default mainly.." and "Like if he looks at 24 hours or 2 week or
+  anything else that is what I would like to see". The served 🚩 tile href (setup cards, 🧠 potentials, ☀️/🌙 movers;
+  GG5, the 1-minute page and 🧪 Audited) = `tab.chart_href(sym, tf, v)` = `board._href(sym)` + `&tf=<key>` — the ONE
+  `board_mod._href(sym)` call in `gajjala/tab.py`; `board._href` is unchanged for every other board and 🥇 Luk's cards
+  stay on the daily chart. The key is the Support-tab frame of the frame the card is DRAWN on (`fr["tf"]`; a bar-less
+  tile → the variant's primary), read BY NAME from `constants.CHART_FRAME_KEY_CONST` (`"5m"` → `timeframes.M5_TODAY`
+  "Today, for an entry", `"15m"` → `M15` "The last two weeks", `"1m"` → `M1_TODAY` "Today, to the minute") against
+  `supply_demand/timeframes.py` at call time — never the bare `5m` (the 24-hour alias) nor `1m` (the one-month window);
+  `CHART_TF_PARAM = "tf"`. The stock page (`pages/SepaCandidate.tsx`) reads `?tf=` / `?window=` ONCE on first paint into
+  its plain state (`parseTf` / `parseWindow` / `retiredTf`, a retired key says so through `retired=`); a later pick wins,
+  and a /sepa → /sepa navigation does not re-read. The landed zoom is the link's own `?window=` or the house 1 year
+  (`SEPA_SUPPLY_WINDOW`), never the picker's frame pin (`windowForFrame` → 6 months): SupportLevels remembers the MOUNT
+  window as what "The big picture" comes back to, so daily returns at 1 year. The chart under his frame draws the HOUSE
+  averages (`board.MA_SPECS` 9 EMA / 20 SMA / 200 SMA), not his 21 EMA (verified_rules T2) — HIS CALL #7. The GG5 BOARD
+  golden and the three FE board goldens moved href-only (the WRITES golden byte-identical). Docs
+  `docs/gajjala/gajjala_tab_2026_10_13.md` § "🚩 The card's href carries his frame (2026-11-06)" and
+  `docs/gajjala/frontend_2026_10_13.md` § "🚩 Gajjala's chart on the stock page (2026-11-06)" (HIS CALLs #1–#7);
+  contracts "🚩 Gajjala's chart on the stock page (2026-11-06)"; ✨ `chart-maps-gajjala-chart-frame-2026-11-06`.
+  No gate, rule, threshold, claim or push changed. UNMEASURED. Not advice.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a
