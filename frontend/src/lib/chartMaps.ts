@@ -678,6 +678,14 @@ export function quickBouncePersistenceText(p?: CmQuickBouncePersistence | null):
 /** `s` marks an extended-hours bar ('pre' | 'ah') on the live frame so the
  *  chart can shade it; absent on regular-hours and daily bars. */
 export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: number; s?: string };
+/** 🎾 One of GG's chart circles on the Reversal Squeeze card (2026-11-08, served by
+ *  chart_maps/gajjala/squeeze_marks.py): the structure the detector already found, from_t → to_t
+ *  (FULL bar stamps) × lo → hi. `label` is the short chart word, `note` GG's own words for the hover
+ *  title only. Display only (lib/ggEllipses.ts draws the geometry). UNMEASURED. */
+export type CmEllipse = {
+  kind: string; from_t: string; to_t: string; lo: number; hi: number;
+  label?: string; note?: string; tone?: 'structure' | 'entry' | string;
+};
 // `neutral` is a range that is neither a floor nor a lid — the 0DTE gamma
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
@@ -1332,6 +1340,9 @@ export type CmTile = {
   /** 📉 Down 40%+ tab only (2026-10-02): Bonde's pick legs exactly as the 📈
    *  Bonde tab serves them (sepa/bonde_picks), drawn by BondePickChips. */
   pick?: BondePick | null;
+  /** 🎾 Gajjala Reversal Squeeze cards only (2026-11-08): GG's chart circles. Absent
+   *  everywhere else; `[]` on a 🎾 card whose frame is not the read's own. */
+  ellipses?: CmEllipse[];
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -3152,10 +3163,16 @@ export function monthTicks(bars: CmBar[], max = 6): { i: number; label: string }
 
 /** Index of a dated marker within the bar window, or -1.
  *  Joined by DATE, never by index — the ledger's indices are offsets into the
- *  full cached frame, not into the window drawn here. */
+ *  full cached frame, not into the window drawn here.
+ *  2026-11-08: the FULL stamp first — an intraday card's served marker
+ *  ("2026-11-06 11:50", the 🚩 / 1-minute / 🧪 / 🥇 A+ tag) never matched the
+ *  date-only join, so the tag never drew. A daily key equals its date, so the
+ *  daily boards land on the same bar as before. */
 export function markerIndex(bars: CmBar[], date: string): number {
   const d = (date || '').slice(0, 10);
   if (!d) return -1;
+  const i = bars.findIndex((b) => b.t === date);
+  if (i >= 0) return i;
   return bars.findIndex((b) => b.t === d);
 }
 

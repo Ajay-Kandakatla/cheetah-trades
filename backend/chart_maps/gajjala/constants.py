@@ -295,3 +295,12 @@ GGA_RECORD_FROM = "2026-11-01"           # Ajay 2026-11-01 "So we can keep track
 # it draws the HOUSE averages (chart_maps.board.MA_SPECS: 9 EMA / 20 SMA / 200 SMA), not his 21 EMA — HIS CALL, not built.
 CHART_FRAME_KEY_CONST = {"1m": "M1_TODAY", "5m": "M5_TODAY", "15m": "M15"}   # Ajay 2026-11-06 — the 5-minute card opens today's 5-minute frame (M5_TODAY), not the 24-hour one he also named = MINE (HIS CALL #1); 15m → the two-week 15-minute frame; 1m → today to the minute (the 1-minute page)
 CHART_TF_PARAM = "tf"                    # TRANSPORT — the Support tab's own query name (frontend pages/ChartMaps.tsx + pages/SepaCandidate.tsx read `?tf=`; the FE contract pins equality)
+
+# 🎾 GG's chart on the squeeze card (Ajay 2026-11-08: "I need something like this but that big of circle for reversal squeen mainly on the
+# cart itself also increase the width of the reversal sqeeze chart to show more bars" — his own TPST chart runs from the prior day's 15:00).
+# Drawing window only — nothing lists, reads, gates or pushes on these; every K number stays above.
+RS_TILE_PRIOR_FROM_ET = _dt.time(15, 0)   # Cheetah default (MINE, not GG — HIS CALL #3 of docs/gajjala/squeeze_chart_2026_11_08.md): the first bar of his TPST chart; the GG5 🎾 card's bars start at the prior session's 15:00 bucket
+RS_TILE_PRIOR_TO_ET = _dt.time(20, 0)     # Cheetah default (MINE) — = daytrading.data.ET_AFTERHOURS_CLOSE (test pins equality — the LEDGER_FILL_TO_ET pattern; constants.py may import only datetime, test_gajjala_constants)
+RS_TILE_PRIOR_BARS_MAX = ((RS_TILE_PRIOR_TO_ET.hour - RS_TILE_PRIOR_FROM_ET.hour) * 60) // LEDGER_TAPE_TF_MIN   # derived — MINE: 15:00 → 20:00 in 5-minute bars → 60 (the only literal is 60 min/h, as on LEDGER_TAPE_BARS_MAX; never retype 15 or 20 here)
+RS_TILE_TODAY_BARS_MAX = LEDGER_TAPE_BARS_MAX // LEDGER_TAPE_SESSIONS  # derived — MINE: one 16-hour session in 5-minute bars → 192 (= GG1M_TILE_BARS_MAX's expression, the 5-minute page's cap)
+RS_TILE_BARS_MAX = RS_TILE_PRIOR_BARS_MAX + RS_TILE_TODAY_BARS_MAX     # derived — MINE: the most bars a 🎾 card ever serves → 252

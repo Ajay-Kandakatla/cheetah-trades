@@ -28,6 +28,11 @@
    the card can never be wider than its column, and every served chip on it wraps instead of widening it. */
 .gg-card { border-radius: 8px; min-width: 0; max-width: 100%; }
 .gg-card.gg-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
+/* 🎾 2026-11-08 — the wide Reversal Squeeze card. Ajay: "increase the width of the reversal sqeeze chart to show more bars".
+   `1 / -1` (never `span 2`): the card takes the WHOLE row at every column count — `span 2` would force an implicit second
+   track on a one-column auto-fill grid (641–860 px) and overflow it. At ≤ 640 px .cm-grid is one column (styles.css), so the
+   phone draws exactly as before; min-width: 0 / max-width: 100% above still hold. Kept OUT of the pinned .gg-card rule. */
+.gg-card.gg-wide { grid-column: 1 / -1; }
 .gg-chip-row .cm-badge, .gg-pot-tells .cm-badge, .cm-tile-chips .cm-badge {
   white-space: normal; overflow-wrap: anywhere;
 }

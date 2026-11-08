@@ -17,7 +17,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, time as dtime
 from typing import Callable, Optional
 
 import pandas as pd
@@ -316,6 +316,45 @@ def tile_payload(frames: Frames, tf: str, *, max_bars: Optional[int] = None) -> 
             ser = board._vol_avg_series(f.df, stamp=_intraday_stamp)
         except Exception as exc:                                # noqa: BLE001
             log.debug("gajjala vol_avg failed: %s", exc)
+            ser = None
+        if ser:
+            by = {d: i for i, d in enumerate(ser.get("dates") or [])}
+            col = ser.get("values") or []
+            vals = [col[by[b["t"]]] if b["t"] in by else None for b in bars]
+            if any(v is not None for v in vals):
+                out["vol_avg"] = {"period": board.VOL_AVG_PERIOD, "label": board.VOL_AVG_LABEL, "values": vals}
+    return out
+
+
+def tile_prior_payload(frames: Frames, tf: str, *, from_et: dtime) -> dict:
+    """{bars, curves, vol_avg} for the PRIOR session's bars whose bucket START (ET) is at or after `from_et` — the stretch GG's own
+    chart shows before today (the 🎾 card, 2026-11-08; GC.RS_TILE_PRIOR_FROM_ET). Same shape as tile_payload: _frame_bars (s flags
+    kept), the 9/21 curves by index, board._vol_avg_series over the FULL 2-session frame cut to these stamps. Empty lists / None
+    when the frame has no prior bar in the window. Display only — no detector, alert or ledger reads it."""
+    f = frames.frame(tf)
+    out = {"bars": [], "curves": [], "vol_avg": None}
+    stop = f.today.start
+    if not stop:
+        return out
+    rule = RULE_OF[f.frame]
+    starts = (f.df.index[:stop] - pd.Timedelta(rule)).tz_localize("UTC").tz_convert("America/New_York")
+    prior_day = starts[-1].date()                               # the prior session = the last day before today's first bucket
+    idx = [i for i, ts in enumerate(starts) if ts.date() == prior_day and ts.time() >= from_et]
+    if not idx:
+        return out
+    bars = _frame_bars(f.df.iloc[idx])
+    curves = []
+    for tone, label, _p in EMA_TONES:
+        col = getattr(f, tone)
+        vals = [col[i] for i in idx]
+        if any(v is not None for v in vals):
+            curves.append({"tone": tone, "label": label, "values": vals})
+    out.update(bars=bars, curves=curves)
+    if bars:
+        try:
+            ser = board._vol_avg_series(f.df, stamp=_intraday_stamp)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("gajjala prior vol_avg failed: %s", exc)
             ser = None
         if ser:
             by = {d: i for i, d in enumerate(ser.get("dates") or [])}

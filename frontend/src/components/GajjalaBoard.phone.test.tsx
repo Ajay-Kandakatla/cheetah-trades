@@ -129,3 +129,72 @@ describe('📱 the 🏁 Ticker cell wraps at 430 px so the 🧪 Audit column sta
     expect(rule!.badges).not.toMatch(/white-space:\s*normal/);
   });
 });
+
+/* 🎾 2026-11-08 — the wide Reversal Squeeze card (spec gg-squeeze WP fe-wide). Ajay: "increase the width of the reversal
+ * sqeeze chart to show more bars". The card spans the WHOLE row with `grid-column: 1 / -1` in its OWN rule, placed after the
+ * pinned first `.gg-card {…}` rule (which must never gain a grid-column). `span 2` is wrong: on the one-column auto-fill grid
+ * (641–860 px) it forces an implicit second track and the card overflows. At ≤ 640 px `.cm-grid` is one column (styles.css),
+ * so the phone draws exactly as before. Source guards + NEGATIVES. */
+/** The declarations of the `.gg-card.gg-wide { … }` rule. */
+function ggWideRule(src: string): string | null {
+  const m = src.match(/(^|\n)\s*\.gg-card\.gg-wide\s*\{([^}]*)\}/);
+  return m ? m[2] : null;
+}
+/** The wide rule is right only when it spans every track and the pinned base rule carries no grid-column. */
+function wideOk(src: string): boolean {
+  const wide = ggWideRule(src);
+  const base = ggCardRule(src);
+  if (wide === null || base === null) return false;
+  if (/grid-column/.test(base)) return false;
+  return /grid-column:\s*1\s*\/\s*-1\s*;?/.test(wide) && !/span/.test(wide);
+}
+const styles = (): Promise<string> => readSource('src/styles.css');
+
+describe('🎾 the wide Reversal Squeeze card — a full-row rule outside the pinned .gg-card rule', () => {
+  it('the FIRST .gg-card rule is unchanged: min-width: 0, max-width: 100%, border-radius, and NO grid-column', async () => {
+    const decl = ggCardRule(await css());
+    expect(decl).not.toBeNull();
+    expect(decl!.trim()).toBe('border-radius: 8px; min-width: 0; max-width: 100%;');
+    expect(decl).not.toMatch(/grid-column/);
+  });
+
+  it('a .gg-card.gg-wide rule exists with grid-column: 1 / -1, placed after the base and the focus rules', async () => {
+    const src = await css();
+    const wide = ggWideRule(src);
+    expect(wide).not.toBeNull();
+    expect(wide).toMatch(/grid-column:\s*1\s*\/\s*-1/);
+    expect(wideOk(src)).toBe(true);
+    const at = src.search(/\n\s*\.gg-card\.gg-wide\s*\{/);
+    expect(at).toBeGreaterThan(src.search(/\n\s*\.gg-card\s*\{/));
+    expect(at).toBeGreaterThan(src.indexOf('.gg-card.gg-focus {'));
+  });
+
+  it('NEGATIVE: a wide rule that says span 2 fails the matcher', () => {
+    const bad = PRE_FIX.replace('.gg-card { border-radius: 8px; }', '.gg-card { border-radius: 8px; min-width: 0; max-width: 100%; }')
+      + '\n.gg-card.gg-wide { grid-column: span 2; }';
+    expect(ggWideRule(bad)).not.toBeNull();
+    expect(wideOk(bad)).toBe(false);
+  });
+
+  it('NEGATIVE: a grid-column inside the base .gg-card rule fails (even with a correct wide rule)', () => {
+    const bad = '.gg-card { border-radius: 8px; min-width: 0; max-width: 100%; grid-column: 1 / -1; }\n'
+      + '.gg-card.gg-wide { grid-column: 1 / -1; }';
+    expect(wideOk(bad)).toBe(false);
+  });
+
+  it('NEGATIVE: the pre-fix stylesheet has no wide rule', () => {
+    expect(ggWideRule(PRE_FIX)).toBeNull();
+    expect(wideOk(PRE_FIX)).toBe(false);
+  });
+
+  it('the ≤ 640 px .cm-grid one-column collapse still exists (one column at 430 px; the wide card = the phone card)', async () => {
+    const src = await styles();
+    expect(src).toMatch(/@media \(max-width: 640px\) \{ \.cm-grid \{ grid-template-columns: 1fr; \} \}/);
+    expect(src).toMatch(/\.cm-grid \{[^}]*grid-template-columns: repeat\(auto-fill, minmax\(420px, 1fr\)\)/);
+  });
+
+  it('NEGATIVE: a stylesheet without the 640 px collapse fails the same guard', () => {
+    const bad = '.cm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }';
+    expect(bad).not.toMatch(/@media \(max-width: 640px\) \{ \.cm-grid \{ grid-template-columns: 1fr; \} \}/);
+  });
+});

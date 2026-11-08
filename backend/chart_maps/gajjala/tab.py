@@ -80,6 +80,7 @@ from chart_maps.gajjala import entry_zone as EZ               # 🧪 2026-11-08 
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
+from chart_maps.gajjala import squeeze_marks as SM            # 🎾 2026-11-08 — GG's chart marks on the squeeze card
 from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
 from supply_demand import timeframes as TF                   # 🚩 2026-11-06 — the Support-tab frame keys, read BY NAME (chart_href)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
@@ -959,16 +960,59 @@ def _listed_block(info: Optional[dict]) -> Optional[dict]:
 
 
 # ── tiles ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-def _tile_frame(doc: dict, tf: str, v=None) -> dict:
+def _tile_frame(doc: dict, tf: str, v=None, *, wide: bool = False) -> dict:
     """The stored tile of one frame: `tf` when it is one of the variant's frames, else its primary (GG5: "15m" → the
     bars15 keys, anything else → bars5, as always; the 1-minute page: "5m" → bars5, anything else → bars1). The key
-    suffix is variant.frame_minutes (2026-10-27), never typed."""
+    suffix is variant.frame_minutes (2026-10-27), never typed.
+    🎾 `wide` (2026-11-08, the squeeze card): when the doc stored the prior session's tail of this frame
+    (`bars{suf}_prior`, the GG5 pass) it is laid AHEAD of today's bars — curves merged by tone, the volume average
+    joined, a side that lacks one padded with None — and the LAST GC.RS_TILE_BARS_MAX bars are served. No `_prior`
+    keys (GG1, the 15-minute frame, a doc from before the upgrade) → exactly today's frame."""
     vv = V.of(v)
     tile = doc.get("tile") if isinstance(doc.get("tile"), dict) else {}
     t = tf if tf in vv.tfs else vv.primary
     suf = str(V.frame_minutes(t, vv))
-    return {"tf": t, "bars": list(tile.get(f"bars{suf}") or []),
-            "curves": list(tile.get(f"curves{suf}") or []), "vol_avg": tile.get(f"vol_avg{suf}")}
+    out = {"tf": t, "bars": list(tile.get(f"bars{suf}") or []),
+           "curves": list(tile.get(f"curves{suf}") or []), "vol_avg": tile.get(f"vol_avg{suf}")}
+    prior = tile.get(f"bars{suf}_prior")
+    if not wide or not isinstance(prior, list) or not prior:
+        return out
+    return _wide_frame(out, prior, tile.get(f"curves{suf}_prior"), tile.get(f"vol_avg{suf}_prior"))
+
+
+def _fit(vals, n: int) -> list:
+    """`vals` as exactly `n` aligned values (a missing / short side padded with None)."""
+    vals = list(vals) if isinstance(vals, list) else []
+    return vals[:n] + [None] * (n - len(vals[:n]))
+
+
+def _wide_frame(today: dict, prior: list, prior_curves, prior_vol) -> dict:
+    """🎾 prior tail + today on one frame, cut to the last GC.RS_TILE_BARS_MAX bars (every aligned list cut alike)."""
+    n_p, n_t = len(prior), len(today["bars"])
+    bars = list(prior) + today["bars"]
+    by_p = {c.get("tone"): c for c in (prior_curves if isinstance(prior_curves, list) else []) if isinstance(c, dict)}
+    by_t = {c.get("tone"): c for c in today["curves"] if isinstance(c, dict)}
+    tones = list(dict.fromkeys(list(by_p) + list(by_t)))
+    curves = []
+    for tone in tones:
+        p, q = by_p.get(tone) or {}, by_t.get(tone) or {}
+        curves.append({"tone": tone, "label": q.get("label", p.get("label")),
+                       "values": _fit(p.get("values"), n_p) + _fit(q.get("values"), n_t)})
+    pv = prior_vol if isinstance(prior_vol, dict) else None
+    tv = today["vol_avg"] if isinstance(today["vol_avg"], dict) else None
+    vol = None
+    if pv or tv:
+        a, b = pv or {}, tv or {}
+        vol = {"period": b.get("period", a.get("period")), "label": b.get("label", a.get("label")),
+               "values": _fit(a.get("values"), n_p) + _fit(b.get("values"), n_t)}
+    cut = max(0, len(bars) - GC.RS_TILE_BARS_MAX)
+    if cut:
+        bars = bars[cut:]
+        for c in curves:
+            c["values"] = c["values"][cut:]
+        if vol:
+            vol["values"] = vol["values"][cut:]
+    return {"tf": today["tf"], "bars": bars, "curves": curves, "vol_avg": vol}
 
 
 def chart_href(sym: str, tf: Optional[str], v=None) -> str:
@@ -1139,17 +1183,23 @@ def _on_bars(markers: list, bars: list) -> list:
 
 
 def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, listed: Optional[dict],
-               halt_doc=None, daily=None, pass_at: Optional[datetime] = None, v=None) -> dict:
+               halt_doc=None, daily=None, pass_at: Optional[datetime] = None, v=None,
+               carry: Optional[dict] = None, prev_iso: Optional[str] = None) -> dict:
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
     is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
-    "read at …" chip, 2026-10-15)."""
+    "read at …" chip, 2026-10-15).
+    🎾 2026-11-08: a Reversal Squeeze card draws the WIDE frame (the prior session's tail ahead of today's bars) and
+    serves `ellipses` (squeeze_marks — GG's chart marks) on the frame its read was taken on only, `[]` on the other
+    frame's toggle; `carry` = the prior session's carry doc (build's ONE read), `prev_iso` = that session's date. Every
+    other setup's card is byte-identical (no `ellipses` key, today's bars)."""
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
     vv = V.of(v)
-    fr = _tile_frame(doc, tf, vv)
+    wide = setup == "reversal_squeeze"
+    fr = _tile_frame(doc, tf, vv, wide=wide)
     if not fr["bars"]:                                               # the asked frame is empty → the other one
         other = next((t for t in vv.tfs if t != fr["tf"]), fr["tf"])
-        alt = _tile_frame(doc, other, vv)
+        alt = _tile_frame(doc, other, vv, wide=wide)
         if alt["bars"]:
             fr = alt
     mlabel = ("A+" if read.get("state") in MARKED_STATES else
@@ -1174,9 +1224,17 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
         g["_ema_gap_pct"] = _ema_gap_pct(read)
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
-    return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
+    tile = {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
             "vol_avg": vol_avg, "bands": EZ.bands(read, vv), "lines": _tile_lines(read), "markers": markers, "stats": stats,
             "why": read.get("reason") or "", "badges": [], "curves": fr["curves"], "gajjala": g}
+    if wide:                                                         # 🎾 GG's chart marks (2026-11-08)
+        read_tf = read.get("frame") if read.get("frame") in vv.tfs else vv.primary   # the tile_tf / _last_close rule
+        names = carry.get("names") if isinstance(carry, dict) else None
+        carry_row = names.get(sym) if isinstance(names, dict) else None
+        tile["ellipses"] = (SM.ellipses(read, fr["bars"], entry_t=(markers[0]["date"] if markers else None),
+                                        carry_row=carry_row, prev_iso=prev_iso)
+                            if fr["tf"] == read_tf else [])          # drawn ONLY on the frame the read was taken on
+    return tile
 
 
 def _strip_private(tiles: list) -> None:
@@ -1620,7 +1678,8 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
 
 
 def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, sess: dict, listed: dict,
-                     halts_by: dict, pass_at: Optional[datetime] = None, v=None) -> list:
+                     halts_by: dict, pass_at: Optional[datetime] = None, v=None,
+                     carry: Optional[dict] = None, prev_iso: Optional[str] = None) -> list:
     """§3.9 (b) — one tile per SYMBOL: the existing `setup_tile` card of its PRIMARY potential (the first by
     potential.order_key), with `gajjala.potential` (W12) and the 🧩 other setups forming on it (GG S9 1:59:01)."""
     by_sym: dict = {}
@@ -1633,7 +1692,8 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
         daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
         vv = V.of(v)
         tile = setup_tile(doc, setup, tile_tf(read, tf_ask, vv.primary, vv), scan_row=scan_row(sym), sess=sess,
-                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at, v=vv)
+                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at, v=vv,
+                          carry=carry, prev_iso=prev_iso)                 # 🎾 2026-11-08 — build's ONE carry read
         first = row["first_seen_et"]
         tile["gajjala"]["potential"] = {
             "kind": row["kind"], "kind_label": row["kind_label"], "setup": setup, "setup_label": _setup_label(setup),
@@ -1898,6 +1958,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     pot_docs = [d for d in _safe_list(st.potentials, session) if d.get("symbol") and d.get("setup")]
     pot_prev = [d for d in _safe_list(st.potentials, prev) if d.get("symbol") and d.get("setup")]
     pot_ok = True                       # D1 on the read path: a raising potential layer never silences the A+ board
+    ah_prev = None                      # 🎾 2026-11-08 — bound before the try: the squeeze cards read it either way
     try:
         trackers_today = {(str(d["symbol"]).upper(), d["setup"]): d for d in pot_docs}
         trackers_prev = {(str(d["symbol"]).upper(), d["setup"]) for d in pot_prev}
@@ -1957,7 +2018,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
-                                            pass_at=pass_at, v=v))
+                                            pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat()))
         tiles.sort(key=order_key)
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
@@ -2025,7 +2086,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     elif sub_k == GC.POTENTIAL_SUB:
         out["tiles"] = (_soft("potential tiles", _potential_tiles, pots, st=st, session=session, tf_ask=tf_ask,
                               scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, pass_at=pass_at,
-                              v=v, default=[])
+                              v=v, carry=ah_prev, prev_iso=prev.isoformat(), default=[])
                         if pot_ok else [])[:lim]
         entries = _soft("A+ entry read", _entry_times, st, [session, prev], v, default={}) or {}   # D4: ONE read
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,

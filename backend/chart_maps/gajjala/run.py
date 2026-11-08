@@ -529,6 +529,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             for tf, suf in (("5m", "5"), ("15m", "15")):
                 p = B.tile_payload(fr, tf)
                 tile.update({f"bars{suf}": p["bars"], f"curves{suf}": p["curves"], f"vol_avg{suf}": p["vol_avg"]})
+            p = B.tile_prior_payload(fr, "5m", from_et=GC.RS_TILE_PRIOR_FROM_ET)   # 🎾 the prior session's tail (2026-11-08), drawing only
+            tile.update(bars5_prior=p["bars"], curves5_prior=p["curves"], vol_avg5_prior=p["vol_avg"])
             mine()
             st.upsert_read(session, s, {"as_of_bar_t5": fr.as_of_bar_t5, "as_of_bar_t15": fr.as_of_bar_t15,
                                         "setups": reads.get(s) or {}, "ctx": ctx, "tile": tile,

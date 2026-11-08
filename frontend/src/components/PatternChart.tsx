@@ -45,6 +45,9 @@ import {
   VOLUME_SMA_COLOR, VOLUME_SMA_LEN, paneVolumeAverage, volumeColor, volumePaneLayout, volumeSmaTitle,
 } from '../lib/volumePane';
 import type { ServedVolAvg } from '../lib/volumePane';
+import {
+  ELLIPSE_LABEL_FS, ellipseGeom, ellipseStroke, ellipseTitle, ellipseTone,
+} from '../lib/ggEllipses';
 
 const W = 620;
 const PAD_Y = 10;
@@ -129,6 +132,8 @@ export const PatternChart = memo(function PatternChart(
    * new ⊞ answer clears the override (⊞ means all). Above the early return. */
   const [moreOv, setMoreOv] = useState<boolean | null>(null);
   const moreId = useId();
+  /* 🎾 the clip for GG's chart circles — React's id carries ':' which a url(#…) must not. */
+  const ggClipId = `pc-gge-${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
   useEffect(() => { setMoreOv(null); }, [expandAll]);
   const more = moreOv ?? !!expandAll;
 
@@ -845,6 +850,50 @@ export const PatternChart = memo(function PatternChart(
               </g>
             );
           })}
+
+          {/* 🎾 GG's chart circles (Ajay 2026-11-08: "I need something like this but that big of
+              circle for reversal squeen mainly on the cart itself" · "This is from Gajjals").
+              Drawn AFTER the candles so the ring reads over them, clipped to the price pane
+              (never the gutter labels, never the volume pane). The layer stays a pointer target
+              (2026-11-08 refix: pointer-events none hid every <title>, so GG's words never showed);
+              mouse moves bubble to the svg's onMouseMove exactly as through the band rects, and a
+              click still reaches the card link. The chart prints the SHORT label; GG's own words
+              are the <title> hover only. Served by squeeze_marks.py; nothing is computed here
+              but the geometry (lib/ggEllipses.ts). Absent / [] → nothing renders at all. */}
+          {(() => {
+            const marks = (tile.ellipses || [])
+              .map((e) => ({ e, g: ellipseGeom(e, bars, domain, H, PAD_Y, W, padR) }))
+              .filter((m) => m.g != null);
+            if (!marks.length) return null;
+            return (
+              <>
+                <defs>
+                  <clipPath id={ggClipId}>
+                    <rect x={0} y={0} width={plotW} height={H} />
+                  </clipPath>
+                </defs>
+                <g className="pc-gg-ellipses" clipPath={`url(#${ggClipId})`}>
+                  {marks.map(({ e, g }, ei) => {
+                    const tone = ellipseTone(e.tone);
+                    const colour = ellipseStroke(tone);
+                    return (
+                      <g key={`gge-${ei}-${e.kind}-${e.from_t}`}
+                         data-ellipse-kind={e.kind} data-ellipse-tone={tone}>
+                        <title>{ellipseTitle(e)}</title>
+                        <ellipse cx={g!.cx} cy={g!.cy} rx={g!.rx} ry={g!.ry}
+                                 fill={colour} fillOpacity={0.06} stroke={colour}
+                                 strokeWidth={1.3} opacity={0.9} />
+                        {e.label ? (
+                          <text x={g!.labelX} y={g!.labelY} fontSize={ELLIPSE_LABEL_FS}
+                                fontWeight={600} textAnchor="middle" fill={colour}>{e.label}</text>
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </g>
+              </>
+            );
+          })()}
 
           {/* pointers: a label pushed off its level points back to it
             * (Ajay 2026-09-08: "These overlap, can you use some pointers") */}

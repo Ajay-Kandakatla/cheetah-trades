@@ -260,6 +260,28 @@ def _span(F: Frame, idx) -> Optional[dict]:
     return {"from_t": F.t[idx[0]], "to_t": F.t[idx[-1]], "bars": len(idx)}
 
 
+def _box(F: Frame, idx) -> Optional[dict]:
+    """`_span` + the span's price range (lowest low, highest high) — a display stamp for the 🎾 card (2026-11-08);
+    None for an empty span. Read by no rule."""
+    idx = list(idx)
+    if not idx:
+        return None
+    return {"from_t": F.t[idx[0]], "to_t": F.t[idx[-1]], "lo": min(F.l[i] for i in idx),
+            "hi": max(F.h[i] for i in idx), "bars": len(idx)}
+
+
+def _merge_spans(spans: list) -> list:
+    """[(a, f)] index spans → sorted by a, overlapping or touching spans (next a ≤ current f + 1) merged into one.
+    Pure index geometry (the 🎾 card's attempt marks, 2026-11-08)."""
+    out = []
+    for a, f in sorted(spans):
+        if out and a <= out[-1][1] + 1:
+            out[-1] = (out[-1][0], max(out[-1][1], f))
+        else:
+            out.append((a, f))
+    return out
+
+
 def _leg(F: Frame, s: int, e: int) -> dict:
     return {"s_t": F.t[s], "e_t": F.t[e], "bars": e - s + 1}
 
@@ -873,11 +895,16 @@ def failed_attempts(F: Frame, last: int) -> list:
     return out
 
 
-def _paired(tb: tuple, attempts: list) -> bool:
+def _pairs(tb: tuple, attempts: list) -> list:
+    """The attempts (a, f) that pair with tennis ball tb — an attempt that failed before the running-high bar r, or,
+    under K8_FAIL_EVENT_RULE "same_ok", one that started at or before r and failed by the recovery bar k."""
     r, _, k = tb
-    if any(f < r for _, f in attempts):
-        return True
-    return GC.K8_FAIL_EVENT_RULE == "same_ok" and any(a <= r and f <= k for a, f in attempts)
+    same_ok = GC.K8_FAIL_EVENT_RULE == "same_ok"
+    return [(a, f) for a, f in attempts if f < r or (same_ok and a <= r and f <= k)]
+
+
+def _paired(tb: tuple, attempts: list) -> bool:
+    return bool(_pairs(tb, attempts))
 
 
 def _fr(float_read, key):
@@ -892,7 +919,8 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
     """Low float only. Drops snap straight back ("tennis ball action … whenever it hits the ground it [reverses]
     hard", S8 35:02), it has tried the highs and been sold before, then a quiet base at the top of the squeeze-back
     and entry = the break of the highs, stop = the base low (DECISIONS K8). The structure is read FIRST
-    (`meta.structure_alive` feeds the float priority); the float gate is applied LAST."""
+    (`meta.structure_alive` feeds the float priority); the float gate is applied LAST.
+    `structure` = display stamps for the card (2026-11-08), read by no rule."""
     setup = "reversal_squeeze"
     last = _last(F, last)
     if last < 0:
@@ -918,6 +946,11 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
     B = list(range(p + 1, (j - 1 if j is not None else last) + 1))
     r["leg"] = {"s_t": F.t[d], "e_t": F.t[p], "bars": len(R)}
     r["base"] = _span(F, B)
+    r["structure"] = {"tennis": _box(F, range(d, k + 1)),        # GG: "Tennis ball action, quick dump and reclaim"
+                      "run": _box(F, R),                          # "Demand picks up" — the squeeze-back
+                      "base": _box(F, B),                         # the quiet base under the top; None while empty
+                      "attempts": [_box(F, range(a, f + 1))       # tried the highs and been sold — paired, merged
+                                   for a, f in _merge_spans(_pairs(tb, attempts))]}
     r["red_closes"] = red_closes(F, B)
     if _depth_binds(setup) and not k3_depth_ok(F, B, p):
         return _invalid(r, "base sank below half the top bar")          # meta.structure_alive = a tennis ball exists

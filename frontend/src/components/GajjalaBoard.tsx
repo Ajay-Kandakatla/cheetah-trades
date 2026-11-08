@@ -722,9 +722,12 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
             {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
               const isFocus = focus === t.symbol;
+              /* 🎾 2026-11-08 (Ajay: "increase the width of the reversal sqeeze chart to show more bars"): every card whose
+                 read is a Reversal Squeeze takes the whole grid row (gajjala.css .gg-card.gg-wide) — the 🎾 sub and a 🧠
+                 card of a 🎾 read alike; the served order is untouched. */
               return (
                 <div key={t.symbol} data-testid={`gg-tile-${t.symbol}`}
-                     className={`gg-card${isFocus ? ' gg-focus' : ''}`}
+                     className={`gg-card${isFocus ? ' gg-focus' : ''}${t.gajjala?.setup === 'reversal_squeeze' ? ' gg-wide' : ''}`}
                      ref={(el) => { if (el) tileRefs.current.set(t.symbol, el); else tileRefs.current.delete(t.symbol); }}>
                   <div className="cm-tile-chips" data-testid={`gg-chips-${t.symbol}`}>
                     <GrowthChip symbol={t.symbol} />

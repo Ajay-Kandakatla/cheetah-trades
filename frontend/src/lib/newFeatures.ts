@@ -22,6 +22,19 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-08 (verbatim in the label, his spelling kept), with GG's own annotated TPST 5-minute chart attached: "I need
+  // something like this but that big of circle for reversal squeen mainly on the cart itself also increase the width of the
+  // reversal sqeeze chart to show more bars" / "This is from Gajjals" / "They don't have to be circles but indicators did you
+  // build them already?". detectors.reversal_squeeze now stores the structure it already found (tennis ball, demand run, quiet
+  // base, the paired earlier attempts) as display stamps; the GG5 pass stores the prior session's 15:00→20:00 ET tail
+  // (constants.RS_TILE_*, MINE); chart_maps/gajjala/squeeze_marks.py serves `ellipses` on 🎾 cards only (label + GG's quote
+  // on hover; no red "close or add" — his exits are discretionary, his 2026-11-06 "keep it"); PatternChart draws them in one
+  // clipped layer (lib/ggEllipses.ts, drawing constants MINE); the 🎾 card spans the grid row (gajjala.css .gg-card.gg-wide,
+  // `1 / -1`, one column at ≤ 640 px). The markerIndex full-stamp fix rides along (the A+ tag draws on intraday cards at last,
+  // 🥇 Luk's too — HIS CALL #13). Doc docs/gajjala/squeeze_chart_2026_11_08.md (HIS CALLs #1–#15). UNMEASURED; nothing
+  // gates, rings or trades.
+  { id: 'chart-maps-gajjala-squeeze-chart-2026-11-08', addedAt: '2026-11-08', route: '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+    label: "🎾 GG's marks on the Reversal Squeeze chart — Ajay: “I need something like this but that big of circle for reversal squeen mainly on the cart itself also increase the width of the reversal sqeeze chart to show more bars” and “They don't have to be circles but indicators did you build them already?”. Every 🎾 card now spans the whole row and, on the 5-minute tabs, draws the prior session from 15:00 ET on, so the after-hours spike sits on the chart with today. On it, in GG's own magenta, marks for what the detector found: the earlier try that was sold, the tennis ball, the demand run and the quiet base, plus a green mark on the entry bar once the break printed. Hover any mark for his words from his own TPST chart. Nothing new is measured and no rule moved. His red “close or add” mark is not drawn: his exits are his discretion. The 1-minute page keeps its 1-minute bars. UNMEASURED. Not advice." },
   // Ajay 2026-11-07 / 2026-11-08 (verbatim in the labels, his spelling kept), three asks the same night: (1) "On the Gajjalas
   // Audited and Gajjalas 1 min tab can you add entry signal on the chart please like a small zone. Based on what he said,
   // Like when its imminent with volume drying and selling pressure is low. and Also when the pullback is ideal and close
