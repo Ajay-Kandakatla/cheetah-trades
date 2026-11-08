@@ -816,7 +816,7 @@
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
-   "order_note": null,
+   "order_note": "➖ 9 and 21 EMA closest to merged on top",
    "pass": {
     "as_of_et": "10:41 ET",
     "at": "2026-10-13T14:41:00+00:00",
@@ -1067,6 +1067,212 @@
        "o": 11.0,
        "t": "2026-10-13 10:30",
        "v": 100000.0
+      }
+     ],
+     "broker_text": null,
+     "curves": [
+      {
+       "label": "9 EMA",
+       "tone": "ema9",
+       "values": [
+        10.0,
+        10.0,
+        10.0,
+        10.1,
+        10.28,
+        10.4115
+       ]
+      },
+      {
+       "label": "21 EMA",
+       "tone": "ema21",
+       "values": [
+        10.0,
+        10.0,
+        10.0,
+        10.045455,
+        10.132231,
+        10.205438
+       ]
+      }
+     ],
+     "gajjala": {
+      "bars_since_entry": null,
+      "broke": false,
+      "chips": {
+       "change_pct": 37.5,
+       "first15": false,
+       "flag_k": null,
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "shares": 5000000.0,
+        "src": "shares_out_massive",
+        "suspect": false,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "instrument": "type unknown",
+       "outside_rth": null,
+       "psych": [],
+       "read_at": null,
+       "red_closes": null,
+       "rotation": "🔄 shares out ×0.6",
+       "session_badge": "RTH",
+       "stopped_earlier": null,
+       "vol_src": "min_av",
+       "volume": 3000000.0
+      },
+      "criteria": [
+       {
+        "key": "k4",
+        "label": "K4 base 6–24 bars",
+        "need": "6–24",
+        "ok": false,
+        "value": "1 bars"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 base volume ≤ 0.5× leg mean",
+        "need": "≤ 125000",
+        "ok": true,
+        "value": "max 100000"
+       },
+       {
+        "key": "k6_tight",
+        "label": "K6 base range ≤ 8% of price",
+        "need": "≤ 8%",
+        "ok": true,
+        "value": "1.1%"
+       },
+       {
+        "key": "k6_merge",
+        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+        "need": "≤ 0.5%",
+        "ok": false,
+        "value": "EMAs 1.88% apart"
+       },
+       {
+        "key": "k6_decay",
+        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+        "need": "< 0.7×",
+        "ok": null,
+        "value": "second-half volume —×"
+       }
+      ],
+      "cycles": null,
+      "entry_bar_t": null,
+      "flag_k": null,
+      "frame": "5m",
+      "grade": null,
+      "grade_label": null,
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13",
+       "text": "listed day 1/3 · since 2026-10-13"
+      },
+      "missed": [],
+      "ready": false,
+      "reason": "base 1 of 6 bars",
+      "red_closes": 1,
+      "risk_pct": 1.1363636363636365,
+      "setup": "horizontal_fade",
+      "state": "forming",
+      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
+      "stop": 10.875,
+      "trigger": 11.0,
+      "unjudged": [
+       "k6_decay"
+      ],
+      "variant": null,
+      "variant_label": null
+     },
+     "href": "/sepa/GGB?tab=supply&tf=5m_today",
+     "lines": [
+      {
+       "label": "TRIGGER 11.00",
+       "price": 11.0,
+       "text": "11.00",
+       "tone": "buy"
+      },
+      {
+       "label": "STOP 10.88",
+       "price": 10.875,
+       "text": "10.88",
+       "tone": "stop"
+      }
+     ],
+     "markers": [],
+     "name": null,
+     "stats": [
+      {
+       "k": "Change",
+       "v": "+37.5%"
+      },
+      {
+       "k": "Volume",
+       "v": "3.0M"
+      }
+     ],
+     "symbol": "GGB",
+     "tf": "5m",
+     "trader_text": null,
+     "vol_avg": null,
+     "why": "base 1 of 6 bars"
+    },
+    {
+     "badges": [],
+     "bands": [],
+     "bars": [
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:05",
+       "v": 100000.0
+      },
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:10",
+       "v": 100000.0
+      },
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:15",
+       "v": 100000.0
+      },
+      {
+       "c": 10.5,
+       "h": 10.5,
+       "l": 10.0,
+       "o": 10.0,
+       "t": "2026-10-13 10:20",
+       "v": 200000.0
+      },
+      {
+       "c": 11.0,
+       "h": 11.0,
+       "l": 10.5,
+       "o": 10.5,
+       "t": "2026-10-13 10:25",
+       "v": 300000.0
+      },
+      {
+       "c": 10.9375,
+       "h": 11.0,
+       "l": 10.875,
+       "o": 11.0,
+       "t": "2026-10-13 10:30",
+       "v": 100000.0
       },
       {
        "c": 10.875,
@@ -1239,212 +1445,6 @@
      "trader_text": null,
      "vol_avg": null,
      "why": "base 3 of 6 bars"
-    },
-    {
-     "badges": [],
-     "bands": [],
-     "bars": [
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:05",
-       "v": 100000.0
-      },
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:10",
-       "v": 100000.0
-      },
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:15",
-       "v": 100000.0
-      },
-      {
-       "c": 10.5,
-       "h": 10.5,
-       "l": 10.0,
-       "o": 10.0,
-       "t": "2026-10-13 10:20",
-       "v": 200000.0
-      },
-      {
-       "c": 11.0,
-       "h": 11.0,
-       "l": 10.5,
-       "o": 10.5,
-       "t": "2026-10-13 10:25",
-       "v": 300000.0
-      },
-      {
-       "c": 10.9375,
-       "h": 11.0,
-       "l": 10.875,
-       "o": 11.0,
-       "t": "2026-10-13 10:30",
-       "v": 100000.0
-      }
-     ],
-     "broker_text": null,
-     "curves": [
-      {
-       "label": "9 EMA",
-       "tone": "ema9",
-       "values": [
-        10.0,
-        10.0,
-        10.0,
-        10.1,
-        10.28,
-        10.4115
-       ]
-      },
-      {
-       "label": "21 EMA",
-       "tone": "ema21",
-       "values": [
-        10.0,
-        10.0,
-        10.0,
-        10.045455,
-        10.132231,
-        10.205438
-       ]
-      }
-     ],
-     "gajjala": {
-      "bars_since_entry": null,
-      "broke": false,
-      "chips": {
-       "change_pct": 37.5,
-       "first15": false,
-       "flag_k": null,
-       "float": {
-        "as_of": "2026-10-13T14:41:00+00:00",
-        "shares": 5000000.0,
-        "src": "shares_out_massive",
-        "suspect": false,
-        "text": "shares out 5.0M (Massive)"
-       },
-       "float_suspect": null,
-       "halts": null,
-       "instrument": "type unknown",
-       "outside_rth": null,
-       "psych": [],
-       "read_at": null,
-       "red_closes": null,
-       "rotation": "🔄 shares out ×0.6",
-       "session_badge": "RTH",
-       "stopped_earlier": null,
-       "vol_src": "min_av",
-       "volume": 3000000.0
-      },
-      "criteria": [
-       {
-        "key": "k4",
-        "label": "K4 base 6–24 bars",
-        "need": "6–24",
-        "ok": false,
-        "value": "1 bars"
-       },
-       {
-        "key": "k3_vol",
-        "label": "K3 base volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
-        "ok": true,
-        "value": "max 100000"
-       },
-       {
-        "key": "k6_tight",
-        "label": "K6 base range ≤ 8% of price",
-        "need": "≤ 8%",
-        "ok": true,
-        "value": "1.1%"
-       },
-       {
-        "key": "k6_merge",
-        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-        "need": "≤ 0.5%",
-        "ok": false,
-        "value": "EMAs 1.88% apart"
-       },
-       {
-        "key": "k6_decay",
-        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-        "need": "< 0.7×",
-        "ok": null,
-        "value": "second-half volume —×"
-       }
-      ],
-      "cycles": null,
-      "entry_bar_t": null,
-      "flag_k": null,
-      "frame": "5m",
-      "grade": null,
-      "grade_label": null,
-      "listed": {
-       "day_n": 1,
-       "last_qualified": "2026-10-13",
-       "of": 3,
-       "since": "2026-10-13",
-       "text": "listed day 1/3 · since 2026-10-13"
-      },
-      "missed": [],
-      "ready": false,
-      "reason": "base 1 of 6 bars",
-      "red_closes": 1,
-      "risk_pct": 1.1363636363636365,
-      "setup": "horizontal_fade",
-      "state": "forming",
-      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
-      "stop": 10.875,
-      "trigger": 11.0,
-      "unjudged": [
-       "k6_decay"
-      ],
-      "variant": null,
-      "variant_label": null
-     },
-     "href": "/sepa/GGB?tab=supply&tf=5m_today",
-     "lines": [
-      {
-       "label": "TRIGGER 11.00",
-       "price": 11.0,
-       "text": "11.00",
-       "tone": "buy"
-      },
-      {
-       "label": "STOP 10.88",
-       "price": 10.875,
-       "text": "10.88",
-       "tone": "stop"
-      }
-     ],
-     "markers": [],
-     "name": null,
-     "stats": [
-      {
-       "k": "Change",
-       "v": "+37.5%"
-      },
-      {
-       "k": "Volume",
-       "v": "3.0M"
-      }
-     ],
-     "symbol": "GGB",
-     "tf": "5m",
-     "trader_text": null,
-     "vol_avg": null,
-     "why": "base 1 of 6 bars"
     }
    ]
   },
@@ -7732,7 +7732,7 @@
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
-   "order_note": null,
+   "order_note": "➖ 9 and 21 EMA closest to merged on top",
    "pass": {
     "as_of_et": "10:41 ET",
     "at": "2026-10-13T14:41:00+00:00",
@@ -7983,6 +7983,212 @@
        "o": 11.0,
        "t": "2026-10-13 10:30",
        "v": 100000.0
+      }
+     ],
+     "broker_text": null,
+     "curves": [
+      {
+       "label": "9 EMA",
+       "tone": "ema9",
+       "values": [
+        10.0,
+        10.0,
+        10.0,
+        10.1,
+        10.28,
+        10.4115
+       ]
+      },
+      {
+       "label": "21 EMA",
+       "tone": "ema21",
+       "values": [
+        10.0,
+        10.0,
+        10.0,
+        10.045455,
+        10.132231,
+        10.205438
+       ]
+      }
+     ],
+     "gajjala": {
+      "bars_since_entry": null,
+      "broke": false,
+      "chips": {
+       "change_pct": 37.5,
+       "first15": false,
+       "flag_k": null,
+       "float": {
+        "as_of": "2026-10-13T14:41:00+00:00",
+        "shares": 5000000.0,
+        "src": "shares_out_massive",
+        "suspect": false,
+        "text": "shares out 5.0M (Massive)"
+       },
+       "float_suspect": null,
+       "halts": null,
+       "instrument": "type unknown",
+       "outside_rth": null,
+       "psych": [],
+       "read_at": null,
+       "red_closes": null,
+       "rotation": "🔄 shares out ×0.6",
+       "session_badge": "RTH",
+       "stopped_earlier": null,
+       "vol_src": "min_av",
+       "volume": 3000000.0
+      },
+      "criteria": [
+       {
+        "key": "k4",
+        "label": "K4 base 6–24 bars",
+        "need": "6–24",
+        "ok": false,
+        "value": "1 bars"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 base volume ≤ 0.5× leg mean",
+        "need": "≤ 125000",
+        "ok": true,
+        "value": "max 100000"
+       },
+       {
+        "key": "k6_tight",
+        "label": "K6 base range ≤ 8% of price",
+        "need": "≤ 8%",
+        "ok": true,
+        "value": "1.1%"
+       },
+       {
+        "key": "k6_merge",
+        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
+        "need": "≤ 0.5%",
+        "ok": false,
+        "value": "EMAs 1.88% apart"
+       },
+       {
+        "key": "k6_decay",
+        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
+        "need": "< 0.7×",
+        "ok": null,
+        "value": "second-half volume —×"
+       }
+      ],
+      "cycles": null,
+      "entry_bar_t": null,
+      "flag_k": null,
+      "frame": "5m",
+      "grade": null,
+      "grade_label": null,
+      "listed": {
+       "day_n": 1,
+       "last_qualified": "2026-10-13",
+       "of": 3,
+       "since": "2026-10-13",
+       "text": "listed day 1/3 · since 2026-10-13"
+      },
+      "missed": [],
+      "ready": false,
+      "reason": "base 1 of 6 bars",
+      "red_closes": 1,
+      "risk_pct": 1.1363636363636365,
+      "setup": "horizontal_fade",
+      "state": "forming",
+      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
+      "stop": 10.875,
+      "trigger": 11.0,
+      "unjudged": [
+       "k6_decay"
+      ],
+      "variant": null,
+      "variant_label": null
+     },
+     "href": "/sepa/GGB?tab=supply&tf=5m_today",
+     "lines": [
+      {
+       "label": "TRIGGER 11.00",
+       "price": 11.0,
+       "text": "11.00",
+       "tone": "buy"
+      },
+      {
+       "label": "STOP 10.88",
+       "price": 10.875,
+       "text": "10.88",
+       "tone": "stop"
+      }
+     ],
+     "markers": [],
+     "name": null,
+     "stats": [
+      {
+       "k": "Change",
+       "v": "+37.5%"
+      },
+      {
+       "k": "Volume",
+       "v": "3.0M"
+      }
+     ],
+     "symbol": "GGB",
+     "tf": "5m",
+     "trader_text": null,
+     "vol_avg": null,
+     "why": "base 1 of 6 bars"
+    },
+    {
+     "badges": [],
+     "bands": [],
+     "bars": [
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:05",
+       "v": 100000.0
+      },
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:10",
+       "v": 100000.0
+      },
+      {
+       "c": 10.0,
+       "h": 10.125,
+       "l": 9.875,
+       "o": 10.0,
+       "t": "2026-10-13 10:15",
+       "v": 100000.0
+      },
+      {
+       "c": 10.5,
+       "h": 10.5,
+       "l": 10.0,
+       "o": 10.0,
+       "t": "2026-10-13 10:20",
+       "v": 200000.0
+      },
+      {
+       "c": 11.0,
+       "h": 11.0,
+       "l": 10.5,
+       "o": 10.5,
+       "t": "2026-10-13 10:25",
+       "v": 300000.0
+      },
+      {
+       "c": 10.9375,
+       "h": 11.0,
+       "l": 10.875,
+       "o": 11.0,
+       "t": "2026-10-13 10:30",
+       "v": 100000.0
       },
       {
        "c": 10.875,
@@ -8155,212 +8361,6 @@
      "trader_text": null,
      "vol_avg": null,
      "why": "base 3 of 6 bars"
-    },
-    {
-     "badges": [],
-     "bands": [],
-     "bars": [
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:05",
-       "v": 100000.0
-      },
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:10",
-       "v": 100000.0
-      },
-      {
-       "c": 10.0,
-       "h": 10.125,
-       "l": 9.875,
-       "o": 10.0,
-       "t": "2026-10-13 10:15",
-       "v": 100000.0
-      },
-      {
-       "c": 10.5,
-       "h": 10.5,
-       "l": 10.0,
-       "o": 10.0,
-       "t": "2026-10-13 10:20",
-       "v": 200000.0
-      },
-      {
-       "c": 11.0,
-       "h": 11.0,
-       "l": 10.5,
-       "o": 10.5,
-       "t": "2026-10-13 10:25",
-       "v": 300000.0
-      },
-      {
-       "c": 10.9375,
-       "h": 11.0,
-       "l": 10.875,
-       "o": 11.0,
-       "t": "2026-10-13 10:30",
-       "v": 100000.0
-      }
-     ],
-     "broker_text": null,
-     "curves": [
-      {
-       "label": "9 EMA",
-       "tone": "ema9",
-       "values": [
-        10.0,
-        10.0,
-        10.0,
-        10.1,
-        10.28,
-        10.4115
-       ]
-      },
-      {
-       "label": "21 EMA",
-       "tone": "ema21",
-       "values": [
-        10.0,
-        10.0,
-        10.0,
-        10.045455,
-        10.132231,
-        10.205438
-       ]
-      }
-     ],
-     "gajjala": {
-      "bars_since_entry": null,
-      "broke": false,
-      "chips": {
-       "change_pct": 37.5,
-       "first15": false,
-       "flag_k": null,
-       "float": {
-        "as_of": "2026-10-13T14:41:00+00:00",
-        "shares": 5000000.0,
-        "src": "shares_out_massive",
-        "suspect": false,
-        "text": "shares out 5.0M (Massive)"
-       },
-       "float_suspect": null,
-       "halts": null,
-       "instrument": "type unknown",
-       "outside_rth": null,
-       "psych": [],
-       "read_at": null,
-       "red_closes": null,
-       "rotation": "🔄 shares out ×0.6",
-       "session_badge": "RTH",
-       "stopped_earlier": null,
-       "vol_src": "min_av",
-       "volume": 3000000.0
-      },
-      "criteria": [
-       {
-        "key": "k4",
-        "label": "K4 base 6–24 bars",
-        "need": "6–24",
-        "ok": false,
-        "value": "1 bars"
-       },
-       {
-        "key": "k3_vol",
-        "label": "K3 base volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
-        "ok": true,
-        "value": "max 100000"
-       },
-       {
-        "key": "k6_tight",
-        "label": "K6 base range ≤ 8% of price",
-        "need": "≤ 8%",
-        "ok": true,
-        "value": "1.1%"
-       },
-       {
-        "key": "k6_merge",
-        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-        "need": "≤ 0.5%",
-        "ok": false,
-        "value": "EMAs 1.88% apart"
-       },
-       {
-        "key": "k6_decay",
-        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-        "need": "< 0.7×",
-        "ok": null,
-        "value": "second-half volume —×"
-       }
-      ],
-      "cycles": null,
-      "entry_bar_t": null,
-      "flag_k": null,
-      "frame": "5m",
-      "grade": null,
-      "grade_label": null,
-      "listed": {
-       "day_n": 1,
-       "last_qualified": "2026-10-13",
-       "of": 3,
-       "since": "2026-10-13",
-       "text": "listed day 1/3 · since 2026-10-13"
-      },
-      "missed": [],
-      "ready": false,
-      "reason": "base 1 of 6 bars",
-      "red_closes": 1,
-      "risk_pct": 1.1363636363636365,
-      "setup": "horizontal_fade",
-      "state": "forming",
-      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
-      "stop": 10.875,
-      "trigger": 11.0,
-      "unjudged": [
-       "k6_decay"
-      ],
-      "variant": null,
-      "variant_label": null
-     },
-     "href": "/sepa/GGB?tab=supply&tf=5m_today",
-     "lines": [
-      {
-       "label": "TRIGGER 11.00",
-       "price": 11.0,
-       "text": "11.00",
-       "tone": "buy"
-      },
-      {
-       "label": "STOP 10.88",
-       "price": 10.875,
-       "text": "10.88",
-       "tone": "stop"
-      }
-     ],
-     "markers": [],
-     "name": null,
-     "stats": [
-      {
-       "k": "Change",
-       "v": "+37.5%"
-      },
-      {
-       "k": "Volume",
-       "v": "3.0M"
-      }
-     ],
-     "symbol": "GGB",
-     "tf": "5m",
-     "trader_text": null,
-     "vol_avg": null,
-     "why": "base 1 of 6 bars"
     }
    ]
   },

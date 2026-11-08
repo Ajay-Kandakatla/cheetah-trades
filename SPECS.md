@@ -844,6 +844,23 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `docs/gajjala/frontend_2026_10_13.md` § "🚩 Gajjala's chart on the stock page (2026-11-06)" (HIS CALLs #1–#7);
   contracts "🚩 Gajjala's chart on the stock page (2026-11-06)"; ✨ `chart-maps-gajjala-chart-frame-2026-11-06`.
   No gate, rule, threshold, claim or push changed. UNMEASURED. Not advice.
+- **🎾 Short-interest label · ➖ 9/21 EMA rank (2026-11-08)** — Ajay, verbatim: "Also for the reversal squeeze I need
+  short interest to be show on all the 3 of his tab as a label." and "On the horizonal fade I need a ranking in
+  horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs". 🎾: FE only —
+  `components/GgShortInterestLabel.tsx` prints the SERVED 🩳 chip text (`short_interest/read.py chip_text`; hover =
+  `title_text`) in bold under the plan of every `reversal_squeeze` card on GG5, the 1-minute page and 🧪 Audited through
+  the ONE hook `useShortInterest` + `siChip` (one bulk GET per board, unchanged); the muted `ShortInterestChip` is skipped
+  on 🎾 cards only (Rule #5: the SI prints once); no record → nothing, never a zero; a label, never a gate — GG has no
+  short-interest rule in any source (verified_rules U10). ➖: `constants.HF_EMA_SORT = "pre_break"` (MINE; the three
+  orders in `HF_EMA_SORTS`) — on the ➖ sub the reads that have NOT broken out (forming AND partial) rank together by
+  `tab._ema_gap_pct(read)` = the k6_merge criterion's printed value (|9 − 21 EMA| as % of close at the read's ref bar, a
+  SNAPSHOT: "closest to merged", never a direction — HIS CALL #16) ascending, unknown last, stashed as
+  `gajjala._ema_gap_pct` and popped by `_strip_private`; A+/held/triggered/stopped keep today's key on top; the sub
+  serves `tab.HF_ORDER_TEXT` as `order_note`. The GG5 BOARD golden moved by the ➖ order plus that one string;
+  `gg5_writes` byte-identical; no band on any GG5 card. Docs `docs/gajjala/card_labels_2026_11_08.md` and
+  `docs/gajjala/fade_ema_rank_2026_11_08.md` (HIS CALLs #6–#10, #16); contract "🧪 entry zones · 🎾 SI label · ➖ EMA
+  rank (2026-11-08)"; ✨ `chart-maps-gajjala-squeeze-si-label-2026-11-08`, `chart-maps-gajjala-fade-ema-rank-2026-11-08`.
+  No gate, rule, threshold, claim or push changed. UNMEASURED. Not advice.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a
@@ -1054,6 +1071,22 @@ the 5-minute setups read NULL.
   `GG_VARIANT_BASE` == variant.py `api_base`.
 - Doc `docs/gajjala/one_minute_page_2026_10_27.md` (the 15 HIS CALLs, costs, verification); contract "🚩 Gajjala
   1-minute page (2026-10-27)"; ✨ `chart-maps-gajjala-1m-2026-10-27`.
+- **🧪 Entry zone on the 1-minute cards (2026-11-08)** — Ajay, verbatim: "On the Gajjalas Audited and Gajjalas 1 min tab
+  can you add entry signal on the chart please like a small zone. Based on what he said, Like when its imminent with
+  volume drying and selling pressure is low. and Also when the pullback is ideal and close EMAs I guess based on what he
+  says." `chart_maps/gajjala/entry_zone.py`, called once from `tab.setup_tile` on the STORED read (it carries `base`):
+  ONE served band `{kind: "gg_entry", lo: stop, hi: trigger, label: WORDS_1M["zone_label"] = "entry zone", note:
+  WORDS_1M["zone_note"] = "{why} · UNMEASURED"}` on a FORMING setup card (🧠 tiles included) when IMMINENT (`ready` True
+  AND `context.red_closes_chip(red_closes)` is None — GG S11 "The volume will dry up during the entries of all my
+  setups", GG X 1733882105204011109 "more than 3 red closes is red flag to me") and/or IDEAL PULLBACK (`k3_vol` ✓ AND the
+  setup's own EMA criterion ✓: 💋 `k5a_honor` · 🌀 `k7_ema21` · ➖ `k6_merge`; 🚩 and 🎾 have no EMA rule → imminent
+  only); guards: a base of ≥ 1 bar (K3 is vacuous over an empty pullback) and `ledger.plan_of` = ok. Built from the
+  criteria already on the read — no new number, no new rule; never on partial / A+ / triggered / stopped (his 11-06
+  "keep it": no EMA exit word). FE: `PatternChart` `BAND_FILL` / `BAND_NAME` `gg_entry` (gold), `CmBand.note?`, the card
+  line prints the served `note` verbatim (`GajjalaBoard` `gg-zone-<SYM>`). The 1-minute FE golden gained exactly two
+  bands (the GGB bull_flag card and its 🧠 tile, `red_closes` 3 = the boundary). Doc
+  `docs/gajjala/entry_zones_2026_11_08.md` (HIS CALLs #1–#5, #11); contract "🧪 entry zones · 🎾 SI label · ➖ EMA rank
+  (2026-11-08)"; ✨ `chart-maps-gajjala-entry-zones-2026-11-08` (routed to the 🧪 tab). UNMEASURED. Not advice.
 
 ### Chart Maps — 🧪 Gajjala · Audited — `chart_maps/gajjala/audited_rules.py` (2026-11-01)
 Ajay 2026-11-01: *"I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
@@ -1117,6 +1150,10 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   engine; the held side over its own rows from the ORIGINALS' facts (never inherited); a duplicate original is never
   rule-scored; `_tally` drops duplicates (`n_dup` served); identity `o.n + o.n_dup == a.n + a.n_dup + held.n + held.n_dup
   + original_only − audited_only − both`. Doc `docs/gajjala/audited_modifications_2026_11_01.md` § Attribution.
+- **🧪 Entry zone on the Audited cards (2026-11-08)** — the same `entry_zone.bands(read, v)` over the 🧪 cards (GG5's
+  5-minute reads overlaid): the words are `WORDS_GGA["zone_label"]` / `["zone_note"]`; a held A+ (`aplus_held`) is not
+  forming, so it carries no band; GG5 has no word, so `variant.word` is None and its cards serve `bands: []` byte for
+  byte (`test_gajjala_variant_gg5_identity.py`). Same doc, contract and ✨ as the 1-minute page's entry. UNMEASURED.
 
 ### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
 Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement

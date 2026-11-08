@@ -671,8 +671,9 @@ export type GgBoard = {
   awaiting?: { setup: string; his_call: string; text: string }[];
   sorts?: { key: string; label: string }[];
   sort?: string | null;
-  /** 🎾 2026-10-18 (DECISIONS13 D3): the served ordering word (tab.RS_ORDER_TEXT) — the squeeze sub only; null on every other
-   *  sub, absent on an older API. Printed verbatim; the FE types none. */
+  /** 🎾 2026-10-18 (DECISIONS13 D3): the served ordering word (tab.RS_ORDER_TEXT) — the squeeze sub; ➖ 2026-11-08: the fade
+   *  sub serves its own (tab.HF_ORDER_TEXT, "closest to merged on top"); null on every other sub, absent on an older API.
+   *  Printed verbatim; the FE types none. */
   order_note?: string | null;
   /** 🌀 2026-10-20 (BUILD_SPEC18 D3/D6): the served "counted, not listed" line (tab.build `list_note`) — the 🌀 Intraday VCP
    *  sub only, when reads with fewer than K4_VCP_MIN_CYCLES contractions were counted but not carded; null on every other

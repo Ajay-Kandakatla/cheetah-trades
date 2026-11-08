@@ -73,6 +73,10 @@ const BAND_FILL: Record<string, string> = {
   // alert would name" laid over the finer levels, not as one more fill.
   board_demand: 'var(--positive, #22c55e)',
   board_supply: 'var(--negative, #ef4444)',
+  // 🧪 The Gajjala entry zone (2026-11-08): stop → trigger on a forming
+  // 1-minute / Audited setup. The 🚩 board's gold (gajjala.css), because it
+  // is a RISK band — neither support (green) nor overhead (red).
+  gg_entry: 'var(--gold, #c9a227)',
 };
 
 /** A plan line's dash. `buy` and 🔑 `key` are the only SOLID lines, so a key
@@ -91,6 +95,7 @@ const BAND_NAME: Record<string, string> = {
   fvg_demand: 'Fair value gap', fvg_supply: 'Fair value gap',
   order_block: 'Order block',
   board_demand: 'Board demand', board_supply: 'Board overhead',
+  gg_entry: 'Entry zone',
 };
 
 export const PatternChart = memo(function PatternChart(

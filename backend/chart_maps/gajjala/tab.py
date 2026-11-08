@@ -70,11 +70,13 @@ a failed read lists the rows with a "not read" cell and serves `audited_compare`
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
 from chart_maps.gajjala import constants as GC
+from chart_maps.gajjala import entry_zone as EZ               # 🧪 2026-11-08 — the GG1 / GGA entry zone (GG5 serves none)
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
@@ -184,6 +186,7 @@ OUTSIDE_RTH = {"premarket": "pre-market — he uses limit orders only and less s
                "afterhours": "after-hours — he uses limit orders only and less size outside regular hours (S8 1:16:35)"}
 UNMEASURED = "UNMEASURED"
 RS_ORDER_TEXT = "🎾 lowest float on top"   # DECISIONS13 D3 — the ordering word, served as order_note on the squeeze sub
+HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top"   # 🧪 2026-11-08 — served as order_note on the fade sub; [C3] a snapshot, "closest", never a direction word
 
 
 def _vcp_listed(setup: str, r: dict) -> bool:
@@ -1014,8 +1017,15 @@ def order_key(t: dict) -> tuple:
     its trigger; forming by bars to go; partial by fewest misses, then biggest change; final tie the symbol.
     🎾 (DECISIONS13 D3, Ajay 2026-10-18 "for the float lower the better is what I wanna follow so sort it by
     lowest on top"): a reversal_squeeze card built by setup_tile (it carries `_float_shares`) sorts by float ascending, unknown last —
-    GC.RS_FLOAT_SORT "within_state" = right after the state rank; "global" = above it. Every other setup, and a read
-    without the stash (the cross-setup focus pick), keeps today's key byte-identical."""
+    GC.RS_FLOAT_SORT "within_state" = right after the state rank; "global" = above it.
+    ➖ (Ajay 2026-11-07 "I need a ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to
+    converge on all tabs"): a horizontal_fade card built by setup_tile (it carries `_ema_gap_pct`, the k6_merge number)
+    sorts by the 9/21 EMA gap ascending, unknown last. GC.HF_EMA_SORT "pre_break" (built): every read that has NOT broken
+    out — forming AND partial (a FULL-length base with the EMAs apart is partial, detectors._resolve_forming; only a
+    SHORT base stays forming) — ranks together at the forming-ready rank by the gap, today's key breaking ties; A+ /
+    held / triggered / stopped keep today's key byte-identical. "within_state" = the gap right after each state rank;
+    "global" = the gap above every state. The gap is a snapshot at the read's ref bar, never a direction.
+    Every other setup, and a read without the stash (the cross-setup focus pick), keeps today's key byte-identical."""
     g = t.get("gajjala") or {}
     key = _state_key(g, t.get("symbol") or "")
     if g.get("setup") == "reversal_squeeze" and "_float_shares" in g:
@@ -1024,7 +1034,35 @@ def order_key(t: dict) -> tuple:
         if GC.RS_FLOAT_SORT == "global":
             return (0, fkey) + key
         return key[:1] + (fkey,) + key[1:]
+    if g.get("setup") == "horizontal_fade" and "_ema_gap_pct" in g:
+        gap = g.get("_ema_gap_pct")
+        gkey = float(gap) if gap is not None else float("inf")
+        if GC.HF_EMA_SORT == "global":
+            return (0, gkey) + key
+        if GC.HF_EMA_SORT == "within_state":
+            return key[:1] + (gkey,) + key[1:]
+        if g.get("state") in ("forming", "partial"):            # pre_break: ONE bucket, gap first, today's key breaks ties
+            return (_PRE_BREAK_RANK, gkey) + key
+        return key                                              # [C6] rung / stopped cards: today's key, byte-identical
     return key
+
+
+# the k6_merge criterion's served value, verbatim (detectors._fade_checks: f"EMAs {gap/close*100:.2f}% apart")
+_EMA_GAP_RE = re.compile(r"EMAs (\d+(?:\.\d+)?)% apart")
+
+
+def _ema_gap_pct(read: dict) -> Optional[float]:
+    """The k6_merge number as the detector printed it (2 dp) — |EMA9 − EMA21| / close × 100 at the read's ref bar;
+    None when the read has no k6_merge row or the EMAs were warming ("EMAs —% apart") → sorts last. The criteria are
+    served on forming AND partial reads (detectors._set_criteria runs first), so a partial fade keeps its number."""
+    for c in (read or {}).get("criteria") or []:
+        if isinstance(c, dict) and c.get("key") == "k6_merge":
+            m = _EMA_GAP_RE.fullmatch(str(c.get("value") or ""))
+            return float(m.group(1)) if m else None
+    return None
+
+
+_PRE_BREAK_RANK = 2      # the forming-ready rank of _state_key — the ➖ pre_break bucket sits there (ONE definition)
 
 
 def _state_key(g: dict, sym: str) -> tuple:
@@ -1037,7 +1075,7 @@ def _state_key(g: dict, sym: str) -> tuple:
         return (rank, -float(digits) if digits else big, 0.0, sym)      # newest entry bar first
     if st == "forming" and g.get("ready"):
         trig, last = _f(g.get("trigger")), _f(g.get("_last"))
-        return (2, (trig - last) / last if (trig is not None and last) else big, 0.0, sym)
+        return (_PRE_BREAK_RANK, (trig - last) / last if (trig is not None and last) else big, 0.0, sym)
     if st == "forming":
         n = g.get("_bars_to_go")
         return (3, float(n) if isinstance(n, int) else big, 0.0, sym)
@@ -1133,9 +1171,11 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         g["audit"] = read["audit"]
     if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
         g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
+    if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
+        g["_ema_gap_pct"] = _ema_gap_pct(read)
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
     return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
-            "vol_avg": vol_avg, "bands": [], "lines": _tile_lines(read), "markers": markers, "stats": stats,
+            "vol_avg": vol_avg, "bands": EZ.bands(read, vv), "lines": _tile_lines(read), "markers": markers, "stats": stats,
             "why": read.get("reason") or "", "badges": [], "curves": fr["curves"], "gajjala": g}
 
 
@@ -1146,6 +1186,7 @@ def _strip_private(tiles: list) -> None:
             g.pop("_last", None)
             g.pop("_bars_to_go", None)
             g.pop("_float_shares", None)
+            g.pop("_ema_gap_pct", None)
 
 
 def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: dict, sess: dict,
@@ -1969,7 +2010,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
     if sub_k in per_setup:
         out["tiles"] = per_setup[sub_k][:lim]
-        out["order_note"] = RS_ORDER_TEXT if sub_k == "reversal_squeeze" else None   # DECISIONS13 D3 — served word
+        out["order_note"] = (RS_ORDER_TEXT if sub_k == "reversal_squeeze" else          # DECISIONS13 D3 — served word
+                             HF_ORDER_TEXT if sub_k == "horizontal_fade" else None)  # 🧪 2026-11-08 — the ➖ word
         out["list_note"] = (_soft("vcp list note", vcp_list_note, unlisted.get(sub_k, 0))
                             if sub_k == "intraday_vcp" else None)                # BUILD_SPEC18 D3 — served line
         e, label = SUB_META[sub_k]
@@ -2042,7 +2084,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     return _plain(out)
 
 
-__all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "state_label", "strip_text", "session_for", "first15",
+__all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block"]

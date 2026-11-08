@@ -22,6 +22,30 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-07 / 2026-11-08 (verbatim in the labels, his spelling kept), three asks the same night: (1) "On the Gajjalas
+  // Audited and Gajjalas 1 min tab can you add entry signal on the chart please like a small zone. Based on what he said,
+  // Like when its imminent with volume drying and selling pressure is low. and Also when the pullback is ideal and close
+  // EMAs I guess based on what he says." (2) "Also for the reversal squeeze I need short interest to be show on all the 3
+  // of his tab as a label. But others are only in the tabs I told you to on the top" (3) "On the horizonal fade I need a
+  // ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs".
+  // (1) backend chart_maps/gajjala/entry_zone.py: ONE served band (kind gg_entry, lo = stop, hi = trigger, label
+  // "entry zone", note = the served sentence) on a FORMING setup card of the 1-minute page and the 🧪 Audited tab only —
+  // the words live in variant.WORDS_1M / WORDS_GGA, so 🚩 Gajjala's (GG5) serves bands: [] byte for byte. Imminent =
+  // ready True AND the red-closes chip engine shows no flag; ideal pullback = K3 volume dry AND the setup's own EMA
+  // criterion (💋 k5a_honor · 🌀 k7_ema21 · ➖ k6_merge). Built from the criteria already on the read; no new number.
+  // (2) FE only: GgShortInterestLabel prints the SERVED 🩳 chip text under the plan of every 🎾 card on all three tabs
+  // (useShortInterest + siChip, the ONE engine short_interest/read.py); the muted chip is skipped on 🎾 cards only.
+  // (3) constants.HF_EMA_SORT = "pre_break" (MINE): on the ➖ sub the reads that have not broken out rank by the k6_merge
+  // number (|9 − 21 EMA| as % of close, a SNAPSHOT — "closest to merged", never a direction) ascending, unknown last;
+  // A+/held/triggered/stopped keep today's order on top; the sub serves tab.HF_ORDER_TEXT as its order_note. Docs
+  // docs/gajjala/{entry_zones,card_labels,fade_ema_rank}_2026_11_08.md. Everything UNMEASURED; nothing gates, rings
+  // or trades. GG has no short-interest rule (verified_rules U10) — a label, never a filter.
+  { id: 'chart-maps-gajjala-entry-zones-2026-11-08', addedAt: '2026-11-08', route: '/chart-maps?tab=gajjala_audited',
+    label: "🧪 Entry zone on the 1-minute and Audited cards — Ajay: “On the Gajjalas Audited and Gajjalas 1 min tab can you add entry signal on the chart please like a small zone. Based on what he said, Like when its imminent with volume drying and selling pressure is low. and Also when the pullback is ideal and close EMAs I guess based on what he says.” A forming card on 🚩 Gajjala's 1-min and 🧪 Gajjala · Audited now draws a gold band from the stop to the trigger, with one served line under the chart saying why: imminent (trigger armed, volume dry, no red-closes flag) and/or ideal pullback (low volume and the setup's own EMA rule — 💋 honours the 9 EMA, 🌀 holds the 21 EMA, ➖ 9 and 21 EMA merged). Built only from the rules already on the card; no new number. The 🚩 5-minute tab is unchanged, as you asked. It is a level to watch, never a word that says buy. Nothing here trades, gates or rings. UNMEASURED. Not advice." },
+  { id: 'chart-maps-gajjala-squeeze-si-label-2026-11-08', addedAt: '2026-11-08', route: '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+    label: "🎾 Short interest on every Reversal Squeeze card — Ajay: “Also for the reversal squeeze I need short interest to be show on all the 3 of his tab as a label.” Each 🎾 card on 🚩 Gajjala's, the 1-min page and 🧪 Audited now prints the FINRA short-interest line in bold under the plan (short as % of float or of shares, days to cover, settlement date), the same served words the small 🩳 chip carried; the chip row no longer repeats it on 🎾 cards. No record, no line — never a zero. A count of open short positions with its date, published twice a month by FINRA — not a forecast and not a filter: GG has no short-interest rule in any source. UNMEASURED. Not advice." },
+  { id: 'chart-maps-gajjala-fade-ema-rank-2026-11-08', addedAt: '2026-11-08', route: '/chart-maps?tab=gajjala&sub=horizontal_fade',
+    label: "➖ Horizontal Fade ranked by the 9 and 21 EMA — Ajay: “On the horizonal fade I need a ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs”. On the ➖ sub of all three tabs the cards that have not broken out are now ordered closest to merged on top — how far apart the 9 and 21 EMA are right now, not which way they are moving — using the number the K6 line already prints (“EMAs 0.42% apart”); A+ and triggered cards keep their place on top, unknown last. The sub says so in its own line. Order only: no card added or hidden, nothing gates, rings or trades. UNMEASURED. Not advice." },
   // Ajay 2026-11-06 (verbatim in the label, his spelling kept): "If I click on Gajjalas tab stocks show me "Gajjalas chart"
   // in supply and demand of his view by default mainly.." and "Like if he looks at 24 hours or 2 week or anything else that
   // is what I would like to see". The served 🚩 tile href now carries the Support-tab frame KEY of the frame the card is

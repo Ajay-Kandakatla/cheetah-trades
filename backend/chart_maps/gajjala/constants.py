@@ -88,6 +88,8 @@ K8_HISTORY_RANGE_PCT = 50.0              # Ajay K8: (high - low)/low >= 50% OR a
 FLOAT_SUSPECT_POLICY = "ineligible"      # spec default (R1-9b not answered): a float on file > shares out -> unknown -> ineligible
 FLOAT_SUSPECT_POLICIES = ("ineligible", "shares_out")
 RS_FLOAT_SORT = "within_state"           # MINE (DECISIONS13 D3) — state rank first, then float ascending, unknown last; "global" = float above the state rank (HIS CALL Q1)
+HF_EMA_SORT = "pre_break"               # MINE (Ajay 2026-11-07 "I need a ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs") — ➖ reads that have NOT broken out (forming AND partial) rank together by |9 − 21 EMA| as % of close (the k6_merge number, a snapshot) ascending, unknown last; A+/held/triggered/stopped keep today's key on top. "within_state" = the 🎾 twin (gap after each state rank; partial always below forming); "global" = the gap above every state (HIS CALL #6 of docs/gajjala/fade_ema_rank_2026_11_08.md)
+HF_EMA_SORTS = ("pre_break", "within_state", "global")   # MINE — the three ➖ orders HF_EMA_SORT may name (HIS CALL #6)
 # K9 premarket / K10 post-market
 K9_PM_MIN_VOLUME = 1_000_000             # Ajay K9: accumulated premarket volume >= 1,000,000
 K9_AH_CARRY_PCT = 10.0                   # Ajay K9: prior-day after-hours move >= 10% vs the regular close

@@ -512,7 +512,15 @@
     },
     {
      "badges": [],
-     "bands": [],
+     "bands": [
+      {
+       "hi": 10.9375,
+       "kind": "gg_entry",
+       "label": "entry zone",
+       "lo": 10.8125,
+       "note": "imminent — trigger armed, volume dry, no more than 3 red closes in a row · UNMEASURED"
+      }
+     ],
      "bars": [
       {
        "c": 10.0,
@@ -978,7 +986,15 @@
    "tiles": [
     {
      "badges": [],
-     "bands": [],
+     "bands": [
+      {
+       "hi": 10.9375,
+       "kind": "gg_entry",
+       "label": "entry zone",
+       "lo": 10.8125,
+       "note": "imminent — trigger armed, volume dry, no more than 3 red closes in a row · UNMEASURED"
+      }
+     ],
      "bars": [
       {
        "c": 10.0,

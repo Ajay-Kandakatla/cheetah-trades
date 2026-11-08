@@ -140,7 +140,10 @@ WORDS_1M: Mapping = MappingProxyType({
     "ledger_counts_lead_shadow": "🧠 shadow — recorded, never sent",
     "ledger_counts_lead_pushed": "🧠 live — sent to your phone",
     "ledger_counts_lead_mixed": "🧠 shadow (recorded, never sent) + live (sent)",
-    "ledger_empty": "No 1-minute alert recorded on this span yet (the record starts {from}).",
+    "ledger_empty": "No 1-minute alert recorded on this span yet (the record starts {from}).",    # 🧪 2026-11-08 (entry_zone.py; Ajay "add entry signal on the chart please like a small zone") — [C1] the band's SHORT
+    # label (chart <title> + crosshair readout) and the card line's sentence ({why} = entry_zone's reasons, joined)
+    "zone_label": "entry zone",
+    "zone_note": "{why} · UNMEASURED",
 })
 # The 2026-10-27 shadow sentences — served INSTEAD of WORDS_1M's for these keys while GAJJALA_1M_PUSH_MODE reads
 # "shadow" (fail closed: any value but "live"), so a flip back never leaves "rings your phone" on the page.
@@ -252,7 +255,10 @@ WORDS_GGA: Mapping = MappingProxyType({
     "per_rule_not_judged": "{n} recorded before this rule joined — not judged",
     "per_rule_no_rows": "no A+ judged on this rule yet",
     "per_rule_t4_fired": "fired on {fired} rung bars · alone on {alone}",
-    "per_rule_t1_tie": "{n} held on a tied bar — 🚩's ring order broke the tie",
+    "per_rule_t1_tie": "{n} held on a tied bar — 🚩's ring order broke the tie",    # 🧪 2026-11-08 (entry_zone.py; Ajay "add entry signal on the chart please like a small zone") — [C1] the band's SHORT
+    # label (chart <title> + crosshair readout) and the card line's sentence ({why} = entry_zone's reasons, joined)
+    "zone_label": "entry zone",
+    "zone_note": "{why} · UNMEASURED",
 })
 
 

@@ -167,13 +167,14 @@ import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { GgTraderChip } from './GgTraderChip';
+import { GgShortInterestLabel } from './GgShortInterestLabel';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useCardLive } from '../hooks/useCardLive';
 import { cardLiveSymbols, liveVsText, patchTiles, type CardLiveLevels } from '../lib/cardLive';
-import type { CmTapeSession } from '../lib/chartMaps';
+import type { CmBand, CmTapeSession } from '../lib/chartMaps';
 import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
@@ -727,7 +728,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                      ref={(el) => { if (el) tileRefs.current.set(t.symbol, el); else tileRefs.current.delete(t.symbol); }}>
                   <div className="cm-tile-chips" data-testid={`gg-chips-${t.symbol}`}>
                     <GrowthChip symbol={t.symbol} />
-                    {' '}<ShortInterestChip symbol={t.symbol} />
+                    {/* 🎾 2026-11-08 [C7]: on a Reversal Squeeze card the SI prints ONCE, as the bold label under the plan
+                        (GgShortInterestLabel) — the muted chip is skipped here on that setup only; every other row unchanged. */}
+                    {t.gajjala?.setup !== 'reversal_squeeze' ? <>{' '}<ShortInterestChip symbol={t.symbol} /></> : null}
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
                     <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`}
@@ -760,6 +763,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                       {t.name ? ` ${t.name}` : ''}
                     </div>
                   )}
+                  <GgZoneLines tile={t} />
                   <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} sym={t.symbol} live={liveVsText(t)} />
                   {brokerEditable && brokerBlock ? (
                     <BrokerToggle sym={t.symbol} on={typeof t.broker_text === 'string' && t.broker_text.trim() !== ''}
@@ -898,6 +902,20 @@ function ggLiveLevels(tiles: GgTile[], boardTf: string | null): CardLiveLevels {
   return out;
 }
 
+/** 🧪 2026-11-08 [C1]: the SERVED entry-zone sentence (`note` of each `gg_entry` band) as a card line under the chart —
+ *  phones have no hover. The short `label` stays on the chart only. GG5 tiles serve `bands: []` → nothing. The narrowing
+ *  reads `note` as unknown so a band without a string note prints nothing. */
+function GgZoneLines({ tile }: { tile: GgTile }) {
+  const notes = (tile.bands || [])
+    .filter((b) => b && b.kind === 'gg_entry')
+    .map((b) => (b as CmBand & { note?: unknown }).note)
+    .filter((n): n is string => typeof n === 'string' && n.trim() !== '');
+  if (!notes.length) return null;
+  return <>{notes.map((n, i) => (
+    <div key={`${i}-${n}`} className="cm-note gg-line gg-zone" data-testid={`gg-zone-${tile.symbol}`}>{n}</div>
+  ))}</>;
+}
+
 /** State pill, plan line, the 🔴 served live line, criteria checklist and the chip row under a tile. */
 function CardExtras({ read, board, sub, sym, live }: {
   read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null;
@@ -944,6 +962,8 @@ function CardExtras({ read, board, sub, sym, live }: {
             .filter(Boolean).join(' · ')}
         </div>
       ) : null}
+      {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
+      {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
       {live ? <div className="cm-note gg-line gg-live" data-testid={`gg-live-${sym}`}>{live}</div> : null}
       {read.criteria?.length ? (

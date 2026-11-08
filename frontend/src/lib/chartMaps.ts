@@ -682,7 +682,9 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
 export type CmBand = {
-  kind: 'base' | 'demand' | 'supply' | 'neutral' | 'board_demand' | 'board_supply'; lo: number; hi: number; label?: string;
+  kind: 'base' | 'demand' | 'supply' | 'neutral' | 'board_demand' | 'board_supply' | 'gg_entry'; lo: number; hi: number; label?: string;
+  /** 🧪 entry zone sentence, printed as a card line; the chart shows `label` only. */
+  note?: string;
   /** 🧱 The served 1% pad under a demand floor (2026-09-30,
    *  supply_demand/level_pad.pad_fields). `lo` stays the DRAWN edge; the pad
    *  is drawn as a lighter strip from `lo` down to `pad_lo` (lib/zonePad.ts).

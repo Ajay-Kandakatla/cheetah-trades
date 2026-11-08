@@ -57,6 +57,11 @@
 .gg-criteria .gg-unjudged { color: var(--ink-subtle, #94a3b8); }
 .gg-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .gg-line { margin: 0; }
+/* 🎾 2026-11-08: the served short-interest chip text as a bold label under the plan (Reversal Squeeze cards, all three
+   tabs). 🧪 2026-11-08: the served entry-zone sentence under the chart, edged in the board's gold. Both ride .gg-line,
+   which already wraps at 430 px — the phone selector lists above are untouched. */
+.gg-si-label { font-weight: 600; }
+.gg-zone { border-left: 2px solid var(--gold, #c9a227); padding-left: .4rem; }
 
 .gg-recap ul { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.8rem; }
 

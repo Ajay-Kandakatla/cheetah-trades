@@ -177,7 +177,8 @@ def test_words_frozen_and_built_from_the_variant():
     assert V.word("ledger_empty", V.GG1) == "No 1-minute alert recorded on this span yet (the record starts 2026-10-27)."
     assert V.word("nope", V.GG1) is None
     for k in V.WORDS_1M:
-        txt = V.word(k, V.GG1, open="04:00", close="20:00", cad=1, rth_open="09:30", mute_end="09:45", n=15)
+        txt = V.word(k, V.GG1, open="04:00", close="20:00", cad=1, rth_open="09:30", mute_end="09:45", n=15,
+                    why="why")
         assert "{" not in txt and "b" + "ounc" not in txt.lower(), k
         assert "minervini" not in txt.lower() and "bonde" not in txt.lower(), k
 

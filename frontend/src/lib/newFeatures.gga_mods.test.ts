@@ -25,10 +25,12 @@ describe('✨ the 🧪 audited-modifications entry', () => {
   // WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …")
   // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fourth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05 and the 🏁 one-count ✨ 2026-11-02 went first), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-chart-frame-2026-11-06');
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[2].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[3].id).toBe(ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[5].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[6].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');

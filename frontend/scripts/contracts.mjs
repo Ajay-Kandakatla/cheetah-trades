@@ -9779,7 +9779,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 30) → slice(0, 31).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 33) → slice(0, 36).
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10004,7 +10005,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 27) → slice(0, 28).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 30) → slice(0, 33).
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10312,7 +10314,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 26) → slice(0, 27).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 29) → slice(0, 32).
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10522,7 +10525,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 21) → slice(0, 22).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 24) → slice(0, 27).
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10631,7 +10635,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 25) → slice(0, 26).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 28) → slice(0, 31).
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10791,7 +10796,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 22) → slice(0, 23).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 25) → slice(0, 28).
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10918,7 +10924,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 23) → slice(0, 24).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 26) → slice(0, 29).
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10979,7 +10986,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 19) → slice(0, 20).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 22) → slice(0, 25).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11129,7 +11137,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 20) → slice(0, 21).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 23) → slice(0, 26).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11222,7 +11231,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 18) → slice(0, 19).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 21) → slice(0, 24).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11348,7 +11358,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 17) → slice(0, 18).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 20) → slice(0, 23).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11549,7 +11560,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 16) → slice(0, 17).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 19) → slice(0, 22).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11613,7 +11625,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 15) → slice(0, 16).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 18) → slice(0, 21).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11697,7 +11710,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 14) → slice(0, 15).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 17) → slice(0, 20).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11775,7 +11789,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 13) → slice(0, 14).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 16) → slice(0, 19).
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12124,7 +12139,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 12) → slice(0, 13).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 15) → slice(0, 18).
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12298,7 +12314,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 10) → slice(0, 11).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 13) → slice(0, 16).
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12521,7 +12538,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 11) → slice(0, 12).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 14) → slice(0, 17).
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12623,7 +12641,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 9) → slice(0, 10).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 12) → slice(0, 15).
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12733,7 +12752,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 8) → slice(0, 9).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 11) → slice(0, 14).
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12873,7 +12893,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 7) → slice(0, 8).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 10) → slice(0, 13).
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13003,7 +13024,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 6) → slice(0, 7).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 9) → slice(0, 12).
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13334,7 +13356,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 4) → slice(0, 5).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 7) → slice(0, 10).
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13358,7 +13381,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST) — FIRST → one of the first two.
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      if (nf && !ids2.slice(0, 4).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 4).join(', ') || 'none'}')`);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
+      if (nf && !ids2.slice(0, 7).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 7).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13634,7 +13658,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 3) → slice(0, 4).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 6) → slice(0, 9).
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -13861,7 +13886,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-02: luk-track-record-one-count FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …") — slice(0, 2) → slice(0, 3).
       // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST).
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
+      // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 5) → slice(0, 8).
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -13995,7 +14021,8 @@ const CONTRACTS = [
         const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
         // WIDENED +1 (2026-11-05: the 🏁 three-track-records-alike ✨ went FIRST) — first → first two.
         // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
-        if (!ids.slice(0, 3).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 3).join(', ') || 'none'}')`);
+        // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
+        if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14085,7 +14112,8 @@ const CONTRACTS = [
         const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
         const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
         // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — first → first two.
-        if (!ids.slice(0, 2).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 2).join(', ') || 'none'}')`);
+        // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
+        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14204,7 +14232,8 @@ const CONTRACTS = [
       if (nf) {
         const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
         const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
-        if (ids[0] !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found '${ids[0] || 'none'}')`);
+        // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — FIRST → one of the first four.
+        if (!ids.slice(0, 4).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 4).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14234,6 +14263,145 @@ const CONTRACTS = [
       if (d2 && !d2.includes("## 🚩 The card's href carries his frame (2026-11-06)")) errs.push("docs/gajjala/gajjala_tab_2026_10_13.md must carry the dated section \"🚩 The card's href carries his frame (2026-11-06)\"");
       const sp = tryRead('../SPECS.md', 'SPECS.md');
       if (sp && !sp.includes("**🚩 Gajjala's chart on the stock page (2026-11-06)**")) errs.push("SPECS.md must carry the bullet \"🚩 Gajjala's chart on the stock page (2026-11-06)\"");
+      return errs;
+    },
+  },
+  {
+    name: "🧪 entry zones · 🎾 SI label · ➖ EMA rank (2026-11-08)",
+    file: 'src/components/GajjalaBoard.tsx',
+    checks(sc) {
+      // Ajay 2026-11-07 / 11-08 (verbatim): (1) "On the Gajjalas Audited and Gajjalas 1 min tab can you add entry signal on the
+      // chart please like a small zone. Based on what he said, Like when its imminent with volume drying and selling pressure
+      // is low. and Also when the pullback is ideal and close EMAs I guess based on what he says." (2) "Also for the reversal
+      // squeeze I need short interest to be show on all the 3 of his tab as a label." (3) "On the horizonal fade I need a
+      // ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs".
+      // Every check reads the REAL file: (1) backend — HF_EMA_SORT names one of HF_EMA_SORTS and is tagged MINE; tab.py
+      // serves HF_ORDER_TEXT ("closest", never a direction word), declares _ema_gap_pct and keys order_key on it for the
+      // fade; entry_zone.py's ZONE_KIND is the FE band kind; variant.py carries zone_label + zone_note in BOTH word tables
+      // (GG5 has none → bands: [] byte for byte); (2) FE — PatternChart knows the kind (fill + name), CmBand carries the
+      // kind and `note`, GajjalaBoard mounts GgShortInterestLabel on 🎾 reads only, skips the muted chip there only, and
+      // prints the zone note; (3) the three ✨ — the first three, once each, dated, routed, his words verbatim, UNMEASURED,
+      // "Not advice.", never "edge" / the b-word, the rank entry says "closest to merged" and never "converging" outside
+      // his quote; (4) docs + SPECS carry the dated sections. No gate, rule, threshold, claim or push is read or changed.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\(['"\\])/g, '$1');
+      const field = (body, name) => {
+        const m = new RegExp(`\\b${name}: (?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`).exec(body);
+        return m ? unesc(m[1] ?? m[2]) : null;
+      };
+      const count = (hay, needle) => hay.split(needle).length - 1;
+      // (1) the backend
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'gajjala/constants.py');
+      if (gc) {
+        const m = /^HF_EMA_SORT = "([a-z_]+)"\s+# MINE/m.exec(gc);
+        if (!m) errs.push('gajjala/constants.py must declare HF_EMA_SORT = "<order>"  # MINE (the ➖ order is Ajay\'s default, not GG\'s)');
+        const ms = /^HF_EMA_SORTS = \(([^)]*)\)/m.exec(gc);
+        if (!ms) errs.push('gajjala/constants.py must declare HF_EMA_SORTS = (...) (the three ➖ orders by name)');
+        else {
+          const names = [...ms[1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]);
+          for (const w of ['pre_break', 'within_state', 'global']) if (!names.includes(w)) errs.push(`HF_EMA_SORTS must name "${w}"`);
+          if (m && !names.includes(m[1])) errs.push(`HF_EMA_SORT "${m[1]}" must be one of HF_EMA_SORTS`);
+        }
+      }
+      const gt = tryRead('../backend/chart_maps/gajjala/tab.py', 'gajjala/tab.py');
+      if (gt) {
+        const ot = /^HF_ORDER_TEXT = "([^"]+)"/m.exec(gt);
+        if (!ot) errs.push('gajjala/tab.py must declare HF_ORDER_TEXT = "…" (the ➖ sub\'s served order_note)');
+        else {
+          if (!ot[1].includes('closest')) errs.push('HF_ORDER_TEXT must say "closest" (the k6_merge number is a snapshot)');
+          if (/converg/i.test(ot[1])) errs.push('HF_ORDER_TEXT must not say "converging" (a direction the read does not measure — HIS CALL #16)');
+        }
+        if (count(gt, '\ndef _ema_gap_pct(') !== 1) errs.push('gajjala/tab.py must declare def _ema_gap_pct( exactly once (the ONE parse of the k6_merge value)');
+        const a = gt.indexOf('\ndef order_key(');
+        const b = a < 0 ? -1 : gt.indexOf('\ndef ', a + 1);
+        const body = a < 0 ? '' : gt.slice(a, b < 0 ? undefined : b);
+        if (!body) errs.push('gajjala/tab.py must declare def order_key(');
+        else {
+          if (!body.includes('horizontal_fade')) errs.push('tab.order_key must branch on horizontal_fade (the ➖ rank)');
+          if (!body.includes('_ema_gap_pct')) errs.push('tab.order_key must key the ➖ branch on _ema_gap_pct');
+          if (!body.includes('HF_EMA_SORT')) errs.push('tab.order_key must read GC.HF_EMA_SORT (one word in constants.py flips the order)');
+        }
+        if (!gt.includes('entry_zone')) errs.push('gajjala/tab.py must call the entry_zone module (setup_tile serves its bands)');
+        if (!gt.includes('HF_ORDER_TEXT if sub_k == "horizontal_fade"')) errs.push('tab.build must serve HF_ORDER_TEXT as order_note on the ➖ sub only');
+      }
+      const ez = tryRead('../backend/chart_maps/gajjala/entry_zone.py', 'gajjala/entry_zone.py');
+      if (ez) {
+        if (!/^ZONE_KIND = "gg_entry"/m.test(ez)) errs.push('entry_zone.py must declare ZONE_KIND = "gg_entry" (== the FE band kind)');
+        for (const d of ['\ndef bands(', '\ndef reasons(', '\ndef why_imminent(', '\ndef why_pullback(']) if (!ez.includes(d)) errs.push(`entry_zone.py must declare ${d.trim()}`);
+        if (!ez.includes('plan_of')) errs.push('entry_zone.py must guard the zone with ledger.plan_of (the ONE plan rule)');
+        if (!ez.includes('red_closes_chip')) errs.push('entry_zone.py must read context.red_closes_chip (the ONE red-closes engine)');
+        if (/\bbuy\b/i.test(ez.replace(/#.*$/gm, '').replace(/"""[\s\S]*?"""/g, ''))) errs.push('entry_zone.py must serve no "buy" word (a level to watch, never advice)');
+      }
+      const vp = tryRead('../backend/chart_maps/gajjala/variant.py', 'gajjala/variant.py');
+      if (vp) {
+        if (count(vp, '"zone_label":') !== 2) errs.push(`variant.py must carry "zone_label" in exactly two word tables (WORDS_1M + WORDS_GGA; found ${count(vp, '"zone_label":')})`);
+        if (count(vp, '"zone_note":') !== 2) errs.push(`variant.py must carry "zone_note" in exactly two word tables (WORDS_1M + WORDS_GGA; found ${count(vp, '"zone_note":')})`);
+        const zn = [...vp.matchAll(/"zone_note": "([^"]+)"/g)].map((x) => x[1]);
+        for (const t of zn) { if (!t.includes('{why}')) errs.push('zone_note must carry the {why} placeholder'); if (!t.includes('UNMEASURED')) errs.push('zone_note must say UNMEASURED'); }
+      }
+      // (2) the FE
+      const pc = tryRead('src/components/PatternChart.tsx', 'PatternChart');
+      if (pc) {
+        if (!/gg_entry: 'var\(--gold/.test(pc)) errs.push("PatternChart BAND_FILL must carry gg_entry: 'var(--gold, …)' (the zone's own fill)");
+        if (!/gg_entry: 'Entry zone'/.test(pc)) errs.push("PatternChart BAND_NAME must carry gg_entry: 'Entry zone'");
+      }
+      const cm = tryRead('src/lib/chartMaps.ts', 'chartMaps');
+      if (cm) {
+        if (!/kind: [^;]*'gg_entry'/.test(cm)) errs.push("lib/chartMaps.ts CmBand.kind must admit 'gg_entry'");
+        if (!/note\?: string/.test(cm)) errs.push('lib/chartMaps.ts CmBand must carry note?: string (the zone sentence the card line prints)');
+      }
+      if (!sc.includes("import { GgShortInterestLabel } from './GgShortInterestLabel';")) errs.push('GajjalaBoard must import GgShortInterestLabel (own module, the GgTraderChip pattern)');
+      if (!sc.includes("read.setup === 'reversal_squeeze' ? <GgShortInterestLabel")) errs.push('GajjalaBoard must mount GgShortInterestLabel on reversal_squeeze reads only');
+      if (!sc.includes("t.gajjala?.setup !== 'reversal_squeeze' ? <>{' '}<ShortInterestChip")) errs.push('GajjalaBoard must skip the muted ShortInterestChip on 🎾 cards only (Rule #5: the SI prints once)');
+      if (!sc.includes("b.kind === 'gg_entry'")) errs.push('GajjalaBoard must print the gg_entry band notes as card lines');
+      const gl = tryRead('src/lib/gajjala.ts', 'lib/gajjala');
+      if (gl && !gl.includes('HF_ORDER_TEXT')) errs.push('lib/gajjala.ts order_note comment must name tab.HF_ORDER_TEXT (the ➖ sub serves one too)');
+      // (3) the three ✨
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      if (nf) {
+        const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+        const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((x) => x[1]);
+        const want = [
+          ['chart-maps-gajjala-entry-zones-2026-11-08', '/chart-maps?tab=gajjala_audited',
+           'On the Gajjalas Audited and Gajjalas 1 min tab can you add entry signal on the chart please like a small zone. Based on what he said, Like when its imminent with volume drying and selling pressure is low. and Also when the pullback is ideal and close EMAs I guess based on what he says.'],
+          ['chart-maps-gajjala-squeeze-si-label-2026-11-08', '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+           'Also for the reversal squeeze I need short interest to be show on all the 3 of his tab as a label.'],
+          ['chart-maps-gajjala-fade-ema-rank-2026-11-08', '/chart-maps?tab=gajjala&sub=horizontal_fade',
+           'On the horizonal fade I need a ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs'],
+        ];
+        for (const [ID, route, his] of want) {
+          if (!ids.slice(0, 3).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 3).join(', ') || 'none'}')`);
+          if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+          const a = nfArr.indexOf(`{ id: '${ID}'`);
+          if (a < 0) continue;
+          const nx = nfArr.indexOf("{ id: '", a + 1);
+          const e = nfArr.slice(a, nx < 0 ? undefined : nx);
+          if (field(e, 'addedAt') !== '2026-11-08') errs.push(`the ✨ '${ID}' must be dated 2026-11-08`);
+          if (field(e, 'route') !== route) errs.push(`the ✨ '${ID}' must route to ${route}`);
+          const label = field(e, 'label') || '';
+          if (!label.includes(`“${his}”`)) errs.push(`the ✨ '${ID}' label must quote him verbatim: “${his.slice(0, 40)}…”`);
+          if (!label.includes('UNMEASURED')) errs.push(`the ✨ '${ID}' label must say UNMEASURED`);
+          if (!label.includes('Not advice.')) errs.push(`the ✨ '${ID}' label must end "Not advice."`);
+          if (/\bedge\b/i.test(label)) errs.push(`the ✨ '${ID}' label must not say "edge"`);
+          if (label.toLowerCase().includes('b' + 'ounc')) errs.push(`the ✨ '${ID}' label must not use the b-word (say "reversal")`);
+          if (ID.includes('fade-ema-rank')) {
+            if (!label.includes('closest to merged')) errs.push('the ➖ rank ✨ must say "closest to merged" (a snapshot, not a direction)');
+            if (/converg/i.test(label.replace(/“[^”]*”/g, ''))) errs.push('the ➖ rank ✨ must not say "converging" outside his quote (HIS CALL #16)');
+          }
+        }
+      }
+      // (4) docs + SPECS
+      for (const [rel, h1] of [
+        ['../docs/gajjala/entry_zones_2026_11_08.md', '# 🧪 / 1-min entry zone — 2026-11-08'],
+        ['../docs/gajjala/card_labels_2026_11_08.md', '# 🎾 Short-interest label · 🧪 entry-zone card line — Gajjala cards (2026-11-08)'],
+        ['../docs/gajjala/fade_ema_rank_2026_11_08.md', '# ➖ Horizontal Fade — 9 / 21 EMA rank on all three tabs — 2026-11-08'],
+      ]) { const d = tryRead(rel, 'the dated doc'); if (d && !d.startsWith(h1)) errs.push(`${rel} must open with "${h1}"`); }
+      const sp = tryRead('../SPECS.md', 'SPECS.md');
+      for (const t of ['**🎾 Short-interest label · ➖ 9/21 EMA rank (2026-11-08)**', '**🧪 Entry zone on the 1-minute cards (2026-11-08)**', '**🧪 Entry zone on the Audited cards (2026-11-08)**'])
+        if (sp && !sp.includes(t)) errs.push(`SPECS.md must carry the bullet "${t}"`);
       return errs;
     },
   },

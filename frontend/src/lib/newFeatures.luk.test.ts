@@ -25,11 +25,13 @@ describe("✨ the 🥇 Luk's go-live entry", () => {
   // WIDENED +1 (2026-11-02: the 🏁 one-count / 🥇 Luk's-🏁 ✨ went FIRST — Ajay: "Can you make Luk's track record similar to Gajjal's …")
   // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fifth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05, the 🏁 one-count ✨ 2026-11-02, the 🧪 audited-modifications ✨ 2026-11-01 went first), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-chart-frame-2026-11-06');
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[2].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
-    expect(NEW_FEATURES[4].id).toBe(LIVE_ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[5].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
+    expect(NEW_FEATURES[7].id).toBe(LIVE_ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -66,7 +68,7 @@ describe("✨ the 🥇 Luk's tab entry", () => {
 
   // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — every NEW_FEATURES[n] pin below → [n+1].
   it('is sixth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05, the 🏁 one-count ✨ 2026-11-02, then the 🧪 audited-modifications ✨ and the go-live 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[5].id).toBe(ID);
+    expect(NEW_FEATURES[8].id).toBe(ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -97,7 +99,7 @@ describe("✨ the 🥇 Luk's tab entry", () => {
 
   it('NEGATIVE: listed once; the 🧪 audited entry moved to seventh, not dropped', () => {
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-audited-2026-11-01');
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-audited-2026-11-01');
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });
