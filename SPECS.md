@@ -1177,6 +1177,20 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   5-minute reads overlaid): the words are `WORDS_GGA["zone_label"]` / `["zone_note"]`; a held A+ (`aplus_held`) is not
   forming, so it carries no band; GG5 has no word, so `variant.word` is None and its cards serve `bands: []` byte for
   byte (`test_gajjala_variant_gg5_identity.py`). Same doc, contract and ✨ as the 1-minute page's entry. UNMEASURED.
+- **🧪 K3S — K3 volume-dry not binding on the 🎾 base (2026-11-09)** (*"yes change the audit as per you like that is yours
+  I need you to make it successful and earn money that is the goal"*): a third registry KIND, `KIND_ADMIT`, ON on 🧪 only
+  (`REGISTRY` 13 ids, K3S last; prereg `PREREG3_SHA256` be966681e317…, `tests/fixtures/gajjala/audited_k3s_prereg_2026_11_09.md`;
+  `AUDIT_VERSION` 3). A 🚩 `reversal_squeeze` read that broke "partial" with `missed` exactly `["k3_vol"]` is re-read ON ITS
+  BREAK BAR through the ONE detector (`detectors.reversal_squeeze(..., k3_binding=False)`; the default True = 🚩's bytes),
+  K11 re-applied with the pass's own session volume (fail-closed), then handed through the same refusal chain, `judge(...,
+  admit="K3S")`, T1, shadow claim and `#held` marker as any 🚩 A+ — inside `audited_pass.run_step` only. 🚩's own plan;
+  no new number; `K3_VOL_FRAC` untouched; GG5 byte-identical; pushes SHADOW; `OWNER_KEEP_SET` seven. Every 🎾 partial
+  break leaves one first-wins `#partial_break` row (never a 🏁 row, never a claim) for the prereg's placebo. The audit
+  block gains `admit` (None on every non-K3S block); the compare block gains `admitted` ("🧪 only": W / L / filled /
+  mean R / held-by / same-day original) and `recon.admitted`; the per-rule table gains a K3S row. The card prints the
+  audit's words through the served `state_label` on the break pass only. Doc `docs/gajjala/audited_k3s_2026_11_09.md`
+  (HIS CALLs #37–#49); LEDGER.md row '🧪 K3S' 2026-11-09; contract "🧪 K3S (2026-11-09)"; ✨
+  `chart-maps-gajjala-audited-k3s-2026-11-09`. UNMEASURED — n ≥ 30 rings before any word. Not advice.
 
 ### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
 Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement

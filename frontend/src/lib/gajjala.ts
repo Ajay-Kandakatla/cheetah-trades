@@ -233,6 +233,8 @@ export type GgAudit = {
   values?: Record<string, Record<string, unknown> | null> | null;
   text?: string | null;
   version?: number | null;
+  /** 🧪 K3S (2026-11-09): the admit rule's id when THIS tab admitted a read 🚩 reads 'broke — not A+'; null otherwise. */
+  admit?: string | null;
 };
 /** One served registry row of the 🧪 strip (audited_rules.registry_rows) — words only. */
 export type GgAuditedRegistryRow = {
@@ -249,7 +251,7 @@ export type GgAuditedRegistryRow = {
   changes_text?: string | null;
   applies?: boolean | null;
   note?: string | null;
-  /** "filter" | "exit" (audited_rules.KINDS, 2026-11-01) — a word, never printed as a number. */
+  /** "filter" | "exit" | "admit" (audited_rules.KINDS, 2026-11-01; "admit" 2026-11-09) — a word, never printed as a number. */
   kind?: string | null;
 };
 /** The 🧪 strip block (audited_tab.audited_block). */
@@ -267,9 +269,15 @@ export type GgAuditedBlock = {
   stale?: boolean | null;
   stale_text?: string | null;
   unaudited?: { n?: number | null; text?: string | null } | null;
+  /** 🧪 K3S (2026-11-09, audited_tab.audited_block from state.k3s_session): today's admit pass counts as served; the FE
+   *  prints ONLY `text` (null when nothing was a candidate or the key is absent). */
+  admitted?: {
+    n?: number | null; rang?: number | null; held?: number | null; candidates?: number | null;
+    k11_refused?: number | null; placebo_a?: number | null; text?: string | null;
+  } | null;
 };
 /** A held row = the 🎯 A+ row shape + the rules that held it (audited_tab.held_block). */
-export type GgHeldRow = GgAplusRow & { held_by?: GgAuditFail[] | null; audit_text?: string | null };
+export type GgHeldRow = GgAplusRow & { held_by?: GgAuditFail[] | null; audit_text?: string | null; admit?: string | null };
 /** The held section (audited_tab.held_block). */
 export type GgHeldBlock = { title?: string | null; rows?: GgHeldRow[] | null; empty_text?: string | null; note?: string | null };
 /** One side of the 🏁 compare (original / audited). */
@@ -305,7 +313,24 @@ export type GgAuditedCompare = {
     rows?: { date?: string | null; symbol: string; setup?: string | null; setup_label?: string | null; held_by?: string[] | null;
              outcome?: string | null; outcome_text?: string | null; text?: string | null }[] | null;
   } | null;
-  recon?: { original_only?: number | null; audited_only?: number | null; both?: number | null; text?: string | null } | null;
+  recon?: {
+    original_only?: number | null; audited_only?: number | null; both?: number | null;
+    /** 🧪 K3S (2026-11-09): admitted rang ids with NO 🚩 row — a COUNT, never printed by the FE. */
+    admitted?: number | null; text?: string | null;
+  } | null;
+  /** 🧪 K3S (2026-11-09, audited_tab.compare_block): A+ this tab admitted that 🚩 read 'broke — not A+'. The FE prints
+   *  `title`, `text`, `held_by_text` and each row's `text` verbatim — `mean_r` and every count are never formatted here. */
+  admitted?: {
+    title?: string | null; n?: number | null; rang?: number | null; held?: number | null; filled?: number | null;
+    win?: number | null; loss?: number | null; unfilled?: number | null; pending?: number | null; mean_r?: number | null;
+    same_day_original?: number | null; held_by_counts?: Record<string, number> | null; held_by_text?: string | null;
+    text?: string | null;
+    rows?: {
+      date?: string | null; symbol: string; setup?: string | null; setup_label?: string | null; rule?: string | null;
+      kind?: string | null; held_by?: string[] | null; outcome?: string | null; outcome_text?: string | null;
+      dup_of?: string | null; original_same_day?: boolean | null; text?: string | null;
+    }[] | null;
+  } | null;
   /** 🧪 Rule by rule (2026-11-01, replaces the held-only `by_rule`): ONE row per ON rule, every sentence served. */
   per_rule?: GgAuditedPerRuleRow[] | null;
   per_rule_title?: string | null;

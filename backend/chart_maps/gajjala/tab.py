@@ -167,6 +167,16 @@ HELD_LEGEND_WORD = "A+ held"                                                    
 HELD_LEGEND_TEXT = "A+ on the original, held here by the audit"                 # 🧪 2026-11-01 (§3.6 edit 5)
 HELD_MARKER_LABEL = "A+ (original)"                                             # 🧪 2026-11-01 (§3.6 edit 3)
 HELD_RECAP_WORD = "A+ on the original — held here by the audit"                 # 🧪 2026-11-01 (§3.6 edit 4)
+ADMIT_MARKER_LABEL = "A+ (🧪 K3S)"                                              # 🧪 2026-11-09 K3S (SPEC §3.4) — MINE
+ADMIT_RECAP_WORD = "🧪 A+ by the audit's admit rule — held here by the audit"    # 🧪 2026-11-09 K3S (SPEC §3.4) — MINE
+
+
+def _admit_of(read) -> Optional[str]:
+    """🧪 2026-11-09 K3S — the admit rule id the served audit block carries (only a GGA read has an `audit` key), else
+    None. A 🚩 A+ audit carries `admit: None`; a K3S admit carries the rule id."""
+    aud = read.get("audit") if isinstance(read, dict) else None
+    a = aud.get("admit") if isinstance(aud, dict) else None
+    return a if isinstance(a, str) and a else None
 
 
 def _held_state() -> str:
@@ -732,6 +742,9 @@ def state_label(read: dict) -> str:
     """The served pill. Every label says UNMEASURED; a break that missed a rule says so (HIS CALL 21)."""
     st = read.get("state")
     trig, stop = read.get("trigger"), read.get("stop")
+    if (_admit_of(read) and isinstance(read["audit"].get("text"), str)
+            and st in ("aplus", _held_state())):            # 🧪 2026-11-09 K3S — the admit's own words, FIRST
+        return read["audit"]["text"]
     if st == "aplus":
         return f"A+ — every rule met, entry bar closed · {UNMEASURED}"
     if st == "triggered":
@@ -1203,7 +1216,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         if alt["bars"]:
             fr = alt
     mlabel = ("A+" if read.get("state") in MARKED_STATES else
-              HELD_MARKER_LABEL if "audit" in read and read.get("state") == _held_state() else None)   # 🧪 2026-11-01
+              (ADMIT_MARKER_LABEL if _admit_of(read) else HELD_MARKER_LABEL)          # 🧪 2026-11-09 K3S admit
+              if "audit" in read and read.get("state") == _held_state() else None)   # 🧪 2026-11-01
     markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": mlabel}]
                        if mlabel and read.get("entry_bar_t") else [], fr["bars"])
     chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at)
@@ -1341,10 +1355,12 @@ def recap(reads: list, v=None) -> dict:
         sym = (doc.get("symbol") or "").upper()
         for setup in GC.SETUPS:
             r = (doc.get("setups") or {}).get(setup) or {}
+            admit = _admit_of(r) if aud else None                # 🧪 2026-11-09 K3S — a 🧪-only A+ says so
             if aud and r.get("state") == _held_state():           # 🧪 2026-11-01 — a held A+ is a recap row too
                 e, label = SUB_META[setup]
                 rows.append((r.get("entry_bar_t") or "", sym, setup,
-                             f"{e} {label} {HELD_RECAP_WORD} at {_hhmm(r.get('entry_bar_t')) or '—'} — broke "
+                             f"{e} {label} {ADMIT_RECAP_WORD if admit else HELD_RECAP_WORD} at "
+                             f"{_hhmm(r.get('entry_bar_t')) or '—'} — broke "
                              f"{_px(r.get('trigger'))}, stop {_px(r.get('stop'))}"))
                 continue
             if r.get("state") not in MARKED_STATES:
@@ -1353,7 +1369,7 @@ def recap(reads: list, v=None) -> dict:
             word = {"aplus": "A+", "triggered": "A+ (triggered)", "stopped": "A+, then stopped"}[r["state"]]
             rows.append((r.get("entry_bar_t") or "", sym, setup,
                          f"{e} {label} {word} at {_hhmm(r.get('entry_bar_t')) or '—'} — broke {_px(r.get('trigger'))}"
-                         f", stop {_px(r.get('stop'))}"))
+                         f", stop {_px(r.get('stop'))}" + (f" · 🧪 only by {admit}" if admit else "")))
     rows.sort()
     return {"title": f"Today's A+ recap — states only, no win/loss maths · {UNMEASURED}",
             "rows": [{"symbol": sym, "setup": setup, "text": text, "href": PT.deep_link(sym, setup, v)}

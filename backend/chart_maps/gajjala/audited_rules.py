@@ -30,6 +30,16 @@ tests/fixtures/gajjala/gates_study_2026_10_30.py.txt). report.md:5 cites the RUN
 "The file was then edited only to print a one-week CI as 'no interval' and to re-render these files from `results.json`
 (`--render-only`, no data read)." The run-2 bytes are not in git; the port cites the bytes it read (20bb1970…) beside them.
 
+THE K3S ADMIT (2026-11-09, SPEC gg-k3s §3.2). Ajay 2026-11-09: "yes change the audit as per you like that is yours I
+need you to make it successful and earn money that is the goal". Frozen before any code in
+eod-audits/research/2026-11-09_gajjala_audited_k3s_prereg.md (byte copy
+tests/fixtures/gajjala/audited_k3s_prereg_2026_11_09.md, sha256 PREREG3_SHA256). A third KIND, KIND_ADMIT: K3S ADMITS
+a 🚩 "broke — not A+" 🎾 Reversal Squeeze read whose ONLY miss is K3 (`missed == [D.K3_VOL_KEY]`) ON ITS BREAK BAR
+(the detector's own `bars_since_entry == 0`) as a 🧪 A+ with 🚩's own plan — the re-read is the ONE detector
+(`detectors.reversal_squeeze(..., k3_binding=False)`) with K11 re-applied by the overlay (a partial read never carries
+the K11 row). The admitted read then passes through every ON 🧪 filter exactly as a 🚩 A+ would (`judge(..., admit=)`).
+K3_VOL_FRAC is untouched; the 🚩 tab is untouched; pushes stay SHADOW. UNMEASURED.
+
 Fail-closed: a rule that reads None FAILS (the A+ is held) and its served why is NONE_WHY[id] — no served string ever
 prints "None". `judge` serves JSON-native values only (float / str / int / bool / None — never a Decimal: tab._plain has
 no Decimal branch). Every number below carries its source line; GG's own numbers (G2, T4, T5) are read BY NAME from
@@ -56,12 +66,15 @@ PREREG_PATH = "eod-audits/research/2026-10-30_gajjala_gates_prereg.md"     # und
 PREREG_SHA256 = "4ebc30d20e7f3eb19aa6df5fbe2b620d9c19e0e22144ae6620e66ca7bf8d14b6"   # report.md:5 — the frozen prereg
 PREREG2_PATH = "eod-audits/research/2026-11-01_gajjala_audited_modifications_prereg.md"   # byte copy tests/fixtures/gajjala/audited_modifications_prereg_2026_11_01.md
 PREREG2_SHA256 = "0f6e1e9172696a3b757d89b039dc40820aac6f629182a93a706993e0068a337c"   # shasum -a 256 of the frozen file (written before any code)
-PREREG_SHA_BY_PATH = MappingProxyType({PREREG_PATH: PREREG_SHA256, PREREG2_PATH: PREREG2_SHA256})
+PREREG3_PATH = "eod-audits/research/2026-11-09_gajjala_audited_k3s_prereg.md"   # byte copy tests/fixtures/gajjala/audited_k3s_prereg_2026_11_09.md
+PREREG3_SHA256 = "be966681e31703f9bba2761d6dd28c0d135108ef93076be000ec8ec516b6ef54"   # shasum -a 256 of the frozen file (written before any code)
+PREREG_SHA_BY_PATH = MappingProxyType({PREREG_PATH: PREREG_SHA256, PREREG2_PATH: PREREG2_SHA256,
+                                       PREREG3_PATH: PREREG3_SHA256})
 REPORT_PATH = "eod-audits/research/gajjala_gates_2026_10_30/report.md"       # copy tests/fixtures/gajjala/gates_report_2026_10_30.md
 LEDGER_PATH = "eod-audits/research/LEDGER.md"                                # rows dated 2026-10-30: TOO SMALL (= UNMEASURED); 2026-11-01: UNMEASURED
 STUDY_PATH = "wt-gggates/backend/scripts/gajjala_gates_study_2026_10_30.py"  # the ported gate math; byte copy tests/fixtures/gajjala/gates_study_2026_10_30.py.txt
 STUDY_SHA256 = "20bb1970b5c5c9a59921a01afcfd570787ddc65c5c25bc5f8c16ff4ba08b2798"   # the file AS PORTED (wt-gggates HEAD 0678034f); report.md:5 cites run-2 bytes e308ab74…dfff08 — report.md:47 "edited only to print a one-week CI … --render-only"
-AUDIT_VERSION = 2                                                            # TRANSPORT — bump when judge() changes (stored on every audit block); 2 = the 2026-11-01 modifications
+AUDIT_VERSION = 3                                                            # TRANSPORT — bump when judge() changes (stored on every audit block); 2 = the 2026-11-01 modifications; 3 = the 2026-11-09 K3S admit
 
 # ── the rule numbers (each from its prereg row; the in-sample picks of report.md "Per gate" / LEDGER.md) ──────────
 G1_K = 2.0                 # prereg row G1 "k ∈ {1.0, 1.5, 2.0}"; the in-sample pick k=2 (LEDGER.md row "gates G1"; report.md §Per gate)
@@ -76,7 +89,8 @@ MEASURE_FLOOR_WEEKS = 30   # LEDGER.md:11 "TOO SMALL means fewer than 30 OOS ent
 
 # ── the 2026-11-01 modifications (each from its prereg2 row; never a second literal of a GG number) ──────────────
 KIND_FILTER, KIND_EXIT = "filter", "exit"   # a FILTER removes an A+ on this tab; an EXIT changes the 🏁 grade only
-KINDS = (KIND_FILTER, KIND_EXIT)
+KIND_ADMIT = "admit"                        # 2026-11-09: an ADMIT makes a 🚩 "broke — not A+" read a 🧪 A+ (K3S)
+KINDS = (KIND_FILTER, KIND_EXIT, KIND_ADMIT)
 T1_DAILY_CAP = 2                            # prereg2 row T1 — GG "one trade a day, two max" (the ceiling); 1 = HIS CALL #16
 T1_ORDER = "ring"                           # prereg2 row T1 — 🚩's ring order = alerts._candidates (bar, SETUPS index, symbol) [C3]
 T2_FIRST_HOUR_END_ET = dt.time(10, 30)      # prereg2 row T2 "not A+ when the break bar STARTS before 10:30 ET"
@@ -88,6 +102,10 @@ T3_SETUPS = ("intraday_vcp",)               # prereg2 row T3 "on 🌀 Intraday V
 T3_R_MULTS = (2.0, 3.0)                     # prereg2 row T3 "+2R (primary, the lower bound) and +3R" — primary = T3_R_MULTS[0] (HIS CALL #17)
 T5_EMA = GC.EMA_SLOW                        # prereg2 row T5 "the 21 EMA" — orderflow.signals EMA_SLOW by NAME
 T5_FRAME = V.GG5.primary                    # prereg2 row T5 "the GG5 5-minute frame" — by name
+
+# ── the 2026-11-09 K3S admit (prereg3 "The rule, exactly"; no number of its own — K3_VOL_FRAC by name) ────────────
+K3S_SETUPS = ("reversal_squeeze",)          # prereg3 "Setup: `reversal_squeeze` only."
+K3S_MISSED = (D.K3_VOL_KEY,)                # prereg3 "`missed` is exactly `["k3_vol"]`" — the detector's key by name
 
 
 def exit_col_key(rule_id: str, r_mult=None) -> str:
@@ -127,7 +145,11 @@ FROZEN_REASONS = MappingProxyType({                 # values.G4.frozen_reason �
 })
 T1_KEPT = "kept — claimed earlier today"            # values.T1.slot of an A+ whose (symbol, setup) was claimed on an earlier pass
 T1_TIE_TEXT = " — tied on one bar, 🚩's ring order broke it"
-AUDIT_SERVED_KEYS = ("aplus", "original_aplus", "rules", "passed", "failed", "values", "text", "version", "frame")
+AUDIT_SERVED_KEYS = ("aplus", "original_aplus", "rules", "passed", "failed", "values", "text", "version", "frame",
+                     "admit")                # 2026-11-09: `admit` = the ADMIT rule's id on a K3S block, None on every other
+K3S_PARTIAL_ROW_STATE = "partial_break"      # the GGA alerts row "GGA:{date}|SYM|reversal_squeeze#partial_break" (first-wins; never a 🏁 row, never a claim)
+ADMIT_TEXT_OK = "🧪 A+ by {admit} — 🚩 reads it '{reason}' · {ids} pass · {unmeasured}"
+ADMIT_TEXT_HELD = "🧪 A+ by {admit} (🚩 reads it '{reason}'), held here by: {fails} · {unmeasured}"
 STATUS_TEXT = MappingProxyType({
     STATUS_ON: "ON on this tab",
     STATUS_OFF: "OFF — listed, not applied",
@@ -155,7 +177,7 @@ class Rule:
     verdict_source: str
     changes: str
     note: str
-    kind: str = KIND_FILTER  # KIND_FILTER (removes an A+ on this tab) | KIND_EXIT (a 🏁 grade beside GG's math)
+    kind: str = KIND_FILTER  # KIND_FILTER (removes an A+ on this tab) | KIND_EXIT (a 🏁 grade beside GG's math) | KIND_ADMIT
     prereg: str = PREREG_PATH   # the frozen prereg this entry was registered in (PREREG_SHA_BY_PATH)
 
 
@@ -323,7 +345,29 @@ T5 = Rule(
     "claim_only, unverified overflow (Dollar Wisdom uG8CzABsIPM); contradicts GG's 9 EMA trail (VR 11.4) — a true "
     "modification, not GG. The 5-minute frame for every setup incl. the Horizontal Fade (HIS CALL #20)",
     KIND_EXIT, PREREG2_PATH)
-REGISTRY = (G1, G2, G3, G4, T1, T2, A1, H1, T4, A2, T3, T5)   # display order = the ask's order
+# ── the 2026-11-09 K3S admit (prereg3; source quotes are single lines of the frozen file) ─────────────────────────
+K3S = Rule(
+    "K3S", "K3 volume-dry not binding on the 🎾 base", "2026-11-09", STATUS_ON, True,
+    "a 🎾 Reversal Squeeze break that 🚩 refuses ONLY on K3 (base volume ≤ {frac:g}× the squeeze-back run) is a 🧪 A+ at "
+    "that break bar with 🚩's own trigger, stop and R; K11 session volume re-applied; every other 🧪 rule then applies",
+    MappingProxyType({"frac": GC.K3_VOL_FRAC, "setups": K3S_SETUPS, "missed": K3S_MISSED}),
+    ((PREREG3_PATH, "Fires when: the 🚩 read's state is \"partial\", its break bar is identified (`entry_bar_t` set), "
+                    "and `missed` is exactly"),
+     (PREREG3_PATH, "Output: a 🧪 A+ ring at that break bar with 🚩's OWN plan unchanged — trigger, stop, R, risk % — no "
+                    "new number anywhere.")),
+    ((_FIRST_HAND, "110", "gradual decrease in volume"),),
+    VERDICT_UNMEASURED,
+    "LEDGER.md row '🧪 K3S' 2026-11-09: UNMEASURED — forward-recorded on 🧪; the 11-04/11-05 cohort (9 reads, 0 🚩 🎾 A+) "
+    "is a motivating observation, not a result",
+    "an ADMIT on the A+ read — a 🧪 A+ 🚩 never rings, with 🚩's own plan; never a new setup, never a push, never the 🚩 "
+    "tab; K3_VOL_FRAC untouched",
+    f"nine 🎾 reads on 2026-11-04/05 broke partial on K3 alone with zero 🚩 🎾 A+ — a cohort, not a result. GG's words on "
+    f"the squeeze base are qualitative (S8 36:12); the {GC.K3_VOL_FRAC:g}× number is Ajay's K3. Judged on the break bar "
+    f"only; K11 re-applied with the pass's own session volume, fail-closed. Decision rule: at n ≥ 30 rings a positive "
+    f"read → a paper-lane variant ONLY on HIS CALL; null → OFF and the row stays. 🚩's own 🎾 A+ arm may be too small to "
+    f"compare — the placebos are the lab's read. HIS CALLs #37–#49",
+    KIND_ADMIT, PREREG3_PATH)
+REGISTRY = (G1, G2, G3, G4, T1, T2, A1, H1, T4, A2, T3, T5, K3S)   # display order = the ask's order
 
 
 def validate() -> None:
@@ -365,6 +409,38 @@ def exit_rules() -> tuple:
     return tuple(r for r in on_rules() if r.kind == KIND_EXIT)
 
 
+def admit_rules() -> tuple:
+    """on_rules() that ADMIT a 🚩 "broke — not A+" read as a 🧪 A+ (K3S) — never in filter_rules / judge_rules."""
+    return tuple(r for r in on_rules() if r.kind == KIND_ADMIT)
+
+
+def k3s_on() -> bool:
+    """K3S is ON on this tab (status ON and applies)."""
+    return K3S in admit_rules()
+
+
+def _int0(x) -> bool:
+    return isinstance(x, int) and not isinstance(x, bool) and x == 0
+
+
+def k3s_partial(read) -> bool:
+    """PURE. A 🎾 read 🚩 stored "partial" ON ITS BREAK PASS (the detector's own `bars_since_entry == 0`, detectors
+    _resolve_break) with a non-empty `missed` — any missed set (the `#partial_break` marker's predicate: placebo (a)
+    included). Never a read with an unjudged row, a variant or a grade."""
+    if not isinstance(read, dict) or read.get("setup") not in K3S_SETUPS:
+        return False
+    missed = read.get("missed")
+    return (read.get("state") == "partial" and read.get("broke") is True and bool(read.get("entry_bar_t"))
+            and _int0(read.get("bars_since_entry")) and isinstance(missed, (list, tuple)) and len(missed) > 0
+            and not read.get("unjudged") and not read.get("variant") and not read.get("grade"))
+
+
+def k3s_candidate(read) -> bool:
+    """PURE. k3s_partial AND `missed` is EXACTLY K3S_MISSED (K3 the only miss) — a name is a candidate once, on its
+    break bar; the same read one bar later is not."""
+    return k3s_partial(read) and list(read["missed"]) == list(K3S_MISSED)
+
+
 def by_id(i) -> Optional[Rule]:
     return next((r for r in REGISTRY if r.id == i), None)
 
@@ -401,6 +477,9 @@ def _params_text(r: Rule) -> str:
         return f"+{_g(p['r1'])}R and +{_g(p['r2'])}R · 🌀 Intraday VCP only"
     if r.id == "T5":
         return f"{_g(p['frame_min'])}-minute close under the {_g(p['ema'])} EMA"
+    if r.id == "K3S":
+        return (f"🎾 only · fires when K3 ({_g(p['frac'])}× the squeeze-back run) is the ONLY miss on the break bar · "
+                f"K11 re-applied · 🚩's plan unchanged")
     return ", ".join(f"{k} = {_g(v)}" for k, v in p.items())
 
 
@@ -422,11 +501,14 @@ def rules_clause() -> str:
     """The ℹ️ panel's sentence for the audited tab — every number formatted from the constants above (no literal)."""
     filters = "; ".join(f"{r.id} {r.name} ({r.rule.format(**r.params)})" for r in filter_rules())
     exits = "; ".join(f"{r.id} {r.name} ({r.rule.format(**r.params)})" for r in exit_rules())
+    admits = "; ".join(f"{r.id} {r.name} ({r.rule.format(**r.params)})" for r in admit_rules())
+    admit_txt = (f"Admits on the A+ read — a 🧪 A+ 🚩 never rings, with 🚩's own plan: {admits}. " if admits else "")
     lane = [r for r in REGISTRY if r.status == STATUS_LANE_ONLY]
     lane_txt = " ".join(f"{r.id} {r.name} ({_params_text(r)}) is a paper-lane entry gate — registered, not applied on "
                         f"this tab." for r in lane)
     return (f"🧪 Gajjala · Audited — an overlay on 🚩 Gajjala's A+ reads, recorded in shadow, never sent: {filters}. "
             f"Exit grades on its 🏁 beside GG's math: {exits}. "
+            f"{admit_txt}"
             f"{lane_txt} A removed A+ is listed as held, never hidden; the 🚩 tab is never filtered. Every rule is "
             f"{VERDICT_UNMEASURED} (the pre-registered replay read TOO SMALL against the lab's "
             f"{_g(MEASURE_FLOOR_WEEKS)}-week floor; the newest entries are recorded forward on this tab).")
@@ -608,27 +690,39 @@ def _hhmm(t) -> Optional[str]:
     return t.strftime("%H:%M") if isinstance(t, (dt.datetime, dt.time)) else None
 
 
-def _finish(results: dict, values: dict, frame) -> dict:
-    """The ONE text composer (judge and with_t1): `results` = {id: (ok, why)} in rule order."""
+def _finish(results: dict, values: dict, frame, *, admit=None) -> dict:
+    """The ONE text composer (judge and with_t1): `results` = {id: (ok, why)} in rule order. `admit` (2026-11-09) = the
+    ADMIT rule's id when the read is a 🚩 "broke — not A+" read that rule admitted (ADMIT_TEXT_OK / ADMIT_TEXT_HELD,
+    `original_aplus` False); None → today's words. Every block carries `admit`."""
     ids = list(results)
     passed = [i for i in ids if results[i][0] is True]
     failed = [{"id": i, "why": results[i][1]} for i in ids if results[i][0] is not True]
     ok = not failed
-    if ok:
+    fails = "; ".join(f"{f['id']} — {f['why']}" for f in failed)
+    admitted = isinstance(admit, str) and bool(admit)
+    if admitted:
+        tpl = ADMIT_TEXT_OK if ok else ADMIT_TEXT_HELD
+        text = tpl.format(admit=admit, reason=D.NOT_APLUS_REASON, ids=" · ".join(ids), fails=fails,
+                          unmeasured=VERDICT_UNMEASURED)
+    elif ok:
         text = f"audited A+ — {' · '.join(ids)} pass · {VERDICT_UNMEASURED}"
     else:
-        text = ("🚩 A+ on the original, held here by: " + "; ".join(f"{f['id']} — {f['why']}" for f in failed)
-                + f" · {VERDICT_UNMEASURED}")
-    return {"aplus": ok, "original_aplus": True, "rules": ids, "passed": passed, "failed": failed, "frame": frame,
-            "values": {i: values[i] for i in ids}, "text": text, "version": AUDIT_VERSION}
+        text = "🚩 A+ on the original, held here by: " + fails + f" · {VERDICT_UNMEASURED}"
+    return {"aplus": ok, "original_aplus": not admitted, "rules": ids, "passed": passed, "failed": failed,
+            "frame": frame, "values": {i: values[i] for i in ids}, "text": text, "version": AUDIT_VERSION,
+            "admit": admit if admitted else None}
 
 
-def judge(read: dict, F, frozen=None, ctx=None) -> Optional[dict]:
+def judge(read: dict, F, frozen=None, ctx=None, *, admit=None) -> Optional[dict]:
     """The audit block of ONE A+ read on its own frame `F` (the bars.Frame the read was made on). None unless the read
     is in state "aplus" (the contract: the audit filters A+ reads only). The rules are judge_rules() (every ON filter
     but T1 — appended later by with_t1). `ctx` = {"session": date | iso | None, "best_change_pct": float | None,
     "best_symbol": str | None} — the pass's own session and scanner strip; absent → H1 and T4 read None (fail-closed).
-    Every ON rule that reads None FAILS with NONE_WHY[id]; every value is JSON-native."""
+    Every ON rule that reads None FAILS with NONE_WHY[id]; every value is JSON-native.
+    `admit` (2026-11-09) = None, or the id of an ON admit rule (K3S) whose re-read made this A+ — anything else raises
+    ValueError; it rides into the block (`admit`, the ADMIT words, `original_aplus` False)."""
+    if admit is not None and (not isinstance(admit, str) or admit not in tuple(r.id for r in admit_rules())):
+        raise ValueError("audited_rules: admit must name an ON admit rule")
     if not isinstance(read, dict) or read.get("state") != "aplus":
         return None
     ctx = ctx if isinstance(ctx, dict) else {}
@@ -731,7 +825,7 @@ def judge(read: dict, F, frozen=None, ctx=None) -> Optional[dict]:
                     "ratio": (vol / prior) if (vol is not None and prior) else None, "frame": frame}
 
     ids = [r.id for r in judge_rules()]
-    return _finish({i: results[i] for i in ids}, values, frame)
+    return _finish({i: results[i] for i in ids}, values, frame, admit=admit)
 
 
 # ── T1: the daily entry cap (cross-read state — judged LAST by audited_pass over the pass's claimable survivors) ────
@@ -821,6 +915,6 @@ def with_t1(audit: Optional[dict], ok, why, values) -> Optional[dict]:
     results[tid] = (ok, (NONE_WHY[tid] if ok is None else (why or "")))
     vals = {i: v for i, v in (audit.get("values") or {}).items() if i != tid}
     vals[tid] = dict(values or {})
-    out = _finish(results, vals, audit.get("frame"))
+    out = _finish(results, vals, audit.get("frame"), admit=audit.get("admit"))
     out["original_aplus"] = audit.get("original_aplus", True)
     return out

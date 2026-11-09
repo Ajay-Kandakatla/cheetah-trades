@@ -14,6 +14,8 @@
  * loster" — the per-rule table REPLACES the held-only `by_rule` table (a legacy `by_rule` key renders nothing).
  * `fired_alone` / `tie_held` are already inside the served `other.text` and are never recomposed here. NO arithmetic — every number is printed as served; the column heads are structural words.
  * `floor_reached` is a COUNT flag and is NEVER printed as a verdict: the words are the served `unmeasured_text`.
+ * 🧪 K3S (2026-11-09): after the held line and BEFORE recon, the served `admitted` block — its title, line, held-by line
+ * and one row per served row, each printed verbatim; `mean_r` and the counts are never formatted here.
  * An absent block renders nothing. Shadow only. UNMEASURED.
  */
 import type {
@@ -35,6 +37,8 @@ export function GgAuditedCompare({ block }: { block?: GgAuditedCompareBlock | nu
   const sides = (Array.isArray(block.sides) ? block.sides : []).filter((s): s is GgAuditedSide => !!s && said(s.key));
   const held = block.held && typeof block.held === 'object' ? block.held : null;
   const heldRows = (Array.isArray(held?.rows) ? held!.rows! : []).filter((r) => !!r && said(r.symbol));
+  const admitted = block.admitted && typeof block.admitted === 'object' ? block.admitted : null;
+  const admittedRows = (Array.isArray(admitted?.rows) ? admitted!.rows! : []).filter((r) => !!r && said(r.symbol));
   const perRule = (Array.isArray(block.per_rule) ? block.per_rule : [])
     .filter((r): r is GgAuditedPerRuleRow => !!r && typeof r === 'object' && said(r.key));
   const byDay = (Array.isArray(block.by_day) ? block.by_day : []).filter((r) => !!r && said(r.date));
@@ -70,6 +74,26 @@ export function GgAuditedCompare({ block }: { block?: GgAuditedCompareBlock | nu
               {heldRows.map((r) => (
                 <li key={`${r.date}-${r.symbol}-${r.setup}`} data-testid={`gg-audited-compare-held-${r.symbol}-${r.setup}`}>
                   {said(r.text) ? r.text : said(r.outcome_text) ? r.outcome_text : r.symbol}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+      {admitted ? (
+        <div className="gg-audited-held-line" data-testid="gg-audited-compare-admitted-block">
+          {said(admitted.title) ? (
+            <div className="gg-audited-compare-title" data-testid="gg-audited-compare-admitted-title"><strong>{admitted.title}</strong></div>
+          ) : null}
+          {said(admitted.text) ? <div data-testid="gg-audited-compare-admitted">{admitted.text}</div> : null}
+          {said(admitted.held_by_text) ? (
+            <div className="gg-muted" data-testid="gg-audited-compare-admitted-heldby">{admitted.held_by_text}</div>
+          ) : null}
+          {admittedRows.length ? (
+            <ul className="gg-held-rows">
+              {admittedRows.map((r) => (
+                <li key={`${r.date}-${r.symbol}-${r.setup}`} data-testid={`gg-audited-compare-admitted-${r.symbol}-${r.setup}`}>
+                  {said(r.text) ? r.text : null}
                 </li>
               ))}
             </ul>

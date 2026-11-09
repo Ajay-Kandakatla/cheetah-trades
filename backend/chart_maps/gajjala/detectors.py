@@ -302,9 +302,12 @@ def _invalid(r: dict, reason: str) -> dict:
     return r
 
 
-def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minutes, last: int, crit: list) -> dict:
+def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minutes, last: int, crit: list, *,
+                   exempt: tuple = ()) -> dict:
     """Bar j printed above the trigger: the plan first (trigger must sit ABOVE the stop — ledger.plan_of, 2026-10-20),
-    then entry_event decides break / stop-first / same-minute, then the state table."""
+    then entry_event decides break / stop-first / same-minute, then the state table.
+    `exempt` (2026-11-09, 🧪 K3S): criterion keys that are read and listed (`missed` still names them) but do not bind
+    the state. The default () is the GG5 path — the same list, the same bytes."""
     _levels(r, trigger, stop)
     r["entry_bar_t"], r["bars_since_entry"] = F.t[j], last - j
     plan = plan_of(trigger, stop)[0]
@@ -321,7 +324,7 @@ def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minut
         crit = crit + [criterion("entry", "break printed before any stop", False,
                                  "trigger and stop inside the same minute", "a clean break")]
     _set_criteria(r, crit)
-    if _all([c["ok"] for c in crit]) is True:
+    if _all([c["ok"] for c in crit if c["key"] not in exempt]) is True:
         if stopped_after(F, j, m, stop, mins, last):
             r["state"] = "stopped"
         else:
@@ -915,12 +918,15 @@ def _fr(float_read, key):
     return getattr(float_read, key, None)
 
 
-def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[int] = None) -> dict:
+def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[int] = None,
+                     k3_binding: bool = True) -> dict:
     """Low float only. Drops snap straight back ("tennis ball action … whenever it hits the ground it [reverses]
     hard", S8 35:02), it has tried the highs and been sold before, then a quiet base at the top of the squeeze-back
     and entry = the break of the highs, stop = the base low (DECISIONS K8). The structure is read FIRST
     (`meta.structure_alive` feeds the float priority); the float gate is applied LAST.
-    `structure` = display stamps for the card (2026-11-08), read by no rule."""
+    `structure` = display stamps for the card (2026-11-08), read by no rule.
+    k3_binding=False (🧪 K3S, 2026-11-09): the K3 cap row is read and shown but does not bind the state; the GG5 path
+    never passes it. K11 is NOT applied here — the caller re-applies k11_gate, as read_all does."""
     setup = "reversal_squeeze"
     last = _last(F, last)
     if last < 0:
@@ -963,7 +969,7 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
                   f"drop {F.t[d]} · back {F.t[k]}", "≥ 1"),
         criterion("k8_failed", f"≥ 1 failed attempt at the highs ({GC.K8_FAIL_EVENT_RULE})", tb in paired,
                   f"{len(attempts)} attempt(s) today", "an earlier try at the highs that was sold"),
-        criterion("k3_vol", f"K3 base volume ≤ {GC.K3_VOL_FRAC:g}× the squeeze-back run", k3_vol_ok(F, B, R),
+        criterion(K3_VOL_KEY, f"K3 base volume ≤ {GC.K3_VOL_FRAC:g}× the squeeze-back run", k3_vol_ok(F, B, R),
                   f"max {_f(max((F.v[b] for b in B), default=None), 0)}", f"≤ {_f(cap, 0)}"),
     ]
     if GC.RED_CLOSES_MODE == "criterion":
@@ -977,7 +983,8 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
                              ready_reason="squeezing back — the quiet base has not started")
     else:
         crit.append(base_len)
-        r = _resolve_break(r, F, j, F.h[p], stop, minutes, last, crit)
+        r = _resolve_break(r, F, j, F.h[p], stop, minutes, last, crit,
+                           exempt=() if k3_binding else (K3_VOL_KEY,))
     return _float_gate(r, float_read)
 
 
@@ -1011,6 +1018,7 @@ def _float_gate(r: dict, float_read) -> dict:
 # (🧠 potentials) are never judged — K11 is judged at the ring. The figure arrives in read_all's ctx under
 # K11_CTX_KEY; a caller that does not pass the key at all (a study replay, a unit test) reads K1–K10 as before.
 K11_KEY = "k11_volume"
+K3_VOL_KEY = "k3_vol"            # the 🎾 K3 volume-dry criterion key (2026-11-09: 🧪 K3S reads it by name)
 K11_CTX_KEY = "session_volume"
 K11_STATES = ("aplus", "triggered", "stopped")
 K11_WHY = "GG: one 1M bar then a fade = not interested"      # VR 0.4, his words — the only digit is in his sentence

@@ -187,7 +187,7 @@ def test_forced_fail_holds_the_aplus_with_one_held_row_and_no_claim(monkeypatch)
     assert al[held]["entry_bar_t"] == "2026-10-13 10:40"
     assert not [k for k in al if k.startswith("SHADOW:")]       # NEGATIVE: a held read never rings (shadow or live)
     latest = gga.get_state(AP.LATEST_ID)
-    assert latest["n_held"] == 1 and latest["held"] == [{"symbol": "GGA", "setup": "bull_flag", "failed": ["G1"]}]
+    assert latest["n_held"] == 1 and latest["held"] == [{"symbol": "GGA", "setup": "bull_flag", "failed": ["G1"], "admit": None}]   # MOVED 2026-11-09: + admit
     assert latest["n_aplus_audited"] == 0 and latest["alerts"]["aplus"] == 0     # alerts._candidates skipped it
     st2, gga2, _d2, _o2 = _scenario_one_pass(monkeypatch, judge=lambda r, F, fz=None, **kw: _audit(False, F.frame))
     assert len([k for k in _gga_docs(gga2, ST.ALERTS) if k.endswith("#held")]) == 1
@@ -756,7 +756,7 @@ def test_t1_holds_the_symbol_last_of_three_on_one_bar_and_flags_the_tie(monkeypa
     assert list(held) == [f"{AL.claim_key(S, 'CCC', 'bull_flag', V.GGA)}#{AUD.HELD_ROW_STATE}"]
     row = next(iter(held.values()))
     assert _fids(row["audit"]) == ["T1"] and row["audit"]["passed"] == [x.id for x in AUD.judge_rules()]
-    assert set(row["audit"]) == {"passed", "failed", "values", "version", "frame", "rules"}
+    assert set(row["audit"]) == {"passed", "failed", "values", "version", "frame", "rules", "admit"}   # MOVED 2026-11-09: + admit (K3S)
     assert row["audit"]["rules"][-1] == "T1"                            # T1 judged LAST
     served = seen[0]["CCC"]["bull_flag"]                                # what the tab serves as held
     assert served["state"] == AUD.HELD_STATE and [f["id"] for f in served["audit"]["failed"]] == ["T1"]
@@ -938,7 +938,8 @@ def test_the_shadow_claim_is_settled_with_its_audit_once(monkeypatch):
     _run(gga, _reads(("AAA", _aplus())), {"AAA": _Fr(BAR)})
     sk = AL.shadow_key(S, "AAA", "bull_flag", V.GGA)
     claim = _gga_docs(gga, ST.ALERTS)[sk]
-    assert set(claim["audit"]) == {"passed", "failed", "values", "version", "frame", "rules"}
+    assert set(claim["audit"]) == {"passed", "failed", "values", "version", "frame", "rules", "admit"}   # MOVED 2026-11-09
+    assert claim["audit"]["admit"] is None                              # NEGATIVE: a 🚩 A+ is never admitted
     assert claim["audit"]["rules"][-1] == "T1" and "T1" in claim["audit"]["passed"]
     first = copy.deepcopy(claim["audit"])
     _stub(monkeypatch, fail_by_sym={"AAA": ["G1"]})

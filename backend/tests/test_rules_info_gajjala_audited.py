@@ -106,7 +106,7 @@ def test_the_clause_names_all_twelve_entries_and_the_exit_grades():
     twelve-entry registry — the nine filters before "Exit grades", T3 / T5 after it, G3 as the lane-only gate."""
     from chart_maps.gajjala import audited_rules as AUD
     clause = RI._gg_audited_clause()
-    assert len(AUD.REGISTRY) == 12
+    assert len(AUD.REGISTRY) == 13                                                   # 2026-11-09: + K3S (an ADMIT)
     for r in AUD.REGISTRY:
         assert f"{r.id} {r.name}" in clause, r.id
     ex = clause.index("Exit grades on its 🏁 beside GG's math:")
@@ -125,3 +125,25 @@ def test_NEGATIVE_an_off_rule_leaves_the_clause(monkeypatch):
     monkeypatch.setattr(AUD, "REGISTRY", tuple(off if r.id == "T4" else r for r in AUD.REGISTRY))
     clause = RI._gg_audited_clause()
     assert "T4 regime gate" not in clause and "T2 first-hour block" in clause
+
+
+def test_the_clause_carries_the_k3s_admit_after_the_exit_grades():
+    """2026-11-09 (SPEC gg-k3s §3.2, Ajay "yes change the audit as per you like that is yours"): the ADMIT sentence
+    names K3S and sits after the exit grades, before the lane-only gate."""
+    from chart_maps.gajjala import audited_rules as AUD
+    clause = RI._gg_audited_clause()
+    ex = clause.index("Exit grades on its 🏁 beside GG's math:")
+    ad = clause.index("Admits on the A+ read — a 🧪 A+ 🚩 never rings, with 🚩's own plan:")
+    assert ex < ad < clause.index("K3S K3 volume-dry not binding on the 🎾 base") < clause.index("G3 ring age")
+    assert [r.id for r in AUD.admit_rules()] == ["K3S"]
+    assert not re.search("b" + "ounc", clause, re.I) and not re.search(r"\bedge\b", clause, re.I)
+
+
+def test_NEGATIVE_k3s_off_drops_the_admit_sentence(monkeypatch):
+    import dataclasses
+    from chart_maps.gajjala import audited_rules as AUD
+    off = dataclasses.replace(AUD.K3S, status=AUD.STATUS_OFF)
+    monkeypatch.setattr(AUD, "REGISTRY", tuple(off if r.id == "K3S" else r for r in AUD.REGISTRY))
+    clause = RI._gg_audited_clause()
+    assert "Admits on the A+ read" not in clause and "K3S" not in clause
+    assert "Exit grades on its 🏁 beside GG's math:" in clause

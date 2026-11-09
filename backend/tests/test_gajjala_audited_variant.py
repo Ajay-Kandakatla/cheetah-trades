@@ -25,7 +25,9 @@ FMT = dict(p=5, s=15, tail="tail", floor=AUD.MEASURE_FLOOR_WEEKS, m=AUD.G3_MAX_A
            audited_only=0, open="04:00", close="20:00", cad=5, rth_open="09:30", mute_end="09:45",
            w="1 winner", l="2 losers", u=0, rule="T5 21 EMA trail", ww=1, wl=0, gw=0, gl=1, fired=3, alone=2,
            ids="G1, A1", k=AUD.T3_R_MULTS[0], ema=AUD.T5_EMA,            # 2026-11-05 [C3]: the 🏁 audit-column words
-           why="why")                                                    # 2026-11-08: the 🧪 entry-zone sentence ({why})
+           why="why",                                                    # 2026-11-08: the 🧪 entry-zone sentence ({why})
+           reason="broke — not A+", rang=1, held=0, vol=0, gate="K11", cand=1, pa=0, filled=1, pending=0,   # 🧪 2026-11-09 K3S
+           parts="G1 ×1", gn=0)
 PER_RULE_KEYS = ("per_rule_title", "per_rule_with", "per_rule_held", "per_rule_cap_held", "per_rule_gg_math",
                  "per_rule_delta_filter", "per_rule_delta_exit", "per_rule_not_graded", "per_rule_not_judged",
                  "per_rule_no_rows", "per_rule_t4_fired", "per_rule_t1_tie")

@@ -52,6 +52,17 @@ SHARED store's sessions ∪ the GGA store's own, so an overlay-silent 🚩 sessi
 both 🏁 blocks; `track_block` never reads it — a failed read lists 🚩's rows with NOT_READ_CELL, never an empty 🏁.
 No today read on this tab (HIS CALL #28): today's rows carry the ledger's own "not read yet — graded tonight" words.
 
+🧪 K3S ADMIT (2026-11-09, SPEC gg-k3s §3.4 / WP-C). Ajay, verbatim: "yes change the audit as per you like that is
+yours I need you to make it successful and earn money that is the goal". The registry's admit rule K3S makes a 🎾
+break 🚩 reads "broke — not A+" on K3 alone a 🧪 A+ (audited_pass writes the overlay entry with `admit`). Served here:
+`overlay_reads` paints that 🚩 partial ONLY on its break pass (audited_rules.k3s_candidate ⇒ bars_since_entry == 0) and
+only when the entry carries `admit` — afterwards the card is 🚩's partial, unchanged [C3]; the held block / held docs /
+verdicts carry `admit`; the compare moves admitted records OUT of the held side and out of the per-rule attribution
+(`_attribute` / `row_audits` never score them [C7]) into ONE `admitted` block ("🧪 only": W / L / filled / mean R by
+GG's math, the held-by counts [C8], the same-day-original count [C7]) and `recon.admitted` (admitted rang ids with no
+🚩 row [C6]); the per-rule table gains the ADMIT row (with = the admitted rings, other = 🚩's own 🎾 A+ on the same
+sessions). UNMEASURED.
+
 READS MONGO ONLY, never a provider. Every rule, number and sentence comes from audited_rules.py / variant.WORDS_GGA /
 the ledger — nothing here types a threshold. UNMEASURED — nothing here trades or enters a lane. Not advice.
 """
@@ -64,6 +75,7 @@ from typing import Optional
 from . import alerts as AL
 from . import audited_rules as AUD
 from . import constants as GC
+from . import detectors as D
 from . import ledger as LG
 from . import store as ST
 from . import tab as GT
@@ -76,6 +88,10 @@ NO_ORIGINAL_TEXT = "no original row — the original's send failed"             
 FILLED_STATES = ("win", "loss", "open", "flat")                                 # a fill printed (ledger.CELL_STATES)
 OPEN_FLAT_STATES = ("open", "flat")
 UNFILLED_STATES = ("no_entry",)
+ADMIT_KINDS = ("rang", "held")                                                  # 🧪 2026-11-09 K3S — an admitted row's kind
+K11_RULE = D.K11_KEY.partition("_")[0].upper()     # 🧪 2026-11-09 K3S — "K11", the rule's name off its ONE key (spec §3.4)
+ADMIT_HELD_STATE = "held"                                                       # a held admit never rang → no grade
+ADMIT_HELD_TEXT = "held here — never rang, never graded"                        # 🧪 2026-11-09 K3S — MINE (HIS CALL #43)
 SIDE_LABELS = {"original": "🚩 original", "audited": "🧪 audited"}              # §3.6 — served verbatim
 # 🧪 2026-11-05 (SPEC gg-track-parity §3.1) — the 🏁 row's audit column
 AUDIT_HEAD_KEY = "audit"                                                        # the served head key and row cell key
@@ -104,7 +120,7 @@ def overlay_reads(reads_by: dict, st, session) -> tuple:
         if isinstance(o, dict) and o.get("symbol"):
             overlays[str(o["symbol"]).upper()] = o
     out: dict = {}
-    n_orig = n_aud = n_held = n_un = 0
+    n_orig = n_aud = n_held = n_un = n_adm = 0
     for sym, doc in (reads_by or {}).items():
         setups = _setups(doc)
         ov = overlays.get(str(sym).upper())
@@ -113,10 +129,22 @@ def overlay_reads(reads_by: dict, st, session) -> tuple:
         upd = GT._stamp_utc(doc.get("updated_at")) if isinstance(doc, dict) else None
         touched: dict = {}
         for setup, r in setups.items():
-            if not isinstance(r, dict) or r.get("state") != "aplus":
-                continue                                            # (1) an audit never paints a non-A+ read
-            n_orig += 1
+            if not isinstance(r, dict):
+                continue
             e = entries.get(setup)
+            if r.get("state") != "aplus":
+                # (1) an audit never paints a non-A+ read — save 🧪 K3S [C3]: the 🚩 partial on its BREAK pass
+                # (k3s_candidate ⇒ bars_since_entry == 0) whose entry carries the admit, under the same (2) + (3)
+                if not (_entry_admit(e) and AUD.k3s_candidate(dict(r, setup=setup))
+                        and e.get("entry_bar_t") == r.get("entry_bar_t")
+                        and ov_at is not None and upd is not None and ov_at >= upd):
+                    continue
+                audit = {k: e[k] for k in AUD.AUDIT_SERVED_KEYS if k in e}
+                touched[setup] = dict(r, audit=audit,
+                                      state="aplus" if audit.get("aplus") is True else AUD.HELD_STATE)
+                n_adm += 1                                  # never in n_aplus_original (that counts 🚩 A+)
+                continue
+            n_orig += 1
             if (not isinstance(e, dict) or e.get("entry_bar_t") != r.get("entry_bar_t")      # (2) the bar served
                     or ov_at is None or upd is None or ov_at < upd):                       # (3) as fresh as the read
                 n_un += 1
@@ -136,8 +164,14 @@ def overlay_reads(reads_by: dict, st, session) -> tuple:
             out[sym] = doc
     ats = [a for a in (GT._stamp_utc(o.get("pass_at")) for o in overlays.values()) if a is not None]
     stats = {"n_aplus_original": n_orig, "n_aplus_audited": n_aud, "n_held": n_held, "n_unaudited": n_un,
-             "overlay_at": max(ats) if ats else None}
+             "n_admitted": n_adm, "overlay_at": max(ats) if ats else None}
     return out, stats
+
+
+def _entry_admit(e) -> Optional[str]:
+    """🧪 2026-11-09 K3S — the admit rule id an overlay entry / audit block carries (a non-empty str), else None."""
+    a = e.get("admit") if isinstance(e, dict) else None
+    return a if isinstance(a, str) and a else None
 
 
 # ── 🚩 A+ held by the audit ───────────────────────────────────────────────────────────────────────────────────────
@@ -173,7 +207,8 @@ def held_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool, 
         audit = r.get("audit") if isinstance(r.get("audit"), dict) else {}
         failed = [f for f in audit.get("failed") or [] if isinstance(f, dict)]
         rows.append(dict(row, held_by=[{"id": f.get("id"), "why": f.get("why")} for f in failed],
-                         audit_text=audit.get("text"), frame=audit.get("frame") or row.get("frame")))
+                         audit_text=audit.get("text"), frame=audit.get("frame") or row.get("frame"),
+                         admit=_entry_admit(audit)))                 # 🧪 2026-11-09 K3S
     empty = None
     if not rows:
         empty = (V.word("held_empty", vv) if _gate_open(latest, now, in_window=in_window, cron=cron,
@@ -224,7 +259,22 @@ def audited_block(st, session: date, now, latest: Optional[dict], stats: Optiona
                      "text": pass_text},
             "stale": stale,
             "stale_text": (V.word("pass_stale", vv, hhmm=GT._et(l_at).strftime("%H:%M")) if stale else None),
-            "unaudited": {"n": n_un, "text": V.word("unaudited_line", vv, n=n_un) if n_un else None}}
+            "unaudited": {"n": n_un, "text": V.word("unaudited_line", vv, n=n_un) if n_un else None},
+            "admitted": _admitted_strip(state.get("k3s_session"))}
+
+
+def _admitted_strip(ks) -> dict:
+    """🧪 2026-11-09 K3S — the strip's admit line off the GGA state doc's DURABLE per-session counts (audited_pass
+    k3s_session). None-safe: no `k3s_session` → every number None and no text; no candidate → the counts, no text."""
+    ks = ks if isinstance(ks, dict) else {}
+    rang, held = _int(ks.get("rang")), _int(ks.get("held"))
+    cand, k11, pa = _int(ks.get("candidates")), _int(ks.get("k11_refused")), _int(ks.get("placebo_a"))
+    n = rang + held if rang is not None and held is not None else None
+    text = None
+    if cand and n is not None:
+        text = V.word("k3s_pass_line", V.GGA, n=n, rule=AUD.K3S.id, reason=D.NOT_APLUS_REASON, rang=rang, held=held,
+                      vol=k11 or 0, gate=K11_RULE, cand=cand, pa=pa or 0)
+    return {"n": n, "rang": rang, "held": held, "candidates": cand, "k11_refused": k11, "placebo_a": pa, "text": text}
 
 
 # ── 🏁 audited vs original ────────────────────────────────────────────────────────────────────────────────────────
@@ -260,7 +310,7 @@ def _held_docs(st, sessions) -> list:
         v = _verdicts(audit) or {"passed": [], "failed": [], "rules": [], "tie": False, "ok": False}
         out.append({"id": rid, "date": day.isoformat(), "symbol": sym, "setup": setup, "held_by": v["failed"],
                     "entry_bar_t": d.get("entry_bar_t"), "passed_by": v["passed"], "rules": v["rules"],
-                    "t1_tie": v["tie"]})
+                    "t1_tie": v["tie"], "admit": _entry_admit(audit)})          # 🧪 2026-11-09 K3S
     return out
 
 
@@ -275,7 +325,8 @@ def _verdicts(audit) -> Optional[dict]:
     return {"passed": [p for p in audit.get("passed") or [] if isinstance(p, str) and p],
             "failed": [f.get("id") for f in audit.get("failed") or [] if isinstance(f, dict) and f.get("id")],
             "rules": [r for r in audit.get("rules") or [] if isinstance(r, str) and r],
-            "tie": t1.get("tie") is True, "ok": audit.get("aplus") is True}
+            "tie": t1.get("tie") is True, "ok": audit.get("aplus") is True,
+            "admit": _entry_admit(audit)}                               # 🧪 2026-11-09 K3S
 
 
 def _claim_audits(st, sessions) -> dict:
@@ -344,9 +395,11 @@ def _dedupe_side(rows: list, docs: dict) -> None:
 
 
 def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
-    """{original, audited, held} rows of these sessions, each with its same-session `state`. 🔁 2026-11-02: every row
-    carries `dup_of` — each side dedupes over its OWN rows; a held row over its ORIGINAL's facts (a held doc carries no
-    ring time or plan), the partition being the held rows themselves (never inherited from the original side)."""
+    """{original, audited, held, admitted} rows of these sessions, each with its same-session `state`. 🔁 2026-11-02:
+    every row carries `dup_of` — each side dedupes over its OWN rows; a held row over its ORIGINAL's facts (a held doc
+    carries no ring time or plan), the partition being the held rows themselves (never inherited from the original side).
+    🧪 2026-11-09 K3S: an audited row carries `admit` (its claim's audit); a held marker WITH an admit leaves `held` —
+    `admitted` lists the admitted rings (they STAY in `audited`: a 🧪 A+) and the admitted holds (_admitted_rows)."""
     shared = st.shared
     orig = [r for r in LG.rows_for(sessions, shared) if r.get("kind") == LG.KINDS[1]]
     aud = [r for r in LG.rows_for(sessions, st, variant=V.GGA) if r.get("kind") == LG.KINDS[1]]
@@ -364,10 +417,13 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
         c = claims.get(r["id"]) or {}
         r["audit"] = c.get("audit")
         r["entry_bar_t"] = c.get("entry_bar_t")
+        r["admit"] = _entry_admit(c.get("audit"))                  # 🧪 2026-11-09 K3S
     _dedupe_side(orig, odocs)
     _dedupe_side(aud, adocs)
     by_orig = {r["id"]: r for r in orig}
-    held = _held_docs(st, sessions)
+    held_all = _held_docs(st, sessions)
+    held = [h for h in held_all if not h.get("admit")]
+    admitted_held = [h for h in held_all if h.get("admit")]
     for h in held:
         o = by_orig.get(h["id"])
         h["state"] = o["state"] if o is not None else NO_ORIGINAL
@@ -383,7 +439,34 @@ def _read_sides(st, sessions, now, session: date, is_today: bool) -> dict:
     dups_held = LG.dedupe_trades([f for f in facts_held if f])
     for h in held:
         h["dup_of"] = dups_held.get(h["id"])                  # None on a NO_ORIGINAL held row
-    return {"original": orig, "audited": aud, "held": held}
+    return {"original": orig, "audited": aud, "held": held,
+            "admitted": _admitted_rows(aud, admitted_held, by_orig, adocs, now, session, is_today)}
+
+
+def _admitted_rows(aud: list, admitted_held: list, by_orig: dict, adocs: dict, now, session: date,
+                   is_today: bool) -> list:
+    """🧪 2026-11-09 K3S — the admitted rows: kind "rang" (an audited row with `admit`; its state = the GGA ledger's
+    same-session grade, `dup_of` its own side's) and kind "held" (a `#held` marker with `admit`; it never rang → no
+    grade, state ADMIT_HELD_STATE). `original_same_day` = the id is also a 🚩 row (a later same-day 🚩 🎾 A+ under the
+    one claim per name per day [C7])."""
+    out = []
+    for r in aud:
+        if not r.get("admit"):
+            continue
+        doc = adocs.get(r["id"]) or {}
+        g = doc.get("same") if isinstance(doc.get("same"), dict) else None
+        v = _verdicts(r.get("audit")) or {"failed": []}
+        out.append({"id": r["id"], "date": r["date"], "symbol": r["symbol"], "setup": r["setup"],
+                    "kind": ADMIT_KINDS[0], "rule": r["admit"], "held_by": list(v["failed"]), "state": r["state"],
+                    "state_text": LG._cell(r, "same", g, False, now, session, is_today)["text"],
+                    "dup_of": r.get("dup_of"), "entry_bar_t": r.get("entry_bar_t"),
+                    "original_same_day": r["id"] in by_orig})
+    for h in admitted_held:
+        out.append({"id": h["id"], "date": h["date"], "symbol": h["symbol"], "setup": h["setup"],
+                    "kind": ADMIT_KINDS[1], "rule": h["admit"], "held_by": list(h.get("held_by") or []),
+                    "state": ADMIT_HELD_STATE, "state_text": ADMIT_HELD_TEXT, "dup_of": None,
+                    "entry_bar_t": h.get("entry_bar_t"), "original_same_day": h["id"] in by_orig})
+    return out
 
 
 def _tally(rows: list, r_of=None) -> dict:
@@ -481,9 +564,9 @@ def _bar(x) -> Optional[str]:
 def _attribute(sides: dict) -> tuple:
     """([(original row, verdicts | None)], [unmatched record verdicts]) — [C1] each 🚩 original scored by the 🧪 record
     on ITS bar: the held marker on that bar, else the audited claim on that bar, else (an original with no bar) the
-    marker, then the claim. A record no original takes is returned once in the second list (None verdicts dropped)."""
-    markers = {h["id"]: h for h in sides["held"]}
-    claims = {a["id"]: a for a in sides["audited"]}
+    marker, then the claim. A record no original takes is returned once in the second list (None verdicts dropped).
+    🧪 2026-11-09 K3S: an admitted record (`admit`) is never scored on a filter row — _unadmitted [C7]."""
+    markers, claims = _unadmitted(sides)
     taken: set = set()
     pairs = []
     for o in sides["original"]:
@@ -499,6 +582,13 @@ def _attribute(sides: dict) -> tuple:
     loose = [_rec_verdicts("m", m) for i, m in markers.items() if ("m", i) not in taken]
     loose += [_rec_verdicts("c", c) for i, c in claims.items() if ("c", i) not in taken]
     return pairs, [v for v in loose if v is not None]
+
+
+def _unadmitted(sides: dict) -> tuple:
+    """({id: held marker}, {id: audited claim}) with every admitted record (`admit` set) left out — 🧪 2026-11-09 K3S:
+    an admit is not a verdict on 🚩's A+, so neither the per-rule filter rows nor the 🏁 audit column ever read it."""
+    return ({h["id"]: h for h in sides["held"] if not h.get("admit")},
+            {a["id"]: a for a in sides["audited"] if not a.get("admit")})
 
 
 def _record_of(o: dict, markers: dict, claims: dict) -> Optional[tuple]:
@@ -635,15 +725,38 @@ def _per_rule(sides: dict, exits_by_id: dict, now, session: date, is_today: bool
     pairs, loose = _attribute(sides)
     out = []
     for rule in AUD.on_rules():
-        if getattr(rule, "kind", AUD.KIND_FILTER) == AUD.KIND_EXIT:
+        kind = getattr(rule, "kind", AUD.KIND_FILTER)
+        if kind == AUD.KIND_EXIT:
             out += _exit_rows(rule, sides["audited"], exits_by_id or {})
+        elif kind == AUD.KIND_ADMIT:                                 # 🧪 2026-11-09 K3S
+            out.append(_admit_row(rule, sides))
         else:
             out.append(_filter_row(rule, pairs, loose))
     return out
 
 
+def _admit_row(rule, sides: dict) -> dict:
+    """🧪 2026-11-09 K3S [C4] — the ADMIT row: `with` = the 🧪-only rings this rule admitted (graded by GG's math off
+    the GGA ledger, mean R printed), `other` = 🚩's own A+ on the rule's setups (AUD.K3S_SETUPS) over the same sessions.
+    The delta prints W / L, filled, never-filled and mean R beside 🚩's 🎾 W / L — never W / L alone."""
+    vv = V.GGA
+    rid = rule.id
+    rows = [r for r in sides["audited"] if r.get("admit") == rid]
+    orig = [o for o in sides["original"] if o.get("setup") in AUD.K3S_SETUPS]
+    w = _pr_side(V.word("per_rule_admit_with", vv), rows)
+    other = _pr_side(V.word("per_rule_admit_other", vv), orig)
+    if w["n"] == 0:
+        delta = V.word("per_rule_no_rows", vv)
+    else:
+        wt = _tally(rows)
+        delta = V.word("per_rule_delta_admit", vv, n=w["n"], w=w["win"], l=w["loss"], filled=wt["filled"],
+                       u=w["unfilled"], mr=_mean_text(wt), gw=other["win"], gl=other["loss"], gn=other["n"])
+    return _pr_row(rid, rid, AUD.KIND_ADMIT, f"{rid} {getattr(rule, 'name', None) or rid}", w, other, delta,
+                   not_judged=0)
+
+
 def _by_day(sides: dict) -> list:
-    days = sorted({r["date"] for rows in sides.values() for r in rows}, reverse=True)
+    days = sorted({r["date"] for k in ("original", "audited", "held") for r in sides[k]}, reverse=True)
     out = []
     for d in days:
         cell = {}
@@ -704,8 +817,9 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
     oid = {r["id"] for r in sides["original"]}
     aid = {r["id"] for r in sides["audited"]}
     hid = {h["id"] for h in sides["held"]}
+    adm = {r["id"] for r in sides.get("admitted") or [] if r["kind"] == ADMIT_KINDS[0]}   # ⊆ aid — 🧪 K3S rings
     original_only = len(oid - aid - hid)
-    audited_only = len((aid | hid) - oid)          # on this tab (audited or held) with no 🚩 row: the send failed
+    audited_only = len((aid | hid) - oid - adm)    # on this tab (audited or held) with no 🚩 row: the send failed
     both = len(aid & hid)                          # held on one pass, audited A+ on a later one the same day
     all_k = "all"
     if span_k == all_k:
@@ -726,7 +840,9 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
             "sides": [_side("original", sides["original"]), _side("audited", sides["audited"])],
             "held": _held_side(sides["held"]),
             "recon": {"original_only": original_only, "audited_only": audited_only, "both": both,
+                      "admitted": len(adm - oid),          # 🧪 2026-11-09 K3S [C6]: 🧪-only rings with no 🚩 row
                       "text": V.word("compare_recon", vv, original_only=original_only, audited_only=audited_only)},
+            "admitted": _admitted_block(sides.get("admitted") or [], oid),
             "per_rule_title": V.word("per_rule_title", vv),
             "per_rule": _per_rule(sides, exits_by_id, now, session, is_today),
             "by_rule_note": V.word("by_rule_note", vv),
@@ -736,12 +852,52 @@ def compare_block(st, session: date, now, *, span: str = "", is_today: bool = Fa
                                 else V.word("unmeasured", vv, floor=floor))}
 
 
+def _admitted_block(rows: list, oid: set) -> dict:
+    """🧪 2026-11-09 K3S [C4, C7, C8] — "🧪 only": the admitted rings (W / L / filled / no entry / not graded / mean R
+    by GG's math — `_tally`, the 🔁 dedupe included) and the admitted holds (`held_by_counts` — the per-rule hold share,
+    by count then id), `same_day_original` (an admitted ring whose id is also a 🚩 row), one row per record."""
+    vv = V.GGA
+    rule = AUD.K3S.id
+    rang = [r for r in rows if r["kind"] == ADMIT_KINDS[0]]
+    held = [r for r in rows if r["kind"] == ADMIT_KINDS[1]]
+    c = _tally(rang)
+    n = c["n"] + len(held)
+    counts: dict = {}
+    for h in held:
+        for i in h.get("held_by") or []:
+            counts[i] = counts.get(i, 0) + 1
+    held_by_counts = dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    held_by_text = (V.word("admitted_held_by", vv, parts=" · ".join(f"{k} ×{v}" for k, v in held_by_counts.items()))
+                    if held_by_counts else None)
+    text = (V.word("admitted_line", vv, n=n, rule=rule, rang=c["n"], held=len(held), w=c["win"], l=c["loss"],
+                   filled=c["filled"], u=c["unfilled"], pending=c["pending"], mr=_mean_text(c)) if n
+            else V.word("admitted_empty", vv, rule=rule))
+    out_rows = []
+    for r in sorted(rows, key=lambda x: (x["date"], x["symbol"], _rank(x["setup"])), reverse=True):
+        label = GT._setup_label(r["setup"])
+        ids = list(r.get("held_by") or [])
+        same = r.get("original_same_day") is True
+        text_r = (f"{r['date']} · {r['symbol']} · {label} · 🧪 only by {r['rule']}"
+                  + (f" · held by {', '.join(ids)}" if ids else " · rang in shadow")
+                  + f" · {r.get('state_text') or '—'}"
+                  + (f" · {V.word('admitted_same_day', vv)}" if same else ""))
+        out_rows.append({"date": r["date"], "symbol": r["symbol"], "setup": r["setup"], "setup_label": label,
+                         "rule": r["rule"], "kind": r["kind"], "held_by": ids, "outcome": r["state"],
+                         "outcome_text": r.get("state_text"), "dup_of": r.get("dup_of"), "original_same_day": same,
+                         "text": text_r})
+    adm = {r["id"] for r in rang}
+    return {"title": V.word("admitted_title", vv, reason=D.NOT_APLUS_REASON), "n": n, "rang": c["n"],
+            "held": len(held), "filled": c["filled"], "win": c["win"], "loss": c["loss"], "unfilled": c["unfilled"],
+            "pending": c["pending"], "mean_r": c["mean_r"], "same_day_original": len(adm & oid),
+            "held_by_counts": held_by_counts, "held_by_text": held_by_text, "text": text, "rows": out_rows}
+
+
 # ── 🏁 rows: 🚩's own A+ with the audit's call (2026-11-05, SPEC gg-track-parity §3.1) ────────────────────────────────
 def row_audits(sides: dict, exits_by_id: dict) -> dict:
     """{original id: audit cell} for EVERY original row (a duplicate too — listed, never counted): the record on the
-    row's own bar (_record_of — the one the per-rule table scores), its verdicts, its cell."""
-    markers = {h["id"]: h for h in sides["held"]}
-    claims = {a["id"]: a for a in sides["audited"]}
+    row's own bar (_record_of — the one the per-rule table scores), its verdicts, its cell. An admitted record never
+    lands on a 🚩 row (_unadmitted): a same-id 🚩 row reads "not judged" — the truth under one claim per name per day."""
+    markers, claims = _unadmitted(sides)
     out: dict = {}
     for o in sides["original"]:
         rec = _record_of(o, markers, claims)

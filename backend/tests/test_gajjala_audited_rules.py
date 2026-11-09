@@ -39,11 +39,12 @@ BACKEND = Path(__file__).resolve().parents[1]
 FIX = BACKEND / "tests" / "fixtures" / "gajjala"
 PREREG_FIX = FIX / "gates_prereg_2026_10_30.md"
 PREREG2_FIX = FIX / "audited_modifications_prereg_2026_11_01.md"
+PREREG3_FIX = FIX / "audited_k3s_prereg_2026_11_09.md"            # 2026-11-09 K3S (SPEC gg-k3s §3.2)
 REPORT_FIX = FIX / "gates_report_2026_10_30.md"
 STUDY_FIX = FIX / "gates_study_2026_10_30.py.txt"
 HOST_ROOT = Path("/Users/ajay/clinet-test")
 FIXTURE_OF = {AUD.PREREG_PATH: PREREG_FIX, AUD.REPORT_PATH: REPORT_FIX, AUD.STUDY_PATH: STUDY_FIX,
-              AUD.PREREG2_PATH: PREREG2_FIX}
+              AUD.PREREG2_PATH: PREREG2_FIX, AUD.PREREG3_PATH: PREREG3_FIX}
 SRC = Path(AUD.__file__).read_text(encoding="utf-8")
 EDGE = re.compile(r"\bedge\b", re.I)
 B_WORD = re.compile("b" + "ounc", re.I)
@@ -364,12 +365,12 @@ def test_NEGATIVE_the_run2_sha_is_never_cited_without_the_ported_sha():
 
 # ── the registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 def test_registry_ids_status_and_fields():
-    assert tuple(r.id for r in AUD.REGISTRY) == ("G1", "G2", "G3", "G4") + NEW_IDS
+    assert tuple(r.id for r in AUD.REGISTRY) == ("G1", "G2", "G3", "G4") + NEW_IDS + ("K3S",)   # 2026-11-09: + K3S LAST
     for r in AUD.REGISTRY:
-        assert r.date_added == "2026-11-01" and r.status in AUD.STATUSES
+        assert r.date_added == ("2026-11-09" if r.id == "K3S" else "2026-11-01") and r.status in AUD.STATUSES
         assert r.name and r.rule and r.params and r.source and r.verdict_source and r.changes
         assert r.verdict == AUD.VERDICT_UNMEASURED
-    assert [r.id for r in AUD.on_rules()] == ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2", "T3", "T5"]
+    assert [r.id for r in AUD.on_rules()] == ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2", "T3", "T5", "K3S"]
     for i in ("G1", "G2", "G4"):
         assert AUD.by_id(i).status == AUD.STATUS_ON and AUD.by_id(i).applies is True
     assert AUD.by_id("G3").status == AUD.STATUS_LANE_ONLY and AUD.by_id("G3").applies is False   # NEGATIVE
@@ -388,7 +389,8 @@ def test_every_source_resolves_and_quotes_its_file():
             if host.exists():
                 assert host.read_bytes() == fx.read_bytes(), path
         assert r.source[0][0] == r.prereg and r.prereg in AUD.PREREG_SHA_BY_PATH
-        assert r.prereg == (AUD.PREREG2_PATH if r.id in NEW_IDS else AUD.PREREG_PATH)
+        assert r.prereg == (AUD.PREREG3_PATH if r.id == "K3S" else
+                            AUD.PREREG2_PATH if r.id in NEW_IDS else AUD.PREREG_PATH)
 
 
 def test_the_prereg_fixture_is_the_frozen_bytes():
@@ -438,7 +440,7 @@ def test_every_gg_cite_resolves():
                 # the JSON text (escaped quotes) or the rule's own line verbatim (a quote holding GG's quote marks)
                 assert quote in json.dumps(entry, ensure_ascii=False) or quote in entry["rule"], (r.id, where)
             n += 1
-    assert n == 8 and AUD.G3.gg == ()
+    assert n == 9 and AUD.G3.gg == ()                                              # 2026-11-09: + K3S's S8 36:12 line
     for rid in ("T1", "A1", "T4", "T3"):                                                  # NO GG words on file
         assert AUD.by_id(rid).gg == (), rid
     assert [w for _f, w, _q in AUD.H1.gg + AUD.T2.gg + AUD.A2.gg + AUD.T5.gg] == [
@@ -447,7 +449,7 @@ def test_every_gg_cite_resolves():
 
 def test_registry_rows_are_words_only_and_say_unmeasured():
     rows = AUD.registry_rows()
-    assert [r["id"] for r in rows] == ["G1", "G2", "G3", "G4"] + list(NEW_IDS)
+    assert [r["id"] for r in rows] == ["G1", "G2", "G3", "G4"] + list(NEW_IDS) + ["K3S"]
     keys = {"id", "name", "rule", "params_text", "source_text", "since", "status", "status_text", "verdict",
             "verdict_text", "changes_text", "applies", "note", "kind"}                   # 2026-11-01: + kind only
     for row in rows:
@@ -467,7 +469,7 @@ def test_rules_clause_formats_every_number_from_the_constants():
     allowed = {"%g" % x for x in (AUD.G1_K, AUD.G2_MAX_RED, AUD.G3_MAX_AGE_MIN, AUD.G3_MISSED_R,
                                   AUD.G4_MAX_RISK_PCT, AUD.MEASURE_FLOOR_WEEKS, AUD.T1_DAILY_CAP,
                                   AUD.T4_QUIET_TOP_PCT, AUD.A2_SPIKE_MULT, AUD.T5_EMA,
-                                  AL.FRAME_MINUTES[AUD.T5_FRAME]) + AUD.T3_R_MULTS}
+                                  AL.FRAME_MINUTES[AUD.T5_FRAME], GC.K3_VOL_FRAC) + AUD.T3_R_MULTS}
     for t in (AUD.T2_FIRST_HOUR_END_ET, AUD.A1_LAST_ENTRY_ET, AUD.H1_OPEN_ET, AUD.H1_CLOSE_ET):   # HH and MM parts
         allowed |= {t.strftime("%H"), t.strftime("%M")}
     assert set(NUM.findall(txt)) <= allowed, set(NUM.findall(txt)) - allowed
@@ -695,7 +697,8 @@ def test_prereg2_fixture_is_the_frozen_bytes_and_the_host_file_equals_it():
     host = HOST_ROOT / AUD.PREREG2_PATH
     if host.exists():
         assert host.read_bytes() == raw
-    assert dict(AUD.PREREG_SHA_BY_PATH) == {AUD.PREREG_PATH: AUD.PREREG_SHA256, AUD.PREREG2_PATH: AUD.PREREG2_SHA256}
+    assert dict(AUD.PREREG_SHA_BY_PATH) == {AUD.PREREG_PATH: AUD.PREREG_SHA256, AUD.PREREG2_PATH: AUD.PREREG2_SHA256,
+                                            AUD.PREREG3_PATH: AUD.PREREG3_SHA256}
     assert hashlib.sha256(raw + b" ").hexdigest() != AUD.PREREG2_SHA256                 # NEGATIVE: one byte moves it
     line = next(ln for ln in SRC.splitlines() if ln.startswith("PREREG2_SHA256 ="))
     assert AUD.PREREG2_SHA256 in line
@@ -761,14 +764,15 @@ def test_the_ledger_has_one_unmeasured_row_per_new_entry():
 
 # ── the registry ────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_the_twelve_entry_registry_and_its_views():
-    assert AUD.AUDIT_VERSION == 2
+    assert AUD.AUDIT_VERSION == 3                                                         # 2026-11-09: the K3S admit
     assert [r.id for r in AUD.filter_rules()] == ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2"]
     assert [r.id for r in AUD.judge_rules()] == JUDGE_IDS                                 # NEGATIVE: no T1
     assert [r.id for r in AUD.exit_rules()] == ["T3", "T5"]
-    assert len(AUD.on_rules()) == 11 and AUD.G3 not in AUD.on_rules()
+    assert len(AUD.on_rules()) == 12 and AUD.G3 not in AUD.on_rules()
     for r in AUD.REGISTRY:
-        assert r.kind == (AUD.KIND_EXIT if r.id in ("T3", "T5") else AUD.KIND_FILTER), r.id
-    assert AUD.KINDS == ("filter", "exit")
+        assert r.kind == (AUD.KIND_EXIT if r.id in ("T3", "T5") else
+                          AUD.KIND_ADMIT if r.id == "K3S" else AUD.KIND_FILTER), r.id
+    assert AUD.KINDS == ("filter", "exit", "admit")
     for i in ("G1", "G2", "G3", "G4"):                                                   # the 10-30 entries unchanged
         assert AUD.by_id(i).prereg == AUD.PREREG_PATH and AUD.by_id(i).kind == AUD.KIND_FILTER
     with pytest.raises(Exception):
@@ -817,7 +821,7 @@ def test_the_new_constants_are_read_by_name():
 def test_registry_rows_carry_kind_and_the_right_prereg_sha():
     rows = {r["id"]: r for r in AUD.registry_rows()}
     for rid, row in rows.items():
-        sha = AUD.PREREG2_SHA256 if rid in NEW_IDS else AUD.PREREG_SHA256
+        sha = (AUD.PREREG3_SHA256 if rid == "K3S" else AUD.PREREG2_SHA256 if rid in NEW_IDS else AUD.PREREG_SHA256)
         assert f"(sha256 {sha[:12]}…)" in row["source_text"], rid
         assert row["kind"] == AUD.by_id(rid).kind and "{" not in row["rule"] and "{" not in row["params_text"]
         for v in row.values():

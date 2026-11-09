@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 (verbatim in the label, his spelling kept): "yes change the audit as per you like that is yours I need
+  // you to make it successful and earn money that is the goal". 🧪 K3S (backend chart_maps/gajjala/audited_rules.K3S, a
+  // third registry KIND `admit`, prereg eod-audits/research/2026-11-09_gajjala_audited_k3s_prereg.md sha256 be966681e317…):
+  // a 🚩 🎾 reversal_squeeze read that broke "partial" with `missed` exactly ["k3_vol"] is re-read ON ITS BREAK BAR through
+  // the ONE detector (detectors.reversal_squeeze(..., k3_binding=False); default True = 🚩's bytes), K11 re-applied with the
+  // pass's own session volume (fail-closed), then handed through the SAME refusal chain, judge (admit="K3S"), T1, shadow
+  // claim and #held marker as any 🚩 A+ (audited_pass.run_step only). 🚩's own plan — no new number; K3_VOL_FRAC untouched;
+  // GG5 byte-identical; pushes SHADOW; OWNER_KEEP_SET seven. The compare block lists each K3S ring as "🧪 only"; the per-rule
+  // table gains a K3S row. Doc docs/gajjala/audited_k3s_2026_11_09.md (HIS CALLs #37–#49). UNMEASURED; LEDGER.md row
+  // '🧪 K3S' 2026-11-09. Pinned by scripts/contracts.mjs ("🧪 K3S (2026-11-09)").
+  { id: 'chart-maps-gajjala-audited-k3s-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala_audited&sub=track_record',
+    label: "🧪 Gajjala · Audited — a Reversal Squeeze that 🚩 reads “broke — not A+” only because the base volume did not dry up enough (K3, the one miss) is now an A+ here, on its break bar, with 🚩's own trigger, stop and R. Every other rule on this tab still applies, and a held one is listed, never hidden. 🚩 Gajjala's tab, its pushes and the K3 number are unchanged. The 🏁 Track record marks these rings “🧪 only” and keeps a K3S row beside the other rules, so you can see whether they win or lose against 🚩's own squeeze A+. Every alert here is recorded in shadow, never sent: nothing new rings your phone and nothing trades. You said: “yes change the audit as per you like that is yours I need you to make it successful and earn money that is the goal”. UNMEASURED — nine squeeze reads on 11-04/11-05 broke on K3 alone, a reason to look, not a result; 30 rings before any word. Not advice." },
   // Ajay 2026-11-08 (verbatim in the label, his spelling kept), with GG's own annotated TPST 5-minute chart attached: "I need
   // something like this but that big of circle for reversal squeen mainly on the cart itself also increase the width of the
   // reversal sqeeze chart to show more bars" / "This is from Gajjals" / "They don't have to be circles but indicators did you

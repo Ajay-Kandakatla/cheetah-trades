@@ -72,6 +72,7 @@ def entry(read, failed=(), frame="5m"):
                        "G4": {"risk_pct": 4.5, "stop_used": "10.5", "frozen": False,
                               "frozen_reason": AUD.FROZEN_REASONS["not_squeeze"], "cap_pct": 10.0}},
             "text": text, "version": AUD.AUDIT_VERSION,
+            "admit": None,                                  # 🧪 2026-11-09 K3S: judge emits it on every block (None)
             "entry_bar_t": read.get("entry_bar_t"), "trigger": read.get("trigger"), "stop": read.get("stop"),
             "risk_pct": read.get("risk_pct")}
 
@@ -262,6 +263,7 @@ def test_c2d_all_three_hold_attaches_and_only_the_served_keys_ride():
     assert r["state"] == AUD.HELD_STATE and set(r["audit"]) == set(AUD.AUDIT_SERVED_KEYS)
     assert "entry_bar_t" not in r["audit"] and "trigger" not in r["audit"]
     assert stats == {"n_aplus_original": 1, "n_aplus_audited": 0, "n_held": 1, "n_unaudited": 0,
+                     "n_admitted": 0,                                    # 🧪 2026-11-09 K3S
                      "overlay_at": datetime(2026, 10, 13, 14, 41, tzinfo=timezone.utc)}
     ok, s2 = AT.overlay_reads({"ZZZ": _doc("aplus")}, _Ov([_ov(failed=())]), S)
     assert ok["ZZZ"]["setups"]["bull_flag"]["state"] == "aplus" and s2["n_aplus_audited"] == 1
@@ -423,11 +425,12 @@ def base_world(extra_g5=(), extra_g5l=(), extra_a=(), extra_al=()):
 
 def _identity(c):
     # REWRITTEN 2026-11-02 (🔁 one count per stock per day, SPEC luk-track §3.2 [C5]): `recon` is id-set arithmetic
-    # over ALL ids (untouched) while `n` counts the COUNTED rows — the identity holds in the n + n_dup form
+    # over ALL ids (untouched) while `n` counts the COUNTED rows — the identity holds in the n + n_dup form.
+    # 🧪 2026-11-09 K3S [C6]: KEEPS `- both` and gains `- admitted` (admitted rings with no 🚩 row, |R − O|)
     o, a = c["sides"]
     r, h = c["recon"], c["held"]
     return (o["n"] + o["n_dup"] == a["n"] + a["n_dup"] + h["n"] + h["n_dup"] + r["original_only"] - r["audited_only"]
-            - r["both"])
+            - r["both"] - r["admitted"])
 
 
 def test_compare_arithmetic_original_audited_held_by_rule_by_day():
@@ -480,7 +483,7 @@ def test_compare_recon_original_only_audited_only_no_original_and_both():
     assert c4["recon"]["audited_only"] == 0 and c4["recon"]["original_only"] == 0
     r4 = c4["recon"]                                               # NEGATIVE: the identity fails without `both`
     assert c4["sides"][0]["n"] != (c4["sides"][1]["n"] + c4["held"]["n"] + r4["original_only"] - r4["audited_only"])
-    assert set(r4) == {"original_only", "audited_only", "both", "text"}
+    assert set(r4) == {"original_only", "audited_only", "both", "admitted", "text"}     # + admitted 2026-11-09
 
 
 def test_a_hash_held_doc_in_shadow_is_not_held_and_a_gga_shadow_claim_is_a_row():
@@ -563,7 +566,7 @@ def test_no_edge_word_in_the_new_blocks_and_no_b_word_anywhere(world):
 B1040, B0805, B1115 = "2026-11-03 10:40", "2026-11-03 08:05", "2026-11-03 11:15"
 UN_MEASURED = re.compile(r"(?<!un)measured", re.I)
 VCP = AUD.T3_SETUPS[0]
-KEYS_12 = ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2", "T3_2R", "T3_3R", "T5"]
+KEYS_12 = ["G1", "G2", "G4", "T1", "T2", "A1", "H1", "T4", "A2", "T3_2R", "T3_3R", "T5", "K3S"]   # + K3S 2026-11-09
 
 
 def _filters():
@@ -627,7 +630,7 @@ def test_per_rule_rows_are_one_per_on_rule_in_registry_order_and_by_rule_is_gone
     assert c["per_rule_title"] == V.word("per_rule_title", V.GGA)
     assert c["by_rule_note"] == V.word("by_rule_note", V.GGA)
     assert "by_rule" not in c                                                          # NEGATIVE
-    assert {r["kind"] for r in c["per_rule"]} == {AUD.KIND_FILTER, AT.KIND_CAP, AUD.KIND_EXIT}
+    assert {r["kind"] for r in c["per_rule"]} == {AUD.KIND_FILTER, AT.KIND_CAP, AUD.KIND_EXIT, AUD.KIND_ADMIT}
     assert pr["T1"]["kind"] == AT.KIND_CAP and pr["T5"]["kind"] == AUD.KIND_EXIT and pr["G1"]["kind"] == "filter"
     for r in c["per_rule"]:
         assert set(r) == {"key", "id", "name", "kind", "label", "with", "other", "not_judged", "fired_alone",

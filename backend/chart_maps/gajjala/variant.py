@@ -259,6 +259,23 @@ WORDS_GGA: Mapping = MappingProxyType({
     # label (chart <title> + crosshair readout) and the card line's sentence ({why} = entry_zone's reasons, joined)
     "zone_label": "entry zone",
     "zone_note": "{why} · UNMEASURED",
+    # 🧪 2026-11-09 K3S (SPEC gg-k3s §3.4; Ajay "yes change the audit as per you like that is yours") — the ADMIT words:
+    # a 🎾 break 🚩 reads "broke — not A+" on K3 alone is a 🧪 A+ here. Sentences only — {reason} =
+    # detectors.NOT_APLUS_REASON, {rule} = the admit rule's id, {vol} = the K11 refusals, {gate} = audited_tab.K11_RULE (the rule's name off
+    # detectors.K11_KEY; no digit typed here, placeholder names included), every count a caller kwarg; {mr} = audited_tab._mean_text.
+    "k3s_pass_line": ("{n} 🧪 A+ by {rule} today — 🚩 read them '{reason}' · {rang} rang in shadow · {held} held · "
+                      "{vol} refused by {gate} · {cand} candidates · {pa} 🎾 breaks partial on another rule"),
+    "admitted_title": "🧪 only — A+ this tab admitted that 🚩 read '{reason}' · UNMEASURED",
+    "admitted_line": ("{n} 🧪 only by {rule}: {rang} rang in shadow · {held} held by another rule · {w} W / {l} L of "
+                      "{filled} filled · {u} no entry · {pending} not graded yet · {mr}"),
+    "admitted_empty": "No 🧪-only A+ yet — {rule} has admitted nothing on these sessions.",
+    "admitted_held_by": "held by: {parts}",
+    "admitted_same_day": ("🚩 rang its own 🎾 A+ later the same day — not judged here (one claim per name per "
+                          "day)"),
+    "per_rule_admit_with": "🧪 only — admitted by the rule",
+    "per_rule_admit_other": "🚩's own 🎾 A+ on the same sessions",
+    "per_rule_delta_admit": ("{n} 🧪 only: {w} W / {l} L of {filled} filled · {u} never filled · {mr} · 🚩 🎾 A+: "
+                             "{gw} W / {gl} L on {gn}"),
 })
 
 

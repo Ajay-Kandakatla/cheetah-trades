@@ -30,6 +30,14 @@ The pass summary lands in `gajjala_audited_state` doc `audit_latest`; a raise in
 type there and re-raises to run.py's fence (logged only). On a dry pass the GGA store is a dry store: its writes are
 recorded, not made, and ONE log line names them ("gajjala audit overlay dry writes: …") — the CLI cost proof.
 Every rule is UNMEASURED (the 2026-10-30 replay read TOO SMALL). Nothing here trades or enters a lane.
+2026-11-09 (🧪 K3S, SPEC REV 2 §3.3 — Ajay: "yes change the audit as per you like that is yours I need you to make it
+successful and earn money that is the goal"): a 🎾 read 🚩 refuses ONLY on K3 (`audited_rules.k3s_candidate` — the
+break pass, `bars_since_entry == 0`) is re-read from the SAME 5-minute frame with the SAME float through the ONE
+detector with `k3_binding=False`, then put through `detectors.k11_gate` with THIS pass's session volume ALWAYS
+(fail-closed: None / under the floor → partial, as read_all) — `k3s_read`. An A+ re-read then takes the SAME chain as a
+🚩 A+: refusal → judge(admit="K3S") → T1 → shadow claim / #held. Every 🎾 partial break (any `missed`) leaves ONE
+first-wins `#partial_break` marker (no push, no claim, never a 🏁 row) so the prereg's placebo (a) is recoverable;
+`k3s_session` reads the day's durable counts. UNMEASURED; 🚩 never changes.
 """
 from __future__ import annotations
 
@@ -39,6 +47,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from . import constants as GC
+from . import detectors as D
 from . import variant as V
 
 log = logging.getLogger("chart_maps.gajjala.audited_pass")
@@ -99,13 +108,28 @@ def frozen_update(existing: list, read: dict) -> list:
 
 
 def wants_overlay(rs: dict) -> bool:
-    """True when the name has something to say this pass: any A+ read, or an ARMED 🎾 read (the frozen-stop memory)."""
+    """True when the name has something to say this pass: any A+ read, an ARMED 🎾 read (the frozen-stop memory), or
+    (🧪 K3S ON, 2026-11-09) a 🎾 partial break on its break bar (the `#partial_break` marker / the K3S candidate)."""
     from . import audited_rules as AUD
     from . import potential as PT
     rs = rs or {}
     if any(isinstance(r, dict) and r.get("state") == "aplus" for r in rs.values()):
         return True
-    return any(PT.potential_kind(rs.get(s)) == GC.POTENTIAL_KINDS[0] for s in AUD.FROZEN_STOP_SETUPS)
+    if any(PT.potential_kind(rs.get(s)) == GC.POTENTIAL_KINDS[0] for s in AUD.FROZEN_STOP_SETUPS):
+        return True
+    return AUD.k3s_on() and any(isinstance(rs.get(s), dict) and AUD.k3s_partial(dict(rs[s], setup=s))
+                                for s in AUD.K3S_SETUPS)
+
+
+def k3s_read(frames_obj, orig: dict, float_read, volume) -> dict:
+    """[C1] The 🧪 K3S re-read of a 🚩 🎾 read partial ONLY on K3: the SAME 5-minute frame and the SAME float through the
+    ONE detector with `k3_binding=False`, then `detectors.k11_gate` with THIS pass's session volume ALWAYS — a partial
+    read never carries the K11 row, and `volume` None / under GC.K11_MIN_SESSION_VOLUME reads partial (fail-closed,
+    exactly as read_all). The caller tests `state == "aplus"`; a K11 refusal shows as `D.K11_KEY in missed`. `orig` (the
+    stored 🚩 read) is never mutated — the caller pins the re-read's plan against it."""
+    F5 = frames_obj.frame(V.GG5.primary)
+    r2 = D.reversal_squeeze(F5, float_read=float_read, k3_binding=False)
+    return D.k11_gate(r2, volume)
 
 
 def _dump(x) -> str:
@@ -133,28 +157,55 @@ def _failed_ids(audit) -> list:
 
 
 def _audit_block(audit: dict) -> dict:
-    """The audit a 🧪 record carries (the #held marker and the settled shadow claim) — the per-rule table's source."""
-    return {k: audit.get(k) for k in ("passed", "failed", "values", "version", "frame", "rules")}
+    """The audit a 🧪 record carries (the #held marker and the settled shadow claim) — the per-rule table's source.
+    `admit` (2026-11-09): the admit rule's id on a K3S record, None on every other."""
+    return {k: audit.get(k) for k in ("passed", "failed", "values", "version", "frame", "rules", "admit")}
+
+
+def _admitted(doc) -> bool:
+    """A 🧪 record whose audit was ADMITTED by an admit rule (K3S) — `audit.admit` is a str."""
+    return isinstance(doc, dict) and isinstance((doc.get("audit") or {}).get("admit"), str)
 
 
 def t4_session(gga, session) -> dict:
     """[C2] The day's T4 count from the DURABLE #held markers (idempotent per date, symbol, setup — a repeated pass
     never double-counts): fired = markers whose failed ids include T4, fired_alone = markers whose failed ids are
-    exactly [T4]. A read fault → both None + read_fault True."""
+    exactly [T4]. A read fault → both None + read_fault True. 2026-11-09: an ADMITTED marker (K3S) is excluded — T4's
+    session count is 🚩 bars only, as its per-rule row."""
     rows = gga.held_rows([session])
     if rows is None:
         return {"fired": None, "fired_alone": None, "read_fault": True}
-    ids = [_failed_ids(d.get("audit")) for d in rows if isinstance(d, dict)]
+    ids = [_failed_ids(d.get("audit")) for d in rows if isinstance(d, dict) and not _admitted(d)]
     return {"fired": sum(1 for f in ids if "T4" in f), "fired_alone": sum(1 for f in ids if f == ["T4"])}
+
+
+def k3s_session(gga, session) -> dict:
+    """[C2, C5] The day's DURABLE 🧪 K3S counts (a repeated pass never double-counts — every source is first-wins):
+    candidates / placebo_a = `#partial_break` markers with `k3s` True / False; k11_refused = markers whose
+    `k3s_result` is "k11"; rang = today's shadow claims (the ONE row reader `ledger.alert_of`) whose audit was admitted;
+    held = `#held` markers whose audit was admitted. A reader returning None → its counts None + read_fault True."""
+    from . import ledger as LG
+    marks, claims, helds = gga.k3s_partial_rows([session]), gga.alert_rows([session]), gga.held_rows([session])
+    marks_ok = [d for d in (marks or []) if isinstance(d, dict)]
+    return {
+        "candidates": None if marks is None else sum(1 for d in marks_ok if d.get("k3s") is True),
+        "placebo_a": None if marks is None else sum(1 for d in marks_ok if d.get("k3s") is False),
+        "rang": None if claims is None else sum(1 for d in claims
+                                                if _admitted(d) and LG.alert_of(d, LG.KINDS[1], variant=V.GGA)),
+        "held": None if helds is None else sum(1 for d in helds if _admitted(d)),
+        "k11_refused": None if marks is None else sum(1 for d in marks_ok if d.get("k3s_result") == "k11"),
+        "read_fault": marks is None or claims is None or helds is None}
 
 
 def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, alert_ctx: Optional[dict], owner,
              dry: bool, push_dry: bool, record_status: Optional[Callable] = None,
-             strip: Optional[dict] = None) -> dict:
+             strip: Optional[dict] = None, floats: Optional[dict] = None,
+             session_volume: Optional[dict] = None) -> dict:
     """The overlay over THIS pass's reads (module docstring). -> the counts (alerts.COUNT_KEYS + aplus_original,
     aplus_audited, held) — never stored on GG5's `out`. Raises (after a best-effort `ok: False` state doc) so run.py's
     fence logs it. `strip` = the pass's scanner strip (`best_change_pct`, `best_symbol` — T4's number; absent → T4
-    fails closed)."""
+    fails closed). `floats` / `session_volume` (2026-11-09, 🧪 K3S) = the pass's {SYM: float read} and {SYM: session
+    volume} — absent (an old caller) → the 🎾 re-read has no float and K11 reads "unknown": K3S can never ring."""
     from . import alerts as AL
     from . import audited_rules as AUD
     v = V.GGA
@@ -174,6 +225,13 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
         judged: list = []                                       # (sym, setup, read, audit) — the reads 🚩 would ring
         n_unjudged: dict = {}
         n_orig = 0
+        k3s_live = AUD.k3s_on()                                 # 🧪 K3S (2026-11-09) — ONCE per pass
+        k3s: dict = {"candidates": 0, "rang": 0, "held": 0, "not_aplus": 0, "k11_refused": 0, "unjudged": {}}
+        partials: list = []                                     # (sym, setup, 🚩 partial read) — the #partial_break markers
+        k3s_res: dict = {}                                      # (sym, setup) → the marker's k3s_result
+        admits: set = set()                                     # (sym, setup) judged as a K3S re-read
+        floats = floats or {}
+        session_volume = session_volume or {}
         # phase 1 — the frozen stops, then judge ONLY the A+ bars the pass would claim [C1]
         for sym in sorted(frames):
             rs = reads.get(sym) or {}
@@ -192,6 +250,28 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
                     if new or setup in frozen:                  # no empty key for a name never armed
                         frozen[setup] = new
                 if r.get("state") != "aplus":
+                    if k3s_live and AUD.k3s_partial(dict(r, setup=setup)):
+                        partials.append((sym, setup, r))
+                        if AUD.k3s_candidate(dict(r, setup=setup)):
+                            k3s["candidates"] += 1
+                            r2 = k3s_read(frames[sym], r, floats.get(sym), session_volume.get(sym))
+                            if r2.get("state") != "aplus":
+                                res = "k11" if D.K11_KEY in (r2.get("missed") or []) else "not_aplus"
+                                k3s["k11_refused" if res == "k11" else "not_aplus"] += 1
+                                k3s_res[(sym, setup)] = res
+                                continue
+                            why = AL.refusal(dict(r2, setup=setup), sym, str(r2.get("entry_bar_t") or ""),
+                                             frames[sym], now, session, actx.get(sym), v, coll, closed=closed)
+                            if why is None and (str(sym).upper(), setup) in claimed:
+                                why = "claimed_before"
+                            if why is not None:
+                                k3s["unjudged"][why] = k3s["unjudged"].get(why, 0) + 1
+                                k3s_res[(sym, setup)] = f"unjudged:{why}"
+                                continue
+                            F = frames[sym].frame(r2.get("frame") or v.primary)
+                            judged.append((sym, setup, r2, AUD.judge(r2, F, frozen.get(setup) or [], ctx=ctx,
+                                                                     admit=AUD.K3S.id)))
+                            admits.add((sym, setup))
                     continue
                 n_orig += 1
                 why = AL.refusal(dict(r, setup=r.get("setup") or setup), sym, str(r.get("entry_bar_t") or ""),
@@ -229,11 +309,19 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
                                  "frame": r.get("frame") or audit.get("frame"), "trigger": r.get("trigger"),
                                  "stop": r.get("stop"), "risk_pct": r.get("risk_pct")}
                 n_t4 += 1 if "T4" in _failed_ids(audit) else 0
+                admit = (sym, setup) in admits
                 if audit.get("aplus") is True:
                     n_aud += 1
+                    if admit:                                   # the K3S re-read rings in shadow on 🚩's own plan
+                        out_rs[setup] = r
+                        k3s["rang"] += 1
+                        k3s_res[(sym, setup)] = "rang"
                 else:
                     out_rs[setup] = dict(r, state=AUD.HELD_STATE, audit=audit)
                     held.append((sym, setup, r, audit))
+                    if admit:
+                        k3s["held"] += 1
+                        k3s_res[(sym, setup)] = "held"
             gga_reads[sym] = out_rs
             if writes_ok and (setups or _dump(frozen) != frozen_before):
                 gga.upsert_overlay(session, sym, {"date": session_iso, "symbol": sym, "setups": setups,
@@ -251,6 +339,15 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
                     "frame": r.get("frame"), "trigger": r.get("trigger"), "stop": r.get("stop"),
                     "risk_pct": r.get("risk_pct"), "price": c.get("price"), "audit": _audit_block(audit),
                     "at": now.isoformat()})
+            for sym, setup, r in partials:                      # [C5] first-wins, no push, no claim, never a 🏁 row
+                c = actx.get(sym) or {}
+                AL._record(coll, f"{AL.claim_key(session, sym, setup, v)}#{AUD.K3S_PARTIAL_ROW_STATE}", {
+                    "date": session_iso, "symbol": sym, "setup": setup, "state": AUD.K3S_PARTIAL_ROW_STATE,
+                    "mode": "shadow", "entry_bar_t": r.get("entry_bar_t"), "frame": r.get("frame"),
+                    "trigger": r.get("trigger"), "stop": r.get("stop"), "risk_pct": r.get("risk_pct"),
+                    "missed": list(r.get("missed") or []), "k3s": AUD.k3s_candidate(dict(r, setup=setup)),
+                    "k3s_result": k3s_res.get((sym, setup)), "session_volume": session_volume.get(sym),
+                    "price": c.get("price"), "at": now.isoformat()})
             for (sym, setup), (_r, audit) in final.items():     # the shadow claim carries its audit — ONCE
                 if audit.get("aplus") is not True:
                     continue
@@ -268,13 +365,16 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
                 "at": now, "session": session_iso, "n_read": len(reads or {}), "n_aplus_original": n_orig,
                 "n_aplus_audited": n_aud, "n_held": len(held), "n_overlay_written": n_written,
                 "n_unjudged": dict(sorted(n_unjudged.items())),
-                "held": [{"symbol": s, "setup": k, "failed": _failed_ids(a)} for s, k, _r, a in held],
+                "held": [{"symbol": s, "setup": k, "failed": _failed_ids(a), "admit": a.get("admit")}
+                         for s, k, _r, a in held],
                 "alerts": counts, "ok": True,
                 "best_change_pct": ctx["best_change_pct"], "best_symbol": ctx["best_symbol"],
                 "t1_slots_used": len(claimed) + taken, "n_t4_fired_pass": n_t4,
                 "t4_session": t4_session(gga, session),
                 "rules": [rule.id for rule in AUD.filter_rules()],
                 "exit_rules": [rule.id for rule in AUD.exit_rules()],
+                "k3s": dict(k3s, unjudged=dict(sorted(k3s["unjudged"].items()))),
+                "k3s_session": k3s_session(gga, session),
                 "version": AUD.AUDIT_VERSION})
         if record_status is not None:
             record_status(summary, now, None)
@@ -292,5 +392,5 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
             log.info("gajjala audit overlay dry writes: %s", sorted(set(getattr(gga, "writes", []))))
 
 
-__all__ = ["LATEST_ID", "store_for", "refuse_send", "frozen_update", "wants_overlay", "session_claims",
-           "t4_session", "run_step"]
+__all__ = ["LATEST_ID", "store_for", "refuse_send", "frozen_update", "wants_overlay", "k3s_read", "session_claims",
+           "t4_session", "k3s_session", "run_step"]

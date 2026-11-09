@@ -962,6 +962,14 @@ class GajjalaStore:
         days = [_iso(s) for s in sessions or []]
         return self._find_or_none(ALERTS, {"date": {"$in": days}, "state": AUD.HELD_ROW_STATE})
 
+    def k3s_partial_rows(self, sessions: Iterable) -> Optional[list]:
+        """🧪 K3S (2026-11-09): the `#partial_break` markers of these sessions — one first-wins row per 🎾 partial break
+        per name per day (state audited_rules.K3S_PARTIAL_ROW_STATE; never a 🏁 row: the id carries `#`). The
+        held_rows shape. None on a read fault / no handle ([] = none on file)."""
+        from . import audited_rules as AUD
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(ALERTS, {"date": {"$in": days}, "state": AUD.K3S_PARTIAL_ROW_STATE})
+
     # ── 🧪 gajjala_exits (2026-11-01 — the alternative-exit grades; written ONLY by audited_exits.grade_exits) ───────
     def exits_docs(self, sessions: Iterable) -> Optional[list]:
         """🧪 The exits docs of these sessions. None on a read fault / no handle ([] = none on file)."""

@@ -6,7 +6,8 @@
  * Draws the SERVED `audited` block (backend chart_maps/gajjala/audited_tab.audited_block) and nothing else: a <details>
  * FOLDED by default (Rule #5 — a dense surface), its summary the served title and pass line; the body one row per served
  * registry entry (id · rule · source · since · verdict · status · note), then the served lane-only, UNMEASURED and
- * process lines, the stale line when the overlay missed the latest pass, the unaudited line when served. The FE types no
+ * process lines, the stale line when the overlay missed the latest pass, the unaudited line when served.
+ * 🧪 K3S (2026-11-09): after the unaudited line, the served `admitted.text` (today's admit-pass line) when said. The FE types no
  * rule, number or sentence of the audit and decides nothing — an absent block renders nothing. UNMEASURED.
  */
 import type { GgAuditedBlock, GgAuditedRegistryRow } from '../lib/gajjala';
@@ -55,6 +56,9 @@ export function GgAuditedStrip({ block }: { block?: GgAuditedBlock | null }) {
       ) : null}
       {block.unaudited && said(block.unaudited.text) ? (
         <div className="gg-audited-warn" data-testid="gg-audited-unaudited">{block.unaudited.text}</div>
+      ) : null}
+      {block.admitted && typeof block.admitted === 'object' && said(block.admitted.text) ? (
+        <div className="gg-muted" data-testid="gg-audited-admitted">{block.admitted.text}</div>
       ) : null}
     </details>
   );

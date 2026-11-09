@@ -9781,7 +9781,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 33) → slice(0, 36).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10008,7 +10009,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 30) → slice(0, 33).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10318,7 +10320,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 29) → slice(0, 32).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10530,7 +10533,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 24) → slice(0, 27).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10641,7 +10645,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 28) → slice(0, 31).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10803,7 +10808,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 25) → slice(0, 28).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10932,7 +10938,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 26) → slice(0, 29).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10995,7 +11002,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 22) → slice(0, 25).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11147,7 +11155,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 23) → slice(0, 26).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11242,7 +11251,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 21) → slice(0, 24).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11370,7 +11380,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 20) → slice(0, 23).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11573,7 +11584,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 19) → slice(0, 22).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11639,7 +11651,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 18) → slice(0, 21).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11725,7 +11738,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 17) → slice(0, 20).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11805,7 +11819,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 16) → slice(0, 19).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12156,7 +12171,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 15) → slice(0, 18).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12332,7 +12348,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 13) → slice(0, 16).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12557,7 +12574,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 14) → slice(0, 17).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12661,7 +12679,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 12) → slice(0, 15).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12773,7 +12792,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 11) → slice(0, 14).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12915,7 +12935,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 10) → slice(0, 13).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13047,7 +13068,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 9) → slice(0, 12).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13205,8 +13227,13 @@ const CONTRACTS = [
       // the 12-id tuple in the ask's order (the launch set G1–G4, then the eight modifications T1 T2 A1 H1 T4 A2 T3 T5);
       // G3 stays lane_only, the eleven others ON; T3 / T5 are EXIT grades, the rest FILTERS; each modification cites
       // the second frozen prereg (PREREG2_PATH); AUDIT_VERSION is 2.
-      const REG_IDS = ['G1', 'G2', 'G3', 'G4', 'T1', 'T2', 'A1', 'H1', 'T4', 'A2', 'T3', 'T5'];
+      // RE-PINNED 2026-11-09 (🧪 K3S — Ajay: "yes change the audit as per you like that is yours I need you to make it
+      // successful and earn money that is the goal"; spec gg_k3 §4 main-session): K3S joins LAST (13 ids), STATUS_ON,
+      // KIND_ADMIT, citing the third frozen prereg PREREG3_PATH; judge() gained `admit=` so AUDIT_VERSION is 3. The K3S
+      // specifics are pinned in their own "🧪 K3S (2026-11-09)" block.
+      const REG_IDS = ['G1', 'G2', 'G3', 'G4', 'T1', 'T2', 'A1', 'H1', 'T4', 'A2', 'T3', 'T5', 'K3S'];
       const EXIT_IDS = ['T3', 'T5'];
+      const ADMIT_IDS = ['K3S'];
       const regM = /^REGISTRY = \(([^)]*)\)/m.exec(ar);
       const regIds = regM ? regM[1].split(',').map((x) => x.trim()).filter(Boolean) : null;
       if (!regIds) errs.push('audited_rules.py lost REGISTRY = (…)');
@@ -13216,17 +13243,18 @@ const CONTRACTS = [
         if (!body || !new RegExp(`^${id} = Rule\\(\\s*(?:id\\s*=\\s*)?"${id}"`).test(body)) { errs.push(`audited_rules.py must declare ${id} = Rule("${id}", …)`); continue; }
         if (id === 'G3') {
           if (!/\bSTATUS_LANE_ONLY\b/.test(body) || /\bSTATUS_ON\b/.test(body)) errs.push('audited_rules.G3 must be STATUS_LANE_ONLY — a paper-lane entry gate, applied nowhere');
-        } else if (!/\bSTATUS_ON\b/.test(body) || /\bSTATUS_(?:OFF|LANE_ONLY)\b/.test(body)) errs.push(`audited_rules.${id} must be STATUS_ON (G3 lane_only, the eleven others ON)`);
+        } else if (!/\bSTATUS_ON\b/.test(body) || /\bSTATUS_(?:OFF|LANE_ONLY)\b/.test(body)) errs.push(`audited_rules.${id} must be STATUS_ON (G3 lane_only, the twelve others ON)`);
         if (!id.startsWith('G')) {
           // the TRAILING (kind, prereg) fields of the Rule — the source tuple also names PREREG2_PATH, so read the tail
           const tail = /\b(KIND_[A-Z]+),\s*([A-Z0-9_]+)\)\s*$/.exec(body.trim()) || [];
-          const wantKind = EXIT_IDS.includes(id) ? 'KIND_EXIT' : 'KIND_FILTER';
-          if (tail[1] !== wantKind) errs.push(`audited_rules.${id} must be ${wantKind} (T3 / T5 grade exits; the rest remove an A+; found ${tail[1] || 'none'})`);
-          if (tail[2] !== 'PREREG2_PATH') errs.push(`audited_rules.${id} must cite PREREG2_PATH — the 2026-11-01 frozen prereg (found ${tail[2] || 'none'})`);
+          const wantKind = EXIT_IDS.includes(id) ? 'KIND_EXIT' : ADMIT_IDS.includes(id) ? 'KIND_ADMIT' : 'KIND_FILTER';
+          const wantPre = ADMIT_IDS.includes(id) ? 'PREREG3_PATH' : 'PREREG2_PATH';
+          if (tail[1] !== wantKind) errs.push(`audited_rules.${id} must be ${wantKind} (T3 / T5 grade exits; K3S admits; the rest remove an A+; found ${tail[1] || 'none'})`);
+          if (tail[2] !== wantPre) errs.push(`audited_rules.${id} must cite ${wantPre} — its frozen prereg (found ${tail[2] || 'none'})`);
         }
       }
       const AV = (/^AUDIT_VERSION = (\d+)\b/m.exec(ar) || [])[1];
-      if (AV !== '2') errs.push(`audited_rules.AUDIT_VERSION must be 2 — judge() changed 2026-11-01 (found ${AV ?? 'none'})`);
+      if (AV !== '3') errs.push(`audited_rules.AUDIT_VERSION must be 3 — judge() changed 2026-11-09 (K3S admit=) (found ${AV ?? 'none'})`);
       if (!/^PREREG2_PATH = "eod-audits\/research\/2026-11-01_gajjala_audited_modifications_prereg\.md"/m.test(ar)) errs.push('audited_rules.PREREG2_PATH must name eod-audits/research/2026-11-01_gajjala_audited_modifications_prereg.md');
       // the overlay judges ONLY what 🚩 would ring: run_step calls the ONE refusal chain (pinned in alerts.py by the no-risk block)
       const apy = tryRead('../backend/chart_maps/gajjala/audited_pass.py', 'audited_pass.py');
@@ -13250,7 +13278,9 @@ const CONTRACTS = [
       const pins = [['STUDY_SHA256', '../backend/tests/fixtures/gajjala/gates_study_2026_10_30.py.txt'],
         ['PREREG_SHA256', '../backend/tests/fixtures/gajjala/gates_prereg_2026_10_30.md'],
         // 2026-11-01: the second frozen prereg (the eight modifications) — written before any code
-        ['PREREG2_SHA256', '../backend/tests/fixtures/gajjala/audited_modifications_prereg_2026_11_01.md']];
+        ['PREREG2_SHA256', '../backend/tests/fixtures/gajjala/audited_modifications_prereg_2026_11_01.md'],
+        // 2026-11-09: the third frozen prereg (🧪 K3S) — written before any code
+        ['PREREG3_SHA256', '../backend/tests/fixtures/gajjala/audited_k3s_prereg_2026_11_09.md']];
       for (const [n, rel] of pins) {
         const want = arHex(n);
         const buf = tryBytes(rel, `${n} fixture`);
@@ -13380,7 +13410,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 7) → slice(0, 10).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13406,7 +13437,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      if (nf && !ids2.slice(0, 8).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 8).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      if (nf && !ids2.slice(0, 9).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 9).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13420,7 +13452,8 @@ const CONTRACTS = [
         for (const need of ['UNMEASURED', 'Not advice.', 'never hidden', 'winners and losers', 'rule by rule']) if (!label2.includes(need)) errs.push(`${W2} must say "${need}"`);
         if (MODE === 'shadow' && !(label2.includes('never sent') && /\bshadow\b/.test(label2))) errs.push(`${W2} must say shadow and "never sent" (GAJJALA_AUDITED_PUSH_MODE is shadow)`);
         if (MODE !== 'shadow' && /\bshadow\b/.test(label2)) errs.push(`${W2} says shadow but GAJJALA_AUDITED_PUSH_MODE is ${MODE}`);
-        for (const id of REG_IDS.filter((x) => !x.startsWith('G'))) {
+        // the 2026-11-01 ✨ names the eight modifications only — K3S (2026-11-09) is named by its own ✨
+        for (const id of REG_IDS.filter((x) => !x.startsWith('G') && !ADMIT_IDS.includes(x))) {
           const body = pyStmt(ar, id, 'Rule(') || '';
           const nm = ([...body.matchAll(/"([^"]*)"/g)][1] || [])[1];
           if (!nm) errs.push(`audited_rules.${id} has no served name (the ✨ check reads it)`);
@@ -13684,7 +13717,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 6) → slice(0, 9).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -13913,7 +13947,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 5) → slice(0, 8).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14049,7 +14084,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …").
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+        if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14141,7 +14177,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — first → first two.
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-        if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14262,7 +14299,8 @@ const CONTRACTS = [
         const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — FIRST → one of the first four.
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+        if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14403,7 +14441,8 @@ const CONTRACTS = [
         ];
         for (const [ID, route, his] of want) {
           // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
-          if (!ids.slice(0, 4).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 4).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+          if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14529,7 +14568,8 @@ const CONTRACTS = [
         const ID = 'chart-maps-gajjala-squeeze-chart-2026-11-08';
         const HIS1 = 'I need something like this but that big of circle for reversal squeen mainly on the cart itself also increase the width of the reversal sqeeze chart to show more bars';
         const HIS2 = "They don't have to be circles but indicators did you build them already?";
-        if (ids[0] !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found '${ids[0] || 'none'}')`);
+        // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
+        if (!ids.slice(0, 2).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 2).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14550,6 +14590,136 @@ const CONTRACTS = [
       if (d && !d.startsWith("# 🎾 GG's marks on the Reversal Squeeze chart — 2026-11-08")) errs.push('docs/gajjala/squeeze_chart_2026_11_08.md must open with its dated H1');
       const sp = tryRead('../SPECS.md', 'SPECS.md');
       if (sp && !sp.includes("**🎾 GG's marks on the Reversal Squeeze chart · wide card · prior-session tail (2026-11-08)**")) errs.push('SPECS.md must carry the 🎾 squeeze-chart bullet (2026-11-08)');
+      return errs;
+    },
+  },
+  {
+    name: '🧪 K3S (2026-11-09)',
+    file: '../backend/chart_maps/gajjala/audited_rules.py',
+    checks(ar) {
+      // Ajay 2026-11-09 (verbatim): "yes change the audit as per you like that is yours I need you to make it successful
+      // and earn money that is the goal". Spec gg_k3 §4 main-session. 🧪 K3S = an ADMIT: a 🎾 Reversal Squeeze break that
+      // 🚩 refuses ONLY on K3 is a 🧪 A+ with 🚩's own plan; K11 re-applied; SHADOW; UNMEASURED. Every check reads the
+      // REAL file: (1) REGISTRY 13 ids, K3S LAST, STATUS_ON, KIND_ADMIT, PREREG3_PATH; KINDS carries the admit;
+      // AUDIT_VERSION 3; PREREG3_SHA256 is the frozen prereg's sha on its own line and == sha256(the byte copy);
+      // (2) constants: K3_VOL_FRAC still 0.50 (his K3 is untouched), GAJJALA_AUDITED_PUSH_MODE shadow; OWNER_KEEP_SET
+      // seven, no K3S / audited kind; (3) detectors.reversal_squeeze keeps `k3_binding: bool = True` (🚩 byte-identical)
+      // and ONLY audited_pass passes k3_binding=False; (4) audited_pass.k3s_read re-reads with k3_binding=False and puts
+      // the read through D.k11_gate [C1]; run.py hands run_step floats= and session_volume=; (5) no b-word / "edge" in
+      // the new words.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const SHA = 'be966681e31703f9bba2761d6dd28c0d135108ef93076be000ec8ec516b6ef54';
+      const FIX = '../backend/tests/fixtures/gajjala/audited_k3s_prereg_2026_11_09.md';
+      const stripPy = (py) => py.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const B_WORD = (t) => /bounc/i.test(t) || /\bfake\b/i.test(t);
+      // self-tests — the helpers bite where they must and not where they must not
+      if (stripPy('x = 1  # k3_binding=False\n"""k3_binding=False"""\n').includes('k3_binding=False')) errs.push('self-test: stripPy must drop comments and docstrings');
+      if (!B_WORD('a bounce') || B_WORD('a reversal')) errs.push('self-test: B_WORD must flag the b-word and pass "reversal"');
+      if (!/\bedge\b/i.test('no edge') || /\bedge\b/i.test('LEDGER.md hedge')) errs.push('self-test: "edge" must match as a word only');
+
+      // (1) the registry
+      const regM = /^REGISTRY = \(([^)]*)\)/m.exec(ar);
+      const regIds = regM ? regM[1].split(',').map((x) => x.trim()).filter(Boolean) : [];
+      if (regIds.length !== 13) errs.push(`audited_rules.REGISTRY must carry 13 ids (found ${regIds.length})`);
+      if (regIds[regIds.length - 1] !== 'K3S') errs.push(`audited_rules.REGISTRY must end with K3S (found ${regIds[regIds.length - 1] || 'none'})`);
+      if (regIds.filter((x) => x === 'K3S').length !== 1) errs.push('audited_rules.REGISTRY must list K3S exactly once');
+      const a = ar.indexOf('\nK3S = Rule(');
+      const rest = a < 0 ? '' : ar.slice(a + 1);
+      const e = /\n(?=[A-Za-z_#@])/.exec(rest.slice(1));
+      const k3s = e ? rest.slice(0, e.index + 1) : rest;
+      if (!k3s || !/^K3S = Rule\(\s*"K3S"/.test(k3s)) errs.push('audited_rules.py must declare K3S = Rule("K3S", …)');
+      else {
+        if (!/\bSTATUS_ON\b/.test(k3s) || /\bSTATUS_(?:OFF|LANE_ONLY)\b/.test(k3s)) errs.push('audited_rules.K3S must be STATUS_ON');
+        const tail = /\b(KIND_[A-Z]+),\s*([A-Z0-9_]+)\)\s*$/.exec(k3s.trim()) || [];
+        if (tail[1] !== 'KIND_ADMIT') errs.push(`audited_rules.K3S must be KIND_ADMIT (found ${tail[1] || 'none'})`);
+        if (tail[2] !== 'PREREG3_PATH') errs.push(`audited_rules.K3S must cite PREREG3_PATH (found ${tail[2] || 'none'})`);
+        if (!k3s.includes('GC.K3_VOL_FRAC')) errs.push('audited_rules.K3S must read GC.K3_VOL_FRAC (never a second literal of his K3)');
+        if (!k3s.includes('UNMEASURED')) errs.push('audited_rules.K3S must carry VERDICT_UNMEASURED');
+      }
+      if (!/^KIND_ADMIT = "admit"/m.test(ar)) errs.push('audited_rules.py must declare KIND_ADMIT = "admit"');
+      if (!/^KINDS = \(KIND_FILTER, KIND_EXIT, KIND_ADMIT\)/m.test(ar)) errs.push('audited_rules.KINDS must be (KIND_FILTER, KIND_EXIT, KIND_ADMIT)');
+      if ((/^AUDIT_VERSION = (\d+)\b/m.exec(ar) || [])[1] !== '3') errs.push('audited_rules.AUDIT_VERSION must be 3 (judge() gained admit= on 2026-11-09)');
+      if (!/^PREREG3_PATH = "eod-audits\/research\/2026-11-09_gajjala_audited_k3s_prereg\.md"/m.test(ar)) errs.push('audited_rules.PREREG3_PATH must name eod-audits/research/2026-11-09_gajjala_audited_k3s_prereg.md');
+      const p3 = (/^PREREG3_SHA256 = "([0-9a-f]{64})"/m.exec(ar) || [])[1];
+      if (p3 !== SHA) errs.push(`audited_rules.PREREG3_SHA256 must be ${SHA.slice(0, 12)}… on its own line (found ${p3 ? p3.slice(0, 12) + '…' : 'none'})`);
+      let buf = null;
+      try { buf = readFileSync(join(FRONTEND_ROOT, FIX)); } catch { errs.push(`${FIX} is unreadable (the K3S prereg byte copy)`); }
+      if (buf && createHash('sha256').update(buf).digest('hex') !== SHA) errs.push(`sha256(${FIX.slice(3)}) != ${SHA.slice(0, 12)}… — the fixture is a BYTE copy of the frozen prereg`);
+      if (!/PREREG3_PATH: PREREG3_SHA256/.test(ar)) errs.push('audited_rules.PREREG_SHA_BY_PATH must map PREREG3_PATH: PREREG3_SHA256');
+
+      // (2) constants + the keep-set
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
+      if (gc && !/^K3_VOL_FRAC = 0\.50\b/m.test(gc)) errs.push('constants.K3_VOL_FRAC must stay 0.50 — K3S never changes his K3');
+      if (gc && !/^GAJJALA_AUDITED_PUSH_MODE = "shadow"/m.test(gc)) errs.push('constants.GAJJALA_AUDITED_PUSH_MODE must stay "shadow" — a K3S ring is recorded, never sent');
+      const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
+      if (subs) {
+        const ks = keepSet(subs);
+        if (ks.length !== 7) errs.push(`OWNER_KEEP_SET must stay exactly seven (found ${ks.length})`);
+        if (ks.some((k) => /audited|k3s/i.test(k))) errs.push('OWNER_KEEP_SET carries an audited / K3S kind — 🧪 never pushes');
+        if (/k3s/i.test(subs)) errs.push('push/subs.py names K3S — the admit has no push kind');
+      }
+
+      // (3) the detector default + the ONLY caller that unbinds K3
+      const dt = tryRead('../backend/chart_maps/gajjala/detectors.py', 'detectors.py');
+      if (dt) {
+        const sig = /\ndef reversal_squeeze\(([\s\S]*?)\)\s*->/.exec(dt);
+        if (!sig) errs.push('detectors.py lost def reversal_squeeze(');
+        else if (!/\bk3_binding: bool = True\b/.test(sig[1])) errs.push('detectors.reversal_squeeze must keep `k3_binding: bool = True` — the 🚩 path stays byte-identical');
+      }
+      const walk = (rel) => {
+        let out = [];
+        let ents = [];
+        try { ents = readdirSync(join(FRONTEND_ROOT, rel), { withFileTypes: true }); } catch { return out; }
+        for (const d of ents) {
+          if (d.isDirectory()) { if (d.name !== '__pycache__') out = out.concat(walk(`${rel}/${d.name}`)); }
+          else if (d.name.endsWith('.py')) out.push(`${rel}/${d.name}`);
+        }
+        return out;
+      };
+      const pys = walk('../backend/chart_maps');
+      if (!pys.length) errs.push('backend/chart_maps has no .py files (the k3_binding caller scan needs them)');
+      const callers = pys.filter((f) => /\bk3_binding\s*=\s*False\b/.test(stripPy(read(f)))).map((f) => f.replace('../backend/chart_maps/', ''));
+      if (callers.join(',') !== 'gajjala/audited_pass.py') errs.push(`only gajjala/audited_pass.py may pass k3_binding=False (found ${callers.join(', ') || 'none'})`);
+
+      // (4) the overlay re-read + the run.py hand-off
+      const ap = tryRead('../backend/chart_maps/gajjala/audited_pass.py', 'audited_pass.py');
+      if (ap) {
+        const at = ap.indexOf('\ndef k3s_read(');
+        const tl = at < 0 ? '' : ap.slice(at + 1);
+        const nx = /\n(?=[A-Za-z_#@])/.exec(tl.slice(1));
+        const body = stripPy(nx ? tl.slice(0, nx.index + 1) : tl);
+        if (!body) errs.push('audited_pass.py must define k3s_read(');
+        else {
+          if (!/D\.reversal_squeeze\([^)]*k3_binding=False\)/.test(body)) errs.push('audited_pass.k3s_read must re-read through D.reversal_squeeze(…, k3_binding=False) — the ONE detector');
+          if (!/\bD\.k11_gate\(/.test(body)) errs.push('audited_pass.k3s_read must put the re-read through D.k11_gate( — a partial read never carries the K11 row [C1]');
+        }
+      }
+      const rp = tryRead('../backend/chart_maps/gajjala/run.py', 'run.py');
+      if (rp) {
+        const at = rp.indexOf('AP.run_step(');
+        let call = '';
+        if (at >= 0) {
+          let depth = 0;
+          for (let i = at + 'AP.run_step'.length; i < rp.length; i++) {
+            if (rp[i] === '(') depth++;
+            else if (rp[i] === ')') { depth--; if (depth === 0) { call = rp.slice(at, i + 1); break; } }
+          }
+        }
+        if (!call) errs.push('run.py lost the AP.run_step( call');
+        else {
+          if (!/\bfloats=floats\b/.test(call)) errs.push('run.py AP.run_step( must pass floats=floats (the K3S re-read needs the same float)');
+          if (!/\bsession_volume=/.test(call)) errs.push('run.py AP.run_step( must pass session_volume= (K11 re-applied, fail-closed)');
+        }
+      }
+
+      // (5) the new words
+      const words = [k3s, ...[...ar.matchAll(/^ADMIT_[A-Z_]+ = "([^"]*)"/gm)].map((m) => m[1])];
+      if (words.length < 3) errs.push('audited_rules.py must declare the ADMIT_TEXT_* words');
+      for (const w of words) {
+        if (B_WORD(w)) errs.push('a K3S word says bounce / fake — reversal, never bounce');
+        if (/\bedge\b/i.test(w)) errs.push('a K3S word says "edge" — UNMEASURED, never claim an edge');
+      }
       return errs;
     },
   },
