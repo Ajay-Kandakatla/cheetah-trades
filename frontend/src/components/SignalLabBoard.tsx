@@ -169,7 +169,7 @@ export function SignalLabBoard() {
                     endpoint never runs chart_maps/board.attach_band_structure, so
                     the row's SERVED read is put on the tile the one renderer
                     already reads it from. */}
-                <PatternChart tvTf="daily" study={room.payload?.explosive_study}
+                <PatternChart study={room.payload?.explosive_study}
                               bandStudy={room.payload?.band_structure_study}
                               tile={{ ...r.tile,
                                       band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }} />

@@ -24,7 +24,7 @@ import {
   cardLadder, FOLD_GROUPS, FOLD_LABEL, planLineKey, type FoldItem, type OuterChip,
 } from '../lib/cardLadder';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
-import { openTvChart } from '../lib/tvChart';
+import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
@@ -102,8 +102,8 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf, study, bandStudy, burst, outerChips, expandAll }: {
-    tile: CmTile; height?: number; tvTf?: string;
+  { tile, height = 190, study, bandStudy, burst, outerChips, expandAll }: {
+    tile: CmTile; height?: number;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
     study?: ExplosiveStudy | null;
@@ -391,11 +391,14 @@ export const PatternChart = memo(function PatternChart(
             {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
               * every board; the Signals tab reads the same store. */}
             {skip.has('watch') ? null : <SignalWatchButton symbol={tile.symbol} />}
+            {/* Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" /
+              * "To external ones please" — the external link-out is Yahoo's quote page (lib/yahooLink); the chart's
+              * timeframe is not carried (Yahoo has no interval parameter). */}
             <button type="button" className="cm-tv"
-                    title={`Open ${tile.symbol} in TradingView`}
-                    aria-label={`Open ${tile.symbol} in TradingView`}
-                    onClick={(e) => openTvChart(e, tile.symbol, tvTf)}>
-              TV ↗
+                    title={yahooTitle(tile.symbol)}
+                    aria-label={yahooTitle(tile.symbol)}
+                    onClick={(e) => openYahoo(e, tile.symbol)}>
+              {YAHOO_LABEL}
             </button>
           </div>
         </div>

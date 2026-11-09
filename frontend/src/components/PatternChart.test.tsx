@@ -316,26 +316,30 @@ describe('the neutral band', () => {
   });
 });
 
-describe('the TV link-out', () => {
-  // The Charting Library application was refused (auth-gated site), so the
-  // pre-configured chart is a LINK to tradingview.com — never an embed.
+describe('the Yahoo Finance link-out', () => {
+  // Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" / "To external
+  // ones please". A LINK to Yahoo's quote page, never an embed; the TradingView link-out (2026-08-31) is gone from the tiles.
   afterEach(() => vi.unstubAllGlobals());
 
-  it('every tile carries a TV button that opens WITHOUT following the tile link', () => {
+  it('every tile carries a Yahoo button that opens the quote page WITHOUT following the tile link', () => {
     const open = vi.fn();
     vi.stubGlobal('open', open);
     draw(TILE);
-    fireEvent.click(screen.getByRole('button', { name: /IONQ in TradingView/ }));
-    expect(open).toHaveBeenCalledWith(
-      'https://www.tradingview.com/chart/?symbol=IONQ&interval=D', '_blank', 'noopener');
+    const btn = screen.getByRole('button', { name: /IONQ on Yahoo Finance/ });
+    expect(btn.textContent).toBe('Yahoo ↗');
+    fireEvent.click(btn);
+    expect(open).toHaveBeenCalledWith('https://finance.yahoo.com/quote/IONQ/', '_blank', 'noopener');
   });
 
-  it('a session tile preconfigures the 15-minute interval', () => {
+  it('NEGATIVE: no TradingView button, no tradingview.com URL, no interval on the tile', () => {
     const open = vi.fn();
     vi.stubGlobal('open', open);
-    render(<MemoryRouter><PatternChart tile={TILE} tvTf="15m" /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /IONQ in TradingView/ }));
-    expect(open.mock.calls[0][0]).toContain('interval=15');
+    draw(TILE);
+    expect(screen.queryByRole('button', { name: /TradingView/ })).toBeNull();
+    expect(screen.queryByText('TV ↗')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /IONQ on Yahoo Finance/ }));
+    expect(String(open.mock.calls[0][0])).not.toContain('tradingview');
+    expect(String(open.mock.calls[0][0])).not.toContain('interval');
   });
 });
 

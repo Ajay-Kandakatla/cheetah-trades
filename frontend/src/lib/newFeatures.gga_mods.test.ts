@@ -26,16 +26,18 @@ describe('✨ the 🧪 audited-modifications entry', () => {
   // WIDENED +1 (2026-11-06: gajjala-chart-frame FIRST — Ajay: "If I click on Gajjalas tab stocks …") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 later: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-09 latest: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fourth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05 and the 🏁 one-count ✨ 2026-11-02 went first), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
-    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
-    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[8].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[9].id).toBe(ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[9].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[10].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -93,8 +95,9 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
   const k = NEW_FEATURES.find((x) => x.id === K3S_ID)!;
 
   // WIDENED +1 (2026-11-09 later: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live") — K3S [0] → [1], the NEGATIVE [1] → [2].
-  it('is SECOND (the ⏱ Gajjala live ✨ went FIRST 2026-11-09), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
-    expect(NEW_FEATURES[1].id).toBe(K3S_ID);
+  // WIDENED +1 (2026-11-09 latest: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here") — every NEW_FEATURES[n] pin below → [n+1].
+  it('is THIRD (the ⏱ Gajjala live ✨ and then the 🌐 Yahoo link-out ✨ went FIRST 2026-11-09), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
+    expect(NEW_FEATURES[2].id).toBe(K3S_ID);
     expect(NEW_FEATURES.filter((x) => x.id === K3S_ID).length).toBe(1);
     expect(k.addedAt).toBe('2026-11-09');
     expect(k.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -115,7 +118,7 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
     expect(/\bedge\b/i.test(k.label)).toBe(false);
     expect(k.label.toLowerCase().includes('b' + 'ounc')).toBe(false);
     expect(/\b(profitable|proven|guaranteed|wins more|beats)\b/i.test(k.label)).toBe(false);
-    expect(NEW_FEATURES[2].id).not.toBe(K3S_ID);
+    expect(NEW_FEATURES[3].id).not.toBe(K3S_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });
@@ -145,8 +148,8 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     return Number(m[1]);
   };
 
-  it('is FIRST, listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe(LIVE_ID);
+  it('is SECOND (the 🌐 Yahoo link-out ✨ went FIRST 2026-11-09 later), listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
+    expect(NEW_FEATURES[1].id).toBe(LIVE_ID);
     expect(NEW_FEATURES.filter((x) => x.id === LIVE_ID).length).toBe(1);
     expect(g.addedAt).toBe('2026-11-09');
     expect(g.route).toBe('/chart-maps?tab=gajjala&sub=track_record');
@@ -192,7 +195,7 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     expect(/\b(profitable|proven|guaranteed|wins more|beats|faster profits)\b/i.test(g.label)).toBe(false);
     expect(/orders (now )?go on the (stream|first print)/i.test(g.label)).toBe(false);
     expect(/\bLIVE\b.*\bnow\b/.test(g.label.replace('Stream entries LIVE and the earlier pass are your calls', ''))).toBe(false);
-    expect(NEW_FEATURES[1].id).not.toBe(LIVE_ID);
+    expect(NEW_FEATURES[2].id).not.toBe(LIVE_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });

@@ -42,18 +42,24 @@ Session tab hides them on Chart Maps too — one preference, not three.
    never heard of renders even with every checkbox off — a new overlay must
    appear by default, never vanish silently. Also test-locked.
 
-## The TradingView button
+## The Yahoo Finance button (TradingView until 2026-11-09)
 
-Every tile header (and the Support tab head) carries `TV ↗`, opening
-`tradingview.com/chart/?symbol=SYM&interval=…` in a new tab — `D` for daily
-charts, `15`/`60` for the session views; dash share classes are rewritten to
-TradingView's dot style (`BRK-B` → `BRK.B`).
+Every tile header (and the Support tab head) carries `Yahoo ↗`, opening the
+stock's Yahoo Finance quote page (`finance.yahoo.com/quote/SYM/`) in a new
+tab — the chart, float, shares outstanding and short interest in one place.
+Ajay 2026-11-09, with a 🚩 card screenshot of the old button: *"Instead of
+traderview I need yahoo finance link here"* / *"To external ones please"*.
+Share classes keep this app's dash style (`BRK-B`); a dot class is rewritten
+to the dash. Yahoo has no interval parameter, so the tile's timeframe is not
+carried (the TradingView link used to carry it; `tvChart.ts` and the `tvTf`
+prop are deleted). Helper: `frontend/src/lib/yahooLink.ts`.
 
-This is deliberately a **link-out, not an embed**: the TradingView Charting
+History: from 2026-08-31 the button was `TV ↗`, a **link-out, not an embed**,
+to `tradingview.com/chart/?symbol=SYM&interval=…` — the TradingView Charting
 Library application was REFUSED (2026-08-16 — they require a public website,
 and this app is auth-gated; see `docs/tradingview_charting_library.md`). The
-public chart page needs no license and opens in his own TV account with his
-own layout. The tile is wrapped in a router `<Link>`, so the button cancels
+Stock detail modal's TradingView embed is a different surface and is
+unchanged. The tile is wrapped in a router `<Link>`, so the button cancels
 the tile navigation before opening the tab (locked in
 `PatternChart.test.tsx`).
 
@@ -61,8 +67,8 @@ the tile navigation before opening the tab (locked in
 
 - `frontend/src/lib/chartOverlays.test.ts` — filtering, prefix precedence,
   unknown-kept, persistence round-trip.
-- `frontend/src/lib/tvChart.test.ts` — URL shape, interval mapping,
-  dash→dot, the double-cancel click handler.
+- `frontend/src/lib/yahooLink.test.ts` — URL shape, dash share classes kept
+  (never dot), the double-cancel click handler (2026-11-09; `tvChart.test.ts` deleted).
 - `frontend/src/components/OverlayLegend.test.tsx` — render + show-all reset.
 - `frontend/src/components/{PatternChart,SupportLevels}.test.tsx` — the TV
   button/anchor on real surfaces.

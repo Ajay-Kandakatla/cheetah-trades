@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 (verbatim in the label, his spelling kept), with a 🚩 card screenshot of the old ↗ button: "Instead of
+  // traderview I need yahoo finance link here" / "To external ones please". The external link-out top-right of every chart
+  // tile (PatternChart — every board tab incl. 🚩 / 🧪 / 🥇) and on the Support tab head is now Yahoo Finance's quote page
+  // (lib/yahooLink.yahooQuoteUrl: dash share classes kept, no interval — Yahoo has none); lib/tvChart.ts (2026-08-31) is
+  // deleted and PatternChart's tvTf prop with it. The Stock detail modal's TradingView embed is a different surface,
+  // unchanged. Pinned by scripts/contracts.mjs ("🌐 Yahoo link-out (2026-11-09)").
+  { id: 'chart-maps-yahoo-link-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps',
+    label: "🌐 Yahoo ↗ on every card — you said: “Instead of traderview I need yahoo finance link here” / “To external ones please”. The link-out top-right of every chart tile and the Support tab head now opens the stock's Yahoo Finance page (chart, float, shares, short interest) instead of TradingView." },
   // Ajay 2026-11-09 ~01:00 ET (verbatim in the label, his spelling kept): "I would like the autopilot to be continously
   // monitored or live tracked and changed as if Gallalas makes the trades can you modify and make it more live with
   // websockets or something else where there is a low latency monitoring on the prices action changes please?" and "same

@@ -238,7 +238,7 @@ describe('PatternChart — the entry ladder', () => {
     const { container } = draw(VOYA, { outerChips: ['enterable', 'watch'] });
     expect(container.textContent).not.toContain('🎯 READY');
     expect(screen.queryByRole('button', { name: /VOYA (to|from) Signals/ })).toBeNull();
-    expect(screen.getByRole('button', { name: /VOYA in TradingView/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /VOYA on Yahoo Finance/ })).toBeInTheDocument();
   });
 });
 

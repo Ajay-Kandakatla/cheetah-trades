@@ -19,7 +19,7 @@ One labelled rung per entry question, read top to bottom. A rung with nothing in
 
 | Rung | Holds |
 |---|---|
-| head | symbol, name, then what the company IS: theme, 🚀 growth, 🎪 promo, served company facts (Sales, 💎, cap, Recent IPO). `+ Signals` and `TV ↗` sit top-right |
+| head | symbol, name, then what the company IS: theme, 🚀 growth, 🎪 promo, served company facts (Sales, 💎, cap, Recent IPO). `+ Signals` and `Yahoo ↗` (TradingView until 2026-11-09) sit top-right |
 | **ENTRY** | 🎯 READY / WATCH / ⛔ (served), extra served reasons as `· room < 5%`, tier and 0DTE verdicts, vetoes (🔪 falling knife, Reports …, S4/S3 stage, recycled ticker, `-x% vs your cost` first), and the zone pill **only when it disagrees with the board** — e.g. `At Supply · caution`, amber |
 | **PRICE** | position pills, the approach sentence as a coloured line (green reversal / amber falling / grey settling), the ⚡ momentum burst (only while its box is ticked), ⚡ tape pills, 💰 / 🔻 money flow |
 | chart | unchanged |

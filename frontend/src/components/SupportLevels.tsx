@@ -36,7 +36,7 @@ import {
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
-import { tvChartUrl } from '../lib/tvChart';
+import { yahooQuoteUrl, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
 import { ShortInterestChip } from './ShortInterestChip';
@@ -445,10 +445,12 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               <span className="sl-recent">
                 {testedCount(supports)} of {supports.length} turned at more than once
               </span>
-              <a className="cm-tv" href={tvChartUrl(data.symbol, tf)}
+              {/* Ajay 2026-11-09: "Instead of traderview I need yahoo finance link here" / "To external ones please" —
+                * Yahoo's quote page; the frame is not carried (Yahoo has no interval parameter). */}
+              <a className="cm-tv" href={yahooQuoteUrl(data.symbol)}
                  target="_blank" rel="noreferrer"
-                 title={`Open ${data.symbol} in TradingView`}>
-                TV ↗
+                 title={yahooTitle(data.symbol)}>
+                {YAHOO_LABEL}
               </a>
             </div>
           </div>

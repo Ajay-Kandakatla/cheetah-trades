@@ -6,7 +6,6 @@ import {
   windowForFrame, windowsForFrame, zoomApplies,
   type SupportPayload,
 } from './supportLevels';
-import { tvChartUrl } from './tvChart';
 
 /* 🕐 The 1-minute + weekly Support frames (2026-10-26).
  *
@@ -98,14 +97,6 @@ describe('🕐 the 1-minute and weekly frames — FE mirror', () => {
     ];
     const keys = new Set(FIVE.map((r) => r.key));
     expect(FALLBACK_TIMEFRAMES.filter((t) => keys.has(t.key))).toEqual(FIVE);
-  });
-
-  it('tvChartUrl opens 1-minute and weekly charts; the window keys open daily', () => {
-    expect(tvChartUrl('NVDA', '1min')).toContain('interval=1');
-    expect(tvChartUrl('NVDA', '1min')).not.toContain('interval=15');
-    expect(tvChartUrl('NVDA', 'weekly')).toContain('interval=W');
-    expect(tvChartUrl('NVDA', '1m')).toContain('interval=D');
-    expect(tvChartUrl('NVDA', '1w')).toContain('interval=D');
   });
 
   it('shortHistoryNote prints the SERVED unit', () => {

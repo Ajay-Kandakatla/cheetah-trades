@@ -227,7 +227,7 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
             — so the row's SERVED read is put on the tile the one renderer already
             reads it from, rather than a second chip mount with its own rules. */}
         {part.rows.map((r) => r.tile
-          ? <PatternChart key={r.symbol} tvTf="15m"
+          ? <PatternChart key={r.symbol}
                           tile={{ ...filterTile(r.tile, hiddenOverlays),
                                   band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }}
                           bandStudy={room.payload?.band_structure_study}

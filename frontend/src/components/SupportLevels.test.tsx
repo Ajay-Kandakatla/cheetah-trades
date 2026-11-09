@@ -177,17 +177,19 @@ describe('SupportLevels', () => {
     expect(asked).toHaveLength(2);
   });
 
-  it('links a pre-configured TradingView chart carrying the CURRENT timeframe', async () => {
-    // A link-out, never an embed — the Charting Library application was
-    // refused (auth-gated site, 2026-08-16).
+  it('links the Yahoo Finance quote page (Ajay 2026-11-09: "Instead of traderview I need yahoo finance link here")', async () => {
+    // A link-out, never an embed. Yahoo has no interval parameter, so the CURRENT timeframe is not carried.
     mockFetch(PAYLOAD);
     render(<SupportLevels symbol="DHI" window="1d" tf="15m"
                           onSymbol={noop} onWindow={noop} />);
-    await waitFor(() => expect(screen.getByText('TV ↗')).toBeTruthy());
-    const a = screen.getByText('TV ↗') as HTMLAnchorElement;
-    expect(a.getAttribute('href'))
-      .toBe('https://www.tradingview.com/chart/?symbol=DHI&interval=15');
+    await waitFor(() => expect(screen.getByText('Yahoo ↗')).toBeTruthy());
+    const a = screen.getByText('Yahoo ↗') as HTMLAnchorElement;
+    expect(a.getAttribute('href')).toBe('https://finance.yahoo.com/quote/DHI/');
     expect(a.getAttribute('target')).toBe('_blank');
+    expect(a.getAttribute('title')).toBe('Open DHI on Yahoo Finance');
+    // NEGATIVE: the TradingView link-out is gone from the Support tab head
+    expect(a.getAttribute('href')).not.toContain('tradingview');
+    expect(screen.queryByText('TV ↗')).toBeNull();
   });
 
   it('counts recency and evidence SEPARATELY — neither implies the other', async () => {

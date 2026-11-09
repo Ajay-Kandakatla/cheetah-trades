@@ -8,7 +8,6 @@ import { DEFAULT_WINDOW, FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLab
   FRAME_WINDOW, frameFor, parseTf, retiredTf, windowForFrame, zoomApplies,
   SEPA_SUPPLY_WINDOW, windowsForFrame
 } from './supportLevels';
-import { tvChartUrl } from './tvChart';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
   return {
@@ -575,31 +574,6 @@ describe('retired frames — an old link still works, and says where it went', (
     expect(parseTf('24h', served)).toBe(DEFAULT_TF);
     expect(parseTf('5m_live', served)).toBe(DEFAULT_TF);   // its target is gone
     expect(retiredTf('5m_live', served)).toBeNull();
-  });
-});
-
-/* ── TradingView link-out stays in step (Ajay 2026-08-31) ─────────────────── */
-describe('tvChartUrl — an interval for every frame that can be selected', () => {
-  it('maps every offered frame to a real TradingView interval', () => {
-    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
-    const want: Record<string, string> = {
-      '1min': '1', '5m_today': '5', '24h': '5', '15m': '15', '60m': '60', daily: 'D', weekly: 'W',
-    };
-    for (const t of FALLBACK_TIMEFRAMES) {
-      expect(tvChartUrl('NVDA', t.key), `${t.key} lost its TV interval`)
-        .toContain(`interval=${want[t.key]}`);
-    }
-  });
-
-  it('a retired key still opens the right bar size, not daily', () => {
-    expect(tvChartUrl('NVDA', '5m_live')).toContain('interval=5');
-    expect(tvChartUrl('NVDA', '15m_open')).toContain('interval=15');
-  });
-
-  it('NEGATIVE: an unknown frame opens the daily chart', () => {
-    // 2026-10-26: Ajay — "Can you build me 1 min bar chart and also 1 week bar chart in the supply and demand" — widened, dated.
-    expect(tvChartUrl('NVDA', 'fortnightly')).toContain('interval=D');
-    expect(tvChartUrl('BRK-B')).toContain('symbol=BRK.B');
   });
 });
 

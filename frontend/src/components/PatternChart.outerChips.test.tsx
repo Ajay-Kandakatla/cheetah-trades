@@ -52,13 +52,13 @@ describe('outerChips — each wrapper chip prints once on the card', () => {
     expect(count(/^🧨/)).toBe(1);
   });
 
-  it('POTUS: 🎯, 🧨 and + Signals once each; the tile keeps TV ↗', () => {
+  it('POTUS: 🎯, 🧨 and + Signals once each; the tile keeps Yahoo ↗', () => {
     expect(POTUS_OUTER_CHIPS).toEqual(['growth', 'promo', 'explosive', 'enterable', 'watch', 'short']);
     card(POTUS_OUTER_CHIPS, true);
     expect(count(/^🎯 READY$/)).toBe(1);
     expect(count(/^🧨/)).toBe(1);
     expect(screen.getAllByRole('button', { name: /VOYA (to|from) Signals/ })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /VOYA in TradingView/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /VOYA on Yahoo Finance/ })).toBeInTheDocument();
   });
 
   it('9 EMA: 🎯 and 🧨 once each; 🪜 stays on the tile (the strip has none)', () => {

@@ -789,6 +789,9 @@ line above the chart — the one state a reader must not have to infer.
   but the Support tab.
 * `tvChart.ts` gains `24h → 5` and **keeps** rows for both retired keys, so a
   caller still holding a raw key opens the right bar size rather than daily.
+  (2026-11-09: `tvChart.ts` is deleted — the head's link-out is Yahoo Finance's
+  quote page, `lib/yahooLink.ts`, which carries no frame; Ajay: "Instead of
+  traderview I need yahoo finance link here".)
 
 ### Frontend tests
 

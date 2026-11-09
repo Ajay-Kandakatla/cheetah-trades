@@ -535,7 +535,7 @@ setups. It is a study aid — position sizing and stops still decide the result.
 ## + Signals from any card (2026-09-07)
 
 Every card on every board tab and every Catalysts ▸ promo row carries a `+ Signals` button
-beside `TV ↗`. One click puts the name on the ⚡ Signals watchlist (the Signal Lab's list,
+beside `Yahoo ↗` (the external link-out — TradingView until 2026-11-09, Yahoo Finance since). One click puts the name on the ⚡ Signals watchlist (the Signal Lab's list,
 12 names, per user) without leaving the board; `✓` = on the list (click removes), `💼` = in the
 portfolio (rides the board by default, leaves with the position). One store behind the cards,
 the promo rows and the Signals board — see `docs/daytrading/signal_lab.md` §2026-09-07.
