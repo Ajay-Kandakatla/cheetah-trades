@@ -610,7 +610,31 @@ def test_lane_exemption_needs_a_live_lane_doc(env, monkeypatch):
     monkeypatch.setattr(EE, "_distribution_read", lambda sym: DIST)
     EE.tick()
     assert [kw["symbol"] for n, kw in fake.calls if n == "close_position"] == ["AAA"]
-    assert EE.GAJJALA_LANE_LIVE_STATES == ("ordered", "open", "closing")
+    # 2026-11-09 REVIEW, finding #6 (pin moved): the engine reads the lane's OWN live-state set (incl. "ordering");
+    # the retyped ("ordered", "open", "closing") tuple is gone
+    assert not hasattr(EE, "GAJJALA_LANE_LIVE_STATES") and GL._LIVE_STATES == ("ordering", "ordered", "open", "closing")
+
+
+def test_finding6_an_ordering_lane_doc_is_a_lane_name_to_the_engine(env, monkeypatch):
+    """2026-11-09 REVIEW, finding #6: a fill landing while the lane doc is still "ordering" (an api-side stream order,
+    the cron tick running concurrently) is exempt from the house distribution exit / p.308 ratchet like any lane name."""
+    fake, db = _engine(env, monkeypatch,
+                       [_position("AAA", 100, 10.0, 10.5), _position("BBB", 100, 10.0, 10.5)],
+                       [_stop_order("AAA", 9.0, 100, "s-a"), _stop_order("BBB", 9.0, 100, "s-b")],
+                       [seed(_id="GG:x|AAA|bull_flag", symbol="AAA", state="ordering")])
+    monkeypatch.setattr(EE, "_distribution_read", lambda sym: DIST)
+    assert EE._gajjala_lane_symbols() == {"AAA"}
+    EE.tick()
+    assert [kw["symbol"] for n, kw in fake.calls if n == "close_position"] == ["BBB"]
+
+
+def test_finding6_neg_a_waiting_lane_doc_is_not_a_lane_name(env, monkeypatch):
+    fake, db = _engine(env, monkeypatch, [_position("AAA", 100, 10.0, 10.5)], [_stop_order("AAA", 9.0, 100, "s-a")],
+                       [seed(_id="GG:x|AAA|bull_flag", symbol="AAA", state="waiting")])
+    monkeypatch.setattr(EE, "_distribution_read", lambda sym: DIST)
+    assert EE._gajjala_lane_symbols() == set()
+    EE.tick()
+    assert [kw["symbol"] for n, kw in fake.calls if n == "close_position"] == ["AAA"]   # NEG: house rules apply
 
 
 def test_watchdog_still_protects_lane_names(env, monkeypatch):

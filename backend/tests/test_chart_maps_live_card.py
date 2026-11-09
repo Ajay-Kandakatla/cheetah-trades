@@ -99,7 +99,8 @@ def test_golden_rth_appended_closes_at_the_last_print(monkeypatch):
     assert "s" not in q["bar"]
     assert q["prev_t"] == "2026-09-02"
     n = q["now"]
-    assert (n["price"], n["label"], n["session"], n["add_line"]) == (9.12, "now", None, False)
+    # WIDENED 2026-11-09 (Ajay: "I can't see now for them again"): the now label is asked for in EVERY session — RTH too.
+    assert (n["price"], n["label"], n["session"], n["add_line"]) == (9.12, "now", None, True)
     assert n["as_of"] == "14:00:00 ET" and abs(n["as_of_epoch"] - RTH_SNAP["last_trade_ts_ms"] / 1e9) < 1e-3
     assert a["session"] == "rth"
     assert (a["footer"]["live"], a["footer"]["stale"]) == ("live · 14:00:30 ET", "last refresh 14:00 ET")
@@ -349,7 +350,7 @@ def test_negative_c2_no_last_trade_row_never_fails_the_poll(monkeypatch):
     # unstamped and untagged
     assert x["now"]["price"] == 2.7
     assert x["now"]["as_of_epoch"] is None and x["now"]["as_of"] is None
-    assert x["now"]["session"] is None and x["now"]["add_line"] is False
+    assert x["now"]["session"] is None and x["now"]["add_line"] is False   # 2026-11-09: unstamped (no trade) → still no label
     tile = {"symbol": "XLAB", "lines": [{"price": 1.0, "label": "now", "tone": "now"}]}
     B.attach_live_now([tile], {}, live=P.bulk_live_prices(["XLAB"], snaps={"XLAB": bare}),
                       now=_at(2026, 9, 3, 14, 0))
@@ -449,3 +450,33 @@ def test_source_guard_route_handler_slice():
     assert "status_code=413" in handler and "status_code=422" in handler
     # placed before the high-beta watch route (the Gajjala POST contract slice stays untouched)
     assert i < src.index('@router.get("/chart-maps/high-beta/watch")')
+
+
+# ── 2026-11-09: the now label in EVERY session (Ajay: "I can't see now for them again") ─────────────────────────────────
+def test_now_label_is_asked_for_in_every_session_2026_11_09():
+    """card_now sets add_line for a print stamped today in RTH, pre-market and after-hours alike; the wording still follows
+    the session; an unstamped carried print (closed day / no trade) gets no label; no print → None."""
+    from chart_maps import live_card as LC
+    line = lambda px, lab: [{"price": px, "label": lab, "tone": "now"}]
+    from zoneinfo import ZoneInfo
+    from datetime import datetime as _dt
+    day = _dt(2026, 9, 3, 14, 0, tzinfo=ZoneInfo("America/New_York"))
+    rth = LC.card_now({"live_price": 9.12, "lines": line(9.12, "now"), "live_session": None}, RTH_SNAP, now_et=day)
+    pre = LC.card_now({"live_price": 5.61, "lines": line(5.61, "now · pre"), "live_session": "premarket"},
+                      {**SNAP, "last_trade_price": 5.61, "last_trade_ts_ms": _stamp(2026, 9, 3, 8, 0)}, now_et=day)
+    ah = LC.card_now({"live_price": 9.4, "lines": line(9.4, "now · AH"), "live_session": "afterhours"}, AH_SNAP, now_et=day)
+    # NEGATIVE: the same RTH print read the NEXT day (a closed day) is not today's → no label
+    nxt = LC.card_now({"live_price": 9.12, "lines": line(9.12, "now"), "live_session": None}, RTH_SNAP,
+                      now_et=_dt(2026, 9, 4, 10, 0, tzinfo=ZoneInfo("America/New_York")))
+    assert nxt["add_line"] is False and nxt["as_of"] == "14:00:00 ET"
+    # NEGATIVE: no clock → never a label on an un-sessioned print
+    assert LC.card_now({"live_price": 9.12, "lines": line(9.12, "now"), "live_session": None}, RTH_SNAP)["add_line"] is False
+    assert rth["add_line"] is True and rth["session"] is None and rth["label"] == "now" and rth["as_of"] == "14:00:00 ET"
+    assert pre["add_line"] is True and pre["session"] == "premarket" and pre["label"] == "now · pre"
+    assert ah["add_line"] is True and ah["session"] == "afterhours" and ah["label"] == "now · AH"
+    # NEGATIVE: an unstamped carried value (no last trade) is untagged → no label, exactly as before
+    bare = LC.card_now({"live_price": 2.7, "lines": line(2.7, "now"), "live_session": None}, {"close": 2.7, "date": "2026-09-03 00:00:00"}, now_et=day)
+    assert bare["add_line"] is False and bare["as_of_epoch"] is None
+    # NEGATIVE: no live print → no now block at all (never a line without a price)
+    assert LC.card_now({"lines": line(1.0, "now")}, {}) is None
+    assert LC.card_now("not a probe", {}) is None

@@ -121,8 +121,9 @@ def card_bar(frame, sym: str, snap: dict) -> tuple:
     return bar, prev_t, prev_bar
 
 
-def card_now(probe: dict, snap: dict) -> Optional[dict]:
-    """The now block off a probe tile `board.attach_live_now` already moved; None when it found no print."""
+def card_now(probe: dict, snap: dict, now_et: Optional[datetime] = None) -> Optional[dict]:
+    """The now block off a probe tile `board.attach_live_now` already moved; None when it found no print. `now_et` (the
+    answer's ET clock) decides whether the print is TODAY's for the label rule below (2026-11-09)."""
     from sepa import prices
     from . import board
     if not isinstance(probe, dict) or "live_price" not in probe:
@@ -138,8 +139,17 @@ def card_now(probe: dict, snap: dict) -> Optional[dict]:
         except (OverflowError, OSError, ValueError, TypeError):
             as_of = None
     sess = probe.get("live_session")
+    # 2026-11-09 — Ajay, with a 🎾 card whose axis showed TRIGGER / EMAs but no price in regular hours: "I can't see now
+    # for them again" (earlier: "I like how they are realtime updating the prices of now"). Until today the now LABEL was
+    # asked for only in an extended session (`bool(sess)`); in RTH the print moved the last candle but printed no number.
+    # The label is asked for in EVERY session whose print is stamped TODAY (the print's ET date == the answer's ET date):
+    # RTH, pre, AH alike; a carried print of another day (Saturday reading Friday) or a value with no trade stays untagged
+    # and gets no label, as before. The FE still honours the flag (lib/cardLive.patchLines); the wording stays the
+    # session's ("now", "now · pre", "now · AH").
+    today = now_et.date().isoformat() if callable(getattr(now_et, "date", None)) else None   # duck-typed: tests freeze LC.datetime
+    stamped_today = bool(ep.get("date")) and today is not None and ep.get("date") == today
     return {"price": probe["live_price"], "label": label, "session": sess,
-            "add_line": bool(sess), "as_of_epoch": epoch or None, "as_of": as_of}
+            "add_line": bool(sess) or stamped_today, "as_of_epoch": epoch or None, "as_of": as_of}
 
 
 def vs_tf_minutes() -> tuple:
@@ -295,7 +305,7 @@ def compose(symbols, *, levels=None, now: Optional[datetime] = None) -> dict:
                 try:
                     board.attach_live_now([probes[s]], meta, live=live, now=now_et)
                     bar, prev_t, prev_bar = card_bar(frames.get(s), s, raw[s])
-                    nb = card_now(probes[s], raw[s])
+                    nb = card_now(probes[s], raw[s], now_et=now_et)
                 except Exception as exc:                        # noqa: BLE001
                     log.debug("live card: %s failed: %s", s, exc)
                     missing.append(s)

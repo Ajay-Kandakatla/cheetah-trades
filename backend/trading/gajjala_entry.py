@@ -2103,6 +2103,13 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None,
             out["reason"] = LANE_BUSY_TEXT
             log.info("gajjala lane: %s — the %s run skipped (another lane run holds the mutex)", LANE_BUSY_TEXT, source)
             return out
+        if now is None:
+            # 2026-11-09 REVIEW, finding #2: the clock is read again AFTER the mutex wait (≤ LANE_MUTEX_WAIT_SEC) — the
+            # entry window below, the cut-off cancel and the ordering_at / ordered_at stamps use the real time; a
+            # replay `now` is never re-read
+            now_et = _now_et()
+            day = now_et.date().isoformat()
+            out["day"] = day
         coll = _coll(LANE_COLL)
         if coll is None:
             out["errors"].append("the lane store is not available")
@@ -2158,16 +2165,27 @@ def run_stream(doc_id: Optional[str], *, last: Optional[float] = None, source: s
         if coll is None:
             out["errors"].append("the lane store is not available")
             return out
+        ids = {str(i) for i in (claim_ids or []) if i}
+        if ids:
+            # 2026-11-09 REVIEW, finding #4: the claim runs BEFORE the mutex — a busy lane must not lose the new A+
+            # (the hub marked the id seen and never retries; no lane doc = no print can trigger an attempt). Safe
+            # outside the mutex: the insert is keyed on the alert id (a racing tick's claim = DuplicateKeyError)
+            _claim(coll, cfg, brk, now_et, day, out, only_ids=set(ids))
         mcoll = _coll(STATE_COLL)
         token = _mutex_claim(mcoll, _mutex_now(), _holder(osrc))
         out["mutex_wait_ms"] = 0
         if token is None:
             out["reason"] = LANE_BUSY_TEXT
             return out
+        if now is None:
+            # 2026-11-09 REVIEW, finding #2: the clock is read again AFTER the mutex is acquired and the window is
+            # re-checked on it (a job that waited in the hub's queue past the cut-off never orders)
+            now_et = _now_et()
+            day = now_et.date().isoformat()
+            out["day"] = day
+            if not in_entry_window(now_et):
+                return out
         out["ran"] = True
-        ids = {str(i) for i in (claim_ids or []) if i}
-        if ids:
-            _claim(coll, cfg, brk, now_et, day, out, only_ids=set(ids))
         if doc_id:
             ids.add(str(doc_id))
         if not ids:

@@ -32,6 +32,8 @@ export type LatencyPair = { stream: string; tick: string; agree: boolean; n: num
 export type LatencyCheck = {
   title: string; same: number; different: number; n: number; pairs: LatencyPair[];
   entry_delta_r?: { n: number; text: string } | null; odd_lot_only?: { n: number; k: number; text: string } | null;
+  /** 2026-11-09 REVIEW #3: docs the STREAM decided leave the 1-minute comparison and are counted here, never dropped. */
+  stream_ordered?: { n: number; text: string } | null;
 };
 export type LatencyFinality = { n: number; text: string; parts?: { part: string; text: string }[] | null };
 export type LatencyPayload = {
@@ -125,6 +127,7 @@ export function GajjalaLatency({ span }: { span: string }) {
           {(data.check.pairs || []).map((p) => <div key={`${p.stream}|${p.tick}`} style={wrap}>{p.text}</div>)}
           {data.check.entry_delta_r?.text ? <div style={wrap}>{data.check.entry_delta_r.text}</div> : null}
           {data.check.odd_lot_only?.text ? <div style={wrap}>{data.check.odd_lot_only.text}</div> : null}
+          {data.check.stream_ordered?.text ? <div style={wrap}>{data.check.stream_ordered.text}</div> : null}
         </div>
       ) : null}
       {data.finality ? (

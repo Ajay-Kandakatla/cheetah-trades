@@ -62,6 +62,10 @@ wall before the ring; ~51 s = the lane's next minute tick; ~2 s order; ~3 s fill
   `last` — `_expire_waiting` writes none). Same outcome = trigger↔ordered, stop↔stop-first, none↔cut-off. A doc still
   waiting is not counted. Plus the 1-minute fill vs the stream's trigger print in R (fill above the print = positive)
   and the odd-lot-only trigger count (a doc with a `trigger_lot` row is not odd-lot-only).
+  2026-11-09 REVIEW (critic, finding #3): once stream entries are LIVE, a doc the api decided (`order_source` set and
+  not `tick` — absent = the tick — or `last_source` starting `stream`) is NOT a 1-minute outcome: it is left out of the
+  pairs and counted in the served `check.stream_ordered = {n, text}` — "Stream-ordered (not the 1-minute check) — left
+  out of the comparison: {k}" (additive key; nothing renamed). The tab does not print it yet (frontend not touched).
 - "Bar finality: {c} of {n} closed 5-minute bars changed between 30 s and 60 s after close (volume on {v})." with
   regular / extended lines (only when `gajjala_bar_final` has rows).
 - footnote "From the alert and lane records: p50 · p90 (n). A timing, not a result."; empty span "No 🚩 A+ rang in this

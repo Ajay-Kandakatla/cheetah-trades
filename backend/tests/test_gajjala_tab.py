@@ -820,11 +820,16 @@ def test_float_shares_of_unknowns():
         assert GT._float_shares_of(fr) is None, fr
 
 
-def test_order_key_is_byte_identical_off_the_squeeze_sub():
-    """NEGATIVE: the float slot exists only on a squeeze card built by setup_tile; other setups (and the cross-setup
-    focus pick, which never stashes `_float_shares`) keep today's 4-tuple."""
+def test_order_key_is_byte_identical_off_the_squeeze_sub(monkeypatch):
+    """NEGATIVE: the float slot exists only on a card built by setup_tile; the cross-setup focus pick, which never
+    stashes `_float_shares`, keeps today's 4-tuple.
+    WIDENED 2026-11-09 (Ajay "When I say all tabs with in Gajjalas only"): every setup in GC.FLOAT_SORT_SETUPS takes the
+    float slot now (the bull flag too); a setup OUTSIDE the tuple keeps today's 4-tuple even with the stash."""
     g = {"setup": BF, "state": "aplus", "entry_bar_t": "2026-10-13 10:30", "_float_shares": 1}
+    assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, 1.0, -202610131030.0, 0.0, "X")
+    monkeypatch.setattr(GC, "FLOAT_SORT_SETUPS", tuple(s for s in GC.SETUPS if s != BF))
     assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, -202610131030.0, 0.0, "X")
+    monkeypatch.undo()
     g = {"setup": RS, "state": "aplus", "entry_bar_t": "2026-10-13 10:30"}
     assert GT.order_key({"symbol": "X", "gajjala": g}) == (0, -202610131030.0, 0.0, "X")
     g = dict(g, _float_shares=3_000_000)
@@ -833,12 +838,15 @@ def test_order_key_is_byte_identical_off_the_squeeze_sub():
 
 
 def test_NEGATIVE_bull_flag_ordering_is_unchanged_with_floats_on_file():
-    """The bull-flag EXPECTED order holds even when every read carries a float (the float never sorts another sub)."""
+    """WIDENED 2026-11-09 (Ajay "can you update other tabs in the same way" · "When I say all tabs with in Gajjalas
+    only"): the bull flag now takes the 🎾 float key — the state rank still decides first (no state moves), and
+    within a state the lower float goes on top (EEE 7M above DDD 8M; HHH 4M above GGG 5M; BBB 10M was already above
+    AAA 11M). With no float on file the EXPECTED order holds byte-for-byte (NEGATIVE)."""
     floats = {s: 1_000_000 * (len(ORDER_READS) - i) for i, s in enumerate(ORDER_READS)}
     reads = [read_doc(s, {BF: r}, ctx={"float": {"shares": floats[s], "src": "float", "suspect": None}})
              for s, r in ORDER_READS.items()]
     st = store_with(reads=reads, scans=[scan_doc(s) for s in ORDER_READS], passes=[latest()])
-    assert _syms(GT.build(BF, now=NOW, store=st)) == EXPECTED
+    assert _syms(GT.build(BF, now=NOW, store=st)) == ["BBB", "AAA", "CCC", "EEE", "DDD", "FFF", "HHH", "GGG", "III"]
     assert _syms(GT.build(BF, now=NOW, store=ordering_store())) == EXPECTED
 
 

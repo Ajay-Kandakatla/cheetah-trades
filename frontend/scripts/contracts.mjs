@@ -9785,7 +9785,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10016,7 +10018,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10330,7 +10334,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10546,7 +10552,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10661,7 +10669,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10827,7 +10837,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10960,7 +10972,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11027,7 +11041,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11183,7 +11199,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11282,7 +11300,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11414,7 +11434,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11621,7 +11643,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11691,7 +11715,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11781,7 +11807,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11865,7 +11893,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12224,7 +12254,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12404,7 +12436,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12633,7 +12667,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12741,7 +12777,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12857,7 +12895,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13003,7 +13043,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13139,7 +13181,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13484,7 +13528,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13514,7 +13560,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      if (nf && !ids2.slice(0, 12).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 12).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      if (nf && !ids2.slice(0, 14).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 14).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13797,7 +13845,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14030,7 +14080,9 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14170,7 +14222,9 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-        if (!ids.slice(0, 11).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 11).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+        // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+        if (!ids.slice(0, 13).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 13).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14266,7 +14320,9 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-        if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+        // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+        if (!ids.slice(0, 12).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 12).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14391,7 +14447,9 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-        if (!ids.slice(0, 9).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 9).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+        // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+        if (!ids.slice(0, 11).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 11).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14536,7 +14594,9 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
           // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
           // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-          if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+          // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+          if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14666,7 +14726,9 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+        // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15037,7 +15099,9 @@ const CONTRACTS = [
         const ID = 'chart-maps-gajjala-live-stream-2026-11-09';
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-        if (!ids.slice(0, 3).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 3).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+        // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15106,10 +15170,96 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       if (!/id: 'chart-maps-yahoo-link-2026-11-09'/.test(nf)) errs.push("newFeatures.ts lacks the 'chart-maps-yahoo-link-2026-11-09' highlight");
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
+      return errs;
+    },
+  },
+  {
+    name: '🚩 float order on every Gajjala sub (2026-11-09)',
+    file: '../backend/chart_maps/gajjala/tab.py',
+    checks(tab) {
+      // Ajay 2026-11-09 (verbatim): "Are the reversal squeeze tickers sorted by high probability can you update other tabs in
+      // the same way I like how they are realtime updating the prices of now" / "When I say all tabs with in Gajjalas only".
+      // No probability score exists; the 🎾 order (his 2026-10-18 call: state rank, then float lowest-first) now applies to
+      // every setup sub through ONE tab.order_key; ➖ keeps his 2026-11-07 EMA-gap rank FIRST with float next. Display
+      // order only. Every check reads the REAL file.
+      const errs = [];
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      if (!gc) errs.push('constants.py is unreadable');
+      else {
+        if (!/^FLOAT_SORT_SETUPS = tuple\(SETUPS\)/m.test(gc)) errs.push('constants.FLOAT_SORT_SETUPS must be tuple(SETUPS) — every setup sub the board shows, never retyped');
+        if (!/^RS_FLOAT_SORT = "within_state"/m.test(gc)) errs.push('constants.RS_FLOAT_SORT must stay the literal "within_state" (his 2026-10-18 placement; the ONE mode knob for every sub)');
+      }
+      const ok = pyFn(tab, 'order_key') || '';
+      if (!ok) errs.push('tab.py lost def order_key(');
+      else {
+        if (!/g\.get\("setup"\) in GC\.FLOAT_SORT_SETUPS/.test(ok)) errs.push('tab.order_key must take the float key for every setup in GC.FLOAT_SORT_SETUPS');
+        if (!/\(_PRE_BREAK_RANK, gkey\) \+ ft \+ key/.test(ok)) errs.push('tab.order_key: ➖ pre_break must rank by the EMA gap FIRST and the float right after it (never before)');
+        if (!/key\[:1\] \+ \(fkey,\) \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then float ascending, then today\'s key');
+        if (!/\(0, fkey\) \+ key/.test(ok)) errs.push('tab.order_key: "global" = the float above the state rank');
+        if (!/float\("inf"\)/.test(ok)) errs.push('tab.order_key: an unknown float must sort LAST (float("inf"))');
+      }
+      const stile = pyFn(tab, 'setup_tile') || '';
+      if (!/if setup in GC\.FLOAT_SORT_SETUPS:/.test(stile)) errs.push('tab.setup_tile must stash _float_shares for every setup in GC.FLOAT_SORT_SETUPS (the float chip\'s own read, no new fetch)');
+      if (!/_float_shares_of\(_float_read\(doc, daily\)\)/.test(stile)) errs.push('tab.setup_tile: the stash must be _float_shares_of(_float_read(doc, daily)) — the card chip\'s own read');
+      if (!quiet('../docs/gajjala/float_sort_all_setups_2026_11_09.md')) errs.push('docs/gajjala/float_sort_all_setups_2026_11_09.md is missing');
+      const nf = read('src/lib/newFeatures.ts');
+      // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
+      const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
+      if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
+      else {
+        if (!lab[1].includes('can you update other tabs in the same way') || !lab[1].includes('When I say all tabs with in Gajjalas only')) errs.push('the 🚩 float-order ✨ label must carry his sentences verbatim');
+        if (!/no probability number/i.test(lab[1])) errs.push('the 🚩 float-order ✨ label must say there is no probability number (there is none)');
+        if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1])) errs.push('the 🚩 float-order ✨ label: never "edge", never the b-word');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🔴 now label in every session (2026-11-09)',
+    file: '../backend/chart_maps/live_card.py',
+    checks(lc) {
+      // Ajay 2026-11-09 (verbatim), with a 🎾 card whose axis showed TRIGGER / EMAs but no price in regular hours: "I can't
+      // see now for them again". card_now asks for the now LABEL in EVERY session (add_line True whenever a live print
+      // exists); the FE keeps honouring the flag; the wording stays the session's. Every check reads the REAL file.
+      const errs = [];
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const fn = pyFn(lc, 'card_now') || '';
+      if (!fn) errs.push('live_card.py lost def card_now(');
+      else {
+        if (!/"add_line": bool\(sess\) or stamped_today/.test(fn)) errs.push('live_card.card_now must set "add_line": bool(sess) or stamped_today — the now label in every session whose print is TODAY\'s (Ajay 2026-11-09)');
+        if (!/ep\.get\("date"\) == today/.test(fn)) errs.push('live_card.card_now must decide "today" from the print\'s ET date against the answer clock (a Friday print read on Saturday gets no label)');
+        if (/"add_line": bool\(sess\),/.test(fn)) errs.push('live_card.card_now still gates the now label on the extended session (bool(sess)) — regular hours printed no number');
+        if (!/"session": sess/.test(fn)) errs.push('live_card.card_now must still serve the session (the label wording follows it)');
+      }
+      const cl = read('src/lib/cardLive.ts');
+      if (!/if \(!hasNow && now\.add_line\)/.test(cl)) errs.push('cardLive.patchLines must add the served now line when the tile has none and add_line is set');
+      const nf = read('src/lib/newFeatures.ts');
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 1).map((m) => m[1]);
+      if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
+      const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
+      if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');
       return errs;
     },
   },

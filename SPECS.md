@@ -1527,7 +1527,7 @@ only: scans, bands, the ledger and the 📐 page still read closed bars (the liv
   are index-aligned), and the served `prev_bar` (a closed bar, no `s` tag — C4) replaces the tile's last bar first; an
   older bar, a tile ending on another session (a Winners window) or an intraday tile → bars unchanged. Tone-`now` lines
   take the served price and, when their label is one of `now_labels`, the served label (custom wording kept); a tile with
-  no now line gains one only when `add_line`. Unchanged → the same tile object (PatternChart `memo`). The served footer
+  no now line gains one only when `add_line` (since 2026-11-09 the api sets `add_line` in EVERY session — Ajay: "I can't see now for them again"; before, extended hours only). Unchanged → the same tile object (PatternChart `memo`). The served footer
   word joins the existing `cm-scanstamp` freshness line ("live · HH:MM:SS ET" / "last refresh HH:MM ET") — no new chrome.
 - **Budget**: one Massive snapshot call + one Mongo find per 30 s per open, visible board tab (≤ the cap); one per 30 min
   closed. No WS, no SSE, no focus-list change.

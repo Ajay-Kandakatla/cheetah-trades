@@ -37,7 +37,9 @@ const FIXTURE: LatencyPayload = {
     pairs: [{ stream: 'trigger', tick: 'ordered', agree: true, n: 1, text: 'stream: trigger print first · 1-minute: ordered (1)' },
       { stream: 'trigger', tick: 'missed', agree: false, n: 1, text: 'stream: trigger print first · 1-minute: missed (1)' }],
     entry_delta_r: { n: 2, text: "1-minute fill vs the stream's trigger print: p50 +0.10 R · p90 +0.26 R (2)" },
-    odd_lot_only: { n: 4, k: 1, text: 'Trigger seen only on an odd-lot print: 1 of 4' } },
+    odd_lot_only: { n: 4, k: 1, text: 'Trigger seen only on an odd-lot print: 1 of 4' },
+    // 2026-11-09 REVIEW #3: docs the stream decided leave the 1-minute comparison and are counted, never dropped
+    stream_ordered: { n: 2, text: 'Stream-decided docs left out of the 1-minute comparison: 2' } },
   finality: { n: 4, text: 'Bar finality: 3 of 4 closed 5-minute bars changed between 30 s and 60 s after close (volume on 2).',
     parts: [{ part: 'regular', text: 'Regular hours — Bar finality: 2 of 3 closed 5-minute bars changed between 30 s and 60 s after close (volume on 1).' }] },
 };
@@ -75,6 +77,7 @@ describe('⏱ GajjalaLatency', () => {
     for (const p of FIXTURE.check!.pairs) expect(chk.textContent).toContain(p.text);
     expect(chk.textContent).toContain(FIXTURE.check!.entry_delta_r!.text);
     expect(chk.textContent).toContain(FIXTURE.check!.odd_lot_only!.text);
+    expect(chk.textContent).toContain(FIXTURE.check!.stream_ordered!.text);
     expect(screen.getByTestId('gg-latency-finality').textContent).toContain(FIXTURE.finality!.text);
     expect(screen.getByTestId('gg-latency-footnote').textContent).toBe(FIXTURE.footnote);
     expect(screen.queryByTestId('gg-latency-stacked')).toBeNull();

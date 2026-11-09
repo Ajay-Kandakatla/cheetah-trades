@@ -319,3 +319,91 @@ def test_default_run_identical_with_and_without_the_mutex_except_declared_keys(l
     assert a.db.gajjala_lane.get(f"GG:{DAY}|JBDI|kiss_fly")["state"] == "unfilled"
     row_keys = set(GL.ROW_KEYS)
     assert not row_keys & {"order_source", "stream_print_px", "stream_print_t", "enter_ms"}   # tab payload unchanged
+
+
+# ── 2026-11-09 REVIEW (critic), finding #2: the clock is read AFTER the mutex ────────────────────────────────────────
+def _wall_clock(monkeypatch, clock, start):
+    """`_now_et` follows the hermetic clock: start + the seconds slept so far (the mutex wait)."""
+    monkeypatch.setattr(GL, "_now_et", lambda: start + timedelta(seconds=clock["t"]))
+
+
+def test_finding2_ordered_at_is_after_the_mutex_acquisition(lane, clock, monkeypatch):
+    s = lane(alerts=[alert()], lasts={"SAIQ": 4.48})
+    _mutexed(s, [{"_id": GL.MUTEX_ID, "token": "hub", "holder": "stream:1", "until": T0 + timedelta(seconds=3)}])
+    _wall_clock(monkeypatch, clock, NOW)
+    out = GL.run(broker=s.brk, cfg=EE.get_config(), now=None)              # the cron tick: no `now`
+    d = s.db.gajjala_lane.get(f"GG:{DAY}|SAIQ|bull_flag")
+    assert out["ordered"] == 1 and 3000 <= out["mutex_wait_ms"] <= 3500
+    acquired = NOW + timedelta(seconds=sum(clock["slept"]))
+    assert GL._parse(d["ordered_at"]) >= acquired.astimezone(UTC) > NOW.astimezone(UTC)
+    assert GL._parse(d["ordering_at"]) >= acquired.astimezone(UTC)
+
+
+def test_finding2_neg_a_mutex_wait_across_the_cutoff_never_orders(lane, clock, monkeypatch):
+    start = datetime(2026, 10, 20, 15, 29, 50, tzinfo=NOW.tzinfo)          # 10 s before the 15:30 cut-off
+    s = lane(docs=[seed()], lasts={"SAIQ": 4.48}, now=start)
+    _mutexed(s, [{"_id": GL.MUTEX_ID, "token": "hub", "holder": "stream:1", "until": T0 + timedelta(seconds=15)}])
+    _wall_clock(monkeypatch, clock, start)
+    out = GL.run(broker=s.brk, cfg=EE.get_config(), now=None)
+    assert out["ran"] and sum(clock["slept"]) >= 15
+    assert out["ordered"] == 0 and _brackets(s.brk) == []                 # NEG: 15:30:05 is past the cut-off
+    assert s.db.gajjala_lane.get(seed()["_id"])["state"] == "unfilled"     # the cut-off expiry ran on the real time
+
+
+def test_finding2_control_a_replay_now_is_never_re_read(lane, clock, monkeypatch):
+    start = datetime(2026, 10, 20, 15, 29, 50, tzinfo=NOW.tzinfo)
+    s = lane(docs=[seed()], lasts={"SAIQ": 4.48}, now=start)
+    _mutexed(s, [{"_id": GL.MUTEX_ID, "token": "hub", "holder": "stream:1", "until": T0 + timedelta(seconds=15)}])
+    _wall_clock(monkeypatch, clock, start)
+    out = GL.run(broker=s.brk, cfg=EE.get_config(), now=start)             # an explicit `now` stays the caller's
+    assert out["ordered"] == 1 and len(_brackets(s.brk)) == 1
+
+
+def _reads(monkeypatch, seq):
+    """`_now_et` returns `seq` in order, then its last value."""
+    seq = list(seq)
+    monkeypatch.setattr(GL, "_now_et", lambda: seq.pop(0) if len(seq) > 1 else seq[0])
+
+
+def test_finding2_run_stream_rereads_the_clock_after_the_mutex(lane, clock, monkeypatch):
+    s = lane(docs=[seed()], lasts={})
+    _mutexed(s)
+    _reads(monkeypatch, [NOW, NOW + timedelta(seconds=7)])                 # before / after the mutex
+    out = GL.run_stream(seed()["_id"], last=4.47, broker=s.brk, cfg=EE.get_config())
+    d = s.db.gajjala_lane.get(seed()["_id"])
+    assert out["ordered"] == 1 and GL._parse(d["ordered_at"]) == (NOW + timedelta(seconds=7)).astimezone(UTC)
+
+
+def test_finding2_neg_run_stream_queued_past_the_cutoff_never_orders(lane, clock, monkeypatch):
+    s = lane(docs=[seed()], lasts={})
+    _mutexed(s)
+    before = datetime(2026, 10, 20, 15, 29, 59, tzinfo=NOW.tzinfo)
+    _reads(monkeypatch, [before, before + timedelta(seconds=2)])           # 15:29:59 at the gate, 15:30:01 after
+    out = GL.run_stream(seed()["_id"], last=4.47, broker=s.brk, cfg=EE.get_config())
+    assert out["ordered"] == 0 and out["ran"] is False and _brackets(s.brk) == []      # NEG
+    assert s.db.gajjala_lane.get(seed()["_id"])["state"] == "waiting"
+
+
+# ── 2026-11-09 REVIEW (critic), finding #4: a new A+ is claimed even when the lane is busy ──────────────────────────
+def test_finding4_busy_mutex_still_claims_the_new_aplus(lane, clock):
+    s = lane(alerts=[alert()], lasts={"SAIQ": 4.48})
+    m = _mutexed(s, [{"_id": GL.MUTEX_ID, "token": "tick", "until": T0 + timedelta(seconds=30)}])
+    aid = f"GG:{DAY}|SAIQ|bull_flag"
+    out = GL.run_stream(None, claim_ids=[aid], broker=s.brk, cfg=EE.get_config(), now=NOW)
+    assert out["reason"] == "lane busy" and out["claimed"] == 1 and out["ran"] is False
+    d = s.db.gajjala_lane.get(aid)
+    assert d is not None and d["state"] == "waiting" and _brackets(s.brk) == []       # claimed; no order while busy
+    assert m.claims == 1 and clock["slept"] == []                                     # still tried ONCE
+
+
+def test_finding4_neg_the_tick_claiming_the_same_id_makes_no_second_doc(lane, clock):
+    s = lane(alerts=[alert()], lasts={"SAIQ": 4.48})
+    m = _mutexed(s, [{"_id": GL.MUTEX_ID, "token": "tick", "until": T0 + timedelta(seconds=30)}])
+    aid = f"GG:{DAY}|SAIQ|bull_flag"
+    GL.run_stream(None, claim_ids=[aid], broker=s.brk, cfg=EE.get_config(), now=NOW)
+    _mutex_doc(m)["until"] = T0                                                       # the holder released
+    out = s.run()
+    assert out["claimed"] == 0 and out["ordered"] == 1                                # NEG: no double claim
+    assert [r["_id"] for r in s.db.gajjala_lane.rows].count(aid) == 1
+    out2 = GL.run_stream(None, claim_ids=[aid], broker=s.brk, cfg=EE.get_config(), now=NOW)
+    assert out2["claimed"] == 0 and [r["_id"] for r in s.db.gajjala_lane.rows].count(aid) == 1

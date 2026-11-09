@@ -108,7 +108,8 @@ def _ids(coll):
 def test_owner_numbers_words_and_derived(hub):
     from orderflow import tape
     assert _built_mode() == "live" and GS.GG_STREAM_MODES == ("off", "shadow", "live")   # LIVE since 2026-11-09 ~10:00 ET (Ajay: "With entries realtime like Gajjala does")
-    assert (GS.GG_STREAM_RECHECK_SEC, GS.GG_STREAM_ALPACA_PER_MIN, GS.GG_STREAM_FRESH_POLLS) == (15.0, 60, 2)
+    # 2026-11-09 REVIEW, finding #5: the bucket 60 → 7 attempts/min (an attempt ≈ 8 Alpaca calls → 56/min ≈ 28 % of 200)
+    assert (GS.GG_STREAM_RECHECK_SEC, GS.GG_STREAM_ALPACA_PER_MIN, GS.GG_STREAM_FRESH_POLLS) == (15.0, 7, 2)
     assert GS.fresh_sec() == 2.0
     hub.HUB_POLL_SEC = 0.5
     assert GS.fresh_sec() == 1.0                        # derived from the hub, never retyped
@@ -152,7 +153,12 @@ def test_built_default_is_live_env_only_lowers(monkeypatch):
     monkeypatch.setenv("GG_STREAM_MODE", "turbo")
     assert GS.mode() == "live"                          # NEG: an unknown env word changes nothing
     monkeypatch.delenv("GG_STREAM_MODE")
-    assert GS.on_bar_close(NOW) is not None or True     # the bar-close lane run is reachable in LIVE (pinned below)
+    # 2026-11-09 REVIEW, finding #7: was `assert … is not None or True` (could never fail) — the LIVE default path
+    # really calls the lane's run() once, source "bar_close", and returns its dict
+    calls = []
+    monkeypatch.setattr(GL, "run", lambda *a, **k: calls.append((a, k)) or {"ok": True, "ran": True})
+    assert GS.on_bar_close(NOW) == {"ok": True, "ran": True}
+    assert len(calls) == 1 and calls[0][1] == {"source": "bar_close"}
 
 
 def test_env_lowers_never_raises(monkeypatch):
@@ -361,6 +367,9 @@ def live(monkeypatch):
     monkeypatch.setattr(GS, "GG_STREAM_MODE", "live")
     clock = {"t": 1000.0}
     monkeypatch.setattr(GS, "_mono", lambda: clock["t"])
+    # 2026-11-09 REVIEW, finding #1: a stream job now prices from `_price_of` (the FRESH print, else ONE REST read),
+    # so the hermetic wall clock sits just after the fixture's print (a test may move it)
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 0.2)
     return clock
 
 
@@ -443,4 +452,95 @@ def test_bar_close_runs_the_lane_in_live_only(monkeypatch):
     monkeypatch.delenv("GG_STREAM_MODE")
     monkeypatch.setattr(GS, "GG_STREAM_MODE", "live")
     assert GS.on_bar_close(NOW) == {"ok": True}
-    assert len(calls) == 1 and calls[0][1]["source"] == "bar_close" and calls[0][0][2] == NOW
+    # 2026-11-09 REVIEW, finding #2 (pin moved): the hub's submit time is NOT passed on — run() reads its own clock
+    # after the mutex (was `calls[0][0][2] == NOW`)
+    assert len(calls) == 1 and calls[0][1]["source"] == "bar_close" and calls[0][0][2] is None
+
+
+# ── 2026-11-09 REVIEW (critic) — the LIVE stream order path ────────────────────────────────────────────────────────
+def _queued(lane_fx, monkeypatch, lasts=None):
+    """LIVE, one waiting doc, the hub's worker held: jobs queue instead of running inline; `_live_last` recorded."""
+    s = lane_fx(docs=[seed()], lasts=lasts or {})
+    s.db.gajjala_lane_stream = StreamColl()
+    s.jobs, s.rest = [], []
+    monkeypatch.setattr(GS, "_submit", lambda fn, *a: s.jobs.append((fn, a)))
+    monkeypatch.setattr(GL, "_live_last", lambda b, sym: s.rest.append(sym) or ((s.lasts.get(sym), "rest")))
+    return s
+
+
+def _drain(s):
+    while s.jobs:
+        fn, a = s.jobs.pop(0)
+        fn(*a)
+
+
+def test_finding1_queued_job_prices_from_the_fresher_print_record_keeps_the_queued_one(lane, live, monkeypatch):
+    s = _queued(lane, monkeypatch)
+    GS.on_print(_pr(4.47), _view(), True)                # queued behind a bar-close run / another doc's order
+    for k in range(1, 6):                                 # the tape keeps printing while the job waits
+        GS.on_print(_pr(4.47 + 0.01 * k, recv=RECV + 4.0 * k), _view(), True)
+    assert len(s.jobs) == 1                               # one attempt in flight (the memo)
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 20.5)   # the job runs 20 s later
+    _drain(s)
+    d = s.db.gajjala_lane.get(DOC_ID)
+    assert d["state"] == "ordered" and d["last"] == 4.52 and d["entry"] == 4.52 and s.rest == []
+    assert d["last_source"] == GS.STREAM_SOURCE
+    assert d["stream_print_px"] == 4.47                   # the record keeps the QUEUED print
+    assert s.db.gajjala_lane_stream.get(f"{DOC_ID}|trigger")["print_px"] == 4.47
+
+
+def test_finding1_the_critics_case_fresher_print_past_1r_is_missed_not_bought(lane, live, monkeypatch):
+    s = _queued(lane, monkeypatch)
+    GS.on_print(_pr(4.46), _view(), True)                 # AT the trigger (4.46, stop 4.31 → 1R = 0.15)
+    GS.on_print(_pr(4.70, recv=RECV + 19.0), _view(), True)        # +1.6R by the time the job runs
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 20.0)
+    _drain(s)
+    d = s.db.gajjala_lane.get(DOC_ID)
+    assert (d["state"], d["skip_kind"]) == ("skipped", "missed") and _brackets(s.brk) == []      # never a stale buy
+    assert d["last"] == 4.70 and d["last_source"] == GS.STREAM_SOURCE and s.rest == []
+
+
+def test_finding1_neg_no_fresher_print_uses_the_queued_print(lane, live, monkeypatch):
+    s = _queued(lane, monkeypatch, lasts={"SAIQ": 9.99})
+    GS.on_print(_pr(4.47), _view(), True)
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 0.5)  # the queued print is still the fresh last
+    _drain(s)
+    d = s.db.gajjala_lane.get(DOC_ID)
+    assert d["state"] == "ordered" and d["last"] == 4.47 and s.rest == []          # NEG: no REST, no other price
+
+
+def test_finding1_neg_a_fresher_print_on_another_symbol_is_never_used(lane, live, monkeypatch):
+    s = _queued(lane, monkeypatch, lasts={"SAIQ": 9.99})
+    GS.on_print(_pr(4.47), _view(), True)
+    GS.on_print(_pr(4.60, sym="ZZZ", recv=RECV + 1.0), _view(), True)  # another name prints later
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 1.2)
+    _drain(s)
+    d = s.db.gajjala_lane.get(DOC_ID)
+    assert d["state"] == "ordered" and d["last"] == 4.47 and s.rest == []          # NEG: ZZZ's print never used
+
+
+def test_finding1_stale_queued_print_is_one_rest_read(lane, live, monkeypatch):
+    s = _queued(lane, monkeypatch, lasts={"SAIQ": 4.49})
+    GS.on_print(_pr(4.47), _view(), True)
+    monkeypatch.setattr(GS, "_wall", lambda: RECV + 30.0)  # nothing fresher came; the print is 30 s old
+    _drain(s)
+    d = s.db.gajjala_lane.get(DOC_ID)
+    assert s.rest == ["SAIQ"] and d["last"] == 4.49 and d["last_source"] == "rest"
+    assert d["stream_print_px"] == 4.47                   # still the record of the print that triggered
+
+
+def test_finding5_bucket_is_seven_attempts_a_minute_and_fits_alpaca(lane, live, monkeypatch):
+    calls_per_attempt = 8                                 # clock, positions, account, _evaluate x3, clock + POST
+    assert GS.GG_STREAM_ALPACA_PER_MIN * calls_per_attempt <= 0.30 * 200
+    lane(docs=[seed()])
+    calls = []
+    monkeypatch.setattr(GL, "run_stream", lambda *a, **k: calls.append(a) or {"waiting": 1})
+    view = {}
+    for i in range(GS.GG_STREAM_ALPACA_PER_MIN + 1):
+        view.update(_view(sym=f"S{i}", doc_id=f"GG:{DAY}|S{i}|bull_flag"))
+    for i in range(GS.GG_STREAM_ALPACA_PER_MIN + 1):
+        GS.on_print(_pr(4.47, sym=f"S{i}"), view, True)
+    assert len(calls) == GS.GG_STREAM_ALPACA_PER_MIN == 7  # NEG: the 8th attempt in the same instant waits
+    live["t"] += 60.0 / GS.GG_STREAM_ALPACA_PER_MIN + 0.01
+    GS.on_print(_pr(4.48, sym=f"S{GS.GG_STREAM_ALPACA_PER_MIN}"), view, True)
+    assert len(calls) == 8                                # one token refilled ≈ 8.6 s later

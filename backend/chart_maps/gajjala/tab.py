@@ -1080,27 +1080,33 @@ def order_key(t: dict) -> tuple:
     sorts by the 9/21 EMA gap ascending, unknown last. GC.HF_EMA_SORT "pre_break" (built): every read that has NOT broken
     out — forming AND partial (a FULL-length base with the EMAs apart is partial, detectors._resolve_forming; only a
     SHORT base stays forming) — ranks together at the forming-ready rank by the gap, today's key breaking ties; A+ /
-    held / triggered / stopped keep today's key byte-identical. "within_state" = the gap right after each state rank;
+    held / triggered / stopped keep today's key (+ the float since 2026-11-09). "within_state" = the gap right after each state rank;
     "global" = the gap above every state. The gap is a snapshot at the read's ref bar, never a direction.
-    Every other setup, and a read without the stash (the cross-setup focus pick), keeps today's key byte-identical."""
+    2026-11-09 (Ajay "can you update other tabs in the same way" · "When I say all tabs with in Gajjalas only"): every
+    setup in GC.FLOAT_SORT_SETUPS takes the 🎾 float key (state rank, float ascending, unknown last, today's key; placed
+    by GC.RS_FLOAT_SORT); ➖ keeps its gap FIRST and takes the float right after it (a rung ➖ card, no gap key, takes
+    the float like the rest). Display order only. A setup outside the tuple, and a read without the stash (the
+    cross-setup focus pick, the 🧠 rows' potential.order_key), keeps today's key byte-identical."""
     g = t.get("gajjala") or {}
     key = _state_key(g, t.get("symbol") or "")
-    if g.get("setup") == "reversal_squeeze" and "_float_shares" in g:
-        fl = g.get("_float_shares")
-        fkey = float(fl) if fl else float("inf")
-        if GC.RS_FLOAT_SORT == "global":
-            return (0, fkey) + key
-        return key[:1] + (fkey,) + key[1:]
+    has_fl = g.get("setup") in GC.FLOAT_SORT_SETUPS and "_float_shares" in g     # 2026-11-09: every setup sub
+    fl = g.get("_float_shares")
+    fkey = float(fl) if fl else float("inf")
     if g.get("setup") == "horizontal_fade" and "_ema_gap_pct" in g:
         gap = g.get("_ema_gap_pct")
         gkey = float(gap) if gap is not None else float("inf")
+        ft = (fkey,) if has_fl else ()                          # 2026-11-09: the float right AFTER the gap, never before
         if GC.HF_EMA_SORT == "global":
-            return (0, gkey) + key
+            return (0, gkey) + ft + key
         if GC.HF_EMA_SORT == "within_state":
-            return key[:1] + (gkey,) + key[1:]
+            return key[:1] + (gkey,) + ft + key[1:]
         if g.get("state") in ("forming", "partial"):            # pre_break: ONE bucket, gap first, today's key breaks ties
-            return (_PRE_BREAK_RANK, gkey) + key
-        return key                                              # [C6] rung / stopped cards: today's key, byte-identical
+            return (_PRE_BREAK_RANK, gkey) + ft + key
+        # [C6] rung / stopped cards carry no gap key — they take the float key below like every other setup (2026-11-09)
+    if has_fl:
+        if GC.RS_FLOAT_SORT == "global":
+            return (0, fkey) + key
+        return key[:1] + (fkey,) + key[1:]
     return key
 
 
@@ -1233,8 +1239,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
               "_bars_to_go": _bars_to_go(read)})
     if "audit" in read:                                              # 🧪 2026-11-01 — the audited tab's block, served
         g["audit"] = read["audit"]
-    if setup == "reversal_squeeze":                                  # 🎾 order key (DECISIONS13 D3), popped before serving
-        g["_float_shares"] = _float_shares_of(_float_read(doc, daily))
+    if setup in GC.FLOAT_SORT_SETUPS:                                # 🎾 order key (DECISIONS13 D3; every setup 2026-11-09), popped
+        g["_float_shares"] = _float_shares_of(_float_read(doc, daily))   # the float chip's own read (_chips), no new fetch
     if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
         g["_ema_gap_pct"] = _ema_gap_pct(read)
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None

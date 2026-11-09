@@ -87,7 +87,7 @@ K8_HISTORY_SESSIONS = 30                 # Ajay K8: squeeze-history chip over th
 K8_HISTORY_RANGE_PCT = 50.0              # Ajay K8: (high - low)/low >= 50% OR a halt that day
 FLOAT_SUSPECT_POLICY = "ineligible"      # spec default (R1-9b not answered): a float on file > shares out -> unknown -> ineligible
 FLOAT_SUSPECT_POLICIES = ("ineligible", "shares_out")
-RS_FLOAT_SORT = "within_state"           # MINE (DECISIONS13 D3) — state rank first, then float ascending, unknown last; "global" = float above the state rank (HIS CALL Q1)
+RS_FLOAT_SORT = "within_state"           # MINE (DECISIONS13 D3) — state rank first, then float ascending, unknown last; "global" = float above the state rank (HIS CALL Q1). 2026-11-09: the ONE float-sort mode knob for EVERY setup in FLOAT_SORT_SETUPS (name kept — tests and contracts pin it); ➖ keeps its EMA gap first, float right after the gap
 HF_EMA_SORT = "pre_break"               # MINE (Ajay 2026-11-07 "I need a ranking in horizontal fade when the stock 9 EMA and 21 EMA are converging or close to converge on all tabs") — ➖ reads that have NOT broken out (forming AND partial) rank together by |9 − 21 EMA| as % of close (the k6_merge number, a snapshot) ascending, unknown last; A+/held/triggered/stopped keep today's key on top. "within_state" = the 🎾 twin (gap after each state rank; partial always below forming); "global" = the gap above every state (HIS CALL #6 of docs/gajjala/fade_ema_rank_2026_11_08.md)
 HF_EMA_SORTS = ("pre_break", "within_state", "global")   # MINE — the three ➖ orders HF_EMA_SORT may name (HIS CALL #6)
 # K9 premarket / K10 post-market
@@ -243,6 +243,12 @@ LEDGER_GRADE_VERSION = 1                 # TRANSPORT — bump to re-grade the lo
 # sub-tabs (DECISIONS order) — key, emoji, label. 🧠 Potential (Ajay 2026-10-15 msg 1) then 🏁 Track record (Ajay
 # 2026-10-16) appended after it (HIS CALL Q7); nothing else moves (HIS CALL P8)
 SETUPS = ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze")
+# 🎾→all (Ajay 2026-11-09 "Are the reversal squeeze tickers sorted by high probability can you update other tabs in the same
+# way I like how they are realtime updating the prices of now" · "When I say all tabs with in Gajjalas only"): every
+# setup sub takes the 🎾 float key (Ajay 2026-10-18 "for the float lower the better is what I wanna follow so sort it by
+# lowest on top") — state rank, then float ascending (unknown last), then today's key; placement = RS_FLOAT_SORT. DISPLAY
+# ORDER ONLY: no gate, rule, push or data change; no probability is claimed (there is none).
+FLOAT_SORT_SETUPS = tuple(SETUPS)        # derived — MINE: every setup sub the board shows (SETUPS, never retyped); his 2026-11-09 words above
 SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),

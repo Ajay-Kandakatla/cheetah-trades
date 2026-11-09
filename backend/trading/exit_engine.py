@@ -774,19 +774,22 @@ def _distribution_read(symbol: str) -> Optional[dict]:
 # GG's — they skip every symbol with a lane doc in one of these states. The
 # watchdog and adopt-and-protect still run (a lane position always has its stop).
 GAJJALA_LANE_COLL = "gajjala_lane"
-GAJJALA_LANE_LIVE_STATES = ("ordered", "open", "closing")
 
 
 def _gajjala_lane_symbols() -> set:
-    """Symbols the 🚩 lane holds or is buying (lane docs in GAJJALA_LANE_LIVE_STATES). Fenced: a read failure is an
-    empty set — the house rules then apply to every name (the old behaviour)."""
+    """Symbols the 🚩 lane holds or is buying (lane docs in gajjala_entry._LIVE_STATES). Fenced: a read failure is an
+    empty set — the house rules then apply to every name (the old behaviour).
+    2026-11-09 REVIEW, finding #6: the lane's OWN live-state set (incl. "ordering") — with api-side stream orders the
+    cron tick runs concurrently, so a fill landing while the doc is still "ordering" is a lane name here too (was a
+    retyped ("ordered", "open", "closing")). Imported lazily: gajjala_entry imports this module."""
     try:
+        from trading import gajjala_entry as GE
         db = _db()
         if db is None:
             return set()
         coll = getattr(db, GAJJALA_LANE_COLL)
         return {(d.get("symbol") or "").upper()
-                for d in coll.find({"state": {"$in": list(GAJJALA_LANE_LIVE_STATES)}})
+                for d in coll.find({"state": {"$in": list(GE._LIVE_STATES)}})
                 if d.get("symbol")}
     except Exception as exc:                           # noqa: BLE001
         log.debug("gajjala lane symbols unread: %s", exc)

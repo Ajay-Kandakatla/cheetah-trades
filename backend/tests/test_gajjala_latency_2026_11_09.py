@@ -378,6 +378,37 @@ def test_odd_lot_only_count_and_neg_a_trigger_lot_row(mongo):
     assert ol["text"] == "Trigger seen only on an odd-lot print: 1 of 4"
 
 
+def test_finding3_a_stream_decided_doc_is_never_a_same_outcome(mongo):
+    """2026-11-09 REVIEW, finding #3: once LIVE is on, a doc the STREAM ordered (or a stop skip the stream wrote) is not
+    the 1-minute tick agreeing with the stream — it is left out and counted in the served `stream_ordered` bucket."""
+    a = {k: alert(k, bar=bar) for k, bar in (("TCK", "10:00"), ("STR", "10:05"), ("HUB", "10:10"), ("SSK", "10:15"))}
+    ln = [lane(a["TCK"], seen=121, order=122, fill=125, fill_px=2.05, last_source="sepa.prices:last_trade_price"),
+          lane(a["STR"], seen=121, order=62, fill=64, fill_px=2.01, order_source="stream", last_source="stream:T"),
+          lane(a["HUB"], seen=61, order=62, fill=64, fill_px=2.01, order_source="hub_claim"),
+          lane(a["SSK"], seen=121, state="unfilled", skip_kind="never_triggered", last=1.79, last_source="stream:T")]
+    st = [srow(a["TCK"], "trigger", 90), srow(a["STR"], "trigger", 60), srow(a["HUB"], "trigger", 60),
+          srow(a["SSK"], "stop", 100, px=1.79)]
+    mongo(alerts=list(a.values()), lane=ln, stream=st)
+    chk = LT.payload("all", now=NOW, live_from=None)["check"]
+    assert [(x["stream"], x["tick"], x["n"]) for x in chk["pairs"]] == [("trigger", "ordered", 1)]     # TCK only
+    assert chk["same"] == 1 and chk["different"] == 0 and chk["n"] == 1
+    assert chk["stream_ordered"] == {"n": 3, "text": "Stream-ordered (not the 1-minute check) — left out of the "
+                                                     "comparison: 3"}
+    assert {"title", "same", "different", "n", "pairs", "entry_delta_r", "odd_lot_only"} <= set(chk)  # keys kept
+
+
+def test_finding3_neg_tick_ordered_docs_still_agree(mongo):
+    a = {k: alert(k, bar=bar) for k, bar in (("AAA", "10:00"), ("BBB", "10:05"))}
+    ln = [lane(a["AAA"], seen=121, order=122, fill=125, fill_px=2.05),                        # absent = the tick
+          lane(a["BBB"], seen=121, order=122, fill=125, fill_px=2.05, order_source="tick", last_source="test")]
+    mongo(alerts=list(a.values()), lane=ln, stream=[srow(a["AAA"], "trigger", 90), srow(a["BBB"], "trigger", 90)])
+    chk = LT.payload("all", now=NOW, live_from=None)["check"]
+    assert chk["same"] == 2 and chk["stream_ordered"]["n"] == 0                                 # NEG: nothing left out
+    assert LT.stream_decided({}) is False and LT.stream_decided({"order_source": "tick"}) is False
+    assert LT.stream_decided({"order_source": "bar_close"}) is True
+    assert LT.stream_decided({"last_source": "stream:T"}) is True
+
+
 def test_neg_no_stream_rows_no_check_block(mongo):
     al, ln = _baseline_alerts()
     mongo(alerts=al, lane=ln)

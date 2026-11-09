@@ -48,7 +48,7 @@ UTC = timezone.utc
 GG_STREAM_MODES = ("off", "shadow", "live")             # low → high; the env may only move DOWN this list
 GG_STREAM_MODE = "live"                                 # HIS CALL #1 ANSWERED — Ajay 2026-11-09 ~09:25 ET: "With entries realtime like Gajjala does" / "I would like to see it in action now" (SHADOW 02:29–~10:00 ET 11-09; the env may still LOWER it)
 GG_STREAM_RECHECK_SEC = 15.0                            # MINE — spec §3.3: after a LIVE attempt, no new stream attempt on that doc for 15 s (the tick still runs every 60 s)
-GG_STREAM_ALPACA_PER_MIN = 60                           # MINE — spec §3.3 / §5.1: token bucket on LIVE attempts (≈ 4 Alpaca calls each) ≤ 30 % of Alpaca's 200/min
+GG_STREAM_ALPACA_PER_MIN = 7                            # MINE — spec §3.3 / §5.1: token bucket on LIVE attempts. 2026-11-09 REVIEW, finding #5: an ordering attempt is ~8 Alpaca calls (clock, positions, account, _evaluate's three, the clock check + POST in submit_bracket) → 7 attempts × ~8 = 56 calls/min ≈ 28 % of Alpaca's 200/min (was 60 attempts = ~480/min, over the limit)
 GG_STREAM_FRESH_POLLS = 2                               # spec §3.3 (derived): GG_STREAM_FRESH_SEC = 2 × live_hub.HUB_POLL_SEC — a print this fresh is "the last" for a new A+
 GG_STREAM_ROW_MAX_TRIES = 2                             # MINE — critic 2026-11-09: a row whose Mongo write FAILED is retried on the next qualifying print, at most this many tries a day (no per-print retry storm)
 ODD_LOT_CONDITION = 37                                  # orderflow.tape.KEPT_DESPITE_FLAGS "37 Odd Lot Trade" (kept as regular flow; HIS CALL #2) — pinned equal in the tests
@@ -352,7 +352,10 @@ def _job_print(doc_id: str, d: dict, pr: dict, events: list, attempt: bool, m: s
                     _settle(key, status)
         if attempt and m == "live":
             t_ms = GL._f(pr.get("t_ms"))
-            GL.run_stream(doc_id, last=GL._f(pr.get("p")), source=STREAM_SOURCE,
+            # 2026-11-09 REVIEW, finding #1: the job can sit behind a bar-close run (mutex wait ≤ 20 s) or another
+            # doc's order on the hub's ONE worker — price from the FRESH stream print of this symbol, else ONE REST
+            # read (`_price_of`), never the queued print; `last` / `print_t` stay the queued print for the record
+            GL.run_stream(doc_id, last=GL._f(pr.get("p")), source=STREAM_SOURCE, price_of=_price_of,
                           print_t=_iso_ms(t_ms / 1000.0) if t_ms is not None else None)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala stream: job %s failed: %s", doc_id, type(exc).__name__)
@@ -421,11 +424,13 @@ def on_new_aplus(rows: list, now: Optional[datetime] = None) -> dict:
 
 
 def on_bar_close(now: Optional[datetime] = None) -> Optional[dict]:
-    """Worker: LIVE only → the lane's own run() (management at close + settle; HIS CALL #17). SHADOW / OFF → nothing."""
+    """Worker: LIVE only → the lane's own run() (management at close + settle; HIS CALL #17). SHADOW / OFF → nothing.
+    2026-11-09 REVIEW, finding #2: `now` (the hub's submit time — the job can sit in the queue) is NOT passed on: run()
+    reads its own clock after the mutex is acquired, so the window / cut-off and the order stamps are the real time."""
     if mode() != "live":
         return None
     try:
-        return GL.run(None, None, now, source="bar_close")
+        return GL.run(None, None, None, source="bar_close")
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala stream: bar-close run failed: %s", type(exc).__name__)
         return None

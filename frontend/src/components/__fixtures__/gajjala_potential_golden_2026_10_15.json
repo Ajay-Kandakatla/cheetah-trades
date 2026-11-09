@@ -1041,10 +1041,10 @@
        "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
        "float": {
         "as_of": "2026-10-13",
-        "shares": 2000000.0,
+        "shares": 1000000.0,
         "src": "float",
         "suspect": false,
-        "text": "Float 2.0M"
+        "text": "Float 1.0M"
        },
        "float_suspect": null,
        "halts": null,
@@ -1053,7 +1053,7 @@
        "psych": [],
        "read_at": null,
        "red_closes": null,
-       "rotation": "🔄 float ×4.5",
+       "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
        "stopped_earlier": null,
        "vol_src": "min_av",
@@ -1072,14 +1072,14 @@
         "label": "K3 pullback volume ≤ 0.5× leg mean",
         "need": "≤ 125000",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "max — vs cap 125000"
        },
        {
         "key": "k4",
         "label": "K4 pullback 1–5 bars",
         "need": "1–5",
-        "ok": true,
-        "value": "2 bars"
+        "ok": false,
+        "value": "0 bars"
        }
       ],
       "cycles": null,
@@ -1097,30 +1097,30 @@
       },
       "missed": [],
       "ready": false,
-      "reason": "",
-      "red_closes": 2,
-      "risk_pct": 1.4245014245014245,
+      "reason": "waiting for the pullback bar",
+      "red_closes": 0,
+      "risk_pct": 4.545454545454546,
       "setup": "bull_flag",
       "state": "forming",
-      "state_label": "forming — not long enough yet · UNMEASURED",
-      "stop": 10.8125,
-      "trigger": 10.96875,
+      "state_label": "forming — waiting for the pullback bar · UNMEASURED",
+      "stop": 10.5,
+      "trigger": 11.0,
       "unjudged": [],
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/JJJ?tab=supply&tf=5m_today",
+     "href": "/sepa/GGG?tab=supply&tf=5m_today",
      "lines": [
       {
-       "label": "TRIGGER 10.97",
-       "price": 10.96875,
-       "text": "10.97",
+       "label": "TRIGGER 11.00",
+       "price": 11.0,
+       "text": "11.00",
        "tone": "buy"
       },
       {
-       "label": "STOP 10.81",
-       "price": 10.8125,
-       "text": "10.81",
+       "label": "STOP 10.50",
+       "price": 10.5,
+       "text": "10.50",
        "tone": "stop"
       }
      ],
@@ -1136,7 +1136,7 @@
        "v": "9.0M"
       }
      ],
-     "symbol": "JJJ",
+     "symbol": "GGG",
      "tf": "5m",
      "trader_text": null,
      "vol_avg": {
@@ -1157,7 +1157,7 @@
        100.0
       ]
      },
-     "why": ""
+     "why": "waiting for the pullback bar"
     },
     {
      "badges": [],
@@ -1308,10 +1308,10 @@
        "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
        "float": {
         "as_of": "2026-10-13",
-        "shares": 1000000.0,
+        "shares": 2000000.0,
         "src": "float",
         "suspect": false,
-        "text": "Float 1.0M"
+        "text": "Float 2.0M"
        },
        "float_suspect": null,
        "halts": null,
@@ -1320,7 +1320,7 @@
        "psych": [],
        "read_at": null,
        "red_closes": null,
-       "rotation": "🔄 float ×9.0",
+       "rotation": "🔄 float ×4.5",
        "session_badge": "RTH",
        "stopped_earlier": null,
        "vol_src": "min_av",
@@ -1339,14 +1339,14 @@
         "label": "K3 pullback volume ≤ 0.5× leg mean",
         "need": "≤ 125000",
         "ok": true,
-        "value": "max — vs cap 125000"
+        "value": "max 100000 vs cap 125000"
        },
        {
         "key": "k4",
         "label": "K4 pullback 1–5 bars",
         "need": "1–5",
-        "ok": false,
-        "value": "0 bars"
+        "ok": true,
+        "value": "2 bars"
        }
       ],
       "cycles": null,
@@ -1364,30 +1364,30 @@
       },
       "missed": [],
       "ready": false,
-      "reason": "waiting for the pullback bar",
-      "red_closes": 0,
-      "risk_pct": 4.545454545454546,
+      "reason": "",
+      "red_closes": 2,
+      "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
       "state": "forming",
-      "state_label": "forming — waiting for the pullback bar · UNMEASURED",
-      "stop": 10.5,
-      "trigger": 11.0,
+      "state_label": "forming — not long enough yet · UNMEASURED",
+      "stop": 10.8125,
+      "trigger": 10.96875,
       "unjudged": [],
       "variant": null,
       "variant_label": null
      },
-     "href": "/sepa/GGG?tab=supply&tf=5m_today",
+     "href": "/sepa/JJJ?tab=supply&tf=5m_today",
      "lines": [
       {
-       "label": "TRIGGER 11.00",
-       "price": 11.0,
-       "text": "11.00",
+       "label": "TRIGGER 10.97",
+       "price": 10.96875,
+       "text": "10.97",
        "tone": "buy"
       },
       {
-       "label": "STOP 10.50",
-       "price": 10.5,
-       "text": "10.50",
+       "label": "STOP 10.81",
+       "price": 10.8125,
+       "text": "10.81",
        "tone": "stop"
       }
      ],
@@ -1403,7 +1403,7 @@
        "v": "9.0M"
       }
      ],
-     "symbol": "GGG",
+     "symbol": "JJJ",
      "tf": "5m",
      "trader_text": null,
      "vol_avg": {
@@ -1424,7 +1424,7 @@
        100.0
       ]
      },
-     "why": "waiting for the pullback bar"
+     "why": ""
     },
     {
      "badges": [],

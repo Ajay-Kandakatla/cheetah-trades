@@ -22,6 +22,27 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 ~09:55 ET (verbatim in the label, his spelling kept), with a 🎾 card screenshot whose right axis showed
+  // TRIGGER / 21 EMA / 9 EMA but no price: "I can't see now for them again" (earlier: "I like how they are realtime
+  // updating the prices of now"). Since 2026-10-16 the 🔴 live overlay added the "now" label only in pre-market /
+  // after-hours (chart_maps/live_card.card_now `add_line = bool(session)`); in regular hours the live print moved the
+  // last candle but printed no number. Now `add_line` is True whenever a live print exists, every session, every card
+  // (the FE already honoured the flag: lib/cardLive.patchLines). Labels unchanged: "now", "now · pre", "now · AH".
+  // No data path, gate or poll change. Pinned by scripts/contracts.mjs ("🔴 now label in every session (2026-11-09)").
+  { id: 'chart-maps-live-now-label-every-session-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala',
+    label: "🔴 The now price shows in regular hours too — you said: “I can't see now for them again”. The live overlay printed its now label only in pre-market and after-hours; in regular hours the last candle moved but no number was printed. Every card now carries the now label in every session, same 30 s refresh and the same live stream behind it. Not advice." },
+  // Ajay 2026-11-09 ~09:35 ET (verbatim in the label, his spelling kept): "Are the reversal squeeze tickers sorted by high
+  // probability can you update other tabs in the same way I like how they are realtime updating the prices of now" /
+  // "When I say all tabs with in Gajjalas only". There is no probability score anywhere (every setup UNMEASURED); the
+  // 🎾 order was state rank, then float lowest-first (his 2026-10-18 call, GC.RS_FLOAT_SORT "within_state"), then today's
+  // key. Now every setup sub on the Gajjala boards (🚩, 🧪, 1-minute — ONE tab.order_key) takes the float key the same
+  // way: state rank, float ascending (unknown last), today's key; ➖ keeps his 2026-11-07 9/21 EMA-gap rank FIRST with float
+  // as the next key. GC.FLOAT_SORT_SETUPS names the subs; display order only — no gate, rule, threshold, push or data
+  // change; the float is the card's own chip value, no new fetch. Live card prices already ride every Gajjala sub
+  // (the cards on screen stream over the one SSE). Doc docs/gajjala/float_sort_all_setups_2026_11_09.md. Pinned by
+  // scripts/contracts.mjs ("🚩 float order on every Gajjala sub (2026-11-09)").
+  { id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala',
+    label: "🚩 Lowest float on top, every Gajjala sub — you said: “Are the reversal squeeze tickers sorted by high probability can you update other tabs in the same way” / “When I say all tabs with in Gajjalas only”. There is no probability number anywhere; the 🎾 order is state first, then the smallest float on top. Every Gajjala sub now sorts the same way (➖ Fade keeps its 9/21 EMA rank first, float next). Display order only. UNMEASURED. Not advice." },
   // Ajay 2026-11-09 ~09:25 ET (verbatim in the label, his spelling kept): "Is the Autopilot logic up to date?  to do entries
   // I would like to see it in action now.." / "With entries realtime like Gajjala does" — HIS CALL #1 of the GG LIVE spec
   // answered: trading/gajjala_stream.GG_STREAM_MODE "shadow" → "live" (the env may still LOWER it). The paper lane's

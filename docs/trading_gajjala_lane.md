@@ -283,8 +283,17 @@ records what the stream would have done.
   the lane-run mutex tried ONCE, `_try_waiting` on that doc priced by the print (`last_source "stream:T"`); a new A+ is
   claimed and priced from the stream when the last print is ≤ `GG_STREAM_FRESH_SEC` (= 2 × `live_hub.HUB_POLL_SEC`)
   old, else ONE `_live_last`. `GG_STREAM_RECHECK_SEC = 15` (MINE) between attempts on one doc;
-  `GG_STREAM_ALPACA_PER_MIN = 60` (MINE) token bucket (≤ 30 % of Alpaca's 200/min). The bar-close lane run
+  `GG_STREAM_ALPACA_PER_MIN = 7` (MINE) token bucket (an ordering attempt ≈ 8 Alpaca calls → 7 × 8 = 56/min ≈ 28 % of
+  Alpaca's 200/min; was 60 until the 2026-11-09 REVIEW, finding #5). The bar-close lane run
   (`run(source="bar_close")`) only in LIVE (HIS CALL #17).
+- 2026-11-09 REVIEW (critic) — LIVE stream order path, plumbing only (no rule, gate, number of GG's, window or size
+  changed): (#1) a queued stream job prices from the FRESH stream print of its symbol, else ONE REST read
+  (`gajjala_stream._price_of`) — never the print from queue time; `stream_print_px` / `_t` still record the queued
+  print. (#2) with no caller `now` (the cron tick, the bar-close run, stream jobs) `run()` / `run_stream()` read the
+  clock again AFTER the mutex — the window / cut-off and `ordering_at` / `ordered_at` use the real time;
+  `on_bar_close` no longer passes the hub's submit time. (#4) `run_stream` claims a new A+ BEFORE the mutex, so a busy
+  lane no longer loses it until the next tick (insert keyed on the alert id = no double doc). (#6) the house exit
+  engine treats an `ordering` lane doc as a lane name (`gajjala_entry._LIVE_STATES`, not a retyped tuple).
 - Docs it orders carry `order_source` (`stream` | `hub_claim` | `bar_close`; absent = the tick) and, for a print,
   `stream_print_px` / `stream_print_t` — NOT in `ROW_KEYS` (the tab rows are unchanged). Every entry's `TE.enter` is
   timed → `enter_ms`.

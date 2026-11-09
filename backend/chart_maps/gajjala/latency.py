@@ -83,6 +83,9 @@ TICK_WORDS = {"ordered": "1-minute: ordered", "never_triggered": "1-minute: the 
               "missed": "1-minute: missed", "other_skip": "1-minute: skipped",
               "expired": "1-minute: never traded the trigger by the cut-off"}
 FINALITY_PARTS = (("regular", "Regular hours"), ("extended", "Extended hours"))
+# 2026-11-09 REVIEW, finding #3: a doc the api ordered / skipped (order_source not the tick, or last_source "stream…") is
+# not a 1-minute outcome — it is left out of the comparison and counted here, never silently dropped
+STREAM_ORDERED_TEXT = "Stream-ordered (not the 1-minute check) — left out of the comparison: {k}"
 
 
 # ── IO seam (the lane's own; tests patch exit_engine._db) ───────────────────────────────────────────────────────
@@ -287,6 +290,15 @@ def tick_terminal(d: dict) -> Optional[str]:
     return None
 
 
+def stream_decided(d: dict) -> bool:
+    """2026-11-09 REVIEW, finding #3: True when the api — not the 1-minute tick — decided the doc: `order_source` set and
+    not "tick" (absent = the tick), or `last_source` starting "stream" (a stream attempt wrote the price it judged)."""
+    src = d.get("order_source")
+    if src is not None and src != "tick":
+        return True
+    return str(d.get("last_source") or "").startswith("stream")
+
+
 def stream_first(events: dict) -> str:
     best, best_t = "none", None
     for ev in ("trigger", "stop"):
@@ -306,7 +318,7 @@ def check_block(rows: list, lane: dict, stream: dict) -> Optional[dict]:
     if not ids:
         return None
     counts: dict = {}
-    deltas, trig_docs, odd_only = [], 0, 0
+    deltas, trig_docs, odd_only, by_stream = [], 0, 0, 0
     for did in ids:
         ev = stream[did]
         if "trigger" in ev:
@@ -316,6 +328,9 @@ def check_block(rows: list, lane: dict, stream: dict) -> Optional[dict]:
         d = lane.get(did) or {}
         tt = tick_terminal(d)
         if tt is None:
+            continue
+        if stream_decided(d):                                   # finding #3: never a "same outcome" with itself
+            by_stream += 1
             continue
         sf = stream_first(ev)
         counts[(sf, tt)] = counts.get((sf, tt), 0) + 1
@@ -339,7 +354,8 @@ def check_block(rows: list, lane: dict, stream: dict) -> Optional[dict]:
     ed["text"] = ENTRY_DELTA_TEXT.format(p50=_signed(ed["p50"], 2), p90=_signed(ed["p90"], 2), n=ed["n"])
     return {"title": CHECK_TITLE.format(a=a, d=dd), "same": a, "different": dd, "n": a + dd, "pairs": pairs,
             "entry_delta_r": ed,
-            "odd_lot_only": {"n": trig_docs, "k": odd_only, "text": ODD_LOT_TEXT.format(k=odd_only, n=trig_docs)}}
+            "odd_lot_only": {"n": trig_docs, "k": odd_only, "text": ODD_LOT_TEXT.format(k=odd_only, n=trig_docs)},
+            "stream_ordered": {"n": by_stream, "text": STREAM_ORDERED_TEXT.format(k=by_stream)}}
 
 
 # ── bar finality (P2 probe rows) ────────────────────────────────────────────────────────────────────────────────
@@ -452,6 +468,7 @@ def payload(span: Optional[str] = None, now: Optional[datetime] = None, live_fro
             "finality": finality_block(read_bar_final(days))}
 
 
-__all__ = ["payload", "close_of", "pct", "step_stats", "boot_ci", "tick_terminal", "stream_first", "check_block",
+__all__ = ["payload", "close_of", "pct", "step_stats", "boot_ci", "tick_terminal", "stream_decided", "stream_first", "check_block",
            "finality_block", "build_row", "is_live_row", "live_from_of", "GG_LIVE_FROM", "LATENCY_BOOT_N", "LATENCY_BOOT_SEED",
-           "LATENCY_CI_MIN_N", "TITLE", "COLUMNS", "FOOTNOTE", "EMPTY_TEXT", "CHECK_TITLE", "FINALITY_TEXT"]
+           "LATENCY_CI_MIN_N", "TITLE", "COLUMNS", "FOOTNOTE", "EMPTY_TEXT", "CHECK_TITLE", "FINALITY_TEXT",
+           "STREAM_ORDERED_TEXT"]
