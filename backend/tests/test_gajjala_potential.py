@@ -250,7 +250,10 @@ def test_NEGATIVE_no_carry_no_prior_no_halt_no_also_means_no_badges():
 
 
 # ── order ────────────────────────────────────────────────────────────────────────────────────────────────────────
-def test_order_key_armed_first_then_float_up_unknown_last_volume_down_symbol_last():
+def test_order_key_armed_first_then_volume_down_then_float_up_unknown_last_symbol_last():
+    """2026-11-09 ~10:25 ET (Ajay, verbatim: "Ok sort any stocks by volume on all Gajjala's charts"): the volume key
+    (S8 1:32:02) moved AHEAD of the float key (S8 21:04) — armed first, then the loudest, equal volume → the smaller float,
+    an unknown volume LAST among its kind (never coerced to 0), then the SETUPS order and the symbol."""
     def v(fl, vol):
         return {"float_shares": fl, "volume": vol}
     keys = {
@@ -262,8 +265,10 @@ def test_order_key_armed_first_then_float_up_unknown_last_volume_down_symbol_las
         "armed_small_noVol": PT.order_key("armed", v(2_000_000, None), "bull_flag", "AAA"),
     }
     got = sorted(keys, key=keys.get)
-    assert got == ["armed_small_loud", "armed_small", "armed_small_noVol", "armed_huge", "armed_unknown",
-                   "building_tiny"]
+    assert got == ["armed_unknown", "armed_small_loud", "armed_small", "armed_huge", "armed_small_noVol",
+                   "building_tiny"]                      # 9e9 › 5e6 › (vol 1: float 2M › 900M) › no volume › building
+    # NEGATIVE: the pre-2026-11-09 order (float first) is gone — the loudest unknown-float name is no longer last
+    assert got[0] == "armed_unknown" and got.index("armed_huge") < got.index("armed_small_noVol")
     assert PT.order_key("armed", v(1, 1), "bull_flag", "BBB") < PT.order_key("armed", v(1, 1), "kiss_fly", "AAA")
     assert PT.order_key("armed", v(1, 1), "bull_flag", "AAA") < PT.order_key("armed", v(1, 1), "bull_flag", "BBB")
 

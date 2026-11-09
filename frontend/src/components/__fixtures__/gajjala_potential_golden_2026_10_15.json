@@ -10,6 +10,7 @@
     "editable": true,
     "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
     "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
     "remove_title": "take it off the list",
     "symbols": [],
     "text": "🚫 not eligible at Fidelity",
@@ -115,7 +116,7 @@
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
-   "order_note": null,
+   "order_note": "📊 highest volume on top · then lowest float",
    "pass": {
     "as_of_et": "10:31 ET",
     "at": "2026-10-13T14:31:00+00:00",
@@ -1706,6 +1707,7 @@
     "editable": true,
     "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
     "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
     "remove_title": "take it off the list",
     "symbols": [],
     "text": "🚫 not eligible at Fidelity",
@@ -1810,6 +1812,7 @@
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "order_note": "🧠 trigger armed first · then highest volume",
    "pass": {
     "as_of_et": "10:31 ET",
     "at": "2026-10-13T14:31:00+00:00",

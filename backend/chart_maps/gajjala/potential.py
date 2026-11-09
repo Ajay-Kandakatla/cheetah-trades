@@ -267,15 +267,17 @@ def tells(values: dict) -> list:
 
 
 def order_key(kind: str, values: dict, setup: str, sym: str) -> tuple:
-    """One order everywhere (strip, roll-up, Track today): trigger armed before building (K1), then float ascending
-    (S8 21:04 "the lower the float the better"), then volume descending (S8 1:32:02 "the more the better"), then the
-    SETUPS order and the symbol. Unknown values sort LAST by their flag — never by coercion to 0. (HIS CALL P4.)"""
+    """One order everywhere (strip, roll-up, Track today): trigger armed before building (K1), then volume descending
+    (S8 1:32:02 "the more the better" — FIRST since 2026-11-09 ~10:25 ET, Ajay verbatim: "Ok sort any stocks by volume on
+    all Gajjala's charts"), then float ascending (S8 21:04 "the lower the float the better" — the next key since that
+    word; first before it), then the SETUPS order and the symbol. Unknown values sort LAST by their flag — never by
+    coercion to 0. (HIS CALL P4.)"""
     v = values or {}
     fl, vol = _pos(v.get("float_shares")), _num(v.get("volume"))
     order = {s: i for i, s in enumerate(GC.SETUPS)}
     return (0 if kind == GC.POTENTIAL_KINDS[0] else 1,
-            0 if fl is not None else 1, fl if fl is not None else 0,
             0 if vol is not None else 1, -vol if vol is not None else 0,
+            0 if fl is not None else 1, fl if fl is not None else 0,
             order.get(setup, len(order)), (sym or "").upper())
 
 

@@ -2,8 +2,10 @@
 BUILD_SPEC12 §3 / WP-A, AMENDMENTS12 A1 + F1–F9).
 
 Ajay 2026-10-17, verbatim (his 2nd and 3rd lines): "ok then avoid showing me names that are not eligible in Fidelity
-then." / "Or just add a tag that not eligible on Fidelity". A TAG, never a filter: nothing here may hide, reorder or
-mute a name. The list = constants.BROKER_FLAG_SEED (EMPTY — he withdrew WORX) ∪ his adds − his removes in ONE
+then." / "Or just add a tag that not eligible on Fidelity". A TAG, never a filter: nothing here may hide or mute a
+name. 2026-11-09 ~10:30 ET, his word: "The ones I am reporting they are not on Fidelity put them at the bottom" → every
+card board moves his names to the END (tab.broker_bottom, the same order for every viewer; the words stay owner-only;
+tests/test_gajjala_volume_sort_2026_11_09.py). The list = constants.BROKER_FLAG_SEED (EMPTY — he withdrew WORX) ∪ his adds − his removes in ONE
 gajjala_state doc; served to the PRIMARY admin only (ollama_chat.api.is_primary_admin — the second household email is a
 non-owner here, F1); a store read fault FAILS OPEN TO THE SEED and says so (F5). Every seed below is a monkeypatch.
 NEGATIVES are mandatory: two emails, a faulting store, a removed seed, no chip on an unflagged row, the clause only when
@@ -263,7 +265,8 @@ def test_the_served_words_are_built_from_the_constants():
     assert b == {"editable": True, "symbols": ["ABCD"], "text": TEXT, "broker": "Fidelity", "toggle": "🚫",
                  "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
                  "fault_text": None, "add_label": "add", "add_placeholder": "ticker",
-                 "remove_title": "take it off the list"}
+                 "remove_title": "take it off the list",
+                 "order_text": "your 🚫 names sit at the bottom of every card board"}    # 2026-11-09 — his word
 
 
 def test_setup_tiles_and_the_aplus_rows():
@@ -271,7 +274,8 @@ def test_setup_tiles_and_the_aplus_rows():
     out = GT.build("bull_flag", now=TT.NOW, store=st, owner=True)
     hits = assert_tags(out, {"AAA"})
     assert any(p.startswith("$.tiles[") for p in hits)
-    assert [t["symbol"] for t in out["tiles"]] == TT.EXPECTED                         # NEGATIVE: nothing hidden / moved
+    # 2026-11-09 ~10:30 ET (his word): the flagged name sits LAST, every other row in today's order — nothing hidden
+    assert [t["symbol"] for t in out["tiles"]] == [s for s in TT.EXPECTED if s != "AAA"] + ["AAA"]
     assert out["broker_flags"]["symbols"] == ["AAA"] and out["broker_flags"]["editable"] is True
 
 
@@ -422,7 +426,9 @@ def test_NEGATIVE_any_other_reader_gets_null_everywhere(monkeypatch, request, wh
           "nobody": {}}[who]                                                          # nobody = the Depends OBJECT
     body = _get(monkeypatch, flag(TT.ordering_store(), "AAA"), **kw)
     assert_all_null(body)
-    assert [t["symbol"] for t in body["tiles"]] == TT.EXPECTED                        # the same rows, nothing hidden
+    # the same rows in the SAME order as the owner sees them (2026-11-09: his list moves AAA last for every viewer;
+    # only the words are owner-only) — nothing hidden
+    assert [t["symbol"] for t in body["tiles"]] == [s for s in TT.EXPECTED if s != "AAA"] + ["AAA"]
 
 
 def test_the_board_get_slice_gates_on_the_primary_admin_and_names_no_route():
@@ -694,19 +700,23 @@ def test_NEGATIVE_a_faulting_store_still_tags_the_seeded_push(monkeypatch):
 def test_the_rules_line_and_the_note():
     from supply_demand import rules_info as RI
     sec = RI._gajjala_section()
-    assert sec["stops"][-1] == ("🚫 Not eligible at Fidelity — your own list of names Fidelity would not let you buy "
+    line = next(s for s in sec["stops"] if s.startswith("🚫 "))        # by prefix: later lines were appended after it
+    assert line == ("🚫 Not eligible at Fidelity — your own list of names Fidelity would not let you buy "
                                 "online; a tag only — nothing is hidden, the pushes still ring and carry the tag. "
-                                "Nothing is seeded.")
+                                "Nothing is seeded. By your word, your 🚫 names sit at the bottom of "
+                                "every card board (still listed, still tagged).")
+    assert GT.BROKER_BOTTOM_TEXT in line                                 # built from the served word, never retyped
     assert "went through at Fidelity on 2026-10-16" in sec["note"] and "XELB under a dollar" in sec["note"]
     assert sec["note"].endswith("Not advice.")
 
 
 def test_the_rules_line_follows_the_seed(monkeypatch):
     from supply_demand import rules_info as RI
+    line = lambda: next(s for s in RI._gajjala_section()["stops"] if s.startswith("🚫 "))   # noqa: E731 — by prefix
     monkeypatch.setattr(GC, "BROKER_FLAG_SEED", ("ABC",))
-    assert RI._gajjala_section()["stops"][-1].endswith("Seeded with ABC.")
+    assert "Seeded with ABC." in line() and line().endswith("(still listed, still tagged).")
     monkeypatch.setattr(GC, "BROKER_NAME", "Other")
-    assert RI._gajjala_section()["stops"][-1].startswith("🚫 Not eligible at Other — ")
+    assert line().startswith("🚫 Not eligible at Other — ")
 
 
 # ── the words ─────────────────────────────────────────────────────────────────────────────────────────────────────

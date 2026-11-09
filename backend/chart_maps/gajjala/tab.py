@@ -196,8 +196,15 @@ BADGE_CLOSED_TODAY = "closed"                   # after the last pass on a sessi
 OUTSIDE_RTH = {"premarket": "pre-market — he uses limit orders only and less size outside regular hours (S8 1:16:35)",
                "afterhours": "after-hours — he uses limit orders only and less size outside regular hours (S8 1:16:35)"}
 UNMEASURED = "UNMEASURED"
-RS_ORDER_TEXT = "🎾 lowest float on top"   # DECISIONS13 D3 — the ordering word, served as order_note on the squeeze sub
-HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top"   # 🧪 2026-11-08 — served as order_note on the fade sub; [C3] a snapshot, "closest", never a direction word
+# 2026-11-09 ~10:25 ET — Ajay, verbatim: "Ok sort any stocks by volume on all Gajjala's charts" → the volume key sits FIRST
+# inside every state on every card sub (today's scanner volume = the card's own Volume number; GC.VOLUME_SORT_SETUPS); his
+# 2026-10-18 float call is the next key. ~10:30 ET, verbatim: "The ones I am reporting they are not on Fidelity put them at
+# the bottom" → broker_bottom (his 🚫 list last on every card board, never hidden). The ordering words, served, FE types none:
+VOL_ORDER_TEXT = "📊 highest volume on top · then lowest float"   # served as order_note on 🚩 💋 🌀 (2026-11-09)
+RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float"    # DECISIONS13 D3 (float) → volume first 2026-11-09 by his word; the squeeze sub
+HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top · then highest volume"   # 🧪 2026-11-08 — the fade sub; [C3] a snapshot, "closest", never a direction word
+POT_ORDER_TEXT = "🧠 trigger armed first · then highest volume"   # served as order_note on the 🧠 sub (potential.order_key, 2026-11-09)
+BROKER_BOTTOM_TEXT = "your 🚫 names sit at the bottom of every card board"   # served in broker_block.order_text — the owner strip (2026-11-09); the 🏁 only tags
 
 
 def _vcp_listed(setup: str, r: dict) -> bool:
@@ -1086,16 +1093,26 @@ def order_key(t: dict) -> tuple:
     setup in GC.FLOAT_SORT_SETUPS takes the 🎾 float key (state rank, float ascending, unknown last, today's key; placed
     by GC.RS_FLOAT_SORT); ➖ keeps its gap FIRST and takes the float right after it (a rung ➖ card, no gap key, takes
     the float like the rest). Display order only. A setup outside the tuple, and a read without the stash (the
-    cross-setup focus pick, the 🧠 rows' potential.order_key), keeps today's key byte-identical."""
+    cross-setup focus pick, the 🧠 rows' potential.order_key), keeps today's key byte-identical.
+    2026-11-09 ~10:25 ET (Ajay, verbatim: "Ok sort any stocks by volume on all Gajjala's charts"): every setup in
+    GC.VOLUME_SORT_SETUPS whose card carries `_volume` (setup_tile — the card's own Volume number) takes the volume key
+    DESCENDING (unknown last) in the SAME slot, BEFORE the float: the slot is `sk` = (volume, float), placed by
+    GC.RS_FLOAT_SORT ("within_state" = right after the state rank; "global" = above it); ➖ keeps its gap first and takes
+    the slot right after it. Today's key still breaks every tie. His 🚫 list is NOT in this key — `broker_bottom` partitions
+    the sorted board afterwards (his 2026-11-09 ~10:30 ET word), so every exact-tuple pin on this function holds."""
     g = t.get("gajjala") or {}
     key = _state_key(g, t.get("symbol") or "")
     has_fl = g.get("setup") in GC.FLOAT_SORT_SETUPS and "_float_shares" in g     # 2026-11-09: every setup sub
     fl = g.get("_float_shares")
     fkey = float(fl) if fl else float("inf")
+    has_vol = g.get("setup") in GC.VOLUME_SORT_SETUPS and "_volume" in g        # 2026-11-09 ~10:25 ET: volume FIRST (his word)
+    vol = _f(g.get("_volume"))
+    vkey = -vol if vol is not None else float("inf")                             # highest on top, unknown last
+    sk = ((vkey,) if has_vol else ()) + ((fkey,) if has_fl else ())             # the sort slot: volume, then float
     if g.get("setup") == "horizontal_fade" and "_ema_gap_pct" in g:
         gap = g.get("_ema_gap_pct")
         gkey = float(gap) if gap is not None else float("inf")
-        ft = (fkey,) if has_fl else ()                          # 2026-11-09: the float right AFTER the gap, never before
+        ft = sk                                                 # 2026-11-09: volume + float right AFTER the gap, never before
         if GC.HF_EMA_SORT == "global":
             return (0, gkey) + ft + key
         if GC.HF_EMA_SORT == "within_state":
@@ -1103,10 +1120,10 @@ def order_key(t: dict) -> tuple:
         if g.get("state") in ("forming", "partial"):            # pre_break: ONE bucket, gap first, today's key breaks ties
             return (_PRE_BREAK_RANK, gkey) + ft + key
         # [C6] rung / stopped cards carry no gap key — they take the float key below like every other setup (2026-11-09)
-    if has_fl:
+    if sk:
         if GC.RS_FLOAT_SORT == "global":
-            return (0, fkey) + key
-        return key[:1] + (fkey,) + key[1:]
+            return (0,) + sk + key
+        return key[:1] + sk + key[1:]
     return key
 
 
@@ -1241,6 +1258,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         g["audit"] = read["audit"]
     if setup in GC.FLOAT_SORT_SETUPS:                                # 🎾 order key (DECISIONS13 D3; every setup 2026-11-09), popped
         g["_float_shares"] = _float_shares_of(_float_read(doc, daily))   # the float chip's own read (_chips), no new fetch
+    if setup in GC.VOLUME_SORT_SETUPS:                               # 📊 order key (2026-11-09 ~10:25 ET, his word), popped
+        g["_volume"] = chips.get("volume")                           # the card's own Volume number (_chips ← scan_row), no new read
     if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
         g["_ema_gap_pct"] = _ema_gap_pct(read)
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
@@ -1264,6 +1283,7 @@ def _strip_private(tiles: list) -> None:
             g.pop("_last", None)
             g.pop("_bars_to_go", None)
             g.pop("_float_shares", None)
+            g.pop("_volume", None)
             g.pop("_ema_gap_pct", None)
 
 
@@ -1486,7 +1506,8 @@ PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or no
 # 🚫 NOT ELIGIBLE AT THE BROKER (2026-10-17, DECISIONS12 D1–D7, AMENDMENTS12). Ajay, verbatim: "ok then avoid showing me
 # names that are not eligible in Fidelity then." / "Or just add a tag that not eligible on Fidelity". A TAG, never a
 # filter: every row that names a symbol on his own list (store.broker_flags — the seed ∪ his adds − his removes) carries
-# `broker_text`; nothing is hidden, reordered or counted-as-hidden. Served to the PRIMARY admin only (the route decides
+# `broker_text`; nothing is hidden or counted-as-hidden (2026-11-09 ~10:30 ET, his word: his names sit at the BOTTOM of every
+# card board — `broker_bottom`, a stable partition after each board's own order, never a hide). Served to the PRIMARY admin only (the route decides
 # `owner`); anyone else reads null. The broker's name lives in constants.py; these are the only served words.
 BROKER_FLAG_TEXT = f"🚫 not eligible at {GC.BROKER_NAME}"                       # DECISIONS12 D1 — the ONE served word
 BROKER_FLAG_ICON = "🚫"                                                          # D5 — the card toggle (its title = BROKER_FLAG_TEXT)
@@ -1515,11 +1536,27 @@ def broker_text_for(sym, flags) -> Optional[str]:
     return BROKER_FLAG_TEXT if any(_broker_fold(f) == k for f in flags) else None
 
 
+def broker_bottom(rows: list, flags) -> list:
+    """2026-11-09 ~10:30 ET — Ajay, verbatim: "The ones I am reporting they are not on Fidelity put them at the bottom".
+    Every card board (the five setup subs, 🧠, ☀️, 🌙) keeps its own order and moves the rows whose symbol is on his list
+    (store.broker_flags, "." / "-" folded like the tag) to the END in the same relative order — a stable partition, run
+    AFTER the limit cut (critic 2026-11-09): the cards shown are the same set as without the list, only their order moves —
+    the list never drops a card (the 🎾 board passed the 24-card limit on 4 of the last 6 sessions). The 🧠 strip rows
+    take it too. Never hidden, never counted-as-hidden; the 🏁, the counts, the pushes and the 👀 line are untouched. The ORDER is the same for every viewer (the list is read for all);
+    only the WORDS stay owner-only — the nothing-hidden invariant (owner payload minus the tags == non-owner payload)
+    holds. `flags` None / empty → the rows byte-identical."""
+    if not flags:
+        return rows
+    hit = [broker_text_for(r.get("symbol") if isinstance(r, dict) else None, flags) is not None for r in rows]
+    return [r for r, h in zip(rows, hit) if not h] + [r for r, h in zip(rows, hit) if h]
+
+
 def broker_block(flags, *, fault: bool = False) -> dict:
     """D3 / D5 — the owner's 🚫 strip block. A read fault (AMENDMENTS12 F5): `editable` False, `fault_text` served,
     never `empty_text` (the list is not "empty", it was not read)."""
     return {"editable": not fault, "symbols": sorted(flags or ()), "text": BROKER_FLAG_TEXT, "broker": GC.BROKER_NAME,
             "toggle": BROKER_FLAG_ICON, "empty_text": None if fault else BROKER_EMPTY_TEXT,
+            "order_text": BROKER_BOTTOM_TEXT,                                 # 2026-11-09 — his names last, his word
             "fault_text": BROKER_FAULT_TEXT if fault else None, "add_label": BROKER_ADD_LABEL,
             "add_placeholder": BROKER_ADD_PLACEHOLDER, "remove_title": BROKER_REMOVE_TITLE}
 
@@ -1678,10 +1715,11 @@ def _potential_reads(reads_by: dict, scan_by: dict, *, trackers: dict, trackers_
     return out
 
 
-def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_window: bool, v=None) -> dict:
+def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_window: bool, v=None,
+                     flags=None) -> dict:
     """§3.9 (a) — the 🧠 strip of one setup sub (W6 title, W7 text, W8 empty), ALL of its potentials (a compact list,
-    never cut by `limit`)."""
-    rows = [p[1] for p in pots]
+    never cut by `limit`). 🚫 2026-11-09: `flags` = his list → its names last (broker_bottom), none dropped."""
+    rows = broker_bottom([p[1] for p in pots], flags)                 # 🚫 2026-11-09 — his names last, every row kept
     a = sum(1 for r in rows if r["kind"] == GC.POTENTIAL_KINDS[0])
     b = sum(1 for r in rows if r["kind"] == GC.POTENTIAL_KINDS[1])
     concept, ts = PT.CONCEPT
@@ -1919,6 +1957,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     every other sub); `today` = the route's ledger.today_read answer (🏁 only, None = not read on this open).
     🚫 `owner` (2026-10-17, DECISIONS12 D3): `is True` only — the primary admin is served `broker_flags` and every row's
     `broker_text`; anyone else (and a truthy Query / Depends object) reads null on every one. A TAG, never a filter.
+    2026-11-09 ~10:30 ET (his word): the ORDER follows his list for EVERY viewer — `broker_bottom` moves his names to the
+    end of each card board after its own order; the words stay owner-only, nothing is hidden.
     🚩 `variant` (2026-10-27, BUILD_SPEC27 §3.7): None → GG5, this tab, every byte as before (the store's own variant
     when a store is handed in); V.GG1 → the 1-minute page off ST.for_variant(GG1) — its frames, cadence, stale and push
     words, links, `tab` and the ONE added key `variant` (variant.served_block). The broker list stays ONE list."""
@@ -1932,11 +1972,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     v = V.of(variant) if variant is not None else V.of(st)
     gg5 = V.is_gg5(v)
     aud = V.is_audited(v)                       # 🧪 2026-11-01 — every audited edit below is guarded by this
-    if owner is True:
-        _bf, bfault = ST.broker_flags(st)
-        flags = frozenset(_bf)
-    else:
-        flags, bfault = None, False
+    _bf, bfault = _soft("broker flags", ST.broker_flags, st, default=(tuple(GC.BROKER_FLAG_SEED), True))
+    order_flags = frozenset(_bf)                # 2026-11-09 ~10:30 ET: read for EVERY viewer — the ORDER follows his list
+    flags = order_flags if owner is True else None   # the WORDS stay owner-only (DECISIONS12 D3)
+    if owner is not True:
+        bfault = False
     now = now or _clock()
     session, is_today, in_window = session_for(now)
     try:
@@ -2041,7 +2081,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat()))
-        tiles.sort(key=order_key)
+        tiles.sort(key=order_key)                                       # 🚫 the partition runs at the serving site, AFTER the cut
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
 
@@ -2092,9 +2132,10 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["graveyard_text"] = "🪦 moved to the graveyard today: " + ", ".join(out["graveyard_today"])
 
     if sub_k in per_setup:
-        out["tiles"] = per_setup[sub_k][:lim]
+        out["tiles"] = broker_bottom(per_setup[sub_k][:lim], order_flags)   # 🚫 2026-11-09 — his names last among the cards shown (cut first: the list only reorders)
         out["order_note"] = (RS_ORDER_TEXT if sub_k == "reversal_squeeze" else          # DECISIONS13 D3 — served word
-                             HF_ORDER_TEXT if sub_k == "horizontal_fade" else None)  # 🧪 2026-11-08 — the ➖ word
+                             HF_ORDER_TEXT if sub_k == "horizontal_fade" else          # 🧪 2026-11-08 — the ➖ word
+                             VOL_ORDER_TEXT)                                           # 2026-11-09 — every other setup sub
         out["list_note"] = (_soft("vcp list note", vcp_list_note, unlisted.get(sub_k, 0))
                             if sub_k == "intraday_vcp" else None)                # BUILD_SPEC18 D3 — served line
         e, label = SUB_META[sub_k]
@@ -2104,12 +2145,13 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         today_n = sum(1 for (_s, setup) in trackers_today if setup == sub_k)
         out["potential"] = _soft("potential strip", _potential_strip, sub_k,
                                  [p for p in pots if p[1]["setup"] == sub_k], today_n, sess=sess,
-                                 in_window=in_window, v=v) if pot_ok else None
+                                 in_window=in_window, v=v, flags=order_flags) if pot_ok else None
     elif sub_k == GC.POTENTIAL_SUB:
-        out["tiles"] = (_soft("potential tiles", _potential_tiles, pots, st=st, session=session, tf_ask=tf_ask,
-                              scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, pass_at=pass_at,
-                              v=v, carry=ah_prev, prev_iso=prev.isoformat(), default=[])
-                        if pot_ok else [])[:lim]
+        out["tiles"] = broker_bottom((_soft("potential tiles", _potential_tiles, pots, st=st, session=session,
+                                            tf_ask=tf_ask, scan_row=_row, sess=sess, listed=listed, halts_by=halts_by,
+                                            pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(), default=[])
+                                      if pot_ok else [])[:lim], order_flags)   # 🚫 2026-11-09 — his names last among the cards shown
+        out["order_note"] = POT_ORDER_TEXT                              # 2026-11-09 — the 🧠 ordering word, served
         entries = _soft("A+ entry read", _entry_times, st, [session, prev], v, default={}) or {}   # D4: ONE read
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
                              sess=sess, entries=entries, v=v) if pot_ok else None
@@ -2123,7 +2165,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
             sym = str(r["symbol"]).upper()
             tiles.append(_list_tile(sym, "premarket", reads_by.get(sym), tf_k, scan_row=_row(sym), sess=sess,
                                     listed=listed.get(sym), halt_doc=halts_by.get(sym), extra=_pm_extra(r), v=v))
-        out.update({"tiles": tiles[:lim], "sorts": [{"key": k, "label": lb} for k, lb in SORTS_PM], "sort": sk,
+        out.update({"tiles": broker_bottom(tiles[:lim], order_flags),     # 🚫 2026-11-09 — his names last among the cards shown
+                    "sorts": [{"key": k, "label": lb} for k, lb in SORTS_PM], "sort": sk,
                     "empty_note": "No pre-market mover on his list and no after-hours carry from the last session."})
     elif sub_k == "postmarket":
         from chart_maps.gajjala import context as CX
@@ -2132,7 +2175,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                             listed=listed.get(str(d["symbol"]).upper()),
                             halt_doc=halts_by.get(str(d["symbol"]).upper()), extra=_post_extra(d), v=v)
                  for d in post_list]
-        out.update({"tiles": tiles[:lim],
+        out.update({"tiles": broker_bottom(tiles[:lim], order_flags),     # 🚫 2026-11-09 — his names last among the cards shown
                     "postmarket": {"unchecked_n": unchecked, "unchecked_text": CX.unchecked_text(unchecked),
                                    "recap": recap(list(reads_by.values()) if aud else reads, v)},
                     "empty_note": "No after-hours mover has passed his three after-hours checks yet."})

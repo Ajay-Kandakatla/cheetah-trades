@@ -41,3 +41,9 @@ Served keys, gates, K-lines, pushes, alerts, writes, the 🧠 / ☀️ / 🌙 or
 `frontend/src/components/__fixtures__/gajjala_potential_golden_2026_10_15.json` — the bull_flag board's card order only (GGG above JJJ); regenerated with `GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_potential_tab.py -k golden`. GG5 identity goldens (writes + board) did not move.
 
 Tests: `backend/tests/test_gajjala_float_sort_all_setups_2026_11_09.py`.
+
+## Superseded as the FIRST key — 2026-11-09 ~10:25 ET
+
+Ajay: *"Ok sort any stocks by volume on all Gajjala's charts"* → the sort slot inside every state is now (today's
+scanner volume DESCENDING, then this float key). Everything above still holds as the key AFTER the volume; see
+`docs/gajjala/volume_sort_broker_bottom_2026_11_09.md` (which also carries his 🚫-at-the-bottom partition).

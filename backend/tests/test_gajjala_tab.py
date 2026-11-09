@@ -850,20 +850,25 @@ def test_NEGATIVE_bull_flag_ordering_is_unchanged_with_floats_on_file():
     assert _syms(GT.build(BF, now=NOW, store=ordering_store())) == EXPECTED
 
 
-def test_order_note_served_on_the_squeeze_sub_only():
-    """The ordering word is served (tab.RS_ORDER_TEXT), the FE types none; null on every other setup sub (NEGATIVE)
-    and absent off the setup subs. UPDATED 2026-11-08 (SPEC gg-zones §3.4): the ➖ fade sub serves its own ordering word
-    (tab.HF_ORDER_TEXT) — the squeeze and the fade subs are the two that carry one."""
-    assert GT.RS_ORDER_TEXT == "🎾 lowest float on top"
-    assert GT.HF_ORDER_TEXT == "➖ 9 and 21 EMA closest to merged on top"
+def test_order_note_served_on_every_card_sub():
+    """The ordering word is served, the FE types none. UPDATED 2026-11-08 (SPEC gg-zones §3.4): the ➖ fade sub serves
+    its own word (tab.HF_ORDER_TEXT). UPDATED 2026-11-09 ~10:25 ET (Ajay, verbatim: "Ok sort any stocks by volume on all
+    Gajjala's charts"): volume is the first key inside every state on every card sub, so EVERY setup sub serves a word
+    (🚩 💋 🌀 = tab.VOL_ORDER_TEXT; 🎾 / ➖ their own, both naming the volume) and the 🧠 sub serves tab.POT_ORDER_TEXT;
+    the ☀️ / 🌙 / 📓 subs still serve none (NEGATIVE — ☀️ has its own sort toggle)."""
+    assert GT.VOL_ORDER_TEXT == "📊 highest volume on top · then lowest float"
+    assert GT.RS_ORDER_TEXT == "🎾 highest volume on top · then lowest float"
+    assert GT.HF_ORDER_TEXT == "➖ 9 and 21 EMA closest to merged on top · then highest volume"
+    assert GT.POT_ORDER_TEXT == "🧠 trigger armed first · then highest volume"
     reads = {"AAA": R(RS, "forming", base={"bars": 0})}
     out = GT.build(RS, now=NOW, store=_squeeze_store(reads, {"AAA": 2_000_000}))
     assert out["order_note"] == GT.RS_ORDER_TEXT
     for sub in GC.SETUPS:
         if sub != RS:
             out = GT.build(sub, now=NOW, store=ordering_store())
-            want = GT.HF_ORDER_TEXT if sub == "horizontal_fade" else None
+            want = GT.HF_ORDER_TEXT if sub == "horizontal_fade" else GT.VOL_ORDER_TEXT
             assert "order_note" in out and out["order_note"] == want, sub
+    assert GT.build(GC.POTENTIAL_SUB, now=NOW, store=ordering_store())["order_note"] == GT.POT_ORDER_TEXT
     for sub in ("premarket", "postmarket", "playbook"):
         assert GT.build(sub, now=NOW, store=ordering_store()).get("order_note") is None, sub
 

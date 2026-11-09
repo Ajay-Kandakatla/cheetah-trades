@@ -189,7 +189,7 @@ def test_order_note_on_every_sub_and_variant():
         st = _store(reads, v)
         for sub in GC.SETUPS:
             out = GT.build(sub, now=NOW, store=st, variant=v)
-            want = {HF: GT.HF_ORDER_TEXT, RS: GT.RS_ORDER_TEXT}.get(sub)
+            want = {HF: GT.HF_ORDER_TEXT, RS: GT.RS_ORDER_TEXT}.get(sub, GT.VOL_ORDER_TEXT)   # 2026-11-09: every sub a word
             assert "order_note" in out and out["order_note"] == want, (v, sub)
         for sub in ("premarket", "postmarket", "playbook"):
             assert GT.build(sub, now=NOW, store=st, variant=v).get("order_note") is None, (v, sub)
@@ -197,7 +197,7 @@ def test_order_note_on_every_sub_and_variant():
 
 def test_the_order_word_says_closest_never_converging():
     """[C3] the gap is a snapshot at the read's ref bar — no direction word anywhere it is served."""
-    assert GT.HF_ORDER_TEXT == "➖ 9 and 21 EMA closest to merged on top"
+    assert GT.HF_ORDER_TEXT == "➖ 9 and 21 EMA closest to merged on top · then highest volume"   # 2026-11-09: + the volume key
     assert "closest" in GT.HF_ORDER_TEXT and "converg" not in GT.HF_ORDER_TEXT.lower()
     assert "HF_ORDER_TEXT" in GT.__all__
 

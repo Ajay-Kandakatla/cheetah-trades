@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 ~10:25 ET (verbatim in the label, his spelling kept): "Ok sort any stocks by volume on all Gajjala's
+  // charts" — then ~10:30 ET, with a 🚫-chipped card: "The ones I am reporting they are not on Fidelity put them at the
+  // bottom". Backend chart_maps/gajjala/tab.py: order_key's sort slot is now (volume DESCENDING, then float) inside every
+  // state on every setup sub (GC.VOLUME_SORT_SETUPS = the float tuple; the volume = the card's own Volume number, no new
+  // read); ➖ keeps his 2026-11-07 EMA-gap rank first; the 🧠 sub's potential.order_key takes the same swap. Then
+  // tab.broker_bottom partitions every card board (the five setup subs, 🧠, ☀️, 🌙): the names on his 🚫 list move to the
+  // END in the same relative order, AFTER the limit cut (the list only reorders, never drops a card), for every viewer
+  // (the words stay owner-only) — never hidden, counts and the 🏁 untouched. Served words: order_note on every setup sub + the 🧠 sub; broker_flags.order_text on the owner strip. Display
+  // order only — no gate, rule, threshold, push or data change. Doc docs/gajjala/volume_sort_broker_bottom_2026_11_09.md.
+  // Pinned by scripts/contracts.mjs ("📊 volume on top + 🚫 at the bottom (2026-11-09)").
+  { id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala',
+    label: "📊 Highest volume on top, your 🚫 names at the bottom — you said: “Ok sort any stocks by volume on all Gajjala's charts” / “The ones I am reporting they are not on Fidelity put them at the bottom”. Inside every state on every Gajjala sub the loudest name now sits first (the card's own Volume number), the float next; ➖ Fade keeps its 9/21 EMA rank first. The names you reported sit at the bottom of every card board, still listed, still tagged, never dropped. Display order only. UNMEASURED. Not advice." },
   // Ajay 2026-11-09 ~09:55 ET (verbatim in the label, his spelling kept), with a 🎾 card screenshot whose right axis showed
   // TRIGGER / 21 EMA / 9 EMA but no price: "I can't see now for them again" (earlier: "I like how they are realtime
   // updating the prices of now"). Since 2026-10-16 the 🔴 live overlay added the "now" label only in pre-market /

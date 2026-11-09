@@ -16,7 +16,12 @@ F1–F11) + `DECISIONS12.md` D1–D9 (session scratchpad `gg_broker/`). Contract
 ## READ THIS FIRST
 
 1. **Nothing is hidden.** This is a TAG on his own list, never a filter. No scan, list, tile, row, count, gate or push is
-   filtered, muted or counted-as-hidden anywhere; there is no hidden-count. His words chose it: "Or just add a tag that
+   filtered, muted or counted-as-hidden anywhere; there is no hidden-count. **2026-11-09 ~10:30 ET, his word** (*"The ones
+   I am reporting they are not on Fidelity put them at the bottom"*): every card board (the five setup subs, 🧠, ☀️, 🌙)
+   moves his names to the END in the same relative order — `tab.broker_bottom`, a stable partition after the board's own
+   order, the SAME order for every viewer (the list is read for all; the words stay owner-only, so the invariant below
+   still holds) — still listed, still tagged, still counted, never hidden; the 🏁 is untouched. Doc:
+   `docs/gajjala/volume_sort_broker_bottom_2026_11_09.md`. His words chose it: "Or just add a tag that
    not eligible on Fidelity". Tested: the owner payload minus every `broker_text` / `broker_flags` /
    `graveyard_broker_text` key equals the non-owner payload byte for byte.
 2. **His own list is the only honest source.** Fidelity publishes no per-ticker eligibility feed; its own order ticket

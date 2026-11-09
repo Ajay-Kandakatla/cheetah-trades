@@ -988,4 +988,7 @@ export type GgBrokerFlags = {
   add_placeholder: string;
   remove_title: string;
   fault_text?: string | null;
+  /** 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the served word for
+   *  his names sitting at the END of every card board (tab.BROKER_BOTTOM_TEXT); absent on an older API, printed verbatim. */
+  order_text?: string | null;
 };

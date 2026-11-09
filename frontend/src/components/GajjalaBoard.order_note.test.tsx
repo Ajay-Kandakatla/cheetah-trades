@@ -11,7 +11,9 @@ import GajjalaBoard from './GajjalaBoard';
  * word of its own. The hand fixture is frozen (D5) — every case here is a CLONE. */
 
 const BOARDS: Record<string, any> = (fixture as any).boards;
-const SERVED = '\u{1F3BE} lowest float on top';
+// 2026-11-09 (Ajay: "Ok sort any stocks by volume on all Gajjala's charts"): the served squeeze word names the volume
+// first — still a CLONE value here; the board prints whatever tab.py serves.
+const SERVED = '\u{1F3BE} highest volume on top · then lowest float';
 
 function clone(sub: string, patch: Record<string, unknown>) {
   return { ...JSON.parse(JSON.stringify(BOARDS[sub])), ...patch };
@@ -56,7 +58,7 @@ describe('GajjalaBoard 🎾 order_note (served, printed verbatim)', () => {
     b.unmount();
   });
 
-  it('NEGATIVE: nothing on the bull_flag sub (the server serves null there)', async () => {
+  it('NEGATIVE: nothing when the server serves null on a setup sub (an older API — since 2026-11-09 every setup sub serves a word)', async () => {
     const { container, unmount } = await mount('bull_flag', clone('bull_flag', { order_note: null }));
     expect(screen.queryByTestId('gg-order-note')).toBeNull();
     expect(container.textContent).not.toContain('lowest float');

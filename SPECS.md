@@ -770,7 +770,8 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   and 🚫 card toggle — owner = the primary admin only (`ollama_chat.api.is_primary_admin`; anyone else null); the A+ / 🧠
   bodies say " · 🚫 not eligible at Fidelity" before UNMEASURED and the titles end " · 🚫"; `alerts.COUNT_KEYS`
   "broker_flagged"; GET / POST / DELETE `/chart-maps/gajjala/broker-flags` (owner, stealth 404; bad ticker 400, read fault
-  503); nothing hidden, nothing muted, nothing guessed (a pre-screen from Fidelity's published rules = HIS CALL Q2). Doc
+  503); nothing hidden, nothing muted, nothing guessed (a pre-screen from Fidelity's published rules = HIS CALL Q2); since
+  2026-11-09 his names sit at the BOTTOM of every card board by his word (the 📊 bullet below). Doc
   `docs/gajjala/broker_flags_2026_10_17.md`; contracts "🚫 Gajjala broker tag (2026-10-17)"; ✨
   `chart-maps-gajjala-broker-tag-2026-10-17`.
 - **🎾 lowest float on top** (2026-10-18, Ajay: *"for the float lower the better is what I wanna follow so sort it by
@@ -783,6 +784,19 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   mins filter."*). UNMEASURED. Doc + HIS CALL Q1–Q6: `docs/gajjala/k4_long_flags_float_2026_10_18.md`; contracts
   "🚩 K4 long flags + 🎾 float order (2026-10-18)"; ✨ `chart-maps-gajjala-float-sort-2026-10-18`,
   `chart-maps-gajjala-long-flags-2026-10-18`.
+- **📊 Highest volume on top + 🚫 his names at the bottom** (2026-11-09, Ajay: *"Ok sort any stocks by volume on all
+  Gajjala's charts"* / *"The ones I am reporting they are not on Fidelity put them at the bottom"*). `tab.order_key`'s
+  sort slot inside every state on every setup sub = (today's scanner volume DESCENDING — the card's own Volume number,
+  `GC.VOLUME_SORT_SETUPS` = the float tuple, unknown last —, then the 2026-10-18 float ascending), placed by
+  `RS_FLOAT_SORT`; ➖ keeps its 2026-11-07 EMA-gap rank first; `potential.order_key` takes the same swap (armed, volume ↓,
+  float ↑). Then `tab.broker_bottom` partitions every card board (the five setup subs, 🧠, ☀️, 🌙): the names on his 🚫
+  list move to the END in the same order, after the limit cut (the list only reorders, never drops a card; the 🧠 strip
+  rows too; the ℹ️ 🚫 line says so), for EVERY viewer (the words stay owner-only — the
+  nothing-hidden invariant holds); never hidden, counts and the 🏁 untouched. Served words: `order_note` on every setup
+  sub (`VOL_ORDER_TEXT` / `RS_ORDER_TEXT` / `HF_ORDER_TEXT`) and the 🧠 sub (`POT_ORDER_TEXT`); `broker_flags.order_text`
+  on the owner strip. Display order only. The morning's float-on-every-sub step: `docs/gajjala/float_sort_all_setups_2026_11_09.md`.
+  Doc `docs/gajjala/volume_sort_broker_bottom_2026_11_09.md`; contracts "📊 volume on top + 🚫 at the bottom (2026-11-09)";
+  ✨ `chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09`; tests `tests/test_gajjala_volume_sort_2026_11_09.py`.
 - **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
   https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
   reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside

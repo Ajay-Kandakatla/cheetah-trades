@@ -249,6 +249,11 @@ SETUPS = ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_
 # lowest on top") — state rank, then float ascending (unknown last), then today's key; placement = RS_FLOAT_SORT. DISPLAY
 # ORDER ONLY: no gate, rule, push or data change; no probability is claimed (there is none).
 FLOAT_SORT_SETUPS = tuple(SETUPS)        # derived — MINE: every setup sub the board shows (SETUPS, never retyped); his 2026-11-09 words above
+# 2026-11-09 ~10:25 ET — Ajay, verbatim: "Ok sort any stocks by volume on all Gajjala's charts". Today's scanner volume (the
+# card's own Volume number — _chips ← scan_row volume; GG S8 1:21:56 "I sort by volume", S8 1:32:02 "the more the better")
+# sorts DESCENDING inside every state on every card sub, unknown last, and sits BEFORE the float key (his 2026-10-18 float
+# call is the next key); placement = RS_FLOAT_SORT. The 🧠 sub's potential.order_key takes the same swap. DISPLAY ORDER ONLY.
+VOLUME_SORT_SETUPS = FLOAT_SORT_SETUPS   # derived — the same subs as the float key (never retyped); his 2026-11-09 ~10:25 ET words above
 SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),

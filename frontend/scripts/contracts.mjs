@@ -9339,7 +9339,9 @@ const CONTRACTS = [
       // 4. tab.py — the ONE served order word, the float key on the squeeze sub only, served as order_note.
       const tab = tryRead(`${GG}tab.py`);
       if (tab) {
-        if (!/^RS_ORDER_TEXT = "🎾 lowest float on top"/m.test(tab)) errs.push('tab.py must carry RS_ORDER_TEXT = "🎾 lowest float on top" — the ONE served order word (DECISIONS13 D3)');
+        // 2026-11-09 ~10:25 ET (Ajay "Ok sort any stocks by volume on all Gajjala's charts"): the squeeze word names the volume
+        // first, the float next — the "📊 volume on top + 🚫 at the bottom (2026-11-09)" block pins the slot.
+        if (!/^RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float"/m.test(tab)) errs.push('tab.py must carry RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float" — the ONE served squeeze order word (DECISIONS13 D3 float → volume first 2026-11-09)');
         const ok = pyBody(tab, 'order_key');
         if (!ok) errs.push('tab.py lost def order_key(');
         else for (const need of ['_float_shares', 'reversal_squeeze']) if (!ok.includes(need)) errs.push(`tab.order_key must name ${need} (DECISIONS13 D3 — float order on the squeeze sub only)`);
@@ -9787,7 +9789,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10020,7 +10023,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10336,7 +10340,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10554,7 +10559,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10671,7 +10677,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10839,7 +10846,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10974,7 +10982,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11043,7 +11052,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11201,7 +11211,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11302,7 +11313,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11436,7 +11448,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11645,7 +11658,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11717,7 +11731,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11809,7 +11824,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11895,7 +11911,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12256,7 +12273,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12438,7 +12456,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12669,7 +12688,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12779,7 +12799,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12897,7 +12918,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13045,7 +13067,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13183,7 +13206,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13530,7 +13554,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13562,7 +13587,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      if (nf && !ids2.slice(0, 14).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 14).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      if (nf && !ids2.slice(0, 15).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 15).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13847,7 +13873,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14082,7 +14109,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14224,7 +14252,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
         // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
         // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-        if (!ids.slice(0, 13).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 13).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+        if (!ids.slice(0, 14).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 14).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14322,7 +14351,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
         // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
         // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-        if (!ids.slice(0, 12).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 12).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+        if (!ids.slice(0, 13).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 13).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14449,7 +14479,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
         // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
         // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-        if (!ids.slice(0, 11).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 11).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+        if (!ids.slice(0, 12).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 12).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14596,7 +14627,8 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
           // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
           // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-          if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+          if (!ids.slice(0, 11).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 11).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14728,7 +14760,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
         // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
         // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+        if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15101,7 +15134,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
         // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
         // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+        if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15172,7 +15206,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
       // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way").
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
@@ -15208,8 +15243,11 @@ const CONTRACTS = [
       else {
         if (!/g\.get\("setup"\) in GC\.FLOAT_SORT_SETUPS/.test(ok)) errs.push('tab.order_key must take the float key for every setup in GC.FLOAT_SORT_SETUPS');
         if (!/\(_PRE_BREAK_RANK, gkey\) \+ ft \+ key/.test(ok)) errs.push('tab.order_key: ➖ pre_break must rank by the EMA gap FIRST and the float right after it (never before)');
-        if (!/key\[:1\] \+ \(fkey,\) \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then float ascending, then today\'s key');
-        if (!/\(0, fkey\) \+ key/.test(ok)) errs.push('tab.order_key: "global" = the float above the state rank');
+        // 2026-11-09 ~10:25 ET (Ajay "Ok sort any stocks by volume on all Gajjala's charts"): the float now sits in the sort slot
+        // `sk` AFTER the volume key — the "📊 volume on top + 🚫 at the bottom (2026-11-09)" block pins the slot's order.
+        if (!/key\[:1\] \+ sk \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then the sort slot sk (volume, then float ascending), then today\'s key');
+        if (!/\(0,\) \+ sk \+ key/.test(ok)) errs.push('tab.order_key: "global" = the sort slot above the state rank');
+        if (!/\(\(fkey,\) if has_fl else \(\)\)/.test(ok)) errs.push('tab.order_key: the float key must still sit in the sort slot (sk) — his 2026-10-18 call is the key after the volume');
         if (!/float\("inf"\)/.test(ok)) errs.push('tab.order_key: an unknown float must sort LAST (float("inf"))');
       }
       const stile = pyFn(tab, 'setup_tile') || '';
@@ -15218,7 +15256,8 @@ const CONTRACTS = [
       if (!quiet('../docs/gajjala/float_sort_all_setups_2026_11_09.md')) errs.push('docs/gajjala/float_sort_all_setups_2026_11_09.md is missing');
       const nf = read('src/lib/newFeatures.ts');
       // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
@@ -15226,6 +15265,98 @@ const CONTRACTS = [
         if (!lab[1].includes('can you update other tabs in the same way') || !lab[1].includes('When I say all tabs with in Gajjalas only')) errs.push('the 🚩 float-order ✨ label must carry his sentences verbatim');
         if (!/no probability number/i.test(lab[1])) errs.push('the 🚩 float-order ✨ label must say there is no probability number (there is none)');
         if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1])) errs.push('the 🚩 float-order ✨ label: never "edge", never the b-word');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '📊 volume on top + 🚫 at the bottom (2026-11-09)',
+    file: '../backend/chart_maps/gajjala/tab.py',
+    checks(tab) {
+      // Ajay 2026-11-09 ~10:25 ET (verbatim): "Ok sort any stocks by volume on all Gajjala's charts"; ~10:30 ET, with a
+      // 🚫-chipped card: "The ones I am reporting they are not on Fidelity put them at the bottom". Inside every state on
+      // every setup sub the sort slot is (volume DESCENDING, then float); the 🧠 sub's potential.order_key takes the same
+      // swap; tab.broker_bottom moves the names on his list to the END of every card board for every viewer (the words
+      // stay owner-only) — never hidden, the 🏁 and the counts untouched. Display order only. Every check reads the REAL file.
+      const errs = [];
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const noDoc = (src) => src.replace(/"{3}[\s\S]*?"{3}/, '');
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      if (!gc) errs.push('constants.py is unreadable');
+      else if (!/^VOLUME_SORT_SETUPS = FLOAT_SORT_SETUPS/m.test(gc)) errs.push('constants.VOLUME_SORT_SETUPS must be FLOAT_SORT_SETUPS — the same subs as the float key, never retyped');
+      const ok = pyFn(tab, 'order_key') || '';
+      if (!ok) errs.push('tab.py lost def order_key(');
+      else {
+        if (!/g\.get\("setup"\) in GC\.VOLUME_SORT_SETUPS and "_volume" in g/.test(ok)) errs.push('tab.order_key must take the volume key for every setup in GC.VOLUME_SORT_SETUPS whose card carries _volume');
+        if (!/vkey = -vol if vol is not None else float\("inf"\)/.test(ok)) errs.push('tab.order_key: the volume key is -volume (highest on top), an unknown volume LAST (float("inf"))');
+        if (!/sk = \(\(vkey,\) if has_vol else \(\)\) \+ \(\(fkey,\) if has_fl else \(\)\)/.test(ok)) errs.push('tab.order_key: the sort slot sk must be (volume, then float) — volume BEFORE the float (his 2026-11-09 word over his 2026-10-18 word)');
+        if (!/ft = sk/.test(ok) || !/\(_PRE_BREAK_RANK, gkey\) \+ ft \+ key/.test(ok)) errs.push('tab.order_key: ➖ pre_break must rank by the EMA gap FIRST and take the slot (volume, float) right after it');
+        if (!/key\[:1\] \+ sk \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then the slot, then today\'s key');
+        if (/broker/.test(noDoc(ok))) errs.push('tab.order_key must not read his 🚫 list — broker_bottom partitions the sorted board afterwards (every exact-tuple pin holds)');
+      }
+      const stile = pyFn(tab, 'setup_tile') || '';
+      if (!/if setup in GC\.VOLUME_SORT_SETUPS:/.test(stile)) errs.push('tab.setup_tile must stash _volume for every setup in GC.VOLUME_SORT_SETUPS');
+      if (!/g\["_volume"\] = chips\.get\("volume"\)/.test(stile)) errs.push('tab.setup_tile: the stash must be the card\'s own Volume number (chips.get("volume")) — no new read');
+      if (!/g\.pop\("_volume", None\)/.test(pyFn(tab, '_strip_private') || '')) errs.push('tab._strip_private must pop _volume — never served');
+      const bb = pyFn(tab, 'broker_bottom') || '';
+      if (!bb) errs.push('tab.py lost def broker_bottom(');
+      else {
+        if (!/if not flags:\s*\n\s*return rows/.test(bb)) errs.push('tab.broker_bottom: no list → the rows byte-identical');
+        if (!/broker_text_for\(/.test(bb)) errs.push('tab.broker_bottom must decide membership through broker_text_for (the tag\'s own fold)');
+      }
+      const build = pyFn(tab, 'build') || '';
+      const calls = (build.match(/broker_bottom\(/g) || []).length;
+      if (calls < 4) errs.push(`tab.build must partition every card board (the setup loop, 🧠, ☀️, 🌙) — found ${calls} broker_bottom( calls, need ≥ 4`);
+      if (!/order_flags = frozenset\(_bf\)/.test(build)) errs.push('tab.build must read his list for EVERY viewer (order_flags) — the order is the same for everyone, the words owner-only');
+      if (!/flags = order_flags if owner is True else None/.test(build)) errs.push('tab.build: the served words must stay owner-only (flags = order_flags if owner is True else None)');
+      // critic 2026-11-09: a partition BEFORE the limit cut DROPPED his names past 24 cards (the 🎾 board passed 24 on 4 of 6 sessions) — cut FIRST.
+      if (/tiles = broker_bottom\(tiles, order_flags\)/.test(build)) errs.push('tab.build: the setup loop must NOT partition before the limit cut (the list would drop his names past 24 cards)');
+      if (!/out\["tiles"\] = broker_bottom\(per_setup\[sub_k\]\[:lim\], order_flags\)/.test(build)) errs.push('tab.build: the setup subs must cut FIRST, then partition — broker_bottom(per_setup[sub_k][:lim], order_flags)');
+      if ((build.match(/broker_bottom\(tiles\[:lim\], order_flags\)/g) || []).length < 2) errs.push('tab.build: ☀️ and 🌙 must cut first, then partition — broker_bottom(tiles[:lim], order_flags)');
+      if (!/if pot_ok else \[\]\)\[:lim\], order_flags\)/.test(build)) errs.push('tab.build: the 🧠 sub must cut first, then partition');
+      if (/order_flags\)\[:lim\]/.test(build)) errs.push('tab.build: a partition before the limit cut drops his names past the limit — never');
+      if (!/rows = broker_bottom\(\[p\[1\] for p in pots\], flags\)/.test(pyFn(tab, '_potential_strip') || '')) errs.push('tab._potential_strip must partition its rows too (never cut by limit)');
+      if (!/flags=order_flags\) if pot_ok else None/.test(build)) errs.push('tab.build must hand his list to _potential_strip (flags=order_flags)');
+      if (!/BROKER_BOTTOM_TEXT/.test(quiet('../backend/supply_demand/rules_info.py'))) errs.push('rules_info.py: the ℹ️ 🚫 line must carry tab.BROKER_BOTTOM_TEXT (never retyped)');
+      if (!/out\["order_note"\] = POT_ORDER_TEXT/.test(build)) errs.push('tab.build must serve POT_ORDER_TEXT as order_note on the 🧠 sub');
+      if (!/VOL_ORDER_TEXT\)/.test(build)) errs.push('tab.build must serve VOL_ORDER_TEXT as order_note on every setup sub without its own word');
+      for (const [name, re] of [['VOL_ORDER_TEXT', /^VOL_ORDER_TEXT = "📊 highest volume on top · then lowest float"/m],
+                                ['RS_ORDER_TEXT', /^RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float"/m],
+                                ['HF_ORDER_TEXT', /^HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top · then highest volume"/m],
+                                ['POT_ORDER_TEXT', /^POT_ORDER_TEXT = "🧠 trigger armed first · then highest volume"/m],
+                                ['BROKER_BOTTOM_TEXT', /^BROKER_BOTTOM_TEXT = "your 🚫 names sit at the bottom of every card board"/m]]) {
+        if (!re.test(tab)) errs.push(`tab.py must carry the served word ${name} as pinned (2026-11-09)`);
+      }
+      if (!/"order_text": BROKER_BOTTOM_TEXT/.test(pyFn(tab, 'broker_block') || '')) errs.push('tab.broker_block must serve order_text = BROKER_BOTTOM_TEXT (the owner strip prints it)');
+      const pok = pyFn(quiet('../backend/chart_maps/gajjala/potential.py'), 'order_key') || '';
+      if (!/0 if vol is not None else 1, -vol if vol is not None else 0,\s*\n\s*0 if fl is not None else 1, fl if fl is not None else 0,/.test(pok)) errs.push('potential.order_key must rank volume DESCENDING before the float (the 2026-11-09 swap)');
+      if (/broker_bottom/.test(quiet('../backend/chart_maps/gajjala/ledger.py'))) errs.push('ledger.py must never partition the 🏁 rows — the list only tags them');
+      // the FE prints the served words, types none
+      const board = read('src/components/GajjalaBoard.tsx');
+      if (!/data-testid="gg-broker-order"/.test(board) || !/block\.order_text/.test(board)) errs.push('GajjalaBoard.tsx must print the served broker_flags.order_text (data-testid gg-broker-order)');
+      const tsNoComments = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      if (/highest volume|at the bottom/i.test(tsNoComments(board))) errs.push('GajjalaBoard.tsx types an ordering word — every word is served by tab.py');
+      if (!/order_text\?: string \| null/.test(read('src/lib/gajjala.ts'))) errs.push('lib/gajjala.ts GgBrokerFlags must carry order_text?: string | null');
+      if (!/gg-broker-order/.test(read('src/components/GajjalaBoard.broker.test.tsx'))) errs.push('GajjalaBoard.broker.test.tsx must pin the served order_text line (+ its NEGATIVE)');
+      if (!quiet('../backend/tests/test_gajjala_volume_sort_2026_11_09.py')) errs.push('backend/tests/test_gajjala_volume_sort_2026_11_09.py is missing');
+      if (!quiet('../docs/gajjala/volume_sort_broker_bottom_2026_11_09.md')) errs.push('docs/gajjala/volume_sort_broker_bottom_2026_11_09.md is missing');
+      const nf = read('src/lib/newFeatures.ts');
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!ids.includes('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09')) errs.push(`the 📊 volume-order ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
+      const lab = /id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
+      if (!lab) errs.push('the 📊 volume-order ✨ lost its label');
+      else {
+        for (const h of ["Ok sort any stocks by volume on all Gajjala's charts", 'The ones I am reporting they are not on Fidelity put them at the bottom']) if (!lab[1].includes(h)) errs.push(`the 📊 volume-order ✨ label must quote him verbatim: "${h}"`);
+        if (!/Display order only/.test(lab[1])) errs.push('the 📊 volume-order ✨ label must say "Display order only"');
+        if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1]) || /probabil/i.test(lab[1])) errs.push('the 📊 volume-order ✨ label: never "edge", never a probability, never the b-word');
       }
       return errs;
     },
@@ -15256,7 +15387,8 @@ const CONTRACTS = [
       const cl = read('src/lib/cardLive.ts');
       if (!/if \(!hasNow && now\.add_line\)/.test(cl)) errs.push('cardLive.patchLines must add the served now line when the tile has none and add_line is set');
       const nf = read('src/lib/newFeatures.ts');
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 1).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
       if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');

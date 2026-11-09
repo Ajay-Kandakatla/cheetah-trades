@@ -8,6 +8,11 @@ top" (DECISIONS13 D3 → GC.RS_FLOAT_SORT) and Ajay 2026-11-07 (➖ GC.HF_EMA_SO
 tab.order_key: every setup in GC.FLOAT_SORT_SETUPS = (state rank, float ascending — unknown last —, today's key…);
 ➖ keeps the gap first and takes the float right after it. The stash is the float chip's own read (_float_read:
 ctx first, the 🎾 daily doc only on 🎾) — no new fetch. ☀️ / 🌙 / 🧠 orders never move. No probability is claimed.
+
+SUPERSEDED AS THE FIRST KEY 2026-11-09 ~10:25 ET (Ajay: "Ok sort any stocks by volume on all Gajjala's charts"): the
+volume key now sits in the same slot BEFORE the float (tab.order_key `sk` = (volume, float)); every fact here holds
+with the volume absent or equal — the cards below carry no `_volume` stash and the build fixtures share one scan
+volume. tests/test_gajjala_volume_sort_2026_11_09.py pins the volume key and his 🚫-at-the-bottom partition.
 """
 from __future__ import annotations
 

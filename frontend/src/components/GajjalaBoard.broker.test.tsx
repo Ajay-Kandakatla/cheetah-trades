@@ -114,6 +114,9 @@ describe('GajjalaBoard — 🚫 broker tag (owner strip)', () => {
     const strip = await screen.findByTestId('gg-broker-strip');
     await sleep(40);
     expect(within(strip).getByTestId('gg-broker-text').textContent).toBe(BLOCK().text);
+    // 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the served word
+    expect(typeof BLOCK().order_text).toBe('string');
+    expect(within(strip).getByTestId('gg-broker-order').textContent).toBe(BLOCK().order_text);
     expect(within(strip).getByTestId('gg-broker-empty').textContent).toBe(BLOCK().empty_text);
     const input = within(strip).getByTestId('gg-broker-input') as HTMLInputElement;
     expect(input.getAttribute('placeholder')).toBe(BLOCK().add_placeholder);
@@ -125,6 +128,23 @@ describe('GajjalaBoard — 🚫 broker tag (owner strip)', () => {
     expect(gets()).toHaveLength(1);
     // the golden tags nothing (his list is empty): no chip anywhere
     expect(chipCount(document.body)).toBe(0);
+  });
+
+  it('NEGATIVE: no bottom-order line when the served block lacks order_text (an older API) or serves it blank; the FE types no word', async () => {
+    const older = clone(OPEN.bull_flag);
+    delete older.broker_flags.order_text;
+    stub(() => older);
+    mount();
+    const strip = await screen.findByTestId('gg-broker-strip');
+    expect(within(strip).queryByTestId('gg-broker-order')).toBeNull();
+    expect(document.body.textContent).not.toContain('at the bottom');
+    cleanup();
+    const blank = clone(OPEN.bull_flag);
+    blank.broker_flags.order_text = '   ';
+    stub(() => blank);
+    mount();
+    const strip2 = await screen.findByTestId('gg-broker-strip');
+    expect(within(strip2).queryByTestId('gg-broker-order')).toBeNull();
   });
 
   it('✕ → ONE DELETE …/broker-flags/ABCD with credentials include, then ONE board re-read', async () => {

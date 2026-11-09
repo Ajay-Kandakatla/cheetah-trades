@@ -16,6 +16,11 @@ broken at 10:41 (one A+); GGB truncated before its break bar (forming, its last 
 
 A moved GG5 byte is a BUG, never a regen. Recipe (the untouched tree only):
   GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_variant_gg5_identity.py
+
+Dated regens of the BOARD golden (each a 🚩 change by his word, the diff verified key-for-key; the WRITES golden never moved):
+  2026-11-09 ~10:30 ET — Ajay "Ok sort any stocks by volume on all Gajjala's charts" / "The ones I am reporting they are
+  not on Fidelity put them at the bottom": `broker_flags.order_text` on every owner board + `order_note` on every setup sub
+  and the 🧠 sub (tab.VOL_ORDER_TEXT / RS / HF / POT). No tile moved (the fixture day has one card per sub).
 """
 from __future__ import annotations
 

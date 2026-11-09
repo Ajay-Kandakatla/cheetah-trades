@@ -1219,6 +1219,13 @@ def _gg_audited_clause() -> str:
     return " " + clause if isinstance(clause, str) and clause else ""
 
 
+def _gg_bottom_word() -> str:
+    """🚫 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the ONE served
+    word, tab.BROKER_BOTTOM_TEXT, never retyped (lazy: tab imports this package's engines)."""
+    from chart_maps.gajjala import tab as GTAB
+    return GTAB.BROKER_BOTTOM_TEXT
+
+
 def _gajjala_section() -> dict:
     """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
     and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
@@ -1343,9 +1350,11 @@ def _gajjala_section() -> dict:
             % GC.RED_CLOSES_WAIT,
             # 🚫 2026-10-17 (DECISIONS12 D6, BUILD_SPEC12 §3.8): his own broker list — a TAG, never a filter
             "🚫 Not eligible at %s — your own list of names %s would not let you buy online; a tag only — nothing "
-            "is hidden, the pushes still ring and carry the tag. %s"
+            "is hidden, the pushes still ring and carry the tag. %s By your word, %s (still listed, "
+            "still tagged)."
             % (GC.BROKER_NAME, GC.BROKER_NAME,
-               ("Seeded with %s." % ", ".join(GC.BROKER_FLAG_SEED)) if GC.BROKER_FLAG_SEED else "Nothing is seeded."),
+               ("Seeded with %s." % ", ".join(GC.BROKER_FLAG_SEED)) if GC.BROKER_FLAG_SEED else "Nothing is seeded.",
+               _gg_bottom_word()),
             # 🔴 2026-10-21 (BUILD_SPEC20 D6, Ajay: "If something is Potential add min on min for pricing …")
             # 2026-10-21 critic fix: a read on 15-minute bars (horizontal fade reads 15m first) moves at the 15-minute close
             "🔴 Live on the card: price and the live-bar relation refresh every %d s; the read moves at the %d-minute "

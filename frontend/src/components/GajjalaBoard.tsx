@@ -652,19 +652,20 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           </button>
         ))}
       </div>
-      {/* (3a) 🎾 the served ordering word (tab.RS_ORDER_TEXT, squeeze sub only; DECISIONS13 D3) — verbatim, no sort control. */}
-      {typeof board?.order_note === 'string' && board.order_note.trim() ? (
-        <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
-      ) : null}
-      {/* (3a) 🌀 the served "counted, not listed" line (tab.build list_note, 🌀 sub only; BUILD_SPEC18 D3/D6) — verbatim. */}
-      {typeof board?.list_note === 'string' && board.list_note.trim() ? (
-        <span className="gg-muted" data-testid="gg-list-note">{board.list_note}</span>
-      ) : null}
 
       {/* (3b) 🎯 the served A+ line — every sub, so on 🧠 Potential it leads the 📈 Track. */}
       {board?.enterable ? <AplusBanner block={board.enterable} /> : null}
       {/* (3c) 🧪 2026-11-01: A+ held by the audit — listed, never hidden (audited_tab.held_block); absent elsewhere. */}
       <GgAuditedHeld block={board?.held} />
+      {/* (3d) the served ordering word (tab.VOL/RS/HF/POT_ORDER_TEXT — every card sub since 2026-11-09) and the 🌀 "counted, not
+          listed" line (tab.build list_note) — verbatim, no sort control; BELOW the 🎯 banner so the A+ line stays right under
+          the sub strip (2026-11-09). */}
+      {typeof board?.order_note === 'string' && board.order_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
+      ) : null}
+      {typeof board?.list_note === 'string' && board.list_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-list-note">{board.list_note}</span>
+      ) : null}
 
       {err ? <div className="cm-note cm-note-err" data-testid="gg-error">Gajjala board: {err}</div> : null}
 
@@ -1553,6 +1554,8 @@ function BrokerFlagsStrip({ block, editable, fault, busy, err, onWrite }: {
   return (
     <div className="gg-broker-strip" data-testid="gg-broker-strip">
       {block.text ? <span className="gg-broker-text" data-testid="gg-broker-text">{block.text}</span> : null}
+      {typeof block.order_text === 'string' && block.order_text.trim()
+        ? <span className="gg-muted gg-broker-order" data-testid="gg-broker-order">{block.order_text}</span> : null}
       {syms.map((s) => (
         <span key={s} className="cm-badge cm-badge-muted gg-broker-sym" data-testid={`gg-broker-sym-${s}`}>
           {s}
