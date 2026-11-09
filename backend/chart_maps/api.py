@@ -238,6 +238,54 @@ async def chart_maps(
     return JSONResponse(await asyncio.to_thread(_run))
 
 
+def _feed_view() -> tuple:
+    """(word, state) of the ONE Massive socket, served verbatim through the feed's own `live_feed.state_word()` (the
+    one served feed word — `feed_state` itself never carries them); (None, None) when the feed module is absent or
+    raises."""
+    try:
+        import live_feed                                     # lazy: the api process owns the socket
+        state, word = live_feed.state_word()
+    except Exception as exc:                                 # noqa: BLE001
+        log.debug("chart-maps/live: feed state unavailable: %s", exc)
+        return None, None
+    return (word if isinstance(word, str) and word.strip() else None,
+            state if isinstance(state, str) and state.strip() else None)
+
+
+def _inject_vs_fn() -> None:
+    """🚩 GG LIVE (2026-11-09): hand the poll's OWN vs-words function (live_card.live_vs — the same object the route's
+    compose calls) to the `gajjala.update` producer, which may not import the card module (the 2026-10-21 import
+    guard over chart_maps/gajjala). One engine, injected; never raises."""
+    try:
+        from . import live_card as LC
+        from .gajjala import live_events as LE
+        LE.set_vs_fn(LC.live_vs)
+    except Exception as exc:                                 # noqa: BLE001 — the streamed words are display only
+        log.debug("chart-maps/live: vs injection failed: %s", exc)
+
+
+_inject_vs_fn()                                              # once at import (main mounts this router before the hub runs)
+
+
+def _stream_interest(variant, syms: list, levels) -> dict:
+    """🚩 GG LIVE §3.5 (2026-11-09, Ajay: "same for reuglar Gajjlas tab as well need it to be more live"): register
+    this board's live interest with the hub (live_hub.register_interest, a lazy import) → `{"on", "word", "state"}`.
+    `word` / `state` = the hub's served pair (live_feed.state_word), else the feed's own (`live` | `kicked` | `down` |
+    `quiet` | `off`) so the board prints the word only when degraded. Any failure → `on: false` with the feed's word."""
+    word, state = _feed_view()
+    _inject_vs_fn()                                          # idempotent: the same function object every time
+    try:
+        import live_hub                                      # lazy: the hub lives in the api process (WP-A)
+        res = live_hub.register_interest(variant, syms, levels)
+    except Exception as exc:                                 # noqa: BLE001 — the poll answers either way
+        log.debug("chart-maps/live: stream interest failed: %s", exc)
+        return {"on": False, "word": word, "state": state}
+    res = res if isinstance(res, dict) else {}
+    w, st = res.get("word"), res.get("state")
+    return {"on": res.get("on") is True, "word": w if isinstance(w, str) and w.strip() else word,
+            "state": st if isinstance(st, str) and st.strip() else state}
+
+
 @router.post("/chart-maps/live")
 async def chart_maps_live(payload: Any = Body(None)):
     """🔴 The live card overlay (Ajay 2026-10-16: "actual price is this  above
@@ -251,7 +299,12 @@ async def chart_maps_live(payload: Any = Body(None)):
     min for pricing …"): an OPTIONAL `levels` {SYM: {trigger, stop, tf}} — the
     numbers the 🚩 tab already served — adds display-only `vs` words per quote.
     A malformed `levels` is ignored (never a 422); the body's 422 / 413 rules
-    are unchanged."""
+    are unchanged.
+
+    🚩 2026-11-09 (GG LIVE §3.5): an OPTIONAL `"stream": true` + `"variant"` registers the board's live interest with
+    the hub on the event loop BEFORE the read (`_stream_interest`) and adds `"stream": {"on", "word", "state"}`; the
+    prices then arrive as `gajjala.update` events (chart_maps/gajjala/live_events.py). Without `stream` the answer is
+    byte-identical to before (tests/test_gajjala_live_events_2026_11_09.py)."""
     from . import live_card as LC
     syms_in = payload.get("symbols") if isinstance(payload, dict) else None
     if not isinstance(syms_in, list):
@@ -261,7 +314,12 @@ async def chart_maps_live(payload: Any = Body(None)):
         return JSONResponse({"detail": LC.too_many_text(len(syms), LC.cap())}, status_code=413)
     levels = payload.get("levels")
     levels = levels if isinstance(levels, dict) else None
-    return JSONResponse(await asyncio.to_thread(LC.compose, syms, levels=levels))
+    if payload.get("stream") is not True:                    # no `stream` → today's answer, byte for byte
+        return JSONResponse(await asyncio.to_thread(LC.compose, syms, levels=levels))
+    stream = _stream_interest(payload.get("variant"), syms, levels)   # on the event loop, BEFORE the read
+    out = await asyncio.to_thread(LC.compose, syms, levels=levels)
+    out["stream"] = stream
+    return JSONResponse(out)
 
 
 @router.get("/chart-maps/high-beta/watch")

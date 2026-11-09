@@ -15,6 +15,8 @@ import type { CmBar, CmLine, CmTapeSession, CmTile } from './chartMaps';
 export const CARD_LIVE_MS = 30_000;             // MINE — matches SessionPrice's 30 s poll (K1; HIS CALL Q1)
 export const CARD_LIVE_CLOSED_MS = 30 * 60_000; // Cheetah default — = drop10_tab.CLOSED_TTL_SEC (HIS CALL Q5)
 export const CARD_LIVE_PATH = '/chart-maps/live';
+/** The bus event type the hub publishes (backend chart_maps/gajjala/live_events.EVENT_TYPE). */
+export const GG_UPDATE_EVENT = 'gajjala.update';
 
 export type CardLiveNow = {
   price: number; label: string; session: 'premarket' | 'afterhours' | null;
@@ -38,11 +40,23 @@ export type CardLiveQuote = {
   /** 🔴 2026-10-21: present only when the request carried `levels` for this symbol and the print sits somewhere. */
   vs?: CardLiveVs | null;
 };
+/** 🚩 2026-11-09 (GG LIVE §3.5): the served stream block — present only when the POST asked `stream: true`. `word` is
+ *  the feed's / hub's served sentence (printed verbatim, never composed here); `state` the feed's state
+ *  (live | kicked | down | quiet | off). */
+export type CardLiveStream = { on: boolean; word: string | null; state?: string | null };
 export type CardLiveAnswer = {
   session: CmTapeSession | null; as_of_epoch: number; as_of: string;
   footer: { live: string | null; stale: string | null }; now_labels: string[]; cap: number; asked: number;
   served: number; missing: string[]; fault: string | null; quotes: Record<string, CardLiveQuote>;
+  stream?: CardLiveStream | null;
 };
+/** One streamed price (backend live_events QUOTE_KEYS): the print, its time, the served `vs` words (or null). */
+export type GgStreamQuote = { price: number; as_of_epoch: number; vs: CardLiveVs | null };
+/** The three `gajjala.update` payloads (backend live_events — keys fixed there). */
+export type GgQuotesEvent = { kind: 'quotes'; variant: string; quotes: Record<string, GgStreamQuote> };
+export type GgPassEvent = { kind: 'pass'; variant: string; pass_id: string; finished_at_epoch: number };
+export type GgLaneEvent = { kind: 'lane'; day: string; changed_at_epoch: number };
+export type GgUpdate = GgQuotesEvent | GgPassEvent | GgLaneEvent;
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -174,4 +188,83 @@ export function patchTiles<T extends CmTile>(tiles: T[], a: CardLiveAnswer | nul
 export function liveVsText(t: unknown): string | null {
   const v = isObj(t) ? t.live_vs : undefined;
   return validVs(v) ? v.text : null;
+}
+
+/* ── 🚩 GG LIVE §3.5 (2026-11-09) — the streamed half (Ajay: "same for reuglar Gajjlas tab as well need it to be more
+ * live"). The bus carries `gajjala.update`; these helpers only VALIDATE it and SPLICE served numbers and served words
+ * into the poll's answer. They compose no word and compute no price. ── */
+
+const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+
+function validStreamQuote(q: unknown): q is GgStreamQuote {
+  return isObj(q) && pos(q.price) && finite(q.as_of_epoch) && (q.vs === null || q.vs === undefined || validVs(q.vs));
+}
+
+/** A bus payload → one of the three `gajjala.update` shapes, or null (anything else; a quote that is not one is
+ *  dropped from its batch). */
+export function parseGgUpdate(p: unknown): GgUpdate | null {
+  if (!isObj(p)) return null;
+  if (p.kind === 'quotes' && typeof p.variant === 'string' && isObj(p.quotes)) {
+    const quotes: Record<string, GgStreamQuote> = {};
+    for (const [s, q] of Object.entries(p.quotes)) {
+      if (validStreamQuote(q)) quotes[s.trim().toUpperCase()] = { price: q.price, as_of_epoch: q.as_of_epoch, vs: q.vs ?? null };
+    }
+    return { kind: 'quotes', variant: p.variant, quotes };
+  }
+  if (p.kind === 'pass' && typeof p.variant === 'string' && typeof p.pass_id === 'string' && finite(p.finished_at_epoch)) {
+    return { kind: 'pass', variant: p.variant, pass_id: p.pass_id, finished_at_epoch: p.finished_at_epoch };
+  }
+  if (p.kind === 'lane' && typeof p.day === 'string' && finite(p.changed_at_epoch)) {
+    return { kind: 'lane', day: p.day, changed_at_epoch: p.changed_at_epoch };
+  }
+  return null;
+}
+
+/** Two quote batches of ONE variant folded: per symbol the NEWER `as_of_epoch` wins (an older one never overwrites).
+ *  The SAME object when nothing moved. */
+export function mergeQuotesEvt(prev: GgQuotesEvent | null, evt: GgQuotesEvent): GgQuotesEvent {
+  if (!prev || prev.variant !== evt.variant) return evt;
+  let changed = false;
+  const quotes = { ...prev.quotes };
+  for (const [s, q] of Object.entries(evt.quotes)) {
+    const old = quotes[s];
+    if (old && !(q.as_of_epoch > old.as_of_epoch)) continue;
+    quotes[s] = q;
+    changed = true;
+  }
+  return changed ? { kind: 'quotes', variant: prev.variant, quotes } : prev;
+}
+
+/** The poll's answer with the streamed prices spliced in: per symbol already in the answer (with a served now block),
+ *  ONLY when the stream's `as_of_epoch` is newer than the answer's, `now.price`, `now.as_of_epoch` and `vs` are
+ *  replaced; `bar`, every label and the footer are never touched. A symbol not in the answer does nothing. The SAME
+ *  answer when nothing moved. `_nowEpoch` is the caller's clock — kept for the spec's signature; no freshness rule
+ *  reads it (none is specified). */
+export function patchQuotes(
+  answer: CardLiveAnswer | null, evt: GgQuotesEvent | null, _nowEpoch?: number,
+): CardLiveAnswer | null {
+  if (!answer || !evt || !isObj(evt.quotes)) return answer;
+  let changed = false;
+  const quotes: Record<string, CardLiveQuote> = { ...answer.quotes };
+  for (const [s, sq] of Object.entries(evt.quotes)) {
+    if (!Object.prototype.hasOwnProperty.call(answer.quotes, s) || !validStreamQuote(sq)) continue;
+    const q = answer.quotes[s];
+    if (!q || !validNow(q.now)) continue;
+    const had = finite(q.now.as_of_epoch) ? q.now.as_of_epoch : -Infinity;
+    if (!(sq.as_of_epoch > had)) continue;
+    quotes[s] = { ...q, now: { ...q.now, price: sq.price, as_of_epoch: sq.as_of_epoch }, vs: sq.vs ?? null };
+    changed = true;
+  }
+  return changed ? { ...answer, quotes } : answer;
+}
+
+/** The served feed sentence the footer appends — ONLY when the stream is degraded: `on` false, or a served `state`
+ *  other than `live`. A healthy stream, an answer without a stream block, or no served word → null. */
+export function streamFeedWord(answer: CardLiveAnswer | null | undefined): string | null {
+  const st = answer?.stream;
+  if (!isObj(st)) return null;
+  const word = typeof st.word === 'string' && st.word.trim() ? st.word : null;
+  if (!word) return null;
+  const degraded = st.on !== true || (typeof st.state === 'string' && st.state !== 'live');
+  return degraded ? word : null;
 }

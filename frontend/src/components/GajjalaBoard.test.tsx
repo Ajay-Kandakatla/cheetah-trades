@@ -166,11 +166,14 @@ describe('GajjalaBoard', () => {
     const scroll = vi.fn();
     (HTMLElement.prototype as any).scrollIntoView = scroll;
     const ticks = captureInterval();
-    let n = 0;
-    stubFetch(() => {
-      n += 1;
+    // Counted by BOARD reads (2026-11-09): the page also asks /auth/me (the ⏱ latency block's owner gate) and
+    // POSTs /chart-maps/live after a refetch — neither is a board read, so the count keys on the gajjala URL.
+    let boards = 0;
+    const spy = stubFetch((u) => {
+      if (!u.pathname.includes('/chart-maps/gajjala')) return {};
+      boards += 1;
       const b = clone(BOARDS.bull_flag);
-      if (n === 1) b.tiles = b.tiles.filter((t: any) => t.symbol !== 'TCRT');
+      if (boards === 1) b.tiles = b.tiles.filter((t: any) => t.symbol !== 'TCRT');
       return b;
     });
     mount('tab=gajjala&sub=bull_flag&focus=TCRT');
@@ -181,7 +184,8 @@ describe('GajjalaBoard', () => {
     await screen.findByTestId('gg-tile-TCRT');
     await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
     act(() => { ticks[ticks.length - 1](); });
-    await waitFor(() => expect(n).toBe(3));
+    await waitFor(() => expect(gajjalaUrls(spy)).toHaveLength(3));
+    await screen.findByTestId('gg-tile-TCRT');
     expect(scroll).toHaveBeenCalledTimes(1);
     delete (HTMLElement.prototype as any).scrollIntoView;
   });

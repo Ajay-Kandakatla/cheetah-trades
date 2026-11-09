@@ -331,3 +331,146 @@ describe('patchTile — 🔴 live_vs (2026-10-21)', () => {
     expect(liveVsText({ live_vs: 'words' })).toBeNull();
   });
 });
+
+/* ── 🚩 GG LIVE §3.5 (2026-11-09) — the streamed half: patchQuotes / mergeQuotesEvt / parseGgUpdate /
+ * streamFeedWord. Ajay: "same for reuglar Gajjlas tab as well need it to be more live". NEGATIVES: an older (or equal)
+ * stream stamp never overwrites; a symbol not in the answer does nothing; bar / labels / footer never touched; a
+ * healthy stream prints no feed word; a malformed bus payload is null. */
+import {
+  GG_UPDATE_EVENT, mergeQuotesEvt, parseGgUpdate, patchQuotes, streamFeedWord, type GgQuotesEvent,
+} from './cardLive';
+import { GG_PASS_NUDGE_DEBOUNCE_MS } from '../hooks/useGgLive';
+
+const VS_A = { kind: 'over_trigger', text: 'served words A' };
+const VS_B = { kind: 'between', text: 'served words B' };
+const qevt = (quotes: GgQuotesEvent['quotes'], variant = 'gajjala'): GgQuotesEvent => ({ kind: 'quotes', variant, quotes });
+
+describe('GG LIVE — constants', () => {
+  it('the nudge debounce and the event type', () => {
+    expect(GG_PASS_NUDGE_DEBOUNCE_MS).toBe(500);
+    expect(GG_UPDATE_EVENT).toBe('gajjala.update');
+  });
+});
+
+describe('GG LIVE — patchQuotes', () => {
+  const base = () => answer({ XLAB: quote({ vs: VS_B }) });
+
+  it('a newer stream quote replaces now.price, now.as_of_epoch and vs — served values verbatim', () => {
+    const a = base();
+    const out = patchQuotes(a, qevt({ XLAB: { price: 2.91, as_of_epoch: NOW.as_of_epoch + 5, vs: VS_A } }), 0)!;
+    expect(out).not.toBe(a);
+    const q = out.quotes.XLAB;
+    expect(q.now!.price).toBe(2.91);
+    expect(q.now!.as_of_epoch).toBe(NOW.as_of_epoch + 5);
+    expect(q.vs).toEqual(VS_A);
+    expect(q.bar).toBe(a.quotes.XLAB.bar);                       // NEG: the bar is never touched
+    expect(q.now!.label).toBe(NOW.label);                        // NEG: labels never touched
+    expect(q.prev_t).toBe(a.quotes.XLAB.prev_t);
+    expect(out.footer).toBe(a.footer);                           // NEG: footer never touched
+    expect(out.now_labels).toBe(a.now_labels);
+    expect(a.quotes.XLAB.now!.price).toBe(2.77);                 // the input is never mutated
+  });
+
+  it('NEGATIVE: an OLDER or EQUAL stream stamp never overwrites — the SAME answer back', () => {
+    const a = base();
+    expect(patchQuotes(a, qevt({ XLAB: { price: 9.99, as_of_epoch: NOW.as_of_epoch - 1, vs: VS_A } }))).toBe(a);
+    expect(patchQuotes(a, qevt({ XLAB: { price: 9.99, as_of_epoch: NOW.as_of_epoch, vs: VS_A } }))).toBe(a);
+  });
+
+  it('NEGATIVE: a symbol not in the answer does nothing (no new quote invented)', () => {
+    const a = base();
+    const out = patchQuotes(a, qevt({ NVDA: { price: 100, as_of_epoch: NOW.as_of_epoch + 9, vs: null } }));
+    expect(out).toBe(a);
+    expect(Object.keys(out!.quotes)).toEqual(['XLAB']);
+  });
+
+  it('NEGATIVE: a quote without a served now block is left alone (the label is never invented)', () => {
+    const a = answer({ XLAB: quote({ now: null }) });
+    expect(patchQuotes(a, qevt({ XLAB: { price: 3, as_of_epoch: NOW.as_of_epoch + 9, vs: null } }))).toBe(a);
+  });
+
+  it('a served null vs clears the words; a now block without a stamp takes the stream', () => {
+    const a = answer({ XLAB: quote({ vs: VS_B, now: { ...NOW, as_of_epoch: null } }) });
+    const out = patchQuotes(a, qevt({ XLAB: { price: 2.8, as_of_epoch: 1, vs: null } }))!;
+    expect(out.quotes.XLAB.vs).toBeNull();
+    expect(patchTiles([tile()], out)[0]).not.toHaveProperty('live_vs');
+  });
+
+  it('NEGATIVE: null answer / null event / an invalid stream quote → unchanged', () => {
+    const a = base();
+    expect(patchQuotes(null, qevt({ XLAB: { price: 1, as_of_epoch: 2, vs: null } }))).toBeNull();
+    expect(patchQuotes(a, null)).toBe(a);
+    for (const bad of [{ price: -1, as_of_epoch: NOW.as_of_epoch + 9, vs: null },
+      { price: NaN, as_of_epoch: NOW.as_of_epoch + 9, vs: null },
+      { price: 3, as_of_epoch: NaN, vs: null }, { price: 3, as_of_epoch: NOW.as_of_epoch + 9, vs: { kind: 'x', text: '' } }]) {
+      expect(patchQuotes(a, qevt({ XLAB: bad as any }))).toBe(a);
+    }
+  });
+
+  it('through patchTiles: the tile now line moves to the streamed price and the served vs rides as live_vs', () => {
+    const a = base();
+    const out = patchQuotes(a, qevt({ XLAB: { price: 2.95, as_of_epoch: NOW.as_of_epoch + 1, vs: VS_A } }));
+    const t = patchTiles([tile()], out)[0] as CmTile & LiveVsTile;
+    expect(t.lines.find((l) => l.tone === 'now')!.price).toBe(2.95);
+    expect(liveVsText(t)).toBe('served words A');
+  });
+});
+
+describe('GG LIVE — mergeQuotesEvt', () => {
+  it('newer wins per symbol; other symbols kept', () => {
+    const a = qevt({ XLAB: { price: 1, as_of_epoch: 10, vs: null }, ABC: { price: 5, as_of_epoch: 10, vs: null } });
+    const m = mergeQuotesEvt(a, qevt({ XLAB: { price: 2, as_of_epoch: 11, vs: VS_A } }));
+    expect(m.quotes.XLAB.price).toBe(2);
+    expect(m.quotes.ABC.price).toBe(5);
+  });
+
+  it('NEGATIVE: an older batch never overwrites — the SAME object back', () => {
+    const a = qevt({ XLAB: { price: 1, as_of_epoch: 10, vs: null } });
+    expect(mergeQuotesEvt(a, qevt({ XLAB: { price: 9, as_of_epoch: 9, vs: null } }))).toBe(a);
+  });
+
+  it('NEGATIVE: another variant never folds into this one', () => {
+    const a = qevt({ XLAB: { price: 1, as_of_epoch: 10, vs: null } });
+    const b = qevt({ XLAB: { price: 9, as_of_epoch: 11, vs: null } }, 'gajjala_1m');
+    expect(mergeQuotesEvt(a, b)).toBe(b);
+    expect(mergeQuotesEvt(null, a)).toBe(a);
+  });
+});
+
+describe('GG LIVE — parseGgUpdate', () => {
+  it('the three payloads', () => {
+    expect(parseGgUpdate({ kind: 'pass', variant: 'gajjala', pass_id: 'p', finished_at_epoch: 1 }))
+      .toEqual({ kind: 'pass', variant: 'gajjala', pass_id: 'p', finished_at_epoch: 1 });
+    expect(parseGgUpdate({ kind: 'lane', day: '2026-11-09', changed_at_epoch: 2 }))
+      .toEqual({ kind: 'lane', day: '2026-11-09', changed_at_epoch: 2 });
+    const q = parseGgUpdate({ kind: 'quotes', variant: 'gajjala', quotes: {
+      xlab: { price: 2, as_of_epoch: 3, vs: VS_A }, BAD: { price: 'x', as_of_epoch: 3, vs: null } } });
+    expect(q).toEqual({ kind: 'quotes', variant: 'gajjala', quotes: { XLAB: { price: 2, as_of_epoch: 3, vs: VS_A } } });
+  });
+
+  it('NEGATIVE: anything else is null', () => {
+    for (const p of [null, 'x', 5, [], {}, { kind: 'quotes', variant: 'g' }, { kind: 'pass', variant: 'g', pass_id: 1 },
+      { kind: 'pass', variant: 'g', pass_id: 'p', finished_at_epoch: 'x' }, { kind: 'lane', day: 3, changed_at_epoch: 1 },
+      { kind: 'other', variant: 'g' }]) {
+      expect(parseGgUpdate(p)).toBeNull();
+    }
+  });
+});
+
+describe('GG LIVE — streamFeedWord (the footer word only when degraded)', () => {
+  const W = 'served feed word';
+  const withStream = (stream: any) => ({ ...answer({}), stream });
+  it('degraded → the served word verbatim', () => {
+    expect(streamFeedWord(withStream({ on: false, word: W, state: 'live' }))).toBe(W);
+    expect(streamFeedWord(withStream({ on: true, word: W, state: 'kicked' }))).toBe(W);
+    expect(streamFeedWord(withStream({ on: false, word: W }))).toBe(W);
+  });
+  it('NEGATIVE: healthy stream, no stream block, or no served word → null', () => {
+    expect(streamFeedWord(withStream({ on: true, word: W, state: 'live' }))).toBeNull();
+    expect(streamFeedWord(answer({}))).toBeNull();
+    expect(streamFeedWord(null)).toBeNull();
+    expect(streamFeedWord(withStream({ on: false, word: null, state: 'down' }))).toBeNull();
+    expect(streamFeedWord(withStream({ on: false, word: '  ', state: 'down' }))).toBeNull();
+    expect(streamFeedWord(withStream({ on: true, word: W }))).toBeNull();     // no served state → not degraded
+  });
+});

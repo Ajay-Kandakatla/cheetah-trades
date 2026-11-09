@@ -560,6 +560,30 @@ function useAlertsStatus(nonce: number) {
   return { status, error };
 }
 
+/* 📡 The live-feed line (GG LIVE 2026-11-09, spec §3.1): the SERVED `word` from /live/feed-status, plus the
+ * SERVED `admin_word` when the server sends it (admins only). Fetched with the page's status load; a failed read
+ * prints nothing. The page composes no feed sentence of its own. */
+export type FeedWords = { word: string | null; adminWord: string | null };
+const NO_FEED: FeedWords = { word: null, adminWord: null };
+
+export function useFeedWord(nonce: number): FeedWords {
+  const [feed, setFeed] = useState<FeedWords>(NO_FEED);
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API}/live/feed-status`, { credentials: 'include' })
+      .then(async (r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then((j) => {
+        if (!alive) return;
+        const word = j && typeof j.word === 'string' && j.word ? j.word : null;
+        const adminWord = word && typeof j.admin_word === 'string' && j.admin_word ? j.admin_word : null;
+        setFeed({ word, adminWord });
+      })
+      .catch(() => { if (alive) setFeed(NO_FEED); });
+    return () => { alive = false; };
+  }, [nonce]);
+  return feed;
+}
+
 export function skipsToday(status: AlertsStatus | null, today: string):
     { room: number; proximity: number; direction: number; knife: number; mood: number; floor: number } {
   const out = { room: 0, proximity: 0, direction: 0, knife: 0, mood: 0, floor: 0 };
@@ -1027,6 +1051,7 @@ export function AlertsPage() {
 
   const { rows, rawTruncated, loading, error, reload } = useAlertHistory({ kinds: kindList, sinceTs, ticker, limit: MAX_LIMIT });
   const { status, error: statusErr } = useAlertsStatus(reloadNonce);
+  const feed = useFeedWord(reloadNonce);
   const gate = status?.gate ?? GATE_FALLBACK;
 
   const write = (mut: (p: URLSearchParams) => void) => {
@@ -1140,6 +1165,12 @@ export function AlertsPage() {
 
       {/* ── status strip ── */}
       <section style={CARD} aria-label="Alert passes">
+        {feed.word ? (
+          <div data-testid="live-feed-word" style={{ fontSize: '0.72rem', color: MUTED, marginBottom: '0.35rem', minWidth: 0, overflowWrap: 'anywhere' }}>
+            {feed.word}
+            {feed.adminWord ? <div data-testid="live-feed-admin-word" style={{ fontSize: '0.64rem', color: DIM, marginTop: 1 }}>{feed.adminWord}</div> : null}
+          </div>
+        ) : null}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
           <div>
             <div style={EYEBROW}>⚙️ Every-minute passes · the phone gate covers the three zone passes</div>

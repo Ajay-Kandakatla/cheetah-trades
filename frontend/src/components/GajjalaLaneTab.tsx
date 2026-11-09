@@ -28,10 +28,19 @@
  * `awaiting` (the placeholders still waiting for his number). <GgRulesBlock>
  * prints those keys verbatim and types no digit (contracts pin it). The older
  * API's `rules: string[]` still renders as the old list; no `rules` → nothing.
+ *
+ * 2026-11-09 (GG LIVE P1, Ajay "make it more live with websockets or something
+ * else"): the served `status.stream.word` (🛰 stream entries — SHADOW as
+ * built) prints verbatim, and a `gajjala.update` event of kind "lane" on the
+ * one SSE bus (a data-free nudge: the lane docs changed) re-GETs the tab once
+ * — nudges inside LANE_NUDGE_COALESCE_MS collapse into one GET — and restarts
+ * the POLL_MS interval, so the GET count per open tab stays today's. A
+ * "quotes" or "pass" event never reloads the lane.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { subscribe, type BusEvent } from '../lib/eventBus';
 
 export type GajjalaRowState =
   | 'waiting' | 'ordering' | 'ordered' | 'open' | 'closing' | 'closed' | 'unfilled' | 'skipped' | 'dry_run' | 'not_seen';
@@ -75,6 +84,12 @@ export function ggRulesOf(v: unknown): GajjalaRules | null {
 
 const isText = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
 
+/** status.stream (GG LIVE P1, 2026-11-09) — served by trading/gajjala_stream.status(); `word` prints verbatim. */
+export type GajjalaStream = {
+  mode?: 'off' | 'shadow' | 'live' | string | null; word?: string | null;
+  prints_today?: number | null; first_prints_today?: number | null;
+};
+
 export type GajjalaStatus = {
   strategy?: string | null; enabled?: boolean | null; paper?: boolean | null;
   floors?: 'house' | 'gg' | string | null; floors_text?: string | null; floors_flip?: string | null;
@@ -87,6 +102,7 @@ export type GajjalaStatus = {
   unmeasured_text?: string | null; streak_text?: string | null;
   track_record_text?: string | null; track_record_url?: string | null;
   empty_today_text?: string | null; disabled_text?: string | null; live_text?: string | null;
+  stream?: GajjalaStream | null;
 };
 
 export type GajjalaJournal = {
@@ -102,6 +118,15 @@ export type GajjalaPayload = {
 };
 
 export const POLL_MS = 60_000;
+/** MINE (GG LIVE spec §4 WP-B): lane nudges this close together collapse into ONE re-GET (WP-D's board nudge uses
+ *  the same 500 ms). */
+export const LANE_NUDGE_COALESCE_MS = 500;
+export const GG_LIVE_EVENT = 'gajjala.update';
+
+/** A `gajjala.update` payload that says the lane docs changed (kind "lane"); every other kind is not ours. */
+export function isLaneNudge(payload: unknown): boolean {
+  return !!payload && typeof payload === 'object' && (payload as { kind?: unknown }).kind === 'lane';
+}
 export const OWNER_ONLY_TEXT = 'Owner only.';
 export const LOAD_ERR_PREFIX = 'Could not load the lane: ';
 export const DASH = '—';
@@ -163,10 +188,37 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
       setErr(e instanceof Error ? e.message : String(e));
     }
   };
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nudgeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartPoll = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => { void load(); }, POLL_MS);
+  };
   useEffect(() => {
     void load();
-    const t = setInterval(() => { void load(); }, POLL_MS);
-    return () => clearInterval(t);
+    restartPoll();
+    let off: (() => void) | null = null;
+    try {
+      off = subscribe(GG_LIVE_EVENT, (evt: BusEvent) => {
+        if (!isLaneNudge(evt?.payload)) return;
+        if (nudgeRef.current) clearTimeout(nudgeRef.current);
+        nudgeRef.current = setTimeout(() => {
+          nudgeRef.current = null;
+          void load();
+          restartPoll();
+        }, LANE_NUDGE_COALESCE_MS);
+      });
+    } catch {
+      off = null;                                   // no EventSource here: the POLL_MS poll alone, as before
+    }
+    return () => {
+      const t = pollRef.current;
+      if (t) clearInterval(t);
+      pollRef.current = null;
+      if (nudgeRef.current) clearTimeout(nudgeRef.current);
+      nudgeRef.current = null;
+      off?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -274,6 +326,11 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
       {actionErr && <div role="alert" style={{ color: C.bad, fontSize: 13 }}>{actionErr}</div>}
       {s?.live_text && <div role="alert" data-testid="gg-lane-live" style={{ color: C.warn, fontSize: 13 }}>{s.live_text}</div>}
       {s?.disabled_text && <div role="alert" data-testid="gg-lane-disabled" style={{ color: C.warn, fontSize: 13 }}>{s.disabled_text}</div>}
+      {isText(s?.stream?.word) && (
+        <p data-testid="gg-lane-stream" style={{ margin: 0, fontSize: 13, color: C.sub, minWidth: 0, overflowWrap: 'anywhere' }}>
+          {s?.stream?.word}
+        </p>
+      )}
 
       {s && (
         <div data-testid="gg-lane-floors" style={{ display: 'grid', gap: 6, fontSize: 13 }}>

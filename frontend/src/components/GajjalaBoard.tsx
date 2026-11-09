@@ -130,6 +130,15 @@
  * The READ still moves at GG's closed bar (the pass) — the live words are display only. UNMEASURED — freshness, not an
  * edge.
  *
+ * 🚩 Live over /events (2026-11-09, GG LIVE §3.5 — Ajay: "same for reuglar Gajjlas tab as well need it to be more
+ * live"). The card poll asks `stream: true` + this board's variant (the server registers the cards' interest with the
+ * hub); hooks/useGgLive hands the `gajjala.update` events for THIS variant: streamed prices are spliced into the poll's
+ * answer by lib/cardLive.patchQuotes (newer only — price, its time and the served `vs` words), a `pass` nudge re-GETs
+ * the board ONCE (a burst coalesced) and restarts the served-cadence interval (no extra GET per cadence). The 30 s poll stays
+ * — it is the bar splice and the fallback (HIS CALL #15). Right after the footer the SERVED feed word prints only when
+ * the stream is degraded (lib/cardLive.streamFeedWord), as its own wrapping strip item (min-width: 0 + .gg-line).
+ * `cardLive` below is the poll's state with the stream spliced in, so the 2026-10-21 wiring reads it unchanged.
+ *
  * 📌 Trader tag (2026-10-27, BUILD_SPEC26 §3.4). Ajay: "Add them to Gajjals, they are pretty good". The names a tracked
  * trader flagged for this tab posted join the scan as candidates. Each row that names a symbol prints its SERVED
  * `trader_text` as a muted chip just BEFORE the 🚫 chip (tiles, the 🌙 recap, the 🎯 line, the 🧠 strip, 📈 Track, the
@@ -173,7 +182,10 @@ import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useCardLive } from '../hooks/useCardLive';
-import { cardLiveSymbols, liveVsText, patchTiles, type CardLiveLevels } from '../lib/cardLive';
+import { useGgLive } from '../hooks/useGgLive';
+import {
+  cardLiveSymbols, liveVsText, patchQuotes, patchTiles, streamFeedWord, type CardLiveLevels,
+} from '../lib/cardLive';
 import type { CmBand, CmTapeSession } from '../lib/chartMaps';
 import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
@@ -190,6 +202,7 @@ import {
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
 import GajjalaAplusCharts from './GajjalaAplusCharts';
+import { GajjalaLatency } from './GajjalaLatency';
 import { GgAuditedStrip } from './GgAuditedStrip';
 import { GgAuditedHeld } from './GgAuditedHeld';
 import { GgAuditedCompare } from './GgAuditedCompare';
@@ -296,11 +309,17 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
   // Re-read on the SERVED cadence only; 0 / absent (a closed session) = no timer.
   const every = ggRefreshMs(board);
+  /* 🚩 2026-11-09 (GG LIVE §3.5): this board's `gajjala.update` events, only inside the served window. A `pass` nudge
+   * re-GETs ONCE and RESTARTS the interval below (its deps), so the next cadence GET counts from the nudge. */
+  const ggLive = useGgLive(vkey, every != null && every > 0);
   useEffect(() => {
     if (!every) return;
     const id = window.setInterval(() => setTick((n) => n + 1), every);
     return () => window.clearInterval(id);
-  }, [every]);
+  }, [every, ggLive.passNudge]);
+  useEffect(() => {
+    if (ggLive.passNudge > 0) setTick((n) => n + 1);
+  }, [ggLive.passNudge]);
 
   /* 🔄 scan on open (2026-10-15). ONE POST per mount, owner only; the poll is a
    * chain of setTimeouts on the SERVED plan (never a second setInterval), each
@@ -495,10 +514,15 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const liveSyms = useMemo(() => cardLiveSymbols(tiles), [tiles]);
   const liveLevels = useMemo(() => ggLiveLevels(tiles, board?.tf ?? null), [tiles, board]);
   const inWindow = every != null && every > 0;
-  const cardLive = useCardLive(liveSyms, inWindow && liveSyms.length > 0, {
+  const cardPoll = useCardLive(liveSyms, inWindow && liveSyms.length > 0, {
     resetKey: board, initialSession: (board?.session?.tape ?? null) as CmTapeSession | null, levels: liveLevels,
+    stream: true, variant: vkey,
   });
+  /* 🚩 2026-11-09: the streamed prices spliced into the poll's answer (newer only), then into the tiles. */
+  const cardLive = useMemo(() => ({ footer: cardPoll.footer, answer: patchQuotes(cardPoll.answer, ggLive.quotesEvt) }),
+    [cardPoll.answer, cardPoll.footer, ggLive.quotesEvt]);
   const liveTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+  const feedWord = streamFeedWord(cardPoll.answer);
 
   // `focus` scrolls to that tile ONCE per focus value, the first time its tile
   // has landed. The param stays in the URL (the outline keeps marking the tile)
@@ -570,6 +594,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           : pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
         {/* 2026-10-21 critic fix: the window closed → nothing polls, so no "live" stamp is left behind */}
         {inWindow && cardLive.footer ? <span className="gg-muted" data-testid="gg-live-footer">{cardLive.footer}</span> : null}
+        {inWindow && feedWord ? (
+          <span className="gg-muted gg-line" style={{ minWidth: 0 }} data-testid="gg-live-feed-word">{feedWord}</span>
+        ) : null}
         {isOwner && scan?.rescan_label ? (
           <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
                   aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
@@ -1225,6 +1252,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat, kin
       {!kindOn && tr.replayed_note ? <div className="gg-muted" data-testid="gg-tr-replayed-note">{tr.replayed_note}</div> : null}
       {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
       {!tl && tr.aplus ? <GajjalaAplusCharts block={tr.aplus} /> : null}
+      <GajjalaLatency span={tr.span} />{/* ⏱ 2026-11-09 GG LIVE P4: the latency ledger under the A+ charts — owner only, fetches itself, prints served words */}
       {kindEmpty ? <div className="cm-note" data-testid="gg-tr-kind-empty">{tr.kind_empty_text}</div> : null}
       {listCatEmpty ? <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div> : null}
       {tl ? <GgEntryTimeline tr={tr} cat={cat} sortItem={sortItem} /> : shownDays.map((d) => (

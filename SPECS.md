@@ -1191,6 +1191,55 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   audit's words through the served `state_label` on the break pass only. Doc `docs/gajjala/audited_k3s_2026_11_09.md`
   (HIS CALLs #37–#49); LEDGER.md row '🧪 K3S' 2026-11-09; contract "🧪 K3S (2026-11-09)"; ✨
   `chart-maps-gajjala-audited-k3s-2026-11-09`. UNMEASURED — n ≥ 30 rings before any word. Not advice.
+- **⏱ Gajjala live — feed word · lane stream (SHADOW) · bar-close probe · tab live · latency ledger (2026-11-09)**
+  (*"I would like the autopilot to be continously monitored or live tracked and changed as if Gallalas makes the trades can
+  you modify and make it more live with websockets or something else where there is a low latency monitoring on the prices
+  action changes please?"* / *"same for reuglar Gajjlas tab as well need it to be more live"*; spec gg_live rev 2, WP-A..E +
+  Z). No rule, gate, push kind or pass time moved: the A+ is still the 5-minute bar CLOSED through the trigger. Shipped:
+  **(P0)** the ONE Massive socket made honest — kick timeline (`live_feed_events`, TTL 14 d), `GET /live/feed-status` serves
+  `state` + `word` (`live_feed.FEED_WORDS`) and, admins only, `admin_word` + `?events=1`, every string through
+  `_scrub_obj` (the stocks key never leaves); /alerts prints the served word verbatim; `enabled()` refuses `auto` on
+  `CHEETAH_ENV=dev`; the QuoteCache Mongo persist is coalesced (`LIVE_CACHE_PERSIST_SEC`, declared); `live_hub.py` = the ONE
+  print filter (`PRINT_KINDS`) + interest keyed (variant tab, symbol) (`docs/realtime/massive_ws_feed.md`,
+  `docs/realtime/socket_kick_2026_11_09.md`, canary NOT run). **(P1)** `trading/gajjala_stream.py` — stream entries in
+  SHADOW (`GG_STREAM_MODE "shadow"`, env lowers only): the first print at/over the trigger (and the first non-odd-lot one,
+  and the stop) recorded insert-once in `gajjala_lane_stream` beside the 1-minute tick — zero broker calls, zero orders
+  change; the lane-run mutex (`LANE_RUN_MUTEX_SEC` 55) around `run()` and `run_stream()`; `status_block.stream` word on
+  /trading?view=gajjala (`docs/trading_gajjala_lane.md` "Stream entries (shadow)"). **(P2)** `chart_maps/gajjala/bar_close.py`
+  — a finality PROBE (`GAJJALA_BAR_CLOSE_MODE "probe"`, `GAJJALA_BAR_FINAL_PROBE_SESSIONS` 5): a detached child per cron slot
+  reads the closed 5-minute bar at close + 30 s and + 60 s into `gajjala_bar_final`; no lease, no pass, no push; the pass
+  stays on `:x1` (`docs/gajjala/bar_close_pass_2026_11_09.md`). **(P3)** the 🚩 / 1-minute / 🧪 boards live over the
+  existing `/events` bus — one event `gajjala.update` (`chart_maps/gajjala/live_events.py`; quotes ≤ 1 batch/s per variant,
+  `pass` and data-free `lane` nudges coalesced 500 ms); `POST /chart-maps/live` with `stream: true` registers interest and
+  is byte-identical without it; the 30 s card poll stays as the bar splice + fallback; the feed word prints only when
+  degraded (`docs/gajjala/live_tab_2026_11_09.md`). **(P4)** the ⏱ latency ledger — `GET /trading/gajjala/latency?span=`
+  (owner only) = `chart_maps/gajjala/latency.payload` = `scripts/gajjala_latency_report.py`; mounted under the A+ charts on
+  the 🏁 (`<GajjalaLatency span={tr.span} />`); split at `latency.GG_LIVE_FROM` = 2026-11-10 (MINE: the first full session
+  after the deploy); measured "before" (n 47 pushed live `GG:` A+ since 2026-10-01, p50 s after close): Read 61.0 · Rang
+  70.6 · Lane saw 122.0 · Ordered 124.0 · Filled 127.0 (`docs/gajjala/latency_ledger_2026_11_09.md`).
+  **Does NOT change** (spec §3.9): `detectors.py` and every read (GG5 goldens + `gg5_{writes,board}_2026_10_27.json`
+  byte-identical); the pass timing (`:x1`); `alerts.py` gates, claim keys, `MAX_ENTRY_AGE_SEC`; `OWNER_KEEP_SET` (seven)
+  and every push kind; `BAR_SETTLE_SEC`, `PASS_CADENCE_SEC`, `PASS_BUDGET_SEC`, `LEASE_SEC`, `LEASE_MIN_GAP_SEC`,
+  `PASS_MINUTE_OFFSET`; the crontab; the lane rules and numbers (`GAJJALA_RISK_PCT`, `GG_BE_AFTER_BARS`, trail EMAs,
+  flatten / cut-off, `WINDOW_OPEN_ET`, `GAJJALA_MAX_OPEN`, `GAJJALA_FILL_WAIT_SEC`, `GAJJALA_MISSED_R`, floors); paper-only;
+  regular-hours lane; `run_1m.slot_of` / `fits`, Luk, the 🧪 overlay; `quote.update` (0.5 s) and the QuoteCache payload;
+  `SSE_HEADERS` and the six SSE endpoints; the 🏁 payload and its three goldens; Finnhub off; no AM, no new Q;
+  `_RECONNECT_COOLDOWN`'s default. **Known gap:** `gajjala.update` reaches every signed-in tab (public prices + data-free
+  nudges); owner-only delivery needs a bus change (HIS CALL #16).
+  **HIS CALLs** (spec §7; built default in brackets): **#1** stream entries LIVE? [SHADOW] · **#2** which prints count as
+  "traded the trigger" — odd lots (37), Form T (12) [`"regular"` incl. both; `trigger_lot` rows record the round-lot
+  variant] · **#3** intrabar vs closed-bar lane entry [closed — the pushed A+ only] · **#4** extended-hours lane [unchanged,
+  regular hours 09:45–15:30] · **#5** the early pass ON at close + 30 s? [probe, 5 sessions] · **#6** `BAR_SETTLE_SEC` 30 s
+  [unchanged] · **#7** where P2 runs [cron container, detached child] · **#8** where P1 places orders [api hub worker, same
+  lane code, the mutex] · **#9** discovery cadence [inside the 5-minute pass] · **#10** post-kick policy + running the canary
+  [`MASSIVE_WS_KICK_COOLDOWN_SEC` 30 s, yield guard OFF, canary NOT run] · **#11** second-client suspects he can check
+  [listed in the socket doc] · **#12** rotate the stocks key [not done — his dashboard step] · **#13** plan check if
+  `lag_ms_p50` ≈ 900 s [nothing bought] · **#14** latency targets [proposed in the ledger doc, not adopted] · **#15** the
+  30 s card poll [kept as splice + fallback] · **#16** household broadcast of `gajjala.update` [every signed-in tab; he asked
+  owner-only — needs a bus change] · **#17** bar-close lane management by the hub [LIVE only, part of #1] · **#18** hot
+  mini-pass for armed 🧠 names [not built] · **#19** feed word placement [/alerts always; boards + lane tab only when
+  degraded]. Contract "⏱ Gajjala live: feed word · lane stream (shadow) · bar-close probe · tab live · latency ledger
+  (2026-11-09)"; ✨ `chart-maps-gajjala-live-stream-2026-11-09`. UNMEASURED — a timing, not a result. Paper only. Not advice.
 
 ### Chart Maps — 🥇 Luk's tab — `chart_maps/luk/` (2026-11-01)
 Ajay 2026-11-01: *"look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement

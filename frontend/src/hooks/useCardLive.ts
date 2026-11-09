@@ -29,6 +29,13 @@
  * when at least one asked symbol carries one; absent → the body is exactly
  * {symbols} as before. Read from a ref at each tick, so a board refetch with new
  * levels is never answered against the old ones. It never changes the key.
+ *
+ * 🚩 `stream` + `variant` (2026-11-09, GG LIVE §3.5 — Ajay: "same for reuglar
+ * Gajjlas tab as well need it to be more live"): OPTIONAL; `stream: true` adds
+ * `stream: true` and the board's `variant` to the body, so the server registers
+ * the cards' live interest with the hub; the answer then carries the served
+ * `answer.stream` {on, word, state}. Absent → the body is exactly as before. The
+ * poll itself (cadence, splice, fallback) is unchanged — HIS CALL #15.
  */
 import { useEffect, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -40,7 +47,10 @@ export type CardLiveState = { answer: CardLiveAnswer | null; footer: string | nu
 export function useCardLive(
   symbols: readonly string[],
   enabled: boolean,
-  opts: { resetKey: unknown; initialSession?: CmTapeSession | null; levels?: CardLiveLevels | null },
+  opts: {
+    resetKey: unknown; initialSession?: CmTapeSession | null; levels?: CardLiveLevels | null;
+    stream?: boolean; variant?: string | null;
+  },
 ): CardLiveState {
   const key = symbols.join(',');
   const [answer, setAnswer] = useState<CardLiveAnswer | null>(null);
@@ -54,6 +64,8 @@ export function useCardLive(
   sessionRef.current = opts.initialSession;
   const levelsRef = useRef<CardLiveLevels | null | undefined>(opts.levels);
   levelsRef.current = opts.levels;
+  const streamRef = useRef<{ on: boolean; variant: string | null }>({ on: false, variant: null });
+  streamRef.current = { on: opts.stream === true, variant: typeof opts.variant === 'string' ? opts.variant : null };
 
   // A new symbol set is a new board: forget the previous board's answer.
   useEffect(() => {
@@ -73,7 +85,8 @@ export function useCardLive(
     let timer: ReturnType<typeof setTimeout> | null = null;
     let ctrl: AbortController | null = null;
     let session: CmTapeSession | null = sessionRef.current ?? lastGood.current?.session ?? null;
-    /* The POST body: {symbols} — plus `levels` for the asked symbols that carry one, read at each tick. */
+    /* The POST body: {symbols} — plus `levels` for the asked symbols that carry one, plus `stream` + `variant` when the
+     * caller streams; read at each tick. */
     const asked = [...symsRef.current];
     const bodyNow = (): string => {
       const lv = levelsRef.current;
@@ -81,7 +94,11 @@ export function useCardLive(
       if (lv && typeof lv === 'object') {
         for (const s of asked) if (Object.prototype.hasOwnProperty.call(lv, s) && lv[s]) levels[s] = lv[s];
       }
-      return JSON.stringify(Object.keys(levels).length ? { symbols: asked, levels } : { symbols: asked });
+      const st = streamRef.current;
+      if (!st.on) return JSON.stringify(Object.keys(levels).length ? { symbols: asked, levels } : { symbols: asked });
+      return JSON.stringify({
+        ...(Object.keys(levels).length ? { symbols: asked, levels } : { symbols: asked }), stream: true, variant: st.variant,
+      });
     };
 
     const schedule = (ms: number) => {

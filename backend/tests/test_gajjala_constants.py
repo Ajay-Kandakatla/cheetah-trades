@@ -591,3 +591,61 @@ def test_NEGATIVE_the_vcp_switch_adds_no_second_number():
             and not isinstance(n.value, bool)]
     assert lits == []
     assert any(isinstance(n, ast.Name) and n.id == "K4_VCP_MIN_CYCLES" for n in ast.walk(fn))
+
+
+# ── ⏱ bar close + settle (GG LIVE spec §3.4, WP-C, 2026-11-09) ────────────────────────────────────────────────────
+# Ajay 2026-11-09: "can you modify and make it more live with websockets or something else where there is a low latency
+# monitoring on the prices action changes please?"
+BAR_CLOSE_NAMES = ("GAJJALA_BAR_CLOSE_MODE", "GAJJALA_BAR_FINAL_PROBE_SESSIONS", "BAR_CLOSE_LATE_MAX_SEC")
+
+
+def test_bar_close_values_and_the_derived_late_cap():
+    assert GC.GAJJALA_BAR_CLOSE_MODE == "probe"                          # HIS CALL #5: the pass timing does not move
+    assert GC.GAJJALA_BAR_FINAL_PROBE_SESSIONS == 5
+    assert GC.BAR_CLOSE_LATE_MAX_SEC == GC.PASS_MINUTE_OFFSET * 60 - GC.BAR_SETTLE_SEC == 30
+
+
+def test_bar_close_late_cap_is_built_never_retyped():
+    node = {n: v for n, v, _ln in _assigns()}["BAR_CLOSE_LATE_MAX_SEC"]
+    assert isinstance(node, ast.BinOp)
+    names = {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
+    assert names == {"PASS_MINUTE_OFFSET", "BAR_SETTLE_SEC"}, names
+    assert [n.value for n in ast.walk(node) if isinstance(n, ast.Constant)] == [60]   # only the seconds-per-minute
+
+
+def test_bar_close_lines_carry_their_tags():
+    lines = {n: ln for n, _v, ln in _assigns()}
+    assert _comment(lines["GAJJALA_BAR_CLOSE_MODE"]).startswith("TRANSPORT — HIS CALL #5")
+    assert _comment(lines["GAJJALA_BAR_FINAL_PROBE_SESSIONS"]).startswith("TRANSPORT — MINE")
+    assert _comment(lines["BAR_CLOSE_LATE_MAX_SEC"]).startswith("derived — MINE")
+    for n in BAR_CLOSE_NAMES:
+        assert not _comment(lines[n]).startswith("GG"), n                # NEGATIVE: none filed as GG's
+
+
+def test_bar_close_block_sits_after_the_on_open_block():
+    lines = {n: ln for n, _v, ln in _assigns()}
+    assert lines["ON_DEMAND_WAIT_MAX_SEC"] < min(lines[n] for n in BAR_CLOSE_NAMES) < lines["LEDGER_TTL_DAYS"]
+
+
+def test_NEGATIVE_the_bar_close_tag_guard_bites(monkeypatch):
+    import sys
+    ln = {n: ln for n, _v, ln in _assigns()}["GAJJALA_BAR_FINAL_PROBE_SESSIONS"]
+    fake = list(LINES)
+    fake[ln - 1] = "GAJJALA_BAR_FINAL_PROBE_SESSIONS = 5     # GG says five sessions"
+    monkeypatch.setattr(sys.modules[__name__], "LINES", fake)
+    with pytest.raises(AssertionError):
+        test_bar_close_lines_carry_their_tags()
+
+
+def test_NEGATIVE_the_bar_close_block_moves_no_pass_number():
+    assert (GC.PASS_MINUTE_OFFSET, GC.PASS_CADENCE_SEC, GC.PASS_BUDGET_SEC, GC.LEASE_SEC, GC.BAR_SETTLE_SEC) == (
+        1, 300, 240, 280, 30)
+
+
+def test_bar_close_probe_worker_cap():
+    """Critic review 2026-11-09: the probe's fetch concurrency is its own MINE number (2), below the house BAR_WORKERS."""
+    assert GC.GAJJALA_BAR_FINAL_PROBE_WORKERS == 2 < board.BAR_WORKERS
+    lines = {n: ln for n, _v, ln in _assigns()}
+    assert _comment(lines["GAJJALA_BAR_FINAL_PROBE_WORKERS"]).startswith("TRANSPORT — MINE")
+    assert lines["GAJJALA_BAR_FINAL_PROBE_SESSIONS"] < lines["GAJJALA_BAR_FINAL_PROBE_WORKERS"] < lines[
+        "BAR_CLOSE_LATE_MAX_SEC"]

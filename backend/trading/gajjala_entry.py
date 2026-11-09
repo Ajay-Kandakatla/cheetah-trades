@@ -64,9 +64,12 @@ from __future__ import annotations
 
 import logging
 import math
+import os
+import time
+import uuid
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
-from typing import Optional
+from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 from trading.broker import BrokerError, get_broker, round_price, MIN_STOP_GAP_USD, OPEN_STATUSES   # ⚓
@@ -144,6 +147,19 @@ _DAY_STATES = _LIVE_STATES + ("closed",)
 _EXIT_WORD = {"target": "target", "stop": "stop", "flatten": "flattened", "owner": "owner close",
               "carried": "carried", "trail": "trail exit"}
 _EMA_COL = {GC.EMA_FAST: "ema9", GC.EMA_SLOW: "ema21"}
+
+# ── LANE-RUN MUTEX (2026-11-09, GG LIVE spec §3.3 [C2 C3 C15]) — transport only, never a lane rule ─────────────────────
+# ONE mutex around the whole run() AND run_stream() for every caller (the cron minute tick, the api hub's bar-close run,
+# the api hub's stream attempts): the house lease primitive (chart_maps/gajjala/store.py claim_lease) — one
+# find_one_and_update(upsert) on gajjala_lane_state `_id "run_mutex"`; a held mutex makes the upsert collide on `_id`
+# (DuplicateKeyError = not acquired); released by token only; a holder past `until` is taken over.
+LANE_RUN_MUTEX_SEC = 55                                 # MINE — spec §3.3 (HIS CALL #8 names where P1 orders): under the 60 s tick, so a dead holder never blocks two ticks
+LANE_MUTEX_WAIT_SEC = 20                                # MINE — spec §3.3: the cron tick waits at most this long for the mutex, then "lane busy" (the next tick is 60 s later)
+LANE_MUTEX_POLL_SEC = 0.5                               # MINE — spec §3.3: the tick's re-try spacing while it waits
+MUTEX_ID = "run_mutex"
+MUTEX_NO_STORE = "no_store"                             # a state handle without the atomic primitive = no store (the house lease's rule): run unlocked
+LANE_BUSY_TEXT = "lane busy"
+ORDER_SOURCES = ("tick", "stream", "bar_close", "hub_claim")   # doc `order_source` (absent = "tick"; spec §3.3 / §3.6)
 
 ET = ZoneInfo("America/New_York")
 UTC = timezone.utc
@@ -963,6 +979,70 @@ def _dup_error():
         return _Never
 
 
+def _mono() -> float:
+    return time.monotonic()
+
+
+def _sleep(sec: float) -> None:
+    time.sleep(sec)
+
+
+def _mutex_now() -> datetime:
+    """The mutex is a wall-clock thing: never a replay `now`."""
+    return datetime.now(UTC)
+
+
+def _holder(source: str) -> str:
+    return f"{source}:{os.getpid()}"
+
+
+def _mutex_claim(scoll, now: datetime, holder: str) -> Optional[str]:
+    """ONE find_one_and_update on `_id "run_mutex"` matching a free mutex (`until` passed or absent), upsert — a held
+    mutex makes the upsert collide on `_id` → DuplicateKeyError → None. Token = acquired. A handle without the atomic
+    primitive (the lane's test fakes) = MUTEX_NO_STORE (unlocked, the house lease's no_store rule). Any other error →
+    None (refused, like the house lease). Never raises."""
+    if scoll is None or not callable(getattr(scoll, "find_one_and_update", None)):
+        return MUTEX_NO_STORE
+    token = uuid.uuid4().hex
+    try:
+        scoll.find_one_and_update(
+            {"_id": MUTEX_ID, "$or": [{"until": {"$lte": now}}, {"until": {"$exists": False}}]},
+            {"$set": {"holder": holder, "token": token, "claimed_at": now,
+                      "until": now + timedelta(seconds=LANE_RUN_MUTEX_SEC)}},
+            upsert=True)
+    except _dup_error():
+        return None
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: mutex claim failed: %s", type(exc).__name__)
+        return None
+    return token
+
+
+def _mutex_release(scoll, token: Optional[str]) -> bool:
+    """Token-filtered: a holder that was taken over releases NOTHING. True when a doc matched. Never raises."""
+    if scoll is None or not token or token == MUTEX_NO_STORE:
+        return False
+    try:
+        res = scoll.update_one({"_id": MUTEX_ID, "token": token}, {"$set": {"until": _mutex_now()}})
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: mutex release failed: %s", type(exc).__name__)
+        return False
+    return int(getattr(res, "matched_count", 0) or 0) > 0
+
+
+def _mutex_acquire(scoll, holder: str, wait_sec: float) -> tuple:
+    """(token | None, waited_ms): claim, re-trying every LANE_MUTEX_POLL_SEC; never sleeps past `wait_sec`."""
+    t0 = _mono()
+    deadline = t0 + max(0.0, float(wait_sec or 0.0))
+    while True:
+        tok = _mutex_claim(scoll, _mutex_now(), holder)
+        if tok is not None:
+            return tok, int(round((_mono() - t0) * 1000))
+        if _mono() + LANE_MUTEX_POLL_SEC > deadline:
+            return None, int(round((_mono() - t0) * 1000))
+        _sleep(LANE_MUTEX_POLL_SEC)
+
+
 def _find(coll, q: dict) -> list:
     try:
         return [d for d in coll.find(q)]
@@ -1736,8 +1816,9 @@ def _live_alerts(day: str, docs: list) -> list:
     return out
 
 
-def _claim(coll, cfg: dict, brk, now_et: datetime, day: str, out: dict) -> None:
-    """One lane doc per pushed alert id (insert_one; a duplicate key = already claimed). No freshness line (D7)."""
+def _claim(coll, cfg: dict, brk, now_et: datetime, day: str, out: dict, only_ids: Optional[set] = None) -> None:
+    """One lane doc per pushed alert id (insert_one; a duplicate key = already claimed). No freshness line (D7).
+    `only_ids` (2026-11-09, the hub's stream claim): claim only those alert ids."""
     docs = _alert_docs(day)
     if docs is None:
         out["errors"].append("the 🚩 A+ alerts could not be read")
@@ -1750,6 +1831,8 @@ def _claim(coll, cfg: dict, brk, now_et: datetime, day: str, out: dict) -> None:
     now_utc = now_et.astimezone(UTC)
     for a, raw in alerts:
         _id = raw["_id"]
+        if only_ids is not None and _id not in only_ids:
+            continue
         if _id in have or not isinstance(a.get("at_utc"), datetime):
             continue
         doc = {"_id": _id, "date": day, "symbol": a["symbol"], "setup": a["setup"],
@@ -1804,8 +1887,15 @@ def _halt_wait(doc: dict, now_et: datetime) -> tuple:
 
 
 def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads, out: dict, scoll=None,
-                 acct: Optional[dict] = None) -> None:
+                 acct: Optional[dict] = None, only_ids: Optional[set] = None,
+                 price_of: Optional[Callable] = None, source: str = "tick",
+                 stream_print: Optional[tuple] = None) -> None:
+    """Buy the waiting docs whose tape traded the trigger. 2026-11-09 (GG LIVE §3.3): `only_ids` filters the waiting
+    list (a stream attempt); `price_of(brk, sym) -> (px, src)` replaces `_live_last` (the stream print); `source` is
+    written as the doc's `order_source` when it is not the tick; `stream_print` = (px, print_t) of the stream print."""
     waiting = _find(coll, {"date": day, "state": "waiting"})
+    if only_ids is not None:
+        waiting = [d for d in waiting if d.get("_id") in only_ids]
     if not waiting:
         return
     far = "9999"
@@ -1820,7 +1910,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
     for doc in waiting:
         sym = (doc.get("symbol") or "").upper()
         try:
-            last, src = _live_last(brk, sym)
+            last, src = (price_of or _live_last)(brk, sym)
             if acct is None and last is not None:
                 try:
                     acct = brk.account() or {}
@@ -1872,6 +1962,14 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
                             "risk_usd": plan["risk_usd"], "risk_pct": plan["risk_pct"], "notional": plan["notional"],
                             "risk_basis": basis, "cushion_text": cush["text"], "month_pnl": cush["cushion"],
                             "cushion_need": cush["need"], "wait_reason": None})
+            # C2 (2026-11-09): ONE re-read per order attempt, inside the lane-run mutex — the live docs, the positions
+            # (cached per run), the slot count and the state doc — so an order another caller placed since the
+            # pre-loop read counts here; never looser than the pre-loop read (a failed read keeps it)
+            live_now = _find(coll, {"state": {"$in": list(_LIVE_STATES)}})
+            held |= {(d.get("symbol") or "").upper() for d in live_now}
+            held |= set(reads.positions())
+            open_n = max(open_n, len(live_now))
+            st = _state(scoll)
             if sym in held:
                 _skip(coll, doc, "waiting", "held", f"already holding {sym}", out, pfields, dry_run=dry)
                 continue
@@ -1902,6 +2000,10 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             except Exception:                                   # noqa: BLE001
                 cid = None
             ofl = dict(pfields, state="ordering", ordering_at=_iso(now_et.astimezone(UTC)), client_order_id=cid)
+            if source != "tick":                                # 2026-11-09: who ordered it (absent = the tick)
+                ofl["order_source"] = source
+            if stream_print is not None:
+                ofl.update(stream_print_px=_f(stream_print[0]), stream_print_t=stream_print[1])
             if not _move(coll, doc["_id"], "waiting", ofl):
                 continue
             doc.update(ofl)
@@ -1909,6 +2011,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             t, s, r, at, fate = doc.get("trigger"), doc.get("stop"), doc.get("r"), doc.get("alert_et"), fate_text(
                 dict(doc, state="ordered", ordered_et=_hhmm(now_et)))
             equity, risk = _f(acct_d.get("equity")), plan["risk_usd"]
+            t_enter = _mono()
             try:
                 res = TE.enter(sym, limit_price=None, stop_price=SL, strategy=STRATEGY, reason={"lane": STRATEGY, "alert_id": doc["_id"], "setup": setup, "trigger": t, "stop": s, "r": r, "alert_at": at, "why": fate, "cite": CITE}, sizing={"qty": qty, "basis": "gg_risk_pct", "price": E, "full_qty": plan["full_qty"], "risk_usd": risk, "risk_pct": plan["risk_pct"], "equity": equity}, floors=floors, tif="day", order_intent="gg-" + setup, allow_earnings=True, ceiling="gg", order_class="oto")  # ⚓
             except ValueError as exc:
@@ -1921,7 +2024,7 @@ def _try_waiting(coll, cfg: dict, brk, now_et: datetime, day: str, reads: _Reads
             now_utc = now_et.astimezone(UTC)
             ofields = {"state": "ordered", "order_id": (res or {}).get("order_id"),
                        "client_order_id": (res or {}).get("client_order_id") or cid, "ordered_at": _iso(now_utc),
-                       "ordered_et": _hhmm(now_et)}
+                       "ordered_et": _hhmm(now_et), "enter_ms": int(round((_mono() - t_enter) * 1000))}
             _move(coll, doc["_id"], "ordering", ofields)
             doc.update(ofields)
             out["ordered"] += 1
@@ -1964,13 +2067,19 @@ def _account_tick(brk, coll, scoll, now_et: datetime, out: dict, cfg: Optional[d
     return acct
 
 
-def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
-    """Manage what is in flight, then claim and buy today's pushed A+. Never raises past its own fence."""
+def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None, *, source: str = "tick") -> dict:
+    """Manage what is in flight, then claim and buy today's pushed A+. Never raises past its own fence.
+
+    2026-11-09 (GG LIVE §3.3): the whole run holds the lane-run mutex (taken right after the gate; the caller waits up
+    to LANE_MUTEX_WAIT_SEC, then `reason` "lane busy" and nothing else happens); `run_ms` / `mutex_wait_ms` served.
+    `source` "bar_close" = the api hub's LIVE bar-close run (HIS CALL #17); the default is the cron tick."""
     out = {"ok": True, "ran": False, "manage_only": False, "day": None, "gate": None, "claimed": 0, "waiting": 0, "ordered": 0,
            "skipped": 0, "cancelled": 0, "filled": 0, "closed": 0, "closing": 0, "dry_run": 0, "breakeven": 0,
            "added": 0, "trailed": 0, "partials": 0, "half_off": 0, "protected": 0, "restopped": 0, "halt_waiting": 0,
-           "drawdown": False,
+           "drawdown": False, "run_ms": None, "mutex_wait_ms": None,
            "errors": []}
+    t0 = _mono()
+    mcoll, token = None, None
     try:
         brk = broker if broker is not None else globals()["broker"]
         cfg = cfg if cfg is not None else get_config()
@@ -1988,11 +2097,17 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
             if g["enabled"] and not g["paper"]:
                 _disabled_once(cfg, g, day)
             return out
+        mcoll = _coll(STATE_COLL)
+        token, out["mutex_wait_ms"] = _mutex_acquire(mcoll, _holder(source), LANE_MUTEX_WAIT_SEC)
+        if token is None:
+            out["reason"] = LANE_BUSY_TEXT
+            log.info("gajjala lane: %s — the %s run skipped (another lane run holds the mutex)", LANE_BUSY_TEXT, source)
+            return out
         coll = _coll(LANE_COLL)
         if coll is None:
             out["errors"].append("the lane store is not available")
             return out
-        scoll = _coll(STATE_COLL)
+        scoll = mcoll
         out["ran"] = True
         since = datetime.combine(now_et.date(), dtime(0, 0), tzinfo=ET) - timedelta(days=4)
         reads = _Reads(brk, _iso(since))
@@ -2002,11 +2117,79 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
         if manage_only or not in_entry_window(now_et):
             return out
         _claim(coll, cfg, brk, now_et, day, out)
-        _try_waiting(coll, cfg, brk, now_et, day, reads, out, scoll=scoll, acct=acct)
+        _try_waiting(coll, cfg, brk, now_et, day, reads, out, scoll=scoll, acct=acct,
+                     source="tick" if source not in ORDER_SOURCES else source)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala lane run failed: %s", exc)
         out["ok"] = False
         out["errors"].append("%s: %s" % (type(exc).__name__, exc))
+    finally:
+        if token is not None:
+            _mutex_release(mcoll, token)
+        out["run_ms"] = int(round((_mono() - t0) * 1000))
+    return out
+
+
+def run_stream(doc_id: Optional[str], *, last: Optional[float] = None, source: str = "stream:T",
+               print_t: Optional[str] = None, claim_ids: Optional[list] = None, price_of: Optional[Callable] = None,
+               broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+    """The api hub's stream attempt (GG LIVE §3.3; LIVE stream mode only — HIS CALL #1): run()'s gate (the
+    authoritative broker clock, one call) + the lane-run mutex tried ONCE (busy → the doc stays waiting, the 1-minute
+    tick takes it) + the claim of `claim_ids` only + `_try_waiting` on those docs (or `doc_id`) priced by `price_of`
+    (else the stream print `last`). NO `_manage`, NO `_account_tick`. Same rules, same caps, same paper gate. Never
+    raises."""
+    out = {"ok": True, "ran": False, "day": None, "gate": None, "source": source, "claimed": 0, "waiting": 0,
+           "ordered": 0, "skipped": 0, "dry_run": 0, "halt_waiting": 0, "run_ms": None, "mutex_wait_ms": None,
+           "errors": []}
+    t0 = _mono()
+    mcoll, token = None, None
+    osrc = "hub_claim" if claim_ids else "stream"
+    try:
+        brk = broker if broker is not None else globals()["broker"]
+        cfg = cfg if cfg is not None else get_config()
+        now_et = _as_et(now) if now is not None else _now_et()
+        day = now_et.date().isoformat()
+        out["day"] = day
+        g = gate(cfg, _mode(brk), _market_open(brk))
+        out["gate"] = g
+        if not g["ok"] or not in_entry_window(now_et):
+            return out
+        coll = _coll(LANE_COLL)
+        if coll is None:
+            out["errors"].append("the lane store is not available")
+            return out
+        mcoll = _coll(STATE_COLL)
+        token = _mutex_claim(mcoll, _mutex_now(), _holder(osrc))
+        out["mutex_wait_ms"] = 0
+        if token is None:
+            out["reason"] = LANE_BUSY_TEXT
+            return out
+        out["ran"] = True
+        ids = {str(i) for i in (claim_ids or []) if i}
+        if ids:
+            _claim(coll, cfg, brk, now_et, day, out, only_ids=set(ids))
+        if doc_id:
+            ids.add(str(doc_id))
+        if not ids:
+            return out
+        if price_of is None and _f(last) is not None:
+            px, src_word = _f(last), source
+
+            def price_of(_brk, _sym):                           # noqa: E306 — the stream print is "the last"
+                return px, src_word
+        since = datetime.combine(now_et.date(), dtime(0, 0), tzinfo=ET) - timedelta(days=4)
+        reads = _Reads(brk, _iso(since))
+        sp = (_f(last), print_t) if (osrc == "stream" and _f(last) is not None) else None
+        _try_waiting(coll, cfg, brk, now_et, day, reads, out, scoll=mcoll, only_ids=ids, price_of=price_of,
+                     source=osrc, stream_print=sp)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane stream run failed: %s", exc)
+        out["ok"] = False
+        out["errors"].append("%s: %s" % (type(exc).__name__, exc))
+    finally:
+        if token is not None:
+            _mutex_release(mcoll, token)
+        out["run_ms"] = int(round((_mono() - t0) * 1000))
     return out
 
 
@@ -2065,7 +2248,18 @@ def status_block(cfg: Optional[dict] = None, docs: Optional[list] = None) -> dic
         "empty_today_text": EMPTY_TODAY_TEXT,
         "disabled_text": None if g["enabled"] else disabled_text(d),
         "live_text": None if g["paper"] else LIVE_TEXT,
+        "stream": _stream_status(),
     }
+
+
+def _stream_status() -> dict:
+    """2026-11-09 (GG LIVE §3.3): the 🛰 stream-entry block (mode + the served word) — in-memory, no Mongo, no broker."""
+    try:
+        from trading import gajjala_stream as GS
+        return GS.status()
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("gajjala lane: stream status unread: %s", exc)
+        return {"mode": None, "word": None, "prints_today": 0, "first_prints_today": 0}
 
 
 ROW_KEYS = ("id", "symbol", "setup", "setup_label", "alert_et", "trigger", "stop", "r", "r_pct", "state", "skip_kind",

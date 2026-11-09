@@ -370,8 +370,12 @@ def test_recount_and_trim_are_no_ops_without_the_source():
 
 def test_main_wires_the_stored_reader_and_default_deps_never_do():
     assert RUN.Deps().promo_tags is None and "promo_tags" not in inspect.getsource(RUN.dry_deps)
+    # WIDENED 2026-11-09 (GG LIVE §3.4): the cron path's Deps moved into ONE helper, `_cron_deps()`, shared with the
+    # ⏱ bar-close child — main() still wires the stored reader on BOTH paths (cron via the helper, the open inline).
     src = inspect.getsource(RUN.main)
-    assert "promo_tags=PN.default_tags" in src and src.count("promo_tags=PN.default_tags") == 2
+    helper = inspect.getsource(RUN._cron_deps)
+    assert "deps=_cron_deps()" in src and "promo_tags=PN.default_tags" in helper
+    assert (src + helper).count("promo_tags=PN.default_tags") == 2
     body = inspect.getsource(RUN.run_pass)
     i, j, k = body.index("TN.run_step("), body.index("PN.run_step("), body.index("SC.record_scan(")
     assert i < j < k and body.index("PN.recount(result)") > body.index("TN.recount(result)") > k

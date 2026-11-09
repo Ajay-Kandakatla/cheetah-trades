@@ -146,6 +146,11 @@ def vwap(prices: list[float], volumes: list[float]) -> float | None:
 # ---------------------------------------------------------------------------
 _LIVE_CACHE_COLL = None
 _LIVE_CACHE_DISABLED = False
+# GG LIVE 2026-11-09 (spec §3.1, C11 — a DECLARED QuoteCache change): the Mongo persist of the latest quote per symbol
+# left the awaited per-trade path. update() parks the merged doc in a latest-wins dict; ONE background task drains it
+# every LIVE_CACHE_PERSIST_SEC through asyncio.to_thread. Payload, lock, indicators, `quote.update` and the restart
+# re-seed are unchanged (the re-seed is at most this much older).
+LIVE_CACHE_PERSIST_SEC = 1.0      # MINE
 
 
 def _live_cache_mongo():
@@ -177,6 +182,7 @@ class QuoteCache:
         self._data: dict[str, dict] = {}
         self._ticks: dict[str, deque] = {}   # deque of (price, volume)
         self._lock = asyncio.Lock()
+        self._persist_pending: dict[str, dict] = {}   # symbol → the LAST merged doc (latest wins)
 
     async def hydrate_from_mongo(self) -> int:
         """Seed in-memory cache from the live_quote_cache collection.
@@ -237,21 +243,43 @@ class QuoteCache:
             }, min_interval_s=0.5)
         except Exception as exc:
             log.debug("bus publish quote.update failed for %s: %s", symbol, exc)
-        # Best-effort persist outside the lock so Mongo latency doesn't
-        # stall the WS loop.
+        # Persist is COALESCED off this path (2026-11-09, C11): the old awaited
+        # per-trade upsert sat on the WS read loop. The drain task writes the
+        # latest doc per symbol once per LIVE_CACHE_PERSIST_SEC.
+        self._persist_pending[symbol] = merged
+        return merged
+
+    def _persist_batch(self, batch: dict) -> int:
+        """Worker-thread half of the drain: one upsert per symbol (the latest doc)."""
         coll = _live_cache_mongo()
-        if coll is not None:
+        if coll is None:
+            return 0
+        n = 0
+        stamp = time.time()
+        for symbol, merged in batch.items():
             try:
-                doc = {**merged, "_persisted_at": time.time()}
-                await asyncio.to_thread(
-                    coll.update_one,
-                    {"symbol": symbol},
-                    {"$set": doc},
-                    True,  # upsert
-                )
+                coll.update_one({"symbol": symbol}, {"$set": {**merged, "_persisted_at": stamp}}, True)
+                n += 1
             except Exception as exc:
                 log.debug("live cache persist failed for %s: %s", symbol, exc)
-        return merged
+        return n
+
+    async def flush_persist(self) -> int:
+        """Write every pending latest doc once (off the event loop). Returns how many were written."""
+        if not self._persist_pending:
+            return 0
+        batch, self._persist_pending = self._persist_pending, {}
+        try:
+            return await asyncio.to_thread(self._persist_batch, batch)
+        except Exception as exc:
+            log.debug("live cache persist drain failed: %s", exc)
+            return 0
+
+    async def persist_drain(self, interval: float = LIVE_CACHE_PERSIST_SEC) -> None:
+        """The ONE background persist task (lifespan)."""
+        while True:
+            await asyncio.sleep(interval)
+            await self.flush_persist()
 
     async def snapshot(self) -> dict[str, dict]:
         async with self._lock:
@@ -542,8 +570,13 @@ async def lifespan(app: FastAPI):
                     await subscribe_symbols([s])
         except Exception as exc:
             log.warning("initial accumulation focus seed failed: %s", exc)
+        # 🛰 GG LIVE 2026-11-09 (spec §3.1/§3.2): the hub's watch set rides THIS socket through the ONE ordered
+        # control queue; `_handle` routes a hub symbol's print to the hub FIRST, then tracked → cache.
+        import live_hub
+        live_feed.set_views(tracked_symbols, live_hub.watched, _ws_subscribe_queue)
         tasks.append(asyncio.create_task(
             live_feed.massive_ws_consumer(cache, tracked_symbols, _ws_subscribe_queue, _ws_q_subscribe_queue)))
+        tasks.append(asyncio.create_task(live_hub.run()))
         tasks.append(asyncio.create_task(
             live_feed.massive_snapshot_poller(cache, tracked_symbols, bulk_snapshot)))
         tasks.append(asyncio.create_task(_accumulation_focus_refresher()))
@@ -559,6 +592,9 @@ async def lifespan(app: FastAPI):
             "FINNHUB_POLLER_ENABLED=false — skipping Finnhub WS + REST poller "
             "(legacy live-quote cache will be empty; /finnhub-v2/* layer unaffected)"
         )
+    # The coalesced QuoteCache persist (2026-11-09, C11) — every feed path writes through
+    # QuoteCache.update, so the drain runs whichever feed (if any) is live.
+    tasks.append(asyncio.create_task(cache.persist_drain()))
     # Mac SSE drain — pulls from mac_outbox Mongo collection and fans out to
     # live native-app SSE clients. Cheap (200ms poll, single-row finds).
     from push import mac_stream as _mac_stream
@@ -569,6 +605,10 @@ async def lifespan(app: FastAPI):
     finally:
         for t in tasks:
             t.cancel()
+        try:
+            await cache.flush_persist()      # the last ≤ 1 s of quotes, so a restart re-seeds them
+        except Exception as exc:
+            log.debug("final live cache flush failed: %s", exc)
 
 
 app = FastAPI(title="Market Stream", lifespan=lifespan)
@@ -1912,25 +1952,27 @@ async def sepa_live_price(symbol: str):
 
 
 @app.get("/live/feed-status")
-async def live_feed_status():
+async def live_feed_status(events: int = Query(0), email: str = Depends(current_user_email)):
     """Health of the real-time quote feed — which source is active, whether the
     Massive WebSocket is connected/authenticated, and how fresh the last tick is.
 
     Use after a deploy to confirm prod is genuinely live: ``active_source``
     should be ``massive_ws`` and ``last_trade_age_s`` a few seconds during RTH.
+
+    2026-11-09 (GG LIVE §3.1): + kicks / blind seconds / resume / lag / message
+    rate, the served ``state`` + ``word`` (printed on /alerts). ``admin_word``
+    and ``?events=1`` (the last kick-timeline rows) for admins only. The stocks
+    key never appears (live_feed.status_payload scrubs every string).
     """
-    now = time.time()
-    st = dict(live_feed.feed_state)
-    st["tracked"] = len(tracked_symbols)
-    st["active_source"] = (
-        "massive_ws" if live_feed.enabled()
-        else ("finnhub" if _finnhub_poller_enabled() else "none")
+    from auth import is_admin_email
+    on = live_feed.enabled()
+    return live_feed.status_payload(
+        tracked_n=len(tracked_symbols),
+        admin=is_admin_email(email),
+        events=bool(events),
+        active_source=("massive_ws" if on else ("finnhub" if _finnhub_poller_enabled() else "none")),
+        is_enabled=on,
     )
-    if st.get("last_trade_ts"):
-        st["last_trade_age_s"] = round(now - st["last_trade_ts"], 1)
-    if st.get("last_msg_ts"):
-        st["last_msg_age_s"] = round(now - st["last_msg_ts"], 1)
-    return st
 
 
 @app.get("/live/accumulation")

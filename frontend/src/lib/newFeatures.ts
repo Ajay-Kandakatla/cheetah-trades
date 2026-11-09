@@ -22,6 +22,26 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 ~01:00 ET (verbatim in the label, his spelling kept): "I would like the autopilot to be continously
+  // monitored or live tracked and changed as if Gallalas makes the trades can you modify and make it more live with
+  // websockets or something else where there is a low latency monitoring on the prices action changes please?" and "same
+  // for reuglar Gajjlas tab as well need it to be more live". GG LIVE (spec gg_live rev 2, WP-A..E + Z) — no rule, gate,
+  // push kind or pass time moved; the A+ is still the 5-minute bar CLOSED through the trigger. Shipped: (P0) the ONE
+  // Massive socket's kick timeline (live_feed_events) + served FEED_WORDS / admin_word on GET /live/feed-status, printed
+  // verbatim on /alerts; _RECONNECT_COOLDOWN unchanged (docs/realtime/socket_kick_2026_11_09.md, canary NOT run — HIS
+  // CALL #10). (P1) the lane's stream entries in SHADOW (trading/gajjala_stream.GG_STREAM_MODE "shadow", env lowers only):
+  // the first print at/over the trigger is recorded in gajjala_lane_stream beside the 1-minute tick — zero orders change;
+  // the lane-run mutex around run()/run_stream(). (P2) the pass's bar-close finality PROBE (chart_maps/gajjala/constants
+  // GAJJALA_BAR_CLOSE_MODE "probe", GAJJALA_BAR_FINAL_PROBE_SESSIONS sessions) — pass timing unchanged (docs/gajjala/
+  // bar_close_pass_2026_11_09.md). (P3) the 🚩 boards live over the existing /events bus (gajjala.update: quotes batched
+  // per GG_LIVE_QUOTE_BATCH_SEC, pass + lane nudges coalesced GG_PASS_NUDGE_DEBOUNCE_MS); the 30 s card poll stays as the
+  // fallback (docs/gajjala/live_tab_2026_11_09.md). (P4) the ⏱ latency ledger on the 🏁 (GET /trading/gajjala/latency,
+  // owner only; split at latency.GG_LIVE_FROM) with the measured "before" — §1.4, n 47 pushed live GG: A+ since
+  // 2026-10-01: Read 61.0 · Rang 70.6 · Lane saw 122.0 · Ordered 124.0 · Filled 127.0 s p50 (docs/gajjala/
+  // latency_ledger_2026_11_09.md). HIS CALLs #1–#19 in SPECS.md. UNMEASURED — a timing, not a result. Pinned by
+  // scripts/contracts.mjs ("⏱ Gajjala live … (2026-11-09)").
+  { id: 'chart-maps-gajjala-live-stream-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala&sub=track_record',
+    label: "⏱ Gajjala live — you said: “I would like the autopilot to be continously monitored or live tracked and changed as if Gallalas makes the trades can you modify and make it more live with websockets or something else where there is a low latency monitoring on the prices action changes please?” and “same for reuglar Gajjlas tab as well need it to be more live”. No rule moved: the A+ still needs the 5-minute bar to CLOSE through the trigger. 🚩 Gajjala's tabs now ride the live price stream: card prices update about once a second while the stream is live, and a finished pass shows up within seconds instead of on the next refresh; the 30 s refresh stays as the fallback. /alerts prints the stream's own line, so you see when another connection on the Massive key takes the stream. The Auto-Pilot lane: stream entries run in SHADOW — the first print at or over the trigger is recorded beside the 1-minute check, and orders still go on the 1-minute check, so zero orders change. The 5-minute pass: a PROBE measures whether the bar is final 30 s after it closes; the pass timing is unchanged. On the 🏁 Track record, a new ⏱ Speed block (owner only) shows the seconds after the bar closed — before today: Read 61.0 · Rang 70.6 · Lane saw 122.0 · Ordered 124.0 · Filled 127.0 s (p50). Stream entries LIVE and the earlier pass are your calls, after the ⏱ numbers. UNMEASURED — a timing, not a result. Not advice." },
   // Ajay 2026-11-09 (verbatim in the label, his spelling kept): "yes change the audit as per you like that is yours I need
   // you to make it successful and earn money that is the goal". 🧪 K3S (backend chart_maps/gajjala/audited_rules.K3S, a
   // third registry KIND `admit`, prereg eod-audits/research/2026-11-09_gajjala_audited_k3s_prereg.md sha256 be966681e317…):

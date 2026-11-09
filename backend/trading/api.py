@@ -28,6 +28,8 @@ POST /trading/sim-reset?confirm=yes wipe SIM broker state (admin, sim-only)
 GET  /trading/gajjala               🚩 Gajjala paper lane tab: status, today's
                                     pushed A+ alerts with their fates, recent,
                                     journal (admin)
+GET  /trading/gajjala/latency?span=  ⏱ Speed: bar close → ring → lane
+                                    order / fill seconds (admin, read only)
 POST /trading/gajjala/close/{symbol}  owner closes / cancels the lane's
                                     position on one name now (admin, armed)
 GET  /trading/ledger?limit=100      trade_ledger tail
@@ -343,6 +345,17 @@ async def trading_gajjala(email: str = Depends(current_user_email)):
     _require_admin(email)
     from trading import gajjala_entry
     return JSONResponse(await asyncio.to_thread(gajjala_entry.tab_payload))
+
+
+@router.get("/gajjala/latency")
+async def trading_gajjala_latency(span: str = "", email: str = Depends(current_user_email)):
+    """⏱ Speed (GG LIVE P4, 2026-11-09): seconds from the 5-minute entry bar's
+    close to the ring, the lane's first sight, order and fill, per span — the
+    🏁's own span keys. Read only; owner only (the lane's order and fill
+    times). Words served by chart_maps.gajjala.latency.payload."""
+    _require_admin(email)
+    from chart_maps.gajjala import latency
+    return JSONResponse(await asyncio.to_thread(latency.payload, span or None))
 
 
 @router.post("/gajjala/close/{symbol}")

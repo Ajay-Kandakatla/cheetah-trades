@@ -54,6 +54,11 @@ services:
       # free-tier 30/min cap. The new /finnhub-v2/* layer in this dev
       # stack has its own rate limiter and is plenty for testing.
       FINNHUB_POLLER_ENABLED: "false"
+      # 2026-11-09 (GG LIVE §3.1): the Massive account allows ONE stocks socket; a
+      # dev api on the same .env key would open a SECOND one and kick prod's live
+      # feed. live_feed.enabled() also refuses `auto` on CHEETAH_ENV=dev — this is
+      # the explicit belt to that brace.
+      MASSIVE_WS_ENABLED: "false"
     extra_hosts:
       # Required on Linux where host.docker.internal is not a built-in
       # alias. host-gateway is the official Docker shorthand.

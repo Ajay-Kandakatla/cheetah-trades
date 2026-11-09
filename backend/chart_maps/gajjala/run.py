@@ -46,6 +46,11 @@ Gajjals-Audited"): after the pass summary and before the 🧠 gate, `audited_pas
 own fence, and writes ONLY the gajjala_audited_* collections (SHADOW, never sent; never a key of the summary, never an
 `errors` entry — a failure is logged).
 
+⏱ 2026-11-09 — bar close + settle (GG LIVE spec §3.4; Ajay "make it more live with websockets or something else where
+there is a low latency monitoring on the prices action changes"): the cron path also spawns ONE detached
+`--at-bar-close` child (bar_close.py). Shipped in `probe` mode (GAJJALA_BAR_CLOSE_MODE, HIS CALL #5): it measures whether
+the bar is final at close + BAR_SETTLE_SEC and writes gajjala_bar_final only — the pass timing (`:x1`) does not change.
+
 Every dependency is injected (`Deps`), so the tests run the real scanner, bars and detectors on fixture rows. UNMEASURED:
 nothing here trades, sizes or enters a lane.
 """
@@ -747,6 +752,32 @@ def dry_deps() -> Deps:
     return d
 
 
+def _cron_deps() -> Deps:
+    """The cron path's Deps — the 📌 in-pass re-read and the 🎪 tags on, everything else the defaults. ONE definition
+    (GG LIVE spec §3.4, 2026-11-09): run.main's cron path and the ⏱ bar-close child in `on` mode (bar_close.wait_and_run)
+    both call run_pass with it."""
+    from . import trader_names as TN
+    from . import promo_names as PN
+    return Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)
+
+
+def _spawn_bar_close() -> None:
+    """⏱ Bar close + settle (2026-11-09, GG LIVE spec §3.4 — Ajay "make it more live with websockets or something else
+    where there is a low latency monitoring on the prices action changes"): at the end of the CRON pass, SPAWN the
+    bar-close child (`--at-bar-close`) DETACHED and return at once — the 1-minute loop's rule, never in-process. Not
+    when bar_close.mode() is "off". Fenced: one log line, never raises, never changes the exit code. Not on --dry-run /
+    --now / --on-demand / --symbols / --at-bar-close (the child never spawns a child)."""
+    try:
+        from . import bar_close as BC
+        if BC.mode() == "off":
+            log.info("gajjala bar-close: off (GAJJALA_BAR_CLOSE_MODE) — not spawned")
+            return
+        ok = BC.spawn_child()
+        log.info("gajjala bar-close: %s", "spawned" if ok else "spawn failed")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala bar-close: spawn step failed: %s", type(exc).__name__)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="chart_maps.gajjala.run", description=__doc__.split("\n")[0])
     ap.add_argument("--dry-run", action="store_true", help="record every write and send; touch nothing")
@@ -755,8 +786,14 @@ def main(argv=None) -> int:
     ap.add_argument("--symbols", help="comma list: narrow the names read (a dry run reads them even when not listed)")
     ap.add_argument("--on-demand", action="store_true",
                     help="the owner's on-open pass (run_on_demand: push gates dry, short budget, no Yahoo) — 2026-10-15")
+    ap.add_argument("--at-bar-close", action="store_true",
+                    help="⏱ the bar-close child (bar_close.wait_and_run; the cron path spawns it) — 2026-11-09")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    if args.at_bar_close:                                       # ⏱ GG LIVE §3.4: its own refusals, wall clock, no child
+        from . import bar_close as BC
+        res = BC.wait_and_run()
+        return 1 if res.get("status") == "error" else 0
     now = datetime.fromisoformat(args.now) if args.now else None
     if now is not None and now.tzinfo is None:
         now = now.replace(tzinfo=ET)                            # a naive --now is ET (the house rule), never UTC
@@ -787,13 +824,11 @@ def main(argv=None) -> int:
             from . import promo_names as PN
             out = run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags))
         else:
-            from . import trader_names as TN
-            from . import promo_names as PN
-            out = run_pass(now, store=st, deps=Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags),
-                           symbols=syms)
+            out = run_pass(now, store=st, deps=_cron_deps(), symbols=syms)
             if not syms and not args.now:
                 _spawn_1m()                                     # 🚩 1-minute page (2026-10-27): the cron path only
                 _spawn_luk()                                    # 🥇 Luk's (2026-11-01): the same cron-only rule
+                _spawn_bar_close()                              # ⏱ bar close + settle (2026-11-09): the same rule
     if args.json:
         print(json.dumps(out, default=str))
     elif args.on_demand:

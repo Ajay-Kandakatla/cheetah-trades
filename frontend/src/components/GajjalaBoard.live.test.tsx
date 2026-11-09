@@ -168,7 +168,8 @@ describe('GajjalaBoard — 🔴 live cards: the poll', () => {
     await mount('tab=gajjala&sub=premarket');
     await advance(CARD_LIVE_MS + 100);
     expect(posts().length).toBe(1);
-    expect(body(0)).toEqual({ symbols: ['LIFW', 'YJ'] });
+    // 2026-11-09 (GG LIVE §3.5, predicted pin): the board streams — `stream` + `variant` ride along; still NO levels
+    expect(body(0)).toEqual({ symbols: ['LIFW', 'YJ'], stream: true, variant: 'gajjala' });
   });
 
   it('NEGATIVE: refresh_sec 0 (closed) → zero POSTs over three cadences, no footer', async () => {

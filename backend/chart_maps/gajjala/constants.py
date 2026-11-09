@@ -190,6 +190,16 @@ ON_DEMAND_BUDGET_SEC = 45                # TRANSPORT — MINE (HIS CALL Q4): the
 CRON_WAIT_ON_DEMAND_SEC = ON_DEMAND_BUDGET_SEC   # derived — MINE (DECISIONS5 C1): a cron tick waits at most the on-open budget for an on-open pass, then takes the lease over
 ON_DEMAND_POLL_SEC = 5                   # TRANSPORT — MINE (HIS CALL Q4): a waiter (the cron on the lease, the board on the GET) re-checks every 5 s
 ON_DEMAND_WAIT_MAX_SEC = 2 * ON_DEMAND_BUDGET_SEC   # derived — MINE (HIS CALL Q4): the board stops waiting after 90 s (an on-open pass plus its tail, or a typical cron pass); the 5-minute re-read takes over
+# ⏱ bar close + settle (Ajay 2026-11-09: "make it more live with websockets or something else where there is a low latency
+# monitoring on the prices action changes"; GG LIVE spec §3.4, WP-C). Pacing only: nothing lists, reads, gates or pushes on
+# these numbers, and the pass stays on the crontab's `:x1` minute. `probe` = a detached child per cron tick reads the bar that
+# just closed TWICE (close + BAR_SETTLE_SEC and close + PASS_MINUTE_OFFSET minutes — the cron pass's own read moment) for
+# ≤ GG1M_MAX_NAMES names and writes gajjala_bar_final; `on` = the pass itself at close + BAR_SETTLE_SEC. An env value can
+# only LOWER the mode (chart_maps/gajjala/bar_close.mode), never raise it.
+GAJJALA_BAR_CLOSE_MODE = "probe"         # TRANSPORT — HIS CALL #5 of docs/gajjala/bar_close_pass_2026_11_09.md: "off" | "probe" | "on" (on = the pass at close + 30 s, only on his word after the "Bar finality" line)
+GAJJALA_BAR_FINAL_PROBE_SESSIONS = 5     # TRANSPORT — MINE (GG LIVE spec C5): the probe stops itself ("probe complete") once gajjala_bar_final holds 5 session dates
+GAJJALA_BAR_FINAL_PROBE_WORKERS = 2      # TRANSPORT — MINE (GG LIVE critic review 2026-11-09): the probe's fetch concurrency; its second read lands beside the cron pass's own ~150-frame fetch (separate process, own 429 breaker) — 2 never crowds the REAL pass
+BAR_CLOSE_LATE_MAX_SEC = PASS_MINUTE_OFFSET * 60 - BAR_SETTLE_SEC   # derived — MINE: a child that wakes later than this after its target reads no earlier than the `:x1` cron pass would → refuses (late) → 30
 # Mongo retention (spec §3.1.6)
 LEDGER_TTL_DAYS = 30                     # TRANSPORT — gajjala_scan / _ah_carry / _post / _passes / _daily
 READS_TTL_DAYS = 14                      # TRANSPORT — gajjala_reads (tile bars are the bulk)

@@ -256,6 +256,83 @@ served words and the rules_info line. Mutations proved on scratch copies (2026-1
 read, the partial without the add fill, strength at an equal close, open docs in the month P&L, the halt wait off,
 Kiss & Fly on the 9, double during a loss streak, the cushion across months.
 
+## Stream entries (shadow) 2026-11-09
+
+Ajay 2026-11-09: "I would like the autopilot to be continously monitored or live tracked and changed as if Gallalas
+makes the trades can you modify and make it more live with websockets or something else where there is a low latency
+monitoring on the prices action changes please?" (spec `gg_live/spec.md` rev 2, P1 / WP-B).
+
+No lane rule or number moved (`GAJJALA_RISK_PCT`, `GG_BE_AFTER_BARS`, the trail EMAs, the flatten / cut-off,
+`GAJJALA_MAX_OPEN`, `GAJJALA_FILL_WAIT_SEC`, `GAJJALA_MISSED_R`, floors, `WINDOW_OPEN_ET`, regular hours only). The A+
+is still the 5-minute bar CLOSED through the trigger; P1 changes only how fast the lane reacts after the push and
+records what the stream would have done.
+
+- `backend/trading/gajjala_stream.py` (new). The api's live hub (`live_hub`, the ONE Massive socket, the ONE print
+  filter `live_hub.PRINT_KINDS`) hands it every filtered print on a lane / A+ name (`on_print`), every newly pushed
+  live A+ (`on_new_aplus`) and every closed 5-minute bar + `BAR_SETTLE_SEC` (`on_bar_close`).
+- `GG_STREAM_MODE = "shadow"` (HIS CALL #1). The env `GG_STREAM_MODE` only LOWERS it (live → shadow → off), never
+  raises it. SHADOW makes ZERO broker calls: on a waiting doc it records, insert-once, in `gajjala_lane_stream`
+  (`_id "{doc_id}|{event}"`): `trigger` = the first regular print at/over the trigger, `trigger_lot` = the first such
+  print that is not an odd lot (condition 37), `stop` = the first print at/under the stop; a new A+ → `{id}|seen` (when
+  the lane WOULD have claimed it). Each row: `print_px`, `print_size`, `conditions`, `odd_lot`, `print_t` (SIP, UTC),
+  `recv_t` (UTC, ms), `lag_ms`, `mode`. Orders still go on the 1-minute exit_engine tick.
+- The memo (`written` / `pending` per `doc|event`, rebuilt from today's rows on start) means a print whose event is
+  already recorded costs no Mongo and no job — 1,000 prints at the trigger = one row. A row whose Mongo write FAILED is not memoised: the next qualifying print retries, at most `GG_STREAM_ROW_MAX_TRIES = 2` (MINE, critic 2026-11-09) tries a day, then it is given up and logged (no per-print retry storm).
+- LIVE (only on his word): the same rows, then `gajjala_entry.run_stream` — the lane's own gate (one broker clock),
+  the lane-run mutex tried ONCE, `_try_waiting` on that doc priced by the print (`last_source "stream:T"`); a new A+ is
+  claimed and priced from the stream when the last print is ≤ `GG_STREAM_FRESH_SEC` (= 2 × `live_hub.HUB_POLL_SEC`)
+  old, else ONE `_live_last`. `GG_STREAM_RECHECK_SEC = 15` (MINE) between attempts on one doc;
+  `GG_STREAM_ALPACA_PER_MIN = 60` (MINE) token bucket (≤ 30 % of Alpaca's 200/min). The bar-close lane run
+  (`run(source="bar_close")`) only in LIVE (HIS CALL #17).
+- Docs it orders carry `order_source` (`stream` | `hub_claim` | `bar_close`; absent = the tick) and, for a print,
+  `stream_print_px` / `stream_print_t` — NOT in `ROW_KEYS` (the tab rows are unchanged). Every entry's `TE.enter` is
+  timed → `enter_ms`.
+- Served: `status_block.stream = {mode, word, prints_today, first_prints_today}` (additive; the tab prints `word`
+  verbatim): SHADOW "🛰 Stream entries: SHADOW — the first regular print at or over the trigger is recorded; orders
+  still go on the 1-minute check."
+- The lane tab: a `gajjala.update` event of kind `lane` on the one SSE bus (data-free) re-GETs the tab once (nudges
+  inside `LANE_NUDGE_COALESCE_MS` 500 ms collapse) and restarts the `POLL_MS` interval — the GET count per open tab
+  stays today's. `quotes` / `pass` events never reload the lane.
+
+### The lane-run mutex (2026-11-09, spec §3.3 C2 / C3 / C15)
+
+ONE mutex around the whole `run()` and `run_stream()` for every caller — the cron minute tick, the hub's bar-close run,
+the hub's stream attempts — so no broker write can overlap. The house lease primitive (`chart_maps/gajjala/store.py`
+`claim_lease`): ONE `find_one_and_update({_id: "run_mutex", until passed or absent}, $set {holder, token, until},
+upsert)` on `gajjala_lane_state`; a held mutex collides on `_id` (DuplicateKeyError = not acquired); released
+`update_one({_id, token: mine}, {until: now})` — a stale holder never frees a new one; a holder past `until` is taken
+over. `LANE_RUN_MUTEX_SEC = 55` (MINE: under the 60 s tick, a dead holder never blocks two ticks);
+`LANE_MUTEX_WAIT_SEC = 20` / `LANE_MUTEX_POLL_SEC = 0.5` (MINE): the tick waits at most 20 s, then `reason "lane
+busy"` and nothing else that tick (the OTO stop sits at the broker; the next tick is 60 s later); `run_stream` never
+waits. A state handle without the atomic primitive runs unlocked (the house `no_store` rule); a failing claim refuses.
+`run()` serves `run_ms` and `mutex_wait_ms` (additive). Inside the mutex, right before the cap check, ONE re-read of the
+live docs / positions / `open_n` / the state doc per order attempt (C2): an order another caller placed since the
+pre-loop read counts (`cap_open`, `held`); never looser than the pre-loop read. Stop if served `run_ms` p99 nears 55 s.
+
+HIS CALL (spec §7, verbatim):
+
+1. **Stream entries LIVE?** Order on the first qualifying print at/over the trigger (sub-second) instead of the next
+   minute tick. Built: SHADOW. Read with the ⏱ stream-vs-minute table.
+2. **Which prints count as "the tape traded the trigger"** (lane AND screen, `live_hub.PRINT_KINDS`). Built:
+   `"regular"` = includes odd lots (37) and Form T (12). Options: exclude odd lots (`trigger_lot` rows already record
+   that variant); + `auction_open` / `auction_reopen`. The ⏱ serves the odd-lot-only trigger count.
+17. **Bar-close lane management** (breakeven / trail / partial at close + 30 s by the hub, LIVE only) — part of #1 or
+    its own switch.
+
+Tests: `tests/test_gajjala_lane_stream_2026_11_09.py` (numbers + words; env never raises the mode; SHADOW rows, zero
+broker, one write per event, NEG 1,000 prints; odd lot then round lot; NEG gate closed / non-regular print / no hub
+filter / not waiting / off; the stop row; the restart rebuild; the §3.7 order; LIVE with the constant patched: one
+order `order_source "stream"`, NEG the recheck clock and the empty bucket, stop-first = never_triggered, a new A+ from a
+fresh print (NEG no REST) or one REST read when stale, the bar-close run LIVE only) and
+`tests/test_gajjala_lane_mutex_2026_11_09.py` (claim / token release / takeover; NEG stale release; interleaved runs →
+"lane busy", no `_manage`, no broker write; the tick's bounded wait; `run_stream` tries once and skips
+`_manage` / `_account_tick`; the C2 cap race → `cap_open`, NEG a 4th; byte identity of the default `run()` except
+`run_ms` / `mutex_wait_ms` / `enter_ms`). FE: `GajjalaLaneTab.stream.test.tsx`. Mutations on scratch copies killed:
+no cap re-read, release without the token, ignoring "busy", the env raising the mode, no print memo, no recheck clock,
+never fresh, waiting past the bound; FE: no interval restart, no coalescing, reloading on any kind.
+
+UNMEASURED — a timing record, not a result. Paper only. Not advice.
+
 ## Known limits (v2)
 
 - The OTO legs are `day`: a 15:55 flatten that keeps failing leaves a position without broker legs overnight until the

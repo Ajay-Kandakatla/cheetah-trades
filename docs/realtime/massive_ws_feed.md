@@ -106,3 +106,95 @@ with `live_feed.py`, then fold into `make contracts`).
 4. **Instant alerts** — portfolio-scoped; volume/distribution alerts only for
    holdings ("volume drops are just noise unless it's in my portfolio").
 5. Re-enable the breakout-volume `is_buyable` gate + fix premarket movers.
+
+---
+
+## 2026-11-09 — feed honesty + the live hub's watch set (GG LIVE spec §3.1/§3.2, WP-A)
+
+Ajay 2026-11-09: *"I would like the autopilot to be continously monitored or live tracked … make it more live with
+websockets"*. P0 makes the ONE socket observable and honest before anything rides on it. No reconnect behaviour
+changes by default.
+
+**Corrected comment.** The old `_RECONNECT_COOLDOWN` comment said the server "takes ~20-60s to release a dropped one".
+Massive does not document that: connections are counted per cluster, shared by every key on the account; on Stocks
+the OLDER connection is closed and the NEW one keeps streaming. After our own unclean drop, a reconnect kicks only
+our own ghost. After a KICK, reconnecting kicks the other client. The 30 s wait is unchanged. Its measured need is
+HIS CALL #11 (the canary, below).
+
+### Knobs (env, read at import; every default = today)
+| Var | Default | Meaning |
+|---|---|---|
+| `MASSIVE_WS_RECONNECT_COOLDOWN` | `30` | wait after an authed drop that is NOT a kick (today's value) |
+| `MASSIVE_WS_KICK_COOLDOWN_SEC` | = the above | wait after a KICK: status `max_connections` or close code 1008 (HIS CALL #10) |
+| `MASSIVE_WS_KICK_YIELD_AFTER_N` / `_WINDOW_SEC` / `_SEC` | unset = OFF | "never fight": after N kicks inside the window, stop reclaiming for YIELD seconds and say so |
+
+Every default wait is exactly today's: a clean close reconnects at once (even right after a `max_connections`
+status); an authed drop, or a failure whose text says `max_connections`, waits `_RECONNECT_COOLDOWN`; any other
+failure (a 1008 before auth included) keeps the exponential backoff (2 → 60 s). A kick is always COUNTED. Where today
+cools, the wait becomes `KICK_COOLDOWN_SEC`: the knob replaces the cooldown value and never adds a wait. Only the
+yield guard, which is OFF by default, adds one.
+
+### Guards
+- `enabled()` in `auto` is **False when `CHEETAH_ENV == "dev"`**. An explicit `MASSIVE_WS_ENABLED=true` still wins.
+  `docker-compose.dev.yml` also pins `MASSIVE_WS_ENABLED: "false"`, so a dev stack never opens a second socket on
+  the prod key.
+- No pytest guard: it would flip lifespan tests onto the Finnhub WS + REST poller.
+
+### Routing order (`_handle(raw, cache, tracked)`)
+1. A print on a **hub-watched** symbol goes to the hub listener FIRST. The call is synchronous, O(1) and does no I/O;
+   a raising listener is logged and never stops the read loop. The print is
+   `{sym, p, s, c, t_ms, recv, trfi}`.
+2. A print on a **UI-tracked** symbol goes to `await cache.update` with the same payload as before.
+3. A print on a symbol that is neither is dropped.
+
+`_handle(raw, cache)` with no `tracked` keeps the old behaviour: every T goes to the cache.
+
+### One ordered control queue
+`live_hub` calls `live_feed.watch(symbols)` / `unwatch(symbols)`. These put `("sub"|"unsub", SYM)` on the SAME
+`_ws_subscribe_queue` the UI uses (a `str` item is the old subscribe), and ONE pump drains it in order:
+- an `unsubscribe` frame goes out only if, **at send time**, the symbol is neither UI-tracked nor hub-watched. A hub
+  unsub that lands after the UI subscribed the same symbol is dropped, so the UI price never freezes;
+- `("sub", s)` is skipped when `s` is already subscribed on this connection;
+- a reconnect subscribes tracked ∪ hub, exactly once each.
+
+Wiring (lifespan, only when the Massive feed is enabled):
+`live_feed.set_views(tracked_symbols, live_hub.watched, _ws_subscribe_queue)`, then the consumer, then
+`live_hub.run()`.
+
+### Kick timeline + served keys
+Every connect / auth / close / reconnect_wait, and the statuses that explain a drop (`max_connections`,
+`auth_failed`, `auth_timeout`, `error`), is appended to an in-memory deque (`EVENTS_MAX` 500). Per-symbol subscribe
+acks (`success`) and `connected` are never rows. It is
+also inserted best-effort into Mongo `live_feed_events` (TTL `LIVE_FEED_EVENTS_TTL_DAYS` = `READS_TTL_DAYS` 14 d,
+index on `at`). That insert is a fire-and-forget worker task, never on the read loop.
+
+`GET /live/feed-status` adds these keys: `kicks_1h`, `kicks_today`, `last_kick_et`, `last_kick_age_s`,
+`blind_s_today` (drop → next `auth_success`), `resume_s_last`, `connected_since_et`, `lag_ms_p50` / `lag_ms_p99`
+(recv − SIP `t` over the last `LAG_SAMPLES` 1000 trades, linear percentile), `msgs_per_s_1m`, `hub_symbols`,
+`subscribed_t`, `state`, `word`.
+- Admins only (`auth.is_admin_email`) also get `admin_word` (`"lag {p50} ms · {kicks} kicks today · {blind} s
+  blind"`) and, with `?events=1`, the last `EVENTS_SERVED` 50 timeline rows.
+- **The stocks key never appears.** Every served string is scrubbed (`_scrub_obj`).
+
+`state` ∈ `live | kicked | down | quiet | off`. Each state's `word` is served verbatim (`FEED_WORDS`). /alerts prints
+it at the top of the status strip, plus `admin_word` when served; the page composes nothing.
+
+### Coalesced QuoteCache persist (a declared QuoteCache change, C11)
+`QuoteCache.update` used to await one Mongo upsert per trade, on the read loop. Now it parks the merged doc in a
+latest-wins dict. `cache.persist_drain()` (started in the lifespan for whichever feed runs) writes one upsert per
+symbol every `LIVE_CACHE_PERSIST_SEC` (1.0 s), off the loop, and flushes once more on shutdown. The payload, the
+lock, the indicators and `quote.update` (0.5 s) are unchanged. The restart re-seed is unchanged, at most 1 s older.
+
+### The hub (`backend/live_hub.py`)
+See spec §3.2. Each poll reads today's pushed 🚩 A+, the lane doc view, the pass pointers and the gate snapshot. It
+reads the gate from the local calendar and never calls Alpaca. It then sets the watch set, runs the bar clock
+(boundary + `BAR_SETTLE_SEC`), and applies ONE print filter (`PRINT_KINDS = ("regular",)`, HIS CALL #2) before
+either consumer.
+
+Interest is keyed by (variant tab, symbol) with a 60 s TTL and at most 80 symbols per variant. Symbols over the cap
+are refused, never silently cut.
+
+### Tests
+`tests/test_live_feed.py` (routing + control queue appended; the original 9 unmodified),
+`tests/test_live_feed_kicks_2026_11_09.py`, `tests/test_quote_cache_persist_2026_11_09.py`,
+`tests/test_live_hub_2026_11_09.py`, `frontend/src/pages/Alerts.live_feed.test.tsx`.

@@ -9782,7 +9782,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 33) → slice(0, 36).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10010,7 +10011,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 30) → slice(0, 33).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10321,7 +10323,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 29) → slice(0, 32).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10534,7 +10537,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 24) → slice(0, 27).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10646,7 +10650,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 28) → slice(0, 31).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10809,7 +10814,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 25) → slice(0, 28).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10939,7 +10945,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 26) → slice(0, 29).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11003,7 +11010,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 22) → slice(0, 25).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11156,7 +11164,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 23) → slice(0, 26).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11252,7 +11261,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 21) → slice(0, 24).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11381,7 +11391,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 20) → slice(0, 23).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11585,7 +11596,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 19) → slice(0, 22).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11652,7 +11664,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 18) → slice(0, 21).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11739,7 +11752,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 17) → slice(0, 20).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11820,7 +11834,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 16) → slice(0, 19).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12086,7 +12101,11 @@ const CONTRACTS = [
       if (rp && !/q\.get\("source"\) != TN\.SOURCE/.test(rp)) errs.push('out["qualifiers"] must stay GG-only (q.get("source") != TN.SOURCE)');
       if (run && !/^\s+trader_fetch: Optional\[Callable\] = None$/m.test(run)) errs.push('Deps.trader_fetch must default to None (no in-pass fetch in tests / dry / replays / on-open)');
       const mainFn = pyCode(pyDef(run, 'main') || '');
-      if (run && !mainFn.includes('trader_fetch=TN.default_fetch')) errs.push('run.main (the cron path) must pass Deps(trader_fetch=TN.default_fetch)');
+      // 2026-11-09 (WP-C bar_close): main hands Deps through _cron_deps() — the literal may live there, never lost.
+      const cronDepsFn = pyCode(pyDef(run, '_cron_deps') || '');
+      const cronDepsOk = mainFn.includes('trader_fetch=TN.default_fetch')
+        || (mainFn.includes('deps=_cron_deps()') && cronDepsFn.includes('trader_fetch=TN.default_fetch'));
+      if (run && !cronDepsOk) errs.push('run.main (the cron path) must pass Deps(trader_fetch=TN.default_fetch) — directly or through _cron_deps()');
       const scn = tryRead('../backend/chart_maps/gajjala/scanner.py', 'the scanner');
       const sr = pyDef(scn, 'scan_rows');
       if (scn && sr == null) errs.push('scanner.py lost def scan_rows(');
@@ -12172,7 +12191,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 15) → slice(0, 18).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12349,7 +12369,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 13) → slice(0, 16).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12575,7 +12596,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 14) → slice(0, 17).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12680,7 +12702,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 12) → slice(0, 15).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12793,7 +12816,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 11) → slice(0, 14).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12936,7 +12960,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 10) → slice(0, 13).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13069,7 +13094,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 9) → slice(0, 12).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13411,7 +13437,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 7) → slice(0, 10).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13438,7 +13465,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      if (nf && !ids2.slice(0, 9).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 9).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      if (nf && !ids2.slice(0, 10).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 10).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13718,7 +13746,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 6) → slice(0, 9).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -13948,7 +13977,8 @@ const CONTRACTS = [
       // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — slice(0, 5) → slice(0, 8).
       // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14085,7 +14115,8 @@ const CONTRACTS = [
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-        if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+        if (!ids.slice(0, 9).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 9).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14178,7 +14209,8 @@ const CONTRACTS = [
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone").
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+        if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14300,7 +14332,8 @@ const CONTRACTS = [
         // WIDENED +3 (2026-11-08: entry-zones, squeeze-si-label, fade-ema-rank FIRST — Ajay: "add entry signal on the chart please like a small zone") — FIRST → one of the first four.
         // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-        if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+        if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14442,7 +14475,8 @@ const CONTRACTS = [
         for (const [ID, route, his] of want) {
           // WIDENED +1 (2026-11-08 later: squeeze-chart FIRST — Ajay: "I need something like this but that big of circle for reversal squeen").
           // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-          if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+          if (!ids.slice(0, 6).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 6).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14569,7 +14603,8 @@ const CONTRACTS = [
         const HIS1 = 'I need something like this but that big of circle for reversal squeen mainly on the cart itself also increase the width of the reversal sqeeze chart to show more bars';
         const HIS2 = "They don't have to be circles but indicators did you build them already?";
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
-        if (!ids.slice(0, 2).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 2).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
+        if (!ids.slice(0, 3).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 3).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14719,6 +14754,252 @@ const CONTRACTS = [
       for (const w of words) {
         if (B_WORD(w)) errs.push('a K3S word says bounce / fake — reversal, never bounce');
         if (/\bedge\b/i.test(w)) errs.push('a K3S word says "edge" — UNMEASURED, never claim an edge');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '⏱ Gajjala live: feed word · lane stream (shadow) · bar-close probe · tab live · latency ledger (2026-11-09)',
+    file: '../backend/trading/gajjala_stream.py',
+    checks(gs) {
+      // Ajay 2026-11-09 ~01:00 ET (verbatim): "I would like the autopilot to be continously monitored or live tracked and
+      // changed as if Gallalas makes the trades can you modify and make it more live with websockets or something else where
+      // there is a low latency monitoring on the prices action changes please?" and "same for reuglar Gajjlas tab as well need
+      // it to be more live". Spec gg_live rev 2, §3.1 / §3.3 / §3.5 / §3.6 / §3.8 / §4 Z. No rule, gate, push kind or pass
+      // time moved. Every check reads the REAL file:
+      // (1) P1 lane stream: GG_STREAM_MODE is the literal "shadow"; mode() lets the env only LOWER it; the served words.
+      // (2) P2: GAJJALA_BAR_CLOSE_MODE is the literal "probe"; bar_close.mode() lowers only.
+      // (3) P0 feed: _RECONNECT_COOLDOWN's env + default unchanged; KICK_COOLDOWN_SEC defaults to it; FEED_WORDS /
+      //     ADMIN_WORD verbatim; /live/feed-status is built by live_feed.status_payload, whose ONLY return is the
+      //     _scrub_obj(...) of its dict (the stocks key never leaves) — the route composes nothing of its own.
+      // (4) P3: live_events.py lives under chart_maps/gajjala, so the "🔴 Gajjala cards live (2026-10-21)" import guard
+      //     (nothing in chart_maps/gajjala imports live_card) already covers it — NOT duplicated here; it takes the vs
+      //     function by injection (set_vs_fn). The hub's register_interest accepts the TAB names (V.by_tab) and the 🧪 tab
+      //     "gajjala_audited" is a variant tab.
+      // (5) FE: /alerts prints the served word / admin_word verbatim (no composed lag / kick / blind sentence); the board
+      //     prints the served stream word via streamFeedWord; the lane tab prints status.stream.word verbatim; useGgLive's
+      //     nudges are coalesced by GG_PASS_NUDGE_DEBOUNCE_MS (= the lane tab's LANE_NUDGE_COALESCE_MS) so a burst calls
+      //     load ONCE; the b-word appears in none of the new FE files except inside that ALL-CAPS identifier.
+      // (6) P4: GajjalaLatency is mounted ONCE, under the A+ charts on the 🏁; owner-only endpoint.
+      // (7) OWNER_KEEP_SET still exactly seven, no stream / latency kind. (8) the ✨ FIRST, dated, routed, both sentences
+      //     verbatim, the measured "before" == the ledger doc's baseline table. (9) SPECS.md bullet + the four docs.
+      const errs = [];
+      const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const stripPy = (py) => py.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const noComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      const B_WORD = (t) => /bounc/i.test(t);
+      const HIS1 = 'I would like the autopilot to be continously monitored or live tracked and changed as if Gallalas makes the trades can you modify and make it more live with websockets or something else where there is a low latency monitoring on the prices action changes please?';
+      const HIS2 = 'same for reuglar Gajjlas tab as well need it to be more live';
+      // self-tests — the helpers bite where they must and not where they must not
+      if (pyFn('def a(x):\n    return 1\n\ndef b():\n    pass\n', 'a') !== 'def a(x):\n    return 1\n') errs.push('self-test: pyFn must cut a def at the next column-0 line');
+      if (pyFn('def ab():\n    pass\n', 'a') !== null) errs.push('self-test: pyFn must match the whole name');
+      if (!B_WORD('debounce') || B_WORD('reversal')) errs.push('self-test: B_WORD must flag "debounce" and pass "reversal"');
+
+      // (1) the lane stream ships SHADOW; the env only lowers it
+      if (!/^GG_STREAM_MODE = "shadow"/m.test(gs)) errs.push('trading/gajjala_stream.GG_STREAM_MODE must be the literal "shadow" (HIS CALL #1 — LIVE only on his word)');
+      if (!/^GG_STREAM_MODES = \("off", "shadow", "live"\)/m.test(gs)) errs.push('trading/gajjala_stream.GG_STREAM_MODES must be ("off", "shadow", "live") — low → high');
+      const sm = stripPy(pyFn(gs, 'mode') || '');
+      if (!sm) errs.push('trading/gajjala_stream.py must define mode()');
+      else {
+        if (!/GG_STREAM_MODES\.index\(env\) < GG_STREAM_MODES\.index\(built\)/.test(sm)) errs.push('gajjala_stream.mode() must take the env ONLY when it is LOWER than the built mode (index(env) < index(built))');
+        if (/GG_STREAM_MODES\.index\(env\) (?:>|<=|>=)/.test(sm)) errs.push('gajjala_stream.mode() lets the env RAISE the mode — the env may only lower it');
+        if ((sm.match(/\breturn\b/g) || []).length !== 2) errs.push('gajjala_stream.mode() must have exactly two returns (the lowered env, else the built mode)');
+      }
+      for (const w of [
+        '"🛰 Stream entries: SHADOW — the first regular print at or over the trigger is recorded; orders still go "',
+        '"on the 1-minute check."',
+        '"live": "🛰 Stream entries: LIVE — a market order on the first regular print at or over the trigger."',
+        '"off": "🛰 Stream entries: off."',
+      ]) if (!gs.includes(w)) errs.push(`gajjala_stream.STREAM_WORDS lost the spec §3.3 word ${w.slice(0, 60)}…`);
+      const lane = tryRead('../backend/trading/gajjala_entry.py', 'gajjala_entry.py');
+      if (lane && !/^def run_stream\(/m.test(lane)) errs.push('trading/gajjala_entry.py must define run_stream( (the LIVE path, built OFF behind the shadow mode)');
+
+      // (2) the bar-close pass ships as a PROBE; the env only lowers it
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
+      if (gc && !/^GAJJALA_BAR_CLOSE_MODE = "probe"/m.test(gc)) errs.push('chart_maps/gajjala/constants.GAJJALA_BAR_CLOSE_MODE must be the literal "probe" (HIS CALL #5 — the pass timing is unchanged)');
+      if (gc && !/^BAR_SETTLE_SEC = 30\b/m.test(gc)) errs.push('constants.BAR_SETTLE_SEC must stay 30 (HIS CALL #6 — the closed-bar definition)');
+      const bc = tryRead('../backend/chart_maps/gajjala/bar_close.py', 'bar_close.py');
+      if (bc) {
+        if (!/^MODES = \("off", "probe", "on"\)/m.test(bc)) errs.push('bar_close.MODES must be ("off", "probe", "on") — ascending');
+        const bm = stripPy(pyFn(bc, 'mode') || '');
+        if (!bm) errs.push('bar_close.py must define mode()');
+        else {
+          if (!/GC\.GAJJALA_BAR_CLOSE_MODE/.test(bm)) errs.push('bar_close.mode() must read GC.GAJJALA_BAR_CLOSE_MODE (one constant)');
+          if (!/MODES\.index\(env\) < MODES\.index\(const\)/.test(bm)) errs.push('bar_close.mode() must take the env ONLY when it is LOWER (index(env) < index(const))');
+          if (/MODES\.index\(env\) (?:>|<=|>=)/.test(bm)) errs.push('bar_close.mode() lets the env RAISE the mode — the env may only lower it');
+        }
+      }
+
+      // (3) the feed: cooldown unchanged, served words verbatim, the key never leaves
+      const lf = tryRead('../backend/live_feed.py', 'live_feed.py');
+      if (lf) {
+        if (!/^_RECONNECT_COOLDOWN = float\(os\.getenv\("MASSIVE_WS_RECONNECT_COOLDOWN", "30"\)\)/m.test(lf)) errs.push('live_feed._RECONNECT_COOLDOWN must keep its env MASSIVE_WS_RECONNECT_COOLDOWN and default "30" (spec §3.9)');
+        if (!/^KICK_COOLDOWN_SEC = float\(os\.getenv\("MASSIVE_WS_KICK_COOLDOWN_SEC", str\(_RECONNECT_COOLDOWN\)\)\)/m.test(lf)) errs.push('live_feed.KICK_COOLDOWN_SEC must default to _RECONNECT_COOLDOWN (HIS CALL #10 — today\'s 30 s)');
+        for (const w of [
+          '"live": "📡 Live prices — last print {age} s ago"',
+          '"kicked": "📡 Reconnecting — another connection on this Massive key took the stream ({n} times today). "',
+          '"The 1-minute check keeps running."',
+          '"down": "📡 Live stream down ({why}) — the 1-minute check keeps running."',
+          '"quiet": "📡 Connected — no prints (market closed)."',
+          '"off": "📡 Live stream off on this server."',
+          'ADMIN_WORD = "lag {p50} ms · {kicks} kicks today · {blind} s blind"',
+        ]) if (!lf.includes(w)) errs.push(`live_feed.py lost the served word ${w.slice(0, 60)}…`);
+        const sp = stripPy(pyFn(lf, 'status_payload') || '');
+        if (!sp) errs.push('live_feed.py must define status_payload(');
+        else {
+          const rets = sp.match(/\breturn\b[^\n]*/g) || [];
+          if (rets.length !== 1 || !/^return _scrub_obj\(st\)$/.test(rets[0].trim())) errs.push(`live_feed.status_payload must have ONE return: return _scrub_obj(st) — the stocks key never leaves (found ${rets.join(' | ') || 'none'})`);
+          if (!/if admin:/.test(sp) || !/admin_word/.test(sp)) errs.push('live_feed.status_payload must serve admin_word only under `if admin:`');
+        }
+        const so = stripPy(pyFn(lf, '_scrub_obj') || '');
+        if (!so || !/_scrub\(obj\)/.test(so)) errs.push('live_feed._scrub_obj must scrub every string through _scrub(');
+        const sc = stripPy(pyFn(lf, '_scrub') || '');
+        if (!sc || !/stocks_key\(\)/.test(sc)) errs.push('live_feed._scrub must read stocks_key() and replace it');
+      }
+      const mp = tryRead('../backend/main.py', 'main.py');
+      if (mp) {
+        const at = mp.indexOf('@app.get("/live/feed-status")');
+        const tail = at < 0 ? '' : mp.slice(at);
+        const nx = tail.indexOf('\n@app.', 1);
+        const route = stripPy(nx < 0 ? tail : tail.slice(0, nx));
+        if (!route) errs.push('main.py lost @app.get("/live/feed-status")');
+        else {
+          if (!/return live_feed\.status_payload\(/.test(route)) errs.push('/live/feed-status must return live_feed.status_payload( — one scrubbed builder');
+          if (/stocks_key|MASSIVE_API_KEY|"word"\s*:/.test(route)) errs.push('/live/feed-status names the key or composes a word — status_payload serves it');
+          if (!/is_admin_email\(email\)/.test(route)) errs.push('/live/feed-status must decide admin by auth.is_admin_email(email)');
+        }
+      }
+
+      // (4) the tab live: the 🔴 import guard covers live_events (referenced, not duplicated); interest takes tab names
+      const le = tryRead('../backend/chart_maps/gajjala/live_events.py', 'live_events.py');
+      if (le) {
+        if (!/^def set_vs_fn\(/m.test(le)) errs.push('live_events.py must take the vs function by injection (def set_vs_fn) — it never names the card module');
+        if (!le.includes('"gajjala.update"')) errs.push('live_events.py must publish the ONE event type "gajjala.update"');
+        if (!/^GG_LIVE_QUOTE_BATCH_SEC = 1\.0\b/m.test(le)) errs.push('live_events.GG_LIVE_QUOTE_BATCH_SEC must be 1.0 (the ✨ says "about once a second")');
+      }
+      const hub = tryRead('../backend/live_hub.py', 'live_hub.py');
+      if (hub) {
+        const ri = stripPy(pyFn(hub, 'register_interest') || '');
+        if (!ri) errs.push('live_hub.py must define register_interest(');
+        else if (!/V\.by_key\(variant\) or V\.by_tab\(variant\)/.test(ri)) errs.push('live_hub.register_interest must accept the board key OR the tab name (V.by_key(variant) or V.by_tab(variant))');
+      }
+      const vr = tryRead('../backend/chart_maps/gajjala/variant.py', 'variant.py');
+      if (vr && !/^GGA = Variant\("gga", "gajjala_audited",/m.test(vr)) errs.push('variant.GGA must keep the tab "gajjala_audited" (the 🧪 board registers interest by it)');
+
+      // (5) FE: served words only; nudges coalesced by name
+      const al = tryRead('src/pages/Alerts.tsx', 'Alerts.tsx');
+      if (al) {
+        const code = noComments(al);
+        if (!code.includes('/live/feed-status')) errs.push('Alerts.tsx must read GET /live/feed-status');
+        if (!/\{feed\.word\}/.test(code) || !/\{feed\.adminWord\}/.test(code)) errs.push('Alerts.tsx must print {feed.word} and {feed.adminWord} verbatim');
+        const m = /kicks today|s blind|lag \$\{|Reconnecting|Live prices|Live stream (?:down|off)|no prints|last print/.exec(code);
+        if (m) errs.push(`Alerts.tsx composes "${m[0]}" — every feed word is served (live_feed.FEED_WORDS / ADMIN_WORD)`);
+        if (/debounce/.test(code.replace(/\b[A-Z0-9_]*DEBOUNCE[A-Z0-9_]*\b/g, ''))) errs.push('Alerts.tsx says "debounce" outside an identifier — the b-word');
+      }
+      const gl = tryRead('src/hooks/useGgLive.ts', 'useGgLive.ts');
+      if (gl) {
+        const code = noComments(gl);
+        const c = (/^export const GG_PASS_NUDGE_DEBOUNCE_MS = (\d+);/m.exec(gl) || [])[1];
+        if (c !== '500') errs.push(`useGgLive.GG_PASS_NUDGE_DEBOUNCE_MS must be 500 (MINE, spec §3.5; found ${c ?? 'none'})`);
+        if ((code.match(/\},\s*GG_PASS_NUDGE_DEBOUNCE_MS\)/g) || []).length !== 2) errs.push('useGgLive: both nudge timers (pass + lane) must be set with GG_PASS_NUDGE_DEBOUNCE_MS by name');
+        if (!/passTimer\.current != null\) return/.test(code)) errs.push('useGgLive: a pass nudge while its timer is pending must return (a burst = ONE re-read)');
+        if (!/laneTimer\.current == null/.test(code)) errs.push('useGgLive: a lane nudge must arm its timer only when none is pending (a burst = ONE re-read)');
+        if (/\b\d{3,}\b/.test(code.replace(/^export const GG_PASS_NUDGE_DEBOUNCE_MS = \d+;/m, ''))) errs.push('useGgLive types a millisecond number outside GG_PASS_NUDGE_DEBOUNCE_MS');
+      }
+      const lt = tryRead('src/components/GajjalaLaneTab.tsx', 'GajjalaLaneTab.tsx');
+      if (lt) {
+        const lc = (/^export const LANE_NUDGE_COALESCE_MS = (\d+);/m.exec(lt) || [])[1];
+        if (lc !== '500') errs.push(`GajjalaLaneTab.LANE_NUDGE_COALESCE_MS must be 500 (= the board's GG_PASS_NUDGE_DEBOUNCE_MS; found ${lc ?? 'none'})`);
+        const code = noComments(lt);
+        if (!/\{s\?\.stream\?\.word\}/.test(code)) errs.push('GajjalaLaneTab must print the served status.stream.word verbatim');
+        if (/Stream entries/.test(code)) errs.push('GajjalaLaneTab types a "Stream entries" word — gajjala_stream.STREAM_WORDS serves it');
+      }
+      const gb = tryRead('src/components/GajjalaBoard.tsx', 'GajjalaBoard.tsx');
+      if (gb) {
+        const code = noComments(gb);
+        if (!/stream: true, variant: vkey/.test(code)) errs.push('GajjalaBoard must ask the poll for the stream (stream: true, variant: vkey)');
+        if (!/streamFeedWord\(cardPoll\.answer\)/.test(code)) errs.push('GajjalaBoard must print the served feed word through streamFeedWord(cardPoll.answer)');
+        const m = /📡|Live prices|Reconnecting|Live stream (?:down|off)/.exec(code);
+        if (m) errs.push(`GajjalaBoard composes "${m[0]}" — the feed word is served`);
+        // (6) the ⏱ mount: once, right after the A+ charts, with the served span
+        const n = (gb.match(/<GajjalaLatency\b/g) || []).length;
+        if (n !== 1) errs.push(`GajjalaBoard must mount <GajjalaLatency …/> exactly once (found ${n})`);
+        if (!/\{!tl && tr\.aplus \? <GajjalaAplusCharts block=\{tr\.aplus\} \/> : null\}\n\s*<GajjalaLatency span=\{tr\.span\} \/>/.test(gb)) errs.push('GajjalaBoard must mount <GajjalaLatency span={tr.span} /> on the line right under the A+ charts in the 🏁 panel');
+        if (!/^import \{ GajjalaLatency \} from '\.\/GajjalaLatency';/m.test(gb)) errs.push("GajjalaBoard must import { GajjalaLatency } from './GajjalaLatency'");
+      }
+      const lat = tryRead('src/components/GajjalaLatency.tsx', 'GajjalaLatency.tsx');
+      if (lat) {
+        if (!/^export const LATENCY_PATH = '\/trading\/gajjala\/latency';/m.test(lat)) errs.push("GajjalaLatency.LATENCY_PATH must be '/trading/gajjala/latency'");
+        if (!/user\?\.is_admin === true/.test(lat) || !/if \(!owner \|\| !data\) return null;/.test(lat)) errs.push('GajjalaLatency must render nothing for a non-owner (user?.is_admin === true) or without data');
+      }
+      const ta = tryRead('../backend/trading/api.py', 'trading/api.py');
+      if (ta) {
+        const at = ta.indexOf('@router.get("/gajjala/latency")');
+        const tail = at < 0 ? '' : ta.slice(at);
+        const nx = tail.indexOf('\n@router.', 1);
+        const route = stripPy(nx < 0 ? tail : tail.slice(0, nx));
+        if (!route) errs.push('trading/api.py must serve @router.get("/gajjala/latency") (prefix /trading)');
+        else {
+          if (!/_require_admin\(email\)/.test(route)) errs.push('GET /trading/gajjala/latency must be owner only (_require_admin(email))');
+          if (!/latency\.payload/.test(route)) errs.push('GET /trading/gajjala/latency must serve chart_maps.gajjala.latency.payload — the same function the script prints');
+        }
+      }
+      const ly = tryRead('../backend/chart_maps/gajjala/latency.py', 'latency.py');
+      if (ly && !/^GG_LIVE_FROM: Optional\[str\] = "\d{4}-\d{2}-\d{2}"/m.test(ly)) errs.push('latency.GG_LIVE_FROM must be the ISO date of the live switch (set by the main session)');
+      for (const [rel, t] of [['src/hooks/useGgLive.ts', gl], ['src/components/GajjalaLatency.tsx', lat], ['src/lib/cardLive.ts', tryRead('src/lib/cardLive.ts', 'cardLive.ts')], ['src/components/GajjalaLaneTab.tsx', lt]]) {
+        if (t && B_WORD(t.replace(/\b[A-Z0-9_]*DEBOUNCE[A-Z0-9_]*\b/g, ''))) errs.push(`${rel} says the b-word outside an ALL-CAPS identifier — reversal, never bounce`);
+        if (t && /\bedge\b/i.test(noComments(t))) errs.push(`${rel} says "edge" — UNMEASURED`);
+      }
+
+      // (7) the keep-set: no new push kind
+      const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
+      if (subs) {
+        const ks = keepSet(subs);
+        if (ks.length !== 7) errs.push(`OWNER_KEEP_SET must stay exactly seven (found ${ks.length})`);
+        if (ks.some((k) => /stream|latency|live_feed|bar_close|gajjala_update/i.test(k))) errs.push('OWNER_KEEP_SET carries a GG LIVE kind — the live build adds no push kind');
+      }
+
+      // (8) the ✨
+      const nf = tryRead('src/lib/newFeatures.ts', 'newFeatures');
+      if (nf) {
+        const nfArr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+        const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((x) => x[1]);
+        const ID = 'chart-maps-gajjala-live-stream-2026-11-09';
+        if (ids[0] !== ID) errs.push(`the ✨ '${ID}' must be FIRST in NEW_FEATURES (found '${ids[0] || 'none'}')`);
+        if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+        const a = nfArr.indexOf(`{ id: '${ID}'`);
+        if (a >= 0) {
+          const nx = nfArr.indexOf("{ id: '", a + 1);
+          const e = nfArr.slice(a, nx < 0 ? undefined : nx);
+          if (!/addedAt: '2026-11-09'/.test(e)) errs.push(`the ✨ '${ID}' must be dated 2026-11-09`);
+          if (!/route: '\/chart-maps\?tab=gajjala&sub=track_record'/.test(e)) errs.push(`the ✨ '${ID}' must route to the 🚩 🏁`);
+          const label = (/label: "((?:[^"\\]|\\.)*)"/.exec(e) || [])[1] || '';
+          for (const h of [HIS1, HIS2]) if (!label.includes(`“${h}”`)) errs.push(`the ✨ label must quote him verbatim: “${h.slice(0, 40)}…”`);
+          for (const need of ['SHADOW', 'zero orders change', 'PROBE', 'the pass timing is unchanged', 'UNMEASURED']) if (!label.includes(need)) errs.push(`the ✨ label must say "${need}"`);
+          if (!label.endsWith('Not advice.')) errs.push('the ✨ label must end "Not advice."');
+          if (/\bedge\b/i.test(label)) errs.push('the ✨ label must not say "edge"');
+          if (B_WORD(label)) errs.push('the ✨ label must not use the b-word');
+          const doc = tryRead('../docs/gajjala/latency_ledger_2026_11_09.md', 'the ledger doc');
+          for (const step of ['Read', 'Rang', 'Lane saw', 'Ordered', 'Filled']) {
+            const row = new RegExp(`^\\| [^|]*\\*\\*${step}\\*\\* \\| \\d+ \\| ([0-9.]+) \\|`, 'm').exec(doc);
+            if (!row) errs.push(`the ledger doc lost the ${step} baseline row`);
+            else if (!label.includes(`${step} ${row[1]}`)) errs.push(`the ✨ label must carry the measured "before" ${step} ${row[1]} (the ledger doc's p50)`);
+          }
+        }
+      }
+
+      // (9) SPECS + docs
+      const sp = tryRead('../SPECS.md', 'SPECS.md');
+      if (sp && !sp.includes('**⏱ Gajjala live — feed word · lane stream (SHADOW) · bar-close probe · tab live · latency ledger (2026-11-09)**')) errs.push('SPECS.md must carry the ⏱ Gajjala live bullet (2026-11-09)');
+      for (const d of ['../docs/realtime/socket_kick_2026_11_09.md', '../docs/gajjala/bar_close_pass_2026_11_09.md', '../docs/gajjala/live_tab_2026_11_09.md', '../docs/gajjala/latency_ledger_2026_11_09.md']) {
+        if (!exists(d)) errs.push(`${d.slice(3)} is missing`);
       }
       return errs;
     },

@@ -395,7 +395,9 @@ for (const [name, BOARDS] of SOURCES) {
       await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
       for (const c of calls) {
         const ok = (c.method === 'GET' && c.path.endsWith('/chart-maps/gajjala'))
-          || (c.method === 'POST' && c.path.endsWith('/chart-maps/gajjala/scan'));
+          || (c.method === 'POST' && c.path.endsWith('/chart-maps/gajjala/scan'))
+          // 2026-11-09 ⏱ latency ledger: the owner's 🏁 also GETs its own admin-only block (one GET, never a POST).
+          || (c.method === 'GET' && c.path.endsWith('/trading/gajjala/latency'));
         expect(ok, `${c.method} ${c.path}`).toBe(true);
       }
       expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);

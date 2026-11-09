@@ -695,7 +695,8 @@ def test_status_block_shape_and_flip_line(lane):
                        "floors_off_confirm_text", "skipped_floor_today", "skipped_floor_text", "skipped_today",
                        "entries_today", "max_per_day", "open_n", "max_open", "caps_text", "window", "flatten_at",
                        "settings", "rules", "unmeasured_text", "streak_text", "track_record_text",
-                       "track_record_url", "empty_today_text", "disabled_text", "live_text"}
+                       "track_record_url", "empty_today_text", "disabled_text", "live_text",
+                       "stream"}                        # 2026-11-09 GG LIVE §3.3: the additive 🛰 stream block
     assert st["floors"] == "gg" and st["floors_flip"] == 'POST /trading/config {"gajjala_floors": true}'
     assert st["floors_text"] == ("OFF by default (your call 2026-10-21): the house $2 / $700M floors do not apply "
                                  "to GG's lane")
