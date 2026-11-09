@@ -401,7 +401,7 @@ def test_negative_c2_all_missing_without_faults_is_not_a_fault(monkeypatch):
     no print) stay plain `missing` with `fault None` — the rule does not widen to every empty answer."""
     _wire(monkeypatch, {"XLAB": RTH_SNAP}, {"XLAB": _frame()})
     monkeypatch.setattr(LC, "card_bar", lambda frame, sym, snap: (None, None, None))
-    monkeypatch.setattr(LC, "card_now", lambda probe, snap: None)
+    monkeypatch.setattr(LC, "card_now", lambda probe, snap, **kw: None)   # WIDENED 2026-11-09: card_now takes now_et=
     a = LC.compose(["XLAB"], now=_at(2026, 9, 3, 14, 0, 30))
     assert a["quotes"] == {} and a["faults"] == {} and a["fault"] is None
     assert a["missing"] == ["XLAB"]

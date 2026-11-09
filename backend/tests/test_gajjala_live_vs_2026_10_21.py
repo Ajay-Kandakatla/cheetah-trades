@@ -154,7 +154,8 @@ def test_negative_no_levels_no_vs_key(monkeypatch):
 
 
 def test_negative_no_now_price_no_vs(monkeypatch):
-    monkeypatch.setattr(LC, "card_now", lambda probe, snap: None)
+    # WIDENED 2026-11-09: card_now takes now_et= (the now label in every session) — the stub matches the real signature
+    monkeypatch.setattr(LC, "card_now", lambda probe, snap, **kw: None)
     q = _compose(monkeypatch, {"XLAB": {"trigger": 9.0, "stop": 8.5}})["quotes"]["XLAB"]
     assert q["bar"] is not None and q["now"] is None
     assert "vs" not in q
