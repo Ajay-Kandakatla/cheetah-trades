@@ -51,8 +51,8 @@ wall before the ring; ~51 s = the lane's next minute tick; ~2 s order; ~3 s fill
 `GC.LEDGER_SPAN_DEFAULT`) → `chart_maps/gajjala/latency.payload`:
 
 - title "⏱ Speed — seconds after the 5-minute bar closed"; columns Read · Rang · Lane saw · Ordered · Filled; each cell
-  `p50 · p90 (n)`; rows `before {date}` / `since {date}` split at `latency.GG_LIVE_FROM` (MINE — **"2026-11-10"**, the first full
-  session after the 11-09 deploy; a row dated before it is "before", on/after it "since"; None or a value that is not an
+  `p50 · p90 (n)`; rows `before {date}` / `since {date}` split at `latency.GG_LIVE_FROM` (MINE — **"2026-11-09"**, the deploy landed
+  ~02:30 ET 11-09 before the pre-market, so 11-09 is the first full session on the new code; a row dated before it is "before", on/after it "since"; None or a value that is not an
   ISO date = no split, one row named after the span, never an error).
 - per column, a seeded bootstrap 95% interval of the p50 difference (`LATENCY_BOOT_N` 2000, `LATENCY_BOOT_SEED` 7); fewer
   than `LATENCY_CI_MIN_N` (5) on a side → "no interval".

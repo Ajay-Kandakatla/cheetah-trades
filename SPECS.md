@@ -1214,8 +1214,8 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   is byte-identical without it; the 30 s card poll stays as the bar splice + fallback; the feed word prints only when
   degraded (`docs/gajjala/live_tab_2026_11_09.md`). **(P4)** the ⏱ latency ledger — `GET /trading/gajjala/latency?span=`
   (owner only) = `chart_maps/gajjala/latency.payload` = `scripts/gajjala_latency_report.py`; mounted under the A+ charts on
-  the 🏁 (`<GajjalaLatency span={tr.span} />`); split at `latency.GG_LIVE_FROM` = 2026-11-10 (MINE: the first full session
-  after the deploy); measured "before" (n 47 pushed live `GG:` A+ since 2026-10-01, p50 s after close): Read 61.0 · Rang
+  the 🏁 (`<GajjalaLatency span={tr.span} />`); split at `latency.GG_LIVE_FROM` = 2026-11-09 (MINE: deployed ~02:30 ET 11-09,
+  the first full session on the new code); measured "before" (n 47 pushed live `GG:` A+ since 2026-10-01, p50 s after close): Read 61.0 · Rang
   70.6 · Lane saw 122.0 · Ordered 124.0 · Filled 127.0 (`docs/gajjala/latency_ledger_2026_11_09.md`).
   **Does NOT change** (spec §3.9): `detectors.py` and every read (GG5 goldens + `gg5_{writes,board}_2026_10_27.json`
   byte-identical); the pass timing (`:x1`); `alerts.py` gates, claim keys, `MAX_ENTRY_AGE_SEC`; `OWNER_KEEP_SET` (seven)

@@ -264,20 +264,20 @@ def test_split_at_live_from_and_no_split_without_it(mongo, monkeypatch):
 
 
 def test_the_shipped_constant_splits_before_and_since_at_its_date(mongo, monkeypatch):
-    assert LT.GG_LIVE_FROM == "2026-11-10"                      # MINE: the first full session after the 11-09 deploy
+    assert LT.GG_LIVE_FROM == "2026-11-09"                      # MINE: deployed 02:30 ET 11-09 → 11-09 is the first live session
     pytest.importorskip("fastapi")
     from trading import api as TA
     import auth
-    eve = alert("EVE", day="2026-11-09", bar="15:00", read=61.0, ring=70.6)
-    day1 = alert("DAY", day="2026-11-10", bar="10:00", read=31.0, ring=40.0)
+    eve = alert("EVE", day="2026-11-08", bar="15:00", read=61.0, ring=70.6)
+    day1 = alert("DAY", day="2026-11-09", bar="10:00", read=31.0, ring=40.0)
     mongo(alerts=[eve, day1])
-    monkeypatch.setattr(GE, "_now_et", lambda: datetime(2026, 11, 10, 20, 0, tzinfo=ET))
+    monkeypatch.setattr(GE, "_now_et", lambda: datetime(2026, 11, 9, 20, 0, tzinfo=ET))
     body = json.loads(asyncio.run(TA.trading_gajjala_latency(span="all", email=auth.HOUSE_OWNER_EMAIL)).body)
-    assert body["live_from"] == "2026-11-10"
+    assert body["live_from"] == "2026-11-09"
     assert [(s["side"], s["label"], s["n"]) for s in body["summary"]] == [
-        ("before", "before 2026-11-10", 1), ("since", "since 2026-11-10", 1)]
-    assert summary_of(body, "before")["steps"]["ring"]["p50"] == 70.6       # 2026-11-09 → before
-    assert summary_of(body, "since")["steps"]["ring"]["p50"] == 40.0        # 2026-11-10 → since
+        ("before", "before 2026-11-09", 1), ("since", "since 2026-11-09", 1)]
+    assert summary_of(body, "before")["steps"]["ring"]["p50"] == 70.6       # 2026-11-08 → before
+    assert summary_of(body, "since")["steps"]["ring"]["p50"] == 40.0        # 2026-11-09 (the deploy day) → since
     assert [c["key"] for c in body["ci"]] == ["read", "ring", "seen", "order", "fill"]
     assert all(c["lo"] is None for c in body["ci"])             # n 1 a side → no interval
 

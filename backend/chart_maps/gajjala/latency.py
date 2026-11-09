@@ -39,9 +39,10 @@ from . import constants as GC
 log = logging.getLogger(__name__)
 
 # ── OWNER NUMBERS (MINE — transport / statistics, never a rule) ─────────────────────────────────────────────────────
-GG_LIVE_FROM: Optional[str] = "2026-11-10"   # MINE — the ISO date of the first P1/P2 behavior switch; the main session sets it
-#                                          at that deploy. None = no split (one row for the whole span). Set 2026-11-09 by the
-#                                          main session: 2026-11-10 = the first full session after the GG LIVE deploy (MINE).
+GG_LIVE_FROM: Optional[str] = "2026-11-09"   # MINE — the ISO date the GG LIVE stack went live (the tab-side steps change at
+#                                          the deploy; ring / lane steps only when HIS CALLs #1 / #5 switch). None = no split.
+#                                          Set by the main session: deployed 2026-11-09 ~02:30 ET, before the 04:00 pre-market,
+#                                          so 11-09 is the first full session on the new code (MINE).
 LATENCY_BOOT_N = 2000                    # MINE — bootstrap resamples of the p50 difference (spec §3.6)
 LATENCY_BOOT_SEED = 7                    # MINE — the seed (deterministic interval; spec §3.6)
 LATENCY_CI_MIN_N = 5                     # MINE — fewer than this on a side → no interval (spec §3.6 "n < 5 → no CI")
