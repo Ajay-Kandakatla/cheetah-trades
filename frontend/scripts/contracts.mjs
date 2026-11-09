@@ -9784,7 +9784,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10014,7 +10015,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10327,7 +10329,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10542,7 +10545,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10656,7 +10660,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10821,7 +10826,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -10953,7 +10959,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11019,7 +11026,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11174,7 +11182,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11272,7 +11281,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11403,7 +11413,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11609,7 +11620,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11678,7 +11690,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11767,7 +11780,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11850,7 +11864,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12208,7 +12223,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 23).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12387,7 +12403,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12615,7 +12632,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12722,7 +12740,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12837,7 +12856,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -12982,7 +13002,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13117,7 +13138,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13461,7 +13483,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13490,7 +13513,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      if (nf && !ids2.slice(0, 11).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 11).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      if (nf && !ids2.slice(0, 12).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 12).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -13772,7 +13796,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14004,7 +14029,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
       // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
       // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14143,7 +14169,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-        if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+        if (!ids.slice(0, 11).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 11).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14238,7 +14265,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-        if (!ids.slice(0, 9).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 9).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+        if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14362,7 +14390,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-        if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+        if (!ids.slice(0, 9).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 9).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14506,7 +14535,8 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
           // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
           // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-          if (!ids.slice(0, 7).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 7).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+          if (!ids.slice(0, 8).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 8).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14635,7 +14665,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours").
         // WIDENED +1 (2026-11-09: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live").
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-        if (!ids.slice(0, 4).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 4).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+        if (!ids.slice(0, 5).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 5).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14833,8 +14864,9 @@ const CONTRACTS = [
       if (pyFn('def ab():\n    pass\n', 'a') !== null) errs.push('self-test: pyFn must match the whole name');
       if (!B_WORD('debounce') || B_WORD('reversal')) errs.push('self-test: B_WORD must flag "debounce" and pass "reversal"');
 
-      // (1) the lane stream ships SHADOW; the env only lowers it
-      if (!/^GG_STREAM_MODE = "shadow"/m.test(gs)) errs.push('trading/gajjala_stream.GG_STREAM_MODE must be the literal "shadow" (HIS CALL #1 — LIVE only on his word)');
+      // (1) the lane stream is LIVE since 2026-11-09 ~10:00 ET (HIS CALL #1 answered — Ajay: "With entries realtime like Gajjala does" /
+      // "I would like to see it in action now"; shipped SHADOW at 02:29 ET the same day); the env only lowers it
+      if (!/^GG_STREAM_MODE = "live"/m.test(gs)) errs.push('trading/gajjala_stream.GG_STREAM_MODE must be the literal "live" (HIS CALL #1 answered 2026-11-09: "With entries realtime like Gajjala does")');
       if (!/^GG_STREAM_MODES = \("off", "shadow", "live"\)/m.test(gs)) errs.push('trading/gajjala_stream.GG_STREAM_MODES must be ("off", "shadow", "live") — low → high');
       const sm = stripPy(pyFn(gs, 'mode') || '');
       if (!sm) errs.push('trading/gajjala_stream.py must define mode()');
@@ -15004,7 +15036,8 @@ const CONTRACTS = [
         const ids = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].map((x) => x[1]);
         const ID = 'chart-maps-gajjala-live-stream-2026-11-09';
         // WIDENED +1 (2026-11-09 later: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here").
-        if (!ids.slice(0, 2).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 2).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+        if (!ids.slice(0, 3).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 3).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15072,8 +15105,9 @@ const CONTRACTS = [
       }
       const nf = read('src/lib/newFeatures.ts');
       if (!/id: 'chart-maps-yahoo-link-2026-11-09'/.test(nf)) errs.push("newFeatures.ts lacks the 'chart-maps-yahoo-link-2026-11-09' highlight");
-      const firstId = (/\{ id: '([^']+)'/.exec(nf) || [])[1];
-      if (firstId !== 'chart-maps-yahoo-link-2026-11-09') errs.push(`the 🌐 Yahoo link-out ✨ must be FIRST in NEW_FEATURES (found ${firstId})`);
+      // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
       return errs;

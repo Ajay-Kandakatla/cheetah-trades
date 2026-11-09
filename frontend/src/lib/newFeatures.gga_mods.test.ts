@@ -27,17 +27,19 @@ describe('✨ the 🧪 audited-modifications entry', () => {
   // WIDENED +1 (2026-11-09: 🧪 K3S FIRST — Ajay: "yes change the audit as per you like that is yours") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 later: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 latest: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fourth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05 and the 🏁 one-count ✨ 2026-11-02 went first), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
-    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[9].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[10].id).toBe(ID);
+    expect(NEW_FEATURES[0].id).toBe('autopilot-gajjala-stream-live-2026-11-09');   // 2026-11-09 ~10:00 ET: the 🛰 stream-entries-LIVE ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[10].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[11].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -96,8 +98,9 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
 
   // WIDENED +1 (2026-11-09 later: ⏱ Gajjala live FIRST — Ajay: "same for reuglar Gajjlas tab as well need it to be more live") — K3S [0] → [1], the NEGATIVE [1] → [2].
   // WIDENED +1 (2026-11-09 latest: 🌐 Yahoo link-out FIRST — Ajay: "Instead of traderview I need yahoo finance link here") — every NEW_FEATURES[n] pin below → [n+1].
-  it('is THIRD (the ⏱ Gajjala live ✨ and then the 🌐 Yahoo link-out ✨ went FIRST 2026-11-09), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
-    expect(NEW_FEATURES[2].id).toBe(K3S_ID);
+  // WIDENED +1 (2026-11-09 ~10:00 ET: 🛰 stream entries LIVE FIRST — Ajay: "With entries realtime like Gajjala does") — every NEW_FEATURES[n] pin below → [n+1].
+  it('is FOURTH (the ⏱ Gajjala live ✨, the 🌐 Yahoo link-out ✨ and the 🛰 stream-LIVE ✨ went FIRST 2026-11-09), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
+    expect(NEW_FEATURES[3].id).toBe(K3S_ID);
     expect(NEW_FEATURES.filter((x) => x.id === K3S_ID).length).toBe(1);
     expect(k.addedAt).toBe('2026-11-09');
     expect(k.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -118,7 +121,7 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
     expect(/\bedge\b/i.test(k.label)).toBe(false);
     expect(k.label.toLowerCase().includes('b' + 'ounc')).toBe(false);
     expect(/\b(profitable|proven|guaranteed|wins more|beats)\b/i.test(k.label)).toBe(false);
-    expect(NEW_FEATURES[3].id).not.toBe(K3S_ID);
+    expect(NEW_FEATURES[4].id).not.toBe(K3S_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });
@@ -148,8 +151,8 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     return Number(m[1]);
   };
 
-  it('is SECOND (the 🌐 Yahoo link-out ✨ went FIRST 2026-11-09 later), listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
-    expect(NEW_FEATURES[1].id).toBe(LIVE_ID);
+  it('is THIRD (the 🌐 Yahoo link-out ✨ and then the 🛰 stream-LIVE ✨ went FIRST 2026-11-09 later), listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
+    expect(NEW_FEATURES[2].id).toBe(LIVE_ID);
     expect(NEW_FEATURES.filter((x) => x.id === LIVE_ID).length).toBe(1);
     expect(g.addedAt).toBe('2026-11-09');
     expect(g.route).toBe('/chart-maps?tab=gajjala&sub=track_record');
@@ -183,7 +186,12 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     expect(num(gc, 'BAR_SETTLE_SEC')).toBe(30);                                 // "final 30 s after it closes"
     expect(/^GAJJALA_BAR_CLOSE_MODE = "probe"/m.test(gc)).toBe(true);
     const st = await readSource('../backend/trading/gajjala_stream.py');
-    expect(/^GG_STREAM_MODE = "shadow"/m.test(st)).toBe(true);
+    // 2026-11-09 ~10:00 ET: HIS CALL #1 answered — Ajay: "With entries realtime like Gajjala does" → the built mode is "live".
+    // This ⏱ label keeps the words of its ship time (SHADOW at 02:29 ET); the flip has its own, newer ✨ above it.
+    expect(/^GG_STREAM_MODE = "live"/m.test(st)).toBe(true);
+    const flipIdx = NEW_FEATURES.findIndex((x) => x.id === 'autopilot-gajjala-stream-live-2026-11-09');
+    expect(flipIdx).toBeGreaterThanOrEqual(0);
+    expect(flipIdx).toBeLessThan(NEW_FEATURES.findIndex((x) => x.id === LIVE_ID));
     const nums = g.label.replace(/\bp50\b/g, '').match(/\d+(?:\.\d+)?/g) || [];   // p50 is a name, not a number
     const allowed = new Set(['1', '5', '30', '61.0', '70.6', '122.0', '124.0', '127.0']);
     for (const n of nums) expect(allowed.has(n), `the label types ${n} — not a constant or a measured figure`).toBe(true);
@@ -195,7 +203,53 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     expect(/\b(profitable|proven|guaranteed|wins more|beats|faster profits)\b/i.test(g.label)).toBe(false);
     expect(/orders (now )?go on the (stream|first print)/i.test(g.label)).toBe(false);
     expect(/\bLIVE\b.*\bnow\b/.test(g.label.replace('Stream entries LIVE and the earlier pass are your calls', ''))).toBe(false);
-    expect(NEW_FEATURES[2].id).not.toBe(LIVE_ID);
+    expect(NEW_FEATURES[3].id).not.toBe(LIVE_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
+  });
+});
+
+// 🛰 stream entries LIVE (2026-11-09 ~10:00 ET) — Ajay: "Is the Autopilot logic up to date?  to do entries I would like to see it
+// in action now.." / "With entries realtime like Gajjala does". HIS CALL #1 of the GG LIVE spec answered: the built
+// GG_STREAM_MODE is "live"; the entry carries both sentences verbatim, names the same A+ / stop / sizes / window, paper only.
+describe('✨ the 🛰 stream-entries-LIVE entry (2026-11-09)', () => {
+  const FLIP_ID = 'autopilot-gajjala-stream-live-2026-11-09';
+  const f = NEW_FEATURES.find((x) => x.id === FLIP_ID)!;
+  async function readSrc(rel: string): Promise<string> {
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    const root = (globalThis as any).process?.cwd?.() || '.';
+    return fs.readFileSync(`${root}/${rel}`, 'utf8');
+  }
+  it('exists once, dated 2026-11-09, routed to the lane tab, above the ⏱ Gajjala live entry', () => {
+    expect(f).toBeTruthy();
+    expect(NEW_FEATURES.filter((x) => x.id === FLIP_ID).length).toBe(1);
+    expect(f.addedAt).toBe('2026-11-09');
+    expect(f.route).toBe('/trading?view=gajjala');
+    const i = NEW_FEATURES.findIndex((x) => x.id === FLIP_ID);
+    expect(i).toBeLessThan(NEW_FEATURES.findIndex((x) => x.id === 'chart-maps-gajjala-live-stream-2026-11-09'));
+  });
+  it('carries both of his sentences verbatim and the LIVE words', () => {
+    expect(f.label).toContain('to do entries I would like to see it in action now');
+    expect(f.label).toContain('With entries realtime like Gajjala does');
+    expect(f.label).toContain('🛰 Stream entries LIVE');
+    expect(f.label).toContain('first regular print at or over the trigger');
+    expect(f.label).toContain('paper only');
+    expect(f.label).toContain('UNMEASURED');
+    expect(f.label.endsWith('Not advice.')).toBe(true);
+  });
+  it('matches the backend: GG_STREAM_MODE is the literal "live" and the window / A+ words are the lane\'s', async () => {
+    const st = await readSrc('../backend/trading/gajjala_stream.py');
+    expect(/^GG_STREAM_MODE = "live"/m.test(st)).toBe(true);
+    expect(/^GG_STREAM_MODES = \("off", "shadow", "live"\)/m.test(st)).toBe(true);
+    expect(f.label).toContain('09:45–15:30');
+    expect(f.label).toContain('5-minute bar closed through the trigger');
+  });
+  it('NEGATIVE: never "edge", never the b-word, never a result claim, never a probability', () => {
+    expect(/\bedge\b/i.test(f.label)).toBe(false);
+    expect(f.label.toLowerCase().includes('b' + 'ounc')).toBe(false);
+    expect(/\b(profitable|proven|guaranteed|wins more|beats|faster profits|probability)\b/i.test(f.label)).toBe(false);
+    const nums = f.label.match(/\d+(?:\.\d+)?/g) || [];
+    const allowed = new Set(['1', '5', '09', '45', '15', '30']);
+    for (const n of nums) expect(allowed.has(n), `the label types ${n}`).toBe(true);
   });
 });

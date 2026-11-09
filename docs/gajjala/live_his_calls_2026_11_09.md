@@ -14,7 +14,7 @@ changed; the GG5 goldens are byte-identical; the paper lane still trades 🚩 A+
 
 | Knob | Built | Where |
 |---|---|---|
-| `GG_STREAM_MODE` | `"shadow"` — the first regular print at/over the trigger is RECORDED; orders still go on the 1-minute check; env can only lower | `trading/gajjala_stream.py`, `docs/trading_gajjala_lane.md` |
+| `GG_STREAM_MODE` | `"shadow"` at the 02:29 ET deploy → **`"live"` since ~10:00 ET 2026-11-09 (his word, #1 below)** — a market order on the first regular print at/over the trigger; env can only lower | `trading/gajjala_stream.py`, `docs/trading_gajjala_lane.md` |
 | `GAJJALA_BAR_CLOSE_MODE` | `"probe"` — a detached child reads every listed name at close + settle and again +60 s for `GAJJALA_BAR_FINAL_PROBE_SESSIONS` 5 sessions, then stops (`probe_complete`); the `:x1` pass is unchanged | `chart_maps/gajjala/bar_close.py`, `docs/gajjala/bar_close_pass_2026_11_09.md` |
 | `BAR_SETTLE_SEC` | unchanged | `chart_maps/gajjala/constants.py` |
 | `live_hub.PRINT_KINDS` | `("regular",)` — includes odd lots and Form T | `live_hub.py` |
@@ -31,7 +31,9 @@ Read 61.0 · Rang 70.6 · Lane saw 122.0 · Ordered 124.0 · Filled 127.0 (`scri
 ## HIS CALL (never decided here; built default named)
 
 1. **Stream entries LIVE?** Order on the first qualifying print at/over the trigger (sub-second) instead of the next
-   minute tick. Built: SHADOW. Read with the ⏱ stream-vs-minute table.
+   minute tick. Built: SHADOW. **ANSWERED 2026-11-09 ~09:25 ET** — Ajay: "to do entries I would like to see it in action
+   now" / "With entries realtime like Gajjala does" → `GG_STREAM_MODE = "live"`, deployed api the same morning. Read with
+   the ⏱ stream-vs-minute table.
 2. **Which prints count as "the tape traded the trigger"** (lane AND screen, `live_hub.PRINT_KINDS`). Built:
    `"regular"` = includes odd lots (37) and Form T (12). Options: exclude odd lots (`trigger_lot` rows already record
    that variant); + `auction_open` / `auction_reopen`. The ⏱ serves the odd-lot-only trigger count.

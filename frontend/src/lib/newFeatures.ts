@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-09 ~09:25 ET (verbatim in the label, his spelling kept): "Is the Autopilot logic up to date?  to do entries
+  // I would like to see it in action now.." / "With entries realtime like Gajjala does" — HIS CALL #1 of the GG LIVE spec
+  // answered: trading/gajjala_stream.GG_STREAM_MODE "shadow" → "live" (the env may still LOWER it). The paper lane's
+  // market order now goes on the FIRST regular print at or over the trigger (gajjala_entry.run_stream: the lane's own
+  // gate, the lane-run mutex, _try_waiting priced by the print, order_source "stream"); a fresh A+ is claimed from the
+  // hub ("hub_claim"); the bar-close lane run is on. Nothing else moved: the A+ is still the 5-minute bar CLOSED through
+  // the trigger, same stop, sizes (GG's 0.25 % halved after a loss), caps, 09:45–15:30 window, flatten, paper gate, floors
+  // (his switch). The lane tab prints the served LIVE word; the 🏁 ⏱ ledger's since-row reads order_source. UNMEASURED.
+  // Pinned by scripts/contracts.mjs ("⏱ Gajjala live …" (1)).
+  { id: 'autopilot-gajjala-stream-live-2026-11-09', addedAt: '2026-11-09', route: '/trading?view=gajjala',
+    label: "🛰 Stream entries LIVE — you said: “to do entries I would like to see it in action now” / “With entries realtime like Gajjala does”. The paper lane now sends its market order on the first regular print at or over the trigger instead of waiting for the next 1-minute check. Same A+ (the 5-minute bar closed through the trigger), same stop, same sizes, same 09:45–15:30 window, paper only. UNMEASURED. Not advice." },
   // Ajay 2026-11-09 (verbatim in the label, his spelling kept), with a 🚩 card screenshot of the old ↗ button: "Instead of
   // traderview I need yahoo finance link here" / "To external ones please". The external link-out top-right of every chart
   // tile (PatternChart — every board tab incl. 🚩 / 🧪 / 🥇) and on the Support tab head is now Yahoo Finance's quote page

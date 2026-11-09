@@ -1201,8 +1201,9 @@ rows 2026-10-30). **Shadow only.** Every audited alert is recorded and never sen
   `_scrub_obj` (the stocks key never leaves); /alerts prints the served word verbatim; `enabled()` refuses `auto` on
   `CHEETAH_ENV=dev`; the QuoteCache Mongo persist is coalesced (`LIVE_CACHE_PERSIST_SEC`, declared); `live_hub.py` = the ONE
   print filter (`PRINT_KINDS`) + interest keyed (variant tab, symbol) (`docs/realtime/massive_ws_feed.md`,
-  `docs/realtime/socket_kick_2026_11_09.md`, canary NOT run). **(P1)** `trading/gajjala_stream.py` — stream entries in
-  SHADOW (`GG_STREAM_MODE "shadow"`, env lowers only): the first print at/over the trigger (and the first non-odd-lot one,
+  `docs/realtime/socket_kick_2026_11_09.md`, canary NOT run). **(P1)** `trading/gajjala_stream.py` — stream entries, shipped in
+  SHADOW at 02:29 ET and LIVE since ~10:00 ET 2026-11-09 (`GG_STREAM_MODE "live"`, HIS CALL #1 answered: "With entries
+  realtime like Gajjala does"; env lowers only). In SHADOW: the first print at/over the trigger (and the first non-odd-lot one,
   and the stop) recorded insert-once in `gajjala_lane_stream` beside the 1-minute tick — zero broker calls, zero orders
   change; the lane-run mutex (`LANE_RUN_MUTEX_SEC` 55) around `run()` and `run_stream()`; `status_block.stream` word on
   /trading?view=gajjala (`docs/trading_gajjala_lane.md` "Stream entries (shadow)"). **(P2)** `chart_maps/gajjala/bar_close.py`

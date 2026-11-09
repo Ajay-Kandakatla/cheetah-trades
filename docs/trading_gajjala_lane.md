@@ -270,15 +270,16 @@ records what the stream would have done.
 - `backend/trading/gajjala_stream.py` (new). The api's live hub (`live_hub`, the ONE Massive socket, the ONE print
   filter `live_hub.PRINT_KINDS`) hands it every filtered print on a lane / A+ name (`on_print`), every newly pushed
   live A+ (`on_new_aplus`) and every closed 5-minute bar + `BAR_SETTLE_SEC` (`on_bar_close`).
-- `GG_STREAM_MODE = "shadow"` (HIS CALL #1). The env `GG_STREAM_MODE` only LOWERS it (live → shadow → off), never
-  raises it. SHADOW makes ZERO broker calls: on a waiting doc it records, insert-once, in `gajjala_lane_stream`
+- `GG_STREAM_MODE = "live"` since 2026-11-09 ~10:00 ET — HIS CALL #1 answered (Ajay: "With entries realtime like Gajjala
+  does" / "I would like to see it in action now"; it shipped `"shadow"` at 02:29 ET the same day). The env `GG_STREAM_MODE`
+  only LOWERS it (live → shadow → off), never raises it. SHADOW made ZERO broker calls: on a waiting doc it records, insert-once, in `gajjala_lane_stream`
   (`_id "{doc_id}|{event}"`): `trigger` = the first regular print at/over the trigger, `trigger_lot` = the first such
   print that is not an odd lot (condition 37), `stop` = the first print at/under the stop; a new A+ → `{id}|seen` (when
   the lane WOULD have claimed it). Each row: `print_px`, `print_size`, `conditions`, `odd_lot`, `print_t` (SIP, UTC),
   `recv_t` (UTC, ms), `lag_ms`, `mode`. Orders still go on the 1-minute exit_engine tick.
 - The memo (`written` / `pending` per `doc|event`, rebuilt from today's rows on start) means a print whose event is
   already recorded costs no Mongo and no job — 1,000 prints at the trigger = one row. A row whose Mongo write FAILED is not memoised: the next qualifying print retries, at most `GG_STREAM_ROW_MAX_TRIES = 2` (MINE, critic 2026-11-09) tries a day, then it is given up and logged (no per-print retry storm).
-- LIVE (only on his word): the same rows, then `gajjala_entry.run_stream` — the lane's own gate (one broker clock),
+- LIVE (his word 2026-11-09): the same rows, then `gajjala_entry.run_stream` — the lane's own gate (one broker clock),
   the lane-run mutex tried ONCE, `_try_waiting` on that doc priced by the print (`last_source "stream:T"`); a new A+ is
   claimed and priced from the stream when the last print is ≤ `GG_STREAM_FRESH_SEC` (= 2 × `live_hub.HUB_POLL_SEC`)
   old, else ONE `_live_last`. `GG_STREAM_RECHECK_SEC = 15` (MINE) between attempts on one doc;

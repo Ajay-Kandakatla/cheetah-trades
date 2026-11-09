@@ -12,10 +12,11 @@ first sight when the last trade is at or over the trigger … or the stop prints
 cut-off, the flatten and the paper gate are untouched. P1 changes only how fast the lane reacts after the push.
 
 MODES (HIS CALL #1, GG LIVE spec §7):
-  shadow (BUILT) — the first regular print at/over the trigger of a waiting lane doc, the first one at/under its stop,
+  shadow         — the first regular print at/over the trigger of a waiting lane doc, the first one at/under its stop,
                    and the moment a new A+ reached the hub are RECORDED in `gajjala_lane_stream` (insert-once rows).
                    ZERO broker calls, ever. Orders still go on the 1-minute exit_engine tick.
-  live           — the same rows, then `gajjala_entry.run_stream` (the lane's own gate + the lane-run mutex + the
+  live (BUILT since 2026-11-09 ~10:00 ET, his word: "With entries realtime like Gajjala does")
+                 — the same rows, then `gajjala_entry.run_stream` (the lane's own gate + the lane-run mutex + the
                    lane's own `_try_waiting`) on the print; the bar-close lane run (HIS CALL #17). Only on his word.
   off            — nothing.
 The env `GG_STREAM_MODE` may only LOWER the built mode (live → shadow → off), never raise it.
@@ -45,7 +46,7 @@ UTC = timezone.utc
 
 # ── OWNER NUMBERS (GG LIVE spec §3.3; pinned in tests/test_gajjala_lane_stream_2026_11_09.py) ───────────────────────
 GG_STREAM_MODES = ("off", "shadow", "live")             # low → high; the env may only move DOWN this list
-GG_STREAM_MODE = "shadow"                               # HIS CALL #1 (spec §7): SHADOW records, the 1-minute tick orders — LIVE only on his word
+GG_STREAM_MODE = "live"                                 # HIS CALL #1 ANSWERED — Ajay 2026-11-09 ~09:25 ET: "With entries realtime like Gajjala does" / "I would like to see it in action now" (SHADOW 02:29–~10:00 ET 11-09; the env may still LOWER it)
 GG_STREAM_RECHECK_SEC = 15.0                            # MINE — spec §3.3: after a LIVE attempt, no new stream attempt on that doc for 15 s (the tick still runs every 60 s)
 GG_STREAM_ALPACA_PER_MIN = 60                           # MINE — spec §3.3 / §5.1: token bucket on LIVE attempts (≈ 4 Alpaca calls each) ≤ 30 % of Alpaca's 200/min
 GG_STREAM_FRESH_POLLS = 2                               # spec §3.3 (derived): GG_STREAM_FRESH_SEC = 2 × live_hub.HUB_POLL_SEC — a print this fresh is "the last" for a new A+

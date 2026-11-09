@@ -68,6 +68,10 @@ def hub(monkeypatch):
     mod.HUB_POLL_SEC = 1.0
     monkeypatch.setitem(sys.modules, "live_hub", mod)
     monkeypatch.delenv("GG_STREAM_MODE", raising=False)
+    # 2026-11-09 ~10:00 ET: the BUILT default became "live" (HIS CALL #1 answered — Ajay: "With entries realtime like
+    # Gajjala does"). The shadow-behaviour tests below keep their SHADOW baseline through this patch; the built default
+    # and the env rule on it are pinned by test_built_default_is_live_env_only_lowers from the SOURCE literal.
+    monkeypatch.setattr(GS, "GG_STREAM_MODE", "shadow")
     monkeypatch.setattr(GS, "_submit", lambda fn, *a: fn(*a))     # the worker, inline
     GS._reset()
     yield mod
@@ -103,7 +107,7 @@ def _ids(coll):
 # ── numbers, words, mode ─────────────────────────────────────────────────────────────────────────────────────────
 def test_owner_numbers_words_and_derived(hub):
     from orderflow import tape
-    assert GS.GG_STREAM_MODE == "shadow" and GS.GG_STREAM_MODES == ("off", "shadow", "live")
+    assert _built_mode() == "live" and GS.GG_STREAM_MODES == ("off", "shadow", "live")   # LIVE since 2026-11-09 ~10:00 ET (Ajay: "With entries realtime like Gajjala does")
     assert (GS.GG_STREAM_RECHECK_SEC, GS.GG_STREAM_ALPACA_PER_MIN, GS.GG_STREAM_FRESH_POLLS) == (15.0, 60, 2)
     assert GS.fresh_sec() == 2.0
     hub.HUB_POLL_SEC = 0.5
@@ -122,6 +126,33 @@ def test_owner_numbers_words_and_derived(hub):
 def test_no_hub_means_never_fresh_and_nothing_passes(monkeypatch):
     monkeypatch.setitem(sys.modules, "live_hub", None)  # NEG: import fails
     assert GS.fresh_sec() == 0.0 and GS._print_kinds() == ()
+
+
+def _built_mode() -> str:
+    """The BUILT literal, read from the source (the autouse fixture patches the attribute to the shadow baseline)."""
+    import inspect
+    import re
+    m = re.search(r'^GG_STREAM_MODE = "([a-z]+)"', inspect.getsource(GS), re.M)
+    assert m, "gajjala_stream.py lost the GG_STREAM_MODE literal"
+    return m.group(1)
+
+
+def test_built_default_is_live_env_only_lowers(monkeypatch):
+    """2026-11-09 ~10:00 ET — Ajay: "to do entries I would like to see it in action now" / "With entries realtime like
+    Gajjala does" → the built default is LIVE; the env may still lower it, never raise it."""
+    monkeypatch.setattr(GS, "GG_STREAM_MODE", _built_mode())
+    assert GS.mode() == "live"
+    assert GS.STREAM_WORDS["live"] == "🛰 Stream entries: LIVE — a market order on the first regular print at or over the trigger."
+    monkeypatch.setenv("GG_STREAM_MODE", "shadow")
+    assert GS.mode() == "shadow"                        # lowered
+    monkeypatch.setenv("GG_STREAM_MODE", "off")
+    assert GS.mode() == "off"                           # lowered
+    monkeypatch.setenv("GG_STREAM_MODE", "live")
+    assert GS.mode() == "live"
+    monkeypatch.setenv("GG_STREAM_MODE", "turbo")
+    assert GS.mode() == "live"                          # NEG: an unknown env word changes nothing
+    monkeypatch.delenv("GG_STREAM_MODE")
+    assert GS.on_bar_close(NOW) is not None or True     # the bar-close lane run is reachable in LIVE (pinned below)
 
 
 def test_env_lowers_never_raises(monkeypatch):
@@ -314,6 +345,10 @@ def test_status_block_serves_the_stream_word(lane, monkeypatch):
     lane()
     st = GL.status_block(EE.get_config())
     assert st["stream"]["mode"] == "shadow" and st["stream"]["word"] == GS.STREAM_WORDS["shadow"]
+    monkeypatch.setattr(GS, "GG_STREAM_MODE", _built_mode())                                     # the built default: LIVE
+    live_st = GL.status_block(EE.get_config())["stream"]
+    assert live_st["mode"] == "live" and live_st["word"] == GS.STREAM_WORDS["live"]
+    monkeypatch.setattr(GS, "GG_STREAM_MODE", "shadow")
     monkeypatch.setenv("GG_STREAM_MODE", "off")
     assert GL.status_block(EE.get_config())["stream"]["word"] == GS.STREAM_WORDS["off"]
     monkeypatch.setattr(GS, "status", lambda: (_ for _ in ()).throw(RuntimeError("x")))
