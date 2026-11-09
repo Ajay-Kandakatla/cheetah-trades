@@ -929,7 +929,7 @@ def test_C7_idle_and_due_gives_exactly_one_restart_action():
     st = slept_state(wd.CRON_RESYNC_AT_SEC)
     st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
     assert resyncs(a) == [{"type": "cron_resync", "drift_sec": 120.0,
-                           "past_cap": False, "resyncs_24h": 1}]
+                           "past_cap": False, "resyncs_24h": 1, "detached": []}]
     assert st["cron_resyncs"] == [NOW + 120]
     assert [x["type"] for x in a].count("restart") == 0, "Docker itself is never touched"
 
@@ -1019,7 +1019,7 @@ def test_C27_a_long_sleep_resyncs_past_the_daily_cap_and_counts_it():
     assert wd.cron_wants_top(st, cobs(1120.0), NOW + 120, CFG) is True, "docker top is read"
     st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
     assert resyncs(a) == [{"type": "cron_resync", "drift_sec": LONG_DRIFT,
-                           "past_cap": True, "resyncs_24h": 13}]
+                           "past_cap": True, "resyncs_24h": 13, "detached": []}]
     assert st["cron_last_decision"] == "resync"
     assert len(st["cron_resyncs"]) == 13 and st["cron_resyncs"][-1] == NOW + 120, "counted"
     assert [x["type"] for x in a].count("restart") == 0, "Docker itself is never touched"
@@ -1169,6 +1169,7 @@ def test_C15_parsers():
     assert wd.parse_docker_top(TOP_SAMPLE) == IDLE
     assert wd.cron_busy_procs(IDLE) == []
     assert wd.cron_busy_procs(BUSY) == [JOB, "python -m supply_demand.zone_edge"]
+    assert wd.cron_split_procs(BUSY) == ([JOB, "python -m supply_demand.zone_edge"], [])
     assert wd.parse_docker_top("PID   COMMAND\n") is None, "NEG: no lines is not idle"
     assert wd.parse_docker_top("") is None and wd.parse_docker_top(None) is None
     assert wd.cron_busy_procs(["[python] <defunct>", "/usr/bin/supercronicX x"]) == \
@@ -1320,7 +1321,7 @@ def test_C21_dry_run_and_status_show_the_drift(tmp_path, monkeypatch):
     out = wd.dry_run(CFG, NOW + 120, observe_fn=lambda c, n: cobs(1120.0, procs=None),
                      state_dir=str(tmp_path), cron_top_fn=lambda: {"procs": IDLE, "error": None})
     assert resyncs(out["actions"]) == [{"type": "cron_resync", "drift_sec": 18000.0,
-                                        "past_cap": False, "resyncs_24h": 1}]
+                                        "past_cap": False, "resyncs_24h": 1, "detached": []}]
     assert out["cron"]["sleep_acc_sec"] == 18000.0 and out["cron"]["decision"] == "resync"
     assert out["cron"]["resync_at_sec"] == wd.CRON_RESYNC_AT_SEC
     json.dumps(out, default=str)
@@ -1577,3 +1578,184 @@ def test_C35_NEGATIVE_null_error_alerted_at_loads(tmp_path):
     (tmp_path / "state.json").write_text(json.dumps(st))
     got = wd.load_state(str(tmp_path))
     assert got is not None and got["error_alerted_at"] == {}
+
+
+# --------------------------------------------------------------------------- detached children 2026-11-09
+# Since 2026-10-27 the Gajjala 5-minute pass spawns detached children every slot
+# (the 1-minute loop ~4 of every 5 min, Luk's pass, since 2026-11-09 the bar-close
+# probe), so `docker top` is never bare init + supercronic 04:00-20:00 ET. On
+# 2026-11-09 the host hibernated (04:51-07:55 ET, 11,018 s of drift): the watchdog
+# logged "busy" on 20 consecutive runs and pushed cron_drift_busy while every
+# in-session job (exit_engine tick, sepa.cli alerts, demand_alerts, the ORB
+# capture) was set to first fire ~3 h late; cron was restarted by hand. supercronic
+# never waits for the children (`-t 120` cannot either) and the next pass
+# re-spawns them, so they are not a job in flight.
+PY = "/usr/local/bin/python"
+LOOP_1M = PY + " -m chart_maps.gajjala.run_1m --loop"
+LUK_CHILD = PY + " -m chart_maps.luk.run --child"
+BAR_CLOSE = PY + " -m chart_maps.gajjala.run --at-bar-close"
+CHILDREN = [LOOP_1M, LUK_CHILD, BAR_CLOSE]
+GG_PASS = PY + " -m market_hours.gate chart_maps.gajjala.run"      # the pass itself IS a job
+HAND_RERUN = PY + " -m rotation.sector_news_tags"                 # a `docker exec` re-run IS a job
+HIBERNATE_DRIFT = 11018.0
+
+
+def test_C36_measured_2026_11_09_children_only_counts_as_idle_and_resyncs_at_once():
+    st = slept_state(HIBERNATE_DRIFT)
+    st, a = wd.evaluate(st, cobs(1120.0, procs=IDLE + CHILDREN), NOW + 120, CFG)
+    assert st["cron_last_decision"] == "resync" and st["cron_busy_since"] is None
+    assert resyncs(a) == [{"type": "cron_resync", "drift_sec": HIBERNATE_DRIFT, "past_cap": False,
+                           "resyncs_24h": 1, "detached": CHILDREN}]
+    assert "cron_drift_busy" not in conds(st)
+    # each child alone is idle too, and the policy line is the existing CRON_RESYNC_AT_SEC
+    for child in CHILDREN:
+        st2, a2 = wd.evaluate(slept_state(wd.CRON_RESYNC_AT_SEC),
+                              cobs(1120.0, procs=IDLE + [child]), NOW + 120, CFG)
+        assert st2["cron_last_decision"] == "resync" and resyncs(a2)[0]["detached"] == [child]
+    assert wd.cron_split_procs(IDLE + CHILDREN) == ([], CHILDREN)
+    assert wd.cron_busy_procs(IDLE + CHILDREN) == []
+
+
+@pytest.mark.parametrize("interp", ["python", "python3", "/usr/local/bin/python3.11",
+                                    "/app/.venv/bin/python"])
+def test_C36b_any_python_interpreter_name_is_the_child(interp):
+    for tail in sorted(wd.CRON_DETACHED_CHILD_ARGS):
+        assert wd.cron_detached_child(interp + " " + " ".join(tail)) is True
+
+
+@pytest.mark.parametrize("job", [GG_PASS, JOB, "python -m supply_demand.zone_edge", HAND_RERUN])
+def test_C36c_NEGATIVE_a_job_beside_the_children_still_waits_and_the_alert_names_the_job(job):
+    st = slept_state(HIBERNATE_DRIFT)
+    st["cron_busy_since"] = NOW + 120 - 1801                        # waited past 30 min
+    st, a = wd.evaluate(st, cobs(1120.0, procs=IDLE + CHILDREN + [job]), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "busy"
+    body = [p for p in st["pending"] if p["condition"] == "cron_drift_busy"]
+    assert len(body) == 1 and wd._clip(job, wd.CRON_CMD_MAX) in body[0]["body"]
+    for child in CHILDREN:
+        assert child not in body[0]["body"], "the alert names the job, never a child"
+    assert wd.cron_split_procs(IDLE + CHILDREN + [job]) == ([job], CHILDREN)
+
+
+@pytest.mark.parametrize("args", [
+    PY + " -m chart_maps.gajjala.run",                                # the pass, bare
+    GG_PASS,                                                          # the pass under the gate
+    PY + " -m chart_maps.gajjala.run --on-demand",                    # an on-open pass
+    PY + " -m chart_maps.gajjala.run --now 2026-11-09T10:00",
+    PY + " -m chart_maps.gajjala.run_1m --on-demand",
+    PY + " -m chart_maps.gajjala.run_1m",
+    PY + " -m chart_maps.gajjala.run_1m --loop --now 2026-11-09T10:00",   # an extra flag
+    PY + " -m chart_maps.luk.run",
+    PY + " -m chart_maps.luk.run --child --now x",
+    PY + " -m chart_maps.gajjala.run --at-bar-close --symbols IREN",
+    PY + " -m chart_maps.gajjala.bar_close --at-bar-close",
+    "/bin/sh -c cd /app && python -m chart_maps.gajjala.run_1m --loop",  # a shell wrapper
+    "sh -c python -m chart_maps.luk.run --child",
+    "-m chart_maps.gajjala.run_1m --loop",                            # no interpreter
+    "/usr/bin/supercronicX -m chart_maps.gajjala.run_1m --loop",
+    "perl -m chart_maps.gajjala.run_1m --loop",
+    "[python] <defunct>",
+    "python",
+    "",
+])
+def test_C37_NEGATIVE_anything_but_the_exact_child_argv_is_a_job(args):
+    assert wd.cron_detached_child(args) is False
+    assert wd.cron_busy_procs(IDLE + [args]) == [args]
+    st, a = wd.evaluate(slept_state(HIBERNATE_DRIFT),
+                        cobs(1120.0, procs=IDLE + CHILDREN + [args]), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "busy"
+
+
+def test_C37b_NEGATIVE_children_only_never_bypasses_pause_off_gap_or_the_small_drift_cap():
+    # pause file
+    st = slept_state(HIBERNATE_DRIFT)
+    o = cobs(1120.0, procs=IDLE + CHILDREN, paused=True)
+    assert wd.cron_wants_top(st, o, NOW + 120, CFG) is False
+    st2, a = wd.evaluate(copy_state(st), o, NOW + 120, CFG)
+    assert resyncs(a) == [] and st2["cron_last_decision"] == "paused"
+    # config off
+    cfg = dict(CFG, cron_resync=False)
+    st2, a = wd.evaluate(copy_state(st), cobs(1120.0, procs=IDLE + CHILDREN), NOW + 120, cfg)
+    assert resyncs(a) == [] and st2["cron_last_decision"] == "off"
+    # the 10-minute gap
+    st["cron_resyncs"] = [NOW + 120 - 300]
+    st2, a = wd.evaluate(copy_state(st), cobs(1120.0, procs=IDLE + CHILDREN), NOW + 120, CFG)
+    assert resyncs(a) == [] and st2["cron_last_decision"] == "gap"
+    # the daily cap still holds under CRON_RESYNC_CAP_EXEMPT_SEC
+    small = slept_state(wd.CRON_RESYNC_CAP_EXEMPT_SEC - 1)
+    small["cron_resyncs"] = list(FULL_DAY)
+    st2, a = wd.evaluate(small, cobs(1120.0, procs=IDLE + CHILDREN), NOW + 120, CFG)
+    assert resyncs(a) == [] and st2["cron_last_decision"] == "cap"
+    # under the line nothing is read at all
+    assert wd.cron_wants_top(slept_state(wd.CRON_RESYNC_AT_SEC - 1),
+                             cobs(1000.0, procs=IDLE + CHILDREN), NOW, CFG) is False
+
+
+def test_C38_the_exempt_argv_are_the_backends_own_spawn_constants():
+    from chart_maps.gajjala import bar_close, run_1m
+    from chart_maps.luk import run as luk_run
+    spawned = {tuple(run_1m.ARGV_LOOP[1:]), tuple(luk_run.ARGV_CHILD[1:]),
+               tuple(bar_close.ARGV_CHILD[1:])}
+    assert spawned == set(wd.CRON_DETACHED_CHILD_ARGS), "a renamed child must be re-pinned here"
+    assert len(wd.CRON_DETACHED_CHILD_ARGS) == 3
+    assert tuple(run_1m.ARGV_ON_DEMAND[1:]) not in wd.CRON_DETACHED_CHILD_ARGS, \
+        "an on-open run is a pass, not a detached child"
+    for argv in (run_1m.ARGV_LOOP, luk_run.ARGV_CHILD, bar_close.ARGV_CHILD):
+        assert os.path.basename(argv[0]).startswith("python"), argv   # sys.executable
+        assert wd.cron_detached_child(" ".join(argv)) is True
+    for s in CHILDREN:
+        assert len(s) <= wd.CRON_CMD_MAX, "the log line never clips a child"
+
+
+def test_C39_run_once_children_only_restarts_once_and_the_log_names_them(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(HIBERNATE_DRIFT))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None),
+                            top=lambda: {"procs": IDLE + CHILDREN, "error": None})
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert calls == {"top": 1, "restart": 1, "inspect": 1}
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_sleep_acc_sec"] == 0.0 and st["cron_last_decision"] == "resync"
+    assert st["cron_last_resync"] == {"ts": NOW + 120, "drift_sec": HIBERNATE_DRIFT}
+    assert d.calls == [], "no push: it happens at every wake"
+    lines = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()]
+    hit = [x for x in lines if x["msg"] == "cron_resynced"]
+    assert len(hit) == 1 and hit[0]["detached"] == CHILDREN and hit[0]["drift_sec"] == HIBERNATE_DRIFT
+    assert not [x for x in lines if x["msg"] == "cron_resynced_past_cap"]
+    run = [x for x in lines if x["msg"] == "run"][-1]
+    assert run["cron"] == "resync" and run["cron_drift_sec"] == 0
+
+
+def test_C39b_NEGATIVE_run_once_children_plus_a_job_never_restarts_and_a_plain_resync_logs_none(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(HIBERNATE_DRIFT))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None),
+                            top=lambda: {"procs": IDLE + CHILDREN + [GG_PASS], "error": None})
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert calls == {"top": 1, "restart": 0, "inspect": 0}
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_last_decision"] == "busy" and st["cron_sleep_acc_sec"] == HIBERNATE_DRIFT
+    assert st["cron_busy_since"] == NOW + 120
+    text = (tmp_path / "watchdog.log").read_text()
+    assert '"cron_resynced"' not in text
+    # the ordinary idle re-sync carries an empty list
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1240.0, procs=None))
+    assert wd.run_once(CFG, NOW + 240, **kw) == 0 and calls["restart"] == 1
+    lines = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()]
+    hit = [x for x in lines if x["msg"] == "cron_resynced"]
+    assert len(hit) == 1 and hit[0]["detached"] == []
+
+
+def test_C39c_the_2026_11_09_morning_replayed_heals_on_the_first_pass_idle_run(tmp_path):
+    """07:56-08:38 ET: the pass (~40 s at :x1) and its children in every `docker top`;
+    the old rule logged busy 20 times. Now the first run that finds only children
+    restarts; a run that catches the pass itself still waits."""
+    wd.save_state(str(tmp_path), slept_state(HIBERNATE_DRIFT))
+    tops = iter([IDLE + CHILDREN + [GG_PASS], IDLE + CHILDREN + [GG_PASS, HAND_RERUN],
+                 IDLE + CHILDREN, IDLE + CHILDREN])
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1000.0 + (n - NOW), procs=None),
+                            top=lambda: {"procs": next(tops), "error": None})
+    decisions = []
+    for i in range(1, 5):
+        assert wd.run_once(CFG, NOW + 120 * i, **kw) == 0
+        decisions.append(wd.load_state(str(tmp_path))["cron_last_decision"])
+    assert decisions == ["busy", "busy", "resync", "in_sync"]
+    assert calls["restart"] == 1 and d.calls == []

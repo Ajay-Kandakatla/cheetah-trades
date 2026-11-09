@@ -43,6 +43,25 @@ pause file, and logs ``cron_resynced_past_cap`` beside ``cron_resynced``. A
 ``docker restart`` that keeps failing at a large drift therefore retries every
 gap until it succeeds (one ``watchdog_error`` a day), not 12 times.
 
+Detached children (2026-11-09). Since 2026-10-27 the Gajjala 5-minute pass
+spawns detached children every slot (start_new_session; the pass returns at
+once): ``chart_maps.gajjala.run_1m --loop`` (about four minutes of every five),
+``chart_maps.luk.run --child`` and, since 2026-11-09, ``chart_maps.gajjala.run
+--at-bar-close``. supercronic never waits for them (not its children, so
+``-t 120`` cannot either) and the next pass re-spawns them, so ``docker top`` is
+never bare init + supercronic between 04:00 and 20:00 ET. On 2026-11-09 a
+hibernation (11,018 s of drift) therefore met ``busy`` on 20 consecutive runs,
+pushed ``cron_drift_busy``, and every in-session job was set to first fire three
+hours late until a restart by hand. A process whose args are exactly an
+interpreter plus one entry of CRON_DETACHED_CHILD_ARGS is not a job in flight:
+the container counts as idle while only such children run, and the restart
+costs at most one slot of the (shadow) 1-minute loop, one Luk pass (its lease
+frees itself in 280 s) and one bar-close probe. The pass itself
+(``chart_maps.gajjala.run`` under market_hours.gate), an ``--on-demand`` run, a
+shell wrapper, an extra flag or any other argv is still busy, and the pause
+file, the config flag, the gap and the small-drift cap hold as before. The
+``cron_resynced`` line lists the children that were running (``detached``).
+
 It never kills anything: it sends no signal itself, and the one container it
 restarts is restarted only while no cron job runs. ``-t 120`` overrides the
 container's 1 s stop timeout: Docker sends SIGTERM, tini (docker-init) forwards
@@ -131,6 +150,14 @@ _DAY = 24 * 3600
 _CONFIG_KEYS = ("admin_email", "api_base", "auto_restart", "cron_resync", "docker_log_dir")
 _CONFIG_BOOLS = ("auto_restart", "cron_resync")
 _CRON_IDLE_PROCS = ("docker-init", "supercronic")
+# the Gajjala pass's detached children: the args after the interpreter, exact (the
+# backend's ARGV_LOOP / ARGV_CHILD constants, pinned by the tests). Not a job in
+# flight: supercronic never waits for them, the next pass re-spawns them (2026-11-09).
+CRON_DETACHED_CHILD_ARGS = frozenset({
+    ("-m", "chart_maps.gajjala.run_1m", "--loop"),       # the 1-minute loop (2026-10-27)
+    ("-m", "chart_maps.luk.run", "--child"),             # Luk's pass (2026-11-01)
+    ("-m", "chart_maps.gajjala.run", "--at-bar-close"),  # the bar-close probe (2026-11-09)
+})
 _BACKEND_NAME = "com.docker.backend"
 _UI_MARK = "/Docker Desktop.app/Contents/MacOS/Docker Desktop"
 
@@ -275,14 +302,32 @@ def parse_docker_top(text: str) -> Optional[List[str]]:
     return procs or None
 
 
-def cron_busy_procs(procs: List[str]) -> List[str]:
-    """Every process that is not the idle scheduler (docker-init / supercronic)."""
-    busy = []
+def cron_detached_child(args: str) -> bool:
+    """A detached child of the Gajjala pass: an interpreter named python*, then
+    exactly one entry of CRON_DETACHED_CHILD_ARGS. A shell wrapper, an extra flag,
+    another module or an ``--on-demand`` run is not one (it is a job: busy)."""
+    argv = args.split()
+    return (len(argv) >= 2 and os.path.basename(argv[0]).startswith("python")
+            and tuple(argv[1:]) in CRON_DETACHED_CHILD_ARGS)
+
+
+def cron_split_procs(procs: List[str]) -> Tuple[List[str], List[str]]:
+    """(busy, detached): every process that is not the idle scheduler (docker-init /
+    supercronic), split into jobs in flight and the Gajjala pass's detached children,
+    which supercronic never waits for and the next pass re-spawns (2026-11-09)."""
+    busy = []  # type: List[str]
+    detached = []  # type: List[str]
     for args in procs:
         argv = args.split()
-        if not argv or os.path.basename(argv[0]) not in _CRON_IDLE_PROCS:
-            busy.append(args)
-    return busy
+        if argv and os.path.basename(argv[0]) in _CRON_IDLE_PROCS:
+            continue
+        (detached if cron_detached_child(args) else busy).append(args)
+    return busy, detached
+
+
+def cron_busy_procs(procs: List[str]) -> List[str]:
+    """The jobs in flight: cron_split_procs without the detached children."""
+    return cron_split_procs(procs)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -629,7 +674,7 @@ def _cron_evaluate(st: dict, obs: dict, cfg: dict, now: float, actions: List[dic
             _log_once(st, actions, "no_top", "docker top unusable; no re-sync", now,
                       error=top.get("error") or "no process lines")
         else:
-            busy = cron_busy_procs(procs)
+            busy, detached = cron_split_procs(procs)
             if busy:
                 decision = "busy"
                 if st["cron_busy_since"] is None:
@@ -648,7 +693,8 @@ def _cron_evaluate(st: dict, obs: dict, cfg: dict, now: float, actions: List[dic
                 actions.append({"type": "cron_resync",
                                 "drift_sec": round(st["cron_sleep_acc_sec"], 1),
                                 "past_cap": len(recent) >= CRON_RESYNC_MAX_PER_DAY,
-                                "resyncs_24h": len(recent) + 1})
+                                "resyncs_24h": len(recent) + 1,
+                                "detached": list(detached)})
     if decision != "busy":
         st["cron_busy_since"] = None
     st["cron_last_decision"] = decision
@@ -1160,7 +1206,8 @@ def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_d
             state = record_cron_resync(state, err is None, a["drift_sec"], started, err, now)
             if err is None:
                 log_line(state_dir, "warning", "cron_resynced", drift_sec=a["drift_sec"],
-                         drift_h=round(a["drift_sec"] / 3600.0, 2), started_at=started)
+                         drift_h=round(a["drift_sec"] / 3600.0, 2), started_at=started,
+                         detached=list(a.get("detached") or []))
                 if a.get("past_cap"):
                     log_line(state_dir, "warning", "cron_resynced_past_cap",
                              drift_sec=a["drift_sec"], resyncs_24h=a.get("resyncs_24h"),

@@ -53,6 +53,7 @@ watchdog shows a macOS notification on the first failed try and retries every
 | `CRON_BUSY_ALERT_SEC` | 30 min | a job keeps cron busy this long → one `cron_drift_busy` |
 | `CRON_RESYNC_MIN_GAP_SEC` / `CRON_RESYNC_MAX_PER_DAY` | 10 min / 12 | guards on `docker restart cheetah-market-app-cron-1`; the cap holds only under `CRON_RESYNC_CAP_EXEMPT_SEC` of drift |
 | `CRON_RESYNC_CAP_EXEMPT_SEC` | 600 | a drift this large re-syncs past the daily cap (2026-10-21); the gap, the busy wait and the pause file still hold |
+| `CRON_DETACHED_CHILD_ARGS` | 3 argv | the Gajjala pass's detached children (`run_1m --loop`, `luk.run --child`, `run --at-bar-close`): not a job in flight, so cron counts as idle while only they run (2026-11-09) |
 | `CRON_STOP_GRACE_SEC` / `CRON_RESTART_TIMEOUT_SEC` | 120 s / 150 s | `docker restart -t 120` (SIGTERM, SIGKILL only after 120 s) / the CLI call's timeout |
 | `CRON_EDGE_LEAD_SEC` / `CRON_EDGE_TRAIL_SEC` | 3 / 3 | no restart in second 57–59 or 0–3 of a minute (per-minute jobs start at :00) |
 
@@ -93,10 +94,34 @@ What the watchdog does, each run:
    interval's sleep (a deploy, then the lid closes: that night still counts),
    re-arms the busy alert and drops a pending `cron_drift_busy`.
 3. When the drift is at least `CRON_RESYNC_AT_SEC` (120 s): `docker top` must
-   show only `docker-init` and `supercronic`. If a job is running it waits (it
-   never interrupts a job) and, after `CRON_BUSY_ALERT_SEC` (30 min) of waiting,
-   sends ONE `cron_drift_busy` push naming the drift and the running command; it
-   re-arms after a successful re-sync or a new cron `StartedAt`.
+   show only `docker-init` and `supercronic`, or beside them only the Gajjala
+   pass's detached children (`CRON_DETACHED_CHILD_ARGS`, next paragraph). If a
+   job is running it waits (it never interrupts a job) and, after
+   `CRON_BUSY_ALERT_SEC` (30 min) of waiting, sends ONE `cron_drift_busy` push
+   naming the drift and the running command; it re-arms after a successful
+   re-sync or a new cron `StartedAt`.
+   The children (2026-11-09): since 2026-10-27 the 5-minute Gajjala pass spawns
+   `python -m chart_maps.gajjala.run_1m --loop` (about four minutes of every
+   five), `python -m chart_maps.luk.run --child` and, since 2026-11-09, `python
+   -m chart_maps.gajjala.run --at-bar-close` detached (`start_new_session`; the
+   pass returns at once), so between 04:00 and 20:00 ET the container is never
+   bare init + supercronic. supercronic never waits for them (they are not its
+   children, so `-t 120` cannot either) and the next pass re-spawns them. On
+   2026-11-09 the Mac hibernated on battery (04:51–07:55 ET, 11,018 s of drift):
+   the watchdog logged `"cron": "busy"` on 20 consecutive runs, pushed
+   `cron_drift_busy` at 08:26 ET, and the in-session jobs (`trading.exit_engine
+   tick`, `sepa.cli alerts`, demand_alerts, the ORB capture) were set to first
+   fire about three hours late, until cron was restarted by hand at 08:38 ET.
+   So a process whose args are exactly an interpreter plus one entry of
+   `CRON_DETACHED_CHILD_ARGS` is not a job in flight. A restart while they run
+   costs at most one slot of the (shadow) 1-minute loop, one Luk pass (its lease
+   frees itself in 280 s) and one bar-close probe row set. The pass itself
+   (`market_hours.gate chart_maps.gajjala.run`), an `--on-demand` run, a shell
+   wrapper, an extra flag, a `docker exec` re-run and any other argv stay busy;
+   the pause file, `cron_resync: false`, the gap and the small-drift cap hold as
+   before. The `cron_resynced` line lists the children that were running
+   (`detached`). Tests C36–C39c; C38 pins the three argv to the backend's own
+   `ARGV_LOOP` / `ARGV_CHILD` constants, so a renamed child fails the suite.
 4. Idle: `docker restart -t 120 cheetah-market-app-cron-1` (150 s timeout), never
    in second 57–59 or 0–3 of a wall-clock minute (read just before the restart;
    inside that window it waits in-process until second 4, at most 7 s, because
@@ -133,8 +158,10 @@ Reading the log:
 grep -E 'cron_resynced|cron resync failed|drift reset' ~/.cheetah/watchdog/watchdog.log | tail -5
 ```
 
-- `"msg": "cron_resynced", "drift_sec": 80640.0, "drift_h": 22.4, "started_at": "…"`:
-  the cron container was restarted after 22.4 h of summed sleep.
+- `"msg": "cron_resynced", "drift_sec": 80640.0, "drift_h": 22.4, "started_at": "…",
+  "detached": […]`: the cron container was restarted after 22.4 h of summed
+  sleep; `detached` lists the Gajjala children that were running and were not
+  waited for (`[]` when the container was bare).
 - `"msg": "cron_resynced_past_cap", "drift_sec": 11044.0, "resyncs_24h": 13, "cap": 12,
   "exempt_sec": 600`: that re-sync went through although the day's cap was used
   up, because the drift was at least `CRON_RESYNC_CAP_EXEMPT_SEC`. A
