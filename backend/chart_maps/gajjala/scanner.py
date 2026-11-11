@@ -13,7 +13,7 @@ boundary row can never flip on the last bit of a division.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time as dtime, timezone
 from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
@@ -47,16 +47,33 @@ def _iso(d) -> str:
     return d.isoformat() if isinstance(d, (date, datetime)) else str(d)
 
 
+def _mins(t) -> int:
+    return t.hour * 60 + t.minute
+
+
 def pass_tape_session(now) -> str:
-    """The tape session a pass belongs to. `prices.trade_session` calls 20:00–20:05 "closed", but the 20:01 pass
-    closes the 19:55–20:00 bar and is the LAST after-hours pass (it decides tomorrow's carry) — so the minutes up
-    to PASS_CLOSE_ET still count as after-hours."""
+    """The tape session a pass belongs to. `prices.trade_session` gives exchange hours ("callers apply the
+    calendar"); this caller applies the house calendar (alerts._closes): on a half day 13:00–17:00 is after-hours and
+    the extended session ends 17:00 (formulas audit D3, 2026-11-11). The minutes from the extended close up to it +
+    the PASS_CLOSE_ET grace (5, derived from PASS_CLOSE_ET − ET_AFTERHOURS_CLOSE, never typed) still count as
+    after-hours: the 20:01 pass (17:01 on a half day) closes the last extended bar and is the LAST after-hours pass
+    (it decides tomorrow's carry)."""
+    from daytrading.data import ET_AFTERHOURS_CLOSE
+
+    from .alerts import _closes as _closes_of
     et = _et(now)
     s = prices.trade_session(et)
-    if s == "closed" and et.weekday() < 5:
-        hh, mm = (int(x) for x in GC.PASS_CLOSE_ET.split(":"))
-        if 20 * 60 <= et.hour * 60 + et.minute <= hh * 60 + mm:
-            return "afterhours"
+    if et.weekday() >= 5:
+        return s
+    rth_close, ext_close = _closes_of(et.date())
+    m = _mins(et)
+    if s == "rth" and m >= _mins(rth_close):
+        s = "afterhours"                                        # half day: 13:00–16:00 is after-hours
+    if s == "afterhours" and m >= _mins(ext_close):
+        s = "closed"                                            # half day: the extended session ends 17:00
+    grace = _mins(dtime.fromisoformat(GC.PASS_CLOSE_ET)) - _mins(ET_AFTERHOURS_CLOSE)
+    if s == "closed" and _mins(ext_close) <= m <= _mins(ext_close) + grace:
+        return "afterhours"                                     # the pass that closes the last extended bar
     return s
 
 

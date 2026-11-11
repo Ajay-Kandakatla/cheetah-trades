@@ -61,6 +61,21 @@ They run inside the cron pass and the nightly only, never on a page load.
   never-checked first (gain DESC), then the oldest `checked_at`; ≤ `AH_CONFIRM_MAX_PER_PASS` per pass; every check is written
   to `gajjala_post`; `unchecked_n` (incl. failed minute reads) → "N after-hours gainers not checked yet — next pass".
   `reg_gain_pct` is served, display only (`AH_EXHAUSTION_MAX_PCT` OFF).
+- **Half-day clock (formulas audit D3, 2026-11-11).** The 🌙 read and the pass's tape session use the regular close and the
+  extended close of the house calendar, `alerts._closes` — 15:59 / 16:01–19:59 on a normal day, on a half day (2026-11-27,
+  2026-12-24, the `supply_demand.timeframes.HALF_DAYS` table) 12:59 / 13:01–16:59. `context._post_clock(session)` gives the
+  minute starts (the 13:00 / 16:00 closing-cross minute stays EXCLUDED, trap T7); the stored key `close_1559` is kept and
+  means "the last regular minute's close" (12:59 on a half day). `scanner.pass_tape_session` reads 13:00–17:05 on a half day as
+  after-hours (the 17:01–17:05 passes close the last extended bar; the grace = `PASS_CLOSE_ET` − `ET_AFTERHOURS_CLOSE`,
+  derived, never typed) and 17:06 on as "closed". Before the fix the fixed clock read a half day's after-hours as the regular
+  session (demo: close_pos 0.40 instead of 0.90, after-hours volume 148,117 instead of 600,000). A normal day reads exactly as
+  before (pinned minute by minute, `tests/test_gajjala_defects_clock_lines_2026_11_11.py`).
+- **The 17:06–20:05 passes on a half day** still run (`run.in_window` is unchanged — whether they should run is HIS CALL #9)
+  and read tape "closed": no carry change (`commit_ah_carry` → "skipped"; the last 17:01–17:05 pass decides Monday's ☀️
+  carry), no 🌙 confirm, no push (the alerts window already ends at the half-day extended close). Massive's day bar
+  (`day.c` as the regular close) is MEASURED on a normal day only; on a half day it is unmeasured (the 2026-11-27 13:05 check).
+  Not touched (display / ledger clocks, not D3): the `squeeze_marks.py` after-hours stretch, `RS_TILE_PRIOR_TO_ET`,
+  `LEDGER_FILL_TO_ET`.
 
 ## 4. Nightly (20:15 ET, `python -m chart_maps.gajjala.nightly [--session D] [--steps floats,halts,history]`)
 For tomorrow's names (scanner.listed_symbols of the next market day + tonight's after-hours carry):

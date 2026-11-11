@@ -21,13 +21,14 @@ from __future__ import annotations
 import logging
 import math
 import time
-from datetime import date, datetime, time as dtime, timezone
+from datetime import date, datetime, time as dtime, timedelta, timezone
 from typing import Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
 from sepa.moat_backfill import BACKOFF_MAX_SEC, DEFAULT_INTERVAL_SEC
 from short_interest.read import FLOAT_EXCEEDS_SHARES, _float_suspect, _human_shares
 
+from . import alerts as AL                              # alerts._closes — the house calendar's two closes (D3)
 from . import constants as GC
 
 log = logging.getLogger("chart_maps.gajjala.context")
@@ -636,18 +637,34 @@ def premarket_list(scan_today: Iterable[dict], carry_prev: Optional[dict], *, pm
 
 
 # ── 🌙 K10 post-market confirm ────────────────────────────────────────────────────────────────────────────────────
-_RTH_FIRST, _RTH_LAST = dtime(9, 30), dtime(15, 59)            # minute STARTS inside the regular session
-_AH_FIRST, _AH_END = dtime(16, 1), dtime(20, 0)                # 16:00 = the closing-cross minute (T7) — EXCLUDED
+_RTH_FIRST = dtime(9, 30)                                      # minute STARTS inside the regular session
+
+
+def _post_clock(session) -> tuple:
+    """(rth_first, rth_last, ah_first, ah_end) — the minute STARTS the 🌙 K10 read uses on `session`, off the house
+    calendar (alerts._closes: the regular close and the extended close, half days per the house table). A normal day
+    reads 09:30–15:59 regular and 16:01–19:59 after-hours; a half day 09:30–12:59 and 13:01–16:59. The closing-cross
+    minute (16:00 / 13:00, trap T7) stays EXCLUDED. Formulas audit D3, 2026-11-11 (the fixed 15:59 / 16:01 / 20:00
+    clock read a half day's after-hours as the regular session)."""
+    d = _as_date(session)
+    rth_close, ah_end = AL._closes(d)
+    close_dt = datetime.combine(d, rth_close)
+    rth_last = (close_dt - timedelta(minutes=1)).time()
+    ah_first = (close_dt + timedelta(minutes=1)).time()
+    return _RTH_FIRST, rth_last, ah_first, ah_end
 
 
 def _post_minutes(minutes, session) -> Optional[dict]:
-    """RTH high / low, the 15:59 minute's close and the after-hours volume of `session` from a 1-minute frame (naive
-    UTC index = the bar START, daytrading.data). None when the frame has no RTH minute that day."""
+    """RTH high / low, the last regular minute's close and the after-hours volume of `session` from a 1-minute frame
+    (naive UTC index = the bar START, daytrading.data). The clock is `_post_clock(session)` (the house calendar).
+    Key `close_1559` (kept: it is stored in `gajjala_post`) = the last regular minute's close (15:59; 12:59 on a half
+    day). None when the frame has no RTH minute that day."""
     if minutes is None or getattr(minutes, "empty", True):
         return None
     idx = minutes.index.tz_localize("UTC") if minutes.index.tz is None else minutes.index
     et = idx.tz_convert(ET)
     sess = _as_date(session)
+    rth_first, rth_last, ah_first, ah_end = _post_clock(sess)
     hi = lo = c1559 = None
     ah_vol = 0.0
     for k, ts in enumerate(et):
@@ -655,15 +672,15 @@ def _post_minutes(minutes, session) -> Optional[dict]:
             continue
         t = ts.time().replace(second=0, microsecond=0)
         row = minutes.iloc[k]
-        if _RTH_FIRST <= t <= _RTH_LAST:
+        if rth_first <= t <= rth_last:
             h, low = _num(row.get("high")), _num(row.get("low"))
             if h is not None:
                 hi = h if hi is None else max(hi, h)
             if low is not None:
                 lo = low if lo is None else min(lo, low)
-            if t == _RTH_LAST:
+            if t == rth_last:
                 c1559 = _num(row.get("close"))
-        elif _AH_FIRST <= t < _AH_END:
+        elif ah_first <= t < ah_end:
             ah_vol += _num(row.get("volume")) or 0.0
     if hi is None or lo is None:
         return None
@@ -678,9 +695,10 @@ def postmarket_confirm(candidates: Iterable[dict], checked: Optional[dict], minu
 
     `candidates` = this pass's scanner prefilter rows (k10_candidates); `checked` = {SYM: gajjala_post doc} from earlier
     passes. Rotation (spec §3.1.5): never-checked names first (after-hours gain DESC), then the oldest `checked_at`; at
-    most `cap` names get a 1-minute read per pass. Regular close = the snapshot's day.c, else the 15:59 minute (flagged);
-    `close_pos` is fixed after 16:00 — computed once and kept; after-hours volume = minutes starting 16:01–19:59 (the
-    16:00 closing-cross minute excluded, trap T7); the gain is always the CURRENT snapshot's. Every name checked this
+    most `cap` names get a 1-minute read per pass. Regular close = the snapshot's day.c, else the last regular minute
+    (15:59; 12:59 on a half day — flagged "minute_1559"); `close_pos` is fixed after the regular close — computed once
+    and kept; after-hours volume = minutes starting 16:01–19:59 (13:01–16:59 on a half day; the closing-cross minute
+    excluded, trap T7 — `_post_clock`, formulas audit D3); the gain is always the CURRENT snapshot's. Every name checked this
     pass is written to `gajjala_post` when `store` is given (that is what the next pass's rotation reads). A name not
     reached — or whose minutes failed — counts in `unchecked_n` ("N after-hours gainers not checked yet — next pass")."""
     now = _utc(now)
