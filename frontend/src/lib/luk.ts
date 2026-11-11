@@ -75,6 +75,8 @@ export type LukTile = {
   bars?: CmBar[] | null; curves?: CmCurve[] | null; vol_avg?: ServedVolAvg | null;
   lines?: CmTile['lines'] | null; markers?: CmTile['markers'] | null;
   as_of_bar_t5?: string | number | null; read_at_text?: string | null;
+  /** 2026-11-11 — served: the card's read predates the latest pass (stamps compared server-side) + its served sentence. */
+  not_reread?: boolean | null; not_reread_text?: string | null;
   gajjala?: { setup: string; state: string } | null;
 };
 export type LukScreenHead = string | { key: string; label: string };

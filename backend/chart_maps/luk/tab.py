@@ -12,6 +12,12 @@ since LC.LUK_LIVE_SINCE by his word (Ajay 2026-11-01: "Lets make it live. also a
 follow luk.variant.push_mode() at call time (anything but "live" serves the shadow words: recorded, never sent).
 UNMEASURED: nothing here trades, sizes or enters a lane.
 
+2026-11-11 (Ajay ~15:35 ET, verbatim: "It still show HQ as the first ticker for me"): every card carries `not_reread`
+/ `not_reread_text` (its stored read is older than the latest pass's `at`), and of the cards shown the ones the latest
+pass re-read come first — ORDER_VARIANT A (cut first, then the stable partition: the same cards as before), chosen by
+the main session as the set-preserving default; variant B (re-read first, then the cut) = HIS CALL, not built. Display
+only: the names read, the gates, the pushes and the counts are unchanged.
+
 Reused by import (one engine per concept): gajjala.tab's formatters (`_px`, `_pct`, `_hhmm`, `_et`, `_plain`, `_f`),
 its `_session_block` (minus GG's first-15-minutes keys — Luk trades the first candle), `_pass_block` (as_of / stale /
 warming over the LUK variant's cadence), `_tile_lines` and `_on_bars` (the PatternChart BUY / TRIGGER / STOP lines and
@@ -80,7 +86,10 @@ COUNTS_LEGEND = (
     ("stopped", "stopped", "broke, then a later closed bar traded at or under the stop"),
     ("none", "no setup", "no context for the setup today — never carded"),
 )
-ORDER_NOTE = "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state"
+STATE_ORDER_TEXT = "A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state"
+REREAD_ORDER_TEXT = ("of the cards shown: the ones the latest pass re-read first, the ones it did not re-read after "
+                     "them")                                            # 2026-11-11 ORDER_VARIANT A (cut first)
+ORDER_NOTE = REREAD_ORDER_TEXT + " · in each group: " + STATE_ORDER_TEXT
 STATE_LABEL = {
     "aplus": "A+ — every rule met, the trigger bar traded through and closed",
     "triggered": "triggered earlier",
@@ -100,6 +109,7 @@ FLUSH_TEXT = "flushed {d:.1f}% below the hourly {ema} EMA at {hhmm}"
 FLUSH_TOUCH_TEXT = "touched the hourly {ema} EMA at {hhmm}"
 FLUSH_NONE_TEXT = "no touch of the hourly {ema} EMA today"
 READ_AT_TEXT = "read at {hhmm} ET"
+NOT_REREAD_TEXT = "not re-read since {hhmm} ET"                 # 2026-11-11: the card's OWN read time, ET
 SCREENS_RANK_TEXT = "{emoji} #{rank}"
 SCREEN_SORTED_BY = {"premarket": "sorted by pre-market % change", "leader": "sorted by 1-month % change",
                     "potent": "sorted by % change"}
@@ -456,9 +466,26 @@ def _crit(c: dict) -> dict:
             "value": c.get("value", c.get("value_text")), "need": c.get("need", c.get("need_text"))}
 
 
-def tile_of(doc: dict, setup: str, *, caps: dict) -> dict:
+def not_reread(read_at: Optional[datetime], latest_at: Optional[datetime]) -> bool:
+    """True only when BOTH raw stamps exist and the card's stored read is OLDER than the latest pass (`<`, never
+    `!=`: a read written by a pass that did not move "latest" is newer than it and is never tagged)."""
+    return isinstance(read_at, datetime) and isinstance(latest_at, datetime) and read_at < latest_at
+
+
+def _reread_first(tiles: list, focus: str) -> list:
+    """STABLE partition: the focused card stays first, then the cards the latest pass re-read, then the cards it
+    did not — each group in the order it came in. Where it runs (before / after the cut) is the ONE line in `build`."""
+    f = (focus or "").strip().upper() if isinstance(focus, str) else ""
+    head = [t for t in tiles if f and t.get("symbol") == f]
+    rest = [t for t in tiles if not (f and t.get("symbol") == f)]
+    return (head + [t for t in rest if t.get("not_reread") is not True]
+            + [t for t in rest if t.get("not_reread") is True])
+
+
+def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] = None) -> dict:
     """One card in the tile shape PatternChart draws off a 🚩 tile (symbol, href, tf, bars, curves, vol_avg, lines,
-    markers, bands, badges, stats, why) + Luk's own read in words. `bars5/curves5/vol_avg5` are the stored names."""
+    markers, bands, badges, stats, why) + Luk's own read in words. `bars5/curves5/vol_avg5` are the stored names.
+    `latest_at` (2026-11-11) = the latest pass's raw `at` (aware UTC): a card whose read is older is tagged."""
     from chart_maps import board as board_mod
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = str(doc.get("symbol") or "").upper()
@@ -473,6 +500,7 @@ def tile_of(doc: dict, setup: str, *, caps: dict) -> dict:
     rf = read.get("facts") if isinstance(read.get("facts"), dict) else {}
     cap = caps.get(sym)
     at = GT._stamp_utc(doc.get("updated_at") or doc.get("at"))
+    old = not_reread(at, latest_at)
     chips = {"tier_text": TI.tier_text(doc.get("tier") or facts.get("tier")),
              "adr_text": adr_text(facts.get("adr20_pct")),
              "cap_text": doc.get("cap_text"),
@@ -496,6 +524,8 @@ def tile_of(doc: dict, setup: str, *, caps: dict) -> dict:
             "bars5": bars, "curves5": curves, "vol_avg5": vol_avg,
             "as_of_bar_t5": doc.get("as_of_bar_t5"), "entry_bar_t": read.get("entry_bar_t"),
             "read_at_text": READ_AT_TEXT.format(hhmm=GT._et(at).strftime("%H:%M")) if at else None,
+            "not_reread": old,
+            "not_reread_text": NOT_REREAD_TEXT.format(hhmm=GT._et(at).strftime("%H:%M")) if old else None,
             "gajjala": {"setup": setup, "state": st}}
 
 
@@ -506,13 +536,13 @@ def _order_key(t: dict) -> tuple:
             newest if t.get("state") != "forming" else 0.0, t.get("symbol") or "")
 
 
-def tiles_for(reads: list, setup: str, *, caps: dict) -> list:
+def tiles_for(reads: list, setup: str, *, caps: dict, latest_at: Optional[datetime] = None) -> list:
     """Every card of one setup: reads in a TILE_STATE (a `none` read is never carded), in the served order."""
     out = []
     for doc in reads:
         r = ((doc.get("setups") or {}) if isinstance(doc, dict) else {}).get(setup)
         if isinstance(r, dict) and r.get("state") in TILE_STATES and doc.get("symbol"):
-            out.append(tile_of(doc, setup, caps=caps))
+            out.append(tile_of(doc, setup, caps=caps, latest_at=latest_at))
     out.sort(key=_order_key)
     return out
 
@@ -644,11 +674,15 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
     reads = [d for d in (_soft("reads", st.reads, session, default=[]) or []) if isinstance(d, dict)]
     screens_doc = _soft("screens", st.latest_screens, session)
     caps = _caps_from(screens_doc)
-    tiles_by = {s: tiles_for(reads, s, caps=caps) for s in SETUP_SUBS}
+    latest_at = GT._at_utc(latest)                      # the raw stamp behind the served pass.at (GT.pass_stamp)
+    tiles_by = {s: tiles_for(reads, s, caps=caps, latest_at=latest_at) for s in SETUP_SUBS}
     sub_k = resolve_sub(sub, focus, tiles_by=tiles_by, screens_doc=screens_doc)
     lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
     lim = max(1, min(lim, GC.TILE_LIMIT_MAX))
-    shown = {s: _clip_focus(t, focus, lim) for s, t in tiles_by.items()}
+    # 2026-11-11 ORDER_VARIANT A (cut first — the same cards as before the change; re-read cards first among them):
+    # chosen by the main session as the set-preserving default after his "It still show HQ as the first ticker for
+    # me"; re-read first, then the cut = HIS CALL, not built.
+    shown = {s: _reread_first(_clip_focus(t, focus, lim), focus) for s, t in tiles_by.items()}
     screens_by = {k: screen_block(k, screens_doc, latest, session) for k in SCREEN_SUBS}
     from . import ledger as LG
     from . import playbook as PB
@@ -679,4 +713,5 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
 __all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TEXT_SHADOW", "honesty", "push_text",
            "FAULT_TEXT", "PAYLOAD_KEYS", "TILE_STATES", "build", "fault_payload", "session_for",
            "tile_of", "tiles_for", "resolve_sub", "counts_block", "pass_block", "strip_block", "screen_block",
-           "latency_text", "cost_text", "scan_block", "rescan_title", "PASS_TEXT_ON_DEMAND", "RESCAN_TITLE"]
+           "latency_text", "cost_text", "scan_block", "rescan_title", "PASS_TEXT_ON_DEMAND", "RESCAN_TITLE",
+           "not_reread", "NOT_REREAD_TEXT", "REREAD_ORDER_TEXT", "STATE_ORDER_TEXT"]

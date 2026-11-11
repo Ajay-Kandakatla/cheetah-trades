@@ -10,7 +10,11 @@
  * 2026-11-01 — the house chips (🚀 growth, 🩳 short interest, 🧨 explosive, 🎯 enterable) are mounted by LukBoard
  * (one page-level bounce-room POST feeds the 🧨 / 🎯 reads) and handed in as `houseChips`; this card only PLACES
  * them: above the chart (PatternChart is told to skip its own copies via outerChips, so a card never shows a chip
- * twice) or in the head when there are no bars. */
+ * twice) or in the head when there are no bars.
+ *
+ * 2026-11-11 — a served `not_reread: true` (strictly true) with a served sentence prints that sentence as an amber
+ * .luk-not-reread pill in the pills row and replaces the bottom read-at line (the pill carries the same time). A blank
+ * sentence → no pill, the plain line prints; this file types no word. */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
@@ -30,9 +34,11 @@ export function LukCard({ tile: t, focus = false, houseChips = null }: {
     <span className="luk-house-chips" data-testid={`luk-house-chips-${t.symbol}`}>{houseChips}</span>
   ) : null;
   const chips = LUK_CHIP_KEYS.map((k) => [k, lukText(t.chips?.[k])] as const).filter(([, v]) => v);
+  const notReread = t.not_reread === true ? lukText(t.not_reread_text) : null;
   return (
     <div className={`luk-card luk-state-${(t.state || '').replace(/[^a-z_]/gi, '')}${focus ? ' luk-focus' : ''}`}
-         data-testid={`luk-tile-${t.symbol}`} data-state={t.state}>
+         data-testid={`luk-tile-${t.symbol}`} data-state={t.state}
+         data-not-reread={notReread ? 'true' : undefined}>
       {chart.bars.length ? (
         <>
           {house}
@@ -50,6 +56,7 @@ export function LukCard({ tile: t, focus = false, houseChips = null }: {
           <span className={`luk-state luk-state-${(t.state || '').replace(/[^a-z_]/gi, '')}`}
                 data-testid={`luk-state-${t.symbol}`}>{t.state_label}</span>
           {lukText(t.frame_text) ? <span className="luk-frame" data-testid={`luk-frame-${t.symbol}`}>{t.frame_text}</span> : null}
+          {notReread ? <span className="luk-not-reread" data-testid={`luk-not-reread-${t.symbol}`}>{notReread}</span> : null}
         </div>
         {lukText(t.trigger_text) ? <p className="luk-plan" data-testid={`luk-trigger-${t.symbol}`}>{t.trigger_text}</p> : null}
         {lukText(t.stop_text) ? <p className="luk-plan" data-testid={`luk-stop-${t.symbol}`}>{t.stop_text}</p> : null}
@@ -73,7 +80,7 @@ export function LukCard({ tile: t, focus = false, houseChips = null }: {
             ))}
           </div>
         ) : null}
-        {lukText(t.read_at_text) ? <p className="luk-line luk-muted" data-testid={`luk-read-at-${t.symbol}`}>{t.read_at_text}</p> : null}
+        {!notReread && lukText(t.read_at_text) ? <p className="luk-line luk-muted" data-testid={`luk-read-at-${t.symbol}`}>{t.read_at_text}</p> : null}
       </div>
     </div>
   );

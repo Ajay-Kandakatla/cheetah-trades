@@ -16,8 +16,9 @@
  * (aria labels, "ⓘ", the loading / error glyphs). Every 🥇 A+ rings his phone since 2026-11-01 by his call; shadow =
  * recorded, never sent. UNMEASURED.
  *
- * 🔄 Scan now (2026-11-11). Ajay, verbatim: "Can you put an ondeman scan button for Luk' scans too". The 🚩 button in
- * the pass line, owner only (user.is_admin — 🚩 parity): a tap POSTs LUK_SCAN_PATH once and prints the SERVED answer
+ * 🔄 Scan now (2026-11-11). Ajay, verbatim: "Can you put an ondeman scan button for Luk' scans too". The 🚩 button —
+ * since the later 2026-11-11 change in the title row (.luk-topline), right after the title, its answer lines under that
+ * row, above the honesty paragraph (it used to sit at the far right end of the pass line) — owner only (user.is_admin — 🚩 parity): a tap POSTs LUK_SCAN_PATH once and prints the SERVED answer
  * line for every state (started / waiting / reused / closed / refused); a served poll plan (ggScanPlan) re-reads the
  * existing GET on a setTimeout chain until the awaited pass lands (lukScanLanded) or the served wait-max passes. Button
  * only — no scan on open (HIS CALL H5). The button never hides on a served state (a closed session included); it is
@@ -219,10 +220,20 @@ export default function LukBoard() {
    * read that one map (the GajjalaBoard pattern; a per-card fetch is the 2026-09-21 AMD mistake). 📓 / 🏁 / a scan
    * table draw no cards → it posts nothing. NO 🧨 ordering toggle and no 🎯 filter here —
    * his setup state orders this board (A+ → triggered → forming → listed → stopped, the SERVED order); nothing is
-   * hidden or reordered by a read. */
+   * hidden or reordered by a read. 2026-11-11 — the served tile order is the only order: a card's served
+   * `not_reread` flag tags it (LukCard's pill) and never reorders it here; `tiles.map` is the one order. */
   const cardsShown = sub !== LUK_PLAYBOOK_SUB && sub !== LUK_TRACK_SUB && !screen;
   const shownSymbols = useMemo(() => (cardsShown ? tiles.map((t) => t.symbol) : []), [cardsShown, tiles]);
   const room = useBounceRoom(shownSymbols);
+  /* 🔄 2026-11-11 — the ONE button, owner only, in the title row right after the title (luk.css .luk-topline); its
+   * served answer lines print directly under that row, above the honesty paragraph, for every state. */
+  const rescan = isOwner && scan && lukText(scan.rescan_label) ? (
+    <button type="button" className="gg-rescan" data-testid="luk-rescan" disabled={scanning || posting}
+            aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
+            title={rescanTitle ?? undefined} onClick={() => void startScan()}>
+      {scan.rescan_label}
+    </button>
+  ) : null;
 
   return (
     <div className="luk-board" data-testid="luk-board" data-state={board ? 'loaded' : err ? 'error' : 'loading'}>
@@ -230,24 +241,12 @@ export default function LukBoard() {
       {err ? <div className="cm-note cm-note-err" role="status" data-testid="luk-err">{`⚠ ${err}`}</div> : null}
       {board ? (
         <>
-          {lukText(board.title) ? <h2 className="luk-title" data-testid="luk-title">{board.title}</h2> : null}
-          {lukText(board.honesty) ? <p className="luk-honesty" data-testid="luk-honesty">{board.honesty}</p> : null}
-          <div className="luk-passline">
-            {lukText(board.session?.badge) ? (
-              <span className="cm-badge cm-badge-muted" data-testid="luk-session-badge">{board.session!.badge as string}</span>
-            ) : null}
-            {lukText(pass?.text) ? <span className="luk-muted" data-testid="luk-pass">{pass!.text}</span> : null}
-            {pass?.stale && lukText(pass.stale_text) ? (
-              <span className="luk-stale" data-testid="luk-stale">{pass.stale_text}</span>
-            ) : null}
-            {isOwner && scan && lukText(scan.rescan_label) ? (
-              <button type="button" className="gg-rescan" data-testid="luk-rescan" disabled={scanning || posting}
-                      aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
-                      title={rescanTitle ?? undefined} onClick={() => void startScan()}>
-                {scan.rescan_label}
-              </button>
-            ) : null}
-          </div>
+          {lukText(board.title) || rescan ? (
+            <div className="luk-topline" data-testid="luk-topline">
+              {lukText(board.title) ? <h2 className="luk-title" data-testid="luk-title">{board.title}</h2> : null}
+              {rescan}
+            </div>
+          ) : null}
           {scanning && scanningLine ? (
             <div className="cm-note gg-scanning" role="status" data-testid="luk-scanning">{scanningLine}</div>
           ) : null}
@@ -258,6 +257,16 @@ export default function LukBoard() {
             <div className="cm-note cm-note-err" data-testid="luk-scan-refused">{scanResp.text}</div>
           ) : null}
           {scanErr ? <div className="cm-note cm-note-err" role="status" data-testid="luk-scan-err">{scanErr}</div> : null}
+          {lukText(board.honesty) ? <p className="luk-honesty" data-testid="luk-honesty">{board.honesty}</p> : null}
+          <div className="luk-passline">
+            {lukText(board.session?.badge) ? (
+              <span className="cm-badge cm-badge-muted" data-testid="luk-session-badge">{board.session!.badge as string}</span>
+            ) : null}
+            {lukText(pass?.text) ? <span className="luk-muted" data-testid="luk-pass">{pass!.text}</span> : null}
+            {pass?.stale && lukText(pass.stale_text) ? (
+              <span className="luk-stale" data-testid="luk-stale">{pass.stale_text}</span>
+            ) : null}
+          </div>
           <LukStrip strip={board.strip} />
           {subs.length ? (
             <nav className="cat-tabs luk-subs" aria-label="Luk sub-tabs" data-testid="luk-subs">

@@ -10,6 +10,10 @@ listing counts and the golden. NEGATIVES: a `listed` card keeps trigger / stop /
 first-15-minutes quote is never served, an empty store serves the zero board, a raising block never takes the board
 down.
 
+2026-11-11 (not-re-read cards, ORDER_VARIANT A): the four order / tag templates join the no-digit list; every fixture
+read carries PASS_AT, so no fixture card is tagged and no order moves (the cases live in
+tests/test_luk_not_reread_2026_11_11.py).
+
 The golden `tests/fixtures/luk/luk_board_golden_2026_11_01.json` is regenerated ONLY by an explicit command:
     LUK_WRITE_GOLDEN=1 .venv/bin/python -m pytest tests/test_luk_tab.py -q -k golden -p no:cacheprovider
 """
@@ -317,7 +321,8 @@ def test_NEGATIVE_no_template_types_a_digit_outside_its_fields():
     for name in ("COUNTS_TEXT", "PASS_TEXT", "PASS_NONE_TEXT", "LATENCY_TEXT", "COST_TEXT", "COST_LAST_TEXT",
                  "RECORD_TEXT", "NOT_SCREENED_TEXT", "STOP_TEXT", "STOP_SWITCH_TAIL", "ADR_OVER_TEXT",
                  "ADR_UNDER_TEXT", "FLUSH_TEXT", "FLUSH_NONE_TEXT", "FLUSH_TOUCH_TEXT", "READ_AT_TEXT",
-                 "TRIGGER_TEXT", "TRIGGER_BROKE_TEXT", "LEVEL_TEXT"):
+                 "TRIGGER_TEXT", "TRIGGER_BROKE_TEXT", "LEVEL_TEXT",
+                 "NOT_REREAD_TEXT", "REREAD_ORDER_TEXT", "STATE_ORDER_TEXT", "ORDER_NOTE"):   # + 2026-11-11
         tpl = getattr(T, name)
         literal = "".join(lit for lit, _f, _s, _c in fmt.parse(tpl))
         assert not re.search(r"\d", literal), (name, literal)

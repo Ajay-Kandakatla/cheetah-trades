@@ -15827,6 +15827,8 @@ const CONTRACTS = [
       else {
         if (!lab[1].includes("Can you put an ondeman scan button for Luk' scans too")) errs.push('the 🔄 Luk scan-now ✨ label must quote him verbatim (his spelling)');
         if (!/rings no device/.test(lab[1])) errs.push('the 🔄 Luk scan-now ✨ label must say the tap rings no device');
+        if (!lab[1].includes('I do not see an ondeman scan button for Luks') || !lab[1].includes('It still show HQ as the first ticker for me')) errs.push('the 🔄 Luk scan-now ✨ label must quote his 2026-11-11 afternoon words verbatim');
+        if (!/not re-read since HH:MM ET/.test(lab[1]) || !/nothing is hidden/.test(lab[1])) errs.push('the 🔄 Luk scan-now ✨ label must name the not-re-read tag and say nothing is hidden');
         if (/\bedge\b/i.test(lab[1]) || /boun|fake/i.test(lab[1]) || NOTHING.test(lab[1])) errs.push('the 🔄 Luk scan-now ✨ label: never "edge", never the b-word, never the NOTHING words');
       }
       return errs;

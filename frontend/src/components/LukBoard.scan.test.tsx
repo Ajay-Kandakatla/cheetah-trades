@@ -435,3 +435,110 @@ describe('LukBoard source — 🔄 the FE types no scan word and never POSTs on 
     expect(src).toMatch(/LUK_SCAN_PATH/);
   });
 });
+
+/* 🔄 2026-11-11 (lukstale WP-FE §3.4): the owner's button sits in the title row, right after the title, and its served
+ * answer lines print under that row, above the honesty paragraph — for every state. The file's `board()` carries no
+ * `honesty`; this describe's fixture adds a served one. NEGATIVES: a non-owner / no user never sees the button (the
+ * title and the pass line still print); no inline style inside the title row (the 📱 430 px case — jsdom has no
+ * layout, the stylesheet pins live in LukBoard.phone.test.tsx). */
+describe('🔄 right after the title (2026-11-11)', () => {
+  const HONESTY = 'served honesty line';
+  const hb = (opts: Parameters<typeof board>[0] = {}) => ({ ...board(opts), honesty: HONESTY });
+  const before = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  beforeEach(() => { userRet = OWNER; });
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); userRet = null; });
+
+  it('owner: the button is inside luk-topline, after the title, before the honesty line and the pass line; the pass line holds no button', async () => {
+    stub(post('reused'), () => hb());
+    const { container } = mount();
+    const btn = await screen.findByTestId('luk-rescan');
+    const top = screen.getByTestId('luk-topline');
+    expect(top.contains(btn)).toBe(true);
+    const title = screen.getByTestId('luk-title');
+    expect(top.contains(title)).toBe(true);
+    expect(title.tagName).toBe('H2');
+    expect(before(title, btn)).toBe(true);
+    expect(before(btn, screen.getByTestId('luk-honesty'))).toBe(true);
+    expect(before(btn, screen.getByTestId('luk-pass'))).toBe(true);
+    const passline = container.querySelector('.luk-passline')!;
+    expect(passline).not.toBeNull();
+    expect(passline.querySelector('button')).toBeNull();
+    expect(container.querySelectorAll('[data-testid="luk-rescan"]')).toHaveLength(1);
+  });
+
+  const answers: Array<[string, any, string, string]> = [
+    ['started', post('started', { eta_sec: 0.05, poll_sec: 0.05, wait_max_sec: 3 }), 'luk-scanning', 'served started line'],
+    ['reused', post('reused', { text: 'served reused line' }), 'luk-scan-note', 'served reused line'],
+    ['closed', post('closed', { text: 'served closed answer' }), 'luk-scan-note', 'served closed answer'],
+    ['refused', post('refused', { text: 'served refused answer' }), 'luk-scan-refused', 'served refused answer'],
+    ['503', 503, 'luk-scan-err', 'served 503 detail'],
+  ];
+  for (const [name, answer, id, text] of answers) {
+    it(`owner, ${name}: the served answer line prints verbatim BEFORE the honesty line`, async () => {
+      stub(answer, () => hb());
+      mount();
+      fireEvent.click(await screen.findByTestId('luk-rescan'));
+      const line = await screen.findByTestId(id);
+      expect(line.textContent).toBe(text);
+      expect(before(screen.getByTestId('luk-topline'), line)).toBe(true);
+      expect(before(line, screen.getByTestId('luk-honesty'))).toBe(true);
+    });
+  }
+
+  for (const [who, u] of [['a non-owner (is_admin false)', GUEST], ['no user', null]] as const) {
+    it(`NEGATIVE: ${who} → no luk-rescan anywhere; the title still prints; the pass line keeps badge + pass text`, async () => {
+      userRet = u as CurrentUser | null;
+      stub(post('started'), () => hb());
+      const { container } = mount();
+      await screen.findByTestId('m-tile-OLD');
+      expect(container.querySelector('[data-testid="luk-rescan"]')).toBeNull();
+      expect(screen.getByTestId('luk-title')).toHaveTextContent('served title');
+      expect(screen.getByTestId('luk-topline').contains(screen.getByTestId('luk-title'))).toBe(true);
+      const passline = container.querySelector('.luk-passline')!;
+      expect(passline.contains(screen.getByTestId('luk-session-badge'))).toBe(true);
+      expect(passline.contains(screen.getByTestId('luk-pass'))).toBe(true);
+    });
+  }
+
+  it('NEGATIVE: owner, blank title → the button still renders in the title row; no title h2', async () => {
+    const b = hb(); b.title = '  ';
+    stub(post('reused'), () => clone(b));
+    mount();
+    const btn = await screen.findByTestId('luk-rescan');
+    expect(screen.getByTestId('luk-topline').contains(btn)).toBe(true);
+    expect(screen.queryByTestId('luk-title')).toBeNull();
+  });
+
+  it('NEGATIVE: owner, blank title AND blank label → no title row, no button', async () => {
+    const b = hb(); b.title = ''; b.scan.rescan_label = ' ';
+    stub(post('reused'), () => clone(b));
+    mount();
+    await screen.findByTestId('m-tile-OLD');
+    expect(screen.queryByTestId('luk-topline')).toBeNull();
+    expect(screen.queryByTestId('luk-rescan')).toBeNull();
+  });
+
+  it('NEGATIVE: owner, no scan block → no button; the title row still holds the title', async () => {
+    stub(post('reused'), () => hb({ scan: null }));
+    mount();
+    await screen.findByTestId('m-tile-OLD');
+    expect(screen.queryByTestId('luk-rescan')).toBeNull();
+    expect(screen.getByTestId('luk-topline').contains(screen.getByTestId('luk-title'))).toBe(true);
+  });
+
+  it('owner at 430 px: nothing inside the title row carries a style attribute; NEGATIVE (source): no style={, ONE button, ONE startScan()', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 430 });
+    const b = hb(); b.title = 'served title that is very long and wraps on a phone · UNMEASURED';
+    stub(post('reused'), () => clone(b));
+    mount();
+    await screen.findByTestId('luk-rescan');
+    const top = screen.getByTestId('luk-topline');
+    expect(top.getAttribute('style')).toBeNull();
+    for (const el of Array.from(top.querySelectorAll('*'))) expect(el.getAttribute('style')).toBeNull();
+    const src = await readSource('src/components/LukBoard.tsx');
+    expect(src).not.toContain('style={');
+    expect(src.split('data-testid="luk-rescan"').length - 1).toBe(1);
+    expect(src.split('onClick={() => void startScan()}').length - 1).toBe(1);
+    expect(src).toContain('his setup state orders this board');
+  });
+});

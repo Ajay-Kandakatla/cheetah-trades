@@ -76,7 +76,9 @@ const BOARDS: Record<string, any> = {
     TILE('BBB', 'forming', { state_label: 'forming — trigger 8.20 armed', trigger_text: 'trigger 8.20', stop_text: null }),
     TILE('CCC', 'listed', { state_label: 'listed — stop too wide by his rule — 6.2% > 5% of the trigger',
       listed_why: 'stop too wide by his rule — 6.2% > 5% of the trigger', trigger_text: 'trigger 20.10',
-      stop_text: 'stop 18.85 (−6.2%) · R $1.25 · stop = the 5-minute entry candle low (entry-to-LOD > 5%)' }),
+      stop_text: 'stop 18.85 (−6.2%) · R $1.25 · stop = the 5-minute entry candle low (entry-to-LOD > 5%)',
+      /* 2026-11-11 — a tagged tile: the served not-re-read flag + sentence (the number / word guards below cover it). */
+      not_reread: true, not_reread_text: 'not re-read since 09:46 ET' }),
   ] },
   premarket: { ...BASE, sub: 'premarket', tiles: [],
     screens: { key: 'premarket', title: '☀️ Pre-market scan — his settings: cap > $100M · 10-day avg vol > 500K',
@@ -300,6 +302,31 @@ describe('LukBoard — the served payload, verbatim', () => {
     expect(screen.getByTestId('luk-tile-AAA').className).not.toMatch(/luk-focus/);
     expect(within(screen.getByTestId('luk-tile-BBB')).getByTestId('luk-state-BBB')).toHaveTextContent('forming — trigger 8.20 armed');
   });
+});
+
+/* 2026-11-11 (lukstale WP-FE) — the served order is the only order: a card's `not_reread` flag tags it (LukCard's amber
+ * pill) and NEVER reorders it on the FE. NEGATIVE: both served orders render exactly as served. */
+describe('LukBoard — the not-re-read tag never reorders (2026-11-11)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+  const REREAD = TILE('RRR', 'triggered', { read_at_text: 'read 10:06 ET' });
+  const TAGGED = TILE('TTT', 'aplus', { read_at_text: 'read 09:46 ET', not_reread: true, not_reread_text: 'not re-read since 09:46 ET' });
+  const NOTE = 'served order note — re-read first';
+  const order = (c: HTMLElement) => Array.from(c.querySelectorAll('[data-testid^="luk-tile-"]'))
+    .map((e) => e.getAttribute('data-testid')).filter((x) => !x!.includes('link'));
+  for (const [name, tiles, want] of [
+    ['[re-read, tagged]', [REREAD, TAGGED], ['luk-tile-RRR', 'luk-tile-TTT']],
+    ['[tagged, re-read]', [TAGGED, REREAD], ['luk-tile-TTT', 'luk-tile-RRR']],
+  ] as const) {
+    it(`served ${name} → the DOM order equals the served order; the order note prints verbatim`, async () => {
+      stub(() => ({ ...BOARDS.pullback_reversal, order_note: NOTE, tiles }));
+      const { container } = await mount();
+      expect(order(container)).toEqual(want);
+      expect(screen.getByTestId('luk-order-note').textContent).toBe(NOTE);
+      expect(screen.getByTestId('luk-not-reread-TTT')).toHaveTextContent('not re-read since 09:46 ET');
+      expect(screen.queryByTestId('luk-not-reread-RRR')).toBeNull();
+      expect(screen.getByTestId('luk-read-at-RRR')).toHaveTextContent('read 10:06 ET');
+    });
+  }
 });
 
 /* 2026-11-01 — the house chips reach 🥇 Luk's (Ajay 2026-09-11 "ALL TABS IN CHART MAPS"; 2026-10-03 "add this field to

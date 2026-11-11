@@ -4,6 +4,12 @@
 .luk-board { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
 .luk-title { font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
 .luk-honesty { font-size: 0.82rem; margin: 0; overflow-wrap: anywhere; }
+/* 🔄 2026-11-11 — the title row: the title, then the owner's scan-now button RIGHT AFTER it (🚩's .gg-rescan pins itself
+   to the far right with margin-left: auto; two classes override it here only — gajjala.css is untouched). 📱 430 px:
+   the title wraps inside the row and the button takes the next line at its start. */
+.luk-topline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-width: 0; }
+.luk-topline .luk-title { flex: 0 1 auto; min-width: 0; }
+.luk-topline .gg-rescan { margin-left: 0; }
 .luk-passline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.8rem; min-width: 0; }
 .luk-muted { color: var(--ink-subtle, #94a3b8); font-size: 0.78rem; }
 .luk-stale { color: var(--negative, #ef4444); font-size: 0.78rem; }
@@ -31,7 +37,7 @@
 .luk-card { border-radius: 8px; min-width: 0; max-width: 100%; }
 .luk-card.luk-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
 .luk-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
-.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame {
+.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread {
   white-space: normal; overflow-wrap: anywhere;
 }
 .luk-plan, .luk-criteria li, .luk-why, .luk-pb-item { overflow-wrap: anywhere; }
@@ -51,6 +57,11 @@
 .luk-frame {
   display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px;
   border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+/* 2026-11-11 — the served "not re-read" pill: house amber, beside the state pill; wraps like the other pills (📱 430 px). */
+.luk-not-reread {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600;
+  color: var(--gold, #c9a227); border: 1px solid var(--gold, #c9a227);
 }
 .luk-plan { margin: 0; font-variant-numeric: tabular-nums; }
 .luk-criteria { list-style: none; margin: 0; padding: 0; }
