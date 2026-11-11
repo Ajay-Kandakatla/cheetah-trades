@@ -873,7 +873,10 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     if GC.RED_CLOSES_MODE == "criterion":
         crit.append(criterion("red_closes", f"no more than {GC.RED_CLOSES_WAIT} red closes in a row",
                               r["red_closes"] <= GC.RED_CLOSES_WAIT, f"{r['red_closes']}", f"≤ {GC.RED_CLOSES_WAIT}"))
-    others = [c["ok"] for c in crit if c["key"] not in ("k7_ratio", "k7_ema21")]
+    # formulas audit D9, 2026-11-11: decide "waiting for the next cycle" BEFORE the B grade — a k4 that is only
+    # pending (no break yet, fewer than K4 cycles) is not a miss, so a 1-cycle read reads what its 2-cycle self reads
+    waiting = j is None and n < GC.K4_VCP_MIN_CYCLES
+    others = [c["ok"] for c in crit if c["key"] not in ("k7_ratio", "k7_ema21") and not (waiting and c is k4)]
     others_ok = _all(others) is True
     grade_b = GC.VCP_B_READS and others_ok and ((ratio_ok is False) != (ema_ok is False)) \
         and ratio_ok is not None and ema_ok is not None

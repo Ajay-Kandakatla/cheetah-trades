@@ -118,6 +118,8 @@ crit = k4_cycles (≥ K4_VCP_MIN_CYCLES), k7_ratio (each range ≤ K7_CONTRACTIO
        k7_ema21 (each cycle low ≥ EMA21 × (1 − K7_EMA21_TOL_PCT/100)), k3_vol (every pullback bar) — NO K3 depth
 "B — imperfect" (VCP_B_READS, Ajay round C): exactly one of {k7_ratio, k7_ema21} False and everything else True →
     partial, grade "B", reason "B — imperfect · missed …" (never A+, never pushed)
+    "waiting" (no break yet and n < K4_VCP_MIN_CYCLES) is decided BEFORE the grade: the pending k4_cycles is left
+    out of "everything else" (formulas audit D9, 2026-11-11); once broken, a k4 miss is a hard miss
 k7_ema21 False and not B               → invalid "cycle low under the 21 EMA"
 trigger = h[H_n], stop = l[L_n] (HIS CALL 6: "entry the top of this cycle, stop the low of this cycle")
 no break: forming, ready = ≥ 2 cycles and the cycle low is not the latest bar; break: entry_event / state table
@@ -127,6 +129,18 @@ no break: forming, ready = ≥ 2 cycles and the cycle low is not the latest bar;
   read sets 0 on "no pullback yet" and n = the cycle count once it is known (kept on an invalid read). It only COUNTS —
   the tab cards a 🌀 read from `K4_VCP_MIN_CYCLES` contractions (`VCP_LIST_FROM_K4`); no state, criterion, trigger or stop
   moved.
+- 2026-11-11 (formulas audit D9, K7 one-cycle "waiting" read): `_vcp_leg` decided the "B — imperfect" grade with the
+  PENDING k4_cycles inside "everything else", so a 1-cycle read whose low sat under the 21 EMA read `invalid` ("contraction
+  low under the 21 EMA") on bars 8–12 of the audit demo `demos/L2/k7_b_n1.py`, then `partial · B — imperfect · missed K7
+  contraction lows hold the 21 EMA` on bars 13–14 once cycle 2 existed — the same bars, two answers (prefix property
+  broken). Now `waiting = j is None and n < K4_VCP_MIN_CYCLES` is decided first and the pending k4 is left out of the
+  grade: bars 8–12 read `partial · B` with `structure_alive` True (missed = k7_ema21 only; waiting ≠ missed); bars 13–14
+  are byte-equal to before. Unchanged: a BROKEN 1-cycle read with the low under the 21 EMA stays `invalid` (k4 is a hard
+  miss once broken); with VCP_B_READS off, or a second rule missed (e.g. k3_vol), the 1-cycle read stays `invalid`. No
+  A+ ring can move: a 1-cycle read is never A+, never carded (`vcp_list_min_cycles()` = 2), never a 🧠 potential
+  (`potential_kind` → None) and B never pushes. Side effect: such a read's 🧠 timeline step (only on a doc already
+  tracked that session) reads partial instead of invalid; continuity (_unbroken) breaks either way, so no 🧠 push moves.
+  No constant touched. Tests: `backend/tests/test_gajjala_defects_detectors_2026_11_11.py` (A1).
 
 ## 🎾 Reversal Squeeze (GG S8 35:02–38:18, S9 2:00:32–2:02:40; K8, H1, H2, H4)
 ```
