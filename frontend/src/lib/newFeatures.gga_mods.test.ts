@@ -31,21 +31,23 @@ describe('✨ the 🧪 audited-modifications entry', () => {
   // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-10 ~19:20 ET: 🏠 landing on Gajjala's tab FIRST — Ajay: "Then default my landing page to Gajjala's tab in chartmaps on the app always.") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fourth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05 and the 🏁 one-count ✨ 2026-11-02 went first), listed once, dated 2026-11-01, routed to the 🧪 🏁 Track record', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09');   // 2026-11-09 ~10:35 ET: the 📊 volume-order ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-live-now-label-every-session-2026-11-09');   // 2026-11-09 ~10:45 ET: the 🔴 now-label ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-float-sort-all-subs-2026-11-09');   // 2026-11-09 ~10:30 ET: the 🚩 float-order ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe('autopilot-gajjala-stream-live-2026-11-09');   // 2026-11-09 ~10:00 ET: the 🛰 stream-entries-LIVE ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[4].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
-    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
-    expect(NEW_FEATURES[12].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[13].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[14].id).toBe(ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-landing-gajjala-tab-2026-11-10');   // 2026-11-10 ~19:20 ET: the 🏠 landing ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09');   // 2026-11-09 ~10:35 ET: the 📊 volume-order ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-live-now-label-every-session-2026-11-09');   // 2026-11-09 ~10:45 ET: the 🔴 now-label ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-float-sort-all-subs-2026-11-09');   // 2026-11-09 ~10:30 ET: the 🚩 float-order ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe('autopilot-gajjala-stream-live-2026-11-09');   // 2026-11-09 ~10:00 ET: the 🛰 stream-entries-LIVE ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[5].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[11].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[13].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[14].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[15].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -108,8 +110,9 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
   // WIDENED +1 (2026-11-09 ~10:30 ET: 🚩 float order on every Gajjala sub FIRST — Ajay: "can you update other tabs in the same way") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 ~10:45 ET: 🔴 now label in every session FIRST — Ajay: "I can't see now for them again") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-09 ~10:35 ET: 📊 volume order + 🚫 at the bottom FIRST — Ajay: "Ok sort any stocks by volume on all Gajjala's charts") — every NEW_FEATURES[n] pin below → [n+1].
-  it('is SEVENTH (the ⏱ Gajjala live ✨, the 🌐 Yahoo link-out ✨, the 🛰 stream-LIVE ✨, the 🚩 float-order ✨, the 🔴 now-label ✨ and the 📊 volume-order ✨ went FIRST 2026-11-09), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
-    expect(NEW_FEATURES[6].id).toBe(K3S_ID);
+  // WIDENED +1 (2026-11-10 ~19:20 ET: 🏠 landing on Gajjala's tab FIRST — Ajay: "Then default my landing page to Gajjala's tab in chartmaps on the app always.") — every NEW_FEATURES[n] pin below → [n+1].
+  it('is EIGHTH (the ⏱ Gajjala live ✨, the 🌐 Yahoo link-out ✨, the 🛰 stream-LIVE ✨, the 🚩 float-order ✨, the 🔴 now-label ✨ and the 📊 volume-order ✨ went FIRST 2026-11-09, the 🏠 landing ✨ 2026-11-10), listed once, dated 2026-11-09, routed to the 🧪 Track record', () => {
+    expect(NEW_FEATURES[7].id).toBe(K3S_ID);
     expect(NEW_FEATURES.filter((x) => x.id === K3S_ID).length).toBe(1);
     expect(k.addedAt).toBe('2026-11-09');
     expect(k.route).toBe('/chart-maps?tab=gajjala_audited&sub=track_record');
@@ -130,7 +133,7 @@ describe('✨ the 🧪 K3S entry (2026-11-09)', () => {
     expect(/\bedge\b/i.test(k.label)).toBe(false);
     expect(k.label.toLowerCase().includes('b' + 'ounc')).toBe(false);
     expect(/\b(profitable|proven|guaranteed|wins more|beats)\b/i.test(k.label)).toBe(false);
-    expect(NEW_FEATURES[7].id).not.toBe(K3S_ID);
+    expect(NEW_FEATURES[8].id).not.toBe(K3S_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });
@@ -160,8 +163,8 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     return Number(m[1]);
   };
 
-  it('is SIXTH (the 🌐 Yahoo link-out ✨, the 🛰 stream-LIVE ✨, the 🚩 float-order ✨, the 🔴 now-label ✨ and the 📊 volume-order ✨ went FIRST 2026-11-09 later), listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
-    expect(NEW_FEATURES[5].id).toBe(LIVE_ID);
+  it('is SEVENTH (the 🌐 Yahoo link-out ✨, the 🛰 stream-LIVE ✨, the 🚩 float-order ✨, the 🔴 now-label ✨ and the 📊 volume-order ✨ went FIRST 2026-11-09 later, the 🏠 landing ✨ 2026-11-10), listed once, dated 2026-11-09, routed to the 🚩 Track record', () => {
+    expect(NEW_FEATURES[6].id).toBe(LIVE_ID);
     expect(NEW_FEATURES.filter((x) => x.id === LIVE_ID).length).toBe(1);
     expect(g.addedAt).toBe('2026-11-09');
     expect(g.route).toBe('/chart-maps?tab=gajjala&sub=track_record');
@@ -212,7 +215,7 @@ describe('✨ the ⏱ Gajjala live entry (2026-11-09)', () => {
     expect(/\b(profitable|proven|guaranteed|wins more|beats|faster profits)\b/i.test(g.label)).toBe(false);
     expect(/orders (now )?go on the (stream|first print)/i.test(g.label)).toBe(false);
     expect(/\bLIVE\b.*\bnow\b/.test(g.label.replace('Stream entries LIVE and the earlier pass are your calls', ''))).toBe(false);
-    expect(NEW_FEATURES[6].id).not.toBe(LIVE_ID);
+    expect(NEW_FEATURES[7].id).not.toBe(LIVE_ID);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });

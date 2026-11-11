@@ -797,6 +797,19 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   on the owner strip. Display order only. The morning's float-on-every-sub step: `docs/gajjala/float_sort_all_setups_2026_11_09.md`.
   Doc `docs/gajjala/volume_sort_broker_bottom_2026_11_09.md`; contracts "📊 volume on top + 🚫 at the bottom (2026-11-09)";
   ✨ `chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09`; tests `tests/test_gajjala_volume_sort_2026_11_09.py`.
+- **🏠 "/" opens Gajjala's tab for the primary owner** (2026-11-10, Ajay: *"Then default my landing page to Gajjala's tab
+  in chartmaps on the app always."*) — `frontend/src/lib/landing.ts` `ownerLanding(target, isPrimaryOwner)` +
+  `OWNER_LANDING_TAB: CmTab = 'gajjala'` (type-only import: `chartMaps.ts` stays out of the entry chunk); `App.tsx`
+  `SmartLanding` waits for features, menu AND `useCurrentUser()` (a loader, never a wrong redirect; a failed `/auth/me` →
+  today's target), then `ownerLanding(pickLanding(f.features, !!menu.is_admin), !!user?.is_primary_admin)` →
+  `/chart-maps?tab=gajjala` only when Chart Maps is the winning landing feature AND the viewer is the primary owner
+  (`is_primary_admin` from `/auth/me`; never an email in the bundle; a co-owner with `is_admin` keeps the bare path).
+  Every other viewer and every other target come back byte for byte; the catch-all route and the no-access redirect pass
+  through "/" too, so they follow. `DEFAULT_TAB`, the `CM_TABS` order, the menu's Chart Maps link and a hand-typed
+  `/chart-maps` are untouched (HIS CALL: co-owners / everyone, the menu link, the bare path — an iOS home-screen app that
+  resumes its last page never passes through "/"). Doc `docs/gajjala/landing_gajjala_tab_2026_11_10.md`; contracts
+  "🏠 "/" opens Gajjala's tab for the primary owner only (2026-11-10)"; ✨ `chart-maps-landing-gajjala-tab-2026-11-10`;
+  tests `src/lib/landing.test.ts`, `src/App.landing.test.tsx`.
 - **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
   https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
   reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside

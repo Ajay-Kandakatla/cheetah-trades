@@ -33,7 +33,7 @@ import { PageContextProvider } from './hooks/usePageContext';
    component-level lazy imports (SepaCandidate's panels, card modals, ...) get
    the same one-shot reload guard as routes. House rule: never raw React.lazy. */
 import { lazyWithReload } from './lib/lazyWithReload';
-import { pickLanding } from './lib/landing';
+import { ownerLanding, pickLanding } from './lib/landing';
 const LiveStream                  = lazyWithReload(() => import('./pages/LiveStream').then(m => ({ default: m.LiveStream })));
 const SepaPage                    = lazyWithReload(() => import('./pages/Sepa').then(m => ({ default: m.SepaPage })));
 const SepaGlobalPage              = lazyWithReload(() => import('./pages/SepaGlobal').then(m => ({ default: m.SepaGlobalPage })));
@@ -179,12 +179,14 @@ function PrimaryAdminRoute({ children }: { children: ReactNode }) {
  *  loop. Now we pick the first feature the user actually has access to
  *  and redirect there. Owners + admin still land on /morning naturally
  *  because they have every feature. */
-function SmartLanding() {
+export function SmartLanding() {
   const f = useMyFeatures();
   const { menu, loaded: menuLoaded } = useMyMenu();
-  // Wait for BOTH so we know is_admin before redirecting (else Ajay would flash
-  // to the wrong page before the admin flag resolves).
-  if (!f.loaded || !menuLoaded) return <PageLoader />;
+  const { user, loading: userLoading } = useCurrentUser();
+  // Wait for ALL THREE so we know is_admin and is_primary_admin before
+  // redirecting (else Ajay would flash to the wrong page before the flags
+  // resolve). A failed /auth/me ends loading with user null → today's target.
+  if (!f.loaded || !menuLoaded || userLoading) return <PageLoader />;
   // Landing order. EVERYONE lands on SEPA Global first (Ajay 2026-06-23: "make
   // SEPA global default landing page to everyone") — the beginner-friendly
   // scanner is the universal front door now; it's granted to all by default
@@ -195,7 +197,10 @@ function SmartLanding() {
   // Ajay 2026-09-07: "Make chart maps default loading page for me on the app
   // load. Also for everyone." Chart Maps leads both chains (lib/landing.ts);
   // the 2026-06-23 order stays behind it as the fallback.
-  const target = pickLanding(f.features, !!menu.is_admin);
+  // Ajay 2026-11-10: "Then default my landing page to Gajjala's tab in
+  // chartmaps on the app always." The PRIMARY OWNER only (is_primary_admin —
+  // co-owners carry is_admin too and keep the bare path); lib/landing.ownerLanding.
+  const target = ownerLanding(pickLanding(f.features, !!menu.is_admin), !!user?.is_primary_admin);
   if (target) return <Navigate to={target} replace />;
   // No accessible feature at all — show 404 rather than a redirect loop.
   return <NotFound />;

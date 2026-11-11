@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-10 (verbatim in the label): "Then default my landing page to Gajjala's tab in chartmaps on the app
+  // always." lib/landing.ts ownerLanding(target, isPrimaryOwner) + OWNER_LANDING_TAB: CmTab = 'gajjala' (type-only
+  // import); App.tsx SmartLanding waits for features, menu AND useCurrentUser (a loader, never a wrong redirect; a failed
+  // /auth/me → today's target), then "/" → /chart-maps?tab=gajjala only when Chart Maps is the winning landing feature
+  // AND the viewer is the primary owner (is_primary_admin from /auth/me — never an email in the bundle; a co-owner keeps
+  // the bare path). Everyone else lands byte for byte as before. DEFAULT_TAB, the CM_TABS order, the menu's Chart Maps
+  // link and a hand-typed /chart-maps are untouched (HIS CALL). Doc docs/gajjala/landing_gajjala_tab_2026_11_10.md.
+  // Pinned by scripts/contracts.mjs ("🏠 "/" opens Gajjala's tab for the primary owner only (2026-11-10)").
+  { id: 'chart-maps-landing-gajjala-tab-2026-11-10', addedAt: '2026-11-10', route: '/chart-maps?tab=gajjala',
+    label: "🏠 The app opens on Gajjala's tab — you said: “Then default my landing page to Gajjala's tab in chartmaps on the app always.” Opening the app (its home address, the Pounce logo) now takes you straight to Chart Maps → 🚩 Gajjala's. Your account only: everyone else lands where they did. The Chart Maps menu link and a typed /chart-maps still open the first tab; say the word and those follow." },
   // Ajay 2026-11-09 ~10:25 ET (verbatim in the label, his spelling kept): "Ok sort any stocks by volume on all Gajjala's
   // charts" — then ~10:30 ET, with a 🚫-chipped card: "The ones I am reporting they are not on Fidelity put them at the
   // bottom". Backend chart_maps/gajjala/tab.py: order_key's sort slot is now (volume DESCENDING, then float) inside every

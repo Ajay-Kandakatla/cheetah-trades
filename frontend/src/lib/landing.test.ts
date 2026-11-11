@@ -1,6 +1,7 @@
 /* "/" lands on Chart Maps for everyone (Ajay 2026-09-07). */
 import { describe, expect, it } from 'vitest';
-import { LANDING_FEATURE, LANDING_ORDER, pickLanding } from './landing';
+import { LANDING_FEATURE, LANDING_ORDER, OWNER_LANDING_TAB, ownerLanding, pickLanding } from './landing';
+import { CM_TABS, parseTab, tabSearch } from './chartMaps';
 
 describe('pickLanding', () => {
   it('Chart Maps leads both chains', () => {
@@ -28,5 +29,40 @@ describe('pickLanding', () => {
     expect(pickLanding(new Set(), true)).toBeNull();
     expect(pickLanding([], false)).toBeNull();
     expect(pickLanding(new Set(['usage']), false)).toBeNull();      // not in the chain
+  });
+});
+
+/* Ajay 2026-11-10: "Then default my landing page to Gajjala's tab in chartmaps on the app always." */
+describe('ownerLanding', () => {
+  it("the tab literal is a real Chart Maps tab, and it is Gajjala's", () => {
+    expect(OWNER_LANDING_TAB).toBe('gajjala');
+    expect((CM_TABS as readonly string[]).includes(OWNER_LANDING_TAB)).toBe(true);
+    expect(parseTab(OWNER_LANDING_TAB)).toBe(OWNER_LANDING_TAB);   // never coerced to DEFAULT_TAB
+  });
+
+  it("the primary owner landing on Chart Maps opens Gajjala's tab", () => {
+    expect(ownerLanding('/chart-maps', true)).toBe('/chart-maps?tab=gajjala');
+    expect(ownerLanding(pickLanding(new Set(['chart-maps', 'sepa']), true), true)).toBe('/chart-maps?tab=gajjala');
+  });
+
+  it('builds the SAME query chartMaps.tabSearch writes (one URL convention)', () => {
+    expect(ownerLanding('/chart-maps', true)).toBe(`/chart-maps?${tabSearch(new URLSearchParams(), OWNER_LANDING_TAB)}`);
+  });
+
+  it('NEGATIVE: every other viewer keeps the bare path byte for byte', () => {
+    expect(ownerLanding('/chart-maps', false)).toBe('/chart-maps');
+  });
+
+  it('NEGATIVE: a non-chart-maps target never gets a tab param, owner or not', () => {
+    for (const t of ['/sepa-global', '/sepa', '/breakouts', '/glossary', '/chart-maps-x', '/chart-maps?tab=zones']) {
+      expect(ownerLanding(t, true)).toBe(t);
+      expect(ownerLanding(t, false)).toBe(t);
+    }
+    expect(ownerLanding(pickLanding(new Set(['sepa-global', 'sepa']), true), true)).toBe('/sepa-global');
+  });
+
+  it('NEGATIVE: nothing accessible stays null (the 404, never a redirect)', () => {
+    expect(ownerLanding(null, true)).toBeNull();
+    expect(ownerLanding(null, false)).toBeNull();
   });
 });
