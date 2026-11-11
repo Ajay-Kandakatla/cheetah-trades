@@ -7,6 +7,10 @@ import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 import { _resetShortInterestCache } from '../hooks/useShortInterest';
 import { VOYA } from '../lib/__fixtures__/cardLadder.tiles';
 
+/* 🔄 2026-11-11 (lukscan WP-LUK-FE): LukBoard reads useCurrentUser for the owner's scan-now button; the real hook fetches
+ * /auth/me and would shift every fetch-count assertion here — no user (the scan glue is pinned in LukBoard.scan.test). */
+vi.mock('../hooks/useUser', () => ({ useCurrentUser: () => ({ user: null, loading: false }) }));
+
 /* 🥇 Luk's board (2026-11-01, luk spec §3.10 / §3.13 / WP-E). Ajay: "look at other winners of US stocks champion ship
  * and pic the next best one like Gajjala. Implement their strategy please if they have online resources." … "I need
  * something like Gajjlala that is exposed". The board prints the served payload VERBATIM and composes no word and no

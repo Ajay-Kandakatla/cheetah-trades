@@ -22,6 +22,30 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-11 08:18 ET (verbatim in the label): "Can you fix the defects please" — the formulas audit
+  // (eod-audits/research/2026-11-10_formulas_audit.md §3) ship-now set, none of which changes which A+ rings:
+  // D3 the 🌙 K10 clock + the tape session off the house calendar (alerts._closes; a half day closes 13:00 / 17:00 —
+  // context._post_clock, scanner.pass_tape_session); D9 a 🌀 1-cycle read is "waiting", decided before the B grade
+  // (detectors._vcp_leg); D10 a triggered card whose alert never rang says "no alert rang" (tab.py NO_RING_TEXT /
+  // NO_RING_RECAP; live-push pages only, every reader); D12 Kell base-n-break: a missing volume = not dry
+  // (kell/base_n_break.py); D13 a --now replay cuts the 1-minute frame at the pass clock (run._upto; a live pass is
+  // byte-identical). D1, D2, D4–D8, D11 are count-gated: built later, shipped on his word after the replay count.
+  // Doc docs/gajjala/formulas_audit_defects_2026_11_11.md.
+  { id: 'chart-maps-gajjala-defects-ship-now-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=gajjala',
+    label: "🔧 Formula defects fixed — you said: “Can you fix the defects please”. On a half day (next: 2026-11-27) the 🌙 after-hours read and the session clock now take the close from the market calendar (13:00, after-hours to 17:00) instead of a fixed 16:00. A Gajjala card that broke out but never sent you an alert now says “no alert rang” instead of “A+”. A 🌀 VCP with one contraction so far reads “waiting” for the next one, not failed. Kell's base-n-break list never lists a name with a missing volume bar. None of these changes which A+ rings; the fixes that do (K1, K3, K7 lows, K8, the scanner lines, SEPA, Kell bases) wait for the replay count and your word. UNMEASURED. Not advice." },
+  // Ajay 2026-11-11 ~10:10 ET (verbatim in the label, his spelling kept): "Can you put an ondeman scan button for Luk'
+  // scans too". "too" = 🚩 Gajjala's 🔄 button. POST /chart-maps/luk/scan (owner only: auth.is_admin_email, anyone else
+  // the stealth 404) → chart_maps/luk/on_demand.request = 🚩's ONE order (gajjala/on_demand.request, variant=LUK,
+  // Luk's profile) and, on "started", ONE 🥇 pass in a SUBPROCESS (python -m chart_maps.luk.run --on-demand): push gate
+  // DRY (rings no device), no 🏁 grade, no 1-minute clock write, never "latest_cron". A tap starts a pass only after
+  // this slot's 5-minute 🥇 pass landed (or its child skipped itself) and when it can end LUK_SLOT_MARGIN_SEC before
+  // the next tick; a pass under ON_DEMAND_REUSE_SEC old is reused. The cron claim takes over a running on-demand holder
+  // (take_over=True) so a tap never costs a cron pass. luk/tab.py serves the `scan` block (every reader, every sub);
+  // LukBoard prints the button for user.is_admin only, every word served — a BUTTON, no scan on open (HIS CALL H5).
+  // Doc docs/luk/luk_tab_2026_11_01.md "🔄 Scan now (2026-11-11)". Pinned by scripts/contracts.mjs
+  // ("🔄 Luk's scan-now button (2026-11-11)").
+  { id: 'chart-maps-luk-scan-now-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=luk',
+    label: "🔄 Scan now on 🥇 Luk's tab — you said: “Can you put an ondeman scan button for Luk' scans too”. The 🔄 scan now button you have on 🚩 Gajjala's now sits on every 🥇 Luk sub (your account only). A tap runs one 🥇 pass right away and prints what it did. It rings no device: the 5-minute pass rings as always. A pass that just finished is reused, and a tap never starts on top of the 5-minute pass — the line under the button says why. Nothing scans when you open the tab. UNMEASURED. Not advice." },
   // Ajay 2026-11-10 (verbatim in the label, his spelling kept): "Also please use common vocabuluary like volume dried"
   // + "not jus k3 please up date what he means in simple terms acroos k1 to k10" ("he" = GG). WORDING ONLY. Every
   // criterion( row and reason in backend/chart_maps/gajjala/detectors.py: label = the K id + a plain phrase with no

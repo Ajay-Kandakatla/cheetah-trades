@@ -29,6 +29,15 @@ No number is typed here (constants.py). UNMEASURED — nothing here trades.
 "latest_cron" pointer), spawns `python -m chart_maps.gajjala.run_1m --on-demand` (PROC_NAME_1M) in its OWN child slot
 (a live 🚩 child never makes the 1-minute page "waiting", and back), and words its texts on the variant's cadence
 (variant.cadence_sec — "the 1-minute pass …"). A GG5 call (no variant) answers byte for byte as before.
+
+2026-11-11 — `profile`: another package's pass driven through THIS order (Ajay 2026-11-11 asked for an on-demand scan
+button on another champion's tab "too" — "too" = this module's button; his words verbatim live in the caller). A
+frozen `Profile` names what differs: the child's argv and log name, the closed check, a kill-switch refusal checked
+right after it, ONE extra gate after the reuse check (it may answer waiting, with or without a poll plan), and the
+package's own words. The order itself — closed → own child alive → lease held → no cron pass this session → reused
+→ spawned — stays ONE, here. `profile=None` (every 🚩 / 1-minute / audited call) runs the statements above byte for
+byte; the answers are pinned against literals captured before this parameter landed
+(tests/test_*_scan_now_2026_11_11.py). No number is typed for it.
 """
 from __future__ import annotations
 
@@ -38,6 +47,7 @@ import os
 import subprocess
 import sys
 import threading
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Optional
 from zoneinfo import ZoneInfo
@@ -59,6 +69,20 @@ ARGV = (sys.executable, "-m", "chart_maps.gajjala.run", "--on-demand")
 RESPONSE_KEYS = ("state", "latest_at", "eta_sec", "poll_sec", "wait_max_sec", "text")
 STATES = ("started", "reused", "waiting", "closed", "refused")
 HOLDERS = ("cron", "on_demand")                                    # = store.LEASE_SOURCES (strings, not numbers)
+
+
+@dataclass(frozen=True)
+class Profile:
+    """A pass of another package driven through THIS module's order (2026-11-11): its child, its closed check, its
+    kill switch, one extra gate after the reuse check, and its own words. None = this module's passes, byte for byte.
+    `gate` answers None (go on to the spawn) or {"state", "why", "when", "eta", "plan"} — `plan` False = a waiting
+    answer with NO poll plan (eta / poll / wait_max None: the board does not poll for it)."""
+    argv: tuple                                   # the child's argv (python -m <pkg>.run --on-demand)
+    proc_name: str                                # the child's log name
+    closed: Callable                              # (now) -> bool — replaces _closed
+    text: Callable                                # (state, latest, now, **kw) -> str — replaces _text
+    refusal: Optional[Callable] = None            # (now) -> Optional[str why] — checked right after `closed`
+    gate: Optional[Callable] = None               # (now, st, latest, cron) -> Optional[dict] — after reuse, before spawn
 
 
 def _spawn(argv: list, name: str):
@@ -199,16 +223,21 @@ def _text(state: str, latest: Optional[dict], now: datetime, *, holder=None, sta
 
 
 def _resp(state: str, latest: Optional[dict], now: datetime, *, holder=None, started=None, age=None,
-          eta: Optional[int] = None, first_wait=None, via_open: bool = False, variant=None) -> dict:
+          eta: Optional[int] = None, first_wait=None, via_open: bool = False, variant=None, why=None, when=None,
+          profile: Optional[Profile] = None, plan: bool = True) -> dict:
     """EXACTLY RESPONSE_KEYS. `latest_at` = tab.pass_stamp(latest) — the SAME stamp the GET serves as `pass.at`.
     started / waiting carry the poll plan (eta clamped to [ON_DEMAND_POLL_SEC, ON_DEMAND_WAIT_MAX_SEC]: the last
-    pass's wall time minus the time it has run, else the on-open budget); reused / closed / refused carry none."""
+    pass's wall time minus the time it has run, else the on-open budget); reused / closed / refused carry none.
+    2026-11-11: a `profile` words the answer (`why` / `when` are its gate's); `plan=False` (only ever a profile gate's)
+    leaves a waiting answer with no poll plan."""
     from . import tab as GT
     out = {"state": state, "latest_at": GT.pass_stamp(latest), "eta_sec": None, "poll_sec": None,
            "wait_max_sec": None,
-           "text": _text(state, latest, now, holder=holder, started=started, age=age, first_wait=first_wait,
-                         via_open=via_open, variant=variant)}
-    if state in ("started", "waiting"):
+           "text": (_text(state, latest, now, holder=holder, started=started, age=age, first_wait=first_wait,
+                          via_open=via_open, variant=variant) if profile is None else
+                    profile.text(state, latest, now, holder=holder, started=started, age=age, first_wait=first_wait,
+                                 via_open=via_open, why=why, when=when))}
+    if state in ("started", "waiting") and plan:
         if eta is None:
             prev = _finite((latest or {}).get("wall_s")) if isinstance(latest, dict) else None
             prev = prev if prev is not None and prev > 0 else GC.ON_DEMAND_BUDGET_SEC
@@ -231,10 +260,13 @@ def _closed(now: datetime) -> bool:
     return not RUN.in_window(now)
 
 
-def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Callable] = None, variant=None) -> dict:
+def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Callable] = None, variant=None,
+            profile: Optional[Profile] = None) -> dict:
     """CONTRACT — the POST's answer (see the module docstring for the order). `store` / `spawn` are injectable (tests);
     `spawn(argv, name)` returns a process-like object with `poll()`. Never raises. `variant` (2026-10-27): None / GG5 =
-    today's tab, byte for byte; GG1 = the 1-minute page (its store, child, argv and cadence words)."""
+    today's tab, byte for byte; GG1 = the 1-minute page (its store, child, argv and cadence words). `profile`
+    (2026-11-11): another package's pass — its closed check, its refusal right after, its gate after the reuse check,
+    its child and its words; the caller hands its own `store` and `variant` (the child slot). None = as before."""
     v = V.of(variant)
     gg5 = V.is_gg5(v)
     rv = None if gg5 else v                                         # GG5's _resp / _text calls stay as they were
@@ -249,12 +281,17 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
             log.warning("gajjala on-open: latest pass read failed: %s", exc)
             latest = None
         latest = latest if isinstance(latest, dict) else None
-        if _closed(now):
-            return _resp("closed", latest, now, variant=rv)
+        if (_closed(now) if profile is None else profile.closed(now)):
+            return _resp("closed", latest, now, variant=rv, profile=profile)
+        if profile is not None and profile.refusal is not None:
+            why = profile.refusal(now)
+            if why:
+                return _resp("refused", latest, now, variant=rv, why=why, profile=profile)
         with _LOCK:
             if _alive(slot.get("proc")):
                 started = slot.get("started_at")
-                return _resp("waiting", latest, now, holder="on_demand", started=started, variant=rv)
+                return _resp("waiting", latest, now, holder="on_demand", started=started, variant=rv,
+                             profile=profile)
             try:
                 lease = st.lease_state(now) or {}
             except Exception as exc:                                # noqa: BLE001
@@ -263,13 +300,13 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
             if lease.get("held"):
                 started = _stamp(lease.get("holder_started_at")) or _stamp(lease.get("claimed_at"))
                 holder = lease.get("held_by") if lease.get("held_by") in HOLDERS else "cron"
-                return _resp("waiting", latest, now, holder=holder, started=started, variant=rv)
+                return _resp("waiting", latest, now, holder=holder, started=started, variant=rv, profile=profile)
             cron = _cron_pass(st)
             session = now.astimezone(ET).date().isoformat()
             if not (isinstance(cron, dict) and cron.get("date") == session):
                 first, nxt = _ticks(now) if gg5 else _ticks(now, V.cadence_sec(v))   # A12: the 04:01 tick first
                 return _resp("waiting", latest, now, eta=_clamp_eta((nxt - now).total_seconds()),
-                             first_wait=(first, nxt), variant=rv)
+                             first_wait=(first, nxt), variant=rv, profile=profile)
             fin = _finished_at(latest)
             od_done = None                                          # final critic 2026-10-16: an open that re-read
             if lease.get("held_by") == "on_demand" and lease.get("status") == "done":   # nothing left `latest` alone
@@ -280,22 +317,27 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
                 if age < GC.ON_DEMAND_REUSE_SEC:
                     return _resp("reused", latest, now, age=age, via_open=(od_done is not None and ref == od_done
                                                                               and (fin is None or od_done > fin)),
-                                 variant=rv)
+                                 variant=rv, profile=profile)
+            if profile is not None and profile.gate is not None:
+                g = profile.gate(now, st, latest, cron)             # 2026-11-11 — the profile's own gate
+                if isinstance(g, dict):
+                    return _resp(g.get("state") or "waiting", latest, now, eta=g.get("eta"), why=g.get("why"),
+                                 when=g.get("when"), plan=bool(g.get("plan", True)), variant=rv, profile=profile)
             try:
-                argv, name = _argv(v)
+                argv, name = _argv(v) if profile is None else (profile.argv, profile.proc_name)
                 proc = (spawn or _spawn)(list(argv), name)
             except Exception as exc:                                # noqa: BLE001
                 log.warning("gajjala on-open: spawn failed: %s", exc)
-                return _resp("refused", latest, now, variant=rv)
+                return _resp("refused", latest, now, variant=rv, profile=profile)
             slot.update(proc=proc, started_at=now)
-        return _resp("started", latest, now, started=now, variant=rv)
+        return _resp("started", latest, now, started=now, variant=rv, profile=profile)
     except Exception as exc:                                        # noqa: BLE001
         log.warning("gajjala on-open: request failed: %s", exc)
         try:
-            return _resp("refused", None, _utc(None), variant=rv)
+            return _resp("refused", None, _utc(None), variant=rv, profile=profile)
         except Exception:                                           # noqa: BLE001
             return {"state": "refused", "latest_at": None, "eta_sec": None, "poll_sec": None, "wait_max_sec": None,
                     "text": "🔄 the scan could not start (store error) — the board shows the last pass"}
 
 
-__all__ = ["request", "RESPONSE_KEYS", "STATES", "PROC_NAME", "PROC_NAME_1M", "ARGV"]
+__all__ = ["request", "Profile", "RESPONSE_KEYS", "STATES", "PROC_NAME", "PROC_NAME_1M", "ARGV"]

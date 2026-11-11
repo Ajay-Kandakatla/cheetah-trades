@@ -25,6 +25,21 @@ in shadow, never sent. UNMEASURED: nothing here trades, sizes or enters a lane.
 
 CLI: `--child` (the cron child), `--dry-run` (dry store + dry deps: every write recorded, nothing lands; prints `calls`),
 `--json`, `--now ISO` (refused without --dry-run, exit 2; a naive stamp is ET), `--symbols A,B` (narrow the names read).
+
+🔄 THE ON-DEMAND PASS (2026-11-11). Ajay 2026-11-11: "Can you put an ondeman scan button for Luk' scans too". `--on-demand`
+= `run_on_demand()` = run_pass(on_demand=True), spawned by chart_maps/luk/on_demand.py when he taps 🔄 scan now (never by
+the cron, never inside the api process). It reads like a cron pass and writes its screens and reads, but it NEVER:
+(1) rings, claims or records an alert (the push gate runs dry), (2) runs the 🏁 grade step, (3) writes the 1-minute
+clock (luk_state LUK_STATE_BARS_THROUGH — the next cron pass keeps the previous CRON pass's clock, so a 1-minute break the
+tap saw is still fresh for the cron pass that rings it), (4) writes the /alerts PASS-HEALTH row, (5) moves "latest_cron".
+Its lease claim is on_demand (free only; it never stamps the cron gap clock); its pass doc is "{date}|{HH:MM:SS}|on_demand"
+with `on_demand` and `finished_at`; "latest" moves only forward and only on an ok pass. Each read it writes carries
+`on_demand` and `cron_setups` (the last CRON pass's setups), and `_carried` reads `cron_setups` off such a doc — the next
+cron pass's shortlist is exactly what the cron passes alone would have made. The cron claim takes over a running
+on-demand holder (`take_over=True`, 🚩's rule): a dead or slow on-demand child never costs a cron pass; the on-demand pass
+checks it still owns the lease (`mine()`, 🚩's A8) before every write of its tail and stops writing once taken over.
+The child re-checks only the switch and the window (the parent decided the slot once). `--on-demand --dry-run` records
+every write and lands nothing; `--on-demand --child` is refused (exit 2).
 """
 from __future__ import annotations
 
@@ -60,6 +75,14 @@ SKIP_SLOT = "no time left in the slot"
 _LEASE_REASON = {"held": "lease held — another Luk pass is running",
                  "gap": "lease held — a Luk pass started under its minimum gap ago",
                  "error": "lease held — the lease could not be claimed (store error)"}
+ON_DEMAND_PASS_SUFFIX = "on_demand"                   # the on-demand pass doc id "{date}|{HH:MM:SS}|on_demand"
+_SUPERSEDED = "superseded — a 5-minute 🥇 pass took the lease over; this on-demand pass stopped writing"
+_BODY_KEYS = ("ran", "dry", "errors", "lease", "snapshot", "screens", "shortlist", "bars", "n_read", "states", "aplus",
+              "alerts", "market_state", "ledger", "calls", "bars_through", "wall_s", "status")
+
+
+class _Superseded(Exception):
+    """Raised inside an on-demand pass whose lease a cron Luk pass took over (🚩's A8): nothing more is written."""
 
 
 # ── the switch, the window, the slot ──────────────────────────────────────────────────────────────────────────────
@@ -249,12 +272,16 @@ def _hhmm(t: Optional[datetime]) -> Optional[str]:
 
 
 def _carried(st, session) -> set:
-    """Today's and the previous market day's reads with a setup in forming / triggered."""
+    """Today's and the previous market day's reads with a setup in forming / triggered. A read an on-demand pass wrote
+    (`on_demand` True, 2026-11-11) counts by its `cron_setups` — the last CRON pass's setups — so an on-demand pass never
+    adds or drops a carried name."""
     from catalysts.medical.reaction import prev_market_day
     out: set = set()
     for d in (session, prev_market_day(session)):
         for doc in st.reads(d) or []:
-            setups = doc.get("setups") if isinstance(doc, dict) else None
+            if not isinstance(doc, dict):
+                continue
+            setups = doc.get("cron_setups") if doc.get("on_demand") else doc.get("setups")
             if isinstance(setups, dict) and any(isinstance(r, dict) and r.get("state") in CARRY_STATES
                                                 for r in setups.values()):
                 if doc.get("symbol"):
@@ -269,9 +296,13 @@ def _new_out(now: datetime, dry: bool) -> dict:
 
 
 def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps] = None, dry: bool = False,
-             symbols: Optional[list] = None) -> dict:
+             symbols: Optional[list] = None, on_demand: bool = False) -> dict:
     """One Luk pass (the 16 steps of the module docstring). Never raises past a step: a failure is logged, named in
-    `errors`, and the pass still records. -> the summary (also the pass doc's body)."""
+    `errors`, and the pass still records. -> the summary (also the pass doc's body).
+
+    `on_demand=True` (2026-11-11 — call it through `run_on_demand`): the owner's on-demand pass — an on_demand lease,
+    the push gate dry, no 🏁 grade, no 1-minute clock write, reads tagged `on_demand` + `cron_setups`, its own pass doc,
+    no /alerts row, and the A8 owner check before every write of its tail (see the module docstring)."""
     from chart_maps.gajjala import store as GS
     from . import alerts as AL
     from . import bars as BA
@@ -284,6 +315,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     deps = deps or Deps()
     now = GR._utc(now)
     out = _new_out(now, dry)
+    on_demand = bool(on_demand)
+    if on_demand:
+        out["on_demand"] = True                                 # the cron summary keys stay as they were
     calls = out["calls"]
     session = now.astimezone(ET).date()
     iso = session.isoformat()
@@ -291,13 +325,30 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         out["reason"] = "outside the pass window"
         return out
     st = store or (ST.dry_store() if dry else ST.default())
-    claim = st.claim_lease(now, source=GS.LEASE_CRON)           # 2 the lease (LukStore._lease_nums)
+    if on_demand:                                               # 2 the lease (LukStore._lease_nums)
+        claim = st.claim_lease(now, source=GS.LEASE_ON_DEMAND)  # free only; never stamps the cron gap clock
+    else:                                                       # a running on-demand holder never costs a cron pass
+        claim = st.claim_lease(now, source=GS.LEASE_CRON, take_over=True)
     out["lease"] = {"why": getattr(claim, "why", "claimed" if claim else "held"),
                     "held_by": getattr(claim, "held_by", None)}
     if not claim:
         out["reason"] = _LEASE_REASON.get(out["lease"]["why"], _LEASE_REASON["held"])
         return out
     token = getattr(claim, "token", None)
+    guard_on = on_demand and not getattr(st, "dry", False)
+
+    def mine() -> None:
+        """A8 (🚩's pattern): before every write of an on-demand pass's tail — raise _Superseded once the token is not
+        ours. A raising owner read fails closed (the pass stops writing)."""
+        if not guard_on:
+            return
+        try:
+            ok = st.lease_owner_is(token)
+        except Exception:                                       # noqa: BLE001
+            ok = False
+        if not ok:
+            raise _Superseded()
+
     t0 = deps.clock()
     load_day = _counted(deps.load_day, calls,
                         lambda a, k: "minute_today" if _day_of(a, k) == session else "minute_prior")
@@ -332,7 +383,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                           "not_screened_n": len(universe) - screened,
                           "daily": {k: warm.get(k) for k in ("doc_hits", "computed", "fetched", "deferred",
                                                              "untrusted", "no_frame")}}
+        mine()
         st.upsert_screens(session, now, dict(lists, counts=dict(out["screens"])))
+        mine()                                                  # the index step caches LUK_STATE_INDEX in `st`
         try:                                                    # 9 the index state words (a fault is no strip)
             loader = _counted(deps.index_loader or DA.default_index_loader(session), calls, "index")
             out["market_state"] = MS.block(DA.index_state(session, loader=loader, store=st, now=now))
@@ -358,6 +411,10 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 if isinstance(r, dict) and r.get("symbol"):
                     rank.setdefault(str(r["symbol"]).upper(), {})[key] = r.get("rank")
         t1 = t5 = None
+        prior: dict = {}
+        if on_demand:                                           # the last CRON setups each on-demand read carries
+            prior = {str(d["symbol"]).upper(): d for d in (st.reads(session) or [])
+                     if isinstance(d, dict) and d.get("symbol")}
         for sym, F in frames.items():
             try:
                 setups = DT.read_all(F, facts.get(sym), iso, prev_through_1m=prev_t1) or {}
@@ -382,22 +439,28 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 tile = {}
             fct = facts.get(sym) or {}
             row = rows_by.get(sym) or {}
-            st.upsert_read(session, sym, {
+            body = {
                 "as_of_bar_t5": F.as_of_bar_t.get("5m"), "as_of_bar_t1": F.as_of_bar_t.get("1m"),
                 "as_of_bar_t60": F.as_of_bar_t.get("60m"), "setups": setups, "facts": fct,
                 "tile": {"bars5": tile.get("bars"), "curves5": tile.get("curves"), "vol_avg5": tile.get("vol_avg")},
-                "screens_rank": rank.get(sym, {}), "tier": fct.get("tier"), "cap_text": row.get("cap_text")}, now=now)
+                "screens_rank": rank.get(sym, {}), "tier": fct.get("tier"), "cap_text": row.get("cap_text")}
+            if on_demand:
+                pd_ = prior.get(sym) or {}
+                body["on_demand"] = True
+                body["cron_setups"] = pd_.get("cron_setups") if pd_.get("on_demand") else pd_.get("setups")
+            mine()
+            st.upsert_read(session, sym, body, now=now)
         out["n_read"] = len(reads)
         out["states"] = states
         out["aplus"] = aplus
         try:                                                    # 13 the SHADOW gate
-            out["alerts"] = AL.run_pass(reads, frames, now, session, store=st, dry=dry,
+            out["alerts"] = AL.run_pass(reads, frames, now, session, store=st, dry=dry or on_demand,
                                         ctx={s: {"price": prices_by.get(s)} for s in reads})
         except Exception as exc:                                # noqa: BLE001
             log.warning("luk pass: shadow gate failed: %s", type(exc).__name__)
             out["errors"].append("alerts")
-        out["ledger"] = None                                    # 14 the 🏁 grade step (none on a dry run)
-        if not dry:
+        out["ledger"] = None                                    # 14 the 🏁 grade step (none on a dry / on-demand run)
+        if not dry and not on_demand:
             try:
                 from . import ledger as LG
                 out["ledger"] = LG.grade_step(st, now, load_day=deps.grade_load_day, fetch_daily=None,
@@ -407,23 +470,40 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 log.warning("luk pass: grade step failed: %s", type(exc).__name__)
                 out["errors"].append("ledger")
         t1, t5 = _later(prev_t1, t1), _later(prev_t5, t5)      # 15 the next pass's 1-minute clock (never backwards)
-        st.set_state(LC.LUK_STATE_BARS_THROUGH, {"session": iso, "t1": t1, "t5": t5, "at": now})
+        if not on_demand:                                       # an on-demand pass never moves the cron's clock
+            st.set_state(LC.LUK_STATE_BARS_THROUGH, {"session": iso, "t1": t1, "t5": t5, "at": now})
         out["bars_through"] = {"t1_et": _hhmm(t1), "t5_et": _hhmm(t5)}
         out["status"] = "ok" if (out["snapshot"].get("http") == 200 and rows) else "failed"
+    except _Superseded:
+        out["superseded"] = 1
+        out["status"] = "superseded"
+        out["reason"] = _SUPERSEDED
+        log.info("luk on-demand pass: %s", _SUPERSEDED)
     except Exception as exc:                                    # noqa: BLE001
         log.exception("luk pass failed")
         out["errors"].append(type(exc).__name__)
         out["status"] = "error"
     finally:
         out["wall_s"] = round(deps.clock() - t0, 3)
-        _finish(st, now, session, out, deps, token)             # 16 the pass doc + the /alerts row → release
+        _finish(st, now, session, out, deps, token, on_demand=on_demand)   # 16 the pass doc + the /alerts row → release
     return out
 
 
-def _finish(st, now: datetime, session: date, out: dict, deps: Deps, token: Optional[str]) -> None:
-    body = {k: out.get(k) for k in ("ran", "dry", "errors", "lease", "snapshot", "screens", "shortlist", "bars",
-                                    "n_read", "states", "aplus", "alerts", "market_state", "ledger", "calls",
-                                    "bars_through", "wall_s", "status")}
+def run_on_demand(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps] = None,
+                  dry: bool = False) -> dict:
+    """CONTRACT — 🔄 the owner's on-demand pass (Ajay 2026-11-11: "Can you put an ondeman scan button for Luk' scans
+    too") = run_pass(on_demand=True). Runs ONLY in its own process (`python -m chart_maps.luk.run --on-demand`, spawned by
+    chart_maps/luk/on_demand.py). `dry` = `--on-demand --dry-run` (the summary then says `dry` True, as a cron dry run
+    does). -> the run_pass summary (+ `on_demand`)."""
+    return run_pass(now, store=store, deps=deps, dry=dry, on_demand=True)
+
+
+def _finish(st, now: datetime, session: date, out: dict, deps: Deps, token: Optional[str], *,
+            on_demand: bool = False) -> None:
+    if on_demand:
+        _finish_on_demand(st, now, session, out, token)
+        return
+    body = {k: out.get(k) for k in _BODY_KEYS}
     try:
         st.record_pass(session, now, body)
     except Exception as exc:                                    # noqa: BLE001
@@ -440,6 +520,40 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps, token: Opti
         st.release_lease(now, token)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("luk pass: lease release failed: %s", exc)
+
+
+def _finish_on_demand(st, now: datetime, session: date, out: dict, token: Optional[str]) -> None:
+    """An on-demand pass's end (2026-11-11): the A8 owner check again before the pass doc (a body that raised after a
+    take-over never reached its last `mine()`); superseded → NO pass doc. Else its OWN doc "{date}|{HH:MM:SS}|on_demand"
+    (+ `on_demand`, `finished_at`), source on_demand (never "latest_cron"), "latest" moved only forward and only on an ok
+    pass; NO /alerts row. The release is token-guarded and stamps the real finish (`done_at` = start + wall — the
+    trigger's reuse check reads it): after a real take-over it frees nothing; after a failed owner read it frees its own
+    lease."""
+    from chart_maps.gajjala import store as GS
+    finished = now + timedelta(seconds=float(out.get("wall_s") or 0))
+    if not out.get("superseded") and not getattr(st, "dry", False):
+        try:
+            ok = st.lease_owner_is(token)
+        except Exception:                                       # noqa: BLE001
+            ok = False
+        if not ok:
+            out["superseded"] = 1
+            out["status"] = "superseded"
+            out["reason"] = _SUPERSEDED
+            log.info("luk on-demand pass: %s", _SUPERSEDED)
+    if not out.get("superseded"):
+        body = {k: out.get(k) for k in _BODY_KEYS}
+        body.update(on_demand=True, finished_at=finished)
+        try:
+            st.record_pass(session, now, body,
+                           hhmm=now.astimezone(ET).strftime("%H:%M:%S") + "|" + ON_DEMAND_PASS_SUFFIX,
+                           source=GS.LEASE_ON_DEMAND, latest_if_newer=True, move_latest=(out.get("status") == "ok"))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("luk on-demand pass: pass doc failed: %s", exc)
+    try:
+        st.release_lease(finished, token)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("luk on-demand pass: lease release failed: %s", exc)
 
 
 # ── the child ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -484,6 +598,8 @@ def main(argv=None, *, store=None, deps: Optional[Deps] = None) -> int:
     ap.add_argument("--json", action="store_true", help="print the pass summary as JSON")
     ap.add_argument("--now", help="ISO clock to replay (a naive stamp is ET); refused without --dry-run")
     ap.add_argument("--symbols", help="comma list: narrow the names read")
+    ap.add_argument("--on-demand", action="store_true",
+                    help="the owner's on-demand pass: push gate dry, no 🏁 grade, no 1-minute clock write — 2026-11-11")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
     now = datetime.fromisoformat(args.now) if args.now else None
@@ -492,11 +608,17 @@ def main(argv=None, *, store=None, deps: Optional[Deps] = None) -> int:
     if args.now and not args.dry_run:
         log.warning("luk pass: a --now replay records on the real store unless --dry-run; refusing")
         return 2
+    if args.on_demand and args.child:
+        log.warning("luk pass: --on-demand and --child are two different passes; refusing")
+        return 2
     syms = [s.strip() for s in (args.symbols or "").split(",") if s.strip()] or None
     from . import store as ST
     if args.dry_run:
         st = store if store is not None else ST.dry_store()
-        out = run_pass(now, store=st, deps=deps or dry_deps(), dry=True, symbols=syms)
+        if args.on_demand:
+            out = run_on_demand(now, store=st, deps=deps or dry_deps(), dry=True)
+        else:
+            out = run_pass(now, store=st, deps=deps or dry_deps(), dry=True, symbols=syms)
         out["writes"] = sorted({w[0] for w in (getattr(st, "writes", None) or [])})
         if not args.json:
             print(json.dumps(out.get("calls"), default=str))
@@ -508,13 +630,24 @@ def main(argv=None, *, store=None, deps: Optional[Deps] = None) -> int:
                 log.info("luk pass: child skipped — %s", why)
                 _skip(st, now or GR._utc(None), why)
                 return 0
+        if args.on_demand:                                      # the switch and the window ONLY — never `fits` (the
+            why = SKIP_OFF if not enabled() else SKIP_WINDOW if not in_window(now) else None   # parent decided the slot)
+            if why:
+                log.info("luk on-demand: skipped — %s", why)    # no lease, no child state doc (that one is the cron's)
+                return 0
         try:
             st.ensure_indexes()
         except Exception as exc:                                # noqa: BLE001
             log.warning("luk pass: indexes failed: %s", type(exc).__name__)
-        out = run_pass(now, store=st, deps=deps or Deps(), symbols=syms)
+        if args.on_demand:
+            out = run_on_demand(now, store=st, deps=deps or Deps())
+        else:
+            out = run_pass(now, store=st, deps=deps or Deps(), symbols=syms)
     if args.json:
         print(json.dumps(out, default=str))
+    elif args.on_demand:
+        log.info("luk on-demand pass: %s", {k: out.get(k) for k in ("ran", "status", "n_read", "wall_s", "lease",
+                                                                    "reason")})
     else:
         log.info("luk pass: %s", {k: out.get(k) for k in ("ran", "status", "n_read", "alerts", "wall_s", "lease",
                                                           "reason")})
@@ -522,7 +655,7 @@ def main(argv=None, *, store=None, deps: Optional[Deps] = None) -> int:
 
 
 __all__ = ["ARGV_CHILD", "PROC_NAME", "CALL_KEYS", "enabled", "in_window", "fits", "slot_of", "Deps", "dry_deps",
-           "run_pass", "prev_bars_through", "spawn_child", "child_refusal", "main"]
+           "run_pass", "run_on_demand", "prev_bars_through", "spawn_child", "child_refusal", "main"]
 
 
 if __name__ == "__main__":

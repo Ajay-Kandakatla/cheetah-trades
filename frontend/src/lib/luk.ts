@@ -16,7 +16,8 @@
 import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
-import type { GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
+import type { GgBoard, GgScan, GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
+import { ggScanAdvanced } from './gajjala';
 
 /** The tab id (== backend chart_maps/luk/constants.LUK_TAB). */
 export const LUK_TAB = 'luk';
@@ -35,6 +36,10 @@ export const LUK_SORT_PARAM = 'sort';
 export const LUK_FOCUS_PARAM = 'focus';
 /** The 🏁 entry-tape route — the SAME payload shape as 🚩's (gajjala.tape.PAYLOAD_KEYS), drawn by GgEntryTape. */
 export const LUK_TAPE_PATH = `${LUK_BASE}/entry-tape`;
+/** 🔄 2026-11-11, Ajay: "Can you put an ondeman scan button for Luk' scans too" — the owner's scan-now POST (== the
+ *  api route string, backend chart_maps/api.py `chart_maps_luk_scan`; contract-pinned by the main session). A BUTTON
+ *  only: LukBoard never POSTs on mount (scan on open = HIS CALL H5). */
+export const LUK_SCAN_PATH = `${LUK_BASE}/scan`;
 /** The two sub keys whose body is not a card grid or a scan table (backend constants.SUBS keys). */
 export const LUK_PLAYBOOK_SUB = 'playbook';
 export const LUK_TRACK_SUB = 'track_record';
@@ -124,6 +129,9 @@ export type LukTrackRecord = {
 export type LukPass = {
   as_of_et?: string | null; bars_through_et?: string | null; stale?: boolean | null; stale_text?: string | null;
   wall_s?: number | null; status?: string | null; text?: string | null;
+  /** 🔄 2026-11-11: the latest pass's clock (gajjala.tab.pass_stamp) — the stamp the scan POST's `latest_at` is
+   *  compared to; and whether that pass was the owner's on-demand pass. */
+  at?: string | null; on_demand?: boolean | null;
 };
 export type LukLegend = Record<string, string> | Array<{ key: string; label?: string | null; text: string }>;
 export type LukBoard = {
@@ -139,6 +147,9 @@ export type LukBoard = {
   screens?: LukScreen | null;
   playbook?: LukPlaybook | null;
   track_record?: LukTrackRecord | null;
+  /** 🔄 2026-11-11: the served scan block (luk/tab.scan_block) — 🚩's keys, so the 🚩 type carries it. Every reader
+   *  gets it; the FE prints the button for the owner only. */
+  scan?: GgScan | null;
 };
 export type LukTapePayload = GgTapePayload;
 
@@ -180,6 +191,14 @@ export function lukQuery(q: { sub?: string | null; span?: string | null; focus?:
 export function lukRefreshMs(board: unknown): number {
   const s = (board as LukBoard | null | undefined)?.session?.refresh_sec;
   return typeof s === 'number' && Number.isFinite(s) && s > 0 ? s * 1000 : LUK_REFRESH_FALLBACK_MS;
+}
+
+/** 🔄 The pass a scan POST waited for has landed — ONE rule, 🚩's `ggScanAdvanced`, on the board's served `pass.at` and
+ *  `scan.state` (pass.at a string ≠ latestAt, and no pass running). */
+export function lukScanLanded(board: LukBoard | null | undefined, latestAt: string | null | undefined): boolean {
+  if (!board) return false;
+  const shaped = { pass: { at: board.pass?.at ?? null }, scan: board.scan ? { state: board.scan.state } : null };
+  return ggScanAdvanced(shaped as unknown as GgBoard, latestAt);
 }
 
 /** A served string worth printing (non-blank), else null — never "undefined" / "null" on screen. */

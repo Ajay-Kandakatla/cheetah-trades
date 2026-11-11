@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  LUK_BASE, LUK_CAT_PARAM, LUK_REFRESH_FALLBACK_MS, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB, LUK_TAPE_PATH,
-  lukChartTile, lukHref, lukLegendRows, lukMark, lukQuery, lukRefreshMs, lukScreenCols, lukSpan, lukText, parseLukSub,
-  type LukScreen, type LukTile,
+  LUK_BASE, LUK_CAT_PARAM, LUK_REFRESH_FALLBACK_MS, LUK_SCAN_PATH, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB,
+  LUK_TAPE_PATH, lukChartTile, lukHref, lukLegendRows, lukMark, lukQuery, lukRefreshMs, lukScanLanded, lukScreenCols,
+  lukSpan, lukText, parseLukSub, type LukBoard, type LukScreen, type LukTile,
 } from './luk';
-import { GG_CAT_PARAM, GG_SORT_PARAM } from './gajjala';
+import { GG_CAT_PARAM, GG_SCAN_PATH, GG_SORT_PARAM, ggScanAdvanced, type GgBoard } from './gajjala';
 
 /* 🥇 Luk's FE plumbing (2026-11-01, luk spec §3.13). Ajay: "look at other winners of US stocks champion ship and pic the
  * next best one like Gajjala. Implement their strategy please if they have online resources." The parsers, the hrefs,
@@ -154,5 +154,44 @@ describe('lukChartTile — the served 5-minute tile under the house CmTile keys'
   it('NEGATIVE: no served bars → an empty list (no chart), never a made-up bar', () => {
     const c = lukChartTile({ ...t, bars5: null });
     expect(c.bars).toEqual([]);
+  });
+});
+
+/* 🔄 2026-11-11, Ajay: "Can you put an ondeman scan button for Luk' scans too" (lukscan WP-LUK-FE). */
+describe('🔄 Luk scan now — the route and the landed rule', () => {
+  it('LUK_SCAN_PATH is the api route string', () => {
+    expect(LUK_SCAN_PATH).toBe('/chart-maps/luk/scan');
+    expect(LUK_SCAN_PATH.startsWith(LUK_BASE)).toBe(true);
+  });
+  it('NEGATIVE: never 🚩 Gajjala\'s scan route', () => {
+    expect(LUK_SCAN_PATH).not.toBe(GG_SCAN_PATH);
+    expect(LUK_SCAN_PATH).not.toMatch(/gajjala/);
+  });
+  const A = '2026-11-11T15:31:00+00:00';
+  const B = '2026-11-11T15:33:12+00:00';
+  const board = (at: unknown, state: unknown): LukBoard => ({ tab: 'luk', title: 'T',
+    pass: at === undefined ? undefined : { at: at as string | null },
+    scan: state === undefined ? undefined : { state: state as string } });
+  const rows: Array<[string, unknown, unknown, string | null | undefined, boolean]> = [
+    ['moved, idle → landed', B, 'idle', A, true],
+    ['moved, closed → landed', B, 'closed', A, true],
+    ['moved, no scan block → landed', B, undefined, A, true],
+    ['moved, no latest_at → landed', B, 'idle', null, true],
+    ['NEGATIVE: same stamp → not landed', A, 'idle', A, false],
+    ['NEGATIVE: moved but a pass still running → not landed', B, 'scanning', A, false],
+    ['NEGATIVE: no pass.at → not landed', null, 'idle', A, false],
+    ['NEGATIVE: blank pass.at → not landed', '', 'idle', A, false],
+    ['NEGATIVE: no pass block → not landed', undefined, 'idle', A, false],
+  ];
+  for (const [name, at, state, latest, want] of rows) {
+    it(`lukScanLanded == ggScanAdvanced: ${name}`, () => {
+      const b = board(at, state);
+      expect(lukScanLanded(b, latest)).toBe(want);
+      expect(lukScanLanded(b, latest)).toBe(ggScanAdvanced(b as unknown as GgBoard, latest));
+    });
+  }
+  it('NEGATIVE: no board → not landed', () => {
+    expect(lukScanLanded(null, A)).toBe(false);
+    expect(lukScanLanded(undefined, A)).toBe(false);
   });
 });

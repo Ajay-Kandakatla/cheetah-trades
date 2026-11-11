@@ -66,6 +66,18 @@
    "warming": false
   },
   "playbook": null,
+  "scan": {
+   "as_of_text": "last pass 10:11 ET · bars through 10:10",
+   "bars_through_et": "10:10",
+   "note": null,
+   "on_demand": false,
+   "rescan_label": "🔄 scan now",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "scanning_text": null,
+   "started_at_et": "10:11",
+   "state": "idle",
+   "text": "last pass 10:11 ET · bars through 10:10"
+  },
   "screens": null,
   "session": {
    "badge": "RTH",
@@ -646,6 +658,18 @@
    "warming": false
   },
   "playbook": null,
+  "scan": {
+   "as_of_text": "last pass 10:11 ET · bars through 10:10",
+   "bars_through_et": "10:10",
+   "note": null,
+   "on_demand": false,
+   "rescan_label": "🔄 scan now",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "scanning_text": null,
+   "started_at_et": "10:11",
+   "state": "idle",
+   "text": "last pass 10:11 ET · bars through 10:10"
+  },
   "screens": {
    "considerations_text": "He is considering a $100M dollar-volume floor and filtering biotechs and buyouts/mergers out (iMBI3ZcQ6sU 1:17:58–1:18:43) — listed, not applied: HIS CALL",
    "heads": [
@@ -972,6 +996,18 @@
    "warming": false
   },
   "playbook": null,
+  "scan": {
+   "as_of_text": "last pass 10:11 ET · bars through 10:10",
+   "bars_through_et": "10:10",
+   "note": null,
+   "on_demand": false,
+   "rescan_label": "🔄 scan now",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "scanning_text": null,
+   "started_at_et": "10:11",
+   "state": "idle",
+   "text": "last pass 10:11 ET · bars through 10:10"
+  },
   "screens": null,
   "session": {
    "badge": "RTH",

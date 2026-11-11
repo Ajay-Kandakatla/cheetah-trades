@@ -5,8 +5,10 @@ Implement their strategy please if they have online resources. ... I need someth
 
 GET /chart-maps/luk builds `luk.tab.build` (coerced args) + the ONE live fan-out for the shown tiles; a raising build
 serves 200 with the fault note. GET /chart-maps/luk/entry-tape serves `luk.tape.entry_tape`, 404 for an unknown id, 200
-with the fault payload on a raise. NEGATIVES: no POST / scan route under the Luk base; the 🚩 / 1-minute / audited
-routes are the same set and still build with their own variant; the Luk GET never touches gajjala.tab.build.
+with the fault payload on a raise. NEGATIVES: exactly ONE non-GET route under the Luk base — the owner's scan POST
+(REVERSED 2026-11-11 by his word, Ajay: "Can you put an ondeman scan button for Luk' scans too"; its tests live in
+tests/test_luk_scan_now_2026_11_11.py); the 🚩 / 1-minute / audited routes are the same set and still build with their
+own variant; the Luk GET never touches gajjala.tab.build nor names the trigger.
 """
 from __future__ import annotations
 
@@ -71,17 +73,25 @@ def _routes():
 
 
 # ── the route table ────────────────────────────────────────────────────────────────────────────────────────────────
-def test_exactly_two_get_routes_live_under_the_variant_api_base():
+def test_two_gets_and_the_owner_scan_post_live_under_the_variant_api_base():
+    # WIDENED 2026-11-11 (Ajay: "Can you put an ondeman scan button for Luk' scans too"): + POST /chart-maps/luk/scan
     got = {(p, m) for p, m in _routes() if p == BASE or p.startswith(BASE + "/")}
-    assert got == {(BASE, "GET"), (BASE + "/entry-tape", "GET")}
+    assert got == {(BASE, "GET"), (BASE + "/entry-tape", "GET"), (BASE + "/scan", "POST")}
     assert LUK.api_base == BASE
 
 
-def test_NEGATIVE_no_post_or_scan_route_exists_for_luk(client):
-    assert not any(p.startswith(BASE) and m != "GET" for p, m in _routes())
-    assert not any(p.startswith(BASE + "/scan") for p, _m in _routes())
-    assert client.post(BASE + "/scan", headers=DOUG).status_code in (404, 405)
-    assert client.post(BASE, headers=DOUG).status_code == 405
+def test_the_one_luk_post_is_the_owner_scan_route(client, monkeypatch):
+    # REVERSED 2026-11-11 (was test_NEGATIVE_no_post_or_scan_route_exists_for_luk — HIS CALL #20 answered by his word)
+    import auth
+    from chart_maps.luk import on_demand as LOD
+    assert [(p, m) for p, m in _routes() if p.startswith(BASE) and m != "GET"] == [(BASE + "/scan", "POST")]
+    calls = []
+    monkeypatch.setattr(auth, "is_admin_email", lambda e: e == "owner@example.com")
+    monkeypatch.setattr(LOD, "request", lambda *a, **k: calls.append(1) or {})
+    assert client.post(BASE + "/scan", headers=DOUG).status_code == 404               # NEGATIVE: Doug → stealth 404
+    assert calls == []                                                               # … and the trigger never ran
+    assert client.post(BASE, headers=DOUG).status_code == 405                        # NEGATIVE: the board stays a GET
+    assert client.get(BASE + "/scan", headers=DOUG).status_code in (404, 405)        # NEGATIVE: no GET trigger
 
 
 def test_NEGATIVE_the_gajjala_routes_are_the_same_set():

@@ -1397,7 +1397,8 @@ every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`
   push/record/external/cost/latency), subs (eight: ↩️ 🔔 📦 ☀️ 🏆 ⚡ 📓 🏁), sub, counts, counts_text, counts_legend,
   tiles, screens, playbook, track_record`. The 📓 Playbook serves every rule with its cite, the SYNTHESIS §D HIS CALLs
   and the external backtests as EXTERNAL.
-- **Routes**: `GET /chart-maps/luk?sub=&span=&focus=&limit=`, `GET /chart-maps/luk/entry-tape?id=&lite=`. No POST.
+- **Routes**: `GET /chart-maps/luk?sub=&span=&focus=&limit=`, `GET /chart-maps/luk/entry-tape?id=&lite=`,
+  `POST /chart-maps/luk/scan` (owner's 🔄 scan now, 2026-11-11; stealth 404 for anyone else).
 - **ℹ️ panel**: section "🥇 Luk's" = `luk.playbook.rules_lines()`, before "doji_sweep"; fenced; no numeric literal in
   `rules_info.py`.
 - **FE**: `LukBoard` (+ `LukCard` drawing `PatternChart`, `LukScreens`, `LukPlaybook`, `LukTrackRecord` (🚩's shared 🏁 row; 📈 opens

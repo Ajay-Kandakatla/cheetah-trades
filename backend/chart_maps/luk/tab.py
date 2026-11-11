@@ -48,6 +48,8 @@ HONESTY_SHADOW = _HONESTY.replace("{mode}", "Every alert is recorded in shadow, 
 FAULT_TEXT = "🥇 The board could not be read this time — the next re-read tries again."
 PASS_TEXT = ("pass {hhmm} ET · bars through {through} · {n_read} read of {shortlist} shortlisted · {screened} screened "
              "· {not_screened} not screened yet")
+PASS_TEXT_ON_DEMAND = ("🔄 on-demand pass {hhmm} ET · bars through {through} · {n_read} read of {shortlist} "
+                       "shortlisted · {screened} screened · {not_screened} not screened yet")      # 2026-11-11 scan now
 PASS_NONE_TEXT = "no 🥇 pass on file for this session yet — it runs every {cad} minutes, {open}–{close} ET"
 THROUGH_NONE = "—"
 LATENCY_TEXT = ("a {one}-minute trigger is read on the next {cad}-minute pass — up to {cad} minutes after its bar closed — "
@@ -131,8 +133,29 @@ SUB_KEYS = tuple(k for k, _e, _l in LC.SUBS)
 SUB_META = {k: (e, label) for k, e, label in LC.SUBS}
 PAYLOAD_KEYS = ("tab", "label", "title", "honesty", "variant", "session", "pass", "strip", "subs", "sub", "counts",
                 "counts_text", "counts_legend", "tiles", "order_note", "screens", "playbook", "track_record", "focus",
-                "fault", "fault_text")
+                "fault", "fault_text", "scan")                                    # + "scan" 2026-11-11 (🔄 scan now)
 UNIT_SEC_PER_MIN = 60                                                       # a unit, not a rule
+
+# ── 🔄 scan now (Ajay 2026-11-11, verbatim: "Can you put an ondeman scan button for Luk' scans too") ─────────────────
+# The served `scan` block (scan_block below) — the keys of 🚩's gajjala.tab.scan_block so the FE reuses one type; every
+# word Luk's own, every number a constants name formatted at call time. The block is served to EVERY reader (🚩 parity,
+# HIS CALL H8); only the button is owner-only (the FE's is_admin, the POST's stealth 404).
+SCAN_AS_OF_CLOSED = "outside 🥇 Luk's pass window — last pass {hhmm} ET {date}"                                  # LS3
+SCAN_AS_OF_CLOSED_NONE = "outside 🥇 Luk's pass window — no pass on file"                                        # LS3
+SCAN_AS_OF_ON_DEMAND = "🔄 scanned on demand {hhmm} ET{bars}"                                                     # LS1
+SCAN_AS_OF_CRON = "last pass {hhmm} ET{bars}"                                                                     # LS2
+SCAN_AS_OF_OTHER = "last pass {date} {hhmm} ET — none yet this session"                                           # LS2b
+SCAN_AS_OF_NONE = "no pass on file yet"                                                                           # LS2b
+SCAN_BARS_TAIL = " · bars through {through}"
+SCAN_SCANNING_ON_DEMAND = "scanning… an on-demand pass started{when} — {tail}"                                    # LS4
+SCAN_SCANNING_CRON = "scanning… the {cad}-minute 🥇 pass started{when} — {tail}"                                  # LS5
+SCAN_WHEN = " at {started} ET"
+SCAN_TAIL = "the board below is the {shown} ET read until it lands"
+SCAN_TAIL_NONE = "the board fills when it lands"
+RESCAN_TITLE = ("Run one 🥇 pass now — its push gate runs dry, so it rings no device; the {cad}-minute pass rings as "
+                "always: {latency}. A pass that finished under {reuse} s ago is reused; a scan starts only after this "
+                "slot's {cad}-minute pass landed (or skipped itself) and when it can end {margin} s before the next "
+                "one")                                                                                            # LS9
 
 _STATE_RANK = {s: i for i, s in enumerate(TILE_STATES)}
 
@@ -232,13 +255,73 @@ def pass_block(latest: Optional[dict], cron: Optional[dict], now, session: date,
         scr = latest.get("screens") if isinstance(latest.get("screens"), dict) else {}
         sl = latest.get("shortlist") if isinstance(latest.get("shortlist"), dict) else {}
         at = GT._at_utc(latest)
-        out["text"] = PASS_TEXT.format(hhmm=GT._et(at).strftime("%H:%M") if at else THROUGH_NONE, through=through,
+        tpl = PASS_TEXT_ON_DEMAND if latest.get("on_demand") else PASS_TEXT     # 2026-11-11: an on-demand pass says so
+        out["text"] = tpl.format(hhmm=GT._et(at).strftime("%H:%M") if at else THROUGH_NONE, through=through,
                                        n_read=int(latest.get("n_read") or 0), shortlist=int(sl.get("n") or 0),
                                        screened=int(scr.get("screened_n") or 0),
                                        not_screened=int(scr.get("not_screened_n") or 0))
     else:
         out["text"] = PASS_NONE_TEXT.format(cad=_cad_min(), open=LC.LUK_PASS_OPEN_ET, close=LC.LUK_PASS_CLOSE_ET)
     return out
+
+
+def rescan_title() -> str:
+    """LS9 — the button's title: the cadence, the reuse window and the slot margin are constants names read at call
+    time, and the latency fact is `latency_text()` spliced in verbatim (never retyped — critique C6)."""
+    cad = _cad_min()
+    return RESCAN_TITLE.format(cad=cad, latency=latency_text(), reuse=GC.ON_DEMAND_REUSE_SEC,
+                               margin=LC.LUK_SLOT_MARGIN_SEC)
+
+
+def scan_block(latest: Optional[dict], lease: dict, now, session: date, in_window: bool) -> dict:
+    """🔄 the served scan line (2026-11-11, every sub, every reader). Keys = 🚩's gajjala.tab.scan_block. state "closed"
+    outside Luk's pass window, "scanning" while the Luk lease is held (`lease_state`'s `held` — a holder that claimed
+    ≥ LUK_LEASE_SEC ago is not held, so a crashed holder never shows "scanning" forever), else "idle". Composed from
+    gajjala.tab's formatters; `bars_through_et` = this session's pass doc `bars_through.t1_et or t5_et`; `note` None.
+    Reads its arguments only."""
+    lease = lease if isinstance(lease, dict) else {}
+    latest = latest if isinstance(latest, dict) else None
+    at = GT._at_utc(latest)
+    this = bool(latest) and latest.get("date") == session.isoformat() and at is not None
+    on_demand = bool((latest or {}).get("on_demand"))
+    bt = (latest or {}).get("bars_through") if this else None
+    bt = bt if isinstance(bt, dict) else {}
+    through = bt.get("t1_et") or bt.get("t5_et") or None
+    through = through if isinstance(through, str) and through else None
+    hhmm = GT._et(at).strftime("%H:%M") if at is not None else None
+    bars = SCAN_BARS_TAIL.format(through=through) if through else ""
+    if not in_window:
+        state = "closed"
+        as_of = (SCAN_AS_OF_CLOSED.format(hhmm=hhmm, date=GT._et(at).date().isoformat()) if at is not None
+                 else SCAN_AS_OF_CLOSED_NONE)
+    else:
+        state = "scanning" if lease.get("held") else "idle"
+        if this and on_demand:
+            as_of = SCAN_AS_OF_ON_DEMAND.format(hhmm=hhmm, bars=bars)
+        elif this:
+            as_of = SCAN_AS_OF_CRON.format(hhmm=hhmm, bars=bars)
+        elif at is not None:
+            as_of = SCAN_AS_OF_OTHER.format(date=GT._et(at).date().isoformat(), hhmm=hhmm)
+        else:
+            as_of = SCAN_AS_OF_NONE
+    scanning_text = None
+    started = None
+    if state == "scanning":
+        hstart = GT._stamp_utc(lease.get("holder_started_at")) or GT._stamp_utc(lease.get("claimed_at"))
+        started = GT._when(hstart, session, sec=True)
+        shown = GT._when(at, session)
+        tail = SCAN_TAIL.format(shown=shown) if shown else SCAN_TAIL_NONE
+        when = SCAN_WHEN.format(started=started) if started else ""
+        if lease.get("held_by") == "on_demand":
+            scanning_text = SCAN_SCANNING_ON_DEMAND.format(when=when, tail=tail)
+        else:
+            scanning_text = SCAN_SCANNING_CRON.format(cad=_cad_min(), when=when, tail=tail)
+    elif at is not None:
+        started = GT._when(at, session)
+    return {"state": state, "on_demand": on_demand, "started_at_et": started, "bars_through_et": through,
+            "as_of_text": as_of, "scanning_text": scanning_text,
+            "text": scanning_text if scanning_text else as_of, "note": None,
+            "rescan_label": GT.RESCAN_LABEL, "rescan_title": rescan_title()}
 
 
 def cost_text(latest: Optional[dict] = None) -> str:
@@ -543,7 +626,8 @@ def fault_payload(sub: str = "") -> dict:
             "variant": variant_block(), "session": None, "pass": None, "strip": None, "subs": [],
             "sub": s if s in SUB_KEYS else LC.DEFAULT_SUB, "counts": None, "counts_text": None,
             "counts_legend": counts_legend(), "tiles": [], "order_note": ORDER_NOTE, "screens": None,
-            "playbook": None, "track_record": None, "focus": None, "fault": True, "fault_text": FAULT_TEXT}
+            "playbook": None, "track_record": None, "focus": None, "fault": True, "fault_text": FAULT_TEXT,
+            "scan": None}
 
 
 def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT,
@@ -556,6 +640,7 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
     session, is_today, in_window = session_for(now)
     latest = _soft("latest pass", st.latest_pass)
     cron = _soft("latest cron pass", st.latest_cron_pass)
+    lease = _soft("lease", st.lease_state, now, default={})              # 2026-11-11 🔄 scan now (Mongo read only)
     reads = [d for d in (_soft("reads", st.reads, session, default=[]) or []) if isinstance(d, dict)]
     screens_doc = _soft("screens", st.latest_screens, session)
     caps = _caps_from(screens_doc)
@@ -586,11 +671,12 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
            "screens": screens_by[sub_k] if sub_k in SCREEN_SUBS else None,
            "playbook": pb if sub_k == PLAYBOOK_SUB else None,
            "track_record": tr if sub_k == TRACK_SUB else None,
-           "focus": f or None, "fault": False, "fault_text": None}
+           "focus": f or None, "fault": False, "fault_text": None,
+           "scan": _soft("scan line", scan_block, latest, lease, now, session, in_window, default=None)}
     return GT._plain(out)
 
 
 __all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TEXT_SHADOW", "honesty", "push_text",
            "FAULT_TEXT", "PAYLOAD_KEYS", "TILE_STATES", "build", "fault_payload", "session_for",
            "tile_of", "tiles_for", "resolve_sub", "counts_block", "pass_block", "strip_block", "screen_block",
-           "latency_text", "cost_text"]
+           "latency_text", "cost_text", "scan_block", "rescan_title", "PASS_TEXT_ON_DEMAND", "RESCAN_TITLE"]

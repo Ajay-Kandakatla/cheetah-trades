@@ -3,7 +3,8 @@
 Read-only by construction with TWO exceptions: POST /chart-maps/gajjala/scan
 (owner-only, 2026-10-15) starts one Gajjala pass in a SUBPROCESS and answers at
 once — no GET here ever starts a scan (POST /chart-maps/gajjala-1m/scan, the
-1-minute page's, 2026-10-27, the same); and the owner's 🚫 broker list (POST /
+1-minute page's, 2026-10-27, and POST /chart-maps/luk/scan, 🥇 Luk's owner scan
+now, 2026-11-11, the same); and the owner's 🚫 broker list (POST /
 DELETE /chart-maps/gajjala/broker-flags — one gajjala_state doc, 2026-10-17,
 DECISIONS12 D5), the primary admin's own edit and nobody else's. The demand tab warms in the background
 and answers `warming: true` immediately, so a page load cannot sit behind a
@@ -845,9 +846,10 @@ async def chart_maps_gajjala_audited_entry_tape(
 # Ajay, verbatim: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement
 # their strategy please if they have online resources. ... I need something like Gajjlala that is exposed". Two GET
 # routes under the variant's api base (chart_maps.luk.variant.LUK.api_base): the board (Mongo only + the ONE live
-# fan-out for the shown tiles) and one 🏁 row's entry tape. No scan POST (not asked — HIS CALL #20). Every 🥇 A+ rings
-# his phone since 2026-11-01 by his word (Ajay 2026-11-01: "Lets make it live. also alerts too." — LUK_PUSH_MODE live;
-# shadow = recorded, never sent); UNMEASURED. The 🚩 / 1-minute / audited routes above are untouched.
+# fan-out for the shown tiles) and one 🏁 row's entry tape. One owner scan POST since 2026-11-11 by his word (Ajay: "Can
+# you put an ondeman scan button for Luk' scans too" — HIS CALL #20 answered; the route right after the board). Every
+# 🥇 A+ rings his phone since 2026-11-01 by his word (Ajay 2026-11-01: "Lets make it live. also alerts too." —
+# LUK_PUSH_MODE live; shadow = recorded, never sent); UNMEASURED. The 🚩 / 1-minute / audited routes above are untouched.
 @router.get("/chart-maps/luk")
 async def chart_maps_luk(
     sub: str = Query("", description="pullback_reversal (default) | opening_range_high | inside_day_pdh | premarket | "
@@ -894,6 +896,24 @@ async def chart_maps_luk(
         return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.post("/chart-maps/luk/scan")
+async def chart_maps_luk_scan(email: str = Depends(current_user_email)):
+    """🔄 Luk's scan now (Ajay 2026-11-11, verbatim: "Can you put an ondeman scan button for Luk' scans too").
+    OWNER-ONLY (auth.is_admin_email — the 🚩 POST's gate; anyone else the stealth 404). Answers at once
+    (luk.on_demand.request: started | reused | waiting | closed | refused, Mongo reads only); the pass, when one
+    starts, runs in a SUBPROCESS (`python -m chart_maps.luk.run --on-demand`) with its push gate dry. This process
+    never runs the pass. Cost: this POST = Mongo reads only; each GET /chart-maps/luk the FE's served poll plan adds
+    does its usual ONE live-price fan-out for the shown tiles (≤ ON_DEMAND_WAIT_MAX_SEC / ON_DEMAND_POLL_SEC GETs
+    per answer that carries a plan). A direct call (the `Depends` OBJECT as `email`) is a non-owner → 404, never a
+    crash."""
+    from auth import is_admin_email                                  # lazy: tests monkeypatch auth.is_admin_email
+    if not is_admin_email(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from rotation.api import _scrub
+    from .luk import on_demand as LOD
+    return JSONResponse(_scrub(await asyncio.to_thread(LOD.request)))
 
 
 @router.get("/chart-maps/luk/entry-tape")

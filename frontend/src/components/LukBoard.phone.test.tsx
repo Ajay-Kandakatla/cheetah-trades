@@ -10,6 +10,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import LukBoard from './LukBoard';
 
+/* 🔄 2026-11-11 (lukscan WP-LUK-FE): the real useCurrentUser fetches /auth/me — no user here. */
+vi.mock('../hooks/useUser', () => ({ useCurrentUser: () => ({ user: null, loading: false }) }));
+
 async function readSource(rel: string): Promise<string> {
   const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
   const fs: any = mod?.default || mod;
@@ -17,6 +20,7 @@ async function readSource(rel: string): Promise<string> {
   return fs.readFileSync(`${root}/${rel}`, 'utf8');
 }
 const css = (): Promise<string> => readSource('src/styles/luk.css');
+const ggCss = (): Promise<string> => readSource('src/styles/gajjala.css');
 
 function rule(src: string, selector: RegExp): string | null {
   const m = src.match(new RegExp(`(^|\\n)\\s*${selector.source}\\s*\\{([^}]*)\\}`));
@@ -84,5 +88,34 @@ describe('📱 Luk board DOM at 430 px', () => {
       expect(st).not.toMatch(/(^|;)\s*(min-)?width\s*:|white-space\s*:\s*nowrap|overflow-x\s*:\s*(scroll|visible)/);
       expect(el.getAttribute('nowrap')).toBeNull();
     }
+  });
+});
+
+/* 🔄 2026-11-11, Ajay: "Can you put an ondeman scan button for Luk' scans too". The owner's 🔄 button sits in the pass
+ * line (`.gg-rescan`, 🚩's look). At 430 px it must wrap to its own line end, never widen the row. */
+describe('📱 🔄 Luk scan-now button — wraps inside the pass line', () => {
+  it('.luk-passline keeps flex-wrap: wrap and min-width: 0', async () => {
+    const decl = rule(await css(), /\.luk-passline/);
+    expect(decl).not.toBeNull();
+    expect(decl).toMatch(/flex-wrap:\s*wrap/);
+    expect(decl).toMatch(/min-width:\s*0\b/);
+  });
+  it('.gg-rescan keeps white-space: nowrap and margin-left: auto (it wraps whole, to its line end)', async () => {
+    const decl = rule(await ggCss(), /\.gg-rescan/);
+    expect(decl).not.toBeNull();
+    expect(decl).toMatch(/white-space:\s*nowrap/);
+    expect(decl).toMatch(/margin-left:\s*auto/);
+  });
+  it('NEGATIVE: a pass line without wrap / min-width fails the same matchers', () => {
+    const decl = rule('.luk-passline { display: flex; gap: 0.4rem; }', /\.luk-passline/);
+    expect(decl).not.toMatch(/flex-wrap:\s*wrap/);
+    expect(decl).not.toMatch(/min-width:\s*0\b/);
+  });
+  it('NEGATIVE: the board imports gajjala.css (the button is never unstyled) and adds no inline width', async () => {
+    const src = await readSource('src/components/LukBoard.tsx');
+    expect(src).toMatch(/import '\.\.\/styles\/gajjala\.css';/);
+    const btn = src.slice(src.indexOf('data-testid="luk-rescan"') - 200, src.indexOf('data-testid="luk-rescan"') + 400);
+    expect(btn).toMatch(/className="gg-rescan"/);
+    expect(btn).not.toMatch(/style=\{/);
   });
 });
