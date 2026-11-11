@@ -278,10 +278,12 @@ describe('ggPx — the broker price grid', () => {
     expect(ggPx(0.3101)).not.toBe(ggPx(0.295));
   });
 
-  it('GajjalaBoard prints the plan line through ggPx and never through the house pxText', async () => {
+  // ⚡ 2026-11-11 (entry spec §3.2, predicted pin): the card's plan line is now the SERVED plan_text (tab.plan_text on the
+  // broker grid, tab._px) — GajjalaBoard prints it verbatim and formats no trigger / stop itself.
+  it('GajjalaBoard prints the served plan_text and never formats a price (no ggPx( / pxText( / toFixed( on the card)', async () => {
     const src = await readSource('src/components/GajjalaBoard.tsx');
-    expect(src).toContain('const trig = ggPx(read.trigger)');
-    expect(src).toContain('const stop = ggPx(read.stop)');
+    expect(src).toContain('read.plan_text');
+    expect(src).not.toMatch(/ggPx\(read\./);
     expect(src).not.toMatch(/pxText\(/);
     expect(src).not.toMatch(/toFixed\(/);
   });

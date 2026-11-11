@@ -323,7 +323,8 @@ def _count_reads(monkeypatch, st):
 
 @pytest.mark.parametrize("sub,variant,n", [
     (GC.POTENTIAL_SUB, None, 1), (RS, None, 1), ("bull_flag", None, 1), ("postmarket", None, 1),
-    ("premarket", None, 0), ("playbook", None, 0),
+    ("premarket", None, 1), ("playbook", None, 0),     # MOVED 2026-11-11 (🌅 day-2 list): GG5 ☀️ reads once
+    ("premarket", V.GG1, 0), ("premarket", V.GGA, 0),  # NEGATIVE: no 🌅 off GG5 → no read
     (RS, V.GG1, 1),
     (RS, V.GGA, 0), ("postmarket", V.GGA, 0), (GC.POTENTIAL_SUB, V.GGA, 1),    # 🧪: only the 🧠 entry_text read
 ])
@@ -332,7 +333,13 @@ def test_alert_rows_is_read_at_most_once_per_build(monkeypatch, sub, variant, n)
     calls = _count_reads(monkeypatch, st)
     GT.build(sub, now=NOW, store=st, variant=variant)
     assert len(calls) == n
-    assert all(c == [S, PREV] for c in calls)
+    # MOVED 2026-11-11 (🧭 setup stages, review fix D10): the ONE read spans the listing window SC._window(S) (⊇ [S,
+    # PREV]; PREV appended only if the window lacks it — tab.build's own rule) instead of [S, PREV]. The count pin is
+    # unchanged (a ☀️ board WITH cards reads once for the stage tags — pinned in test_gajjala_potential_tab.py).
+    from chart_maps.gajjala import scanner as SC
+    win = list(SC._window(S))
+    win += [PREV] if PREV not in win else []
+    assert all(c == win for c in calls)
 
 
 # ── readers [C5]: the same words for owner and non-owner ─────────────────────────────────────────────────────────

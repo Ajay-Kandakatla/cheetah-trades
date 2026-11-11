@@ -245,24 +245,32 @@ describe('GajjalaBoard', () => {
     expect(roomSyms[roomSyms.length - 1]).toEqual(BOARDS.bull_flag.tiles.map((t: any) => t.symbol));
   });
 
-  it('a sub-dollar plan line keeps the served decimals: trigger 0.3101 · stop 0.295 (2026-10-20, the MMA finding)', async () => {
+  // ⚡ 2026-11-11 (entry spec §3.2, predicted pin): the plan line is the SERVED plan_text (tab.plan_text on the broker grid,
+  // tab._px) — the card prints it verbatim; the sub-dollar grid is now pinned on the backend (test_gajjala_card_plan_focus_day2).
+  it('a sub-dollar plan line keeps the served decimals: Entry above 0.3101 · stop 0.295 (2026-10-20, the MMA finding)', async () => {
     const sub = clone(BOARDS.bull_flag);
-    Object.assign(sub.tiles[0].gajjala, { trigger: 0.3101, stop: 0.295, risk_pct: 4.869 });
+    Object.assign(sub.tiles[0].gajjala, { trigger: 0.3101, stop: 0.295, risk_pct: 4.869,
+                                          plan_text: 'Entry above 0.3101 · stop 0.295 · risk 4.9%' });
     stubFetch(() => sub);
     mount();
     const pf = await screen.findByTestId('gg-tile-PFAI');
-    expect(within(pf).getByTestId('gg-plan')).toHaveTextContent('trigger 0.3101 · stop 0.295 · risk 4.9%');
+    expect(within(pf).getByTestId('gg-plan').textContent).toBe('Entry above 0.3101 · stop 0.295 · risk 4.9%');
     // NEGATIVE: the house three-decimal print would have read "0.310" — the trigger and the stop must not blur
     expect(within(pf).getByTestId('gg-plan').textContent).not.toContain('0.310 ');
   });
 
   it('card extras: state pill, plan line, ✓ / ✗ / · criteria and the served chips', async () => {
-    stubFetch(bySub);
+    // ⚡ 2026-11-11 (predicted pin): the plan line is the served plan_text, verbatim (an A+ read → "Entry above …").
+    stubFetch((u) => {
+      const b = bySub(u);
+      for (const t of b.tiles || []) if (t.symbol === 'PFAI') t.gajjala.plan_text = 'Entry above 4.12 · stop 3.95 · risk 4.1%';
+      return b;
+    });
     mount();
     const pf = await screen.findByTestId('gg-tile-PFAI');
     expect(within(pf).getByTestId('gg-state')).toHaveTextContent(BOARDS.bull_flag.tiles[0].gajjala.state_label);
     expect(within(pf).getByTestId('gg-state').className).toContain('gg-state-aplus');
-    expect(within(pf).getByTestId('gg-plan')).toHaveTextContent('trigger 4.12 · stop 3.95 · risk 4.1%');
+    expect(within(pf).getByTestId('gg-plan').textContent).toBe('Entry above 4.12 · stop 3.95 · risk 4.1%');
     const crit = within(pf).getByTestId('gg-criteria');
     expect(crit.textContent).toContain('✓ pullback bars — 2 (1–3)');
     const chips = within(pf).getByTestId('gg-chip-row').textContent || '';

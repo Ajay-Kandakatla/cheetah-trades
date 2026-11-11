@@ -403,16 +403,27 @@ def test_end_to_end_a_forming_flag_rings_one_potential_push():
     assert out["ran"] and out["status"] == "ok" and out["errors"] == []
     pot = out["potential"]
     sent = [p for (_o, p), _k in deps.send_potential.calls]
-    # one push per (symbol, setup) forming with its sideways part begun — the flag, plus any other setup the same
-    # bars read as a potential (K3 / HIS CALL P6); each its own push, never twice
-    assert pot["new"] == pot["potential"] == pot["pushed"] == len(sent) >= 1
+    # MOVED 2026-11-11 (Ajay "Also apply your proposal too." — proposal #2, GC.POTENTIAL_ONE_RING_PER_NAME): the same
+    # bars still read as several potentials of ONE name (the flag + K3 / HIS CALL P6 others), each tracked, but the
+    # name rings ONE push — the best-ordered (the armed flag); every other setup of it is HELD name_rang, never sent.
+    from chart_maps.gajjala import potential as PT
+    assert GC.POTENTIAL_ONE_RING_PER_NAME is True
+    assert pot["new"] == pot["potential"] >= 1
+    assert pot["pushed"] == len(sent) == 1                           # one push per name (GGA)
+    assert pot["name_held"] == pot["potential"] - pot["pushed"]
     assert len({p["tag"] for p in sent}) == len(sent)
     flag = [p for p in sent if p["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"]
     assert len(flag) == 1 and flag[0]["kind"] == "gajjala_potential"
     assert flag[0]["title"] == "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED"
     assert {o for (o, _p), _k in deps.send_potential.calls} == {"owner@example.com"}
     docs = [d for d in st.coll(ST.POTENTIALS).docs.values() if d.get("symbol") == "GGA"]
-    assert len(docs) == len(sent) and all(d["push"]["state"] == "pushed" for d in docs)
+    assert len(docs) == pot["potential"]
+    rang = [d for d in docs if "push" in d]
+    assert len(rang) == len(sent) and all(d["push"]["state"] == "pushed" for d in rang)
+    assert rang[0]["setup"] == "bull_flag"
+    # NEGATIVE: every other setup of the name is held name_rang, no push block, never sent
+    assert all("push" not in d and [h["reason"] for h in d["held"]] == [PT.NAME_HELD[0]]
+               for d in docs if d["setup"] != "bull_flag")
     bf = st.get_potential(S, "GGA", "bull_flag")
     assert bf["first_seen_et"] == "10:31" and bf["first_kind"] == "armed" and bf["first_px"] == FX.P1[3]
     assert bf["first_tells"]["float_text"] and bf["first_tells"]["float_shares"] == 5_000_000

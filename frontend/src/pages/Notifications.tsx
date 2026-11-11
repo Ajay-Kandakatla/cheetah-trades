@@ -133,12 +133,19 @@ export const CATEGORIES: CategoryDef[] = [
      the gajjala.run crontab step; the three "Cheetah default, not his" sentences
      exist iff POTENTIAL_NEEDS_BASE / POTENTIAL_DEFER_REFUSED /
      POTENTIAL_FRESH_TAPE are True — the contracts.mjs 🧠 block pins all of it.
-     UNMEASURED — a potential, not an entry. */
+     UNMEASURED — a potential, not an entry.
+     2026-11-11 (Ajay "Also apply your proposal too."): rings only when ARMED
+     (constants.POTENTIAL_PUSH_ARMED_ONLY) and once per name per session
+     (POTENTIAL_ONE_RING_PER_NAME); the ⚡ break sentence follows
+     GAJJALA_BREAK_PUSH_MODE ("shadow" → "not sent, until your word"; never the
+     word "shadow" here — the contracts.mjs 🧠 block). */
   { key: 'gajjala_potential', label: 'Gajjala potential (forming, trigger not printed)', emoji: '\u{1F9E0}', group: 'trading',
     detail: 'ON FOR YOUR PHONE — you said: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride the wave"; everyone else starts off. It rings live — there is no later switch to flip. '
-      + 'WHAT FIRES: the first time a name his scanner listed is a potential in one of Goverdhan Gajjala’s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, ➖ Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze): the read is forming, the run up is in, the quiet sideways part has started ("building") or is complete ("trigger armed"), and the reclaim of the highs has not printed (needing at least one sideways bar is a Cheetah default, not his). The push says which, with the trigger and stop the read carries, the float and the float rotation. '
-      + 'Once per name, setup and session, every one its own push, every one listed on /alerts with its ticker linked to the tab. Every 5 minutes, 04:00–20:00 ET on trading days (earlier on NYSE half days), never 09:30–09:45 (his first 15 minutes) — a name first seen in them rings on the next pass if it is still a potential (a Cheetah default, not his); silent on closed days. A name with no print in the 5-minute bar that just closed waits for its next print (a Cheetah default, not his). '
-      + 'WHAT NEVER FIRES: a read that already broke (A+ — those ring under \u{1F6A9} as an A+ entry since 2026-10-16), a partial (a rule failed), a near-kiss, a "B — imperfect" VCP, a second sighting the same session. '
+      + 'WHAT FIRES: the first time a name his scanner listed is a potential in one of Goverdhan Gajjala’s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, ➖ Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze): the read is forming, the run up is in, the quiet sideways part is complete ("trigger armed"), and the reclaim of the highs has not printed (needing at least one sideways bar is a Cheetah default, not his). A read first seen with the sideways part only started ("building") is held and rings once, the first time its trigger arms (your call, 2026-11-11). The push carries the trigger and stop the read carries, the float and the float rotation. '
+      + 'One push per name and session: once a name rang, its other setups that session are held (your call, 2026-11-11); every one listed on /alerts with its ticker linked to the tab. '
+      + 'Every 5 minutes, 04:00–20:00 ET on trading days (earlier on NYSE half days), never 09:30–09:45 (his first 15 minutes) — a name first seen in them rings on the next pass if it is still a potential (a Cheetah default, not his); silent on closed days. A name with no print in the 5-minute bar that just closed waits for its next print (a Cheetah default, not his). '
+      + '\u26A1 break pushes (an armed plan traded over its trigger on the live bar, before that bar closed) ride this toggle \u2014 recorded on /alerts, not sent, until your word. '
+      + 'WHAT NEVER FIRES: a read that already broke (A+ — those ring under \u{1F6A9} as an A+ entry since 2026-10-16), a partial (a rule failed), a near-kiss, a "B — imperfect" VCP, a second sighting the same session, a read still building (held until its trigger arms), a second setup of a name that already rang that session. '
       + 'UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs. The study of his A+ setups read no edge (2026-10-14); nobody has measured potentials. Not a recommendation.' },
   /* 🎢 🗺️ orderflow/tape_burst_kinds.py (2026-10-14). Ajay: "I need a tape
      burst notification specific for High Beta stocks from the reselinet

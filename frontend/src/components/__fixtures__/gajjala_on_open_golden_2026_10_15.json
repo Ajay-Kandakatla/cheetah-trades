@@ -141,9 +141,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -378,6 +382,7 @@
        "rotation": "🔄 shares out ×0.6",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 3000000.0
       },
@@ -425,11 +430,69 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
       "ready": false,
       "reason": "",
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:36"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 10:36"
+          },
+          {
+           "emoji": "➖",
+           "here": false,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:36"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:36 → 💋 EMA Kiss & Fly · 🧠 potential 10:36 → ➖ Horizontal Fade · 🧠 potential 10:36",
+       "title": "🧭 Setup stages"
+      },
       "state": "aplus",
       "state_label": "A+ — every rule met, entry bar closed · UNMEASURED",
       "stop": 10.8125,
@@ -2038,9 +2101,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -2280,9 +2347,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -2571,6 +2642,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 11.25 · stop 10.84 · risk 3.6%",
       "potential": {
        "again": false,
        "also": [],
@@ -2598,6 +2670,63 @@
       "red_closes": 2,
       "risk_pct": 3.6111111111111107,
       "setup": "horizontal_fade",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": false,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:36"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 10:36"
+          },
+          {
+           "emoji": "➖",
+           "here": true,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:36"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:36 → 💋 EMA Kiss & Fly · 🧠 potential 10:36 → ➖ Horizontal Fade · 🧠 potential 10:36",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — base 3 of 6 bars · UNMEASURED",
       "stop": 10.84375,
@@ -2652,6 +2781,7 @@
      "pushed_n": 0,
      "rows": [
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
@@ -2683,6 +2813,7 @@
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -2714,6 +2845,7 @@
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",

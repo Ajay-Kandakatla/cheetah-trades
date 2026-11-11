@@ -1190,6 +1190,21 @@ def _gg_promo_clause() -> str:
     return " " + clause if clause else ""
 
 
+def _gg_break_clause() -> str:
+    """⚡ 2026-11-11 (Ajay "Here is how he enters please tell me to enter based on this"; entry spec §3.1, WP-BRK) — the
+    section note's ONE clause on the ⚡ break push, built by chart_maps.gajjala.break_watch.rules_line() (every number a
+    constant, the mode read at call time — never typed here): " " + the line, or "" when the module cannot load or the
+    line raises (the panel never breaks on it). In the note, beside the 📌 / 🎪 / one-minute / 🧪 clauses — the 🧠 lines
+    of `alerts` stay exactly potential.rules_lines()."""
+    try:
+        from chart_maps.gajjala import break_watch as BW
+        line = BW.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala break clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1383,6 +1398,7 @@ def _gajjala_section() -> dict:
                  + (" 🚫: XLAB and XELB (XELB under a dollar) went through at %s on 2026-10-16, so a price floor is "
                     "not the rule." % GC.BROKER_NAME)
                  + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
+                 + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

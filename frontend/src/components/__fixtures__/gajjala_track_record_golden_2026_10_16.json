@@ -112,9 +112,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -1759,9 +1763,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -3263,9 +3271,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {

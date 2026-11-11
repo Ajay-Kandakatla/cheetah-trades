@@ -676,15 +676,18 @@ def test_held_words():
 def test_push_note_and_pass_times(monkeypatch):
     g1 = PT.push_note(S, V.GG1)
     # WIDENED 2026-10-29 — live (Ajay: "Only give me Gajjalas chart notifications from both tabs")
-    assert g1 == ("🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup "
-                  "and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never "
+    # MOVED 2026-11-11 (Ajay "Also apply your proposal too." — proposals #1 / #2): armed only, one push per name
+    assert g1 == ("🧠 Potentials on this page ring your phone since 2026-10-29 by your call — the first time it is "
+                  "armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on "
+                  "the 1-minute pass, never "
                   "09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, "
                   "never sent. " + PT.TAIL + ".")
-    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")                         # a flip back: the 10-27 words
+    monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")                         # a flip back: the shadow words
+    # MOVED 2026-11-11 (T-PINS #5): the shadow words say the built rule — armed only, one per name per session
     assert PT.push_note(S, V.GG1) == (
-        "🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first time "
-        "it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). "
-        "Never sent until you say so. " + PT.TAIL + ".")
+        "🧠 Potentials on this page are recorded in shadow — the first time it is armed (every rule met, only the "
+        "break missing) — one per name and session, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his "
+        "first 15 minutes). Never sent until you say so. " + PT.TAIL + ".")
     assert PT.push_note(S).startswith("🧠 Potentials ring your phone live")             # NEGATIVE: GG5 unchanged
     assert PT.pass_times(S, V.GG1) == ("04:01", "20:00")
     assert PT.pass_times(S) == PT.pass_times(S, V.GG5) == ("04:01", "19:56")

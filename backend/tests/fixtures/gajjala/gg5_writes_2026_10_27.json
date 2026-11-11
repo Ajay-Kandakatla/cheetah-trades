@@ -73,6 +73,7 @@
     "potential": {
      "armed": 1,
      "building": 2,
+     "building_held": 0,
      "claimed_before": 0,
      "closed_day": 0,
      "dry": 0,
@@ -80,11 +81,12 @@
      "graveyard": 0,
      "joined": 0,
      "muted": 0,
+     "name_held": 2,
      "new": 3,
      "no_target": 0,
      "outside_hours": 0,
      "potential": 3,
-     "pushed": 3,
+     "pushed": 1,
      "stale_tape": 0,
      "tracked_today": 4,
      "trader_held": 0
@@ -203,6 +205,7 @@
     "potential": {
      "armed": 1,
      "building": 3,
+     "building_held": 0,
      "claimed_before": 0,
      "closed_day": 0,
      "dry": 0,
@@ -210,6 +213,7 @@
      "graveyard": 0,
      "joined": 0,
      "muted": 0,
+     "name_held": 0,
      "new": 3,
      "no_target": 0,
      "outside_hours": 0,
@@ -302,40 +306,6 @@
       "title": "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED",
       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
      }
-    ],
-    [
-     "owner@example.com",
-     {
-      "body": "low 4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
-      "items": [
-       {
-        "symbol": "GGA",
-        "text": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88"
-       }
-      ],
-      "kind": "gajjala_potential",
-      "tag": "gg-pot-kiss_fly-GGA",
-      "ticker": "GGA",
-      "title": "🧠 GGA · 💋 EMA Kiss & Fly — building · UNMEASURED",
-      "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA"
-     }
-    ],
-    [
-     "owner@example.com",
-     {
-      "body": "base 1 of 6 bars · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
-      "items": [
-       {
-        "symbol": "GGA",
-        "text": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88"
-       }
-      ],
-      "kind": "gajjala_potential",
-      "tag": "gg-pot-horizontal_fade-GGA",
-      "ticker": "GGA",
-      "title": "🧠 GGA · ➖ Horizontal Fade — building · UNMEASURED",
-      "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA"
-     }
     ]
    ],
    []
@@ -410,6 +380,7 @@
      {
       "armed": 1,
       "building": 2,
+      "building_held": 0,
       "claimed_before": 0,
       "closed_day": 0,
       "dry": 0,
@@ -417,11 +388,12 @@
       "graveyard": 0,
       "joined": 0,
       "muted": 0,
+      "name_held": 2,
       "new": 3,
       "no_target": 0,
       "outside_hours": 0,
       "potential": 3,
-      "pushed": 3,
+      "pushed": 1,
       "stale_tape": 0,
       "tracked_today": 4,
       "trader_held": 0
@@ -435,6 +407,7 @@
      {
       "armed": 1,
       "building": 3,
+      "building_held": 0,
       "claimed_before": 0,
       "closed_day": 0,
       "dry": 0,
@@ -442,6 +415,7 @@
       "graveyard": 0,
       "joined": 0,
       "muted": 0,
+      "name_held": 0,
       "new": 3,
       "no_target": 0,
       "outside_hours": 0,
@@ -1258,6 +1232,7 @@
         "px": 10.9375,
         "ready": true,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -1386,6 +1361,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -1448,49 +1424,18 @@
     "body": {
      "q": {
       "_id": "2026-10-13|GGA|kiss_fly",
-      "first_seen_mode": {
-       "$ne": "joined"
-      },
       "push": {
        "$exists": false
       }
      },
      "upd": {
       "$set": {
-       "push": {
-        "at": "2026-10-13T14:31:00+00:00",
-        "at_et": "10:31",
-        "kind_at_push": "building",
-        "px": 10.9375,
-        "state": "claimed",
-        "stop": 10.875,
-        "trigger": 11.0
-       }
-      }
-     },
-     "upsert": false
-    },
-    "coll": "gajjala_potentials",
-    "op": "update_one"
-   },
-   {
-    "body": {
-     "q": {
-      "_id": "2026-10-13|GGA|kiss_fly",
-      "push": {
-       "$exists": true
-      }
-     },
-     "upd": {
-      "$set": {
-       "push.at_et": "10:31",
-       "push.result": {
-        "failed": 0,
-        "sent": 1,
-        "skipped": null,
-        "total_targets": 1
-       },
-       "push.state": "pushed"
+       "held": [
+        {
+         "at_et": "10:31",
+         "reason": "name_rang"
+        }
+       ]
       }
      },
      "upsert": false
@@ -1514,6 +1459,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "base 1 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -1576,49 +1522,18 @@
     "body": {
      "q": {
       "_id": "2026-10-13|GGA|horizontal_fade",
-      "first_seen_mode": {
-       "$ne": "joined"
-      },
       "push": {
        "$exists": false
       }
      },
      "upd": {
       "$set": {
-       "push": {
-        "at": "2026-10-13T14:31:00+00:00",
-        "at_et": "10:31",
-        "kind_at_push": "building",
-        "px": 10.9375,
-        "state": "claimed",
-        "stop": 10.875,
-        "trigger": 11.0
-       }
-      }
-     },
-     "upsert": false
-    },
-    "coll": "gajjala_potentials",
-    "op": "update_one"
-   },
-   {
-    "body": {
-     "q": {
-      "_id": "2026-10-13|GGA|horizontal_fade",
-      "push": {
-       "$exists": true
-      }
-     },
-     "upd": {
-      "$set": {
-       "push.at_et": "10:31",
-       "push.result": {
-        "failed": 0,
-        "sent": 1,
-        "skipped": null,
-        "total_targets": 1
-       },
-       "push.state": "pushed"
+       "held": [
+        {
+         "at_et": "10:31",
+         "reason": "name_rang"
+        }
+       ]
       }
      },
      "upsert": false
@@ -1694,6 +1609,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -1701,11 +1617,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -1823,6 +1740,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -1830,11 +1748,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -1953,6 +1872,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -1960,11 +1880,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -3424,6 +3345,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "aplus",
         "stop": 10.8125,
         "trigger": 10.96875
@@ -3471,6 +3393,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "near-kiss — flew without touching the 9 EMA",
+        "session_volume": 3000000.0,
         "state": "partial",
         "stop": 10.8125,
         "trigger": 10.96875
@@ -3518,6 +3441,7 @@
         "px": 10.9375,
         "ready": true,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -3615,6 +3539,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -3712,6 +3637,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "base 3 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.84375,
         "trigger": 11.25
@@ -3753,6 +3679,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "base 1 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -3902,6 +3829,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -3909,6 +3837,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
@@ -4031,6 +3960,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -4038,6 +3968,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
@@ -4161,6 +4092,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -4168,6 +4100,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
@@ -4313,6 +4246,7 @@
     "potential": {
      "armed": 1,
      "building": 2,
+     "building_held": 0,
      "claimed_before": 0,
      "closed_day": 0,
      "dry": 0,
@@ -4320,11 +4254,12 @@
      "graveyard": 0,
      "joined": 0,
      "muted": 0,
+     "name_held": 2,
      "new": 3,
      "no_target": 0,
      "outside_hours": 0,
      "potential": 3,
-     "pushed": 3,
+     "pushed": 1,
      "stale_tape": 0,
      "tracked_today": 4,
      "trader_held": 0
@@ -4443,6 +4378,7 @@
     "potential": {
      "armed": 1,
      "building": 3,
+     "building_held": 0,
      "claimed_before": 0,
      "closed_day": 0,
      "dry": 0,
@@ -4450,6 +4386,7 @@
      "graveyard": 0,
      "joined": 0,
      "muted": 0,
+     "name_held": 0,
      "new": 3,
      "no_target": 0,
      "outside_hours": 0,
@@ -4523,40 +4460,6 @@
       "ticker": "GGA",
       "title": "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED",
       "url": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
-     }
-    ],
-    [
-     "owner@example.com",
-     {
-      "body": "low 4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
-      "items": [
-       {
-        "symbol": "GGA",
-        "text": "GGA · 💋 EMA Kiss & Fly · building · trigger 11.00 · stop 10.88"
-       }
-      ],
-      "kind": "gajjala_potential",
-      "tag": "gg-pot-kiss_fly-GGA",
-      "ticker": "GGA",
-      "title": "🧠 GGA · 💋 EMA Kiss & Fly — building · UNMEASURED",
-      "url": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA"
-     }
-    ],
-    [
-     "owner@example.com",
-     {
-      "body": "base 1 of 6 bars · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
-      "items": [
-       {
-        "symbol": "GGA",
-        "text": "GGA · ➖ Horizontal Fade · building · trigger 11.00 · stop 10.88"
-       }
-      ],
-      "kind": "gajjala_potential",
-      "tag": "gg-pot-horizontal_fade-GGA",
-      "ticker": "GGA",
-      "title": "🧠 GGA · ➖ Horizontal Fade — building · UNMEASURED",
-      "url": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA"
      }
     ]
    ],
@@ -4632,6 +4535,7 @@
      {
       "armed": 1,
       "building": 2,
+      "building_held": 0,
       "claimed_before": 0,
       "closed_day": 0,
       "dry": 0,
@@ -4639,11 +4543,12 @@
       "graveyard": 0,
       "joined": 0,
       "muted": 0,
+      "name_held": 2,
       "new": 3,
       "no_target": 0,
       "outside_hours": 0,
       "potential": 3,
-      "pushed": 3,
+      "pushed": 1,
       "stale_tape": 0,
       "tracked_today": 4,
       "trader_held": 0
@@ -4657,6 +4562,7 @@
      {
       "armed": 1,
       "building": 3,
+      "building_held": 0,
       "claimed_before": 0,
       "closed_day": 0,
       "dry": 0,
@@ -4664,6 +4570,7 @@
       "graveyard": 0,
       "joined": 0,
       "muted": 0,
+      "name_held": 0,
       "new": 3,
       "no_target": 0,
       "outside_hours": 0,
@@ -5480,6 +5387,7 @@
         "px": 10.9375,
         "ready": true,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -5608,6 +5516,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -5670,49 +5579,18 @@
     "body": {
      "q": {
       "_id": "2026-10-13|GGA|kiss_fly",
-      "first_seen_mode": {
-       "$ne": "joined"
-      },
       "push": {
        "$exists": false
       }
      },
      "upd": {
       "$set": {
-       "push": {
-        "at": "2026-10-13T14:31:00+00:00",
-        "at_et": "10:31",
-        "kind_at_push": "building",
-        "px": 10.9375,
-        "state": "claimed",
-        "stop": 10.875,
-        "trigger": 11.0
-       }
-      }
-     },
-     "upsert": false
-    },
-    "coll": "gajjala_potentials",
-    "op": "update_one"
-   },
-   {
-    "body": {
-     "q": {
-      "_id": "2026-10-13|GGA|kiss_fly",
-      "push": {
-       "$exists": true
-      }
-     },
-     "upd": {
-      "$set": {
-       "push.at_et": "10:31",
-       "push.result": {
-        "failed": 0,
-        "sent": 1,
-        "skipped": null,
-        "total_targets": 1
-       },
-       "push.state": "pushed"
+       "held": [
+        {
+         "at_et": "10:31",
+         "reason": "name_rang"
+        }
+       ]
       }
      },
      "upsert": false
@@ -5736,6 +5614,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "base 1 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -5798,49 +5677,18 @@
     "body": {
      "q": {
       "_id": "2026-10-13|GGA|horizontal_fade",
-      "first_seen_mode": {
-       "$ne": "joined"
-      },
       "push": {
        "$exists": false
       }
      },
      "upd": {
       "$set": {
-       "push": {
-        "at": "2026-10-13T14:31:00+00:00",
-        "at_et": "10:31",
-        "kind_at_push": "building",
-        "px": 10.9375,
-        "state": "claimed",
-        "stop": 10.875,
-        "trigger": 11.0
-       }
-      }
-     },
-     "upsert": false
-    },
-    "coll": "gajjala_potentials",
-    "op": "update_one"
-   },
-   {
-    "body": {
-     "q": {
-      "_id": "2026-10-13|GGA|horizontal_fade",
-      "push": {
-       "$exists": true
-      }
-     },
-     "upd": {
-      "$set": {
-       "push.at_et": "10:31",
-       "push.result": {
-        "failed": 0,
-        "sent": 1,
-        "skipped": null,
-        "total_targets": 1
-       },
-       "push.state": "pushed"
+       "held": [
+        {
+         "at_et": "10:31",
+         "reason": "name_rang"
+        }
+       ]
       }
      },
      "upsert": false
@@ -5916,6 +5764,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -5923,11 +5772,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -6045,6 +5895,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -6052,11 +5903,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -6175,6 +6027,7 @@
       "potential": {
        "armed": 1,
        "building": 2,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -6182,11 +6035,12 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 2,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
        "potential": 3,
-       "pushed": 3,
+       "pushed": 1,
        "stale_tape": 0,
        "tracked_today": 4,
        "trader_held": 0
@@ -7640,6 +7494,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "aplus",
         "stop": 10.8125,
         "trigger": 10.96875
@@ -7687,6 +7542,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "near-kiss — flew without touching the 9 EMA",
+        "session_volume": 3000000.0,
         "state": "partial",
         "stop": 10.8125,
         "trigger": 10.96875
@@ -7734,6 +7590,7 @@
         "px": 10.9375,
         "ready": true,
         "reason": "",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -7831,6 +7688,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -7928,6 +7786,7 @@
         "px": 11.2,
         "ready": false,
         "reason": "base 3 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.84375,
         "trigger": 11.25
@@ -7969,6 +7828,7 @@
         "px": 10.9375,
         "ready": false,
         "reason": "base 1 of 6 bars",
+        "session_volume": 3000000.0,
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -8118,6 +7978,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -8125,6 +7986,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
@@ -8247,6 +8109,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -8254,6 +8117,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,
@@ -8377,6 +8241,7 @@
       "potential": {
        "armed": 1,
        "building": 3,
+       "building_held": 0,
        "claimed_before": 0,
        "closed_day": 0,
        "dry": 0,
@@ -8384,6 +8249,7 @@
        "graveyard": 0,
        "joined": 0,
        "muted": 0,
+       "name_held": 0,
        "new": 3,
        "no_target": 0,
        "outside_hours": 0,

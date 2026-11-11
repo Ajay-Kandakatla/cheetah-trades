@@ -38,6 +38,13 @@ push kind / sender / mode switch (GAJJALA_1M_PUSH_MODE — shadow 2026-10-27 …
 clock (one 1-minute cadence + BAR_SETTLE_SEC). GG5 (today's tab) keeps every byte. THE SHADOW-KEY GUARD STAYS on the live
 path: a live claim refuses a key whose `SHADOW:GG1:` twin is already on file, so an A+ the shadow recorded earlier the
 same day never rings after the flip (no double record, no late ring).
+
+FACTS ON THE 1-MINUTE A+ (2026-11-11, proposal #3 ADDITIVE — Ajay: "Also apply your proposal too"): on the one-minute
+page ONLY (V.GG1), `compose(..., last_px=...)` adds ONE clause right after the stop bit: where the last price sits vs the
+trigger and how much of GG's +R target (constants.LEDGER_R_MULT, ledger.plan_of's R) is left — CHASE_TEXT, or
+CHASE_PAST_TEXT once the last price is at or over the target. Facts only: no threshold, no verdict word, no gate. GG5
+bytes never move and 🧪 GGA's shadow records never carry it (2026-11-11: the clause is built on GG1 alone); the 1-minute
+push mode and its toggle are untouched.
 """
 from __future__ import annotations
 
@@ -86,6 +93,10 @@ ENTRY_WORDS = {
     "intraday_vcp": "Each cycle tighter, holding the {slow} EMA; entry = the top of the previous cycle highs",  # VCP1 (S8 33:50–34:37 "honors the 21 EMA … the volatility contracts in each cycle"), VCP2 (S8 33:50–34:37 "top of the previous cycle highs")
     "reversal_squeeze": "Tennis-ball reversal after a failed try at the highs; entry = the highs after the quiet base",  # no first-hand entry rule on file: RS2 (2+ sources, S8 35:02 "tennis ball action"), RS4 (2+ sources, S8 34:43, no quote) — the detector criteria k8_tennis / k8_failed / k8_base_len in plain words
 }
+# 2026-11-11 proposal #3 (ADDITIVE): the 1-minute A+ body's chase facts — {px} the last price on the broker grid, {pct} the
+# signed % vs the trigger, {r} the R left to the +{m}R target (m = GC.LEDGER_R_MULT). GG1 only (never GG5 / GGA); no threshold.
+CHASE_TEXT = "last {px} · {pct} vs the trigger · {r}R left to +{m}R"
+CHASE_PAST_TEXT = "last {px} · {pct} vs the trigger · already past +{m}R"
 POTENTIAL_RANG_TEXT = "🧠 potential rang {at} ET"      # DECISIONS10 D2 — only when today's 🧠 potential of the same key RANG
 _HHMM = re.compile(r"\d\d:\d\d")
 # A+ that never ring: the state each refusal is recorded (and counted) as.
@@ -279,9 +290,31 @@ def potential_rang_at(store, session, sym: str, setup: str) -> Optional[str]:
     return at if isinstance(at, str) and _HHMM.fullmatch(at) else None
 
 
+def chase_text(trigger, stop, last_px) -> str:
+    """2026-11-11 proposal #3 — the chase facts of one A+ (CHASE_TEXT / CHASE_PAST_TEXT), or "" when `last_px` is not a
+    finite number > 0 (None / NaN / inf / bool / 0 → no clause) or the plan is not ledger.plan_of "ok" (no_risk /
+    no_plan → no clause). R = trigger − stop; R left = (trigger + LEDGER_R_MULT × R − last) / R in exact decimals;
+    ≤ 0 → "already past". Pure; never raises."""
+    from . import ledger as LG
+    last = LG._num(last_px)
+    if last is None or last <= 0:
+        return ""
+    plan, r = LG.plan_of(trigger, stop)
+    if plan != LG.PLANS[0] or not r:
+        return ""
+    t, R, L = LG._D(trigger), LG._D(r), LG._D(last)
+    left = (t + LG._D(GC.LEDGER_R_MULT) * R - L) / R
+    pct = f"{(last / float(trigger) - 1) * 100:+.1f}%"
+    m = f"{GC.LEDGER_R_MULT:g}"
+    if left <= 0:
+        return CHASE_PAST_TEXT.format(px=_px(last), pct=pct, m=m)
+    return CHASE_TEXT.format(px=_px(last), pct=pct, r=f"{float(left):.2f}", m=m)
+
+
 def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None,
             potential_at_et: Optional[str] = None, broker_text: Optional[str] = None,
-            trader_text: Optional[str] = None, promo_text: Optional[str] = None, variant=None) -> dict:
+            trader_text: Optional[str] = None, promo_text: Optional[str] = None, variant=None,
+            last_px: Optional[float] = None) -> dict:
     """The device payload of one A+ entry. Every number is the read's own (trigger / stop / risk_pct / entry bar).
     Body (AMENDMENTS10 F9 — numbers first): broke T on the bar · stop · the setup's entry words · 🧠 potential rang
     HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · the 🚫 broker tag · UNMEASURED;
@@ -293,7 +326,9 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     🎪 (2026-10-29): `promo_text` (promo_names.text_for) when a non-empty str → its clause right after the 📌 clause;
     the title is UNCHANGED.
     `variant` (2026-10-27): the kind, the url's tab and the tag prefix ("gg-" GG5 / "gg1-" the 1-minute page) and the
-    frame a read without one is said on (its primary)."""
+    frame a read without one is said on (its primary).
+    `last_px` (2026-11-11, proposal #3): on the one-minute page ONLY (V.GG1), `chase_text(trigger, stop, last_px)`
+    right after the stop bit when it is non-empty; GG5 and 🧪 GGA ignore it (byte-identical)."""
     v = V.of(variant)
     ctx = tile_ctx or {}
     sym = (sym or "").upper()
@@ -313,7 +348,8 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     bt = broker_text if isinstance(broker_text, str) and broker_text else ""
     tt = trader_text if isinstance(trader_text, str) and trader_text else ""
     pt = promo_text if isinstance(promo_text, str) and promo_text else ""
-    bits = [broke, stop_bit, words, pot, float_text, tape_tag, tt, pt, bt, UNMEASURED_TAIL]
+    chase = chase_text(read.get("trigger"), read.get("stop"), last_px) if v is V.GG1 else ""
+    bits = [broke, stop_bit, chase, words, pot, float_text, tape_tag, tt, pt, bt, UNMEASURED_TAIL]
     body = " · ".join(b for b in bits if b)
     head = f"{sym} · {emoji} {label} A+ entry"
     line = " · ".join(b for b in (head, f"broke {_px(read.get('trigger'))}", stop_bit, words) if b)
@@ -501,7 +537,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
         pot_at = potential_rang_at(store, session, sym, setup)  # DECISIONS10 D2: after every refusal and the dry gate
         payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at,
                           broker_text=broker_text_for(sym, flags), trader_text=c.get("trader_text"),
-                          promo_text=c.get("promo_text"), variant=v)
+                          promo_text=c.get("promo_text"), variant=v, last_px=c.get("price"))
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
             sk = shadow_key(session, sym, setup, v)
@@ -535,4 +571,5 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
 
 __all__ = ["KIND", "push_mode", "max_entry_age_sec", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
            "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "refusal", "run_pass", "shadow_session_count", "COUNT_KEYS",
-           "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT"]
+           "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT",
+           "CHASE_TEXT", "CHASE_PAST_TEXT", "chase_text"]

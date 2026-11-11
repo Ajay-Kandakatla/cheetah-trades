@@ -90,6 +90,9 @@ REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4
 OVERLAY = "gajjala_overlay"                    # 🧪 2026-11-01 — the audit overlay per (session, symbol); written ONLY by the GGA store as gajjala_audited_overlay; GG5 / GG1 never write it
 EXITS = "gajjala_exits"                        # 🧪 2026-11-01 — alternative-exit grades of the audited 🏁 rows; written ONLY by the GGA store as gajjala_audited_exits; kept, no TTL
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
+# ⚡ 2026-11-11 (entry spec §3.1, WP-BRK): the tracker keys a pass's upsert may never name — the 🧠 claim / holds / 🪦
+# mark, and the ⚡ break watch's claim (`brk`) and holds (`brk_held`), written ONLY by chart_maps.gajjala.break_watch
+POTENTIAL_GUARDED = ("push", "held", "graveyard_on", "brk", "brk_held")
 # 🧪 2026-11-01: OVERLAY and EXITS join ALL before REPLAY (tests pin ALL[-1] == REPLAY — the order carries no meaning)
 ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, EXITS, REPLAY)
 # 2026-10-27 (BUILD_SPEC27 §3.4): what a variant WRITES under its own prefix vs what it READS from GG5 (ALL = OWN ∪ SHARED)
@@ -808,12 +811,13 @@ class GajjalaStore:
 
     def upsert_potential(self, _id: str, insert_fields: dict, set_fields: dict) -> bool:
         """THE track write: one upsert, `$setOnInsert` (identity + first_*) and `$set` (last / path / prices) — two
-        disjoint key sets (Mongo refuses a path in both). Never names push / held / graveyard_on. False on failure."""
+        disjoint key sets (Mongo refuses a path in both). Never names push / held / graveyard_on — nor (⚡ 2026-11-11, entry
+        spec §3.1) brk / brk_held, the break watch's own keys (POTENTIAL_GUARDED). False on failure."""
         c = self.coll(POTENTIALS)
         if c is None:
             return False
         clash = set(insert_fields or {}) & set(set_fields or {})
-        banned = {"push", "held", "graveyard_on"} & (set(insert_fields or {}) | set(set_fields or {}))
+        banned = set(POTENTIAL_GUARDED) & (set(insert_fields or {}) | set(set_fields or {}))
         if clash or banned:
             log.warning("gajjala.store: refused potential write %s (clash %s, banned %s)", _id, clash, banned)
             return False
@@ -850,6 +854,42 @@ class GajjalaStore:
         if not sets:
             return False
         return self._guarded_set(_id, {"push": {"$exists": True}}, sets) == "matched"
+
+    # ── ⚡ the break watch (2026-11-11, entry spec §3.1 — written ONLY by chart_maps.gajjala.break_watch) ──────────
+    # Ajay 2026-11-11: "Here is how he enters please tell me to enter based on this". The watch reads today's live
+    # 🧠 plans (ONE find per refresh) and claims / settles / holds under its OWN keys — never `push` / `held`.
+    def break_watch_docs(self, session) -> Optional[list]:
+        """Today's tracker docs the ⚡ watch may follow: a 🧠 potential on its latest read (`last.state` forming, `last.kind`
+        armed / building), never break-claimed (`brk` absent), never first seen by a join pass, not on the 🪦 graveyard.
+        Projection {symbol, setup, frame, last}. None on a READ FAULT (no handle, or the find raised); [] = none."""
+        c = self.coll(POTENTIALS)
+        if c is None:
+            return None
+        q = {"date": _iso(session), "last.state": GC.POTENTIAL_STATE, "last.kind": {"$in": list(GC.POTENTIAL_KINDS)},
+             "brk": {"$exists": False}, "first_seen_mode": {"$ne": JOINED_MODE}, "graveyard_on": {"$exists": False}}
+        try:
+            return list(c.find(q, {"symbol": 1, "setup": 1, "frame": 1, "last": 1}))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: break watch read failed on %s: %s", POTENTIALS, exc)
+            return None
+
+    def claim_potential_break(self, _id: str, fields: dict) -> str:
+        """The once-per-(date, symbol, setup) ⚡ claim: `brk` set only where it is absent AND the doc was not first seen by
+        a join pass (the 🧠 claim's guard, its own key). -> "claimed" | "taken" | "error" (store fault)."""
+        res = self._guarded_set(_id, {"brk": {"$exists": False}, "first_seen_mode": {"$ne": JOINED_MODE}},
+                                {"brk": dict(fields or {})})
+        return {"matched": "claimed", "unmatched": "taken"}.get(res, "error")
+
+    def settle_potential_break(self, _id: str, fields: dict) -> bool:
+        """The ⚡ outcome: a dotted `$set` of brk.state / brk.result / brk.at_et ONLY — never a whole `brk`."""
+        sets = {f"brk.{k}": v for k, v in (fields or {}).items() if k in ("state", "result", "at_et")}
+        if not sets:
+            return False
+        return self._guarded_set(_id, {"brk": {"$exists": True}}, sets) == "matched"
+
+    def hold_potential_break(self, _id: str, held: list) -> bool:
+        """`brk_held` lands only on a doc that was never break-claimed (`brk` absent). True when a doc matched."""
+        return self._guarded_set(_id, {"brk": {"$exists": False}}, {"brk_held": list(held or [])}) == "matched"
 
     def mark_potential_graveyard(self, _id: str, day, state_path: list) -> bool:
         """`graveyard_on` + the path entry, once (guarded on `graveyard_on` absent). True when a doc matched."""

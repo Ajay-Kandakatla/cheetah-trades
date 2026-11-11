@@ -116,10 +116,12 @@ WORDS_1M: Mapping = MappingProxyType({
     "push": ("📲 Every A+ on this page rings your phone since " + LIVE_SINCE_1M + " by your call (\"" + _HIS_WORDS_1M
              + "\") — once per name, setup and day; the A+ of {from} to 2026-10-28 were recorded in shadow, never "
              "sent. UNMEASURED."),
-    "push_potential": ("🧠 Potentials on this page ring your phone since " + LIVE_SINCE_1M + " by your call — one push "
-                       "per name, setup and session the first time it is a potential, {open}–{close} ET on the "
-                       "{cad}-minute pass, never {rth_open}–{mute_end} (his first {n} minutes). From {from} to "
-                       "2026-10-28 they were recorded in shadow, never sent. {tail}."),
+    # 2026-11-11 (Ajay "Also apply your proposal too." — proposals #1 / #2, POTENTIAL_PUSH_ARMED_ONLY /
+    # POTENTIAL_ONE_RING_PER_NAME): the ring rule = potential.ring_rule() with both switches on, frozen here
+    "push_potential": ("🧠 Potentials on this page ring your phone since " + LIVE_SINCE_1M + " by your call — the "
+                       "first time it is armed (every rule met, only the break missing) — one push per name and "
+                       "session, {open}–{close} ET on the {cad}-minute pass, never {rth_open}–{mute_end} (his first "
+                       "{n} minutes). From {from} to 2026-10-28 they were recorded in shadow, never sent. {tail}."),
     "held_stale_tape": "no print in the last {p}-minute bar",
     "ledger_title": "🏁 Track record — every {p}-minute Gajjala alert since {from}, graded by GG's trade math · UNMEASURED",
     "ledger_honesty": ("A ledger of this page's alerts: from {from} to 2026-10-28 they were recorded in shadow (never "
@@ -152,9 +154,11 @@ WORDS_1M_SHADOW: Mapping = MappingProxyType({
                 "by your call ({from}). Every alert here is recorded in shadow, never sent, until you say so. Nothing "
                 "measured."),
     "push": "A+ on this page is in SHADOW — every A+ is recorded, never sent, until you say so. UNMEASURED.",
-    "push_potential": ("🧠 Potentials on this page are recorded in shadow — one per name, setup and session the first "
-                       "time it is a potential, {open}–{close} ET on the {cad}-minute pass, never {rth_open}–{mute_end} "
-                       "(his first {n} minutes). Never sent until you say so. {tail}."),
+    # MOVED 2026-11-11 (T-PINS #5): the built rule — armed only, one per name per session — in WORDS_1M["push_potential"]'s
+    # own words (potential.ring_rule() with both switches on); "one per name" without "push", as the 10-27 shadow wrote it
+    "push_potential": ("🧠 Potentials on this page are recorded in shadow — the first time it is armed (every rule met, "
+                       "only the break missing) — one per name and session, {open}–{close} ET on the {cad}-minute pass, "
+                       "never {rth_open}–{mute_end} (his first {n} minutes). Never sent until you say so. {tail}."),
     # 2026-10-29 (verifier LOW): the 🏁 honesty line follows the mode too — a flip back never leaves "ring your phone"
     "ledger_honesty": ("A ledger of this page's alerts as RECORDED — none reached your phone. The 🧠 potentials "
                        "recorded in shadow make the headline %; A+ rows keep their own lines, as on 🚩 Gajjala's. "

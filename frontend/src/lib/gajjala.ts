@@ -188,6 +188,9 @@ export type GgChips = {
   outside_rth?: GgChipValue;
   float_suspect?: GgChipValue;
   flag_k?: GgChipValue;
+  /** 💧 2026-11-11 (entry spec §3.6, proposal #4): the served 💧 marker (tab.VOL_DRIED_TEXT, the k3_vol row met) — present only
+   *  when the read's k3_vol row is met on a live state; absent → no pill. An indicator: no order, no gate, no push. */
+  vol_dried?: GgChipValue;
 };
 
 export type GgRead = {
@@ -200,6 +203,9 @@ export type GgRead = {
   trigger?: number | null;
   stop?: number | null;
   risk_pct?: number | null;
+  /** ⚡ 2026-11-11 (entry spec §3.2, DECISION B): the card's plan line, SERVED by tab.plan_text — "Entry above T · stop S ·
+   *  risk r%" on an entry read, "trigger T · stop S · risk r%" otherwise; null / absent → no plan line. The FE composes none. */
+  plan_text?: string | null;
   entry_bar_t?: string | null;
   criteria?: GgCriterion[];
   missed?: string[];
@@ -216,6 +222,36 @@ export type GgRead = {
   potential?: GgPotentialTile | null;
   /** 🧪 2026-11-01: the audit block — the audited board only (absent on 🚩 Gajjala's / 1-min). Served; the FE composes none. */
   audit?: GgAudit | null;
+  /** 🧭 2026-11-11: the setups this stock passed through (backend stages.by_symbol / for_tile) — absent when none. */
+  stages?: GgStages | null;
+};
+
+/* ---- 🧭 Setup stages (2026-11-11, stages spec §3.4) — every word SERVED; the FE types none. ---- */
+/** One step inside a tag: the served word and its ET pass clock (null when the session is not today). */
+export type GgStageStep = { stage?: string | null; word?: string | null; at_et?: string | null };
+/** One setup the stock passed through in one session; `here` = this card's own setup in the board session. */
+export type GgStageTag = {
+  setup?: string | null;
+  emoji?: string | null;
+  label?: string | null;
+  here?: boolean | null;
+  steps?: GgStageStep[] | null;
+  text?: string | null;
+};
+/** One session's tags, oldest first; `clock` = the steps carry their ET clock (today only). */
+export type GgStageGroup = {
+  date?: string | null;
+  label?: string | null;
+  clock?: boolean | null;
+  tags?: GgStageTag[] | null;
+};
+/** The per-card block: served title, hint, the arrow between tags, the groups and the whole chain as one text. */
+export type GgStages = {
+  title?: string | null;
+  hint?: string | null;
+  sep?: string | null;
+  groups?: GgStageGroup[] | null;
+  text?: string | null;
 };
 
 /* ---- 🧪 Gajjala · Audited (2026-11-01, gg-audited spec §3.6 / §3.8) — every string and number SERVED. ---- */
@@ -410,6 +446,9 @@ export type GgTrackRow = {
   /** "🎯 entry sent 10:36 ET" — 🎯 served by tab._track_row — the FE composes none (2026-10-16, DECISIONS10 D4);
    *  null when no live A+ entry rang for this (symbol, setup, session). */
   entry_text?: string | null;
+  /** ⚡ 2026-11-11 (entry spec §3.1): "⚡ break rang HH:MM:SS ET" / "… (shadow)" — SERVED by tab._track_row
+   *  (break_watch.track_text); null / absent → nothing. */
+  brk_text?: string | null;
   graveyard_on?: string | null;
   timeline?: { at_et?: string | null; text: string }[];
   text: string;
@@ -626,7 +665,19 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
   /** 📌 the served trader tag — every viewer; null / absent → no chip. */
   trader_text?: string | null;
   /** 🎪 2026-10-29: the served Promo-circuit tag — every viewer; absent → no chip. */
-  promo?: boolean | null; promo_text?: string | null };
+  promo?: boolean | null; promo_text?: string | null;
+  /** 🔝 2026-11-11 (entry spec §3.8, proposal #9): true on the first FOCUS_N cards of the served order (🚫 names skipped) —
+   *  display only; every card is still listed. */
+  focus?: boolean | null };
+
+/** 🔝 2026-11-11: the served Focus block (tab.py, GG5 setup subs + 🧠 only, when the board has more than `n` cards). */
+export type GgFocusBlock = { n?: number | null; text?: string | null };
+/** 🌅 2026-11-11 (entry spec §3.7, proposal #8): one served Day-2 row — `href` SERVED (guarded with ggHref). */
+export type GgDay2Row = { symbol: string; text: string; href?: string | null };
+/** 🌅 the served Day-2 block — GG5 ☀️ pre-market sub only; a list, never a push. Every word served. */
+export type GgDay2Block = { title?: string | null; note?: string | null; rows?: GgDay2Row[] | null; empty_text?: string | null };
+/** ⚡ 2026-11-11 (entry spec §3.1): the served break-push status (break_watch.status()) — the FE prints `text` only. */
+export type GgPushBreak = { mode?: string | null; text?: string | null };
 
 export type GgPlaybookItem = string | {
   text: string;
@@ -721,6 +772,12 @@ export type GgBoard = {
   watch?: GgWatch | null;
   /** The LIVE 🧠 push line, printed under the A+ `push` line (LIVE since 2026-10-16). */
   push_potential?: { mode?: string | null; text?: string | null } | null;
+  /** ⚡ 2026-11-11: the served break-push line, printed under `push_potential` (GG5 boards); absent elsewhere. */
+  push_break?: GgPushBreak | null;
+  /** 🔝 2026-11-11: the served Focus header (GG5 setup subs + 🧠, more than FOCUS_N cards); absent otherwise. */
+  focus?: GgFocusBlock | null;
+  /** 🌅 2026-11-11: the served Day-2 list (GG5 ☀️ pre-market sub only); absent otherwise. */
+  day2?: GgDay2Block | null;
   /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */
   scan?: GgScan | null;
   /** 🎯 the served A+ line (every sub); absent on an older API. */

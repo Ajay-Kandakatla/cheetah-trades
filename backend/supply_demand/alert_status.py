@@ -610,6 +610,61 @@ def _et_iso(x) -> Optional[str]:
 
 _POT_PUSH_STATES = ("pushed", "no_target", "failed", "claimed")
 
+# ⚡ 2026-11-11 (entry spec §3.1, critic C7): the break push (chart_maps/gajjala/break_watch.py) rides the 🧠 kind, so
+# the /alerts 🧠 rows and strip must say which pushes were the ⚡ break. A tracker doc's `brk.state` (written ONLY by
+# store.claim_potential_break / settle_potential_break) is served as `brk_state` when it is one of these; anything
+# else is no key. Ajay 2026-11-11: "Here is how he enters please tell me to enter based on this".
+BRK_STATES = ("claimed", "pushed", "no_target", "failed", "shadow")
+
+
+def _break_watch():
+    """The ⚡ engine, LAZY and fenced (this module stays a module-level leaf). None when it cannot be imported — the
+    rows and the 🧠 pass then carry no ⚡ keys and the page still serves."""
+    try:
+        from chart_maps.gajjala import break_watch as BW
+        return BW
+    except Exception as exc:
+        log.warning("alert_status: break_watch unavailable: %s", exc)
+        return None
+
+
+def _brk_tag(item: dict, doc: dict) -> None:
+    """⚡ 2026-11-11 (C7): a tracker doc with a `brk` dict hands its row `brk_state` (in BRK_STATES, else absent) and
+    `brk_text` = break_watch.track_text(doc) — the engine's words, never composed here. A doc without `brk` → NO key
+    (rows byte for byte as before); an absent / raising break_watch → NO ⚡ key on the row."""
+    brk = doc.get("brk")
+    if not isinstance(brk, dict):
+        return
+    bw = _break_watch()
+    if bw is None:
+        return
+    try:
+        text = bw.track_text(doc)
+    except Exception as exc:
+        log.warning("alert_status: break_watch.track_text failed: %s", exc)
+        return
+    state = brk.get("state")
+    if isinstance(state, str) and state in BRK_STATES:
+        item["brk_state"] = state
+    item["brk_text"] = text if isinstance(text, str) and text else None
+
+
+def _brk_summary(items) -> Optional[str]:
+    """⚡ 2026-11-11 (C7): the 🧠 strip's ⚡ line — break_watch.summary_text over the rows' `brk_state`, served only
+    when some row has one. None when no row has one, or break_watch is absent / raising / says nothing."""
+    states = [r.get("brk_state") for r in (items or []) if isinstance(r, dict) and r.get("brk_state")]
+    if not states:
+        return None
+    bw = _break_watch()
+    if bw is None:
+        return None
+    try:
+        text = bw.summary_text(states)
+    except Exception as exc:
+        log.warning("alert_status: break_watch.summary_text failed: %s", exc)
+        return None
+    return text if isinstance(text, str) and text else None
+
 
 def _gajjala_held_text(reason) -> Optional[str]:
     """📌 2026-10-27 (BUILD_SPEC26 A2, critic F2): the FROZEN words of the 🧠 hold chart_maps.gajjala.trader_names owns
@@ -685,7 +740,8 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
     push_state ("pushed" | "no_target" | "failed" | "claimed" | None),
     push_at (ET iso | None), held (the LAST `held` reason | None)[, held_text — 📌 2026-10-27: the served words of a
     📌 trader hold (trader_names.TRADER_HOLD_TEXT) or a 🎪 promo hold (promo_names.PROMO_HOLD_TEXT, 2026-10-29),
-    present ONLY on such a row]}. A Mongo
+    present ONLY on such a row][, brk_state + brk_text — ⚡ 2026-11-11: ONLY on a doc with a `brk` dict, see
+    _brk_tag]}. A Mongo
     read, nothing scanned; never raises — a dead tracker is []."""
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -723,6 +779,7 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
         if words:                                   # 📌 2026-10-27 critic F2: only a 📌 hold carries its served words
             item["held_text"] = words
         _promo_tag(item, d)                         # 🎪 2026-10-29 critic F3: the tracker doc's served tag
+        _brk_tag(item, d)                           # ⚡ 2026-11-11 C7: the break push's served state + words
         out.append(item)
     out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
     return out
@@ -735,7 +792,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     The 🚩 pass also carries `shadow_items` (read_gajjala_shadow) — today's
     shadow A+ records, listed under its strip on the page. The 🧠 pass
     (2026-10-15) carries `potential_items` (read_gajjala_potentials) — today's
-    tracker docs, listed under its strip. The 🎚️ tape_control pass (2026-10-16)
+    tracker docs, listed under its strip, and (⚡ 2026-11-11) `brk_summary` when a row
+    carries a `brk_state` (break_watch.summary_text). The 🎚️ tape_control pass (2026-10-16)
     carries `window`, `pins` and `note` (read_tape_control)."""
     from . import zone_edge as ZE                 # lazy: zone_edge's siblings import this module
     now = now or datetime.now(ET)
@@ -770,6 +828,9 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     pw = _gajjala_promo_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if pw:                                          # 🎪 2026-10-29 — the same rule
         passes[GAJJALA_POTENTIAL_KIND]["promo_held_text"] = pw
+    bs = _brk_summary(passes[GAJJALA_POTENTIAL_KIND].get("potential_items"))
+    if bs:                                          # ⚡ 2026-11-11 C7: only when some 🧠 row carries a brk_state
+        passes[GAJJALA_POTENTIAL_KIND]["brk_summary"] = bs
     window = tape_window()
     for kind in TAPE_KINDS:
         passes[kind] = dict(_with_cadence(kind, read_pass(kind, pass_coll)), window=window)
@@ -790,5 +851,5 @@ __all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIN
            "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "LUK_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
-           "read_gajjala_potentials",
+           "read_gajjala_potentials", "BRK_STATES",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

@@ -75,6 +75,22 @@ describe('📱 Gajjala card on the phone — served chips wrap instead of wideni
     }
   });
 
+  // ⚡ 2026-11-11 (entry spec §5.5 F6): the 💧 pill, the 🔝 divider and the 🌅 Day-2 rows join the wrap-anywhere list.
+  it('the 💧 pill, the 🔝 divider and the 🌅 Day-2 rows may break anywhere and carry min-width: 0', async () => {
+    const src = await css();
+    const selectors = wrapAnywhereRule(src);
+    for (const sel of ['.gg-vol-dried', '.gg-focus-divider', '.gg-day2-row']) expect(selectors).toContain(sel);
+    for (const sel of ['.gg-vol-dried', '.gg-focus-divider', '.gg-day2-row']) {
+      const m = src.match(new RegExp(`\\n\\${sel}\\s*\\{([^}]*)\\}`));
+      expect(m, `${sel} has its own rule`).not.toBeNull();
+      expect(m![1]).toMatch(/min-width:\s*0\b/);
+    }
+  });
+
+  it('NEGATIVE: the pre-fix stylesheet lists none of the 2026-11-11 rows', () => {
+    for (const sel of ['.gg-vol-dried', '.gg-focus-divider', '.gg-day2-row']) expect(PRE_FIX).not.toContain(sel);
+  });
+
   it('NEGATIVE: the pre-fix stylesheet has no chip-wrap rule and no wrap-anywhere rule', () => {
     expect(chipWrapRule(PRE_FIX)).toBeNull();
     expect(wrapAnywhereRule(PRE_FIX)).toBeNull();

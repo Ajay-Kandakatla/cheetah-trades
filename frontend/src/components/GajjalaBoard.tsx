@@ -89,6 +89,14 @@
  * first — an href that is not an in-app path renders the symbol as text. The
  * CardExtras lines stay text (the tile is the link). The FE composes no href.
  *
+ * ⚡ Enter like GG (2026-11-11, entry spec WP-FE). Ajay: "Also apply your proposal too." / "Here is how he enters please
+ * tell me to enter based on this" / "Can you check for any mistakes". The card's plan line is the SERVED `plan_text`
+ * (tab.plan_text — "Entry above T · stop S · risk r%" on an armed / A+ read), printed verbatim; the FE joins no
+ * trigger / stop / risk words any more. Also served and printed verbatim: the 💧 volume-dried pill (chips.vol_dried),
+ * the 🔝 Focus header (board.focus) with a divider after the last served focus card (every card still listed), the 🌅
+ * Day-2 rows on ☀️ (router Links through ggHref + withSource; an unsafe href → text), the ⚡ break-push line under the
+ * 🧠 push line (board.push_break) and the 🧠 Track row's ⚡ word (brk_text). Display only. UNMEASURED.
+ *
  * 🕰️ Entries timeline (2026-10-16, DECISIONS11 D1–D3). Ajay: "We have a Promo Circuit tab in Catalyst tab. Can you
  * use the graph component from  that to show what happened to Entries alert of Gajjala with all the 100% criteria
  * satisfier. One you alert it from the alert system you built please". The 🏁 panel gains the SERVED view toggle
@@ -177,6 +185,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { GgTraderChip } from './GgTraderChip';
 import { GgShortInterestLabel } from './GgShortInterestLabel';
+import { GgStages } from './GgStages';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
@@ -196,8 +205,8 @@ import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
-  ggPx, ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
-  type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
+  ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
+  type GgBoard, type GgBrokerFlags, type GgDay2Block, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
@@ -522,6 +531,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const cardLive = useMemo(() => ({ footer: cardPoll.footer, answer: patchQuotes(cardPoll.answer, ggLive.quotesEvt) }),
     [cardPoll.answer, cardPoll.footer, ggLive.quotesEvt]);
   const liveTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+  /* 🔝 2026-11-11 (entry spec §3.8): the served Focus header, and the index of the last card the server flagged `focus`
+   * (the divider goes after it). No served block → no header, no divider, whatever the tiles carry. */
+  const focusText = typeof board?.focus?.text === 'string' && board.focus.text.trim() ? board.focus.text : null;
+  const lastFocusTile = focusText ? liveTiles.reduce<GgTile | null>((at, t) => (t.focus === true ? t : at), null) : null;
   const feedWord = streamFeedWord(cardPoll.answer);
 
   // `focus` scrolls to that tile ONCE per focus value, the first time its tile
@@ -634,6 +647,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {board?.push_potential?.text ? (
         <div className="cm-note gg-push-potential" data-testid="gg-push-potential">{board.push_potential.text}</div>
       ) : null}
+      {/* ⚡ 2026-11-11: the served break-push line (break_watch.status().text), verbatim, under the 🧠 push line. */}
+      {typeof board?.push_break?.text === 'string' && board.push_break.text.trim() ? (
+        <div className="cm-note gg-push-potential gg-push-break" data-testid="gg-push-break">{board.push_break.text}</div>
+      ) : null}
 
       {/* (2) ⏳ his first 15 minutes (S8 14:41). */}
       {session?.first15 && session.first15_text ? (
@@ -742,10 +759,15 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
             </div>
           ) : null}
 
+          {/* (5c) 🌅 2026-11-11 (proposal #8): the served Day-2 list — GG5 ☀️ only; a list, never a push. */}
+          {board.day2 ? <Day2Block block={board.day2} search={location.search} back={backTarget} /> : null}
+
           {/* (6) the tiles, in the SERVED order. */}
           {!tiles.length && board.empty_note ? (
             <div className="cm-note" data-testid="gg-empty">{board.empty_note}</div>
           ) : null}
+          {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
+          {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}
           <div className={`cm-grid${loading ? ' cm-grid-stale' : ''}`} aria-busy={loading || undefined}>
             {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
@@ -753,7 +775,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               /* 🎾 2026-11-08 (Ajay: "increase the width of the reversal sqeeze chart to show more bars"): every card whose
                  read is a Reversal Squeeze takes the whole grid row (gajjala.css .gg-card.gg-wide) — the 🎾 sub and a 🧠
                  card of a 🎾 read alike; the served order is untouched. */
-              return (
+              const card = (
                 <div key={t.symbol} data-testid={`gg-tile-${t.symbol}`}
                      className={`gg-card${isFocus ? ' gg-focus' : ''}${t.gajjala?.setup === 'reversal_squeeze' ? ' gg-wide' : ''}`}
                      ref={(el) => { if (el) tileRefs.current.set(t.symbol, el); else tileRefs.current.delete(t.symbol); }}>
@@ -802,6 +824,13 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                   ) : null}
                 </div>
               );
+              /* 🔝 the divider after the LAST served focus card (a whole grid row; no word). */
+              return t === lastFocusTile ? (
+                <Fragment key={t.symbol}>
+                  {card}
+                  <hr className="gg-focus-divider" data-testid="gg-focus-divider" />
+                </Fragment>
+              ) : card;
             })}
           </div>
           {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of
@@ -953,9 +982,9 @@ function CardExtras({ read, board, sub, sym, live }: {
 }) {
   if (!read) return null;
   const chips = read.chips || {};
-  const trig = ggPx(read.trigger);                    // the broker's grid — the push, the 🏁 Track and the 🚩 lane agree
-  const stop = ggPx(read.stop);
-  const risk = riskText(read.risk_pct);
+  /* ⚡ 2026-11-11 (entry spec §3.2): the plan line is SERVED (tab.plan_text, the broker grid of tab._px) — verbatim. */
+  const plan = typeof read.plan_text === 'string' && read.plan_text.trim() ? read.plan_text : null;
+  const volDried = chipText(chips.vol_dried);
   const variant = variantText(read);
   const grade = gradeText(read);
   const first15 = typeof chips.first15 === 'string' ? chipText(chips.first15)
@@ -986,13 +1015,10 @@ function CardExtras({ read, board, sub, sym, live }: {
         ) : null}
         {variant ? <span className="gg-variant" data-testid="gg-variant">{variant}</span> : null}
         {grade ? <span className="gg-variant" data-testid="gg-grade">{grade}</span> : null}
+        {/* 💧 2026-11-11 (proposal #4): the served marker beside the state pill — an indicator, never a gate. */}
+        {volDried ? <span className="gg-vol-dried" data-testid={`gg-vol-dried-${sym}`}>{volDried}</span> : null}
       </div>
-      {trig || stop ? (
-        <div className="gg-plan" data-testid="gg-plan">
-          {[trig ? `trigger ${trig}` : null, stop ? `stop ${stop}` : null, risk ? `risk ${risk}` : null]
-            .filter(Boolean).join(' · ')}
-        </div>
-      ) : null}
+      {plan ? <div className="gg-plan" data-testid="gg-plan">{plan}</div> : null}
       {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
       {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
@@ -1020,6 +1046,7 @@ function CardExtras({ read, board, sub, sym, live }: {
           <Tells tells={read.potential.tells} />
         </div>
       ) : null}
+      <GgStages stages={read.stages} sym={sym} />
     </div>
   );
 }
@@ -1093,6 +1120,10 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
               {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
               {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
               {r.entry_text ? <span className="gg-track-push gg-track-entry" data-testid={`gg-track-entry-${id}`}> · {r.entry_text}</span> : null}
+              {/* ⚡ 2026-11-11: the served break word (break_watch.track_text via tab._track_row), verbatim. */}
+              {typeof r.brk_text === 'string' && r.brk_text.trim() ? (
+                <span className="gg-track-push gg-track-brk" data-testid={`gg-track-brk-${id}`}> · {r.brk_text}</span>
+              ) : null}
               {tl.length ? (
                 <details className="gg-timeline" data-testid={`gg-track-timeline-${id}`}>
                   <summary>timeline</summary>
@@ -1495,6 +1526,42 @@ function GgTrTapeRow({ row, heads, views, at, tid }: {
       {/* D12 — the loser's facts under its tape (after the expanded tape row when it is open). */}
       <GgTrLossLine row={row} heads={heads} tape={!!views} />
     </Fragment>
+  );
+}
+
+/** 🌅 2026-11-11 (entry spec §3.7, proposal #8): the served Day-2 list on ☀️ — the served title, note, rows and empty line,
+ *  verbatim. A row with a safe served href is a router Link (withSource + the back state, the ☀️ / 🌙 movers convention);
+ *  an href that is not an in-app path → the row as text. A list, never a push; the FE types no word. */
+function Day2Block({ block, search, back }: { block: GgDay2Block; search: string; back: string }) {
+  /* 2026-11-11 critic fix: a mis-shaped served key renders nothing, never throws — `rows` must be an array and
+   * `title` / `note` / `empty_text` strings (an object child would crash the board). */
+  const str = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null);
+  const rows = (Array.isArray(block.rows) ? block.rows : [])
+    .filter((r) => r && typeof r === 'object' && typeof r.symbol === 'string' && typeof r.text === 'string' && r.text.trim());
+  const empty = str(block.empty_text);
+  const title = str(block.title);
+  const note = str(block.note);
+  if (!rows.length && !empty && !title) return null;
+  return (
+    <section className="gg-day2" data-testid="gg-day2">
+      {title ? <strong className="gg-day2-title" data-testid="gg-day2-title">{title}</strong> : null}
+      {note ? <div className="gg-muted gg-day2-note" data-testid="gg-day2-note">{note}</div> : null}
+      {rows.length ? (
+        <ul className="gg-day2-rows">
+          {rows.map((r) => {
+            const href = ggHref(r.href);
+            return (
+              <li key={`${r.symbol}-${r.text}`} className="gg-day2-row" data-testid={`gg-day2-row-${r.symbol}`}>
+                {href ? (
+                  <Link to={withSource(href, 'chart-maps', search)} state={{ from: back, label: 'Chart Maps' }}
+                        data-testid={`gg-day2-link-${r.symbol}`}>{r.text}</Link>
+                ) : r.text}
+              </li>
+            );
+          })}
+        </ul>
+      ) : empty ? <div className="cm-note" data-testid="gg-day2-empty">{empty}</div> : null}
+    </section>
   );
 }
 

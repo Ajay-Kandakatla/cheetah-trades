@@ -194,6 +194,11 @@ either consumer.
 Interest is keyed by (variant tab, symbol) with a 60 s TTL and at most 80 symbols per variant. Symbols over the cap
 are refused, never silently cut.
 
+2026-11-11 (entry spec §3.1, WP-BRK): `live_feed.authed_since()` returns the epoch of the current authentication
+while the socket is authed (else None). It reads state only. `chart_maps/gajjala/break_watch.py` keys its ⚡
+coverage on it: a changed value restarts every symbol's coverage. The hub adds break_watch's symbols to the watch set
+and hands it each regular print between the lane and the screen (`tests/test_live_hub_break_2026_11_11.py`).
+
 ### Tests
 `tests/test_live_feed.py` (routing + control queue appended; the original 9 unmodified),
 `tests/test_live_feed_kicks_2026_11_09.py`, `tests/test_quote_cache_persist_2026_11_09.py`,

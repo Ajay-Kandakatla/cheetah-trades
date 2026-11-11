@@ -22,6 +22,39 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-11 (verbatim in the label): "Here is how he enters please tell me to enter based on this". Entry spec
+  // §3.1–3.2. tab.plan_text serves the card's ONE plan line (PLAN_ENTRY_HEAD only when ledger.plan_of is the first
+  // plan; a no-risk / no-plan read says PLAN_LEVEL_HEAD); GajjalaBoard prints read.plan_text verbatim, composes none.
+  // chart_maps/gajjala/break_watch.py watches the ARMED 🧠 plans on the live socket and records the ⚡ intrabar break
+  // (strictly over the trigger, the stop not printed first); GAJJALA_BREAK_PUSH_MODE = "shadow" (HIS CALL #1: recorded
+  // on /alerts, no device), kind GAJJALA_BREAK_PUSH_KIND = the 🧠 kind (HIS CALL #2). The bar-close A+ is unchanged.
+  // Doc docs/gajjala/entry_break_2026_11_11.md. Pinned by scripts/contracts.mjs ("⚡ Gajjala enter like GG (2026-11-11)").
+  { id: 'chart-maps-gajjala-entry-break-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=gajjala',
+    label: "⚡ Enter like GG — you said: “Here is how he enters please tell me to enter based on this”. Every Gajjala card now prints one plan line: “Entry above X · stop Y · risk r%” (a plan with no risk says “trigger X”, never “Entry above”). When an armed 🧠 plan trades over its trigger inside the live bar, the ⚡ break is recorded on /alerts; it is not sent to your phone until you say so. The A+ alert at the bar close rings as always. UNMEASURED. Not advice." },
+  // Ajay 2026-11-11 (verbatim in the label): "Also apply your proposal too." = the proposals table of
+  // eod-audits/research/2026-11-11_entries_followthrough.md. #1 POTENTIAL_PUSH_ARMED_ONLY (a building 🧠 is held
+  // "building", rings once when it arms); #2 POTENTIAL_ONE_RING_PER_NAME (held "name_rang"); #3 the 1-minute A+ push
+  // adds alerts.CHASE_TEXT / CHASE_PAST_TEXT (facts, no threshold, the push still rings; GG5 byte-identical); #4
+  // tab.VOL_DRIED_TEXT chip; #8 tab.day2_block on ☀️ (list, no push); #9 FOCUS_N tiles flagged `focus` + FOCUS_TEXT
+  // (display only, never reorders). #5–#7 pre-registered, not run. Pinned by scripts/contracts.mjs
+  // ("🧠 armed-only · one ring per name (2026-11-11)", "💧 🌅 🔝 card extras (2026-11-11)").
+  { id: 'chart-maps-gajjala-proposals-applied-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=gajjala',
+    label: "🧠 My proposals applied — you said: “Also apply your proposal too.” A 🧠 potential now rings only once its trigger is armed, and once per name per session. The 1-minute A+ push adds the last price, how far it is past the trigger and how much of the target is left; it still rings. Cards show 💧 volume dried up when the base dried; ☀️ Premarket lists 🌅 Day 2 (yesterday's A+ and after-hours movers, a list, no push); 🔝 Focus 5 marks the first five cards (display only, nothing reordered). Three studies are written down, not run. UNMEASURED. Not advice." },
+  // Ajay 2026-11-11 ~08:39 ET (verbatim in the label, his spelling kept): "Another big thing I need is what stages a stock
+  // has crossed in the past like Bullflag -> EMA Kiss and Fly -> and Horizontal -Fade …". chart_maps/gajjala/stages.py
+  // (pure: imports constants only) builds the tags from the 🧠 tracker's state_path + the live A+ that rang
+  // (tab._entry_times), read ONCE per board by tab._stage_tag; GgStages.tsx prints the served text. A clock for today's
+  // session only, the date otherwise. DISPLAY ONLY. Pinned by scripts/contracts.mjs ("🪜 Gajjala stages tags (2026-11-11)").
+  { id: 'chart-maps-gajjala-stages-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=gajjala',
+    label: "🧭 Setup stages on every card — you said: “Another big thing I need is what stages a stock has crossed in the past like Bullflag -> EMA Kiss and Fly -> and Horizontal -Fade so I know their stages may be add them like tags or some UI to show me stages with time stamps if its same day”. Every Gajjala card (🚩, 1-minute, 🧪) now shows the setups the stock passed through as tags, oldest first, each with how far it got (🧠 potential · 🎯 A+ · triggered · stopped): today's with the ET time, earlier sessions by date. Display only: no alert or order moved." },
+  // Ajay 2026-11-11 (verbatim in the label, his spelling kept): "Maintain a track record when Alpaca is blocked please,
+  // Like we do in Gajjals so I know how our strategies are working". trading/gajjala_untraded.py (read-only: no order /
+  // broker import, writes nothing) grades every 🚩 lane row with no fill by the 🏁 Track record's own math (GLG.grade);
+  // the row carries track_state / track_text (gajjala_entry.ROW_KEYS), the served `untraded` block sits under "Lane
+  // journal". Never in the paper P&L, sizing or the loss streak. Pinned by scripts/contracts.mjs
+  // ("🏁 lane not-traded record (2026-11-11)").
+  { id: 'autopilot-gajjala-lane-not-traded-record-2026-11-11', addedAt: '2026-11-11', route: '/trading?view=gajjala',
+    label: "🏁 Not-traded record on the 🚩 lane — you said: “Maintain a track record when Alpaca is blocked please, Like we do in Gajjals so I know how our strategies are working”. Every 🚩 lane row with no fill now shows the 🏁 Track record's own grade of the same alert, marked “not traded”, and a block under Lane journal totals them beside the lane's fills. Never added to the paper P&L, the size or the loss streak. UNMEASURED. Not advice." },
   // Ajay 2026-11-11 08:18 ET (verbatim in the label): "Can you fix the defects please" — the formulas audit
   // (eod-audits/research/2026-11-10_formulas_audit.md §3) ship-now set, none of which changes which A+ rings:
   // D3 the 🌙 K10 clock + the tape session off the house calendar (alerts._closes; a half day closes 13:00 / 17:00 —

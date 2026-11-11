@@ -177,7 +177,7 @@
    },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -412,6 +412,7 @@
        "rotation": "🔄 shares out ×0.6",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 3000000.0
       },
@@ -459,11 +460,41 @@
        "text": "listed day 1/3 · since 2026-10-27"
       },
       "missed": [],
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
       "ready": false,
       "reason": "",
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-27",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "➖",
+           "here": false,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:08"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 1-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: ➖ Horizontal Fade · 🧠 potential 10:08",
+       "title": "🧭 Setup stages"
+      },
       "state": "aplus",
       "state_label": "A+ — every rule met, entry bar closed · UNMEASURED",
       "stop": 10.8125,
@@ -643,6 +674,7 @@
        "rotation": "🔄 shares out ×0.6",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 3000000.0
       },
@@ -683,11 +715,69 @@
        "text": "listed day 1/3 · since 2026-10-27"
       },
       "missed": [],
+      "plan_text": "Entry above 10.94 · stop 10.81 · risk 1.1%",
       "ready": true,
       "reason": "",
       "red_closes": 3,
       "risk_pct": 1.1428571428571428,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-27",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:08"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 10:08"
+          },
+          {
+           "emoji": "➖",
+           "here": false,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:08"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 1-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:08 → 💋 EMA Kiss & Fly · 🧠 potential 10:08 → ➖ Horizontal Fade · 🧠 potential 10:08",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.94 · UNMEASURED",
       "stop": 10.8125,
@@ -876,7 +966,7 @@
    },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -1119,6 +1209,7 @@
        "rotation": "🔄 shares out ×0.6",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 3000000.0
       },
@@ -1159,6 +1250,7 @@
        "text": "listed day 1/3 · since 2026-10-27"
       },
       "missed": [],
+      "plan_text": "Entry above 10.94 · stop 10.81 · risk 1.1%",
       "potential": {
        "again": false,
        "also": [
@@ -1200,6 +1292,63 @@
       "red_closes": 3,
       "risk_pct": 1.1428571428571428,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-27",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:08"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 10:08"
+          },
+          {
+           "emoji": "➖",
+           "here": false,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:08"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 1-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:08 → 💋 EMA Kiss & Fly · 🧠 potential 10:08 → ➖ Horizontal Fade · 🧠 potential 10:08",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.94 · UNMEASURED",
       "stop": 10.8125,
@@ -1419,6 +1568,7 @@
        "text": "listed day 1/3 · since 2026-10-27"
       },
       "missed": [],
+      "plan_text": "trigger 11.25 · stop 10.84 · risk 3.6%",
       "potential": {
        "again": false,
        "also": [],
@@ -1446,6 +1596,35 @@
       "red_closes": 2,
       "risk_pct": 3.6111111111111107,
       "setup": "horizontal_fade",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-27",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "➖",
+           "here": true,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "10:08",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 10:08"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 1-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: ➖ Horizontal Fade · 🧠 potential 10:08",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — base 3 of 6 bars · UNMEASURED",
       "stop": 10.84375,
@@ -1500,6 +1679,7 @@
      "pushed_n": 0,
      "rows": [
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -1515,7 +1695,7 @@
        "last_state_text": "building",
        "move_pct": 0.0,
        "move_text": "11.20 → 11.20 (+0.0%) since first seen",
-       "push_text": null,
+       "push_text": "held: building — rings once when the trigger arms",
        "setup": "horizontal_fade",
        "setup_label": "➖ Horizontal Fade",
        "symbol": "GGA",
@@ -1531,6 +1711,7 @@
        "vs_trigger_text": "-0.4% vs the trigger at first sight (11.25)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
@@ -1562,6 +1743,7 @@
        "vs_trigger_text": "-0.9% vs the trigger at first sight (10.94)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -1577,7 +1759,7 @@
        "last_state_text": "building",
        "move_pct": 0.0,
        "move_text": "10.84 → 10.84 (+0.0%) since first seen",
-       "push_text": null,
+       "push_text": "held: this name already rang today — one 🧠 ring per name",
        "setup": "kiss_fly",
        "setup_label": "💋 EMA Kiss & Fly",
        "symbol": "GGB",
@@ -1593,6 +1775,7 @@
        "vs_trigger_text": "-0.9% vs the trigger at first sight (10.94)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -1608,7 +1791,7 @@
        "last_state_text": "building",
        "move_pct": 0.0,
        "move_text": "10.84 → 10.84 (+0.0%) since first seen",
-       "push_text": null,
+       "push_text": "held: this name already rang today — one 🧠 ring per name",
        "setup": "horizontal_fade",
        "setup_label": "➖ Horizontal Fade",
        "symbol": "GGB",
@@ -1779,7 +1962,7 @@
    },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials on this page ring your phone since 2026-10-29 by your call — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 1-minute pass, never 09:30–09:45 (his first 15 minutes). From 2026-10-27 to 2026-10-28 they were recorded in shadow, never sent. UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -2213,9 +2396,9 @@
     "categories": [
      {
       "key": "all",
-      "n": 5,
+      "n": 2,
       "n_replayed": 0,
-      "text": "📋 all 5"
+      "text": "📋 all 2"
      },
      {
       "key": "win",
@@ -2243,9 +2426,9 @@
      },
      {
       "key": "out",
-      "n": 3,
+      "n": 2,
       "n_replayed": 0,
-      "text": "— no fill / not graded 3"
+      "text": "— no fill / not graded 2"
      }
     ],
     "categories_aplus": [
@@ -2363,14 +2546,14 @@
        "no_risk": 0,
        "no_time": 0,
        "pct": null,
-       "pending": 2,
+       "pending": 1,
        "split": 0,
        "thin": 0,
        "win": 0
       },
       "same": {
        "loss": 0,
-       "no_entry": 2,
+       "no_entry": 1,
        "no_plan": 0,
        "no_risk": 0,
        "no_time": 0,
@@ -2437,8 +2620,8 @@
      }
     },
     "counts_text": {
-     "next": "🧠 shadow — recorded, never sent · Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 2 not graded yet · 2 duplicates of the same stock not counted",
-     "same": "🧠 shadow — recorded, never sent · Same session: 0 wins · 0 losses · no graded entry yet · 2 no entry · 0 open · 2 duplicates of the same stock not counted · today not final"
+     "next": "🧠 shadow — recorded, never sent · Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 1 not graded yet",
+     "same": "🧠 shadow — recorded, never sent · Same session: 0 wins · 0 losses · no graded entry yet · 1 no entry · 0 open · today not final"
     },
     "days": [
      {
@@ -2500,49 +2683,6 @@
         "dup_text": null,
         "fill_px": null,
         "flag_text": null,
-        "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGA",
-        "id": "2026-10-27|GGA|horizontal_fade|potential",
-        "key": "2026-10-27-GGA-horizontal_fade-potential",
-        "kind": "potential",
-        "kind_text": "🧠 shadow — never sent",
-        "line": "live",
-        "loss_text": null,
-        "next": {
-         "provisional": false,
-         "state": "pending",
-         "sub_text": "graded Wed 10-28 20:15 ET",
-         "text": "after Wed 10-28's close"
-        },
-        "note": null,
-        "plan_text": "trigger 11.25 · stop 10.84",
-        "rang": "rth",
-        "rang_text": "rang RTH",
-        "replay_text": null,
-        "same": {
-         "provisional": true,
-         "state": "no_entry",
-         "sub_text": "not final",
-         "text": "no entry yet"
-        },
-        "setup": "horizontal_fade",
-        "setup_label": "➖ Horizontal Fade",
-        "stop": 10.84375,
-        "symbol": "GGA",
-        "thin_text": null,
-        "trader_text": null,
-        "trigger": 11.25
-       },
-       {
-        "at_et": "10:08",
-        "at_text": "10:08 ET",
-        "broker_text": null,
-        "bucket": "out",
-        "bucket_text": "— no fill / not graded",
-        "date": "2026-10-27",
-        "dup_of": null,
-        "dup_text": null,
-        "fill_px": null,
-        "flag_text": null,
         "href": "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGB",
         "id": "2026-10-27|GGB|bull_flag|potential",
         "key": "2026-10-27-GGB-bull_flag-potential",
@@ -2574,99 +2714,13 @@
         "thin_text": null,
         "trader_text": null,
         "trigger": 10.9375
-       },
-       {
-        "at_et": "10:08",
-        "at_text": "10:08 ET",
-        "broker_text": null,
-        "bucket": "out",
-        "bucket_text": "— no fill / not graded",
-        "date": "2026-10-27",
-        "dup_of": "2026-10-27|GGB|bull_flag|potential",
-        "dup_text": "🔁 same trade as the 10:08 🚩 Bull Flag ring — not counted",
-        "fill_px": null,
-        "flag_text": null,
-        "href": "/chart-maps?tab=gajjala_1m&sub=kiss_fly&focus=GGB",
-        "id": "2026-10-27|GGB|kiss_fly|potential",
-        "key": "2026-10-27-GGB-kiss_fly-potential",
-        "kind": "potential",
-        "kind_text": "🧠 shadow — never sent",
-        "line": "live",
-        "loss_text": null,
-        "next": {
-         "provisional": false,
-         "state": "pending",
-         "sub_text": "graded Wed 10-28 20:15 ET",
-         "text": "after Wed 10-28's close"
-        },
-        "note": null,
-        "plan_text": "trigger 10.94 · stop 10.81",
-        "rang": "rth",
-        "rang_text": "rang RTH",
-        "replay_text": null,
-        "same": {
-         "provisional": true,
-         "state": "no_entry",
-         "sub_text": "not final",
-         "text": "no entry yet"
-        },
-        "setup": "kiss_fly",
-        "setup_label": "💋 EMA Kiss & Fly",
-        "stop": 10.8125,
-        "symbol": "GGB",
-        "thin_text": null,
-        "trader_text": null,
-        "trigger": 10.9375
-       },
-       {
-        "at_et": "10:08",
-        "at_text": "10:08 ET",
-        "broker_text": null,
-        "bucket": "out",
-        "bucket_text": "— no fill / not graded",
-        "date": "2026-10-27",
-        "dup_of": "2026-10-27|GGB|bull_flag|potential",
-        "dup_text": "🔁 same trade as the 10:08 🚩 Bull Flag ring — not counted",
-        "fill_px": null,
-        "flag_text": null,
-        "href": "/chart-maps?tab=gajjala_1m&sub=horizontal_fade&focus=GGB",
-        "id": "2026-10-27|GGB|horizontal_fade|potential",
-        "key": "2026-10-27-GGB-horizontal_fade-potential",
-        "kind": "potential",
-        "kind_text": "🧠 shadow — never sent",
-        "line": "live",
-        "loss_text": null,
-        "next": {
-         "provisional": false,
-         "state": "pending",
-         "sub_text": "graded Wed 10-28 20:15 ET",
-         "text": "after Wed 10-28's close"
-        },
-        "note": null,
-        "plan_text": "trigger 11.00 · stop 10.81",
-        "rang": "rth",
-        "rang_text": "rang RTH",
-        "replay_text": null,
-        "same": {
-         "provisional": true,
-         "state": "no_entry",
-         "sub_text": "not final",
-         "text": "no entry yet"
-        },
-        "setup": "horizontal_fade",
-        "setup_label": "➖ Horizontal Fade",
-        "stop": 10.8125,
-        "symbol": "GGB",
-        "thin_text": null,
-        "trader_text": null,
-        "trigger": 11.0
        }
       ]
      }
     ],
     "dup_counts": {
      "entry": 0,
-     "live": 2,
+     "live": 0,
      "replayed": 0,
      "shadow": 0
     },
@@ -2709,9 +2763,9 @@
     "kinds": [
      {
       "key": "all",
-      "n": 5,
+      "n": 2,
       "n_replayed": 0,
-      "text": "📋 every alert 5"
+      "text": "📋 every alert 2"
      },
      {
       "key": "aplus",

@@ -106,20 +106,35 @@ describe('Notifications · 🧠 gajjala_potential', () => {
     }
   });
 
-  it('WHAT FIRES: forming, the sideways part begun or complete, the reclaim not printed, once per name / setup / session', () => {
+  // MOVED 2026-11-11 (Ajay "Also apply your proposal too." — constants.POTENTIAL_PUSH_ARMED_ONLY /
+  // POTENTIAL_ONE_RING_PER_NAME): it rings when ARMED (a "building" read is held until its trigger arms) and once per
+  // name per session (a second setup of a name that rang is held) — the phrases below are the words now typed.
+  it('WHAT FIRES: forming, the sideways part complete (armed), the reclaim not printed, one push per name and session', () => {
     const d = detail();
     for (const phrase of ['WHAT FIRES', 'the read is forming', 'the run up is in',
-      '("building")', '("trigger armed")', 'the reclaim of the highs has not printed',
-      'Once per name, setup and session', 'every one its own push', 'every one listed on /alerts',
-      'silent on closed days', 'earlier on NYSE half days']) {
+      '("building") is held and rings once, the first time its trigger arms', '("trigger armed")',
+      'the reclaim of the highs has not printed',
+      'One push per name and session', 'its other setups that session are held', 'every one listed on /alerts',
+      'silent on closed days', 'earlier on NYSE half days',
+      'a read still building (held until its trigger arms)', 'a second setup of a name that already rang that session']) {
       expect(d).toContain(phrase);
     }
   });
 
+  it('NEGATIVE (2026-11-11): the retired once-per-setup words are gone', () => {
+    const d = detail();
+    for (const gone of ['Once per name, setup and session', 'every one its own push',
+      'has started ("building") or is complete']) {
+      expect(d).not.toContain(gone);
+    }
+  });
+
   // 2026-11-10 plain words (spec 3.8): "demand leg" → "run up"; the rest of the WHAT FIRES sentence byte-identical.
+  // MOVED 2026-11-11 (constants.POTENTIAL_PUSH_ARMED_ONLY): 'has started ("building") or is complete' → 'is complete' —
+  // a building read no longer fires (its own sentence follows); every other byte unchanged.
   const FIRES_SENTENCE = 'WHAT FIRES: the first time a name his scanner listed is a potential in one of Goverdhan Gajjala’s five setups '
     + '(\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, ➖ Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze): '
-    + 'the read is forming, the run up is in, the quiet sideways part has started ("building") or is complete ("trigger armed"), '
+    + 'the read is forming, the run up is in, the quiet sideways part is complete ("trigger armed"), '
     + 'and the reclaim of the highs has not printed (needing at least one sideways bar is a Cheetah default, not his).';
   it('the WHAT FIRES sentence equals the plain-words sentence in full (only "demand leg" → "run up" moved)', () => {
     expect(sentenceWith('WHAT FIRES')).toBe(FIRES_SENTENCE);

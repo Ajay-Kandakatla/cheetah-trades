@@ -36,7 +36,7 @@
 .gg-chip-row .cm-badge, .gg-pot-tells .cm-badge, .cm-tile-chips .cm-badge {
   white-space: normal; overflow-wrap: anywhere;
 }
-.gg-pills .gg-state, .gg-pills .gg-variant, .gg-pot-tile .gg-pot-kind, .gg-plan, .gg-criteria li, .gg-line {
+.gg-pills .gg-state, .gg-pills .gg-variant, .gg-pot-tile .gg-pot-kind, .gg-plan, .gg-criteria li, .gg-line, .gg-vol-dried, .gg-focus-divider, .gg-day2-row {
   overflow-wrap: anywhere;
 }
 .gg-row-head { font-weight: 600; padding: 0.3rem 0; }
@@ -314,3 +314,34 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   .gg-tr-table td:first-child { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
   .gg-tr-table td:first-child .cm-badge, .gg-tr-table td:first-child .gg-tr-flag { white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* 🧭 2026-11-11 (stages spec §3.5) — Setup stages row at the end of every card: the served title, each session's served
+   label and its tags (served text), the served arrow between tags. 430 px phone: the row wraps, every chip can break
+   (min-width: 0, overflow-wrap: anywhere) — a served string never widens the card (the 2026-10-19 phone rule). */
+.gg-stages { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; margin-top: 4px; font-size: 0.74rem; }
+.gg-stages-title { font-weight: 600; color: var(--ink-subtle, #94a3b8); }
+.gg-stage-day { color: var(--ink-subtle, #94a3b8); }
+.gg-stage { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.gg-stage-here { font-weight: 600; }
+.gg-stage-sep { color: var(--ink-subtle, #94a3b8); }
+
+/* ⚡ 2026-11-11 (entry spec WP-FE) — every word below is SERVED. 💧 the volume-dried pill beside the state pill; 🔝 the
+   Focus header above the first card and the divider after the last focus card (a whole grid row, like .gg-wide); 🌅 the
+   Day-2 list on ☀️; ⚡ the break word on a 🧠 Track row. 430 px phone: every new row wraps, min-width: 0 (the wrap-anywhere
+   rule above lists .gg-vol-dried, .gg-focus-divider and .gg-day2-row). */
+.gg-vol-dried {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; min-width: 0; max-width: 100%;
+  white-space: normal; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.gg-focus-head { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.gg-focus-divider {
+  grid-column: 1 / -1; min-width: 0; width: 100%; margin: 0.2rem 0; border: 0;
+  border-top: 2px dashed var(--gold, #c9a227);
+}
+.gg-day2 {
+  display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; font-size: 0.8rem; padding: 0.35rem 0.6rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+}
+.gg-day2-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.gg-day2-row { min-width: 0; white-space: normal; }
+.gg-track-brk { min-width: 0; overflow-wrap: anywhere; }

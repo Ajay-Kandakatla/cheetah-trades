@@ -512,6 +512,13 @@ def state_word(now: Optional[float] = None, *, is_enabled: Optional[bool] = None
     return "live", FEED_WORDS["live"].format(age=age)
 
 
+def authed_since() -> Optional[float]:
+    """⚡ 2026-11-11 (entry spec §3.1): the epoch of the CURRENT authentication while the socket is authed, else None.
+    chart_maps.gajjala.break_watch keys its coverage on it — a changed value (a re-auth after a kick / drop) means the
+    socket may have missed prints, so every symbol's coverage restarts at its next print. Reads state only."""
+    return _link.get("auth_ts") if feed_state.get("authed") else None
+
+
 def status_payload(*, tracked_n: int, admin: bool, events: bool = False, active_source: str = "massive_ws",
                    is_enabled: Optional[bool] = None, now: Optional[float] = None) -> dict:
     """The `/live/feed-status` body. `admin_word` and `events` only for admins; the key never appears."""

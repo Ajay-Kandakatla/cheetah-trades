@@ -246,9 +246,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -523,6 +527,7 @@
        "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -563,11 +568,41 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "Entry above 10.95 · stop 10.89 · risk 0.6%",
       "ready": true,
       "reason": "",
       "red_closes": 4,
       "risk_pct": 0.5706134094151213,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:31",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:31"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:31",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.95 · UNMEASURED",
       "stop": 10.890625,
@@ -790,6 +825,7 @@
        "rotation": "🔄 float ×1.8",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -830,11 +866,81 @@
        "text": "listed day 1/3 · since 2026-10-12"
       },
       "missed": [],
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
       "ready": true,
       "reason": "",
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": false,
+         "date": "2026-10-12",
+         "label": "Mon 10-12",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": false,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": null,
+             "stage": "potential",
+             "word": "🧠 potential"
+            },
+            {
+             "at_et": null,
+             "stage": "stopped",
+             "word": "stopped"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential · stopped"
+          }
+         ]
+        },
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 09:21"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 09:21"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "Mon 10-12: 🚩 Bull Flag · 🧠 potential · stopped → today: 🚩 Bull Flag · 🧠 potential 09:21 → 💋 EMA Kiss & Fly · 🧠 potential 09:21",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.97 · UNMEASURED",
       "stop": 10.8125,
@@ -1057,6 +1163,7 @@
        "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -1097,6 +1204,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 11.00 · stop 10.50 · risk 4.5%",
       "ready": false,
       "reason": "waiting for the pullback bar",
       "red_closes": 0,
@@ -1324,6 +1432,7 @@
        "rotation": "🔄 float ×4.5",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -1364,11 +1473,41 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 10.97 · stop 10.81 · risk 1.4%",
       "ready": false,
       "reason": "",
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 09:21"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 09:21",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — not long enough yet · UNMEASURED",
       "stop": 10.8125,
@@ -1633,6 +1772,7 @@
       "missed": [
        "k3_vol"
       ],
+      "plan_text": "trigger 10.97 · stop 10.81 · risk 1.4%",
       "ready": false,
       "reason": "broke — not A+",
       "red_closes": 2,
@@ -1810,6 +1950,10 @@
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
+   "focus": {
+    "n": 5,
+    "text": "🔝 Focus 5 — the first five cards in this board's own order (GG keeps 4–5 names active). Display only: nothing measured says these five win more."
+   },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "order_note": "🧠 trigger armed first · then highest volume",
@@ -1826,9 +1970,13 @@
     "mode": "live",
     "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
    "push_potential": {
     "mode": "live",
-    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
    "scan": {
@@ -2079,6 +2227,7 @@
        ]
       }
      ],
+     "focus": true,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -2103,6 +2252,7 @@
        "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -2143,6 +2293,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "Entry above 10.95 · stop 10.89 · risk 0.6%",
       "potential": {
        "again": false,
        "also": [],
@@ -2170,6 +2321,35 @@
       "red_closes": 4,
       "risk_pct": 0.5706134094151213,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "10:31",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 10:31"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 10:31",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.95 · UNMEASURED",
       "stop": 10.890625,
@@ -2369,6 +2549,7 @@
       }
      ],
      "ellipses": [],
+     "focus": true,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -2394,6 +2575,7 @@
        "session_badge": "RTH",
        "squeeze_history": null,
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -2441,6 +2623,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "Entry above 6.25 · stop 6.09 · risk 2.5%",
       "potential": {
        "again": false,
        "also": [],
@@ -2473,6 +2656,40 @@
       "red_closes": 2,
       "risk_pct": 2.5,
       "setup": "reversal_squeeze",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🎾",
+           "here": true,
+           "label": "Reversal Squeeze",
+           "setup": "reversal_squeeze",
+           "steps": [
+            {
+             "at_et": "10:31",
+             "stage": "potential",
+             "word": "🧠 potential"
+            },
+            {
+             "at_et": "10:36",
+             "stage": "aplus",
+             "word": "🎯 A+"
+            }
+           ],
+           "text": "🎾 Reversal Squeeze · 🧠 potential 10:31 · 🎯 A+ 10:36"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🎾 Reversal Squeeze · 🧠 potential 10:31 · 🎯 A+ 10:36",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 6.25 · UNMEASURED",
       "stop": 6.09375,
@@ -2671,6 +2888,7 @@
        ]
       }
      ],
+     "focus": true,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -2695,6 +2913,7 @@
        "rotation": "🔄 float ×1.8",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -2735,6 +2954,7 @@
        "text": "listed day 1/3 · since 2026-10-12"
       },
       "missed": [],
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
       "potential": {
        "again": true,
        "also": [
@@ -2787,6 +3007,75 @@
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": false,
+         "date": "2026-10-12",
+         "label": "Mon 10-12",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": false,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": null,
+             "stage": "potential",
+             "word": "🧠 potential"
+            },
+            {
+             "at_et": null,
+             "stage": "stopped",
+             "word": "stopped"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential · stopped"
+          }
+         ]
+        },
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 09:21"
+          },
+          {
+           "emoji": "💋",
+           "here": false,
+           "label": "EMA Kiss & Fly",
+           "setup": "kiss_fly",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "💋 EMA Kiss & Fly · 🧠 potential 09:21"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "Mon 10-12: 🚩 Bull Flag · 🧠 potential · stopped → today: 🚩 Bull Flag · 🧠 potential 09:21 → 💋 EMA Kiss & Fly · 🧠 potential 09:21",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — ready: the next bar over 10.97 · UNMEASURED",
       "stop": 10.8125,
@@ -2985,6 +3274,7 @@
        ]
       }
      ],
+     "focus": true,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -3009,6 +3299,7 @@
        "rotation": "🔄 float ×4.5",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -3049,6 +3340,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 10.97 · stop 10.81 · risk 1.4%",
       "potential": {
        "again": false,
        "also": [],
@@ -3076,6 +3368,35 @@
       "red_closes": 2,
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "🚩",
+           "here": true,
+           "label": "Bull Flag",
+           "setup": "bull_flag",
+           "steps": [
+            {
+             "at_et": "09:21",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "🚩 Bull Flag · 🧠 potential 09:21"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: 🚩 Bull Flag · 🧠 potential 09:21",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — not long enough yet · UNMEASURED",
       "stop": 10.8125,
@@ -3274,6 +3595,7 @@
        ]
       }
      ],
+     "focus": true,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -3298,6 +3620,7 @@
        "rotation": "🔄 float ×1.1",
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -3352,6 +3675,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 10.94 · stop 10.81 · risk 1.1%",
       "potential": {
        "again": false,
        "also": [],
@@ -3379,6 +3703,35 @@
       "red_closes": 2,
       "risk_pct": 1.1428571428571428,
       "setup": "horizontal_fade",
+      "stages": {
+       "groups": [
+        {
+         "clock": true,
+         "date": "2026-10-13",
+         "label": "today",
+         "tags": [
+          {
+           "emoji": "➖",
+           "here": true,
+           "label": "Horizontal Fade",
+           "setup": "horizontal_fade",
+           "steps": [
+            {
+             "at_et": "09:36",
+             "stage": "potential",
+             "word": "🧠 potential"
+            }
+           ],
+           "text": "➖ Horizontal Fade · 🧠 potential 09:36"
+          }
+         ]
+        }
+       ],
+       "hint": "The setups this stock passed through on his list, oldest first. Today's steps show the 5-minute pass time (ET) that first saw them; earlier sessions show the date only. A setup shows here once it was a 🧠 potential or its 🎯 A+ alert rang — today's and the last session's full path are on the 🧠 Potential sub's 📈 Track.",
+       "sep": " → ",
+       "text": "today: ➖ Horizontal Fade · 🧠 potential 09:36",
+       "title": "🧭 Setup stages"
+      },
       "state": "forming",
       "state_label": "forming — base 5 of 6 bars · UNMEASURED",
       "stop": 10.8125,
@@ -3601,6 +3954,7 @@
        "rotation": null,
        "session_badge": "RTH",
        "stopped_earlier": null,
+       "vol_dried": "💧 volume dried up",
        "vol_src": "min_av",
        "volume": 9000000.0
       },
@@ -3662,6 +4016,7 @@
        "text": "listed day 1/3 · since 2026-10-13"
       },
       "missed": [],
+      "plan_text": "trigger 10.48 · stop 10.42 · risk 0.6%",
       "potential": {
        "again": false,
        "also": [],
@@ -3746,9 +4101,10 @@
      "date": "2026-10-13",
      "label": "today",
      "n": 7,
-     "pushed_n": 6,
+     "pushed_n": 3,
      "rows": [
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": "🎯 entry sent 10:36 ET",
        "first_kind": "armed",
@@ -3780,6 +4136,7 @@
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
@@ -3811,6 +4168,7 @@
        "vs_trigger_text": "+4.1% vs the trigger at first sight (10.95)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -3842,6 +4200,7 @@
        "vs_trigger_text": "+4.2% vs the trigger at first sight (10.94)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
@@ -3873,6 +4232,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -3888,7 +4248,7 @@
        "last_state_text": "building",
        "move_pct": 4.59,
        "move_text": "10.90 → 11.40 (+4.6%) since first seen",
-       "push_text": "📲 sent 09:21 ET",
+       "push_text": "held: this name already rang today — one 🧠 ring per name",
        "setup": "kiss_fly",
        "setup_label": "💋 EMA Kiss & Fly",
        "symbol": "AAA",
@@ -3904,6 +4264,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -3919,7 +4280,7 @@
        "last_state_text": "A+ — broke the trigger",
        "move_pct": 4.59,
        "move_text": "10.90 → 11.40 (+4.6%) since first seen",
-       "push_text": "📲 sent 09:21 ET",
+       "push_text": "held: his first 15 minutes",
        "setup": "kiss_fly",
        "setup_label": "💋 EMA Kiss & Fly",
        "symbol": "BBB",
@@ -3939,6 +4300,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -3954,7 +4316,7 @@
        "last_state_text": "building",
        "move_pct": 4.59,
        "move_text": "10.90 → 11.40 (+4.6%) since first seen",
-       "push_text": "📲 sent 09:21 ET",
+       "push_text": "held: his first 15 minutes",
        "setup": "bull_flag",
        "setup_label": "🚩 Bull Flag",
        "symbol": "JJJ",
@@ -3977,6 +4339,7 @@
      "n": 2,
      "rows": [
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
@@ -4012,6 +4375,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "brk_text": null,
        "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
@@ -4027,7 +4391,7 @@
        "last_state_text": "partial — a rule failed",
        "move_pct": 4.59,
        "move_text": "10.90 → 11.40 (+4.6%) since first seen",
-       "push_text": "📲 sent 09:21 ET",
+       "push_text": "held: building — rings once when the trigger arms",
        "setup": "kiss_fly",
        "setup_label": "💋 EMA Kiss & Fly",
        "symbol": "ZZZ",

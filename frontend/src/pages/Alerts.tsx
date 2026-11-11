@@ -84,6 +84,10 @@ export type PassStatus = {
    *  counter's words — backend promo_names.PROMO_HOLD_TEXT, served only when
    *  the latest pass counted one. Printed, never typed here. */
   promo_held_text?: string | null;
+  /** 🧠 gajjala_potential only (⚡ 2026-11-11, entry spec §3.1 [C7]): the ⚡ line — backend
+   *  break_watch.summary_text over today's rows' `brk_state`, served only when some row has one. Printed verbatim,
+   *  never composed here. An older API omits it. */
+  brk_summary?: string | null;
   /** 🎢 🗺️ the two tape-burst passes only (2026-10-14): the clock their cron
    *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
    *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
@@ -128,6 +132,9 @@ export type GgPotentialItem = {
   held_text?: string | null;
   /** 🎪 2026-10-29: the served Promo-circuit tag (promo_names) — absent on an untagged row. */
   promo?: boolean | null; promo_text?: string | null;
+  /** ⚡ 2026-11-11 (entry spec §3.1 [C7]): the doc's `brk.state` (alert_status BRK_STATES) and its served words
+   *  (break_watch.track_text) — present only on a doc an armed-plan break was recorded on. Printed verbatim. */
+  brk_state?: string | null; brk_text?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -489,12 +496,17 @@ export function ggPotentialChipText(key: string, n: number, traderHeldText?: str
      * are SERVED (pass.promo_held_text); an older API without them keeps the
      * generic counter words (the key, de-underscored). */
     case 'promo_held':        return promoHeldText && promoHeldText.trim() ? `${n} ${promoHeldText}` : `${n} promo held`;
+    /* 2026-11-11 (entry spec §3.3 / §3.4, Ajay "Also apply your proposal too."): proposal #1 holds a building doc until
+     * it arms; proposal #2 holds a second 🧠 of a name that already rang today (potential.COUNT_KEYS). */
+    case 'building_held':     return `${n} held until armed`;
+    case 'name_held':         return `${n} held: the name already rang`;
     default: return null;
   }
 }
 export const GAJJALA_POTENTIAL_KEYS = ['tracked_today', 'new', 'armed', 'building', 'muted', 'outside_hours',
                                        'closed_day', 'stale_tape', 'joined', 'claimed_before',
-                                       'no_target', 'failed', 'graveyard', 'trader_held', 'promo_held'];
+                                       'no_target', 'failed', 'graveyard', 'trader_held', 'promo_held',
+                                       'building_held', 'name_held'];
 /* Every `held` reason of backend potential.HELD_WORDS (RULE_HELD + STORE_HELD)
  * plus D9's `joined_midsession` → the 🧠 list row's status word. A reason this
  * page does not know still prints, as "held: <its words>" — never dropped. */
@@ -505,6 +517,9 @@ export const GG_POTENTIAL_HELD_ROW: Record<string, string> = {
   stale_tape:        'held: no print in the last 5-minute bar',
   claim_error:       'held: store error — retrying next pass',
   joined_midsession: 'joined mid-session: tracking, not ringing',
+  /* 2026-11-11 (entry spec §3.3 / §3.4): potential.HELD_WORDS "building" (#1) and "name_rang" (#2). */
+  building:          'held: building — rings once when the trigger arms',
+  name_rang:         'held: this name already rang today',
 };
 const GAJJALA_KEYS = ['shadow_mode', 'shadow', 'shadow_session', 'suppressed_premarket', 'suppressed_first15',
                       'suppressed_window', 'suppressed_closed', 'suppressed_halt', 'suppressed_exhausted', 'late',
@@ -667,6 +682,8 @@ const SMALL_CHIP: CSSProperties = {
 };
 const SKIP_CHIP: CSSProperties = { ...SMALL_CHIP, background: 'rgba(217,119,6,0.14)', color: AMBER };
 const REASON_CHIP: CSSProperties = { ...SKIP_CHIP, whiteSpace: 'normal' };
+/* ⚡ 2026-11-11: the served break words are long (the strip line ~150 chars) — they wrap on a 430 px phone. */
+const BRK_CHIP: CSSProperties = { ...SMALL_CHIP, whiteSpace: 'normal', minWidth: 0 };
 
 /* The delivery line. `total` is devices targeted, `sent` devices reached. A
  * row with nobody targeted is a muted kind or a dead subscription — the cron
@@ -833,6 +850,10 @@ function PassStrip({ pass, meta, status, gate, today }: {
           under today's "no pass yet" would read as today's fact. */}
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
+      {/* ⚡ 2026-11-11 [C7]: the served break line, verbatim — the ⚡ pushes ride the 🧠 toggle, so the phone's 🧠
+          count = the 🧠 pushes + this line's. Today's pass only (the reason precedent). */}
+      {meta.key === 'gajjala_potential' && day === today && typeof pass?.brk_summary === 'string' && pass.brk_summary.trim()
+        ? <span className="mono" style={BRK_CHIP} data-testid="gg-pot-brk-summary">{pass.brk_summary}</span> : null}
       {skips.map(([k, n]) => (
         <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text, pass?.promo_held_text) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
@@ -946,6 +967,8 @@ export function GgPotentialList({ items, today }: { items: GgPotentialItem[] | n
           <GgPotentialLine it={it} />
           <GgTraderChip promoText={it.promo_text} promoTestid={`gg-alert-promo-pot-${it.symbol}-${it.setup ?? ''}`} />
           <span className="mono" style={it.push_state === 'pushed' ? SMALL_CHIP : SKIP_CHIP}>{ggPotentialRowWord(it)}</span>
+          {typeof it.brk_text === 'string' && it.brk_text.trim()
+            ? <span className="mono" style={BRK_CHIP} data-testid={`gg-pot-brk-${it.symbol}-${it.setup ?? ''}`}>{it.brk_text}</span> : null}
         </div>
       ))}
     </div>

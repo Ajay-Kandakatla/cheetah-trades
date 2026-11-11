@@ -14,6 +14,12 @@ b-word.
 GOLDEN: `GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_on_open.py -k golden` writes the FE fixture
 (frontend/src/components/__fixtures__/gajjala_on_open_golden_2026_10_15.json) from a REAL cron pass and a REAL on-open
 pass (run.run_on_demand); without the env the test proves the file IS the served payload, byte for byte.
+
+Regen 2026-11-11 (entry + stages specs, T-PINS #3; diff verified key for key against HEAD): added `gajjala.stages`
+(title / hint / sep / groups: date, clock, label, tags: setup, emoji, label, here, text, steps: stage, word, at_et),
+`gajjala.plan_text`, `gajjala.chips.vol_dried`, `push_break` {mode, text} on all three boards, 🧠 Track `brk_text`
+(null); changed `push_potential.text` (the armed / one-per-name 🧠 sentence). Nothing else moved. The ⚡ feed word is
+pinned (tests/gg_feed_pin.py) so the golden is the same on every machine.
 """
 from __future__ import annotations
 
@@ -36,6 +42,7 @@ from chart_maps.gajjala import on_demand as OD
 from chart_maps.gajjala import run as RUN
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
+from tests.gg_feed_pin import feed_pinned
 from tests.test_gajjala_store import FakeColl, fake_store
 from tests.test_gajjala_tab import R, read_doc, run_route, scan_doc, store_with
 
@@ -797,9 +804,10 @@ def golden_payload() -> str:
     st = golden_store()
     now = at(10, 42)
     # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the golden is the OWNER's payload (the 🚫 strip block)
-    doc = {"_recipe": RECIPE, "boards": {"bull_flag": GT.build("bull_flag", now=now, store=st, owner=True),
-                                         "potential": GT.build("potential", now=now, store=st, owner=True),
-                                         "playbook": GT.build("playbook", now=now, store=st, owner=True)}}
+    with feed_pinned():                     # 2026-11-11: push_break's feed word is env / socket dependent — pinned
+        doc = {"_recipe": RECIPE, "boards": {"bull_flag": GT.build("bull_flag", now=now, store=st, owner=True),
+                                             "potential": GT.build("potential", now=now, store=st, owner=True),
+                                             "playbook": GT.build("playbook", now=now, store=st, owner=True)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
 

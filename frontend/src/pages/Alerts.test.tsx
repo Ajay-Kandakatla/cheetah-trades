@@ -1814,9 +1814,10 @@ describe('Alerts page — the 🧠 Gajjala potentials pass (2026-10-15)', () => 
     expect(w({ push_state: null, held: 'some_new_hold' })).toBe('held: some new hold');
     // NEGATIVE: a settled push outranks an older hold — a sent potential never reads "held"
     expect(w({ push_state: 'pushed', held: 'muted' })).toBe('📲 sent');
-    // every backend HELD_WORDS reason (potential.py) + D9 has a row word
+    // every backend HELD_WORDS reason (potential.py) + D9 has a row word.
+    // 2026-11-11 (entry spec §6 [C2], predicted pin move): + "building" (proposal #1) and "name_rang" (proposal #2).
     expect(Object.keys(GG_POTENTIAL_HELD_ROW).sort())
-      .toEqual(['claim_error', 'closed_day', 'joined_midsession', 'muted', 'outside_hours', 'stale_tape']);
+      .toEqual(['building', 'claim_error', 'closed_day', 'joined_midsession', 'muted', 'name_rang', 'outside_hours', 'stale_tape']);
   });
 
   it('a held claim_error and a D9 mid-session join render their words on the page', async () => {

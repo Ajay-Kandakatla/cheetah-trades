@@ -73,14 +73,23 @@ CONCEPT = ("strong demand, goes sideways at the top of the bars, volume subsides
            "highs — this is the concept of all the moves", "S9 1:54:53")
 COUNT_KEYS = ("potential", "armed", "building", "new", "tracked_today", "pushed", "claimed_before", "muted",
               "outside_hours", "closed_day", "stale_tape", "no_target", "failed", "dry", "graveyard", "joined",
-              "trader_held")                                     # 📌 A2 2026-10-27 — appended LAST
+              "trader_held",                                     # 📌 A2 2026-10-27 — appended after the existing keys
+              "building_held", "name_held")                      # 2026-11-11 proposals #1 / #2 — appended after trader_held
 HELD_WORDS = {"muted": f"his first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes", "outside_hours": "outside the push hours",
               "closed_day": "market closed", "stale_tape": f"no print in the last {GC.PASS_CADENCE_SEC // 60}-minute bar",
               "claim_error": "store error — retrying next pass",
-              "joined_midsession": "joined mid-session: tracking, not ringing"}   # built, not typed numbers
+              "joined_midsession": "joined mid-session: tracking, not ringing",   # built, not typed numbers
+              "building": "building — rings once when the trigger arms",          # 2026-11-11 proposal #1
+              "name_rang": "this name already rang today — one 🧠 ring per name"}  # 2026-11-11 proposal #2
 RULE_HELD = ("closed_day", "outside_hours", "muted", "stale_tape")   # refused by his window / the tape — P1 decides a re-ring
 STORE_HELD = ("claim_error",)                                        # a store fault — ALWAYS retried next pass (it never rang; K3)
 JOIN_HELD = ("joined_midsession",)                                   # D9 — tracked, NEVER rung
+# 2026-11-11 (Ajay "Also apply your proposal too." — entries_followthrough.md proposals #1 / #2; switches
+# GC.POTENTIAL_PUSH_ARMED_ONLY / GC.POTENTIAL_ONE_RING_PER_NAME): a doc that cleared every other gate while still
+# BUILDING is held "building" and rings the first time it arms (no continuity test — a re-armed structure is the
+# event); a name that already rang today (any `push` block of any setup) is held "name_rang", final for the day.
+BUILDING_HELD = ("building",)
+NAME_HELD = ("name_rang",)
 # 📌 A2 (2026-10-27, BUILD_SPEC26 AMENDMENTS — GG's 1M floor stays on EVERY push): a 📌 trader ADD (row source "trader")
 # is tracked from its first sighting but its push is HELD while the session volume the pass read is under
 # GC.SCAN_MIN_VOLUME — the D9 path (`_hold`, the `held` list); it rings on the pass the volume clears it, while the
@@ -426,6 +435,19 @@ def _join_sentence(mute_end: str) -> str:
             f"already forming without ringing it {CHEETAH_TAG}.")
 
 
+def ring_rule() -> str:
+    """The 🧠 ring rule in words, built from the two 2026-11-11 switches (Ajay "Also apply your proposal too." —
+    proposals #1 / #2): armed only → "the first time it is armed (every rule met, only the break missing)"; one ring per
+    name → "one push per name and session". Both switches off → the pre-2026-11-11 words, byte for byte."""
+    armed, per_name = GC.POTENTIAL_PUSH_ARMED_ONLY, GC.POTENTIAL_ONE_RING_PER_NAME
+    if not armed and not per_name:
+        return "one push per name, setup and session the first time it is a potential"
+    when = ("the first time it is armed (every rule met, only the break missing)" if armed
+            else "the first time it is a potential")
+    per = "one push per name and session" if per_name else "one push per name, setup and session"
+    return f"{when} — {per}"
+
+
 def push_note(session, variant=None) -> str:
     """W15 — the tab's `push_potential.text`, under the narrowed A+ line. The 1-minute page (2026-10-27): its own frozen
     sentence (variant.WORDS_1M "push_potential" — shadow 2026-10-27…28, live since 2026-10-29 by his call; the words
@@ -435,10 +457,9 @@ def push_note(session, variant=None) -> str:
         return V.word("push_potential", variant, open=w["open"], close=w["close"],
                       cad=V.cadence_sec(variant) // 60, rth_open=w["rth_open"], mute_end=w["mute_end"], n=w["n"])
     first, last = pass_times(session)
-    return (f"🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a "
-            f"potential, {w['open']}–{w['close']} ET on the {w['cadence']}-minute pass (passes from {first} to {last} "
-            f"ET), never {w['rth_open']}–{w['mute_end']} (his first {w['n']} minutes). {_join_sentence(w['mute_end'])} "
-            f"{TAIL}.")
+    return (f"🧠 Potentials ring your phone live — {ring_rule()}, {w['open']}–{w['close']} ET on the "
+            f"{w['cadence']}-minute pass (passes from {first} to {last} ET), never {w['rth_open']}–{w['mute_end']} "
+            f"(his first {w['n']} minutes). {_join_sentence(w['mute_end'])} {TAIL}.")
 
 
 def defaults_clauses() -> list:
@@ -481,19 +502,38 @@ def rules_lines() -> list:
          f"printed. On top, three conditions that are not his: {c1}; {c2}; {c3}. Badges, never rules: float (lower "
          "first), 🔄 float rotation, ⏸ halts today, 🌙 after-hours mover last session, 📅 on his scanner the session "
          "before, 🧩 forming in another setup too.")
-    b = (f"📲 {KIND} (ON for the owner — mute at /notifications), live: one push per name, setup and session the first "
-         f"time it is a potential, {w['open']}–{w['close']} ET on the {w['cadence']}-minute pass, never "
+    b = (f"📲 {KIND} (ON for the owner — mute at /notifications), live: {ring_rule()}, "
+         f"{w['open']}–{w['close']} ET on the {w['cadence']}-minute pass, never "
          f"{w['rth_open']}–{w['mute_end']} (his first {w['n']} minutes); silent on closed days. 📈 Track records each "
          f"from its first sighting. {_join_sentence(w['mute_end'])} {TAIL}.")
     return [a, b]
 
 
 # ── 📈 the tracker ────────────────────────────────────────────────────────────────────────────────────────────────
-def _last_block(read: dict, kind, now, px) -> dict:
-    return {"at": _utc(now), "at_et": _hhmm(now), "state": read.get("state"), "ready": read.get("ready") is True,
-            "kind": kind, "trigger": _num(read.get("trigger")), "stop": _num(read.get("stop")), "px": _num(px),
-            "bar_t": read.get("as_of_bar_t"), "reason": read.get("reason") if isinstance(read.get("reason"), str)
-            else None}
+_UNSET = object()                                                    # "the kwarg was not given" (GG1 → no key)
+
+
+def _suppression_on() -> bool:
+    """alerts.extra_suppression's two switches — both None (OFF) today, so `last` carries no halt / gain key."""
+    return GC.HALT_CALM_BARS is not None or GC.AH_EXHAUSTION_MAX_PCT is not None
+
+
+def _last_block(read: dict, kind, now, px, session_volume=_UNSET, halt_ctx=_UNSET) -> dict:
+    """The tracker's `last`. 2026-11-11 (the ⚡ break watch's input contract): `session_volume` (the number K11 reads,
+    run.py's `sv[sym]`) is added ONLY when the kwarg was given (GG5's pass; the 1-minute page never passes it, so its
+    bytes do not move); `halt_ctx` (the pass's ctx for the symbol) adds `halt_resume_et` / `reg_gain_pct` ONLY when
+    given AND a suppression switch is ON (alerts.extra_suppression's inputs)."""
+    out = {"at": _utc(now), "at_et": _hhmm(now), "state": read.get("state"), "ready": read.get("ready") is True,
+           "kind": kind, "trigger": _num(read.get("trigger")), "stop": _num(read.get("stop")), "px": _num(px),
+           "bar_t": read.get("as_of_bar_t"), "reason": read.get("reason") if isinstance(read.get("reason"), str)
+           else None}
+    if session_volume is not _UNSET:
+        out["session_volume"] = _num(session_volume)
+    if halt_ctx is not _UNSET and _suppression_on():
+        hc = halt_ctx if isinstance(halt_ctx, dict) else {}
+        out["halt_resume_et"] = hc.get("last_halt_resume_et")
+        out["reg_gain_pct"] = hc.get("reg_gain_pct")
+    return out
 
 
 def _pct_move(a, b) -> Optional[float]:
@@ -502,7 +542,8 @@ def _pct_move(a, b) -> Optional[float]:
 
 
 def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False, mode="normal", known=False,
-          trader: Optional[str] = None, promo: Optional[bool] = None, promo_text: Optional[str] = None) -> tuple:
+          trader: Optional[str] = None, promo: Optional[bool] = None, promo_text: Optional[str] = None,
+          session_volume=_UNSET, halt_ctx=_UNSET) -> tuple:
     """-> (doc | None, is_new). Creates the doc at the FIRST pass whose read is a potential; after that follows every
     state of that (symbol, setup) for the session, appending to `state_path` only when (state, kind) changes — so a
     replayed pass (same clock, same read) leaves the doc byte-identical. ONE `update_one` upsert with disjoint
@@ -511,7 +552,9 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
     pass already saw this doc on file (run_pass's session read): a None read then is a READ FAULT, never a new doc —
     nothing is written (the timeline and the move survive) and the gate skips the name this pass. 📌 `trader`
     (2026-10-27): the flagged trader's key, stamped on the INSERT only and only when truthy (the 🏁 ledger's tag).
-    🎪 `promo` / `promo_text` (2026-10-29): the same rule — on the INSERT only, and only when `promo` is True."""
+    🎪 `promo` / `promo_text` (2026-10-29): the same rule — on the INSERT only, and only when `promo` is True.
+    2026-11-11: `session_volume` / `halt_ctx` go to `_last_block` (GG5 only; absent = the key is not written).
+    The ⚡ break watch's `brk` / `brk_held` are preserved like `push` / `held` (never written here)."""
     sym = (sym or "").upper()
     read = read if isinstance(read, dict) else {}
     existing = store.get_potential(session, sym, setup)
@@ -546,7 +589,7 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
     if not path or (path[-1].get("state"), path[-1].get("kind")) != (state, kind):
         path.append({"at": now_u.isoformat(), "at_et": hhmm, "state": state, "kind": kind,
                      "bar_t": read.get("as_of_bar_t")})
-    last = _last_block(read, kind, now, px)
+    last = _last_block(read, kind, now, px, session_volume=session_volume, halt_ctx=halt_ctx)
     first_px, first_trig = base.get("first_px"), base.get("first_trigger")
     sets = {"last": last, "state_path": path, "move_pct": _pct_move(last["px"], first_px),
             "vs_trigger_pct": _pct_move(last["px"], first_trig), "url": deep_link(sym, setup, V.of(store)),
@@ -558,7 +601,7 @@ def track(store, session, sym, setup, read, kind, now, *, px, values, dry=False,
             log.warning("gajjala potential: tracker write missed for %s", _id)
     doc = dict(base, **sets)
     doc["_id"] = _id
-    for k in ("push", "held", "graveyard_on"):
+    for k in ("push", "held", "graveyard_on", "brk", "brk_held"):
         doc.pop(k, None)
         if existing is not None and k in existing:
             doc[k] = existing[k]
@@ -601,16 +644,24 @@ def eligible(doc: dict, is_new: bool, kind: Optional[str]) -> bool:
     (alone or beside a store hold) and a doc with no hold at all (its hold write may be the one that was lost) ring
     only while the path is unbroken (`_unbroken`, D3) — the continuity check runs BEFORE the store-fault shortcut. A
     doc first seen by a join pass (`first_seen_mode` "joined", written in the SAME upsert that created it) or held
-    `joined_midsession` NEVER rings (D9) — even when its hold write was lost."""
+    `joined_midsession` NEVER rings (D9) — even when its hold write was lost.
+    2026-11-11 (proposals #1 / #2): a doc held "name_rang" never rings that day; a doc held ONLY "building" (no other
+    reason ever written) passes — it rings the first time it arms, no continuity test (run_pass re-holds it while it
+    is still building); a doc also held by a RULE / ADD / STORE reason keeps that reason's own test."""
     if kind is None or not isinstance(doc, dict) or "push" in doc:
         return False
     if is_new:
         return True
     if doc.get("first_seen_mode") == FIRST_SEEN_MODES[1]:
         return False
-    reasons = _held_reasons(doc)
-    if reasons & set(JOIN_HELD):
+    raw = _held_reasons(doc)
+    if raw & set(JOIN_HELD):
         return False
+    if raw & set(NAME_HELD):
+        return False
+    reasons = raw - set(BUILDING_HELD)
+    if raw and not reasons:
+        return True
     if reasons & set(RULE_HELD):
         return GC.POTENTIAL_DEFER_REFUSED and _unbroken(doc)
     if reasons & set(ADD_HELD):                                 # 📌 A2 / 🎪 — the floor decides at the gate, every pass
@@ -688,7 +739,7 @@ def _frame_close(frames_obj) -> Optional[float]:
 
 def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Callable] = None, owner=None,
              dry=False, tape=None, live_rows: Optional[dict] = None, trader_hold: Optional[dict] = None,
-             promo_hold: Optional[dict] = None) -> dict:
+             promo_hold: Optional[dict] = None, session_volume: Optional[dict] = None) -> dict:
     """Track every potential of the pass and ring each FIRST sighting once (K3), live, owner-only.
 
     `reads` = {SYM: {setup: Read}}; `frames` = {SYM: bars.Frames}; `ctx` = {SYM: the read doc's ctx}; `rows` = {SYM:
@@ -705,7 +756,13 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     2026-10-27 (BUILD_SPEC27 §3.5): the variant is the store's (`V.of(store)`); signature unchanged. A non-GG5 variant
     in shadow (variant.push_mode — GAJJALA_1M_PUSH_MODE) claims as always, then SETTLES {"state": "shadow", "at_et",
     "result": {"would_push": payload}} and counts "shadow" (a key ONLY its counts carry) — the sender is never called.
-    Live (the 1-minute page since 2026-10-29): the same send path as GG5, through the variant's sender."""
+    Live (the 1-minute page since 2026-10-29): the same send path as GG5, through the variant's sender.
+    2026-11-11 (Ajay "Also apply your proposal too." — proposals #1 / #2): after every other gate, a name that already
+    rang today (any `push` block, any setup) is held "name_rang" (counted "name_held") when POTENTIAL_ONE_RING_PER_NAME,
+    then a still-BUILDING potential is held "building" (counted "building_held") when POTENTIAL_PUSH_ARMED_ONLY — it
+    rings the first time it arms. `session_volume` = {SYM: the session volume K11 reads} (GG5's run.py only): each
+    tracker `last` then carries `session_volume` (the ⚡ break watch's 1M floor), and — only while a suppression
+    switch is ON — `halt_resume_et` / `reg_gain_pct` from `ctx`; None (the 1-minute page) → no key, its bytes unchanged."""
     from . import alerts as AL
     from . import store as ST
     from . import tab as GT
@@ -756,6 +813,13 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
         counts.pop("tracked_today", None)
         return counts
     today = {d.get("_id") for d in docs_today if isinstance(d, dict)}
+    rang = {str(d.get("symbol") or "").upper() for d in docs_today if isinstance(d, dict) and "push" in d}   # #2
+    sv_map = None if session_volume is None else {str(k).upper(): v for k, v in session_volume.items()}
+
+    def last_kw(sym) -> dict:                                   # 2026-11-11 — the ⚡ input contract, GG5 only
+        if sv_map is None:
+            return {}
+        return {"session_volume": sv_map.get(sym), "halt_ctx": ctx.get(sym)}
     joining = (not today and _et(now) >= _mute_end(_et(now).date())          # D9 — the JOIN RULE
                and not _previous_pass_ran_gate(store, session, now))
     closed = AL._closed_reason(now)
@@ -783,7 +847,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
 
     for sym, setup, r in rest:                                  # a tracked name that is no longer a potential
         if doc_id(session, sym, setup) in today:
-            track(store, session, sym, setup, r, None, now, px=px_of(sym), values={}, dry=dry)
+            track(store, session, sym, setup, r, None, now, px=px_of(sym), values={}, dry=dry, **last_kw(sym))
 
     for _k, sym, setup, r, kind, values in pots:
         counts["potential"] += 1
@@ -792,7 +856,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
         doc, is_new = track(store, session, sym, setup, r, kind, now, px=px_of(sym), values=values, dry=dry,
                             mode=FIRST_SEEN_MODES[1] if joining else FIRST_SEEN_MODES[0],
                             known=doc_id(session, sym, setup) in today, trader=c.get("trader"),
-                            promo=c.get("promo"), promo_text=c.get("promo_text"))
+                            promo=c.get("promo"), promo_text=c.get("promo_text"), **last_kw(sym))
         if doc is None:                                         # a read fault on a doc on file: skip, never re-create
             counts["failed"] += 1
             continue
@@ -810,6 +874,10 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             reason = ckey = "stale_tape"
         elif add_hold(sym) is not None:
             reason, ckey = add_hold(sym)                        # 📌 A2 / 🎪 — GG's 1M floor stays on every push
+        elif GC.POTENTIAL_ONE_RING_PER_NAME and sym in rang:
+            reason, ckey = NAME_HELD[0], "name_held"            # #2 — one 🧠 ring per name per day
+        elif GC.POTENTIAL_PUSH_ARMED_ONLY and kind != GC.POTENTIAL_KINDS[0]:
+            reason, ckey = BUILDING_HELD[0], "building_held"    # #1 — rings the first time it arms
         if reason:
             counts[ckey] += 1
             if not dry:
@@ -829,10 +897,12 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             again = store.get_potential(session, sym, setup) if claim == "taken" else None
             if isinstance(again, dict) and "push" in again:
                 counts["claimed_before"] += 1                   # another pass holds the claim — no send
+                rang.add(sym)                                   # #2 — that push block consumes the name too
             else:
                 counts["failed"] += 1                           # a lost write or a store fault: fail closed, retry
                 _hold(store, doc, STORE_HELD[0], now)
             continue
+        rang.add(sym)                                           # #2 — a second setup of this name is held this pass
         payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
                           broker_text=GT.broker_text_for(sym, flags), trader_text=c.get("trader_text"),
                           promo_text=c.get("promo_text"), variant=var)
@@ -868,7 +938,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
 
 
 __all__ = ["KIND", "TAIL", "KIND_LABEL", "CONCEPT", "COUNT_KEYS", "HELD_WORDS", "RULE_HELD", "STORE_HELD", "JOIN_HELD",
-           "FIRST_SEEN_MODES", "TRADER_HELD", "PROMO_HELD", "ADD_HELD", "PROMO_COUNT_KEY", "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
+           "FIRST_SEEN_MODES", "TRADER_HELD", "PROMO_HELD", "ADD_HELD", "PROMO_COUNT_KEY", "BUILDING_HELD", "NAME_HELD",
+           "AGAIN_TEXT", "potential_kind", "tell_values", "tells", "order_key", "state_word",
            "doc_id", "deep_link", "held_words", "line", "row_text", "compose", "window_reason", "fresh_tape", "pass_times",
-           "push_note", "rules_lines", "defaults_clauses", "defaults_sentence", "track", "eligible", "mark_graveyard",
+           "ring_rule", "push_note", "rules_lines", "defaults_clauses", "defaults_sentence", "track", "eligible", "mark_graveyard",
            "run_pass"]

@@ -49,6 +49,9 @@ function board(patch: (b: any) => void = () => {}): any {
   const b = clone(BOARDS.reversal_squeeze);
   b.session = { ...b.session, refresh_sec: 0 };
   b.tiles = [clone(BOARDS.reversal_squeeze.tiles[0]), clone(BOARDS.bull_flag.tiles[0])];
+  // ⚡ 2026-11-11 (entry spec §3.2, predicted pin): the plan line is the SERVED plan_text — the hand fixture predates it.
+  b.tiles[0].gajjala.plan_text = 'Entry above 3.42 · stop 3.18 · risk 7.0%';
+  b.tiles[1].gajjala.plan_text = 'Entry above 4.12 · stop 3.95 · risk 4.1%';
   patch(b);
   return b;
 }

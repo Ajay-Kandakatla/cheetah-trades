@@ -119,6 +119,14 @@ journal-only: NOT read by the p.299 stop rule (`entries._closed_trade_stats`) or
 🚩 Gajjala trades pair by alert id (the lane's own `gajjala_exit` / `gajjala_lane` book); the breakeven add's stale journal docs are
 marked `superseded`, never deleted. UNMEASURED — a tally of what happened, not a study.
 
+**🏁 Not traded on the 🚩 lane (2026-11-11, `backend/trading/gajjala_untraded.py`, `docs/trading_gajjala_lane.md`).**
+Ajay: "Maintain a track record when Alpaca is blocked please, Like we do in Gajjals so I know how our strategies are working".
+Every 🚩 lane row with no fill carries `track_state` / `track_text` (`gajjala_entry.ROW_KEYS`): the 🏁 Track record's own
+grade of the same alert (`ledger.grade`, one engine), shown as "not traded · 🏁"; the served `untraded` block under Lane
+journal totals them beside the lane's fills. Pure reads: no order / broker import, no write; never in the paper P&L,
+sizing or the loss streak. UNMEASURED. Contracts "🏁 lane not-traded record (2026-11-11)"; ✨
+`autopilot-gajjala-lane-not-traded-record-2026-11-11`.
+
 **Module-level state in `main.py`:**
 - `cache: QuoteCache` — `_data` dict + `_ticks` deque per symbol (maxlen=`TICK_WINDOW`=64).
   Each `update()` recomputes RSI(14) + VWAP + last-32 sparkline.
@@ -884,6 +892,27 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `test_gajjala_audited_k3s_rules_2026_11_09.py`; FE `src/pages/Notifications.gajjala_potential.test.tsx`; ✨ order +1
   in `GajjalaBoard.promo_chip.test.tsx`, `newFeatures.gga_mods.test.ts`, `newFeatures.luk.test.ts` and `contracts.mjs`;
   docstring / comment only: `test_gajjala_audited_pass.py`, `test_gajjala_variant_gg5_identity.py`).
+- **⚡ Enter like GG** (2026-11-11, Ajay: *"Here is how he enters please tell me to enter based on this"*) — the card's
+  ONE plan line is served: `tab.plan_text` → "Entry above X · stop Y · risk r%" (on `tab._px`, the broker grid; "Entry
+  above" only when `ledger.plan_of` is the first plan, else "trigger …"); `GajjalaBoard` prints `read.plan_text`
+  verbatim. `chart_maps/gajjala/break_watch.py` watches the ARMED 🧠 plans on the live socket (its own "gg-brk" worker)
+  and records the ⚡ intrabar break; `GAJJALA_BREAK_PUSH_MODE = "shadow"` (recorded on /alerts, no device — HIS CALL #1),
+  `GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND` (HIS CALL #2). The bar-close A+ is unchanged. UNMEASURED. Doc
+  `docs/gajjala/entry_break_2026_11_11.md`; contracts "⚡ Gajjala enter like GG (2026-11-11)" + the re-pinned "🚫 Gajjala
+  no-risk A+ · one price grid"; ✨ `chart-maps-gajjala-entry-break-2026-11-11`.
+- **🧠 Proposals applied** (2026-11-11, Ajay: *"Also apply your proposal too."*) — `POTENTIAL_PUSH_ARMED_ONLY` (a 🧠 rings
+  only once armed; held "building") and `POTENTIAL_ONE_RING_PER_NAME` (held "name_rang"), read by name in
+  `potential.py`; the 1-minute A+ push adds `alerts.CHASE_TEXT` facts (GG5 byte-identical); `tab.VOL_DRIED_TEXT` 💧 chip;
+  🌅 `tab.day2_block` on ☀️ (a list, no push); 🔝 `tab.focus_block` marks the first `FOCUS_N` cards (display only, never
+  reorders). Studies #5–#7 pre-registered, not run. UNMEASURED. Doc `docs/gajjala/proposals_applied_2026_11_11.md`;
+  contracts "🧠 armed-only · one ring per name (2026-11-11)", "💧 🌅 🔝 card extras (2026-11-11)"; ✨
+  `chart-maps-gajjala-proposals-applied-2026-11-11`.
+- **🧭 Setup stages on every card** (2026-11-11, Ajay: *"… what stages a stock has crossed in the past like Bullflag ->
+  EMA Kiss and Fly -> and Horizontal -Fade … with time stamps if its same day"*) — `chart_maps/gajjala/stages.py` (pure:
+  imports constants only) turns the 🧠 tracker's `state_path` + the live A+ that rang (`tab._entry_times`) into tags,
+  read ONCE per board by `tab._stage_tag`; `GgStages.tsx` prints the served words on 🚩, 1-minute and 🧪 cards. A clock
+  for today's session only, the date otherwise. Display only. Doc `docs/gajjala/setup_stages_2026_11_11.md`; contracts
+  "🪜 Gajjala stages tags (2026-11-11)"; ✨ `chart-maps-gajjala-stages-2026-11-11`.
 - **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
   https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
   reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside

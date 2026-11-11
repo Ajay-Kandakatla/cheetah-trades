@@ -16,12 +16,17 @@ What it does (nothing here changes a rule, a gate, a push or a detector):
       4. the gate snapshot: `exit_engine.get_config()` (one find_one), `trading.broker.mode()` (env), market open from
          the LOCAL calendar (`market_hours.gate.closed_reason` + the RTH clock) — NO Alpaca call, ever. `on_print`
          reads one bool.
-      5. watch set = lane symbols ∪ today's A+ symbols ∪ every variant's live interest → `live_feed.watch/unwatch`.
+      3b. ⚡ (2026-11-11, entry spec §3.1): the GG5 pass pointer change, or the first poll of a day →
+          `break_watch.request_refresh(day, now)` — NON-BLOCKING, it runs on break_watch's OWN "gg-brk" worker (never
+          queued behind a lane order on this hub's worker).
+      5. watch set = lane symbols ∪ today's A+ symbols ∪ every variant's live interest ∪ break_watch's symbols
+         → `live_feed.watch/unwatch`.
       6. the bar clock: once per 5-minute boundary at boundary + BAR_CLOSE_OFFSET_SEC → `gajjala_stream.on_bar_close`
          on the worker; a boundary missed by more than BAR_CLOCK_LATE_MAX_SEC (host sleep) is skipped and logged.
       7. `live_events.flush(now)` (the quote batches).
   * `on_print(pr)` — the `live_feed` listener, sync, O(1), no I/O, never raises: ONE print filter (PRINT_KINDS through
-    `orderflow.tape.print_kind`) BEFORE either consumer, so the lane and the screen read the same tape.
+    `orderflow.tape.print_kind`) BEFORE every consumer, so the lane, the ⚡ break watch and the screen read the same
+    tape (order: lane → break → screen).
   * `register_interest(variant, symbols, levels)` — the on-screen cards, keyed (variant, symbol), TTL
     INTEREST_TTL_SEC, at most INTEREST_MAX symbols per variant (the excess is refused, never silently cut).
 
@@ -68,6 +73,7 @@ PRINT_KINDS = ("regular",)                               # HIS CALL #2 — names
 ERR_LOG_EVERY_SEC = 60.0                                 # MINE — one log line per failing consumer per minute
 STREAM_MOD = "trading.gajjala_stream"
 EVENTS_MOD = "chart_maps.gajjala.live_events"
+BREAK_MOD = "chart_maps.gajjala.break_watch"            # ⚡ 2026-11-11 (entry spec §3.1) — fenced like the others
 assert all(k in OT.PRINT_KINDS for k in PRINT_KINDS)
 
 # ── state (single process) ──────────────────────────────────────────────────────────────────────────────────────
@@ -85,7 +91,7 @@ _MISSING = object()
 def _fresh_view() -> dict:
     return {"day": None, "doc_view": {}, "lane_syms": frozenset(), "aplus_syms": frozenset(), "gate_ok": False,
             "cfg": {}, "seen": set(), "seeded_day": None, "lane_sig": _MISSING, "pass_sig": {},
-            "next_fire": None}
+            "next_fire": None, "brk_syms": frozenset(), "brk_day": None}
 
 
 _view.update(_fresh_view())
@@ -363,6 +369,7 @@ def apply(world: dict, now_et: datetime) -> None:
             _call(EVENTS_MOD, "on_lane_change", day, now_et)
         v["lane_sig"] = sig
     # 3. pass pointers
+    brk_refresh = v.get("brk_day") != day
     for phys, tabs in _pass_groups():
         if phys not in world.get("passes", {}):
             continue
@@ -373,13 +380,21 @@ def apply(world: dict, now_et: datetime) -> None:
         if prev is not _MISSING and sig != prev and ptr.get("pass_id"):
             for tab in tabs:
                 _call(EVENTS_MOD, "on_pass", tab, ptr.get("pass_id"), fin)
+            if V.GG5.tab in tabs:
+                brk_refresh = True
         v["pass_sig"][phys] = sig
+    # 3b. ⚡ the break watch's plans — NON-BLOCKING (its own "gg-brk" worker) [entry spec C5]
+    if brk_refresh:
+        v["brk_day"] = day
+        _call(BREAK_MOD, "request_refresh", day, now_et)
     # 4. the gate snapshot (no Alpaca call)
     if "cfg" in world:
         v["cfg"] = world.get("cfg") or {}
         v["gate_ok"] = _gate_ok(world.get("cfg"), world.get("mode"), now_et)
     # 5. the watch set
-    desired = set(v["lane_syms"]) | set(v["aplus_syms"]) | _live_interest(time.time())
+    brk = _call(BREAK_MOD, "symbols")
+    v["brk_syms"] = frozenset(brk) if isinstance(brk, (set, frozenset)) else frozenset()
+    desired = set(v["lane_syms"]) | set(v["aplus_syms"]) | _live_interest(time.time()) | set(v["brk_syms"])
     added = sorted(desired - _watch)
     removed = sorted(_watch - desired)
     _watch.difference_update(removed)
@@ -440,7 +455,8 @@ async def run(*, sleep: Optional[Callable] = None) -> None:
 
 # ── the print path (sync, O(1), no I/O) ─────────────────────────────────────────────────────────────────────────
 def on_print(pr: dict) -> None:
-    """The `live_feed` listener. ONE filter (PRINT_KINDS) before EITHER consumer (C7). Never raises."""
+    """The `live_feed` listener. ONE filter (PRINT_KINDS) before EVERY consumer (C7). Never raises. Order: the lane,
+    then the ⚡ break watch (2026-11-11), then the screen — each fenced."""
     try:
         kind = OT.print_kind(pr.get("c"))
         if kind not in PRINT_KINDS:
@@ -450,6 +466,8 @@ def on_print(pr: dict) -> None:
         v = _view
         if sym in v["lane_syms"] or sym in v["aplus_syms"]:
             _call(STREAM_MOD, "on_print", pr, v["doc_view"], v["gate_ok"])
+        if sym in v.get("brk_syms", ()):
+            _call(BREAK_MOD, "on_print", pr)
         tabs = _interest_syms.get(sym)
         if tabs:
             now = pr.get("recv") or time.time()

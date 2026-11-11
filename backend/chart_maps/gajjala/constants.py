@@ -158,6 +158,12 @@ POTENTIAL_PUSH_KIND = "gajjala_potential"    # Ajay 2026-10-15 msg 3 — NEW kin
 POTENTIAL_NEEDS_BASE = True                  # Cheetah default (MINE, not GG — HIS CALL P0): ≥1 sideways bar; DECISIONS4 "first two clauses present"
 POTENTIAL_DEFER_REFUSED = True               # Cheetah default (MINE, not GG — HIS CALL P1): a first sighting held by the mute / no fresh print rings at the next eligible pass while still a potential
 POTENTIAL_FRESH_TAPE = True                  # Cheetah default (MINE, not GG — HIS CALL P2): ring only when the 5-minute bar that just closed printed (alerts.MAX_ENTRY_AGE_SEC)
+POTENTIAL_PUSH_ARMED_ONLY = True             # Ajay 2026-11-11 "Also apply your proposal too." — proposal #1 (entries_followthrough.md:236): a 🧠 rings only when armed; a doc first seen building rings once when it arms
+POTENTIAL_ONE_RING_PER_NAME = True           # Ajay 2026-11-11 "Also apply your proposal too." — proposal #2 (entries_followthrough.md:237)
+GAJJALA_BREAK_PUSH_MODES = ("off", "shadow", "live")   # Ajay 2026-11-11 "please tell me to enter based on this" — the three states of the ⚡ break push
+GAJJALA_BREAK_PUSH_MODE = "shadow"           # HIS CALL #1 — Ajay 2026-11-11 "please tell me to enter based on this"; SHADOW until his word ("live" = rings his phone)
+GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND   # HIS CALL #2 — rides the 🧠 kind (no 8th OWNER_KEEP_SET kind); "gajjala_break" only on his word
+FOCUS_N = 5                                  # Ajay 2026-11-11 "Also apply your proposal too." — proposal #9 "Focus 5"; GG U14 "4–5 active (1–2 in poor markets)"
 PASS_MINUTE_OFFSET = 1                       # TRANSPORT — = the crontab minute field "1-56/5" of chart_maps.gajjala.run (test pins it)
 
 # WP6 study — Ajay round C (exits reported side by side; placebo = same-session scanner names with no setup)

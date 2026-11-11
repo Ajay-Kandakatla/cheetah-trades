@@ -422,7 +422,9 @@ def test_a_first_sighting_in_the_window_rings_exactly_once_with_the_copy(no_ab_s
     assert no_ab_sender.calls == []
 
 
-def test_a_building_push_says_not_armed_yet_and_carries_the_stop():
+def test_a_building_push_says_not_armed_yet_and_carries_the_stop(monkeypatch):
+    # 2026-11-11: proposals #1 / #2 switched OFF here — this test reads a building push's body (rung only with POTENTIAL_PUSH_ARMED_ONLY off); the new gates: test_gajjala_potential_armed_name_2026_11_11.py
+    monkeypatch.setattr(GC, "POTENTIAL_PUSH_ARMED_ONLY", False)
     st = fake_store()
     seed(st)
     send = Rec(OK_SEND)
@@ -563,7 +565,10 @@ def test_no_target_when_no_device_takes_it():
     assert out["no_target"] == 1 and doc_of(st)["push"]["state"] == "no_target"
 
 
-def test_NEGATIVE_the_potential_pass_never_touches_the_a_plus_kind_or_its_ledger(no_ab_sender):
+def test_NEGATIVE_the_potential_pass_never_touches_the_a_plus_kind_or_its_ledger(no_ab_sender, monkeypatch):
+    # 2026-11-11: proposals #1 / #2 switched OFF here — this test reads five setups of ONE name (one per setup — K3); the new gates: test_gajjala_potential_armed_name_2026_11_11.py
+    monkeypatch.setattr(GC, "POTENTIAL_PUSH_ARMED_ONLY", False)
+    monkeypatch.setattr(GC, "POTENTIAL_ONE_RING_PER_NAME", False)
     # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the mode clause is dropped (the A+ kind is live);
     # the potential pass still never writes the A+ ledger nor calls the A+ sender (the AST guard below unchanged)
     st = fake_store()
@@ -614,7 +619,9 @@ def test_also_forming_names_the_other_setups_of_the_same_name():
         ["bull_flag"]
 
 
-def test_the_pass_pushes_in_order_key_order():
+def test_the_pass_pushes_in_order_key_order(monkeypatch):
+    # 2026-11-11: proposals #1 / #2 switched OFF here — this test reads the send order of an armed AND a building name; the new gates: test_gajjala_potential_armed_name_2026_11_11.py
+    monkeypatch.setattr(GC, "POTENTIAL_PUSH_ARMED_ONLY", False)
     st = fake_store()
     seed(st)
     send = Rec(OK_SEND)
@@ -626,6 +633,8 @@ def test_the_pass_pushes_in_order_key_order():
 
 # ── Revision 1 ───────────────────────────────────────────────────────────────────────────────────────────────────
 def test_OVERLAP_NEGATIVE_a_stale_read_never_wipes_the_claim_and_never_rings_twice(monkeypatch):
+    # 2026-11-11: proposals #1 / #2 switched OFF here — this test reads the claim guard (with #2 on, the name check holds pass B before its claim — also pinned below); the new gates: test_gajjala_potential_armed_name_2026_11_11.py
+    monkeypatch.setattr(GC, "POTENTIAL_ONE_RING_PER_NAME", False)
     st = fake_store()
     send = Rec(OK_SEND)
     reads = {"AAA": {"bull_flag": bf_armed()}}
@@ -642,6 +651,11 @@ def test_OVERLAP_NEGATIVE_a_stale_read_never_wipes_the_claim_and_never_rings_twi
     monkeypatch.setattr(st, "get_potential", b_get)
     out = go(st, at(9, 46, ss=20), reads, send=send)                        # pass B writes + gates
     assert out["claimed_before"] == 1 and out["failed"] == 0 and len(send.calls) == 1
+    assert doc_of(st)["push"]["state"] == "pushed"
+    monkeypatch.setattr(GC, "POTENTIAL_ONE_RING_PER_NAME", True)                 # 2026-11-11: #2 on — held, never rung
+    calls.clear()
+    out = go(st, at(9, 46, ss=40), reads, send=send)
+    assert out["claimed_before"] == 0 and out["name_held"] == 1 and len(send.calls) == 1
     assert doc_of(st)["push"]["state"] == "pushed"
 
 
@@ -797,7 +811,9 @@ def test_D9_a_pass_doc_from_before_this_build_still_joins():
     assert send.calls == [] and out["joined"] == 1
 
 
-def test_D9_a_later_first_sighting_after_a_join_rings_normally():
+def test_D9_a_later_first_sighting_after_a_join_rings_normally(monkeypatch):
+    # 2026-11-11: proposals #1 / #2 switched OFF here — this test reads a BUILDING first sighting after a join; the new gates: test_gajjala_potential_armed_name_2026_11_11.py
+    monkeypatch.setattr(GC, "POTENTIAL_PUSH_ARMED_ONLY", False)
     st = fake_store()
     send = Rec(OK_SEND)
     go(st, at(10, 6), {"AAA": {"bull_flag": bf_armed()}}, send=send)        # the join pass

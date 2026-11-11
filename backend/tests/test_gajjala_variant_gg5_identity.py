@@ -31,6 +31,15 @@ wording only; every other entry is the BOARD golden alone):
   need 100, value 80, reason 20, first_reason 4, body 2), byte-equal to a scratch render made before the regen. His
   word covers the WORDS; the WRITES regen itself was not put to him as a question
   (docs/gajjala/plain_words_2026_11_10.md: Goldens, Open HIS CALLs #1).
+  2026-11-11 — Ajay "Also apply your proposal too." / "…show me stages with time stamps" / "Here is how he enters please
+  tell me to enter based on this": BOARD and, for the second time, WRITES regenerated (by BEHAVIOUR this time).
+  BOARD = 790 leaves: added `stages`, `plan_text`, `chips.vol_dried`, `push_break` {mode, text}, 🧠 row `brk_text`,
+  ☀️ `day2` (null on the fixture day); changed `push_potential.text`, 🧠 `pushed_n` 3 -> 1 and two rows' `push_text`
+  "sent" -> "held: this name already rang today" (one 🧠 ring per name); the two GGA 🧠 🏁 rows that were 🔁
+  duplicates are gone (they no longer ring), so categories/kinds 4 -> 2 and dup_counts 2 -> 0. WRITES = 228 leaves:
+  added counts `building_held` / `name_held`, `last.session_volume` on every tracker upsert and two `name_rang` holds
+  per mode; removed those two ids' claim + settle + send; `potential.pushed` 3 -> 1. Full key-for-key diff was checked
+  before the regen was kept; the WRITES move is flagged to him (docs/gajjala/proposals_applied_2026_11_11.md).
 """
 from __future__ import annotations
 
@@ -48,6 +57,7 @@ from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import variant as V
 from tests.test_gajjala_run import NOW, PREV, PRIOR_1M, S, TODAY_1M, T1, at, make_deps, snap_row
+from tests.gg_feed_pin import feed_pinned
 from tests.test_gajjala_store import FakeColl
 
 FIX = Path(__file__).resolve().parent / "fixtures" / "gajjala"
@@ -164,8 +174,9 @@ def writes_text(monkeypatch) -> tuple:
 def board_text(stores) -> str:
     now = at(10, 42)
     doc = {"_recipe": RECIPE}
-    for mode, st in stores.items():
-        doc[mode] = {k: GT.build(k, now=now, store=st, owner=True) for k in SUB_KEYS}
+    with feed_pinned():                     # 2026-11-11: push_break's feed word is env / socket dependent — pinned
+        for mode, st in stores.items():
+            doc[mode] = {k: GT.build(k, now=now, store=st, owner=True) for k in SUB_KEYS}
     return _dump(doc)
 
 

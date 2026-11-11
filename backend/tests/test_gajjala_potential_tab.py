@@ -36,6 +36,7 @@ from chart_maps.gajjala import tab as GT
 from tests.fixtures.gajjala import detector_frames as FX
 from tests.test_gajjala_potential import Rec, bf_armed, bf_no_pullback, four_bar_flag, frame_at, kf_building, \
     one_per_setup, real_partials
+from tests.gg_feed_pin import feed_pinned
 from tests.test_gajjala_store import FakeColl, fake_store
 from tests.test_gajjala_tab import _walk_strings, read_doc, run_route
 
@@ -340,10 +341,17 @@ def test_track_today_newest_first_with_push_and_held_words(store):
     assert [(r["symbol"], r["setup"]) for r in today["rows"]] == [
         ("DDD", "reversal_squeeze"), ("EEE", "bull_flag"), ("CCC", "horizontal_fade"), ("AAA", "bull_flag"),
         ("AAA", "kiss_fly"), ("BBB", "kiss_fly"), ("JJJ", "bull_flag")]
-    assert (today["n"], today["armed_n"], today["building_n"], today["pushed_n"]) == (7, 3, 4, 6)
+    # MOVED 2026-11-11 (Ajay "Also apply your proposal too." — GC.POTENTIAL_PUSH_ARMED_ONLY /
+    # GC.POTENTIAL_ONE_RING_PER_NAME): pushed 6 → 3 — a building potential holds until it arms and a name rings once a
+    # day (AAA's kiss_fly is held name_rang behind its bull flag). The rows, n, armed_n and building_n never move.
+    assert (today["n"], today["armed_n"], today["building_n"], today["pushed_n"]) == (7, 3, 4, 3)
     assert tr["title"] == "📈 Track — 7 potentials first seen today · UNMEASURED"
     by = {(r["symbol"], r["setup"]): r for r in today["rows"]}
     assert by[("DDD", "reversal_squeeze")]["push_text"] == "📲 sent 10:31 ET"
+    assert by[("AAA", "bull_flag")]["push_text"] == "📲 sent 09:21 ET"
+    # NEGATIVE: the second setup of a name that already rang is held (served words), never sent
+    assert by[("AAA", "kiss_fly")]["push_text"] == "held: " + PT.HELD_WORDS[PT.NAME_HELD[0]]
+    assert sum(1 for r in today["rows"] if (r["push_text"] or "").startswith("📲 sent")) == today["pushed_n"]
     assert by[("CCC", "horizontal_fade")]["push_text"] == "held: " + PT.HELD_WORDS["stale_tape"]
     bbb = by[("BBB", "kiss_fly")]
     assert bbb["last_state"] == "aplus" and bbb["last_state_text"] == "A+ — broke the trigger"
@@ -531,7 +539,7 @@ def test_every_title_line_carries_unmeasured(store):
 
 
 # ── (d) resolve_sub: the push-history link opens the sub that rang ───────────────────────────────────────────────
-def focus_store(*, push_kf=True, hold_kf=False, prev_day=False, alert=False, both=False):
+def focus_store(*, push_kf=True, hold_kf=False, prev_day=False, alert=False, both=False, kf_armed=False):
     st = fake_store()
     st.record_qualifiers(S, at(9, 0), [row("XYZ")], "rth")
     st.upsert_read(S, "XYZ", read_doc("XYZ", {"bull_flag": bf_armed(), "kiss_fly": kf_building()}, ctx=ctx("XYZ")),
@@ -541,7 +549,9 @@ def focus_store(*, push_kf=True, hold_kf=False, prev_day=False, alert=False, bot
     elif hold_kf:
         run(st, at(9, 36), {"XYZ": {"kiss_fly": kf_building()}}, px=PX0)        # muted: held, never pushed
     elif push_kf:
-        reads = {"kiss_fly": kf_building()}
+        # 2026-11-11 (GC.POTENTIAL_PUSH_ARMED_ONLY): `kf_armed` = the same real kiss & fly with its trigger armed — the
+        # only kiss_fly potential that can still ring; the default (building) is held "building", never pushed
+        reads = {"kiss_fly": dict(kf_building(), ready=True) if kf_armed else kf_building()}
         if both:
             reads["bull_flag"] = bf_armed()
         run(st, at(9, 21), {"XYZ": reads}, px=PX0)
@@ -553,9 +563,14 @@ def focus_store(*, push_kf=True, hold_kf=False, prev_day=False, alert=False, bot
 
 
 def test_focus_with_a_pushed_potential_opens_that_setup_over_the_best_ranked_read():
-    out = build("", focus_store(), focus="xyz")
+    # MOVED 2026-11-11 (GC.POTENTIAL_PUSH_ARMED_ONLY): only an ARMED potential rings now, so the pushed kiss_fly is the
+    # armed one (kf_armed); the rule under test — a pushed potential beats the best-ranked read — never moved.
+    out = build("", focus_store(kf_armed=True), focus="xyz")
     assert (out["sub"], out["sub_resolved_from"]) == ("kiss_fly", "focus_potential")
     assert (build("", focus_store(push_kf=False), focus="XYZ")["sub_resolved_from"]) == "focus_read"
+    # NEGATIVE (2026-11-11): a BUILDING kiss_fly is held, never pushed — focus falls back to the best-ranked read
+    held = build("", focus_store(), focus="XYZ")
+    assert (held["sub"], held["sub_resolved_from"]) == ("bull_flag", "focus_read")
 
 
 def test_focus_potential_tie_takes_the_setups_order():
@@ -696,18 +711,27 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
         calls.append(list(sessions))
         return real(sessions)
     monkeypatch.setattr(st, "alert_rows", counting)
+    # MOVED 2026-11-11 (🧭 setup stages, review fix D10): build's ONE alert_rows read now spans the listing window
+    # SC._window(S) (⊇ [S, PREV]; PREV appended only if the window lacks it — tab.build's own rule) instead of [S, PREV].
+    from chart_maps.gajjala import scanner as SC
+    win = list(SC._window(S))
+    win += [PREV] if PREV not in win else []
     out = build(GC.POTENTIAL_SUB, st)
-    assert calls == [[S, PREV]]
+    assert calls == [win]
     assert track_rows(out)[("DDD", "reversal_squeeze")]["entry_text"] == "🎯 entry sent 10:36 ET"
     # MOVED BY DESIGN 2026-11-11 (formulas audit D10, spec §3.7 — K11 words): on a live-push page every setup sub and
     # the 🌙 postmarket recap read the SAME ONE alert_rows (a triggered card / recap row that never rang says so);
-    # still at most ONE read per build. NEGATIVE kept: the ☀️ / 📖 subs never read it (🏁 reads its own rows_for).
+    # still at most ONE read per build. MOVED 2026-11-11 (🧭 setup stages): a ☀️ premarket board WITH cards now reads
+    # it once too — the stage tags' entries (tab._stage_tag via build's _entries_once); pinned as it is (this fixture's
+    # ☀️ board has cards). NEGATIVE kept: the 📖 playbook sub never reads it (🏁 reads its own rows_for).
     for k, _e, _l in GC.SUBS:
         if k in (GC.POTENTIAL_SUB, GC.LEDGER_SUB):
             continue
         calls.clear()
-        build(k, st)
-        assert calls == ([[S, PREV]] if k in GC.SETUPS or k == "postmarket" else []), k
+        got = build(k, st)
+        if k == "premarket":
+            assert got.get("tiles"), "the ☀️ pin needs cards on the board"
+        assert calls == ([win] if k in GC.SETUPS or k in ("postmarket", "premarket") else []), k
 
 
 def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():
@@ -723,8 +747,9 @@ def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():
 def golden_payload() -> str:
     st = seed(day_store(), entry_doc())             # DECISIONS10 D4: the DDD 🎾 entry rang 10:36 (the FE pins it)
     # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the golden is the OWNER's payload (the 🚫 strip block)
-    doc = {"_recipe": RECIPE, "boards": {"potential": build(GC.POTENTIAL_SUB, st, owner=True),
-                                         "bull_flag": build("bull_flag", st, owner=True)}}
+    with feed_pinned():                     # 2026-11-11: push_break's feed word is env / socket dependent — pinned
+        doc = {"_recipe": RECIPE, "boards": {"potential": build(GC.POTENTIAL_SUB, st, owner=True),
+                                             "bull_flag": build("bull_flag", st, owner=True)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
 

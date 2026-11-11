@@ -633,8 +633,10 @@ def test_the_pass_holds_the_added_potential_and_rings_the_tagged_one():
 
 
 def test_NEGATIVE_the_trader_hold_is_not_a_held_words_key():
-    """The /alerts page words every HELD_WORDS key (contracts.mjs) — the 📌 hold keeps its OWN frozen words."""
-    assert not set(PT.TRADER_HELD) & set(PT.HELD_WORDS) and PT.COUNT_KEYS[-1] == "trader_held"
+    """The /alerts page words every HELD_WORDS key (contracts.mjs) — the 📌 hold keeps its OWN frozen words.
+    MOVED 2026-11-11 (entry spec §6 [C3], proposals #1 / #2): COUNT_KEYS gains "building_held", "name_held" after
+    "trader_held" — the 📌 intent "appended after the existing keys" kept, pinned as the tail."""
+    assert not set(PT.TRADER_HELD) & set(PT.HELD_WORDS) and PT.COUNT_KEYS[PT.COUNT_KEYS.index("trader_held"):] == ("trader_held", "building_held", "name_held")
 
 
 # ── 🏁 ledger ─────────────────────────────────────────────────────────────────────────────────────────────────────

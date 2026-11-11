@@ -649,3 +649,37 @@ def test_bar_close_probe_worker_cap():
     assert _comment(lines["GAJJALA_BAR_FINAL_PROBE_WORKERS"]).startswith("TRANSPORT — MINE")
     assert lines["GAJJALA_BAR_FINAL_PROBE_SESSIONS"] < lines["GAJJALA_BAR_FINAL_PROBE_WORKERS"] < lines[
         "BAR_CLOSE_LATE_MAX_SEC"]
+
+
+# ── 2026-11-11 — ⚡ break push + his proposals #1 / #2 / #9 (entry spec step 0) ──────────────────────────────────────
+ENTRY_2026_11_11 = ("POTENTIAL_PUSH_ARMED_ONLY", "POTENTIAL_ONE_RING_PER_NAME", "GAJJALA_BREAK_PUSH_MODES",
+                    "GAJJALA_BREAK_PUSH_MODE", "GAJJALA_BREAK_PUSH_KIND", "FOCUS_N")
+
+
+def test_entry_2026_11_11_values():
+    assert GC.POTENTIAL_PUSH_ARMED_ONLY is True and GC.POTENTIAL_ONE_RING_PER_NAME is True
+    assert GC.GAJJALA_BREAK_PUSH_MODES == ("off", "shadow", "live")
+    assert GC.GAJJALA_BREAK_PUSH_MODE == "shadow" and GC.GAJJALA_BREAK_PUSH_MODE in GC.GAJJALA_BREAK_PUSH_MODES
+    assert GC.GAJJALA_BREAK_PUSH_KIND == GC.POTENTIAL_PUSH_KIND == "gajjala_potential"
+    assert GC.FOCUS_N == 5
+
+
+def test_entry_2026_11_11_lines_carry_his_date():
+    lines = {n: ln for n, _v, ln in _assigns()}
+    for n in ENTRY_2026_11_11:
+        c = _comment(lines[n])
+        assert "Ajay 2026-11-11" in c or c.startswith("HIS CALL #2"), n
+        assert not c.startswith("GG"), n                                 # NEGATIVE: none filed as GG's
+
+
+def test_NEGATIVE_the_break_kind_is_built_from_the_potential_kind_never_retyped():
+    ln = {n: ln for n, _v, ln in _assigns()}["GAJJALA_BREAK_PUSH_KIND"]
+    assert LINES[ln - 1].split("#")[0].split("=", 1)[1].strip() == "POTENTIAL_PUSH_KIND"
+
+
+def test_NEGATIVE_no_env_var_can_raise_the_break_mode():
+    """The mode is a source literal: constants.py reads no environment at all, so nothing outside a commit flips it."""
+    src = "\n".join(LINES)
+    assert "os.environ" not in src and "getenv" not in src
+    ln = {n: ln for n, _v, ln in _assigns()}["GAJJALA_BREAK_PUSH_MODE"]
+    assert LINES[ln - 1].split("#")[0].split("=", 1)[1].strip() == '"shadow"'

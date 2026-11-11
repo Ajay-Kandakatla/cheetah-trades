@@ -1253,7 +1253,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -9832,7 +9833,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10070,7 +10072,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10117,8 +10120,24 @@ const CONTRACTS = [
       }
       if (!/export function ggPx\(p: unknown\): string \| null/.test(lib)) errs.push('lib/gajjala.ts must export ggPx(p: unknown): string | null');
       const board = tryRead('src/components/GajjalaBoard.tsx', 'the card');
-      if (board && !board.includes('const trig = ggPx(read.trigger)')) errs.push('GajjalaBoard must print the trigger through ggPx');
-      if (board && !board.includes('const stop = ggPx(read.stop)')) errs.push('GajjalaBoard must print the stop through ggPx');
+      // RE-PINNED 2026-11-11 (⚡ entry spec §3.2 DECISION B — Ajay: "Here is how he enters please tell me to enter based on
+      // this"): the card's plan line is SERVED — tab.plan_text on tab._px (the same broker grid) — and the board prints
+      // read.plan_text verbatim, joining no trigger / stop / risk words (was: `const trig = ggPx(read.trigger)` /
+      // `const stop = ggPx(read.stop)`). The no-risk protection moves into tab.plan_text: "Entry above" only when
+      // ledger.plan_of(trigger, stop) is the first plan (PLANS[0], "ok"); a no-risk / no-plan read says "trigger …".
+      if (board && !board.includes("const plan = typeof read.plan_text === 'string' && read.plan_text.trim() ? read.plan_text : null;")) errs.push('GajjalaBoard must print the SERVED read.plan_text');
+      if (board && !board.includes('<div className="gg-plan" data-testid="gg-plan">{plan}</div>')) errs.push('GajjalaBoard must print the plan line in the gg-plan div, verbatim');
+      const boardCode = board.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      if (/ggPx\(read\.(trigger|stop)\)|riskText\(read\./.test(boardCode)) errs.push('GajjalaBoard composes the plan line again (ggPx(read.trigger|stop) / riskText(read.) — it is served');
+      if (/Entry above|[`'](?:trigger|stop|risk) /.test(boardCode)) errs.push('GajjalaBoard types a plan word ("Entry above" / \'trigger \' / \'stop \' / \'risk \') — the plan line is served');
+      const tabPy = tryRead('../backend/chart_maps/gajjala/tab.py', 'the served plan line');
+      for (const need of ['PLAN_ENTRY_HEAD = "Entry above"', 'PLAN_LEVEL_HEAD = "trigger"',
+                          'head = PLAN_ENTRY_HEAD if LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0] else PLAN_LEVEL_HEAD',
+                          'parts = [f"{head} {_px(trig)}",', 'f"stop {_px(stop)}" if stop is not None else None,',
+                          '"plan_text": plan_text(read),']) {
+        if (tabPy && !tabPy.includes(need)) errs.push(`tab.py must carry ${need} (the no-risk read never says "Entry above")`);
+      }
+      if (tabPy && (tabPy.match(/PLAN_ENTRY_HEAD/g) || []).length !== 2) errs.push('tab.py: PLAN_ENTRY_HEAD must be defined once and used once (inside plan_text, behind ledger.plan_of)');
       if (/pxText\(/.test(board)) errs.push('GajjalaBoard calls pxText( — the house 3-decimal print blurs a sub-dollar trigger and stop');
       if (/toFixed\(/.test(board)) errs.push('GajjalaBoard types a toFixed( — every number on the card is served or on the grid');
 
@@ -10391,7 +10410,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10614,7 +10634,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10736,7 +10757,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10909,7 +10931,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11049,7 +11072,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11123,7 +11147,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11286,7 +11311,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11392,7 +11418,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11531,7 +11558,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11745,7 +11773,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11822,7 +11851,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11919,7 +11949,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12010,7 +12041,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12376,7 +12408,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12563,7 +12596,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12799,7 +12833,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12914,7 +12949,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -13037,7 +13073,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13190,7 +13227,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13333,7 +13371,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13685,7 +13724,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13722,7 +13762,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      if (nf && !ids2.slice(0, 19).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 19).join(', ') || 'none'}')`);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      if (nf && !ids2.slice(0, 23).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 23).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -14012,7 +14053,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 25).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14252,7 +14294,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 24).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14399,7 +14442,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
         // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
         // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-        if (!ids.slice(0, 18).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 18).join(', ') || 'none'}')`);
+        // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+        if (!ids.slice(0, 22).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 22).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14502,7 +14546,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
         // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
         // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-        if (!ids.slice(0, 17).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 17).join(', ') || 'none'}')`);
+        // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+        if (!ids.slice(0, 21).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 21).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14634,7 +14679,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
         // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
         // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-        if (!ids.slice(0, 16).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 16).join(', ') || 'none'}')`);
+        // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+        if (!ids.slice(0, 20).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 20).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14786,7 +14832,8 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
           // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
           // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-          if (!ids.slice(0, 15).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 15).join(', ') || 'none'}')`);
+          // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+          if (!ids.slice(0, 19).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 19).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -14923,7 +14970,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
         // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
         // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-        if (!ids.slice(0, 12).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 12).join(', ') || 'none'}')`);
+        // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+        if (!ids.slice(0, 16).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 16).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15301,7 +15349,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
         // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
         // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-        if (!ids.slice(0, 10).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 10).join(', ') || 'none'}')`);
+        // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+        if (!ids.slice(0, 14).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 14).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15377,7 +15426,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
@@ -15431,7 +15481,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
@@ -15527,7 +15578,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09')) errs.push(`the 📊 volume-order ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 📊 volume-order ✨ lost its label');
@@ -15570,7 +15622,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-10 ~22:00 ET: 🗣 plain words on every Gajjala rule row FIRST — Ajay: "not jus k3 please up date what he means in simple terms acroos k1 to k10").
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');
@@ -15628,7 +15681,8 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       // WIDENED +1 (2026-11-11 ~10:10 ET: 🔄 Luk's scan-now button FIRST — Ajay: "Can you put an ondeman scan button for Luk' scans too").
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 7).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-plain-words-2026-11-10')) errs.push(`the 🗣 plain-words ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-plain-words-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🗣 plain-words ✨ lost its label');
@@ -15725,7 +15779,8 @@ const CONTRACTS = [
       if (!quiet('../docs/luk/luk_tab_2026_11_01.md').includes('🔄 Scan now (2026-11-11)')) errs.push('docs/luk/luk_tab_2026_11_01.md must carry the "🔄 Scan now (2026-11-11)" section');
       const nf = read('src/lib/newFeatures.ts');
       // WIDENED +1 (2026-11-11: 🔧 formulas-audit defects ship-now FIRST — Ajay 08:18 ET: "Can you fix the defects please").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);
       if (!ids.includes('chart-maps-luk-scan-now-2026-11-11')) errs.push(`the 🔄 Luk scan-now ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-luk-scan-now-2026-11-11'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🔄 Luk scan-now ✨ lost its label');
@@ -15734,6 +15789,220 @@ const CONTRACTS = [
         if (!/rings no device/.test(lab[1])) errs.push('the 🔄 Luk scan-now ✨ label must say the tap rings no device');
         if (/\bedge\b/i.test(lab[1]) || /boun|fake/i.test(lab[1]) || NOTHING.test(lab[1])) errs.push('the 🔄 Luk scan-now ✨ label: never "edge", never the b-word, never the NOTHING words');
       }
+      return errs;
+    },
+  },
+  {
+    name: '⚡ Gajjala enter like GG (2026-11-11)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-11-11, verbatim: "Here is how he enters please tell me to enter based on this". Entry spec §3.1–3.2: the
+    // card's ONE plan line is served (tab.plan_text — pinned in "🚫 Gajjala no-risk A+ · one price grid"); the ⚡ engine
+    // backend/chart_maps/gajjala/break_watch.py records the intrabar break of an ARMED 🧠 plan. GAJJALA_BREAK_PUSH_MODE =
+    // "shadow" (HIS CALL #1: recorded on /alerts, no device) and the kind rides the 🧠 kind (HIS CALL #2, no 8th
+    // keep-set kind). In shadow the ring settles "shadow" and returns BEFORE the one sender call; the engine runs on its
+    // own "gg-brk" worker, never the hub's consumer (C5). The board prints push_break.text / brk_text / plan_text served.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyBody = (pySrc, def) => {
+        const at = pySrc.indexOf(`\ndef ${def}(`);
+        if (at < 0) return null;
+        const end = pySrc.indexOf('\ndef ', at + 5);
+        return pySrc.slice(at, end < 0 ? undefined : end);
+      };
+      // 1. the switches, read by name (constants.py = the ONLY number / switch source)
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      if (!/^GAJJALA_BREAK_PUSH_MODES = \("off", "shadow", "live"\)/m.test(gc)) errs.push('constants.py must define GAJJALA_BREAK_PUSH_MODES = ("off", "shadow", "live")');
+      if (!/^GAJJALA_BREAK_PUSH_MODE = "shadow"\s/m.test(gc)) errs.push('constants.py: GAJJALA_BREAK_PUSH_MODE must stay "shadow" — "live" is HIS CALL #1');
+      if (!/^GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND\s/m.test(gc)) errs.push('constants.py: GAJJALA_BREAK_PUSH_KIND must be POTENTIAL_PUSH_KIND — a new kind is HIS CALL #2');
+      // 2. break_watch.py: reads the switches by name; in shadow it never reaches the sender
+      const bw = quiet('../backend/chart_maps/gajjala/break_watch.py');
+      if (!bw) errs.push('backend/chart_maps/gajjala/break_watch.py is missing');
+      else {
+        const code = pyCode(bw);
+        if (!code.includes('KIND = GC.GAJJALA_BREAK_PUSH_KIND')) errs.push('break_watch.py must read KIND = GC.GAJJALA_BREAK_PUSH_KIND');
+        if (!code.includes('m = GC.GAJJALA_BREAK_PUSH_MODE\n')) errs.push('break_watch.mode() must read GC.GAJJALA_BREAK_PUSH_MODE by name');
+        if (!code.includes('TAG_PREFIX = "gg-brk"')) errs.push('break_watch.py: the ⚡ tag prefix must be "gg-brk" (never the 🧠 "gg-pot-")');
+        if (/_submit_consumer|live_hub\.submit/.test(code)) errs.push('break_watch.py must not queue on the hub worker (_submit_consumer / live_hub.submit) — its own "gg-brk" worker (C5)');
+        const send = pyBody(code, '_send') || '';
+        const ring = pyBody(code, '_ring') || '';
+        if (!send) errs.push('break_watch.py lost def _send(');
+        if (!ring) errs.push('break_watch.py lost def _ring(');
+        const outside = code.replace(send, '');
+        if (/notify_/.test(outside)) errs.push('break_watch.py: a notify_ sender is named outside _send(');
+        const calls = [...outside.matchAll(/\b_send\(/g)].length;
+        if (calls !== 1 || !/res = _send\(GA\._owner\(\), payload\)/.test(ring)) errs.push(`break_watch.py: _send( must be called once, from _ring (found ${calls})`);
+        const sh = ring.indexOf('if m == "shadow":');
+        const sd = ring.indexOf('_send(');
+        if (sh < 0 || sd < 0 || sh > sd) errs.push('break_watch._ring: the shadow branch must come BEFORE the _send( call');
+        else {
+          const branch = ring.slice(sh, sd);
+          if (!/"state": "shadow"/.test(branch) || !/\n\s+return\n/.test(branch)) errs.push('break_watch._ring: the shadow branch must settle "state": "shadow" and return before the sender');
+        }
+      }
+      // 3. the board prints the served words, types none
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const need of ['{board.push_break.text}', '{r.brk_text}', "const plan = typeof read.plan_text === 'string'"]) {
+        if (!src.includes(need)) errs.push(`GajjalaBoard must print the served ${need}`);
+      }
+      for (const w of ['⚡', 'Entry above', "'shadow'", '"shadow"']) if (code.includes(w)) errs.push(`GajjalaBoard types ${w} — the ⚡ / plan words are served`);
+      if (!quiet('../backend/tests/test_gajjala_break_watch_2026_11_11.py')) errs.push('backend/tests/test_gajjala_break_watch_2026_11_11.py is missing');
+      return errs;
+    },
+  },
+  {
+    name: '🧠 armed-only · one ring per name (2026-11-11)',
+    file: '../backend/chart_maps/gajjala/potential.py',
+    // Ajay 2026-11-11, verbatim: "Also apply your proposal too." Proposals #1 / #2 (entry spec §3.3–3.4): a 🧠 rings only
+    // once its trigger is ARMED (a building doc is held "building" and rings the first time it arms), and one 🧠 ring per
+    // name per session (held "name_rang", final for the day). Both switches live in constants.py and potential.py reads
+    // them BY NAME; the name check runs before the building check (C4).
+    checks: (src) => {
+      const errs = [];
+      const gc = read('../backend/chart_maps/gajjala/constants.py');
+      if (!/^POTENTIAL_PUSH_ARMED_ONLY = True\s/m.test(gc)) errs.push('constants.py must define POTENTIAL_PUSH_ARMED_ONLY = True');
+      if (!/^POTENTIAL_ONE_RING_PER_NAME = True\s/m.test(gc)) errs.push('constants.py must define POTENTIAL_ONE_RING_PER_NAME = True');
+      const code = src.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      if (/^\s*POTENTIAL_(PUSH_ARMED_ONLY|ONE_RING_PER_NAME)\s*=/m.test(code)) errs.push('potential.py must not define its own POTENTIAL_PUSH_ARMED_ONLY / POTENTIAL_ONE_RING_PER_NAME — read GC by name');
+      for (const need of ['BUILDING_HELD = ("building",)', 'NAME_HELD = ("name_rang",)', 'if raw & set(NAME_HELD):', 'reasons = raw - set(BUILDING_HELD)']) {
+        if (!code.includes(need)) errs.push(`potential.py must carry ${need}`);
+      }
+      const nm = code.indexOf('elif GC.POTENTIAL_ONE_RING_PER_NAME and sym in rang:');
+      const bd = code.indexOf('elif GC.POTENTIAL_PUSH_ARMED_ONLY and kind != GC.POTENTIAL_KINDS[0]:');
+      if (nm < 0) errs.push('potential.run_pass must hold a name that already rang: elif GC.POTENTIAL_ONE_RING_PER_NAME and sym in rang:');
+      if (bd < 0) errs.push('potential.run_pass must hold a building potential: elif GC.POTENTIAL_PUSH_ARMED_ONLY and kind != GC.POTENTIAL_KINDS[0]:');
+      if (nm >= 0 && bd >= 0 && nm > bd) errs.push('potential.run_pass: the one-per-name check must run BEFORE the building check (C4)');
+      if (!/"building_held", "name_held"\)/.test(code)) errs.push('potential.COUNT_KEYS must end "building_held", "name_held" (appended last)');
+      return errs;
+    },
+  },
+  {
+    name: '🪜 Gajjala stages tags (2026-11-11)',
+    file: 'src/components/GgStages.tsx',
+    // Ajay 2026-11-11 ~08:39 ET, verbatim: "Another big thing I need is what stages a stock has crossed in the past like
+    // Bullflag -> EMA Kiss and Fly -> and Horizontal -Fade …". DISPLAY ONLY. backend/chart_maps/gajjala/stages.py is a
+    // pure view (no store, no network, no clock, no datetime parsing; it imports constants only); tab.build tags every
+    // card after the 🎪 tag and before the private keys are stripped. GgStages.tsx prints the served words only.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const sp = quiet('../backend/chart_maps/gajjala/stages.py');
+      if (!sp) errs.push('backend/chart_maps/gajjala/stages.py is missing');
+      else {
+        const ALLOWED = new Set(['from __future__ import annotations', 'import copy', 'import re', 'from datetime import date',
+                                 'from typing import Optional', 'from . import constants as GC']);
+        const imports = [...sp.matchAll(/^\s*((?:from \S+ )?import [^\n#]+)/gm)].map((m) => m[1].trim());
+        const bad = imports.filter((l) => !ALLOWED.has(l));
+        if (bad.length) errs.push(`stages.py imports ${bad.join(' / ')} — a pure view imports constants (plus stdlib) only`);
+        const code = sp.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+        const io = /\bopen\(|fromisoformat\(|strptime\(|\bstore\b|requests|httpx|pymongo|live_feed|massive/i.exec(code);
+        if (io) errs.push(`stages.py names "${io[0]}" — no store, no network, no datetime parsing (C9)`);
+        if (!code.includes('TAG_SEP = " → "')) errs.push('stages.py must serve TAG_SEP = " → " (his own arrow)');
+      }
+      const tab = quiet('../backend/chart_maps/gajjala/tab.py');
+      const pt = tab.indexOf('_promo_tag(out, ptags)');
+      const stg = tab.indexOf('_soft("setup stages", _stage_tag, out,');
+      const strip = tab.indexOf('_strip_private(out["tiles"])');
+      if (pt < 0 || stg < 0 || strip < 0 || !(pt < stg && stg < strip)) errs.push('tab.build must call _stage_tag after _promo_tag(out, ptags) and before _strip_private(out["tiles"])');
+      // GgStages.tsx: every word served — no literal or JSX text carries a step word, a clock word or the arrow
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const lits = [...code.matchAll(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)].map((m) => m[0]);
+      const jsxText = [...code.matchAll(/<[A-Za-z][^<>]*>([^<{]*)/g), ...code.matchAll(/[>}]([^<>{}]*)(?=<\/)/g)]
+        .map((m) => m[1].trim()).filter(Boolean);
+      for (const s of [...lits, ...jsxText]) {
+        if (/potential|A\+|today|→|Stages|🧭|triggered|stopped/.test(s)) errs.push(`GgStages.tsx types ${s} — the stage words are served`);
+      }
+      if (jsxText.length) errs.push(`GgStages.tsx has JSX text (${jsxText.join(' | ')}) — print served words only`);
+      for (const need of ['{stages.title}', '{g.label}', '{t.text}', '{sep}']) if (!src.includes(need)) errs.push(`GgStages.tsx must print the served ${need}`);
+      if (!quiet('src/components/GajjalaBoard.tsx').includes('<GgStages stages={read.stages} sym={sym} />')) errs.push('GajjalaBoard must render <GgStages stages={read.stages} sym={sym} /> on every card');
+      return errs;
+    },
+  },
+  {
+    name: '🏁 lane not-traded record (2026-11-11)',
+    file: 'src/components/GajjalaLaneTab.tsx',
+    // Ajay 2026-11-11, verbatim: "Maintain a track record when Alpaca is blocked please, Like we do in Gajjals so I know
+    // how our strategies are working". backend/trading/gajjala_untraded.py grades every 🚩 lane row with no fill by the
+    // 🏁 Track record's own math — PURE READS: it imports no order / broker module and writes nothing. The row carries
+    // track_state / track_text (gajjala_entry.ROW_KEYS); the lane's P&L, sizing and loss streak never see them.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const un = quiet('../backend/trading/gajjala_untraded.py');
+      if (!un) errs.push('backend/trading/gajjala_untraded.py is missing');
+      else {
+        const imports = [...un.matchAll(/^\s*((?:from \S+ )?import [^\n#]+)/gm)].map((m) => m[1].trim());
+        const bad = imports.filter((l) => /broker|alpaca|order|exit_engine|journal|notify|push/i.test(l));
+        if (bad.length) errs.push(`gajjala_untraded.py imports ${bad.join(' / ')} — no order / broker / push module`);
+        const code = un.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+        const w = /insert_one|insert_many|update_one|update_many|replace_one|delete_one|delete_many|bulk_write|find_one_and_|\.upsert|submit_order|place_order|cancel_order/.exec(code);
+        if (w) errs.push(`gajjala_untraded.py names "${w[0]}" — it writes nothing and touches no order`);
+        if (!code.includes('GLG.grade(')) errs.push("gajjala_untraded.py must grade through the 🏁's own GLG.grade( (one engine)");
+      }
+      const ge = quiet('../backend/trading/gajjala_entry.py');
+      const rk = (/^ROW_KEYS = \(([\s\S]*?)\)\n/m.exec(ge) || [])[1] || '';
+      for (const k of ['"track_state"', '"track_text"']) if (!rk.includes(k)) errs.push(`gajjala_entry.ROW_KEYS must carry ${k}`);
+      const jAt = ge.indexOf('\ndef journal_block(');
+      const jEnd = jAt < 0 ? -1 : ge.indexOf('\ndef ', jAt + 5);
+      const jb = jAt < 0 ? '' : ge.slice(jAt, jEnd < 0 ? undefined : jEnd);
+      if (!jb) errs.push('gajjala_entry.py lost def journal_block(');
+      else if (/track_/.test(jb)) errs.push('gajjala_entry.journal_block names track_ — a not-traded grade never enters the lane journal');
+      for (const rel of ['../backend/trading/journal.py', '../backend/trading/exit_engine.py']) {
+        if (/gajjala_untraded/.test(quiet(rel))) errs.push(`${rel.slice(3)} imports gajjala_untraded — never in the P&L or the exits`);
+      }
+      // the TSX: the track words print muted, never summed into the P&L or the row tint
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      if (/track_\w+\s*[-+*/]|[-+*/]\s*(?:\w+\??\.)*track_\w+/.test(code)) errs.push('GajjalaLaneTab.tsx does arithmetic with a track_ field — never into the P&L');
+      const outcome = (/const outcome = [^\n]*\n[^\n]*/.exec(code) || [''])[0];
+      if (!outcome || /track/.test(outcome)) errs.push('GajjalaLaneTab.tsx: the row tint (const outcome) must read the real pnl_usd only');
+      for (const need of ['{row.track_text}', '{l.text}', '{untraded.traded?.text}', '{untraded.total?.text}']) {
+        if (!src.includes(need)) errs.push(`GajjalaLaneTab.tsx must print the served ${need}`);
+      }
+      return errs;
+    },
+  },
+  {
+    name: '💧 🌅 🔝 card extras (2026-11-11)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-11-11, verbatim: "Also apply your proposal too." Proposals #4 / #8 / #9 (entry spec §3.6–3.8): the 💧
+    // volume-dried chip (the read's own k3_vol row met, a live state), the 🌅 Day-2 LIST on ☀️ (no push) and the 🔝 Focus
+    // header — GC.FOCUS_N read by name; focus_block only MARKS tiles (never sorts, drops or moves one) and runs after
+    // broker_bottom. Display only. The board prints every word served.
+    checks: (src) => {
+      const errs = [];
+      const gc = read('../backend/chart_maps/gajjala/constants.py');
+      if (!/^FOCUS_N = 5\s/m.test(gc)) errs.push('constants.py must define FOCUS_N = 5');
+      const tab = read('../backend/chart_maps/gajjala/tab.py');
+      const body = (def) => {
+        const at = tab.indexOf(`\ndef ${def}(`);
+        if (at < 0) return '';
+        const end = tab.indexOf('\ndef ', at + 5);
+        return tab.slice(at, end < 0 ? undefined : end).replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      };
+      const fb = body('focus_block');
+      if (!fb) errs.push('tab.py lost def focus_block(');
+      else {
+        if ((fb.match(/GC\.FOCUS_N/g) || []).length < 3) errs.push('tab.focus_block must read GC.FOCUS_N by name (the cut, the pick, the served n)');
+        if (/\b5\b/.test(fb)) errs.push('tab.focus_block types a 5 — read GC.FOCUS_N');
+        const mv = /\.sort\(|sorted\(|\.insert\(|\.pop\(|\.remove\(|\bdel\b|reverse|\.append\(/.exec(fb);
+        if (mv) errs.push(`tab.focus_block names "${mv[0]}" — it marks cards, never reorders or drops one`);
+        const assigns = [...fb.matchAll(/\bt\[[^\]]+\]\s*=/g)].map((m) => m[0]);
+        if (assigns.length !== 1 || !/t\["focus"\]/.test(assigns[0])) errs.push('tab.focus_block may only assign t["focus"] = True');
+      }
+      const bb = tab.lastIndexOf('broker_bottom(tiles[:lim], order_flags)');
+      const fc = tab.indexOf('_soft("focus five", focus_block, out["tiles"], order_flags, default=None)');
+      if (fc < 0 || bb < 0 || fc < bb) errs.push('tab.build must run focus_block on out["tiles"] AFTER broker_bottom');
+      if (!tab.includes('VOL_DRIED_TEXT = "💧 volume dried up"')) errs.push('tab.py must serve VOL_DRIED_TEXT = "💧 volume dried up"');
+      const vd = body('vol_dried_text');
+      if (!/D\.K3_VOL_KEY/.test(vd) || !/D\.LIVE_STATES/.test(vd)) errs.push('tab.vol_dried_text must read detectors.K3_VOL_KEY and detectors.LIVE_STATES by name');
+      const d2 = body('day2_block');
+      if (!d2) errs.push('tab.py lost def day2_block(');
+      else if (/notify|claim_|send_|push_/.test(d2)) errs.push('tab.day2_block names a push / claim — the 🌅 Day 2 block is a list, no push');
+      // the board prints them served
+      for (const need of ['{volDried}', '{focusText}', 'data-testid="gg-focus-divider"', '{r.text}']) if (!src.includes(need)) errs.push(`GajjalaBoard must print the served ${need}`);
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const w of ['💧', '🌅', '🔝', 'Focus 5', 'Day 2', 'volume dried']) if (code.includes(w)) errs.push(`GajjalaBoard types "${w}" — served words only`);
       return errs;
     },
   },

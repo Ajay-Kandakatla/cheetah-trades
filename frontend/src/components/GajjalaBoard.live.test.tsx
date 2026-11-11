@@ -217,6 +217,12 @@ describe('GajjalaBoard — 🔴 live cards: what reaches the card', () => {
   });
 
   it('the served live words print verbatim under the plan line, as one wrapping line', async () => {
+    // ⚡ 2026-11-11 (entry spec §3.2, predicted pin): the plan line is the SERVED plan_text — the hand fixture predates it.
+    boardFor = (sub) => {
+      const b = clone(HAND[sub] || HAND.bull_flag);
+      for (const t of b.tiles || []) if (t.symbol === 'PFAI') t.gajjala.plan_text = 'Entry above 4.12 · stop 3.95 · risk 4.1%';
+      return b;
+    };
     await mount('tab=gajjala&sub=bull_flag');
     await advance(CARD_LIVE_MS + 100);
     const line = await screen.findByTestId('gg-live-PFAI');

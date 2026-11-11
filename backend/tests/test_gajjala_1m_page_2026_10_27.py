@@ -45,6 +45,7 @@ from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import tape as TP
 from chart_maps.gajjala import variant as V
 from tests.fixtures.gajjala import detector_frames as FX
+from tests.gg_feed_pin import feed_pinned
 from tests.test_gajjala_run import make_deps, snap_row
 from tests.test_gajjala_store import FakeColl
 from tests.test_gajjala_tab import _walk_strings, run_route
@@ -676,10 +677,11 @@ def test_NEGATIVE_no_typed_1_minute_digit_in_the_gajjala_rules_source():
 # ── GOLDEN: the FE fixture IS the served payload ─────────────────────────────────────────────────────────────────
 def golden_payload() -> str:
     _g5, g1, *_ = day()
-    doc = {"_recipe": RECIPE,
-           "boards": {"potential": board(g1, GC.POTENTIAL_SUB, owner=True),
-                      "bull_flag": board(g1, "bull_flag", owner=True),
-                      "track_record": board(g1, GC.LEDGER_SUB, span="today", owner=True)}}
+    with feed_pinned():                     # 2026-11-11: GG1 serves no push_break; pinned so no feed word can leak
+        doc = {"_recipe": RECIPE,
+               "boards": {"potential": board(g1, GC.POTENTIAL_SUB, owner=True),
+                          "bull_flag": board(g1, "bull_flag", owner=True),
+                          "track_record": board(g1, GC.LEDGER_SUB, span="today", owner=True)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
 

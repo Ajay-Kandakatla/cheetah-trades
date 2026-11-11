@@ -531,12 +531,19 @@ def test_shadow_potentials_are_claimed_settled_and_never_sent(monkeypatch):
     monkeypatch.setattr(GC, "GAJJALA_1M_PUSH_MODE", "shadow")         # 2026-10-29: shipped "live" — this pins the shadow branch
     db, shared, st = world(monkeypatch)
     st.record_pass(S, NOW - timedelta(seconds=60), {"potential": {"tracked_today": 0}}, hhmm="10:07:31")
-    d = deps()
+    # MOVED 2026-11-11 (Ajay "Also apply your proposal too." — GC.POTENTIAL_PUSH_ARMED_ONLY): a BUILDING potential no
+    # longer claims, so the default TODAY_1M (a building fade only) would never reach the shadow claim / settle branch.
+    # The fixture is now an ARMED bull flag (FX.bf_bars(entry=None) — forming, the break bar not yet printed), its
+    # 1-minute bars labelled 10:02 … 10:08 so the 10:08 bar has settled at NOW; the switch itself is never touched.
+    assert GC.POTENTIAL_PUSH_ARMED_ONLY is True
+    d = deps(load_day=loader(today=m1(FX.bf_bars(entry=None), S, "10:01")))
     out = R1.run_iteration(NOW, store=st, deps=d)
     pot = out["potential"]
-    assert pot["shadow"] >= 1 and d.send_potential.calls == []
+    assert pot["armed"] >= 1 and pot["shadow"] >= 1 and d.send_potential.calls == []
     docs = list(db["gajjala_1m_potentials"].docs.values())
-    assert any((x.get("push") or {}).get("state") == "shadow" for x in docs)
+    shadowed = [x for x in docs if (x.get("push") or {}).get("state") == "shadow"]
+    assert shadowed and all(x["push"]["kind_at_push"] == "armed" for x in shadowed)
+    assert all(x["push"]["result"]["would_push"]["kind"] == V.GG1.push_kind_potential for x in shadowed)
     assert "gajjala_potentials" not in db or db["gajjala_potentials"].docs == {}   # NEGATIVE: never GG5's tracker
 
 

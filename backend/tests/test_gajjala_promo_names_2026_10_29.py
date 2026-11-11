@@ -451,7 +451,9 @@ def test_NEGATIVE_no_promo_map_means_no_count_key_and_a_trader_add_keeps_its_own
     assert tuple(out) == PT.COUNT_KEYS and out["trader_held"] == 1        # no promo_held key; 📌 decides a 📌 add
     assert [h["reason"] for h in st.get_potential(S, "MXCT", "bull_flag")["held"]] == list(PT.TRADER_HELD)
     assert PT.ADD_HELD == PT.TRADER_HELD + PT.PROMO_HELD and PT.PROMO_HELD == (PN.HOLD_REASON,)
-    assert not set(PT.PROMO_HELD) & set(PT.HELD_WORDS) and PT.COUNT_KEYS[-1] == "trader_held"
+    # MOVED 2026-11-11 (entry spec §6 [C3]): the tail after trader_held = the two 2026-11-11 counts; promo_held is
+    # still not a COUNT_KEYS member (appended LAST only when a promo map is handed)
+    assert not set(PT.PROMO_HELD) & set(PT.HELD_WORDS) and PT.COUNT_KEYS[PT.COUNT_KEYS.index("trader_held"):] == ("trader_held", "building_held", "name_held")
 
 
 def test_NEGATIVE_a_promo_tagged_gg_qualifier_is_never_held():

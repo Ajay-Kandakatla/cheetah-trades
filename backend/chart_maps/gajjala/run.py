@@ -610,7 +610,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                            trader_hold={s: sv.get(s) for s in trader_adds if s in frames},
                                            # 🎪 the SAME hold for a 🎪 add — None (no count key) when no source ran
                                            promo_hold=({s: sv.get(s) for s in promo_adds if s in frames}
-                                                       if ("promo" in out or promo_adds) else None))
+                                                       if ("promo" in out or promo_adds) else None),
+                                           # 2026-11-11 — the ⚡ break watch's 1M floor: `last.session_volume`
+                                           session_volume=sv)
         except Exception:                                       # noqa: BLE001
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")

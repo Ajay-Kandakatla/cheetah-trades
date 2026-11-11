@@ -23,6 +23,10 @@ file IS the served payload, byte for byte. The golden's own store (golden_store)
 09:45 ET, 2026-10-16 polish) so its served `entries_text` is real, and (2026-10-16 night, DECISIONS11 D5) ONE SYNTHETIC
 ⏪ replayed doc REPLAY:2026-10-12|RPL|bull_flag graded by the REAL ledger.grade on a synthetic tape; the shared `store`
 fixture never carries either.
+
+Regen 2026-11-11 (entry spec, T-PINS #3; diff verified key for key against HEAD): added `push_break` {mode, text} on
+the three span boards; changed `push_potential.text` (the armed / one-per-name 🧠 sentence). Nothing else moved — no
+row, count or order. The ⚡ feed word is pinned (tests/gg_feed_pin.py) so the golden is the same on every machine.
 """
 from __future__ import annotations
 
@@ -40,6 +44,7 @@ from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import ledger as LG
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
+from tests.gg_feed_pin import feed_pinned
 from tests.test_gajjala_store import FakeColl, fake_store
 from tests.test_gajjala_tab import _walk_strings, run_route
 
@@ -640,7 +645,8 @@ def golden_payload() -> str:
     for span in ("today", "5d", "yesterday"):
         LG._TODAY_MEMO.clear()
         LG._TODAY_SPLIT.clear()
-        boards[span] = board(st, span, owner=True)   # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the OWNER's payload
+        with feed_pinned():                 # 2026-11-11: push_break's feed word is env / socket dependent — pinned
+            boards[span] = board(st, span, owner=True)   # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the OWNER's payload
     doc = {"_recipe": RECIPE, "boards": boards}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 

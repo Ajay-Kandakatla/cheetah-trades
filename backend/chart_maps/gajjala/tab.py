@@ -81,6 +81,7 @@ from chart_maps.gajjala import potential as PT                # 🧠 the ONE pot
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
 from chart_maps.gajjala import squeeze_marks as SM            # 🎾 2026-11-08 — GG's chart marks on the squeeze card
+from chart_maps.gajjala import stages as SG                   # 🧭 2026-11-11 — the setup stages on every card (display only)
 from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
 from supply_demand import timeframes as TF                   # 🚩 2026-11-06 — the Support-tab frame keys, read BY NAME (chart_href)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
@@ -211,6 +212,22 @@ VOL_ORDER_TEXT = "📊 highest volume on top · then lowest float"   # served as
 RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float"    # DECISIONS13 D3 (float) → volume first 2026-11-09 by his word; the squeeze sub
 HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top · then highest volume"   # 🧪 2026-11-08 — the fade sub; [C3] a snapshot, "closest", never a direction word
 POT_ORDER_TEXT = "🧠 trigger armed first · then highest volume"   # served as order_note on the 🧠 sub (potential.order_key, 2026-11-09)
+# 2026-11-11 entry spec (WP-TAB) — Ajay, verbatim: "Also apply your proposal too. / Here is how he enters please tell me
+# to enter based on this". The card's plan line, served (§3.2, DECISION B — the FE stops composing it); proposal #4 the 💧
+# marker (§3.6); #8 the 🌅 day-2 list (§3.7, list only, no push); #9 🔝 Focus 5 (§3.8, display only). Every number is a
+# constant read by name (GC.FOCUS_N); nothing here is a gate, an order or a push.
+PLAN_ENTRY_HEAD = "Entry above"                   # an entry read (_is_entry_read: A+ or forming-ready)
+PLAN_LEVEL_HEAD = "trigger"                       # every other read with a trigger (the FE's words until 2026-11-11)
+VOL_DRIED_TEXT = "💧 volume dried up"              # chips.vol_dried — the read's own k3_vol criterion met, an indicator
+FOCUS_TEXT = ("🔝 Focus 5 — the first five cards in this board's own order (GG keeps 4–5 names active). Display only: "
+              "nothing measured says these five win more.")   # "5" / "five" pinned to GC.FOCUS_N by the WP-TAB test
+DAY2_TITLE = "🌅 Day 2 — last session's A+ and after-hours movers"
+DAY2_NOTE = ("List only, no push. GG keeps the prior day's movers on his morning list (R2). Our 21-session read: they "
+             "print +1R again on day 2 about as often as any listed name — a list, not a signal.")
+DAY2_EMPTY = "No A+ rang and no after-hours mover passed his checks last session."
+DAY2_APLUS_TEXT = "{sym} · {setup_label} A+ rang {at} ET last session"   # 2026-11-11: "last session", not "yesterday" — on a Monday it is Friday
+DAY2_CARRY_TEXT = "{sym} · 🌙 after-hours mover last session"
+DAY2_LISTED_TEXT = " · on today's list"
 BROKER_BOTTOM_TEXT = "your 🚫 names sit at the bottom of every card board"   # served in broker_block.order_text — the owner strip (2026-11-09); the 🏁 only tags
 
 
@@ -737,6 +754,24 @@ def push_potential_block(session: date, v=None) -> dict:
     return {"mode": "live", "text": PT.push_note(session)}
 
 
+def push_break_block() -> dict:
+    """⚡ 2026-11-11 entry spec §3.1 — the break-push status line, served as `push_break` on GG5 boards beside
+    `push_potential`: break_watch.status()'s `mode` and `text` (its `text` names the mode). LAZY import: build calls it
+    inside _soft, so an absent / raising break_watch serves None and the board still builds. 2026-11-11 critic fix:
+    ONLY {mode, text} (= GgPushBreak) — status()'s process counters (watching / plans / rang / shadow / refused)
+    reset on a restart, the FE reads none of them, and they would leak into the goldens."""
+    from chart_maps.gajjala import break_watch as BW
+    s = BW.status()
+    return {"mode": s.get("mode"), "text": s.get("text")}
+
+
+def _brk_track_text(doc: dict) -> Optional[str]:
+    """⚡ 2026-11-11 — the 🧠 Track row word of a doc's ⚡ claim (break_watch.track_text: pushed → "⚡ break rang …",
+    shadow → "⚡ break seen … (shadow)", else None). LAZY import; the caller fences it (_soft → None)."""
+    from chart_maps.gajjala import break_watch as BW
+    return BW.track_text(doc)
+
+
 def board_note() -> str:
     from chart_maps.gajjala import playbook as PB
     note = "UNMEASURED — his rules as he described them, not a forecast."
@@ -978,6 +1013,9 @@ def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_d
     }
     if setup == "reversal_squeeze":
         out["squeeze_history"] = _squeeze_text(ctx.get("squeeze_history") or daily.get("squeeze_history"))
+    vd = vol_dried_text(read)                                        # 💧 2026-11-11 (#4) — the key only when met
+    if vd:
+        out["vol_dried"] = vd
     return out
 
 
@@ -1213,6 +1251,43 @@ def _tile_lines(read: dict) -> list:
     return out
 
 
+def plan_text(read: dict) -> Optional[str]:
+    """2026-11-11 entry spec §3.2 (DECISION B) — Ajay: "Here is how he enters please tell me to enter based on this".
+    The card's ONE plan line, served: an entry read (_is_entry_read) → "Entry above {T} · stop {S} · risk {r}%"; any
+    other read with a trigger → "trigger {T} · stop {S} · risk {r}%" (the FE's composed words until today, now
+    served). {T} / {S} = _px (the broker grid — the same text as the BUY / STOP lines); {r} = the read's own risk_pct
+    `.1f` (= the FE's riskText). A missing part is dropped; no trigger → None. The read's own bar high / low — GG's
+    ±1 cent is HIS CALL #8, not applied here. 2026-11-11 critic fix: "Entry above" only when the plan is a real one
+    (ledger.plan_of == LG.PLANS[0], "ok": trigger above the stop) — a no-risk (trigger == stop), a stop above the
+    trigger or a missing stop says "trigger …" (the ledger calls those no_risk / no_plan and the push refuses them; the
+    no-risk guard in detectors._resolve_break runs only when the bar breaks). An unloadable ledger → "trigger …"."""
+    read = read or {}
+    trig = _f(read.get("trigger"))
+    if trig is None:
+        return None
+    stop, risk = _f(read.get("stop")), _f(read.get("risk_pct"))
+    LG = _ledger() if stop is not None and _is_entry_read(read) else None
+    head = PLAN_ENTRY_HEAD if LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0] else PLAN_LEVEL_HEAD
+    parts = [f"{head} {_px(trig)}",
+             f"stop {_px(stop)}" if stop is not None else None,
+             f"risk {risk:.1f}%" if risk is not None else None]
+    return " · ".join(p for p in parts if p)
+
+
+def vol_dried_text(read: dict) -> Optional[str]:
+    """2026-11-11 entry spec §3.6 (proposal #4) — VOL_DRIED_TEXT when the read's own criteria row of key
+    detectors.K3_VOL_KEY ("k3_vol", every setup) has ok True AND the read is still being read (state in
+    detectors.LIVE_STATES: forming / aplus / triggered); else None (the chip key is then absent). An indicator only —
+    no order, no gate, no push."""
+    from chart_maps.gajjala import detectors as D
+    read = read or {}
+    if read.get("state") not in D.LIVE_STATES:
+        return None
+    ok = any(isinstance(c, dict) and c.get("key") == D.K3_VOL_KEY and c.get("ok") is True
+             for c in read.get("criteria") or [])
+    return VOL_DRIED_TEXT if ok else None
+
+
 def tile_tf(read: dict, tf: str, sub_default: str, v=None) -> str:
     """The frame a card draws: the asked tf when the URL carries one, else the frame its own read was taken on (the
     ➖ Fade reads 15-minute first but falls back to a 5-minute read), else the sub's default. 2026-10-27: the
@@ -1265,6 +1340,7 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
                                   "cycles")}            # 🌀 the contraction count (BUILD_SPEC18 D2; critic 2026-10-20)
     g.update({"setup": setup, "state_label": state_label(read, rang), "variant_label": variant_label(read),
               "grade_label": grade_label(read), "chips": chips, "listed": _listed_block(listed),
+              "plan_text": plan_text(read),                     # 2026-11-11 §3.2 — the served plan line
               "_last": _last_close(doc, read.get("frame") or vv.primary, vv) or _f(scan_row.get("price")),
               "_bars_to_go": _bars_to_go(read)})
     if "audit" in read:                                              # 🧪 2026-11-01 — the audited tab's block, served
@@ -1678,6 +1754,38 @@ def _promo_tag(out: dict, ptags) -> None:
         tag(pm["recap"].get("rows"))
 
 
+def _stage_tag(out: dict, st, session: date, have: dict, *, is_today: bool, v=None, entries=None) -> None:
+    """🧭 2026-11-11 — in place: every card in out["tiles"] whose symbol has a 🧠 tracker doc or a rang A+ in the
+    listing window (SC._window(session) = the board's session + GC.STAY_LISTED_SESSIONS before it) gains
+    gajjala["stages"]. `have` = {date: docs} already read by build (today, prev); the window's other sessions are read
+    here (ONE find each) — never per card. `entries` (review fix 2026-11-11, D10) = build's ONE _entry_times read over
+    the window, handed in as a zero-arg callable (read at most once per build, only when a card exists); None → its own
+    read (a direct caller). 🧪 keeps its separate st.shared read (🚩's claims). Every block is computed FIRST, then
+    all are assigned (a raise → no card has the key). A card with no tag keeps every byte. Never reorders, drops or
+    gates."""
+    from chart_maps.gajjala import scanner as SC
+    tiles = [t for t in out.get("tiles") or [] if isinstance(t, dict) and isinstance(t.get("gajjala"), dict)]
+    if not tiles:
+        return
+    win = SC._window(session)
+    days = {d: (have[d] if d in have else _safe_list(st.potentials, d)) for d in win}
+    aud = V.is_audited(V.of(v))
+    if aud:                                              # 🧪 → 🚩's claims (the tracker is borrowed; GGA's own are shadow)
+        src = getattr(st, "shared", None)
+        entries = (_entry_times(src, win, None) or {}) if src is not None else {}
+    elif callable(entries):
+        entries = entries() or {}                        # build's ONE alert_rows read (D10); None (a fault) → {}
+    else:
+        entries = _entry_times(st, win, v) or {}         # `or {}`: a read fault answers None (D10)
+    syms = {str(t.get("symbol") or "").upper() for t in tiles}
+    by = SG.by_symbol(days, board_session=session, is_today=is_today, symbols=syms, cadence_min=_cad(v),
+                      borrowed=aud, entries=entries)
+    adds = [(t, SG.for_tile(by[s], t["gajjala"].get("setup"), session))
+            for t in tiles for s in [str(t.get("symbol") or "").upper()] if by.get(s)]             # all first
+    for t, b in adds:
+        t["gajjala"]["stages"] = b
+
+
 def _soft(what: str, fn, *a, default=None, **kw):
     """D1 on the read path: a raising 🧠 potential / 📈 track piece logs and serves `default`; it never takes down the
     A+ board of any sub."""
@@ -1849,6 +1957,7 @@ def _track_row(doc: dict, entries: Optional[dict] = None, v=None, live: bool = F
             "first_stop": _f(doc.get("first_stop")), "last_state": last_state, "last_state_text": last_text,
             "last_px": p1, "move_pct": m, "move_text": move_text, "vs_trigger_pct": v, "vs_trigger_text": vs_text,
             "push_text": push_text, "entry_text": entry_text, "graveyard_on": grave, "timeline": timeline,
+            "brk_text": _soft("break track word", _brk_track_text, doc, default=None),   # ⚡ 2026-11-11
             "text": " · ".join(b for b in bits if b), "href": href}
 
 
@@ -1974,6 +2083,78 @@ def _rang(entries: Optional[dict], session, sym: str, setup: str) -> Optional[bo
     return (session.isoformat(), sym, setup) in entries
 
 
+_UNSET = object()
+
+
+def day2_block(st, session: date, prev: date, listed, v=None, *, entries=_UNSET, carry=_UNSET) -> Optional[dict]:
+    """🌅 2026-11-11 entry spec §3.7 (proposal #8) — GG5's ☀️ pre-market sub only; a LIST, never a push.
+    Rows: (a) yesterday's A+ that RANG LIVE (_entry_times — store.alert_rows classified by ledger.alert_of, line "live"
+    only: shadow, refusals, claimed, failed, no_target never count), ONE row per symbol = its earliest ring (the
+    first-ring-counts rule of ledger.dedupe_trades), ordered by ring time; then (b) yesterday's after-hours carry names
+    (store.ah_carry(prev), the doc's own order) not already in (a). " · on today's list" when the name is listed today.
+    `entries` = build's ONE window read (a zero-arg callable or its dict; None = a read fault); unset → its own
+    `_entry_times(st, [prev], v)`. `carry` = build's ONE carry read; unset → its own. An UNKNOWN entries read (None)
+    serves None — never "No A+ rang" on a read that failed (the house tri-state, _ledger_count). 2026-11-11 critic
+    fix: an UNKNOWN carry (None — the read faulted, or no after-hours pass wrote yesterday's doc; replace_ah_carry
+    writes `names: {}` when a pass ran and nothing passed) serves None the same way — never "no after-hours mover
+    passed" on a carry that was never read. The entries read still runs first (ONE read per ☀️ build either way)."""
+    if entries is _UNSET:
+        entries = _entry_times(st, [prev], v)
+    elif callable(entries):
+        entries = entries()
+    if entries is None:
+        return None
+    if carry is _UNSET:
+        carry = st.ah_carry(prev)
+    if not isinstance(carry, dict):
+        return None
+    listed = listed or {}
+    day = prev.isoformat()
+    order = {s: i for i, s in enumerate(GC.SETUPS)}
+    first: dict = {}                                                # SYM → (at, setup order, setup)
+    for (d, sym, setup), at in entries.items():
+        if d != day or not isinstance(at, str) or not sym:
+            continue
+        sym = str(sym).upper()
+        k = (at, order.get(setup, len(order)), setup)
+        if sym not in first or k < first[sym]:
+            first[sym] = k
+    rows = []
+    for sym, (at, _o, setup) in sorted(first.items(), key=lambda kv: (kv[1][0], kv[0])):
+        text = DAY2_APLUS_TEXT.format(sym=sym, setup_label=_setup_label(setup), at=at)
+        rows.append({"symbol": sym, "text": text + (DAY2_LISTED_TEXT if sym in listed else ""),
+                     "href": PT.deep_link(sym, setup, v) if not V.is_gg5(v) else PT.deep_link(sym, setup)})
+    names = carry.get("names") if isinstance(carry, dict) else None
+    seen = set(first)
+    for sym in (names or {}) if isinstance(names, dict) else ():
+        sym = str(sym or "").upper()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        rows.append({"symbol": sym, "text": DAY2_CARRY_TEXT.format(sym=sym) + (DAY2_LISTED_TEXT if sym in listed else ""),
+                     "href": f"/chart-maps?tab={V.of(v).tab}&sub=premarket&focus={sym}"})
+    return {"title": DAY2_TITLE, "note": DAY2_NOTE, "rows": rows, "empty_text": DAY2_EMPTY}
+
+
+def focus_block(tiles: list, order_flags) -> Optional[dict]:
+    """🔝 2026-11-11 entry spec §3.8 (proposal #9) — display only. When the board serves MORE than GC.FOCUS_N cards,
+    the first GC.FOCUS_N of the served order (run AFTER broker_bottom) whose symbol is NOT on his 🚫 list
+    (`order_flags` — read for EVERY viewer, so every reader sees the same focus cards; never the owner-only `flags`)
+    get `tile["focus"] = True` and the block {n, text} is returned; else None and no card is marked. Never reorders,
+    drops or gates a card. Every mark is computed FIRST, then assigned (a raise marks nothing). 2026-11-11 critic fix:
+    the header says "the first five cards", so it is served (and the cards marked) only when exactly GC.FOCUS_N
+    non-🚫 cards are picked — fewer (his 🚫 names fill the rest) → None and no card is marked."""
+    rows = [t for t in tiles or [] if isinstance(t, dict)]
+    if len(rows) <= GC.FOCUS_N:
+        return None
+    picks = [t for t in rows if broker_text_for(t.get("symbol"), order_flags or None) is None][:GC.FOCUS_N]
+    if len(picks) < GC.FOCUS_N:                                     # 🚫 names leave fewer than five → no header, no mark
+        return None
+    for t in picks:
+        t["focus"] = True
+    return {"n": GC.FOCUS_N, "text": FOCUS_TEXT}
+
+
 def _ledger_count(st, session: date, v=None) -> Optional[int]:
     """🏁 chip: ledger.count_today over today's tracker docs and today's ledger docs; None when the ledger cannot load
     or EITHER read faulted (an unknown count is never served as 0). The tracker is read here with `st.potentials`
@@ -2090,9 +2271,20 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     def _row(sym):
         return dict(((scan_by.get(sym) or {}).get("last") or {}))
 
-    # D10 2026-11-11: the ONE entries read of a setup sub (live-push pages only), before the tile loop
-    words_entries = (_soft("A+ entry read", _entry_times, st, [session, prev], v, default=None)
-                     if live_push and sub_k in GC.SETUPS else None)
+    # D10 2026-11-11 + 🧭 review fix: ONE alert_rows read per build, over the listing window (SC._window(session) ⊇
+    # [session, prev]), made at most once and only when a consumer needs it — the setup-sub words, the 🧠 entries, the
+    # 🌙 recap and the 🧭 stages all share it. Every consumer looks up (date_iso, SYM, setup), so the older window days
+    # are never matched by the [session, prev] words.
+    ent_win = list(SC._window(session))
+    ent_win += [prev] if prev not in ent_win else []
+    ent_memo: dict = {}
+
+    def _entries_once():
+        if "v" not in ent_memo:
+            ent_memo["v"] = _soft("A+ entry read", _entry_times, st, ent_win, v, default=None)
+        return ent_memo["v"]
+
+    words_entries = _entries_once() if live_push and sub_k in GC.SETUPS else None   # before the tile loop
     # every setup's tiles — the counts on the strip, the tiles of the shown sub
     per_setup: dict = {}
     counts_by: dict = {}
@@ -2160,6 +2352,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                               _soft("potential push line", push_potential_block, session, v)),
            "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a],
            "broker_flags": broker_block(flags, fault=bfault) if flags is not None else None}
+    if gg5:                                     # ⚡ 2026-11-11 entry spec §3.1 — GG5 only; a raising watch → None
+        out["push_break"] = _soft("break push line", push_break_block, default=None)
     if not gg5:                                 # 🚩 2026-10-27 — the 1-minute page's ONE added key (never on GG5)
         out["variant"] = V.served_block(v)
     out["scan"] = _soft("scan line", scan_block, pass_doc, lease, now, in_window=in_window, session=session,
@@ -2193,7 +2387,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                  [p for p in pots if p[1]["setup"] == sub_k], today_n, sess=sess,
                                  in_window=in_window, v=v, flags=order_flags) if pot_ok else None
     elif sub_k == GC.POTENTIAL_SUB:
-        entries = _soft("A+ entry read", _entry_times, st, [session, prev], v, default=None)   # D4: ONE read (D10: above the tiles, tri-state)
+        entries = _entries_once()                       # D4: ONE read (D10: above the tiles, tri-state; the window read)
         out["tiles"] = broker_bottom((_soft("potential tiles", _potential_tiles, pots, st=st, session=session,
                                             tf_ask=tf_ask, scan_row=_row, sess=sess, listed=listed, halts_by=halts_by,
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
@@ -2215,6 +2409,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out.update({"tiles": broker_bottom(tiles[:lim], order_flags),     # 🚫 2026-11-09 — his names last among the cards shown
                     "sorts": [{"key": k, "label": lb} for k, lb in SORTS_PM], "sort": sk,
                     "empty_note": "No pre-market mover on his list and no after-hours carry from the last session."})
+        if gg5:                                 # 🌅 2026-11-11 (#8) — GG5 ☀️ only; build's ONE entries + carry reads
+            out["day2"] = _soft("day-2 list", day2_block, st, session, prev, listed, v, entries=_entries_once,
+                                carry=ah_prev, default=None)
     elif sub_k == "postmarket":
         from chart_maps.gajjala import context as CX
         tiles = [_list_tile(str(d["symbol"]).upper(), "postmarket", reads_by.get(str(d["symbol"]).upper()), tf_k,
@@ -2225,8 +2422,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out.update({"tiles": broker_bottom(tiles[:lim], order_flags),     # 🚫 2026-11-09 — his names last among the cards shown
                     "postmarket": {"unchecked_n": unchecked, "unchecked_text": CX.unchecked_text(unchecked),
                                    "recap": recap(list(reads_by.values()) if aud else reads, v,
-                                                  entries=(_soft("A+ entry read", _entry_times, st, [session, prev], v,
-                                                                 default=None) if live_push else None))},
+                                                  entries=_entries_once() if live_push else None)},
                     "empty_note": "No after-hours mover has passed his three after-hours checks yet."})
     elif sub_k == "playbook":
         from chart_maps.gajjala import playbook as PB
@@ -2251,10 +2447,16 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                          broker_text_of=lambda s: broker_text_for(s, flags),
                                          **({} if gg5 else {"variant": v}), default=None) if LG else None)
             out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT  # W16
+    if gg5 and (sub_k in per_setup or sub_k == GC.POTENTIAL_SUB):   # 🔝 2026-11-11 (#9) — after broker_bottom
+        fb = _soft("focus five", focus_block, out["tiles"], order_flags, default=None)
+        if fb:
+            out["focus"] = fb
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
     _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer
     _promo_tag(out, ptags)                                          # 🎪 2026-10-29 — the same walk, keys only when tagged
+    _soft("setup stages", _stage_tag, out, st, session, {session: pot_docs, prev: pot_prev}, is_today=is_today,
+          v=v, entries=_entries_once)                              # 🧭 2026-11-11 — display only, every card
     _strip_private(out["tiles"])
     return _plain(out)
 
@@ -2262,4 +2464,6 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
-           "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block"]
+           "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
+           "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
+           "FOCUS_TEXT", "DAY2_NOTE"]
