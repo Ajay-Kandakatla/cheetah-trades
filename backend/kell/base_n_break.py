@@ -41,6 +41,7 @@ Top 200 SEPA candidates.
 from __future__ import annotations
 
 import logging
+import math
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
@@ -94,7 +95,12 @@ def _detect(symbol: str) -> Optional[dict]:
             return None
 
     avg_vol = float(vols[-_AVG_VOL_WINDOW - 1:-1].mean())
-    if avg_vol <= 0:
+    # Missing volume = not dry (fail closed, formulas audit D12): one NaN bar
+    # in the 50-bar baseline makes avg_vol NaN, and every NaN comparison
+    # below is False, so the dry and breakout-volume gates would both pass.
+    # Every base window lies inside this baseline, so this one check also
+    # covers a NaN base-bar volume.
+    if not math.isfinite(avg_vol) or avg_vol <= 0:
         return None
 
     last_close = float(closes[-1])
@@ -170,7 +176,8 @@ def _detect(symbol: str) -> Optional[dict]:
 
     # 4) Volume expansion on the breakout bar.
     vol_mult = last_vol / avg_vol
-    if vol_mult <= _BREAKOUT_VOL_MULT:
+    # A NaN breakout-bar volume is not expansion (formulas audit D12).
+    if not math.isfinite(vol_mult) or vol_mult <= _BREAKOUT_VOL_MULT:
         return None
 
     # 5) Trigger / stop / target.

@@ -215,6 +215,18 @@ once the consolidation completes).
 3. Today: `df[-1].close > max(base_highs)`.
 4. `df[-1].volume > 1.3 × avg_vol_50`.
 
+**2026-11-11 — missing volume = not dry (formulas audit D12, fail closed).** One NaN volume bar inside the 50-bar
+baseline `vols[-51:-1]` made `avg_vol_50` NaN; every NaN comparison is False, so the volume-dry gate (2c) and the
+breakout-volume gate (4) both passed and the name was LISTED (audit demo `L4/demo_kell_voldry.py`: the NAN frame read
+`vol_dry_ratio nan / breakout_vol_mult nan`, base_len 15, pivot 77.645). Now `_detect` returns None when
+`avg_vol_50` is not finite (`math.isfinite`) and when `vol_mult = today's volume / avg_vol_50` is not finite. Every base
+window (≤ 15 bars ending yesterday) lies inside the 50-bar baseline, so a NaN base volume is caught by the `avg_vol_50`
+check — ONE outcome, None; there is no separate base-volume clause. A NaN older than the 50-bar baseline is never read
+and changes nothing. The fix can only REMOVE a listed name (and so a name in the nightly `setup_base_n_break` top-3
+push), never add one; every constant above is unchanged. Demo after: DRY listed (base_len 15, pivot 77.645) unchanged,
+WET None unchanged, NAN None. Tests: `backend/tests/test_kell_base_n_break_defects_2026_11_11.py`. NOT fixed here: D8
+(a shorter window standing in for a failed longest base) — count-gated, a later step.
+
 **Trigger / Stop / Target (per pp. 48-49):**
 - trigger = `max(base_highs) + 0.01`
 - stop = `min(ema20, min(base_lows)) − 0.01`
