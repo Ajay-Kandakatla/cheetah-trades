@@ -70,7 +70,7 @@ served `counts` are unchanged; no methodology change.
 | none | no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error |
 | awaiting your number | held by a rule whose number you have not given |
 | listed | the names his scanner listed for the session — every count above is read on these |
-| 🧠 Potential | 🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup. |
+| 🧠 Potential | 🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup. |
 | 📈 Track | every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on |
 
 Under the shipped settings. The 🧠 Potential row's middle sentence is `potential.defaults_clauses()[0]`'s base clause and follows `POTENTIAL_NEEDS_BASE`;

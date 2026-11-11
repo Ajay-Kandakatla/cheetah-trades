@@ -405,6 +405,13 @@ def _pct_of(name: str) -> str:
     return "%g%%" % (val * _PCT) if isinstance(val, (int, float)) else _v(name)
 
 
+def _part(name: str) -> str:
+    """A fraction knob in common words ("half", "70% of") through the ONE helper; the waiting text when unset."""
+    from . import detectors as D
+    x = getattr(GC, name, None)
+    return D.part_words(x) if isinstance(x, (int, float)) and not isinstance(x, bool) else _v(name)
+
+
 def _n(name: str) -> str:
     val = getattr(GC, name, None)
     return "{:,}".format(int(val)) if isinstance(val, (int, float)) else _v(name)
@@ -420,26 +427,28 @@ def _setup_names(keys) -> str:
 
 
 def _event_rule_text() -> str:
+    """H2 in words — the ONE map (detectors.FAIL_RULE_WORDS); the waiting sentence for an unset or unknown rule."""
+    from . import detectors as D
     rule = getattr(GC, "K8_FAIL_EVENT_RULE", None)
-    if rule == "distinct":
-        return "a separate, earlier sell-off (it must end before the tennis ball)"
-    if rule == "same_ok":
-        return "the tennis-ball drop may itself be the failed try"
-    return WAITING.format(h=_hcall("K8_FAIL_EVENT_RULE") or "?")
+    return D.FAIL_RULE_WORDS.get(rule) or WAITING.format(h=_hcall("K8_FAIL_EVENT_RULE") or "?")
 
 
 def knobs() -> list:
     """K1–K11 (+ round-A/C answers and H1–H5) rendered from constants.py with their provenance."""
+    from . import detectors as D
     rows = [
         ("Scanner", "price $%s–$%s, %s+ shares today, up %s%%+ on the prior regular close; common stock + ADRs"
          % (_v("SCAN_MIN_PRICE", "%.2f"), _v("SCAN_MAX_PRICE"), _n("SCAN_MIN_VOLUME"), _v("SCAN_MIN_CHANGE_PCT")),
          "GG (floor: his X post 2024-02-01); types: " + AJAY),
         ("Stays listed", "%s sessions after it last qualified" % _v("STAY_LISTED_SESSIONS", "%d"), CHEETAH_DEFAULT),
-        ("K1", "demand bar: close ≥ open +%s%%, range ≥ %s× the prior %s bars' average"
+        ("K1", "big green bar (his demand bar): close ≥ open +%s%%, range ≥ %s× the prior %s bars' average"
          % (_v("K1_BODY_GAIN_PCT"), _v("K1_RANGE_MULT"), _v("K1_RANGE_LOOKBACK", "%d")), AJAY),
-        ("K2", "leg volume rising bar to bar, no step over %s×" % _v("K2_MAX_VOL_STEP"), AJAY),
-        ("K3", "pullback lows ≥ last demand high − %s × its range (%s only); pullback volume ≤ %s× the leg's mean"
-         % (_v("K3_DEPTH_FRAC"), _setup_names(GC.K3_DEPTH_SETUPS), _v("K3_VOL_FRAC")), AJAY),
+        ("K2", "volume building on the run up (%s only): inside the run up each big green bar at least the volume "
+               "of the bar before, no step over %s×%s"
+         % (_setup_names(D.K2_SETUPS), _v("K2_MAX_VOL_STEP"), D.k2_first_words()), AJAY),
+        ("K3", "pullback gives back no more than %s the last big green bar's range (%s only); volume dried up: no "
+               "pullback or base bar above %s the average bar of the run up (🎾: of the run back up)"
+         % (_part("K3_DEPTH_FRAC"), _setup_names(GC.K3_DEPTH_SETUPS), _part("K3_VOL_FRAC")), AJAY),
         ("K4", "Bull Flag %s–%s bars%s · Kiss & Fly ≤ %s · Fade base %s–%s · VCP ≥ %s contractions"
          % (_v("K4_BF_PULL_MIN", "%d"), _v("K4_BF_PULL_MAX", "%d"),
             # Ajay 2026-10-18 (DECISIONS13 D1/D4): the long-flag band is empty while K4_BF_LONG_FLAG_MAX is None
@@ -447,14 +456,17 @@ def knobs() -> list:
              if GC.K4_BF_LONG_FLAG_MAX is not None else ""),
             _v("K4_KF_PULL_MAX", "%d"), _v("K4_HF_BASE_MIN", "%d"), _v("K4_HF_BASE_MAX", "%d"),
             _v("K4_VCP_MIN_CYCLES", "%d")), AJAY_K4_FMT % (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX)),
-        ("K5", "kiss = low ≤ 9 EMA +%s%% and close above it; uptrend = 9 over 21, both above %s bars back; every "
-               "pullback close ≥ the 9 EMA" % (_v("K5_KISS_TOL_PCT"), _v("K5_SLOPE_BARS", "%d")), AJAY),
-        ("K6", "EMAs within %s%%, base ≤ %s%% of price, second-half volume < %s× the first"
-         % (_v("K6_MERGE_PCT"), _v("K6_TIGHT_PCT"), _v("K6_SELL_DECAY")), AJAY),
-        ("K7", "each cycle ≤ %s× the one before, cycle lows ≥ 21 EMA −%s%%, higher lows"
-         % (_v("K7_CONTRACTION"), _v("K7_EMA21_TOL_PCT")), AJAY),
-        ("K8", "float ≤ %s; drop ≥ %s%% recovered within %s%% in %s bars; squeeze-history chip: last %s sessions, "
-               "≥ %s%% range or a halt"
+        ("K5", "kiss = a pullback low no more than %s%% above the 9 EMA and a close above it; uptrend = 9 EMA over "
+               "the 21, both higher than %s bars back; every pullback bar closes at or above the 9 EMA"
+         % (_v("K5_KISS_TOL_PCT"), _v("K5_SLOPE_BARS", "%d")), AJAY),
+        ("K6", "9 and 21 EMA merged (within %s%%), tight base (at most %s%% of the price from high to low), selling "
+               "drying up (second half of the base under %s the first half's volume)"
+         % (_v("K6_MERGE_PCT"), _v("K6_TIGHT_PCT"), _part("K6_SELL_DECAY")), AJAY),
+        ("K7", "each contraction (pullback) at most %s the one before, every contraction low no more than %s%% under "
+               "the 21 EMA, higher lows"
+         % (_part("K7_CONTRACTION"), _v("K7_EMA21_TOL_PCT")), AJAY),
+        ("K8", "float ≤ %s; tennis ball action = a drop ≥ %s%% that closes back within %s%% of the high on the drop "
+               "bar or in the next %s bars; squeeze-history chip: last %s sessions, ≥ %s%% range or a halt"
          % (_n("K8_MAX_FLOAT"), _v("K8_DROP_PCT"), _v("K8_RECOVER_PCT"), _v("K8_RECOVER_BARS", "%d"),
             _v("K8_HISTORY_SESSIONS", "%d"), _v("K8_HISTORY_RANGE_PCT")), AJAY),
         ("K9", "premarket %s+ shares; yesterday's after-hours movers up %s%%+" % (_n("K9_PM_MIN_VOLUME"),
@@ -464,11 +476,11 @@ def knobs() -> list:
         # K11 (2026-10-21, BUILD_SPEC22 B3): GG VR 0.4 — Ajay "keep what ever Gajjala says"; the floor is his scanner's
         ("K11", "today's volume ≥ %s shares at the ring (his scanner floor; 'it must sustain')"
          % _n("K11_MIN_SESSION_VOLUME"), AJAY_K11),
-        ("H1", "failed try at the highs: within %s%% of today's high, then %s%% under it"
+        ("H1", "failed try at the highs: within %s%% of today's high, then %s%% under that try's high"
          % (_v("K8_FAIL_NEAR_PCT"), _v("K8_FAIL_DROP_PCT")), AJAY),
         ("H2", "failed try vs the tennis ball: %s" % _event_rule_text(), AJAY),
-        ("H3", "left-side demand bars: Fade ≥ %s, VCP ≥ %s" % (_v("HF_LEG_MIN_BARS", "%d"),
-                                                           _v("VCP_LEG_MIN_BARS", "%d")), AJAY),
+        ("H3", "big green bars on the left side: Fade ≥ %s, VCP ≥ %s" % (_v("HF_LEG_MIN_BARS", "%d"),
+                                                                       _v("VCP_LEG_MIN_BARS", "%d")), AJAY),
         ("H4", "squeeze quiet base ≥ %s bars" % _v("RS_BASE_MIN_BARS", "%d"), AJAY),
         ("H5", "VCP pivots confirmed by %s bars each side" % _v("VCP_PIVOT_WINDOW", "%d"), AJAY),
         ("🧱 Psych chip", "%s within %s%% above the price" % (_levels(), _v("PSY_NEAR_PCT")), CHEETAH_DEFAULT),

@@ -230,9 +230,13 @@ def test_registry_row_k3s_carries_the_prereg3_sha_and_words_only():
     assert "sha256 be966681e317…" in row["source_text"] and AUD.PREREG3_PATH in row["source_text"]
     assert 'GG: "gradual decrease in volume"' in row["source_text"]
     assert "UNMEASURED" in row["verdict_text"] and "{" not in row["rule"]
-    assert "≤ 0.5× the squeeze-back run" in row["rule"] and "K11 session volume re-applied" in row["rule"]
-    assert row["params_text"] == ("🎾 only · fires when K3 (0.5× the squeeze-back run) is the ONLY miss on the break "
-                                  "bar · K11 re-applied · 🚩's plan unchanged")
+    # MOVED 2026-11-10 (plain words): the K3 phrase reads "volume dried up in the base"; the {frac:g} param stays
+    assert ("K3 (volume dried up in the base: no base bar above 0.5× the average bar of the run back up)" in row["rule"]
+            and "K11 session volume re-applied" in row["rule"])
+    assert "squeeze-back" not in row["rule"] and "squeeze-back" not in row["params_text"]          # NEGATIVE
+    assert row["params_text"] == ("🎾 only · fires when K3 volume dried up in the base (no bar above 0.5× the average "
+                                  "bar of the run back up) is the ONLY miss on the break bar · K11 re-applied · 🚩's "
+                                  "plan unchanged")
     for v in row.values():
         if isinstance(v, str):
             assert "None" not in v and not EDGE.search(v) and not B_WORD.search(v), v[:60]   # NEGATIVE

@@ -348,8 +348,9 @@ T5 = Rule(
 # ── the 2026-11-09 K3S admit (prereg3; source quotes are single lines of the frozen file) ─────────────────────────
 K3S = Rule(
     "K3S", "K3 volume-dry not binding on the 🎾 base", "2026-11-09", STATUS_ON, True,
-    "a 🎾 Reversal Squeeze break that 🚩 refuses ONLY on K3 (base volume ≤ {frac:g}× the squeeze-back run) is a 🧪 A+ at "
-    "that break bar with 🚩's own trigger, stop and R; K11 session volume re-applied; every other 🧪 rule then applies",
+    "a 🎾 Reversal Squeeze break that 🚩 refuses ONLY on K3 (volume dried up in the base: no base bar above {frac:g}× "
+    "the average bar of the run back up) is a 🧪 A+ at that break bar with 🚩's own trigger, stop and R; K11 session "
+    "volume re-applied; every other 🧪 rule then applies",
     MappingProxyType({"frac": GC.K3_VOL_FRAC, "setups": K3S_SETUPS, "missed": K3S_MISSED}),
     ((PREREG3_PATH, "Fires when: the 🚩 read's state is \"partial\", its break bar is identified (`entry_bar_t` set), "
                     "and `missed` is exactly"),
@@ -478,8 +479,8 @@ def _params_text(r: Rule) -> str:
     if r.id == "T5":
         return f"{_g(p['frame_min'])}-minute close under the {_g(p['ema'])} EMA"
     if r.id == "K3S":
-        return (f"🎾 only · fires when K3 ({_g(p['frac'])}× the squeeze-back run) is the ONLY miss on the break bar · "
-                f"K11 re-applied · 🚩's plan unchanged")
+        return (f"🎾 only · fires when K3 volume dried up in the base (no bar above {_g(p['frac'])}× the average bar "
+                f"of the run back up) is the ONLY miss on the break bar · K11 re-applied · 🚩's plan unchanged")
     return ", ".join(f"{k} = {_g(v)}" for k, v in p.items())
 
 

@@ -75,7 +75,7 @@
     },
     {
      "key": "potential",
-     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
      "word": "🧠 Potential"
     },
     {
@@ -134,7 +134,7 @@
     },
     "empty_text": "No 🚩 Bull Flag forming right now — the next pass is at most 5 minutes away.",
     "rows": [],
-    "text": "Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
+    "text": "Forming, not triggered: the run up is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
     "title": "🧠 Potential — 0 trigger armed · 0 building · 1 first seen today · UNMEASURED"
    },
    "push": {
@@ -241,7 +241,7 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential",
-     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
@@ -384,22 +384,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        },
@@ -553,7 +553,7 @@
     },
     {
      "key": "potential",
-     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
      "word": "🧠 Potential"
     },
     {
@@ -870,17 +870,17 @@
      },
      {
       "key": "K1",
-      "text": "demand bar: close ≥ open +3%, range ≥ 1.5× the prior 20 bars' average",
+      "text": "big green bar (his demand bar): close ≥ open +3%, range ≥ 1.5× the prior 20 bars' average",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "K2",
-      "text": "leg volume rising bar to bar, no step over 5×",
+      "text": "volume building on the run up (Bull Flag and EMA Kiss & Fly only): inside the run up each big green bar at least the volume of the bar before, no step over 5×",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "K3",
-      "text": "pullback lows ≥ last demand high − 0.5 × its range (Bull Flag and EMA Kiss & Fly only); pullback volume ≤ 0.5× the leg's mean",
+      "text": "pullback gives back no more than half the last big green bar's range (Bull Flag and EMA Kiss & Fly only); volume dried up: no pullback or base bar above half the average bar of the run up (🎾: of the run back up)",
       "value": "Ajay 2026-10-13"
      },
      {
@@ -890,22 +890,22 @@
      },
      {
       "key": "K5",
-      "text": "kiss = low ≤ 9 EMA +0.5% and close above it; uptrend = 9 over 21, both above 3 bars back; every pullback close ≥ the 9 EMA",
+      "text": "kiss = a pullback low no more than 0.5% above the 9 EMA and a close above it; uptrend = 9 EMA over the 21, both higher than 3 bars back; every pullback bar closes at or above the 9 EMA",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "K6",
-      "text": "EMAs within 0.5%, base ≤ 8% of price, second-half volume < 0.7× the first",
+      "text": "9 and 21 EMA merged (within 0.5%), tight base (at most 8% of the price from high to low), selling drying up (second half of the base under 70% of the first half's volume)",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "K7",
-      "text": "each cycle ≤ 0.75× the one before, cycle lows ≥ 21 EMA −0.5%, higher lows",
+      "text": "each contraction (pullback) at most 75% of the one before, every contraction low no more than 0.5% under the 21 EMA, higher lows",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "K8",
-      "text": "float ≤ 10,000,000; drop ≥ 8% recovered within 2% in 3 bars; squeeze-history chip: last 30 sessions, ≥ 50% range or a halt",
+      "text": "float ≤ 10,000,000; tennis ball action = a drop ≥ 8% that closes back within 2% of the high on the drop bar or in the next 3 bars; squeeze-history chip: last 30 sessions, ≥ 50% range or a halt",
       "value": "Ajay 2026-10-13"
      },
      {
@@ -925,17 +925,17 @@
      },
      {
       "key": "H1",
-      "text": "failed try at the highs: within 2% of today's high, then 8% under it",
+      "text": "failed try at the highs: within 2% of today's high, then 8% under that try's high",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "H2",
-      "text": "failed try vs the tennis ball: a separate, earlier sell-off (it must end before the tennis ball)",
+      "text": "failed try vs the tennis ball: a separate sell-off that ends before the tennis ball",
       "value": "Ajay 2026-10-13"
      },
      {
       "key": "H3",
-      "text": "left-side demand bars: Fade ≥ 2, VCP ≥ 1",
+      "text": "big green bars on the left side: Fade ≥ 2, VCP ≥ 1",
       "value": "Ajay 2026-10-13"
      },
      {
@@ -2138,7 +2138,7 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential",
-     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
@@ -2226,7 +2226,7 @@
     },
     {
      "key": "potential",
-     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
      "word": "🧠 Potential"
     },
     {
@@ -2380,7 +2380,7 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential",
-     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
@@ -2523,38 +2523,38 @@
       "criteria": [
        {
         "key": "k4",
-        "label": "K4 base 6–24 bars",
-        "need": "6–24",
+        "label": "K4 sideways base length",
+        "need": "6 to 24 bars",
         "ok": false,
         "value": "3 bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 base volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up in the base",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": false,
-        "value": "max 250000"
+        "value": "busiest bar 250,000"
        },
        {
         "key": "k6_tight",
-        "label": "K6 base range ≤ 8% of price",
-        "need": "≤ 8%",
+        "label": "K6 tight base",
+        "need": "at most 8% of the price",
         "ok": true,
-        "value": "3.9%"
+        "value": "3.9% from high to low"
        },
        {
         "key": "k6_merge",
-        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-        "need": "≤ 0.5%",
+        "label": "K6 9 and 21 EMA merged",
+        "need": "at most 0.5% apart",
         "ok": false,
         "value": "EMAs 2.61% apart"
        },
        {
         "key": "k6_decay",
-        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-        "need": "< 0.7×",
+        "label": "K6 selling drying up",
+        "need": "under 70%",
         "ok": false,
-        "value": "second-half volume 2.50×"
+        "value": "second half 250% of the first half's volume"
        }
       ],
       "cycles": null,

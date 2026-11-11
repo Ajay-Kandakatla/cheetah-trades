@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-10 (verbatim in the label, his spelling kept): "Also please use common vocabuluary like volume dried"
+  // + "not jus k3 please up date what he means in simple terms acroos k1 to k10" ("he" = GG). WORDING ONLY. Every
+  // criterion( row and reason in backend/chart_maps/gajjala/detectors.py: label = the K id + a plain phrase with no
+  // number (it is what the "missed:" pill joins), the number moves into `need` in words, `value` says what was seen
+  // with thousands separators. The same words on the 📓 knob rows (playbook.py), the ℹ️ panel
+  // (rules_info._gajjala_section), the 🧠 sentences (potential.py) and the pills (tab.py). The FE prints, never
+  // composes. No ok / missed / state / grade / trigger / stop moved: the stripped snapshot
+  // backend/tests/fixtures/gajjala/plain_words_stripped_2026_11_10.json is reproduced byte for byte. Cards (stored
+  // reads) written before the deploy keep their old words (never relabelled at serve time); 🏁 / 🕰️ rows carry none
+  // of the row words. K11, the red-closes row, the state words and GG's quoted lines are left. Doc
+  // docs/gajjala/plain_words_2026_11_10.md.
+  // Pinned by scripts/contracts.mjs ("🗣 Gajjala rule rows in plain words (2026-11-10)").
+  { id: 'chart-maps-gajjala-plain-words-2026-11-10', addedAt: '2026-11-10', route: '/chart-maps?tab=gajjala',
+    label: "🗣 Gajjala's rule rows in plain words — you said: “Also please use common vocabuluary like volume dried” and “not jus k3 please up date what he means in simple terms acroos k1 to k10”. Every K1 to K10 row on a Gajjala card (🚩 Gajjala's, the 1-minute page and 🧪 Audited) now says what GG means in everyday words. Your example row now reads: K3 volume dried up in the base — busiest bar 98,933 (every bar must be ≤ 36,008: half the average bar of the run back up). A big green bar is his demand bar; a run up is his leg. The reason lines, the 📓 Playbook rows and the ℹ️ Rules panel use the same words. Words only: no rule, number, alert or order moved. Cards stored before this change keep their old words until they age out; 🏁 rows carry none of these words, so they look the same." },
   // Ajay 2026-11-10 (verbatim in the label): "Then default my landing page to Gajjala's tab in chartmaps on the app
   // always." lib/landing.ts ownerLanding(target, isPrimaryOwner) + OWNER_LANDING_TAB: CmTab = 'gajjala' (type-only
   // import); App.tsx SmartLanding waits for features, menu AND useCurrentUser (a loader, never a wrong redirect; a failed

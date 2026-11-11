@@ -14,13 +14,23 @@ every stored and served byte. This file was written and its fixtures captured on
 The day: the tests/test_gajjala_run.py fixture — GGA forming a Bull Flag at 10:31 (one 🧠 potential), the same flag
 broken at 10:41 (one A+); GGB truncated before its break bar (forming, its last bar old); NOPE never qualifies.
 
-A moved GG5 byte is a BUG, never a regen. Recipe (the untouched tree only):
+A moved GG5 byte is a BUG, never a regen. Recipe (the untouched tree only; a dated regen below, each for a 🚩 change
+by his word, is the only exception):
   GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_variant_gg5_identity.py
 
-Dated regens of the BOARD golden (each a 🚩 change by his word, the diff verified key-for-key; the WRITES golden never moved):
+Dated regens (each a 🚩 change by his word, the diff verified key-for-key; the WRITES golden moved ONCE, 2026-11-10,
+wording only; every other entry is the BOARD golden alone):
   2026-11-09 ~10:30 ET — Ajay "Ok sort any stocks by volume on all Gajjala's charts" / "The ones I am reporting they are
   not on Fidelity put them at the bottom": `broker_flags.order_text` on every owner board + `order_note` on every setup sub
   and the 🧠 sub (tab.VOL_ORDER_TEXT / RS / HF / POT). No tile moved (the fixture day has one card per sub).
+  2026-11-10 — Ajay "please use common vocabuluary like volume dried" / "not jus k3 please up date what he means in
+  simple terms acroos k1 to k10": plain words on every rule row, reason and knob. BOARD and, for the first time,
+  WRITES regenerated (WRITES alone, with `-k test_gg5_writes_are_byte_identical`); wording only. Every differing leaf
+  is a string under label / value / need / reason / why / first_reason / state_label / grade_label / text / body,
+  plus the 🧠 sub's title at subs/<n>/title (BOARD only); `_recipe` byte-equal. WRITES = 302 leaves (label 96,
+  need 100, value 80, reason 20, first_reason 4, body 2), byte-equal to a scratch render made before the regen. His
+  word covers the WORDS; the WRITES regen itself was not put to him as a question
+  (docs/gajjala/plain_words_2026_11_10.md: Goldens, Open HIS CALLs #1).
 """
 from __future__ import annotations
 

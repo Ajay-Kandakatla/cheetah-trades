@@ -256,12 +256,12 @@ def _vcp_line():
 def test_rules_line_carries_the_listing_clause():
     t = _vcp_line()
     assert ", carded from %d contractions (fewer are counted, not listed)" % M in t
-    assert "≥%d contractions each ≤ %g×" % (M, GC.K7_CONTRACTION) in t        # the pinned K4/K7 clause intact
+    assert "≥%d contractions (pullbacks), each at most %s the one before" % (M, D.part_words(GC.K7_CONTRACTION)) in t   # MOVED 11-10
 
 
 def test_NEGATIVE_rules_line_has_no_clause_with_the_switch_off(monkeypatch):
     monkeypatch.setattr(GC, "VCP_LIST_FROM_K4", False)
     t = _vcp_line()
     assert "carded from" not in t
-    assert "≥%d contractions each ≤ %g×" % (M, GC.K7_CONTRACTION) in t
+    assert "≥%d contractions (pullbacks), each at most %s the one before" % (M, D.part_words(GC.K7_CONTRACTION)) in t   # MOVED 11-10
     assert not B_WORD.search(t)

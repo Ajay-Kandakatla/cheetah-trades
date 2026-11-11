@@ -306,7 +306,7 @@
     [
      "owner@example.com",
      {
-      "body": "4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "body": "low 4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
       "items": [
        {
         "symbol": "GGA",
@@ -751,24 +751,24 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          }
         ],
         "cycles": null,
@@ -808,38 +808,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "1.1%"
+          "value": "1.1% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 1.88% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": null,
-          "value": "second-half volume —×"
+          "value": "base too short to compare"
          }
         ],
         "cycles": null,
@@ -882,30 +882,30 @@
          {
           "key": "k4_cycles",
           "label": "K4 at least 2 contractions",
-          "need": "≥ 2",
+          "need": "2 or more",
           "ok": false,
-          "value": "1 cycles"
+          "value": "1 contraction"
          },
          {
           "key": "k7_ratio",
-          "label": "K7 each cycle's range ≤ 0.75× the previous",
-          "need": "≤ 0.75× each",
+          "label": "K7 each contraction tighter than the last",
+          "need": "each at most 75% of the one before",
           "ok": true,
-          "value": "0.125"
+          "value": "high to low 0.125"
          },
          {
           "key": "k7_ema21",
-          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
-          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "label": "K7 contraction lows hold the 21 EMA",
+          "need": "every low no more than 0.5% under the 21 EMA",
           "ok": true,
-          "value": "10.88"
+          "value": "lows 10.88"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullbacks",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          }
         ],
         "cycles": 1,
@@ -923,7 +923,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "1 of 2 cycles",
+        "reason": "1 of 2 contractions",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "intraday_vcp",
@@ -945,45 +945,45 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.41 · 21 EMA 10.21"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 pullback bar"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA and a close above it",
           "ok": false,
-          "value": "4.5% above the 9 EMA"
+          "value": "low 4.5% above the 9 EMA"
          }
         ],
         "cycles": null,
@@ -1001,7 +1001,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "kiss_fly",
@@ -1028,7 +1028,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -1385,7 +1385,7 @@
         "kind": "building",
         "px": 10.9375,
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -1410,7 +1410,7 @@
        "first_bar_t": "2026-10-13 10:30",
        "first_kind": "building",
        "first_px": 10.9375,
-       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_reason": "low 4.5% above the 9 EMA — waiting for the kiss",
        "first_risk_pct": 1.1363636363636365,
        "first_seen": "2026-10-13T14:31:00+00:00",
        "first_seen_et": "10:31",
@@ -2323,22 +2323,22 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
           "value": "2 bars"
          },
@@ -2387,38 +2387,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
           "value": "3 bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": false,
-          "value": "max 250000"
+          "value": "busiest bar 250,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "3.9%"
+          "value": "3.9% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 2.61% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": false,
-          "value": "second-half volume 2.50×"
+          "value": "second half 250% of the first half's volume"
          }
         ],
         "cycles": null,
@@ -2467,7 +2467,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no pullback yet — the leg is still printing highs",
+        "reason": "no pullback yet — still making new highs",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "intraday_vcp",
@@ -2489,43 +2489,43 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.50 · 21 EMA 10.27"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
           "value": "2 bars"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "2 bars"
+          "value": "2 pullback bars"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%)",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA",
           "ok": false,
           "value": "flew without touching the 9 EMA"
          }
@@ -2574,7 +2574,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -2867,24 +2867,24 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          }
         ],
         "cycles": null,
@@ -2924,38 +2924,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "1.1%"
+          "value": "1.1% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 1.88% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": null,
-          "value": "second-half volume —×"
+          "value": "base too short to compare"
          }
         ],
         "cycles": null,
@@ -2998,30 +2998,30 @@
          {
           "key": "k4_cycles",
           "label": "K4 at least 2 contractions",
-          "need": "≥ 2",
+          "need": "2 or more",
           "ok": false,
-          "value": "1 cycles"
+          "value": "1 contraction"
          },
          {
           "key": "k7_ratio",
-          "label": "K7 each cycle's range ≤ 0.75× the previous",
-          "need": "≤ 0.75× each",
+          "label": "K7 each contraction tighter than the last",
+          "need": "each at most 75% of the one before",
           "ok": true,
-          "value": "0.125"
+          "value": "high to low 0.125"
          },
          {
           "key": "k7_ema21",
-          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
-          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "label": "K7 contraction lows hold the 21 EMA",
+          "need": "every low no more than 0.5% under the 21 EMA",
           "ok": true,
-          "value": "10.88"
+          "value": "lows 10.88"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullbacks",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          }
         ],
         "cycles": 1,
@@ -3039,7 +3039,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "1 of 2 cycles",
+        "reason": "1 of 2 contractions",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "intraday_vcp",
@@ -3061,45 +3061,45 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.41 · 21 EMA 10.21"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 pullback bar"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA and a close above it",
           "ok": false,
-          "value": "4.5% above the 9 EMA"
+          "value": "low 4.5% above the 9 EMA"
          }
         ],
         "cycles": null,
@@ -3117,7 +3117,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "kiss_fly",
@@ -3144,7 +3144,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -3614,7 +3614,7 @@
         "kind": "building",
         "px": 10.9375,
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -3639,7 +3639,7 @@
        "first_bar_t": "2026-10-13 10:30",
        "first_kind": "building",
        "first_px": 10.9375,
-       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_reason": "low 4.5% above the 9 EMA — waiting for the kiss",
        "first_risk_pct": 1.1363636363636365,
        "first_seen": "2026-10-13T14:41:00+00:00",
        "first_seen_et": "10:41",
@@ -4528,7 +4528,7 @@
     [
      "owner@example.com",
      {
-      "body": "4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
+      "body": "low 4.5% above the 9 EMA — waiting for the kiss · trigger 11.00 (not armed yet) · stop 10.88 (−1.1%) · UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs · first seen 10:31 ET · shares out 5.0M (Massive) · 🔄 shares out ×0.6",
       "items": [
        {
         "symbol": "GGA",
@@ -4973,24 +4973,24 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          }
         ],
         "cycles": null,
@@ -5030,38 +5030,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "1.1%"
+          "value": "1.1% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 1.88% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": null,
-          "value": "second-half volume —×"
+          "value": "base too short to compare"
          }
         ],
         "cycles": null,
@@ -5104,30 +5104,30 @@
          {
           "key": "k4_cycles",
           "label": "K4 at least 2 contractions",
-          "need": "≥ 2",
+          "need": "2 or more",
           "ok": false,
-          "value": "1 cycles"
+          "value": "1 contraction"
          },
          {
           "key": "k7_ratio",
-          "label": "K7 each cycle's range ≤ 0.75× the previous",
-          "need": "≤ 0.75× each",
+          "label": "K7 each contraction tighter than the last",
+          "need": "each at most 75% of the one before",
           "ok": true,
-          "value": "0.125"
+          "value": "high to low 0.125"
          },
          {
           "key": "k7_ema21",
-          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
-          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "label": "K7 contraction lows hold the 21 EMA",
+          "need": "every low no more than 0.5% under the 21 EMA",
           "ok": true,
-          "value": "10.88"
+          "value": "lows 10.88"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullbacks",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          }
         ],
         "cycles": 1,
@@ -5145,7 +5145,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "1 of 2 cycles",
+        "reason": "1 of 2 contractions",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "intraday_vcp",
@@ -5167,45 +5167,45 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.41 · 21 EMA 10.21"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 pullback bar"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA and a close above it",
           "ok": false,
-          "value": "4.5% above the 9 EMA"
+          "value": "low 4.5% above the 9 EMA"
          }
         ],
         "cycles": null,
@@ -5223,7 +5223,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "kiss_fly",
@@ -5250,7 +5250,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -5607,7 +5607,7 @@
         "kind": "building",
         "px": 10.9375,
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -5632,7 +5632,7 @@
        "first_bar_t": "2026-10-13 10:30",
        "first_kind": "building",
        "first_px": 10.9375,
-       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_reason": "low 4.5% above the 9 EMA — waiting for the kiss",
        "first_risk_pct": 1.1363636363636365,
        "first_seen": "2026-10-13T14:31:00+00:00",
        "first_seen_et": "10:31",
@@ -6545,22 +6545,22 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
           "value": "2 bars"
          },
@@ -6609,38 +6609,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
           "value": "3 bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": false,
-          "value": "max 250000"
+          "value": "busiest bar 250,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "3.9%"
+          "value": "3.9% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 2.61% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": false,
-          "value": "second-half volume 2.50×"
+          "value": "second half 250% of the first half's volume"
          }
         ],
         "cycles": null,
@@ -6689,7 +6689,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no pullback yet — the leg is still printing highs",
+        "reason": "no pullback yet — still making new highs",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "intraday_vcp",
@@ -6711,43 +6711,43 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.50 · 21 EMA 10.27"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
           "value": "2 bars"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "2 bars"
+          "value": "2 pullback bars"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%)",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA",
           "ok": false,
           "value": "flew without touching the 9 EMA"
          }
@@ -6796,7 +6796,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -7089,24 +7089,24 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000 vs cap 125000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k4",
-          "label": "K4 pullback 1–5 bars",
-          "need": "1–5",
+          "label": "K4 short pullback",
+          "need": "1 to 5 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          }
         ],
         "cycles": null,
@@ -7146,38 +7146,38 @@
         "criteria": [
          {
           "key": "k4",
-          "label": "K4 base 6–24 bars",
-          "need": "6–24",
+          "label": "K4 sideways base length",
+          "need": "6 to 24 bars",
           "ok": false,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k3_vol",
-          "label": "K3 base volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up in the base",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k6_tight",
-          "label": "K6 base range ≤ 8% of price",
-          "need": "≤ 8%",
+          "label": "K6 tight base",
+          "need": "at most 8% of the price",
           "ok": true,
-          "value": "1.1%"
+          "value": "1.1% from high to low"
          },
          {
           "key": "k6_merge",
-          "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-          "need": "≤ 0.5%",
+          "label": "K6 9 and 21 EMA merged",
+          "need": "at most 0.5% apart",
           "ok": false,
           "value": "EMAs 1.88% apart"
          },
          {
           "key": "k6_decay",
-          "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-          "need": "< 0.7×",
+          "label": "K6 selling drying up",
+          "need": "under 70%",
           "ok": null,
-          "value": "second-half volume —×"
+          "value": "base too short to compare"
          }
         ],
         "cycles": null,
@@ -7220,30 +7220,30 @@
          {
           "key": "k4_cycles",
           "label": "K4 at least 2 contractions",
-          "need": "≥ 2",
+          "need": "2 or more",
           "ok": false,
-          "value": "1 cycles"
+          "value": "1 contraction"
          },
          {
           "key": "k7_ratio",
-          "label": "K7 each cycle's range ≤ 0.75× the previous",
-          "need": "≤ 0.75× each",
+          "label": "K7 each contraction tighter than the last",
+          "need": "each at most 75% of the one before",
           "ok": true,
-          "value": "0.125"
+          "value": "high to low 0.125"
          },
          {
           "key": "k7_ema21",
-          "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
-          "need": "≥ 21 EMA × (1 − 0.5%)",
+          "label": "K7 contraction lows hold the 21 EMA",
+          "need": "every low no more than 0.5% under the 21 EMA",
           "ok": true,
-          "value": "10.88"
+          "value": "lows 10.88"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullbacks",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          }
         ],
         "cycles": 1,
@@ -7261,7 +7261,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "1 of 2 cycles",
+        "reason": "1 of 2 contractions",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "intraday_vcp",
@@ -7283,45 +7283,45 @@
         "criteria": [
          {
           "key": "k2",
-          "label": "K2 leg volume rising, each step ≤ 5×",
-          "need": "rising, no step above the cap",
+          "label": "K2 volume building on the run up",
+          "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
           "ok": true,
-          "value": "2 demand bars"
+          "value": "2 big green bars"
          },
          {
           "key": "k3_vol",
-          "label": "K3 pullback volume ≤ 0.5× leg mean",
-          "need": "≤ 125000",
+          "label": "K3 volume dried up on the pullback",
+          "need": "every bar must be ≤ 125,000: half the average bar of the run up",
           "ok": true,
-          "value": "max 100000"
+          "value": "busiest bar 100,000"
          },
          {
           "key": "k5_uptrend",
-          "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-          "need": "9 > 21, both rising",
+          "label": "K5 uptrend",
+          "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
           "ok": true,
           "value": "9 EMA 10.41 · 21 EMA 10.21"
          },
          {
           "key": "k4",
-          "label": "K4 pullback ≤ 9 bars",
-          "need": "≤ 9",
+          "label": "K4 short pullback",
+          "need": "at most 9 bars",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 bar"
          },
          {
           "key": "k5a_honor",
-          "label": "K5a every pullback bar closes at or above the 9 EMA",
-          "need": "close ≥ 9 EMA",
+          "label": "K5a pullback honors the 9 EMA",
+          "need": "every pullback bar closes at or above the 9 EMA",
           "ok": true,
-          "value": "1 bars"
+          "value": "1 pullback bar"
          },
          {
           "key": "k5_kiss",
-          "label": "K5 the pullback kissed the 9 EMA",
-          "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+          "label": "K5 pullback touched the 9 EMA (the kiss)",
+          "need": "a low no more than 0.5% above the 9 EMA and a close above it",
           "ok": false,
-          "value": "4.5% above the 9 EMA"
+          "value": "low 4.5% above the 9 EMA"
          }
         ],
         "cycles": null,
@@ -7339,7 +7339,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "red_closes": 1,
         "risk_pct": 1.1363636363636365,
         "setup": "kiss_fly",
@@ -7366,7 +7366,7 @@
         },
         "missed": [],
         "ready": false,
-        "reason": "no tennis ball today (a 8% drop recovered within 3 bars)",
+        "reason": "no tennis ball action today (a drop of 8% or more that closes back up on the drop bar or in the next 3 bars)",
         "red_closes": 0,
         "risk_pct": null,
         "setup": "reversal_squeeze",
@@ -7830,7 +7830,7 @@
         "kind": "building",
         "px": 10.9375,
         "ready": false,
-        "reason": "4.5% above the 9 EMA — waiting for the kiss",
+        "reason": "low 4.5% above the 9 EMA — waiting for the kiss",
         "state": "forming",
         "stop": 10.875,
         "trigger": 11.0
@@ -7855,7 +7855,7 @@
        "first_bar_t": "2026-10-13 10:30",
        "first_kind": "building",
        "first_px": 10.9375,
-       "first_reason": "4.5% above the 9 EMA — waiting for the kiss",
+       "first_reason": "low 4.5% above the 9 EMA — waiting for the kiss",
        "first_risk_pct": 1.1363636363636365,
        "first_seen": "2026-10-13T14:41:00+00:00",
        "first_seen_et": "10:41",

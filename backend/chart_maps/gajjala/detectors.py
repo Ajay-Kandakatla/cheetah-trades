@@ -236,6 +236,67 @@ def _px(x) -> str:
     return tab_px(x)
 
 
+# ── plain words on the rule rows (2026-11-10, Ajay: "please use common vocabuluary like volume dried") ─────────────
+# Display only: every helper below builds WORDS from a constant or a measured figure; none gates, counts or orders.
+K2_SETUPS = ("bull_flag", "kiss_fly")     # display only: the setups whose rows carry `k2` (pinned by a test)
+
+# H2 in words — the ONE wording, read by the 🎾 failed-try row, the 📓 knob H2 and the ℹ️ panel (each keeps its own
+# fallback for an unset or unknown rule value).
+FAIL_RULE_WORDS = {"distinct": "a separate sell-off that ends before the tennis ball",
+                   "same_ok": "the tennis ball drop itself may be the failed try"}
+
+
+def _vol(x) -> str:
+    """A share count on a rule row: thousands separators, no decimals; None -> "—" (display only)."""
+    return "—" if x is None else f"{x:,.0f}"
+
+
+def part_words(x) -> str:
+    """A fraction constant in common words, built from the constant, never retyped: 0.5 -> "half", 0.7 -> "70% of"."""
+    return "half" if x * 2 == 1 else f"{x * 100:g}% of"
+
+
+def k2_first_words() -> str:
+    """The extra K2 clause while the first-bar check is on (off by his round C answer); "" otherwise."""
+    return "; the first bar is held to the same step against the bar before the run up" if GC.K2_CHECK_FIRST_BAR else ""
+
+
+def _count(n, one: str, many: str = "") -> str:
+    return f"{n} {one if n == 1 else (many or one + 's')}"
+
+
+def _busiest(F: Frame, bars) -> str:
+    top = max((F.v[b] for b in bars), default=None)
+    return "no bar yet" if top is None else f"busiest bar {_vol(top)}"
+
+
+def _k3_need(cap, run: str) -> str:
+    if cap is None:
+        return f"no volume yet on {run}"
+    return f"every bar must be ≤ {_vol(cap)}: {part_words(GC.K3_VOL_FRAC)} the average bar of {run}"
+
+
+def _no_run(n) -> str:
+    return "no big green bar today" if n == 1 else f"no run of {n} big green bars today"
+
+
+def _decay_text(m1, m2) -> str:
+    """K6 value: the second half of the base against the first half (display only; the ok expression is untouched)."""
+    if m1 is None or m2 is None:
+        return "base too short to compare"
+    if not m1:
+        return "first half of the base traded no volume"
+    pct = f"{round(m2 / m1 * 100, 1):,.1f}"
+    return f"second half {pct[:-2] if pct.endswith('.0') else pct}% of the first half's volume"
+
+
+def _tries_text(n, ok) -> str:
+    """🎾 failed-try value: how many tries today and, when the row is a cross, that none of them counts."""
+    if ok:
+        return _count(n, "failed try", "failed tries") + " today"
+    return "no failed try today" if not n else _count(n, "failed try", "failed tries") + " today, none that counts"
+
+
 # ── Read builders ─────────────────────────────────────────────────────────────────────────────────────────────────
 def _blank(setup: str, F: Optional[Frame], last: int) -> dict:
     t = getattr(F, "t", None) or []
@@ -321,8 +382,8 @@ def _resolve_break(r: dict, F: Frame, j: int, trigger: float, stop: float, minut
         return _invalid(r, "stopped before the break — the entry bar traded under the stop first")
     r["broke"] = True
     if ev == "ambiguous":
-        crit = crit + [criterion("entry", "break printed before any stop", False,
-                                 "trigger and stop inside the same minute", "a clean break")]
+        crit = crit + [criterion("entry", "the break came before the stop", False,
+                                 "trigger and stop both hit in the same bar, order unknown", "the break first")]
     _set_criteria(r, crit)
     if _all([c["ok"] for c in crit if c["key"] not in exempt]) is True:
         if stopped_after(F, j, m, stop, mins, last):
@@ -414,22 +475,20 @@ def _bull_flag_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         return _invalid(r, f"pullback longer than {long_max} bars")
     if _depth_binds(setup) and not k3_depth_ok(F, P, e):
         r["meta"]["structure_alive"] = False
-        return _invalid(r, "pulled back more than half the last demand bar")
+        return _invalid(r, f"pulled back more than {part_words(GC.K3_DEPTH_FRAC)} the last big green bar")
     cap = k3_vcap(F, range(s, e + 1))
-    pmax = max((F.v[p] for p in P), default=None)
     crit = [
-        criterion("k2", f"K2 leg volume rising, each step ≤ {GC.K2_MAX_VOL_STEP:g}×", k2_ok(F, s, e),
-                  f"{e - s + 1} demand bars", "rising, no step above the cap"),
-        criterion("k3_vol", f"K3 pullback volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, P, range(s, e + 1)),
-                  f"max {_f(pmax, 0)} vs cap {_f(cap, 0)}", f"≤ {_f(cap, 0)}"),
+        criterion("k2", "K2 volume building on the run up", k2_ok(F, s, e), _count(e - s + 1, "big green bar"),
+                  f"inside the run up each bar at least the volume of the bar before and no more than "
+                  f"{GC.K2_MAX_VOL_STEP:g}× it{k2_first_words()}"),
+        criterion("k3_vol", "K3 volume dried up on the pullback", k3_vol_ok(F, P, range(s, e + 1)),
+                  _busiest(F, P), _k3_need(cap, "the run up")),
     ]
-    k4 = criterion("k4", f"K4 pullback {GC.K4_BF_PULL_MIN}–{GC.K4_BF_PULL_MAX} bars",
-                   GC.K4_BF_PULL_MIN <= len(P) <= GC.K4_BF_PULL_MAX, f"{len(P)} bars",
-                   f"{GC.K4_BF_PULL_MIN}–{GC.K4_BF_PULL_MAX}")
+    k4 = criterion("k4", "K4 short pullback", GC.K4_BF_PULL_MIN <= len(P) <= GC.K4_BF_PULL_MAX,
+                   _count(len(P), "bar"), f"{GC.K4_BF_PULL_MIN} to {GC.K4_BF_PULL_MAX} bars")
     if len(P) > GC.K4_BF_PULL_MAX:
         r["variant"] = "long_flag"                      # Ajay K4a: listed, never A+, never pushed
-        k4["label"] = (f"K4 pullback {GC.K4_BF_PULL_MIN}–{GC.K4_BF_PULL_MAX} bars "
-                       f"({GC.K4_BF_PULL_MAX + 1}–{long_max} = long flag)")
+        k4["label"] = f"K4 short pullback ({GC.K4_BF_PULL_MAX + 1}–{long_max} = long flag)"
     if GC.RED_CLOSES_MODE == "criterion":
         crit.append(criterion("red_closes", f"no more than {GC.RED_CLOSES_WAIT} red closes in a row",
                               r["red_closes"] <= GC.RED_CLOSES_WAIT, f"{r['red_closes']}", f"≤ {GC.RED_CLOSES_WAIT}"))
@@ -455,7 +514,7 @@ def bull_flag(F: Frame, minutes=None, *, last: Optional[int] = None) -> dict:
         return _none(setup, F, last, "no closed bars yet")
     legs = find_legs(F, GC.BF_LEG_MIN_BARS, last)
     if not legs:
-        return _none(setup, F, last, f"no {GC.BF_LEG_MIN_BARS}-bar demand leg today")
+        return _none(setup, F, last, _no_run(GC.BF_LEG_MIN_BARS))
     heads, r = _live_structure(F, legs, last, lambda s, e: _bull_flag_leg(F, s, e, last, minutes))
     k = 0
     for i, (s, e) in enumerate(heads[:-1]):                     # earlier flags, each read up to the next structure
@@ -505,7 +564,7 @@ def kiss_fly(F: Frame, minutes=None, *, last: Optional[int] = None) -> dict:
         return _none(setup, F, last, "no closed bars yet")
     legs = find_legs(F, GC.KF_LEG_MIN_BARS, last)
     if not legs:
-        return _none(setup, F, last, "no demand bar today")
+        return _none(setup, F, last, _no_run(GC.KF_LEG_MIN_BARS))
     return _live_structure(F, legs, last, lambda s, e: _kiss_fly_leg(F, s, e, last, minutes))[1]
 
 
@@ -538,7 +597,7 @@ def _kiss_fly_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         return _invalid(r, f"pullback longer than {GC.K4_KF_PULL_MAX} bars")
     if _depth_binds(setup) and not k3_depth_ok(F, P, e):
         r["meta"]["structure_alive"] = False
-        return _invalid(r, "pulled back more than half the last demand bar")
+        return _invalid(r, f"pulled back more than {part_words(GC.K3_DEPTH_FRAC)} the last big green bar")
     honor = _all([ge(F.c[p], _e9(F, p)) for p in P])
     if GC.KF_HONOR_ALL_PULLBACK_CLOSES and honor is False:
         r["meta"]["structure_alive"] = False
@@ -546,24 +605,27 @@ def _kiss_fly_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     ref = (j - 1) if j is not None else (near - 1) if near is not None else last
     cap = k3_vcap(F, range(s, e + 1))
     crit = [
-        criterion("k2", f"K2 leg volume rising, each step ≤ {GC.K2_MAX_VOL_STEP:g}×", k2_ok(F, s, e),
-                  f"{e - s + 1} demand bars", "rising, no step above the cap"),
-        criterion("k3_vol", f"K3 pullback volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, P, range(s, e + 1)),
-                  f"max {_f(max((F.v[p] for p in P), default=None), 0)}", f"≤ {_f(cap, 0)}"),
-        criterion("k5_uptrend", f"K5 9 EMA above 21 EMA, both rising over {GC.K5_SLOPE_BARS} bars", uptrend(F, ref),
-                  f"9 EMA {_px(_e9(F, ref))} · 21 EMA {_px(_e21(F, ref))}", "9 > 21, both rising"),
-        criterion("k4", f"K4 pullback ≤ {GC.K4_KF_PULL_MAX} bars", len(P) <= GC.K4_KF_PULL_MAX, f"{len(P)} bars",
-                  f"≤ {GC.K4_KF_PULL_MAX}"),
+        criterion("k2", "K2 volume building on the run up", k2_ok(F, s, e), _count(e - s + 1, "big green bar"),
+                  f"inside the run up each bar at least the volume of the bar before and no more than "
+                  f"{GC.K2_MAX_VOL_STEP:g}× it{k2_first_words()}"),
+        criterion("k3_vol", "K3 volume dried up on the pullback", k3_vol_ok(F, P, range(s, e + 1)),
+                  _busiest(F, P), _k3_need(cap, "the run up")),
+        criterion("k5_uptrend", "K5 uptrend", uptrend(F, ref),
+                  f"9 EMA {_px(_e9(F, ref))} · 21 EMA {_px(_e21(F, ref))}",
+                  f"9 EMA above the 21 EMA and both higher than {GC.K5_SLOPE_BARS} bars ago"),
+        criterion("k4", "K4 short pullback", len(P) <= GC.K4_KF_PULL_MAX, _count(len(P), "bar"),
+                  f"at most {GC.K4_KF_PULL_MAX} bars"),
     ]
     if GC.KF_HONOR_ALL_PULLBACK_CLOSES:
-        crit.append(criterion("k5a_honor", "K5a every pullback bar closes at or above the 9 EMA", honor,
-                              f"{len(P)} bars", "close ≥ 9 EMA"))
+        crit.append(criterion("k5a_honor", "K5a pullback honors the 9 EMA", honor,
+                              _count(len(P), "pullback bar"), "every pullback bar closes at or above the 9 EMA"))
     if GC.RED_CLOSES_MODE == "criterion":
         crit.append(criterion("red_closes", f"no more than {GC.RED_CLOSES_WAIT} red closes in a row",
                               r["red_closes"] <= GC.RED_CLOSES_WAIT, f"{r['red_closes']}", f"≤ {GC.RED_CLOSES_WAIT}"))
     if near is not None:
-        crit.append(criterion("k5_kiss", "K5 the pullback kissed the 9 EMA", False,
-                              "flew without touching the 9 EMA", f"low ≤ 9 EMA × (1 + {GC.K5_KISS_TOL_PCT:g}%)"))
+        crit.append(criterion("k5_kiss", "K5 pullback touched the 9 EMA (the kiss)", False,
+                              "flew without touching the 9 EMA",
+                              f"a low no more than {GC.K5_KISS_TOL_PCT:g}% above the 9 EMA"))
         k3_up = _and(*(c["ok"] for c in crit if c["key"] in ("k3_vol", "k5_uptrend")))
         if k3_up is True:
             r["variant"] = GC.KF_NO_TOUCH_VARIANT
@@ -575,14 +637,15 @@ def _kiss_fly_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     if j is None:
         _levels(r, F.h[last], F.l[last])
         k = kiss(F, last) if P else False
-        crit.append(_pending(criterion("k5_kiss", "K5 the pullback kissed the 9 EMA", k,
+        crit.append(_pending(criterion("k5_kiss", "K5 pullback touched the 9 EMA (the kiss)", k,
                                        _kiss_text(F, last) if P else "no pullback yet",
-                                       f"low ≤ 9 EMA × (1 + {GC.K5_KISS_TOL_PCT:g}%), close above")))
+                                       f"a low no more than {GC.K5_KISS_TOL_PCT:g}% above the 9 EMA and a close "
+                                       f"above it")))
         reason = ("9 EMA warming up — not judgeable yet" if k is None else
                   _kiss_text(F, last) + " — waiting for the kiss" if k is False else "")
         return _resolve_forming(r, crit, pending=k is not True, ready_reason=reason)
-    crit.append(criterion("k5_kiss", "K5 the pullback kissed the 9 EMA", True, f"kiss bar {F.t[j - 1]}",
-                          "a kiss"))
+    crit.append(criterion("k5_kiss", "K5 pullback touched the 9 EMA (the kiss)", True, f"kiss bar {F.t[j - 1]}",
+                          "a touch and a close above"))
     return _resolve_break(r, F, j, F.h[j - 1], F.l[j - 1], minutes, last, crit)
 
 
@@ -590,7 +653,10 @@ def _kiss_text(F: Frame, k: int) -> str:
     e9 = _e9(F, k)
     if e9 is None or not e9:
         return "9 EMA warming up"
-    return f"{(F.l[k] / e9 - 1) * 100:.1f}% above the 9 EMA"
+    gap = round((F.l[k] / e9 - 1) * 100, 1)              # sign-aware words (display only; the kiss test is untouched)
+    if not gap:
+        return "low at the 9 EMA"
+    return f"low {abs(gap):.1f}% {'above' if gap > 0 else 'under'} the 9 EMA"
 
 
 # ── ➖ Horizontal Fade (GG S8 32:49–33:50, 1:20:08, S9 1:56:08, 2:00:12; K1–K4, K6) ───────────────────────────────
@@ -603,25 +669,26 @@ def _fade_checks(F: Frame, s: int, e: int, B: list, ref: int, *, need_len: bool)
     half = len(B) // 2
     first, second = B[:half], B[len(B) - half:]
     m1, m2 = _mean(F.v[b] for b in first), _mean(F.v[b] for b in second)
-    k4 = criterion("k4", f"K4 base {GC.K4_HF_BASE_MIN}–{GC.K4_HF_BASE_MAX} bars",
-                   GC.K4_HF_BASE_MIN <= len(B) <= GC.K4_HF_BASE_MAX, f"{len(B)} bars",
-                   f"{GC.K4_HF_BASE_MIN}–{GC.K4_HF_BASE_MAX}")
+    k4 = criterion("k4", "K4 sideways base length", GC.K4_HF_BASE_MIN <= len(B) <= GC.K4_HF_BASE_MAX,
+                   _count(len(B), "bar"), f"{GC.K4_HF_BASE_MIN} to {GC.K4_HF_BASE_MAX} bars")
     if not need_len and len(B) < GC.K4_HF_BASE_MIN:
         _pending(k4)
     cap = k3_vcap(F, range(s, e + 1))
     out = [
         k4,
-        criterion("k3_vol", f"K3 base volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, B, range(s, e + 1)),
-                  f"max {_f(max((F.v[b] for b in B), default=None), 0)}", f"≤ {_f(cap, 0)}"),
-        criterion("k6_tight", f"K6 base range ≤ {GC.K6_TIGHT_PCT:g}% of price",
+        criterion("k3_vol", "K3 volume dried up in the base", k3_vol_ok(F, B, range(s, e + 1)),
+                  _busiest(F, B), _k3_need(cap, "the run up")),
+        criterion("k6_tight", "K6 tight base",
                   le(width, _mul(F.c[ref], _pct(GC.K6_TIGHT_PCT))),
-                  f"{_f(None if width is None else width / F.c[ref] * 100, 1)}%", f"≤ {GC.K6_TIGHT_PCT:g}%"),
-        criterion("k6_merge", f"K6 9 and 21 EMA merged (≤ {GC.K6_MERGE_PCT:g}% apart)",
+                  "no base yet" if width is None else f"{_f(width / F.c[ref] * 100, 1)}% from high to low",
+                  f"at most {GC.K6_TIGHT_PCT:g}% of the price"),
+        criterion("k6_merge", "K6 9 and 21 EMA merged",
                   le(gap, _mul(F.c[ref], _pct(GC.K6_MERGE_PCT))),
-                  f"EMAs {_f(None if gap is None else gap / F.c[ref] * 100, 2)}% apart", f"≤ {GC.K6_MERGE_PCT:g}%"),
-        criterion("k6_decay", f"K6 selling decreasing (second-half volume < {GC.K6_SELL_DECAY:g}× first half)",
+                  f"EMAs {_f(None if gap is None else gap / F.c[ref] * 100, 2)}% apart",
+                  f"at most {GC.K6_MERGE_PCT:g}% apart"),
+        criterion("k6_decay", "K6 selling drying up",
                   None if m1 is None or m2 is None else m2 < GC.K6_SELL_DECAY * m1,
-                  f"second-half volume {_f(None if not m1 else m2 / m1, 2)}×", f"< {GC.K6_SELL_DECAY:g}×"),
+                  _decay_text(m1, m2), f"under {GC.K6_SELL_DECAY * 100:g}%"),
     ]
     if GC.RED_CLOSES_MODE == "criterion":
         rc = red_closes(F, B)
@@ -641,7 +708,7 @@ def fade_on(F: Frame, minutes=None, *, last: Optional[int] = None) -> dict:
         return _none(setup, F, last, "no closed bars yet")
     legs = find_legs(F, GC.HF_LEG_MIN_BARS, last)
     if not legs:
-        return _none(setup, F, last, f"no {GC.HF_LEG_MIN_BARS}-bar demand leg today")
+        return _none(setup, F, last, _no_run(GC.HF_LEG_MIN_BARS))
     return _live_structure(F, legs, last, lambda s, e: _fade_leg(F, s, e, last, minutes))[1]
 
 
@@ -671,7 +738,7 @@ def _fade_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
             return _invalid(r, f"base longer than {GC.K4_HF_BASE_MAX} bars")
         if _depth_binds(setup) and not k3_depth_ok(F, B, e):
             r["meta"]["structure_alive"] = False
-            return _invalid(r, "base sank below half the last demand bar")
+            return _invalid(r, f"base sank below {part_words(GC.K3_DEPTH_FRAC)} the last big green bar")
         if B and (max(F.h[b] for b in B) - min(F.l[b] for b in B)) > _pct(GC.K6_TIGHT_PCT) * F.c[last]:
             r["meta"]["structure_alive"] = False
             return _invalid(r, f"base wider than {GC.K6_TIGHT_PCT:g}% of price")
@@ -753,7 +820,7 @@ def intraday_vcp(F: Frame, minutes=None, *, last: Optional[int] = None) -> dict:
         return _none(setup, F, last, "no closed bars yet")
     legs = find_legs(F, GC.VCP_LEG_MIN_BARS, last)
     if not legs:
-        return _none(setup, F, last, f"no {GC.VCP_LEG_MIN_BARS}-bar demand leg today")
+        return _none(setup, F, last, _no_run(GC.VCP_LEG_MIN_BARS))
     return _live_structure(F, legs, last, lambda s, e: _vcp_leg(F, s, e, last, minutes))[1]
 
 
@@ -765,10 +832,10 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     cycles, Hn, j = _vcp_cycles(F, e, last)
     end = (j - 1) if j is not None else last
     if j is not None and j == Hn + 1:
-        return _invalid(r, "no pullback in the last cycle")
+        return _invalid(r, "no pullback before the break")
     if Hn >= end:
         _levels(r, F.h[Hn], None)
-        r["reason"] = "no pullback yet — the leg is still printing highs"
+        r["reason"] = "no pullback yet — still making new highs"
         r["state"] = "forming"
         r["cycles"] = 0                                                # no contraction yet (BUILD_SPEC18 D2)
         return r
@@ -783,23 +850,25 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
     r["red_closes"] = red_closes(F, pull)
     if any(lows[k] <= lows[k - 1] for k in range(1, n)):
         r["meta"]["structure_alive"] = False
-        return _invalid(r, "lower low — not contracting up")
+        return _invalid(r, "lower low — the pullbacks must make higher lows")
     if _depth_binds(setup) and not k3_depth_ok(F, range(e + 1, end + 1), e):
         r["meta"]["structure_alive"] = False
-        return _invalid(r, "pulled back more than half the last demand bar")
+        return _invalid(r, f"pulled back more than {part_words(GC.K3_DEPTH_FRAC)} the last big green bar")
     ratio_ok = all(ranges[k] <= GC.K7_CONTRACTION * ranges[k - 1] for k in range(1, n))
     ema_ok = _all([ge(F.l[L], _mul(_e21(F, L), 1 - _pct(GC.K7_EMA21_TOL_PCT))) for _, L in all_cycles])
     cap = k3_vcap(F, range(s, e + 1))
     k4 = criterion("k4_cycles", f"K4 at least {GC.K4_VCP_MIN_CYCLES} contractions", n >= GC.K4_VCP_MIN_CYCLES,
-                   f"{n} cycles", f"≥ {GC.K4_VCP_MIN_CYCLES}")
+                   _count(n, "contraction"), f"{GC.K4_VCP_MIN_CYCLES} or more")
     crit = [
         k4,
-        criterion("k7_ratio", f"K7 each cycle's range ≤ {GC.K7_CONTRACTION:g}× the previous", ratio_ok,
-                  " → ".join(_px(x) for x in ranges), f"≤ {GC.K7_CONTRACTION:g}× each"),
-        criterion("k7_ema21", f"K7 each cycle low holds the 21 EMA (−{GC.K7_EMA21_TOL_PCT:g}%)", ema_ok,
-                  " · ".join(_px(x) for x in lows), f"≥ 21 EMA × (1 − {GC.K7_EMA21_TOL_PCT:g}%)"),
-        criterion("k3_vol", f"K3 pullback volume ≤ {GC.K3_VOL_FRAC:g}× leg mean", k3_vol_ok(F, pull, range(s, e + 1)),
-                  f"max {_f(max((F.v[p] for p in pull), default=None), 0)}", f"≤ {_f(cap, 0)}"),
+        criterion("k7_ratio", "K7 each contraction tighter than the last", ratio_ok,
+                  ("high to low " + " → ".join(_px(x) for x in ranges)) if ranges else "",
+                  f"each at most {part_words(GC.K7_CONTRACTION)} the one before"),
+        criterion("k7_ema21", "K7 contraction lows hold the 21 EMA", ema_ok,
+                  ("lows " + " · ".join(_px(x) for x in lows)) if lows else "",
+                  f"every low no more than {GC.K7_EMA21_TOL_PCT:g}% under the 21 EMA"),
+        criterion("k3_vol", "K3 volume dried up on the pullbacks", k3_vol_ok(F, pull, range(s, e + 1)),
+                  _busiest(F, pull), _k3_need(cap, "the run up")),
     ]
     if GC.RED_CLOSES_MODE == "criterion":
         crit.append(criterion("red_closes", f"no more than {GC.RED_CLOSES_WAIT} red closes in a row",
@@ -810,7 +879,7 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         and ratio_ok is not None and ema_ok is not None
     if ema_ok is False and not grade_b:
         r["meta"]["structure_alive"] = False
-        return _invalid(r, "cycle low under the 21 EMA")
+        return _invalid(r, "contraction low under the 21 EMA")
     if grade_b:
         r["grade"] = GC.VCP_B_GRADE
     _levels(r, F.h[Hn], F.l[Ln])
@@ -818,13 +887,15 @@ def _vcp_leg(F: Frame, s: int, e: int, last: int, minutes) -> dict:
         if n < GC.K4_VCP_MIN_CYCLES:
             _pending(k4)
         r = _resolve_forming(r, crit, pending=n < GC.K4_VCP_MIN_CYCLES or not last > Ln,
-                             ready_reason=(f"{n} of {GC.K4_VCP_MIN_CYCLES} cycles" if n < GC.K4_VCP_MIN_CYCLES
-                                           else "the last cycle is still making its low"))
+                             ready_reason=(f"{n} of {GC.K4_VCP_MIN_CYCLES} contractions"
+                                           if n < GC.K4_VCP_MIN_CYCLES
+                                           else "the last contraction is still making its low"))
     else:
         r = _resolve_break(r, F, j, F.h[Hn], F.l[Ln], minutes, last, crit)
     if grade_b and r["state"] not in ("invalid",):
         r["state"] = "partial"                          # "B — imperfect": listed with the missed rule, never pushed
-        r["reason"] = "B — imperfect · missed " + ", ".join(r["missed"])
+        labels = {c["key"]: c["label"] for c in r["criteria"]}      # the rows' own words, never a raw key
+        r["reason"] = "B — imperfect · missed " + ", ".join(labels.get(k, k) for k in r["missed"])
     return r
 
 
@@ -933,8 +1004,9 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
         return _none(setup, F, last, "no closed bars yet")
     tbs = tennis_balls(F, last, minutes)
     if not tbs:
-        return _none(setup, F, last, f"no tennis ball today (a {GC.K8_DROP_PCT:g}% drop recovered within "
-                                     f"{GC.K8_RECOVER_BARS} bars)")
+        return _none(setup, F, last, f"no tennis ball action today (a drop of {GC.K8_DROP_PCT:g}% or more that "
+                                     f"closes back up on the drop bar or in the next "
+                                     f"{_count(GC.K8_RECOVER_BARS, 'bar')})")
     attempts = failed_attempts(F, last)
     paired = [tb for tb in tbs if _paired(tb, attempts)]
     tb = paired[-1] if paired else tbs[-1]
@@ -959,18 +1031,20 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
                                    for a, f in _merge_spans(_pairs(tb, attempts))]}
     r["red_closes"] = red_closes(F, B)
     if _depth_binds(setup) and not k3_depth_ok(F, B, p):
-        return _invalid(r, "base sank below half the top bar")          # meta.structure_alive = a tennis ball exists
+        return _invalid(r, f"base sank below {part_words(GC.K3_DEPTH_FRAC)} the top bar")   # structure_alive = a tennis ball
     cap = k3_vcap(F, R)
-    base_len = criterion("k8_base_len", f"quiet base at least {GC.RS_BASE_MIN_BARS} bar(s)",
-                         len(B) >= GC.RS_BASE_MIN_BARS, f"{len(B)} bars", f"≥ {GC.RS_BASE_MIN_BARS}")
+    base_len = criterion("k8_base_len", "quiet base", len(B) >= GC.RS_BASE_MIN_BARS, _count(len(B), "bar"),
+                         f"at least {_count(GC.RS_BASE_MIN_BARS, 'bar')}")
     crit = [
-        criterion("k8_tennis", f"≥ 1 tennis ball ({GC.K8_DROP_PCT:g}% drop closed back within "
-                               f"{GC.K8_RECOVER_PCT:g}% in {GC.K8_RECOVER_BARS} bars)", True,
-                  f"drop {F.t[d]} · back {F.t[k]}", "≥ 1"),
-        criterion("k8_failed", f"≥ 1 failed attempt at the highs ({GC.K8_FAIL_EVENT_RULE})", tb in paired,
-                  f"{len(attempts)} attempt(s) today", "an earlier try at the highs that was sold"),
-        criterion(K3_VOL_KEY, f"K3 base volume ≤ {GC.K3_VOL_FRAC:g}× the squeeze-back run", k3_vol_ok(F, B, R),
-                  f"max {_f(max((F.v[b] for b in B), default=None), 0)}", f"≤ {_f(cap, 0)}"),
+        criterion("k8_tennis", "tennis ball action", True, f"drop {F.t[d]} · back {F.t[k]}",
+                  f"a drop of {GC.K8_DROP_PCT:g}% or more that closed back within {GC.K8_RECOVER_PCT:g}% of the high "
+                  f"on the drop bar or in the next {_count(GC.K8_RECOVER_BARS, 'bar')}"),
+        criterion("k8_failed", "tried the highs earlier and got sold", tb in paired,
+                  _tries_text(len(attempts), tb in paired),
+                  f"within {GC.K8_FAIL_NEAR_PCT:g}% of the day's high then {GC.K8_FAIL_DROP_PCT:g}% under that try's "
+                  f"high: {FAIL_RULE_WORDS.get(GC.K8_FAIL_EVENT_RULE, GC.K8_FAIL_EVENT_RULE)}"),
+        criterion(K3_VOL_KEY, "K3 volume dried up in the base", k3_vol_ok(F, B, R),
+                  _busiest(F, B), _k3_need(cap, "the run back up")),
     ]
     if GC.RED_CLOSES_MODE == "criterion":
         crit.append(criterion("red_closes", f"no more than {GC.RED_CLOSES_WAIT} red closes in a row",
@@ -980,7 +1054,7 @@ def reversal_squeeze(F: Frame, minutes=None, float_read=None, *, last: Optional[
         crit.append(_pending(base_len) if len(B) < GC.RS_BASE_MIN_BARS else base_len)
         _levels(r, F.h[p], stop)
         r = _resolve_forming(r, crit, pending=len(B) < GC.RS_BASE_MIN_BARS,
-                             ready_reason="squeezing back — the quiet base has not started")
+                             ready_reason="running back up — the quiet base has not started")
     else:
         crit.append(base_len)
         r = _resolve_break(r, F, j, F.h[p], stop, minutes, last, crit,

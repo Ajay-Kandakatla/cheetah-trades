@@ -447,8 +447,8 @@ def defaults_clauses() -> list:
     from .alerts import FRAME_MINUTES
     n = GC.NO_TRADE_AFTER_OPEN_MIN
     base, fresh, defer = GC.POTENTIAL_NEEDS_BASE, GC.POTENTIAL_FRESH_TAPE, GC.POTENTIAL_DEFER_REFUSED
-    c1 = ("the base must hold at least one sideways bar — a demand leg alone is not a potential" if base
-          else "no sideways bar is needed — a demand leg alone counts")
+    c1 = ("the base must hold at least one sideways bar — a run up alone is not a potential" if base
+          else "no sideways bar is needed — a run up alone counts")
     c2 = (f"a push waits for a print in the {FRAME_MINUTES['5m']}-minute bar that just closed" if fresh
           else "a push does not wait for a fresh print")
     held = f"a first sighting held by his first {n} minutes" + (" or by a missing print" if fresh else "")

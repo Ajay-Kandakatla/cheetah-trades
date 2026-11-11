@@ -810,6 +810,80 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   resumes its last page never passes through "/"). Doc `docs/gajjala/landing_gajjala_tab_2026_11_10.md`; contracts
   "🏠 "/" opens Gajjala's tab for the primary owner only (2026-11-10)"; ✨ `chart-maps-landing-gajjala-tab-2026-11-10`;
   tests `src/lib/landing.test.ts`, `src/App.landing.test.tsx`.
+- **🗣 Rule rows in plain words (K1–K11)** (2026-11-10, Ajay: *"Also please use common vocabuluary like volume dried:
+  "K3 base volume ≤ 0.5× the squeeze-back run — max 98933 (≤ 36008)""* + *"not jus k3 please up date what he means in
+  simple terms acroos k1 to k10"*; "he" = GG) — **wording only**: no gate, rule, threshold, key, number, push, count or
+  data change. Every `ok`, `missed`, state, grade, trigger and stop is byte-identical to the tree before the build (the
+  stripped snapshot `backend/tests/fixtures/gajjala/plain_words_stripped_2026_11_10.json`, written on the untouched
+  tree, is reproduced byte for byte by `tests/test_gajjala_plain_words_2026_11_10.py`). ONE engine:
+  `chart_maps/gajjala/detectors.py` `criterion(key, label, ok, value, need)` composes a row once and the FE prints it
+  (`criteriaText` = "<mark> label — value (need)"; the FE types no rule word), so 🚩 Gajjala's, the 1-minute page and
+  🧪 Audited change together; 🥇 Luk's tab is out of scope. Row shape: label = the K id + a plain phrase with no number,
+  comma or em-dash (the "missed:" pill joins the labels); the number moves into `need`, in words, built from the
+  enforcing constant by name (`part_words(GC.K3_VOL_FRAC)` → "half"); `value` says what was seen, with thousands
+  separators. His row now:
+  `✗ K3 volume dried up in the base — busiest bar 98,933 (every bar must be ≤ 36,008: half the average bar of the run back up)`.
+  Vocabulary, one word per idea: demand bar → big green bar · demand leg → run up · leg mean → the average bar of the
+  run up · squeeze-back run → the run back up · max → busiest bar · ≤ 0.5× → half · 🌀 cycle → contraction; GG's own
+  words kept (kiss, honors, merged, tennis ball action, quiet base). The same words in the reason lines, the 🧠 legend
+  sentence (`potential.py`: "a run up alone is not a potential"), the 🧠 strip sentence (`tab.py`),
+  the 📓 knob rows (`playbook.knobs()`: K1, K2, K3, K5,
+  K6, K7, K8, H1, H2, H3), the ℹ️ Rules panel (`rules_info._gajjala_section`: picks 2–7, stop 1, one alert line, the
+  note), the 🧪 K3S rule text (`audited_rules.py`; the registry param keeps "0.5×"), `scripts/gajjala_examples.py`
+  `INVALID_RULE` (the new reason fragments ADDED beside the old ones, so old stored reads still classify) and the
+  /notifications 🧠 sentence. Byte-identical on purpose: the `k6_merge` VALUE (`tab._EMA_GAP_RE` fullmatches it), every
+  "awaiting …" reason (`alerts.py` / `tab.py` read `reason.startswith("awaiting")`), the K11 row, the red-closes row,
+  the state words, the variant names, the K4 🌀 label, `NOT_APLUS_REASON`, GG's quoted lines and `alerts.ENTRY_WORDS`.
+  Rides along: the kiss sign fix ("-1.4% above" → "low 1.4% under the 9 EMA"). **Stored rows keep the words of the pass
+  that wrote them** — nothing relabels at serve time, so stored reads (cards and 🧠 strip rows) written before the
+  first pass after the deploy keep the old words until they age out; 🏁 and 🕰️ rows carry none of the row words.
+  Goldens regenerated text-only (allow-list `body`,
+  `first_reason`, `grade_label`, `label`, `need`, `reason`, `state_label`, `text`, `value`, `why` + `title` only at
+  `subs/<n>/title`; `_recipe` byte-equal): the four FE fixtures, the GG5 BOARD golden and, for the first time, the GG5
+  WRITES golden (302 string leaves; HIS CALL #1 in the doc: it was not asked first).
+  **430 px, measured** in the real page's own nodes (local preview at `innerWidth` 430; pill and row content width
+  382.8 px; the Range line count and `round(height / line-height)` agree on all 28 measured items): **PASS** — no
+  "missed:" pill takes more lines than its old string (6 of 15 one line shorter, 9 equal, none longer); nothing clips or
+  scrolls sideways. Rows grow on purpose: `k2`, `k8_tennis` and `k8_failed` 2 → 3 lines, the grade-B tile line 1 → 2;
+  his K3 row stays at 2.
+
+  | String | node | chars old → new | lines old → new |
+  |---|---|---|---|
+  | worst pill + K11 · 🚩 Bull Flag | pill | 218 → 211 | 4 → 4 |
+  | worst pill + K11 · 💋 Kiss & Fly | pill | 353 → 296 | 7 → 6 |
+  | worst pill + K11 · ➖ Horizontal Fade | pill | 303 → 240 | 6 → 5 |
+  | worst pill + K11 · 🌀 Intraday VCP | pill | 274 → 267 | 5 → 5 |
+  | worst pill + K11 · 🎾 Reversal Squeeze | pill | 240 → 204 | 5 → 4 |
+  | worst pill, no K11 · 🚩 | pill | 132 → 125 | 3 → 3 |
+  | worst pill, no K11 · 💋 | pill | 267 → 210 | 5 → 4 |
+  | worst pill, no K11 · ➖ | pill | 217 → 154 | 4 → 3 |
+  | worst pill, no K11 · 🌀 | pill | 188 → 181 | 4 → 4 |
+  | worst pill, no K11 · 🎾 | pill | 154 → 118 | 3 → 2 |
+  | single miss · 🎾 K3 only | pill | 80 → 68 | 2 → 2 |
+  | single miss · ➖ K6 selling only | pill | 98 → 58 | 2 → 2 |
+  | single miss · 🌀 K7 tighter only | pill | 80 → 79 | 2 → 2 |
+  | single miss · 🎾 failed try only | pill | 80 → 74 | 2 → 2 |
+  | K11 label alone (untouched) | pill | 122 → 122 | 3 → 3 |
+  | grade-B pill · 🌀 | grade pill | 89 → 88 | 2 → 2 |
+  | grade-B tile line · 🌀 (row label instead of the raw key) | tile why | 31 → 64 | 1 → 2 |
+  | row · his K3 row (🎾) | row | 66 → 123 | 2 → 2 |
+  | row · `k2` (🚩) | row | 86 → 143 | 2 → 3 |
+  | row · `k8_tennis` (🎾) — also the longest OLD row | row | 113 → 168 | 2 → 3 |
+  | row · `k8_failed`, "1 failed try today" | row | 109 → 173 | 2 → 3 |
+  | row · `k8_failed`, "no failed try today" | row | 109 → 174 | 2 → 3 |
+  | row · `k8_failed`, "none that counts" — the longest NEW row | row | 109 → 191 | 2 → 3 |
+  | tile line · longest NEW reason (🎾 "no tennis ball action today …") | tile why | 56 → 108 | 2 → 2 |
+  | tile line · longest OLD reason (💋 "no risk — …", unchanged) | tile why | 77 → 77 | 2 → 2 |
+
+  With the new words injected at 430 px: ℹ️ Rules → Gajjala panel (8 picks / 6 stops / 3 alerts; 6 picks, 1 stop, 1
+  alert and the note reworded) is 386 px wide with 0 overflowing nodes and no sideways scroll; 📓 Playbook → knobs
+  serves 19 of 19 (10 reworded) with 0 overflowing nodes. Doc `docs/gajjala/plain_words_2026_11_10.md` (12 open
+  HIS CALLs); contracts "🗣 Gajjala rule rows in plain words (2026-11-10)"; ✨
+  `chart-maps-gajjala-plain-words-2026-11-10`; tests `tests/test_gajjala_plain_words_2026_11_10.py` (re-pinned:
+  `test_gajjala_detectors.py`, `test_gajjala_vcp_listing.py`, `test_rules_info_gajjala.py`,
+  `test_gajjala_audited_k3s_rules_2026_11_09.py`; FE `src/pages/Notifications.gajjala_potential.test.tsx`; ✨ order +1
+  in `GajjalaBoard.promo_chip.test.tsx`, `newFeatures.gga_mods.test.ts`, `newFeatures.luk.test.ts` and `contracts.mjs`;
+  docstring / comment only: `test_gajjala_audited_pass.py`, `test_gajjala_variant_gg5_identity.py`).
 - **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
   https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
   reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside

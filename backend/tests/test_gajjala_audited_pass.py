@@ -3,7 +3,8 @@
 Ajay 2026-11-01: "I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..
 Gajjals-Audited. So we can keep track of improvements on this tab"
 
-Pins: GG5's WRITES and BOARD goldens stay byte-identical WITH the overlay ACTIVE (the fixtures are never regenerated);
+Pins: GG5's WRITES and BOARD goldens stay byte-identical WITH the overlay ACTIVE (no regen inside this test; a
+dated regen of either golden is recorded in test_gajjala_variant_gg5_identity.py);
 run_pass's return keys never move; the overlay writes only the gajjala_audited_* collections, only for a name with an
 A+ or an ARMED 🎾 read, and only when something changed; the sender is never called (the explicit shadow mode AND a
 sender that refuses); the pass makes ZERO extra provider calls; a GG1 store is never audited (hook or no hook); a dry
@@ -89,7 +90,7 @@ def test_gg5_writes_and_board_stay_byte_identical_with_the_overlay_active(monkey
     made: dict = {}
     _patch_idt_deps(monkeypatch, _hook(made))
     stores, text = IDT.writes_text(monkeypatch)
-    IDT._check(IDT.WRITES, text)                                 # the golden — never regenerated
+    IDT._check(IDT.WRITES, text)                                 # the golden — never regenerated here
     IDT._check(IDT.BOARD, IDT.board_text(stores))
     assert len(made) == 2                                        # one GGA store per mode — the overlay RAN
     for gga in made.values():

@@ -108,12 +108,31 @@ describe('Notifications · 🧠 gajjala_potential', () => {
 
   it('WHAT FIRES: forming, the sideways part begun or complete, the reclaim not printed, once per name / setup / session', () => {
     const d = detail();
-    for (const phrase of ['WHAT FIRES', 'the read is forming', 'the demand leg is in',
+    for (const phrase of ['WHAT FIRES', 'the read is forming', 'the run up is in',
       '("building")', '("trigger armed")', 'the reclaim of the highs has not printed',
       'Once per name, setup and session', 'every one its own push', 'every one listed on /alerts',
       'silent on closed days', 'earlier on NYSE half days']) {
       expect(d).toContain(phrase);
     }
+  });
+
+  // 2026-11-10 plain words (spec 3.8): "demand leg" → "run up"; the rest of the WHAT FIRES sentence byte-identical.
+  const FIRES_SENTENCE = 'WHAT FIRES: the first time a name his scanner listed is a potential in one of Goverdhan Gajjala’s five setups '
+    + '(\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, ➖ Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze): '
+    + 'the read is forming, the run up is in, the quiet sideways part has started ("building") or is complete ("trigger armed"), '
+    + 'and the reclaim of the highs has not printed (needing at least one sideways bar is a Cheetah default, not his).';
+  it('the WHAT FIRES sentence equals the plain-words sentence in full (only "demand leg" → "run up" moved)', () => {
+    expect(sentenceWith('WHAT FIRES')).toBe(FIRES_SENTENCE);
+    expect(detail().split(FIRES_SENTENCE).length - 1).toBe(1);
+  });
+
+  it('NEGATIVE: no "demand leg" in the 🧠 detail or anywhere in the rendered page text', () => {
+    expect(detail()).not.toMatch(/demand leg/i);
+    expect(sentenceWith('WHAT FIRES')).not.toMatch(/demand leg/i);
+    const { container } = render(<MemoryRouter><NotificationsPage /></MemoryRouter>);
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/demand leg/i);
+    expect(text).toContain('the run up is in');
   });
 
   it('the hours and the cadence equal the backend constants (data.py clock, NO_TRADE_AFTER_OPEN_MIN, the gajjala.run cron step)', async () => {

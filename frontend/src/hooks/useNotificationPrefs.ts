@@ -73,7 +73,7 @@ export type NotificationPrefs = {
      LIVE since 2026-10-16 (Ajay's call): every A+ entry in the window is its
      own push. UNMEASURED. */
   gajjala_setup?: boolean;
-  /* 🧠 A Goverdhan Gajjala setup read still FORMING — the demand leg in, the
+  /* 🧠 A Goverdhan Gajjala setup read still FORMING — the run up in, the
      quiet sideways part begun ("building") or complete ("trigger armed"), the
      reclaim of the highs not printed (chart_maps/gajjala/potential.py,
      2026-10-15: "Give me an alert all continous tracker on these specifically

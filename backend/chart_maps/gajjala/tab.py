@@ -1724,7 +1724,7 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
     b = sum(1 for r in rows if r["kind"] == GC.POTENTIAL_KINDS[1])
     concept, ts = PT.CONCEPT
     defaults = PT.defaults_sentence()
-    text = ("Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is "
+    text = ("Forming, not triggered: the run up is in and the quiet sideways part has started (“building”) or is "
             "complete (“trigger armed”); the reclaim of the highs has not printed. "
             f"His words: “{concept}” ({ts}). " + (f"{defaults} " if defaults else "") + "A potential, not an entry.")
     e, label = SUB_META[setup]

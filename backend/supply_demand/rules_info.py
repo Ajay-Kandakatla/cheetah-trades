@@ -1124,6 +1124,15 @@ def _gg_v(name: str, fmt: str = "%g") -> str:
     return val if isinstance(val, str) else fmt % val
 
 
+def _gg_part(name: str) -> str:
+    """A fraction constant in common words ("half", "70% of") through detectors.part_words; the waiting text when
+    unset (2026-11-10, plain words)."""
+    from chart_maps.gajjala import constants as GC
+    from chart_maps.gajjala import detectors as GD
+    x = getattr(GC, name, None)
+    return GD.part_words(x) if isinstance(x, (int, float)) and not isinstance(x, bool) else _gg_v(name)
+
+
 def _gg_n(name: str) -> str:
     from chart_maps.gajjala import constants as GC
     val = getattr(GC, name, None)
@@ -1261,8 +1270,11 @@ def _gajjala_section() -> dict:
     vcp_list = (", carded from %d contractions (fewer are counted, not listed)" % vcp_min
                 if vcp_min is not None else "")
     rule = GC.K8_FAIL_EVENT_RULE
-    fail_rule = ("a separate, earlier sell-off" if rule == "distinct" else
-                 "the same drop may count" if rule == "same_ok" else _gg_v("K8_FAIL_EVENT_RULE"))
+    fail_rule = GD.FAIL_RULE_WORDS.get(rule) or _gg_v("K8_FAIL_EVENT_RULE")      # the ONE map (2026-11-10)
+    k2_only = " and ".join(_gg_label(k) for k in GD.K2_SETUPS)
+    fade_entry = ("Fade: %s; " % hf_trig) if GC.HF_TRIGGER == "base_high" else ""
+    rs_depth = ("" if "reversal_squeeze" in GC.K3_DEPTH_SETUPS
+                else " (no depth limit: the stop is the base low, so read the card's risk %)")
     if GC.GAJJALA_PUSH_MODE == "live":
         push = ("📲 %s (ON for the owner — mute at /notifications): A+ only — every rule met and the entry bar "
                 "closed; %s–%s and %s–%s ET; never the first %d minutes; silent on closed days; once per name, "
@@ -1288,40 +1300,44 @@ def _gajjala_section() -> dict:
                _gg_v("SCAN_MIN_CHANGE_PCT"), types, GC.SCAN_UNKNOWN_TYPE_LABEL, cadence, GC.PASS_OPEN_ET,
                ah_close, GC.STAY_LISTED_SESSIONS, _gg_v("SA_BIG_RUNNER_PCT"), _gg_v("SA_RUNNER_PCT"),
                _gg_v("SA_QUIET_BEST_PCT")) + _gg_trader_clause(),
-            "Demand bar: close ≥ open +%s%% and range ≥ %s× the prior %s bars' average; volume rising bar to bar, "
-            "no step over %s×. Pullback: lows no deeper than %s of the last demand bar's range under its high (%s "
-            "only), volume ≤ %s× the leg's mean."
-            % (_gg_v("K1_BODY_GAIN_PCT"), _gg_v("K1_RANGE_MULT"), _gg_v("K1_RANGE_LOOKBACK", "%d"),
-               _gg_v("K2_MAX_VOL_STEP"), _gg_v("K3_DEPTH_FRAC"), depth, _gg_v("K3_VOL_FRAC")),
-            "%s: ≥%s demand bars, then a %s–%s bar quiet pullback (%s); entry over the pullback bar's high, stop "
-            "its low."
+            "Big green bar (his demand bar): close ≥ open +%s%% and range ≥ %s× the prior %s bars' average. Run "
+            "up = big green bars in a row. %s only: inside the run up each bar trades at least the volume of the "
+            "bar before, no step over %s×%s. Pullback: gives back no more than %s the last big green bar's range "
+            "(%s only) and the volume dries up: no bar above %s the average bar of the run up."
+            % (_gg_v("K1_BODY_GAIN_PCT"), _gg_v("K1_RANGE_MULT"), _gg_v("K1_RANGE_LOOKBACK", "%d"), k2_only,
+               _gg_v("K2_MAX_VOL_STEP"), GD.k2_first_words(), _gg_part("K3_DEPTH_FRAC"), depth,
+               _gg_part("K3_VOL_FRAC")),
+            "%s: a run up of ≥%s big green bars, then a %s–%s bar quiet pullback (%s); entry over the pullback "
+            "bar's high, stop its low."
             % (_gg_label("bull_flag"), _gg_v("BF_LEG_MIN_BARS", "%d"), _gg_v("K4_BF_PULL_MIN", "%d"),
                _gg_v("K4_BF_PULL_MAX", "%d"), long_flag),
-            "%s: ≥%s demand bar(s), uptrend (%d EMA over the %d, both above their value %s bars back), a pullback "
-            "of at most %s bars where %sone bar kisses it (low within %s%%) and closes above it, on the pullback "
-            "volume above%s; entry over the kiss bar's high."
+            "%s: ≥%s big green bar(s), uptrend (%d EMA over the %d, both higher than %s bars back), a pullback "
+            "of at most %s bars where %sone bar touches it (the kiss: low within %s%%) and closes above it, with "
+            "the same dried-up pullback volume%s; entry when the very next bar trades over the kiss bar's high."
             % (_gg_label("kiss_fly"), _gg_v("KF_LEG_MIN_BARS", "%d"), e9, e21, _gg_v("K5_SLOPE_BARS", "%d"),
                _gg_v("K4_KF_PULL_MAX", "%d"), kf_honor, _gg_v("K5_KISS_TOL_PCT"), kf_near),
-            "%s (%s bars first, %s fallback): ≥%s demand bars, a %s–%s bar base no wider than %s%% of the price, "
-            "%d and %d EMA within %s%%, second-half volume under %s× the first half; entry over %s, stop the prior "
-            "bar's low."
+            "%s (%s bars first, %s fallback): a run up of ≥%s big green bars, a sideways %s–%s bar base no wider "
+            "than %s%% of the price, %d and %d EMA merged (within %s%%), selling drying up (the second half of the "
+            "base trades under %s the first half's volume); entry over %s, stop the prior bar's low."
             % (_gg_label("horizontal_fade"), tf15, tf5, _gg_v("HF_LEG_MIN_BARS", "%d"), _gg_v("K4_HF_BASE_MIN", "%d"),
                _gg_v("K4_HF_BASE_MAX", "%d"), _gg_v("K6_TIGHT_PCT"), e9, e21, _gg_v("K6_MERGE_PCT"),
-               _gg_v("K6_SELL_DECAY"), hf_trig),
-            "%s: ≥%s demand bar(s), ≥%s contractions each ≤ %s× the one before, every cycle low ≥ the %d EMA −%s%%, "
-            "higher lows, pivots confirmed by %s closed bars each side%s%s; entry over the last cycle's high, stop "
-            "its low."
+               _gg_part("K6_SELL_DECAY"), hf_trig),
+            "%s: ≥%s big green bar(s), then ≥%s contractions (pullbacks), each at most %s the one before, every "
+            "contraction low no more than %s%% under the %d EMA, higher lows, pivots confirmed by %s closed bars "
+            "each side%s%s; entry over the last contraction's high, stop its low."
             % (_gg_label("intraday_vcp"), _gg_v("VCP_LEG_MIN_BARS", "%d"), _gg_v("K4_VCP_MIN_CYCLES", "%d"),
-               _gg_v("K7_CONTRACTION"), e21, _gg_v("K7_EMA21_TOL_PCT"), _gg_v("VCP_PIVOT_WINDOW", "%d"), vcp_list,
-               vcp_b),
-            "%s (float ≤ %s): a drop ≥%s%% off a bar's high back within %s%% inside %s bars, AND a failed try at "
-            "today's high (within %s%%, then %s%% under it; %s), then a quiet base of ≥%s bar(s) at the top on the "
-            "pullback volume above; entry over the top, stop the base low. 🎾 squeeze-history chip: last %s "
-            "sessions, ≥%s%% range or a halt — a chip, not a rule."
+               _gg_part("K7_CONTRACTION"), _gg_v("K7_EMA21_TOL_PCT"), e21, _gg_v("VCP_PIVOT_WINDOW", "%d"),
+               vcp_list, vcp_b),
+            "%s (float ≤ %s): tennis ball action (a drop ≥%s%% off a bar's high that closes back within %s%% of "
+            "that high on the drop bar or one of the next %s bars), AND an earlier try at today's high that got "
+            "sold (within %s%%, then %s%% under that try's high; %s), then a quiet base of ≥%s bar(s) after the run "
+            "back up%s, its volume dried up: no base bar above %s the average bar of the run back up; entry over "
+            "the top, stop the base low. 🎾 squeeze-history chip: last %s sessions, ≥%s%% range or a halt — a "
+            "chip, not a rule."
             % (_gg_label("reversal_squeeze"), _gg_n("K8_MAX_FLOAT"), _gg_v("K8_DROP_PCT"),
                _gg_v("K8_RECOVER_PCT"), _gg_v("K8_RECOVER_BARS", "%d"), _gg_v("K8_FAIL_NEAR_PCT"),
-               _gg_v("K8_FAIL_DROP_PCT"), fail_rule, _gg_v("RS_BASE_MIN_BARS", "%d"),
-               _gg_v("K8_HISTORY_SESSIONS", "%d"), _gg_v("K8_HISTORY_RANGE_PCT")),
+               _gg_v("K8_FAIL_DROP_PCT"), fail_rule, _gg_v("RS_BASE_MIN_BARS", "%d"), rs_depth,
+               _gg_part("K3_VOL_FRAC"), _gg_v("K8_HISTORY_SESSIONS", "%d"), _gg_v("K8_HISTORY_RANGE_PCT")),
             "☀️ premarket: %s+ shares before %s + yesterday's after-hours movers up %s%%+ at the last after-hours "
             "pass. 🌙 after-hours: regular close in the top %g%% of the day's range, %s+ after-hours shares, up "
             "%s%%+ on the close."
@@ -1329,11 +1345,11 @@ def _gajjala_section() -> dict:
                GC.K10_CLOSE_TOP_FRAC * _GG_PCT, _gg_n("K10_AH_MIN_VOLUME"), _gg_v("K10_AH_MIN_GAIN_PCT")),
         ],
         "stops": [
-            "Entry = the break of the prior bar's high (VCP: the last cycle's high; squeeze: the top of the "
-            "squeeze-back); stop = that bar's low (VCP: the last cycle's low; squeeze: the base low). A reference bar "
+            "Entry = the break of the prior bar's high (%sVCP: the last contraction's high; squeeze: the top of the "
+            "run back up); stop = that bar's low (VCP: the last contraction's low; squeeze: the base low). A reference bar "
             "with no range puts the stop at the trigger — no risk — and that read is invalid: never A+, never pushed "
             "(the 🏁 Track record's own “no risk” word). Never the first %d minutes after the open (his) — rows carry "
-            "⏳. Exits are his discretion — 📓 Playbook — never computed." % GC.NO_TRADE_AFTER_OPEN_MIN,
+            "⏳. Exits are his discretion — 📓 Playbook — never computed." % (fade_entry, GC.NO_TRADE_AFTER_OPEN_MIN),
             # K11 2026-10-21 (BUILD_SPEC22 B3): GG VR 0.4 "1M is a floor … it must SUSTAIN" — Ajay 2026-10-21 "keep what
             # ever Gajjala says for these". The floor is GC.K11_MIN_SESSION_VOLUME (= SCAN_MIN_VOLUME, one number); the
             # why / unknown / not-A+ words are the detectors' own served constants, never retyped. No "K11" token here:

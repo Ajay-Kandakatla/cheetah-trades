@@ -139,7 +139,10 @@ INVALID_RULE = (("stopped before the break", "entry"), ("pullback longer than", 
                 ("pulled back more than half", "k3_depth"), ("base sank below half", "k3_depth"),
                 ("did not honor it", "k5a_honor"), ("base wider than", "k6_tight"),
                 ("no pullback in the last cycle", "k4_cycles"), ("lower low", "k7_higher_lows"),
-                ("cycle low under the 21 EMA", "k7_ema21"))
+                ("cycle low under the 21 EMA", "k7_ema21"),
+                # 2026-11-10 plain words: the NEW reason words, added beside the old ones (old stored reads still classify)
+                ("pulled back more than", "k3_depth"), ("base sank below", "k3_depth"),
+                ("no pullback before the break", "k4_cycles"), ("contraction low under the 21 EMA", "k7_ema21"))
 DEAD_STATES = ("none", "invalid")
 BROKE_STATES = ("aplus", "triggered", "stopped", "broke_not_aplus")
 # How a structure with NO failing rule ended (critic round 2, 2026-10-14): it broke; its last read was the session's

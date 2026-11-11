@@ -13,6 +13,7 @@ import re
 import pytest
 
 from chart_maps.gajjala import constants as GC
+from chart_maps.gajjala import detectors as GD
 from supply_demand import rules_info as RI
 
 
@@ -63,7 +64,7 @@ def test_one_line_per_setup_with_its_numbers(sec):
     assert "long flag" not in t
     assert "1–5 bar quiet pullback (longer = invalid)" in t
     assert "at most %d bars" % GC.K4_KF_PULL_MAX in t and "%d–%d bar base" % (GC.K4_HF_BASE_MIN, GC.K4_HF_BASE_MAX) in t
-    assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in t
+    assert "≥%d contractions (pullbacks), each at most %s the one before" % (GC.K4_VCP_MIN_CYCLES, GD.part_words(GC.K7_CONTRACTION)) in t   # MOVED 2026-11-10
     assert "float ≤ {:,}".format(GC.K8_MAX_FLOAT) in t and "drop ≥%g%%" % GC.K8_DROP_PCT in t
     assert "top %g%% of the day's range" % (GC.K10_CLOSE_TOP_FRAC * 100) in t
     assert "Cheetah default" in t                                   # stays-listed + psych band are Ajay's
@@ -74,11 +75,11 @@ def test_vcp_line_carries_the_listing_clause_from_the_switch(sec, monkeypatch):
     # K4; the pinned K4/K7 clause above stays intact. NEGATIVE: the switch off drops the clause.
     t = _text(sec)
     assert ", carded from %d contractions (fewer are counted, not listed)" % GC.vcp_list_min_cycles() in t
-    assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in t
+    assert "≥%d contractions (pullbacks), each at most %s the one before" % (GC.K4_VCP_MIN_CYCLES, GD.part_words(GC.K7_CONTRACTION)) in t   # MOVED 2026-11-10
     monkeypatch.setattr(GC, "VCP_LIST_FROM_K4", False)
     off = _text(RI.sections()["gajjala"])
     assert "carded from" not in off
-    assert "≥%d contractions each ≤ %g×" % (GC.K4_VCP_MIN_CYCLES, GC.K7_CONTRACTION) in off
+    assert "≥%d contractions (pullbacks), each at most %s the one before" % (GC.K4_VCP_MIN_CYCLES, GD.part_words(GC.K7_CONTRACTION)) in off   # MOVED 2026-11-10
 
 
 def test_push_line_is_live_by_default_and_shadow_on_a_flip_back(sec, monkeypatch):
@@ -119,10 +120,10 @@ MUTATIONS = [
     ("SCAN_MIN_CHANGE_PCT", 33.0, "up 33%+"), ("SCAN_MIN_VOLUME", 2_500_000, "2,500,000+ shares"),
     ("STAY_LISTED_SESSIONS", 4, "Stays listed 4 sessions"), ("K1_BODY_GAIN_PCT", 4.5, "open +4.5%"),
     ("K1_RANGE_LOOKBACK", 30, "prior 30 bars"), ("K2_MAX_VOL_STEP", 7.0, "no step over 7×"),
-    ("K3_VOL_FRAC", 0.4, "≤ 0.4× the leg"), ("K4_BF_PULL_MAX", 4, "1–4 bar quiet pullback"),
+    ("K3_VOL_FRAC", 0.4, "no bar above 40% of the average bar"), ("K4_BF_PULL_MAX", 4, "1–4 bar quiet pullback"),
     ("K4_KF_PULL_MAX", 12, "at most 12 bars"), ("K5_KISS_TOL_PCT", 0.8, "low within 0.8%"),
-    ("K6_TIGHT_PCT", 9.5, "no wider than 9.5%"), ("K6_SELL_DECAY", 0.6, "under 0.6× the first"),
-    ("K7_CONTRACTION", 0.8, "≤ 0.8× the one before"), ("VCP_PIVOT_WINDOW", 3, "confirmed by 3 closed bars"),
+    ("K6_TIGHT_PCT", 9.5, "no wider than 9.5%"), ("K6_SELL_DECAY", 0.6, "under 60% of the first"),
+    ("K7_CONTRACTION", 0.8, "at most 80% of the one before"), ("VCP_PIVOT_WINDOW", 3, "confirmed by 3 closed bars"),
     ("K8_MAX_FLOAT", 5_000_000, "float ≤ 5,000,000"), ("K8_FAIL_NEAR_PCT", 3.0, "within 3%, then"),
     ("RS_BASE_MIN_BARS", 2, "base of ≥2 bar"), ("K9_AH_CARRY_PCT", 12.0, "up 12%+ at the last"),
     ("K10_AH_MIN_VOLUME", 300_000, "300,000+ after-hours"), ("PSY_NEAR_PCT", 7.0, "within 7% above"),

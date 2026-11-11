@@ -75,7 +75,7 @@
     },
     {
      "key": "potential",
-     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
      "word": "🧠 Potential"
     },
     {
@@ -239,7 +239,7 @@
       "trigger": 10.96875
      }
     ],
-    "text": "Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
+    "text": "Forming, not triggered: the run up is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
     "title": "🧠 Potential — 2 trigger armed · 1 building · 3 first seen today · UNMEASURED"
    },
    "push": {
@@ -346,7 +346,7 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential",
-     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
@@ -529,22 +529,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 80000 vs cap 125000"
+        "value": "busiest bar 80,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "4 bars"
        }
@@ -796,22 +796,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        }
@@ -1063,22 +1063,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max — vs cap 125000"
+        "value": "no bar yet"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": false,
         "value": "0 bars"
        }
@@ -1330,22 +1330,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        }
@@ -1597,22 +1597,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": false,
-        "value": "max 127500 vs cap 125000"
+        "value": "busiest bar 127,500"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        }
@@ -1639,7 +1639,7 @@
       "risk_pct": 1.4245014245014245,
       "setup": "bull_flag",
       "state": "partial",
-      "state_label": "broke — not A+ · missed: K3 pullback volume ≤ 0.5× leg mean · UNMEASURED",
+      "state_label": "broke — not A+ · missed: K3 volume dried up on the pullback · UNMEASURED",
       "stop": 10.8125,
       "trigger": 10.96875,
       "unjudged": [],
@@ -1772,7 +1772,7 @@
     },
     {
      "key": "potential",
-     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
      "word": "🧠 Potential"
     },
     {
@@ -1926,7 +1926,7 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential",
-     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a demand leg alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
     },
     {
      "count": 0,
@@ -2109,22 +2109,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 80000 vs cap 125000"
+        "value": "busiest bar 80,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "4 bars"
        }
@@ -2400,29 +2400,29 @@
       "criteria": [
        {
         "key": "k8_tennis",
-        "label": "≥ 1 tennis ball (8% drop closed back within 2% in 3 bars)",
-        "need": "≥ 1",
+        "label": "tennis ball action",
+        "need": "a drop of 8% or more that closed back within 2% of the high on the drop bar or in the next 3 bars",
         "ok": true,
         "value": "drop 2026-10-13 04:50 · back 2026-10-13 04:55"
        },
        {
         "key": "k8_failed",
-        "label": "≥ 1 failed attempt at the highs (distinct)",
-        "need": "an earlier try at the highs that was sold",
+        "label": "tried the highs earlier and got sold",
+        "need": "within 2% of the day's high then 8% under that try's high: a separate sell-off that ends before the tennis ball",
         "ok": true,
-        "value": "1 attempt(s) today"
+        "value": "1 failed try today"
        },
        {
         "key": "k3_vol",
-        "label": "K3 base volume ≤ 0.5× the squeeze-back run",
-        "need": "≤ 200000",
+        "label": "K3 volume dried up in the base",
+        "need": "every bar must be ≤ 200,000: half the average bar of the run back up",
         "ok": true,
-        "value": "max 60000"
+        "value": "busiest bar 60,000"
        },
        {
         "key": "k8_base_len",
-        "label": "quiet base at least 1 bar(s)",
-        "need": "≥ 1",
+        "label": "quiet base",
+        "need": "at least 1 bar",
         "ok": true,
         "value": "2 bars"
        }
@@ -2701,22 +2701,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        }
@@ -3015,22 +3015,22 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "2 demand bars"
+        "value": "2 big green bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000 vs cap 125000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k4",
-        "label": "K4 pullback 1–5 bars",
-        "need": "1–5",
+        "label": "K4 short pullback",
+        "need": "1 to 5 bars",
         "ok": true,
         "value": "2 bars"
        }
@@ -3304,38 +3304,38 @@
       "criteria": [
        {
         "key": "k4",
-        "label": "K4 base 6–24 bars",
-        "need": "6–24",
+        "label": "K4 sideways base length",
+        "need": "6 to 24 bars",
         "ok": false,
         "value": "5 bars"
        },
        {
         "key": "k3_vol",
-        "label": "K3 base volume ≤ 0.5× leg mean",
-        "need": "≤ 125000",
+        "label": "K3 volume dried up in the base",
+        "need": "every bar must be ≤ 125,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k6_tight",
-        "label": "K6 base range ≤ 8% of price",
-        "need": "≤ 8%",
+        "label": "K6 tight base",
+        "need": "at most 8% of the price",
         "ok": true,
-        "value": "1.4%"
+        "value": "1.4% from high to low"
        },
        {
         "key": "k6_merge",
-        "label": "K6 9 and 21 EMA merged (≤ 0.5% apart)",
-        "need": "≤ 0.5%",
+        "label": "K6 9 and 21 EMA merged",
+        "need": "at most 0.5% apart",
         "ok": true,
         "value": "EMAs 0.14% apart"
        },
        {
         "key": "k6_decay",
-        "label": "K6 selling decreasing (second-half volume < 0.7× first half)",
-        "need": "< 0.7×",
+        "label": "K6 selling drying up",
+        "need": "under 70%",
         "ok": true,
-        "value": "second-half volume 0.50×"
+        "value": "second half 50% of the first half's volume"
        }
       ],
       "cycles": null,
@@ -3607,45 +3607,45 @@
       "criteria": [
        {
         "key": "k2",
-        "label": "K2 leg volume rising, each step ≤ 5×",
-        "need": "rising, no step above the cap",
+        "label": "K2 volume building on the run up",
+        "need": "inside the run up each bar at least the volume of the bar before and no more than 5× it",
         "ok": true,
-        "value": "1 demand bars"
+        "value": "1 big green bar"
        },
        {
         "key": "k3_vol",
-        "label": "K3 pullback volume ≤ 0.5× leg mean",
-        "need": "≤ 150000",
+        "label": "K3 volume dried up on the pullback",
+        "need": "every bar must be ≤ 150,000: half the average bar of the run up",
         "ok": true,
-        "value": "max 100000"
+        "value": "busiest bar 100,000"
        },
        {
         "key": "k5_uptrend",
-        "label": "K5 9 EMA above 21 EMA, both rising over 3 bars",
-        "need": "9 > 21, both rising",
+        "label": "K5 uptrend",
+        "need": "9 EMA above the 21 EMA and both higher than 3 bars ago",
         "ok": true,
         "value": "9 EMA 10.36 · 21 EMA 9.56"
        },
        {
         "key": "k4",
-        "label": "K4 pullback ≤ 9 bars",
-        "need": "≤ 9",
+        "label": "K4 short pullback",
+        "need": "at most 9 bars",
         "ok": true,
         "value": "3 bars"
        },
        {
         "key": "k5a_honor",
-        "label": "K5a every pullback bar closes at or above the 9 EMA",
-        "need": "close ≥ 9 EMA",
+        "label": "K5a pullback honors the 9 EMA",
+        "need": "every pullback bar closes at or above the 9 EMA",
         "ok": true,
-        "value": "3 bars"
+        "value": "3 pullback bars"
        },
        {
         "key": "k5_kiss",
-        "label": "K5 the pullback kissed the 9 EMA",
-        "need": "low ≤ 9 EMA × (1 + 0.5%), close above",
+        "label": "K5 pullback touched the 9 EMA (the kiss)",
+        "need": "a low no more than 0.5% above the 9 EMA and a close above it",
         "ok": false,
-        "value": "0.6% above the 9 EMA"
+        "value": "low 0.6% above the 9 EMA"
        }
       ],
       "cycles": null,
@@ -3674,12 +3674,12 @@
        "text": "🧠 building · 💋 EMA Kiss & Fly"
       },
       "ready": false,
-      "reason": "0.6% above the 9 EMA — waiting for the kiss",
+      "reason": "low 0.6% above the 9 EMA — waiting for the kiss",
       "red_closes": 0,
       "risk_pct": 0.5961251862891207,
       "setup": "kiss_fly",
       "state": "forming",
-      "state_label": "forming — 0.6% above the 9 EMA — waiting for the kiss · UNMEASURED",
+      "state_label": "forming — low 0.6% above the 9 EMA — waiting for the kiss · UNMEASURED",
       "stop": 10.421875,
       "trigger": 10.484375,
       "unjudged": [],
@@ -3734,7 +3734,7 @@
        100.0
       ]
      },
-     "why": "0.6% above the 9 EMA — waiting for the kiss"
+     "why": "low 0.6% above the 9 EMA — waiting for the kiss"
     }
    ],
    "track": {

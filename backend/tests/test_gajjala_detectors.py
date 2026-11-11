@@ -353,7 +353,7 @@ def test_zyne_5_bar_flag_reads_per_setting(monkeypatch):
 def test_bf_pullback_low_under_the_midpoint_is_invalid():
     deep = (11.0, 11.0, 10.71875, 10.9375, 100_000)                # floor 10.75
     r = D.bull_flag(FX.frame(FX.bf_bars([deep, FX.P2])))
-    assert r["state"] == "invalid" and "half the last demand bar" in r["reason"]
+    assert r["state"] == "invalid" and "half the last big green bar" in r["reason"]   # MOVED 2026-11-10 plain words
 
 
 @pytest.mark.parametrize("first_bar", [False, True])
@@ -432,7 +432,7 @@ def test_kf_low_06pct_above_the_ema9_is_forming_not_ready():
     F = FX.kf_frame(kiss_above_pct=0.6, entry=False)
     r = D.kiss_fly(F)
     assert r["state"] == "forming" and r["ready"] is False
-    assert r["reason"] == "0.6% above the 9 EMA — waiting for the kiss"
+    assert r["reason"] == "low 0.6% above the 9 EMA — waiting for the kiss"            # MOVED 2026-11-10 plain words
 
 
 def test_kf_kiss_on_the_latest_bar_is_forming_ready():
@@ -652,7 +652,7 @@ def test_vcp_lower_low_is_invalid_in_both(monkeypatch):
     bars = FX.vcp_replace(r13=(10.1875, 10.25, 9.6875, 10.125, 40_000))
     for b in (True, False):
         monkeypatch.setattr(GC, "VCP_B_READS", b)
-        assert D.intraday_vcp(FX.vcp_frame(bars))["reason"] == "lower low — not contracting up"
+        assert D.intraday_vcp(FX.vcp_frame(bars))["reason"] == "lower low — the pullbacks must make higher lows"
 
 
 def test_vcp_cycle_low_under_the_21_ema_is_b_or_invalid(monkeypatch):
@@ -660,7 +660,7 @@ def test_vcp_cycle_low_under_the_21_ema_is_b_or_invalid(monkeypatch):
     r = D.intraday_vcp(F)
     assert r["state"] == "partial" and r["grade"] == "B" and r["missed"] == ["k7_ema21"]
     monkeypatch.setattr(GC, "VCP_B_READS", False)
-    assert D.intraday_vcp(F)["reason"] == "cycle low under the 21 EMA"
+    assert D.intraday_vcp(F)["reason"] == "contraction low under the 21 EMA"
 
 
 def test_vcp_trigger_is_the_last_cycle_high():
@@ -671,7 +671,7 @@ def test_vcp_trigger_is_the_last_cycle_high():
 def test_vcp_not_ready_while_the_latest_bar_is_the_cycle_low():
     r = D.intraday_vcp(FX.vcp_frame(entry=None))
     assert r["state"] == "forming" and r["ready"] is False
-    assert r["reason"] == "the last cycle is still making its low"
+    assert r["reason"] == "the last contraction is still making its low"
 
 
 def test_vcp_post_break_lower_low_under_the_frozen_cycle_low_is_stopped():
@@ -713,7 +713,7 @@ def test_ayla_sharp_pullback_is_invalid_in_both(monkeypatch):
     F = FX.vcp_frame(bars, e21_at={13: 10.0})
     for b in (True, False):
         monkeypatch.setattr(GC, "VCP_B_READS", b)
-        assert D.intraday_vcp(F)["reason"] == "cycle low under the 21 EMA"
+        assert D.intraday_vcp(F)["reason"] == "contraction low under the 21 EMA"
 
 
 def test_vcp_k3_depth_does_not_bind():
@@ -732,20 +732,21 @@ VCP_THIRD = [(10.125, 10.375, 10.0625, 10.3125, 40_000), (10.3125, 10.5, 10.25, 
 
 VCP_STATE_TABLE = [   # (name, frame builder, cycles, state, reason, missed, grade, trigger, stop, ready)
     ("printing_highs", lambda: FX.vcp_frame(FX.VCP_BARS[:6], entry=None), 0, "forming",
-     "no pullback yet — the leg is still printing highs", [], None, 11.0, None, False),
+     "no pullback yet — still making new highs", [], None, 11.0, None, False),
     ("one_forming", lambda: FX.vcp_frame(FX.VCP_BARS[:11], entry=None), 1, "forming",
-     "1 of 2 cycles", [], None, 11.0, 9.75, False),
+     "1 of 2 contractions", [], None, 11.0, 9.75, False),
     ("one_broke", lambda: FX.vcp_frame(FX.VCP_BARS[:11] + [(10.5, 11.125, 10.4375, 10.75, 150_000)], entry=None), 1,
      "partial", "broke — not A+", ["k4_cycles"], None, 11.0, 9.75, False),
     ("two_aplus", lambda: FX.vcp_frame(), 2, "aplus", "", [], None, 10.75, 9.875, False),
-    ("two_forming", lambda: FX.vcp_frame(entry=None), 2, "forming", "the last cycle is still making its low", [],
+    ("two_forming", lambda: FX.vcp_frame(entry=None), 2, "forming", "the last contraction is still making its low", [],
      None, 10.75, 9.875, False),
     ("two_b", lambda: FX.vcp_frame(FX.vcp_replace(r13=(10.1875, 10.25, 9.8, 10.125, 40_000)), e21_at={13: 9.8}), 2,
-     "partial", "B — imperfect · missed k7_ratio", ["k7_ratio"], "B", 10.75, 9.8, False),
+     "partial", "B — imperfect · missed K7 each contraction tighter than the last", ["k7_ratio"], "B", 10.75, 9.8,
+     False),
     ("three_b", lambda: FX.vcp_frame(FX.VCP_BARS + VCP_THIRD, entry=None), 3, "partial",
-     "B — imperfect · missed k7_ema21", ["k7_ema21"], "B", 10.5625, 10.0, False),
+     "B — imperfect · missed K7 contraction lows hold the 21 EMA", ["k7_ema21"], "B", 10.5625, 10.0, False),
     ("two_lower_low", lambda: FX.vcp_frame(FX.vcp_replace(r13=(10.1875, 10.25, 9.6875, 10.125, 40_000))), 2,
-     "invalid", "lower low — not contracting up", [], None, None, None, False),
+     "invalid", "lower low — the pullbacks must make higher lows", [], None, None, None, False),
 ]
 
 
@@ -1129,7 +1130,8 @@ def test_long_flag_label_is_built_from_the_constants(monkeypatch):
     long flag; with the band configured (PULL_MAX 2, LONG_FLAG_MAX 5) the label carries the band from the constants."""
     r = D.bull_flag(FX.frame(FX.bf_bars(FX.flat_pull(5))))
     k4 = next(c for c in r["criteria"] if c["key"] == "k4")
-    assert k4["label"] == f"K4 pullback {GC.K4_BF_PULL_MIN}–{GC.K4_BF_PULL_MAX} bars" == "K4 pullback 1–5 bars"
+    assert k4["label"] == "K4 short pullback"                                    # MOVED 2026-11-10 plain words
+    assert k4["need"] == f"{GC.K4_BF_PULL_MIN} to {GC.K4_BF_PULL_MAX} bars" == "1 to 5 bars"
     assert "long flag" not in k4["label"]
     monkeypatch.setattr(GC, "K4_BF_PULL_MAX", 2)
     monkeypatch.setattr(GC, "K4_BF_LONG_FLAG_MAX", 5)
