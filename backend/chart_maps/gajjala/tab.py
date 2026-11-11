@@ -212,6 +212,19 @@ VOL_ORDER_TEXT = "📊 highest volume on top · then lowest float"   # served as
 RS_ORDER_TEXT = "🎾 highest volume on top · then lowest float"    # DECISIONS13 D3 (float) → volume first 2026-11-09 by his word; the squeeze sub
 HF_ORDER_TEXT = "➖ 9 and 21 EMA closest to merged on top · then highest volume"   # 🧪 2026-11-08 — the fade sub; [C3] a snapshot, "closest", never a direction word
 POT_ORDER_TEXT = "🧠 trigger armed first · then highest volume"   # served as order_note on the 🧠 sub (potential.order_key, 2026-11-09)
+# 💋 2026-11-11 (Ajay: "Sort by relative volume, and closer to the EMA." · "This filter is needed for EMA Kiss atleast") —
+# the 💋 sub's order word per GC.KF_EMA_SORT (state ranks first: flew, then kissing the 9 EMA now; placement GC.RS_FLOAT_SORT)
+KF_ORDER_TEXT = {"rvol_first": "💋 A+ and triggered, then kissing the 9 EMA now, on top · then highest relative volume · "
+                               "then closest to the 9 EMA",
+                 "ema_first": "💋 A+ and triggered, then kissing the 9 EMA now, on top · then closest to the 9 EMA · "
+                              "then highest relative volume"}
+RVOL_STAT_KEY = "Rel volume"                        # 💋 the card stat (chart_maps.drop10_tab.rvol_text words), shown only when known
+# 💋 the "lifting off the 9 EMA" toggle (2026-11-11 addendum) — every word served; the FE fills {shown} {hidden} {unknown}
+KF_FILTER_LABEL = "💋 lifting off the 9 EMA only"
+KF_FILTER_HINT = ("Shows only the 💋 cards that flew (A+ or triggered) or are kissing the 9 EMA on the latest closed bar "
+                  "(the K5 read); a card whose read is not known yet stays. Display only: nothing is gated, pushed or "
+                  "counted differently.")
+KF_FILTER_LINE = "{shown} shown · {hidden} hidden (not at the 9 EMA now) · {unknown} unknown kept"
 # 2026-11-11 entry spec (WP-TAB) — Ajay, verbatim: "Also apply your proposal too. / Here is how he enters please tell me
 # to enter based on this". The card's plan line, served (§3.2, DECISION B — the FE stops composing it); proposal #4 the 💧
 # marker (§3.6); #8 the 🌅 day-2 list (§3.7, list only, no push); #9 🔝 Focus 5 (§3.8, display only). Every number is a
@@ -1159,6 +1172,7 @@ def order_key(t: dict) -> tuple:
     vol = _f(g.get("_volume"))
     vkey = -vol if vol is not None else float("inf")                             # highest on top, unknown last
     sk = ((vkey,) if has_vol else ()) + ((fkey,) if has_fl else ())             # the sort slot: volume, then float
+    sk = _kf_slot(g) + sk                                                        # 💋 2026-11-11: rel volume + 9 EMA distance first
     if g.get("setup") == "horizontal_fade" and "_ema_gap_pct" in g:
         gap = g.get("_ema_gap_pct")
         gkey = float(gap) if gap is not None else float("inf")
@@ -1190,6 +1204,75 @@ def _ema_gap_pct(read: dict) -> Optional[float]:
             m = _EMA_GAP_RE.fullmatch(str(c.get("value") or ""))
             return float(m.group(1)) if m else None
     return None
+
+
+# the k5_kiss criterion's pre-break value, verbatim (detectors._kiss_text: f"low {abs(gap):.1f}% above|under the 9 EMA")
+_KISS_GAP_RE = re.compile(r"low (\d+(?:\.\d+)?)% (?:above|under) the 9 EMA")
+_KISS_AT_TEXT = "low at the 9 EMA"                  # detectors._kiss_text when the rounded gap is 0
+
+
+def _kiss_gap_pct(read: dict) -> Optional[float]:
+    """💋 2026-11-11 — the K5 row's printed distance of the last closed bar's low from the 9 EMA, absolute (1 dp; a low
+    that dipped under counts by how far under); "low at the 9 EMA" → 0.0. Pre-break reads only: every other value
+    ("9 EMA warming up", "no pullback yet", "kiss bar …", "flew without touching the 9 EMA") → None → sorts last."""
+    for c in (read or {}).get("criteria") or []:
+        if isinstance(c, dict) and c.get("key") == "k5_kiss":
+            val = str(c.get("value") or "")
+            if val == _KISS_AT_TEXT:
+                return 0.0
+            m = _KISS_GAP_RE.fullmatch(val)
+            return float(m.group(1)) if m else None
+    return None
+
+
+def _kf_slot(g: dict) -> tuple:
+    """💋 2026-11-11 (Ajay: "Sort by relative volume, and closer to the EMA."): the slot ahead of the 📊 volume / float
+    keys — (rel volume DESCENDING, 9 EMA distance ASCENDING), each unknown = inf (last in its state, never 0), swapped
+    by GC.KF_EMA_SORT "ema_first". () unless the setup is in GC.RVOL_SORT_SETUPS AND the card carries the stash
+    (setup_tile kf_rank=True — the setup sub only; the banner, the focus resolve and the 🧠 tiles keep today's key)."""
+    if g.get("setup") not in GC.RVOL_SORT_SETUPS or "_rvol" not in g:
+        return ()
+    rv, gap = _f(g.get("_rvol")), _f(g.get("_kiss_gap_pct"))
+    rk = -rv if rv is not None else float("inf")
+    gk = gap if gap is not None else float("inf")
+    return (rk, gk) if GC.KF_EMA_SORT == "rvol_first" else (gk, rk)
+
+
+def kiss_now_of(read: dict) -> Optional[bool]:
+    """💋 2026-11-11 addendum — the served `kiss_now` flag, off the EXISTING state reads only (no new rule): True = flew
+    (A+ / triggered) or forming-ready (kissing the 9 EMA on the latest closed bar); False = a partial / stopped read, or
+    a forming read whose K5 row says it is not kissing; None = unknown (a forming read whose K5 row is missing or not
+    judgeable, or judged but waiting on another unjudged row; the 🧪 held state; anything else) — never False."""
+    read = read or {}
+    st = read.get("state")
+    if st in ("aplus", "triggered"):
+        return True
+    if st in ("partial", "stopped"):
+        return False
+    if st == "forming":
+        if read.get("ready") is True:
+            return True
+        k5 = next((c for c in read.get("criteria") or [] if isinstance(c, dict) and c.get("key") == "k5_kiss"), None)
+        return False if (k5 or {}).get("ok") is False else None
+    return None
+
+
+def kf_list_note(tiles: list) -> Optional[str]:
+    """💋 2026-11-11 — over the shown sub's cards BEFORE the cut: a line only on a MIXED board (some cards with a relative
+    volume, some without — the only case where the unknown ones are pushed down); else None."""
+    from sepa.breakout_audit import VOL_AVG_BARS                     # 50 — the same constant the house average uses
+    gs = [t.get("gajjala") or {} for t in tiles or [] if isinstance(t, dict)]
+    k = sum(1 for g in gs if g.get("_rvol") is not None)
+    u = sum(1 for g in gs if "_rvol" in g and g.get("_rvol") is None)
+    if k < 1 or u < 1:
+        return None
+    return (f"💋 {u} of {len(gs)} have no relative volume yet (fewer than {VOL_AVG_BARS} trading days, or not read "
+            f"yet) — they sit last in their state")
+
+
+def kiss_filter_block() -> dict:
+    """💋 2026-11-11 addendum — the toggle's served words (the 💋 sub only); the FE types none."""
+    return {"label": KF_FILTER_LABEL, "hint": KF_FILTER_HINT, "hidden_text_template": KF_FILTER_LINE}
 
 
 _PRE_BREAK_RANK = 2      # the forming-ready rank of _state_key — the ➖ pre_break bucket sits there (ONE definition)
@@ -1307,7 +1390,8 @@ def _on_bars(markers: list, bars: list) -> list:
 
 def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, listed: Optional[dict],
                halt_doc=None, daily=None, pass_at: Optional[datetime] = None, v=None,
-               carry: Optional[dict] = None, prev_iso: Optional[str] = None, rang: Optional[bool] = None) -> dict:
+               carry: Optional[dict] = None, prev_iso: Optional[str] = None, rang: Optional[bool] = None,
+               kf_rank: bool = False) -> dict:
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
     is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
     "read at …" chip, 2026-10-15).
@@ -1315,7 +1399,10 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     serves `ellipses` (squeeze_marks — GG's chart marks) on the frame its read was taken on only, `[]` on the other
     frame's toggle; `carry` = the prior session's carry doc (build's ONE read), `prev_iso` = that session's date. Every
     other setup's card is byte-identical (no `ellipses` key, today's bars).
-    `rang` (D10, 2026-11-11) = _rang's answer, handed to state_label (only a `triggered` read uses it)."""
+    `rang` (D10, 2026-11-11) = _rang's answer, handed to state_label (only a `triggered` read uses it).
+    💋 `kf_rank` (2026-11-11) = True ONLY at build's setup-sub call: a GC.RVOL_SORT_SETUPS card stashes `_rvol` (this
+    pass's ctx["rvol"], chart_maps.drop10_tab.rvol_read's dict) + `_kiss_gap_pct` for order_key, prints a "Rel volume"
+    stat (drop10_tab.rvol_text) right after Volume when known, and a 💋 card serves `kiss_now` (kiss_now_of)."""
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
     vv = V.of(v)
@@ -1351,10 +1438,21 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         g["_volume"] = chips.get("volume")                           # the card's own Volume number (_chips ← scan_row), no new read
     if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
         g["_ema_gap_pct"] = _ema_gap_pct(read)
+    if kf_rank and setup in GC.RVOL_SORT_SETUPS:                     # 💋 order keys (2026-11-11), popped before serving
+        rv = (doc.get("ctx") or {}).get("rvol")
+        rv = rv if isinstance(rv, dict) else None
+        g["_rvol"] = _f((rv or {}).get("rvol"))
+        g["_kiss_gap_pct"] = _kiss_gap_pct(read)
+        if g["_rvol"] is not None:
+            from chart_maps import drop10_tab as DT
+            at = next((i + 1 for i, s_ in enumerate(stats) if s_["k"] == "Volume"), len(stats))
+            stats.insert(at, {"k": RVOL_STAT_KEY, "v": DT.rvol_text(rv)})
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
     tile = {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
             "vol_avg": vol_avg, "bands": EZ.bands(read, vv), "lines": _tile_lines(read), "markers": markers, "stats": stats,
             "why": read.get("reason") or "", "badges": [], "curves": fr["curves"], "gajjala": g}
+    if kf_rank and setup == "kiss_fly":                              # 💋 the toggle's flag (2026-11-11 addendum), served
+        tile["kiss_now"] = kiss_now_of(read)
     if wide:                                                         # 🎾 GG's chart marks (2026-11-08)
         read_tf = read.get("frame") if read.get("frame") in vv.tfs else vv.primary   # the tile_tf / _last_close rule
         names = carry.get("names") if isinstance(carry, dict) else None
@@ -1374,6 +1472,8 @@ def _strip_private(tiles: list) -> None:
             g.pop("_float_shares", None)
             g.pop("_volume", None)
             g.pop("_ema_gap_pct", None)
+            g.pop("_rvol", None)
+            g.pop("_kiss_gap_pct", None)
 
 
 def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: dict, sess: dict,
@@ -2318,7 +2418,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
-                                            rang=_rang(words_entries, session, sym, setup)))
+                                            rang=_rang(words_entries, session, sym, setup), kf_rank=True))
         tiles.sort(key=order_key)                                       # 🚫 the partition runs at the serving site, AFTER the cut
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
@@ -2375,9 +2475,14 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["tiles"] = broker_bottom(per_setup[sub_k][:lim], order_flags)   # 🚫 2026-11-09 — his names last among the cards shown (cut first: the list only reorders)
         out["order_note"] = (RS_ORDER_TEXT if sub_k == "reversal_squeeze" else          # DECISIONS13 D3 — served word
                              HF_ORDER_TEXT if sub_k == "horizontal_fade" else          # 🧪 2026-11-08 — the ➖ word
+                             KF_ORDER_TEXT[GC.KF_EMA_SORT] if sub_k in GC.RVOL_SORT_SETUPS else   # 💋 2026-11-11
                              VOL_ORDER_TEXT)                                           # 2026-11-09 — every other setup sub
         out["list_note"] = (_soft("vcp list note", vcp_list_note, unlisted.get(sub_k, 0))
-                            if sub_k == "intraday_vcp" else None)                # BUILD_SPEC18 D3 — served line
+                            if sub_k == "intraday_vcp" else                       # BUILD_SPEC18 D3 — served line
+                            _soft("kiss list note", kf_list_note, per_setup[sub_k])   # 💋 2026-11-11 — before the cut
+                            if sub_k in GC.RVOL_SORT_SETUPS else None)
+        if sub_k == "kiss_fly":                                         # 💋 2026-11-11 addendum — the toggle's words
+            out["kiss_filter"] = kiss_filter_block()
         e, label = SUB_META[sub_k]
         out["empty_note"] = (f"No {e} {label} on his list right now — the next pass is at most "
                              f"{_mins(_cad(v))} away." if in_window else

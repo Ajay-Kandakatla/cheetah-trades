@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-11 ~12:50 ET (verbatim in the label, his spelling kept; the fragment with the b-word is NOT quoted — the
+  // b-word rule on his surfaces, kiss rvol spec R1): "Sort by relative volume, and closer to the EMA." / "This filter is
+  // needed for EMA Kiss atleast". context.warm_squeeze_history stores avg_vol_50 (MB.avg_volume_before, the 🎾 chip's
+  // frame); run.run_pass sets ctx["rvol"] = drop10_tab.rvol_read over THIS pass's volume. tab._kf_slot (the 💋 sub only,
+  // GC.RVOL_SORT_SETUPS) ranks relative volume ↓, then the K5 row's 9 EMA distance ↑, ahead of the 📊 slot; unknown last in
+  // its state. "Rel volume" stat (rvol_text), KF_ORDER_TEXT order_note, kf_list_note on a mixed board. The toggle
+  // (addendum): per-card kiss_now + the served kiss_filter block; GajjalaBoard hides only kiss_now === false, default OFF.
+  // Display only, UNMEASURED. Doc docs/gajjala/kiss_rvol_sort_2026_11_11.md. Pinned by scripts/contracts.mjs
+  // ("💋 EMA Kiss rel volume order + lifting-off toggle (2026-11-11)").
+  { id: 'chart-maps-gajjala-kiss-rvol-sort-2026-11-11', addedAt: '2026-11-11', route: '/chart-maps?tab=gajjala&sub=kiss_fly',
+    label: "💋 EMA Kiss: relative volume first, closest to the EMA next — you said: “Sort by relative volume, and closer to the EMA.” and “This filter is needed for EMA Kiss atleast”. On the 💋 EMA Kiss & Fly sub, inside each state (A+ and triggered first, then the cards kissing the EMA now, as before) the card with the highest relative volume now sits first (today's volume against its own daily average), then the one whose low is closest to the EMA. Each card shows its Rel volume when known; a name too new to have an average sits last in its state. A new toggle on that sub, off until you tap it, shows only the cards lifting off the EMA now (A+, triggered or kissing it); a card not read yet stays. Display order only: no alert, rule or count moved. UNMEASURED. Not advice." },
   // Ajay 2026-11-11 (verbatim in the label): "Here is how he enters please tell me to enter based on this". Entry spec
   // §3.1–3.2. tab.plan_text serves the card's ONE plan line (PLAN_ENTRY_HEAD only when ledger.plan_of is the first
   // plan; a no-risk / no-plan read says PLAN_LEVEL_HEAD); GajjalaBoard prints read.plan_text verbatim, composes none.
@@ -114,7 +125,7 @@ export const NEW_FEATURES: NewFeature[] = [
   // order only — no gate, rule, threshold, push or data change. Doc docs/gajjala/volume_sort_broker_bottom_2026_11_09.md.
   // Pinned by scripts/contracts.mjs ("📊 volume on top + 🚫 at the bottom (2026-11-09)").
   { id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09', addedAt: '2026-11-09', route: '/chart-maps?tab=gajjala',
-    label: "📊 Highest volume on top, your 🚫 names at the bottom — you said: “Ok sort any stocks by volume on all Gajjala's charts” / “The ones I am reporting they are not on Fidelity put them at the bottom”. Inside every state on every Gajjala sub the loudest name now sits first (the card's own Volume number), the float next; ➖ Fade keeps its 9/21 EMA rank first. The names you reported sit at the bottom of every card board, still listed, still tagged, never dropped. Display order only. UNMEASURED. Not advice." },
+    label: "📊 Highest volume on top, your 🚫 names at the bottom — you said: “Ok sort any stocks by volume on all Gajjala's charts” / “The ones I am reporting they are not on Fidelity put them at the bottom”. Inside every state on every Gajjala sub (💋 EMA Kiss: relative volume first since 2026-11-11) the loudest name now sits first (the card's own Volume number), the float next; ➖ Fade keeps its 9/21 EMA rank first. The names you reported sit at the bottom of every card board, still listed, still tagged, never dropped. Display order only. UNMEASURED. Not advice." },
   // Ajay 2026-11-09 ~09:55 ET (verbatim in the label, his spelling kept), with a 🎾 card screenshot whose right axis showed
   // TRIGGER / 21 EMA / 9 EMA but no price: "I can't see now for them again" (earlier: "I like how they are realtime
   // updating the prices of now"). Since 2026-10-16 the 🔴 live overlay added the "now" label only in pre-market /

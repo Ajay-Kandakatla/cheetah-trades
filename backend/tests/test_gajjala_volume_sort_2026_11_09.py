@@ -333,7 +333,8 @@ def test_order_note_names_the_volume_on_every_card_sub_and_says_nothing_banned()
         if sub == HF:
             assert note.startswith("➖ 9 and 21 EMA closest to merged on top")   # his 2026-11-07 rank stays first
     assert GT.build(GC.POTENTIAL_SUB, now=NOW, store=st)["order_note"] == GT.POT_ORDER_TEXT
-    for w in (GT.VOL_ORDER_TEXT, GT.RS_ORDER_TEXT, GT.HF_ORDER_TEXT, GT.POT_ORDER_TEXT, GT.BROKER_BOTTOM_TEXT):
+    for w in (GT.VOL_ORDER_TEXT, GT.RS_ORDER_TEXT, GT.HF_ORDER_TEXT, GT.POT_ORDER_TEXT, GT.BROKER_BOTTOM_TEXT,
+              *GT.KF_ORDER_TEXT.values()):                                       # WIDENED 2026-11-11 — the 💋 words
         assert not any(b in w.lower() for b in BANNED), w
     for sub in ("premarket", "postmarket", "playbook"):                          # NEGATIVE: the lists serve none
         assert GT.build(sub, now=NOW, store=st).get("order_note") is None, sub

@@ -40,6 +40,12 @@ wording only; every other entry is the BOARD golden alone):
   added counts `building_held` / `name_held`, `last.session_volume` on every tracker upsert and two `name_rang` holds
   per mode; removed those two ids' claim + settle + send; `potential.pushed` 3 -> 1. Full key-for-key diff was checked
   before the regen was kept; the WRITES move is flagged to him (docs/gajjala/proposals_applied_2026_11_11.md).
+  2026-11-11 (later) — Ajay "Sort by relative volume, and closer to the EMA." / "This filter is needed for EMA Kiss
+  atleast": BOARD only (WRITES byte-identical — the fixture loader has no 50-session average, so no ctx `rvol` is
+  written). BOARD = 8 leaves, all on the 💋 sub, both modes: `kiss_fly/order_note` VOL_ORDER_TEXT -> tab.KF_ORDER_TEXT
+  ["rvol_first"] (2 changed); `kiss_fly/kiss_filter` = tab.kiss_filter_block() (2 added); `kiss_now` false on each of
+  the two 💋 tiles (4 added). No tile reordered, no "Rel volume" stat, `list_note` still null, every other sub
+  byte-equal (docs/gajjala/kiss_rvol_sort_2026_11_11.md).
 """
 from __future__ import annotations
 

@@ -345,3 +345,9 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-day2-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .gg-day2-row { min-width: 0; white-space: normal; }
 .gg-track-brk { min-width: 0; overflow-wrap: anywhere; }
+
+/* 💋 2026-11-11 (kiss rvol spec addendum): the "lifting off the 9 EMA" toggle chip and its served count line. 📱 430 px:
+   the row wraps and the served label never sets the board's minimum (min-width: 0, white-space: normal). */
+.gg-kiss-filter { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; min-width: 0; max-width: 100%; margin: 0.25rem 0; }
+.gg-kiss-filter-btn { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.gg-kiss-filter-line { min-width: 0; overflow-wrap: anywhere; }

@@ -668,7 +668,16 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
   promo?: boolean | null; promo_text?: string | null;
   /** 🔝 2026-11-11 (entry spec §3.8, proposal #9): true on the first FOCUS_N cards of the served order (🚫 names skipped) —
    *  display only; every card is still listed. */
-  focus?: boolean | null };
+  focus?: boolean | null;
+  /** 💋 2026-11-11 (kiss rvol spec addendum): the served "lifting off the 9 EMA now" flag — the 💋 sub only. true = A+ /
+   *  triggered (flew) or forming-ready (kissing the 9 EMA on the latest closed bar, the existing K5 read); false = neither;
+   *  null / absent = unknown (NEVER treated as false — the 💋 toggle never hides it). Display only. */
+  kiss_now?: boolean | null };
+
+/** 💋 2026-11-11 (kiss rvol spec addendum): the served toggle block — the 💋 sub only. Every word SERVED (the FE types
+ *  none): `label` = the chip, `hint` = its native title, `hidden_text_template` = the line printed under the chip while it
+ *  is ON, with `{shown}` / `{hidden}` / `{unknown}` filled by the FE's own counts of the cards it drew. */
+export type GgKissFilter = { label?: string | null; hint?: string | null; hidden_text_template?: string | null };
 
 /** 🔝 2026-11-11: the served Focus block (tab.py, GG5 setup subs + 🧠 only, when the board has more than `n` cards). */
 export type GgFocusBlock = { n?: number | null; text?: string | null };
@@ -778,6 +787,8 @@ export type GgBoard = {
   focus?: GgFocusBlock | null;
   /** 🌅 2026-11-11: the served Day-2 list (GG5 ☀️ pre-market sub only); absent otherwise. */
   day2?: GgDay2Block | null;
+  /** 💋 2026-11-11: the served "lifting off the 9 EMA" toggle block (the 💋 sub only); absent elsewhere → no toggle. */
+  kiss_filter?: GgKissFilter | null;
   /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */
   scan?: GgScan | null;
   /** 🎯 the served A+ line (every sub); absent on an older API. */
@@ -1049,3 +1060,54 @@ export type GgBrokerFlags = {
    *  his names sitting at the END of every card board (tab.BROKER_BOTTOM_TEXT); absent on an older API, printed verbatim. */
   order_text?: string | null;
 };
+
+/* ---- 💋 EMA Kiss & Fly "lifting off the 9 EMA" toggle (2026-11-11, kiss rvol spec addendum) ----
+ * Ajay 2026-11-11: "Sort by relative volume, and closer to the EMA." and "This filter is needed for EMA Kiss atleast".
+ * The server orders the 💋 cards and serves, per card, `kiss_now` (true / false / null) plus the `kiss_filter` words.
+ * The toggle is a per-viewer view filter, default OFF: ON hides ONLY `kiss_now === false`; an unknown card stays and is
+ * counted. It never reorders the cards it keeps, never changes a count, gate or push. UNMEASURED. */
+
+/** The served block when this sub may show the toggle — the 💋 sub AND a served non-blank label; else null. */
+export function ggKissFilterBlock(board: GgBoard | null | undefined, sub: GgSub | null | undefined): GgKissFilter | null {
+  if (sub !== 'kiss_fly') return null;
+  const b = board?.kiss_filter;
+  if (!b || typeof b !== 'object') return null;
+  return typeof b.label === 'string' && b.label.trim() ? b : null;
+}
+
+export type GgKissFilterSplit<T> = { visible: T[]; shown: number; hidden: number; unknown: number };
+
+/** OFF → every card, in the served order. ON → drop `kiss_now === false` only (null / absent / anything else stays),
+ *  the kept cards in the served order. `unknown` counts the kept cards whose flag is not a boolean. */
+export function ggKissFilterSplit<T extends { kiss_now?: boolean | null }>(tiles: T[], on: boolean): GgKissFilterSplit<T> {
+  const visible = on ? tiles.filter((t) => t?.kiss_now !== false) : tiles.slice();
+  const unknown = visible.filter((t) => typeof t?.kiss_now !== 'boolean').length;
+  return { visible, shown: visible.length, hidden: tiles.length - visible.length, unknown };
+}
+
+/** The served template with the three counts filled in; a missing / blank template → null (the FE types no word). */
+export function ggKissFilterLine(block: GgKissFilter | null | undefined,
+                                 n: { shown: number; hidden: number; unknown: number }): string | null {
+  const tpl = block?.hidden_text_template;
+  if (typeof tpl !== 'string' || !tpl.trim()) return null;
+  return tpl.split('{shown}').join(String(n.shown))
+    .split('{hidden}').join(String(n.hidden))
+    .split('{unknown}').join(String(n.unknown));
+}
+
+/** Per-viewer convenience only (the emaFrames precedent): both directions in try/catch — a blocked store reads OFF. */
+export const GG_KISS_FILTER_LS = 'gg-kiss-filter';
+export function loadGgKissFilter(): boolean {
+  try {
+    return window.localStorage.getItem(GG_KISS_FILTER_LS) === '1';
+  } catch {
+    return false;
+  }
+}
+export function saveGgKissFilter(on: boolean): void {
+  try {
+    window.localStorage.setItem(GG_KISS_FILTER_LS, on ? '1' : '0');
+  } catch {
+    /* losing it must cost nothing */
+  }
+}

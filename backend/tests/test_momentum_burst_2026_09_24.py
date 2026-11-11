@@ -480,9 +480,26 @@ def test_only_three_backend_modules_mention_momentum_burst():
     # + the 🔻 Down 10%+ today tab (2026-10-05): imports rvol_leg /
     #   avg_volume_before / session_frac / burst_session for the card's
     #   volume vs normal — display only, gates nothing
+    # + Gajjala 💋 2026-11-11: avg_volume_before / burst_session / session_frac
+    #   for the 💋 rel-volume order and words (context.py stores avg_vol_50,
+    #   run.py stamps ctx["rvol"]) — display only, never in alert_ctx, gates
+    #   nothing. tab.py takes VOL_AVG_BARS from sepa.breakout_audit instead.
     assert hits == {"chart_maps/board.py", "supply_demand/rules_info.py",
                     "chart_maps/resiliency_tab.py", "chart_maps/fallen_tab.py",
-                    "chart_maps/drop10_tab.py"}, hits
+                    "chart_maps/drop10_tab.py",
+                    "chart_maps/gajjala/context.py", "chart_maps/gajjala/run.py"}, hits
+
+
+def test_NEGATIVE_no_gajjala_push_or_tab_module_mentions_momentum_burst():
+    """2026-11-11 — the 💋 rel-volume use stays in context.py + run.py only:
+    the push module (alerts.py), the tab, and every other gajjala module never
+    name the burst engine."""
+    allowed = {"context.py", "run.py"}
+    bad = sorted(p.name for p in (BACKEND / "chart_maps/gajjala").glob("*.py")
+                 if p.name not in allowed and "momentum_burst" in p.read_text(errors="ignore"))
+    assert bad == [], bad
+    for name in ("alerts.py", "tab.py"):
+        assert "momentum_burst" not in (BACKEND / "chart_maps/gajjala" / name).read_text(), name
 
 
 def test_attach_burst_makes_no_push_enter_or_size_call():

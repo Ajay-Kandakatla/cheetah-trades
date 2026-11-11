@@ -805,6 +805,8 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   on the owner strip. Display order only. The morning's float-on-every-sub step: `docs/gajjala/float_sort_all_setups_2026_11_09.md`.
   Doc `docs/gajjala/volume_sort_broker_bottom_2026_11_09.md`; contracts "📊 volume on top + 🚫 at the bottom (2026-11-09)";
   ✨ `chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09`; tests `tests/test_gajjala_volume_sort_2026_11_09.py`.
+  Amended 2026-11-11: on the 💋 sub the slot takes `tab._kf_slot` (relative volume ↓, then the 9 EMA distance ↑) AHEAD
+  of (volume ↓, float ↑) and `order_note` is `KF_ORDER_TEXT` — see the 💋 row below.
 - **🏠 "/" opens Gajjala's tab for the primary owner** (2026-11-10, Ajay: *"Then default my landing page to Gajjala's tab
   in chartmaps on the app always."*) — `frontend/src/lib/landing.ts` `ownerLanding(target, isPrimaryOwner)` +
   `OWNER_LANDING_TAB: CmTab = 'gajjala'` (type-only import: `chartMaps.ts` stays out of the entry chunk); `App.tsx`
@@ -913,6 +915,22 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   read ONCE per board by `tab._stage_tag`; `GgStages.tsx` prints the served words on 🚩, 1-minute and 🧪 cards. A clock
   for today's session only, the date otherwise. Display only. Doc `docs/gajjala/setup_stages_2026_11_11.md`; contracts
   "🪜 Gajjala stages tags (2026-11-11)"; ✨ `chart-maps-gajjala-stages-2026-11-11`.
+- **💋 EMA Kiss: relative volume first, closest to the 9 EMA next + the "lifting off the 9 EMA" toggle** (2026-11-11,
+  Ajay: *"Sort by relative volume, and closer to the EMA."* / *"This filter is needed for EMA Kiss atleast"*). Data:
+  `context.warm_squeeze_history` stores `avg_vol_50` = `MB.avg_volume_before` (the 🎾 chip's own daily frame, no new
+  read; only when 50 closed sessions exist); `run.run_pass` sets `ctx["rvol"]` = `drop10_tab.rvol_read` over THIS pass's
+  session volume (`sv[s]`, never the stored scan row) — projected in RTH, none pre-market. Order: on the 💋 sub only
+  (`GC.RVOL_SORT_SETUPS`), `tab._kf_slot` puts (relative volume ↓, the K5 row's 9 EMA distance ↑; each unknown last in
+  its state, never 0; `GC.KF_EMA_SORT` "rvol_first") ahead of the 📊 (volume, float) slot inside each state (A+ /
+  triggered, then forming-ready = kissing now, on top — the existing ranks). Card stat "Rel volume" (`rvol_text`), a
+  `list_note` on a mixed board, `order_note` = `KF_ORDER_TEXT`. Toggle (addendum): each 💋 card serves `kiss_now`
+  (true = A+ / triggered / forming-ready; false = not kissing; null = unknown, never hidden), the sub serves
+  `kiss_filter` {label, hint, hidden_text_template}; `GajjalaBoard` chip default OFF (localStorage `gg-kiss-filter`), ON
+  hides only `kiss_now === false`, never reorders. Display only: no gate, rule, push, count or 🏁 change. UNMEASURED
+  (the 11-11 loudest-three read was null-to-negative). Doc `docs/gajjala/kiss_rvol_sort_2026_11_11.md` (13 HIS CALLs);
+  contracts "💋 EMA Kiss rel volume order + lifting-off toggle (2026-11-11)"; ✨ `chart-maps-gajjala-kiss-rvol-sort-2026-11-11`;
+  tests `tests/test_gajjala_rvol_avg_2026_11_11.py`, `tests/test_gajjala_kiss_rvol_sort_2026_11_11.py`,
+  `GajjalaBoard.kiss_rvol.test.tsx`.
 - **📌 Trader names join the list** (2026-10-27, Ajay: *"Can you track this guy please? and his tickers"* +
   https://stocktwits.com/algo888, then *"Add them to Gajjals, they are pretty good"*). `chart_maps/gajjala/trader_names.py`
   reads the STORED posts of every `traders/registry.py` row with `"gajjala": True` (today: algo888 only) and, inside

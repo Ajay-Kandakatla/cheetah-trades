@@ -260,6 +260,14 @@ FLOAT_SORT_SETUPS = tuple(SETUPS)        # derived — MINE: every setup sub the
 # sorts DESCENDING inside every state on every card sub, unknown last, and sits BEFORE the float key (his 2026-10-18 float
 # call is the next key); placement = RS_FLOAT_SORT. The 🧠 sub's potential.order_key takes the same swap. DISPLAY ORDER ONLY.
 VOLUME_SORT_SETUPS = FLOAT_SORT_SETUPS   # derived — the same subs as the float key (never retyped); his 2026-11-09 ~10:25 ET words above
+# 💋 2026-11-11 ~12:50 ET — Ajay, verbatim: "Sort by relative volume, and closer to the EMA." · "This filter is needed for
+# EMA Kiss atleast". Inside each state on the 💋 sub: relative volume DESCENDING (this pass's session volume ÷ the
+# 50-session average, chart_maps.drop10_tab.rvol_read — the house sort engine), then the low's distance to the 9 EMA
+# ASCENDING (the K5 row's own printed number), both unknown last, BEFORE the 📊 volume / float slot. DISPLAY ORDER ONLY: no
+# gate, rule, push or count change; UNMEASURED (the 11-11 entries study's loudest-three read was null-to-negative).
+RVOL_SORT_SETUPS = ("kiss_fly",)         # MINE (HIS CALL Q8 of docs/gajjala/kiss_rvol_sort_2026_11_11.md) — his "EMA Kiss atleast": the 💋 sub only
+KF_EMA_SORT = "rvol_first"               # MINE (HIS CALL Q6) — his word order: relative volume first, then closest to the 9 EMA; "ema_first" swaps the two
+KF_EMA_SORTS = ("rvol_first", "ema_first")   # MINE — the two 💋 orders KF_EMA_SORT may name (HIS CALL Q6)
 SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),

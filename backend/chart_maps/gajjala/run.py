@@ -526,6 +526,15 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala pass: promo tags unreadable: %s", type(exc).__name__)
             ptags, promo_adds = {}, set()
+        # 💋 2026-11-11 (Ajay: "Sort by relative volume, and closer to the EMA."): rel volume off the volume THIS pass
+        # read (`sv`, the K11 number — never the stored row) ÷ the 50-session average, through the house sort engine
+        # `drop10_tab.rvol_read` (projected in RTH). Display only: stored in the read doc's ctx, never in alert_ctx.
+        avg_vol = hist.get("avg_vol") or {}
+        if avg_vol:
+            from chart_maps import drop10_tab as DT
+            from supply_demand import momentum_burst as MB
+            rv_tape, rv_half = MB.burst_session(result.get("tape_session"), et)
+            rv_frac = MB.session_frac(rv_tape, et, half_day=rv_half)
         alert_ctx: dict = {}
         pot_ctx: dict = {}
         for s, fr in frames.items():
@@ -542,6 +551,10 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             ptag = ptags.get(s)
             if ptag:                                            # 🎪 the same rule: keys only when tagged
                 ctx.update(promo=True, promo_text=ptag["promo_text"])
+            av = avg_vol.get(s)
+            if av is not None:                                  # 💋 the same rule: the key only when the average is known
+                ctx["rvol"] = DT.rvol_read({"volume": sv.get(s)}, {"avg_vol50": av}, tape=rv_tape, frac=rv_frac,
+                                            half_day=rv_half)
             prior = st.get_read(session, s) or {}
             stopped = dict(prior.get("stopped_today") or {})
             for setup, r in (reads.get(s) or {}).items():

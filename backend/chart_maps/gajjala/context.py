@@ -523,17 +523,27 @@ def warm_squeeze_history(symbols: Iterable[str], session, store, *, cap: Optiona
                          loader: Optional[Callable] = None, force: bool = False) -> dict:
     """The chip for each symbol on `session`, from `gajjala_daily` when already computed, else computed (the daily
     frame via `prices.closed_daily_frame` — never a cache write, trap T5) and stored. `cap` bounds the NEW computes
-    (the pass: DAILY_MAX_NEW_PER_PASS; nightly: None = all). -> {chips: {SYM: chip}, computed, cached, deferred}."""
+    (the pass: DAILY_MAX_NEW_PER_PASS; nightly: None = all). -> {chips: {SYM: chip}, avg_vol: {SYM: avg}, computed,
+    cached, deferred}.
+
+    💋 2026-11-11 (Ajay: "Sort by relative volume, and closer to the EMA."): the SAME daily frame also gives the
+    50-session average volume (`momentum_burst.avg_volume_before` — the house average, today dropped, None unless
+    VOL_AVG_BARS finite sessions), stored as `avg_vol_50` beside the chip ONLY when known (an unknown average leaves
+    the daily body byte-identical) and served in `avg_vol`. A cached doc serves its stored average and is never
+    re-read for it (a doc written before the average existed, or a name under VOL_AVG_BARS sessions, has none)."""
+    from supply_demand import momentum_burst as MB
     loader = loader or _default_daily_loader
     sess = _as_date(session)
     as_of = datetime.combine(sess, dtime(0, 0))               # naive = ET midnight: rows dated before the session
     ledger = halt_ledger_dates(store)
-    out = {"chips": {}, "computed": 0, "cached": 0, "deferred": 0}
+    out = {"chips": {}, "avg_vol": {}, "computed": 0, "cached": 0, "deferred": 0}
     for s in dict.fromkeys((x or "").upper() for x in symbols or [] if x):
         doc = (store.get_daily(sess, s) if store is not None else None) or {}
         if not force and isinstance(doc.get("squeeze_history"), dict):
             out["chips"][s] = doc["squeeze_history"]
             out["cached"] += 1
+            if _num(doc.get("avg_vol_50")) is not None:
+                out["avg_vol"][s] = _num(doc["avg_vol_50"])
             continue
         if cap is not None and out["computed"] >= cap:
             out["deferred"] += 1
@@ -547,8 +557,13 @@ def warm_squeeze_history(symbols: Iterable[str], session, store, *, cap: Optiona
                                ledger_dates=ledger if store is not None else None)
         out["chips"][s] = chip
         out["computed"] += 1
+        avg = MB.avg_volume_before(df, sess)
+        body = {"squeeze_history": chip}
+        if avg is not None:                                     # keys only when known — an unknown body is unchanged
+            body["avg_vol_50"] = avg
+            out["avg_vol"][s] = avg
         if store is not None:
-            store.upsert_daily(sess, s, {"squeeze_history": chip})
+            store.upsert_daily(sess, s, body)
     return out
 
 

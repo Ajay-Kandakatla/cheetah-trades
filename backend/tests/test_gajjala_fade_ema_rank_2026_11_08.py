@@ -190,6 +190,8 @@ def test_order_note_on_every_sub_and_variant():
         for sub in GC.SETUPS:
             out = GT.build(sub, now=NOW, store=st, variant=v)
             want = {HF: GT.HF_ORDER_TEXT, RS: GT.RS_ORDER_TEXT}.get(sub, GT.VOL_ORDER_TEXT)   # 2026-11-09: every sub a word
+            if sub in GC.RVOL_SORT_SETUPS:                       # UPDATED 2026-11-11 — 💋 rel volume first (its own word)
+                want = GT.KF_ORDER_TEXT[GC.KF_EMA_SORT]
             assert "order_note" in out and out["order_note"] == want, (v, sub)
         for sub in ("premarket", "postmarket", "playbook"):
             assert GT.build(sub, now=NOW, store=st, variant=v).get("order_note") is None, (v, sub)

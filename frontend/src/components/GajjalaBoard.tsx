@@ -206,6 +206,7 @@ import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
+  ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
   type GgBoard, type GgBrokerFlags, type GgDay2Block, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
@@ -530,9 +531,26 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   /* 🚩 2026-11-09: the streamed prices spliced into the poll's answer (newer only), then into the tiles. */
   const cardLive = useMemo(() => ({ footer: cardPoll.footer, answer: patchQuotes(cardPoll.answer, ggLive.quotesEvt) }),
     [cardPoll.answer, cardPoll.footer, ggLive.quotesEvt]);
-  const liveTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+  const patchedTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+  /* 💋 2026-11-11 (kiss rvol spec addendum; Ajay: "This filter is needed for EMA Kiss atleast"): the per-viewer toggle,
+   * default OFF, remembered in localStorage (try/catch — a blocked store reads OFF). It shows only on the 💋 sub of a
+   * board that SERVES `kiss_filter`; ON drops the cards served `kiss_now === false` from the drawing only — the room
+   * POST, the live poll, the counts and the served order are untouched, an unknown (null) card stays. Every word is
+   * served: the chip is `label`, its title `hint`, the line under it `hidden_text_template` with the counts filled in. */
+  const [kissOn, setKissOn] = useState<boolean>(() => loadGgKissFilter());
+  const kissBlock = ggKissFilterBlock(board, activeSub);
+  const kissSplit = ggKissFilterSplit(patchedTiles, kissBlock != null && kissOn);
+  /* The live-patched cards the grid DRAWS (every card unless the 💋 toggle is ON), in the served order. */
+  const liveTiles = kissSplit.visible;
+  const kissLine = kissBlock && kissOn ? ggKissFilterLine(kissBlock, kissSplit) : null;
+  const toggleKiss = () => {
+    const next = !kissOn;
+    setKissOn(next);
+    saveGgKissFilter(next);
+  };
   /* 🔝 2026-11-11 (entry spec §3.8): the served Focus header, and the index of the last card the server flagged `focus`
-   * (the divider goes after it). No served block → no header, no divider, whatever the tiles carry. */
+   * (the divider goes after it). No served block → no header, no divider, whatever the tiles carry. 💋: over the cards
+   * DRAWN, so a hidden focus card moves the divider to the last focus card still on screen. */
   const focusText = typeof board?.focus?.text === 'string' && board.focus.text.trim() ? board.focus.text : null;
   const lastFocusTile = focusText ? liveTiles.reduce<GgTile | null>((at, t) => (t.focus === true ? t : at), null) : null;
   const feedWord = streamFeedWord(cardPoll.answer);
@@ -765,6 +783,18 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {/* (6) the tiles, in the SERVED order. */}
           {!tiles.length && board.empty_note ? (
             <div className="cm-note" data-testid="gg-empty">{board.empty_note}</div>
+          ) : null}
+          {/* 💋 2026-11-11: the served toggle chip and, while it is ON, the served count line — the 💋 sub only. */}
+          {kissBlock ? (
+            <div className="gg-kiss-filter" data-testid="gg-kiss-filter">
+              <button type="button" data-testid="gg-kiss-filter-btn" aria-pressed={kissOn}
+                      className={`cm-phase-btn gg-kiss-filter-btn${kissOn ? ' cm-phase-on' : ''}`}
+                      title={typeof kissBlock.hint === 'string' && kissBlock.hint.trim() ? kissBlock.hint : undefined}
+                      onClick={toggleKiss}>
+                {kissBlock.label}
+              </button>
+              {kissLine ? <span className="gg-muted gg-kiss-filter-line" data-testid="gg-kiss-filter-line">{kissLine}</span> : null}
+            </div>
           ) : null}
           {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
           {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}

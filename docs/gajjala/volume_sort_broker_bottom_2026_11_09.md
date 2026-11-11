@@ -40,6 +40,8 @@ Served words (the FE prints them, types none): `order_note` on every setup sub �
 "📊 highest volume on top · then lowest float" (🚩 💋 🌀), `RS_ORDER_TEXT` "🎾 highest volume on top · then lowest
 float", `HF_ORDER_TEXT` "➖ 9 and 21 EMA closest to merged on top · then highest volume" — and on the 🧠 sub
 `POT_ORDER_TEXT` "🧠 trigger armed first · then highest volume". ☀️ / 🌙 / 📓 serve none (☀️ has its sort toggle).
+Amended 2026-11-11: 💋 no longer serves `VOL_ORDER_TEXT` — its slot is relative volume ↓, then the 9 EMA distance ↑,
+AHEAD of (volume ↓, float ↑), and its `order_note` is `KF_ORDER_TEXT` (`docs/gajjala/kiss_rvol_sort_2026_11_11.md`).
 
 The 🧪 Audited and 1-minute pages share `tab.order_key` / `setup_tile` and follow with no special case (tested).
 

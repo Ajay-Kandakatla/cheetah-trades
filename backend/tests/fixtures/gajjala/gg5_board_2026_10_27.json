@@ -2074,9 +2074,14 @@
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
    "graveyard_today": [],
+   "kiss_filter": {
+    "hidden_text_template": "{shown} shown · {hidden} hidden (not at the 9 EMA now) · {unknown} unknown kept",
+    "hint": "Shows only the 💋 cards that flew (A+ or triggered) or are kissing the 9 EMA on the latest closed bar (the K5 read); a card whose read is not known yet stays. Display only: nothing is gated, pushed or counted differently.",
+    "label": "💋 lifting off the 9 EMA only"
+   },
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
-   "order_note": "📊 highest volume on top · then lowest float",
+   "order_note": "💋 A+ and triggered, then kissing the 9 EMA now, on top · then highest relative volume · then closest to the 9 EMA",
    "pass": {
     "as_of_et": "10:41 ET",
     "at": "2026-10-13T14:41:00+00:00",
@@ -2490,6 +2495,7 @@
       "variant_label": null
      },
      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+     "kiss_now": false,
      "lines": [
       {
        "label": "TRIGGER 11.00",
@@ -2786,6 +2792,7 @@
       "variant_label": "near-kiss — listed, never A+, never pushed"
      },
      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+     "kiss_now": false,
      "lines": [
       {
        "label": "TRIGGER 10.97",
@@ -9452,9 +9459,14 @@
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
    "graveyard_today": [],
+   "kiss_filter": {
+    "hidden_text_template": "{shown} shown · {hidden} hidden (not at the 9 EMA now) · {unknown} unknown kept",
+    "hint": "Shows only the 💋 cards that flew (A+ or triggered) or are kissing the 9 EMA on the latest closed bar (the K5 read); a card whose read is not known yet stays. Display only: nothing is gated, pushed or counted differently.",
+    "label": "💋 lifting off the 9 EMA only"
+   },
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
-   "order_note": "📊 highest volume on top · then lowest float",
+   "order_note": "💋 A+ and triggered, then kissing the 9 EMA now, on top · then highest relative volume · then closest to the 9 EMA",
    "pass": {
     "as_of_et": "10:41 ET",
     "at": "2026-10-13T14:41:00+00:00",
@@ -9868,6 +9880,7 @@
       "variant_label": null
      },
      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+     "kiss_now": false,
      "lines": [
       {
        "label": "TRIGGER 11.00",
@@ -10164,6 +10177,7 @@
       "variant_label": "near-kiss — listed, never A+, never pushed"
      },
      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+     "kiss_now": false,
      "lines": [
       {
        "label": "TRIGGER 10.97",

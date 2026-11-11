@@ -866,7 +866,9 @@ def test_order_note_served_on_every_card_sub():
     for sub in GC.SETUPS:
         if sub != RS:
             out = GT.build(sub, now=NOW, store=ordering_store())
-            want = GT.HF_ORDER_TEXT if sub == "horizontal_fade" else GT.VOL_ORDER_TEXT
+            want = (GT.HF_ORDER_TEXT if sub == "horizontal_fade" else
+                    GT.KF_ORDER_TEXT[GC.KF_EMA_SORT] if sub in GC.RVOL_SORT_SETUPS else   # UPDATED 2026-11-11 💋 rel volume
+                    GT.VOL_ORDER_TEXT)
             assert "order_note" in out and out["order_note"] == want, sub
     assert GT.build(GC.POTENTIAL_SUB, now=NOW, store=ordering_store())["order_note"] == GT.POT_ORDER_TEXT
     for sub in ("premarket", "postmarket", "playbook"):
