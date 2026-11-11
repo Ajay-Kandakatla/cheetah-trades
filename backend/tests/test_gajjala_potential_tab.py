@@ -699,12 +699,15 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
     out = build(GC.POTENTIAL_SUB, st)
     assert calls == [[S, PREV]]
     assert track_rows(out)[("DDD", "reversal_squeeze")]["entry_text"] == "🎯 entry sent 10:36 ET"
-    for k, _e, _l in GC.SUBS:                       # NEGATIVE: no other sub reads it (🏁 reads its own rows_for)
+    # MOVED BY DESIGN 2026-11-11 (formulas audit D10, spec §3.7 — K11 words): on a live-push page every setup sub and
+    # the 🌙 postmarket recap read the SAME ONE alert_rows (a triggered card / recap row that never rang says so);
+    # still at most ONE read per build. NEGATIVE kept: the ☀️ / 📖 subs never read it (🏁 reads its own rows_for).
+    for k, _e, _l in GC.SUBS:
         if k in (GC.POTENTIAL_SUB, GC.LEDGER_SUB):
             continue
         calls.clear()
         build(k, st)
-        assert calls == [], k
+        assert calls == ([[S, PREV]] if k in GC.SETUPS or k == "postmarket" else []), k
 
 
 def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():

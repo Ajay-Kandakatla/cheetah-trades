@@ -59,3 +59,34 @@ are untouched.
 
 ## NOT built
 No served key, no new chip, no FE word, no sort, no filter, no push. The ✨ entry is the main session's.
+
+## 2026-11-11 — a triggered card whose alert never rang (formulas audit D10, K11 words)
+Ajay 2026-11-11 08:18 ET, verbatim: "Can you fix the defects please" (audit
+`eod-audits/research/2026-11-10_formulas_audit.md` §3 D10). Words only — no gate, no threshold, no new served key.
+
+- **The defect.** K11 is judged on each pass's own session volume. Demo (`L3/k8_edges.py` §8): the pass that reads the
+  🎾 break bar sees 900,000 shares → partial, no alert; the next pass sees 1,050,000 → the read is re-judged A+ and served
+  as `triggered`. The card said "triggered 1 bar ago — A+ on the 10:20 bar" and the 🌙 recap "A+ (triggered)" for an
+  alert that never rang.
+- **The served words now** (module constants in `chart_maps/gajjala/tab.py`, `NO_RING_TEXT` / `NO_RING_RECAP`; the FE
+  types none):
+  - triggered pill: `triggered 1 bar ago — broke on the 10:20 bar, no alert rang · UNMEASURED`;
+  - 🌙 recap row: `broke (no alert rang)` for a triggered read, `broke, then stopped (no alert rang)` for a stopped one;
+  - 🧠 Track row: the "now …" word and every triggered timeline step read `broke (no alert rang)`; a 🧠 tile carrying a
+    triggered read gets the pill above.
+- **When.** Only when the 🏁's own read of the rang alerts (`store.alert_rows` classified by `ledger.alert_of`,
+  `tab._entry_times`, ONE read per build) came back fine AND holds no live A+ entry for that (session, symbol, setup).
+  An alert that rang → today's words ("A+ on the 10:20 bar", "A+ (triggered)", "A+, then stopped"). A read fault / no
+  ledger → unknown → today's words (never "no alert rang" on a guess).
+- **Where.** Live-push pages only: 🚩 Gajjala's (GG5) and the 1-minute page (GG1). 🧪 Audited (shadow) keeps today's
+  words. `aplus`, `stopped` pills, `potential.STATE_WORDS` and its pin are untouched.
+- **Who.** The SAME words for every reader — the 🏁 already shows non-owners which alerts rang, and owner-only words
+  would break the nothing-hidden rule (HIS CALL #4: confirm, or non-owners keep today's words).
+- **Not said.** "Volume came later" is not printed — no-ring also comes from the window, a missed pass, the no-risk guard
+  or the dedupe, and stored data cannot tell them apart. The chart's "A+" marker on that bar is unchanged (HIS CALL #5).
+  Luk's 🥇 triggered card ("A+ on the …", `chart_maps/luk/tab.py`) is NOT fixed here (HIS CALL #11).
+- **Tests.** `backend/tests/test_gajjala_defects_k11_words_2026_11_11.py` — the §8 frames end to end (pill, recap,
+  🧠 track, 1-minute page), owner = non-owner, ONE `alert_rows` read per build (0 on 🧪 setup subs, ☀️, 📖); NEGATIVES:
+  key present, entries unknown (None / raises / no ledger), another key's alert, 🧪 shadow, bare `_track_row`, every
+  other state. Pin moved by design: `test_gajjala_potential_tab.py::test_one_alert_rows_read_per_potential_build_and_none_on_another_sub`
+  (setup subs and 🌙 now read the same ONE alert_rows on a live page).
