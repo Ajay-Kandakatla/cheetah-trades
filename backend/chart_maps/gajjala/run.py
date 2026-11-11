@@ -81,6 +81,22 @@ def _utc(now: Optional[datetime]) -> datetime:
     return now.replace(tzinfo=timezone.utc) if now.tzinfo is None else now.astimezone(timezone.utc)
 
 
+def _upto(raw, now):
+    """Formulas audit D13 (2026-11-11): the 1-minute frame cut at the pass clock — minutes whose bucket START is before
+    `now` (naive UTC index, daytrading.data). A replay (--now): no later bar leaks into ☀️ / 🌙. A live pass hands
+    `now=None` (run_pass: `cut`) and gets the SAME frame back — a minute that printed while the pass ran is kept.
+
+    None / empty → returned as is; nothing at or after `now` → the SAME frame (not a copy).
+    `now` is read by `_utc` (this module's clock); an index that carries a tz is compared tz-aware."""
+    if now is None or raw is None or getattr(raw, "empty", True):
+        return raw
+    cut = _utc(now)
+    if getattr(raw.index, "tz", None) is None:
+        cut = cut.replace(tzinfo=None)
+    keep = raw.index < cut
+    return raw if keep.all() else raw[keep]
+
+
 def in_window(now: datetime) -> bool:
     """PASS_OPEN_ET ≤ now ≤ PASS_CLOSE_ET (ET) on a market day (the house calendar)."""
     from catalysts.medical.reaction import is_market_day
@@ -341,6 +357,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         return out
     st = store or (dry_store() if dry else ST.default())
     claim, now, waited = _claim(st, now, deps, on_demand=on_demand, now_given=now_given)
+    cut = now if now_given else None                        # D13: the replay cut; a live pass is never cut
     out["lease"] = {"why": getattr(claim, "why", "claimed" if claim else "held"), "waited_s": waited,
                     "held_by": getattr(claim, "held_by", None)}
     if not claim:
@@ -470,7 +487,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         pm_levels = {}
         for s, fr in frames.items():
             try:
-                lv = CX.pm_levels_for(fr.raw, session)
+                lv = CX.pm_levels_for(_upto(fr.raw, cut), session)
             except Exception:                                   # noqa: BLE001
                 lv = None
             if lv:
@@ -481,11 +498,11 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
 
             def minutes(sym):
                 if sym in frames:
-                    return frames[sym].raw
+                    return _upto(frames[sym].raw, cut)
                 # Massive's spelling for class shares (MOG-A → MOG.A), as `bars.frames_for` does.
                 from sepa.symbols import for_massive
-                return deps.load_day(for_massive(sym), session, force=True, include_premarket=True,
-                                     include_afterhours=True)
+                return _upto(deps.load_day(for_massive(sym), session, force=True, include_premarket=True,
+                                           include_afterhours=True), cut)
             mine()
             p_rows, unchecked = CX.postmarket_confirm(result.get("k10_candidates") or [], checked, minutes,
                                                       cap=GC.AH_CONFIRM_MAX_PER_PASS, session=session, now=now,
