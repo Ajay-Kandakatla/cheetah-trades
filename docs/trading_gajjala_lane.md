@@ -343,6 +343,80 @@ never fresh, waiting past the bound; FE: no interval restart, no coalescing, rel
 
 UNMEASURED — a timing record, not a result. Paper only. Not advice.
 
+## 🏁 Not traded — the 🏁 grade on every row without a fill (2026-11-11)
+
+Ajay 2026-11-11 ~12:00 ET, verbatim (with a screenshot of the lane panel: four skipped / not-filled rows reading P&L "—"
+and one real AMC fill): "Maintain a track record when Alpaca is blocked please, Like we do in Gajjals so I know how our
+strategies are working".
+
+Code: `backend/trading/gajjala_untraded.py` (new, pure reads) + two wiring lines in `gajjala_entry.tab_payload` (the
+`untraded` block after `journal`; `ROW_KEYS` gains `track_state` / `track_text`, appended LAST, None on every row the
+block does not serve). FE: `GajjalaLaneTab.tsx` prints the served words only. Tests:
+`backend/tests/test_gajjala_lane_untraded_2026_11_11.py`.
+
+- **The join.** A lane doc's `_id` is the raw `GG:{date}|{SYM}|{setup}` alert id; `GL._live_alerts` reads that alert
+  through `ledger.alert_of`, whose `id` is the 🏁 ledger id `{date}|{SYM}|{setup}|aplus`. One alert = one 🏁 row: an
+  exact join, never another setup or another day of the same name. ONE `alert_rows` read of the lane's dates and ONE
+  `gajjala_ledger` find by `_id $in` the joined ids (never `ledger_docs`, which reads every graded doc of the dates).
+- **The grade.** The 🏁's stored nightly `same` column. Today, before the 20:15 ET nightly, a provisional cell through
+  `ledger.grade` on the 🏁's OWN memo (`ledger.today_bars(load=None)` — MEMO-ONLY, the lane GET never fetches a bar),
+  cut exactly as `ledger.today_read` cuts it, marked "not final". A memo miss reads "not read yet — graded tonight".
+- **The words.** The row's P&L cell prints "not traded · 🏁 " + the 🏁's own cell words (`ledger._cell` text — sub
+  text), muted, no tint. The block's lines print the 🏁's own W / L / % (`_wl`, `_extras`, `_dup_tail`), the 🏁's thin
+  rule (`_tally_into`) and its 🔁 one count per stock per day (`dedupe_trades` over every live 🎯 entry of those days).
+- **No R, no $.** The 🏁 stores no exit price on a loss, so a gap through the stop cannot be priced; the 🏁 itself
+  serves no R. Nothing here is a fill and nothing is ever summed into `journal_block`, `status_block`, `lane_pnl`,
+  `by_strategy` or the lane's sizing / loss streak. Nothing is written.
+- **Rows.** Every STORED lane row with no fill (skipped, unfilled, dry_run → "engine disarmed"), by reason in
+  `REASON_ORDER` (every `SKIP_KINDS` + `LEGACY_SKIP_KINDS` member has a line; an unknown kind → "other", last). Today's
+  synthetic not-seen rows (lane off / after the cut-off) get the row cell only and are never counted, so the tally does
+  not change overnight. An in-flight not-seen row gets nothing.
+- **Out of the total (`OUT_OF_TOTAL`).** never_triggered and the v1 `dead` rows — the lane's own rule said out ("the
+  stop printed first", GG: out) — are listed with their own W / L and "not in the total". broker_gap and rounding stay
+  IN the total (they are the rows his ask names); their rows say they are graded at the alert's stop, which Alpaca
+  refuses / before the broker's price grid.
+- **The lane window rule.** A 🏁 fill at or after the lane's cut-off (`cutoff_et`: 15:30, 12:30 on a half day), a 🏁
+  fill on another session (an after-close alert), or a 🏁 exit at or after the lane's flatten (`flatten_et`) is listed
+  "after the lane's cut-off or flatten (not counted)" and kept out of W / L. Read from the stored `fill_t` / `exit_t`
+  only — no new math.
+- **The comparison line.** ONE line under the total: the lane's own fills (open / closing / closed), graded by the same
+  🏁, so the not-traded % is never read alone. No figure is quoted here: the served block is the only source, read
+  after the read-only container probe (spec §5 step 2) with its date. Any figure is a tally of the alerts as sent, small
+  n, post-hoc, mostly sub-$1. NEVER an edge; the prior is null (entries study 2026-11-11: A+ = coin flip).
+- **Faults.** An unread alert or ledger read serves `fault_text` ("🏁 grades not read on this open — the lane rows are
+  unchanged"), every `track_*` None, and the rest of the payload as before.
+
+HIS CALL (built default first; nothing here is decided by his words):
+
+- UT-1 today's rows: MEMO-ONLY, no bar fetch on the lane GET. Alt: a bounded fetch (≤ `LEDGER_TODAY_MAX` names).
+- UT-2 which rows: every stored row with no fill; today's not-seen rows = row cell only. Alt: only the literal "Alpaca
+  blocked" rows (broker_gap, blocked, rounding, broker-cancelled unfilled), or count every past day's lane-less alert.
+- UT-3 horizon: the 🏁 same-session column only. Alt: add the next-session column.
+- UT-4 R / $: none of our own. A 🏁 WIN cell's own words carry its target ("+1R at HH:MM"), printed verbatim on a
+  not-traded row in the P&L column (review 2026-11-11). Alt: print only the cell's first words on a WIN; R at the 🏁
+  exit (loss "≤ −1R", out of any sum); or $ at the lane's own sizing.
+- UT-5 thin R: out of W / L (the 🏁's rule).
+- UT-6 🔁: the 🏁's one count per stock per day over the 🎯 entry line; a not-traded first ring of a stock the lane
+  filled later that day still counts here.
+- UT-7 the lane's "out" rows (never_triggered, v1 dead): apart from the total. Alt: in the total, as the 🏁 tab counts.
+- UT-7b Alpaca-refused stop (broker_gap, rounding): IN the total with the stop tail. Alt: apart.
+- UT-8 span: every lane doc since 10-20 (v1 days and both floors eras). Alt: since v2 (10-21), or split by floors.
+- UT-9 placement: the row's P&L cell + a block under Lane journal. Alt: a fate-cell line or its own column.
+- UT-10 wording: TRACK_LEAD, REASON_TEXT, TITLE, TOTAL_LABEL, TRADED_LABEL, OUT_TAIL, LATE_TAIL, STOP_TAIL and the
+  honesty text are all MINE. Two labels name the lane's own rule constants: broker_gap "stop under $0.01 below the
+  last" (`MIN_STOP_GAP_USD`) and missed "already past +1R" (`GAJJALA_MISSED_R`) — a rule, never a would-have-been
+  figure. Alt: reword them without the figure. An open count reads the 🏁's own "N open" (review 2026-11-11).
+- UT-11 % on the lines: the 🏁's own "P% won". Alt: drop it.
+- UT-12 🏁 beside the real fills: ONE line. Alt: drop it. NOT built: the per-fill 🏁-vs-lane execution gap.
+- UT-13 other lanes: 🚩 only; the 💵 P&L-by-lane block is untouched.
+- UT-14 per-setup split: not built.
+- UT-15 earlier days with no lane doc: not listed (the 🏁 🎯 line covers them).
+- UT-16 ✨: the id, route and FIRST position, placed after the other build's ✨ (main session).
+- UT-17 the lane's clock: a 🏁 fill at / after the cut-off, on another session, or an exit at / after the flatten is
+  listed and kept out of W / L. Alt: count them as the 🏁 tab does.
+
+UNMEASURED — a tally of the alerts as sent, not a backtest. Paper only. Not advice.
+
 ## Known limits (v2)
 
 - The OTO legs are `day`: a 15:55 flatten that keeps failing leaves a position without broker legs overnight until the

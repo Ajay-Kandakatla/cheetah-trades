@@ -2280,10 +2280,12 @@ def _stream_status() -> dict:
         return {"mode": None, "word": None, "prints_today": 0, "first_prints_today": 0}
 
 
+# 2026-11-11 🏁 not traded (Ajay: "Maintain a track record when Alpaca is blocked please"): track_state / track_text
+# are appended LAST — None on every row unless trading.gajjala_untraded serves them in tab_payload
 ROW_KEYS = ("id", "symbol", "setup", "setup_label", "alert_et", "trigger", "stop", "r", "r_pct", "state", "skip_kind",
             "why", "entry", "target", "qty", "risk_usd", "notional", "fill_px", "fill_et", "exit_px", "exit_et",
             "exit_kind", "pnl_usd", "r_mult", "last", "fate_text", "pnl_text", "floors", "floor_warnings",
-            "broker_text", "url", "closable")
+            "broker_text", "url", "closable", "track_state", "track_text")
 
 
 def _row(doc: dict, last=None, flags=None) -> dict:
@@ -2372,7 +2374,7 @@ def tab_payload() -> dict:
             log.debug("gajjala lane: positions unread: %s", exc)
     g = gate(cfg, _mode(broker), True)
     cut = cutoff_et(day)
-    today_rows, seen = [], set()
+    today_rows, seen, synth = [], set(), []
     try:
         alerts = _live_alerts(day, _alert_docs(day) or [])
     except Exception as exc:                                    # noqa: BLE001
@@ -2390,6 +2392,7 @@ def tab_payload() -> dict:
                    "floors": _floors_of(cfg), "floor_warnings": [],
                    "not_seen": ("off" if not g["enabled"] else
                                 "after_cutoff" if (et or "") >= _hhmm(cut) else None)}
+            synth.append(doc)
         today_rows.append(_row(doc, lasts.get((doc.get("symbol") or "").upper()), flags))
     for d in docs:
         if d.get("date") == day and d.get("_id") not in seen:
@@ -2398,10 +2401,21 @@ def tab_payload() -> dict:
     prior = [d for d in docs if str(d.get("date") or "") < day]
     prior.sort(key=lambda d: (str(d.get("date") or ""), d.get("alert_at") or ""), reverse=True)
     recent = [_row(d, lasts.get((d.get("symbol") or "").upper()), flags) for d in prior[:RECENT_MAX]]
+    # 🏁 not traded (2026-11-11, Ajay: "Maintain a track record when Alpaca is blocked please, Like we do in Gajjals so
+    # I know how our strategies are working"): the 🏁's own same-session cell on every stored row without a fill —
+    # display only, read-only, never summed into the journal, the status or any P&L
+    try:
+        from trading import gajjala_untraded as GU
+        ur = GU.read(docs + synth, day=day, now=_now_et(), shown_ids={r["id"] for r in today_rows + recent})
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala lane: not-traded block unread: %s", type(exc).__name__)
+        ur = {"rows": {}, "block": None}
+    for r in today_rows + recent:
+        r.update(ur["rows"].get(r["id"]) or {})
     return {"date": day, "armed": bool(cfg.get("armed")), "mode": _mode(broker),
             "as_of": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": status_block(cfg, docs), "today": today_rows, "recent": recent,
-            "journal": journal_block(docs)}
+            "journal": journal_block(docs), "untraded": ur["block"]}
 
 
 def close_now(symbol: str, reason: str = "owner close") -> dict:

@@ -36,6 +36,17 @@
  * — nudges inside LANE_NUDGE_COALESCE_MS collapse into one GET — and restarts
  * the POLL_MS interval, so the GET count per open tab stays today's. A
  * "quotes" or "pass" event never reloads the lane.
+ *
+ * 2026-11-11 (🏁 not traded, Ajay on a screenshot of this panel's skipped and
+ * not-filled rows: "Maintain a track record when Alpaca is blocked please, Like
+ * we do in Gajjals so I know how our strategies are working"): every lane row
+ * without a fill carries the 🏁 Track record's own same-session cell for the same
+ * alert, served as `track_text` (muted, italic, in the P&L cell only when no real
+ * pnl_text is served — no tint, no data-outcome: the row tint stays real P&L only),
+ * and the served `untraded` block under "Lane journal" prints its span, total,
+ * one line per reason, the lane's own fills graded by the same 🏁, and the honesty
+ * line — all verbatim. A served `fault_text` prints alone. Never summed into the
+ * journal above; this file types none of its words or numbers.
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -56,6 +67,8 @@ export type GajjalaRow = {
   fate_text?: string | null; pnl_text?: string | null;
   floors?: 'house' | 'gg' | string | null; floor_warnings?: string[] | null; broker_text?: string | null;
   url?: string | null; closable?: boolean | null;
+  /** 🏁 not traded (2026-11-11): the 🏁's own same-session cell state + words for a lane row with no fill (served). */
+  track_state?: string | null; track_text?: string | null;
 };
 
 export type GajjalaSettings = {
@@ -111,10 +124,24 @@ export type GajjalaJournal = {
   text?: string | null;
 };
 
+/** One served line of the 🏁 not-traded block (gajjala_untraded.LINE_KEYS); `text` prints verbatim. */
+export type GajjalaUntradedLine = {
+  key?: string | null; label?: string | null; n?: number | null; counts?: Record<string, number | null> | null;
+  dup?: number | null; no_row?: number | null; late?: number | null; in_total?: boolean | null;
+  provisional?: boolean | null; text?: string | null;
+};
+
+/** The served `untraded` block (gajjala_untraded.BLOCK_KEYS) — every word served; a served fault_text prints alone. */
+export type GajjalaUntraded = {
+  title?: string | null; span_text?: string | null; total?: GajjalaUntradedLine | null;
+  lines?: GajjalaUntradedLine[] | null; traded?: GajjalaUntradedLine | null; honesty?: string | null;
+  fault_text?: string | null;
+};
+
 export type GajjalaPayload = {
   date?: string | null; armed?: boolean | null; mode?: string | null; as_of?: string | null;
   status?: GajjalaStatus | null; today?: GajjalaRow[] | null; recent?: GajjalaRow[] | null;
-  journal?: GajjalaJournal | null;
+  journal?: GajjalaJournal | null; untraded?: GajjalaUntraded | null;
 };
 
 export const POLL_MS = 60_000;
@@ -274,7 +301,12 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
               <td style={cell}>{served(row.setup_label)}</td>
               <td style={cell}>{served(row.alert_et)}</td>
               <td style={cell} data-testid="gg-lane-fate">{served(row.fate_text)}</td>
-              <td style={cell} data-testid="gg-lane-pnl">{served(row.pnl_text)}</td>
+              <td style={cell} data-testid="gg-lane-pnl">
+                {!isText(row.pnl_text) && isText(row.track_text) ? (
+                  <span data-testid="gg-lane-would" data-state={row.track_state ?? undefined}
+                        style={{ color: C.sub, fontStyle: 'italic', minWidth: 0, overflowWrap: 'anywhere' }}>{row.track_text}</span>
+                ) : served(row.pnl_text)}
+              </td>
               <td style={cell}>
                 {row.floors === 'gg' && <span data-testid="gg-lane-waived" style={{ ...chip, color: C.warn }}>{FLOORS_WAIVED_CHIP}</span>}
                 {row.broker_text && <span data-testid="gg-lane-broker" style={{ ...chip, color: C.sub }}>{row.broker_text}</span>}
@@ -374,6 +406,12 @@ export function GajjalaLaneTab({ onChanged }: { onChanged?: () => void }) {
         </Block>
       )}
 
+      {data?.untraded && (
+        <Block title={served(data.untraded.title)}>
+          <UntradedBlock untraded={data.untraded} />
+        </Block>
+      )}
+
       {ggRules && <GgRulesBlock rules={ggRules} />}
 
       {rules.length > 0 && (
@@ -437,4 +475,37 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 }
 function Empty({ children }: { children: ReactNode }) {
   return <p style={{ margin: 0, fontSize: 13, color: C.sub }}>{children}</p>;
+}
+
+/* 🏁 not traded (2026-11-11) — the served block verbatim; a served fault_text prints alone. The style numbers live in
+ * these constants so UntradedBlock's own body types no digit (contracts pin it). */
+const untradedGrid: CSSProperties = { display: 'grid', gap: 4, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' };
+const untradedText: CSSProperties = { margin: 0, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' };
+const untradedSub: CSSProperties = { ...untradedText, color: C.sub };
+const untradedTotal: CSSProperties = { ...untradedText, fontWeight: 600 };
+const untradedList: CSSProperties = { margin: 0, paddingLeft: 18, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' };
+const untradedLine = (inTotal: boolean | null | undefined): CSSProperties =>
+  ({ minWidth: 0, overflowWrap: 'anywhere', color: inTotal === false ? C.sub : undefined });
+
+function UntradedBlock({ untraded }: { untraded: GajjalaUntraded }) {
+  if (isText(untraded.fault_text)) {
+    return <p role="status" data-testid="gg-lane-untraded-fault" style={untradedSub}>{untraded.fault_text}</p>;
+  }
+  const lines = (untraded.lines ?? []).filter((l) => l && isText(l.text));
+  return (
+    <div data-testid="gg-lane-untraded" style={untradedGrid}>
+      {isText(untraded.span_text) && <p data-testid="gg-lane-untraded-span" style={untradedSub}>{untraded.span_text}</p>}
+      {isText(untraded.total?.text) && <p data-testid="gg-lane-untraded-total" style={untradedTotal}>{untraded.total?.text}</p>}
+      {lines.length ? (
+        <ul data-testid="gg-lane-untraded-lines" style={untradedList}>
+          {lines.map((l, i) => (
+            <li key={l.key ?? i} data-reason={l.key ?? undefined} data-in-total={String(l.in_total)}
+                style={untradedLine(l.in_total)}>{l.text}</li>
+          ))}
+        </ul>
+      ) : null}
+      {isText(untraded.traded?.text) && <p data-testid="gg-lane-untraded-traded" style={untradedText}>{untraded.traded?.text}</p>}
+      {isText(untraded.honesty) && <p data-testid="gg-lane-untraded-honesty" style={untradedSub}>{untraded.honesty}</p>}
+    </div>
+  );
 }

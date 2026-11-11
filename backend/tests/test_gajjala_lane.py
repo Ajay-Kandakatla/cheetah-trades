@@ -786,6 +786,9 @@ SECTION2_ROW_KEYS = {"id", "symbol", "setup", "setup_label", "alert_et", "trigge
                      "skip_kind", "why", "entry", "target", "qty", "risk_usd", "notional", "fill_px", "fill_et",
                      "exit_px", "exit_et", "exit_kind", "pnl_usd", "r_mult", "last", "fate_text", "pnl_text",
                      "floors", "floor_warnings", "broker_text", "url", "closable"}
+# WIDENED 2026-11-11 🏁 not traded (Ajay: "Maintain a track record when Alpaca is blocked please, Like we do in Gajjals
+# so I know how our strategies are working"): two served keys appended, None unless trading.gajjala_untraded serves them
+SECTION2_ROW_KEYS |= {"track_state", "track_text"}
 
 
 def test_tab_payload_every_pushed_alert_has_a_fate(lane):
@@ -796,7 +799,8 @@ def test_tab_payload_every_pushed_alert_has_a_fate(lane):
     s.alerts.append(alert("LATE", hm=(15, 40)))                       # rang after the cut-off: never traded
     s.now = _at(DAY, 15, 45)
     p = GL.tab_payload()
-    assert set(p) == {"date", "armed", "mode", "as_of", "status", "today", "recent", "journal"}
+    # WIDENED 2026-11-11 🏁 not traded (Ajay: "Maintain a track record when Alpaca is blocked please"): + "untraded"
+    assert set(p) == {"date", "armed", "mode", "as_of", "status", "today", "recent", "journal", "untraded"}
     assert p["date"] == DAY and p["armed"] is True and p["mode"] == "paper"
     assert set(p["journal"]) == {"n", "closed", "wins", "losses", "flat", "unfilled", "win_rate_pct", "pnl_usd",
                                  "avg_r", "text"}
