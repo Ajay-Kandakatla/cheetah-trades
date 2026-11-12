@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-11, relayed (verbatim in the label, his spelling kept): "Do your receommendations" — item 1 of rec157.
+  // chart_maps/luk/ledger.py stop_r(trigger, stop, fill_px) = (stop − fill) / (trigger − stop): walk() writes it on a new
+  // stop and cells() ALWAYS derives a stopped row's R from it (legacy docs keep walk.r = −1.0 in Mongo; nothing served
+  // reads it). exit_px stays the alert's stop; win / loss buckets unchanged. UNMEASURED. Doc
+  // docs/luk/stop_r_from_fill_2026_11_11.md. Pinned by scripts/contracts.mjs ("🏁 Luk stop R from the fill (2026-11-12)").
+  { id: 'chart-maps-luk-stop-r-from-fill-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=luk&sub=track_record',
+    label: "🏁 Luk's Track record: a stop is now measured from the actual fill — you said “Do your receommendations”. Every 🥇 stop used to be booked at exactly −1R; a fill above the trigger loses more than 1R at the stop, so the R column now reads what the fill really lost (at the 11-12 close: −1.57R a trade, not −0.34R). Wins and losses did not change — only the R numbers. UNMEASURED." },
   // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Most of our potentials are not having breakout, please
   // write that on them that..". chart_maps/gajjala/breakout_state.py (pure, words only) is called ONCE from tab.build after
   // the 🧭 stages call: `gajjala.breakout` on every 🧠 potential and broke card, `breakout` on today's 📈 Track rows.
