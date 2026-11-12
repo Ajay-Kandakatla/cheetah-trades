@@ -1256,7 +1256,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -9838,7 +9839,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 54).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 55).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10079,7 +10081,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 51).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10419,7 +10422,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 50).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 51).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10645,7 +10649,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10770,7 +10775,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 50).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10946,7 +10952,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11089,7 +11096,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11166,7 +11174,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11332,7 +11341,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11441,7 +11451,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11583,7 +11594,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11800,7 +11812,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11880,7 +11893,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11980,7 +11994,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12074,7 +12089,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12443,7 +12459,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12633,7 +12650,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12872,7 +12890,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -12990,7 +13009,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -13116,7 +13136,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13272,7 +13293,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13418,7 +13440,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13773,7 +13796,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13813,7 +13837,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      if (nf && !ids2.slice(0, 25).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 25).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      if (nf && !ids2.slice(0, 26).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 26).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -14106,7 +14131,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14349,7 +14375,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 26).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 27).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14499,7 +14526,8 @@ const CONTRACTS = [
         // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
         // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-        if (!ids.slice(0, 24).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 24).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+        if (!ids.slice(0, 25).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 25).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14605,7 +14633,8 @@ const CONTRACTS = [
         // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
         // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-        if (!ids.slice(0, 23).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 23).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+        if (!ids.slice(0, 24).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 24).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14740,7 +14769,8 @@ const CONTRACTS = [
         // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
         // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-        if (!ids.slice(0, 22).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 22).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+        if (!ids.slice(0, 23).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 23).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14895,7 +14925,8 @@ const CONTRACTS = [
           // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
           // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
           // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-          if (!ids.slice(0, 21).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 21).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+          if (!ids.slice(0, 22).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 22).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -15035,7 +15066,8 @@ const CONTRACTS = [
         // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
         // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-        if (!ids.slice(0, 18).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 18).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+        if (!ids.slice(0, 19).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 19).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15416,7 +15448,8 @@ const CONTRACTS = [
         // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
         // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-        if (!ids.slice(0, 16).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 16).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+        if (!ids.slice(0, 17).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 17).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15495,7 +15528,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
@@ -15552,7 +15586,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
@@ -15652,7 +15687,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09')) errs.push(`the 📊 volume-order ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 📊 volume-order ✨ lost its label');
@@ -15698,7 +15734,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');
@@ -15759,7 +15796,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-plain-words-2026-11-10')) errs.push(`the 🗣 plain-words ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-plain-words-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🗣 plain-words ✨ lost its label');
@@ -15859,7 +15897,8 @@ const CONTRACTS = [
       // WIDENED +4 (2026-11-11 tail: ⚡ enter-like-GG, 🧠 proposals applied, 🧭 setup stages, 🏁 lane not-traded FIRST — Ajay: "please tell me to enter based on this").
       // WIDENED +1 (2026-11-11 ~13:30 ET: 💋 EMA Kiss relative-volume order + lifting-off toggle FIRST — Ajay: "Sort by relative volume, and closer to the EMA.").
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (!ids.includes('chart-maps-luk-scan-now-2026-11-11')) errs.push(`the 🔄 Luk scan-now ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-luk-scan-now-2026-11-11'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🔄 Luk scan-now ✨ lost its label');
@@ -16181,7 +16220,8 @@ const CONTRACTS = [
       // ✨, docs, tests
       const nf = read('src/lib/newFeatures.ts');
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-kiss-rvol-sort-2026-11-11')) errs.push(`the 💋 relative-volume ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-kiss-rvol-sort-2026-11-11'[\s\S]*?route: '([^']+)',\s*\n\s*label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 💋 relative-volume ✨ lost its route / label');
@@ -16269,7 +16309,8 @@ const CONTRACTS = [
       const nf = quiet('src/lib/newFeatures.ts');
       const ID = 'chart-maps-luk-realtime-2026-11-12';
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
-      if (ids[0] !== ID) errs.push(`the 🥇 realtime ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
+      if (!ids.slice(0, 2).includes(ID)) errs.push(`the 🥇 realtime ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk`);
@@ -16284,6 +16325,92 @@ const CONTRACTS = [
       for (const t of ['../backend/tests/test_luk_reread_pass_2026_11_12.py', '../backend/tests/test_luk_realtime_source_guard_2026_11_12.py',
                        '../backend/tests/test_live_card_pct_2026_11_12.py', 'src/components/LukBoard.live.test.tsx',
                        'src/components/LukCard.live.test.tsx']) if (!quiet(t)) errs.push(`${t} is missing`);
+      return errs;
+    },
+  },
+  {
+    name: '⏸ Gajjala no-breakout line (2026-11-12)',
+    file: 'src/components/GgBreakoutLine.tsx',
+    // Ajay 2026-11-12, verbatim: "Most of our potentials are not having breakout, please write that on them that.. I need
+    // for an additonal break out from the triggers Usually after that run up to tirgger point they are mostly just sitting
+    // there". backend/chart_maps/gajjala/breakout_state.py (pure, display only) is called ONCE from tab.build, right after
+    // the 🧭 stages call and before _strip_private: `gajjala.breakout` on 🧠 potential and broke cards, `breakout` on
+    // today's 📈 Track rows. GgBreakoutLine prints the served head / detail / text / hint only. No push, alert, gate or
+    // grade reads it; no exit word (his 2026-11-06 "keep it"), never the b-word. Spec scratchpad nobreak/spec.md; doc
+    // docs/gajjala/no_breakout_2026_11_12.md.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const HIS = 'Most of our potentials are not having breakout, please write that on them that.. I need for an additonal break out from the triggers Usually after that run up to tirgger point they are mostly just sitting there';
+      const noComments = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+      // 1. the engine exists; tab.build calls BS.tag ONCE, after the 🧭 stages call, before _strip_private
+      const bs = quiet('../backend/chart_maps/gajjala/breakout_state.py');
+      if (!bs) errs.push('backend/chart_maps/gajjala/breakout_state.py is missing');
+      const tab = quiet('../backend/chart_maps/gajjala/tab.py');
+      if (!tab) errs.push('backend/chart_maps/gajjala/tab.py is missing');
+      else {
+        const imports = [...tab.matchAll(/^\s*from chart_maps\.gajjala import breakout_state as BS\b/gm)].length;
+        if (imports !== 1) errs.push(`tab.py must import breakout_state as BS exactly once (found ${imports})`);
+        const calls = [...tab.matchAll(/BS\.tag\b/g)].length;
+        if (calls !== 1) errs.push(`tab.py must call BS.tag exactly once (found ${calls})`);
+        const iBuild = tab.indexOf('\ndef build(');
+        const iStages = tab.indexOf('_soft("setup stages", _stage_tag,', iBuild);
+        const iTag = tab.indexOf('_soft("breakout lines", BS.tag, out, reads_by,', iBuild);
+        const iStrip = tab.indexOf('_strip_private(out["tiles"])', iTag);
+        if (iBuild < 0 || iStages < 0 || iTag < 0 || iStrip < 0) errs.push(`tab.build must carry the 🧭 stages _soft call, then _soft("breakout lines", BS.tag, out, reads_by, …), then _strip_private (found ${iBuild}, ${iStages}, ${iTag}, ${iStrip})`);
+        else if (!(iStages < iTag && iTag < iStrip)) errs.push('tab.build: BS.tag must run AFTER the 🧭 stages call and BEFORE _strip_private');
+      }
+      // 2. no push / alert send in the engine — display only
+      if (bs) {
+        const bad = /^\s*(?:from|import)\s+[^\n]*\b(alerts|notify|notifications|webpush|push_\w*|alert_gates)\b|send_to_user|notify_\w*\(|webpush\(|\.insert_one\(|\.update_one\(|requests\./m.exec(bs);
+        if (bad) errs.push(`breakout_state.py must not send, push, alert or write (found "${bad[0].trim()}")`);
+      }
+      // 3. served strings: no b-word, no exit words (HEAD / PART / VOL_WORD dicts and the hint())
+      if (bs) {
+        const grab = (re) => { const m = re.exec(bs); return m ? m[0] : ''; };
+        const head = grab(/^HEAD = \{[\s\S]*?^\}/m);
+        const part = grab(/^PART = \{[\s\S]*?^\}/m);
+        const vol = grab(/^VOL_WORD = \{[\s\S]*?\}/m);
+        const hintFn = grab(/^def hint\(\)[\s\S]*?^\s+f?"traded over its trigger[^\n]*\n/m);
+        const hintRet = hintFn.slice(hintFn.indexOf('return ('));
+        for (const [k, x] of [['HEAD', head], ['PART', part], ['VOL_WORD', vol], ['hint()', hintRet]]) {
+          if (!x || (k === 'hint()' && !x.startsWith('return ('))) { errs.push(`breakout_state.py lost its ${k} strings`); continue; }
+          const w = /\b(exit|sell|get out|bounc\w*)\b/i.exec(x);
+          if (w) errs.push(`breakout_state.py ${k} prints "${w[0]}" — no exit word (his 2026-11-06 "keep it"), "reversal" never the b-word`);
+        }
+      }
+      // 4. FE prints the served words only: GgBreakoutLine renders head / detail / text / hint off the payload
+      const code = noComments(src);
+      for (const re of [/<strong>\{breakout\.head\}<\/strong>\{detail\}/, /breakout\.detail/, /\{' · '\}<strong>\{breakout\.head\}<\/strong>/, /breakout\.text/, /breakout\.hint/]) {
+        if (!re.test(code)) errs.push(`GgBreakoutLine.tsx must render the served payload (missing ${re})`);
+      }
+      const typed = /no breakout|broke out|back under|traded under|louder|quieter|trigger bar/i.exec(code);
+      if (typed) errs.push(`GgBreakoutLine.tsx types a served word ("${typed[0]}") — every word comes from breakout_state.py`);
+      const board = quiet('src/components/GajjalaBoard.tsx');
+      if (!/import \{ GgBreakoutLine, GgBreakoutWord \} from '\.\/GgBreakoutLine';/.test(board)) errs.push("GajjalaBoard.tsx must import { GgBreakoutLine, GgBreakoutWord } from './GgBreakoutLine'");
+      const nLine = [...board.matchAll(/<GgBreakoutLine breakout=\{read\.breakout\} sym=\{sym\} \/>/g)].length;
+      const nWord = [...board.matchAll(/<GgBreakoutWord breakout=\{r\.breakout\} id=\{id\} \/>/g)].length;
+      if (nLine !== 1 || nWord !== 1) errs.push(`GajjalaBoard.tsx must render <GgBreakoutLine …/> once and <GgBreakoutWord …/> once (found ${nLine}, ${nWord})`);
+      const lib = quiet('src/lib/gajjala.ts');
+      if (!/export type GgBreakout = \{/.test(lib)) errs.push('gajjala.ts must export type GgBreakout');
+      // 5. ✨ FIRST, routed to the 🧠 sub, his words verbatim, UNMEASURED; NEGATIVE: no b-word, no "edge"
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-no-breakout-2026-11-12';
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
+      if (ids[0] !== ID) errs.push(`the ⏸ no-breakout ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+      const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=gajjala&sub=potential',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=gajjala&sub=potential`);
+      else {
+        if (!lab[1].includes(`“${HIS}”`)) errs.push('the ⏸ no-breakout ✨ must quote his ask verbatim');
+        if (!lab[1].includes('UNMEASURED')) errs.push('the ⏸ no-breakout ✨ must say UNMEASURED');
+        if (!/Words only: no alert, A\+, rule, order or grade moved/.test(lab[1])) errs.push('the ⏸ no-breakout ✨ must say words only — no alert, A+, rule, order or grade moved');
+        if (/bounc|\bedge\b|\bexit\b|\bsell\b/i.test(lab[1])) errs.push('the ⏸ no-breakout ✨ must not say the b-word, "edge" or an exit word');
+      }
+      // 6. doc + tests on both sides
+      if (!quiet('../docs/gajjala/no_breakout_2026_11_12.md')) errs.push('docs/gajjala/no_breakout_2026_11_12.md is missing');
+      for (const t of ['../backend/tests/test_gajjala_breakout_state_2026_11_12.py', 'src/components/GgBreakoutLine.test.tsx',
+                       'src/components/GajjalaBoard.breakout.test.tsx', 'src/lib/newFeatures.no_breakout.test.ts']) if (!quiet(t)) errs.push(`${t} is missing`);
       return errs;
     },
   },

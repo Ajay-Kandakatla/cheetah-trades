@@ -2562,6 +2562,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     _promo_tag(out, ptags)                                          # 🎪 2026-10-29 — the same walk, keys only when tagged
     _soft("setup stages", _stage_tag, out, st, session, {session: pot_docs, prev: pot_prev}, is_today=is_today,
           v=v, entries=_entries_once)                              # 🧭 2026-11-11 — display only, every card
+    from chart_maps.gajjala import breakout_state as BS             # ⏸ 2026-11-12 — display only (Ajay: "…just sitting there")
+    _soft("breakout lines", BS.tag, out, reads_by, v=v, pots=pot_docs)
     _strip_private(out["tiles"])
     return _plain(out)
 

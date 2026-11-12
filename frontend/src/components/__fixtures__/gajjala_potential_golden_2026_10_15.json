@@ -505,6 +505,13 @@
      ],
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -803,6 +810,13 @@
      ],
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -1410,6 +1424,13 @@
      ],
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -2230,6 +2251,13 @@
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -2552,6 +2580,13 @@
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-35.2% vs the trigger 6.25) · 325 min since first seen (05:05 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-35.2% vs the trigger 6.25) · 325 min since first seen (05:05 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -2891,6 +2926,13 @@
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -3277,6 +3319,13 @@
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -3598,6 +3647,13 @@
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-63.0% vs the trigger 10.94) · 0 min since first seen (10:20 bar)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-63.0% vs the trigger 10.94) · 0 min since first seen (10:20 bar)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -3932,6 +3988,13 @@
      ],
      "gajjala": {
       "bars_since_entry": null,
+      "breakout": {
+       "detail": " · last close 4.05 (-61.4% vs the trigger 10.48)",
+       "head": "⏸ no breakout yet",
+       "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+       "state": "no_break_yet",
+       "text": "⏸ no breakout yet · last close 4.05 (-61.4% vs the trigger 10.48)"
+      },
       "broke": false,
       "chips": {
        "change_pct": 50.0,
@@ -4104,6 +4167,13 @@
      "pushed_n": 3,
      "rows": [
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-35.2% vs the trigger 6.25) · 325 min since first seen (05:05 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-35.2% vs the trigger 6.25) · 325 min since first seen (05:05 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": "🎯 entry sent 10:36 ET",
@@ -4136,6 +4206,13 @@
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
       },
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-63.0% vs the trigger 10.95) · 0 min since first seen (10:15 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,
@@ -4168,6 +4245,13 @@
        "vs_trigger_text": "+4.1% vs the trigger at first sight (10.95)"
       },
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-63.0% vs the trigger 10.94) · 0 min since first seen (10:20 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-63.0% vs the trigger 10.94) · 0 min since first seen (10:20 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,
@@ -4200,6 +4284,13 @@
        "vs_trigger_text": "+4.2% vs the trigger at first sight (10.94)"
       },
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,
@@ -4232,6 +4323,13 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-61.4% vs the trigger 10.48) · 0 min since first seen (10:10 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-61.4% vs the trigger 10.48) · 0 min since first seen (10:10 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,
@@ -4264,6 +4362,13 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "breakout": {
+        "detail": "",
+        "head": "⏸ no breakout over 10.48",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break",
+        "text": "⏸ no breakout over 10.48"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,
@@ -4300,6 +4405,13 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "breakout": {
+        "detail": " · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)",
+        "head": "⏸ no breakout yet",
+        "hint": "Display only — no alert, A+, rule, order or grade reads it. Trigger bar = the bar that broke the trigger (the card's own A+ / triggered / broke bar). Breakout = a later closed bar closing above the highest high since the trigger bar; the latest closed bar decides the line, an earlier breakout is named in the detail. Volume louder = that bar's volume above the busiest bar of the base (the card's K3 row). Traded under the stop = a bar from the trigger bar on traded under the card's stop; nothing after it counts as a breakout. Back under = the latest closed bar closed under the trigger. No breakout yet = a 🧠 potential: no bar has traded over its trigger. (Cheetah default, not his.) GG: “The volume will dry up during the entries of all my setups and it picks up if the setup works.” UNMEASURED.",
+        "state": "no_break_yet",
+        "text": "⏸ no breakout yet · last close 4.05 (-63.1% vs the trigger 10.97) · 0 min since first seen (10:05 bar)"
+       },
        "brk_text": null,
        "broker_text": null,
        "entry_text": null,

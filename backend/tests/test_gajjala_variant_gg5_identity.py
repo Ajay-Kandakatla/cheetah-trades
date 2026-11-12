@@ -46,6 +46,13 @@ wording only; every other entry is the BOARD golden alone):
   ["rvol_first"] (2 changed); `kiss_fly/kiss_filter` = tab.kiss_filter_block() (2 added); `kiss_now` false on each of
   the two 💋 tiles (4 added). No tile reordered, no "Rel volume" stat, `list_note` still null, every other sub
   byte-equal (docs/gajjala/kiss_rvol_sort_2026_11_11.md).
+  2026-11-12 — Ajay "Most of our potentials are not having breakout, please write that on them": BOARD only (WRITES
+  byte-identical — breakout_state.tag runs in tab.build, never in the pass). BOARD = 20 leaves, all ADDED, all the one
+  key `breakout` (state no_break_yet on all 20; 0 changed, 0 removed): per mode `gajjala.breakout` on 6 tiles (🧠 2,
+  ➖ 2, 🚩 Bull Flag 1, 💋 1 — the forming GGB / GGA reads) and `breakout` on 4 of the 🧠 sub's today 📈 rows. NEGATIVE: the
+  GGA A+ card (break bar = the latest bar) and the 💋 GGA partial carry no key. Same check on the FE fixtures by their
+  own `-k golden` recipes: 1m board 7, potential 16 (no_break_yet 15, no_break 1), on_open 2 — `breakout` only
+  (docs/gajjala/no_breakout_2026_11_12.md).
 """
 from __future__ import annotations
 

@@ -224,7 +224,13 @@ export type GgRead = {
   audit?: GgAudit | null;
   /** 🧭 2026-11-11: the setups this stock passed through (backend stages.by_symbol / for_tile) — absent when none. */
   stages?: GgStages | null;
+  /** ⏸ 2026-11-12: the served no-breakout / breakout line (backend breakout_state.block) — absent when no line. */
+  breakout?: GgBreakout | null;
 };
+
+/* ---- ⏸ No-breakout line (2026-11-12, no-breakout spec §3.3) — every word SERVED; the FE types none. ---- */
+/** The served block: `head` (bold), `detail` (" · …" parts), `text` = head + detail, `hint` (definitions, on hover). */
+export type GgBreakout = { state?: string | null; head?: string | null; detail?: string | null; text?: string | null; hint?: string | null };
 
 /* ---- 🧭 Setup stages (2026-11-11, stages spec §3.4) — every word SERVED; the FE types none. ---- */
 /** One step inside a tag: the served word and its ET pass clock (null when the session is not today). */
@@ -449,6 +455,8 @@ export type GgTrackRow = {
   /** ⚡ 2026-11-11 (entry spec §3.1): "⚡ break rang HH:MM:SS ET" / "… (shadow)" — SERVED by tab._track_row
    *  (break_watch.track_text); null / absent → nothing. */
   brk_text?: string | null;
+  /** ⏸ 2026-11-12: the served breakout word for today's row (backend breakout_state.row_block) — absent → nothing. */
+  breakout?: GgBreakout | null;
   graveyard_on?: string | null;
   timeline?: { at_et?: string | null; text: string }[];
   text: string;

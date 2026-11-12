@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Most of our potentials are not having breakout, please
+  // write that on them that..". chart_maps/gajjala/breakout_state.py (pure, words only) is called ONCE from tab.build after
+  // the 🧭 stages call: `gajjala.breakout` on every 🧠 potential and broke card, `breakout` on today's 📈 Track rows.
+  // GgBreakoutLine prints the served head / detail only. No push, alert, gate or grade moved. UNMEASURED (study pending).
+  // Doc docs/gajjala/no_breakout_2026_11_12.md. Pinned by scripts/contracts.mjs ("⏸ Gajjala no-breakout line (2026-11-12)").
+  { id: 'chart-maps-gajjala-no-breakout-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "⏸ No breakout — you said: “Most of our potentials are not having breakout, please write that on them that.. I need for an additonal break out from the triggers Usually after that run up to tirgger point they are mostly just sitting there”. Every 🧠 potential card now says ⏸ no breakout yet (last close vs the trigger, minutes since first seen); every card that traded through its trigger says what it did since — ⏸ no breakout since the trigger (the price it must close above), 🔊 broke out on volume louder than the base's busiest bar, 🔇 broke out on quieter volume, ↩️ back under the trigger, or ✖️ traded under the stop; each 📈 Track row of today carries the same word. Same on the 1-minute and 🧪 Audited pages. Words only: no alert, A+, rule, order or grade moved. UNMEASURED. Not advice." },
   // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Luks scan is not realtime I see all dated values can you
   // make it realtime". chart_maps/luk/run.py step 13b (after the push gate AL.run_pass, before the 🏁 grade step) re-reads
   // every card the board shows + today's 🥇 alert cards while LC.LUK_REREAD_SHOWN (a re-read rings nothing; the served

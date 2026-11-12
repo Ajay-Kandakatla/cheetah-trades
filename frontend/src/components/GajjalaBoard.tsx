@@ -186,6 +186,7 @@ import { EnterableChip } from './EnterableChip';
 import { GgTraderChip } from './GgTraderChip';
 import { GgShortInterestLabel } from './GgShortInterestLabel';
 import { GgStages } from './GgStages';
+import { GgBreakoutLine, GgBreakoutWord } from './GgBreakoutLine';
 import { RulesInfo } from './RulesInfo';
 import { GgEntryMiniTape, GgEntryTape } from './GgEntryTape';
 import { GG_VARIANT_BASE, GgVariantContext, ggVariantKey, type GgVariantKey } from './ggVariant';
@@ -1049,6 +1050,7 @@ function CardExtras({ read, board, sub, sym, live }: {
         {volDried ? <span className="gg-vol-dried" data-testid={`gg-vol-dried-${sym}`}>{volDried}</span> : null}
       </div>
       {plan ? <div className="gg-plan" data-testid="gg-plan">{plan}</div> : null}
+      <GgBreakoutLine breakout={read.breakout} sym={sym} />
       {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
       {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
@@ -1154,6 +1156,7 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
               {typeof r.brk_text === 'string' && r.brk_text.trim() ? (
                 <span className="gg-track-push gg-track-brk" data-testid={`gg-track-brk-${id}`}> · {r.brk_text}</span>
               ) : null}
+              <GgBreakoutWord breakout={r.breakout} id={id} />
               {tl.length ? (
                 <details className="gg-timeline" data-testid={`gg-track-timeline-${id}`}>
                   <summary>timeline</summary>
