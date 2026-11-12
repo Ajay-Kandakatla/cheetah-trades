@@ -10,8 +10,10 @@ const HIS = 'Do your receommendations';
 const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
 describe('✨ the 🏁 Luk stop-R-from-the-fill entry (2026-11-12)', () => {
-  it("is FIRST, listed once, dated 2026-11-12, routed to Luk's 🏁 sub", () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
+  // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
+  it("is SECOND (the 🟢 entry-marks ✨ went FIRST 2026-11-12), listed once, dated 2026-11-12, routed to Luk's 🏁 sub", () => {
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=luk&sub=track_record');
@@ -35,7 +37,7 @@ describe('✨ the 🏁 Luk stop-R-from-the-fill entry (2026-11-12)', () => {
   });
 
   it('NEGATIVE: the ⏸ no-breakout ✨ is not replaced — still listed once, right after this entry; ids stay unique', () => {
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-no-breakout-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });

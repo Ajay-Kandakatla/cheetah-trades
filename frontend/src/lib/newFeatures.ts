@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 ~15:22 ET (verbatim in the label, his spelling kept): "Can you show me green on these tabs some
+  // indicators to show be which ones have best potential entries right now I am clicking through each one and figuring
+  // out... an Indicator or new tickers with in last 30 mins like blinkers or something would be nice".
+  // chart_maps/gajjala/entry_marks.py (pure, display only) is called ONCE from tab.build via _soft: `entry_marks.subs` on
+  // every Gajjala board (🟢 green {n, label, title} + ✨ new {n, until, title}) and `new_mark` on a card; blinkers from
+  // STORED first times only, GC.ENTRY_MARK_NEW_MIN = 30 minutes. 5-min, 1-min and 🧪 pages. No order, count, alert or push
+  // moved. UNMEASURED. Doc docs/gajjala/entry_marks_2026_11_12.md. Pinned by scripts/contracts.mjs ("🟢 Gajjala
+  // close-to-entry marks (2026-11-12)").
+  { id: 'chart-maps-gajjala-entry-marks-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=gajjala',
+    label: "🟢 Gajjala sub tabs light up — you said: “Can you show me green on these tabs some indicators to show be which ones have best potential entries right now I am clicking through each one and figuring out... an Indicator or new tickers with in last 30 mins like blinkers or something would be nice”. A green number on a sub tab = its cards that are an entry right now (A+ on the latest closed bar, or ready: the next bar over the trigger, with the trigger above the stop); on 🧠 Potential = trigger armed. Hover it for the names (and whether the A+ alert rang). A pulsing dot on a sub tab = an A+ in the last 30 minutes (it keeps blinking after the next bar), or a card that turned ready / armed. A card that is new on his list today blinks on the card only; the card says “new 15:04 ET”. Your 🚫 names are left out. Same on the 1-min and 🧪 pages. Display only: no order, count or alert moved. UNMEASURED. Not advice." },
   // Ajay 2026-11-11, relayed (verbatim in the label, his spelling kept): "Do your receommendations" — item 1 of rec157.
   // chart_maps/luk/ledger.py stop_r(trigger, stop, fill_px) = (stop − fill) / (trigger − stop): walk() writes it on a new
   // stop and cells() ALWAYS derives a stopped row's R from it (legacy docs keep walk.r = −1.0 in Mongo; nothing served

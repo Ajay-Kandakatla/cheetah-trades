@@ -1258,7 +1258,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -9842,7 +9843,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 56).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 57).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10085,7 +10087,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 53).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 54).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10431,7 +10434,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 53).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10659,7 +10663,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10786,7 +10791,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 51).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10964,7 +10970,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11109,7 +11116,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 50).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11188,7 +11196,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11356,7 +11365,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11467,7 +11477,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11611,7 +11622,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11830,7 +11842,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11912,7 +11925,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12014,7 +12028,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12110,7 +12125,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12481,7 +12497,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12673,7 +12690,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -12914,7 +12932,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13034,7 +13053,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -13162,7 +13182,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13320,7 +13341,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13468,7 +13490,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13825,7 +13848,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 31).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13867,7 +13891,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      if (nf && !ids2.slice(0, 27).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 27).join(', ') || 'none'}')`);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      if (nf && !ids2.slice(0, 28).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 28).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -14162,7 +14187,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 30).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14407,7 +14433,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 28).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 29).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14559,7 +14586,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
         // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
         // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-        if (!ids.slice(0, 26).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 26).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+        if (!ids.slice(0, 27).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 27).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14667,7 +14695,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
         // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
         // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-        if (!ids.slice(0, 25).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 25).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+        if (!ids.slice(0, 26).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 26).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14804,7 +14833,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
         // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
         // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-        if (!ids.slice(0, 24).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 24).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+        if (!ids.slice(0, 25).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 25).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14961,7 +14991,8 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
           // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
           // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-          if (!ids.slice(0, 23).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 23).join(', ') || 'none'}')`);
+          // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+          if (!ids.slice(0, 24).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 24).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -15103,7 +15134,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
         // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
         // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-        if (!ids.slice(0, 20).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 20).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+        if (!ids.slice(0, 21).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 21).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15486,7 +15518,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
         // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
         // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-        if (!ids.slice(0, 18).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 18).join(', ') || 'none'}')`);
+        // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+        if (!ids.slice(0, 19).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 19).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15567,7 +15600,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
@@ -15626,7 +15660,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
@@ -15728,7 +15763,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09')) errs.push(`the 📊 volume-order ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 📊 volume-order ✨ lost its label');
@@ -15776,7 +15812,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');
@@ -15839,7 +15876,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-plain-words-2026-11-10')) errs.push(`the 🗣 plain-words ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-plain-words-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🗣 plain-words ✨ lost its label');
@@ -15941,7 +15979,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 10).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 11).map((m) => m[1]);
       if (!ids.includes('chart-maps-luk-scan-now-2026-11-11')) errs.push(`the 🔄 Luk scan-now ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-luk-scan-now-2026-11-11'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🔄 Luk scan-now ✨ lost its label');
@@ -16265,7 +16304,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime").
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-kiss-rvol-sort-2026-11-11')) errs.push(`the 💋 relative-volume ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-kiss-rvol-sort-2026-11-11'[\s\S]*?route: '([^']+)',\s*\n\s*label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 💋 relative-volume ✨ lost its route / label');
@@ -16355,7 +16395,8 @@ const CONTRACTS = [
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them").
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      if (!ids.slice(0, 3).includes(ID)) errs.push(`the 🥇 realtime ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      if (!ids.slice(0, 4).includes(ID)) errs.push(`the 🥇 realtime ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${ids.slice(0, 4).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk`);
@@ -16443,7 +16484,8 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-no-breakout-2026-11-12';
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations").
-      if (!ids.slice(0, 2).includes(ID)) errs.push(`the ⏸ no-breakout ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      if (!ids.slice(0, 3).includes(ID)) errs.push(`the ⏸ no-breakout ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=gajjala&sub=potential',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=gajjala&sub=potential`);
@@ -16498,11 +16540,12 @@ const CONTRACTS = [
       const code = pyNoComments(src);
       const lit = /\br\s*=\s*-1(?:\.0)?\b|["']r["']\s*:\s*-1(?:\.0)?\b/.exec(code);
       if (lit) errs.push(`ledger.py still books a stop at a −1.0 literal ("${lit[0]}") — the R of a stop comes from stop_r`);
-      // 5. ✨ FIRST, routed to the 🥇 🏁 sub, his words verbatim, UNMEASURED; NEGATIVE: no b-word, no "edge"
+      // 5. ✨ in the first two (FIRST until the 🟢 entry-marks ✨ 2026-11-12), routed to the 🥇 🏁 sub, his words verbatim, UNMEASURED; NEGATIVE: no b-word, no "edge"
       const nf = quiet('src/lib/newFeatures.ts');
       const ID = 'chart-maps-luk-stop-r-from-fill-2026-11-12';
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
-      if (ids[0] !== ID) errs.push(`the 🏁 Luk stop-R ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      // WIDENED +1 (2026-11-12: 🟢 chart-maps-gajjala-entry-marks-2026-11-12 FIRST — Ajay: "Can you show me green on these tabs").
+      if (!ids.slice(0, 2).includes(ID)) errs.push(`the 🏁 Luk stop-R ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk&sub=track_record',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk&sub=track_record`);
@@ -16516,6 +16559,101 @@ const CONTRACTS = [
       if (!quiet('../docs/luk/stop_r_from_fill_2026_11_11.md')) errs.push('docs/luk/stop_r_from_fill_2026_11_11.md is missing');
       for (const t of ['../backend/tests/test_luk_stop_r_from_fill_2026_11_11.py', 'src/components/LukTrackRecord.stop_r.test.tsx',
                        'src/lib/newFeatures.luk_stop_r.test.ts']) if (!quiet(t)) errs.push(`${t} is missing`);
+      return errs;
+    },
+  },
+  {
+    name: '🟢 Gajjala close-to-entry marks (2026-11-12)',
+    file: 'src/components/GgEntryMarks.tsx',
+    // Ajay 2026-11-12 ~15:22 ET, verbatim: "Can you show me green on these tabs some indicators to show be which ones have
+    // best potential entries right now I am clicking through each one and figuring out... an Indicator or new tickers with
+    // in last 30 mins like blinkers or something would be nice". backend/chart_maps/gajjala/entry_marks.py (pure, display
+    // only) is called ONCE from tab.build through _soft("entry marks", _entry_marks, …): `entry_marks.subs` (🟢 green +
+    // ✨ new) on every Gajjala board and `new_mark` on a card, 5-min / 1-min / 🧪. GgEntryMarks.tsx draws the served
+    // label / title / text only; a reduced-motion viewer gets a static dot. No push, alert, order, gate or count reads it.
+    // Spec scratchpad dots/spec.md; doc docs/gajjala/entry_marks_2026_11_12.md.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const HIS = 'Can you show me green on these tabs some indicators to show be which ones have best potential entries right now I am clicking through each one and figuring out... an Indicator or new tickers with in last 30 mins like blinkers or something would be nice';
+      const noComments = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+      const pyCode = (x) => x.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      // 1. the engine exists; tab.py reaches EM.apply through ONE _entry_marks helper, called ONCE inside build via _soft
+      const em = quiet('../backend/chart_maps/gajjala/entry_marks.py');
+      if (!em) errs.push('backend/chart_maps/gajjala/entry_marks.py is missing');
+      const tab = quiet('../backend/chart_maps/gajjala/tab.py');
+      if (!tab) errs.push('backend/chart_maps/gajjala/tab.py is missing');
+      else {
+        const imports = [...tab.matchAll(/^\s*from chart_maps\.gajjala import entry_marks as EM\b/gm)].length;
+        if (imports !== 1) errs.push(`tab.py must import entry_marks as EM exactly once, lazily in _entry_marks (found ${imports})`);
+        const applies = [...tab.matchAll(/\bEM\.apply\(/g)].length;
+        if (applies !== 1) errs.push(`tab.py must call EM.apply exactly once (found ${applies})`);
+        const calls = [...tab.matchAll(/\b_entry_marks\(/g)].length;
+        if (calls !== 1) errs.push(`tab.py must define _entry_marks once and reach it only through _soft (found ${calls} direct "_entry_marks(" uses)`);
+        const iBuild = tab.indexOf('\ndef build(');
+        const soft = [...tab.matchAll(/_soft\("entry marks", _entry_marks, out,/g)];
+        if (soft.length !== 1) errs.push(`tab.build must call _soft("entry marks", _entry_marks, out, …) exactly once (found ${soft.length})`);
+        else if (iBuild < 0 || soft[0].index < iBuild) errs.push('the _soft("entry marks", …) call must sit inside tab.build');
+      }
+      // 2. NEGATIVE: display only — no push / alert send, no write, no order key in entry_marks.py
+      if (em) {
+        const code = pyCode(em);
+        const send = /^\s*(?:from|import)\s+[^\n]*\b(notify|notifications|webpush|push_\w*|alert_gates|autopilot|broker\w*|alpaca\w*)\b|send_to_user|send_push|notify_\w*\(|webpush\(|\.insert_one\(|\.insert_many\(|\.update_one\(|\.update_many\(|\.replace_one\(|requests\./m.exec(code);
+        if (send) errs.push(`entry_marks.py must not send, push, alert or write (found "${send[0].trim()}")`);
+        const alertUses = [...code.matchAll(/\bAL\.(\w+)/g)].map((m) => m[1]).filter((x) => x !== 'bar_close_et');
+        if (alertUses.length) errs.push(`entry_marks.py may read alerts only for AL.bar_close_et (found AL.${alertUses[0]})`);
+        const order = /\b(submit_order|place_order|order_id|client_order_id)\b|\[\s*["'](order|qty|side|counts|tiles|subs)["']\s*\]\s*=|["'](order|qty|side)["']\s*:/.exec(code);
+        if (order) errs.push(`entry_marks.py must not carry an order key or re-assign subs / counts / tiles (found "${order[0]}")`);
+      }
+      // 3. ENTRY_MARK_NEW_MIN = 30 in constants.py, tagged with his date and words; entry_marks reads it by name
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      if (!/^ENTRY_MARK_NEW_MIN = 30\s+# Ajay 2026-11-12 "an Indicator or new tickers with in last 30 mins/m.test(gc)) errs.push('constants.py must carry ENTRY_MARK_NEW_MIN = 30 tagged # Ajay 2026-11-12 with his words');
+      if (em && !/GC\.ENTRY_MARK_NEW_MIN\b/.test(pyCode(em))) errs.push('entry_marks.py must read GC.ENTRY_MARK_NEW_MIN by name');
+      if (em && /\b(?:timedelta\(minutes=30\)|30 \* 60|1800)\b/.test(pyCode(em))) errs.push('entry_marks.py types the 30 minutes — read GC.ENTRY_MARK_NEW_MIN');
+      // 4. FE draws the served words only — label via CSS attr(data-label), title / text off the payload, no typed word
+      const code = noComments(src);
+      for (const re of [/data-label=\{green\.label\}/, /title=\{green\.title\}/, /title=\{fresh\.title\}/, /title=\{m\.title\}/, /\{m\.text\}/]) {
+        if (!re.test(code)) errs.push(`GgEntryMarks.tsx must render the served payload (missing ${re})`);
+      }
+      const typed = /A\+|\bready\b|\barmed\b|\brang\b|\bminutes?\b|\bET\b|\bblink\w*|\bbuy\b/i.exec(code);
+      if (typed) errs.push(`GgEntryMarks.tsx types a served word ("${typed[0]}") — every word comes from entry_marks.py`);
+      const jsxText = [...code.matchAll(/(?:\/>|<\/[A-Za-z]+>|<>)([^<{}]*)[<{]/g)].map((m) => m[1]).filter((t) => t.trim());
+      if (jsxText.length) errs.push(`GgEntryMarks.tsx has a JSX text node ("${jsxText[0].trim()}") — draw served fields only`);
+      const board = quiet('src/components/GajjalaBoard.tsx');
+      if (!/import \{ GgNewMark, GgSubMarksView \} from '\.\/GgEntryMarks';/.test(board)) errs.push("GajjalaBoard.tsx must import { GgNewMark, GgSubMarksView } from './GgEntryMarks'");
+      const nSub = [...board.matchAll(/<GgSubMarksView subKey=\{s\.key\} block=\{entryMarks\?\.\[s\.key\] \?\? null\} \/>/g)].length;
+      const nNew = [...board.matchAll(/<GgNewMark mark=\{t\.new_mark\} sym=\{t\.symbol\} \/>/g)].length;
+      if (nSub !== 1 || nNew !== 1) errs.push(`GajjalaBoard.tsx must render <GgSubMarksView …/> once and <GgNewMark …/> once (found ${nSub}, ${nNew})`);
+      // 5. CSS: reduced motion = a static dot; no font: shorthand; the badge / dot sit absolutely in the chip's top band
+      const css = quiet('src/styles/ggEntryMarks.css');
+      if (!css) errs.push('src/styles/ggEntryMarks.css is missing');
+      else {
+        const rm = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(css);
+        if (!rm || !/\.gg-sub-new\b/.test(rm[1]) || !/\.gg-new-dot\b/.test(rm[1]) || !/animation:\s*none/.test(rm[1])) errs.push('ggEntryMarks.css must stop the .gg-sub-new and .gg-new-dot animation under @media (prefers-reduced-motion: reduce)');
+        if (/(^|[;{\s])font\s*:/m.test(css.replace(/\/\*[\s\S]*?\*\//g, ''))) errs.push('ggEntryMarks.css must not use the font: shorthand (longhands only)');
+        for (const cls of ['gg-sub-green', 'gg-sub-new']) {
+          const rule = new RegExp(`\\.${cls}\\s*\\{([^}]*)\\}`).exec(css);
+          if (!rule || !/position:\s*absolute/.test(rule[1])) errs.push(`ggEntryMarks.css .${cls} must be position: absolute (the chip's width never changes)`);
+        }
+      }
+      // 6. ✨ FIRST, routed to the Gajjala tab, his words verbatim, UNMEASURED; NEGATIVE: no b-word, no "edge"
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-entry-marks-2026-11-12';
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
+      if (ids[0] !== ID) errs.push(`the 🟢 entry-marks ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+      const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=gajjala',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=gajjala`);
+      else {
+        if (!lab[1].includes(`“${HIS}”`)) errs.push('the 🟢 entry-marks ✨ must quote his words verbatim');
+        if (!lab[1].includes('UNMEASURED')) errs.push('the 🟢 entry-marks ✨ must say UNMEASURED');
+        if (!lab[1].includes('Display only: no order, count or alert moved.')) errs.push('the 🟢 entry-marks ✨ must say display only');
+        if (/bounc|\bedge\b/i.test(lab[1])) errs.push('the 🟢 entry-marks ✨ must not say the b-word or "edge"');
+      }
+      // 7. doc + tests on both sides
+      if (!quiet('../docs/gajjala/entry_marks_2026_11_12.md')) errs.push('docs/gajjala/entry_marks_2026_11_12.md is missing');
+      for (const t of ['../backend/tests/test_gajjala_entry_marks_2026_11_12.py', 'src/components/GgEntryMarks.test.tsx',
+                       'src/components/GajjalaBoard.entry_marks.test.tsx', 'src/lib/newFeatures.entry_marks.test.ts']) if (!quiet(t)) errs.push(`${t} is missing`);
       return errs;
     },
   },
