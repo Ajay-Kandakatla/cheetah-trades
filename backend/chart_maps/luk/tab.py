@@ -18,6 +18,15 @@ pass re-read come first — ORDER_VARIANT A (cut first, then the stable partitio
 the main session as the set-preserving default; variant B (re-read first, then the cut) = HIS CALL, not built. Display
 only: the names read, the gates, the pushes and the counts are unchanged.
 
+2026-11-12 (Ajay, verbatim: "Luks scan is not realtime I see all dated values can you make it realtime"): the pass
+re-reads every card the board shows (+ today's 🥇 alert cards) AFTER the push gate (luk.run step 13b, display only —
+a re-read rings nothing). Served here: the pass-line tail "{read} of {board} board cards re-read", the cost clause
+(at most LUK_REREAD_MAX; the last pass's re-read COUNT, never a name list — each card not re-read already says so on
+its own card), the push tail, `pass.next_read_sec` (the board re-GETs right after the next cron pass is due; once that
+pass is overdue by more than one cadence it falls back to the cadence), and per card `live_level` (the levels the
+house 30 s card poll compares against — none on a stopped card) and `not_rung_text` (a board re-read A+ whose gate
+claim ids are both absent — the pass writes `not_rung`). Every number a constants name read at call time.
+
 Reused by import (one engine per concept): gajjala.tab's formatters (`_px`, `_pct`, `_hhmm`, `_et`, `_plain`, `_f`),
 its `_session_block` (minus GG's first-15-minutes keys — Luk trades the first candle), `_pass_block` (as_of / stale /
 warming over the LUK variant's cadence), `_tile_lines` and `_on_bars` (the PatternChart BUY / TRIGGER / STOP lines and
@@ -27,7 +36,8 @@ luk.market_state.block (🧭). Never gajjala.variant.served_block / word (they r
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, time as dtime
+import math
+from datetime import date, datetime, time as dtime, timedelta
 from typing import Optional
 
 from chart_maps.gajjala import constants as GC
@@ -110,6 +120,15 @@ FLUSH_TOUCH_TEXT = "touched the hourly {ema} EMA at {hhmm}"
 FLUSH_NONE_TEXT = "no touch of the hourly {ema} EMA today"
 READ_AT_TEXT = "read at {hhmm} ET"
 NOT_REREAD_TEXT = "not re-read since {hhmm} ET"                 # 2026-11-11: the card's OWN read time, ET
+# ── 2026-11-12 realtime cards (Ajay: "Luks scan is not realtime I see all dated values can you make it realtime") ──
+PASS_REREAD_TAIL = " · {read} of {board} board cards re-read"
+COST_REREAD_TEXT = (" Then, after the push gate, every card the board shows (at most {most}) and every card a 🥇 alert "
+                    "opened today is re-read with the pass budget left — a re-read rings nothing.")
+COST_REREAD_LAST_TEXT = " Re-read last pass: {read} of {asked}{missed}."
+COST_MISSED_TEXT = " — {n} not re-read (each says so on its card)"          # critique C6: a count, never a name list
+PUSH_REREAD_TAIL = " A card re-read only for the board rings nothing — its A+ says so on the card."
+NOT_RUNG_TEXT = "A+ on a board re-read — it did not ring (pushes come from the pass's shortlisted names)"
+LIVE_LEVEL_STATES = ("aplus", "triggered", "forming", "listed")    # a stopped card gets no live words (critique)
 SCREENS_RANK_TEXT = "{emoji} #{rank}"
 SCREEN_SORTED_BY = {"premarket": "sorted by pre-market % change", "leader": "sorted by 1-month % change",
                     "potent": "sorted by % change"}
@@ -242,7 +261,8 @@ def honesty() -> str:
 def push_text() -> str:
     """The strip's push line of the mode; {cad} = the served pass cadence (_cad_min), never a typed number."""
     if VL.push_mode() == "live":
-        return PUSH_TEXT_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS, cad=_cad_min())
+        txt = PUSH_TEXT_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS, cad=_cad_min())
+        return txt + PUSH_REREAD_TAIL if LC.LUK_REREAD_SHOWN else txt      # 2026-11-12: live mode only
     return PUSH_TEXT_SHADOW
 
 
@@ -250,10 +270,39 @@ def latency_text() -> str:
     return LATENCY_TEXT.format(one=V.frame_minutes("1m", LUK), cad=_cad_min())
 
 
+def _refresh_of(doc) -> Optional[dict]:
+    """The pass doc's `refresh` block (luk.run step 13b, 2026-11-12) when it re-read (`on` True), else None (absent on
+    docs written before that build, or the re-read was off / skipped)."""
+    r = doc.get("refresh") if isinstance(doc, dict) else None
+    return r if isinstance(r, dict) and r.get("on") is True else None
+
+
+def next_read_sec(cron: Optional[dict], now, session: date, in_window: bool) -> Optional[int]:
+    """2026-11-12 (critique C3): seconds until the board should re-GET. None outside the window or with no CRON pass of
+    this session. Due = the cron pass `at` + the cadence + its `wall_s`; `over` = now − due. Overdue by more than one
+    cadence (passes stopped — a skipped pass writes no doc) → the cadence; else min(cadence, max(LUK_NEXT_READ_SEC,
+    ceil(−over) + LUK_NEXT_READ_SEC)). So a tab makes at most cadence / LUK_NEXT_READ_SEC extra GETs per late pass."""
+    if not in_window or not isinstance(cron, dict) or cron.get("date") != session.isoformat():
+        return None
+    c_at = GT._at_utc(cron)
+    if c_at is None:
+        return None
+    cadence = int(V.cadence_sec(LUK))
+    due = c_at + timedelta(seconds=cadence + (GT._f(cron.get("wall_s")) or 0.0))
+    over = (GT._et(now) - due).total_seconds()
+    if over > cadence:
+        return cadence
+    return int(min(cadence, max(LC.LUK_NEXT_READ_SEC, math.ceil(-over) + LC.LUK_NEXT_READ_SEC)))
+
+
 def pass_block(latest: Optional[dict], cron: Optional[dict], now, session: date, in_window: bool) -> dict:
     """gajjala.tab._pass_block (as_of / stale / warming on the LUK variant's cadence and stale numbers) + the Luk
-    pass's own facts: bars through, wall, the read / shortlist / screened counts and the latency fact [C1]."""
+    pass's own facts: bars through, wall, the read / shortlist / screened counts and the latency fact [C1].
+    2026-11-12: the board re-read tail (a doc whose `refresh.on`) and `next_read_sec` (the CRON pass — `cron`, or a
+    non-on-demand `latest` when `cron` is None: gajjala.tab._pass_block's own pre-split rule)."""
     out = GT._pass_block(latest, now, session, in_window, cron=cron, v=LUK)
+    ref = cron if cron is not None else (latest if isinstance(latest, dict) and not latest.get("on_demand") else None)
+    out["next_read_sec"] = next_read_sec(ref, now, session, in_window)
     this = isinstance(latest, dict) and latest.get("date") == session.isoformat()
     bt = (latest or {}).get("bars_through") if this else None
     bt = bt if isinstance(bt, dict) else {}
@@ -270,6 +319,10 @@ def pass_block(latest: Optional[dict], cron: Optional[dict], now, session: date,
                                        n_read=int(latest.get("n_read") or 0), shortlist=int(sl.get("n") or 0),
                                        screened=int(scr.get("screened_n") or 0),
                                        not_screened=int(scr.get("not_screened_n") or 0))
+        rf = _refresh_of(latest)
+        if rf is not None:                                                     # 2026-11-12 the board re-read
+            out["text"] += PASS_REREAD_TAIL.format(read=int(rf.get("board_read_n") or 0),
+                                                   board=int(rf.get("board_n") or 0))
     else:
         out["text"] = PASS_NONE_TEXT.format(cad=_cad_min(), open=LC.LUK_PASS_OPEN_ET, close=LC.LUK_PASS_CLOSE_ET)
     return out
@@ -338,11 +391,19 @@ def cost_text(latest: Optional[dict] = None) -> str:
     txt = COST_TEXT.format(cad=_cad_min(), open=LC.LUK_PASS_OPEN_ET, close=LC.LUK_PASS_CLOSE_ET,
                            daily=LC.LUK_DAILY_MAX_NEW_PER_PASS, shortlist=LC.LUK_SHORTLIST_MAX,
                            hourly=LC.LUK_HOURLY_SESSIONS, grade=LC.LUK_GRADE_MAX_LOADS)
+    if LC.LUK_REREAD_SHOWN:                                                   # 2026-11-12 the board re-read
+        txt += COST_REREAD_TEXT.format(most=LC.LUK_REREAD_MAX)
     calls = (latest or {}).get("calls") if isinstance(latest, dict) else None
     if isinstance(calls, dict) and calls:
         parts = [f"{word} {int(calls.get(k) or 0)}" for k, word in CALL_WORDS if k in calls]
         if parts:
             txt += COST_LAST_TEXT.format(calls=" · ".join(parts))
+    rf = _refresh_of(latest)
+    if LC.LUK_REREAD_SHOWN and rf is not None:
+        nr = rf.get("not_read") if isinstance(rf.get("not_read"), list) else []
+        missed = COST_MISSED_TEXT.format(n=len(nr)) if nr else ""          # critique C6: the COUNT, never the names
+        txt += COST_REREAD_LAST_TEXT.format(read=int(rf.get("read_n") or 0), asked=int(rf.get("asked_n") or 0),
+                                            missed=missed)
     return txt
 
 
@@ -482,6 +543,27 @@ def _reread_first(tiles: list, focus: str) -> list:
             + [t for t in rest if t.get("not_reread") is True])
 
 
+def not_rung_text(doc: dict, setup: str, state) -> Optional[str]:
+    """2026-11-12 (critique C2): NOT_RUNG_TEXT only on a board re-read doc (`refresh_only` True) whose `not_rung` list
+    (written by the pass only when the gate's own claim ids are both absent) names this setup AND that reads `aplus`;
+    else None (a ring read, a re-read that rang, a doc without `not_rung`, another setup, a later state)."""
+    nr = doc.get("not_rung")
+    if doc.get("refresh_only") is True and isinstance(nr, (list, tuple)) and setup in nr and state == "aplus":
+        return NOT_RUNG_TEXT
+    return None
+
+
+def live_level(read: dict) -> Optional[dict]:
+    """2026-11-12: the levels the house 30 s card poll compares the live price against ({trigger, stop, tf} — the
+    `levels` body of POST /chart-maps/live), for an aplus / triggered / forming / listed card with a finite trigger or
+    stop; None otherwise (a stopped card gets no live words: VS_TEXT's "the read moves when the bar closes" is untrue
+    for a stopped Luk read)."""
+    trig, stop = GT._f(read.get("trigger")), GT._f(read.get("stop"))
+    if read.get("state") not in LIVE_LEVEL_STATES or (trig is None and stop is None):
+        return None
+    return {"trigger": trig, "stop": stop, "tf": LUK.primary}
+
+
 def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] = None) -> dict:
     """One card in the tile shape PatternChart draws off a 🚩 tile (symbol, href, tf, bars, curves, vol_avg, lines,
     markers, bands, badges, stats, why) + Luk's own read in words. `bars5/curves5/vol_avg5` are the stored names.
@@ -526,6 +608,8 @@ def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] 
             "read_at_text": READ_AT_TEXT.format(hhmm=GT._et(at).strftime("%H:%M")) if at else None,
             "not_reread": old,
             "not_reread_text": NOT_REREAD_TEXT.format(hhmm=GT._et(at).strftime("%H:%M")) if old else None,
+            "live_level": live_level(read),                                     # 2026-11-12 realtime cards
+            "not_rung_text": not_rung_text(doc, setup, st),                     # 2026-11-12 (critique C2)
             "gajjala": {"setup": setup, "state": st}}
 
 
@@ -714,4 +798,6 @@ __all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TE
            "FAULT_TEXT", "PAYLOAD_KEYS", "TILE_STATES", "build", "fault_payload", "session_for",
            "tile_of", "tiles_for", "resolve_sub", "counts_block", "pass_block", "strip_block", "screen_block",
            "latency_text", "cost_text", "scan_block", "rescan_title", "PASS_TEXT_ON_DEMAND", "RESCAN_TITLE",
-           "not_reread", "NOT_REREAD_TEXT", "REREAD_ORDER_TEXT", "STATE_ORDER_TEXT"]
+           "not_reread", "NOT_REREAD_TEXT", "REREAD_ORDER_TEXT", "STATE_ORDER_TEXT",
+           "PASS_REREAD_TAIL", "COST_REREAD_TEXT", "COST_REREAD_LAST_TEXT", "COST_MISSED_TEXT", "PUSH_REREAD_TAIL",
+           "NOT_RUNG_TEXT", "LIVE_LEVEL_STATES", "next_read_sec", "not_rung_text", "live_level"]

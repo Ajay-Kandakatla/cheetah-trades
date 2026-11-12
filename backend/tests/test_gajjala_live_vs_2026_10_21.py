@@ -45,19 +45,22 @@ def test_over_trigger_text_verbatim(monkeypatch):
     assert q["now"]["price"] == 9.12
     assert q["vs"] == {"kind": "over_trigger",
                        "text": "🔴 9.12 over the trigger 9.00 on the live bar — the read moves when the 5-minute bar "
-                               "closes (14:05 ET)"}
+                               "closes (14:05 ET)",
+                       "pct_text": "+1.3% vs the trigger · +7.3% vs the stop"}  # pct_text WIDENED 2026-11-12 (🥇 realtime cards; spec WP-C)
 
 
 def test_under_stop_text_verbatim(monkeypatch):
     q = _compose(monkeypatch, {"XLAB": {"trigger": 9.5, "stop": 9.2, "tf": "5m"}})["quotes"]["XLAB"]
     assert q["vs"] == {"kind": "under_stop",
                        "text": "🔴 9.12 under the stop 9.20 on the live bar — the read moves when the 5-minute bar "
-                               "closes (14:05 ET)"}
+                               "closes (14:05 ET)",
+                       "pct_text": "-4.0% vs the trigger · -0.9% vs the stop"}  # pct_text WIDENED 2026-11-12 (🥇 realtime cards; spec WP-C)
 
 
 def test_between_text_verbatim(monkeypatch):
     q = _compose(monkeypatch, {"XLAB": {"trigger": 9.5, "stop": 9.0, "tf": "5m"}})["quotes"]["XLAB"]
-    assert q["vs"] == {"kind": "between", "text": "🔴 9.12 · between the stop 9.00 and the trigger 9.50"}
+    assert q["vs"] == {"kind": "between", "text": "🔴 9.12 · between the stop 9.00 and the trigger 9.50",
+                       "pct_text": "-4.0% vs the trigger · +1.3% vs the stop"}  # pct_text WIDENED 2026-11-12 (🥇 realtime cards; spec WP-C)
 
 
 def test_text_is_built_from_the_vs_text_constants():
@@ -140,7 +143,8 @@ def test_saiq_worked_example_f4():
     v = LC.live_vs(5.58, {"trigger": 5.85, "stop": 5.63, "tf": "5m"}, _at(2026, 10, 21, 11, 40, 15))
     assert v == {"kind": "under_stop",
                  "text": "🔴 5.58 under the stop 5.63 on the live bar — the read moves when the 5-minute bar closes "
-                         "(11:45 ET)"}
+                         "(11:45 ET)",
+                 "pct_text": "-4.6% vs the trigger · -0.9% vs the stop"}  # pct_text WIDENED 2026-11-12 (🥇 realtime cards; spec WP-C)
 
 
 # ── NEGATIVES: no `vs` key ───────────────────────────────────────────────────

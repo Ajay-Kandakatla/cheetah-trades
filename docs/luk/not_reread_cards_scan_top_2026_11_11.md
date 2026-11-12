@@ -189,6 +189,11 @@ no:cacheprovider` (from `backend/`).
    (`docs/luk/luk_tab_2026_11_01.md` "Cost arithmetic"), the only stated minute ceiling is `GG1M_MAX_NAMES` = 60 a
    minute, and the Massive rate ceiling is stated nowhere in the repo. It is a budget change (both constants are HIS
    CALL #4 of the Luk build) AND a gate change (a carried, re-read name can ring).
+   - **2026-11-12 — answered 2026-11-12 for the cards the board shows — see `realtime_cards_2026_11_12.md`; the
+     not-re-read tag stays as the fallback.** His words: "Luks scan is not realtime I see all dated values can you make
+     it realtime". Every card the board shows (≤ `LUK_REREAD_MAX`) + today's 🥇 alert cards are re-read each pass
+     AFTER the push gate, so a re-read rings nothing and the shortlist is unchanged. Carded cards the board does NOT
+     show are still not re-read (HIS CALL #7 there); letting a re-read ring is still a gate change (HIS CALL #2 there).
 3. **The card limit on 🥇.** The FE sends no `limit`, so `GC.TILE_LIMIT_DEFAULT` (24) of 252 🔔 cards is all he can
    open; the route allows up to `GC.TILE_LIMIT_MAX` (80). A larger limit, a "show more", or a limit per sub = his
    word (a default).

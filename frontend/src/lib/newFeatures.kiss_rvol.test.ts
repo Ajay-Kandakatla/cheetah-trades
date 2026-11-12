@@ -10,8 +10,10 @@ const HIS = ['Sort by relative volume, and closer to the EMA.', 'This filter is 
 const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
 describe('✨ the 💋 EMA Kiss relative-volume entry (2026-11-11)', () => {
-  it('is FIRST, listed once, dated 2026-11-11, routed to the 💋 sub', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
+  // WIDENED +1 (2026-11-12: 🥇 Luk realtime cards FIRST — Ajay: "Luks scan is not realtime I see all dated values can you make it realtime") — every NEW_FEATURES[n] pin below → [n+1].
+  it('is SECOND (the 🥇 Luk realtime ✨ went FIRST 2026-11-12), listed once, dated 2026-11-11, routed to the 💋 sub', () => {
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-luk-realtime-2026-11-12');
+    expect(NEW_FEATURES[1].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-11');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=kiss_fly');

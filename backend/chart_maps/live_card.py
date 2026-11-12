@@ -38,6 +38,11 @@ VS_TEXT = {   # MINE — BUILD_SPEC20 D2 (2026-10-21), the contracts block pins 
                    "({next_close} ET)"),
     "between": "🔴 {px} · between the stop {stop} and the trigger {trigger}",
 }
+# 🥇 realtime cards (Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it realtime"):
+# `vs.pct_text` = where the live print sits against each served level in %, on the broker grid the words print
+# (trigger first). Present ONLY inside a returned `vs` (a `kind`); `text` above stays byte-identical. DISPLAY ONLY.
+VS_PCT_TEXT = {"trigger": "{pct} vs the trigger", "stop": "{pct} vs the stop"}   # MINE — 2026-11-12 (🥇 realtime cards)
+VS_PCT_JOIN = " · "
 # MIRROR (2026-10-21, BUILD_SPEC20 D6) of the FE's CARD_LIVE_MS 30_000 (frontend/src/lib/cardLive.ts, MINE — = the
 # SessionPrice poll): the ℹ️ panel prints it; a repo test pins equality with the FE constant. Not read by any poll.
 CARD_LIVE_SEC = 30
@@ -212,7 +217,8 @@ def next_close(now_et: datetime, tf_min: int) -> str:
 
 
 def live_vs(price, level, now_et: datetime) -> Optional[dict]:
-    """{kind, text} for one served now price against one tile's {trigger, stop, tf}; None = kind "none" (no price, no
+    """{kind, text, pct_text} for one served now price against one tile's {trigger, stop, tf} (pct_text added
+    2026-11-12, only ever inside a returned dict); None = kind "none" (no price, no
     level dict, an unparsable level, or a price with only one side's level that sits on the other side). Compared on
     the broker grid (trading.broker.round_price — the same grid `tab._px` prints), so the kind and the printed words
     never disagree: px ≥ trigger → over_trigger, else px ≤ stop → under_stop, else between (both levels needed)."""
@@ -239,7 +245,26 @@ def live_vs(price, level, now_et: datetime) -> Optional[dict]:
         return None
     if kind != "between":
         words["next_close"] = next_close(now_et, tf)
-    return {"kind": kind, "text": VS_TEXT[kind].format(**words)}
+    return {"kind": kind, "text": VS_TEXT[kind].format(**words), "pct_text": _vs_pct_text(g_px, trig, stop)}
+
+
+def _vs_pct_text(g_px: float, trig: Optional[float], stop: Optional[float]) -> str:
+    """One part per level present, trigger first: (grid px − grid level) / grid level × 100 through the tab's own
+    `GT._pct`, joined by VS_PCT_JOIN (2026-11-12). Only ever called inside a returned `vs`. A level whose grid price is
+    0 (a positive level under the sub-dollar grid's last step) has no % and gets no part — never a division by zero."""
+    from chart_maps.gajjala import tab as GT
+    from trading.broker import round_price
+    parts = []
+    for name, lvl in (("trigger", trig), ("stop", stop)):
+        if lvl is None:
+            continue
+        g_lvl = round_price(lvl)
+        if g_lvl <= 0:
+            continue
+        pct = GT._pct((g_px - g_lvl) / g_lvl * 100.0)
+        if pct is not None:
+            parts.append(VS_PCT_TEXT[name].format(pct=pct))
+    return VS_PCT_JOIN.join(parts)
 
 
 def _norm_levels(levels, syms: list) -> dict:

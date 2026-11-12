@@ -26,7 +26,8 @@ from tests.test_luk_run import (DAY, Rec, _aplus, _live, _shadow_by_default, at,
 
 CRON_BODY_KEYS = {"ran", "dry", "errors", "lease", "snapshot", "screens", "shortlist", "bars", "n_read", "states",
                   "aplus", "alerts", "market_state", "ledger", "calls", "bars_through", "wall_s", "status",
-                  "date", "at", "_id"}
+                  "date", "at", "_id",
+                  "refresh"}                # WIDENED 2026-11-12 (🥇 realtime cards): step 13b's board re-read block
 
 
 def _forming():

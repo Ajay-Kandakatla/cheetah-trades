@@ -1446,6 +1446,12 @@ every rule is his own words in free sources. Tab `luk`, right after `gajjala_1m`
   and the external backtests as EXTERNAL.
 - **Routes**: `GET /chart-maps/luk?sub=&span=&focus=&limit=`, `GET /chart-maps/luk/entry-tape?id=&lite=`,
   `POST /chart-maps/luk/scan` (owner's 🔄 scan now, 2026-11-11; stealth 404 for anyone else).
+- **2026-11-12 realtime cards** (Ajay: *"Luks scan is not realtime I see all dated values can you make it realtime"*):
+  step 13b of the pass re-reads every card the board shows (≤ `LUK_REREAD_MAX`) + today's 🥇 alert cards AFTER the push
+  gate — display only, never handed to the gate, `refresh_only` + `cron_setups` so the shortlist is unchanged; pass doc
+  `refresh`; switch `LUK_REREAD_SHOWN`; cards ride the 30 s `useCardLive` poll (no stream) with served `live_level` +
+  `vs.pct_text`; `pass.next_read_sec` times the board re-GET; a re-read A+ with no claim id says "did not ring". Deploy
+  needs `cron`. Doc `docs/luk/realtime_cards_2026_11_12.md`.
 - **ℹ️ panel**: section "🥇 Luk's" = `luk.playbook.rules_lines()`, before "doji_sweep"; fenced; no numeric literal in
   `rules_info.py`.
 - **FE**: `LukBoard` (+ `LukCard` drawing `PatternChart`, `LukScreens`, `LukPlaybook`, `LukTrackRecord` (🚩's shared 🏁 row; 📈 opens

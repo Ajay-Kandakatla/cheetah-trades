@@ -340,7 +340,8 @@ def test_NEGATIVE_no_internal_key_and_no_new_top_level_key():
     assert out["tiles"]
     for t in out["tiles"]:
         assert not any(k.startswith("_") for k in t)
-        assert set(t) == PRE_CHANGE_TILE_KEYS | {"not_reread", "not_reread_text"}
+        # WIDENED 2026-11-12 (🥇 realtime cards, SPEC lukrt §3.3): + live_level, not_rung_text
+        assert set(t) == PRE_CHANGE_TILE_KEYS | {"not_reread", "not_reread_text", "live_level", "not_rung_text"}
     assert set(out) == set(T.PAYLOAD_KEYS)
     assert set(T.fault_payload()) == set(T.PAYLOAD_KEYS)
 

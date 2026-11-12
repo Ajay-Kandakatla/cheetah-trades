@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   LUK_BASE, LUK_CAT_PARAM, LUK_REFRESH_FALLBACK_MS, LUK_SCAN_PATH, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB,
-  LUK_TAPE_PATH, lukChartTile, lukHref, lukLegendRows, lukMark, lukQuery, lukRefreshMs, lukScanLanded, lukScreenCols,
-  lukSpan, lukText, parseLukSub, type LukBoard, type LukScreen, type LukTile,
+  LUK_TAPE_PATH, lukChartTile, lukHref, lukInWindow, lukLegendRows, lukLivePct, lukLiveLevels, lukMark, lukNextReadMs,
+  lukQuery, lukRefreshMs, lukScanLanded, lukScreenCols, lukSpan, lukText, parseLukSub, type LukBoard, type LukScreen,
+  type LukTile,
 } from './luk';
 import { GG_CAT_PARAM, GG_SCAN_PATH, GG_SORT_PARAM, ggScanAdvanced, type GgBoard } from './gajjala';
 
@@ -194,4 +195,72 @@ describe('🔄 Luk scan now — the route and the landed rule', () => {
     expect(lukScanLanded(null, A)).toBe(false);
     expect(lukScanLanded(undefined, A)).toBe(false);
   });
+});
+
+/* 🔴 2026-11-12 realtime cards (lukrt spec §3.5). Ajay, verbatim: "Luks scan is not realtime I see all dated values can
+ * you make it realtime". The four helpers read SERVED fields only; NEGATIVES for every malformed shape. */
+describe('🔴 lukInWindow', () => {
+  it('a positive served refresh_sec → in window', () => {
+    expect(lukInWindow({ session: { refresh_sec: 300 } })).toBe(true);
+  });
+  for (const bad of [0, -1, null, undefined, '300', Number.NaN, Number.POSITIVE_INFINITY]) {
+    it(`NEGATIVE: refresh_sec ${String(bad)} → closed`, () => {
+      expect(lukInWindow({ session: { refresh_sec: bad } })).toBe(false);
+    });
+  }
+  it('NEGATIVE: no board / no session → closed', () => {
+    expect(lukInWindow(null)).toBe(false);
+    expect(lukInWindow({})).toBe(false);
+  });
+});
+
+describe('🔴 lukLiveLevels', () => {
+  const lv = { trigger: 4.1, stop: 3.9, tf: '5m' };
+  it('each served live_level verbatim, keyed by the upper-cased trimmed symbol', () => {
+    const out = lukLiveLevels([{ symbol: ' hq ', live_level: lv } as unknown as LukTile]);
+    expect(out).toEqual({ HQ: lv });
+    expect(out.HQ).toBe(lv);
+  });
+  it('NEGATIVE: null / absent / non-object live_level (a stopped card) → absent; a blank symbol → absent', () => {
+    const tiles = [
+      { symbol: 'AAA', live_level: null }, { symbol: 'BBB' }, { symbol: 'CCC', live_level: 'x' },
+      { symbol: 'DDD', live_level: [1, 2] }, { symbol: '  ', live_level: lv },
+    ] as unknown as LukTile[];
+    expect(lukLiveLevels(tiles)).toEqual({});
+    expect(lukLiveLevels(null)).toEqual({});
+  });
+});
+
+describe('🔴 lukNextReadMs', () => {
+  it('a positive served pass.next_read_sec → × 1000', () => {
+    expect(lukNextReadMs({ pass: { next_read_sec: 30 } })).toBe(30_000);
+    expect(lukNextReadMs({ pass: { next_read_sec: 47.5 } })).toBe(47_500);
+  });
+  for (const bad of [0, -30, null, undefined, '30', Number.NaN, Number.POSITIVE_INFINITY]) {
+    it(`NEGATIVE: next_read_sec ${String(bad)} → null (the cadence interval)`, () => {
+      expect(lukNextReadMs({ pass: { next_read_sec: bad } })).toBeNull();
+    });
+  }
+  it('NEGATIVE: no board / no pass → null', () => {
+    expect(lukNextReadMs(null)).toBeNull();
+    expect(lukNextReadMs({})).toBeNull();
+  });
+});
+
+describe('🔴 lukLivePct', () => {
+  it('the served pct_text inside a served vs with a kind', () => {
+    expect(lukLivePct({ live_vs: { kind: 'between', text: 'w', pct_text: 'served pct' } })).toBe('served pct');
+  });
+  for (const [name, t] of [
+    ['no live_vs', {}], ['a vs without pct_text', { live_vs: { kind: 'between', text: 'w' } }],
+    ['a blank pct_text', { live_vs: { kind: 'between', text: 'w', pct_text: '  ' } }],
+    ['a number pct_text', { live_vs: { kind: 'between', text: 'w', pct_text: 1.2 } }],
+    ['a pct_text with no kind', { live_vs: { text: 'w', pct_text: 'served pct' } }],
+    ['a pct_text with a blank kind', { live_vs: { kind: '', text: 'w', pct_text: 'served pct' } }],
+    ['not a tile', null],
+  ] as const) {
+    it(`NEGATIVE: ${name} → null`, () => {
+      expect(lukLivePct(t)).toBeNull();
+    });
+  }
 });

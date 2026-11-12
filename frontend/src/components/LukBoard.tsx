@@ -22,16 +22,28 @@
  * line for every state (started / waiting / reused / closed / refused); a served poll plan (ggScanPlan) re-reads the
  * existing GET on a setTimeout chain until the awaited pass lands (lukScanLanded) or the served wait-max passes. Button
  * only — no scan on open (HIS CALL H5). The button never hides on a served state (a closed session included); it is
- * disabled only while the POST is out or the poll it started runs. Every word is a served field. */
+ * disabled only while the POST is out or the poll it started runs. Every word is a served field.
+ *
+ * 🔴 Realtime cards (2026-11-12, spec §3.5). Ajay, verbatim: "Luks scan is not realtime I see all dated values can you
+ * make it realtime". (1) The house card poll: ONE useCardLive call for the cards on screen (setup subs only, inside the
+ * SERVED window — refresh_sec > 0), its `levels` the served per-card `live_level`s copied verbatim (a stopped card
+ * serves none). Poll only: no `stream`, no `variant` — 🥇 is not in 🚩's stream registry. The served footer prints in
+ * the pass line. The overlay never changes a card's state, its order or the counts line. (2) The board re-read: when
+ * the pass serves `next_read_sec`, ONE setTimeout, re-armed after EVERY GET settles (a failed one included), replaces
+ * the cadence interval; absent → the served cadence interval exactly as before. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import {
   LUK_BASE, LUK_PLAYBOOK_SUB, LUK_SCAN_PATH, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TRACK_SUB,
-  lukHref, lukLegendRows, lukQuery, lukRefreshMs, lukScanLanded, lukText, parseLukSub, type LukBoard as LukBoardPayload,
+  lukHref, lukInWindow, lukLegendRows, lukLiveLevels, lukNextReadMs, lukQuery, lukRefreshMs, lukScanLanded, lukText,
+  parseLukSub, type LukBoard as LukBoardPayload,
 } from '../lib/luk';
 import { ggScanPlan, type GgScanResponse } from '../lib/gajjala';
+import { cardLiveSymbols } from '../lib/cardLive';
+import type { CmTapeSession } from '../lib/chartMaps';
+import { useCardLive } from '../hooks/useCardLive';
 import { useCurrentUser } from '../hooks/useUser';
 import { LukStrip } from './LukStrip';
 import { LukCard } from './LukCard';
@@ -65,6 +77,8 @@ export default function LukBoard() {
   const [boardSeq, setBoardSeq] = useState(0);
   const inFlight = useRef<number | null>(null);
   const boardRef = useRef<LukBoardPayload | null>(null);
+  /* 🔴 2026-11-12: bumped when the LATEST GET settles (success or error) — re-arms the served next-read timer. */
+  const [settled, setSettled] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -85,16 +99,28 @@ export default function LukBoard() {
       .catch((e) => { if (alive && my === seq.current) setErr(String(e?.message ?? e)); })
       .finally(() => {
         if (inFlight.current === my) { inFlight.current = null; settleReused(); }
+        if (my === seq.current && mounted.current) setSettled((n) => n + 1);
       });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reqKey, tick]);
 
   const every = lukRefreshMs(board);
+  /* 🔴 2026-11-12: a served next-read time replaces the interval; none served → the cadence interval as before. */
+  const nextServed = lukNextReadMs(board) != null;
   useEffect(() => {
+    if (nextServed) return undefined;
     const id = window.setInterval(() => setTick((n) => n + 1), every);
     return () => window.clearInterval(id);
-  }, [every]);
+  }, [every, nextServed]);
+  /* ONE timer at the served `next_read_sec` of the board on screen, re-armed after every GET settles (a failed GET keeps
+   * the board and re-arms on its served time). A GET still out when it fires re-arms on its own settle. */
+  useEffect(() => {
+    const ms = lukNextReadMs(boardRef.current);
+    if (ms == null) return undefined;
+    const id = window.setTimeout(() => { if (inFlight.current == null) setTick((n) => n + 1); }, ms);
+    return () => window.clearTimeout(id);
+  }, [settled]);
 
   /* 🔄 scan now — the 🚩 contract (GajjalaBoard startScan) minus the scan on open. */
   const { user } = useCurrentUser();
@@ -225,6 +251,14 @@ export default function LukBoard() {
   const cardsShown = sub !== LUK_PLAYBOOK_SUB && sub !== LUK_TRACK_SUB && !screen;
   const shownSymbols = useMemo(() => (cardsShown ? tiles.map((t) => t.symbol) : []), [cardsShown, tiles]);
   const room = useBounceRoom(shownSymbols);
+  /* 🔴 2026-11-12 — the house card poll on the cards on screen (setup subs, inside the served window), poll only. */
+  const inWindow = lukInWindow(board);
+  const liveSyms = useMemo(() => (cardsShown ? cardLiveSymbols(tiles) : []), [cardsShown, tiles]);
+  const liveLevels = useMemo(() => (cardsShown ? lukLiveLevels(tiles) : {}), [cardsShown, tiles]);
+  const cardPoll = useCardLive(liveSyms, inWindow && liveSyms.length > 0, {
+    resetKey: board, initialSession: (board?.session?.tape ?? null) as CmTapeSession | null, levels: liveLevels,
+  });
+  const liveFooter = inWindow && liveSyms.length > 0 ? lukText(cardPoll.footer) : null;
   /* 🔄 2026-11-11 — the ONE button, owner only, in the title row right after the title (luk.css .luk-topline); its
    * served answer lines print directly under that row, above the honesty paragraph, for every state. */
   const rescan = isOwner && scan && lukText(scan.rescan_label) ? (
@@ -266,6 +300,7 @@ export default function LukBoard() {
             {pass?.stale && lukText(pass.stale_text) ? (
               <span className="luk-stale" data-testid="luk-stale">{pass.stale_text}</span>
             ) : null}
+            {liveFooter ? <span className="luk-muted" data-testid="luk-live-footer">{liveFooter}</span> : null}
           </div>
           <LukStrip strip={board.strip} />
           {subs.length ? (
@@ -309,6 +344,8 @@ export default function LukBoard() {
                 <div className="cm-grid luk-grid" data-testid="luk-grid">
                   {tiles.map((t) => (
                     <LukCard key={`${t.symbol}-${t.setup}`} tile={t} focus={focus === t.symbol}
+                             live={cardPoll.answer?.quotes[(t.symbol || '').toUpperCase()]}
+                             nowLabels={cardPoll.answer?.now_labels}
                              houseChips={(
                                <>
                                  <GrowthChip symbol={t.symbol} />

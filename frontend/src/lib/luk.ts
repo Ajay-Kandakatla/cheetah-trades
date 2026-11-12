@@ -17,6 +17,7 @@ import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
 import type { GgBoard, GgScan, GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
+import type { CardLiveLevel, CardLiveLevels } from './cardLive';
 import { ggScanAdvanced } from './gajjala';
 
 /** The tab id (== backend chart_maps/luk/constants.LUK_TAB). */
@@ -78,6 +79,12 @@ export type LukTile = {
   /** 2026-11-11 — served: the card's read predates the latest pass (stamps compared server-side) + its served sentence. */
   not_reread?: boolean | null; not_reread_text?: string | null;
   gajjala?: { setup: string; state: string } | null;
+  /** 🔴 2026-11-12 (realtime cards, spec §3.3 / §3.5 — Ajay: "Luks scan is not realtime I see all dated values can you
+   *  make it realtime"): the served plan numbers, the served `live_level` {trigger, stop, tf} the live POST carries for
+   *  this card (null on a stopped card → no live words), and the served "did not ring" sentence of a board re-read A+. */
+  trigger?: number | null; stop?: number | null; tf?: string | null;
+  live_level?: CardLiveLevel | null;
+  not_rung_text?: string | null;
 };
 export type LukScreenHead = string | { key: string; label: string };
 export type LukScreenRow = {
@@ -134,6 +141,9 @@ export type LukPass = {
   /** 🔄 2026-11-11: the latest pass's clock (gajjala.tab.pass_stamp) — the stamp the scan POST's `latest_at` is
    *  compared to; and whether that pass was the owner's on-demand pass. */
   at?: string | null; on_demand?: boolean | null;
+  /** 🔴 2026-11-12: seconds until the board should re-read (the next cron pass is due, + the served margin); null /
+   *  absent (closed, no cron pass) → the served cadence interval as before. */
+  next_read_sec?: number | null;
 };
 export type LukLegend = Record<string, string> | Array<{ key: string; label?: string | null; text: string }>;
 export type LukBoard = {
@@ -248,4 +258,43 @@ export function lukChartTile(t: LukTile): CmTile & { vol_avg?: ServedVolAvg | nu
     vol_avg: t.vol_avg ?? t.vol_avg5 ?? null,
     bands: [], lines: t.lines ?? [], markers: t.markers ?? [], stats: [], why: '',
   };
+}
+
+/* ── 🔴 2026-11-12 realtime cards (spec §3.5). Ajay, verbatim: "Luks scan is not realtime I see all dated values can you
+ * make it realtime". The board rides the house 30 s card poll (useCardLive, poll only — Luk is not in 🚩's stream
+ * registry) and re-reads when the server says the next pass has landed. Every number below is SERVED. ── */
+
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+
+/** The live overlay's window: the SERVED `session.refresh_sec` is a positive number (0 / absent = closed → no POST). */
+export function lukInWindow(board: unknown): boolean {
+  const s = (board as LukBoard | null | undefined)?.session?.refresh_sec;
+  return typeof s === 'number' && Number.isFinite(s) && s > 0;
+}
+
+/** The live POST's `levels`: each tile's served `live_level` object copied verbatim, keyed by the upper-cased symbol.
+ *  A null / absent / non-object `live_level` (a stopped card) → the symbol is absent. */
+export function lukLiveLevels(tiles: ReadonlyArray<LukTile> | null | undefined): CardLiveLevels {
+  const out: CardLiveLevels = {};
+  for (const t of tiles || []) {
+    const sym = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+    const lv = t?.live_level;
+    if (!sym || !isObj(lv)) continue;
+    out[sym] = lv;
+  }
+  return out;
+}
+
+/** The served next-read time in ms: `pass.next_read_sec` × 1000 when it is a positive finite number, else null. */
+export function lukNextReadMs(board: unknown): number | null {
+  const s = (board as LukBoard | null | undefined)?.pass?.next_read_sec;
+  return typeof s === 'number' && Number.isFinite(s) && s > 0 ? s * 1000 : null;
+}
+
+/** The served percent words on a live-patched tile (`live_vs.pct_text`, present only inside a served `vs` with a
+ *  `kind`), else null — the FE computes no percent. */
+export function lukLivePct(tile: unknown): string | null {
+  const v = isObj(tile) ? tile.live_vs : undefined;
+  if (!isObj(v) || typeof v.kind !== 'string' || !v.kind) return null;
+  return lukText(v.pct_text);
 }

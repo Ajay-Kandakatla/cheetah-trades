@@ -14,22 +14,36 @@
  *
  * 2026-11-11 — a served `not_reread: true` (strictly true) with a served sentence prints that sentence as an amber
  * .luk-not-reread pill in the pills row and replaces the bottom read-at line (the pill carries the same time). A blank
- * sentence → no pill, the plain line prints; this file types no word. */
+ * sentence → no pill, the plain line prints; this file types no word.
+ *
+ * 🔴 2026-11-12 (realtime cards, spec §3.5; his words are quoted in LukBoard.tsx — this file keeps clear of the tag
+ * words the 11-11 source guard forbids). LukBoard hands in the card's quote from the house 30 s poll (`live`) and the served now labels;
+ * cardLive.patchTile splices it (intraday bars are never patched — only the now line and the served `vs`). Under the
+ * plan lines: the served `vs.text` and the served `vs.pct_text` (each only when served, and only on a card that
+ * carries a served `live_level` — a stopped card gets no live words). A served `not_rung_text` prints as a
+ * .luk-not-rung pill in the pills row. The state pill, `data-state` and the card order are never touched. */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import type { OuterChip } from '../lib/cardLadder';
-import { LUK_CHIP_KEYS, lukChartTile, lukMark, lukText, type LukTile } from '../lib/luk';
+import { liveVsText, patchTile, type CardLiveQuote } from '../lib/cardLive';
+import { LUK_CHIP_KEYS, lukChartTile, lukLivePct, lukMark, lukText, type LukTile } from '../lib/luk';
 
 /** The chips LukBoard mounts itself — PatternChart skips exactly these. */
 export const LUK_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'short', 'explosive', 'enterable'];
 
-export function LukCard({ tile: t, focus = false, houseChips = null }: {
+export function LukCard({ tile: t, focus = false, houseChips = null, live, nowLabels }: {
   tile: LukTile; focus?: boolean;
   /** 🚀 / 🩳 / 🧨 / 🎯 mounted by LukBoard (prop-fed reads); null → none. */
   houseChips?: ReactNode;
+  /** 🔴 this card's quote from the house card poll (useCardLive) + the served now labels; absent → the served tile. */
+  live?: CardLiveQuote; nowLabels?: readonly string[];
 }) {
-  const chart = lukChartTile(t);
+  const chart = live ? patchTile(lukChartTile(t), live, nowLabels ?? []) : lukChartTile(t);
+  const liveOn = !!t.live_level && typeof t.live_level === 'object';
+  const liveVs = liveOn ? liveVsText(chart) : null;
+  const livePct = liveOn ? lukLivePct(chart) : null;
+  const notRung = lukText(t.not_rung_text);
   const house = houseChips ? (
     <span className="luk-house-chips" data-testid={`luk-house-chips-${t.symbol}`}>{houseChips}</span>
   ) : null;
@@ -57,9 +71,12 @@ export function LukCard({ tile: t, focus = false, houseChips = null }: {
                 data-testid={`luk-state-${t.symbol}`}>{t.state_label}</span>
           {lukText(t.frame_text) ? <span className="luk-frame" data-testid={`luk-frame-${t.symbol}`}>{t.frame_text}</span> : null}
           {notReread ? <span className="luk-not-reread" data-testid={`luk-not-reread-${t.symbol}`}>{notReread}</span> : null}
+          {notRung ? <span className="luk-not-rung" data-testid={`luk-not-rung-${t.symbol}`}>{notRung}</span> : null}
         </div>
         {lukText(t.trigger_text) ? <p className="luk-plan" data-testid={`luk-trigger-${t.symbol}`}>{t.trigger_text}</p> : null}
         {lukText(t.stop_text) ? <p className="luk-plan" data-testid={`luk-stop-${t.symbol}`}>{t.stop_text}</p> : null}
+        {liveVs ? <p className="luk-line luk-live" data-testid={`luk-live-${t.symbol}`}>{liveVs}</p> : null}
+        {livePct ? <p className="luk-line luk-live" data-testid={`luk-live-pct-${t.symbol}`}>{livePct}</p> : null}
         {lukText(t.listed_why) ? <p className="luk-line luk-why" data-testid={`luk-why-${t.symbol}`}>{t.listed_why}</p> : null}
         {t.criteria?.length ? (
           <ul className="luk-criteria" data-testid={`luk-criteria-${t.symbol}`}>

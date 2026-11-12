@@ -38,6 +38,10 @@ MINE_CITE = "MINE — a Cheetah formula ({h})"
 EXTERNAL_TAIL = " — EXTERNAL, not re-run here"
 _YT = re.compile(r"[?&]v=([A-Za-z0-9_-]+)")
 _SEC_PER_MIN = 60                          # a unit, not a rule
+# 2026-11-12 (Ajay: "Luks scan is not realtime I see all dated values can you make it realtime") — the cadence line's
+# tail while LC.LUK_REREAD_SHOWN; the number is LC.LUK_REREAD_MAX, formatted at call time.
+REREAD_CLAUSE = ("; then every card the board shows (at most %d) and every card a 🥇 alert opened today is re-read — a "
+                 "re-read rings nothing.")
 # 2026-11-01 go-live (Ajay: "Lets make it live. also alerts too."): the words rules_lines()[0]'s mode clause STARTS with
 # in BOTH modes — supply_demand.rules_info classifies the ℹ️ alerts line by this name, never a retyped phrase
 ALERT_LINE_MARK = "Every alert"
@@ -261,8 +265,9 @@ def rules_lines() -> list:
          % (cap, avg, pxv, v1w, cap, avg, _usd(LC.LUK_LEADER_MIN_PX_VOL_1W_USD), e50, e21, cap, v1w, pxv,
             _g(LC.LUK_POTENT_CHG_FROM_OPEN_BAND_PCT), LC.LUK_SCREEN_TOP_N)),
         ("One pass every %d minutes, %s–%s ET, as a detached child of the 🚩 pass: up to %d screened names get "
-         "%d-minute, %d-minute and hourly bars."
-         % (cad, LC.LUK_PASS_OPEN_ET, LC.LUK_PASS_CLOSE_ET, LC.LUK_SHORTLIST_MAX, one, five)),
+         "%d-minute, %d-minute and hourly bars"
+         % (cad, LC.LUK_PASS_OPEN_ET, LC.LUK_PASS_CLOSE_ET, LC.LUK_SHORTLIST_MAX, one, five)
+         + (REREAD_CLAUSE % LC.LUK_REREAD_MAX if LC.LUK_REREAD_SHOWN else ".")),
         ("↩️ Pullback reversal: today's regular-session low at or under the prior close's daily %d EMA, a flush that "
          "touches the hourly %d EMA (reaching under the hourly %d EMA is a fact, not a gate), then the first break of the previous "
          "bar's high after the low — %d-minute bars for the first %d minutes, %d-minute bars to %d minutes."

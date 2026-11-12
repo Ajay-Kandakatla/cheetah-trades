@@ -139,6 +139,10 @@ SUBS = (("pullback_reversal", "↩️", "Pullback reversal"),   # MINE — emoji
         ("playbook", "📓", "Playbook"),
         ("track_record", "🏁", "Track record"))
 DEFAULT_SUB = "pullback_reversal"           # MINE — the first setup sub
+# ── 2026-11-12 realtime cards (Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it realtime") ──
+LUK_REREAD_SHOWN = True                     # Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it realtime" — every card the board shows + today's 🥇 alert cards re-read each pass AFTER the push gate (a re-read rings nothing); False = no re-read: the ring reads, the gate's input and the 1-minute clock exactly as 2026-11-11 (the pass doc then carries refresh {on: False})
+LUK_REREAD_MAX = len(SETUPS) * GC.TILE_LIMIT_DEFAULT   # derived (72) — the most cards the board shows by default: three setup subs × the default card limit
+LUK_NEXT_READ_SEC = 30                      # MINE — = chart_maps.live_card.CARD_LIVE_SEC (a test pins equality): the board re-reads this long after the next cron pass is due, and every this-many seconds while that pass is overdue by up to one cadence (then the cadence)
 
 # ── the sources (spec §3.1: the six transcripts + martin-luk.md, luk_bt_readme.md, backtests-critiques.md; WP-A1 adds
 #    SYNTHESIS.md and the substack sentences) ───────────────────────────────────────────────────────────────

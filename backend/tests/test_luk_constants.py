@@ -80,9 +80,11 @@ MINE_NAMES = frozenset({
     "LUK_INSTRUMENT_TYPES", "LUK_TRIGGER_WINDOW_END_MIN", "LUK_PDH_WINDOW", "SETUPS", "SUBS", "DEFAULT_SUB",
     "LUK_SOURCE_SHA256",
     "LUK_LEDGER_ROWS_MAX",   # WIDENED 2026-11-02 (🏁 like 🚩's): the list cap, derived from GC by name
+    "LUK_REREAD_MAX", "LUK_NEXT_READ_SEC",   # WIDENED 2026-11-12 (realtime cards)
 })
 DESIGN_NAMES = frozenset({"LUK_RECORD_FROM"})     # Ajay's design point #7
-HIS_CALL_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_LIVE_SINCE", "LUK_LIVE_WORDS"})   # his dated word (2026-11-01: "Lets make it live. also alerts too.")
+HIS_CALL_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_LIVE_SINCE", "LUK_LIVE_WORDS",   # his dated word (2026-11-01: "Lets make it live. also alerts too.")
+                            "LUK_REREAD_SHOWN"})   # WIDENED 2026-11-12 (realtime cards)
 # derived from GC by NAME (never retyped): constant → the GC attribute it must be
 GC_DERIVED = {
     "LUK_PASS_OPEN_ET": "PASS_OPEN_ET", "LUK_LEASE_SEC": "LEASE_SEC",
@@ -394,3 +396,44 @@ def test_negative_the_window_reader_respects_the_pad():
     assert not phrase_at("0.5%", "VKNEJA5r8zw.txt", "365", pad=2)
     assert phrase_at("risk per trade is around … 0.5%", "VKNEJA5r8zw.txt", "359")
     assert not phrase_at("", "VKNEJA5r8zw.txt", "359")
+
+
+# ── 2026-11-12 realtime cards (spec lukrt §3.1) ──────────────────────────────────────────────────────────────────
+def _line_of(name: str) -> str:
+    return next(SRC.splitlines()[ln - 1] for n, _v, ln in assigns(SRC) if n == name)
+
+
+def test_realtime_constants_values_and_derivation():
+    from chart_maps import live_card as LCARD
+    assert LC.LUK_REREAD_SHOWN is True
+    assert LC.LUK_REREAD_MAX == len(LC.SETUPS) * GC.TILE_LIMIT_DEFAULT == 72
+    assert "len(SETUPS) * GC.TILE_LIMIT_DEFAULT" in _line_of("LUK_REREAD_MAX")
+    assert LC.LUK_NEXT_READ_SEC == LCARD.CARD_LIVE_SEC == 30
+    assert 'Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it realtime"' \
+        in _line_of("LUK_REREAD_SHOWN")
+
+
+def test_realtime_constants_sit_after_default_sub():
+    order = [n for n, _v, _l in assigns(SRC)]
+    i = order.index("DEFAULT_SUB")
+    assert order[i + 1:i + 4] == ["LUK_REREAD_SHOWN", "LUK_REREAD_MAX", "LUK_NEXT_READ_SEC"]
+
+
+def test_negative_reread_switch_filed_as_mine_fails():
+    line = _line_of("LUK_REREAD_SHOWN")
+    bad = SRC.replace(line, _retag(line, "MINE"))
+    assert bad != SRC and ("LUK_REREAD_SHOWN", "his word not tagged as such") in tag_errors(bad)
+
+
+def test_negative_reread_numbers_filed_as_his_fail():
+    for name in ("LUK_REREAD_MAX", "LUK_NEXT_READ_SEC"):
+        line = _line_of(name)
+        bad = SRC.replace(line, _retag(line, 'Ajay 2026-11-12: "make it realtime"'))
+        assert bad != SRC and (name, "a Cheetah number filed as his") in tag_errors(bad)
+
+
+def test_negative_reread_numbers_untagged_fail():
+    for name in ("LUK_REREAD_SHOWN", "LUK_REREAD_MAX", "LUK_NEXT_READ_SEC"):
+        line = _line_of(name)
+        bad = SRC.replace(line, line[:line.find("  #")])
+        assert bad != SRC and (name, "untagged") in tag_errors(bad)

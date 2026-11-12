@@ -10,13 +10,13 @@ descriptors) — never in-process: supercronic runs without -overlapping, and an
 it SKIP the next live 🚩 pass. The child re-checks `enabled()`, `in_window()` and `fits()` (start + LUK_PASS_BUDGET_SEC
 + LUK_SLOT_MARGIN_SEC ≤ the next tick of the gajjala.run_1m.slot_of grid) and writes a "skipped" state doc otherwise.
 
-THE PASS (run_pass, 16 steps). 1 window → 2 lease (luk_state, Luk's own numbers) → 3 ONE whole-market snapshot →
+THE PASS (run_pass, 17 steps — 13b added 2026-11-12). 1 window → 2 lease (luk_state, Luk's own numbers) → 3 ONE whole-market snapshot →
 4 the stored type map (READ only) → 5 universe = CS/ADRC rows with a numeric price → 6 caps (cache only) → 7 daily facts
 (daily.warm: the TRUST rule decides cache hit vs fetch, ≤ LUK_DAILY_MAX_NEW_PER_PASS fetches, LUK_DAILY_WARM_BUDGET_SEC)
 → 8 his three screens → luk_screens → 9 QQQ / IWM state words (Luk's own fetch, ONCE per session: luk_state
 LUK_STATE_INDEX, REFIX 2026-11-01) → 10 the shortlist (+ names carried in forming / triggered) → 11 closed 1m / 5m / 60m frames (the pass budget left) → 12 the three detectors, the 1-minute A+ clock =
 the PREVIOUS pass's bars-through read off luk_state ([fixed: C1]) → luk_reads → 13 the A+ gate (alerts.run_pass — live since 2026-11-01)
-→ 14 the 🏁 grade step (ledger.grade_step; skipped on a dry run) → 15 this pass's bars-through written to luk_state
+→ 13b the board re-read (2026-11-12, display only — see below) → 14 the 🏁 grade step (ledger.grade_step; skipped on a dry run) → 15 this pass's bars-through written to luk_state
 (the next pass's clock) → 16 the pass doc + the /alerts PASS-HEALTH row (LUK_KIND) → the lease released.
 Every provider dependency is counted in the summary's `calls` block (the cost arithmetic of §3.15 is measured, never
 typed). Since 2026-11-01 every fresh, in-session 🥇 A+ rings his phone by his word (Ajay 2026-11-01: "Lets make it
@@ -25,6 +25,20 @@ in shadow, never sent. UNMEASURED: nothing here trades, sizes or enters a lane.
 
 CLI: `--child` (the cron child), `--dry-run` (dry store + dry deps: every write recorded, nothing lands; prints `calls`),
 `--json`, `--now ISO` (refused without --dry-run, exit 2; a naive stamp is ET), `--symbols A,B` (narrow the names read).
+
+🥇 13b THE BOARD RE-READ (2026-11-12). Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it
+realtime". After the push gate, every card the board shows by default (luk.tab.tiles_for + luk.tab._clip_focus — the
+board's own engine — over today's reads with THIS pass's ring reads overlaid in memory, interleaved across the setup
+subs, at most LC.LUK_REREAD_MAX) and every card a 🥇 alert opened today, minus the names this pass already read, is
+re-read with ONE more bars.frames_for call on the pass budget left (LUK_PASS_BUDGET_SEC − LUK_GRADE_BUDGET_SEC −
+elapsed) and the SAME 1-minute clock. A re-read is DISPLAY ONLY: it is never handed to the push gate, never counted in
+`n_read` / `states` / `aplus`, never moves the 1-minute clock, and its doc carries `refresh_only` + `cron_setups` (the
+on-demand rule), so `_carried` — and therefore the shortlist and what can ring — is exactly what it was. A re-read A+
+whose gate claim ids (GA.shadow_key / GA.claim_key under LUK) are both absent carries `not_rung` (one find_one; a read
+fault → no flag, fails closed). The whole step sits in ONE try: `_Superseded` is re-raised (the on-demand A8 stop),
+any other fault is `errors += ["refresh"]` + `refresh.skipped = "error"` and the 🏁 grade and the clock still run.
+LC.LUK_REREAD_SHOWN False or `--symbols` → no re-read (`refresh.skipped` says why). COST: + ≤ LUK_REREAD_MAX (+ today's
+alerted names) minute loads per pass, counted in `calls.minute_today` / `calls.minute_prior` like every other load.
 
 🔄 THE ON-DEMAND PASS (2026-11-11). Ajay 2026-11-11: "Can you put an ondeman scan button for Luk' scans too". `--on-demand`
 = `run_on_demand()` = run_pass(on_demand=True), spawned by chart_maps/luk/on_demand.py when he taps 🔄 scan now (never by
@@ -78,7 +92,15 @@ _LEASE_REASON = {"held": "lease held — another Luk pass is running",
 ON_DEMAND_PASS_SUFFIX = "on_demand"                   # the on-demand pass doc id "{date}|{HH:MM:SS}|on_demand"
 _SUPERSEDED = "superseded — a 5-minute 🥇 pass took the lease over; this on-demand pass stopped writing"
 _BODY_KEYS = ("ran", "dry", "errors", "lease", "snapshot", "screens", "shortlist", "bars", "n_read", "states", "aplus",
-              "alerts", "market_state", "ledger", "calls", "bars_through", "wall_s", "status")
+              "alerts", "market_state", "ledger", "calls", "bars_through", "wall_s", "status", "refresh")
+# 2026-11-12 13b the board re-read (Ajay 2026-11-12: "Luks scan is not realtime I see all dated values can you make it
+# realtime") — the pass doc's `refresh` block
+REFRESH_KEYS = ("on", "board_n", "board_read_n", "asked", "asked_n", "read_n", "not_read", "bars",
+                "aplus_not_rung", "budget_s", "wall_s", "skipped")
+SKIP_REFRESH_OFF = "off (LUK_REREAD_SHOWN)"
+SKIP_REFRESH_SYMBOLS = "--symbols"
+SKIP_REFRESH_ERROR = "error"
+_BARS_KEYS = ("loaded", "no_bars", "failed", "over_budget")
 
 
 class _Superseded(Exception):
@@ -271,22 +293,180 @@ def _hhmm(t: Optional[datetime]) -> Optional[str]:
     return t.astimezone(ET).strftime("%H:%M") if isinstance(t, datetime) else None
 
 
-def _carried(st, session) -> set:
+def _cron_setups(doc) -> Optional[dict]:
+    """The setups the CRON shortlist last judged: `cron_setups` on a doc that an on-demand pass OR a board re-read wrote
+    (`on_demand` / `refresh_only` True), else `setups`. None for a non-dict."""
+    if not isinstance(doc, dict):
+        return None
+    return doc.get("cron_setups") if (doc.get("on_demand") or doc.get("refresh_only")) else doc.get("setups")
+
+
+def _carried(st, session, today_docs: Optional[list] = None) -> set:
     """Today's and the previous market day's reads with a setup in forming / triggered. A read an on-demand pass wrote
-    (`on_demand` True, 2026-11-11) counts by its `cron_setups` — the last CRON pass's setups — so an on-demand pass never
-    adds or drops a carried name."""
+    (`on_demand` True, 2026-11-11) or a board re-read wrote (`refresh_only` True, 2026-11-12) counts by its
+    `cron_setups` — the last CRON pass's setups — so neither ever adds or drops a carried name. `today_docs` (the
+    pass's ONE read of today's docs) stands in for `st.reads(session)` when given; the previous day is still read."""
     from catalysts.medical.reaction import prev_market_day
     out: set = set()
     for d in (session, prev_market_day(session)):
-        for doc in st.reads(d) or []:
+        docs = today_docs if (today_docs is not None and d == session) else (st.reads(d) or [])
+        for doc in docs:
             if not isinstance(doc, dict):
                 continue
-            setups = doc.get("cron_setups") if doc.get("on_demand") else doc.get("setups")
+            setups = _cron_setups(doc)
             if isinstance(setups, dict) and any(isinstance(r, dict) and r.get("state") in CARRY_STATES
                                                 for r in setups.values()):
                 if doc.get("symbol"):
                     out.add(str(doc["symbol"]).upper())
     return out
+
+
+def _overlay(today_docs: list, ring_docs: dict) -> list:
+    """today_docs with each symbol in ring_docs ({SYM: the doc this pass just upserted, in the store's shape
+    dict(body, date, symbol, updated_at=now, at=now)}) REPLACED by that doc, and ring symbols absent from today_docs
+    appended (sorted). Pure; never mutates its arguments. [C4]"""
+    ring = {str(k).upper(): v for k, v in (ring_docs or {}).items()}
+    out, seen = [], set()
+    for d in today_docs or []:
+        if not isinstance(d, dict):
+            continue
+        sym = str(d.get("symbol") or "").upper()
+        if sym and sym in ring:
+            out.append(ring[sym])
+            seen.add(sym)
+        else:
+            out.append(d)
+    out.extend(ring[s] for s in sorted(ring) if s not in seen)
+    return out
+
+
+def _board_names(today_docs: list, alert_rows: Optional[list]) -> list:
+    """Every card the board shows by default — luk.tab.tiles_for(docs, setup, caps={}) cut by
+    luk.tab._clip_focus(…, "", GC.TILE_LIMIT_DEFAULT) per LC.SETUPS sub (the board's own engine, imported), interleaved
+    by position (card 1 of each sub, then card 2, …) — cut to LC.LUK_REREAD_MAX; then today's alert symbols
+    (alert_rows: `at` desc, symbol asc) not already listed. Upper-cased, de-duplicated, in that order. Reads its
+    arguments only."""
+    from chart_maps.gajjala import constants as GC
+    from . import tab as TB
+    docs = [d for d in today_docs or [] if isinstance(d, dict)]
+    per = [[str(t.get("symbol") or "").upper() for t in
+            TB._clip_focus(TB.tiles_for(docs, setup, caps={}), "", GC.TILE_LIMIT_DEFAULT)] for setup in LC.SETUPS]
+    shown: list = []
+    for i in range(max((len(p) for p in per), default=0)):
+        for p in per:
+            if i < len(p) and p[i] and p[i] not in shown:
+                shown.append(p[i])
+    out = shown[:max(0, int(LC.LUK_REREAD_MAX))]
+    rows = [r for r in alert_rows or [] if isinstance(r, dict) and r.get("symbol")]
+    rows.sort(key=lambda r: str(r["symbol"]).upper())
+    rows.sort(key=lambda r: str(r.get("at") or ""), reverse=True)     # stable: `at` desc, then symbol asc
+    for r in rows:
+        sym = str(r["symbol"]).upper()
+        if sym not in out:
+            out.append(sym)
+    return out
+
+
+def _rang(coll, session, sym: str, setup: str) -> Optional[bool]:
+    """Did the gate ever claim this (sym, setup) today? ONE coll.find_one over the gate's own ids
+    (GA.shadow_key / GA.claim_key under LUK — luk/alerts.py run_pass). True = a claim doc exists (shadow, claimed,
+    pushed, failed, no_target); False = neither id (a `#state` refusal never matches); None = unknown (coll None, or the
+    find raised) → no pill (fails CLOSED — never GA._exists, which fails open). [C2]"""
+    from chart_maps.gajjala import alerts as GA
+    from .variant import LUK
+    if coll is None:
+        return None
+    ids = [GA.shadow_key(session, sym, setup, LUK), GA.claim_key(session, sym, setup, LUK)]
+    try:
+        return coll.find_one({"_id": {"$in": ids}}) is not None
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("luk pass: claim read failed for %s %s: %s", sym, setup, type(exc).__name__)
+        return None
+
+
+def _refresh_skipped(reason: str) -> dict:
+    """The `refresh` block of a pass that did not re-read: every REFRESH_KEYS key, on False, counts 0, lists [],
+    bars {loaded, no_bars, failed, over_budget: 0}, budget_s / wall_s 0.0, skipped = reason."""
+    return {"on": False, "board_n": 0, "board_read_n": 0, "asked": [], "asked_n": 0, "read_n": 0, "not_read": [],
+            "bars": {k: 0 for k in _BARS_KEYS}, "aplus_not_rung": [], "budget_s": 0.0, "wall_s": 0.0,
+            "skipped": reason}
+
+
+def _read_body(sym: str, F, setups: dict, facts_of_sym, rank: dict, rows_by: dict) -> dict:
+    """One read doc's body (the ring loop and the board re-read write the same shape)."""
+    from chart_maps.gajjala.bars import tile_payload
+    try:
+        tile = tile_payload(F, "5m")
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("luk pass: tile failed for %s: %s", sym, exc)
+        tile = {}
+    fct = facts_of_sym or {}
+    row = rows_by.get(sym) or {}
+    return {
+        "as_of_bar_t5": F.as_of_bar_t.get("5m"), "as_of_bar_t1": F.as_of_bar_t.get("1m"),
+        "as_of_bar_t60": F.as_of_bar_t.get("60m"), "setups": setups, "facts": fct,
+        "tile": {"bars5": tile.get("bars"), "curves5": tile.get("curves"), "vol_avg5": tile.get("vol_avg")},
+        "screens_rank": rank.get(sym, {}), "tier": fct.get("tier"), "cap_text": row.get("cap_text")}
+
+
+def _board_reread(st, session, now, *, today_docs: list, ring_docs: dict, names: list, facts: dict, rows_by: dict,
+                  rank: dict, prev_t1, load_day, deps, t0: float, on_demand: bool, mine, errors: list) -> dict:
+    """Step 13b — the board re-read (display only; rings nothing). -> the `refresh` block (REFRESH_KEYS). Raises only
+    _Superseded (through mine()); any other fault is the caller's (run_pass) — see the step-13b wrapper."""
+    from . import bars as BA
+    from . import detectors as DT
+    start = deps.clock()
+    iso = session.isoformat() if hasattr(session, "isoformat") else str(session)
+    board = _board_names(_overlay(today_docs, ring_docs), st.alert_rows([session]))
+    ring = {str(s).upper() for s in names or []}
+    asked = [s for s in board if s not in ring]
+    budget = max(0.0, LC.LUK_PASS_BUDGET_SEC - LC.LUK_GRADE_BUDGET_SEC - (deps.clock() - t0))
+    rstats: dict = {k: 0 for k in _BARS_KEYS}
+    rframes: dict = {}
+    if asked and budget > 0:
+        rframes = BA.frames_for(asked, session, now, load_day=load_day, budget_sec=budget, stats=rstats) or {}
+    elif asked:
+        rstats["over_budget"] = len(asked)
+    prior = {str(d["symbol"]).upper(): d for d in today_docs or [] if isinstance(d, dict) and d.get("symbol")}
+    coll = st.alerts_coll()
+    written: list = []
+    not_rung_all: list = []
+    for sym in asked:
+        F = rframes.get(sym)
+        if F is None:
+            continue
+        pd_ = prior.get(sym) or {}
+        f = facts.get(sym)
+        if not f:                                               # absent, or a falsy daily.Pending
+            pf = pd_.get("facts")
+            if isinstance(pf, dict) and pf and not pf.get("pending"):
+                f = pf                                          # the same session's stored facts (never a pending)
+        try:
+            setups = DT.read_all(F, f, iso, prev_through_1m=prev_t1) or {}
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("luk pass: re-read failed for %s: %s", sym, type(exc).__name__)
+            errors.append(f"reread:{sym}")
+            continue
+        body = _read_body(sym, F, setups, f, rank, rows_by)
+        body["refresh_only"] = True
+        body["cron_setups"] = _cron_setups(pd_)
+        if on_demand:
+            body["on_demand"] = True
+        nr: list = []
+        for setup, r in setups.items():
+            if (r or {}).get("state") == "aplus" and _rang(coll, session, sym, setup) is False:
+                nr.append(setup)
+                not_rung_all.append(f"{sym}|{setup}")
+        body["not_rung"] = nr
+        mine()
+        st.upsert_read(session, sym, body, now=now)
+        written.append(sym)
+    got = set(written) | {str(s).upper() for s in (ring_docs or {})}
+    return {"on": True, "board_n": len(board), "board_read_n": sum(1 for s in board if s in got),
+            "asked": list(asked), "asked_n": len(asked), "read_n": len(written),
+            "not_read": [s for s in asked if s not in set(written)],
+            "bars": {k: rstats.get(k, 0) for k in _BARS_KEYS}, "aplus_not_rung": not_rung_all,
+            "budget_s": round(budget, 3), "wall_s": round(deps.clock() - start, 3), "skipped": None}
 
 
 def _new_out(now: datetime, dry: bool) -> dict:
@@ -297,7 +477,7 @@ def _new_out(now: datetime, dry: bool) -> dict:
 
 def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps] = None, dry: bool = False,
              symbols: Optional[list] = None, on_demand: bool = False) -> dict:
-    """One Luk pass (the 16 steps of the module docstring). Never raises past a step: a failure is logged, named in
+    """One Luk pass (the 17 steps of the module docstring — 13b the board re-read, 2026-11-12). Never raises past a step: a failure is logged, named in
     `errors`, and the pass still records. -> the summary (also the pass doc's body).
 
     `on_demand=True` (2026-11-11 — call it through `run_on_demand`): the owner's on-demand pass — an on_demand lease,
@@ -393,7 +573,8 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             log.warning("luk pass: market state failed: %s", type(exc).__name__)
             out["errors"].append("market_state")
             out["market_state"] = None
-        names, capped_n = SC.shortlist(lists, _carried(st, session))   # 10 the shortlist
+        today_docs = [d for d in (st.reads(session) or []) if isinstance(d, dict)]   # read ONCE per pass (2026-11-12)
+        names, capped_n = SC.shortlist(lists, _carried(st, session, today_docs=today_docs))   # 10 the shortlist
         if want:
             names, capped_n = want, 0
         out["shortlist"] = {"n": len(names), "capped_n": capped_n, "symbols": list(names)}
@@ -412,9 +593,9 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     rank.setdefault(str(r["symbol"]).upper(), {})[key] = r.get("rank")
         t1 = t5 = None
         prior: dict = {}
+        ring_docs: dict = {}                                    # 2026-11-12 [C4]: this pass's ring reads, in memory
         if on_demand:                                           # the last CRON setups each on-demand read carries
-            prior = {str(d["symbol"]).upper(): d for d in (st.reads(session) or [])
-                     if isinstance(d, dict) and d.get("symbol")}
+            prior = {str(d["symbol"]).upper(): d for d in today_docs if d.get("symbol")}
         for sym, F in frames.items():
             try:
                 setups = DT.read_all(F, facts.get(sym), iso, prev_through_1m=prev_t1) or {}
@@ -431,25 +612,14 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     aplus.append({"symbol": sym, "setup": setup, "entry_bar_t": r.get("entry_bar_t")})
             t1 = _later(t1, BA.latest_closed_t(F, "1m"))
             t5 = _later(t5, BA.latest_closed_t(F, "5m"))
-            from chart_maps.gajjala.bars import tile_payload
-            try:
-                tile = tile_payload(F, "5m")
-            except Exception as exc:                            # noqa: BLE001
-                log.debug("luk pass: tile failed for %s: %s", sym, exc)
-                tile = {}
-            fct = facts.get(sym) or {}
-            row = rows_by.get(sym) or {}
-            body = {
-                "as_of_bar_t5": F.as_of_bar_t.get("5m"), "as_of_bar_t1": F.as_of_bar_t.get("1m"),
-                "as_of_bar_t60": F.as_of_bar_t.get("60m"), "setups": setups, "facts": fct,
-                "tile": {"bars5": tile.get("bars"), "curves5": tile.get("curves"), "vol_avg5": tile.get("vol_avg")},
-                "screens_rank": rank.get(sym, {}), "tier": fct.get("tier"), "cap_text": row.get("cap_text")}
+            body = _read_body(sym, F, setups, facts.get(sym), rank, rows_by)
             if on_demand:
                 pd_ = prior.get(sym) or {}
                 body["on_demand"] = True
-                body["cron_setups"] = pd_.get("cron_setups") if pd_.get("on_demand") else pd_.get("setups")
+                body["cron_setups"] = _cron_setups(pd_)
             mine()
             st.upsert_read(session, sym, body, now=now)
+            ring_docs[sym] = dict(body, date=iso, symbol=sym, updated_at=now, at=now)   # memory only [C4]
         out["n_read"] = len(reads)
         out["states"] = states
         out["aplus"] = aplus
@@ -459,6 +629,22 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         except Exception as exc:                                # noqa: BLE001
             log.warning("luk pass: shadow gate failed: %s", type(exc).__name__)
             out["errors"].append("alerts")
+        try:                                                    # 13b the board re-read (display only — rings nothing)
+            if not LC.LUK_REREAD_SHOWN:
+                out["refresh"] = _refresh_skipped(SKIP_REFRESH_OFF)
+            elif want:
+                out["refresh"] = _refresh_skipped(SKIP_REFRESH_SYMBOLS)
+            else:
+                out["refresh"] = _board_reread(st, session, now, today_docs=today_docs, ring_docs=ring_docs,
+                                               names=names, facts=facts, rows_by=rows_by, rank=rank, prev_t1=prev_t1,
+                                               load_day=load_day, deps=deps, t0=t0, on_demand=on_demand, mine=mine,
+                                               errors=out["errors"])
+        except _Superseded:
+            raise                                               # the on-demand A8 stop — never swallowed (critique C1)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("luk pass: board re-read failed: %s", type(exc).__name__)
+            out["errors"].append("refresh")
+            out["refresh"] = _refresh_skipped(SKIP_REFRESH_ERROR)
         out["ledger"] = None                                    # 14 the 🏁 grade step (none on a dry / on-demand run)
         if not dry and not on_demand:
             try:
@@ -655,7 +841,8 @@ def main(argv=None, *, store=None, deps: Optional[Deps] = None) -> int:
 
 
 __all__ = ["ARGV_CHILD", "PROC_NAME", "CALL_KEYS", "enabled", "in_window", "fits", "slot_of", "Deps", "dry_deps",
-           "run_pass", "run_on_demand", "prev_bars_through", "spawn_child", "child_refusal", "main"]
+           "run_pass", "run_on_demand", "prev_bars_through", "spawn_child", "child_refusal", "main",
+           "REFRESH_KEYS", "SKIP_REFRESH_OFF", "SKIP_REFRESH_SYMBOLS", "SKIP_REFRESH_ERROR"]
 
 
 if __name__ == "__main__":

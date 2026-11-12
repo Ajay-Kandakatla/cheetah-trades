@@ -37,7 +37,7 @@
 .luk-card { border-radius: 8px; min-width: 0; max-width: 100%; }
 .luk-card.luk-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
 .luk-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
-.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread {
+.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread, .luk-pills .luk-not-rung {
   white-space: normal; overflow-wrap: anywhere;
 }
 .luk-plan, .luk-criteria li, .luk-why, .luk-pb-item { overflow-wrap: anywhere; }
@@ -63,6 +63,15 @@
   display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600;
   color: var(--gold, #c9a227); border: 1px solid var(--gold, #c9a227);
 }
+/* 🔴 2026-11-12 (realtime cards) — the served "did not ring" pill of a board re-read A+: a dashed muted pill beside the
+   state pill (never the A+ green — it rang nothing); wraps like the other pills (📱 430 px). */
+.luk-not-rung {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600; min-width: 0;
+  color: var(--ink-muted, #94a3b8); border: 1px dashed var(--ink-muted, #94a3b8);
+}
+/* 🔴 2026-11-12 — the served live words under the plan lines (the 30 s card poll): numbers align, the line wraps
+   instead of widening the card (📱 430 px). */
+.luk-live { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .luk-plan { margin: 0; font-variant-numeric: tabular-nums; }
 .luk-criteria { list-style: none; margin: 0; padding: 0; }
 .luk-criteria li { line-height: 1.35; }

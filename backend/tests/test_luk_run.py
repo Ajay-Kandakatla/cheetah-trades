@@ -160,7 +160,8 @@ def fake_deps(**over) -> LR.Deps:
 
 SUMMARY_KEYS = {"ran", "session", "at_et", "dry", "errors", "lease", "snapshot", "screens", "shortlist", "bars",
                 "n_read", "states", "aplus", "alerts", "market_state", "ledger", "calls", "bars_through", "wall_s",
-                "status"}
+                "status",
+                "refresh"}                  # WIDENED 2026-11-12 (🥇 realtime cards): step 13b's board re-read block
 
 
 # ── the switch, the window, the slot ──────────────────────────────────────────────────────────────────────────────

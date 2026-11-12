@@ -57,6 +57,7 @@
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
    "stale_after_sec": 900,
@@ -87,7 +88,7 @@
    "tape": "rth"
   },
   "strip": {
-   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
@@ -107,7 +108,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "pullback_reversal",
@@ -286,10 +287,16 @@
      }
     ],
     "listed_why": null,
+    "live_level": {
+     "stop": 11.98,
+     "tf": "5m",
+     "trigger": 12.4
+    },
     "markers": [],
     "name": null,
     "not_reread": false,
     "not_reread_text": null,
+    "not_rung_text": null,
     "r_usd": 0.42,
     "read_at_text": "read at 10:11 ET",
     "risk_pct": 3.39,
@@ -422,10 +429,16 @@
      }
     ],
     "listed_why": "stop too wide by his rule — 6.2% > 5% of the trigger",
+    "live_level": {
+     "stop": 46.9,
+     "tf": "5m",
+     "trigger": 50.0
+    },
     "markers": [],
     "name": null,
     "not_reread": false,
     "not_reread_text": null,
+    "not_rung_text": null,
     "r_usd": 3.1,
     "read_at_text": "read at 10:11 ET",
     "risk_pct": 6.2,
@@ -558,10 +571,16 @@
      }
     ],
     "listed_why": "more than 3% above the low of day — his no-chase rule",
+    "live_level": {
+     "stop": 19.2,
+     "tf": "5m",
+     "trigger": 20.0
+    },
     "markers": [],
     "name": null,
     "not_reread": false,
     "not_reread_text": null,
+    "not_rung_text": null,
     "r_usd": 0.8,
     "read_at_text": "read at 10:11 ET",
     "risk_pct": 4.0,
@@ -655,6 +674,7 @@
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
    "stale_after_sec": 900,
@@ -834,7 +854,7 @@
    "tape": "rth"
   },
   "strip": {
-   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
@@ -854,7 +874,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "premarket",
@@ -993,6 +1013,7 @@
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
    "stale_after_sec": 900,
@@ -1023,7 +1044,7 @@
    "tape": "rth"
   },
   "strip": {
-   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
+   "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
    "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
@@ -1043,7 +1064,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED.",
+   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "track_record",

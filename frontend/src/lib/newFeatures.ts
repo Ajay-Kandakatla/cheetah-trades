@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Luks scan is not realtime I see all dated values can you
+  // make it realtime". chart_maps/luk/run.py step 13b (after the push gate AL.run_pass, before the 🏁 grade step) re-reads
+  // every card the board shows + today's 🥇 alert cards while LC.LUK_REREAD_SHOWN (a re-read rings nothing; the served
+  // `refresh` block says what was read). LukBoard rides useCardLive (poll only, no stream) for the live price vs the served
+  // trigger / stop (live_card `live_vs` + `pct_text`), and re-GETs the board LC.LUK_NEXT_READ_SEC after the next pass is
+  // due. UNMEASURED. Doc docs/luk/realtime_cards_2026_11_12.md. Pinned by scripts/contracts.mjs
+  // ("🥇 Luk realtime cards (2026-11-12)").
+  { id: 'chart-maps-luk-realtime-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=luk',
+    label: "🥇 Luk's: every card on the board is re-read on every 5-minute pass (after the push gate — a re-read rings nothing new), carries the live price vs its trigger and stop every 30 s, and the board re-reads itself right after each pass lands. UNMEASURED. You said: “Luks scan is not realtime I see all dated values can you make it realtime”." },
   // Ajay 2026-11-11 ~12:50 ET (verbatim in the label, his spelling kept; the fragment with the b-word is NOT quoted — the
   // b-word rule on his surfaces, kiss rvol spec R1): "Sort by relative volume, and closer to the EMA." / "This filter is
   // needed for EMA Kiss atleast". context.warm_squeeze_history stores avg_vol_50 (MB.avg_volume_before, the 🎾 chip's
