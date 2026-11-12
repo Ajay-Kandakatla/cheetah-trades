@@ -164,6 +164,7 @@ GAJJALA_BREAK_PUSH_MODES = ("off", "shadow", "live")   # Ajay 2026-11-11 "please
 GAJJALA_BREAK_PUSH_MODE = "shadow"           # HIS CALL #1 — Ajay 2026-11-11 "please tell me to enter based on this"; SHADOW until his word ("live" = rings his phone)
 GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND   # HIS CALL #2 — rides the 🧠 kind (no 8th OWNER_KEEP_SET kind); "gajjala_break" only on his word
 FOCUS_N = 5                                  # Ajay 2026-11-11 "Also apply your proposal too." — proposal #9 "Focus 5"; GG U14 "4–5 active (1–2 in poor markets)"
+ENTRY_MARK_NEW_MIN = 30                      # Ajay 2026-11-12 "an Indicator or new tickers with in last 30 mins like blinkers or something would be nice" — how long a ✨ blinker stays on a Gajjala card / sub chip (display only)
 PASS_MINUTE_OFFSET = 1                       # TRANSPORT — = the crontab minute field "1-56/5" of chart_maps.gajjala.run (test pins it)
 
 # WP6 study — Ajay round C (exits reported side by side; placebo = same-session scanner names with no setup)

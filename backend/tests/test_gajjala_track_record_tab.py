@@ -27,6 +27,10 @@ fixture never carries either.
 Regen 2026-11-11 (entry spec, T-PINS #3; diff verified key for key against HEAD): added `push_break` {mode, text} on
 the three span boards; changed `push_potential.text` (the armed / one-per-name 🧠 sentence). Nothing else moved — no
 row, count or order. The ⚡ feed word is pinned (tests/gg_feed_pin.py) so the golden is the same on every machine.
+
+Regen 2026-11-12 (🟢 entry marks, docs/gajjala/entry_marks_2026_11_12.md; diff verified key for key against HEAD): 3
+leaves, ALL ADDED — `entry_marks` {"subs": {}} on the three span boards (no pass this session on the fixture store — the 🎯 clock is not live).
+Nothing else moved.
 """
 from __future__ import annotations
 

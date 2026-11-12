@@ -20,6 +20,10 @@ Regen 2026-11-11 (entry + stages specs, T-PINS #3; diff verified key for key aga
 `gajjala.plan_text`, `gajjala.chips.vol_dried`, `push_break` {mode, text} on all three boards, 🧠 Track `brk_text`
 (null); changed `push_potential.text` (the armed / one-per-name 🧠 sentence). Nothing else moved. The ⚡ feed word is
 pinned (tests/gg_feed_pin.py) so the golden is the same on every machine.
+
+Regen 2026-11-12 (🟢 entry marks, docs/gajjala/entry_marks_2026_11_12.md; diff verified key for key against HEAD): 23
+leaves, ALL ADDED — `entry_marks.subs.bull_flag` {green, new} on the three boards and ONE tile `new_mark`. Nothing else
+moved (plan_text, subs, counts, order byte-equal).
 """
 from __future__ import annotations
 

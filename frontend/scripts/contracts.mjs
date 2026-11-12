@@ -10143,8 +10143,12 @@ const CONTRACTS = [
       if (/ggPx\(read\.(trigger|stop)\)|riskText\(read\./.test(boardCode)) errs.push('GajjalaBoard composes the plan line again (ggPx(read.trigger|stop) / riskText(read.) — it is served');
       if (/Entry above|[`'](?:trigger|stop|risk) /.test(boardCode)) errs.push('GajjalaBoard types a plan word ("Entry above" / \'trigger \' / \'stop \' / \'risk \') — the plan line is served');
       const tabPy = tryRead('../backend/chart_maps/gajjala/tab.py', 'the served plan line');
+      // UPDATED 2026-11-12 (🟢 entry marks spec §3.2(b)): the plan_of test moved verbatim into ONE helper
+      // tab.is_entry_plan(read) — read by plan_text's head AND entry_marks (the 🟢). The head line now calls the helper,
+      // and the helper's return line carries the same ledger.plan_of(trig, stop)[0] == PLANS[0] test. Same behaviour.
       for (const need of ['PLAN_ENTRY_HEAD = "Entry above"', 'PLAN_LEVEL_HEAD = "trigger"',
-                          'head = PLAN_ENTRY_HEAD if LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0] else PLAN_LEVEL_HEAD',
+                          'head = PLAN_ENTRY_HEAD if is_entry_plan(read) else PLAN_LEVEL_HEAD',
+                          'return LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0]',
                           'parts = [f"{head} {_px(trig)}",', 'f"stop {_px(stop)}" if stop is not None else None,',
                           '"plan_text": plan_text(read),']) {
         if (tabPy && !tabPy.includes(need)) errs.push(`tab.py must carry ${need} (the no-risk read never says "Entry above")`);

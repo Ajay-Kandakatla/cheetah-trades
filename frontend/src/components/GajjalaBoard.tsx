@@ -179,6 +179,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from '
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
+import { GgNewMark, GgSubMarksView } from './GgEntryMarks';
 import { GrowthChip } from './GrowthChip';
 import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
@@ -582,6 +583,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM, GG_KIND_PARAM]);
 
   const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null, title: null }));
+  const entryMarks = board?.entry_marks?.subs ?? null;
   const session = board?.session;
   const pass = board?.pass;
   const strip = board?.strip;
@@ -685,6 +687,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                   title={s.title || undefined}
                   onClick={() => pickSub(s.key)}>
             {`${s.emoji} ${s.label}`}{typeof s.count === 'number' ? ` · ${s.count}` : ''}
+            <GgSubMarksView subKey={s.key} block={entryMarks?.[s.key] ?? null} />
           </button>
         ))}
       </div>
@@ -828,6 +831,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                         {`${tfWords(t.tf as GgTf)} read`}
                       </span></>
                     ) : null}
+                    <GgNewMark mark={t.new_mark} sym={t.symbol} />
                   </div>
                   {t.bars?.length ? (
                     <PatternChart tile={t}

@@ -94,6 +94,7 @@
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
+import type { GgEntryMarks, GgNewMark } from './ggEntryMarks';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
 export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
@@ -680,7 +681,9 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
   /** 💋 2026-11-11 (kiss rvol spec addendum): the served "lifting off the 9 EMA now" flag — the 💋 sub only. true = A+ /
    *  triggered (flew) or forming-ready (kissing the 9 EMA on the latest closed bar, the existing K5 read); false = neither;
    *  null / absent = unknown (NEVER treated as false — the 💋 toggle never hides it). Display only. */
-  kiss_now?: boolean | null };
+  kiss_now?: boolean | null;
+  /** ✨ 2026-11-12 (entry marks §3.5): the served card blinker — drawn until its served `until`; absent → nothing. */
+  new_mark?: GgNewMark | null };
 
 /** 💋 2026-11-11 (kiss rvol spec addendum): the served toggle block — the 💋 sub only. Every word SERVED (the FE types
  *  none): `label` = the chip, `hint` = its native title, `hidden_text_template` = the line printed under the chip while it
@@ -797,6 +800,8 @@ export type GgBoard = {
   day2?: GgDay2Block | null;
   /** 💋 2026-11-11: the served "lifting off the 9 EMA" toggle block (the 💋 sub only); absent elsewhere → no toggle. */
   kiss_filter?: GgKissFilter | null;
+  /** 🟢 ✨ 2026-11-12 (entry marks §3.5): the served per-sub green count + chip blinker; absent on an older API → no mark. */
+  entry_marks?: GgEntryMarks | null;
   /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */
   scan?: GgScan | null;
   /** 🎯 the served A+ line (every sub); absent on an older API. */

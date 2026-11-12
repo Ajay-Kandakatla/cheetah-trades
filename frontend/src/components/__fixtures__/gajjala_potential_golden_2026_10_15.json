@@ -113,6 +113,53 @@
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — ready — the next bar over the trigger is the entry: AAA, EEE · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — EEE ready since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     },
+     "kiss_fly": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — A+ on the latest closed bar: BBB (no alert rang) · display only — no order, count or alert changes · UNMEASURED"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "3",
+       "n": 3,
+       "title": "🟢 3 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: AAA, DDD, EEE · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — DDD 🧠 trigger armed since the 10:31 ET pass · EEE 🧠 trigger armed since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     },
+     "reversal_squeeze": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — ready — the next bar over the trigger is the entry: DDD · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — DDD ready since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     }
+    }
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -635,6 +682,13 @@
      ],
      "markers": [],
      "name": null,
+     "new_mark": {
+      "at_et": "10:31",
+      "kind": "ready",
+      "text": "new 10:31 ET",
+      "title": "ready since the 10:31 ET pass · marked new for 30 minutes · display only",
+      "until": "2026-10-13T15:01:00+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -1971,6 +2025,53 @@
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — ready — the next bar over the trigger is the entry: AAA, EEE · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — EEE ready since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     },
+     "kiss_fly": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — A+ on the latest closed bar: BBB (no alert rang) · display only — no order, count or alert changes · UNMEASURED"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "3",
+       "n": 3,
+       "title": "🟢 3 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: AAA, DDD, EEE · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — DDD 🧠 trigger armed since the 10:31 ET pass · EEE 🧠 trigger armed since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     },
+     "reversal_squeeze": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — ready — the next bar over the trigger is the entry: DDD · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — DDD ready since the 10:31 ET pass",
+       "until": "2026-10-13T15:01:00+00:00"
+      }
+     }
+    }
+   },
    "focus": {
     "n": 5,
     "text": "🔝 Focus 5 — the first five cards in this board's own order (GG keeps 4–5 names active). Display only: nothing measured says these five win more."
@@ -2403,6 +2504,13 @@
      ],
      "markers": [],
      "name": null,
+     "new_mark": {
+      "at_et": "10:31",
+      "kind": "armed",
+      "text": "new 10:31 ET",
+      "title": "🧠 trigger armed since the 10:31 ET pass · marked new for 30 minutes · display only",
+      "until": "2026-10-13T15:01:00+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -2750,6 +2858,13 @@
      ],
      "markers": [],
      "name": null,
+     "new_mark": {
+      "at_et": "10:31",
+      "kind": "armed",
+      "text": "new 10:31 ET",
+      "title": "🧠 trigger armed since the 10:31 ET pass · marked new for 30 minutes · display only",
+      "until": "2026-10-13T15:01:00+00:00"
+     },
      "stats": [
       {
        "k": "Change",

@@ -113,6 +113,22 @@
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGA A+ on the 10:40 ET bar — no alert rang",
+       "until": "2026-10-13T15:10:00+00:00"
+      }
+     }
+    }
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -524,6 +540,13 @@
       }
      ],
      "name": null,
+     "new_mark": {
+      "at_et": "10:40",
+      "kind": "aplus",
+      "text": "new 10:40 ET",
+      "title": "A+ on the 10:40 ET bar — no alert rang · marked new for 30 minutes · display only",
+      "until": "2026-10-13T15:10:00+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -653,6 +676,22 @@
      }
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGA A+ on the 10:40 ET bar — no alert rang",
+       "until": "2026-10-13T15:10:00+00:00"
+      }
+     }
+    }
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -2330,6 +2369,22 @@
      }
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGA A+ on the 10:40 ET bar — no alert rang",
+       "until": "2026-10-13T15:10:00+00:00"
+      }
+     }
+    }
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",

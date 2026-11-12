@@ -323,8 +323,12 @@ def _count_reads(monkeypatch, st):
 
 @pytest.mark.parametrize("sub,variant,n", [
     (GC.POTENTIAL_SUB, None, 1), (RS, None, 1), ("bull_flag", None, 1), ("postmarket", None, 1),
-    ("premarket", None, 1), ("playbook", None, 0),     # MOVED 2026-11-11 (🌅 day-2 list): GG5 ☀️ reads once
-    ("premarket", V.GG1, 0), ("premarket", V.GGA, 0),  # NEGATIVE: no 🌅 off GG5 → no read
+    ("premarket", None, 1), ("playbook", None, 1),     # MOVED 2026-11-11 (🌅 day-2 list): GG5 ☀️ reads once
+    ("premarket", V.GG1, 1), ("premarket", V.GGA, 0),  # NEGATIVE: 🧪 shadow → no read
+    # MOVED 2026-11-12 (🟢 entry marks, spec §6): 📖 playbook and the 1-min ☀️ 0→1 — this fixture's X is a fresh A+
+    # break, so entry_marks asks the ONE memoized alert_rows read for its "no alert rang" clause. Still ONE read. A day
+    # with no green A+ and no fresh break still reads 0 there — the NEGATIVE lives in test_gajjala_entry_marks_2026_11_12
+    # (test_NEGATIVE_no_aplus_and_no_fresh_break_reads_alert_rows_zero_times_off_the_setup_subs).
     (RS, V.GG1, 1),
     (RS, V.GGA, 0), ("postmarket", V.GGA, 0), (GC.POTENTIAL_SUB, V.GGA, 1),    # 🧪: only the 🧠 entry_text read
 ])

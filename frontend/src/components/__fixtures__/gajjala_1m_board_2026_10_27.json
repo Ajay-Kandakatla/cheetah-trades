@@ -113,6 +113,34 @@
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
    },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:08 ET pass · GGA A+ on the 10:08 ET bar — no alert rang",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:08 ET pass",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     }
+    }
+   },
    "graveyard_today": [],
    "list_note": null,
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -526,6 +554,13 @@
       }
      ],
      "name": null,
+     "new_mark": {
+      "at_et": "10:08",
+      "kind": "aplus",
+      "text": "new 10:08 ET",
+      "title": "A+ on the 10:08 ET bar — no alert rang · marked new for 30 minutes · display only",
+      "until": "2026-10-27T14:38:00+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -810,6 +845,13 @@
      ],
      "markers": [],
      "name": null,
+     "new_mark": {
+      "at_et": "10:08",
+      "kind": "ready",
+      "text": "new 10:08 ET",
+      "title": "ready since the 10:08 ET pass · marked new for 30 minutes · display only",
+      "until": "2026-10-27T14:38:40+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -954,6 +996,34 @@
      }
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:08 ET pass · GGA A+ on the 10:08 ET bar — no alert rang",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:08 ET pass",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     }
+    }
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
@@ -1388,6 +1458,13 @@
      ],
      "markers": [],
      "name": null,
+     "new_mark": {
+      "at_et": "10:08",
+      "kind": "armed",
+      "text": "new 10:08 ET",
+      "title": "🧠 trigger armed since the 10:08 ET pass · marked new for 30 minutes · display only",
+      "until": "2026-10-27T14:38:40+00:00"
+     },
      "stats": [
       {
        "k": "Change",
@@ -1993,6 +2070,34 @@
      }
     ],
     "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA (no alert rang) · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:08 ET pass · GGA A+ on the 10:08 ET bar — no alert rang",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:08 ET pass",
+       "until": "2026-10-27T14:38:40+00:00"
+      }
+     }
+    }
    },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",

@@ -53,6 +53,13 @@ wording only; every other entry is the BOARD golden alone):
   GGA A+ card (break bar = the latest bar) and the 💋 GGA partial carry no key. Same check on the FE fixtures by their
   own `-k golden` recipes: 1m board 7, potential 16 (no_break_yet 15, no_break 1), on_open 2 — `breakout` only
   (docs/gajjala/no_breakout_2026_11_12.md).
+  2026-11-12 — Ajay "Can you show me green on these tabs some indicators to show be which ones have best potential
+  entries right now … an Indicator or new tickers with in last 30 mins like blinkers or something would be nice":
+  BOARD only (WRITES byte-identical — display only, nothing written). BOARD = 310 leaves, ALL ADDED, none changed or
+  removed: `entry_marks` on all 20 boards (12 leaves each: subs.bull_flag + subs.potential, green {n, label, title} +
+  new {n, until, title}) and `new_mark` {kind, at_et, until, text, title} on 14 tiles (🚩 GGA aplus 10:40 / GGB ready
+  10:41, 🧠 GGB armed 10:41, ➖ / 💋 GGA + GGB "listed" — card only) in each mode. plan_text, subs, counts and tile
+  order byte-equal (docs/gajjala/entry_marks_2026_11_12.md).
 """
 from __future__ import annotations
 

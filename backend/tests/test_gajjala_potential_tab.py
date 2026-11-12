@@ -723,7 +723,10 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
     # the 🌙 postmarket recap read the SAME ONE alert_rows (a triggered card / recap row that never rang says so);
     # still at most ONE read per build. MOVED 2026-11-11 (🧭 setup stages): a ☀️ premarket board WITH cards now reads
     # it once too — the stage tags' entries (tab._stage_tag via build's _entries_once); pinned as it is (this fixture's
-    # ☀️ board has cards). NEGATIVE kept: the 📖 playbook sub never reads it (🏁 reads its own rows_for).
+    # ☀️ board has cards). MOVED 2026-11-12 (🟢 entry marks, spec §6): the 📖 playbook sub now reads it once too — this
+    # fixture has green A+ cards (BBB on 💋), so entry_marks asks the ONE memoized read for its "alert rang" clause; a
+    # day with no green A+ and no fresh break still reads 0 there (NEGATIVE in test_gajjala_entry_marks_2026_11_12:
+    # test_NEGATIVE_no_aplus_and_no_fresh_break_reads_alert_rows_zero_times_off_the_setup_subs). Still ONE read.
     for k, _e, _l in GC.SUBS:
         if k in (GC.POTENTIAL_SUB, GC.LEDGER_SUB):
             continue
@@ -731,7 +734,7 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
         got = build(k, st)
         if k == "premarket":
             assert got.get("tiles"), "the ☀️ pin needs cards on the board"
-        assert calls == ([win] if k in GC.SETUPS or k in ("postmarket", "premarket") else []), k
+        assert calls == ([win] if k in GC.SETUPS or k in ("postmarket", "premarket", "playbook") else []), k
 
 
 def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():

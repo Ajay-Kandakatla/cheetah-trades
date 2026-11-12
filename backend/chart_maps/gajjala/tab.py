@@ -668,6 +668,32 @@ def _aplus_note(cad: int) -> str:
             "newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.")
 
 
+def banner_clock(latest, now, *, in_window: bool, cron=None, session=None, v=None) -> dict:
+    """The 🎯 banner's "right now" (A10 / A11 / C6) — ONE definition, read by aplus_block and entry_marks (🟢 2026-11-12).
+    Keeps the pre-split rule: cron None and latest not on-demand → cron = latest.
+    -> {"at": pass clock (aware UTC) | None, "c_at": cron clock | None, "cron_ok": bool, "this_session": bool,
+        "live": in_window and this_session and cron_ok}"""
+    latest = latest if isinstance(latest, dict) else None
+    at = _at_utc(latest)
+    session = session or _et(now).date()
+    if cron is None and latest is not None and not latest.get("on_demand"):
+        cron = latest                                                # pre-split: every pass was a cron pass
+    c_at = _at_utc(cron)
+    c_age = (_et(now) - _et(c_at)).total_seconds() if c_at is not None else None
+    cron_ok = c_age is not None and c_age <= V.stale_after_sec(V.of(v))
+    this_session = latest is not None and at is not None and latest.get("date") == session.isoformat()
+    return {"at": at, "c_at": c_at, "cron_ok": cron_ok, "this_session": this_session,
+            "live": bool(in_window and this_session and cron_ok)}
+
+
+def read_of_pass(doc, at) -> bool:
+    """A11 — the read was written by the pass at `at` (updated_at within 1 s); False on any missing stamp / at None."""
+    if not isinstance(doc, dict) or at is None:
+        return False
+    upd = _stamp_utc(doc.get("updated_at"))
+    return upd is not None and (at - upd).total_seconds() < 1
+
+
 def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool, scan: dict,
                 cron: Optional[dict] = None, session: Optional[date] = None, v=None) -> dict:
     """§3.6 (c) — the 🎯 banner, every sub (DECISIONS5 K1 / K3, AMENDMENTS5 A10 / A11). Rows = every listed read OF THE
@@ -679,24 +705,18 @@ def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool,
     from chart_maps.gajjala import alerts as AL                      # bar_close_et: the A+ gate's own clock
     scan = scan if isinstance(scan, dict) else {}
     latest = latest if isinstance(latest, dict) else None
-    at = _at_utc(latest)
     session = session or _et(now).date()
     vv = V.of(v)
     cad = _cad(vv)
-    if cron is None and latest is not None and not latest.get("on_demand"):
-        cron = latest                                                # pre-split: every pass was a cron pass
-    c_at = _at_utc(cron)
-    c_age = (_et(now) - _et(c_at)).total_seconds() if c_at is not None else None
-    cron_ok = c_age is not None and c_age <= V.stale_after_sec(vv)
-    this_session = latest is not None and at is not None and latest.get("date") == session.isoformat()
+    g = banner_clock(latest, now, in_window=in_window, cron=cron, session=session, v=vv)   # 🟢 2026-11-12 — ONE clock
+    at, c_at, cron_ok, this_session = g["at"], g["c_at"], g["cron_ok"], g["this_session"]
     rows: list = []
-    if in_window and this_session and cron_ok:
+    if g["live"]:
         keyed = []
         for sym, doc in (reads_by or {}).items():
             if not isinstance(doc, dict):
                 continue
-            upd = _stamp_utc(doc.get("updated_at"))
-            if upd is None or (at - upd).total_seconds() >= 1:       # a read of an older pass (A11 NEGATIVE)
+            if not read_of_pass(doc, at):                            # a read of an older pass (A11 NEGATIVE)
                 continue
             setups = doc.get("setups") if isinstance(doc.get("setups"), dict) else {}
             for setup in GC.SETUPS:
@@ -1309,6 +1329,19 @@ def _is_entry_read(read: dict) -> bool:
     return st == "aplus" or (st == "forming" and read.get("ready") is True)
 
 
+def is_entry_plan(read: dict) -> bool:
+    """_is_entry_read AND a real plan (ledger.plan_of == LG.PLANS[0]: trigger above the stop) — ONE definition, read by
+    plan_text (the card's "Entry above") and entry_marks (the 🟢, 2026-11-12). Missing trigger / stop, an unloadable
+    ledger → False."""
+    if not isinstance(read, dict) or not _is_entry_read(read):
+        return False
+    trig, stop = _f(read.get("trigger")), _f(read.get("stop"))
+    if trig is None or stop is None:
+        return False
+    LG = _ledger()
+    return LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0]
+
+
 def _tile_lines(read: dict) -> list:
     """2026-10-21 (Ajay, a NAUT 🚩 card reading "broke — not A+ · missed: K3": "Why does this chart in potential say buy?
     If its in Buy at the rate why is it not in A+?"): the trigger line says BUY only when the read is the entry
@@ -1349,8 +1382,7 @@ def plan_text(read: dict) -> Optional[str]:
     if trig is None:
         return None
     stop, risk = _f(read.get("stop")), _f(read.get("risk_pct"))
-    LG = _ledger() if stop is not None and _is_entry_read(read) else None
-    head = PLAN_ENTRY_HEAD if LG is not None and LG.plan_of(trig, stop)[0] == LG.PLANS[0] else PLAN_LEVEL_HEAD
+    head = PLAN_ENTRY_HEAD if is_entry_plan(read) else PLAN_LEVEL_HEAD     # 🟢 2026-11-12 — ONE definition
     parts = [f"{head} {_px(trig)}",
              f"stop {_px(stop)}" if stop is not None else None,
              f"risk {risk:.1f}%" if risk is not None else None]
@@ -2272,6 +2304,12 @@ def _ledger_count(st, session: date, v=None) -> Optional[int]:
     return LG.count_today(rows, docs) if V.is_gg5(v) else LG.count_today(rows, docs, variant=v)
 
 
+def _entry_marks(out: dict, **kw) -> None:
+    """🟢 2026-11-12 (Ajay: "show me green on these tabs") — display only; imported lazily, called through _soft."""
+    from chart_maps.gajjala import entry_marks as EM
+    EM.apply(out, **kw)
+
+
 def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT, sort: str = "",
           span: str = "", now: Optional[datetime] = None, store=None, today: Optional[dict] = None,
           owner: bool = False, variant=None) -> dict:
@@ -2389,6 +2427,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     per_setup: dict = {}
     counts_by: dict = {}
     n_tiles: dict = {}
+    carded: dict = {}                                               # 🟢 2026-11-12 — n_tiles' own names, per setup
     tile_syms: set = set()                                          # names with a card in any setup sub (W14)
     unlisted: dict = {}                                             # 🌀 reads counted, not carded (BUILD_SPEC18 D3)
     for setup in GC.SETUPS:
@@ -2413,6 +2452,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     unlisted[setup] = unlisted.get(setup, 0) + 1
                     continue
                 n_tiles[setup] = n_tiles.get(setup, 0) + 1
+                carded.setdefault(setup, []).append(sym)
                 if setup == sub_k:                                      # only the shown sub builds its cards
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
@@ -2552,6 +2592,10 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                          broker_text_of=lambda s: broker_text_for(s, flags),
                                          **({} if gg5 else {"variant": v}), default=None) if LG else None)
             out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT  # W16
+    _soft("entry marks", _entry_marks, out, reads_by=reads_by, carded=carded, pots=pots, trackers=trackers_today,
+          scan_by=scan_by, listed=listed, session=session, now=now, pass_doc=pass_doc, cron=cron,
+          in_window=in_window, v=v, lim=lim, flags=order_flags,
+          entries=_entries_once if live_push else None)          # 🟢 2026-11-12 — display only
     if gg5 and (sub_k in per_setup or sub_k == GC.POTENTIAL_SUB):   # 🔝 2026-11-11 (#9) — after broker_bottom
         fb = _soft("focus five", focus_block, out["tiles"], order_flags, default=None)
         if fb:
