@@ -15,8 +15,9 @@ THE TRADE MATH (his words where he gave them; the rest is a Cheetah choice, list
   fixture by tests/test_luk_ledger.py): the first 1-minute bar starting at least BAR_SETTLE_SEC after the alert, ET
   start time in [LUK_FILL_FROM_ET, min(LUK_FILL_TO_ET, that day's regular close)), whose high ≥ the trigger → fill =
   max(trigger, that bar's open). Same session only (HIS CALL #16); none → "no entry".
-- STOP — the alert's stop, a TOUCH (low ≤ stop) → exit at the stop, r = −1.0 exactly; the fill minute counts; a bar
-  that touches the stop and a target high → the stop wins (GG's Q0).
+- STOP — the alert's stop, a TOUCH (low ≤ stop) → exit at the stop, r = (stop − fill) / R, measured from the actual
+  fill (2026-11-11; −1.0 only when the fill is the trigger, lower when the fill bar opened above it); the fill minute
+  counts; a bar that touches the stop and a target high → the stop wins (GG's Q0).
 - EXIT — the first daily CLOSE below the daily 9 EMA (VKNEJA5r8zw 2:29:17 "I closed this trade on the first close um
   below the 9 EMA") → exit at that close, r = (close − fill) / R. No maximum hold (HIS CALL #11).
 - 3R / 5R — his partials (VKNEJA5r8zw 2:27:37, LC.LUK_PARTIAL_R) are FLAGS when a high AFTER the fill minute reaches
@@ -273,10 +274,23 @@ def _blank_walk() -> dict:
     return w
 
 
+def stop_r(trigger, stop, fill_px) -> Optional[float]:
+    """The R of a stop exit, measured from the ACTUAL fill: (stop − fill) / (trigger − stop) — the same arithmetic as
+    walk()'s r_of at the stop (Ajay 2026-11-11, relayed: "Do your receommendations"). None (never −1.0 by default,
+    never NaN) when the plan is not ok, the fill is not a finite number, or the fill is at or under the stop
+    (impossible on a graded row: fill ≥ trigger > stop)."""
+    plan, r = plan_of(trigger, stop)
+    f, s = _num(fill_px), _num(stop)
+    if plan != PLAN_OK or f is None or s is None or f <= s:
+        return None
+    return round(float((_D(s) - _D(f)) / _D(r)), 4)
+
+
 def walk(alert: dict, fill_: dict, days: list, prior: Optional[dict] = None) -> dict:
     """LUK's exits over `days` = [{"date", "bars" [(t_utc START, o, h, l, c)] regular-session, "close", "ema9_close"}]
     from the fill session on (or from the session after `prior`'s through_date). Per bar from the fill minute on: low ≤
-    stop → exit "stop" at the stop, r = −1.0 (the fill minute counts; a stop and a target in one bar → the stop). A high
+    stop → exit "stop" at the stop, r = stop_r (from the fill) (the fill minute counts; a stop and a target in one bar →
+    the stop). A high
     ≥ fill + mR on a bar AFTER the fill minute sets the reached_{m}r flag (first touch time kept). At each session end
     (close and ema9_close both numbers): close < ema9_close → exit "ema9_close" at that close, r = (close − fill) / R.
     A day without both daily numbers is walked intraday only (stop / flags) and never counted as a held session.
@@ -307,7 +321,8 @@ def walk(alert: dict, fill_: dict, days: list, prior: Optional[dict] = None) -> 
                 continue
             if _D(b[3]) <= stop:                                # a touch; the fill minute counts; the stop wins
                 w.update(exit=EXITS[0], state="stopped", exit_t=_iso_t(t), exit_date=d.isoformat() if d else None,
-                         exit_px=float(stop), r=-1.0, r_now=None, through_date=d.isoformat() if d else None)
+                         exit_px=float(stop), r=stop_r(alert.get("trigger"), alert.get("stop"), fill_.get("fill_px")),
+                         r_now=None, through_date=d.isoformat() if d else None)
                 w["sessions"] = int(w.get("sessions") or 0) + 1
                 return w
             if fill_t is not None and t > fill_t:               # the fill minute's high never sets a flag
@@ -550,7 +565,8 @@ TITLE = "🏁 Track record — every 🥇 A+ recorded here since {from_}, graded
 RULE_TEXT = (
     "Fill = the first 1-minute bar at least {settle} s after the alert trading at or above the trigger, from the "
     "regular open — the same fill convention as 🚩's 🏁 (a Cheetah choice, for comparability). Stop = the alert's "
-    "stop, a touch. Exit = the stop or the first daily close below the {ema} EMA, whichever prints first — his "
+    "stop, a touch; the R of a stop is measured from the actual fill, so a fill above the trigger loses more than "
+    "one R. Exit = the stop or the first daily close below the {ema} EMA, whichever prints first — his "
     "stated exit (VKNEJA5r8zw 2:29:17). His partials at {partials} are shown as flags, not applied (HIS CALL #5); no "
     "maximum hold — a row stays open until the exit prints (HIS CALL #11). The alert itself can print up to {lag} "
     "minutes after his bar closed (one Luk pass per {lag} minutes), so a 🏁 fill is later than his would have been — "
@@ -574,6 +590,7 @@ NO_PLAN_TEXT = {NO_PLAN: "no plan — the alert carried no usable trigger / stop
                 NO_RISK: "no risk — trigger equals the stop"}
 NO_TIME_TEXT = "no alert time on file — not graded"
 EXIT_STOP_TEXT = "stopped {hhmm} · {r}"
+EXIT_STOP_NO_R_TEXT = "stopped {hhmm} · R not known — the fill is missing"   # MINE (2026-11-11) — unreachable, kept visible
 EXIT_EMA9_TEXT = "closed below the {ema} EMA on {md} · {r} · {sessions}"
 EXIT_OPEN_TEXT = "open · {r} after {sessions}"
 PLAN_TEXT = "trigger {trigger} · stop {stop} (−{pct:.1f}%) · R ${r}"
@@ -600,8 +617,8 @@ CHARTS_SPLIT = "{sent} sent to your phone"
 CHARTS_SPLIT_SHADOW = "{n} recorded in shadow (never sent)"          # joined " · " only when n > 0
 CHARTS_EMPTY_TEXT = "No 🥇 A+ on this span."
 CHARTS_HONESTY = ("Every 🥇 A+ on the span — sent or recorded in shadow — in one %, graded by Luk's exit: a win is a "
-                  "closed row above its fill, a loss a closed row below it (every stop is one R down); open rows and a "
-                  "close exactly at the fill stay out of the %. Operational accounting of alerts as recorded, not a "
+                  "closed row above its fill, a loss a closed row below it (a stop is one R down or more, measured "
+                  "from the actual fill); open rows and a close exactly at the fill stay out of the %. Operational accounting of alerts as recorded, not a "
                   "backtest; small n. UNMEASURED.") + " " + DUP_RULE_TEXT
 MORE_TEXT = "+{n} more rows — the counts above cover all {total}"
 TAPE_TOGGLE_TITLE = "the full tape — the alert, the fill, the trigger / stop, the exit and the {partials} marks"
@@ -706,9 +723,11 @@ def cells(row: dict, doc: Optional[dict]) -> dict:
     else:
         fill_text = PENDING_TEXT
     exit_text, r = "", None
-    if st == "stopped":
-        r = float(w["r"])
-        exit_text = EXIT_STOP_TEXT.format(hhmm=_hhmm(w.get("exit_t")) or "—", r=_r_text(r))
+    if st == "stopped":                                       # 2026-11-11: ALWAYS from the fill, never the stored R
+        r = stop_r(row.get("trigger"), row.get("stop"), f.get("fill_px"))
+        hhmm = _hhmm(w.get("exit_t")) or "—"
+        exit_text = (EXIT_STOP_TEXT.format(hhmm=hhmm, r=_r_text(r)) if r is not None
+                     else EXIT_STOP_NO_R_TEXT.format(hhmm=hhmm))
     elif st == EXITS[1]:
         r = float(w["r"])
         exit_text = EXIT_EMA9_TEXT.format(ema=_ema_n(), md=_md(w.get("exit_date")), r=_r_text(r),
@@ -758,7 +777,7 @@ def setup_label(setup: str) -> str:
 
 def bucket_of(state: str, r) -> str:
     """The row's ✅ / ❌ bucket (gajjala.ledger.BUCKETS words) by the sign of R at Luk's exit (HIS CALL #9): a closed row
-    (stopped / ema9_close) with r > 0 → win, r < 0 (every stop is −1.0) → loss, r == 0 → flat (HIS CALL #8); an open
+    (stopped / ema9_close) with r > 0 → win, r < 0 (every stop is −1.0 or lower, from the fill) → loss, r == 0 → flat (HIS CALL #8); an open
     row → open; anything else (no entry / no plan / no risk / no time / pending) → out."""
     if state in ("stopped", EXITS[1]) and _num(r) is not None:
         v = float(r)
@@ -1006,6 +1025,6 @@ def served_block(store, session, now, *, span: str = "") -> dict:
 
 
 __all__ = ["ROW_ID", "EXITS", "OPEN", "LEDGER_KEYS", "STATE_SHADOW", "STATE_PUSHED", "ROW_STATES", "LINE_OF", "GRADE_VERSION", "LedgerReadError", "row_id", "row_of",
-           "rows_for", "fill", "fill_window", "walk", "grade_step", "served_block", "title_text", "rule_text",
+           "rows_for", "fill", "fill_window", "stop_r", "walk", "grade_step", "served_block", "title_text", "rule_text",
            "honesty", "empty_text", "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip",
            "bucket_of", "setup_label", "track_row", "charts_block", "views_block", "mark_dups", "LUK_HK", "HEADS"]

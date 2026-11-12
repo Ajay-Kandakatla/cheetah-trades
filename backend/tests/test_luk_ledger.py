@@ -532,13 +532,15 @@ def test_served_block_words_counts_and_row_texts():
     c = b["counts"]
     assert (c["n"], c["filled"], c["no_entry"], c["stopped"], c["ema9_exits"], c["open"]) == (4, 3, 1, 1, 1, 1)
     assert (c["closed_positive"], c["closed_negative"], c["reached_3r"], c["reached_5r"]) == (1, 1, 1, 0)
-    assert c["mean_r_closed"] == pytest.approx(0.65) and c["entry_weeks"] == 1
+    # MOVED 2026-11-11 (stop R from the fill): STP filled 12.41 on trigger 10.00 / stop 9.50 → (9.50 − 12.41) / 0.50 =
+    # −5.82R (was the stored −1.0); mean (−5.82 + 2.3) / 2 = −1.76 (was +0.65). Buckets unchanged (1 win, 1 loss).
+    assert c["mean_r_closed"] == pytest.approx(-1.76) and c["entry_weeks"] == 1
     assert b["counts_text"] == ("4 A+ recorded · 3 filled · 1 stopped · 1 closed below the 9 EMA · 1 open · mean "
-                                "+0.65R over 2 closed · 1 of 30 entry weeks")
+                                "-1.76R over 2 closed · 1 of 30 entry weeks")
     rows = {r["symbol"]: r for dd in b["days"] for r in dd["rows"]}
     assert "OLD" not in rows                                 # NEGATIVE: before the record start
     assert rows["STP"]["fill_text"] == "filled 12.41 at 09:47"
-    assert rows["STP"]["exit_text"] == "stopped 10:12 · −1.0R"
+    assert rows["STP"]["exit_text"] == "stopped 10:12 · −5.8R"          # MOVED 2026-11-11 (was −1.0R)
     assert rows["EMA"]["exit_text"] == "closed below the 9 EMA on 11-05 · +2.3R · 3 sessions"
     assert rows["EMA"]["flags_text"] == "+3R reached"
     assert rows["OPN"]["exit_text"] == "open · +0.8R after 2 sessions" and rows["OPN"]["flags_text"] == ""
