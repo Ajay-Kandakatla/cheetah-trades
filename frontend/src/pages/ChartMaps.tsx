@@ -77,6 +77,7 @@ import PotusBoard from '../components/PotusBoard';
 import NewsTabBoard from '../components/NewsTabBoard';
 import GajjalaBoard from '../components/GajjalaBoard';
 import LukBoard from '../components/LukBoard';
+import LongTermBoard from '../components/LongTermBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
@@ -1661,6 +1662,15 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * with the rows the trading engine will refuse marked ⛔ rather than
          * hidden. Sits beside Hottest: both are discovery surfaces. */
         <ExplosiveGrowth />
+      ) : tab === 'long_term' ? (
+        /* 📅 Long Term (Ajay 2026-11-12: "Save this entire list for me. In a
+           New tab - Long Term …" and "Yeah I wanna find out the ones that are
+           actually great in fundamentals and growth and sales and no debt but
+           not growing in price action yet.."). His saved list on its own
+           read-only endpoint (GET /chart-maps/long-term), re-read weekly by
+           the server, owner only. Must sit BEFORE the SupportLevels fallback
+           below. */
+        <LongTermBoard />
       ) : tab === 'catalysts' ? (
         /* The Catalysts page body, mounted as a tab (Ajay 2026-09-05: "move
          * catalyst tab in to Chart maps"). Same component as the old

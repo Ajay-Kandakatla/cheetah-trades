@@ -1,0 +1,1148 @@
+{
+ "saved_on": "2026-11-12",
+ "source": "Ajay's ask 2026-11-12 ~21:00 ET: 'Save this entire list for me. In a New tab - Long Term - Remember this analays criteria ... keep updating it from all the other tabs info.. Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes.'",
+ "rules": {
+  "per_category": 10,
+  "max_per_sector": 3,
+  "hot_max_per_sector": 2
+ },
+ "categories": [
+  {
+   "key": "s2_growth",
+   "label": "\ud83d\ude80 Stage 2 growth leaders",
+   "source_tab": "SEPA scan (full)",
+   "criteria": "stage.stage == 2 AND (fundamentals.sales.tier in {strong, explosive} OR (tier == steady AND sales.accelerating)) AND checks.c_strong_q_eps AND checks.a_strong_y_eps; ranked by rs_rank desc",
+   "names": [
+    "AMC",
+    "APPN",
+    "FIGS",
+    "MGNI",
+    "AMD",
+    "PRCH",
+    "GCT",
+    "PGNY",
+    "VCEL",
+    "IDT"
+   ]
+  },
+  {
+   "key": "capital_quality",
+   "label": "\ud83d\udc8e Capital quality",
+   "source_tab": "SEPA scan moat components (proxy) + growth board capital_quality grade",
+   "criteria": "moat.components.profitability.roe_pct >= 20 AND moat.components.fcf.fcf_margin_pct > 0 AND moat.components.capital.net_debt_ebitda <= 1 (not null); ranked by moat.score desc",
+   "names": [
+    "SLDE",
+    "ANET",
+    "MANH",
+    "EXEL",
+    "HNGE",
+    "PAYC",
+    "CBOE",
+    "MA",
+    "ABNB",
+    "CDNA"
+   ],
+   "also_graded_on_growth_board": [
+    "NVDA",
+    "SNDK",
+    "STRL",
+    "KLIC",
+    "MU",
+    "ALAB"
+   ]
+  },
+  {
+   "key": "undervalue",
+   "label": "\ud83c\udff7\ufe0f Undervalue vs peers",
+   "source_tab": "Chart Maps \ud83c\udff7\ufe0f vs peers + \ud83d\udc8e PSG tiles",
+   "criteria": "tiles on the undervalue vs-peers view (P/S far below peer median, sales growing); served order",
+   "names": [
+    "AVT",
+    "ARW",
+    "SMCI",
+    "WKC",
+    "RUN",
+    "DELL",
+    "BTSG",
+    "CSTM",
+    "CRBG",
+    "CTRI"
+   ]
+  },
+  {
+   "key": "bonde",
+   "label": "\ud83d\udcc8 Bonde",
+   "source_tab": "SEPA scan buy_verdict.bonde",
+   "criteria": "buy_verdict.bonde.tier in {strong, explosive}; ranked by bonde.score desc",
+   "names": [
+    "XNCR",
+    "KDP",
+    "WAT",
+    "VIR",
+    "JXN",
+    "SKWD",
+    "ANET",
+    "NIC",
+    "LNG",
+    "WELL"
+   ]
+  },
+  {
+   "key": "fallen_growers",
+   "label": "\ud83d\udcc9 Fallen growers turning up",
+   "source_tab": "Chart Maps \ud83d\udcc9 Down 40%+ (fallen)",
+   "criteria": "fallen.pct_below >= 40 AND fallen.pct_above_low >= 10 AND fallen.sales.yoy_pct >= 20; ranked by sales yoy desc",
+   "names": [
+    "NRIX",
+    "ASTS",
+    "PGEN",
+    "ONDS",
+    "SNDK",
+    "EOSE",
+    "LUNR",
+    "SATL",
+    "URGN",
+    "AUR"
+   ]
+  },
+  {
+   "key": "hot",
+   "label": "\ud83d\udd25 Hot sectors",
+   "source_tab": "\ud83d\udd25 Hottest",
+   "criteria": "names in Hottest sectors with sales_tier in {strong, explosive} AND q_eps_yoy > 0 AND ret_21d > 0; ranked by ret_21d desc; max 2 per sector",
+   "names": [
+    "LQDA",
+    "XNCR",
+    "APP",
+    "KRMN",
+    "BKSY",
+    "LBTYA",
+    "CLX",
+    "FIGS",
+    "HHH",
+    "FROG"
+   ]
+  },
+  {
+   "key": "quiet_strong",
+   "label": "\ud83c\udf31 Strong but not moving yet",
+   "source_tab": "Ticker \u25b8 Fundamentals long-term doc (sepa.longterm.stored(), weekly warm) + stage.classify on the cached daily bars",
+   "his_words": "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet.. (2026-11-12)",
+   "criteria": "stage.classify(df, vol=volume.analyze(df)).stage == 1 (price not moving yet) AND longterm score.ranked AND score.score >= 70 (top 30% in its sector) AND m.net_profit > 0 AND m.ocf > 0 AND m.sales_cagr >= 15 AND m.de (total liabilities / equity) <= 1 AND 50-day avg dollar volume >= $5M AND close <= 10% under the 52-week high is EXCLUDED (off_hi <= -10); GOOG dropped as a duplicate share class of GOOGL; ranked by score desc; max 3 per sector. All cut-offs except stage are MY proposal = HIS CALL. The long-term score is UNMEASURED (SCORE_IS_MEASURED = False). PLUS (added after critique C1, 11-12) the CURRENT sales leg: research sales.tier in {steady, strong, explosive} (LULU 'declining' and ZM 'weak' dropped from the seed for failing it). The tier set is MY proposal = HIS CALL.",
+   "names": [
+    "HLNE",
+    "NVDA",
+    "META",
+    "GOOGL",
+    "NXT",
+    "MPWR",
+    "XPEL",
+    "EPRT",
+    "MGY",
+    "CTRE"
+   ],
+   "also_considered": {
+    "INDI": "Stage 1 and sales CAGR +46% but loses money (net profit \u2212$143M) and D/E 1.28 \u2192 fails",
+    "RCAT": "Stage 4, loses money \u2192 fails",
+    "FRMI": "Stage 4, no filed annual financials \u2192 fails"
+   }
+  },
+  {
+   "key": "accel_after_fall",
+   "label": "\ud83d\udd04 Small & mid caps accelerating after a fall",
+   "his_words": "Also I would like us to find more of such Mid and small caps TBH in all fields that that are accelerating and have been down in the past (2026-11-12)",
+   "source_tab": "research.sales_snapshot(full universe, the weekly research cache) + stage.classify / 52w high-low on cached daily bars + market cap = short_interest.client._shares_outstanding \u00d7 last close (the Under Value board's own cap path)",
+   "criteria": "market cap $300M\u2013$10B (small + mid cap, the standard bands) AND sales.tier in {strong, explosive} AND sales.accelerating AND sales.prior_yoy_pct > 0 AND close >= 30% under the 52-week high AND >= 10% above the 52-week low AND stage in {1, 2} AND 50d avg dollar volume >= $3M; ranked by acceleration (growth_yoy_pct \u2212 prior_yoy_pct) desc; max 3 per sector; profit shown as a chip, not a gate. Cut-offs other than the cap bands are MY proposal = HIS CALL. UNMEASURED.",
+   "names": [
+    "UMAC",
+    "SATL",
+    "AXTI",
+    "LUNR",
+    "VOYG",
+    "AUR",
+    "KLIC",
+    "RUM",
+    "HIMS",
+    "SBET"
+   ]
+  },
+  {
+   "key": "pankaj",
+   "label": "\ud83e\udded Pankaj's long-term list",
+   "his_words": "I have a long term tab already from Pankaj can you take a look at this again most them have been winner wondering since when we tracked those but lets use those tickerts too (2026-11-12); I need you to tell me whcih ones are at the zone to enter like C1 or Aggr",
+   "source_tab": "Pankaj's sheet /Users/ajay/Desktop/Stock tracker-Pankaj.xlsx, tab '10182026' (his tracking start 2026-11-01), read 2026-11-12",
+   "criteria": "HIS picks, not re-screened by our criteria; every name kept (no 10-name cut, no sector cap). Carry his Tier (A/B), ZT score, Class, his Possible Action and his zones Agg L1\u2013U1, CL1\u2013CU1, CL2\u2013CU2, CL3\u2013CU3 (blank = none). The tab shows which zone the latest close is in (or the nearest zone above), labelled as HIS zones. Weekly notices: the same stage / sales notices as every category, plus 'entered his Agg / C1 / C2 / C3 zone'. A new sheet from him replaces his zones (his call to send one); our app reads never overwrite his numbers.",
+   "names": [
+    {
+     "sym": "TSM",
+     "tier": "A",
+     "zt": "8.8",
+     "action": "Buy Zone AAG1",
+     "zones": {
+      "Agg": [
+       400.0,
+       410.0
+      ],
+      "C1": [
+       360.0,
+       375.0
+      ],
+      "C2": [
+       310.0,
+       320.0
+      ],
+      "C3": [
+       260.0,
+       280.0
+      ]
+     }
+    },
+    {
+     "sym": "INTU",
+     "tier": "A",
+     "zt": "8.5",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       255.0,
+       275.0
+      ],
+      "C1": [
+       180.0,
+       210.0
+      ],
+      "C2": [
+       130.0,
+       145.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "ASML",
+     "tier": "A",
+     "zt": "8.5",
+     "action": "Going for CL1",
+     "zones": {
+      "Agg": [
+       1540.0,
+       1620.0
+      ],
+      "C1": [
+       1250.0,
+       1320.0
+      ],
+      "C2": [
+       940.0,
+       1040.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "AVGO",
+     "tier": "A",
+     "zt": "8.4",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       320.0,
+       330.0
+      ],
+      "C1": [
+       280.0,
+       295.0
+      ],
+      "C2": [
+       240.0,
+       260.0
+      ],
+      "C3": [
+       190.0,
+       200.0
+      ]
+     }
+    },
+    {
+     "sym": "REGN",
+     "tier": "A",
+     "zt": "8.4",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       725.0,
+       745.0
+      ],
+      "C1": [
+       590.0,
+       626.0
+      ],
+      "C2": [
+       480.0,
+       520.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "MSFT",
+     "tier": "A",
+     "zt": "8.4",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       475.0,
+       485.0
+      ],
+      "C1": [
+       380.0,
+       400.0
+      ],
+      "C2": [
+       345.0,
+       360.0
+      ],
+      "C3": [
+       310.0,
+       320.0
+      ]
+     }
+    },
+    {
+     "sym": "LRCX",
+     "tier": "A",
+     "zt": "8.4",
+     "action": "Going for CL1",
+     "zones": {
+      "Agg": [
+       240.0,
+       250.0
+      ],
+      "C1": [
+       190.0,
+       200.0
+      ],
+      "C2": [
+       140.0,
+       150.0
+      ],
+      "C3": [
+       90.0,
+       100.0
+      ]
+     }
+    },
+    {
+     "sym": "META",
+     "tier": "A",
+     "zt": "8.3",
+     "action": "Buy CL1",
+     "zones": {
+      "Agg": [
+       675.0,
+       685.0
+      ],
+      "C1": [
+       620.0,
+       630.0
+      ],
+      "C2": [
+       580.0,
+       590.0
+      ],
+      "C3": [
+       520.0,
+       540.0
+      ]
+     }
+    },
+    {
+     "sym": "GOOGL",
+     "tier": "A",
+     "zt": "8.3",
+     "action": "Going for CL2",
+     "zones": {
+      "Agg": [
+       325.0,
+       330.0
+      ],
+      "C1": [
+       310.0,
+       315.0
+      ],
+      "C2": [
+       270.0,
+       280.0
+      ],
+      "C3": [
+       240.0,
+       260.0
+      ]
+     }
+    },
+    {
+     "sym": "NVDA",
+     "tier": "A",
+     "zt": "8.3",
+     "action": "Buy CL2",
+     "zones": {
+      "Agg": [
+       205.0,
+       210.0
+      ],
+      "C1": [
+       190.0,
+       195.0
+      ],
+      "C2": [
+       165.0,
+       170.0
+      ],
+      "C3": [
+       145.0,
+       155.0
+      ]
+     }
+    },
+    {
+     "sym": "AMAT",
+     "tier": "A",
+     "zt": "8.2",
+     "action": "Going for CL1",
+     "zones": {
+      "Agg": [
+       395.0,
+       415.0
+      ],
+      "C1": [
+       320.0,
+       340.0
+      ],
+      "C2": [
+       240.0,
+       260.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "V",
+     "tier": "A",
+     "zt": "8.2",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       380.0,
+       385.0
+      ],
+      "C1": [
+       355.0,
+       365.0
+      ],
+      "C2": [
+       325.0,
+       340.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "VRTX",
+     "tier": "A",
+     "zt": "8.2",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       465.0,
+       485.0
+      ],
+      "C1": [
+       410.0,
+       430.0
+      ],
+      "C2": [
+       360.0,
+       380.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "TROW",
+     "tier": "A",
+     "zt": "8.1",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       85.0,
+       90.0
+      ],
+      "C2": [
+       75.0,
+       80.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "PGR",
+     "tier": "A",
+     "zt": "8.1",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       200.0,
+       205.0
+      ],
+      "C1": [
+       189.0,
+       195.0
+      ],
+      "C2": [
+       145.0,
+       155.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "CRDO",
+     "tier": "A",
+     "zt": "8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       145.0,
+       160.0
+      ],
+      "C2": [
+       85.0,
+       95.0
+      ],
+      "C3": [
+       60.0,
+       70.0
+      ]
+     }
+    },
+    {
+     "sym": "NFLX",
+     "tier": "B",
+     "zt": "7.9",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       68.0,
+       72.0
+      ],
+      "C2": [
+       58.0,
+       62.0
+      ],
+      "C3": [
+       50.0,
+       55.0
+      ]
+     }
+    },
+    {
+     "sym": "AMZN",
+     "tier": "B",
+     "zt": "7.9",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       225.0,
+       235.0
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       185.0,
+       195.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "LLY",
+     "tier": "B",
+     "zt": "7.9",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       850.0,
+       870.0
+      ],
+      "C3": [
+       625.0,
+       700.0
+      ]
+     }
+    },
+    {
+     "sym": "BSX",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       41.0,
+       43.0
+      ],
+      "C1": [
+       35.0,
+       37.0
+      ],
+      "C2": [
+       23.0,
+       27.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "BKNG",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       145.0,
+       155.0
+      ],
+      "C1": [
+       125.0,
+       130.0
+      ],
+      "C2": [
+       100.0,
+       110.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "CLS",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Going for CL3",
+     "zones": {
+      "Agg": [
+       380.0,
+       395.0
+      ],
+      "C1": [
+       320.0,
+       340.0
+      ],
+      "C2": [
+       280.0,
+       295.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "UBER",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       65.0,
+       68.0
+      ],
+      "C1": [
+       59.0,
+       62.0
+      ],
+      "C2": [
+       48.0,
+       52.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "GWW",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       1200.0,
+       1230.0
+      ],
+      "C1": [
+       1030.0,
+       1070.0
+      ],
+      "C2": [
+       900.0,
+       930.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "BRK-B",
+     "tier": "B",
+     "zt": "7.8",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       495.0,
+       500.0
+      ],
+      "C2": [
+       460.0,
+       470.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     },
+     "sheet_symbol": "BRK.B"
+    },
+    {
+     "sym": "CB",
+     "tier": "B",
+     "zt": "7.7",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       320.0,
+       330.0
+      ],
+      "C1": [
+       300.0,
+       310.0
+      ],
+      "C2": [
+       265.0,
+       275.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "SOFI",
+     "tier": "B",
+     "zt": "7.7",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       12.5,
+       13.5
+      ],
+      "C1": [
+       8.0,
+       10.0
+      ],
+      "C2": [
+       6.0,
+       7.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "MA",
+     "tier": "B",
+     "zt": "7.7",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       588.0,
+       600.0
+      ],
+      "C1": [
+       545.0,
+       555.0
+      ],
+      "C2": [
+       510.0,
+       523.0
+      ],
+      "C3": [
+       460.0,
+       480.0
+      ]
+     }
+    },
+    {
+     "sym": "KLAC",
+     "tier": "B",
+     "zt": "7.7",
+     "action": "Going for CL1",
+     "zones": {
+      "Agg": [
+       163.0,
+       166.0
+      ],
+      "C1": [
+       125.0,
+       140.0
+      ],
+      "C2": [
+       100.0,
+       110.0
+      ],
+      "C3": [
+       55.0,
+       65.0
+      ]
+     }
+    },
+    {
+     "sym": "COST",
+     "tier": "B",
+     "zt": "7.7",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       880.0,
+       900.0
+      ],
+      "C1": [
+       845.0,
+       855.0
+      ],
+      "C2": [
+       790.0,
+       810.0
+      ],
+      "C3": [
+       700.0,
+       720.0
+      ]
+     }
+    },
+    {
+     "sym": "BLK",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       1015.0,
+       1045.0
+      ],
+      "C2": [
+       920.0,
+       950.0
+      ],
+      "C3": [
+       775.0,
+       800.0
+      ]
+     }
+    },
+    {
+     "sym": "FSLR",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       null,
+       null
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "CME",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       220.0,
+       230.0
+      ],
+      "C2": [
+       190.0,
+       200.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "CDNS",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       260.0,
+       265.0
+      ],
+      "C2": [
+       220.0,
+       230.0
+      ],
+      "C3": [
+       190.0,
+       195.0
+      ]
+     }
+    },
+    {
+     "sym": "TJX",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       93.0,
+       100.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "ISRG",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       345.0,
+       355.0
+      ],
+      "C1": [
+       300.0,
+       310.0
+      ],
+      "C2": [
+       260.0,
+       270.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "ANET",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       150.0,
+       160.0
+      ],
+      "C2": [
+       130.0,
+       140.0
+      ],
+      "C3": [
+       110.0,
+       120.0
+      ]
+     }
+    },
+    {
+     "sym": "ODFL",
+     "tier": "B",
+     "zt": "7.6",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       null,
+       null
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "EOG",
+     "tier": "B",
+     "zt": "7.5",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       null,
+       null
+      ],
+      "C2": [
+       null,
+       null
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    },
+    {
+     "sym": "VRT",
+     "tier": "B",
+     "zt": "7.5",
+     "action": "Wait and Watch",
+     "zones": {
+      "Agg": [
+       null,
+       null
+      ],
+      "C1": [
+       195.0,
+       205.0
+      ],
+      "C2": [
+       148.0,
+       158.0
+      ],
+      "C3": [
+       null,
+       null
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "caveats": [
+  "Bonde measured INVERTED (-3.11pp vs placebo)",
+  "AMD read measured INVERTED",
+  "cheap + growth \u2248 market",
+  "Fallen growers UNMEASURED",
+  "None of these lists is a buy signal",
+  "VIR/WAT/KDP sales jumps look like one-offs or acquisitions"
+ ]
+}

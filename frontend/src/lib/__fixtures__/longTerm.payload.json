@@ -1,0 +1,673 @@
+{
+ "state": "ready",
+ "reason": null,
+ "title": "📅 Long Term",
+ "saved_on": "2026-11-12",
+ "measured": false,
+ "note": "📅 UNMEASURED — your list saved on 2026-11-12, re-read every week from the other tabs' own data. Each list carries its own caveat. None of these lists is a buy signal.",
+ "not_a_signal": "None of these lists is a buy signal.",
+ "his_words": [
+  "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet.."
+ ],
+ "as_of": {
+  "week": "2026-W46",
+  "session": "2026-11-13",
+  "built_at_iso": "2026-11-13T16:41:07-05:00",
+  "next_run_text": "Re-read weekly after the 4:30 PM ET re-rate on the last trading day of the week — next: Friday 2026-11-20.",
+  "sources": [
+   {
+    "key": "scan",
+    "label": "SEPA scan",
+    "as_of_text": "read 2026-11-13 16:31 ET",
+    "ok": true
+   },
+   {
+    "key": "fallen",
+    "label": "📉 Down 40%+",
+    "as_of_text": "not read this week",
+    "ok": false
+   }
+  ]
+ },
+ "digest": {
+  "title": "📅 Long Term — week of 2026-11-13: 0 dropped (stage or sales) · 1 started moving · 2 in Pankaj's zones",
+  "lines": [
+   "🌱 → 🚀 NVDA started moving: Stage 1 → Stage 2 (Advancing)",
+   "⚠️ MANH no longer meets 💎 Capital quality: ROE 18.2% (needs ≥ 20%)"
+  ],
+  "items": [
+   {
+    "symbol": "NVDA",
+    "kind": "started_moving",
+    "text": "🌱 → 🚀 NVDA started moving: Stage 1 → Stage 2 (Advancing)"
+   },
+   {
+    "symbol": "MANH",
+    "kind": "fundamental",
+    "text": "⚠️ MANH no longer meets 💎 Capital quality: ROE 18.2% (needs ≥ 20%)"
+   }
+  ],
+  "pushed_text": "Phone push is off — this digest shows here only."
+ },
+ "zones": {
+  "as_of_text": "🧭 In one of Pankaj's zones at the 11-13 close",
+  "at_zone": [
+   {
+    "symbol": "TSM",
+    "his_symbol": "TSM",
+    "zone_text": "In Pankaj's Agg zone (400–410) at the 11-13 close"
+   },
+   {
+    "symbol": "NVDA",
+    "his_symbol": "NVDA",
+    "zone_text": "In Pankaj's C2 zone (160–170) at the 11-13 close"
+   }
+  ],
+  "rows_note": "Read from the cached closes when you open the tab."
+ },
+ "started_moving": [
+  {
+   "symbol": "NVDA",
+   "date": "2026-11-13",
+   "text": "🌱 → 🚀 NVDA started moving: Stage 1 → Stage 2 (Advancing)"
+  }
+ ],
+ "changed": [
+  {
+   "symbol": "MANH",
+   "name": "Manhattan Associates",
+   "sector": "Technology",
+   "chips": [
+    {
+     "key": "capital_quality",
+     "label": "💎 Capital quality"
+    }
+   ],
+   "stage": {
+    "now": 2,
+    "label": "Advancing",
+    "at_save": 2,
+    "text": "Stage 2 · Advancing (saved in Stage 2)"
+   },
+   "sales": {
+    "tier": "strong",
+    "at_save": "strong",
+    "text": "Sales +28.4% y/y · tier strong · quarter ended 2026-09-30 · read 2026-11-08"
+   },
+   "status": {
+    "key": "changed",
+    "text": "⚠️ Changed since the save"
+   },
+   "fields": [
+    {
+     "category": "capital_quality",
+     "key": "roe",
+     "label": "ROE",
+     "kind": "fundamental",
+     "text": "18.2% (needs ≥ 20%)",
+     "verdict": "fail"
+    },
+    {
+     "category": "capital_quality",
+     "key": "fcf_margin",
+     "label": "FCF margin",
+     "kind": "fundamental",
+     "text": "31.0%",
+     "verdict": "pass"
+    },
+    {
+     "category": "capital_quality",
+     "key": "net_debt_ebitda",
+     "label": "Net debt / EBITDA",
+     "kind": "fundamental",
+     "text": "-0.40 (net cash)",
+     "verdict": "pass"
+    }
+   ],
+   "events": [
+    {
+     "date": "2026-11-13",
+     "kind": "fundamental",
+     "text": "⚠️ MANH no longer meets 💎 Capital quality: ROE 18.2% (needs ≥ 20%)"
+    }
+   ],
+   "pankaj": null,
+   "caveat_tag": "💎 UNMEASURED"
+  }
+ ],
+ "categories": [
+  {
+   "key": "s2_growth",
+   "label": "🚀 Stage 2 growth leaders",
+   "source_tab": "SEPA scan (full)",
+   "criteria_text": "Stage 2 · sales tier strong or explosive (or steady and accelerating) · strong quarterly and yearly EPS · ranked by RS rank",
+   "caveat": "UNMEASURED — a list of Stage 2 growers, not a measured edge.",
+   "caveat_tag": "🚀 UNMEASURED",
+   "also_text": null,
+   "rows": [
+    {
+     "symbol": "AMD",
+     "name": "Advanced Micro Devices",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "s2_growth",
+       "label": "🚀 Stage 2 growth leaders"
+      }
+     ],
+     "stage": {
+      "now": 2,
+      "label": "Advancing",
+      "at_save": 2,
+      "text": "Stage 2 · Advancing (saved in Stage 2)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": "Sales +35.6% y/y · tier strong · quarter ended 2026-09-27 · read 2026-11-08"
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "s2_growth",
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "text": "passes",
+       "verdict": "pass"
+      },
+      {
+       "category": "s2_growth",
+       "key": "c_strong_q_eps",
+       "label": "Quarterly EPS",
+       "kind": "fundamental",
+       "text": null,
+       "verdict": "unknown"
+      }
+     ],
+     "events": [],
+     "pankaj": null,
+     "caveat_tag": "🚀 UNMEASURED"
+    },
+    {
+     "symbol": "FIGS",
+     "name": "FIGS Inc",
+     "sector": "Healthcare",
+     "chips": [
+      {
+       "key": "s2_growth",
+       "label": "🚀 Stage 2 growth leaders"
+      },
+      {
+       "key": "hot",
+       "label": "🔥 Hot sectors"
+      }
+     ],
+     "stage": {
+      "now": 2,
+      "label": "Advancing",
+      "at_save": 2,
+      "text": "Stage 2 · Advancing (saved in Stage 2)"
+     },
+     "sales": {
+      "tier": "explosive",
+      "at_save": "explosive",
+      "text": "Sales +104.2% y/y · tier explosive · quarter ended 2026-09-30 · read 2026-11-08"
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "hot",
+       "key": "ret_21d",
+       "label": "21-day return",
+       "kind": "market",
+       "text": "+12.4%",
+       "verdict": "pass"
+      }
+     ],
+     "events": [],
+     "pankaj": null,
+     "caveat_tag": "🚀 UNMEASURED"
+    }
+   ],
+   "moved_text": null,
+   "top": [
+    {
+     "symbol": "RDDT",
+     "name": "Reddit",
+     "sector": "Communication Services",
+     "rank_text": "RS rank 98",
+     "new": true
+    },
+    {
+     "symbol": "HOOD",
+     "name": "Robinhood",
+     "sector": "Financials",
+     "rank_text": "RS rank 97",
+     "new": false
+    }
+   ],
+   "top_text": "This week's top (not saved)"
+  },
+  {
+   "key": "capital_quality",
+   "label": "💎 Capital quality",
+   "source_tab": "SEPA scan moat components (proxy)",
+   "criteria_text": "ROE ≥ 20% · FCF margin > 0 · net debt / EBITDA ≤ 1 · ranked by moat score",
+   "caveat": "UNMEASURED — moat components are proxies; the 💎 grade on 🚀 is unmeasured too.",
+   "caveat_tag": "💎 UNMEASURED",
+   "also_text": "Also graded on 🚀: ANET A",
+   "rows": [
+    {
+     "symbol": "MANH",
+     "name": "Manhattan Associates",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "capital_quality",
+       "label": "💎 Capital quality"
+      }
+     ],
+     "stage": {
+      "now": 2,
+      "label": "Advancing",
+      "at_save": 2,
+      "text": "Stage 2 · Advancing (saved in Stage 2)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": "Sales +28.4% y/y · tier strong · quarter ended 2026-09-30 · read 2026-11-08"
+     },
+     "status": {
+      "key": "changed",
+      "text": "⚠️ Changed since the save"
+     },
+     "fields": [
+      {
+       "category": "capital_quality",
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "text": "18.2% (needs ≥ 20%)",
+       "verdict": "fail"
+      },
+      {
+       "category": "capital_quality",
+       "key": "fcf_margin",
+       "label": "FCF margin",
+       "kind": "fundamental",
+       "text": "31.0%",
+       "verdict": "pass"
+      },
+      {
+       "category": "capital_quality",
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "fundamental",
+       "text": "-0.40 (net cash)",
+       "verdict": "pass"
+      }
+     ],
+     "events": [
+      {
+       "date": "2026-11-13",
+       "kind": "fundamental",
+       "text": "⚠️ MANH no longer meets 💎 Capital quality: ROE 18.2% (needs ≥ 20%)"
+      }
+     ],
+     "pankaj": null,
+     "caveat_tag": "💎 UNMEASURED"
+    },
+    {
+     "symbol": "ANET",
+     "name": "Arista Networks",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "capital_quality",
+       "label": "💎 Capital quality"
+      },
+      {
+       "key": "bonde",
+       "label": "📈 Bonde"
+      },
+      {
+       "key": "pankaj",
+       "label": "🧭 Pankaj's long-term list"
+      }
+     ],
+     "stage": {
+      "now": 3,
+      "label": "Topping",
+      "at_save": 3,
+      "text": "Stage 3 · Topping (saved in Stage 3)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": "Sales +27.5% y/y · tier strong · quarter ended 2026-09-30 · read 2026-11-08"
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "capital_quality",
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "text": "29.1%",
+       "verdict": "pass"
+      },
+      {
+       "category": "pankaj",
+       "key": "tier",
+       "label": "Pankaj tier",
+       "kind": "info",
+       "text": "Pankaj: Tier A · ZT 8.1",
+       "verdict": "info"
+      }
+     ],
+     "events": [],
+     "pankaj": {
+      "tier_text": "Pankaj: Tier A · ZT 8.1",
+      "zones_text": "Agg 120–125 · C1 110–115",
+      "zone_text": "6.2% over Pankaj's Agg zone top (125)"
+     },
+     "caveat_tag": "💎 UNMEASURED"
+    }
+   ],
+   "moved_text": null,
+   "top": [],
+   "top_text": "This week's top (not saved)"
+  },
+  {
+   "key": "quiet_strong",
+   "label": "🌱 Strong but not moving yet",
+   "source_tab": "Ticker ▸ Fundamentals long-term doc",
+   "criteria_text": "Stage 1 · long-term score ≥ 70 · profit and cash flow > 0 · sales CAGR ≥ 15% · liabilities / equity ≤ 1",
+   "caveat": "The long-term score is UNMEASURED — it describes the filings, it does not predict the stock.",
+   "caveat_tag": "🌱 UNMEASURED",
+   "also_text": null,
+   "rows": [
+    {
+     "symbol": "NVDA",
+     "name": "NVIDIA",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "quiet_strong",
+       "label": "🌱 Strong but not moving yet"
+      },
+      {
+       "key": "pankaj",
+       "label": "🧭 Pankaj's long-term list"
+      }
+     ],
+     "stage": {
+      "now": 2,
+      "label": "Advancing",
+      "at_save": 1,
+      "text": "Stage 2 · Advancing (saved in Stage 1)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": "Sales +62.0% y/y · tier strong · quarter ended 2026-10-26 · read 2026-11-08"
+     },
+     "status": {
+      "key": "started_moving",
+      "text": "🌱 → 🚀 Started moving this week"
+     },
+     "fields": [
+      {
+       "category": "quiet_strong",
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "text": "Stage 2 (needs Stage 1)",
+       "verdict": "fail"
+      },
+      {
+       "category": "quiet_strong",
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "text": "-0.12 (net cash)",
+       "verdict": "info"
+      }
+     ],
+     "events": [
+      {
+       "date": "2026-11-13",
+       "kind": "started_moving",
+       "text": "🌱 → 🚀 NVDA started moving: Stage 1 → Stage 2 (Advancing)"
+      }
+     ],
+     "pankaj": {
+      "tier_text": "Pankaj: Tier A · ZT 8.5",
+      "zones_text": "Agg 175–180 · C1 170–175 · C2 160–170",
+      "zone_text": "In Pankaj's C2 zone (160–170) at the 11-13 close"
+     },
+     "caveat_tag": "🌱 UNMEASURED"
+    },
+    {
+     "symbol": "MPWR",
+     "name": "Monolithic Power Systems",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "quiet_strong",
+       "label": "🌱 Strong but not moving yet"
+      }
+     ],
+     "stage": {
+      "now": 1,
+      "label": "Basing",
+      "at_save": 1,
+      "text": "Stage 1 · Basing (saved in Stage 1)"
+     },
+     "sales": {
+      "tier": "steady",
+      "at_save": "steady",
+      "text": "Sales +18.9% y/y · tier steady · quarter ended 2026-09-30 · read 2026-11-08"
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "quiet_strong",
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "text": "8.2% (needs ≥ 10%)",
+       "verdict": "fail"
+      },
+      {
+       "category": "quiet_strong",
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "text": "0.21",
+       "verdict": "pass"
+      }
+     ],
+     "events": [],
+     "pankaj": null,
+     "caveat_tag": "🌱 UNMEASURED"
+    },
+    {
+     "symbol": "XPEL",
+     "name": "XPEL Inc",
+     "sector": null,
+     "chips": [
+      {
+       "key": "quiet_strong",
+       "label": "🌱 Strong but not moving yet"
+      }
+     ],
+     "stage": {
+      "now": 1,
+      "label": "Basing",
+      "at_save": 1,
+      "text": "Stage 1 · Basing (saved in Stage 1)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": null
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "quiet_strong",
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "text": null,
+       "verdict": "info"
+      }
+     ],
+     "events": [],
+     "pankaj": null,
+     "caveat_tag": "🌱 UNMEASURED"
+    }
+   ],
+   "moved_text": "MPWR 8.2% under its 52-week high (needs ≥ 10%)",
+   "top": [],
+   "top_text": "This week's top (not saved)"
+  },
+  {
+   "key": "pankaj",
+   "label": "🧭 Pankaj's long-term list",
+   "source_tab": "Pankaj's sheet, read 2026-11-12",
+   "criteria_text": "His picks, not re-screened",
+   "caveat": "Pankaj's picks and Pankaj's zones from his sheet (read 2026-11-12) — not re-screened by this app; UNMEASURED here.",
+   "caveat_tag": "🧭 his picks",
+   "also_text": null,
+   "rows": [
+    {
+     "symbol": "TSM",
+     "name": "Taiwan Semiconductor",
+     "sector": "Technology",
+     "chips": [
+      {
+       "key": "pankaj",
+       "label": "🧭 Pankaj's long-term list"
+      }
+     ],
+     "stage": {
+      "now": 2,
+      "label": "Advancing",
+      "at_save": 2,
+      "text": "Stage 2 · Advancing (saved in Stage 2)"
+     },
+     "sales": {
+      "tier": "strong",
+      "at_save": "strong",
+      "text": "Sales +40.8% y/y · tier strong · quarter ended 2026-09-30 · read 2026-11-08"
+     },
+     "status": {
+      "key": "holding",
+      "text": "Holding — every leg as at the save"
+     },
+     "fields": [
+      {
+       "category": "pankaj",
+       "key": "zone_read",
+       "label": "Zone read",
+       "kind": "info",
+       "text": "In Pankaj's Agg zone (400–410) at the 11-13 close",
+       "verdict": "info"
+      }
+     ],
+     "events": [],
+     "pankaj": {
+      "tier_text": "Pankaj: Tier A · ZT 8.8",
+      "zones_text": "Agg 400–410 · C1 380–390",
+      "zone_text": "In Pankaj's Agg zone (400–410) at the 11-13 close"
+     },
+     "caveat_tag": "🧭 his picks"
+    }
+   ],
+   "moved_text": null,
+   "top": [],
+   "top_text": null
+  }
+ ],
+ "forward": {
+  "base_session": "2026-11-13",
+  "n_sessions": 1,
+  "too_early": true,
+  "line": "Too early — 1 of 21 sessions since the 2026-11-13 open. Equal weight across the 74 screened names saved 2026-11-12.",
+  "counts_line": "0 without a 2026-11-13 price · 0 on an older close · 0 carried at their last stored price",
+  "series": [
+   {
+    "key": "list_pct",
+    "label": "Saved list"
+   },
+   {
+    "key": "rsp_pct",
+    "label": "RSP"
+   },
+   {
+    "key": "spy_pct",
+    "label": "SPY"
+   }
+  ],
+  "points": [
+   {
+    "date": "2026-11-13",
+    "list_pct": 0.42,
+    "rsp_pct": 0.18,
+    "spy_pct": 0.25
+   }
+  ]
+ },
+ "history": [
+  {
+   "week": "2026-W46",
+   "session": "2026-11-13",
+   "text": "Week of 2026-11-13: 1 started moving · 1 changed · 1 new in the weekly tops",
+   "n_events": {
+    "started_moving": 1,
+    "fundamental": 1
+   },
+   "n_new_in_top": 1
+  }
+ ],
+ "rules": [
+  {
+   "key": "PER_CATEGORY",
+   "label": "Names per list",
+   "text": "10 per list, at most 3 per sector",
+   "source": "MINE",
+   "his_call": true
+  },
+  {
+   "key": "FALLEN_MIN_PCT_BELOW",
+   "label": "📉 depth",
+   "text": "at least 40% under the 52-week high",
+   "source": "HIS",
+   "his_call": false
+  }
+ ],
+ "caveats": [
+  "Bonde measured INVERTED (-3.11pp vs placebo)",
+  "cheap + growth ≈ market",
+  "None of these lists is a buy signal"
+ ]
+}

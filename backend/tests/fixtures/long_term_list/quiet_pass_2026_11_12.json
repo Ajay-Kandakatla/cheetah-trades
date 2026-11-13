@@ -1,0 +1,556 @@
+{
+ "_about": "🌱 pass set on the 2026-11-12 dumps (sc1112 lt_rows + sweep + snap): every leg except the current sales tier passes. Hand-copied for the reproduction test (spec §4 WP-CORE).",
+ "population": [
+  {
+   "symbol": "HLNE",
+   "sector": "Financial Services",
+   "values": {
+    "stage": 1,
+    "score": 87.9,
+    "score_ranked": true,
+    "net_profit": 249180000.0,
+    "ocf": 424917000.0,
+    "opm": 42.81,
+    "sales_cagr": 17.35,
+    "profit_cagr": 94.97,
+    "liab_to_equity": 0.916,
+    "sales_tier": "strong",
+    "dollar_vol_50": 57000000,
+    "pct_below_high": 39.0,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "NVDA",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 86.4,
+    "score_ranked": true,
+    "net_profit": 120067000000.0,
+    "ocf": 102718000000.0,
+    "opm": 60.38,
+    "sales_cagr": 46.59,
+    "profit_cagr": 60.85,
+    "liab_to_equity": 0.315,
+    "sales_tier": "explosive",
+    "dollar_vol_50": 29376500000,
+    "pct_below_high": 30.5,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "META",
+   "sector": "Communication Services",
+   "values": {
+    "stage": 1,
+    "score": 82.0,
+    "score_ranked": true,
+    "net_profit": 60458000000.0,
+    "ocf": 115800000000.0,
+    "opm": 41.44,
+    "sales_cagr": 24.66,
+    "profit_cagr": 21.84,
+    "liab_to_equity": 0.685,
+    "sales_tier": "strong",
+    "dollar_vol_50": 14992700000,
+    "pct_below_high": 19.8,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "AEM",
+   "sector": "Basic Materials",
+   "values": {
+    "stage": 1,
+    "score": 81.0,
+    "score_ranked": true,
+    "net_profit": 4461461000.0,
+    "ocf": 6817113000.0,
+    "opm": 53.04,
+    "sales_cagr": 21.02,
+    "profit_cagr": 44.86,
+    "liab_to_equity": 0.393,
+    "sales_tier": "unknown",
+    "dollar_vol_50": 351600000,
+    "pct_below_high": 29.3,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "GOOG",
+   "sector": "Communication Services",
+   "values": {
+    "stage": 1,
+    "score": 79.9,
+    "score_ranked": true,
+    "net_profit": 132170000000.0,
+    "ocf": 164713000000.0,
+    "opm": 32.03,
+    "sales_cagr": 18.08,
+    "profit_cagr": 23.71,
+    "liab_to_equity": 0.433,
+    "sales_tier": "steady",
+    "dollar_vol_50": 6543000000,
+    "pct_below_high": 26.0,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "GOOGL",
+   "sector": "Communication Services",
+   "values": {
+    "stage": 1,
+    "score": 79.9,
+    "score_ranked": true,
+    "net_profit": 132170000000.0,
+    "ocf": 164713000000.0,
+    "opm": 32.03,
+    "sales_cagr": 18.08,
+    "profit_cagr": 23.71,
+    "liab_to_equity": 0.433,
+    "sales_tier": "steady",
+    "dollar_vol_50": 10128900000,
+    "pct_below_high": 25.8,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "NXT",
+   "sector": "Industrials",
+   "values": {
+    "stage": 1,
+    "score": 79.7,
+    "score_ranked": true,
+    "net_profit": 585883000.0,
+    "ocf": 562911000.0,
+    "opm": 19.59,
+    "sales_cagr": 23.23,
+    "profit_cagr": 700.3,
+    "liab_to_equity": 0.745,
+    "sales_tier": "steady",
+    "dollar_vol_50": 222500000,
+    "pct_below_high": 40.2,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "LULU",
+   "sector": "Consumer Cyclical",
+   "values": {
+    "stage": 1,
+    "score": 79.0,
+    "score_ranked": true,
+    "net_profit": 1579183000.0,
+    "ocf": 1602477000.0,
+    "opm": 19.91,
+    "sales_cagr": 18.86,
+    "profit_cagr": 20.12,
+    "liab_to_equity": 0.704,
+    "sales_tier": "declining",
+    "dollar_vol_50": 503300000,
+    "pct_below_high": 51.6,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "MPWR",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 78.5,
+    "score_ranked": true,
+    "net_profit": 621483000.0,
+    "ocf": 838202000.0,
+    "opm": 26.11,
+    "sales_cagr": 24.49,
+    "profit_cagr": 31.54,
+    "liab_to_equity": 0.188,
+    "sales_tier": "strong",
+    "dollar_vol_50": 1124500000,
+    "pct_below_high": 14.3,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "XPEL",
+   "sector": "Consumer Cyclical",
+   "values": {
+    "stage": 1,
+    "score": 77.5,
+    "score_ranked": true,
+    "net_profit": 51226000.0,
+    "ocf": 66938000.0,
+    "opm": 13.16,
+    "sales_cagr": 24.17,
+    "profit_cagr": 24.17,
+    "liab_to_equity": 0.347,
+    "sales_tier": "steady",
+    "dollar_vol_50": 10300000,
+    "pct_below_high": 31.5,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "ZM",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 77.1,
+    "score_ranked": true,
+    "net_profit": 1900148000.0,
+    "ocf": 1989048000.0,
+    "opm": 23.08,
+    "sales_cagr": 40.88,
+    "profit_cagr": 105.4,
+    "liab_to_equity": 0.219,
+    "sales_tier": "weak",
+    "dollar_vol_50": 263800000,
+    "pct_below_high": 12.7,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "EPRT",
+   "sector": "Real Estate",
+   "values": {
+    "stage": 1,
+    "score": 76.1,
+    "score_ranked": true,
+    "net_profit": 253013000.0,
+    "ocf": 381080000.0,
+    "opm": 59.41,
+    "sales_cagr": 27.76,
+    "profit_cagr": 48.87,
+    "liab_to_equity": 0.632,
+    "sales_tier": "steady",
+    "dollar_vol_50": 77100000,
+    "pct_below_high": 20.1,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "MGY",
+   "sector": "Energy",
+   "values": {
+    "stage": 1,
+    "score": 75.8,
+    "score_ranked": true,
+    "net_profit": 325252000.0,
+    "ocf": 878639000.0,
+    "opm": 33.48,
+    "sales_cagr": 15.89,
+    "profit_cagr": 7.76,
+    "liab_to_equity": 0.466,
+    "sales_tier": "strong",
+    "dollar_vol_50": 100000000,
+    "pct_below_high": 25.3,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "PHM",
+   "sector": "Consumer Cyclical",
+   "values": {
+    "stage": 1,
+    "score": 75.4,
+    "score_ranked": true,
+    "net_profit": 2218730000.0,
+    "ocf": 1871249000.0,
+    "opm": 17.32,
+    "sales_cagr": 26.71,
+    "profit_cagr": 15.58,
+    "liab_to_equity": 0.39,
+    "sales_tier": "declining",
+    "dollar_vol_50": 237100000,
+    "pct_below_high": 11.0,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "CTRE",
+   "sector": "Real Estate",
+   "values": {
+    "stage": 1,
+    "score": 74.3,
+    "score_ranked": true,
+    "net_profit": 320538000.0,
+    "ocf": 394029000.0,
+    "opm": 55.94,
+    "sales_cagr": 15.13,
+    "profit_cagr": 30.42,
+    "liab_to_equity": 0.27,
+    "sales_tier": "strong",
+    "dollar_vol_50": 102600000,
+    "pct_below_high": 12.1,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "BOOT",
+   "sector": "Consumer Cyclical",
+   "values": {
+    "stage": 1,
+    "score": 74.2,
+    "score_ranked": true,
+    "net_profit": 225880000.0,
+    "ocf": 304903000.0,
+    "opm": 13.27,
+    "sales_cagr": 15.22,
+    "profit_cagr": 35.99,
+    "liab_to_equity": 0.858,
+    "sales_tier": "steady",
+    "dollar_vol_50": 103500000,
+    "pct_below_high": 35.7,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "UI",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 73.6,
+    "score_ranked": true,
+    "net_profit": 960303000.0,
+    "ocf": 928682000.0,
+    "opm": 36.21,
+    "sales_cagr": 15.94,
+    "profit_cagr": 15.75,
+    "liab_to_equity": 0.526,
+    "sales_tier": "steady",
+    "dollar_vol_50": 67900000,
+    "pct_below_high": 37.0,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "MZTI",
+   "sector": "Consumer Defensive",
+   "values": {
+    "stage": 1,
+    "score": 73.0,
+    "score_ranked": true,
+    "net_profit": 191606000.0,
+    "ocf": 283816000.0,
+    "opm": 12.37,
+    "sales_cagr": 22.15,
+    "profit_cagr": 5.8,
+    "liab_to_equity": 0.524,
+    "sales_tier": "declining",
+    "dollar_vol_50": 43300000,
+    "pct_below_high": 36.5,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "ARM",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 72.8,
+    "score_ranked": true,
+    "net_profit": 904000000.0,
+    "ocf": 1524000000.0,
+    "opm": 18.29,
+    "sales_cagr": 23.36,
+    "profit_cagr": 71.88,
+    "liab_to_equity": 0.292,
+    "sales_tier": "unknown",
+    "dollar_vol_50": 1403100000,
+    "pct_below_high": 54.5,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "TRNO",
+   "sector": "Real Estate",
+   "values": {
+    "stage": 1,
+    "score": 72.5,
+    "score_ranked": true,
+    "net_profit": 402992000.0,
+    "ocf": 271862000.0,
+    "opm": 40.32,
+    "sales_cagr": 17.88,
+    "profit_cagr": 44.02,
+    "liab_to_equity": 0.299,
+    "sales_tier": "steady",
+    "dollar_vol_50": 49800000,
+    "pct_below_high": 11.4,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "ADC",
+   "sector": "Real Estate",
+   "values": {
+    "stage": 1,
+    "score": 72.2,
+    "score_ranked": true,
+    "net_profit": 204349000.0,
+    "ocf": 504136000.0,
+    "opm": 46.63,
+    "sales_cagr": 25.73,
+    "profit_cagr": 18.27,
+    "liab_to_equity": 0.562,
+    "sales_tier": "steady",
+    "dollar_vol_50": 115700000,
+    "pct_below_high": 15.6,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "INTU",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 72.2,
+    "score_ranked": true,
+    "net_profit": 4566000000.0,
+    "ocf": 8838000000.0,
+    "opm": 27.43,
+    "sales_cagr": 17.06,
+    "profit_cagr": 18.58,
+    "liab_to_equity": 0.937,
+    "sales_tier": "steady",
+    "dollar_vol_50": 1063900000,
+    "pct_below_high": 49.7,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "IESC",
+   "sector": "Industrials",
+   "values": {
+    "stage": 1,
+    "score": 72.0,
+    "score_ranked": true,
+    "net_profit": 305975000.0,
+    "ocf": 286096000.0,
+    "opm": 11.37,
+    "sales_cagr": 19.16,
+    "profit_cagr": 10.88,
+    "liab_to_equity": 0.801,
+    "sales_tier": "strong",
+    "dollar_vol_50": 98200000,
+    "pct_below_high": 56.1,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "AU",
+   "sector": "Basic Materials",
+   "values": {
+    "stage": 1,
+    "score": 71.9,
+    "score_ranked": true,
+    "net_profit": 2636000000.0,
+    "ocf": 4784000000.0,
+    "opm": 41.75,
+    "sales_cagr": 46.94,
+    "profit_cagr": null,
+    "liab_to_equity": 0.638,
+    "sales_tier": "unknown",
+    "dollar_vol_50": 231600000,
+    "pct_below_high": 31.7,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "DOCS",
+   "sector": "Healthcare",
+   "values": {
+    "stage": 1,
+    "score": 71.7,
+    "score_ranked": true,
+    "net_profit": 196051000.0,
+    "ocf": 326458000.0,
+    "opm": 33.33,
+    "sales_cagr": 17.05,
+    "profit_cagr": 6.09,
+    "liab_to_equity": 0.182,
+    "sales_tier": "weak",
+    "dollar_vol_50": 84900000,
+    "pct_below_high": 35.6,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "PEN",
+   "sector": "Healthcare",
+   "values": {
+    "stage": 1,
+    "score": 71.5,
+    "score_ranked": true,
+    "net_profit": 177687000.0,
+    "ocf": 238663000.0,
+    "opm": 13.48,
+    "sales_cagr": 20.44,
+    "profit_cagr": 31.79,
+    "liab_to_equity": 0.279,
+    "sales_tier": "steady",
+    "dollar_vol_50": 121300000,
+    "pct_below_high": 10.7,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "ISRG",
+   "sector": "Healthcare",
+   "values": {
+    "stage": 1,
+    "score": 71.4,
+    "score_ranked": true,
+    "net_profit": 2856000000.0,
+    "ocf": 3030500000.0,
+    "opm": 29.27,
+    "sales_cagr": 15.71,
+    "profit_cagr": 16.22,
+    "liab_to_equity": 0.141,
+    "sales_tier": "steady",
+    "dollar_vol_50": 1024500000,
+    "pct_below_high": 25.8,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "TCMD",
+   "sector": "Healthcare",
+   "values": {
+    "stage": 1,
+    "score": 71.4,
+    "score_ranked": true,
+    "net_profit": 19086000.0,
+    "ocf": 42811000.0,
+    "opm": 8.89,
+    "sales_cagr": 16.32,
+    "profit_cagr": 23.39,
+    "liab_to_equity": 0.251,
+    "sales_tier": "steady",
+    "dollar_vol_50": 5800000,
+    "pct_below_high": 18.9,
+    "net_debt_ebitda": null
+   }
+  },
+  {
+   "symbol": "EPAM",
+   "sector": "Technology",
+   "values": {
+    "stage": 1,
+    "score": 71.2,
+    "score_ranked": true,
+    "net_profit": 377678000.0,
+    "ocf": 654934000.0,
+    "opm": 9.53,
+    "sales_cagr": 32.86,
+    "profit_cagr": 16.01,
+    "liab_to_equity": 0.333,
+    "sales_tier": "weak",
+    "dollar_vol_50": 158300000,
+    "pct_below_high": 26.0,
+    "net_debt_ebitda": null
+   }
+  }
+ ]
+}

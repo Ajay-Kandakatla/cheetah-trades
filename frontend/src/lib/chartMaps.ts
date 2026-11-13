@@ -33,7 +33,7 @@ import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
 import { LUK_CAT_PARAM, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'luk' | 'doji_sweep';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'luk' | 'doji_sweep' | 'long_term';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -187,6 +187,15 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // The slot is his call (spec §7.2).
   'news',
   'growth',
+  // 📅 Long Term (Ajay 2026-11-12: "Save this entire list for me. In a New tab
+  // - Long Term - Remember this analays criteria I am asking you to for this
+  // tab and keep updating it from all the other tabs info.. Weekly and if
+  // something gets dropped let me know when to like is Sales drop or Stage 2 to
+  // Stage 3 or stage 4 changes."). IMMEDIATELY after 🚀 Explosive Growth —
+  // TAB ORDER IS EARNED; tabUsageKey counts it from the first open and the next
+  // re-cut moves it on the evidence. Label and slot are his call (long-term
+  // spec §7 #12).
+  'long_term',
   // 🆕 IPOs ≤2y (Ajay 2026-09-19: "IPO of hot sector theme of stocks and
   // then add them as a tab in Chart maps"). A tile board off the chart-maps
   // dispatcher, beside the growth board it was asked for next to; no usage
@@ -363,7 +372,12 @@ export function isBoardTab(t: CmTab): boolean {
     // 5- / 60-minute bars, his three scans, his Playbook, the 🏁 record). Not a
     // universe pass, so the board loader and its controls are skipped and
     // LukBoard draws it with its own sub-tabs.
-    && t !== 'luk';
+    && t !== 'luk'
+    // 📅 Long Term (2026-11-12) — its own read-only endpoint,
+    // GET /chart-maps/long-term: his saved list re-read weekly by the server
+    // (owner only). Not a universe pass, so the board loader and its controls
+    // are skipped and LongTermBoard draws it.
+    && t !== 'long_term';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -444,6 +458,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // verbatim and no rule number. Label = backend chart_maps/luk/constants
   // .LUK_TAB_LABEL. Every A+ rings his phone since 2026-11-01 by his call ("Lets make it
   // live. also alerts too."); shadow = recorded, never sent. UNMEASURED.
+  // 📅 Long Term (Ajay 2026-11-12, long-term spec §3.13). Every word and number
+  // on the BOARD is served by backend long_term_list/payload.py; this blurb
+  // carries his ask verbatim (the one with no digit) and no number. Owner only
+  // by default (server-gated, spec §7 #11). UNMEASURED.
+  long_term: {
+    label: '\u{1F4C5} Long Term',
+    blurb: '\u{1F4C5} Your saved long-term lists, re-read every week from the other tabs\u2019 own data: what dropped out of its stage or its sales tier, what started moving, and each list\u2019s new names this week. Ajay: "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet.." Shown to the account owner only. UNMEASURED \u2014 none of these lists is a buy signal. Not advice.',
+  },
   luk: {
     label: '\u{1F947} Luk\'s',
     blurb: '\u{1F947} Martin Luk\u2019s published pullback / opening-range method, built from his own words in free sources. Ajay 2026-11-01: "look at other winners of US stocks champion ship and pic the next best one like Gajjala. Implement their strategy please if they have online resources." and "I need something like Gajjlala that is exposed". WHO HE IS: the 2025 US Investing Championship winner (stock division). He sells nothing; every rule on this tab is his own words in free sources \u2014 his videos and his guest post \u2014 cited line by line on the \u{1F4D3} Playbook. THE SUB-TABS come in three groups: his three setups \u2014 \u21A9\uFE0F Pullback reversal, \u{1F514} Opening range, \u{1F4E6} Inside day \u2014 each card with its state, its trigger, its stop and its risk and every criterion ticked or crossed; his three scans \u2014 \u2600\uFE0F Premarket, \u{1F3C6} Leader, \u26A1 Potent \u2014 with the settings he showed; and \u{1F4D3} his Playbook with the \u{1F3C1} Track record. Every A+ here rings your phone since 2026-11-01 by your call ("Lets make it live. also alerts too."). Its \u{1F3C1} Track record starts 2026-11-01. UNMEASURED \u2014 nothing here trades or enters a lane. Not advice.',

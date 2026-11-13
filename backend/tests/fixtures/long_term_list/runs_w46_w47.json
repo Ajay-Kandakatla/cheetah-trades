@@ -1,0 +1,1810 @@
+[
+ {
+  "_id": "2026-W46",
+  "iso_week": "2026-W46",
+  "session": "2026-11-13",
+  "trigger": "test",
+  "built_at": 0,
+  "built_at_iso": "2026-11-13T16:41:00-05:00",
+  "duration_s": 1.0,
+  "sources": {
+   "scan": {
+    "ok": true,
+    "reason": null,
+    "as_of": "2026-11-13",
+    "n": 2650
+   },
+   "fallen": {
+    "ok": false,
+    "reason": "📉 list not warmed",
+    "as_of": null,
+    "n": 0
+   }
+  },
+  "names": {
+   "AMD": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Advanced Micro Devices",
+    "legs": {
+     "s2_growth": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "pass",
+       "value": 2,
+       "text": "Stage 2 (needs Stage 2)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "tier": "strong",
+        "accelerating": false
+       },
+       "text": "Sales tier strong (needs strong or explosive, or steady and accelerating)"
+      },
+      {
+       "key": "c_strong_q_eps",
+       "label": "Quarterly EPS (C)",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": true,
+       "text": "Quarterly EPS strong (C)"
+      },
+      {
+       "key": "a_strong_y_eps",
+       "label": "Annual EPS (A)",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": true,
+       "text": "Annual EPS strong (A)"
+      }
+     ]
+    },
+    "qualifies": {
+     "s2_growth": true
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-13",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "HLNE": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Financial Services",
+    "name": "Hamilton Lane",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "pass",
+       "value": 1,
+       "text": "Stage 1 (needs Stage 1)"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 39.0,
+       "text": "39.0% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": true
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "MPWR": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Monolithic Power Systems",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "pass",
+       "value": 1,
+       "text": "Stage 1 (needs Stage 1)"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 39.0,
+       "text": "39.0% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": true
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "MA": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Financial Services",
+    "name": "Mastercard",
+    "legs": {
+     "capital_quality": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 31.0,
+       "text": "ROE 31.0% (needs ≥ 20%)"
+      },
+      {
+       "key": "fcf_margin",
+       "label": "FCF margin",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 22.0,
+       "text": "FCF margin 22.0% (needs > 0%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": -0.4,
+       "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+      },
+      {
+       "key": "cq_grade",
+       "label": "💎 grade on 🚀",
+       "kind": "info",
+       "verdict": "info",
+       "value": null,
+       "text": "—"
+      }
+     ]
+    },
+    "qualifies": {
+     "capital_quality": true
+    },
+    "zone_read": {
+     "close": 520.0,
+     "close_date": "2026-11-13",
+     "n_zones": 4,
+     "zones": {
+      "Agg": [
+       588.0,
+       600.0
+      ],
+      "C1": [
+       545.0,
+       555.0
+      ],
+      "C2": [
+       510.0,
+       523.0
+      ],
+      "C3": [
+       460.0,
+       480.0
+      ]
+     },
+     "in": [
+      "C2"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "under",
+      "pct": 4.6,
+      "edge": 545.0
+     }
+    },
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-13",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [
+      "C2"
+     ],
+     "absent": []
+    }
+   },
+   "ANET": {
+    "stage": 3,
+    "stage_label": "Topping",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Arista Networks",
+    "legs": {
+     "capital_quality": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 31.0,
+       "text": "ROE 31.0% (needs ≥ 20%)"
+      },
+      {
+       "key": "fcf_margin",
+       "label": "FCF margin",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 22.0,
+       "text": "FCF margin 22.0% (needs > 0%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": -0.4,
+       "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+      },
+      {
+       "key": "cq_grade",
+       "label": "💎 grade on 🚀",
+       "kind": "info",
+       "verdict": "info",
+       "value": null,
+       "text": "—"
+      }
+     ],
+     "bonde": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "bonde_tier",
+       "label": "Bonde tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Bonde tier strong (needs strong or explosive)"
+      }
+     ]
+    },
+    "qualifies": {
+     "capital_quality": true,
+     "bonde": true
+    },
+    "zone_read": {
+     "close": 140.0,
+     "close_date": "2026-11-13",
+     "n_zones": 3,
+     "zones": {
+      "C1": [
+       150.0,
+       160.0
+      ],
+      "C2": [
+       130.0,
+       140.0
+      ],
+      "C3": [
+       110.0,
+       120.0
+      ]
+     },
+     "in": [
+      "C2"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "under",
+      "pct": 6.7,
+      "edge": 150.0
+     }
+    },
+    "flags": {
+     "last_stage": 3,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [
+      "C2"
+     ],
+     "absent": []
+    }
+   },
+   "XPEL": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "steady",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Consumer Cyclical",
+    "name": "XPEL",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "pass",
+       "value": 1,
+       "text": "Stage 1 (needs Stage 1)"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 39.0,
+       "text": "39.0% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": true
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "TSM": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "steady",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Taiwan Semiconductor",
+    "legs": {},
+    "qualifies": {},
+    "zone_read": {
+     "close": 405.49,
+     "close_date": "2026-11-13",
+     "n_zones": 4,
+     "zones": {
+      "Agg": [
+       400.0,
+       410.0
+      ],
+      "C1": [
+       360.0,
+       375.0
+      ],
+      "C2": [
+       310.0,
+       320.0
+      ],
+      "C3": [
+       260.0,
+       280.0
+      ]
+     },
+     "in": [
+      "Agg"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "over",
+      "pct": 8.1,
+      "edge": 375.0
+     }
+    },
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-13",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [
+      "Agg"
+     ],
+     "absent": []
+    }
+   },
+   "NRIX": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-13",
+    "close": 100.0,
+    "close_date": "2026-11-13",
+    "sales_tier": "explosive",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Healthcare",
+    "name": "Nurix Therapeutics",
+    "legs": {
+     "fallen_growers": [
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 60.0,
+       "text": "60.0% under its 52-week high (needs ≥ 40%)"
+      },
+      {
+       "key": "pct_above_low",
+       "label": "Over the 52-week low",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 80.0,
+       "text": "80.0% over its 52-week low (needs ≥ 10%)"
+      },
+      {
+       "key": "sales_yoy",
+       "label": "Sales y/y",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 1500.0,
+       "text": "Sales +1500.0% y/y (needs ≥ 20%)"
+      },
+      {
+       "key": "floor",
+       "label": "Liquidity floor",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Liquidity floor: ok or better"
+      }
+     ]
+    },
+    "qualifies": {
+     "fallen_growers": true
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   }
+  },
+  "top": {
+   "s2_growth": [
+    {
+     "symbol": "AMC",
+     "name": "AMC Entertainment",
+     "sector": "Communication Services",
+     "rank_text": "RS rank 99",
+     "new": false
+    },
+    {
+     "symbol": "NEWX",
+     "name": "New Name Inc",
+     "sector": "Technology",
+     "rank_text": "RS rank 98",
+     "new": true
+    }
+   ],
+   "hot": [
+    {
+     "symbol": "LQDA",
+     "name": "Liquidia",
+     "sector": "Healthcare",
+     "rank_text": "One-month return +40.0%",
+     "new": false
+    }
+   ]
+  },
+  "events": [
+   {
+    "symbol": "TSM",
+    "kind": "zone",
+    "date": "2026-11-13",
+    "categories": [
+     "pankaj"
+    ],
+    "text": "🧭 TSM in Pankaj's Agg zone (400–410) at the 11-13 close",
+    "detail": {
+     "zone": "Agg"
+    },
+    "rings": false
+   }
+  ],
+  "digest": {
+   "title": "📅 Long Term — week of 2026-11-13: 0 dropped (stage or sales) · 0 started moving · 1 in Pankaj's zones",
+   "lines": [
+    "🧭 TSM in Pankaj's Agg zone (400–410) at the 11-13 close",
+    "✨ 🚀 Stage 2 growth leaders — new in this week's top: NEWX"
+   ],
+   "items": [
+    {
+     "symbol": "TSM",
+     "kind": "zone",
+     "text": "🧭 TSM in Pankaj's Agg zone (400–410) at the 11-13 close"
+    }
+   ],
+   "n_ring": 0,
+   "n_dropped": 0,
+   "n_started": 0,
+   "n_fundamental": 0,
+   "n_zone": 1,
+   "n_moved": 0,
+   "n_new_in_top": 1,
+   "n_absent": 0,
+   "rings": false
+  },
+  "constants": {}
+ },
+ {
+  "_id": "2026-W47",
+  "iso_week": "2026-W47",
+  "session": "2026-11-20",
+  "trigger": "test",
+  "built_at": 0,
+  "built_at_iso": "2026-11-20T16:41:00-05:00",
+  "duration_s": 1.0,
+  "sources": {
+   "scan": {
+    "ok": true,
+    "reason": null,
+    "as_of": "2026-11-20",
+    "n": 2650
+   },
+   "fallen": {
+    "ok": false,
+    "reason": "📉 list not warmed",
+    "as_of": null,
+    "n": 0
+   }
+  },
+  "names": {
+   "AMD": {
+    "stage": 3,
+    "stage_label": "Topping",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Advanced Micro Devices",
+    "legs": {
+     "s2_growth": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "fail",
+       "value": 3,
+       "text": "Stage 3 (needs Stage 2)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "tier": "strong",
+        "accelerating": false
+       },
+       "text": "Sales tier strong (needs strong or explosive, or steady and accelerating)"
+      },
+      {
+       "key": "c_strong_q_eps",
+       "label": "Quarterly EPS (C)",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": true,
+       "text": "Quarterly EPS strong (C)"
+      },
+      {
+       "key": "a_strong_y_eps",
+       "label": "Annual EPS (A)",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": true,
+       "text": "Annual EPS strong (A)"
+      }
+     ]
+    },
+    "qualifies": {
+     "s2_growth": false
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 3,
+     "last_stage2_on": "2026-11-13",
+     "stage_drop_on": "2026-11-20",
+     "stage_drop_active": true,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "HLNE": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Financial Services",
+    "name": "Hamilton Lane",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "fail",
+       "value": 2,
+       "text": "Stage 2 (needs Stage 1)"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 39.0,
+       "text": "39.0% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": false
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-20",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": "2026-11-20",
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "MPWR": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Monolithic Power Systems",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "pass",
+       "value": 1,
+       "text": "Stage 1 (needs Stage 1)"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "fail",
+       "value": 8.2,
+       "text": "8.2% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": false
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   },
+   "MA": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Financial Services",
+    "name": "Mastercard",
+    "legs": {
+     "capital_quality": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "verdict": "fail",
+       "value": 18.0,
+       "text": "ROE 18.0% (needs ≥ 20%)"
+      },
+      {
+       "key": "fcf_margin",
+       "label": "FCF margin",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 22.0,
+       "text": "FCF margin 22.0% (needs > 0%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": -0.4,
+       "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+      },
+      {
+       "key": "cq_grade",
+       "label": "💎 grade on 🚀",
+       "kind": "info",
+       "verdict": "info",
+       "value": null,
+       "text": "—"
+      }
+     ]
+    },
+    "qualifies": {
+     "capital_quality": false
+    },
+    "zone_read": {
+     "close": 520.0,
+     "close_date": "2026-11-20",
+     "n_zones": 4,
+     "zones": {
+      "Agg": [
+       588.0,
+       600.0
+      ],
+      "C1": [
+       545.0,
+       555.0
+      ],
+      "C2": [
+       510.0,
+       523.0
+      ],
+      "C3": [
+       460.0,
+       480.0
+      ]
+     },
+     "in": [
+      "C2"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "under",
+      "pct": 4.6,
+      "edge": 545.0
+     }
+    },
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-20",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [
+      "capital_quality"
+     ],
+     "started_moving_on": null,
+     "zone_in": [
+      "C2"
+     ],
+     "absent": []
+    }
+   },
+   "ANET": {
+    "stage": 3,
+    "stage_label": "Topping",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "strong",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Arista Networks",
+    "legs": {
+     "capital_quality": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "roe",
+       "label": "ROE",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 31.0,
+       "text": "ROE 31.0% (needs ≥ 20%)"
+      },
+      {
+       "key": "fcf_margin",
+       "label": "FCF margin",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 22.0,
+       "text": "FCF margin 22.0% (needs > 0%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": -0.4,
+       "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+      },
+      {
+       "key": "cq_grade",
+       "label": "💎 grade on 🚀",
+       "kind": "info",
+       "verdict": "info",
+       "value": null,
+       "text": "—"
+      }
+     ],
+     "bonde": [
+      {
+       "key": "qualifier",
+       "label": "Trend template",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Trend template: passes"
+      },
+      {
+       "key": "bonde_tier",
+       "label": "Bonde tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Bonde tier strong (needs strong or explosive)"
+      }
+     ]
+    },
+    "qualifies": {
+     "capital_quality": true,
+     "bonde": true
+    },
+    "zone_read": {
+     "close": 140.0,
+     "close_date": "2026-11-20",
+     "n_zones": 3,
+     "zones": {
+      "C1": [
+       150.0,
+       160.0
+      ],
+      "C2": [
+       130.0,
+       140.0
+      ],
+      "C3": [
+       110.0,
+       120.0
+      ]
+     },
+     "in": [
+      "C2"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "under",
+      "pct": 6.7,
+      "edge": 150.0
+     }
+    },
+    "flags": {
+     "last_stage": 3,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [
+      "C2"
+     ],
+     "absent": []
+    }
+   },
+   "XPEL": {
+    "stage": null,
+    "stage_label": null,
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": null,
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Consumer Cyclical",
+    "name": "XPEL",
+    "legs": {
+     "quiet_strong": [
+      {
+       "key": "stage",
+       "label": "Stage",
+       "kind": "stage",
+       "verdict": "unknown",
+       "value": null,
+       "text": "—"
+      },
+      {
+       "key": "score",
+       "label": "Long-term score",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": {
+        "score": 87.9,
+        "ranked": true
+       },
+       "text": "Long-term score 87.9 (needs ≥ 70)"
+      },
+      {
+       "key": "net_profit",
+       "label": "Net profit",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 249000000.0,
+       "text": "Net profit $249M (needs > $0)"
+      },
+      {
+       "key": "ocf",
+       "label": "Operating cash flow",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 425000000.0,
+       "text": "Operating cash flow $425M (needs > $0)"
+      },
+      {
+       "key": "sales_cagr",
+       "label": "Sales CAGR",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 17.35,
+       "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+      },
+      {
+       "key": "liab_to_equity",
+       "label": "Liabilities / equity",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": 0.916,
+       "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+      },
+      {
+       "key": "sales_tier",
+       "label": "Sales tier",
+       "kind": "fundamental",
+       "verdict": "pass",
+       "value": "strong",
+       "text": "Sales tier strong (needs steady, strong or explosive)"
+      },
+      {
+       "key": "dollar_vol_50",
+       "label": "Average daily $ volume",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 61000000.0,
+       "text": "Average daily $ volume $61M (needs ≥ $5M)"
+      },
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 39.0,
+       "text": "39.0% under its 52-week high (needs ≥ 10%)"
+      },
+      {
+       "key": "net_debt_ebitda",
+       "label": "Net debt / EBITDA",
+       "kind": "info",
+       "verdict": "info",
+       "value": 0.06,
+       "text": "Net debt / EBITDA 0.06"
+      }
+     ]
+    },
+    "qualifies": {
+     "quiet_strong": null
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": [
+      "scan"
+     ]
+    }
+   },
+   "TSM": {
+    "stage": 2,
+    "stage_label": "Advancing",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "steady",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Technology",
+    "name": "Taiwan Semiconductor",
+    "legs": {},
+    "qualifies": {},
+    "zone_read": {
+     "close": 405.49,
+     "close_date": "2026-11-20",
+     "n_zones": 4,
+     "zones": {
+      "Agg": [
+       400.0,
+       410.0
+      ],
+      "C1": [
+       360.0,
+       375.0
+      ],
+      "C2": [
+       310.0,
+       320.0
+      ],
+      "C3": [
+       260.0,
+       280.0
+      ]
+     },
+     "in": [
+      "Agg"
+     ],
+     "nearest": {
+      "zone": "C1",
+      "side": "over",
+      "pct": 8.1,
+      "edge": 375.0
+     }
+    },
+    "flags": {
+     "last_stage": 2,
+     "last_stage2_on": "2026-11-20",
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [
+      "Agg"
+     ],
+     "absent": []
+    }
+   },
+   "NRIX": {
+    "stage": 1,
+    "stage_label": "Basing",
+    "stage_bar_date": "2026-11-20",
+    "close": 100.0,
+    "close_date": "2026-11-20",
+    "sales_tier": "explosive",
+    "sales_yoy_pct": 30.0,
+    "sales_q_end": "2026-09-30",
+    "sales_read_on": "2026-11-08",
+    "sector": "Healthcare",
+    "name": "Nurix Therapeutics",
+    "legs": {
+     "fallen_growers": [
+      {
+       "key": "pct_below_high",
+       "label": "Under the 52-week high",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 60.0,
+       "text": "60.0% under its 52-week high (needs ≥ 40%)"
+      },
+      {
+       "key": "pct_above_low",
+       "label": "Over the 52-week low",
+       "kind": "market",
+       "verdict": "pass",
+       "value": 80.0,
+       "text": "80.0% over its 52-week low (needs ≥ 10%)"
+      },
+      {
+       "key": "sales_yoy",
+       "label": "Sales y/y",
+       "kind": "fundamental",
+       "verdict": "unknown",
+       "value": null,
+       "text": "—"
+      },
+      {
+       "key": "floor",
+       "label": "Liquidity floor",
+       "kind": "market",
+       "verdict": "pass",
+       "value": true,
+       "text": "Liquidity floor: ok or better"
+      }
+     ]
+    },
+    "qualifies": {
+     "fallen_growers": null
+    },
+    "zone_read": null,
+    "flags": {
+     "last_stage": 1,
+     "last_stage2_on": null,
+     "stage_drop_on": null,
+     "stage_drop_active": false,
+     "sales_drop_active": false,
+     "fundamental_failing": [],
+     "started_moving_on": null,
+     "zone_in": [],
+     "absent": []
+    }
+   }
+  },
+  "top": {
+   "s2_growth": [
+    {
+     "symbol": "AMC",
+     "name": "AMC Entertainment",
+     "sector": "Communication Services",
+     "rank_text": "RS rank 99",
+     "new": false
+    },
+    {
+     "symbol": "NEWX",
+     "name": "New Name Inc",
+     "sector": "Technology",
+     "rank_text": "RS rank 98",
+     "new": true
+    }
+   ],
+   "hot": [
+    {
+     "symbol": "LQDA",
+     "name": "Liquidia",
+     "sector": "Healthcare",
+     "rank_text": "One-month return +40.0%",
+     "new": false
+    }
+   ]
+  },
+  "events": [
+   {
+    "symbol": "AMD",
+    "kind": "stage_drop",
+    "date": "2026-11-20",
+    "categories": [
+     "s2_growth"
+    ],
+    "text": "⚠️ AMD Stage 2 → Stage 3 (Topping) — last read in Stage 2 on 2026-11-13",
+    "detail": {
+     "to": 3,
+     "last_stage2_on": "2026-11-13"
+    },
+    "rings": true
+   },
+   {
+    "symbol": "HLNE",
+    "kind": "started_moving",
+    "date": "2026-11-20",
+    "categories": [
+     "quiet_strong"
+    ],
+    "text": "🌱 → 🚀 HLNE started moving: Stage 1 → Stage 2 (Advancing)",
+    "detail": {
+     "from": 1,
+     "to": 2
+    },
+    "rings": true
+   },
+   {
+    "symbol": "MPWR",
+    "kind": "moved",
+    "date": "2026-11-20",
+    "categories": [
+     "quiet_strong"
+    ],
+    "text": "MPWR 8.2% under its 52-week high (needs ≥ 10%)",
+    "detail": {
+     "legs": [
+      "8.2% under its 52-week high (needs ≥ 10%)"
+     ]
+    },
+    "rings": false
+   },
+   {
+    "symbol": "MA",
+    "kind": "fundamental",
+    "date": "2026-11-20",
+    "categories": [
+     "capital_quality"
+    ],
+    "text": "⚠️ MA no longer meets 💎 Capital quality: ROE 18.0% (needs ≥ 20%)",
+    "detail": {
+     "legs": [
+      "ROE 18.0% (needs ≥ 20%)"
+     ]
+    },
+    "rings": false
+   },
+   {
+    "symbol": "XPEL",
+    "kind": "absent",
+    "date": "2026-11-20",
+    "categories": [
+     "quiet_strong"
+    ],
+    "text": "XPEL not in this week's data (SEPA scan) — not read, not dropped",
+    "detail": {
+     "sources": [
+      "scan"
+     ]
+    },
+    "rings": false
+   }
+  ],
+  "digest": {
+   "title": "📅 Long Term — week of 2026-11-20: 1 dropped (stage or sales) · 1 started moving · 0 in Pankaj's zones",
+   "lines": [
+    "⚠️ AMD Stage 2 → Stage 3 (Topping) — last read in Stage 2 on 2026-11-13",
+    "🌱 → 🚀 HLNE started moving: Stage 1 → Stage 2 (Advancing)",
+    "⚠️ MA no longer meets 💎 Capital quality: ROE 18.0% (needs ≥ 20%)",
+    "MPWR 8.2% under its 52-week high (needs ≥ 10%)",
+    "XPEL not in this week's data (SEPA scan) — not read, not dropped",
+    "✨ 🚀 Stage 2 growth leaders — new in this week's top: NEWX"
+   ],
+   "items": [
+    {
+     "symbol": "AMD",
+     "kind": "stage_drop",
+     "text": "⚠️ AMD Stage 2 → Stage 3 (Topping) — last read in Stage 2 on 2026-11-13"
+    },
+    {
+     "symbol": "HLNE",
+     "kind": "started_moving",
+     "text": "🌱 → 🚀 HLNE started moving: Stage 1 → Stage 2 (Advancing)"
+    },
+    {
+     "symbol": "MA",
+     "kind": "fundamental",
+     "text": "⚠️ MA no longer meets 💎 Capital quality: ROE 18.0% (needs ≥ 20%)"
+    },
+    {
+     "symbol": "MPWR",
+     "kind": "moved",
+     "text": "MPWR 8.2% under its 52-week high (needs ≥ 10%)"
+    },
+    {
+     "symbol": "XPEL",
+     "kind": "absent",
+     "text": "XPEL not in this week's data (SEPA scan) — not read, not dropped"
+    }
+   ],
+   "n_ring": 2,
+   "n_dropped": 1,
+   "n_started": 1,
+   "n_fundamental": 1,
+   "n_zone": 0,
+   "n_moved": 1,
+   "n_new_in_top": 1,
+   "n_absent": 1,
+   "rings": true
+  },
+  "constants": {}
+ }
+]

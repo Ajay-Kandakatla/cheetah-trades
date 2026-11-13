@@ -4473,6 +4473,36 @@ def resiliency_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                                 pm_state=pm_state)}
 
 
+def fallen_pool(entry: dict, *, sort: str, depth: int, min_tier: str) -> tuple:
+    """The 📉 page's selection, before any tile is built: `fallen_tab.rank` at
+    `depth` in the asked `sort`, then the liquidity floor (the resiliency
+    pattern) on a COPY of the stored scan-row metrics; no scan row -> the
+    closed frame's 50-bar close x volume, the same formula (the 🏔️ ATH
+    pattern).
+
+    Returns `(kept, counts, dropped_thin, no_turnover)`; `kept` is a list of
+    `(row, metrics)` in page order, rows being the memo's own dicts —
+    READ-ONLY. Extracted 2026-11-12 so the 📅 Long Term weekly read takes the
+    exact pool `fallen_tiles` serves (one engine); `fallen_tiles` output is
+    byte-identical.
+    """
+    from chart_maps import fallen_tab as FAL
+
+    rows, counts = FAL.rank(entry, sort=sort, depth=depth)
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    kept, no_turnover, dropped_thin = [], 0, 0
+    for r in rows:
+        m = dict(r.get("metrics") or {})
+        if m.get("avg_turnover") is None:
+            m["avg_turnover"] = r.get("adv50")
+        if not passes_liquidity(m.get("avg_turnover"), min_tier):
+            dropped_thin += 1
+            no_turnover += int(floor_on and m.get("avg_turnover") is None)
+            continue
+        kept.append((r, m))
+    return kept, counts, dropped_thin, no_turnover
+
+
 def fallen_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  universe: str = "full", themes_first: bool = False,
                  sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
@@ -4515,22 +4545,11 @@ def fallen_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 "fallen_board": FAL.error_block(got.get("reason"), now=now_et, sort=sort,
                                                 depth=d)}
     entry = got["entry"]                                    # READ-ONLY (the memo's)
-    rows, counts = FAL.rank(entry, sort=sort, depth=d)
-
-    # 1 — the liquidity floor first (the resiliency pattern), on a COPY of the
-    # stored scan-row metrics; no scan row -> the closed frame's 50-bar close x
-    # volume, the same formula (the 🏔️ ATH pattern).
-    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
-    kept, no_turnover, dropped_thin = [], 0, 0
-    for r in rows:
-        m = dict(r.get("metrics") or {})
-        if m.get("avg_turnover") is None:
-            m["avg_turnover"] = r.get("adv50")
-        if not passes_liquidity(m.get("avg_turnover"), min_tier):
-            dropped_thin += 1
-            no_turnover += int(floor_on and m.get("avg_turnover") is None)
-            continue
-        kept.append((r, m))
+    kept, counts, dropped_thin, no_turnover = fallen_pool(entry, sort=sort, depth=d,
+                                                          min_tier=min_tier)
+    # every row at the depth (pre-floor), for the 📋 pick-coverage line only —
+    # `fallen_pool` keeps the 2026-11-12 spec's 4-tuple; rank is deterministic.
+    rows, _ = FAL.rank(entry, sort=sort, depth=d)
 
     # 2 — the pool, deep-copied, and the tile skeletons
     pool = [(copy.deepcopy(r), m) for r, m in kept[:limit + BAR_BUFFER]]

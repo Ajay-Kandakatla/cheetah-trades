@@ -1,0 +1,829 @@
+{
+ "saved_on": "2026-11-12",
+ "built_from": "hand-built test fixture (WP-CORE)",
+ "names": {
+  "AMD": {
+   "stage": 2,
+   "stage_label": "Advancing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "strong",
+   "sales_yoy_pct": 30.0,
+   "sector": "Technology",
+   "name": "Advanced Micro Devices"
+  },
+  "HLNE": {
+   "stage": 1,
+   "stage_label": "Basing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "strong",
+   "sales_yoy_pct": 30.0,
+   "sector": "Financial Services",
+   "name": "Hamilton Lane"
+  },
+  "MPWR": {
+   "stage": 1,
+   "stage_label": "Basing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "strong",
+   "sales_yoy_pct": 30.0,
+   "sector": "Technology",
+   "name": "Monolithic Power Systems"
+  },
+  "MA": {
+   "stage": 2,
+   "stage_label": "Advancing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "strong",
+   "sales_yoy_pct": 30.0,
+   "sector": "Financial Services",
+   "name": "Mastercard"
+  },
+  "ANET": {
+   "stage": 3,
+   "stage_label": "Topping",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "strong",
+   "sales_yoy_pct": 30.0,
+   "sector": "Technology",
+   "name": "Arista Networks"
+  },
+  "XPEL": {
+   "stage": 1,
+   "stage_label": "Basing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "steady",
+   "sales_yoy_pct": 30.0,
+   "sector": "Consumer Cyclical",
+   "name": "XPEL"
+  },
+  "TSM": {
+   "stage": 2,
+   "stage_label": "Advancing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "steady",
+   "sales_yoy_pct": 30.0,
+   "sector": "Technology",
+   "name": "Taiwan Semiconductor"
+  },
+  "NRIX": {
+   "stage": 1,
+   "stage_label": "Basing",
+   "stage_bar_date": "2026-11-12",
+   "close_at_save": 100.0,
+   "sales_tier": "explosive",
+   "sales_yoy_pct": 30.0,
+   "sector": "Healthcare",
+   "name": "Nurix Therapeutics"
+  }
+ },
+ "categories": {
+  "s2_growth": {
+   "AMD": {
+    "values": {
+     "qualifier": true,
+     "stage": 2,
+     "sales_tier": "strong",
+     "sales_accelerating": false,
+     "c_strong_q_eps": true,
+     "a_strong_y_eps": true,
+     "rs_rank": 97,
+     "scan_score": 81
+    },
+    "legs": [
+     {
+      "key": "qualifier",
+      "label": "Trend template",
+      "kind": "market",
+      "verdict": "pass",
+      "value": true,
+      "text": "Trend template: passes"
+     },
+     {
+      "key": "stage",
+      "label": "Stage",
+      "kind": "stage",
+      "verdict": "pass",
+      "value": 2,
+      "text": "Stage 2 (needs Stage 2)"
+     },
+     {
+      "key": "sales_tier",
+      "label": "Sales tier",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": {
+       "tier": "strong",
+       "accelerating": false
+      },
+      "text": "Sales tier strong (needs strong or explosive, or steady and accelerating)"
+     },
+     {
+      "key": "c_strong_q_eps",
+      "label": "Quarterly EPS (C)",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": true,
+      "text": "Quarterly EPS strong (C)"
+     },
+     {
+      "key": "a_strong_y_eps",
+      "label": "Annual EPS (A)",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": true,
+      "text": "Annual EPS strong (A)"
+     }
+    ]
+   }
+  },
+  "quiet_strong": {
+   "HLNE": {
+    "values": {
+     "stage": 1,
+     "score": 87.9,
+     "score_ranked": true,
+     "net_profit": 249000000.0,
+     "ocf": 425000000.0,
+     "opm": 42.8,
+     "sales_cagr": 17.35,
+     "profit_cagr": 94.97,
+     "liab_to_equity": 0.916,
+     "sales_tier": "strong",
+     "dollar_vol_50": 61000000.0,
+     "pct_below_high": 39.0,
+     "net_debt_ebitda": 0.06
+    },
+    "legs": [
+     {
+      "key": "stage",
+      "label": "Stage",
+      "kind": "stage",
+      "verdict": "pass",
+      "value": 1,
+      "text": "Stage 1 (needs Stage 1)"
+     },
+     {
+      "key": "score",
+      "label": "Long-term score",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": {
+       "score": 87.9,
+       "ranked": true
+      },
+      "text": "Long-term score 87.9 (needs ≥ 70)"
+     },
+     {
+      "key": "net_profit",
+      "label": "Net profit",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 249000000.0,
+      "text": "Net profit $249M (needs > $0)"
+     },
+     {
+      "key": "ocf",
+      "label": "Operating cash flow",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 425000000.0,
+      "text": "Operating cash flow $425M (needs > $0)"
+     },
+     {
+      "key": "sales_cagr",
+      "label": "Sales CAGR",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 17.35,
+      "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+     },
+     {
+      "key": "liab_to_equity",
+      "label": "Liabilities / equity",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 0.916,
+      "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+     },
+     {
+      "key": "sales_tier",
+      "label": "Sales tier",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": "strong",
+      "text": "Sales tier strong (needs steady, strong or explosive)"
+     },
+     {
+      "key": "dollar_vol_50",
+      "label": "Average daily $ volume",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 61000000.0,
+      "text": "Average daily $ volume $61M (needs ≥ $5M)"
+     },
+     {
+      "key": "pct_below_high",
+      "label": "Under the 52-week high",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 39.0,
+      "text": "39.0% under its 52-week high (needs ≥ 10%)"
+     },
+     {
+      "key": "net_debt_ebitda",
+      "label": "Net debt / EBITDA",
+      "kind": "info",
+      "verdict": "info",
+      "value": 0.06,
+      "text": "Net debt / EBITDA 0.06"
+     }
+    ]
+   },
+   "MPWR": {
+    "values": {
+     "stage": 1,
+     "score": 87.9,
+     "score_ranked": true,
+     "net_profit": 249000000.0,
+     "ocf": 425000000.0,
+     "opm": 42.8,
+     "sales_cagr": 17.35,
+     "profit_cagr": 94.97,
+     "liab_to_equity": 0.916,
+     "sales_tier": "strong",
+     "dollar_vol_50": 61000000.0,
+     "pct_below_high": 39.0,
+     "net_debt_ebitda": 0.06
+    },
+    "legs": [
+     {
+      "key": "stage",
+      "label": "Stage",
+      "kind": "stage",
+      "verdict": "pass",
+      "value": 1,
+      "text": "Stage 1 (needs Stage 1)"
+     },
+     {
+      "key": "score",
+      "label": "Long-term score",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": {
+       "score": 87.9,
+       "ranked": true
+      },
+      "text": "Long-term score 87.9 (needs ≥ 70)"
+     },
+     {
+      "key": "net_profit",
+      "label": "Net profit",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 249000000.0,
+      "text": "Net profit $249M (needs > $0)"
+     },
+     {
+      "key": "ocf",
+      "label": "Operating cash flow",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 425000000.0,
+      "text": "Operating cash flow $425M (needs > $0)"
+     },
+     {
+      "key": "sales_cagr",
+      "label": "Sales CAGR",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 17.35,
+      "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+     },
+     {
+      "key": "liab_to_equity",
+      "label": "Liabilities / equity",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 0.916,
+      "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+     },
+     {
+      "key": "sales_tier",
+      "label": "Sales tier",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": "strong",
+      "text": "Sales tier strong (needs steady, strong or explosive)"
+     },
+     {
+      "key": "dollar_vol_50",
+      "label": "Average daily $ volume",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 61000000.0,
+      "text": "Average daily $ volume $61M (needs ≥ $5M)"
+     },
+     {
+      "key": "pct_below_high",
+      "label": "Under the 52-week high",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 39.0,
+      "text": "39.0% under its 52-week high (needs ≥ 10%)"
+     },
+     {
+      "key": "net_debt_ebitda",
+      "label": "Net debt / EBITDA",
+      "kind": "info",
+      "verdict": "info",
+      "value": 0.06,
+      "text": "Net debt / EBITDA 0.06"
+     }
+    ]
+   },
+   "XPEL": {
+    "values": {
+     "stage": 1,
+     "score": 87.9,
+     "score_ranked": true,
+     "net_profit": 249000000.0,
+     "ocf": 425000000.0,
+     "opm": 42.8,
+     "sales_cagr": 17.35,
+     "profit_cagr": 94.97,
+     "liab_to_equity": 0.916,
+     "sales_tier": "strong",
+     "dollar_vol_50": 61000000.0,
+     "pct_below_high": 39.0,
+     "net_debt_ebitda": 0.06
+    },
+    "legs": [
+     {
+      "key": "stage",
+      "label": "Stage",
+      "kind": "stage",
+      "verdict": "pass",
+      "value": 1,
+      "text": "Stage 1 (needs Stage 1)"
+     },
+     {
+      "key": "score",
+      "label": "Long-term score",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": {
+       "score": 87.9,
+       "ranked": true
+      },
+      "text": "Long-term score 87.9 (needs ≥ 70)"
+     },
+     {
+      "key": "net_profit",
+      "label": "Net profit",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 249000000.0,
+      "text": "Net profit $249M (needs > $0)"
+     },
+     {
+      "key": "ocf",
+      "label": "Operating cash flow",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 425000000.0,
+      "text": "Operating cash flow $425M (needs > $0)"
+     },
+     {
+      "key": "sales_cagr",
+      "label": "Sales CAGR",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 17.35,
+      "text": "Sales CAGR 17.4% (needs ≥ 15%)"
+     },
+     {
+      "key": "liab_to_equity",
+      "label": "Liabilities / equity",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 0.916,
+      "text": "Liabilities / equity 0.92 (needs ≤ 1)"
+     },
+     {
+      "key": "sales_tier",
+      "label": "Sales tier",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": "strong",
+      "text": "Sales tier strong (needs steady, strong or explosive)"
+     },
+     {
+      "key": "dollar_vol_50",
+      "label": "Average daily $ volume",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 61000000.0,
+      "text": "Average daily $ volume $61M (needs ≥ $5M)"
+     },
+     {
+      "key": "pct_below_high",
+      "label": "Under the 52-week high",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 39.0,
+      "text": "39.0% under its 52-week high (needs ≥ 10%)"
+     },
+     {
+      "key": "net_debt_ebitda",
+      "label": "Net debt / EBITDA",
+      "kind": "info",
+      "verdict": "info",
+      "value": 0.06,
+      "text": "Net debt / EBITDA 0.06"
+     }
+    ]
+   }
+  },
+  "capital_quality": {
+   "MA": {
+    "values": {
+     "qualifier": true,
+     "roe_pct": 31.0,
+     "fcf_margin_pct": 22.0,
+     "net_debt_ebitda": -0.4,
+     "cq_grade": null,
+     "moat_score": 78,
+     "scan_score": 70
+    },
+    "legs": [
+     {
+      "key": "qualifier",
+      "label": "Trend template",
+      "kind": "market",
+      "verdict": "pass",
+      "value": true,
+      "text": "Trend template: passes"
+     },
+     {
+      "key": "roe",
+      "label": "ROE",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 31.0,
+      "text": "ROE 31.0% (needs ≥ 20%)"
+     },
+     {
+      "key": "fcf_margin",
+      "label": "FCF margin",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 22.0,
+      "text": "FCF margin 22.0% (needs > 0%)"
+     },
+     {
+      "key": "net_debt_ebitda",
+      "label": "Net debt / EBITDA",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": -0.4,
+      "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+     },
+     {
+      "key": "cq_grade",
+      "label": "💎 grade on 🚀",
+      "kind": "info",
+      "verdict": "info",
+      "value": null,
+      "text": "—"
+     }
+    ]
+   },
+   "ANET": {
+    "values": {
+     "qualifier": true,
+     "roe_pct": 31.0,
+     "fcf_margin_pct": 22.0,
+     "net_debt_ebitda": -0.4,
+     "cq_grade": null,
+     "moat_score": 78,
+     "scan_score": 70
+    },
+    "legs": [
+     {
+      "key": "qualifier",
+      "label": "Trend template",
+      "kind": "market",
+      "verdict": "pass",
+      "value": true,
+      "text": "Trend template: passes"
+     },
+     {
+      "key": "roe",
+      "label": "ROE",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 31.0,
+      "text": "ROE 31.0% (needs ≥ 20%)"
+     },
+     {
+      "key": "fcf_margin",
+      "label": "FCF margin",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 22.0,
+      "text": "FCF margin 22.0% (needs > 0%)"
+     },
+     {
+      "key": "net_debt_ebitda",
+      "label": "Net debt / EBITDA",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": -0.4,
+      "text": "Net debt / EBITDA -0.40 (net cash) (needs ≤ 1)"
+     },
+     {
+      "key": "cq_grade",
+      "label": "💎 grade on 🚀",
+      "kind": "info",
+      "verdict": "info",
+      "value": null,
+      "text": "—"
+     }
+    ]
+   }
+  },
+  "bonde": {
+   "ANET": {
+    "values": {
+     "qualifier": true,
+     "bonde_tier": "strong",
+     "bonde_score": 7,
+     "scan_score": 70
+    },
+    "legs": [
+     {
+      "key": "qualifier",
+      "label": "Trend template",
+      "kind": "market",
+      "verdict": "pass",
+      "value": true,
+      "text": "Trend template: passes"
+     },
+     {
+      "key": "bonde_tier",
+      "label": "Bonde tier",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": "strong",
+      "text": "Bonde tier strong (needs strong or explosive)"
+     }
+    ]
+   }
+  },
+  "fallen_growers": {
+   "NRIX": {
+    "values": {
+     "pct_below_high": 60.0,
+     "pct_above_low": 80.0,
+     "sales_yoy_pct": 1500.0,
+     "pair_blanked": false,
+     "floor_ok": true,
+     "in_served_pool": true
+    },
+    "legs": [
+     {
+      "key": "pct_below_high",
+      "label": "Under the 52-week high",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 60.0,
+      "text": "60.0% under its 52-week high (needs ≥ 40%)"
+     },
+     {
+      "key": "pct_above_low",
+      "label": "Over the 52-week low",
+      "kind": "market",
+      "verdict": "pass",
+      "value": 80.0,
+      "text": "80.0% over its 52-week low (needs ≥ 10%)"
+     },
+     {
+      "key": "sales_yoy",
+      "label": "Sales y/y",
+      "kind": "fundamental",
+      "verdict": "pass",
+      "value": 1500.0,
+      "text": "Sales +1500.0% y/y (needs ≥ 20%)"
+     },
+     {
+      "key": "floor",
+      "label": "Liquidity floor",
+      "kind": "market",
+      "verdict": "pass",
+      "value": true,
+      "text": "Liquidity floor: ok or better"
+     }
+    ]
+   }
+  }
+ },
+ "pankaj": {
+  "MA": {
+   "zone_read": {
+    "close": 520.0,
+    "close_date": "2026-11-12",
+    "n_zones": 4,
+    "zones": {
+     "Agg": [
+      588.0,
+      600.0
+     ],
+     "C1": [
+      545.0,
+      555.0
+     ],
+     "C2": [
+      510.0,
+      523.0
+     ],
+     "C3": [
+      460.0,
+      480.0
+     ]
+    },
+    "in": [
+     "C2"
+    ],
+    "nearest": {
+     "zone": "C1",
+     "side": "under",
+     "pct": 4.6,
+     "edge": 545.0
+    }
+   }
+  },
+  "ANET": {
+   "zone_read": {
+    "close": 140.0,
+    "close_date": "2026-11-12",
+    "n_zones": 3,
+    "zones": {
+     "C1": [
+      150.0,
+      160.0
+     ],
+     "C2": [
+      130.0,
+      140.0
+     ],
+     "C3": [
+      110.0,
+      120.0
+     ]
+    },
+    "in": [
+     "C2"
+    ],
+    "nearest": {
+     "zone": "C1",
+     "side": "under",
+     "pct": 6.7,
+     "edge": 150.0
+    }
+   }
+  },
+  "TSM": {
+   "zone_read": {
+    "close": 395.0,
+    "close_date": "2026-11-12",
+    "n_zones": 4,
+    "zones": {
+     "Agg": [
+      400.0,
+      410.0
+     ],
+     "C1": [
+      360.0,
+      375.0
+     ],
+     "C2": [
+      310.0,
+      320.0
+     ],
+     "C3": [
+      260.0,
+      280.0
+     ]
+    },
+    "in": [],
+    "nearest": {
+     "zone": "Agg",
+     "side": "under",
+     "pct": 1.2,
+     "edge": 400.0
+    }
+   }
+  }
+ },
+ "flags": {
+  "AMD": {
+   "last_stage": 2,
+   "last_stage2_on": "2026-11-12",
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  },
+  "HLNE": {
+   "last_stage": 1,
+   "last_stage2_on": null,
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  },
+  "MPWR": {
+   "last_stage": 1,
+   "last_stage2_on": null,
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  },
+  "MA": {
+   "last_stage": 2,
+   "last_stage2_on": "2026-11-12",
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [
+    "C2"
+   ],
+   "absent": []
+  },
+  "ANET": {
+   "last_stage": 3,
+   "last_stage2_on": null,
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [
+    "C2"
+   ],
+   "absent": []
+  },
+  "XPEL": {
+   "last_stage": 1,
+   "last_stage2_on": null,
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  },
+  "TSM": {
+   "last_stage": 2,
+   "last_stage2_on": "2026-11-12",
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  },
+  "NRIX": {
+   "last_stage": 1,
+   "last_stage2_on": null,
+   "stage_drop_on": null,
+   "stage_drop_active": false,
+   "sales_drop_active": false,
+   "fundamental_failing": [],
+   "started_moving_on": null,
+   "zone_in": [],
+   "absent": []
+  }
+ }
+}

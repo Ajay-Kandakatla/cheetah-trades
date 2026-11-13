@@ -801,6 +801,8 @@ app.include_router(rotation_router)
 # engine will refuse to buy carry that in their own warnings.
 from growth.api import router as growth_router  # noqa: E402
 app.include_router(growth_router)
+from long_term_list.api import router as long_term_router  # noqa: E402  📅 Long Term (2026-11-12), owner-only
+app.include_router(long_term_router)
 
 # Bonde board (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see
 # explicitly new ones getting added"). Pradeep Bonde's own screen — his sales

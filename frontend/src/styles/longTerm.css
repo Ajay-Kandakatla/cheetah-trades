@@ -1,0 +1,64 @@
+/* 📅 Long Term tab (2026-11-12, long-term spec §3.13). Badges reuse the house cm-* rules; only what is new to this tab
+   lives here (prefix lt-).
+
+   📱 Phone (430 px — the 🚩 2026-10-19 lesson): a grid / flex item's default `min-width: auto` lets ONE unbreakable
+   served word set the card's minimum and push the page sideways. Every card stays inside its column, and every served
+   pill, field and line wraps instead of widening it. This sheet never sets the no-wrap white-space value. */
+
+.lt-board { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; max-width: 100%; }
+.lt-title { font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
+.lt-h { font-size: 0.95rem; margin: 0.2rem 0; overflow-wrap: anywhere; }
+.lt-muted { color: var(--ink-subtle, #94a3b8); font-size: 0.78rem; }
+.lt-list { list-style: none; margin: 0.2rem 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+
+.lt-section {
+  display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; max-width: 100%;
+  padding: 0.45rem 0.6rem; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 8px;
+  background: var(--bg-surface, transparent);
+}
+.lt-changed { border-color: var(--negative, #ef4444); }
+.lt-started { border-color: var(--positive, #22c55e); }
+
+.lt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0.5rem; min-width: 0; }
+.lt-card {
+  min-width: 0; max-width: 100%;
+  display: flex; flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.55rem; border-radius: 8px;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
+}
+.lt-card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; min-width: 0; font-weight: 600; }
+.lt-pills, .lt-house-chips, .lt-fields { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
+.lt-strip { display: flex; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
+
+.lt-pill, .lt-field, .lt-line, .lt-status, .lt-strip-item, .lt-house-chips .cm-badge, .lt-pills .cm-badge {
+  white-space: normal; overflow-wrap: anywhere;
+}
+.lt-line { margin: 0; font-size: 0.8rem; }
+.lt-pill {
+  display: inline-block; padding: 0.06rem 0.4rem; border-radius: 999px; font-size: 0.75rem;
+  border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.lt-field { font-size: 0.75rem; padding: 0.05rem 0.35rem; border-radius: 4px; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
+.lt-v-pass { border-color: var(--positive, #22c55e); }
+.lt-v-fail { border-color: var(--negative, #ef4444); color: var(--negative, #ef4444); }
+.lt-v-unknown { border-style: dashed; color: var(--ink-muted, #94a3b8); }
+.lt-v-info { color: var(--ink-muted, #94a3b8); }
+.lt-k-market, .lt-k-stage { font-style: italic; }
+.lt-status { font-size: 0.78rem; font-weight: 600; }
+.lt-status-changed { color: var(--negative, #ef4444); }
+.lt-status-started_moving { color: var(--positive, #22c55e); }
+.lt-status-not_read { color: var(--ink-muted, #94a3b8); }
+.lt-strip-item {
+  display: inline-flex; flex-wrap: wrap; gap: 0.25rem; align-items: baseline; min-width: 0; max-width: 100%;
+  font-size: 0.78rem; padding: 0.1rem 0.4rem; border-radius: 6px; border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.lt-moved { font-size: 0.78rem; color: var(--ink-muted, #94a3b8); overflow-wrap: anywhere; }
+
+.lt-chart { width: 100%; max-width: 100%; height: auto; display: block; }
+.lt-chart polyline { fill: none; stroke-width: 1.5; }
+.lt-s-0 { stroke: var(--accent, #3b82f6); }
+.lt-s-1 { stroke: var(--ink-muted, #94a3b8); }
+.lt-s-2 { stroke: var(--gold, #c9a227); }
+.lt-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; min-width: 0; }
+.lt-legend .lt-s-0 { color: var(--accent, #3b82f6); }
+.lt-legend .lt-s-1 { color: var(--ink-muted, #94a3b8); }
+.lt-legend .lt-s-2 { color: var(--gold, #c9a227); }

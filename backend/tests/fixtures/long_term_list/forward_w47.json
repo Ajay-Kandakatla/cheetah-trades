@@ -1,0 +1,33 @@
+[
+ {
+  "_id": "base",
+  "session": "2026-11-13",
+  "kind": "open",
+  "prices": {
+   "AMD": 250.0
+  },
+  "no_base": [
+   "XPEL"
+  ],
+  "pool_prices": {},
+  "pool_no_base": []
+ },
+ {
+  "_id": "2026-W47",
+  "at": "2026-11-20",
+  "list_pct": 1.25,
+  "rsp_pct": 0.4,
+  "spy_pct": 0.6,
+  "n_sessions": 6,
+  "n_names": 74,
+  "n_stale": 1,
+  "n_carried": 0,
+  "per_category": {},
+  "per_symbol": {},
+  "ci": [
+   null,
+   null
+  ],
+  "placebo": {}
+ }
+]

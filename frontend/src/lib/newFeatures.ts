@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 (verbatim in the label): ~21:00 ET "Save this entire list for me. In a New tab - Long Term - …" and
+  // ~21:20 ET "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt
+  // but not growing in price action yet..". backend/long_term_list (spec longterm §3): his saved list from 11-12 (nine
+  // lists, one row per symbol), re-read weekly after the 4:30 PM ET re-rate from the other tabs' own data; notices for
+  // Stage 2 → 3 / 4, a sales-tier drop, a criterion leg failed, 🌱 Stage 1 → 2 started moving; absent ≠ dropped.
+  // PRIMARY OWNER only; DIGEST_PUSH_MODE = "off" (WP-PUSH HELD, HIS CALL §7 #1). His words 1–2 only — Pankaj's sheet
+  // stays out of the public bundle. UNMEASURED. Docs docs/chart_maps/long_term_*_2026_11_12.md. Pinned by
+  // scripts/contracts.mjs ("📅 Long Term tab (2026-11-12)").
+  { id: 'long-term-list-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=long_term',
+    label: "📅 Long Term — your saved list from 11-12, re-read every week from the other tabs: what dropped (Stage 2 → 3 or 4, a sales drop), what started moving, and each list's new names this week. You: “Save this entire list for me. In a New tab - Long Term …” · “Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet..”. UNMEASURED; none of these lists is a buy signal." },
   // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "We got wrong numbers for Joby in sales in the undervalye
   // can you verfy". sepa.bonde.headline_sales_read (ONE helper, bonde.MIN_MATERIAL_BASE_REV $1M) — 💎 PSG board and
   // 🏷️ vs peers drop a name whose year-ago quarter is under $1M / missing / not a year apart, with a served count, the

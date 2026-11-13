@@ -141,4 +141,6 @@ export const BURST_EXEMPT: Record<string, string> = {
   gajjala_audited: 'his setup state orders this board (A+ \u2192 forming \u2192 partial); the \u26A1 burst is a daily-volume read',
   // 🥇 Luk's (2026-11-01, luk spec §3.13): his setup state orders the board; its own reason (his states differ from 🚩's).
   luk: 'his setup state orders this board (A+ \u2192 triggered \u2192 forming \u2192 listed); the \u26A1 burst is a daily-volume read',
+  // 📅 Long Term (2026-11-12, long-term spec §3.13): his saved list in its saved order; nothing re-orders it.
+  long_term: 'his saved list keeps its saved order \u2014 the \u26A1 burst is a daily-volume read',
 };

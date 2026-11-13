@@ -136,7 +136,7 @@ describe('BURST_EXEMPT — every non-board tab, with a written reason', () => {
   it('keys == the Chart Maps tabs that are not tile boards', () => {
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t)).sort();
     expect(Object.keys(BURST_EXEMPT).sort()).toEqual(nonBoard);
-    expect(nonBoard).toHaveLength(19);   // +gajjala 2026-10-13 (its own endpoint and sub-tabs); +gajjala_1m 2026-10-27 (BUILD_SPEC27 — its own endpoint); +gajjala_audited 2026-11-01 (its own endpoint); WIDENED 2026-11-01 +luk (🥇 Luk's — its own endpoint, luk spec §3.13)
+    expect(nonBoard).toHaveLength(20);   // WIDENED 2026-11-12 +long_term (its saved list keeps its saved order, longterm spec §5.8); +gajjala 2026-10-13 (its own endpoint and sub-tabs); +gajjala_1m 2026-10-27 (BUILD_SPEC27 — its own endpoint); +gajjala_audited 2026-11-01 (its own endpoint); WIDENED 2026-11-01 +luk (🥇 Luk's — its own endpoint, luk spec §3.13)
   });
 
   it('NEGATIVE: no board tab is exempt — every tile board gets the pin', () => {
@@ -153,6 +153,12 @@ describe('BURST_EXEMPT — every non-board tab, with a written reason', () => {
     expect(BURST_EXEMPT.gajjala_audited).toBe(BURST_EXEMPT.gajjala);
     expect(isBoardTab('gajjala_audited')).toBe(false);
     expect(BURST_EXEMPT.gajjala_audit).toBeUndefined();
+  });
+
+  it('long_term (2026-11-12, longterm spec §5.8) is exempt with its saved-order reason — NEGATIVE: it is not a tile board', () => {
+    expect(BURST_EXEMPT.long_term).toBe('his saved list keeps its saved order \u2014 the \u26A1 burst is a daily-volume read');
+    expect(isBoardTab('long_term')).toBe(false);
+    expect(BURST_EXEMPT.longterm).toBeUndefined();
   });
 
   it('every reason is non-empty and none says "bounce"', () => {

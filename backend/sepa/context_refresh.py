@@ -169,6 +169,19 @@ def refresh_all(*, parts=PARTS, coll=None) -> dict:
     return summary
 
 
+def _long_term_hook(kind: str) -> None:
+    """📅 Long Term (2026-11-12, Ajay: "keep updating it from all the other tabs info.. Weekly"). On the last trading
+    day of the ISO week after the 16:30 ET re-rate, start `python -m long_term_list.weekly --after-scan KIND` DETACHED
+    (long_term_list.weekly.spawn_after_scan: the eligibility read touches no Mongo; a pytest run never starts a
+    process). Fenced: nothing here can change what after_scan returns or fail the scan."""
+    try:
+        from long_term_list import weekly as LTW
+        if LTW.spawn_after_scan(kind):
+            log.info("long-term list weekly: spawned after %s", kind)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("context_refresh: long-term hook after %s failed: %s", kind, exc)
+
+
 def after_scan(kind: str) -> Optional[dict]:
     """The scan hook (sepa.cli scan / fast-scan). Never raises."""
     try:
@@ -177,6 +190,7 @@ def after_scan(kind: str) -> Optional[dict]:
         log.info("SCAN CONTEXT after %s — %s", kind,
                  " · ".join(f"{k} {'ok' if v.get('ok') else 'FAILED'} {v.get('sec', 0)}s"
                             for k, v in parts.items()))
+        _long_term_hook(kind)
         return s
     except Exception as exc:                                   # noqa: BLE001
         log.warning("context_refresh: after_scan(%s) failed: %s", kind, exc)

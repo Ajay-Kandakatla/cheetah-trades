@@ -87,6 +87,13 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
                 "zone_pad",
+                # 📅 LONG TERM (2026-11-12) — his saved list, re-read weekly from
+                # the other tabs' own data. Its own section because every list is
+                # UNMEASURED, nothing rings (the digest push is off) and every
+                # cut-off is a named constant in long_term_list.constants. BEFORE
+                # "luk" so the luk → doji_sweep → … → short_interest pins stay put.
+                # No 🧭 / Pankaj line here: this panel is served to every user.
+                "long_term",
                 # 🥇 LUK'S (2026-11-01, BUILD SPEC luk-tab §3.12 / WP-D) — Martin
                 # Luk's published pullback / opening-range method. Its own section
                 # because every alert is recorded in shadow, never sent, and
@@ -860,6 +867,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 📅 Long Term ───────────────────────────────────────
+    try:
+        out["long_term"] = _long_term_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: long term section unavailable: %s", exc)
+
     # ── 🥇 Luk's ───────────────────────────────────────────
     try:
         out["luk"] = _luk_section()
@@ -1433,6 +1446,25 @@ def _luk_section() -> dict:
         else:
             picks.append(line)
     return {"title": name, "emoji": emoji, "picks": picks, "stops": stops, "alerts": alerts, "note": LPB.TITLE}
+
+
+# 📅 Long Term has no stop, no target and no size; the house line the 📉 / 🔻 sections carry, in its own words.
+_LT_NO_STOP_LINE = "No stop, no target, no size: a saved list and its weekly reads."
+
+
+def _long_term_section() -> dict:
+    """📅 Long Term (2026-11-12) — every rule line is long_term_list.words.rules_lines() (each number formatted there
+    from `long_term_list.constants`, never typed here): the screened lists' criteria → picks; notices, schedule, phone
+    push and forward record → alerts. The 🧭 line is never asked for (include_pankaj stays False) — this panel is
+    served to every user. Imported LAZILY; a raising import drops only this section."""
+    from long_term_list import constants as LTC
+    from long_term_list import words as LTW
+    picks, alerts = [], []
+    for r in LTW.rules_lines():
+        line = f"{r['label']}: {r['text']}"
+        (picks if r["key"] in LTC.SCREENED_KEYS else alerts).append(line)
+    return {"title": LTC.TITLE.partition(" ")[2], "emoji": LTC.MARK, "picks": picks,
+            "stops": [_LT_NO_STOP_LINE], "alerts": alerts, "note": LTW.NOTE}
 
 
 def _fallen_section() -> dict:
