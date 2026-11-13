@@ -41,35 +41,37 @@ describe("✨ the 🥇 Luk's go-live entry", () => {
   // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
   it('is fifth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05, the 🏁 one-count ✨ 2026-11-02, the 🧪 audited-modifications ✨ 2026-11-01 went first), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-luk-realtime-2026-11-12');   // 2026-11-12: the 🥇 Luk realtime ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-kiss-rvol-sort-2026-11-11');   // 2026-11-11 ~13:30 ET: the 💋 EMA Kiss relative-volume ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-entry-break-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-proposals-applied-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-stages-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
-    expect(NEW_FEATURES[8].id).toBe('autopilot-gajjala-lane-not-traded-record-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-defects-ship-now-2026-11-11');   // 2026-11-11: the 🔧 defects ship-now ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[10].id).toBe('chart-maps-luk-scan-now-2026-11-11');   // 2026-11-11 ~10:10 ET: the 🔄 Luk scan-now ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[11].id).toBe('chart-maps-gajjala-plain-words-2026-11-10');   // 2026-11-10 ~22:00 ET: the 🗣 plain-words ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[12].id).toBe('chart-maps-landing-gajjala-tab-2026-11-10');   // 2026-11-10 ~19:20 ET: the 🏠 landing ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[13].id).toBe('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09');   // 2026-11-09 ~10:35 ET: the 📊 volume-order ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[14].id).toBe('chart-maps-live-now-label-every-session-2026-11-09');   // 2026-11-09 ~10:45 ET: the 🔴 now-label ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[15].id).toBe('chart-maps-gajjala-float-sort-all-subs-2026-11-09');   // 2026-11-09 ~10:30 ET: the 🚩 float-order ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[16].id).toBe('autopilot-gajjala-stream-live-2026-11-09');   // 2026-11-09 ~10:00 ET: the 🛰 stream-entries-LIVE ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[17].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[18].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[19].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[20].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[21].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
-    expect(NEW_FEATURES[22].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
-    expect(NEW_FEATURES[23].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
-    expect(NEW_FEATURES[25].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
-    expect(NEW_FEATURES[26].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
-    expect(NEW_FEATURES[27].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
-    expect(NEW_FEATURES[28].id).toBe(LIVE_ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-luk-realtime-2026-11-12');   // 2026-11-12: the 🥇 Luk realtime ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-kiss-rvol-sort-2026-11-11');   // 2026-11-11 ~13:30 ET: the 💋 EMA Kiss relative-volume ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-entry-break-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-proposals-applied-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-stages-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
+    expect(NEW_FEATURES[9].id).toBe('autopilot-gajjala-lane-not-traded-record-2026-11-11');   // 2026-11-11 tail: the four ✨ (⚡ entry break, 🧠 proposals, 🧭 stages, 🏁 lane not-traded) went FIRST — every older index below is +4
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-defects-ship-now-2026-11-11');   // 2026-11-11: the 🔧 defects ship-now ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[11].id).toBe('chart-maps-luk-scan-now-2026-11-11');   // 2026-11-11 ~10:10 ET: the 🔄 Luk scan-now ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[12].id).toBe('chart-maps-gajjala-plain-words-2026-11-10');   // 2026-11-10 ~22:00 ET: the 🗣 plain-words ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[13].id).toBe('chart-maps-landing-gajjala-tab-2026-11-10');   // 2026-11-10 ~19:20 ET: the 🏠 landing ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[14].id).toBe('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09');   // 2026-11-09 ~10:35 ET: the 📊 volume-order ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[15].id).toBe('chart-maps-live-now-label-every-session-2026-11-09');   // 2026-11-09 ~10:45 ET: the 🔴 now-label ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[16].id).toBe('chart-maps-gajjala-float-sort-all-subs-2026-11-09');   // 2026-11-09 ~10:30 ET: the 🚩 float-order ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[17].id).toBe('autopilot-gajjala-stream-live-2026-11-09');   // 2026-11-09 ~10:00 ET: the 🛰 stream-entries-LIVE ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[18].id).toBe('chart-maps-yahoo-link-2026-11-09');   // 2026-11-09 (latest): the 🌐 Yahoo link-out ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[19].id).toBe('chart-maps-gajjala-live-stream-2026-11-09');   // 2026-11-09 (later): the ⏱ Gajjala live ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[20].id).toBe('chart-maps-gajjala-audited-k3s-2026-11-09');   // 2026-11-09: the 🧪 K3S ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[21].id).toBe('chart-maps-gajjala-squeeze-chart-2026-11-08');   // 2026-11-08 (later): the 🎾 squeeze-chart ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[22].id).toBe('chart-maps-gajjala-entry-zones-2026-11-08');   // 2026-11-08: three ✨ went FIRST (entry zones, 🎾 SI label, ➖ EMA rank) — every older index below is +3
+    expect(NEW_FEATURES[23].id).toBe('chart-maps-gajjala-squeeze-si-label-2026-11-08');
+    expect(NEW_FEATURES[24].id).toBe('chart-maps-gajjala-fade-ema-rank-2026-11-08');
+    expect(NEW_FEATURES[26].id).toBe('chart-maps-gajjala-track-records-alike-2026-11-05');
+    expect(NEW_FEATURES[27].id).toBe('luk-track-record-one-count-per-stock-2026-11-02');
+    expect(NEW_FEATURES[28].id).toBe('chart-maps-gajjala-audited-modifications-2026-11-01');
+    expect(NEW_FEATURES[29].id).toBe(LIVE_ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -108,8 +110,9 @@ describe("✨ the 🥇 Luk's tab entry", () => {
   // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
   it('is sixth (the 🚩 chart-frame ✨ 2026-11-06, the 🏁 records-alike ✨ 2026-11-05, the 🏁 one-count ✨ 2026-11-02, then the 🧪 audited-modifications ✨ and the go-live 2026-11-01), dated 2026-11-01, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[29].id).toBe(ID);
+    expect(NEW_FEATURES[30].id).toBe(ID);
     expect(f.addedAt).toBe('2026-11-01');
     expect(f.route).toBe('/chart-maps?tab=luk');
   });
@@ -141,9 +144,10 @@ describe("✨ the 🥇 Luk's tab entry", () => {
   // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
+  // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
   it('NEGATIVE: listed once; the 🧪 audited entry moved to seventh, not dropped', () => {
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
-    expect(NEW_FEATURES[30].id).toBe('chart-maps-gajjala-audited-2026-11-01');
+    expect(NEW_FEATURES[31].id).toBe('chart-maps-gajjala-audited-2026-11-01');
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
 });
@@ -159,11 +163,13 @@ describe("✨ the 🥇 Luk's realtime cards entry (2026-11-12)", () => {
   // WIDENED +1 (2026-11-12: ⏸ Gajjala no-breakout line FIRST — Ajay: "Most of our potentials are not having breakout, please write that on them") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
-  it('is FOURTH (the 🟢 entry-marks ✨, the 🏁 Luk stop-R ✨ and the ⏸ no-breakout ✨ went FIRST 2026-11-12), listed once, dated 2026-11-12, routed to ?tab=luk', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe(RT_ID);
+  // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
+  it('is FIFTH (the 🏁 Luk ended-fold ✨, the 🟢 entry-marks ✨, the 🏁 Luk stop-R ✨ and the ⏸ no-breakout ✨ went FIRST 2026-11-12), listed once, dated 2026-11-12, routed to ?tab=luk', () => {
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe(RT_ID);
     expect(NEW_FEATURES.filter((x) => x.id === RT_ID).length).toBe(1);
     expect(rt.addedAt).toBe('2026-11-12');
     expect(rt.route).toBe('/chart-maps?tab=luk');

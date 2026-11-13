@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Is this still good ro enter? From Luks" → "I shouldn't be
+  // seeing this" → "I want it to be realtime" (MSTR triggered earlier, entry window closed). chart_maps/luk/tab.py
+  // fold_of / live_tiles / ended_block (spec lukend §3): a card whose Luk trade is over (the read says stopped, or the
+  // 🏁 graded its exit; the house 30 s live price at or under the stop via `live_fold`, latched by LukBoard) leaves the
+  // live list for ONE served `ended` fold under the cards; triggered cards past his window carry `trade_text`.
+  // CARD_CLOSE_EXIT_ON = False (HIS CALL #1) — no card folds by its own close bar. No alert, A+, stop or 🏁 grade moved.
+  // UNMEASURED. Doc docs/luk/ended_cards_fold_2026_11_12.md. Pinned by scripts/contracts.mjs ("🏁 Luk ended trades fold
+  // (2026-11-12)").
+  { id: 'chart-maps-luk-ended-fold-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=luk',
+    label: "🏁 Luk's: a card whose trade is over leaves the list — you said: “Is this still good ro enter? From Luks”, “I shouldn't be seeing this” and “I want it to be realtime”. The moment its stop trades on the live price (the 30 s price check — no wait for the next pass), when a pass reads the stop traded, or once the 🏁 Track record grades its exit (the stop, or a daily close below the daily 9 EMA — Luk's exit), the card folds into one line under the cards: 🏁 N ended today — stopped or closed below the daily 9 EMA (Luk's exit). Tap it to open them; nothing is deleted. After 10:30 ET (Luk's first 60 minutes) a triggered card says “entry window closed 10:30 ET — not an entry”; one the 🏁 Track record shows still open says “open trade since HH:MM ET, not a new entry”. The counts line above the cards still counts every read. No alert, A+, stop or 🏁 grade moved. UNMEASURED." },
   // Ajay 2026-11-12 ~15:22 ET (verbatim in the label, his spelling kept): "Can you show me green on these tabs some
   // indicators to show be which ones have best potential entries right now I am clicking through each one and figuring
   // out... an Indicator or new tickers with in last 30 mins like blinkers or something would be nice".
