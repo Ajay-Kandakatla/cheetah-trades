@@ -91,6 +91,11 @@ export type NotificationPrefs = {
      it live. also alerts too." (backend luk/constants.LUK_PUSH_MODE "live"); False in default_prefs, in the owner
      keep-set since 2026-11-01. UNMEASURED. */
   luk_setup?: boolean;
+  /* 📅 Long Term (2026-11-12, backend long_term_list/zone_watch.py + long_term_list/push.py). LIVE since 2026-11-12 by
+     his calls — Ajay: "add an alert list when stocks reach Pankaj's zones" and "Weekly and if something gets dropped
+     let me know" (backend long_term_list/constants.ZONE_PUSH_MODE / DIGEST_PUSH_MODE "live"). ONE toggle for both the
+     🧭 zone reach and the weekly digest; False in default_prefs, in the owner keep-set since 2026-11-12. UNMEASURED. */
+  long_term?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
      range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
      notification specific for High Beta stocks from the reselinet

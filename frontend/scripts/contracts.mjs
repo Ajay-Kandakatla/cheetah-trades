@@ -1262,7 +1262,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 17).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -9438,7 +9438,7 @@ const CONTRACTS = [
       const allIds = arr < 0 ? [] : [...nf.slice(arr).matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       const ID1 = 'chart-maps-gajjala-float-sort-2026-10-18', ID2 = 'chart-maps-gajjala-long-flags-2026-10-18';
       const i1 = allIds.indexOf(ID1);
-      if (i1 < 0 || allIds[i1 + 1] !== ID2) errs.push(`the ✨ entries '${ID1}' then '${ID2}' must be present and adjacent in NEW_FEATURES (found ${allIds.slice(0, 3).join(', ')})`);
+      if (i1 < 0 || allIds[i1 + 1] !== ID2) errs.push(`the ✨ entries '${ID1}' then '${ID2}' must be present and adjacent in NEW_FEATURES (found ${allIds.slice(0, 4).join(', ')})`);
       let forbidden = [];
       try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
       if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
@@ -9863,7 +9863,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 60).map((m) => m[1]);
+      const firstTwelve = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 61).map((m) => m[1]);
       if (!firstTwelve.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twenty-two (found ${firstTwelve.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10110,7 +10110,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 57).map((m) => m[1]);
+      const firstNine = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 58).map((m) => m[1]);
       if (!firstNine.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first nineteen (found ${firstNine.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -10460,7 +10460,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 56).map((m) => m[1]);
+      const firstEight = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 57).map((m) => m[1]);
       if (!firstEight.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nineteen in NEW_FEATURES (found ${firstEight.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10692,7 +10692,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 51).map((m) => m[1]);
+      const firstThreeIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
       if (!firstThreeIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fourteen in NEW_FEATURES (found ${firstThreeIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -10823,7 +10823,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 55).map((m) => m[1]);
+      const firstSeven = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 56).map((m) => m[1]);
       if (!firstSeven.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eighteen in NEW_FEATURES (found ${firstSeven.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11005,7 +11005,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 52).map((m) => m[1]);
+      const firstFour = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 53).map((m) => m[1]);
       if (!firstFour.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first fifteen in NEW_FEATURES (found ${firstFour.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11154,7 +11154,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 53).map((m) => m[1]);
+      const firstFive = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 54).map((m) => m[1]);
       if (!firstFive.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first sixteen in NEW_FEATURES (found ${firstFive.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11237,7 +11237,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 50).map((m) => m[1]);
       if (!firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first twelve in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11409,7 +11409,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 50).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 51).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first thirteen in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11524,7 +11524,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 49).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first eleven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at >= 0) {
@@ -11672,7 +11672,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 48).map((m) => m[1]);
       if (!firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first ten in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at3 = arr.indexOf(`{ id: '${ID}'`);
       if (at3 < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11895,7 +11895,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 47).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first nine in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -11981,7 +11981,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 46).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12087,7 +12087,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 45).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12187,7 +12187,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
+      const firstTwoIds = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 44).map((m) => m[1]);
       if (nf && !firstTwoIds.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (found ${firstTwoIds.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12562,7 +12562,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
+      const firstTwoAlgo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 43).map((m) => m[1]);
       if (nf && !firstTwoAlgo.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first eight in NEW_FEATURES (found ${firstTwoAlgo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
@@ -12758,7 +12758,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
+      const firstTwoWins = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
       if (!firstTwoWins.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -13003,7 +13003,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 41).map((m) => m[1]);
+      const firstTwoIds1m = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 42).map((m) => m[1]);
       if (nf && !firstTwoIds1m.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first seven in NEW_FEATURES (found ${firstId || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13127,7 +13127,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
+      const firstTwoLane = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 40).map((m) => m[1]);
       if (nf && !firstTwoLane.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const ent = at < 0 ? '' : arr.slice(at, arr.indexOf('},', at) + 2);
@@ -13175,12 +13175,14 @@ const CONTRACTS = [
       // WIDENED 2026-11-01 (luk-live spec main-session) — Ajay 2026-11-01: "Lets make it live. also alerts too." — 🥇
       // luk_setup joined: the keep-set is SEVEN kinds (six 2026-10-29 … 2026-11-01). Its own block "🥇 Luk's alerts go
       // live (2026-11-01)" pins the seventh kind's registry; this block still pins the 10-29 six are all in it.
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's
+      // zones …" / "Weekly and if something gets dropped let me know …"). The name SEVEN is kept; it holds eight.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       // 1. the keep-set — exactly the seven
       const subs = tryRead('../backend/push/subs.py', 'subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the seven: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the eight: ${SEVEN.join(', ')}`);
       // 2. the 1-minute push mode — live, tagged his
       const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
       const ml = /^GAJJALA_1M_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
@@ -13259,7 +13261,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
+      const firstTwoPush = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 39).map((m) => m[1]);
       if (nf && !firstTwoPush.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first five entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13421,7 +13423,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
+      const firstTwoTape = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 38).map((m) => m[1]);
       if (nf && !firstTwoTape.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four entries (found '${first}')`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13573,7 +13575,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 36).map((m) => m[1]);
+      const firstTwo = [...arr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 37).map((m) => m[1]);
       if (nf && !firstTwo.includes(ID)) errs.push(`newFeatures.ts: '${ID}' must be one of the first four (found ${firstTwo.join(', ') || 'none'})`);
       const at = arr.indexOf(`{ id: '${ID}'`);
       const nextAt = at < 0 ? -1 : arr.indexOf("{ id: '", at + 1);
@@ -13722,7 +13724,7 @@ const CONTRACTS = [
       if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
       // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
       if (/gajjala_audited/.test(subs)) errs.push('push/subs.py names gajjala_audited — the audited tab has NO push kind (HIS CALL #1)');
-      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly seven (🥇 luk_setup joined 2026-11-01; 🧪 never)');
+      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly eight (🥇 luk_setup joined 2026-11-01; 📅 long_term 2026-11-12; 🧪 never)');
       const cron = tryRead('../backend/crontab', 'crontab');
       if (cron && /audited/.test(cron)) errs.push('backend/crontab names the audit — the overlay rides the 🚩 line; the host crontab is never edited by a deploy');
       // the registry + the frozen sources [C1]
@@ -13934,7 +13936,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
+      const firstIdsGga = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 35).map((m) => m[1]);
       if (nf && !firstIdsGga.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first six in NEW_FEATURES (🥇 luk went FIRST 2026-11-01, then 🥇 luk-live-pushes; found ${firstIdsGga.join(', ') || 'none'})`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
       if (nf && at >= 0) {
@@ -13980,7 +13982,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (nf && !ids2.slice(0, 31).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 31).join(', ') || 'none'}')`);
+      if (nf && !ids2.slice(0, 32).includes(ID2)) errs.push(`the ✨ '${ID2}' must be one of the first four in NEW_FEATURES (found '${ids2.slice(0, 32).join(', ') || 'none'}')`);
       if (nf && ids2.filter((x) => x === ID2).length !== 1) errs.push(`the ✨ '${ID2}' must be listed exactly once`);
       const at2 = nfArr.indexOf(`{ id: '${ID2}'`);
       if (nf && at2 >= 0) {
@@ -14279,7 +14281,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
+      const firstIdsLuk = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 34).map((m) => m[1]);
       if (nf && !firstIdsLuk.includes(ID)) errs.push(`the ✨ entry '${ID}' must be one of the first five in NEW_FEATURES (the go-live ✨ went FIRST 2026-11-01; found ${firstIdsLuk.join(', ') || 'none'})`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length > 1) errs.push(`the ✨ entry '${ID}' is listed more than once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14333,7 +14335,9 @@ const CONTRACTS = [
         return m ? unesc(m[1] ?? m[2]) : null;
       };
       const HIS = 'Lets make it live. also alerts too.';
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+      // — the 8th kind is long_term; this block still pins luk_setup is in it with his dated comment.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       /** the source of a top-level python NAME = … assignment, up to the next top-level statement. */
       const pyBlock = (py, n) => {
@@ -14354,7 +14358,7 @@ const CONTRACTS = [
       // 1. the keep-set — exactly the seven; default_prefs False for everyone else.
       const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the seven: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the eight: ${SEVEN.join(', ')}`);
       const ksAt = subs.search(/^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{/m);
       const ksBody = ksAt < 0 ? '' : subs.slice(ksAt, subs.indexOf('})', ksAt));
       if (!ksBody.includes(HIS.split(' also')[0]) || !/"luk_setup",/.test(ksBody)) errs.push('OWNER_KEEP_SET must carry "luk_setup" under its own dated comment quoting him (inside the braces, the pattern of every kind)');
@@ -14528,7 +14532,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 32).map((m) => m[1]);
+      const firstTwoLive = [...nfArr.matchAll(/\{ id: '([^']+)'/g)].slice(0, 33).map((m) => m[1]);
       if (nf && !firstTwoLive.includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first five in NEW_FEATURES (🧪 audited-modifications went FIRST 2026-11-01; found '${first}')`);
       if (nf && [...nfArr.matchAll(new RegExp(`\\{ id: '${ID}'`, 'g'))].length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const at = nfArr.indexOf(`{ id: '${ID}'`);
@@ -14684,7 +14688,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
         // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
         // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-        if (!ids.slice(0, 30).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 30).join(', ') || 'none'}')`);
+        if (!ids.slice(0, 31).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first three of NEW_FEATURES (found '${ids.slice(0, 31).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14796,7 +14800,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
         // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
         // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-        if (!ids.slice(0, 29).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 29).join(', ') || 'none'}')`);
+        if (!ids.slice(0, 30).includes(ID)) errs.push(`the ✨ '${ID}' must be in the first two of NEW_FEATURES (found '${ids.slice(0, 30).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -14937,7 +14941,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
         // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
         // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-        if (!ids.slice(0, 28).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 28).join(', ') || 'none'}')`);
+        if (!ids.slice(0, 29).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first four in NEW_FEATURES (found '${ids.slice(0, 29).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15098,7 +15102,7 @@ const CONTRACTS = [
           // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
           // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
           // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-          if (!ids.slice(0, 27).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 27).join(', ') || 'none'}')`);
+          if (!ids.slice(0, 28).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first three in NEW_FEATURES (found '${ids.slice(0, 28).join(', ') || 'none'}')`);
           if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
           const a = nfArr.indexOf(`{ id: '${ID}'`);
           if (a < 0) continue;
@@ -15244,7 +15248,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
         // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
         // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-        if (!ids.slice(0, 24).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 24).join(', ') || 'none'}')`);
+        if (!ids.slice(0, 25).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES (found '${ids.slice(0, 25).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15330,7 +15334,8 @@ const CONTRACTS = [
       const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
       if (subs) {
         const ks = keepSet(subs);
-        if (ks.length !== 7) errs.push(`OWNER_KEEP_SET must stay exactly seven (found ${ks.length})`);
+        // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+        if (ks.length !== 8) errs.push(`OWNER_KEEP_SET must stay exactly eight (found ${ks.length})`);
         if (ks.some((k) => /audited|k3s/i.test(k))) errs.push('OWNER_KEEP_SET carries an audited / K3S kind — 🧪 never pushes');
         if (/k3s/i.test(subs)) errs.push('push/subs.py names K3S — the admit has no push kind');
       }
@@ -15603,7 +15608,8 @@ const CONTRACTS = [
       const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
       if (subs) {
         const ks = keepSet(subs);
-        if (ks.length !== 7) errs.push(`OWNER_KEEP_SET must stay exactly seven (found ${ks.length})`);
+        // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+        if (ks.length !== 8) errs.push(`OWNER_KEEP_SET must stay exactly eight (found ${ks.length})`);
         if (ks.some((k) => /stream|latency|live_feed|bar_close|gajjala_update/i.test(k))) errs.push('OWNER_KEEP_SET carries a GG LIVE kind — the live build adds no push kind');
       }
 
@@ -15631,7 +15637,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
         // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
         // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-        if (!ids.slice(0, 22).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 22).join(', ') || 'none'}')`);
+        if (!ids.slice(0, 23).includes(ID)) errs.push(`the ✨ '${ID}' must be one of the first two in NEW_FEATURES — the 🌐 Yahoo link-out went FIRST later the same day (found '${ids.slice(0, 23).join(', ') || 'none'}')`);
         if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
         const a = nfArr.indexOf(`{ id: '${ID}'`);
         if (a >= 0) {
@@ -15716,7 +15722,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      const yahooIds = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!yahooIds.includes('chart-maps-yahoo-link-2026-11-09')) errs.push(`the 🌐 Yahoo link-out ✨ must be one of the first in NEW_FEATURES (found ${yahooIds.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-yahoo-link-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes('Instead of traderview I need yahoo finance link here') || !lab[1].includes('To external ones please')) errs.push('the 🌐 Yahoo link-out ✨ label must carry both of his sentences verbatim');
@@ -15779,7 +15785,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-float-sort-all-subs-2026-11-09')) errs.push(`the 🚩 float-order ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-float-sort-all-subs-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🚩 float-order ✨ lost its label');
@@ -15885,7 +15891,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09')) errs.push(`the 📊 volume-order ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-volume-sort-broker-bottom-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 📊 volume-order ✨ lost its label');
@@ -15937,7 +15943,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!ids.includes('chart-maps-live-now-label-every-session-2026-11-09')) errs.push(`the 🔴 now-label ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-live-now-label-every-session-2026-11-09'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab || !lab[1].includes("I can't see now for them again")) errs.push('the 🔴 now-label ✨ label must carry his sentence verbatim');
@@ -16004,7 +16010,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 16).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-plain-words-2026-11-10')) errs.push(`the 🗣 plain-words ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-plain-words-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🗣 plain-words ✨ lost its label');
@@ -16110,7 +16116,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);
       if (!ids.includes('chart-maps-luk-scan-now-2026-11-11')) errs.push(`the 🔄 Luk scan-now ✨ must be one of the first in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-luk-scan-now-2026-11-11'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🔄 Luk scan-now ✨ lost its label');
@@ -16438,7 +16444,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 8).map((m) => m[1]);
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 9).map((m) => m[1]);
       if (!ids.includes('chart-maps-gajjala-kiss-rvol-sort-2026-11-11')) errs.push(`the 💋 relative-volume ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-gajjala-kiss-rvol-sort-2026-11-11'[\s\S]*?route: '([^']+)',\s*\n\s*label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 💋 relative-volume ✨ lost its route / label');
@@ -16532,7 +16538,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (!ids.slice(0, 7).includes(ID)) errs.push(`the 🥇 realtime ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${ids.slice(0, 7).join(', ') || 'none'})`);
+      if (!ids.slice(0, 8).includes(ID)) errs.push(`the 🥇 realtime ✨ '${ID}' must be one of the first three in NEW_FEATURES (found ${ids.slice(0, 8).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk`);
@@ -16624,7 +16630,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (!ids.slice(0, 6).includes(ID)) errs.push(`the ⏸ no-breakout ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 6).join(', ') || 'none'})`);
+      if (!ids.slice(0, 7).includes(ID)) errs.push(`the ⏸ no-breakout ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 7).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=gajjala&sub=potential',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=gajjala&sub=potential`);
@@ -16687,7 +16693,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (!ids.slice(0, 5).includes(ID)) errs.push(`the 🏁 Luk stop-R ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 5).join(', ') || 'none'})`);
+      if (!ids.slice(0, 6).includes(ID)) errs.push(`the 🏁 Luk stop-R ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 6).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk&sub=track_record',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk&sub=track_record`);
@@ -16785,7 +16791,7 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (!ids.slice(0, 4).includes(ID)) errs.push(`the 🟢 entry-marks ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 4).join(', ') || 'none'})`);
+      if (!ids.slice(0, 5).includes(ID)) errs.push(`the 🟢 entry-marks ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 5).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=gajjala',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=gajjala`);
@@ -16907,7 +16913,7 @@ const CONTRACTS = [
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      if (!ids.slice(0, 3).includes(ID)) errs.push(`the 🏁 Luk ended-fold ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
+      if (!ids.slice(0, 4).includes(ID)) errs.push(`the 🏁 Luk ended-fold ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 4).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=luk',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=luk`);
@@ -17012,9 +17018,23 @@ const CONTRACTS = [
       else if (!lt) errs.push('longTerm.ts lost export const LT_PATH');
       else if (api[1] !== lt[1]) errs.push(`longTerm.ts LT_PATH '${lt[1]}' != constants.API_PATH '${api[1]}'`);
       if (lt && !board.includes('LT_PATH')) errs.push('LongTermBoard.tsx must fetch through LT_PATH (never a typed route)');
-      // 6. the push ships OFF (WP-PUSH HELD — HIS CALL §7 #1); the tab is owner only
-      if (!/^DIGEST_PUSH_MODE = "off"/m.test(src)) errs.push('constants.py must carry DIGEST_PUSH_MODE = "off" — the phone push is HIS CALL §7 #1');
-      if (/^DIGEST_PUSH_MODE = "live"/m.test(src)) errs.push('constants.py flipped DIGEST_PUSH_MODE to "live" — HIS CALL §7 #1');
+      // 6. the pushes are LIVE by HIS word only; the tab is owner only
+      // RE-PINNED 2026-11-12 (🔔 Pankaj zone alerts): HIS CALL §7 #1 answered — Ajay 2026-11-12: "Weekly and if something
+      // gets dropped let me know …" (digest) and "add an alert list when stocks reach Pankaj's zones …" (zone push). Each
+      // mode must be "live" WITH his quote on the line; a bare flip (no quote) fails.
+      if (!/^DIGEST_PUSH_MODE = "live"\s*#\s*Ajay 2026-11-12: "Weekly and if something gets dropped let me know/m.test(src)) errs.push('constants.py must carry DIGEST_PUSH_MODE = "live"  # Ajay 2026-11-12: "Weekly and if something gets dropped let me know …" (his word, quoted)');
+      if (!/^ZONE_PUSH_MODE = "live"\s*#\s*Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones/m.test(src)) errs.push('constants.py must carry ZONE_PUSH_MODE = "live"  # Ajay 2026-11-12: "add an alert list when stocks reach Pankaj\'s zones …" (his word, quoted)');
+      {
+        const tryRead = (rel, who) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable (${who})`); return ''; } };
+        const zw = tryRead('../backend/long_term_list/zone_watch.py', 'zone_watch.py');
+        if (/send_to_all/.test(zw)) errs.push('long_term_list/zone_watch.py names send_to_all — the zone push is owner only');
+        const ltst = tryRead('../backend/long_term_list/store.py', 'store.py');
+        if (/\$push/.test(ltst)) errs.push('long_term_list/store.py names $push — the latch is insert-only (one result per latch)');
+        const cli = tryRead('../backend/sepa/cli.py', 'cli.py');
+        if (!/zone_watch\.run_pass/.test(cli)) errs.push('sepa/cli.py alerts pass must call zone_watch.run_pass (rides the existing 5-min pass; no crontab edit)');
+        const sb = tryRead('../backend/push/subs.py', 'subs.py');
+        if (!/"long_term":\s*False/.test(sb)) errs.push('push/subs.py default_prefs must carry "long_term": False (owner ON via the keep-set only)');
+      }
       if (!/^OWNER_ONLY = True\b/m.test(src)) errs.push('constants.py must carry OWNER_ONLY = True');
       if (!/['"]owner_only['"]/.test(board)) errs.push("LongTermBoard.tsx must handle state 'owner_only' (the served reason only)");
       // 7. one ordering: no 🧨 toggle, the written reason stays
@@ -17026,7 +17046,25 @@ const CONTRACTS = [
       const nf = quiet('src/lib/newFeatures.ts');
       const ID = 'long-term-list-2026-11-12';
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
-      if (ids[0] !== ID) errs.push(`the 📅 Long Term ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      // WIDENED 2026-11-12 (🔔 Long Term alerts ✨ went FIRST — Ajay: "add an alert list when stocks reach Pankaj's zones"):
+      // the 📅 ✨ is one of the first two; the 🔔 ✨ is FIRST, routed to the tab, both his lines verbatim, UNMEASURED.
+      if (!ids.slice(0, 2).includes(ID)) errs.push(`the 📅 Long Term ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
+      {
+        const AID = 'long-term-alerts-2026-11-12';
+        if (ids[0] !== AID) errs.push(`the 🔔 Long Term alerts ✨ '${AID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+        const am = new RegExp(`\\{ id: '${AID}'[^}]*\\}`).exec(nf);
+        const at = am ? am[0] : '';
+        if (!at) errs.push(`newFeatures.ts lost the ✨ '${AID}'`);
+        else {
+          if (!at.includes("route: '/chart-maps?tab=long_term'")) errs.push(`the ✨ '${AID}' must route to /chart-maps?tab=long_term`);
+          for (const q of ["add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term tabs in general",
+            'Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes.']) {
+            if (!at.includes(q)) errs.push(`the ✨ '${AID}' must quote his words verbatim: "${q.slice(0, 40)}…"`);
+          }
+          if (!at.includes('UNMEASURED')) errs.push(`the ✨ '${AID}' must say UNMEASURED`);
+          if (/\bedge\b/i.test(at)) errs.push(`the ✨ '${AID}' claims an edge — the zone alert is UNMEASURED`);
+        }
+      }
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}', addedAt: '2026-11-12', route: '/chart-maps\\?tab=long_term',\\s*\\n\\s*label: "([^"]+)"`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must be dated 2026-11-12 and routed to /chart-maps?tab=long_term`);

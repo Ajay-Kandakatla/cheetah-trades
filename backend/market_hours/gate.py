@@ -130,6 +130,9 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # 🥇 Luk's A+ (chart_maps/luk/alerts.py, 2026-11-01) — read off live 1-/5-minute bars, a MARKET kind: silent on
     # weekends and NYSE holidays; LIVE by his call 2026-11-01 (Ajay: "Lets make it live. also alerts too.").
     "luk_setup",
+    # 📅 long_term (long_term_list/zone_watch.py + push.py, 2026-11-12) — a live print against closed-bar zones / the
+    # closed weekly read, so a MARKET kind: silent on weekends and NYSE holidays.
+    "long_term",
     # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
     # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
     # (the cli's market-day gate already skips the pass; this drops at the

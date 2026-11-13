@@ -2,8 +2,9 @@
 
 Package: `backend/long_term_list/` (WP-CORE: `constants.py`, `seed.py`, `criteria.py`, `notices.py`,
 `forward.py`, `words.py`, `payload.py`). Spec: scratchpad `longterm/spec.md` revision 2, §3.2–3.7, §3.10–3.11.
-UNMEASURED. Nothing here rings a phone (`DIGEST_PUSH_MODE = "off"`) and the tab is primary-owner only
-(`OWNER_ONLY = True`).
+UNMEASURED. The tab is primary-owner only (`OWNER_ONLY = True`). At save nothing rang a phone
+(`DIGEST_PUSH_MODE = "off"`); since 2026-11-12 the digest and the 🔔 zone reach push LIVE under one kind `long_term`
+(his calls — see "What is NOT done" below and `long_term_zone_alerts_2026_11_12.md`).
 
 ## His words (verbatim)
 
@@ -124,7 +125,7 @@ The ONE allowed sentence is `NOT_A_SIGNAL`; the seed caveat carrying the same se
 period is served as `NOT_A_SIGNAL`. "Liabilities / equity", never "debt".
 
 ## What is NOT done
-- No phone push (WP-PUSH held; `DIGEST_PUSH_MODE "off"`).
+- ~~No phone push (WP-PUSH held; `DIGEST_PUSH_MODE "off"`).~~ **2026-11-12:** both phone pushes are LIVE under ONE owner keep-set kind `long_term` — the weekly digest (`DIGEST_PUSH_MODE = "live"`, Ajay: "Weekly and if something gets dropped let me know …") and a 🧭 name reaching one of Pankaj's zones (`ZONE_PUSH_MODE = "live"`, Ajay: "add an alert list when stocks reach Pankaj's zones …"). Both mode constants are now tagged HIS in `CONSTANT_SOURCES`; `RING_KINDS` unchanged (a zone line never rings the digest). See `long_term_zone_alerts_2026_11_12.md`.
 - Nothing auto-saved; strips are unsaved.
 - No historical replay of the lists (fundamentals are latest-only → look-ahead).
 - No sources / facts / weekly / API in this package piece (WP-DATA, WP-RUN).

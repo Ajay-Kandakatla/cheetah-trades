@@ -102,10 +102,11 @@ def test_push_subs_and_hooks_name_luk_setup_and_no_other_luk_kind():
     assert callable(hooks.notify_luk_setup)
 
 
-def test_the_owner_keep_set_is_seven_with_luk_setup_and_default_prefs_off():
+def test_the_owner_keep_set_is_eight_with_luk_setup_and_default_prefs_off():
     # INVERTED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): was "still exactly six and has no luk kind".
     from push import subs
-    assert len(subs.OWNER_KEEP_SET) == 7
+    # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+    assert len(subs.OWNER_KEEP_SET) == 8
     assert AS.LUK_KIND in subs.OWNER_KEEP_SET
     assert subs.default_prefs()[AS.LUK_KIND] is False                        # NEGATIVE: never ON for anyone else
     assert [k for k in subs.OWNER_KEEP_SET if "luk" in k.lower()] == [AS.LUK_KIND]

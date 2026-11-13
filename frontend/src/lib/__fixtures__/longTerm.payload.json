@@ -47,7 +47,7 @@
     "text": "⚠️ MANH no longer meets 💎 Capital quality: ROE 18.2% (needs ≥ 20%)"
    }
   ],
-  "pushed_text": "Phone push is off — this digest shows here only."
+  "pushed_text": "This week's digest rang — one push to your phone when allowed."
  },
  "zones": {
   "as_of_text": "🧭 In one of Pankaj's zones at the 11-13 close",
@@ -63,7 +63,58 @@
     "zone_text": "In Pankaj's C2 zone (160–170) at the 11-13 close"
    }
   ],
-  "rows_note": "Read from the cached closes when you open the tab."
+  "rows_note": "Read from the cached closes when you open the tab.",
+  "alert": {
+   "title": "🔔 In one of Pankaj's zones now",
+   "live": true,
+   "as_of_text": "Live prints at the 10:35 ET alerts pass",
+   "now": [
+    {
+     "symbol": "TSM",
+     "his_symbol": "TSM",
+     "zone": "Agg",
+     "text": "405.80 at 10:35 ET · in Pankaj's Agg zone (400–410) · Tier A"
+    },
+    {
+     "symbol": "NVDA",
+     "his_symbol": "NVDA",
+     "zone": "C2",
+     "text": "164.30 at 10:35 ET · in Pankaj's C2 zone (160–170) · Tier A"
+    }
+   ],
+   "empty_text": null,
+   "reason": null,
+   "stale_text": null,
+   "push_text": "Each reach rings your phone once per name, zone and session — only when the prior session's close sat outside that zone.",
+   "log_title": "🔔 Reached one of Pankaj's zones — 11-13",
+   "log": [
+    {
+     "symbol": "TSM",
+     "his_symbol": "TSM",
+     "zone": "Agg",
+     "at_text": "09:35 ET",
+     "text": "409.10 reached Pankaj's Agg zone (400–410) · Tier A",
+     "push_text": "rang your phone"
+    },
+    {
+     "symbol": "ANET",
+     "his_symbol": "ANET",
+     "zone": "Agg",
+     "at_text": "09:50 ET",
+     "text": "125.40 reached Pankaj's Agg zone (120–125) · Tier A",
+     "push_text": "not sent — phone push is off"
+    },
+    {
+     "symbol": "NVDA",
+     "his_symbol": "NVDA",
+     "zone": "C2",
+     "at_text": "10:05 ET",
+     "text": "169.90 reached Pankaj's C2 zone (160–170) · Tier A",
+     "push_text": "no phone has this alert on"
+    }
+   ],
+   "log_empty_text": null
+  }
  },
  "started_moving": [
   {

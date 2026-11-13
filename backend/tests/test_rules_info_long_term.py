@@ -51,7 +51,27 @@ def test_lines_are_the_words_rules_lines(sec):
     a = " ".join(sec["alerts"])
     for kind in LTC.RING_KINDS:
         assert kind in a
-    assert "Phone push is off" in a
+    # RE-PINNED 2026-11-12 (pkzone spec §3.6): the digest push is LIVE by his call ("Weekly and if something gets
+    # dropped let me know …") — the push line is the live rule text, never "Phone push is off".
+    assert LTW.pushed_text() in a and "Phone push is off" not in a
+    assert "Zone reach push: " + LTW.zone_rule_text() in sec["alerts"]
+
+
+def test_zone_reach_line_is_built_from_its_constants_2026_11_12(monkeypatch):
+    a = " ".join(RI.sections()["long_term"]["alerts"])
+    assert "Zone reach push:" in a and "within 0.5% of an edge" in a and "previous session's close" in a
+    assert a.count("Zone reach push:") == 1
+    monkeypatch.setattr(LTC, "PANKAJ_ZONE_PAD_PCT", 0.7)
+    a2 = " ".join(RI.sections()["long_term"]["alerts"])
+    assert "within 0.7%" in a2 and "within 0.5%" not in a2                   # NEG: the number is never typed
+    monkeypatch.setattr(LTC, "ZONE_PUSH_MODE", "off")
+    assert "Phone push off." in " ".join(RI.sections()["long_term"]["alerts"])
+
+
+def test_NEGATIVE_zone_reach_line_lands_in_alerts_not_picks_2026_11_12(sec):
+    assert not any("Zone reach push" in x for x in sec["picks"])
+    line = next(x for x in sec["alerts"] if x.startswith("Zone reach push:"))
+    assert "Pankaj" not in line and "\U0001F9ED" not in line
 
 
 def test_a_monkeypatched_constant_moves_the_line(monkeypatch):

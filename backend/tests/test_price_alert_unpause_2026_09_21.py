@@ -209,7 +209,8 @@ def test_the_contracts_parser_reads_the_real_set():
     # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only): 15 → 16.
     # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only): 16 → 17.
     # WIDENED 2026-11-01 — 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too."; LIVE, owner keep-set): 6 → 7.
-    assert len(parsed) == 7      # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six). Was 17: WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
+    # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …"): 7 → 8.
+    assert len(parsed) == 8      # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six). Was 17: WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
 
 
 def test_NEGATIVE_a_comment_above_the_definition_hijacks_the_parser():

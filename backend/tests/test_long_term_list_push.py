@@ -1,10 +1,12 @@
-"""📅 Long Term — the weekly digest push: composed, HELD (spec §3.9, [C9], WP-RUN, 2026-11-12).
+"""📅 Long Term — the weekly digest push (spec §3.9, [C9], WP-RUN, 2026-11-12; LIVE since pkzone spec §3.5).
 
 Ajay 2026-11-12, verbatim: "… if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3
 or stage 4 changes."
 
-Today's path: DIGEST_PUSH_MODE "off" → "push off", nothing claimed, nothing sent. The live path (WP-PUSH, HIS CALL #1)
-is exercised with the mode monkeypatched: owner only, one send per week, never `send_to_all`. NEGATIVES throughout.
+RE-PINNED 2026-11-12 (pkzone spec): DIGEST_PUSH_MODE is "live" under the ONE kind `long_term`, hook
+`notify_long_term`, and the push-hours window reads the wall clock (`push._wall_et`, monkeypatched here — never the
+real clock). The "off" path is exercised with the mode monkeypatched. Owner only, one send per week, never
+`send_to_all`. NEGATIVES throughout.
 """
 from __future__ import annotations
 
@@ -54,6 +56,7 @@ def _env(monkeypatch):
     def _never(*a, **k):
         raise AssertionError("send_to_all reached")
     monkeypatch.setattr(sender, "send_to_all", _never)
+    monkeypatch.setattr(PUSH, "_wall_et", lambda: FRI)                   # never the real clock (2026-11-12)
 
 
 @pytest.fixture()
@@ -61,15 +64,16 @@ def live(monkeypatch):
     from push import subs
     real = subs.default_prefs
     monkeypatch.setattr(C, "DIGEST_PUSH_MODE", "live")
-    monkeypatch.setattr(subs, "default_prefs", lambda: {**real(), C.DIGEST_KIND: False})
+    monkeypatch.setattr(subs, "default_prefs", lambda: {**real(), C.KIND: False})
 
 
-# ── today's path ──────────────────────────────────────────────────────────────────────────────────────────────
-def test_mode_is_off_today():
-    assert C.DIGEST_PUSH_MODE == "off"
+# ── today's path (RE-PINNED 2026-11-12: live by his call) ─────────────────────────────────────────────────────
+def test_mode_is_live_today():
+    assert C.DIGEST_PUSH_MODE == "live" and C.DIGEST_KIND == C.KIND == "long_term"
 
 
-def test_push_off_sends_nothing_and_claims_nothing():
+def test_push_off_sends_nothing_and_claims_nothing(monkeypatch):
+    monkeypatch.setattr(C, "DIGEST_PUSH_MODE", "off")
     db, s = _db(), Sender()
     out = PUSH.send_digest(_doc(), FRI, db=db, send=s)
     assert out["state"] == "skipped" and out["reason"] == PUSH.R_OFF == "push off"
@@ -79,6 +83,7 @@ def test_push_off_sends_nothing_and_claims_nothing():
 
 def test_push_off_never_reads_prefs(monkeypatch):
     from push import subs
+    monkeypatch.setattr(C, "DIGEST_PUSH_MODE", "off")
 
     def _boom():
         raise AssertionError("prefs read with the push off")
@@ -86,7 +91,7 @@ def test_push_off_never_reads_prefs(monkeypatch):
     assert PUSH.send_digest(_doc(), FRI, db=_db(), send=Sender())["reason"] == "push off"
 
 
-# ── the held live path ────────────────────────────────────────────────────────────────────────────────────────
+# ── the live path ────────────────────────────────────────────────────────────────────────────────────────
 def test_live_sends_once_to_the_owner_only(live):
     from push import subs
     db, s = _db(), Sender()
@@ -108,7 +113,9 @@ def test_live_nothing_to_ring_sends_nothing(live):
 
 
 def test_live_kind_not_registered_is_skipped(monkeypatch):
-    monkeypatch.setattr(C, "DIGEST_PUSH_MODE", "live")
+    from push import subs
+    real = subs.default_prefs
+    monkeypatch.setattr(subs, "default_prefs", lambda: {k: v for k, v in real().items() if k != C.KIND})
     s = Sender()
     assert PUSH.send_digest(_doc(), FRI, db=_db(), send=s)["reason"] == PUSH.R_KIND
     assert s.calls == []
@@ -129,7 +136,7 @@ def test_live_closed_day_never_pushes(live):
 
 def test_live_without_the_hook_is_skipped_before_any_claim(live, monkeypatch):
     from push import hooks
-    monkeypatch.delattr(hooks, "notify_long_term_digest", raising=False)
+    monkeypatch.delattr(hooks, "notify_long_term", raising=False)
     db = _db()
     assert PUSH.send_digest(_doc(), FRI, db=db)["reason"] == PUSH.R_NO_HOOK
     assert db[C.CLAIMS_COLL].docs == {}

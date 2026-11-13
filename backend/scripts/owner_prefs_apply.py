@@ -33,6 +33,13 @@ OWNER_KEEP_SET — re-run after the api deploy, before cron. The dry-run shows
 `False→True` on one `push.subs._backfill` already stamped — both are the
 expected diff. The code is unchanged: ON / OFF are still derived from subs.
 
+2026-11-12 (Ajay: "add an alert list when stocks reach Pankaj's zones and also
+tell me if you finish the long term tabs in general" / "Weekly and if something
+gets dropped let me know …"): `long_term` joined OWNER_KEEP_SET (EIGHT kinds) —
+re-run after the api deploy, before cron. The dry-run shows `long_term
+None→True` or `False→True` on each of his devices — both are the expected diff.
+The code is unchanged: ON / OFF are still derived from subs.
+
 NOT A GATE AND NOT A RULE. It flips per-device preference flags — which KINDS
 may reach him. What any kind requires to fire is untouched, and every muted
 kind's cron keeps running (the PREF kills an alert, not the cron).

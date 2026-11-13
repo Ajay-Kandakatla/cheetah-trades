@@ -62,3 +62,8 @@
 .lt-legend .lt-s-0 { color: var(--accent, #3b82f6); }
 .lt-legend .lt-s-1 { color: var(--ink-muted, #94a3b8); }
 .lt-legend .lt-s-2 { color: var(--gold, #c9a227); }
+
+/* 🔔 the zone block inside the 🧭 section (2026-11-12, pkzone spec §3.9). Each served line wraps inside the section on
+   the 430 px phone: the block and each list item can shrink (min-width: 0) and break a long served word anywhere. */
+.lt-alert { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.lt-alert li { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }

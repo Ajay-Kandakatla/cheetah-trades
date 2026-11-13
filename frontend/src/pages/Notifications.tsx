@@ -228,6 +228,16 @@ export const CATEGORIES: CategoryDef[] = [
       + 'WHAT FIRES: an A+ on 🥇 Luk\'s tab — Martin Luk\'s published pullback reversal, opening range and inside-day entries read on CLOSED 1- and 5-minute candles, only when the entry bar is inside the regular session, once per name, setup and session, each its own push, listed on /alerts and in that tab\'s 🏁 Track record (from 2026-11-01). '
       + 'A 1-minute trigger can ring up to 5 minutes after its bar closed. '
       + 'UNMEASURED — his setup, not a buy signal. Not a recommendation.' },
+  /* 📅 Long Term (2026-11-12, pkzone spec §3.8). LIVE since 2026-11-12 by his calls — Ajay 2026-11-12: "add an alert
+     list when stocks reach Pankaj's zones" and "Weekly and if something gets dropped let me know" (backend
+     long_term_list/constants.ZONE_PUSH_MODE and DIGEST_PUSH_MODE "live"; zone_watch.py rings the zone reach, push.py
+     the weekly digest). ONE kind, ONE toggle for both. False in push/subs.default_prefs (everyone else starts off), in
+     OWNER_KEEP_SET (on for his devices). The wording and its public visibility are HIS CALL #11 (it copies the luk
+     row precedent above). No number typed here beyond the date and the stage names. UNMEASURED. */
+  { key: 'long_term', label: 'Long Term', emoji: '📅', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-11-12, your calls: "add an alert list when stocks reach Pankaj\'s zones" and "Weekly and if something gets dropped let me know"; everyone else starts off. Mute it here. '
+      + 'WHAT FIRES: a name on your 📅 Long Term 🧭 list reaching one of Pankaj\'s zones on a live print — once per name, zone and session, only when its prior session\'s close sat outside that zone; and the weekly 📅 Long Term digest, once a week, only when a saved name dropped (Stage 2 → 3 or 4, a sales drop) or a 🌱 name started moving. One toggle mutes both. '
+      + 'UNMEASURED — Pankaj\'s zones and your saved list, not a buy signal. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -559,12 +569,15 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // not "other"); 🩺 host health stays (without it he never learns the alerts stopped).
     // 2026-11-01 (luk-live spec §3.7): + 🥇 luk_setup — the keep-set is SEVEN kinds; Ajay 2026-11-01: "Lets make it
     // live. also alerts too."
+    // 2026-11-12 (pkzone spec §3.8): + 📅 long_term — the keep-set is EIGHT kinds; Ajay 2026-11-12: "add an alert
+    // list when stocks reach Pankaj's zones" / "Weekly and if something gets dropped let me know".
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too."). Everything else muted.',
+    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too.") — plus 📅 Long Term since 2026-11-12 (your calls: "add an alert list when stocks reach Pankaj\'s zones" · "Weekly and if something gets dropped let me know"). Everything else muted.',
     pref: {
       gajjala_setup: true, gajjala_potential: true,
       gajjala_1m_setup: true, gajjala_1m_potential: true,
       luk_setup: true,
+      long_term: true,
       position_alert: true, ops_alert: true,
       hot_pullback_alert: false, pattern_alert: false,
       demand_alert: false,

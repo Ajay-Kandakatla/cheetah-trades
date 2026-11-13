@@ -74,6 +74,11 @@ def make_facts(session, *, populations=None, stages=None, absent=(), cat_ok=True
 def _env(monkeypatch):
     monkeypatch.delenv(C.ENV_SWITCH, raising=False)
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
+    # 2026-11-12 (pkzone spec): the digest push is LIVE — no run in this file reads the real clock or reaches the real
+    # sender unless the test hands `send=` itself.
+    from long_term_list import push as PUSH
+    monkeypatch.setattr(PUSH, "_wall_et", lambda: datetime(2026, 11, 13, 17, 0, tzinfo=ET))
+    monkeypatch.setattr(PUSH, "_hook", lambda: None)
 
 
 @pytest.fixture()
@@ -165,11 +170,51 @@ def test_override_run_never_pushes(facts, monkeypatch):
     assert sent == []
 
 
-def test_push_is_off_on_todays_path(facts):
+# RE-PINNED 2026-11-12 (pkzone spec §3.5, [C6]): the digest push is LIVE under the ONE kind `long_term` (Ajay
+# 2026-11-12: "Weekly and if something gets dropped let me know …"); the window reads `push._wall_et` at send time,
+# monkeypatched here — never the real clock.
+def _prefs(monkeypatch, registered):
+    from push import subs
+    real = subs.default_prefs
+    if registered:
+        monkeypatch.setattr(subs, "default_prefs", lambda: {**real(), C.KIND: False})
+    else:
+        monkeypatch.setattr(subs, "default_prefs", lambda: {k: v for k, v in real().items() if k != C.KIND})
+
+
+def test_push_is_off_on_todays_path(facts, monkeypatch):
+    from long_term_list import push as PUSH
     facts["queue"] = [make_facts("2026-11-13", stages={SAVED[0]: 4})]
+    _prefs(monkeypatch, registered=False)
+    monkeypatch.setattr(PUSH, "_wall_et", lambda: datetime(2026, 11, 13, 17, 0, tzinfo=ET))
     sent = []
     out = _run(FRI46, _db(), send=lambda **k: sent.append(k))
-    assert out["push"]["reason"] == "push off" and sent == []
+    assert out["push"]["reason"] == "kind not registered" and sent == []
+
+
+def test_live_digest_rings_once_through_a_real_run_2026_11_12(facts, monkeypatch):
+    from long_term_list import push as PUSH
+    facts["queue"] = [make_facts("2026-11-13", stages={SAVED[0]: 4})]
+    _prefs(monkeypatch, registered=True)
+    monkeypatch.setattr(PUSH, "_wall_et", lambda: datetime(2026, 11, 13, 17, 0, tzinfo=ET))
+    sent = []
+
+    def _send(**k):
+        sent.append(k)
+        return {"sent": 1, "failed": 0, "total_targets": 1}
+    out = _run(FRI46, _db(), send=_send)
+    assert out["push"]["state"] == "pushed" and len(sent) == 1
+    assert sent[0]["payload"]["kind"] == "long_term" and "items" not in sent[0]["payload"]
+
+
+def test_NEGATIVE_live_digest_after_push_hours_on_the_wall_clock_2026_11_12(facts, monkeypatch):
+    from long_term_list import push as PUSH
+    facts["queue"] = [make_facts("2026-11-13", stages={SAVED[0]: 4})]
+    _prefs(monkeypatch, registered=True)
+    monkeypatch.setattr(PUSH, "_wall_et", lambda: datetime(2026, 11, 13, 20, 1, tzinfo=ET))
+    sent = []
+    out = _run(FRI46, _db(), send=lambda **k: sent.append(k))
+    assert out["push"]["reason"] == "outside the app's push hours" and sent == []
 
 
 def test_env_off_never_runs(facts, monkeypatch):

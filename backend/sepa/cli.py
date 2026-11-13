@@ -377,6 +377,7 @@ def main() -> int:
     if args.cmd == "alerts":
         # Pankaj-level alerts left this pass 2026-09-08 (Ajay: "Remove all of
         # Pankaj's alerts") — the /pankaj page keeps his picks and levels.
+        # 2026-11-12: his ZONES return for the 📅 Long Term 🧭 list only (the hook below).
         from . import alerts, price_alerts, pivot_alerts
         pos = alerts.check_positions()
         pa = price_alerts.check_alerts()
@@ -384,6 +385,13 @@ def main() -> int:
         log.info("ALERTS — positions: fired=%d skipped=%d  price_alerts: fired=%d/%d  pivot: fired=%d",
                  len(pos["fired"]), len(pos["skipped"]),
                  pa["fired"], pa["checked"], len(pv["fired"]))
+        # 🔔 2026-11-12: his zones are back for the 📅 Long Term 🧭 list ONLY (Ajay: "add an alert list when stocks
+        # reach Pankaj's zones …") — long_term_list/zone_watch.py, latched once per name, zone and session.
+        try:
+            from long_term_list import zone_watch
+            log.info("ALERTS — long-term zones: %s", zone_watch.summary(zone_watch.run_pass()))
+        except Exception as exc:                                   # noqa: BLE001 — never blocks the alerts pass
+            log.warning("ALERTS — long-term zones failed: %s", exc)
         # Stamp the engine heartbeat so the UI can show a "paused" banner if this
         # job stops running (e.g. the host slept). Best-effort; never blocks.
         try:

@@ -160,3 +160,90 @@ def insert_forward(fwd, doc: dict) -> Optional[bool]:
             return False
         log.warning("long_term_list: forward %s not stored: %s", doc.get("_id"), exc)
         return None
+
+
+# ── 🔔 zone reaches (2026-11-12, scratchpad pkzone/spec.md §3.2 — critique C1 / C2) ─────────────────────────────
+# Ajay 2026-11-12, verbatim: "add an alert list when stocks reach Pankaj's zones and also tell me if you finish the
+# long term tabs in general".
+#   * `long_term_zone_latch` — INSERT ONLY, `_id` "<session>|<SYM>|<zone>": the push gate. The insert IS the latch; a
+#     duplicate means "already rang this session" and nothing is written. Never updated, replaced, deleted or retaken.
+#   * `long_term_zone_state` — one doc per ET session: the latest pass read (`$set`), every reach of the session
+#     (`reaches.<SYM|zone>`, first write wins — the tab's log) and the push result written ONCE by the pass whose
+#     latch insert succeeded (`results.<SYM|zone>`). This module never uses an array-append operator.
+def zone_colls(db=None) -> Optional[dict]:
+    """{"latch", "state"} collections, or None when there is no database."""
+    d = db if db is not None else _db()
+    if d is None:
+        return None
+    try:
+        return {"latch": d[C.ZONE_LATCH_COLL], "state": d[C.ZONE_STATE_COLL]}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("long_term_list: zone collections unavailable: %s", exc)
+        return None
+
+
+def latch(coll, doc: dict) -> Optional[bool]:
+    """Insert the latch doc. True inserted · False that `_id` is held (DuplicateKey) · None any other error / no coll.
+    Only `insert_one` is ever called on this collection — no retake (a retake would allow a second send)."""
+    if coll is None:
+        return None
+    try:
+        coll.insert_one(doc)
+        return True
+    except Exception as exc:                                   # noqa: BLE001
+        if _is_dup(exc):
+            return False
+        log.warning("long_term_list: zone latch %s not written: %s", doc.get("_id"), exc)
+        return None
+
+
+def zone_state_write(coll, session: str, fields: dict) -> bool:
+    """`$set` the latest pass read on the session doc (upsert). Fenced."""
+    if coll is None:
+        return False
+    try:
+        coll.update_one({"_id": session}, {"$set": dict(fields)}, upsert=True)
+        return True
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("long_term_list: zone state %s not written: %s", session, exc)
+        return False
+
+
+def zone_reach_add(coll, session: str, rkey: str, rec: dict) -> Optional[bool]:
+    """Log one reach, FIRST WRITE WINS: a conditional `$set` on `reaches.<rkey>` not existing yet (no upsert — the
+    session doc was written by `zone_state_write` earlier in the same pass). True first record · False already
+    logged (the first time and price are kept) · None error / no coll."""
+    if coll is None:
+        return None
+    field = f"reaches.{rkey}"
+    try:
+        res = coll.update_one({"_id": session, field: {"$exists": False}}, {"$set": {field: dict(rec)}})
+        return bool(getattr(res, "modified_count", 0))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("long_term_list: zone reach %s/%s not logged: %s", session, rkey, exc)
+        return None
+
+
+def zone_result_set(coll, session: str, rkey: str, result: dict) -> bool:
+    """`$set` `results.<rkey>` — called ONLY by the pass whose latch insert returned True (or None = no store);
+    never for a duplicate insert (critique C1)."""
+    if coll is None:
+        return False
+    try:
+        coll.update_one({"_id": session}, {"$set": {f"results.{rkey}": dict(result)}})
+        return True
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("long_term_list: zone result %s/%s not written: %s", session, rkey, exc)
+        return False
+
+
+def zone_state(coll, session: str) -> Optional[dict]:
+    """The session's state doc, or None (missing / unreachable)."""
+    if coll is None or not session:
+        return None
+    try:
+        doc = coll.find_one({"_id": session})
+        return doc if isinstance(doc, dict) else None
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("long_term_list: zone state %s unreadable: %s", session, exc)
+        return None

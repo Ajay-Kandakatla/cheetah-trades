@@ -675,7 +675,10 @@ def test_N14_the_pinned_equalities():
     assert BW.BUCKET_SEC == GC.PASS_CADENCE_SEC
     assert BW.KIND == GC.GAJJALA_BREAK_PUSH_KIND == GC.POTENTIAL_PUSH_KIND
     from push import subs
-    assert BW.KIND in subs.OWNER_KEEP_SET and len(subs.OWNER_KEEP_SET) == 7       # no 8th kind (HIS CALL #2)
+    # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+    # The 8th kind is 📅 long_term — not a break-watch kind; the break watch still adds none (HIS CALL #2).
+    assert BW.KIND in subs.OWNER_KEEP_SET and len(subs.OWNER_KEEP_SET) == 8
+    assert "long_term" in subs.OWNER_KEEP_SET and not [k for k in subs.OWNER_KEEP_SET if "break" in k]
 
 
 def test_NEGATIVE_on_print_never_raises(bw):

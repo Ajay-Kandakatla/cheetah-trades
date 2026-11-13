@@ -11,9 +11,15 @@ keep updating it from all the other tabs info.. Weekly and if something gets
 dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4
 changes."
 
-Spec: scratchpad longterm/spec.md revision 2, §3.2. Nothing here rings a phone:
-DIGEST_PUSH_MODE is "off" (critique C9) and the tab is PRIMARY OWNER ONLY
+Spec: scratchpad longterm/spec.md revision 2, §3.2. The tab is PRIMARY OWNER ONLY
 (critique C10) until his word.
+
+Phone pushes (2026-11-12, scratchpad pkzone/spec.md §3.1) — ONE owner keep-set kind
+`long_term`, LIVE by his two calls:
+  ZONE_PUSH_MODE   — Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones
+                     and also tell me if you finish the long term tabs in general"
+  DIGEST_PUSH_MODE — Ajay 2026-11-12: "Weekly and if something gets dropped let me know
+                     when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes."
 """
 from __future__ import annotations
 
@@ -132,11 +138,17 @@ FORWARD_BOOT_DRAWS = 2000
 FORWARD_PLACEBO_DRAWS = 1000
 FORWARD_RNG_SEED = 20261112
 
-# ── push (HELD — WP-PUSH not run) ──
-DIGEST_KIND = "long_term_digest"
-DIGEST_PUSH_MODE = "off"                              # [C9]; "live" only after §7 #1 + WP-PUSH
-DIGEST_URL = "/chart-maps?tab=long_term"
-DIGEST_BODY_LINES = 6
+# ── 🔔 one owner keep-set kind for both phone pushes (2026-11-12, scratchpad pkzone/spec.md) ──
+KIND = "long_term"                                    # ONE kind: a 🧭 zone reach + the weekly digest
+ZONE_PUSH_MODE = "live"  # Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term tabs in general"
+ZONE_LATCH_COLL = "long_term_zone_latch"              # INSERT ONLY (the push gate): _id "<session>|<SYM>|<zone>"; never updated/replaced/deleted
+ZONE_STATE_COLL = "long_term_zone_state"              # one doc per session: latest pass read + reaches (the log) + first push results
+ZONE_URL = "/chart-maps?tab=long_term"
+# ── push ──
+DIGEST_KIND = KIND
+DIGEST_PUSH_MODE = "live"  # Ajay 2026-11-12: "Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes."
+DIGEST_URL = "/chart-maps?tab=long_term"              # unchanged
+DIGEST_BODY_LINES = 6                                 # unchanged
 
 # name -> "HIS" | "APP" | "MINE" for every number / cut-off set the tab reads.
 # Served in the payload's `rules`; his_call = (source == "MINE").
@@ -160,5 +172,5 @@ CONSTANT_SOURCES = {
     "STAGE_DROP_PAIRS": "MINE", "STARTED_MOVING_PAIR": "MINE", "RING_KINDS": "MINE",
     "FORWARD_BASE_KIND": "MINE", "FORWARD_MIN_SESSIONS": "APP", "FORWARD_CI_PCT": "MINE",
     "FORWARD_BOOT_DRAWS": "MINE", "FORWARD_PLACEBO_DRAWS": "MINE", "FORWARD_RNG_SEED": "MINE",
-    "DIGEST_PUSH_MODE": "MINE", "DIGEST_BODY_LINES": "MINE",
+    "DIGEST_PUSH_MODE": "HIS", "ZONE_PUSH_MODE": "HIS", "DIGEST_BODY_LINES": "MINE",
 }

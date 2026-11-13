@@ -1,5 +1,75 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-12 — 📅 long_term joins: EIGHT since 2026-11-12
+
+> "add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term tabs in general"
+
+> "Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes."
+
+Ajay, 2026-11-12. From this day `OWNER_KEEP_SET` in `backend/push/subs.py` holds EIGHT kinds: the seven of 2026-11-01
+(below, kept as history) plus one row:
+
+| kind | why it stays |
+| --- | --- |
+| `long_term` 📅 | ONE kind for both Long Term pushes: a 🧭 name reaching one of Pankaj's zones on a live print (once per name, zone and session, `long_term_list/zone_watch.py`) and the weekly 📅 digest (once a week, only when it rang, `long_term_list/push.py`) |
+
+The code does not force two kinds: the sender, prefs, closed-day gate and history are per kind, and the payload `tag`
+keeps the two pushes apart on the device (`long_term:zone:<session>:<SYM>:<zone>` vs `long_term:<ISO week>`). The cost:
+one toggle mutes both (a HIS CALL).
+
+Where the kind is registered (the one push stack, no parallel sender):
+
+- `push/subs.py` — the eighth kind INSIDE the `OWNER_KEEP_SET` braces with its own dated comment (both quotes), the head
+  sentence amended ("SEVEN since 2026-11-01" kept verbatim; "EIGHT since 2026-11-12" added), and
+  `default_prefs()["long_term"] = False`, so every other user starts OFF.
+- `push/hooks.py` — `notify_long_term(owner, payload)` calls `sender.send_to_user(..., kind="long_term")`, owner-scoped,
+  never `send_to_all`. The closed-day drop, quiet hours and the /notifications toggle all apply at the sender.
+- `market_hours/gate.py` — `long_term` is in `MARKET_ALERT_KINDS`: silent on weekends and NYSE holidays.
+- `push/recent.py` — UNCHANGED. The zone push carries no `items`, so the feed renders the body as is and the 18-kind
+  `ITEM_KINDS` pins do not move.
+- `scripts/owner_prefs_apply.py` — code unchanged; the docstring carries the dated paragraph.
+
+No other `long_term_*` kind exists anywhere (no `long_term_digest`, no `long_term_zone`). No gate moved. UNMEASURED:
+Pankaj's zones and his saved list, not a buy signal.
+
+**How often it would ring** (planner replay, 2026-11-13 ~00:30 ET: today's 113 zones over the last 60 sessions, 0.5%
+pad, prior close outside the zone, once per name, zone and session; bootstrap 95% CI over sessions): 1.70 (close) to
+3.68 (day range) reaches a session — **about 8.5–18.4 extra pushes a week** (CIs 6.8–10.4 / 16.0–21.1), max 10 in one
+day. Zones applied in hindsight; a frequency, not an edge claim. Re-run `backend/scripts/long_term_zone_reach_rate.py`
+before quoting it. Burst cap = HIS CALL.
+
+### Runbook (after the push to main)
+
+```bash
+./deploy-cheetah-main.sh api
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+./deploy-cheetah-main.sh cron frontend
+```
+
+1. Deploy `api` alone. The cron still runs the old code, so no zone pass runs and the weekly digest stays held.
+2. The first run is dry. On each of his devices expect exactly one change: `long_term None→True` or
+   `long_term False→True` (`False` = `push.subs._backfill` already stamped `default_prefs()`). Stop only if any OTHER
+   kind moves.
+3. `--apply` writes it.
+4. The third run must print `no change` for every device.
+5. Deploy `cron frontend`, with `cron` between ticks (:x2–:x4) — all before 09:00 ET on the first session after the
+   merge.
+
+**The order matters.** If `cron` deploys before the apply, the first zone reach latches, the send matches 0 devices and
+settles `no_target`; the latch never retakes, so that reach never rings that session. So: `api`, apply, then
+`cron frontend`.
+
+Tests: `backend/tests/test_long_term_push_kind_2026_11_12.py` (eight exactly; both quotes inside the braces and in the
+head, "SEVEN since 2026-11-01" kept; owner ON, default OFF, another user OFF; a MARKET kind, Saturday and a holiday
+drop; the hook calls `send_to_user` once and never `send_to_all`; NEGATIVE no other `long_term_*` kind in the keep-set,
+default_prefs, the gate kinds, `recent.ITEM_KINDS` / `DIGEST_KINDS` / `ITEM_URL_BY_KIND` or `dir(hooks)`; `apply()`
+`None→True` and `False→True`, a dry run writes nothing; the script types no kind name outside its docstring). The
+seven → eight count re-pins in the other keep-set tests are the main session's.
+
+---
+
 ## 2026-11-01 — 🥇 luk_setup joins: the keep-set is seven kinds
 
 > "Lets make it live. also alerts too."

@@ -739,7 +739,14 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            "scripts/zone_pad_study_2026_09_30.py",
            # 🕯️ Doji Sweep study (2026-10-16, WIDENED): a read-only research replay
            # that reuses the session / roll / closed-bar engine of the tab it measures
-           "scripts/doji_sweep_study.py"}
+           "scripts/doji_sweep_study.py",
+           # 🔔 Long Term zone pass (2026-11-12, WIDENED): zone_watch.prev_session dates the
+           # prior-close baseline with KL.prev_market_day ONLY (lazy import), the same use
+           # key_level_alerts.py makes on its push path — no level, chip or tile read
+           "long_term_list/zone_watch.py",
+           # 🔔 its read-only probe (2026-11-12, WIDENED): times the key_levels import that
+           # prev_session pays; never writes, never sends
+           "scripts/long_term_zone_probe.py"}
 
 
 def test_import_guard_display_only():

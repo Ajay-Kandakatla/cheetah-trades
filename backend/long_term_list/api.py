@@ -11,6 +11,10 @@ nothing is read for them: no seed, no Mongo, no cached close.
 The owner's GET reads stored docs only (the weekly runs + the forward record) plus ONE request-time cache read: the 🧭
 names' closed cached closes (`sources.pankaj_closes`, a single `bulk_cached_frames` find, never a fetch). It never
 builds a week (`weekly.run` / `sources.load_all` are not called here). Every failure answers HTTP 200 with a reason.
+
+🔔 2026-11-12 (pkzone spec §3.7): the owner's GET also reads the zone pass's stored session doc
+(`long_term_zone_state`, one find) for the `zones.alert` block — still never a fetch, never a snapshot; the latch
+collection is never touched here. Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …".
 """
 from __future__ import annotations
 
@@ -70,7 +74,17 @@ def owner_payload(now: Optional[datetime] = None, *, db=None) -> dict:
         except Exception as exc:                                # noqa: BLE001
             log.warning("chart-maps/long-term: 🧭 closes unreadable: %s", exc)
             closes = {}
-        return PL.build_payload(seed, baseline, runs, fwd, closes, now=now, owner=True)
+        zone_live = zone_day = ls = None
+        try:
+            from . import zone_watch as ZW
+            ls = ZW.log_session(now)
+            zc = ST.zone_colls(db)
+            zone_day = ST.zone_state(zc["state"], ls) if zc else None
+            zone_live = ZW.serve_state(zone_day, now)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("chart-maps/long-term: 🔔 zone state unreadable: %s", exc)
+        return PL.build_payload(seed, baseline, runs, fwd, closes, now=now, owner=True, zone_live=zone_live,
+                                zone_day=zone_day, log_session=ls)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("chart-maps/long-term: payload failed: %s", exc)
         return PL.error_payload(f"The Long Term list could not be built: {type(exc).__name__}")

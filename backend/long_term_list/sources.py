@@ -448,11 +448,17 @@ def load_all(now, *, saved, seed=None) -> dict:
 # ---------------------------------------------------------------------------
 # the ONE request-time read (owner GET only)
 # ---------------------------------------------------------------------------
-def pankaj_closes(symbols, now=None) -> dict:
+def pankaj_closes(symbols, now=None, *, before: Optional[str] = None) -> dict:
     """{SYM: {"close", "date"}} of the latest CLOSED cached bar for the 🧭
     names — `prices.bulk_cached_frames` (one find, never a fetch), a bar dated
     today before the 16:30 ET re-rate dropped. A symbol the cache does not hold
-    is simply absent (never a zero). Never `load_prices`. Never raises."""
+    is simply absent (never a zero). Never `load_prices`. Never raises.
+
+    `before` (ISO date, 2026-11-12 pkzone spec §3.3b, critique C4): each frame
+    is first cut to bars dated strictly BEFORE that day, so the 🔔 zone pass
+    reads the previous session's close even at the 16:30 pass (when today's
+    bar is already vouched closed). None (the default) = unchanged behaviour
+    for every other caller (the owner GET, the payload)."""
     from sepa import prices
     now = (now or datetime.now(ET))
     now = (now if now.tzinfo else now.replace(tzinfo=ET)).astimezone(ET)
@@ -462,7 +468,10 @@ def pankaj_closes(symbols, now=None) -> dict:
         log.warning("long_term_list: pankaj_closes read failed: %s", exc)
         return {}
     out = {}
+    cut = str(before)[:10] if before else None
     for s, df in (frames or {}).items():
+        if cut is not None and df is not None and len(df):
+            df = df[[str(i)[:10] < cut for i in df.index]]
         d = closed_frame(df, now)
         if d is None:
             continue

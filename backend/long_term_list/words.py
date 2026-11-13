@@ -290,6 +290,127 @@ ZONES_ROWS_NOTE = (f"Pankaj's zones from his sheet, not re-screened. In a zone =
                    f"{C.PANKAJ_ZONE_PAD_PCT:g}% of a zone edge (the /pankaj page's rule).")
 
 
+# ── 🔔 zone reaches (2026-11-12, pkzone spec §3.6) — Ajay: "add an alert list when stocks reach Pankaj's zones …" ──
+# Say "reach / reached" only. Every number comes from the pass read (zone_watch) or constants.py.
+def _px(v) -> str:
+    return f"{v:.2f}" if _is_num(v) else DASH
+
+
+def _edges(lo, hi) -> str:
+    return f"{lo:g}–{hi:g}" if _is_num(lo) and _is_num(hi) else DASH
+
+
+def _or_dash(v) -> str:
+    return DASH if v is None or v == "" else str(v)
+
+
+ZONE_ALERT_TITLE = "🔔 In one of Pankaj's zones now"
+
+
+def zone_alert_as_of(live: bool, hhmm=None, close_date=None) -> str:
+    if live:
+        return f"Live prints at the {_or_dash(hhmm)} ET alerts pass"
+    if close_date:
+        return f"At the {mmdd(close_date)} close — no live read now"
+    return "No cached closes for Pankaj's names"
+
+
+def zone_now_text(basis, price, hhmm_or_date, zk, lo, hi, tier) -> str:
+    """One 'in a zone now' line WITHOUT the symbol (the tab prints the ticker link)."""
+    if basis == "live":
+        return (f"{_px(price)} at {_or_dash(hhmm_or_date)} ET · in Pankaj's {zk} zone ({_edges(lo, hi)}) · "
+                f"Tier {_or_dash(tier)}")
+    return (f"in Pankaj's {zk} zone ({_edges(lo, hi)}) at the {mmdd(hhmm_or_date)} close ({_px(price)}) · "
+            f"Tier {_or_dash(tier)}")
+
+
+ZONE_NOW_EMPTY = "No name is inside one of Pankaj's zones now."
+
+
+def zone_log_title(session) -> str:
+    return f"🔔 Reached one of Pankaj's zones — {mmdd(session)}"
+
+
+def zone_log_text(price, zk, lo, hi, tier) -> str:
+    return f"{_px(price)} reached Pankaj's {zk} zone ({_edges(lo, hi)}) · Tier {_or_dash(tier)}"
+
+
+def zone_log_empty(session) -> str:
+    return f"No name reached one of Pankaj's zones on {mmdd(session)}."
+
+
+ZONE_RESULT_TEXT = {"pushed": "rang your phone", "no_target": "no phone has this alert on",
+                    "failed": "the phone push failed", "no_store": "not sent — the alert store was unreachable"}
+ZONE_LOG_NOT_SENT = {"off": "not sent — phone push is off",
+                     "window": "not sent — outside the app's push hours",
+                     "kind": "not sent — the phone alert kind is not registered",
+                     "no_hook": "not sent — no phone sender"}
+ZONE_RESULT_MISSING = "push result not recorded"
+
+
+def zone_log_push_text(state=None, push_reason=None) -> str:
+    """A stored push result wins; else the pass reason that blocked the push; else 'not recorded'
+    (a duplicate is never stored — handed in anyway it reads 'not recorded')."""
+    if state in ZONE_RESULT_TEXT:
+        return ZONE_RESULT_TEXT[state]
+    if push_reason in ZONE_LOG_NOT_SENT:
+        return ZONE_LOG_NOT_SENT[push_reason]
+    return ZONE_RESULT_MISSING
+
+
+def zone_stale_text(n_stale, n_names, prev) -> Optional[str]:
+    if not n_stale:
+        return None
+    return (f"{n_stale} of {n_names} names have no cached close from {mmdd(prev)} — "
+            f"they cannot ring this session.")
+
+
+def zone_push_text() -> str:
+    if C.ZONE_PUSH_MODE == "live":
+        return ("Each reach rings your phone once per name, zone and session — only when the prior session's "
+                "close sat outside that zone.")
+    return "Phone push for zone reaches is off — this list shows here only."
+
+
+def zone_reason_text(key, hhmm=None) -> Optional[str]:
+    """The served sentence for a pass reason; None for None (a push was attempted) and for any reason a pass
+    never stores (a closed day runs no pass)."""
+    if key is None:
+        return None
+    if key == "no_snapshot":
+        return f"No live prices at the {_or_dash(hhmm)} ET pass — nothing could ring."
+    return {"window": "Outside the app's push hours — nothing rang.",
+            "off": "Phone push for zone reaches is off — this list shows here only.",
+            "kind": "The phone alert kind is not registered — nothing rang.",
+            "no_hook": "No phone sender — nothing rang.",
+            "no_store": "The alert store was unreachable — nothing rang."}.get(key)
+
+
+def zone_push_title(sym, zk) -> str:
+    return f"🔔 {sym} reached Pankaj's {zk} zone"
+
+
+ZONE_PUSH_TAIL = "Pankaj's zone from his sheet — not a signal. Rings once per name, zone and session."
+
+
+def zone_push_line(sym, price, zk, lo, hi, tier, zt, tag="") -> str:
+    return (f"{sym} {_px(price)}{tag or ''} · Pankaj's {zk} zone {_edges(lo, hi)} · his Tier {tier or DASH} · "
+            f"ZT {zt or DASH}")
+
+
+# The public rules panel line: names neither the sheet's owner nor the 🧭 mark. Built from constants.py at call time
+# (rules_lines reads the function, so a monkeypatched constant moves the line); ZONE_RULE_TEXT = the import-time text.
+def zone_rule_text() -> str:
+    return (f"Owner only. A name on the private zone list rings once per name, zone and session when a trade from "
+            f"today's session prints inside one of its saved zones (within {C.PANKAJ_ZONE_PAD_PCT:g}% of an edge) "
+            f"and the previous session's close sat outside that zone; a name with no close from the previous "
+            f"session cannot ring. One price snapshot per alerts pass; nothing on a closed day or outside the app's "
+            f"push hours. Phone push " + ("on." if C.ZONE_PUSH_MODE == "live" else "off."))
+
+
+ZONE_RULE_TEXT = zone_rule_text()
+
+
 # ── stage / sales ──
 def stage_text(now, label, at_save) -> str:
     if now is None:
@@ -395,10 +516,17 @@ def more_text(k) -> str:
     return f"+{k} more on the tab"
 
 
-def pushed_text() -> str:
-    if C.DIGEST_PUSH_MODE == "live":
-        return "Sent to your phone as one weekly push."
-    return "Phone push is off — this digest shows here only."
+def pushed_text(rings=None) -> str:
+    """The digest's push line. rings None = the rule (no run read); True / False = this week's digest.
+    REFIX 2026-11-13: rings True never says "sent" — the GET reads the run doc only, and the send result lives on
+    the claim doc (a refused week: outside push hours, no phone, failed, kind not registered)."""
+    if C.DIGEST_PUSH_MODE != "live":
+        return "Phone push is off — this digest shows here only."
+    if rings is True:
+        return "This week's digest rang — one push to your phone when allowed."
+    if rings is False:
+        return "Nothing dropped or started moving this week — no push."
+    return "One phone push per week, only when a saved name dropped or a 🌱 name started moving."
 
 
 # ── strips ──
@@ -605,6 +733,7 @@ def rules_lines(*, include_pankaj: bool = False) -> list:
     out.append(_rule("notices", "Notices", NOTICE_TEXT, ("STAGE_DROP_PAIRS", "STARTED_MOVING_PAIR", "RING_KINDS")))
     out.append(_rule("schedule", "Schedule", SCHEDULE_TEXT, ()))
     out.append(_rule("push", "Phone push", pushed_text(), ("DIGEST_PUSH_MODE", "DIGEST_BODY_LINES")))
+    out.append(_rule("zone_alert", "Zone reach push", zone_rule_text(), ("PANKAJ_ZONE_PAD_PCT", "ZONE_PUSH_MODE")))
     out.append(_rule("forward", "Forward record", FORWARD_METHOD_TEXT,
                      ("FORWARD_BASE_KIND", "FORWARD_MIN_SESSIONS", "FORWARD_CI_PCT", "FORWARD_BOOT_DRAWS",
                       "FORWARD_PLACEBO_DRAWS")))

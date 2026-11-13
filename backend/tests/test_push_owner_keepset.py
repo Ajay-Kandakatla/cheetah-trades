@@ -69,8 +69,9 @@ def test_keep_set_is_the_2026_09_21_nine():
     assert subs.OWNER_KEEP_SET == frozenset({
         # NARROWED 2026-10-29 — Ajay: "Only give me Gajjalas chart notifications from both tabs" (BUILD_SPEC29 D1: the keep-set is the six)
         # WIDENED 2026-11-01: six → seven — 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too."; LIVE, owner keep-set)
+        # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
         "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential", "luk_setup",
-        "position_alert", "ops_alert",
+        "long_term", "position_alert", "ops_alert",
     })
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone

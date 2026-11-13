@@ -42,9 +42,13 @@ seed + baseline + prior runs → previous flags (the latest run, else the baseli
 - **The saved set is the seed, every week (C6).** No run adds or drops a name; strip names never become rows. A name missing from every source is still a row (`not_read`).
 - Notices and ring causes: `notices.py` (WP-CORE). Only `stage_drop`, `sales_drop`, `started_moving` (`constants.RING_KINDS`) can ever ring.
 
-## The digest and the phone (HELD, C9, HIS CALL §7 #1)
+## The digest and the phone (HELD, C9, HIS CALL §7 #1 — LIVE since 2026-11-12, see below)
 
 `DIGEST_PUSH_MODE = "off"`: the digest is computed, stored on the run doc and shown on the tab ("Phone push is off — this digest shows here only."). `push.send_digest` returns "push off" before reading a pref, a claim or a sender. The held live path, in order: mode → kind registered in `push.subs.default_prefs()` → `CHEETAH_IGNORE_HOLIDAY` (a manual run never pushes) → closed day → `digest.rings` → the `hooks.notify_long_term_digest` hook exists → claim `digest:<week>` → ONE owner-scoped send to `subs._owner_email()`. Never `send_to_all`. The 8th keep-set kind is WP-PUSH's, not shipped.
+
+**2026-11-12 — LIVE by his call** (pkzone spec §3.5; Ajay 2026-11-12: "Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes."). `DIGEST_PUSH_MODE = "live"` under ONE owner keep-set kind `long_term` (`constants.KIND`, shared with the 🔔 zone reach — `long_term_zone_alerts_2026_11_12.md`); the hook is `hooks.notify_long_term`; the payload tag is `long_term:<ISO week>`; the ring set (`RING_KINDS`) and the body cap (6 lines + "+N more on the tab") are unchanged; one push per ISO week through the `digest:<week>` claim. New step right after the closed-day check: the app's push hours (`zone_edge.push_window`, 04:00–20:00 ET) read on the WALL clock at send time (`push._wall_et`, critique C6) — the weekly run hands its start clock, so a run that finishes after 20:00 is refused "outside the app's push hours" and the digest stays on the tab (no catch-up). The tab's digest line reads "Sent to your phone as this week's one push." when the week rang, "Nothing dropped or started moving this week — no push." when it did not. `weekly.py` is unchanged.
+
+**2026-11-13 — digest line wording (refix):** the tab's digest line for a week that rang no longer says "Sent to your phone as this week's one push." It now reads "This week's digest rang — one push to your phone when allowed." (`words.pushed_text(rings=True)`). The GET builds that line from the run doc only, and `push.send_digest`'s result is stored on the `digest:<week>` claim doc, not the run doc, so a week the push refused (outside push hours, no phone, failed send, kind not registered) used to say "Sent" anyway. Reading the claim's push state on the GET was not built. Tests: `test_long_term_digest_live_2026_11_12.py::test_NEGATIVE_refused_week_line_never_says_sent` (4 cases), `::test_NEGATIVE_no_live_digest_line_claims_delivery`.
 
 ## The forward record
 
@@ -66,5 +70,5 @@ seed + baseline + prior runs → previous flags (the latest run, else the baseli
 
 ## Not done here
 
-- The probe numbers (main session, §5.5). The phone push (WP-PUSH held; §7 #1). Saving strip names (§7 #5). Opening the tab to other users (§7 #11). Automatic catch-up of a missed week (§7 #9).
+- The probe numbers (main session, §5.5). The phone push (WP-PUSH held; §7 #1 — LIVE since 2026-11-12, see above). Saving strip names (§7 #5). Opening the tab to other users (§7 #11). Automatic catch-up of a missed week (§7 #9).
 - Every HIS CALL in spec §7 stays his.

@@ -19,8 +19,9 @@ from push import hooks, recent, subs
 from scripts import owner_prefs_apply as S
 
 QUOTE = "Lets make it live. also alerts too."
-SEVEN = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                   "luk_setup", "position_alert", "ops_alert"})
+# WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+EIGHT = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                   "luk_setup", "long_term", "position_alert", "ops_alert"})
 OWNER = "owner-local-part" + chr(64) + "example.com"
 OTHER = "someone-else" + chr(64) + "example.com"
 # the contracts.mjs keepSet() regex — the BODY of the frozenset literal
@@ -36,8 +37,8 @@ def _src(mod) -> str:
 
 
 # ── the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────────
-def test_the_keep_set_is_the_seven_exactly():
-    assert subs.OWNER_KEEP_SET == SEVEN
+def test_the_keep_set_is_the_eight_exactly():
+    assert subs.OWNER_KEEP_SET == EIGHT
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
@@ -49,9 +50,9 @@ def test_the_quote_sits_inside_the_braces_beside_the_kind():
     assert QUOTE.split(" also")[0] in body                      # the comment wraps the quote over two lines
     assert re.search(r'"Lets make it live\. also alerts\s*#?\s*too\."', body), "his words inside the braces"
     assert '"luk_setup"' in body
-    # the quote is a comment — stripping `#…` (contracts keepSet()) leaves exactly the seven names
+    # the quote is a comment — stripping `#…` (contracts keepSet()) leaves exactly the eight names
     names = set(re.findall(r'"([a-z0-9_]+)"', re.sub(r"#[^\n]*", "", body)))
-    assert names == set(SEVEN)
+    assert names == set(EIGHT)
 
 
 def test_the_head_carries_the_seven_sentence_and_still_the_10_29_words():
@@ -120,13 +121,13 @@ def test_NEGATIVE_the_audited_kind_is_still_absent():
     assert k not in _src(subs) and k not in _src(hooks)
 
 
-def test_NEGATIVE_an_eighth_kind_breaks_the_seven_pin(monkeypatch):
+def test_NEGATIVE_a_ninth_kind_breaks_the_eight_pin(monkeypatch):
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     try:
-        test_the_keep_set_is_the_seven_exactly()
+        test_the_keep_set_is_the_eight_exactly()
     except AssertionError:
         return
-    raise AssertionError("an eighth kind must fail the seven pin")
+    raise AssertionError("a ninth kind must fail the eight pin")
 
 
 # ── scripts/owner_prefs_apply derives it ─────────────────────────────────────────────────────────────────────────

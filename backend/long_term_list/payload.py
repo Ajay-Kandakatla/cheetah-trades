@@ -5,7 +5,9 @@
   no run yet  -> "seed_only": every saved row from the at-save baseline;
   else        -> "ready": the latest weekly run doc.
 The 🧭 zone column is the ONE request-time read (`zone_closes`, cache-only,
-built by sources.pankaj_closes). Every sentence comes from words.py; NaN / inf
+built by sources.pankaj_closes). The 🔔 block `zones.alert` (2026-11-12, pkzone
+spec §3.7) reads the zone pass's stored session doc handed in by the API
+(`zone_day`, `zone_live` = `zone_watch.serve_state`) — this module reads nothing. Every sentence comes from words.py; NaN / inf
 are scrubbed by `growth.api._scrub`. His sheet's "Possible Action" column is
 never served (HIS CALL §7 #22).
 """
@@ -122,6 +124,91 @@ def _zones_section(seed, reads, zone_closes) -> dict:
     return {"as_of_text": as_of, "at_zone": at_zone, "rows_note": W.ZONES_ROWS_NOTE}
 
 
+def _alert_now(seed, zone_closes, zone_live) -> list:
+    """Who sits inside a zone now: the live pass's rows (per-row basis) or the closed-bar read; zone order, then seed
+    order; one line per name (its first zone in `order`)."""
+    order = SD.zone_order(seed)
+    ents = SD.pankaj_entries(seed)
+    if zone_live:
+        rows = zone_live.get("rows") or {}
+    else:
+        rows = {sym: {"basis": "close", "price": r.get("close"), "date": r.get("close_date"), "in": r.get("in") or []}
+                for sym, r in _pankaj_reads(seed, zone_closes).items()}
+    out = []
+    for zk in order:
+        for sym, ent in ents.items():
+            r = rows.get(sym) or {}
+            if (r.get("in") or [None])[0] != zk:
+                continue
+            lo, hi = (list((ent.get("zones") or {}).get(zk) or (None, None)) + [None, None])[:2]
+            if r.get("basis") == "live":
+                when = _hhmm(r.get("at_epoch")) or (zone_live or {}).get("as_of_hhmm")
+                text = W.zone_now_text("live", r.get("price"), when, zk, lo, hi, ent.get("tier"))
+            else:
+                text = W.zone_now_text("close", r.get("price"), r.get("date"), zk, lo, hi, ent.get("tier"))
+            out.append({"symbol": sym, "his_symbol": ent.get("sheet_symbol") or sym, "zone": zk, "text": text})
+    return out
+
+
+def _hhmm(epoch) -> Optional[str]:
+    """The ET wall time of a print stamp (the time the price printed), or None."""
+    x = CR._num(epoch)
+    if x is None:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+        return dt.datetime.fromtimestamp(x, tz=ZoneInfo("America/New_York")).strftime("%H:%M")
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _alert_log(seed, zone_day) -> list:
+    """The session's reaches (first write wins on the state doc), sorted by time, zone order, seed order."""
+    order = list(SD.zone_order(seed))
+    seq = list(SD.pankaj_entries(seed))
+    reaches = (zone_day or {}).get("reaches") or {}
+    results = (zone_day or {}).get("results") or {}
+    rows = []
+    for rkey, rec in reaches.items():
+        if not isinstance(rec, dict):
+            continue
+        sym, zk = rec.get("symbol"), rec.get("zone")
+        res = results.get(rkey) if isinstance(results.get(rkey), dict) else {}
+        rows.append(((str(rec.get("at_iso") or ""), order.index(zk) if zk in order else 99,
+                      seq.index(sym) if sym in seq else 999),
+                     {"symbol": sym, "his_symbol": rec.get("his_symbol") or sym, "zone": zk,
+                      "at_text": f"{rec.get('at_hhmm') or W.DASH} ET",
+                      "text": W.zone_log_text(rec.get("price"), zk, rec.get("lo"), rec.get("hi"), rec.get("tier")),
+                      "push_text": W.zone_log_push_text(res.get("state"), rec.get("push_reason"))}))
+    rows.sort(key=lambda t: t[0])
+    return [r for _, r in rows]
+
+
+def _zone_alert(seed, zone_closes, zone_live, zone_day, log_session) -> dict:
+    """`zones.alert` (pkzone spec §3.7): who is inside a zone now + today's log of reaches."""
+    live = bool(zone_live)
+    dates = sorted(str(v.get("date")) for v in (zone_closes or {}).values()
+                   if isinstance(v, dict) and v.get("date"))
+    last_close = dates[-1] if dates else None
+    now_rows = _alert_now(seed, zone_closes, zone_live if live else None)
+    log_rows = _alert_log(seed, zone_day)
+    day = log_session or last_close
+    zl = zone_live or {}
+    return {
+        "title": W.ZONE_ALERT_TITLE,
+        "live": live,
+        "as_of_text": W.zone_alert_as_of(live, zl.get("as_of_hhmm"), last_close),
+        "now": now_rows,
+        "empty_text": W.ZONE_NOW_EMPTY if not now_rows else None,
+        "reason": W.zone_reason_text(zl.get("reason"), zl.get("as_of_hhmm")) if live else None,
+        "stale_text": W.zone_stale_text(zl.get("n_stale"), zl.get("n_names"), zl.get("prev_session")) if live else None,
+        "push_text": W.zone_push_text(),
+        "log_title": W.zone_log_title(day),
+        "log": log_rows,
+        "log_empty_text": W.zone_log_empty(day) if not log_rows else None,
+    }
+
+
 def _run_session(run) -> str:
     return str((run or {}).get("session") or "")
 
@@ -161,8 +248,10 @@ def _caveats(seed) -> list:
     return out
 
 
-def build_payload(seed, baseline, runs, forward_docs, zone_closes, *, now=None, owner: bool) -> dict:
-    """The served dict (already NaN-scrubbed). Never raises: a failure is state "error" + reason."""
+def build_payload(seed, baseline, runs, forward_docs, zone_closes, *, now=None, owner: bool, zone_live=None,
+                  zone_day=None, log_session=None) -> dict:
+    """The served dict (already NaN-scrubbed). Never raises: a failure is state "error" + reason.
+    zone_live / zone_day / log_session: the 🔔 zone pass's stored doc (None = no pass read)."""
     if not owner:
         return owner_only_payload()
     try:
@@ -173,8 +262,9 @@ def build_payload(seed, baseline, runs, forward_docs, zone_closes, *, now=None, 
                 return error_payload(f"The saved list file changed: {exc}")
             except OSError as exc:
                 return error_payload(f"The saved list file could not be read: {exc}")
-        return _scrub(_build(seed, baseline or {}, list(runs or []), list(forward_docs or []),
-                             zone_closes or {}, now))
+        out = _build(seed, baseline or {}, list(runs or []), list(forward_docs or []), zone_closes or {}, now)
+        out["zones"]["alert"] = _zone_alert(seed, zone_closes or {}, zone_live, zone_day, log_session)
+        return _scrub(out)
     except Exception as exc:                                    # noqa: BLE001
         return error_payload(f"The Long Term list could not be built: {exc}")
 
@@ -288,7 +378,7 @@ def _build(seed, baseline, runs, forward_docs, zone_closes, now) -> dict:
         digest = {"title": d.get("title"), "lines": list(d.get("lines") or []),
                   "items": [{"symbol": i.get("symbol"), "kind": i.get("kind"), "text": i.get("text")}
                             for i in d.get("items") or []],
-                  "pushed_text": W.pushed_text()}
+                  "pushed_text": W.pushed_text(rings=d.get("rings"))}
 
     history = []
     for run in runs:

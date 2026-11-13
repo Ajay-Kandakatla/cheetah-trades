@@ -8,7 +8,9 @@
  * ONE read-only GET on mount (GET /chart-maps/long-term, backend long_term_list/api.py) — no polling: the list is
  * re-read once a week by the server. States: `owner_only` → the served reason only (the server sends nothing else);
  * `error` → the served reason; `seed_only` / `ready` → header (title, note, his words, next-run line, per-source as-of
- * lines) → digest → 🧭 at-zone strip (served `zones`) → 🌱 started moving → ⚠️ changed → the categories (label,
+ * lines) → digest → 🧭 zones (the 🔔 block from the served `zones.alert` when present — names in one of Pankaj's zones
+ * now, the served reason / stale / push lines and the session's reach log with each row's served push line; otherwise
+ * the closed-bar at-zone strip, never both) → 🌱 started moving → ⚠️ changed → the categories (label,
  * criteria, caveat, also line, saved rows, the neutral moved line — never ⚠️ — and the unsaved weekly top strip with ✨
  * on a name new to it) → forward (an inline chart only once the served record is past "too early") → history → rules
  * and caveats. A request that fails prints FETCH_FAILED (the ONE FE sentence).
@@ -25,7 +27,7 @@ import { API } from '../lib/apiBase';
 import {
   FETCH_FAILED, LT_CHART, LT_PATH, listOr, ltCategoryRows, ltForwardLines, ltMark, ltSavedSymbols, ltState, ltText,
   ltToken, textOr,
-  type LtAny, type LtCategory, type LtPayload, type LtRow, type LtTop,
+  type LtAny, type LtCategory, type LtPayload, type LtRow, type LtTop, type LtZoneAlert,
 } from '../lib/longTerm';
 import { TickerLink } from './TickerLink';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -108,6 +110,43 @@ function StripItem({ t }: { t: LtTop }) {
   );
 }
 
+/* 🔔 zones.alert (pkzone spec §3.9): every node is a served string; a served null renders no node. */
+function ZoneAlert({ a }: { a: LtZoneAlert }) {
+  const now = listOr(a.now);
+  const log = listOr(a.log);
+  return (
+    <div className="lt-alert" data-testid="lt-zone-alert" data-live={a.live === true ? 'true' : 'false'}>
+      {ltText(a.title) ? <h3 className="lt-h">{a.title}</h3> : null}
+      <Line text={a.as_of_text} testId="lt-zone-alert-asof" className="lt-line lt-muted" />
+      {now.length ? (
+        <ul className="lt-list">
+          {now.map((z) => (
+            <li key={`${z.symbol}-${z.zone}`} className="lt-line" data-testid={`lt-zone-now-${z.symbol}`}>
+              <TickerLink ticker={z.symbol} showWatchlist={false} title={ltText(z.his_symbol) ?? undefined} />
+              {' '}{textOr(z.text)}
+            </li>
+          ))}
+        </ul>
+      ) : <Line text={a.empty_text} testId="lt-zone-now-empty" />}
+      <Line text={a.reason} testId="lt-zone-alert-reason" />
+      <Line text={a.stale_text} testId="lt-zone-alert-stale" />
+      <Line text={a.push_text} testId="lt-zone-alert-push" className="lt-line lt-muted" />
+      {ltText(a.log_title) ? <h4 className="lt-h" data-testid="lt-zone-log-title">{a.log_title}</h4> : null}
+      {log.length ? (
+        <ul className="lt-list" data-testid="lt-zone-log">
+          {log.map((r) => (
+            <li key={`${r.symbol}-${r.zone}`} className="lt-line" data-testid={`lt-zone-log-${r.symbol}-${r.zone}`}>
+              {textOr(r.at_text)}{' · '}
+              <TickerLink ticker={r.symbol} showWatchlist={false} title={ltText(r.his_symbol) ?? undefined} />
+              {' '}{textOr(r.text)}{' · '}<span className="lt-muted">{textOr(r.push_text)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <Line text={a.log_empty_text} testId="lt-zone-log-empty" />}
+    </div>
+  );
+}
+
 export default function LongTermBoard() {
   const [load, setLoad] = useState<Load>({ phase: 'loading' });
 
@@ -163,6 +202,8 @@ export default function LongTermBoard() {
   const digest = p.digest;
   const zones = p.zones;
   const atZone = listOr(zones?.at_zone);
+  /* 🔔 present → it replaces the closed-bar strip (heading + at_zone list); absent → the strip renders as before. */
+  const alert = zones?.alert && typeof zones.alert === 'object' ? zones.alert : null;
   const started = listOr(p.started_moving);
   const changed = listOr(p.changed);
   const categories = listOr(p.categories);
@@ -204,10 +245,11 @@ export default function LongTermBoard() {
         </section>
       ) : null}
 
-      {zones && (atZone.length || ltText(zones.as_of_text) || ltText(zones.rows_note)) ? (
+      {zones && (alert || atZone.length || ltText(zones.as_of_text) || ltText(zones.rows_note)) ? (
         <section className="lt-section" data-testid="lt-zones" data-section="zones">
-          {ltText(zones.as_of_text) ? <h3 className="lt-h">{zones.as_of_text}</h3> : null}
-          {atZone.length ? (
+          {alert ? <ZoneAlert a={alert} /> : null}
+          {!alert && ltText(zones.as_of_text) ? <h3 className="lt-h">{zones.as_of_text}</h3> : null}
+          {!alert && atZone.length ? (
             <ul className="lt-list">
               {atZone.map((z) => (
                 <li key={z.symbol} className="lt-line" data-testid={`lt-zone-${z.symbol}`}>

@@ -294,6 +294,17 @@ def notify_luk_setup(*, owner: str, payload: dict) -> dict:
     return sender.send_to_user(owner, payload, kind="luk_setup")
 
 
+def notify_long_term(*, owner: str, payload: dict) -> dict:
+    """📅 long_term — BOTH Long Term pushes under ONE pref kind (2026-11-12): a 🧭 name reaching one of Pankaj's zones
+    on a live print (long_term_list/zone_watch.py, once per name, zone and session) and the weekly 📅 digest
+    (long_term_list/push.py, once a week, only when it rang). Ajay 2026-11-12: "add an alert list when stocks reach
+    Pankaj's zones and also tell me if you finish the long term tabs in general" / "Weekly and if something gets
+    dropped let me know …". Owner-scoped (send_to_user, never send_to_all), so the closed-day drop, quiet hours and the
+    /notifications toggle all apply at the sender. ON for his devices through OWNER_KEEP_SET. UNMEASURED — Pankaj's
+    zones and his saved list, not a signal; never a trade."""
+    return sender.send_to_user(owner, payload, kind="long_term")
+
+
 def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
     """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
     over night scan for all the stocks they are all growing over night". Owner-

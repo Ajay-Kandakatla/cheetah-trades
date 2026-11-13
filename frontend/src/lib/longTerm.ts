@@ -48,7 +48,18 @@ export type LtAsOf = { week: string | null; session: string | null; built_at_iso
 export type LtDigestItem = { symbol: string; kind: string; text: string | null };
 export type LtDigest = { title: string | null; lines: string[]; items: LtDigestItem[]; pushed_text: string | null };
 export type LtZoneHit = { symbol: string; his_symbol: string | null; zone_text: string | null };
-export type LtZones = { as_of_text: string | null; at_zone: LtZoneHit[]; rows_note: string | null };
+/* 🔔 zones.alert (2026-11-12, pkzone spec §3.7 / §3.9) — the owner payload's "in one of Pankaj's zones now" block and
+ * the session's reach log. Every text is served (backend long_term_list/words.py); the FE prints them as they come.
+ * Absent / null → the board falls back to the closed-bar `at_zone` strip. */
+export type LtZoneNow = { symbol: string; his_symbol: string | null; zone: string; text: string | null };
+export type LtZoneLog = { symbol: string; his_symbol: string | null; zone: string; at_text: string | null; text: string | null; push_text: string | null };
+export type LtZoneAlert = {
+  title: string | null; live: boolean; as_of_text: string | null;
+  now: LtZoneNow[]; empty_text: string | null;
+  reason: string | null; stale_text: string | null; push_text: string | null;
+  log_title: string | null; log: LtZoneLog[]; log_empty_text: string | null;
+};
+export type LtZones = { as_of_text: string | null; at_zone: LtZoneHit[]; rows_note: string | null; alert?: LtZoneAlert | null };
 export type LtStarted = { symbol: string; date: string | null; text: string | null };
 export type LtSeries = { key: string; label: string };
 export type LtPoint = { date: string; list_pct: number | null; rsp_pct: number | null; spy_pct: number | null } & Record<string, unknown>;

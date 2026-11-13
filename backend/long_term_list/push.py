@@ -1,14 +1,16 @@
-"""📅 Long Term — the weekly digest as a phone push: COMPOSED, and HELD (spec §3.9, [C9], HIS CALL #1).
+"""📅 Long Term — the weekly digest as a phone push: LIVE by his call (2026-11-12, pkzone spec §3.5, [C6]).
 
 Ajay 2026-11-12, verbatim: "… Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to
-Stage 3 or stage 4 changes."
+Stage 3 or stage 4 changes." — `constants.DIGEST_PUSH_MODE = "live"`; the kind is the ONE owner keep-set kind
+`long_term` (shared with the 🔔 zone reach, `zone_watch.py`).
 
-Today the digest is computed, stored on the week's run doc and shown on the tab. `constants.DIGEST_PUSH_MODE` is "off",
-so `send_digest` returns "push off" before it reads a pref, a claim or a sender — nothing rings, nothing is claimed.
-The rest of the path is written for the day he says yes (WP-PUSH registers the kind + the hook), in this order:
+The digest is computed, stored on the week's run doc and shown on the tab; `send_digest` rings the owner's phone once
+per ISO week, in this order:
 mode → kind registered in `push.subs.default_prefs()` → `CHEETAH_IGNORE_HOLIDAY` override (a manual run never pushes)
-→ closed day → `digest.rings` (only RING_KINDS events ring) → the sender hook exists → claim `digest:<week>` (the
-insert is the dedupe) → ONE owner-scoped send (`hooks.notify_long_term_digest(owner=subs._owner_email(), payload)`).
+→ closed day (the run's clock) → the app's push hours on the WALL clock at send time (`zone_edge.push_window`,
+critique C6: the weekly run hands its START clock) → `digest.rings` (only RING_KINDS events ring) → the sender hook
+exists → claim `digest:<week>` (the insert is the dedupe) → ONE owner-scoped send
+(`hooks.notify_long_term(owner=subs._owner_email(), payload)`).
 NEVER `send_to_all`: this module does not import it and no branch reaches it.
 """
 from __future__ import annotations
@@ -16,12 +18,14 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import Callable, Optional
+from zoneinfo import ZoneInfo
 
 from . import constants as C
 from . import store as ST
 from . import words as W
 
 log = logging.getLogger("long_term_list.push")
+ET = ZoneInfo("America/New_York")
 
 R_OFF = "push off"
 R_KIND = "kind not registered"
@@ -30,6 +34,12 @@ R_QUIET = "nothing to ring"
 R_NO_HOOK = "no sender hook"
 R_CLAIMED = "already pushed this week"
 R_NO_STORE = "claim store unreachable — not sent"
+R_WINDOW = "outside the app's push hours"
+
+
+def _wall_et() -> datetime:
+    """The wall clock in ET at send time (tests monkeypatch this — never the real clock in a test)."""
+    return datetime.now(ET)
 
 
 def compose(digest: dict, week_id: str) -> dict:
@@ -53,7 +63,7 @@ def _body(lines: list) -> list:
 def _hook() -> Optional[Callable]:
     try:
         from push import hooks
-        return getattr(hooks, "notify_long_term_digest", None)
+        return getattr(hooks, "notify_long_term", None)
     except Exception as exc:                                   # noqa: BLE001
         log.warning("long_term_list.push: hooks unavailable: %s", exc)
         return None
@@ -64,13 +74,15 @@ def _skip(reason: str) -> dict:
     return {"state": "skipped", "reason": reason, "sent": 0}
 
 
-def send_digest(run_doc: dict, now: datetime, *, db=None, send: Optional[Callable] = None) -> dict:
-    """{"state": "skipped" | "pushed" | "no_target" | "failed", "reason", "sent"}. Never raises."""
+def send_digest(run_doc: dict, now: datetime, *, db=None, send: Optional[Callable] = None,
+                clock: Optional[Callable[[], datetime]] = None) -> dict:
+    """{"state": "skipped" | "pushed" | "no_target" | "failed", "reason", "sent"}. Never raises.
+    `now` = the run's clock (closed day, claim stamp); the push-hours window reads `clock()` (default `_wall_et`)."""
     try:
         if C.DIGEST_PUSH_MODE != "live":
             return _skip(R_OFF)
         from push import subs
-        if C.DIGEST_KIND not in (subs.default_prefs() or {}):
+        if C.KIND not in (subs.default_prefs() or {}):
             return _skip(R_KIND)
         from market_hours import gate
         if gate.override_active():
@@ -78,6 +90,10 @@ def send_digest(run_doc: dict, now: datetime, *, db=None, send: Optional[Callabl
         why = gate.closed_reason(now)
         if why:
             return _skip(why)
+        from supply_demand import zone_edge as ZE
+        wall = (clock or _wall_et)()
+        if not ZE.push_window(wall):
+            return _skip(R_WINDOW)
         digest = (run_doc or {}).get("digest") or {}
         if not digest.get("rings"):
             return _skip(R_QUIET)

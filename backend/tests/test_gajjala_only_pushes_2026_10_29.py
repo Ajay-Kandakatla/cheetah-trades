@@ -28,8 +28,9 @@ from tests.test_gajjala_run import S, at
 from tests.test_gajjala_variant_2026_10_27 import _aplus, _frames, boom, frame_1m, gg1_store
 
 # WIDENED 2026-11-01: six → SEVEN — 🥇 luk_setup joined (Ajay 2026-11-01: "Lets make it live. also alerts too.").
-SEVEN = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                   "luk_setup", "position_alert", "ops_alert"})
+# WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
+EIGHT = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                   "luk_setup", "long_term", "position_alert", "ops_alert"})
 GAJJALA_FOUR = ("gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential")
 OK_SEND = {"sent": 1, "failed": 0, "total_targets": 1}
 OWNER = "owner-local-part" + chr(64) + "example.com"
@@ -42,16 +43,16 @@ def _no_override(monkeypatch):
 
 
 # ── D1: the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────
-def test_the_keep_set_is_exactly_the_seven():
-    assert subs.OWNER_KEEP_SET == SEVEN
+def test_the_keep_set_is_exactly_the_eight():
+    assert subs.OWNER_KEEP_SET == EIGHT
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
-def test_owner_prefs_is_true_for_exactly_the_seven_and_false_for_every_other_bool():
+def test_owner_prefs_is_true_for_exactly_the_eight_and_false_for_every_other_bool():
     op = subs.owner_prefs()
-    assert {k for k, v in op.items() if v is True} == SEVEN
+    assert {k for k, v in op.items() if v is True} == EIGHT
     for k, v in op.items():
-        if isinstance(v, bool) and k not in SEVEN:
+        if isinstance(v, bool) and k not in EIGHT:
             assert v is False, k
     # the non-bool settings ride through untouched (the quiet-hours clock)
     d = subs.default_prefs()
@@ -94,7 +95,7 @@ def test_both_1m_kinds_are_live_market_kinds_never_retired():
 def test_NEGATIVE_an_eighth_kind_breaks_the_pin(monkeypatch):
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     with pytest.raises(AssertionError):
-        test_the_keep_set_is_exactly_the_seven()
+        test_the_keep_set_is_exactly_the_eight()
 
 
 def test_the_keep_set_comment_carries_his_words_and_each_removed_kind_once():

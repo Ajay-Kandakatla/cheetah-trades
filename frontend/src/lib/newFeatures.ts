@@ -30,6 +30,8 @@ export const NEW_FEATURES: NewFeature[] = [
   // PRIMARY OWNER only; DIGEST_PUSH_MODE = "off" (WP-PUSH HELD, HIS CALL §7 #1). His words 1–2 only — Pankaj's sheet
   // stays out of the public bundle. UNMEASURED. Docs docs/chart_maps/long_term_*_2026_11_12.md. Pinned by
   // scripts/contracts.mjs ("📅 Long Term tab (2026-11-12)").
+  { id: 'long-term-alerts-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=long_term',
+    label: "🔔 Long Term alerts — a 🧭 name reaching one of Pankaj's zones on a live print rings your phone once per name, zone and session (who sits inside a zone now + today's reaches are on the 📅 tab), and the weekly 📅 digest rings when a saved name dropped (Stage 2 → 3 or 4, a sales drop) or a 🌱 name started moving. You: “add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term tabs in general” · “Weekly and if something gets dropped let me know when to like is Sales drop or Stage 2 to Stage 3 or stage 4 changes.” UNMEASURED; Pankaj's zones are his, not a buy signal." },
   { id: 'long-term-list-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=long_term',
     label: "📅 Long Term — your saved list from 11-12, re-read every week from the other tabs: what dropped (Stage 2 → 3 or 4, a sales drop), what started moving, and each list's new names this week. You: “Save this entire list for me. In a New tab - Long Term …” · “Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet..”. UNMEASURED; none of these lists is a buy signal." },
   // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "We got wrong numbers for Joby in sales in the undervalye

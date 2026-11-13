@@ -101,6 +101,12 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // 2026-11-01. The label carries no mode word: a row's own push state says sent or not. UNMEASURED — his setup,
   // not a buy signal.
   luk_setup:            { emoji: '🥇', label: "Luk's A+",                group: 'trading' },
+  // 📅 Long Term (2026-11-12, long_term_list/zone_watch.py + long_term_list/push.py) — LIVE since 2026-11-12 by his
+  // calls: "add an alert list when stocks reach Pankaj's zones" and "Weekly and if something gets dropped let me
+  // know". ONE kind for both pushes: a 🧭 zone reach (once per name, zone and session) and the weekly digest (only
+  // when it rang). Off in default_prefs, in the owner keep-set since 2026-11-12. The label carries no mode word: a
+  // row's own push state says sent or not. UNMEASURED — Pankaj's zones and his saved list, not a buy signal.
+  long_term:            { emoji: '📅', label: 'Long Term',               group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

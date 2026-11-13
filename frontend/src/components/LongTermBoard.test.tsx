@@ -87,8 +87,10 @@ describe('📅 LongTermBoard — ready: the sections in the served order', () =>
     for (const l of fixture.digest.lines) expect(d).toHaveTextContent(l);
     expect(d).toHaveTextContent(fixture.digest.pushed_text);
   });
-  it('🧭 at-zone strip from the served zones (title, each name + served text, note)', async () => {
-    await mount({ body: fixture });
+  it('🧭 at-zone strip from the served zones when no 🔔 alert is served (title, each name + served text, note)', async () => {
+    const p = clone(fixture) as any;
+    delete p.zones.alert;
+    await mount({ body: p });
     const z = screen.getByTestId('lt-zones');
     expect(z).toHaveTextContent(fixture.zones.as_of_text);
     for (const hit of fixture.zones.at_zone) expect(screen.getByTestId(`lt-zone-${hit.symbol}`)).toHaveTextContent(hit.zone_text);

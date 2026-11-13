@@ -34,9 +34,22 @@ def test_app_numbers_are_imported_not_retyped():
 
 
 def test_held_switches_default_off():
-    assert C.DIGEST_PUSH_MODE == "off"
+    # RE-PINNED 2026-11-12 (pkzone spec §3.1): both phone pushes are LIVE by his calls — Ajay 2026-11-12: "add an
+    # alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …".
+    # The tab stays owner only and UNMEASURED.
+    assert C.DIGEST_PUSH_MODE == "live" and C.ZONE_PUSH_MODE == "live"
+    assert C.CONSTANT_SOURCES["DIGEST_PUSH_MODE"] == "HIS" and C.CONSTANT_SOURCES["ZONE_PUSH_MODE"] == "HIS"
+    assert C.KIND == C.DIGEST_KIND == "long_term"                       # ONE kind for both pushes
     assert C.OWNER_ONLY is True
     assert C.MEASURED is False
+
+
+def test_NEGATIVE_no_second_long_term_kind_2026_11_12():
+    kinds = {v for k, v in vars(C).items() if k.isupper() and isinstance(v, str) and v.startswith("long_term")
+             and not v.startswith("long_term_list") and not v.startswith("long_term_zone")}
+    assert kinds == {"long_term"}                                       # no long_term_digest / long_term_zone kind
+    assert C.ZONE_LATCH_COLL != C.ZONE_STATE_COLL
+    assert C.ZONE_URL == C.DIGEST_URL == "/chart-maps?tab=long_term"
 
 
 def test_negative_no_3_to_4_in_stage_drop_pairs():

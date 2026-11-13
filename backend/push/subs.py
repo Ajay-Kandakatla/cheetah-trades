@@ -324,7 +324,9 @@ def _backfill(db):
 # tape_burst_highbeta 325, gajjala_potential 155 — the Gajjala pings were
 # buried under the tape bursts. For the OWNER only, a registering device now
 # starts with EXACTLY six kinds (2026-10-29 … 2026-11-01; SEVEN since 2026-11-01
-# — 🥇 luk_setup, Ajay: "Lets make it live. also alerts too.") (owner_prefs() /
+# — 🥇 luk_setup, Ajay: "Lets make it live. also alerts too."; EIGHT since
+# 2026-11-12 — 📅 long_term, Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …"
+# and "Weekly and if something gets dropped let me know …") (owner_prefs() /
 # prefs_for() derive from this set; everyone else keeps default_prefs(),
 # unchanged); his already-registered devices are flipped by
 # scripts/owner_prefs_apply.py (a data write):
@@ -375,6 +377,11 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # SEVEN kinds from this day (six 2026-10-29 … 2026-11-01). A MARKET kind.
     # UNMEASURED: his setup, not a buy signal.
     "luk_setup",
+    # 📅 long_term (long_term_list/zone_watch.py + long_term_list/push.py, 2026-11-12) — LIVE by his call (Ajay
+    # 2026-11-12: "add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term
+    # tabs in general" / "Weekly and if something gets dropped let me know …"). ONE kind: a 🧭 zone reach (once per
+    # name, zone and session) + the weekly digest (only when it rang). The keep-set is EIGHT from this day. A MARKET kind.
+    "long_term",
     # 🔴 position_alert — stop / supply reached on stocks he actually owns
     # (kept 2026-09-09 and again 2026-10-29).
     "position_alert",
@@ -610,6 +617,13 @@ def default_prefs() -> dict:
         # missing from default_prefs targets ZERO devices and renders no toggle.
         # A MARKET kind. UNMEASURED.
         "luk_setup": False,
+        # 📅 long_term (long_term_list/zone_watch.py + long_term_list/push.py, 2026-11-12): ONE kind for a 🧭
+        # zone reach (once per name, zone and session) and the weekly 📅 digest (only when it rang). False for
+        # everyone else; ON for HIS devices through OWNER_KEEP_SET + scripts/owner_prefs_apply.py since 2026-11-12
+        # (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets
+        # dropped let me know …"). It must still be here: a kind missing from default_prefs targets ZERO devices and
+        # renders no toggle. A MARKET kind. UNMEASURED.
+        "long_term": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

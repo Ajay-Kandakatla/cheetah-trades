@@ -88,3 +88,47 @@ describe('📱 Long Term DOM — the cards carry the class; nothing inline widen
     }
   });
 });
+
+/* 🔔 the zone block in the 🧭 section (2026-11-12, pkzone spec §3.9): the block and each of its list items can shrink and
+ * wrap at 430 px. jsdom has no layout engine, so the right-edge check below holds trivially there (0 ≤ 0); the binding
+ * guards are the stylesheet rules and the absence of any inline width / no-wrap style. */
+const PRE_FIX_ALERT = `.lt-alert { display: flex; }
+.lt-alert li { white-space: nowrap; }`;
+
+describe('📱 🔔 zone block — items shrink and wrap at 430 px', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('.lt-alert and .lt-alert li carry min-width: 0, max-width: 100% and overflow-wrap: anywhere', async () => {
+    const src = await css();
+    for (const sel of [/\.lt-alert/, /\.lt-alert li/]) {
+      const decl = rule(src, sel);
+      expect(decl, sel.source).not.toBeNull();
+      expect(decl).toMatch(/min-width:\s*0\b/);
+      expect(decl).toMatch(/max-width:\s*100%/);
+      expect(decl).toMatch(/overflow-wrap:\s*anywhere/);
+    }
+    expect(rule(src, /\.lt-alert li/)).toMatch(/white-space:\s*normal/);
+  });
+  it('NEGATIVE: the pre-fix block rules fail the same matchers', () => {
+    expect(rule(PRE_FIX_ALERT, /\.lt-alert/)).not.toMatch(/min-width:\s*0\b/);
+    const li = rule(PRE_FIX_ALERT, /\.lt-alert li/)!;
+    expect(li).not.toMatch(/overflow-wrap:\s*anywhere/);
+    expect(li).toMatch(/nowrap/);
+  });
+  it('DOM: every 🔔 item is an .lt-line inside .lt-alert, right edge ≤ the board width; NEGATIVE: no inline style', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(fixture)) })));
+    const { container } = render(<MemoryRouter initialEntries={['/chart-maps?tab=long_term']}><LongTermBoard /></MemoryRouter>);
+    await waitFor(() => expect(container.querySelector('.lt-board[data-state="ready"]')).not.toBeNull());
+    const block = container.querySelector('.lt-alert');
+    expect(block).not.toBeNull();
+    const items = block!.querySelectorAll('li');
+    expect(items.length).toBe(fixture.zones.alert.now.length + fixture.zones.alert.log.length);
+    const board = container.querySelector('.lt-board') as HTMLElement;
+    for (const li of items) {
+      expect(li.className).toMatch(/\blt-line\b/);
+      expect(li.getBoundingClientRect().right).toBeLessThanOrEqual(board.clientWidth);
+    }
+    for (const el of block!.querySelectorAll('[style]')) {
+      expect(el.getAttribute('style') || '').not.toMatch(/width|nowrap|overflow/i);
+    }
+  });
+});

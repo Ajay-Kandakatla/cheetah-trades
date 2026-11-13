@@ -201,7 +201,11 @@ def test_negative_strip_rows_carry_no_fields():
 def test_digest_history_forward_rules():
     p = _ready()
     assert p["digest"]["title"].startswith("📅 Long Term — week of 2026-11-20: 1 dropped")
-    assert p["digest"]["pushed_text"] == "Phone push is off — this digest shows here only."
+    # RE-PINNED 2026-11-12 (pkzone spec §3.6): the digest push is LIVE; W47's digest rings → the "rang" line.
+    # RE-PINNED 2026-11-13 (refix): never "Sent" — the GET does not read the send result.
+    assert p["digest"]["pushed_text"] == W.pushed_text(rings=True)
+    assert p["digest"]["pushed_text"] == "This week's digest rang — one push to your phone when allowed."
+    assert "Sent" not in p["digest"]["pushed_text"]
     assert [h["week"] for h in p["history"]] == ["2026-W47", "2026-W46"]
     assert p["history"][1]["n_events"].get("zone") == 1
     assert p["forward"]["too_early"] is True and p["forward"]["counts_line"].startswith("1 without a 2026-11-13")
@@ -223,8 +227,23 @@ def test_build_never_raises_on_garbage():
     assert p["state"] in ("ready", "error")
 
 
+def _live_zone_payload():
+    """2026-11-12 (pkzone spec §3.7): an owner payload whose 🔔 block carries a live pass, a stale line and a log."""
+    session = "2026-11-17"
+    reach = {"symbol": "TSM", "his_symbol": "TSM", "zone": "Agg", "lo": 400.0, "hi": 410.0, "price": 405.0,
+             "at_iso": "2026-11-17T10:00:00-05:00", "at_hhmm": "10:00", "tier": "A", "push_reason": None}
+    day = {"session": session, "as_of_hhmm": "10:35", "reason": "no_snapshot", "n_stale": 1, "n_names": 40,
+           "prev_session": "2026-11-16",
+           "rows": {"TSM": {"basis": "live", "price": 406.0, "at_epoch": None, "date": session, "in": ["Agg"]}},
+           "reaches": {"TSM|Agg": reach}, "results": {"TSM|Agg": {"state": "pushed"}}}
+    return P.build_payload(SD.load(), _load("baseline_mini.json"), [], [], ZONES,
+                           now=dt.datetime(2026, 11, 17, 10, 36), owner=True, zone_live=day, zone_day=day,
+                           log_session=session)
+
+
 def test_golden_key_set():
-    paths = sorted(key_paths(_ready()) | key_paths(_seed_only()))
+    # 2026-11-12: + the 🔔 zones.alert paths (a live pass with a log, built in _live_zone_payload).
+    paths = sorted(key_paths(_ready()) | key_paths(_seed_only()) | key_paths(_live_zone_payload()))
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     assert golden["owner_only"] == sorted(P.owner_only_payload())
     assert golden["paths"] == paths

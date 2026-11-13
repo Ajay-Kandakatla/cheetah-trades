@@ -51,12 +51,58 @@ def _served():
             W.forward_too_early(3, "2026-11-13", 74), W.forward_counts(1, 2, 3, "b"), W.seed_only_status("d"),
             W.next_run_text(dt.date(2026, 11, 13)), W.zones_strip_title("2026-11-13"), W.TOP_PENDING_TEXT,
             W.forward_line("b", 22, 1.0, [0.5, 1.5], 74, 0.2, [-1.0, 1.0], 70.0, 0.3, 0.4)]
+    out += _zone_served()
     for cat, kinds in CR.LEG_KINDS.items():
         for key in kinds:
             for v in (None, True, False, 1.5, -2.0, "strong", {"tier": "steady", "accelerating": True},
                       {"score": 75.0, "ranked": True}):
                 out.append(W.leg_text(cat, key, v))
     return out
+
+
+def _zone_served():
+    """2026-11-12 (pkzone spec §3.6): every 🔔 sentence — a live-state payload with a stale line and one log row per
+    blocked-push reason, the push body, the rules line and each helper's branches."""
+    from long_term_list import zone_watch as ZW
+    seed = SD.load()
+    ent = SD.pankaj_entries(seed)["TSM"]
+    session = "2026-11-17"
+    reaches, results = {}, {}
+    for i, (why, state) in enumerate([(k, None) for k in W.ZONE_LOG_NOT_SENT] + [(None, k) for k in W.ZONE_RESULT_TEXT]
+                                     + [(None, None), (None, "dup")]):
+        reaches[f"TSM|Agg{i}"] = {"symbol": "TSM", "zone": "Agg", "lo": 400.0, "hi": 410.0, "price": 405.0,
+                                  "at_iso": f"t{i:02d}", "at_hhmm": "10:00", "tier": "A", "push_reason": why}
+        if state:
+            results[f"TSM|Agg{i}"] = {"state": state}
+    day = {"session": session, "as_of_hhmm": "10:35", "reason": "no_snapshot", "n_stale": 3, "n_names": 40,
+           "prev_session": "2026-11-16", "reaches": reaches, "results": results,
+           "rows": {"TSM": {"basis": "live", "price": 406.0, "date": session, "in": ["Agg"]},
+                    "META": {"basis": "close", "price": 623.6, "date": "2026-11-16", "in": ["C1"]}}}
+    pl = P.build_payload(seed, {}, [], [], {}, now=dt.datetime(2026, 11, 17, 10, 36), owner=True, zone_live=day,
+                         zone_day=day, log_session=session)
+    alert = pl["zones"]["alert"]
+    assert alert["stale_text"] and len(alert["log"]) == len(reaches)
+    out = list(_strings(alert))
+    out += list(W.ZONE_RESULT_TEXT.values()) + list(W.ZONE_LOG_NOT_SENT.values())
+    out += [W.zone_reason_text(k, "10:35") or "" for k in ("no_snapshot", "window", "off", "kind", "no_hook",
+                                                           "no_store")]
+    out += [W.zone_alert_as_of(True, "10:35"), W.zone_alert_as_of(False, close_date="2026-11-16"),
+            W.zone_alert_as_of(False), W.zone_now_text("live", 1.0, "10:00", "Agg", 1, 2, "A"),
+            W.zone_now_text("close", 1.0, "2026-11-16", "Agg", 1, 2, None), W.zone_log_title(session),
+            W.zone_log_text(1.0, "Agg", 1, 2, "A"), W.zone_log_empty(session), W.zone_push_text(),
+            W.zone_stale_text(1, 40, "2026-11-16") or "", W.zone_push_title("TSM", "Agg"),
+            W.zone_push_line("TSM", 1.0, "Agg", 1, 2, "A", "8.8", " · pre-mkt"), W.zone_rule_text(),
+            W.pushed_text(rings=True), W.pushed_text(rings=False)]
+    p = ZW.compose("TSM", dict(ent, action="Buy CL1"), "Agg", 405.0, session, "premarket")
+    out += [p["title"], p["body"]]
+    return out
+
+
+def test_NEGATIVE_no_buy_anywhere_in_the_zone_push_2026_11_12():
+    from long_term_list import zone_watch as ZW
+    ent = SD.pankaj_entries(SD.load())["TSM"]
+    p = ZW.compose("TSM", dict(ent, action="Buy CL1"), "Agg", 405.0, "2026-11-17", "rth")
+    assert not re.search("buy", p["title"] + p["body"], re.I) and W.NOT_A_SIGNAL not in p["body"]
 
 
 def _strip_allowed(s: str) -> str:
