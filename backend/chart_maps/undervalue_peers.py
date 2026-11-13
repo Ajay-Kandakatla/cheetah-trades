@@ -46,6 +46,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from growth.capital_quality import _median
+from sepa import bonde as SB
 from sepa import qoq
 from sepa.board_metrics import NON_OPERATING_SECTORS, QUARTERS_FOR_TTM
 from sepa.cap_warm import DERIVED_FLOAT
@@ -173,21 +174,21 @@ def ttm_growth_pct(rev_q_series, periods=None) -> Optional[float]:
 
 def q_yoy_pct(snap) -> Optional[float]:
     """The latest quarter's YoY sales growth (`sales.growth_yoy_pct`), or None
-    when the headline pair is not four quarters apart or the year-ago quarter
-    is <= 0 (growth/tracker E4 precedent)."""
+    when `bonde.headline_sales_read` says the figure is not comparable — the
+    ONE helper the 💎 board and this view share for this field.
+
+    It refuses: no finite figure; a headline pair whose labels are not four
+    quarters apart, or whose END DATES are not a year apart (the CRDO relabel
+    shape; a prior-pair-only skip is not refused, as before); a year-ago
+    quarter <= 0 (growth/tracker E4 precedent); a year-ago slot that is empty
+    while a series is on file; and, since 2026-11-12, a tiny positive year-ago
+    quarter under `bonde.MIN_MATERIAL_BASE_REV` (his owner setting). JOBY
+    printed +257,493% off a $15,000 year-ago quarter that day — a percentage
+    off that base is arithmetic, not growth. Every refusal lands in the
+    existing `q_growth_not_read` bucket; no count key changes."""
     snap = snap if isinstance(snap, dict) else {}
-    g = _f((snap.get("sales") or {}).get("growth_yoy_pct"))
-    if g is None:
-        return None
-    if not qoq.yoy_pairs_ok(snap.get("q_period_series"), pairs=(qoq.HEADLINE_PAIR,)):
-        return None
-    rev = list(snap.get("rev_q_series") or [])
-    j = qoq.HEADLINE_PAIR[1]
-    if len(rev) > j:
-        base = _f(rev[j])
-        if base is not None and base <= 0:
-            return None
-    return g
+    r = SB.headline_sales_read(snap)
+    return r["pct"] if r["comparable"] else None
 
 
 def _group_index(labels: dict, usable: dict) -> dict:

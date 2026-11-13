@@ -18,8 +18,10 @@ research builder already leans on, throttle-friendly at warm cadence.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from typing import Optional
 
 log = logging.getLogger("sepa.rev_ttm")
@@ -27,6 +29,11 @@ log = logging.getLogger("sepa.rev_ttm")
 TTL_SEC = 7 * 24 * 3600
 _FILL_BOX_SEC = 8.0
 _FILL_WORKERS = 8
+# ISO date of Yahoo `info["mostRecentQuarter"]` — the quarter the stored TTM
+# runs to. Written beside `rev_ttm` since 2026-11-12 (the 💎 board prints the
+# growth quarter next to it and says when the two differ: JOBY's P/S ran to
+# FY2026 Q3 while its growth was FY2026 Q2).
+TTM_Q_END_KEY = "ttm_q_end"
 
 
 def _coll():
@@ -37,14 +44,39 @@ def _coll():
         return None
 
 
-def _fetch_one(symbol: str) -> Optional[float]:
-    """One TTM-revenue fetch. None on any failure — never raises."""
+def _fetch_meta(symbol: str) -> tuple:
+    """One Yahoo `info` read → (ttm_revenue_dollars, ttm_quarter_end_iso).
+
+    Either half is None when Yahoo has no usable value; (None, None) on any
+    failure — never raises. A bool is never a number here.
+    """
     try:
         from sepa.symbols import yf_ticker
-        v = (yf_ticker(symbol).info or {}).get("totalRevenue")
-        return float(v) if v and v > 0 else None
+        info = yf_ticker(symbol).info or {}
     except Exception:
-        return None
+        return (None, None)
+    rev = None
+    q_end = None
+    try:
+        v = info.get("totalRevenue")
+        if (isinstance(v, (int, float)) and not isinstance(v, bool)
+                and math.isfinite(float(v)) and v > 0):
+            rev = float(v)
+    except Exception:
+        rev = None
+    try:
+        m = info.get("mostRecentQuarter")
+        if (isinstance(m, (int, float)) and not isinstance(m, bool)
+                and math.isfinite(float(m)) and m > 0):
+            q_end = datetime.fromtimestamp(m, tz=timezone.utc).date().isoformat()
+    except Exception:
+        q_end = None
+    return (rev, q_end)
+
+
+def _fetch_one(symbol: str) -> Optional[float]:
+    """One TTM-revenue fetch. None on any failure — never raises."""
+    return _fetch_meta(symbol)[0]
 
 
 def bulk(symbols: list, *, fill_missing: bool = True) -> dict:
@@ -71,20 +103,21 @@ def bulk(symbols: list, *, fill_missing: bool = True) -> dict:
         return out
     deadline = now + _FILL_BOX_SEC
     with ThreadPoolExecutor(max_workers=_FILL_WORKERS) as pool:
-        futs = {pool.submit(_fetch_one, s): s for s in missing}
+        futs = {pool.submit(_fetch_meta, s): s for s in missing}
         for fut, sym in futs.items():
             budget = deadline - time.time()
             if budget <= 0:
                 break
             try:
-                v = fut.result(timeout=budget)
+                v, q_end = fut.result(timeout=budget)
             except Exception:
                 continue
             if v:
                 out[sym] = v
                 try:
                     coll.update_one({"symbol": sym},
-                                    {"$set": {"rev_ttm": v, "cached_at": time.time()}},
+                                    {"$set": {"rev_ttm": v, TTM_Q_END_KEY: q_end,
+                                              "cached_at": time.time()}},
                                     upsert=True)
                 except Exception:                              # pragma: no cover
                     pass
@@ -112,14 +145,46 @@ def warm(symbols: list) -> dict:
         if s in fresh_syms:
             fresh += 1
             continue
-        v = _fetch_one(s)
+        v, q_end = _fetch_meta(s)
         if v:
             try:
                 coll.update_one({"symbol": s},
-                                {"$set": {"rev_ttm": v, "cached_at": time.time()}},
+                                {"$set": {"rev_ttm": v, TTM_Q_END_KEY: q_end,
+                                          "cached_at": time.time()}},
                                 upsert=True)
                 filled += 1
             except Exception:                                  # pragma: no cover
                 pass
         time.sleep(1.0)                       # yfinance throttle etiquette
     return {"ok": True, "already_fresh": fresh, "filled": filled}
+
+
+def quarter_ends(symbols: list) -> dict:
+    """{SYM: "YYYY-MM-DD"} — the quarter each FRESH cached TTM runs to.
+
+    Read-only: one `$in` find, never fills, never raises ({} with no
+    collection or on any error). Only docs that are fresh (`TTL_SEC`), carry a
+    truthy `rev_ttm` AND a string `ttm_q_end` are returned. A doc cached
+    before 2026-11-12 has no date until its normal TTL refetch (≤ 7 days);
+    it is absent here and never guessed. The fill cadence is untouched.
+    """
+    syms = sorted({str(s).upper() for s in (symbols or []) if s})
+    out: dict = {}
+    if not syms:
+        return out
+    try:
+        coll = _coll()
+        if coll is None:
+            return out
+        now = time.time()
+        for doc in coll.find({"symbol": {"$in": syms}},
+                             {"_id": 0, "symbol": 1, TTM_Q_END_KEY: 1,
+                              "rev_ttm": 1, "cached_at": 1}):
+            q = doc.get(TTM_Q_END_KEY)
+            if ((now - (doc.get("cached_at") or 0)) < TTL_SEC and doc.get("rev_ttm")
+                    and isinstance(q, str) and q):
+                out[str(doc["symbol"]).upper()] = q
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rev_ttm: quarter_ends read failed: %s", exc)
+        return {}
+    return out

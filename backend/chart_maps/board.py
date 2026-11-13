@@ -6381,6 +6381,101 @@ UNDERVALUE_MAX_CANDIDATES = 120
 # CAPPED here for the ratio, so past this point cheapness must come from
 # the P/S side. LPTH (+109%) sits far below the cap and is untouched.
 UNDERVALUE_GROWTH_CAP_PCT = 300.0
+# 2026-11-12 (Ajay: "We got wrong numbers for Joby in sales in the undervalye
+# can you verfy"). JOBY sat on 💎 at "+257493%" — sales growth measured off a
+# $15,000 year-ago quarter. The cap above only tamed the RATIO; the tile still
+# printed the arithmetic and the 120-name cut still ranked on it. Comparability
+# is decided by ONE helper, `sepa.bonde.headline_sales_read` (his owner setting
+# MIN_MATERIAL_BASE_REV, the headline pair with end dates), and a name it
+# refuses is EXCLUDED before the cut with a count and its name — the board's
+# existing missing-data pattern. Reason strings are imported, never retyped.
+from sepa import bonde as SB  # noqa: E402 — light, dependency-free; reasons + floor live there
+UV_QUARTER_STAT_KEY = "Rev quarter"       # NOT "Growth" — cardLadder folds that key
+UV_EXCLUDED_REASON_ORDER = (SB.READ_BASE_TOO_SMALL, SB.READ_BASE_NON_POSITIVE,
+                            SB.READ_BASE_MISSING, SB.READ_PAIR_MISMATCH)
+
+
+def _uv_stale_clock():
+    """(expected_quarter_idx, STALE_FILING_QUARTERS) — 🛡️'s stale-filing rule,
+    borrowed by name for the 💎 `Rev quarter` word (a LABEL only; excluding a
+    stale filing is HIS CALL). The only impure piece: it reads today's date.
+    Any failure → (None, None), so the board never breaks on it."""
+    try:
+        from chart_maps import resiliency_tab as RES
+        return (RES.expected_quarter_idx(datetime.now(ET).date()),
+                int(RES.STALE_FILING_QUARTERS))
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("undervalue: stale clock unavailable: %s", exc)
+        return None, None
+
+
+def _uv_quarter_word(read: dict, ttm_q_end, expected_idx=None,
+                     stale_quarters=None) -> tuple:
+    """(state, words) for the 💎 `Rev quarter` stat. PURE.
+
+    The fiscal quarter the growth % comes from, plus a word when the filing is
+    stale by 🛡️'s rule (`STALE_FILING_QUARTERS` behind `expected_quarter_idx`,
+    🛡️'s own served words) or when that quarter differs from the quarter the
+    P/S revenue (Yahoo TTM, `ttm_q_end`) runs to. Same quarter = within
+    `capital_returns.SAME_QUARTER_DAYS`. Never a computed or guessed quarter.
+    """
+    from sepa.capital_returns import SAME_QUARTER_DAYS
+    from sepa.qoq import _iso_day
+
+    read = read if isinstance(read, dict) else {}
+    p = read.get("period")
+    ge = read.get("period_end")
+    li = read.get("latest_idx")
+    if p is None:
+        return "unknown", "quarter not on file"
+    if (expected_idx is not None and stale_quarters is not None
+            and li is not None and expected_idx - li >= stale_quarters):
+        head = f"{p} (to {ge})" if ge is not None else f"{p}"
+        return ("stale_filing",
+                f"{head} · a latest filing {stale_quarters} or more quarters past due")
+    g = _iso_day(ge) if ge is not None else None
+    if ge is None or g is None:
+        return "not_dated", f"{p} · not dated on file"
+    ttm = _iso_day(ttm_q_end) if ttm_q_end is not None else None
+    if ttm is None:
+        return "ttm_unknown", f"{p} · P/S revenue quarter not on file"
+    days = (ttm - g).days
+    if days > SAME_QUARTER_DAYS:
+        return ("growth_older",
+                f"{p} (to {ge}) · older than the P/S revenue (to {ttm_q_end})")
+    if days < -SAME_QUARTER_DAYS:
+        return ("ttm_older",
+                f"{p} (to {ge}) · newer than the P/S revenue (to {ttm_q_end})")
+    return "same", f"{p}"
+
+
+_UV_EXCLUDED_WORDS = {
+    SB.READ_BASE_TOO_SMALL: lambda: f"under {_usd_short(SB.MIN_MATERIAL_BASE_REV)}",
+    SB.READ_BASE_NON_POSITIVE: lambda: "at or below $0",
+    SB.READ_BASE_MISSING: lambda: "missing on file",
+    SB.READ_PAIR_MISMATCH: lambda: "not a year before the latest quarter on file",
+}
+
+
+def _uv_excluded_sentence(excluded: list) -> str:
+    """The one note sentence naming every non-comparable name. PURE.
+
+    Entries whose reason is not in UV_EXCLUDED_REASON_ORDER (e.g. no_figure)
+    are IGNORED, never a KeyError; "" when no known entry remains."""
+    known = [e for e in (excluded or [])
+             if isinstance(e, dict) and e.get("reason") in UV_EXCLUDED_REASON_ORDER]
+    if not known:
+        return ""
+    present = {e["reason"] for e in known}
+    words = [_UV_EXCLUDED_WORDS[r]() for r in UV_EXCLUDED_REASON_ORDER if r in present]
+    if len(words) == 1:
+        clause = words[0]
+    else:
+        clause = ", ".join(words[:-1]) + " or " + words[-1]
+    names = ", ".join(sorted(str(e.get("symbol")) for e in known))
+    return (f"{len(known)} more had sales growth off a year-ago quarter {clause} "
+            f"({names}) — a percentage off that base is arithmetic, not growth, "
+            f"so they are excluded too, never ranked. ")
 
 
 def psg_ratio(mkt_cap, rev_ttm, growth_yoy_pct):
@@ -6463,24 +6558,45 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         universe = []
     snaps = {}
     try:
-        snaps = research.sales_snapshot(universe)
+        snaps = research.decision_snapshot(universe)
     except Exception as exc:
-        log.warning("undervalue: sales snapshot failed: %s", exc)
+        log.warning("undervalue: decision snapshot failed: %s", exc)
 
-    cands = []
+    # 2026-11-12: comparability is decided BEFORE the 120-name cut, so a
+    # percentage off a near-zero (or ≤ 0, or missing, or misaligned) year-ago
+    # quarter never takes a screening slot. No finite figure → skipped
+    # uncounted, exactly as the `ratio is None` path below.
+    cands, excluded = [], []
     for sym, snap in snaps.items():
         sales = (snap or {}).get("sales") or {}
         if sales.get("tier") in UNDERVALUE_TIERS and sales.get("growth_yoy_pct"):
-            cands.append((sym, sales))
+            rd = SB.headline_sales_read(snap)
+            if rd["reason"] == SB.READ_NO_FIGURE:
+                continue
+            if not rd["comparable"]:
+                excluded.append({"symbol": sym, "reason": rd["reason"],
+                                 "base_state": rd["base_state"],
+                                 "base_rev": rd["base_rev"],
+                                 "latest_rev": rd["latest_rev"],
+                                 "period": rd["period"]})
+                continue
+            cands.append((sym, sales, rd))
     cands.sort(key=lambda t: -(t[1].get("growth_yoy_pct") or 0.0))
     cands = cands[:UNDERVALUE_MAX_CANDIDATES]
+    excluded.sort(key=lambda e: e["symbol"])
 
-    revs = rev_mod.bulk([s for s, _ in cands])
+    revs = rev_mod.bulk([s for s, _, _ in cands])
+    q_ends = {}
+    try:
+        q_ends = rev_mod.quarter_ends([s for s, _, _ in cands]) or {}
+    except Exception:
+        q_ends = {}
+    ei, stale_n = _uv_stale_clock()
 
     from short_interest import client as si_client
     flash_syms = _flash_symbols()
     tiles, no_rev, no_shares, too_rich = [], 0, 0, 0
-    for sym, sales in cands:
+    for sym, sales, rd in cands:
         rev = revs.get(sym)
         if not rev:
             no_rev += 1
@@ -6501,7 +6617,7 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             continue
         last = float(df["close"].iloc[-1])
         mkt_cap = shares * last
-        ratio = psg_ratio(mkt_cap, rev, sales.get("growth_yoy_pct"))
+        ratio = psg_ratio(mkt_cap, rev, rd["pct"])
         if ratio is None:
             continue
         if ratio > UNDERVALUE_MAX_PSG:
@@ -6522,7 +6638,7 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                           "hi": float(b["hi"]), "label": "supply"})
 
         ps = mkt_cap / rev
-        g = sales.get("growth_yoy_pct")
+        g = rd["pct"]
         tail = df["close"].iloc[-min(len(df), 50):]
         avg_turnover = float((df["close"] * df["volume"])
                              .iloc[-min(len(df), 50):].mean())
@@ -6561,6 +6677,8 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "stats": [
                 {"k": "P/S", "v": f"{ps:.1f}x"},
                 {"k": "Rev YoY", "v": f"+{g:.0f}%"},
+                {"k": UV_QUARTER_STAT_KEY,
+                 "v": _uv_quarter_word(rd, q_ends.get(sym), ei, stale_n)[1]},
                 {"k": "PSG", "v": f"{ratio:.3f}"},
                 {"k": "Mkt cap", "v": _usd_short(mkt_cap)},
             ],
@@ -6583,6 +6701,8 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "no_rev_data": no_rev,
             "no_shares_data": no_shares,
             "priced_for_growth": too_rich,
+            "growth_not_comparable": len(excluded),
+            "growth_excluded": excluded,
             "note": (f"Bonde strong/explosive sales across the whole universe "
                      f"({len(cands)} screened), kept only when the price tag "
                      f"LAGS the growth: price-to-sales ÷ revenue growth (PSG) "
@@ -6590,6 +6710,7 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"sales at +109% = 0.11). {too_rich} growers already "
                      f"priced for it; {no_rev} lacked a revenue figure and "
                      f"{no_shares} a share count — excluded, never estimated. "
+                     f"{_uv_excluded_sentence(excluded)}"
                      f"Backlog and contracts are not machine-readable, so "
                      f"check the story before the chart. Cheapest-for-growth "
                      f"ranks first."),

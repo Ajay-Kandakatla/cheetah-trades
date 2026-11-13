@@ -133,3 +133,23 @@ Live read after round 2 (2026-09-29 ~23:45 ET, read-only probe of the branch mod
 Passes, deepest discount first (P/S ÷ peer median): SMCI 0.047 · AVT 0.068 · ARW 0.073 · BG 0.206 · CRBG 0.213 · HRMY 0.257 · HPE 0.271 · HHH 0.313 · TPG 0.391 · LPLA 0.452 · OMC 0.454 · SHLS 0.499. First card: `$26.9B · shares fetched 2026-09-22 × close 2026-09-29` (file mtime 2026-09-30 00:01 ET, `generated_at` 2026-09-29 23:27 ET). Outage simulation (`decision_snapshot` → `{}`): error `no_fundamentals`, nothing memoised, header "🏷️ The vs-peers read failed — no fundamentals came back for any of the 1829 scan names …".
 
 Tests: the round-2 block at the end of `backend/tests/test_undervalue_peers.py`. Mutation proofs (each red, then green): peer pool without the floor; close dated from the mtime; `build_failure` bypassed in `read()`; the old `shares {date}` wording; `EMPTY_NOTE` whenever the board is empty.
+
+## 2026-11-12 — a tiny year-ago quarter is not read
+
+JOBY printed **+257,493%** quarterly sales growth on 2026-11-12, off a year-ago quarter of $15,000. `q_yoy_pct` refused only a year-ago quarter at or below $0, so a tiny positive base read as real growth.
+
+**What changed.** `q_yoy_pct` now delegates to `sepa.bonde.headline_sales_read`, the ONE helper the 💎 P/S ÷ growth board also reads for `sales.growth_yoy_pct`. The figure is read only when the helper calls it comparable. It refuses:
+
+- no finite figure;
+- a headline pair whose labels are not four quarters apart, **or whose end dates are not a year apart** (`qoq.period_ok(periods, (HEADLINE_PAIR,), ends=q_end_series)`, the CRDO relabel shape: labels four apart, quarters 455 days apart);
+- a year-ago quarter at or below $0 (as before);
+- a year-ago quarter under `bonde.MIN_MATERIAL_BASE_REV` ($1M, his owner setting, reused by name, no new floor);
+- an empty year-ago slot while a revenue series is on file.
+
+Every refusal lands in the **existing** `q_growth_not_read` bucket. No count key, header, note, stat or threshold changed. A refused name also contributes no growth to its peers' `q_yoy_peer_median` (`q_yoy_peer_n` drops by one); it still counts for the P/S median.
+
+Not changed: a mismatch on the PRIOR pair only (1, 5) is still read, as before, because the headline number is correct. A doc with no revenue series at all, or an unverifiable pair, is still accepted by default (the `qoq.yoy_pairs_ok` rule for legacy rows).
+
+Measured live before the change (spec §1.6, read-only probe): 9 docs with a tiny base, 1 non-positive, 0 end-date mismatches, 0 label mismatches, **0 passers affected**. This is the same field fixed the same way through one helper, not a change to today's list.
+
+Tests: the 2026-11-12 block at the end of `backend/tests/test_undervalue_peers.py` (JOBY shape not read, the same name on a material base passes, a normal base unchanged, zero / negative / empty base still refused, a tiny-base peer out of the growth median, CRDO-shape ends refused, a prior-only mismatch still read, and a source pin that `q_yoy_pct` reads `headline_sales_read`).

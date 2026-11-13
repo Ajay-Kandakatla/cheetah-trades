@@ -774,3 +774,111 @@ def test_four_floor_passing_industry_peers_fall_back_to_the_sector():
 def test_the_note_says_peers_clear_the_revenue_floor():
     assert "peers count only when they too have at least $100M of revenue" in UVP.NOTE
     assert "dated by when it was fetched" in UVP.NOTE
+
+
+# ---------------------------------------------------------------------------
+# 2026-11-12 — a tiny year-ago quarter is not read (`bonde.headline_sales_read`,
+# the ONE helper the 💎 board and this view share). JOBY printed +257,493% off a
+# $15,000 year-ago quarter.
+# ---------------------------------------------------------------------------
+JOBY_BASE = 15_000.0
+# 4 quarters of $37.2M (TTM $148.8M, over MIN_TTM_REVENUE_USD) then a year-ago
+# quarter of $15,000 and three normal prior quarters.
+JOBY_REV = [3.72e7] * 4 + [JOBY_BASE, 2e7, 2e7, 2e7]
+ENDS8 = ["2026-06-30", "2026-03-31", "2025-12-31", "2025-09-30",
+         "2025-06-30", "2025-03-31", "2024-12-31", "2024-09-30"]
+
+
+def test_joby_shaped_tiny_year_ago_quarter_is_not_read():
+    from sepa import bonde as SB
+    assert JOBY_BASE < SB.MIN_MATERIAL_BASE_REV
+    assert sum(JOBY_REV[:4]) >= UVP.MIN_TTM_REVENUE_USD
+    e = U().peers(6).add("JOBY", ps=2.0, q=257493.3, ttm=sum(JOBY_REV[:4]),
+                         rev=list(JOBY_REV)).build()
+    assert "JOBY" not in _passed(e)
+    assert e["counts"]["q_growth_not_read"] == 1
+    snap = {"sales": {"growth_yoy_pct": 257493.3}, "rev_q_series": list(JOBY_REV),
+            "q_period_series": list(PERIODS8), "_source": "massive"}
+    assert UVP.q_yoy_pct(snap) is None
+    assert "257493" not in json.dumps(e)
+
+
+def test_control_the_same_name_on_a_material_base_passes():
+    """Only the year-ago quarter differs from the JOBY case -> it is the base."""
+    from sepa import bonde as SB
+    rev = list(JOBY_REV)
+    rev[4] = SB.MIN_MATERIAL_BASE_REV          # exactly the floor is material
+    e = U().peers(6).add("JOBY", ps=2.0, q=257493.3, ttm=sum(rev[:4]), rev=rev).build()
+    assert _passed(e) == ["JOBY"]
+    assert e["counts"]["q_growth_not_read"] == 0
+
+
+def test_normal_base_value_is_unchanged():
+    snap = {"sales": {"growth_yoy_pct": 30.0}, "rev_q_series": _rev(1e9, 8e8),
+            "q_period_series": list(PERIODS8), "_source": "massive"}
+    assert UVP.q_yoy_pct(snap) == 30.0
+    e = U().peers(6).add("CHEAP", ps=2.0, q=30.0).build()
+    assert _passed(e) == ["CHEAP"]
+    tv = {s["k"]: s["v"] for s in UVP.tile_parts(_row(e, "CHEAP"))["stats"]}
+    assert tv["Sales YoY Q"] == "+30% · peers +5%"
+
+
+def test_negative_and_zero_and_missing_bases_still_not_read():
+    for base in (0.0, -4.71e8):
+        snap = {"sales": {"growth_yoy_pct": 135.7}, "q_period_series": list(PERIODS8),
+                "rev_q_series": [1e8] * 4 + [base, 1e8, 1e8, 1e8]}
+        assert UVP.q_yoy_pct(snap) is None, base
+    hole = {"sales": {"growth_yoy_pct": 40.0}, "q_period_series": list(PERIODS8),
+            "rev_q_series": [1e8] * 4 + [None, 1e8, 1e8, 1e8]}
+    assert UVP.q_yoy_pct(hole) is None, "year-ago slot empty while a series is on file"
+    assert UVP.q_yoy_pct({"sales": {"growth_yoy_pct": float("inf")}}) is None
+    assert UVP.q_yoy_pct({"sales": {"growth_yoy_pct": None}}) is None
+    assert UVP.q_yoy_pct(None) is None and UVP.q_yoy_pct("x") is None
+
+
+def test_a_tiny_base_peer_adds_no_growth_to_the_peer_median():
+    def build(peer_base):
+        u = U()
+        for i, q in enumerate((10.0, 20.0, 30.0, 40.0, 50.0)):
+            u.add(f"G{i}", ps=10.0, q=q, prior=1e9 / (1 + q / 100.0))
+        rev = [2.5e8] * 4 + [peer_base, 2e8, 2e8, 2e8]
+        u.add("TINYP", ps=10.0, q=9000.0, rev=rev)
+        u.add("CHEAP", ps=2.0, q=60.0)
+        return _row(u.build(), "CHEAP")
+    normal = build(2e8)
+    assert normal["q_yoy_peer_n"] == 6 and normal["q_yoy_peer_median"] == 35.0
+    tiny = build(JOBY_BASE)
+    assert tiny["q_yoy_peer_n"] == 5 and tiny["q_yoy_peer_median"] == 30.0
+    assert tiny["peer_n"] == 6, "the tiny-base peer still counts for the P/S median"
+
+
+def test_crdo_shape_end_dates_not_a_year_apart_is_not_read():
+    base = {"sales": {"growth_yoy_pct": 40.0}, "q_period_series": list(PERIODS8),
+            "rev_q_series": _rev(1e9, 8e8), "_source": "massive"}
+    ok = dict(base, q_end_series=list(ENDS8))
+    assert UVP.q_yoy_pct(ok) == 40.0, "end dates a year apart -> read"
+    crdo = list(ENDS8)
+    crdo[0], crdo[4] = "2026-08-01", "2025-05-03"      # labels four apart, 455 days
+    assert UVP.q_yoy_pct(dict(base, q_end_series=crdo)) is None
+    e = U().peers(6).add("CRDO", ps=2.0).build()
+    u2 = U().peers(6).add("CRDO", ps=2.0)
+    u2.snaps["CRDO"]["q_end_series"] = crdo
+    e2 = u2.build()
+    assert _passed(e) == ["CRDO"]
+    assert _passed(e2) == [] and e2["counts"]["q_growth_not_read"] == 1
+
+
+def test_a_prior_pair_only_mismatch_is_still_read():
+    """(1, 5) five apart, (0, 4) four apart: the headline number is correct."""
+    periods = [8105, 8104, 8103, 8102, 8101, 8099, 8098, 8097]
+    snap = {"sales": {"growth_yoy_pct": 40.0}, "q_period_series": periods,
+            "rev_q_series": _rev(1e9, 8e8), "_source": "massive"}
+    assert UVP.q_yoy_pct(snap) == 40.0
+
+
+def test_q_yoy_reads_through_the_one_shared_helper():
+    src = inspect.getsource(UVP.q_yoy_pct)
+    assert "headline_sales_read" in src
+    from sepa import bonde as SB
+    assert UVP.SB.__name__ == SB.__name__ == "sepa.bonde"
+    assert "= 4" not in inspect.getsource(UVP)

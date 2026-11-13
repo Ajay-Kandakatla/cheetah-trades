@@ -2154,6 +2154,15 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
           </div>
         : null}
 
+      {/* 💎 The served note carries the tiny-year-ago-base exclusion sentence
+        * (2026-11-12, JOBY +257,493% off a $15K quarter). With cards on the
+        * board the note below never prints, so it prints here — served words
+        * only, once. */}
+      {tab === 'undervalue' && !err && tiles.length > 0 && data?.note
+        && ((data as { growth_not_comparable?: number }).growth_not_comparable ?? 0) > 0 ? (
+        <div className="cm-note" data-testid="uv-growth-excluded-note">{data.note}</div>
+      ) : null}
+
       {!loading && !tiles.length && !data?.warming && !err ? (
         <div className="cm-note">
           {data?.note || 'Nothing matched on this tab right now.'}

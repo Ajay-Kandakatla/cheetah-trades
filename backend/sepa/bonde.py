@@ -475,6 +475,86 @@ def _pair_mismatch(scan_row: dict) -> bool:
     return not Q.yoy_pairs_ok(_periods(scan_row))
 
 
+# Why a headline YoY sales % is NOT comparable (`headline_sales_read`). Order = precedence.
+READ_NO_FIGURE = "no_figure"                # no finite stored growth_yoy_pct
+READ_PAIR_MISMATCH = "pair_mismatch"        # headline labels or end dates not a year apart
+READ_BASE_NON_POSITIVE = "base_non_positive"  # year-ago revenue <= 0 (`_rev_base`)
+READ_BASE_TOO_SMALL = "base_too_small"      # 0 < year-ago revenue < MIN_MATERIAL_BASE_REV
+READ_BASE_MISSING = "base_missing"          # the year-ago quarter is a hole, or its revenue slot is empty
+READ_REASONS = (READ_NO_FIGURE, READ_PAIR_MISMATCH, READ_BASE_NON_POSITIVE,
+                READ_BASE_TOO_SMALL, READ_BASE_MISSING)
+
+
+def headline_sales_read(f) -> dict:
+    """May this row's stored headline YoY sales % be printed or ranked as growth?
+
+    THE DEFECT THIS EXISTS TO STOP, measured live 2026-11-12: the 💎 Under Value
+    board printed JOBY at +257,493% sales growth. The year-ago quarter's revenue
+    was $15,000, so the percentage is arithmetic off a near-zero base, not a
+    growth rate, and it ranked and passed the PSG gate on that number.
+
+    ONE helper, read by every surface that prints `sales.growth_yoy_pct` off a
+    research fundamentals dict (a `research.decision_snapshot` row or a scan
+    row's `fundamentals`, same keys). It reuses, never retypes:
+
+      * the base test — `_rev_base` against `MIN_MATERIAL_BASE_REV`, which is
+        THIS APP'S OWNER SETTING (see its comment), not a new floor;
+      * the pair test — the HEADLINE pair only, WITH end dates:
+        `qoq.period_ok(periods, (HEADLINE_PAIR,), ends=ends)`. Not
+        `_pair_mismatch`: that one refuses on the PRIOR pair too, which the
+        headline % never reads (so its words would be false), and it carries no
+        end dates, so it misses a relabelled fiscal year whose labels are four
+        apart while the quarters are not a year apart (CRDO: 455 days). A
+        headline HOLE reads `base_missing`, because the year-ago quarter is
+        absent rather than mis-paired.
+
+    `sepa/sales.py` is untouched: the stored number, `sales.score` and the tiers
+    do not move anywhere. This only says whether that number is comparable.
+
+    PURE, never raises; a non-dict input reads as `{}` (`no_figure`). A doc with
+    no `rev_q_series` at all, or an unverifiable pair, is accepted by default —
+    the `qoq.yoy_pairs_ok` rule for legacy rows.
+    """
+    from sepa import qoq as Q
+    if not isinstance(f, dict):
+        f = {}
+    sales = f.get("sales") if isinstance(f.get("sales"), dict) else {}
+    raw = _f(sales.get("growth_yoy_pct"))
+    try:
+        rb = _rev_base({"fundamentals": f})
+    except Exception:                       # a non-sequence rev_q_series — never raise
+        rb = {"latest_rev": None, "base_rev": None, "base_state": "unknown"}
+    series = f.get("rev_q_series") if isinstance(f.get("rev_q_series"), list) else None
+    periods = f.get("q_period_series") if isinstance(f.get("q_period_series"), list) else None
+    ends = f.get(Q.END_SERIES_KEY) if isinstance(f.get(Q.END_SERIES_KEY), list) else None
+
+    period = Q.period_label(periods[0] if periods else None, f.get("_source"))
+    latest_idx = Q._int_or_none(periods[0]) if periods else None
+    d = Q._iso_day(ends[0]) if ends else None
+    period_end = d.isoformat() if d else None
+
+    state = rb["base_state"]
+    if raw is None:
+        reason = READ_NO_FIGURE
+    elif Q.period_ok(periods, (Q.HEADLINE_PAIR,), ends=ends) is False:
+        reason = (READ_BASE_MISSING if Q.headline_hole(periods, (Q.HEADLINE_PAIR,))
+                  else READ_PAIR_MISMATCH)
+    elif state == "non_positive":
+        reason = READ_BASE_NON_POSITIVE
+    elif state == "too_small":
+        reason = READ_BASE_TOO_SMALL
+    elif state == "unknown" and isinstance(series, list) and len(series) > 0:
+        reason = READ_BASE_MISSING
+    else:
+        reason = None
+    comparable = reason is None
+    return {"pct": raw if comparable else None, "raw_pct": raw,
+            "comparable": comparable, "reason": reason,
+            "base_state": state, "base_rev": rb["base_rev"],
+            "latest_rev": rb["latest_rev"], "period": period,
+            "period_end": period_end, "latest_idx": latest_idx}
+
+
 COHORT_PASSER = "passer"
 COHORT_FLOOR_CLEARER = "floor_clearer"
 

@@ -596,7 +596,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   undervalue: {
     label: 'Under Value',
-    blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated. The 🏷️ vs peers toggle ranks the whole scan by discount to its industry peers’ price-to-sales instead (UNMEASURED).',
+    blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name, and so does sales growth measured off a year-ago quarter too small (or at or below zero) to carry a percentage — nothing here is estimated. The 🏷️ vs peers toggle ranks the whole scan by discount to its industry peers’ price-to-sales instead (UNMEASURED).',
   },
   session: {
     label: 'Session',

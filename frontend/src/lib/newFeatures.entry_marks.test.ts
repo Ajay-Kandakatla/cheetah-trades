@@ -13,8 +13,9 @@ const f = NEW_FEATURES.find((x) => x.id === ID)!;
 describe('✨ the 🟢 Gajjala close-to-entry marks entry (2026-11-12)', () => {
   // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
   it('is SECOND (the 🏁 Luk ended-fold ✨ went FIRST 2026-11-12), listed once, dated 2026-11-12, routed to the 🚩 Gajjala tab', () => {
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[1].id).toBe(ID);
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 Under Value tiny-base ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[2].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=gajjala');
@@ -42,7 +43,7 @@ describe('✨ the 🟢 Gajjala close-to-entry marks entry (2026-11-12)', () => {
 
   // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
   it('NEGATIVE: the 🏁 Luk stop-R ✨ is not replaced — still listed once, right after this entry; ids stay unique', () => {
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-luk-stop-r-from-fill-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });

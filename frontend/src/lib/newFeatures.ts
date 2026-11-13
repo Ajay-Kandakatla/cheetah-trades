@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "We got wrong numbers for Joby in sales in the undervalye
+  // can you verfy". sepa.bonde.headline_sales_read (ONE helper, bonde.MIN_MATERIAL_BASE_REV $1M) — 💎 PSG board and
+  // 🏷️ vs peers drop a name whose year-ago quarter is under $1M / missing / not a year apart, with a served count, the
+  // names and one note sentence; every 💎 card serves `Rev quarter` (and says when it is older than the P/S revenue).
+  // No gate or threshold moved. Doc docs/chart_maps/undervalue_tiny_base_2026_11_12.md. Pinned by scripts/contracts.mjs
+  // ("💎 Under Value tiny base (2026-11-12)").
+  { id: 'chart-maps-undervalue-tiny-base-2026-11-12', addedAt: '2026-11-12', route: '/chart-maps?tab=undervalue',
+    label: "💎 Under Value sales fixed — you said: “We got wrong numbers for Joby in sales in the undervalye can you verfy”. JOBY showed +257,493% sales growth: that was this June's quarter against a $15K quarter a year earlier, before it bought Blade. A percentage off a year-ago quarter under $1M is arithmetic, not growth — such a name now leaves the 💎 and 🏷️ boards, named in the note under the cards, never ranked. Every 💎 card now says which quarter its sales growth comes from, and when that quarter is older than the revenue its price-to-sales uses. No rule or threshold moved. Not advice." },
   // Ajay 2026-11-12 (verbatim in the label, his spelling kept): "Is this still good ro enter? From Luks" → "I shouldn't be
   // seeing this" → "I want it to be realtime" (MSTR triggered earlier, entry window closed). chart_maps/luk/tab.py
   // fold_of / live_tiles / ended_block (spec lukend §3): a card whose Luk trade is over (the read says stopped, or the

@@ -1227,7 +1227,18 @@ def _uv_fixture(prices, monkeypatch, sales_stub):
         def bulk(symbols, fill_missing=True):
             return {"CHEAP": 62.8e6, "RICH": 50e6, "NOSHARES": 80e6}
 
-    monkeypatch.setitem(_sys.modules, "sepa.rev_ttm", _Rev())
+        @staticmethod
+        def quarter_ends(symbols):
+            return {}
+
+    # Bound on the `sepa` package too (2026-11-12): `from sepa import rev_ttm`
+    # reads the package attribute BEFORE sys.modules, so once any collected
+    # file has imported the real module (test_headline_sales_read_2026_11_12
+    # does), a sys.modules-only stub is silently bypassed and the board empties.
+    import sepa as _sepa
+    _rev_stub = _Rev()
+    monkeypatch.setitem(_sys.modules, "sepa.rev_ttm", _rev_stub)
+    monkeypatch.setattr(_sepa, "rev_ttm", _rev_stub, raising=False)
 
     class _SI:
         @staticmethod
@@ -1307,12 +1318,405 @@ def test_the_psg_view_is_byte_identical_to_the_pre_toggle_board(
     for view in got.values():
         for t in view.get("tiles") or []:
             t.pop("vol_avg", None)
+    # 2026-11-12 (JOBY tiny base): the INTENDED new fields are stripped, and
+    # only after asserting their values on this universe — every fixture row
+    # is comparable (no exclusions) and carries no periods (quarter not on
+    # file). The golden FILE is untouched.
+    for view in got.values():
+        assert view.pop("growth_not_comparable") == 0
+        assert view.pop("growth_excluded") == []
+        for t in view.get("tiles") or []:
+            keys = [st["k"] for st in t["stats"]]
+            assert B.UV_QUARTER_STAT_KEY in keys
+            i = keys.index(B.UV_QUARTER_STAT_KEY)
+            assert keys[i - 1] == "Rev YoY"
+            assert t["stats"][i]["v"] == "quarter not on file"
+            t["stats"] = [st for st in t["stats"]
+                          if st["k"] != B.UV_QUARTER_STAT_KEY]
     assert json.dumps(got["all"], sort_keys=True) == \
         json.dumps(golden["payloads"]["all"], sort_keys=True)
     assert json.dumps(got["reached"], sort_keys=True) == \
         json.dumps(golden["payloads"]["reached"], sort_keys=True)
     assert [t["symbol"] for t in got["all"]["tiles"]] == ["CHEAP"]
-    assert _uv_source_hashes() == golden["source_sha256"]
+    hashes = _uv_source_hashes()
+    for name in ("psg_ratio", "_uv_band_state"):
+        assert hashes[name] == golden["source_sha256"][name], name
+    # `undervalue_tiles` was intentionally edited 2026-11-12 (headline_sales_read
+    # exclusion + the Rev quarter stat); its behaviour is pinned by the
+    # stripped-payload equality above, not by its source hash.
+
+
+# ---------------------------------------------------------------------------
+# 💎 growth off a near-zero year-ago quarter (Ajay 2026-11-12: "We got wrong
+# numbers for Joby in sales in the undervalye can you verfy")
+# ---------------------------------------------------------------------------
+_UV_ENDS = ["2026-06-30", "2026-03-31", "2025-12-31", "2025-09-30",
+            "2025-06-30", "2025-03-31", "2024-12-31", "2024-09-30"]
+_UV_PERIODS = [8105, 8104, 8103, 8102, 8101, 8100, 8099, 8098]
+# JOBY's live research doc, 2026-11-12 (spec §1.6): a $15,000 year-ago quarter.
+_JOBY_SERIES = [38_639_000.0, 24_246_000.0, 30_836_000.0, 22_574_000.0,
+                15_000.0, None, 55_000.0, 28_000.0]
+_MATERIAL_SERIES = [50e6, 40e6, 30e6, 25e6, 20e6, 18e6, 16e6, 14e6]
+_UV_KW = dict(limit=20, days=B.BARS_DEFAULT, themes_first=False,
+              sort=B.DEFAULT_SORT, min_tier="any")
+
+
+def _uv_snap(tier, growth, series, periods=None, ends=None, source="hybrid"):
+    row = _sales(tier, growth)
+    row.update({"rev_q_series": list(series),
+                "q_period_series": list(periods if periods is not None else _UV_PERIODS),
+                "q_end_series": list(ends if ends is not None else _UV_ENDS),
+                "_source": source})
+    return row
+
+
+def _joby_snap():
+    return _uv_snap("explosive", 257493.3, _JOBY_SERIES)
+
+
+def _oldx_snap():
+    """SE's live shape (spec §1.6): a material base on a quarter that ended
+    2021-03-31, the series stops there."""
+    return _uv_snap("explosive", 146.7,
+                    [1.764e9, 1.567e9, None, None, 714.9e6, 700e6],
+                    periods=[8084, 8083, None, None, 8080, 8079],
+                    ends=["2021-03-31", "2020-12-31", None, None,
+                          "2020-03-31", "2019-12-31"])
+
+
+def _uv_world(prices, monkeypatch, sales_stub, extra, clock=(None, None)):
+    """`_uv_fixture` plus `extra` = {SYM: (snap, rev_ttm, shares)}, last close
+    100 each. `clock` stubs `_uv_stale_clock` (None = leave the real one)."""
+    import short_interest
+    from sepa import universe as _uni
+
+    _uv_fixture(prices, monkeypatch, sales_stub)
+    base_u = ["CHEAP", "RICH", "NOREV", "NOSHARES", "WEAK"]
+    monkeypatch.setattr(_uni, "load_universe",
+                        lambda mode=None: base_u + list(extra))
+    revs = {"CHEAP": 62.8e6, "RICH": 50e6, "NOSHARES": 80e6}
+    shares = {"CHEAP": 7_450_000, "RICH": 50_000_000, "NOREV": 1_000_000}
+    for sym, (snap, rev, sh) in extra.items():
+        sales_stub[sym] = snap
+        revs[sym] = rev
+        shares[sym] = sh
+        prices[sym] = _frame(200, start=90.05)
+    monkeypatch.setattr(sys.modules["sepa.rev_ttm"], "bulk",
+                        lambda symbols, fill_missing=True: dict(revs))
+    monkeypatch.setattr(short_interest.client, "_shares_outstanding",
+                        lambda sym: shares.get(sym))
+    if clock is not None:
+        monkeypatch.setattr(B, "_uv_stale_clock", lambda: clock)
+
+
+def _uv_stat(tile, key):
+    return {s["k"]: s["v"] for s in tile["stats"]}.get(key)
+
+
+def test_a_joby_shaped_tiny_base_is_excluded_named_and_its_percent_never_served(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """JOBY sat on 💎 at +257,493% off a $15,000 year-ago quarter. With the
+    growth CAP its PSG (35.7x / 300 = 0.119) passes the 0.15 bar, so the cap
+    alone never kept it off — the comparability read does, with a count, its
+    name and its dollars, never the arithmetic percentage."""
+    import json
+    from sepa import bonde as SB
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"JOBYX": (_joby_snap(), 148.81e6, 53_100_000)})
+    assert B.psg_ratio(53_100_000 * 100.0, 148.81e6, 257493.3) == \
+        pytest.approx(0.119, abs=0.001)
+    assert B.psg_ratio(53_100_000 * 100.0, 148.81e6, 257493.3) <= B.UNDERVALUE_MAX_PSG
+
+    out = B.undervalue_tiles(**_UV_KW)
+    assert [t["symbol"] for t in out["tiles"]] == ["CHEAP"]
+    assert out["growth_not_comparable"] == 1
+    assert out["growth_excluded"] == [{
+        "symbol": "JOBYX", "reason": SB.READ_BASE_TOO_SMALL,
+        "base_state": "too_small", "base_rev": 15000.0,
+        "latest_rev": 38639000.0, "period": "FY2026 Q2"}]
+    assert ("1 more had sales growth off a year-ago quarter under $1M (JOBYX) "
+            "— a percentage off that base is arithmetic, not growth, so they "
+            "are excluded too, never ranked. ") in out["note"]
+    body = json.dumps(out, default=str)
+    assert "257493" not in body and "+257" not in body
+    json.dumps(out, allow_nan=False, default=str)       # no NaN anywhere
+
+
+def test_a_normal_base_tile_is_unchanged_byte_for_byte(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """NEGATIVE: the exclusion moves nothing for a comparable name. CHEAP's
+    tile in the JOBY universe equals CHEAP's tile in the plain universe, and
+    its stats less the new `Rev quarter` equal the pre-change golden's."""
+    import json
+    _uv_fixture(prices, monkeypatch, sales_stub)
+    monkeypatch.setattr(B, "_uv_stale_clock", lambda: (None, None))
+    plain = B.undervalue_tiles(**_UV_KW)
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"JOBYX": (_joby_snap(), 148.81e6, 53_100_000)})
+    joby = B.undervalue_tiles(**_UV_KW)
+    c_plain = next(t for t in plain["tiles"] if t["symbol"] == "CHEAP")
+    c_joby = next(t for t in joby["tiles"] if t["symbol"] == "CHEAP")
+    assert json.dumps(c_plain, sort_keys=True, default=str) == \
+        json.dumps(c_joby, sort_keys=True, default=str)
+    golden = json.loads(_UV_GOLDEN.read_text())
+    g_cheap = next(t for t in golden["payloads"]["all"]["tiles"]
+                   if t["symbol"] == "CHEAP")
+    assert [s for s in c_joby["stats"] if s["k"] != B.UV_QUARTER_STAT_KEY] == \
+        g_cheap["stats"]
+
+
+def test_negative_null_and_misaligned_bases_are_excluded_with_their_words(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """NEGATIVE: a year-ago quarter at or below $0 (JXN: −$471M reads +135.7%
+    because sales.py divides by abs), an empty year-ago slot, and headline
+    labels five apart — each would pass PSG, each is excluded and named."""
+    from sepa import bonde as SB
+    neg = _uv_snap("explosive", 135.7,
+                   [500e6, 400e6, 300e6, 200e6, -471e6, 100e6, 90e6, 80e6])
+    nul = _uv_snap("explosive", 120.0,
+                   [50e6, 40e6, 30e6, 20e6, None, 10e6, 9e6, 8e6])
+    skew = _uv_snap("explosive", 150.0, _MATERIAL_SERIES,
+                    periods=[8105, 8104, 8103, 8102, 8100, 8099, 8098, 8097])
+    for snap, rev in ((neg, 2e9), (nul, 150e6), (skew, 150e6)):
+        assert B.psg_ratio(1e6 * 100.0, rev,
+                           snap["sales"]["growth_yoy_pct"]) <= B.UNDERVALUE_MAX_PSG
+    _uv_world(prices, monkeypatch, sales_stub, {
+        "JOBYX": (_joby_snap(), 148.81e6, 53_100_000),
+        "NEGB": (neg, 2e9, 1_000_000),
+        "NULLB": (nul, 150e6, 1_000_000),
+        "SKEWX": (skew, 150e6, 1_000_000)})
+    out = B.undervalue_tiles(**_UV_KW)
+    syms = [t["symbol"] for t in out["tiles"]]
+    for s in ("JOBYX", "NEGB", "NULLB", "SKEWX"):
+        assert s not in syms
+    reasons = {e["symbol"]: e["reason"] for e in out["growth_excluded"]}
+    assert reasons == {"JOBYX": SB.READ_BASE_TOO_SMALL,
+                       "NEGB": SB.READ_BASE_NON_POSITIVE,
+                       "NULLB": SB.READ_BASE_MISSING,
+                       "SKEWX": SB.READ_PAIR_MISMATCH}
+    assert [e["symbol"] for e in out["growth_excluded"]] == \
+        ["JOBYX", "NEGB", "NULLB", "SKEWX"]
+    assert out["growth_not_comparable"] == 4
+    assert ("4 more had sales growth off a year-ago quarter under $1M, at or "
+            "below $0, missing on file or not a year before the latest quarter "
+            "on file (JOBYX, NEGB, NULLB, SKEWX)") in out["note"]
+    neg_e = next(e for e in out["growth_excluded"] if e["symbol"] == "NEGB")
+    assert neg_e["base_rev"] == -471e6 and neg_e["base_state"] == "non_positive"
+    assert "135.7" not in str(out["growth_excluded"])
+
+
+def test_the_sentence_clause_reads_the_two_reasons_present(
+        prices, monkeypatch, sales_stub, gex_stub):
+    neg = _uv_snap("explosive", 135.7,
+                   [500e6, 400e6, 300e6, 200e6, -471e6, 100e6, 90e6, 80e6])
+    _uv_world(prices, monkeypatch, sales_stub, {
+        "JOBYX": (_joby_snap(), 148.81e6, 53_100_000),
+        "NEGB": (neg, 2e9, 1_000_000)})
+    out = B.undervalue_tiles(**_UV_KW)
+    assert ("2 more had sales growth off a year-ago quarter under $1M or at or "
+            "below $0 (JOBYX, NEGB)") in out["note"]
+
+
+def test_a_pair_mismatch_alone_reads_its_words():
+    assert B._uv_excluded_sentence([{"symbol": "SKEWX", "reason": "pair_mismatch"}]) == (
+        "1 more had sales growth off a year-ago quarter not a year before the "
+        "latest quarter on file (SKEWX) — a percentage off that base is "
+        "arithmetic, not growth, so they are excluded too, never ranked. ")
+
+
+def test_a_prior_only_mismatch_stays_on_the_board(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """NEGATIVE: only the HEADLINE pair feeds the printed %, so a hole in the
+    PRIOR pair leaves the number correct — the name is ranked, not excluded."""
+    prior = _uv_snap("explosive", 150.0, _MATERIAL_SERIES,
+                     periods=[8105, 8104, 8103, 8102, 8101, 8099, 8098, 8097])
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"PRIORX": (prior, 150e6, 1_000_000)})
+    out = B.undervalue_tiles(**_UV_KW)
+    assert "PRIORX" in [t["symbol"] for t in out["tiles"]]
+    assert out["growth_not_comparable"] == 0 and out["growth_excluded"] == []
+    assert "more had sales growth" not in out["note"]
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf")])
+def test_a_nan_or_inf_growth_is_skipped_uncounted(
+        bad, prices, monkeypatch, sales_stub, gex_stub):
+    """NEGATIVE: a NaN growth is truthy and NaN > 0.15 is False, so before
+    2026-11-12 it could pass; inf divides down to the cap. No finite figure →
+    skipped uncounted (the `ratio is None` path), never listed."""
+    import json
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"NANX": (_sales("explosive", bad), 150e6, 1_000_000)})
+    out = B.undervalue_tiles(**_UV_KW)
+    assert "NANX" not in [t["symbol"] for t in out["tiles"]]
+    assert out["growth_excluded"] == []
+    assert out["growth_not_comparable"] == 0
+    assert "more had sales growth" not in out["note"]
+    assert "()" not in out["note"]
+    json.dumps(out, allow_nan=False, default=str)
+
+
+def test_the_sentence_ignores_unknown_reasons():
+    """NEGATIVE: no KeyError and no empty clause for a reason it has no words for."""
+    assert B._uv_excluded_sentence([{"symbol": "X", "reason": "no_figure"}]) == ""
+    assert B._uv_excluded_sentence([]) == ""
+    assert B._uv_excluded_sentence(None) == ""
+    s = B._uv_excluded_sentence([{"symbol": "X", "reason": "no_figure"},
+                                 {"symbol": "Y", "reason": "base_too_small"}])
+    assert s.startswith("1 more had") and "(Y)" in s and "X" not in s
+
+
+def test_the_exclusion_happens_before_the_candidate_cut(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """Pre-cut proof: with ONE screening slot, JOBYX's arithmetic % would take
+    it. Excluded first, CHEAP keeps the slot and reaches the board."""
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"JOBYX": (_joby_snap(), 148.81e6, 53_100_000)})
+    monkeypatch.setattr(B, "UNDERVALUE_MAX_CANDIDATES", 1)
+    out = B.undervalue_tiles(**_UV_KW)
+    assert out["screened"] == 1
+    assert [t["symbol"] for t in out["tiles"]] == ["CHEAP"]
+    assert out["growth_not_comparable"] == 1
+
+
+def test_the_quarter_words_name_the_quarter_and_its_relation_to_the_ps_revenue():
+    from datetime import date, timedelta
+
+    from sepa import bonde as SB
+    from sepa.capital_returns import SAME_QUARTER_DAYS
+    rd = SB.headline_sales_read(_joby_snap())
+    assert B._uv_quarter_word(rd, "2026-09-30") == (
+        "growth_older",
+        "FY2026 Q2 (to 2026-06-30) · older than the P/S revenue (to 2026-09-30)")
+    assert B._uv_quarter_word(rd, "2026-06-30") == ("same", "FY2026 Q2")
+    near = dict(rd, period_end="2026-06-27")
+    assert B._uv_quarter_word(near, "2026-06-30") == ("same", "FY2026 Q2")
+    assert B._uv_quarter_word(rd, "2026-03-31") == (
+        "ttm_older",
+        "FY2026 Q2 (to 2026-06-30) · newer than the P/S revenue (to 2026-03-31)")
+    assert B._uv_quarter_word(rd, None) == (
+        "ttm_unknown", "FY2026 Q2 · P/S revenue quarter not on file")
+    assert B._uv_quarter_word(rd, "not-a-date") == (
+        "ttm_unknown", "FY2026 Q2 · P/S revenue quarter not on file")
+    assert B._uv_quarter_word(dict(rd, period=None), "2026-09-30") == (
+        "unknown", "quarter not on file")
+    assert B._uv_quarter_word(dict(rd, period_end=None), "2026-09-30") == (
+        "not_dated", "FY2026 Q2 · not dated on file")
+    g = date(2026, 6, 30)
+    at = (g + timedelta(days=SAME_QUARTER_DAYS)).isoformat()
+    past = (g + timedelta(days=SAME_QUARTER_DAYS + 1)).isoformat()
+    assert B._uv_quarter_word(rd, at)[0] == "same"
+    assert B._uv_quarter_word(rd, past)[0] == "growth_older"
+    before = (g - timedelta(days=SAME_QUARTER_DAYS + 1)).isoformat()
+    assert B._uv_quarter_word(rd, before)[0] == "ttm_older"
+
+
+def test_the_stale_filing_word_is_the_shield_tabs_rule_and_words():
+    """SE was tile #14 on a quarter that ended 2021-03-31. The 💎 word borrows
+    🛡️'s rule by name (STALE_FILING_QUARTERS behind expected_quarter_idx) and
+    🛡️'s served words. A LABEL only (HIS CALL #7)."""
+    from chart_maps import resiliency_tab as RES
+    n = RES.STALE_FILING_QUARTERS
+    se = {"period": "FY2021 Q1", "period_end": "2021-03-31", "latest_idx": 8084}
+    words = f"FY2021 Q1 (to 2021-03-31) · a latest filing {n} or more quarters past due"
+    assert B._uv_quarter_word(se, None, 8105, n) == ("stale_filing", words)
+    assert B._uv_quarter_word(se, "2021-03-31", 8105, n) == ("stale_filing", words)
+    assert B._uv_quarter_word(dict(se, period_end=None), None, 8105, n) == (
+        "stale_filing", f"FY2021 Q1 · a latest filing {n} or more quarters past due")
+    edge = {"period": "X", "period_end": "2026-06-30", "latest_idx": 8105 - n}
+    assert B._uv_quarter_word(edge, "2026-06-30", 8105, n)[0] == "stale_filing"
+    inside = dict(edge, latest_idx=8105 - n + 1)
+    assert B._uv_quarter_word(inside, "2026-06-30", 8105, n) == ("same", "X")
+    assert B._uv_quarter_word(se, "2021-03-31", None, n)[0] == "same"
+    assert B._uv_quarter_word(se, "2021-03-31", 8105, None)[0] == "same"
+    ahead = dict(se, latest_idx=8110)
+    assert B._uv_quarter_word(ahead, "2021-03-31", 8105, n)[0] == "same"
+
+
+def test_a_stale_filing_is_labelled_on_the_board_not_excluded(
+        prices, monkeypatch, sales_stub, gex_stub):
+    from chart_maps import resiliency_tab as RES
+    from sepa import bonde as SB
+    n = RES.STALE_FILING_QUARTERS
+    assert SB.headline_sales_read(_oldx_snap())["comparable"] is True
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"OLDX": (_oldx_snap(), 6e9, 1_000_000)}, clock=(8105, n))
+    out = B.undervalue_tiles(**_UV_KW)
+    tile = next(t for t in out["tiles"] if t["symbol"] == "OLDX")
+    assert _uv_stat(tile, B.UV_QUARTER_STAT_KEY) == (
+        f"FY2021 Q1 (to 2021-03-31) · a latest filing {n} or more quarters past due")
+    assert out["growth_excluded"] == []
+
+
+def test_the_stale_clock_swallows_a_failure_and_the_board_still_builds(
+        prices, monkeypatch, sales_stub, gex_stub):
+    from chart_maps import resiliency_tab as RES
+    ei, n = B._uv_stale_clock()
+    assert isinstance(ei, int) and n == RES.STALE_FILING_QUARTERS
+
+    def _boom(today):
+        raise RuntimeError("no clock")
+
+    monkeypatch.setattr(RES, "expected_quarter_idx", _boom)
+    assert B._uv_stale_clock() == (None, None)
+    _uv_world(prices, monkeypatch, sales_stub,
+              {"OLDX": (_oldx_snap(), 6e9, 1_000_000)}, clock=None)
+    out = B.undervalue_tiles(**_UV_KW)
+    tile = next(t for t in out["tiles"] if t["symbol"] == "OLDX")
+    assert "past due" not in _uv_stat(tile, B.UV_QUARTER_STAT_KEY)
+
+
+def _dated_cheap():
+    return _uv_snap("explosive", 108.9, _MATERIAL_SERIES)
+
+
+def test_the_tile_reads_the_ps_revenue_quarter_from_rev_ttm(
+        prices, monkeypatch, sales_stub, gex_stub):
+    _uv_world(prices, monkeypatch, sales_stub, {})
+    sales_stub["CHEAP"] = _dated_cheap()
+    monkeypatch.setattr(sys.modules["sepa.rev_ttm"], "quarter_ends",
+                        lambda symbols: {"CHEAP": "2026-09-30"})
+    out = B.undervalue_tiles(**_UV_KW)
+    tile = next(t for t in out["tiles"] if t["symbol"] == "CHEAP")
+    assert _uv_stat(tile, B.UV_QUARTER_STAT_KEY) == (
+        "FY2026 Q2 (to 2026-06-30) · older than the P/S revenue (to 2026-09-30)")
+
+
+def test_a_failing_quarter_read_never_breaks_the_board(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """NEGATIVE: quarter_ends raising → the board builds, the word says so."""
+    _uv_world(prices, monkeypatch, sales_stub, {})
+    sales_stub["CHEAP"] = _dated_cheap()
+
+    def _boom(symbols):
+        raise RuntimeError("mongo down")
+
+    monkeypatch.setattr(sys.modules["sepa.rev_ttm"], "quarter_ends", _boom)
+    out = B.undervalue_tiles(**_UV_KW)
+    tile = next(t for t in out["tiles"] if t["symbol"] == "CHEAP")
+    assert _uv_stat(tile, B.UV_QUARTER_STAT_KEY) == \
+        "FY2026 Q2 · P/S revenue quarter not on file"
+
+
+def test_the_psg_board_reads_the_one_helper_and_imports_its_constants():
+    """Source guard: one comparability engine, constants imported never retyped."""
+    import inspect
+
+    from sepa import bonde as SB
+    src = inspect.getsource(B.undervalue_tiles)
+    for needle in ("headline_sales_read(", "decision_snapshot(", "_uv_stale_clock(",
+                   "quarter_ends("):
+        assert needle in src, needle
+    assert "sales_snapshot(" not in src
+    mod = inspect.getsource(B)
+    assert "MIN_MATERIAL_BASE_REV =" not in mod
+    assert "STALE_FILING_QUARTERS =" not in mod
+    assert B.UV_EXCLUDED_REASON_ORDER == (
+        SB.READ_BASE_TOO_SMALL, SB.READ_BASE_NON_POSITIVE,
+        SB.READ_BASE_MISSING, SB.READ_PAIR_MISMATCH)
+    assert B.UV_QUARTER_STAT_KEY == "Rev quarter"
+    clock = inspect.getsource(B._uv_stale_clock)
+    assert "STALE_FILING_QUARTERS" in clock and "expected_quarter_idx(" in clock
 
 
 # ---------------------------------------------------------------------------
@@ -1664,6 +2068,13 @@ def sales_stub(monkeypatch):
     class _R:
         @staticmethod
         def sales_snapshot(symbols, max_age_sec=None):
+            return {s: table[s] for s in symbols if s in table}
+
+        # 💎 Under Value reads the decision snapshot since 2026-11-12 (the
+        # series its comparability read needs). Same table — without this the
+        # board's try/except would silently empty it.
+        @staticmethod
+        def decision_snapshot(symbols, max_age_sec=None):
             return {s: table[s] for s in symbols if s in table}
 
     import sepa
