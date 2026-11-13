@@ -15,18 +15,22 @@
  * on a name new to it) → forward (an inline chart only once the served record is past "too early") → history → rules
  * and caveats. A request that fails prints FETCH_FAILED (the ONE FE sentence).
  *
- * NO ordering toggle and no filter here — his saved list keeps its saved order (rows in seed order, as served). The
+ * No filter here — his saved list keeps its saved order (rows in seed order, as served). The ONE display sort (📋
+ * 2026-11-13) is a tap on the Today header: worst today first, tap again = the saved order back. The
  * four house chips (🚀 GrowthChip, 🩳 ShortInterestChip, 🧨 ExplosiveChip, 🎯 EnterableChip) sit on every SAVED row from
  * ONE useBounceRoom call over the saved symbols on screen (the LukBoard pattern); weekly strip rows carry no house chips
  * (the strip is unsaved, spec C6), and an owner-only / error answer asks the room for nothing.
  *
- * The FE composes NO word and NO number about a stock: every visible string is a served field; the only FE-typed glyphs
- * are structural (🌱 / ⚠️ section marks, ✨ on a served `new`, the verdict marks, "·" separators). UNMEASURED. */
+ * The FE composes NO word about a stock: every visible string is a served field; the only FE-typed glyphs are structural
+ * (🌱 / ⚠️ section marks, ✨ on a served `new`, the verdict marks, "·" separators, the table headers). The ONE number
+ * the FE computes is 📋 Today (2026-11-13): the served now print vs the served previous close (lib/longTerm ltTodayPct),
+ * display only — the rows keep their saved order unless he taps the Today header (worst first; tap again = saved).
+ * 📋 2026-11-13: the saved rows render as one table per section instead of cards. UNMEASURED. */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { API } from '../lib/apiBase';
 import {
-  FETCH_FAILED, LT_CHART, LT_PATH, listOr, ltCategoryRows, ltForwardLines, ltMark, ltSavedSymbols, ltState, ltText,
-  ltToken, textOr,
+  FETCH_FAILED, LT_CHART, LT_PATH, listOr, ltCategoryRows, ltForwardLines, ltMark, ltPctText, ltPctTone, ltSavedSymbols,
+  ltSortRows, ltState, ltText, ltTodayPct, ltToken, textOr,
   type LtAny, type LtCategory, type LtPayload, type LtRow, type LtTop, type LtZoneAlert,
 } from '../lib/longTerm';
 import { TickerLink } from './TickerLink';
@@ -35,6 +39,7 @@ import { GrowthChip } from './GrowthChip';
 import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { useLtToday } from '../hooks/useLtToday';
 import '../styles/longTerm.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: LtAny };
@@ -44,57 +49,95 @@ function Line({ text, testId, className = 'lt-line' }: { text: unknown; testId?:
   return t ? <p className={className} data-testid={testId}>{t}</p> : null;
 }
 
-function RowCard({ row, houseChips }: { row: LtRow; houseChips: ReactNode }) {
+/* 📋 2026-11-13 (Ajay: "Creat a table instead of cards so i can view them
+ * quickly"): every saved row is ONE table row — same served fields and testids the card carried, one line per name. */
+function RowLine({ row, houseChips, today }: { row: LtRow; houseChips: ReactNode; today: number | null }) {
   const chips = listOr(row.chips);
   const fields = listOr(row.fields);
   const events = listOr(row.events);
   const pk = row.pankaj;
+  const tone = ltPctTone(today);
   return (
-    <article className="lt-card" data-testid={`lt-row-${row.symbol}`} data-status={ltToken(row.status?.key)}>
-      <div className="lt-card-head">
+    <tr className="lt-tr" data-testid={`lt-row-${row.symbol}`} data-status={ltToken(row.status?.key)}>
+      <td className="lt-td-sym">
         <TickerLink ticker={row.symbol} showWatchlist={false} />
-        <span className="lt-muted lt-line">{textOr(row.name)}</span>
-        <span className="lt-muted lt-line">{textOr(row.sector)}</span>
-      </div>
-      {chips.length ? (
-        <div className="lt-pills" data-testid={`lt-chips-${row.symbol}`}>
-          {chips.map((c) => <span key={c.key} className="lt-pill" data-chip={ltToken(c.key)}>{textOr(c.label)}</span>)}
-        </div>
-      ) : null}
-      <div className="lt-house-chips" data-testid={`lt-house-${row.symbol}`}>{houseChips}</div>
-      <p className="lt-line" data-testid={`lt-stage-${row.symbol}`}>{textOr(row.stage?.text)}</p>
-      <p className="lt-line" data-testid={`lt-sales-${row.symbol}`}>{textOr(row.sales?.text)}</p>
-      {row.status ? (
-        <p className={`lt-status lt-status-${ltToken(row.status.key)}`} data-testid={`lt-status-${row.symbol}`}>{textOr(row.status.text)}</p>
-      ) : null}
-      {fields.length ? (
-        <div className="lt-fields">
-          {fields.map((f) => (
-            <span key={`${f.category}-${f.key}`} className={`lt-field lt-v-${ltToken(f.verdict)} lt-k-${ltToken(f.kind)}`}
-                  data-testid={`lt-field-${row.symbol}-${f.category}-${f.key}`}>
-              {ltMark(f.verdict)} {textOr(f.label)}: {textOr(f.text)}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {pk ? (
-        <div className="lt-pankaj" data-testid={`lt-pankaj-${row.symbol}`}>
-          <Line text={pk.tier_text} />
-          <Line text={pk.zones_text} />
-          <Line text={pk.zone_text} />
-        </div>
-      ) : null}
-      {events.length ? (
-        <ul className="lt-list">
-          {events.map((e, i) => (
-            <li key={`${e.kind}-${e.date}-${i}`} className="lt-line" data-testid={`lt-event-${row.symbol}`}>
-              {ltText(e.date) ? <span className="lt-muted">{e.date} · </span> : null}{textOr(e.text)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <Line text={row.caveat_tag} className="lt-line lt-muted" />
-    </article>
+        {ltText(row.name) ? <span className="lt-muted lt-sub">{row.name}</span> : null}
+        {ltText(row.sector) ? <span className="lt-muted lt-sub">{row.sector}</span> : null}
+      </td>
+      <td className={`lt-td-num${tone}`} data-testid={`lt-today-${row.symbol}`}>{ltPctText(today)}</td>
+      <td data-testid={`lt-stage-${row.symbol}`}>{textOr(row.stage?.text)}</td>
+      <td data-testid={`lt-sales-${row.symbol}`}>{textOr(row.sales?.text)}</td>
+      <td>
+        {row.status ? (
+          <span className={`lt-status lt-status-${ltToken(row.status.key)}`} data-testid={`lt-status-${row.symbol}`}>{textOr(row.status.text)}</span>
+        ) : null}
+        {events.map((e, i) => (
+          <span key={`${e.kind}-${e.date}-${i}`} className="lt-line lt-sub" data-testid={`lt-event-${row.symbol}`}>
+            {ltText(e.date) ? <span className="lt-muted">{e.date} · </span> : null}{textOr(e.text)}
+          </span>
+        ))}
+      </td>
+      <td>
+        {fields.length ? (
+          <div className="lt-fields">
+            {fields.map((f) => (
+              <span key={`${f.category}-${f.key}`} className={`lt-field lt-v-${ltToken(f.verdict)} lt-k-${ltToken(f.kind)}`}
+                    title={ltText(f.text) ?? undefined}
+                    data-testid={`lt-field-${row.symbol}-${f.category}-${f.key}`}>
+                {ltMark(f.verdict)} {textOr(f.label)}: {textOr(f.text)}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </td>
+      <td>
+        {chips.length ? (
+          <div className="lt-pills" data-testid={`lt-chips-${row.symbol}`}>
+            {chips.map((c) => <span key={c.key} className="lt-pill" data-chip={ltToken(c.key)}>{textOr(c.label)}</span>)}
+          </div>
+        ) : null}
+        {pk ? (
+          <div className="lt-pankaj" data-testid={`lt-pankaj-${row.symbol}`}>
+            <Line text={pk.tier_text} />
+            <Line text={pk.zones_text} />
+            <Line text={pk.zone_text} />
+          </div>
+        ) : null}
+        <Line text={row.caveat_tag} className="lt-line lt-muted" />
+      </td>
+      <td><div className="lt-house-chips" data-testid={`lt-house-${row.symbol}`}>{houseChips}</div></td>
+    </tr>
+  );
+}
+
+function RowTable({ rows, render, worstFirst, onSort, pct, testId }: {
+  rows: LtRow[]; render: (r: LtRow) => ReactNode; worstFirst: boolean; onSort: () => void;
+  pct: (s: string) => number | null; testId?: string;
+}) {
+  const ordered = ltSortRows(rows, pct, worstFirst);
+  return (
+    <div className="lt-table-wrap" data-testid={testId}>
+      <table className="lt-table">
+        <thead>
+          <tr>
+            <th>{'Ticker'}</th>
+            <th>
+              <button type="button" className="lt-sort" onClick={onSort} aria-pressed={worstFirst}
+                      data-testid="lt-sort-today">
+                {worstFirst ? 'Today ▲ worst first' : 'Today'}
+              </button>
+            </th>
+            <th>{'Stage'}</th>
+            <th>{'Sales'}</th>
+            <th>{'Status'}</th>
+            <th>{'Checks'}</th>
+            <th>{'Lists'}</th>
+            <th>{'Reads'}</th>
+          </tr>
+        </thead>
+        <tbody>{ordered.map(render)}</tbody>
+      </table>
+    </div>
   );
 }
 
@@ -168,6 +211,9 @@ export default function LongTermBoard() {
   /* The house chips: ONE room POST over the saved symbols on screen. Owner-only / error / loading → [] (nothing asked). */
   const savedSymbols = useMemo(() => ltSavedSymbols(p), [p]);
   const room = useBounceRoom(savedSymbols);
+  /* 📋 Today: the live read over the same saved symbols (hooks/useLtToday — the board GET stays one read). */
+  const live = useLtToday(savedSymbols);
+  const [worstFirst, setWorstFirst] = useState(false);
 
   const house = (sym: string) => {
     const r = room.map.get(sym.toUpperCase());
@@ -180,7 +226,12 @@ export default function LongTermBoard() {
       </>
     );
   };
-  const card = (row: LtRow) => <RowCard key={row.symbol} row={row} houseChips={house(row.symbol)} />;
+  const pct = (sym: string) => ltTodayPct(live?.quotes?.[sym.toUpperCase()], live?.as_of);
+  const line = (row: LtRow) => <RowLine key={row.symbol} row={row} houseChips={house(row.symbol)} today={pct(row.symbol)} />;
+  const table = (rows: LtRow[], testId?: string) => (
+    <RowTable rows={rows} render={line} worstFirst={worstFirst} onSort={() => setWorstFirst((w) => !w)} pct={pct}
+              testId={testId} />
+  );
 
   if (load.phase === 'loading') {
     return <div className="lt-board" data-state="loading" aria-busy="true"><span className="lt-muted">{'…'}</span></div>;
@@ -279,7 +330,7 @@ export default function LongTermBoard() {
       {changed.length ? (
         <section className="lt-section lt-changed" data-testid="lt-changed" data-section="changed">
           <h3 className="lt-h" aria-hidden="true">{'⚠️'}</h3>
-          <div className="lt-grid">{changed.map(card)}</div>
+          {table(changed, 'lt-table-changed')}
         </section>
       ) : null}
 
@@ -293,7 +344,7 @@ export default function LongTermBoard() {
             <Line text={c.criteria_text} testId={`lt-criteria-${c.key}`} />
             <Line text={c.caveat} testId={`lt-caveat-${c.key}`} className="lt-line lt-muted" />
             <Line text={c.also_text} className="lt-line lt-muted" />
-            {rows.length ? <div className="lt-grid">{rows.map(card)}</div> : null}
+            {rows.length ? table(rows, `lt-table-${c.key}`) : null}
             <Line text={c.moved_text} testId={`lt-moved-${c.key}`} className="lt-moved" />
             {top.length || ltText(c.top_text) ? (
               <div className="lt-top" data-testid={`lt-strip-${c.key}`}>

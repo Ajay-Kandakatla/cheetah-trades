@@ -16965,12 +16965,13 @@ const CONTRACTS = [
         if (w) errs.push(`${f} carries "${w[0]}" — no buy/sell vocabulary on the 📅 Long Term tab (only "${NOT_A_SIGNAL}")`);
         if (REBOUND.test(rest)) errs.push(`${f} carries the b-word — "reversal", never the b-word`);
       }
-      // 2. phone: the card can shrink (min-width: 0) and never forces a nowrap line
-      const card = /\.lt-card\s*\{([^}]*)\}/.exec(css);
-      if (!card) errs.push('src/styles/longTerm.css lost its .lt-card rule');
+      // 2. phone: the table (📋 2026-11-13, replaced the cards) scrolls inside its own box and never forces a nowrap line
+      const wrap = /\.lt-table-wrap\s*\{([^}]*)\}/.exec(css);
+      if (!wrap) errs.push('src/styles/longTerm.css lost its .lt-table-wrap rule');
       else {
-        if (!/min-width:\s*0\b/.test(card[1])) errs.push('.lt-card must carry min-width: 0 (430 px phone)');
-        if (!/max-width:\s*100%/.test(card[1])) errs.push('.lt-card must carry max-width: 100% (430 px phone)');
+        if (!/min-width:\s*0\b/.test(wrap[1])) errs.push('.lt-table-wrap must carry min-width: 0 (430 px phone)');
+        if (!/max-width:\s*100%/.test(wrap[1])) errs.push('.lt-table-wrap must carry max-width: 100% (430 px phone)');
+        if (!/overflow-x:\s*auto/.test(wrap[1])) errs.push('.lt-table-wrap must carry overflow-x: auto (430 px phone)');
       }
       if (/white-space:\s*nowrap/.test(css)) errs.push('longTerm.css must not carry white-space: nowrap (430 px phone)');
       // 3. FE fixture keys ⊆ the backend golden key set (the FE reads only served keys)

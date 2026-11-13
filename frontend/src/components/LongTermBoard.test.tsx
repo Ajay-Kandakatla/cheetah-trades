@@ -250,12 +250,13 @@ describe('📅 LongTermBoard — the other states', () => {
     await mount({ body: { rows: [] } });
     expect(screen.getByTestId('lt-reason')).toHaveTextContent(FETCH_FAILED);
   });
-  it('ONE fetch of the board on mount; NEGATIVE: no polling timer in the source', async () => {
+  it('ONE fetch of the board on mount; NEGATIVE: no polling timer in the board source (the 📋 Today poll lives in useLtToday)', async () => {
     const { f } = await mount({ body: fixture });
     await new Promise((r) => setTimeout(r, 30));
     expect(ltCalls(f)).toHaveLength(1);
     const src = await readSource('src/components/LongTermBoard.tsx');
     expect(src).not.toMatch(/setInterval|setTimeout/);
+    expect(await readSource('src/hooks/useLtToday.ts')).not.toMatch(/long-term/);
   });
 });
 

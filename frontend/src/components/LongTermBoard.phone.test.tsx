@@ -35,24 +35,27 @@ function wrapRule(src: string): { selectors: string; decl: string } | null {
   const m = src.match(/\n([^{}\n]*\.lt-pill[,\s][^{}\n]*)\{([^}]*)\}/);
   return m ? { selectors: m[1], decl: m[2] } : null;
 }
-const PRE_FIX = `.lt-card { border-radius: 8px; }
+const PRE_FIX = `.lt-table-wrap { max-width: 100%; }
 .lt-pills { display: flex; gap: 0.25rem; }
 .lt-pill, .lt-field { white-space: nowrap; }`;
 
-describe('📱 Long Term card — never wider than its grid column', () => {
-  it('.lt-card carries min-width: 0 and max-width: 100%', async () => {
-    const decl = rule(await css(), /\.lt-card/);
+describe('📱 Long Term table (2026-11-13) — scrolls inside its own box, never the page', () => {
+  it('.lt-table-wrap carries min-width: 0, max-width: 100% and overflow-x: auto', async () => {
+    const decl = rule(await css(), /\.lt-table-wrap/);
     expect(decl).not.toBeNull();
     expect(decl).toMatch(/min-width:\s*0\b/);
     expect(decl).toMatch(/max-width:\s*100%/);
+    expect(decl).toMatch(/overflow-x:\s*auto/);
   });
   it('NEGATIVE: the pre-fix rule fails the same matcher', () => {
-    const decl = rule(PRE_FIX, /\.lt-card/);
+    const decl = rule(PRE_FIX, /\.lt-table-wrap/);
     expect(decl).not.toMatch(/min-width:\s*0\b/);
-    expect(decl).not.toMatch(/max-width:\s*100%/);
+    expect(decl).not.toMatch(/overflow-x:\s*auto/);
   });
-  it('the grid column floor never exceeds the screen (min(100%, …))', async () => {
-    expect(rule(await css(), /\.lt-grid/)).toMatch(/minmax\(min\(100%,/);
+  it('NEGATIVE: the old card grid rules are gone', async () => {
+    const src = await css();
+    expect(rule(src, /\.lt-grid/)).toBeNull();
+    expect(rule(src, /\.lt-card/)).toBeNull();
   });
 });
 
@@ -75,14 +78,15 @@ describe('📱 Long Term pills / fields / lines — wrap instead of widening the
   });
 });
 
-describe('📱 Long Term DOM — the cards carry the class; nothing inline widens them', () => {
+describe('📱 Long Term DOM — every saved row is a table row; nothing inline widens it', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  it('every saved row is an .lt-card; NEGATIVE: no inline width / nowrap / overflow style anywhere', async () => {
+  it('every saved row is an .lt-tr inside .lt-table-wrap; NEGATIVE: no .lt-card and no inline width / nowrap / overflow style', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(fixture)) })));
     const { container } = render(<MemoryRouter initialEntries={['/chart-maps?tab=long_term']}><LongTermBoard /></MemoryRouter>);
     await waitFor(() => expect(container.querySelector('.lt-board[data-state="ready"]')).not.toBeNull());
-    const cards = container.querySelectorAll('.lt-card');
-    expect(cards.length).toBe(8);
+    const rows = container.querySelectorAll('.lt-table-wrap .lt-tr');
+    expect(rows.length).toBe(8);
+    expect(container.querySelectorAll('.lt-card').length).toBe(0);
     for (const el of container.querySelectorAll('[style]')) {
       expect(el.getAttribute('style') || '').not.toMatch(/width|nowrap|overflow/i);
     }

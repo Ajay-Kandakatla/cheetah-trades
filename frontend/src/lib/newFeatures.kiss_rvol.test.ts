@@ -18,16 +18,18 @@ describe('✨ the 💋 EMA Kiss relative-volume entry (2026-11-11)', () => {
   it('is SIXTH (the 🏁 Luk ended-fold ✨, the 🟢 entry-marks ✨, the 🏁 Luk stop-R ✨, the ⏸ no-breakout ✨ and the 🥇 Luk realtime ✨ went FIRST 2026-11-12), listed once, dated 2026-11-11, routed to the 💋 sub', () => {
     // WIDENED +1 (2026-11-12: 🔔 Long Term alerts FIRST — Ajay: "add an alert list when stocks reach Pankaj's zones") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-13: 📋 All strategies table FIRST — Ajay: "Call all strategies") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
-    expect(NEW_FEATURES[1].id).toBe('long-term-alerts-2026-11-12');
-    expect(NEW_FEATURES[2].id).toBe('long-term-list-2026-11-12');   // 2026-11-12: the 📅 Long Term ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 Under Value tiny-base ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[4].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[5].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-luk-realtime-2026-11-12');
-    expect(NEW_FEATURES[9].id).toBe(ID);
+    // WIDENED +1 (2026-11-13: 📅 Long Term table ✨ FIRST — Ajay: \"Creat a table instead of cards\") — every NEW_FEATURES[n] pin below → [n+1].
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[1].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
+    expect(NEW_FEATURES[2].id).toBe('long-term-alerts-2026-11-12');
+    expect(NEW_FEATURES[3].id).toBe('long-term-list-2026-11-12');   // 2026-11-12: the 📅 Long Term ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 Under Value tiny-base ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[5].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[6].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-no-breakout-2026-11-12');   // 2026-11-12: the ⏸ no-breakout ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-luk-realtime-2026-11-12');
+    expect(NEW_FEATURES[10].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-11');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=kiss_fly');

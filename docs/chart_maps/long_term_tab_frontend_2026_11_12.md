@@ -63,3 +63,23 @@ Ajay, 2026-11-12: "add an alert list when stocks reach Pankaj's zones and also t
 ## Not done here
 - The ✨ entry, the contracts block, the RENDERER / NO_TOGGLE map entries and the real-payload fixture are the main session's.
 - `frontend/src/lib/momentumBurst.test.ts:139` pins the non-board count at 19; with `long_term` it is 20 — that file is outside this package and needs the one-line pin update.
+
+## 📋 Table + Today column (2026-11-13)
+
+Ajay 2026-11-13, verbatim: "Creat a table instead of cards so i can view them quickly" (on a down day: SPY −1.0%, QQQ
+−2.3% at 11:17 ET).
+
+- Every saved row is one `<tr class="lt-tr">` in one table per section (⚠️ changed and each category). Columns: Ticker
+  (name, sector under it) · Today · Stage · Sales · Status (+ the row's events) · Checks (the served fields, verdict
+  marks) · Lists (other-list pills, 🧭 Pankaj lines, caveat tag) · Reads (the four house chips). Same served fields and
+  the same testids the card carried; the FE still composes no word about a stock.
+- **Today** = the ONE number the FE computes: the served now print vs the served previous close (`lib/longTerm.ltTodayPct`
+  — `prev_bar.c` when the served `bar` is today's ET date, else `bar.c`). Missing / non-positive / NaN → blank, never
+  0%. Read by `hooks/useLtToday`: ONE POST `/chart-maps/live` over the saved symbols (cap 250, ~109 today) at mount, then
+  every `CARD_LIVE_MS` while visible. The board GET stays one read on mount; owner-only / error asks nothing.
+- **Sort**: rows keep the saved order. A tap on the Today header sorts every table worst-first (unread names stay after,
+  in saved order); a second tap restores the saved order. Display only — no filter, no rule.
+- Phone: `.lt-table-wrap` = `min-width: 0; max-width: 100%; overflow-x: auto` (the table scrolls in its own box; pinned in
+  `LongTermBoard.phone.test.tsx` and contracts). The `.lt-card` / `.lt-grid` rules are gone.
+- Tests: `LongTermBoard.table.test.tsx` (helper unit tests, live POST body, blank on a failed read, sort round trip,
+  owner_only asks nothing).

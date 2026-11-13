@@ -19,13 +19,6 @@
 .lt-changed { border-color: var(--negative, #ef4444); }
 .lt-started { border-color: var(--positive, #22c55e); }
 
-.lt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0.5rem; min-width: 0; }
-.lt-card {
-  min-width: 0; max-width: 100%;
-  display: flex; flex-direction: column; gap: 0.25rem; padding: 0.45rem 0.55rem; border-radius: 8px;
-  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
-}
-.lt-card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; min-width: 0; font-weight: 600; }
 .lt-pills, .lt-house-chips, .lt-fields { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
 .lt-strip { display: flex; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
 
@@ -67,3 +60,28 @@
    the 430 px phone: the block and each list item can shrink (min-width: 0) and break a long served word anywhere. */
 .lt-alert { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .lt-alert li { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+
+/* 📋 2026-11-13 — the saved rows as a table (Ajay: "Creat a table instead of cards so i can view them quickly"). The
+   table scrolls sideways inside its own wrapper on the 430 px phone; the page never does. Cells wrap their served words. */
+.lt-table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.lt-table th {
+  text-align: left; font-size: 0.72rem; font-weight: 600; color: var(--ink-subtle, #94a3b8); letter-spacing: 0.02em;
+  padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+  position: sticky; top: 0; background: var(--bg-surface, var(--bg, #fff));
+}
+.lt-table td {
+  vertical-align: top; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
+  white-space: normal; overflow-wrap: anywhere; min-width: 5rem;
+}
+.lt-table td.lt-td-sym { min-width: 7rem; font-weight: 600; }
+.lt-table td.lt-td-num { min-width: 4.5rem; font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.lt-table td:nth-child(6) { min-width: 14rem; }
+.lt-table tr[data-status="changed"] td { background: color-mix(in srgb, var(--negative, #ef4444) 7%, transparent); }
+.lt-sub { display: block; font-weight: 400; }
+.lt-up { color: var(--positive, #22c55e); }
+.lt-dn { color: var(--negative, #ef4444); }
+.lt-sort {
+  font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted;
+}
+.lt-sort:focus-visible { outline: 2px solid var(--accent, #3b82f6); outline-offset: 2px; }

@@ -192,3 +192,45 @@ export function ltForwardLines(fwd: LtForward | null | undefined): LtLine[] {
   }
   return out;
 }
+
+/* 📋 Today column (2026-11-13, Ajay: "Creat a table instead of cards so i can view them quickly"). ONE POST /chart-maps/live over the table's symbols (the house card overlay, one snapshot). The
+ * move is the served now print against the served previous close: `prev_bar.c` when the served `bar` is today's (the
+ * answer's ET date), else `bar.c` (no today bar yet → the last closed bar is the previous close). Anything missing or
+ * non-positive → null and the cell stays blank — never 0%. Display only; it sorts only when he taps the header. */
+export type LtLiveQuote = {
+  bar?: { t?: unknown; c?: unknown } | null; prev_bar?: { c?: unknown } | null; now?: { price?: unknown } | null;
+};
+const ltPos = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && x > 0;
+
+export function ltTodayPct(q: LtLiveQuote | null | undefined, asOf: unknown): number | null {
+  if (!q || typeof q !== 'object') return null;
+  const px = q.now?.price;
+  if (!ltPos(px)) return null;
+  const day = typeof asOf === 'string' ? asOf.slice(0, 10) : '';
+  const bar = q.bar;
+  if (!bar || typeof bar !== 'object') return null;
+  const base = bar.t === day && day ? q.prev_bar?.c : bar.c;
+  if (!ltPos(base)) return null;
+  return (px / base - 1) * 100;
+}
+
+export function ltPctText(pct: number | null): string {
+  if (pct === null || !Number.isFinite(pct)) return '';
+  return `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+}
+
+/** Saved order, or worst-today first (a name with no read keeps its saved place after every read name). */
+export function ltSortRows<T extends { symbol: string }>(rows: readonly T[], pct: (s: string) => number | null,
+                                                       worstFirst: boolean): T[] {
+  if (!worstFirst) return [...rows];
+  const read = rows.filter((r) => pct(r.symbol) !== null);
+  const unread = rows.filter((r) => pct(r.symbol) === null);
+  read.sort((a, b) => (pct(a.symbol) as number) - (pct(b.symbol) as number));
+  return [...read, ...unread];
+}
+
+/** The Today cell's tone class: down / up / flat-or-unread. */
+export function ltPctTone(pct: number | null): string {
+  if (pct === null || !Number.isFinite(pct) || pct === 0) return '';
+  return pct < 0 ? ' lt-dn' : ' lt-up';
+}

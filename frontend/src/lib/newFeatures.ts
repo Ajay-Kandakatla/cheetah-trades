@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-13 (verbatim, his spelling kept): "Creat a table instead of cards so i can view them quickly". The 📅
+  // Long Term tab's saved rows render as ONE table per section (LongTermBoard RowTable) — same served fields; plus a
+  // 📋 Today column from ONE POST /chart-maps/live (hooks/useLtToday; now print vs the served previous close; blank when
+  // unread, never 0%) and a tap on the Today header for worst-first (tap again = saved order). Display only.
+  {
+    id: 'chart-maps-long-term-table-2026-11-13',
+    label: '📅 Long Term — "Creat a table instead of cards so i can view them quickly": one table per list + a Today % column (tap it for worst first)',
+    addedAt: '2026-11-13',
+    route: '/chart-maps',
+  },
   // Ajay 2026-11-13 (verbatim in the label, his spelling kept): "Hey can you build be a table like track record on Gajjals
   // landing page.. Call all strategies. …". chart_maps/gajjala/all_table.py (pure, display order only) builds the 📋
   // All strategies sub (constants.TABLE_SUB = SUBS[0][0], FIRST in the strip; DEFAULT_SUB stays bull_flag — HIS CALL #1)
