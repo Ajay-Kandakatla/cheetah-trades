@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_VARIANT_LABEL,
+  GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_TABLE_SUB, GG_VARIANT_LABEL,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   playbookItem, riskText, variantText, watchParts,
   GG_SCAN_PATH, ggScanAdvanced, ggScanPlan, type GgBoard,
@@ -106,11 +106,19 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
   // (BUILD_SPEC4 §3.1, HIS CALL P8); the other eight keep their DECISIONS order.
   // WIDENED 2026-10-16 — 🏁 Track record is the TENTH sub, LAST; 🧠 Potential ninth (Ajay "keep a new tab",
   // BUILD_SPEC9 §3.11).
-  it('ten subs in DECISIONS order, 🧠 Potential ninth, 🏁 Track record last, labels his', () => {
-    expect(GG_SUBS.map((s) => s.key)).toEqual(['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp',
+  // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub, FIRST (Ajay "Call all strategies"; spec §3.1/§3.5);
+  // the other ten keep their order, 🏁 Track record still last.
+  it('eleven subs: 📋 All strategies FIRST, then DECISIONS order, 🧠 Potential tenth, 🏁 Track record last, labels his', () => {
+    expect(GG_SUBS.map((s) => s.key)).toEqual(['all_strategies', 'bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp',
       'reversal_squeeze', 'premarket', 'postmarket', 'playbook', 'potential', 'track_record']);
+    expect(GG_TABLE_SUB).toBe('all_strategies');
+    expect(GG_SUBS[0].key).toBe(GG_TABLE_SUB);
+    expect(parseGgSub('all_strategies')).toBe('all_strategies');
+    expect(parseGgSub(' All_Strategies ')).toBe('all_strategies');
+    // NEGATIVE: a near miss is not the 📋 sub — the default
+    expect(parseGgSub('all_strategy')).toBe(GG_DEFAULT_SUB);
     expect(GG_SUBS.map((s) => `${s.emoji} ${s.label}`).join(' · ')).toBe(
-      '\u{1F6A9} Bull Flag · \u{1F48B} EMA Kiss & Fly · ➖ Horizontal Fade · \u{1F300} Intraday VCP · '
+      '\u{1F4CB} All strategies · \u{1F6A9} Bull Flag · \u{1F48B} EMA Kiss & Fly · ➖ Horizontal Fade · \u{1F300} Intraday VCP · '
       + '\u{1F3BE} Reversal Squeeze · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential'
       + ' · \u{1F3C1} Track record');
     expect(parseGgSub('potential')).toBe('potential');

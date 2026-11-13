@@ -355,6 +355,11 @@ def apply(out, *, reads_by, carded, pots, trackers, scan_by, listed, session, no
     tile_key = sub_k if sub_k in GC.SETUPS or sub_k == GC.POTENTIAL_SUB else None
     assigns = [(t, marks[(tile_key, t.get("symbol"))]) for t in (out.get("tiles") or [])
                if tile_key is not None and isinstance(t, dict) and (tile_key, t.get("symbol")) in marks]
+    tbl = out.get("table")                                          # 📋 2026-11-13 — the table rows: the setup mark, else the 🧠 one
+    rows = tbl.get("rows") if isinstance(tbl, dict) and isinstance(tbl.get("rows"), list) else []
+    assigns += [(r, m) for r in rows if isinstance(r, dict)
+                for m in [marks.get((r.get("setup"), r.get("symbol"))) or marks.get((GC.POTENTIAL_SUB, r.get("symbol")))]
+                if m]
     out["entry_marks"] = {"subs": subs}
     for t, m in assigns:
         t["new_mark"] = dict(m)

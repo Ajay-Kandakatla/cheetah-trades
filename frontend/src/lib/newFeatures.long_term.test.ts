@@ -15,8 +15,10 @@ const f = NEW_FEATURES.find((x) => x.id === ID)!;
 describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
   it('is FIRST, listed once, dated 2026-11-12, routed to ?tab=long_term', () => {
     // WIDENED +1 (2026-11-12: 🔔 Long Term alerts FIRST — Ajay: "add an alert list when stocks reach Pankaj's zones") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[0].id).toBe('long-term-alerts-2026-11-12');
-    expect(NEW_FEATURES[1].id).toBe(ID);
+    // WIDENED +1 (2026-11-13: 📋 All strategies table FIRST — Ajay: "Call all strategies") — every NEW_FEATURES[n] pin below → [n+1].
+    expect(NEW_FEATURES[0].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
+    expect(NEW_FEATURES[1].id).toBe('long-term-alerts-2026-11-12');
+    expect(NEW_FEATURES[2].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=long_term');
@@ -51,8 +53,8 @@ describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
   });
 
   it('NEGATIVE: the 💎 tiny-base ✨ and the 🏁 Luk ended-fold ✨ are not replaced — each listed once, right after this entry; ids stay unique', () => {
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-undervalue-tiny-base-2026-11-12').length).toBe(1);
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-luk-ended-fold-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);

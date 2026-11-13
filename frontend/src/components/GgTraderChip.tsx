@@ -24,3 +24,5 @@ function GgTraderChip({ text, testid, promoText, promoTestid }: {
   return <>{t}{p}</>;
 }
 export { GgTraderChip };
+/* 📋 2026-11-13: the shared span for the All strategies table's 🚫 chip (GgAllTable) — the board keeps its own GgBrokerChip. */
+export { servedChip };

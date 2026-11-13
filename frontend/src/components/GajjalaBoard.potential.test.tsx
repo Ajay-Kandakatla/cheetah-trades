@@ -95,19 +95,21 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
   beforeEach(() => { chartProps.length = 0; });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  // WIDENED 2026-10-16 — 🏁 Track record is the TENTH sub, LAST (Ajay "keep a new tab", BUILD_SPEC9 §3.11);
-  // 🧠 Potential is btns[8] and keeps its served text.
-  it('10 sub buttons on the golden payload — 🧠 Potential ninth, 🏁 Track record LAST, the other 8 in their served order', async () => {
+  // WIDENED 2026-10-16 — 🏁 Track record is the TENTH sub, LAST (Ajay "keep a new tab", BUILD_SPEC9 §3.11).
+  // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub, FIRST (Ajay "Call all strategies"); 🧠 Potential is
+  // btns[9] and keeps its served text; the eight between keep their served order.
+  it('11 sub buttons on the golden payload — 📋 All strategies FIRST, 🧠 Potential tenth, 🏁 Track record LAST, the other 8 in their served order', async () => {
     stubFetch(from(GOLD, 'potential'));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);
     const btns = screen.getAllByRole('tab').filter((b) => b.getAttribute('data-testid')?.startsWith('gg-sub-'));
-    expect(btns).toHaveLength(10);
+    expect(btns).toHaveLength(11);
     expect(btns.map((b) => b.getAttribute('data-testid'))).toEqual(GOLD.potential.subs.map((s: any) => `gg-sub-${s.key}`));
-    expect(GOLD.potential.subs.map((s: any) => s.key).slice(0, 8)).toEqual(
+    expect(btns[0].getAttribute('data-testid')).toBe('gg-sub-all_strategies');
+    expect(GOLD.potential.subs.map((s: any) => s.key).slice(1, 9)).toEqual(
       ['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp', 'reversal_squeeze', 'premarket', 'postmarket', 'playbook']);
-    const pot = btns[8];
-    const servedPot = GOLD.potential.subs[8];
+    const pot = btns[9];
+    const servedPot = GOLD.potential.subs[9];
     expect(servedPot.key).toBe('potential');
     expect(typeof servedPot.count).toBe('number');
     expect(pot.textContent).toBe(`${servedPot.emoji} ${servedPot.label} · ${servedPot.count}`);

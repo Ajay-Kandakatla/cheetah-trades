@@ -351,3 +351,32 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-kiss-filter { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; min-width: 0; max-width: 100%; margin: 0.25rem 0; }
 .gg-kiss-filter-btn { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
 .gg-kiss-filter-line { min-width: 0; overflow-wrap: anywhere; }
+
+/* 📋 2026-11-13 (All strategies table, spec §3.5). Ajay: "build be a table like track record on Gajjals landing page.. Call
+   all strategies". The 🏁 table look (.gg-tr-scroll > .gg-tr-table) with its own hooks: the Ticker cell (SECOND, after the
+   rank) and the Category cell wrap on the 430 px phone — a served string never widens the page (the 11-05 first-cell rule,
+   re-aimed); tier 1 (🎯) the win wash, tier 2 (🧠) a faint gold wash; 🚫 rows dimmed; the "GG's 18" divider = the 🔝
+   divider's gold dash. No px width anywhere. Every word in it is SERVED; the classes are CSS hooks only. */
+.gg-all { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; max-width: 100%; font-size: 0.8rem; }
+.gg-all-title { margin: 0; font-size: 0.95rem; min-width: 0; overflow-wrap: anywhere; }
+.gg-all-order { min-width: 0; overflow-wrap: anywhere; }
+/* `min-width: 0` overrides the global `table { min-width: 1400px }` (styles.css:246 — the .hsm-table precedent): the table
+   sizes to its content, so #, Ticker and Tape sit on the 430 px screen and the rest scrolls inside .gg-tr-scroll. */
+.gg-all-table { min-width: 0; }
+/* The rank is the FIRST cell here: the 430 px 🏁 first-cell wrap rule above would break "18" into two lines — keep it whole. */
+.gg-all-table td.gg-all-rank { white-space: nowrap; overflow-wrap: normal; }
+.gg-all-table td.gg-all-sym { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+/* 2026-11-13 refix: the 🚫 / 📌 chips keep ONE line inside the scroller (they wrapped a word per line at 430 px, a row ~8
+   lines tall); the Ticker column widens to the chip and the table scrolls sideways inside .gg-tr-scroll, never the page. */
+.gg-tr-scroll .gg-all-table td.gg-all-sym .cm-badge { white-space: normal; overflow-wrap: normal; display: inline-block; max-width: 9rem; }
+.gg-all-cat { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.gg-all-table td.gg-all-cat { white-space: normal; }
+.gg-all-entry { margin-left: 0.2rem; }
+.gg-all-table tr.gg-all-tier-1 > td { background: rgba(34, 197, 94, 0.14); background: color-mix(in srgb, var(--positive, #22c55e) 14%, transparent); }
+.gg-all-table tr.gg-all-tier-1 > td:first-child { box-shadow: inset 3px 0 0 var(--positive, #22c55e); }
+.gg-all-table tr.gg-all-tier-2 > td { background: rgba(201, 162, 39, 0.08); background: color-mix(in srgb, var(--gold, #c9a227) 8%, transparent); }
+.gg-all-table tr.gg-all-broker > td { opacity: 0.65; }
+.gg-all-table tr.gg-all-divider > td {
+  border-top: 2px dashed var(--gold, #c9a227); white-space: normal; overflow-wrap: anywhere;
+  color: var(--ink-subtle, #94a3b8); font-size: 0.74rem;
+}

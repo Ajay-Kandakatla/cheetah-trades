@@ -149,12 +149,12 @@ def test_subs_title_is_the_potential_text_on_the_brain_sub_only():
     pot = legend_by()["potential"]["text"]
     for sub in ("bull_flag", GC.POTENTIAL_SUB, "premarket"):
         subs = build(sub, st)["subs"]
-        assert len(subs) == len(GC.SUBS) == 10
+        assert len(subs) == len(GC.SUBS) == 11                               # WIDENED 2026-11-13 — 📋 All strategies first
         titled = [s["key"] for s in subs if s["title"] is not None]
         assert titled == [GC.POTENTIAL_SUB]
         assert next(s for s in subs if s["key"] == GC.POTENTIAL_SUB)["title"] == pot
         others = [s for s in subs if s["key"] != GC.POTENTIAL_SUB]
-        assert len(others) == 9 and all(s["title"] is None for s in others)   # NEGATIVE: None on the other nine
+        assert len(others) == 10 and all(s["title"] is None for s in others)  # NEGATIVE: None on the other ten
         assert all("title" in s for s in subs)
 
 

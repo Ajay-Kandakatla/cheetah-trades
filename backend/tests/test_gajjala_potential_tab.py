@@ -467,12 +467,16 @@ def test_subs_end_with_potential_and_the_other_eight_keep_their_order(store):
     pot_title = next(r["text"] for r in GT.count_legend() if r["key"] == "potential")
     assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 6,
                                "title": pot_title}
+    # WIDENED 2026-11-13 (📋 All strategies table, docs/gajjala/all_strategies_table_2026_11_13.md): the table sub sits
+    # FIRST in the strip — the other ten now, and subs[:-2] starts with GC.TABLE_SUB; the old eight keep their order
     others = [s for s in out["subs"] if s["key"] != "potential"]
-    assert len(others) == 9 and all(s["title"] is None for s in others)          # NEGATIVE: the other nine
+    assert len(others) == 10 and all(s["title"] is None for s in others)         # NEGATIVE: the other ten
     assert {k: out["subs"][-1][k] for k in ("key", "emoji", "label")} == {"key": "track_record", "emoji": "🏁",
                                                                           "label": "Track record"}
-    assert [s["key"] for s in out["subs"][:-2]] == ["bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp",
-                                                     "reversal_squeeze", "premarket", "postmarket", "playbook"]
+    assert out["subs"][0]["key"] == GC.TABLE_SUB == "all_strategies"
+    assert [s["key"] for s in out["subs"][:-2]] == [GC.TABLE_SUB, "bull_flag", "kiss_fly", "horizontal_fade",
+                                                     "intraday_vcp", "reversal_squeeze", "premarket", "postmarket",
+                                                     "playbook"]
 
 
 def test_every_sub_serves_the_live_potential_push_line_under_the_narrowed_a_plus_line(store):
@@ -734,7 +738,10 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
         got = build(k, st)
         if k == "premarket":
             assert got.get("tiles"), "the ☀️ pin needs cards on the board"
-        assert calls == ([win] if k in GC.SETUPS or k in ("postmarket", "premarket", "playbook") else []), k
+        # MOVED BY DESIGN 2026-11-13 (📋 All strategies table): the table sub builds every setup's cards in one page, so
+        # it reads the SAME ONE memoized alert_rows (tab.build's words_entries) — still ONE read, never one per setup
+        assert calls == ([win] if k in GC.SETUPS or k == GC.TABLE_SUB
+                         or k in ("postmarket", "premarket", "playbook") else []), k
 
 
 def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():

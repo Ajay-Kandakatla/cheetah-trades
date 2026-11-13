@@ -95,9 +95,10 @@
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgEntryMarks, GgNewMark } from './ggEntryMarks';
+import type { GgTapePayload } from '../components/GgEntryTape';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
+export type GgSub = 'all_strategies' | GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
 export type GgTf = '1m' | '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -128,6 +129,9 @@ const GG_TF_KEYS: ReadonlySet<string> = new Set<string>(GG_TF_ALL);
 /** The fallback sub strip — == backend chart_maps/gajjala/constants.SUBS
  *  (DECISIONS order), contract-pinned. The SERVED `subs` (with counts) wins. */
 export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }> = [
+  /* 📋 2026-11-13 Ajay "Call all strategies" — the table sub, FIRST (== constants.SUBS[0], GG5 only; the 1-min / 🧪 / 🥇
+   * fallback strips filter it off — GajjalaBoard). */
+  { key: 'all_strategies', emoji: '\u{1F4CB}', label: 'All strategies' },
   { key: 'bull_flag', emoji: '\u{1F6A9}', label: 'Bull Flag' },
   { key: 'kiss_fly', emoji: '\u{1F48B}', label: 'EMA Kiss & Fly' },
   { key: 'horizontal_fade', emoji: '➖', label: 'Horizontal Fade' },
@@ -140,6 +144,8 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
   { key: 'track_record', emoji: '\u{1F3C1}', label: 'Track record' },
 ];
 const SUB_KEYS = new Set<string>(GG_SUBS.map((s) => s.key));
+/** 📋 the All strategies table sub (== backend constants.TABLE_SUB = SUBS[0][0]) — the ONE FE spelling. */
+export const GG_TABLE_SUB: GgSub = 'all_strategies';
 
 /** The five setup subs (== backend constants.SETUPS, test-pinned) — the only
  *  subs that carry a 🧠 strip (☀️ / 🌙 / 📓 / 🧠 never do, BUILD_SPEC4 §3.9 (c)). */
@@ -816,6 +822,42 @@ export type GgBoard = {
   audited?: GgAuditedBlock | null;
   held?: GgHeldBlock | null;
   audited_compare?: GgAuditedCompare | null;
+  /** 📋 2026-11-13: the All strategies table (backend chart_maps/gajjala/all_table.block) — the GG5 table sub only;
+   *  null when the build faulted (the served `empty_note` says so), absent elsewhere and on an older API. */
+  table?: GgTableBlock | null;
+};
+
+/* ---- 📋 All strategies table (2026-11-13, spec §3.2 / §3.5). Ajay: "build be a table like track record on Gajjals landing
+ * page.. Call all strategies ... A+'s on top and potental next and others close to strategies next". Every word and number
+ * below is SERVED by all_table.py; the FE types none and never sorts (the served `rank` order is authoritative). ---- */
+export type GgTableRow = {
+  rank: number; tier: number; symbol: string; setup: string;
+  tier_key?: string | null; tier_label?: string | null; name?: string | null;
+  setup_emoji?: string | null; setup_label?: string | null;
+  state?: string | null; state_word?: string | null; state_label?: string | null; category_text?: string | null;
+  kind?: string | null; kind_label?: string | null;
+  href?: string | null; card_href?: string | null; tf?: string | null;
+  price?: number | null; price_text?: string | null; change_pct?: number | null; change_text?: string | null;
+  volume?: number | null; volume_text?: string | null; rvol_text?: string | null; float_text?: string | null;
+  trigger?: number | null; stop?: number | null; risk_pct?: number | null; plan_text?: string | null;
+  dist_pct?: number | null; dist_text?: string | null; entry_plan?: boolean | null; in_watch?: boolean | null;
+  vol_dried?: string | null;
+  /** the preset lite tape for GgEntryMiniTape (tape.LITE_KEYS shape) — zero per-row fetches. */
+  spark?: GgTapePayload | null;
+  /** the route's live fan-out (all_table.attach_live) — served texts only. */
+  live_price?: number | null; live_price_text?: string | null;
+  broker_text?: string | null; trader_text?: string | null; promo_text?: string | null;
+  new_mark?: GgNewMark | null;
+};
+export type GgTableBlock = {
+  title?: string | null;
+  heads?: { key: string; label: string }[] | null;
+  order_text?: string | null;
+  watch?: { n?: number | null; rows?: number | null; text?: string | null } | null;
+  rows?: GgTableRow[] | null;
+  n?: number | null; more_n?: number | null; more_text?: string | null;
+  faults_n?: number | null; fault_text?: string | null;
+  empty_text?: string | null; honesty?: string | null; tape_head?: string | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the

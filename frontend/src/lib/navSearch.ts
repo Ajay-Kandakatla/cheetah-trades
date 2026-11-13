@@ -100,6 +100,7 @@ const GG_TAB_LABEL = "Chart Maps ▸ 🚩 Gajjala's";
 export const GG_LANE_TO = '/trading?view=gajjala';
 /** Extra words per sub beyond its key and label. Keys == GgSub. */
 const GG_SUB_WORDS: Record<string, string[]> = {
+  all_strategies:   ['all strategies', 'table', 'watch table', 'ranked', 'all setups', 'his 18', 'eighteen'],
   bull_flag:        ['flag', 'flags', 'flag break', 'first flag', 'tight flag'],
   kiss_fly:         ['kiss', 'kiss and fly', 'ema kiss', 'ema touch', 'pullback to the ema', 'fly'],
   horizontal_fade:  ['fade', 'horizontal', 'fading', 'flat top'],

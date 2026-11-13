@@ -8,6 +8,7 @@ from __future__ import annotations
 import ast
 import pathlib
 import re
+from pathlib import Path
 from datetime import date, datetime, time, timedelta
 
 import pytest
@@ -53,8 +54,9 @@ def test_pins_against_the_house_engines():
 def test_subs_and_setups():
     # WIDENED 2026-10-15 — 🧠 Potential appended LAST (Ajay msg 1 "create a potential category"; nothing else moves)
     # WIDENED 2026-10-16 — 🏁 Track record appended LAST (Ajay "keep a new tab"); 🧠 Potential is now second to last
-    assert tuple(k for k, _e, _l in GC.SUBS) == GC.SETUPS + ("premarket", "postmarket", "playbook", "potential",
-                                                             "track_record")
+    # WIDENED 2026-11-13 — 📋 All strategies FIRST (Ajay "Call all strategies"; the phone strip shows it); nothing else moves
+    assert tuple(k for k, _e, _l in GC.SUBS) == (GC.TABLE_SUB,) + GC.SETUPS + ("premarket", "postmarket", "playbook",
+                                                                             "potential", "track_record")
     assert GC.SUBS[-1] == ("track_record", "🏁", "Track record") and GC.LEDGER_SUB == GC.SUBS[-1][0]
     assert GC.SUBS[-2] == ("potential", "🧠", "Potential") and GC.POTENTIAL_SUB == GC.SUBS[-2][0]
     assert GC.DEFAULT_SUB in GC.SETUPS
@@ -683,3 +685,42 @@ def test_NEGATIVE_no_env_var_can_raise_the_break_mode():
     assert "os.environ" not in src and "getenv" not in src
     ln = {n: ln for n, _v, ln in _assigns()}["GAJJALA_BREAK_PUSH_MODE"]
     assert LINES[ln - 1].split("#")[0].split("=", 1)[1].strip() == '"shadow"'
+
+
+# ── 📋 All strategies table (2026-11-13, SPEC REV 2 §3.1 / WP-A) ────────────────────────────────────────────────
+# the contracts.mjs shape of SUBS (frontend/scripts/contracts.mjs GG_SUBS == constants.SUBS) — a Python copy of its two
+# regexes: ONE tuple literal anchored on "SUBS = (" … ")\n", every element a string-literal triple
+_SUBS_BLOCK = re.compile(r"^SUBS = \(([\s\S]*?)\)\n", re.M)
+_SUBS_TRIPLE = re.compile(r'\(\s*"([a-z_]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)')
+
+
+def test_table_sub_is_the_first_literal_triple_and_the_strip_keeps_its_ends():
+    assert GC.TABLE_SUB == GC.SUBS[0][0] == "all_strategies"
+    assert GC.SUBS[0] == ("all_strategies", "📋", "All strategies")
+    assert GC.SUBS[-1][0] == GC.LEDGER_SUB and GC.SUBS[-2][0] == GC.POTENTIAL_SUB
+    assert GC.DEFAULT_SUB == "bull_flag" and GC.TABLE_SUB not in GC.SETUPS        # NEGATIVE: the default never moved
+
+
+def test_subs_source_matches_the_contracts_regex_eleven_times():
+    src = Path(GC.__file__).read_text(encoding="utf-8")
+    m = _SUBS_BLOCK.search(src)
+    assert m, "SUBS literal lost its contracts shape"
+    py = [t for t in _SUBS_TRIPLE.findall(m.group(1))]
+    assert py == [tuple(x) for x in GC.SUBS] and len(py) == 11
+    # NEGATIVE: the shapes the contract cannot parse are caught by the same regexes
+    bad_name = 'SUBS = ((TABLE_SUB, "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"))\n'
+    assert [t[0] for t in _SUBS_TRIPLE.findall(_SUBS_BLOCK.search(bad_name).group(1))] == ["bull_flag"]
+    bad_comment = 'SUBS = (("a", "x", "A"), ("b", "y", "B"))   # trailing comment\n'
+    assert _SUBS_BLOCK.search(bad_comment) is None
+
+
+def test_table_setup_order_is_a_permutation_of_setups_in_his_order():
+    assert sorted(GC.TABLE_SETUP_ORDER) == sorted(GC.SETUPS) and len(set(GC.TABLE_SETUP_ORDER)) == len(GC.SETUPS)
+    assert GC.TABLE_SETUP_ORDER[:4] == ("kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze")
+    assert GC.TABLE_SETUP_ORDER[-1] == "bull_flag"                                   # MINE — HIS CALL #3
+
+
+def test_gg_watch_n_is_his_18_with_his_dated_words():
+    assert GC.GG_WATCH_N == 18
+    line = next(l for l in Path(GC.__file__).read_text(encoding="utf-8").splitlines() if l.startswith("GG_WATCH_N ="))
+    assert "Ajay 2026-11-13" in line and "18 stocks simultaneously" in line and "never a cap" in line

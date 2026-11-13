@@ -233,12 +233,16 @@ def test_gg5_writes_are_byte_identical(monkeypatch):
 
 
 def test_gg5_board_is_byte_identical(monkeypatch):
+    """REGENERATED 2026-11-13 (📋 All strategies, SPEC REV 2 §4 WP-A step 5, the recipe): the key-for-key diff = every
+    board's `subs` gains the 📋 entry FIRST (count = the five setup subs' cards, 6 on this fixture day) and each mode
+    gains the `all_strategies` board (its `table`, 6 rows). Dropping those two, the old and new files are IDENTICAL —
+    no tile byte moved. The WRITES golden is byte-identical (sha1 54ab4af3…, unchanged by the regen)."""
     stores, _t = writes_text(monkeypatch)
     text = board_text(stores)
     _check(BOARD, text)
     doc = json.loads(text)
     for mode in MODES:
-        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 10
+        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 11           # WIDENED 2026-11-13 — 📋 first
         for k, b in doc[mode].items():
             assert b["tab"] == "gajjala", k
             assert "variant" not in b, k                                          # NEGATIVE: GG5 serves no variant block

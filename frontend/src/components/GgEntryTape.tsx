@@ -99,26 +99,31 @@ export function fetchGgLiteTape(id: string, path: string = GG_TAPE_PATH): Promis
 /** Tests only — the cache is module-global. */
 export function _resetGgLiteCache() { ggLiteCache.clear(); }
 
-export function GgEntryMiniTape({ id, onOpen, width = 100 }: { id: string; onOpen?: () => void; width?: number }) {
+/* 📋 2026-11-13 (All strategies table, spec §3.5): a preset `data` (the row's served lite spark) draws at once — no
+ * IntersectionObserver, no fetch (both effects return early); without it the lazy path is unchanged. */
+export function GgEntryMiniTape({ id, onOpen, width = 100, data: preset }: {
+  id: string; onOpen?: () => void; width?: number; data?: GgTapePayload | null;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [seen, setSeen] = useState(typeof IntersectionObserver === 'undefined');
-  const [data, setData] = useState<GgTapePayload | null>(null);
+  const [loaded, setData] = useState<GgTapePayload | null>(null);
   const [err, setErr] = useState(false);
   const path = ggTapePath(useGgVariant());
+  const data = preset ?? loaded;
   useEffect(() => {
-    if (seen || !ref.current) return;
+    if (preset || seen || !ref.current) return;
     const io = new IntersectionObserver((es) => {
       if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); }
     }, { rootMargin: '240px' });
     io.observe(ref.current);
     return () => io.disconnect();
-  }, [seen]);
+  }, [seen, preset]);
   useEffect(() => {
-    if (!seen) return;
+    if (preset || !seen) return;
     let live = true;
     fetchGgLiteTape(id, path).then((j) => { if (live) setData(j); }).catch(() => { if (live) setErr(true); });
     return () => { live = false; };
-  }, [seen, id, path]);
+  }, [seen, id, path, preset]);
 
   const g = data ? miniLayout(data.bars ?? [], (data.rules ?? []).slice(0, 1), width, SPARK_H) : null;
   return (
@@ -126,7 +131,7 @@ export function GgEntryMiniTape({ id, onOpen, width = 100 }: { id: string; onOpe
           title={data?.title ?? undefined}
           onClick={onOpen} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}
           onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}>
-      {err ? <span className="pcw__dim">—</span>
+      {err && !preset ? <span className="pcw__dim">—</span>
         : !data ? <span className="pcw__dim">…</span>
         : !g ? <span className="pcw__dim">—</span>
         : (

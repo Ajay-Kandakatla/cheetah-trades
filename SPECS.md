@@ -636,8 +636,20 @@ imported, never retyped; tags as the file writes them: **GG** = his own words (S
 posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `verified_rules.json`), **Ajay** = his
 2026-10-13 answers (DECISIONS rounds A/B/C), **Cheetah default** = Ajay's number, not GG's (the ℹ️ panel says so),
 **spec default** = an unanswered display option shipped OFF, **TRANSPORT** = pacing only.
-- **Sub-tabs** (`SUBS`, default `DEFAULT_SUB` = `bull_flag`): 🚩 Bull Flag · 💋 EMA Kiss & Fly · ➖ Horizontal Fade · 🌀
-  Intraday VCP · 🎾 Reversal Squeeze · ☀️ Premarket · 🌙 Post-market · 📓 Playbook (his words with timestamps, text only).
+- **Sub-tabs** (`SUBS`, default `DEFAULT_SUB` = `bull_flag`): 📋 All strategies (FIRST, 2026-11-13) · 🚩 Bull Flag · 💋 EMA
+  Kiss & Fly · ➖ Horizontal Fade · 🌀 Intraday VCP · 🎾 Reversal Squeeze · ☀️ Premarket · 🌙 Post-market · 📓 Playbook (his
+  words with timestamps, text only) · 🧠 Potential · 🏁 Track record.
+- **📋 All strategies** (2026-11-13; Ajay: *"Call all strategies. I want this table to rank based how gajjals sees them.. He
+  watches 18 stocks simultaneously"*): `sub=all_strategies` (`TABLE_SUB = SUBS[0][0]`, 🚩 GG5 only — the 1-minute / 🧪 /
+  🥇 pages fail open to `bull_flag` and their strips never show 📋) serves `table` from `chart_maps/gajjala/all_table.py`
+  (pure): one row per (symbol, setup) built from the five setup subs' OWN cards, ranked 🎯 A+ (newest break first) › 🧠
+  potential (`potential.order_key`) › forming in `TABLE_SETUP_ORDER` (💋 → ➖ → 🌀 → 🎾 → 🚩; 🚩 last = HIS CALL #3), each
+  setup in its own sub's order › a rule failed / stopped; cut at `TILE_LIMIT_MAX` FIRST, 🚫 names last in their tier
+  inside the cut; `in_watch` on the first `GG_WATCH_N` 18 distinct names (a divider, never a cap). Each row serves a
+  preset lite spark of TODAY's bars (the 🏁 mini, no per-row fetch) and the route's one live fan-out adds
+  `live_price_text`. Every word is served (`HEADS`, `TIER_WORDS`, `TITLE`, `ORDER_TEXT`, `WATCH_TEXT`); FE `GgAllTable.tsx`
+  prints served strings only. "25 EMA" = the 21 EMA (HIS CALL #2). Display order only — no alert, gate, count or push
+  moved. UNMEASURED. Doc `docs/gajjala/all_strategies_table_2026_11_13.md`; contracts "📋 All strategies table (2026-11-13)".
   Charts are closed 5-minute bars (the Fade reads 15-minute first) resampled from the 1-minute cache, with the 9/21 EMA
   (`EMA_FAST` 9 / `EMA_SLOW` 21, imported from `orderflow.signals` — GG S8 25:36, S9 24:42).
 - **Scanner** (one whole-market Massive snapshot per pass): `SCAN_MIN_PRICE` 0.10 (GG X 2024-02-01, his latest — Ajay
@@ -715,7 +727,8 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   300, `PASS_OPEN_ET` 04:00–`PASS_CLOSE_ET` 20:05, TRANSPORT) and
   `15 20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` (float, halt history, 🎾 history,
   🏁 track-record grade — last step, 2026-10-16).
-- **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=&span=` (`span` 🏁 only, 2026-10-16) (`limit` `TILE_LIMIT_DEFAULT` 24, max
+- **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=&span=` (`sub` = any `SUBS` key incl. `all_strategies`
+  since 2026-11-13 — the table ignores `limit`, capped at `TILE_LIMIT_MAX`) (`span` 🏁 only, 2026-10-16) (`limit` `TILE_LIMIT_DEFAULT` 24, max
   `TILE_LIMIT_MAX` 80) → `tab.build()`: reads Mongo only (`gajjala_reads`, `gajjala_passes`, `gajjala_alerts`) plus one
   live fan-out for the shown tiles' now-line; never scans or fetches a bar on the request. `stale` after `STALE_AFTER_SEC`
   900. ℹ️ panel: `rules_info` section "gajjala", built from `constants.py`. Every payload serves `counts_legend`

@@ -1,6 +1,822 @@
 {
  "_recipe": "GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_variant_gg5_identity.py (untouched tree only)",
  "live": {
+  "all_strategies": {
+   "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
+   "counts": {
+    "aplus": 1,
+    "awaiting_answer": 0,
+    "forming": 6,
+    "invalid": 0,
+    "listed": 2,
+    "none": 2,
+    "partial": 1,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
+    }
+   ],
+   "empty_note": null,
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "broker_text": null,
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "risk_pct": 1.4245014245014245,
+      "setup": "bull_flag",
+      "setup_label": "🚩 Bull Flag",
+      "since_et": "10:40",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:41 ET pass · GGA A+ on the 10:40 ET bar",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:41 ET pass",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     }
+    }
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": "10:41 ET",
+    "at": "2026-10-13T14:41:00+00:00",
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": "ok",
+    "warming": false
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:41 ET · bars through 10:40",
+    "bars_through_et": "10:40",
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:41",
+    "state": "idle",
+    "text": "last pass 10:41 ET · bars through 10:40"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-13",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": 40.0,
+    "best_symbol": "GGA",
+    "quiet": false,
+    "runners_100": 0,
+    "runners_80": 0,
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
+   },
+   "sub": "all_strategies",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market",
+     "title": null
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record",
+     "title": null
+    }
+   ],
+   "tab": "gajjala",
+   "table": {
+    "empty_text": null,
+    "fault_text": null,
+    "faults_n": 0,
+    "heads": [
+     {
+      "key": "rank",
+      "label": "#"
+     },
+     {
+      "key": "symbol",
+      "label": "Ticker"
+     },
+     {
+      "key": "spark",
+      "label": "Tape"
+     },
+     {
+      "key": "category",
+      "label": "Category"
+     },
+     {
+      "key": "price",
+      "label": "Price"
+     },
+     {
+      "key": "plan",
+      "label": "Trigger / stop"
+     },
+     {
+      "key": "dist",
+      "label": "To trigger"
+     },
+     {
+      "key": "volume",
+      "label": "Volume"
+     },
+     {
+      "key": "float",
+      "label": "Float"
+     }
+    ],
+    "honesty": "display order only — no gate, count or alert changes · UNMEASURED",
+    "more_n": 0,
+    "more_text": null,
+    "n": 6,
+    "order_text": "🎯 A+ first (newest break on top) · 🧠 potential next (trigger armed before building, then highest volume) · then forming, closest to a setup: 💋 EMA Kiss & Fly → ➖ Horizontal Fade (9 and 21 EMA merging) → 🌀 Intraday VCP → 🎾 Reversal Squeeze → 🚩 Bull Flag, each in its own sub's order · then a rule failed / stopped · your 🚫 names last in their group",
+    "rows": [
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "category_text": "🚩 Bull Flag · A+ — broke the trigger",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": -2.0647321428571366,
+      "dist_text": "-2.1%",
+      "entry_plan": true,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": null,
+      "kind_label": null,
+      "name": null,
+      "new_mark": {
+       "at_et": "10:40",
+       "kind": "aplus",
+       "text": "new 10:40 ET",
+       "title": "A+ on the 10:40 ET bar · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:10:00+00:00"
+      },
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 1,
+      "risk_pct": 1.4245014245014245,
+      "rvol_text": null,
+      "setup": "bull_flag",
+      "setup_emoji": "🚩",
+      "setup_label": "Bull Flag",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|bull_flag",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [
+        {
+         "at": "2026-10-13T10:40:00-04:00",
+         "key": "alert",
+         "label": "alert 10:40 ET",
+         "style": "solid",
+         "tone": "alert"
+        }
+       ],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "🚩 Bull Flag · A+ — broke the trigger · A+ — every rule met, entry bar closed · UNMEASURED",
+       "tone": "up"
+      },
+      "state": "aplus",
+      "state_label": "A+ — every rule met, entry bar closed · UNMEASURED",
+      "state_word": "A+ — broke the trigger",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 1,
+      "tier_key": "aplus",
+      "tier_label": "🎯 A+",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGB",
+      "category_text": "🚩 Bull Flag · trigger armed",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": true,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "armed",
+      "kind_label": "trigger armed",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "ready",
+       "text": "new 10:41 ET",
+       "title": "ready since the 10:41 ET pass · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "Entry above 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 2,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "bull_flag",
+      "setup_emoji": "🚩",
+      "setup_label": "Bull Flag",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|bull_flag",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "🚩 Bull Flag · trigger armed · forming — ready: the next bar over 11.00 · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — ready: the next bar over 11.00 · UNMEASURED",
+      "state_word": "trigger armed",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGB",
+      "category_text": "💋 EMA Kiss & Fly · building",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "listed",
+       "text": "new 10:41 ET",
+       "title": "new on his list at 10:41 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "trigger 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 3,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "kiss_fly",
+      "setup_emoji": "💋",
+      "setup_label": "EMA Kiss & Fly",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|kiss_fly",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "💋 EMA Kiss & Fly · building · forming — low 4.5% above the 9 EMA — waiting for the kiss · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — low 4.5% above the 9 EMA — waiting for the kiss · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+      "category_text": "➖ Horizontal Fade · building",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": 0.44642857142857784,
+      "dist_text": "+0.4%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:31",
+       "kind": "listed",
+       "text": "new 10:31 ET",
+       "title": "new on his list at 10:31 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:01:00+00:00"
+      },
+      "plan_text": "trigger 11.25 · stop 10.84 · risk 3.6%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 4,
+      "risk_pct": 3.6111111111111107,
+      "rvol_text": null,
+      "setup": "horizontal_fade",
+      "setup_emoji": "➖",
+      "setup_label": "Horizontal Fade",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|horizontal_fade",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "➖ Horizontal Fade · building · forming — base 3 of 6 bars · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — base 3 of 6 bars · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.84375,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.25,
+      "vol_dried": null,
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGB",
+      "category_text": "➖ Horizontal Fade · building",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "listed",
+       "text": "new 10:41 ET",
+       "title": "new on his list at 10:41 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "trigger 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 5,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "horizontal_fade",
+      "setup_emoji": "➖",
+      "setup_label": "Horizontal Fade",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|horizontal_fade",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "➖ Horizontal Fade · building · forming — base 1 of 6 bars · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+      "category_text": "💋 EMA Kiss & Fly · near-kiss — listed, never A+, never pushed",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": -2.0647321428571366,
+      "dist_text": "-2.1%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": null,
+      "kind_label": null,
+      "name": null,
+      "new_mark": {
+       "at_et": "10:31",
+       "kind": "listed",
+       "text": "new 10:31 ET",
+       "title": "new on his list at 10:31 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:01:00+00:00"
+      },
+      "plan_text": "trigger 10.97 · stop 10.81 · risk 1.4%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 6,
+      "risk_pct": 1.4245014245014245,
+      "rvol_text": null,
+      "setup": "kiss_fly",
+      "setup_emoji": "💋",
+      "setup_label": "EMA Kiss & Fly",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|kiss_fly",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "💋 EMA Kiss & Fly · near-kiss — listed, never A+, never pushed · broke — not A+ · missed: K5 pullback touched the 9 EMA (the kiss) · UNMEASURED",
+       "tone": "up"
+      },
+      "state": "partial",
+      "state_label": "broke — not A+ · missed: K5 pullback touched the 9 EMA (the kiss) · UNMEASURED",
+      "state_word": "near-kiss — listed, never A+, never pushed",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 4,
+      "tier_key": "rest",
+      "tier_label": "a rule failed / stopped",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "vol_dried": null,
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     }
+    ],
+    "tape_head": "Tape",
+    "title": "📋 All strategies — every card on his five setups, ranked the way he watches",
+    "watch": {
+     "n": 18,
+     "rows": 6,
+     "text": "GG's 18 — the first 18 names (6 rows; a name on two setups is listed twice). He watches 18 charts at once (your word, 2026-11-13). Every row below is still listed."
+    }
+   },
+   "tf": "5m",
+   "tiles": []
+  },
   "bull_flag": {
    "awaiting": [],
    "broker_flags": {
@@ -246,6 +1062,13 @@
    "sub": "bull_flag",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -1153,6 +1976,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -2020,6 +2850,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -2344,6 +3181,13 @@
    "sub": "kiss_fly",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -4640,6 +5484,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -4930,6 +5781,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -5203,6 +6061,13 @@
    "sub": "potential",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -6382,6 +7247,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -6668,6 +7540,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -6940,6 +7819,13 @@
    "sub": "track_record",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -7785,6 +8671,822 @@
   }
  },
  "shadow": {
+  "all_strategies": {
+   "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
+   "counts": {
+    "aplus": 1,
+    "awaiting_answer": 0,
+    "forming": 6,
+    "invalid": 0,
+    "listed": 2,
+    "none": 2,
+    "partial": 1,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
+    }
+   ],
+   "empty_note": null,
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "broker_text": null,
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "risk_pct": 1.4245014245014245,
+      "setup": "bull_flag",
+      "setup_label": "🚩 Bull Flag",
+      "since_et": "10:40",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:41 ET pass · GGA A+ on the 10:40 ET bar",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:41 ET pass",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     }
+    }
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": "10:41 ET",
+    "at": "2026-10-13T14:41:00+00:00",
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": "ok",
+    "warming": false
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:41 ET · bars through 10:40",
+    "bars_through_et": "10:40",
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:41",
+    "state": "idle",
+    "text": "last pass 10:41 ET · bars through 10:40"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-13",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": 40.0,
+    "best_symbol": "GGA",
+    "quiet": false,
+    "runners_100": 0,
+    "runners_80": 0,
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
+   },
+   "sub": "all_strategies",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market",
+     "title": null
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record",
+     "title": null
+    }
+   ],
+   "tab": "gajjala",
+   "table": {
+    "empty_text": null,
+    "fault_text": null,
+    "faults_n": 0,
+    "heads": [
+     {
+      "key": "rank",
+      "label": "#"
+     },
+     {
+      "key": "symbol",
+      "label": "Ticker"
+     },
+     {
+      "key": "spark",
+      "label": "Tape"
+     },
+     {
+      "key": "category",
+      "label": "Category"
+     },
+     {
+      "key": "price",
+      "label": "Price"
+     },
+     {
+      "key": "plan",
+      "label": "Trigger / stop"
+     },
+     {
+      "key": "dist",
+      "label": "To trigger"
+     },
+     {
+      "key": "volume",
+      "label": "Volume"
+     },
+     {
+      "key": "float",
+      "label": "Float"
+     }
+    ],
+    "honesty": "display order only — no gate, count or alert changes · UNMEASURED",
+    "more_n": 0,
+    "more_text": null,
+    "n": 6,
+    "order_text": "🎯 A+ first (newest break on top) · 🧠 potential next (trigger armed before building, then highest volume) · then forming, closest to a setup: 💋 EMA Kiss & Fly → ➖ Horizontal Fade (9 and 21 EMA merging) → 🌀 Intraday VCP → 🎾 Reversal Squeeze → 🚩 Bull Flag, each in its own sub's order · then a rule failed / stopped · your 🚫 names last in their group",
+    "rows": [
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "category_text": "🚩 Bull Flag · A+ — broke the trigger",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": -2.0647321428571366,
+      "dist_text": "-2.1%",
+      "entry_plan": true,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": null,
+      "kind_label": null,
+      "name": null,
+      "new_mark": {
+       "at_et": "10:40",
+       "kind": "aplus",
+       "text": "new 10:40 ET",
+       "title": "A+ on the 10:40 ET bar · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:10:00+00:00"
+      },
+      "plan_text": "Entry above 10.97 · stop 10.81 · risk 1.4%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 1,
+      "risk_pct": 1.4245014245014245,
+      "rvol_text": null,
+      "setup": "bull_flag",
+      "setup_emoji": "🚩",
+      "setup_label": "Bull Flag",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|bull_flag",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [
+        {
+         "at": "2026-10-13T10:40:00-04:00",
+         "key": "alert",
+         "label": "alert 10:40 ET",
+         "style": "solid",
+         "tone": "alert"
+        }
+       ],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "🚩 Bull Flag · A+ — broke the trigger · A+ — every rule met, entry bar closed · UNMEASURED",
+       "tone": "up"
+      },
+      "state": "aplus",
+      "state_label": "A+ — every rule met, entry bar closed · UNMEASURED",
+      "state_word": "A+ — broke the trigger",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 1,
+      "tier_key": "aplus",
+      "tier_label": "🎯 A+",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGB",
+      "category_text": "🚩 Bull Flag · trigger armed",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": true,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "armed",
+      "kind_label": "trigger armed",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "ready",
+       "text": "new 10:41 ET",
+       "title": "ready since the 10:41 ET pass · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "Entry above 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 2,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "bull_flag",
+      "setup_emoji": "🚩",
+      "setup_label": "Bull Flag",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|bull_flag",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "🚩 Bull Flag · trigger armed · forming — ready: the next bar over 11.00 · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — ready: the next bar over 11.00 · UNMEASURED",
+      "state_word": "trigger armed",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGB",
+      "category_text": "💋 EMA Kiss & Fly · building",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "listed",
+       "text": "new 10:41 ET",
+       "title": "new on his list at 10:41 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "trigger 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 3,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "kiss_fly",
+      "setup_emoji": "💋",
+      "setup_label": "EMA Kiss & Fly",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|kiss_fly",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "💋 EMA Kiss & Fly · building · forming — low 4.5% above the 9 EMA — waiting for the kiss · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — low 4.5% above the 9 EMA — waiting for the kiss · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGA",
+      "category_text": "➖ Horizontal Fade · building",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": 0.44642857142857784,
+      "dist_text": "+0.4%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:31",
+       "kind": "listed",
+       "text": "new 10:31 ET",
+       "title": "new on his list at 10:31 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:01:00+00:00"
+      },
+      "plan_text": "trigger 11.25 · stop 10.84 · risk 3.6%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 4,
+      "risk_pct": 3.6111111111111107,
+      "rvol_text": null,
+      "setup": "horizontal_fade",
+      "setup_emoji": "➖",
+      "setup_label": "Horizontal Fade",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|horizontal_fade",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "➖ Horizontal Fade · building · forming — base 3 of 6 bars · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — base 3 of 6 bars · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.84375,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.25,
+      "vol_dried": null,
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=GGB",
+      "category_text": "➖ Horizontal Fade · building",
+      "change_pct": 37.5,
+      "change_text": "+37.5%",
+      "dist_pct": 0.5714285714285714,
+      "dist_text": "+0.6%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGB?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": "building",
+      "kind_label": "building",
+      "name": null,
+      "new_mark": {
+       "at_et": "10:41",
+       "kind": "listed",
+       "text": "new 10:41 ET",
+       "title": "new on his list at 10:41 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:11:00+00:00"
+      },
+      "plan_text": "trigger 11.00 · stop 10.88 · risk 1.1%",
+      "price": 10.9375,
+      "price_text": "10.94",
+      "rank": 5,
+      "risk_pct": 1.1363636363636365,
+      "rvol_text": null,
+      "setup": "horizontal_fade",
+      "setup_emoji": "➖",
+      "setup_label": "Horizontal Fade",
+      "spark": {
+       "aria": "GGB 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.9375,
+         "s": "rth",
+         "t": 1791901800000
+        }
+       ],
+       "id": "GGB|horizontal_fade",
+       "lite": true,
+       "n_bars": 6,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGB",
+       "title": "➖ Horizontal Fade · building · forming — base 1 of 6 bars · UNMEASURED",
+       "tone": "dn"
+      },
+      "state": "forming",
+      "state_label": "forming — base 1 of 6 bars · UNMEASURED",
+      "state_word": "building",
+      "stop": 10.875,
+      "symbol": "GGB",
+      "tf": "5m",
+      "tier": 2,
+      "tier_key": "potential",
+      "tier_label": "🧠 potential",
+      "trader_text": null,
+      "trigger": 11.0,
+      "vol_dried": "💧 volume dried up",
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     },
+     {
+      "broker_text": null,
+      "card_href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA",
+      "category_text": "💋 EMA Kiss & Fly · near-kiss — listed, never A+, never pushed",
+      "change_pct": 40.0,
+      "change_text": "+40.0%",
+      "dist_pct": -2.0647321428571366,
+      "dist_text": "-2.1%",
+      "entry_plan": false,
+      "float_text": "shares out 5.0M (Massive)",
+      "href": "/sepa/GGA?tab=supply&tf=5m_today",
+      "in_watch": true,
+      "kind": null,
+      "kind_label": null,
+      "name": null,
+      "new_mark": {
+       "at_et": "10:31",
+       "kind": "listed",
+       "text": "new 10:31 ET",
+       "title": "new on his list at 10:31 ET — first qualified his scanner today · marked new for 30 minutes · display only",
+       "until": "2026-10-13T15:01:00+00:00"
+      },
+      "plan_text": "trigger 10.97 · stop 10.81 · risk 1.4%",
+      "price": 11.2,
+      "price_text": "11.20",
+      "rank": 6,
+      "risk_pct": 1.4245014245014245,
+      "rvol_text": null,
+      "setup": "kiss_fly",
+      "setup_emoji": "💋",
+      "setup_label": "EMA Kiss & Fly",
+      "spark": {
+       "aria": "GGA 5-minute tape around the A+ entry",
+       "as_of": "2026-10-13T10:42:00-04:00",
+       "bars": [
+        {
+         "c": 10.0,
+         "s": "rth",
+         "t": 1791900300000
+        },
+        {
+         "c": 10.5,
+         "s": "rth",
+         "t": 1791901200000
+        },
+        {
+         "c": 10.875,
+         "s": "rth",
+         "t": 1791902100000
+        },
+        {
+         "c": 11.2,
+         "s": "rth",
+         "t": 1791902400000
+        }
+       ],
+       "id": "GGA|kiss_fly",
+       "lite": true,
+       "n_bars": 8,
+       "note": null,
+       "rules": [],
+       "tf": "5min · pre/post market",
+       "ticker": "GGA",
+       "title": "💋 EMA Kiss & Fly · near-kiss — listed, never A+, never pushed · broke — not A+ · missed: K5 pullback touched the 9 EMA (the kiss) · UNMEASURED",
+       "tone": "up"
+      },
+      "state": "partial",
+      "state_label": "broke — not A+ · missed: K5 pullback touched the 9 EMA (the kiss) · UNMEASURED",
+      "state_word": "near-kiss — listed, never A+, never pushed",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "tf": "5m",
+      "tier": 4,
+      "tier_key": "rest",
+      "tier_label": "a rule failed / stopped",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "vol_dried": null,
+      "volume": 3000000.0,
+      "volume_text": "3.0M"
+     }
+    ],
+    "tape_head": "Tape",
+    "title": "📋 All strategies — every card on his five setups, ranked the way he watches",
+    "watch": {
+     "n": 18,
+     "rows": 6,
+     "text": "GG's 18 — the first 18 names (6 rows; a name on two setups is listed twice). He watches 18 charts at once (your word, 2026-11-13). Every row below is still listed."
+    }
+   },
+   "tf": "5m",
+   "tiles": []
+  },
   "bull_flag": {
    "awaiting": [],
    "broker_flags": {
@@ -8030,6 +9732,13 @@
    "sub": "bull_flag",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -8937,6 +10646,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -9804,6 +11520,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -10128,6 +11851,13 @@
    "sub": "kiss_fly",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -12424,6 +14154,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -12714,6 +14451,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -12987,6 +14731,13 @@
    "sub": "potential",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -14166,6 +15917,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -14452,6 +16210,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -14724,6 +16489,13 @@
    "sub": "track_record",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",

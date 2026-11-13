@@ -269,11 +269,22 @@ VOLUME_SORT_SETUPS = FLOAT_SORT_SETUPS   # derived — the same subs as the floa
 RVOL_SORT_SETUPS = ("kiss_fly",)         # MINE (HIS CALL Q8 of docs/gajjala/kiss_rvol_sort_2026_11_11.md) — his "EMA Kiss atleast": the 💋 sub only
 KF_EMA_SORT = "rvol_first"               # MINE (HIS CALL Q6) — his word order: relative volume first, then closest to the 9 EMA; "ema_first" swaps the two
 KF_EMA_SORTS = ("rvol_first", "ema_first")   # MINE — the two 💋 orders KF_EMA_SORT may name (HIS CALL Q6)
-SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
+# 📋 2026-11-13 — Ajay, verbatim: "Hey can you build be a table like track record on Gajjals landing page.. Call all
+# strategies." The table sub sits FIRST (the phone strip scrolls sideways — an 11th chip at the end is off-screen), GG5
+# only (tab.resolve_sub fails open off it on the 1-minute / 🧪 pages); DEFAULT_SUB unchanged (HIS CALL #1 of
+# docs/gajjala/all_strategies_table_2026_11_13.md). ONE tuple literal of string-literal triples, no name inside it and no
+# comment on its closing line — frontend/scripts/contracts.mjs parses it with a regex (GG_SUBS == SUBS, in order).
+SUBS = (("all_strategies", "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),
         ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
         ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
+TABLE_SUB = SUBS[0][0]                   # "all_strategies" — read off the literal, never a second spelling (2026-11-13)
+# Ajay 2026-11-13, verbatim: "others close to strategies next liek EMA near kiss first, horizontal fade 9 EM Anad 25 EMA
+# merge second and VCP next reversal potental next" — the forming tier's setup order on the 📋 table; bull_flag LAST is
+# MINE (he did not name it — HIS CALL #3). A permutation of SETUPS (the test pins it). DISPLAY ORDER ONLY.
+TABLE_SETUP_ORDER = ("kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze", "bull_flag")
+GG_WATCH_N = 18                          # Ajay 2026-11-13 "He watches 18 stocks simultaneously" — a divider on the 📋 table, never a cap (HIS CALL #8)
 DEFAULT_SUB = "bull_flag"
 TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18
 

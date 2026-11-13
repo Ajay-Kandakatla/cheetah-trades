@@ -160,6 +160,13 @@
    "subs": [
     {
      "count": 0,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "🚩",
      "key": "bull_flag",
      "label": "Bull Flag",
@@ -1814,6 +1821,13 @@
    "subs": [
     {
      "count": 0,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "🚩",
      "key": "bull_flag",
      "label": "Bull Flag",
@@ -3323,6 +3337,13 @@
    "sub": "track_record",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 0,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 0,
      "emoji": "🚩",

@@ -520,7 +520,8 @@ async def chart_maps_ema_frames(
 
 @router.get("/chart-maps/gajjala")
 async def chart_maps_gajjala(
-    sub: str = Query("", description="bull_flag (default) | kiss_fly | horizontal_fade | intraday_vcp | "
+    sub: str = Query("", description="bull_flag (default) | all_strategies (📋 the ranked table, 2026-11-13) | "
+                                     "kiss_fly | horizontal_fade | intraday_vcp | "
                                      "reversal_squeeze | premarket | postmarket | playbook | potential | "
                                      "track_record. EMPTY with "
                                      "a `focus` symbol = the server picks the sub the push or the read meant (the served "
@@ -582,6 +583,16 @@ async def chart_maps_gajjala(
                 board_mod.attach_live_now(tiles, out, live=live)
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/gajjala: live now-line failed: %s", exc)
+        tbl = out.get("table")                              # 📋 2026-11-13 — ONE fan-out over the table's rows
+        rows = tbl.get("rows") if isinstance(tbl, dict) else None
+        if rows:
+            try:
+                live = board_mod._live_snapshot(rows)
+            except Exception as exc:
+                log.debug("chart-maps/gajjala: table live snapshot failed: %s", exc)
+                live = {}
+            from .gajjala import all_table as TBL
+            TBL.attach_live(rows, live)
         return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))

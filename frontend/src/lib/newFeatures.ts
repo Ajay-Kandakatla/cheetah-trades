@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-13 (verbatim in the label, his spelling kept): "Hey can you build be a table like track record on Gajjals
+  // landing page.. Call all strategies. …". chart_maps/gajjala/all_table.py (pure, display order only) builds the 📋
+  // All strategies sub (constants.TABLE_SUB = SUBS[0][0], FIRST in the strip; DEFAULT_SUB stays bull_flag — HIS CALL #1)
+  // from the five setup subs' OWN cards: tier 🎯 A+ (newest break first) › 🧠 potential (potential.order_key) › forming
+  // in constants.TABLE_SETUP_ORDER (💋 → ➖ → 🌀 → 🎾 → 🚩; 🚩 last = MINE, HIS CALL #3) › a rule failed / stopped;
+  // cut at TILE_LIMIT_MAX, 🚫 last in their tier inside the cut, `in_watch` on the first GG_WATCH_N = 18 distinct names (a
+  // divider, never a cap). Each row's mini tape is served preset (no per-row fetch). "25 EMA" = the 21 EMA (HIS CALL #2).
+  // GG5 only. No alert, gate, count or push moved. UNMEASURED. Doc docs/gajjala/all_strategies_table_2026_11_13.md.
+  // Pinned by scripts/contracts.mjs ("📋 All strategies table (2026-11-13)").
+  { id: 'chart-maps-gajjala-all-strategies-2026-11-13', addedAt: '2026-11-13', route: '/chart-maps?tab=gajjala&sub=all_strategies',
+    label: "📋 All strategies on 🚩 Gajjala's tab — you said: “Hey can you build be a table like track record on Gajjals landing page.. Call all strategies. I want this table to rank based how gajjals sees them.. He watches 18 stocks simultaneously I am unable to see that view with car and tab lay out I will use this table format but I need tha track record like graph thoouhg So A+'s on top and potental next and others close to strategies next liek EMA near kiss first, horizontal fade 9 EM Anad 25 EMA merge second and VCP next reversal potental next with categories showing in the table”. The first chip on the 🚩 strip is now ONE table of every card on his five setups (one row per stock and setup), each row with the 🏁 Track record's mini tape of today's bars: 🎯 A+ on top, 🧠 potential next, then the ones close to a setup — 💋 EMA Kiss & Fly first, ➖ Horizontal Fade (the 9 and 21 EMA merging: GG's merge is the 21 EMA, there is no 25 EMA in his rules) second, 🌀 Intraday VCP, 🎾 Reversal Squeeze, then 🚩 Bull Flag — then the ones whose rule failed or stopped. The Category column names the setup and where it stands. A dashed line marks GG's 18 (the first 18 names); every row below it is still listed, and your 🚫 names sit last in their group. The tab still opens on 🚩 Bull Flag. Display order only — no alert, gate or count moved. UNMEASURED. Not advice." },
   // Ajay 2026-11-12 (verbatim in the label): ~21:00 ET "Save this entire list for me. In a New tab - Long Term - …" and
   // ~21:20 ET "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt
   // but not growing in price action yet..". backend/long_term_list (spec longterm §3): his saved list from 11-12 (nine

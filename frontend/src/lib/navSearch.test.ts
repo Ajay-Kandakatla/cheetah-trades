@@ -352,7 +352,7 @@ describe('🏔️ ATH tab deep link (2026-09-29)', () => {
    lib/gajjala.GG_SUBS, so the tests read the same list — a sub added to the
    strip must land here with no edit to navSearch.ts. */
 import { GAJJALA_ENTRIES, GG_TAB_TO, GG_LANE_TO } from './navSearch';
-import { GG_SUBS, GG_SUB_PARAM, parseGgSub } from './gajjala';
+import { GG_DEFAULT_SUB, GG_SUBS, GG_SUB_PARAM, parseGgSub } from './gajjala';
 
 describe("🚩 Gajjala's tab + every sub in ⌘K (2026-10-21)", () => {
   const subTo = (key: string) => `${GG_TAB_TO}&${GG_SUB_PARAM}=${key}`;
@@ -464,7 +464,8 @@ describe("🚩 Gajjala's tab + every sub in ⌘K (2026-10-21)", () => {
   });
 
   it('NEGATIVE: an unknown sub in the URL would fall back to the default — so no row may carry one', () => {
-    expect(parseGgSub('not_a_sub')).toBe(GG_SUBS[0].key);
+    expect(parseGgSub('not_a_sub')).toBe(GG_DEFAULT_SUB);
+    expect(GG_SUBS.some((s) => s.key === GG_DEFAULT_SUB)).toBe(true);
     for (const e of GAJJALA_ENTRIES) {
       const m = /[?&]sub=([a-z_]+)/.exec(e.to);
       if (m) expect(parseGgSub(m[1]), e.to).toBe(m[1]);

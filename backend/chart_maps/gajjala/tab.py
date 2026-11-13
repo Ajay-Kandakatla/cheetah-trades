@@ -66,6 +66,12 @@ byte as before. UNMEASURED — shadow only, nothing here trades.
 🧪 2026-11-05 (SPEC gg-track-parity §3.3): on 🏁 the audited tab serves 🚩's OWN A+ rows (audited_tab.track_block over
 the shared store) with a 🧪 Audit column; the audit is read ONCE (audited_tab.read_span) and handed to both 🏁 blocks —
 a failed read lists the rows with a "not read" cell and serves `audited_compare` None (never re-read in a block).
+
+📋 ALL STRATEGIES (2026-11-13, SPEC REV 2 §3.3). Ajay, verbatim: "Hey can you build be a table like track record on
+Gajjals landing page.. Call all strategies. I want this table to rank based how gajjals sees them..". GG5 only: the sub
+GC.TABLE_SUB (FIRST in the strip) builds every setup's cards with the setup subs' own builder and serves ONE `table`
+block (all_table.block — the tiers, the cut, his 🚫 names last per tier, GG's 18); `tiles` stays []. GG1 / 🧪 resolve it
+to the default sub and never list it. Display order only — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -1664,6 +1670,8 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
     store.potentials(session), a failure → none), else the best-ranked read's setup, else ☀️ / 🌙 when the name is
     on that list, else the default."""
     s = (sub or "").strip().lower()
+    if s == GC.TABLE_SUB and not V.is_gg5(V.of(v)):                 # 📋 2026-11-13 — GG5 only: GG1 / 🧪 fail open
+        return GC.DEFAULT_SUB, "default"
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
     sym = (focus or "").strip().upper()
@@ -1724,6 +1732,7 @@ WATCH_HEAD = ("👀 On his watch list, no structure yet — “if it's making so
 TRACK_UNMEASURED = ("UNMEASURED — what each potential did after it was first seen, recorded pass by pass; not a "
                     "forecast. No study has read this record yet.")                                        # W13b
 TRACK_RECORD_FAULT = "🏁 The alert record could not be read this time — the next re-read tries again."    # W16
+TABLE_FAULT_TEXT = "📋 The table could not be built this read — the next re-read tries again."    # 📋 2026-11-13
 ENTRY_SENT_TEXT = "🎯 entry sent {at} ET"                                                     # DECISIONS10 D4 (E6)
 PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or none registered)",
              "failed": "📲 send failed",
@@ -1807,7 +1816,7 @@ def _broker_tag(out: dict, flags) -> None:
                 r["broker_text"] = broker_text_for(r.get("symbol"), flags)
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable"):
+    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -1841,7 +1850,7 @@ def _trader_tag(out: dict, tags) -> None:
                                     if isinstance(sym, str) and sym else None)
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable"):
+    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -1871,7 +1880,7 @@ def _promo_tag(out: dict, ptags) -> None:
                     r["promo_text"] = hit.get("promo_text")
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable"):
+    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -2404,6 +2413,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     tf_ask = (tf or "").strip().lower() if isinstance(tf, str) else ""
     tf_ask = tf_ask if tf_ask in v.tfs else ""                      # no / unknown tf → each card its read's frame
     tf_k = tf_ask or (v.slow if sub_k == "horizontal_fade" else v.primary)   # GG5: "15m" / "5m", as always
+    table_sub = gg5 and sub_k == GC.TABLE_SUB                       # 📋 2026-11-13 — every setup's cards, one table
     sess = _session_block(now, session, is_today, in_window, v)
 
     def _row(sym):
@@ -2422,7 +2432,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
             ent_memo["v"] = _soft("A+ entry read", _entry_times, st, ent_win, v, default=None)
         return ent_memo["v"]
 
-    words_entries = _entries_once() if live_push and sub_k in GC.SETUPS else None   # before the tile loop
+    words_entries = (_entries_once() if live_push and (sub_k in GC.SETUPS or table_sub)
+                     else None)                                     # before the tile loop (📋 reads it too)
     # every setup's tiles — the counts on the strip, the tiles of the shown sub
     per_setup: dict = {}
     counts_by: dict = {}
@@ -2453,9 +2464,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                     continue
                 n_tiles[setup] = n_tiles.get(setup, 0) + 1
                 carded.setdefault(setup, []).append(sym)
-                if setup == sub_k:                                      # only the shown sub builds its cards
+                if setup == sub_k or table_sub:                         # the shown sub builds its cards (📋: every setup)
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
-                    tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k, v), scan_row=_row(sym), sess=sess,
+                    tfr = (tile_tf(r, "", v.slow if setup == "horizontal_fade" else v.primary, v) if table_sub
+                           else tile_tf(r, tf_ask, tf_k, v))           # 📋 each setup on its own sub's default frame
+                    tiles.append(setup_tile(doc, setup, tfr, scan_row=_row(sym), sess=sess,
                                             listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
                                             rang=_rang(words_entries, session, sym, setup), kf_rank=True))
@@ -2468,7 +2481,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     pot_title = next(r["text"] for r in legend if r["key"] == "potential")
     subs = []
     for key, e, label in GC.SUBS:
-        if key == GC.LEDGER_SUB:                # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
+        if key == GC.TABLE_SUB and not gg5:     # 📋 2026-11-13 — GG5 only; the 1-minute / 🧪 strips never show it
+            continue
+        if key == GC.TABLE_SUB:                 # 📋 every card on the five setup subs (n_tiles — no tile built for it)
+            n = sum(n_tiles.get(s, 0) for s in GC.SETUPS)
+        elif key == GC.LEDGER_SUB:              # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
             n = _soft("track record count", _ledger_count, st, session, v, default=None)
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
@@ -2531,6 +2548,12 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["potential"] = _soft("potential strip", _potential_strip, sub_k,
                                  [p for p in pots if p[1]["setup"] == sub_k], today_n, sess=sess,
                                  in_window=in_window, v=v, flags=order_flags) if pot_ok else None
+    elif table_sub:                             # 📋 2026-11-13 — ONE ranked table over every setup's cards (all_table.py)
+        from chart_maps.gajjala import all_table as TBL
+        out["table"] = _soft("all strategies table", TBL.block, per_setup, pots if pot_ok else [], reads_by=reads_by,
+                             flags=order_flags, sess=sess, in_window=in_window, now=now, v=v, scan_row=_row,
+                             cad_min=_cad(v), default=None)
+        out["empty_note"] = None if out["table"] else TABLE_FAULT_TEXT
     elif sub_k == GC.POTENTIAL_SUB:
         entries = _entries_once()                       # D4: ONE read (D10: above the tiles, tri-state; the window read)
         out["tiles"] = broker_bottom((_soft("potential tiles", _potential_tiles, pots, st=st, session=session,
@@ -2617,4 +2640,4 @@ __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT"
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
            "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
-           "FOCUS_TEXT", "DAY2_NOTE"]
+           "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT"]

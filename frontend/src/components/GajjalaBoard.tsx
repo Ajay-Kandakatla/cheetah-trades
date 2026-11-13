@@ -205,7 +205,7 @@ import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
@@ -218,6 +218,7 @@ import { GajjalaLatency } from './GajjalaLatency';
 import { GgAuditedStrip } from './GgAuditedStrip';
 import { GgAuditedHeld } from './GgAuditedHeld';
 import { GgAuditedCompare } from './GgAuditedCompare';
+import { GgAllTable } from './GgAllTable';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -512,9 +513,12 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
     if (activeSub) trackFeature(`chart-maps:tab:${vkey}:${activeSub}`);
   }, [activeSub, vkey]);
 
-  // 📓 and 🏁 draw no tiles, so useBounceRoom posts nothing on them.
+  // 📓 and 🏁 draw no tiles, so useBounceRoom posts nothing on them. 📋 2026-11-13: the All strategies table draws no
+  // cards either (its rows are GgAllTable's; the price cell prints the served pass text, so the 30-s live poll is OFF there).
+  const onTable = activeSub === GG_TABLE_SUB;
   const tiles = useMemo<GgTile[]>(
-    () => (activeSub === 'playbook' || activeSub === 'track_record' ? [] : (board?.tiles || [])), [board, activeSub]);
+    () => (activeSub === 'playbook' || activeSub === 'track_record' || activeSub === GG_TABLE_SUB ? [] : (board?.tiles || [])),
+    [board, activeSub]);
   const shownSymbols = useMemo(() => tiles.map((t) => t.symbol), [tiles]);
   /* ONE room POST (useBounceRoom) for every name on screen — the 🧨 / 🎯 chips read that
    * one map (the EmaFramesBoard precedent; a per-tile fetch is the 2026-09-21
@@ -523,7 +527,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
   /* 🔴 the live overlay (2026-10-21): the tile symbols, polled only inside the SERVED window (refresh_sec > 0); a board
    * refetch is the reset (its answer was asked against the levels of the board before). */
-  const liveSyms = useMemo(() => cardLiveSymbols(tiles), [tiles]);
+  const liveSyms = useMemo(() => cardLiveSymbols(onTable ? [] : tiles), [onTable, tiles]);
   const liveLevels = useMemo(() => ggLiveLevels(tiles, board?.tf ?? null), [tiles, board]);
   const inWindow = every != null && every > 0;
   const cardPoll = useCardLive(liveSyms, inWindow && liveSyms.length > 0, {
@@ -582,7 +586,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view + ✅ / ❌ category + 🎯 kind, which belong to the sub they were picked on.
   const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM, GG_KIND_PARAM]);
 
-  const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null, title: null }));
+  /* 📋 2026-11-13 [C8]: the pre-board fallback strip shows the table chip on 🚩 Gajjala's only — the 1-min / 🧪 / 🥇 pages
+   * never flash it (their servers never serve the sub). */
+  const subs = board?.subs?.length ? board.subs
+    : GG_SUBS.filter((s) => vkey === 'gajjala' || s.key !== GG_TABLE_SUB).map((s) => ({ ...s, count: null, title: null }));
   const entryMarks = board?.entry_marks?.subs ?? null;
   const session = board?.session;
   const pass = board?.pass;
@@ -710,6 +717,14 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
       {activeSub === 'playbook' ? (
         <PlaybookPanel pb={board?.playbook ?? null} />
+      ) : onTable ? (
+        /* 📋 2026-11-13: the All strategies table — served rows in served order; no counts line, no bar-size toggle, no
+         * cards. An older API never serves the sub (it answers bull_flag and the URL adopts it); a served null table →
+         * the served empty_note only. */
+        board ? (
+          <GgAllTable block={board.table ?? null} emptyNote={board.empty_note ?? null} answer={cardLive.answer}
+                      search={location.search} back={backTarget} />
+        ) : null
       ) : activeSub === 'track_record' ? (
         <>
         {/* 🧪 2026-11-05 (gg-track-parity, HIS CALL #30 default): the 🏁 rows FIRST — on 🧪 they are 🚩's A+ with the

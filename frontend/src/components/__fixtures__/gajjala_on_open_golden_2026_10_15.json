@@ -201,6 +201,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 3,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 1,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -2184,6 +2191,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 3,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 1,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -2445,6 +2459,13 @@
    "sub": "potential",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 3,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 1,
      "emoji": "🚩",

@@ -95,6 +95,10 @@ adds ONE live fan-out for the shown tiles' now-line (`board._live_snapshot` + `a
 - **Sub resolution** (push deep links): an explicit known sub wins; unknown → `bull_flag`; empty sub + `focus` → today's
   newest `gajjala_alerts` claim for that name in state `pushed` or `shadow` (ids `GG:` / `SHADOW:GG:{date}|SYM|setup`) →
   else the setup whose read ranks best → else ☀️ / 🌙 when listed there → else the default. Served as `sub_resolved_from`.
+- **Sub strip** (2026-11-13): eleven subs on 🚩 GG5 — 📋 All strategies FIRST (`GC.TABLE_SUB`, one ranked `table`
+  over every setup sub's cards; docs/gajjala/all_strategies_table_2026_11_13.md), then the five setups, ☀️, 🌙, 📓, 🧠, 🏁
+  LAST. The default stays `bull_flag`; the 1-minute page and 🧪 Audited never list 📋 and resolve `sub=all_strategies` to
+  the default.
 - **Order** (setup subs): aplus 0 · triggered 1 · forming-ready 2 · forming 3 · partial 4 · stopped 5; A+/triggered/stopped
   newest entry bar first; ready forming by (trigger − last)/last; forming by bars to go; partial by fewest misses then biggest
   change; ties by symbol. ☀️ by volume (his ToS sort) or `sort=change`, the carry after today's names; 🌙 by after-hours gain.
