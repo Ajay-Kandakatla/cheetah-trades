@@ -30,15 +30,26 @@
  * serves none). Poll only: no `stream`, no `variant` — 🥇 is not in 🚩's stream registry. The served footer prints in
  * the pass line. The overlay never changes a card's state, its order or the counts line. (2) The board re-read: when
  * the pass serves `next_read_sec`, ONE setTimeout, re-armed after EVERY GET settles (a failed one included), replaces
- * the cadence interval; absent → the served cadence interval exactly as before. */
+ * the cadence interval; absent → the served cadence interval exactly as before.
+ *
+ * 🏁 Ended cards fold (2026-11-12, lukend spec §3.6). Ajay, verbatim: "Is this still good ro enter? From Luks" → "I
+ * shouldn't be seeing this" → "I want it to be realtime". The server folds every card whose Luk trade is over into the
+ * served `ended` block (its count, its words, its cards); this board draws the live `tiles` in the grid and ONE fold line
+ * under it (a <details>, cards mounted only when open). Real time: a trade card serves a `live_fold` rule, and the moment
+ * a FRESH answer of the one card poll matches it the card is latched into the fold (no pass, no GET). Fresh = the answer
+ * changed on a run where the tiles did not — the commit that brings new tiles (a sub switch, a re-GET) still carries the
+ * previous board's answer (useCardLive clears it one commit later), so that run is skipped (critique C3). The poll's
+ * symbols and levels stay on the served tiles (a fold never changes the poll's key). The latch is cleared when the served
+ * session date changes. Every word is served; the FE adds only the count. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import {
   LUK_BASE, LUK_PLAYBOOK_SUB, LUK_SCAN_PATH, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TRACK_SUB,
-  lukHref, lukInWindow, lukLegendRows, lukLiveLevels, lukNextReadMs, lukQuery, lukRefreshMs, lukScanLanded, lukText,
-  parseLukSub, type LukBoard as LukBoardPayload,
+  lukEndedLine, lukHref, lukInWindow, lukLegendRows, lukLiveLevels, lukNewLiveEnds, lukNextReadMs, lukQuery,
+  lukRefreshMs, lukScanLanded, lukSplitLive, lukText, parseLukSub,
+  type LukBoard as LukBoardPayload, type LukLatch, type LukTile,
 } from '../lib/luk';
 import { ggScanPlan, type GgScanResponse } from '../lib/gajjala';
 import { cardLiveSymbols } from '../lib/cardLive';
@@ -60,6 +71,11 @@ import '../styles/luk.css';
 /* `.gg-rescan` — the 🚩 scan-now button's look (solid accent, nowrap, margin-left auto, reduced-motion safe). */
 import '../styles/gajjala.css';
 
+/** 🏁 a null board's tiles — ONE frozen empty list, so a board that has not landed never churns the tiles' identity. */
+const NO_TILES: LukTile[] = Object.freeze([] as LukTile[]) as LukTile[];
+/** 🏁 an empty latch — one frozen object, so "nothing latched" never churns the split. */
+const NO_LATCH: Record<string, LukLatch> = Object.freeze({}) as Record<string, LukLatch>;
+
 export default function LukBoard() {
   const [params] = useSearchParams();
   const urlSub = parseLukSub(params.get(LUK_SUB_PARAM));
@@ -79,6 +95,9 @@ export default function LukBoard() {
   const boardRef = useRef<LukBoardPayload | null>(null);
   /* 🔴 2026-11-12: bumped when the LATEST GET settles (success or error) — re-arms the served next-read timer. */
   const [settled, setSettled] = useState(0);
+  /* 🏁 2026-11-12: the request key of the board on screen — the fold's open state resets to the served `ended.open`
+   * only when a board of a NEW request lands (a re-GET never closes what he opened). */
+  const [boardReq, setBoardReq] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -93,6 +112,7 @@ export default function LukBoard() {
         if (!alive || my !== seq.current) return;
         boardRef.current = b;
         setBoard(b);
+        setBoardReq(reqKey);
         setBoardSeq(my);
         setErr(null);
       })
@@ -232,7 +252,7 @@ export default function LukBoard() {
   const sub = lukText(board?.sub) ?? urlSub;
   const subs = board?.subs ?? [];
   const legend = lukLegendRows(board?.counts_legend);
-  const tiles = board?.tiles ?? [];
+  const tiles = board?.tiles ?? NO_TILES;
   const screen = board?.screens && board.screens.key === sub ? board.screens : null;
   const pass = board?.pass ?? null;
   const scan = board?.scan ?? null;
@@ -259,6 +279,33 @@ export default function LukBoard() {
     resetKey: board, initialSession: (board?.session?.tape ?? null) as CmTapeSession | null, levels: liveLevels,
   });
   const liveFooter = inWindow && liveSyms.length > 0 ? lukText(cardPoll.footer) : null;
+  /* 🏁 2026-11-12 — the live latch, per served session date (a new date starts empty). */
+  const servedDate = board?.session?.date;
+  const sessionDate = typeof servedDate === 'string' ? servedDate : null;
+  const [latch, setLatch] = useState<{ date: string | null; map: Record<string, LukLatch> }>({ date: null, map: {} });
+  const latched = latch.date === sessionDate ? latch.map : NO_LATCH;
+  const prevAnswer = useRef(cardPoll.answer);
+  const prevTiles = useRef(tiles);
+  useEffect(() => {
+    const fresh = cardPoll.answer !== prevAnswer.current && tiles === prevTiles.current;
+    prevAnswer.current = cardPoll.answer;
+    prevTiles.current = tiles;
+    if (!fresh) return;
+    const answer = cardPoll.answer;
+    setLatch((prev) => {
+      const base = prev.date === sessionDate ? prev.map : NO_LATCH;
+      const add = lukNewLiveEnds(tiles, answer, base);
+      return add ? { date: sessionDate, map: { ...base, ...add } } : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardPoll.answer, tiles]);
+  const split = useMemo(() => lukSplitLive(tiles, latched), [tiles, latched]);
+  const ended = board?.ended ?? null;
+  const endedLine = cardsShown ? lukEndedLine(ended, split.ended.length) : null;
+  /* his tap wins for the request it was made on; a board of a new request opens as served. */
+  const [openPick, setOpenPick] = useState<{ req: string | null; open: boolean } | null>(null);
+  const endedOpen = openPick && openPick.req === boardReq ? openPick.open : ended?.open === true;
+  const endedToggle = lukText(ended?.toggle_text);
   /* 🔄 2026-11-11 — the ONE button, owner only, in the title row right after the title (luk.css .luk-topline); its
    * served answer lines print directly under that row, above the honesty paragraph, for every state. */
   const rescan = isOwner && scan && lukText(scan.rescan_label) ? (
@@ -340,9 +387,9 @@ export default function LukBoard() {
           ) : (
             <>
               {lukText(board.order_note) && tiles.length ? <p className="luk-line luk-muted" data-testid="luk-order-note">{board.order_note}</p> : null}
-              {tiles.length ? (
+              {split.live.length ? (
                 <div className="cm-grid luk-grid" data-testid="luk-grid">
-                  {tiles.map((t) => (
+                  {split.live.map((t) => (
                     <LukCard key={`${t.symbol}-${t.setup}`} tile={t} focus={focus === t.symbol}
                              live={cardPoll.answer?.quotes[(t.symbol || '').toUpperCase()]}
                              nowLabels={cardPoll.answer?.now_labels}
@@ -356,6 +403,25 @@ export default function LukBoard() {
                              )} />
                   ))}
                 </div>
+              ) : null}
+              {endedLine ? (
+                <details className="luk-ended" data-testid="luk-ended" open={endedOpen}>
+                  <summary data-testid="luk-ended-line"
+                           onClick={(e) => { e.preventDefault(); setOpenPick({ req: boardReq, open: !endedOpen }); }}>
+                    {endedLine}{!endedOpen && endedToggle ? ` · ${endedToggle}` : ''}
+                  </summary>
+                  {endedOpen ? (
+                    <>
+                      {lukText(ended?.note_text) ? <p className="luk-line luk-muted" data-testid="luk-ended-note">{ended!.note_text}</p> : null}
+                      <div className="cm-grid luk-grid" data-testid="luk-ended-grid">
+                        {[...split.ended, ...(ended?.tiles ?? [])].map((t) => (
+                          <LukCard key={`ended-${t.symbol}-${t.setup}`} tile={t} focus={focus === t.symbol} />
+                        ))}
+                      </div>
+                      {lukText(ended?.more_text) ? <p className="luk-line luk-muted" data-testid="luk-ended-more">{ended!.more_text}</p> : null}
+                    </>
+                  ) : null}
+                </details>
               ) : null}
             </>
           )}

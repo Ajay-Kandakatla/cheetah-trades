@@ -404,7 +404,9 @@ def test_subs_are_the_eight_in_order_and_n_equals_the_rows():
     # under the LUK_LEDGER_ROWS_MAX cap — this fixture is under it)
     assert n[T.TRACK_SUB] == tr["n_rows"] == tr["counts"]["n"] == sum(len(d["rows"]) for d in tr["days"]) == 1
     assert tr["more_text"] is None
-    assert n == {"pullback_reversal": 3, "opening_range_high": 3, "inside_day_pdh": 1, "premarket": 2, "leader": 1,
+    # RE-PINNED 2026-11-12 (🏁 ended cards fold, SPEC lukend §3.9: a setup sub's n = LIVE cards shown): ORH 3 → 2 (its
+    # stopped card is folded under the cards)
+    assert n == {"pullback_reversal": 3, "opening_range_high": 2, "inside_day_pdh": 1, "premarket": 2, "leader": 1,
                  "potent": 3, "playbook": n[T.PLAYBOOK_SUB], "track_record": 1}
 
 
@@ -425,7 +427,10 @@ def test_the_cards_follow_the_served_order():
     assert [(t["symbol"], t["state"]) for t in out["tiles"]] == [("AAA", "aplus"), ("CCC", "listed"),
                                                                   ("BBB", "listed")]   # listed: newest break first
     o2 = _build("opening_range_high")
-    assert [t["state"] for t in o2["tiles"]] == ["forming", "listed", "stopped"]
+    # RE-PINNED 2026-11-12 (🏁 ended cards fold, SPEC lukend §3.3 rule 1 — Ajay: "I shouldn't be seeing this"): the
+    # `stopped` card (CCC) leaves the live list for the served `ended` block; was ["forming", "listed", "stopped"]
+    assert [t["state"] for t in o2["tiles"]] == ["forming", "listed"]
+    assert [(t["symbol"], t["state"]) for t in o2["ended"]["tiles"]] == [("CCC", "stopped")]
     assert out["order_note"] == T.ORDER_NOTE
 
 

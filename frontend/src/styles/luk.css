@@ -37,7 +37,7 @@
 .luk-card { border-radius: 8px; min-width: 0; max-width: 100%; }
 .luk-card.luk-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
 .luk-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
-.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread, .luk-pills .luk-not-rung {
+.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread, .luk-pills .luk-not-rung, .luk-pills .luk-trade {
   white-space: normal; overflow-wrap: anywhere;
 }
 .luk-plan, .luk-criteria li, .luk-why, .luk-pb-item { overflow-wrap: anywhere; }
@@ -69,6 +69,17 @@
   display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600; min-width: 0;
   color: var(--ink-muted, #94a3b8); border: 1px dashed var(--ink-muted, #94a3b8);
 }
+/* 🏁 2026-11-12 (ended cards fold) — the served window / open-trade words of a live trade card: a muted pill beside the
+   state pill; wraps like the other pills (📱 430 px). */
+.luk-trade {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; min-width: 0;
+  color: var(--ink-muted, #94a3b8); border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+/* 🏁 2026-11-12 — the ONE fold line under the cards (a <details>; the folded cards mount only when open) and the served
+   ended sentence on a folded card. 📱 430 px: the fold never exceeds its column and its served line wraps anywhere. */
+.luk-ended { min-width: 0; }
+.luk-ended > summary { cursor: pointer; overflow-wrap: anywhere; font-weight: 600; }
+.luk-ended-line { color: var(--negative, #ef4444); font-weight: 600; overflow-wrap: anywhere; }
 /* 🔴 2026-11-12 — the served live words under the plan lines (the 30 s card poll): numbers align, the line wraps
    instead of widening the card (📱 430 px). */
 .luk-live { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }

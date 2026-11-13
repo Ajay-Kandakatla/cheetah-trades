@@ -1024,7 +1024,46 @@ def served_block(store, session, now, *, span: str = "") -> dict:
                 categories=categories, more_text=more_text, charts=charts, **_static_keys())
 
 
+
+# ── 🏁 2026-11-12 ended cards fold (Ajay: "Is this still good ro enter? From Luks" → "I shouldn't be seeing this" →
+# "I want it to be realtime") — the tab reads the 🏁's OWN answer for a card; nothing here grades or writes ──────────
+def card_trades(store, session) -> dict:
+    """{(SYM, setup): {"state", "exit_text", "fill_t", "through_date"}} for the 🏁 rows of `session` — rows_for([session])
+    + store.ledger_docs([session]) + state_of / cells (the 🏁's own words). READ ONLY. {} when the A+ claim rows or
+    luk_ledger cannot be read (fails CLOSED: no card folds by the 🏁). A doc of another GRADE_VERSION reads "pending"
+    (state_of's rule) and serves no fill time and no through date; a row whose cells cannot be composed is skipped."""
+    d = _as_date(session)
+    if d is None:
+        return {}
+    try:
+        rows = rows_for([d], store)
+    except LedgerReadError:
+        return {}
+    if not rows:
+        return {}
+    stored = store.ledger_docs([d])
+    if stored is None:
+        return {}
+    docs = {x.get("_id"): x for x in stored if isinstance(x, dict) and x.get("_id")}
+    out = {}
+    for row in rows:
+        raw = docs.get(row["id"])
+        doc = raw if isinstance(raw, dict) and raw.get("version") == GRADE_VERSION else {}
+        f = doc.get("fill") if isinstance(doc.get("fill"), dict) else {}
+        w = doc.get("walk") if isinstance(doc.get("walk"), dict) else {}
+        try:
+            state, exit_text = state_of(row, raw), cells(row, raw)["exit_text"]
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("luk ledger: card read skipped %s: %s", row.get("id"), type(exc).__name__)
+            continue
+        out[(row["symbol"], row["setup"])] = {
+            "state": state, "exit_text": exit_text,
+            "fill_t": f.get("fill_t") if f.get("entry") == FILLED else None,
+            "through_date": w.get("through_date") or None}
+    return out
+
 __all__ = ["ROW_ID", "EXITS", "OPEN", "LEDGER_KEYS", "STATE_SHADOW", "STATE_PUSHED", "ROW_STATES", "LINE_OF", "GRADE_VERSION", "LedgerReadError", "row_id", "row_of",
            "rows_for", "fill", "fill_window", "stop_r", "walk", "grade_step", "served_block", "title_text", "rule_text",
            "honesty", "empty_text", "honesty_text", "flags_text", "cells", "counts_of", "state_of", "record_from", "record_sessions", "clip",
-           "bucket_of", "setup_label", "track_row", "charts_block", "views_block", "mark_dups", "LUK_HK", "HEADS"]
+           "bucket_of", "setup_label", "track_row", "charts_block", "views_block", "mark_dups", "LUK_HK", "HEADS",
+           "card_trades"]

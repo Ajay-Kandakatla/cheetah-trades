@@ -17,7 +17,7 @@ import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
 import type { GgBoard, GgScan, GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
-import type { CardLiveLevel, CardLiveLevels } from './cardLive';
+import type { CardLiveAnswer, CardLiveLevel, CardLiveLevels, CardLiveQuote } from './cardLive';
 import { ggScanAdvanced } from './gajjala';
 
 /** The tab id (== backend chart_maps/luk/constants.LUK_TAB). */
@@ -85,7 +85,26 @@ export type LukTile = {
   trigger?: number | null; stop?: number | null; tf?: string | null;
   live_level?: CardLiveLevel | null;
   not_rung_text?: string | null;
+  /** 🏁 2026-11-12 (ended cards fold, lukend spec §3.5 / §3.9): the served fold keys — `ended` (a trade the Luk engine
+   *  says is over), `ended_why` ("stop" | "ema9_close"), its served sentence, the served window / open-trade words of a
+   *  live trade card, and the served `live_fold` rule the 30 s card poll is judged by. `ended_vs_text` is FE-only: the
+   *  served `vs.text` kept when a live answer latched the card into the fold. */
+  ended?: boolean | null; ended_why?: string | null; ended_text?: string | null; trade_text?: string | null;
+  live_fold?: LukLiveFold | null;
+  ended_vs_text?: string | null;
 };
+/** 🏁 the served live-fold rule of one trade card (tab.fold_of rule 4): fold when a FRESH poll answer's `vs.kind` equals
+ *  `kind`, the answer's session equals `session` and its `as_of_epoch` is before `until_epoch`. `text` = the served
+ *  sentence the folded card prints. */
+export type LukLiveFold = { kind: string; session: string; until_epoch: number; text: string };
+/** 🏁 the served ended block of a setup sub (tab.ended_block): the count of every ended card, the fold line's served
+ *  words, whether it opens on mount (a focus among them), and the ended cards cut to the limit. */
+export type LukEnded = {
+  n: number; emoji?: string | null; head_text?: string | null; toggle_text?: string | null;
+  note_text?: string | null; more_text?: string | null; open?: boolean | null; tiles?: LukTile[] | null;
+};
+/** 🏁 one card latched into the fold by the live poll: the served live_fold text + the served vs text of that answer. */
+export type LukLatch = { text: string; vs: string | null };
 export type LukScreenHead = string | { key: string; label: string };
 export type LukScreenRow = {
   rank: number; symbol: string; href?: string | null; price_text?: string | null;
@@ -162,6 +181,8 @@ export type LukBoard = {
   /** 🔄 2026-11-11: the served scan block (luk/tab.scan_block) — 🚩's keys, so the 🚩 type carries it. Every reader
    *  gets it; the FE prints the button for the owner only. */
   scan?: GgScan | null;
+  /** 🏁 2026-11-12: the served ended block — on every setup sub (n 0 included), null on screens / 📓 / 🏁. */
+  ended?: LukEnded | null;
 };
 export type LukTapePayload = GgTapePayload;
 
@@ -297,4 +318,84 @@ export function lukLivePct(tile: unknown): string | null {
   const v = isObj(tile) ? tile.live_vs : undefined;
   if (!isObj(v) || typeof v.kind !== 'string' || !v.kind) return null;
   return lukText(v.pct_text);
+}
+
+/* ── 🏁 2026-11-12 ended cards fold (lukend spec §3.5). Ajay, verbatim: "Is this still good ro enter? From Luks" → "I
+ * shouldn't be seeing this" → "I want it to be realtime". The server folds a card whose Luk trade is over into ONE served
+ * ended block; between passes the 30 s card poll latches a trade card into the fold the moment a fresh served answer
+ * matches the card's served `live_fold` rule. Pure helpers: they compare served values and copy served words — no word,
+ * no level, no threshold is typed here. ── */
+
+const finiteNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+
+/** The latch key of one card: upper-cased symbol | setup | served stop — a re-GET that moves the stop is a new card. */
+export function lukFoldKey(t: LukTile): string {
+  const sym = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+  const stop = finiteNum(t?.stop) ? String(t.stop) : '';
+  return `${sym}|${t?.setup ?? ''}|${stop}`;
+}
+
+/** The latch of one card, or null: ONLY when the card serves a whole `live_fold` (non-blank kind / session / text, a
+ *  finite until_epoch), its quote carries a served vs {kind, text} whose kind equals the rule's kind, and the answer's
+ *  session equals the rule's session with its as_of_epoch before until_epoch. A card the server already ended → null. */
+export function lukLiveEnd(
+  t: LukTile, q: CardLiveQuote | undefined, a: { session: string | null; as_of_epoch: number } | null,
+): LukLatch | null {
+  if (!t || t.ended === true) return null;
+  const lf: unknown = t.live_fold;
+  if (!isObj(lf)) return null;
+  const kind = lukText(lf.kind);
+  const session = lukText(lf.session);
+  const text = lukText(lf.text);
+  if (!kind || !session || !text || !finiteNum(lf.until_epoch)) return null;
+  if (!a || a.session !== session || !finiteNum(a.as_of_epoch) || !(a.as_of_epoch < lf.until_epoch)) return null;
+  const vs: unknown = q?.vs;
+  if (!isObj(vs) || typeof vs.kind !== 'string' || vs.kind !== kind) return null;
+  const vsText = lukText(vs.text);
+  if (!vsText) return null;
+  return { text, vs: vsText };
+}
+
+/** The cards a fresh answer latches that are not latched yet (keyed by lukFoldKey); null = nothing new. */
+export function lukNewLiveEnds(
+  tiles: ReadonlyArray<LukTile>, answer: CardLiveAnswer | null, latched: Record<string, LukLatch>,
+): Record<string, LukLatch> | null {
+  if (!answer || !isObj(answer.quotes)) return null;
+  const out: Record<string, LukLatch> = {};
+  for (const t of tiles || []) {
+    const key = lukFoldKey(t);
+    if (Object.prototype.hasOwnProperty.call(latched, key) || Object.prototype.hasOwnProperty.call(out, key)) continue;
+    const sym = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+    const q = sym && Object.prototype.hasOwnProperty.call(answer.quotes, sym) ? answer.quotes[sym] : undefined;
+    const l = lukLiveEnd(t, q, answer);
+    if (l) out[key] = l;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/** The served tiles split by the latch: a latched card becomes an ended card by the server's own rule for one (ended
+ *  true, the latched served text, trade_text and live_fold null); every other card stays live, in the served order. */
+export function lukSplitLive(
+  tiles: ReadonlyArray<LukTile>, latched: Record<string, LukLatch>,
+): { live: LukTile[]; ended: LukTile[] } {
+  const live: LukTile[] = [];
+  const ended: LukTile[] = [];
+  for (const t of tiles || []) {
+    const key = lukFoldKey(t);
+    const l = Object.prototype.hasOwnProperty.call(latched, key) ? latched[key] : null;
+    if (l) ended.push({ ...t, ended: true, ended_text: l.text, ended_vs_text: l.vs, trade_text: null, live_fold: null });
+    else live.push(t);
+  }
+  return { live, ended };
+}
+
+/** The fold line: the served emoji, the count (served n + the cards latched on this page) and the served head words.
+ *  null when the count is 0 or the served head is blank. A non-finite / negative served n counts as 0. */
+export function lukEndedLine(ended: LukEnded | null | undefined, extra: number): string | null {
+  const n = finiteNum(ended?.n) && (ended!.n as number) >= 0 ? (ended!.n as number) : 0;
+  const total = n + (finiteNum(extra) && extra > 0 ? extra : 0);
+  const head = lukText(ended?.head_text);
+  if (total <= 0 || !head) return null;
+  const emoji = lukText(ended?.emoji);
+  return `${emoji ? `${emoji} ` : ''}${total} ${head}`;
 }

@@ -162,7 +162,8 @@ SUB_KEYS = tuple(k for k, _e, _l in LC.SUBS)
 SUB_META = {k: (e, label) for k, e, label in LC.SUBS}
 PAYLOAD_KEYS = ("tab", "label", "title", "honesty", "variant", "session", "pass", "strip", "subs", "sub", "counts",
                 "counts_text", "counts_legend", "tiles", "order_note", "screens", "playbook", "track_record", "focus",
-                "fault", "fault_text", "scan")                                    # + "scan" 2026-11-11 (🔄 scan now)
+                "fault", "fault_text", "scan",                                    # + "scan" 2026-11-11 (🔄 scan now)
+                "ended")                                                          # + "ended" 2026-11-12 (🏁 fold)
 UNIT_SEC_PER_MIN = 60                                                       # a unit, not a rule
 
 # ── 🔄 scan now (Ajay 2026-11-11, verbatim: "Can you put an ondeman scan button for Luk' scans too") ─────────────────
@@ -185,6 +186,37 @@ RESCAN_TITLE = ("Run one 🥇 pass now — its push gate runs dry, so it rings n
                 "always: {latency}. A pass that finished under {reuse} s ago is reused; a scan starts only after this "
                 "slot's {cad}-minute pass landed (or skipped itself) and when it can end {margin} s before the next "
                 "one")                                                                                            # LS9
+
+# ── 🏁 2026-11-12 ended cards fold (Ajay: "Is this still good ro enter? From Luks" → "I shouldn't be seeing this" →
+# "I want it to be realtime") — SPEC lukend §3.2. A card whose Luk trade is OVER (the engine's own answers: the read
+# says `stopped`, or the 🏁 graded the exit) leaves the live list for ONE served fold line under the cards; the house
+# 30 s card poll folds it the moment its live price trades at or under the stop (`live_fold`, the FE latches). Display
+# only: nothing here changes what rings, the A+ rule, the 🏁 grading, a gate, a threshold or a push.
+CARD_CLOSE_EXIT_ON = False   # HIS CALL #1 (spec lukend §7) — OFF until his word: the card's 15:55–16:00 bar is not the
+                             # official close (59 pairs, 12 equal, 1 opposite answer in 36 — ARRY 2026-11-10)
+ENDED_EMOJI = "🏁"
+ENDED_HEAD_TEXT = "ended {when} — stopped or closed below the daily {ema} EMA (Luk's exit)"   # {ema} = LC.LUK_PULLBACK_DAILY_EMA
+ENDED_WHEN_TODAY = "today"
+ENDED_WHEN_DAY = "on {md}"                                   # a past session shown before 04:00 ET (mm-dd)
+ENDED_TOGGLE_TEXT = "open"
+ENDED_NOTE_TEXT = ("Folded, never deleted — each card says how its trade ended; every 🥇 A+ among them is graded on the "
+                   "🏁 Track record.")
+ENDED_MORE_TEXT = "+{n} more ended — the count covers all {total}"
+ENDED_SUB_TAIL = " · {n} ended — folded under the cards"   # appended to the served sub title
+ENDED_STOP_READ_TEXT = "🏁 ended — a closed bar after the trigger traded at or under the stop {stop} (Luk's exit)"
+ENDED_LEDGER_TEXT = "🏁 ended — {exit} (Luk's exit, as graded on the 🏁 Track record)"
+ENDED_LEDGER_TAIL = " · 🏁 {exit}"
+ENDED_CLOSE_TEXT = ("🏁 ended — the {bar} ET bar closed {close} under the daily {n} EMA ({ema} at the prior close; the "
+                    "official close can differ) — Luk's exit")          # [C1] served only when CARD_CLOSE_EXIT_ON
+LIVE_FOLD_TEXT = ("🏁 ended — the live price traded at or under the stop {stop} (Luk's exit) · the next pass reads it "
+                  "on the closed bar")
+LIVE_FOLD_SESSION = "rth"          # MINE — = zone_edge.session_state's regular-session word (a test pins equality)
+WINDOW_CLOSED_TEXT = "entry window closed {hhmm} ET — not an entry"
+OPEN_TRADE_TEXT = "open trade since {hhmm} ET, not a new entry"
+TRADE_STATES = ("aplus", "triggered")   # the trigger traded and no closed bar touched the stop since
+FOLD_KEYS = ("ended", "ended_why", "ended_text", "trade_text", "live_fold")
+ENDED_KEYS = ("n", "emoji", "head_text", "toggle_text", "note_text", "more_text", "open", "tiles")
+WINDOW_CRIT_KEY = "in_window"      # the detectors' criterion key — served ONLY for setups with his candle window
 
 _STATE_RANK = {s: i for i, s in enumerate(TILE_STATES)}
 
@@ -564,10 +596,13 @@ def live_level(read: dict) -> Optional[dict]:
     return {"trigger": trig, "stop": stop, "tf": LUK.primary}
 
 
-def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] = None) -> dict:
+def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] = None,
+            ctx: Optional[dict] = None) -> dict:
     """One card in the tile shape PatternChart draws off a 🚩 tile (symbol, href, tf, bars, curves, vol_avg, lines,
     markers, bands, badges, stats, why) + Luk's own read in words. `bars5/curves5/vol_avg5` are the stored names.
-    `latest_at` (2026-11-11) = the latest pass's raw `at` (aware UTC): a card whose read is older is tagged."""
+    `latest_at` (2026-11-11) = the latest pass's raw `at` (aware UTC): a card whose read is older is tagged.
+    `ctx` (2026-11-12, 🏁 fold) = build's {trades, now, session, is_today}; None (the pass's re-read names) → only the
+    read's own `stopped` folds (fold_of)."""
     from chart_maps import board as board_mod
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = str(doc.get("symbol") or "").upper()
@@ -610,7 +645,169 @@ def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] 
             "not_reread_text": NOT_REREAD_TEXT.format(hhmm=GT._et(at).strftime("%H:%M")) if old else None,
             "live_level": live_level(read),                                     # 2026-11-12 realtime cards
             "not_rung_text": not_rung_text(doc, setup, st),                     # 2026-11-12 (critique C2)
+            **fold_of(doc, setup, read, ctx),                                   # 2026-11-12 🏁 ended cards fold
             "gajjala": {"setup": setup, "state": st}}
+
+
+# ── 🏁 2026-11-12 ended cards fold (SPEC lukend §3.3) ─────────────────────────────────────────────────────────────
+def window_end(read: dict, session: date) -> dtime:
+    """His entry window's end for THIS card: its read carries the detectors' `in_window` criterion (only setups with his
+    candle window serve it) → detectors._open_plus(LC.LUK_TRIGGER_WINDOW_END_MIN); else (📦 inside day,
+    LC.LUK_PDH_WINDOW) → rth_close_time(session)."""
+    crits = read.get("criteria") if isinstance(read, dict) else None
+    if any(isinstance(c, dict) and c.get("key") == WINDOW_CRIT_KEY for c in crits or []):
+        from . import detectors as DT
+        return DT._open_plus(LC.LUK_TRIGGER_WINDOW_END_MIN)
+    from catalysts.medical.reaction import rth_close_time
+    return rth_close_time(session)
+
+
+def window_closed_hhmm(read: dict, ctx: Optional[dict]) -> Optional[str]:
+    """"HH:MM" of window_end when it has passed: not ctx["is_today"] (a past session), or ET now.time() > the end
+    (STRICT — a break closing at the end is inside); else None. ctx None → None."""
+    if not isinstance(ctx, dict) or not isinstance(ctx.get("session"), date):
+        return None
+    end = window_end(read, ctx["session"])
+    if ctx.get("is_today") is not True:
+        return end.strftime("%H:%M")
+    now = GT._et(ctx.get("now"))
+    return end.strftime("%H:%M") if now.time() > end else None
+
+
+def _close_bar_words(session: date) -> str:
+    """"HH:MM–HH:MM" of the 5-minute bar that closes AT the regular close (frames are right-labelled; the width is the
+    LUK variant's 5-minute frame, never typed) — 15:55–16:00, 12:55–13:00 on a half day."""
+    from catalysts.medical.reaction import rth_close_time
+    c = datetime.combine(session, rth_close_time(session))
+    return f"{(c - timedelta(minutes=V.frame_minutes('5m', LUK))):%H:%M}–{c:%H:%M}"
+
+
+def close_exit(doc: dict, session: date) -> Optional[dict]:
+    """{"close", "ema", "bar"} when judgeable, else None. ema = the read doc's daily facts[f"ema{LUK_PULLBACK_DAILY_EMA}"]
+    (finite, facts not a Pending) with facts["as_of"] == the prior market day of `session`; close = the tile.bars5 bar
+    stamped at the regular close of `session` with NO `s` flag (the bar that closed AT the regular close — a read written
+    before the close is never judged), close > 0; bar = the bar's words (_close_bar_words)."""
+    from catalysts.medical.reaction import rth_close_time
+    from . import daily as DL
+    facts = doc.get("facts") if isinstance(doc, dict) else None
+    if not isinstance(facts, dict) or DL.is_pending(facts) or facts.get("pending") is True:
+        return None
+    if facts.get("as_of") != _prev_market_day(session).isoformat():
+        return None
+    ema = GT._f(facts.get(f"ema{LC.LUK_PULLBACK_DAILY_EMA}"))
+    if ema is None or ema <= 0:
+        return None
+    tile = doc.get("tile") if isinstance(doc.get("tile"), dict) else {}
+    want = f"{session.isoformat()} {rth_close_time(session):%H:%M}"
+    bar = next((b for b in tile.get("bars5") or [] if isinstance(b, dict) and b.get("t") == want), None)
+    if bar is None or bar.get("s"):
+        return None
+    close = GT._f(bar.get("c"))
+    if close is None or close <= 0:
+        return None
+    return {"close": close, "ema": ema, "bar": _close_bar_words(session)}
+
+
+def _px_apart(a: float, b: float) -> tuple:
+    """(GT._px(a), GT._px(b)) unless the two print the same; then both at the first k from
+    price_decimals(round_price(a)) + 1 up to sys.float_info.dig where they differ (ARRY: "4.7250", "4.7251"); repr() of
+    both if none differs. Words only — the compare is always the raw Decimal one."""
+    import sys
+    from trading.broker import price_decimals, round_price
+    pa, pb = GT._px(a), GT._px(b)
+    if pa != pb:
+        return pa, pb
+    for k in range(price_decimals(round_price(a)) + 1, sys.float_info.dig + 1):
+        sa, sb = f"{a:.{k}f}", f"{b:.{k}f}"
+        if sa != sb:
+            return sa, sb
+    return repr(float(a)), repr(float(b))
+
+
+def _not_ended() -> dict:
+    return {"ended": False, "ended_why": None, "ended_text": None, "trade_text": None, "live_fold": None}
+
+
+def _ended(why: str, text: str) -> dict:
+    return {"ended": True, "ended_why": why, "ended_text": text, "trade_text": None, "live_fold": None}
+
+
+def fold_of(doc: dict, setup: str, read: dict, ctx: Optional[dict]) -> dict:
+    """FOLD_KEYS of one card (first match wins): (1) the read says `stopped`; (2) ctx given, the read is a trade
+    (TRADE_STATES) and the 🏁 graded its exit (stop / first daily close below the daily 9 EMA); (3) only when
+    CARD_CLOSE_EXIT_ON (HIS CALL #1, OFF): the card's close bar under the prior close's daily 9 EMA after the close +
+    settle, unless the 🏁 already walked the official close of this session open; (4) else not ended, with `live_fold`
+    (the rule the FE's 30 s poll folds by) and `trade_text` (after his window, a triggered card only). ctx None
+    (run._board_names) → only rule 1, and NO live_card import (C6)."""
+    from . import ledger as LG
+    st = read.get("state") if isinstance(read, dict) else None
+    stop = read.get("stop") if isinstance(read, dict) else None
+    sym = str(doc.get("symbol") or "").upper() if isinstance(doc, dict) else ""
+    has_ctx = isinstance(ctx, dict)
+    trades = ctx.get("trades") if has_ctx and isinstance(ctx.get("trades"), dict) else {}
+    trade = trades.get((sym, setup))
+    trade = trade if isinstance(trade, dict) else {}
+    graded = trade.get("state") in ("stopped", LG.EXITS[1])
+    exit_txt = trade.get("exit_text") if isinstance(trade.get("exit_text"), str) else ""
+    if st == "stopped":                                                               # 1
+        text = ENDED_STOP_READ_TEXT.format(stop=GT._px(stop))
+        if graded and exit_txt.strip():
+            text += ENDED_LEDGER_TAIL.format(exit=exit_txt)
+        return _ended(LG.EXITS[0], text)
+    if not has_ctx:
+        return _not_ended()
+    session = ctx.get("session")
+    now = GT._et(ctx.get("now"))
+    if st in TRADE_STATES and graded:                                                 # 2 [C5]
+        why = LG.EXITS[0] if trade.get("state") == "stopped" else LG.EXITS[1]
+        return _ended(why, ENDED_LEDGER_TEXT.format(exit=exit_txt))
+    if (CARD_CLOSE_EXIT_ON and st in TRADE_STATES and isinstance(session, date)          # 3 [C1] HIS CALL #1
+            and now >= LG.close_utc(session) + timedelta(seconds=GC.BAR_SETTLE_SEC)
+            and not (trade.get("state") == LG.OPEN and trade.get("through_date") == session.isoformat())):
+        ce = close_exit(doc, session)
+        if ce is not None:
+            from chart_maps.gajjala.ledger import _D
+            if _D(ce["close"]) < _D(ce["ema"]):
+                pc, pe = _px_apart(ce["close"], ce["ema"])
+                return _ended(LG.EXITS[1], ENDED_CLOSE_TEXT.format(bar=ce["bar"], close=pc,
+                                                                   n=LC.LUK_PULLBACK_DAILY_EMA, ema=pe))
+    out = _not_ended()                                                                # 4
+    s = GT._f(stop)
+    if (ctx.get("is_today") is True and isinstance(session, date) and st in TRADE_STATES and s is not None
+            and s > 0 and now < LG.close_utc(session)):
+        from chart_maps import live_card as LCARD                    # [C6] ONLY here — never at module / function top
+        out["live_fold"] = {"kind": LCARD.VS_KINDS[1], "session": LIVE_FOLD_SESSION,
+                            "until_epoch": LG.close_utc(session).timestamp(),
+                            "text": LIVE_FOLD_TEXT.format(stop=GT._px(s))}
+    if st == "triggered":
+        wc = window_closed_hhmm(read, ctx)
+        if wc is not None:
+            ft = LG._parse_at(trade.get("fill_t")) if trade.get("state") == LG.OPEN else None
+            out["trade_text"] = (OPEN_TRADE_TEXT.format(hhmm=GT._et(ft).strftime("%H:%M")) if ft is not None
+                                 else WINDOW_CLOSED_TEXT.format(hhmm=wc))
+    return out
+
+
+def live_tiles(tiles: list) -> list:
+    """THE split (build AND run._board_names): every card whose `ended` is not True, in the order given."""
+    return [t for t in tiles if t.get("ended") is not True]
+
+
+def ended_block(ended: list, focus: str, limit: int, *, is_today: bool, session: date) -> dict:
+    """ENDED_KEYS: n = len(ended) (all); tiles = _clip_focus(ended, focus, limit) when ended else []; open = the focus
+    symbol among them; head_text = ENDED_HEAD_TEXT (when = today / on mm-dd, ema = LC.LUK_PULLBACK_DAILY_EMA);
+    more_text = ENDED_MORE_TEXT when n > len(tiles) else None. Served on every SETUP sub, n 0 included (the FE needs the
+    head words for a live fold); None on screens / 📓 / 🏁 (build)."""
+    ended = list(ended or [])
+    tiles = _clip_focus(ended, focus, limit) if ended else []
+    f = (focus or "").strip().upper() if isinstance(focus, str) else ""
+    n = len(ended)
+    when = ENDED_WHEN_TODAY if is_today else ENDED_WHEN_DAY.format(md=f"{session:%m-%d}")
+    return {"n": n, "emoji": ENDED_EMOJI,
+            "head_text": ENDED_HEAD_TEXT.format(when=when, ema=LC.LUK_PULLBACK_DAILY_EMA),
+            "toggle_text": ENDED_TOGGLE_TEXT, "note_text": ENDED_NOTE_TEXT,
+            "more_text": ENDED_MORE_TEXT.format(n=n - len(tiles), total=n) if n > len(tiles) else None,
+            "open": bool(f) and any(t.get("symbol") == f for t in ended), "tiles": tiles}
 
 
 def _order_key(t: dict) -> tuple:
@@ -620,13 +817,15 @@ def _order_key(t: dict) -> tuple:
             newest if t.get("state") != "forming" else 0.0, t.get("symbol") or "")
 
 
-def tiles_for(reads: list, setup: str, *, caps: dict, latest_at: Optional[datetime] = None) -> list:
-    """Every card of one setup: reads in a TILE_STATE (a `none` read is never carded), in the served order."""
+def tiles_for(reads: list, setup: str, *, caps: dict, latest_at: Optional[datetime] = None,
+              ctx: Optional[dict] = None) -> list:
+    """Every card of one setup: reads in a TILE_STATE (a `none` read is never carded), in the served order. `ctx`
+    (2026-11-12) is passed to every tile_of (fold_of's context; None = only the read's own `stopped` folds)."""
     out = []
     for doc in reads:
         r = ((doc.get("setups") or {}) if isinstance(doc, dict) else {}).get(setup)
         if isinstance(r, dict) and r.get("state") in TILE_STATES and doc.get("symbol"):
-            out.append(tile_of(doc, setup, caps=caps, latest_at=latest_at))
+            out.append(tile_of(doc, setup, caps=caps, latest_at=latest_at, ctx=ctx))
     out.sort(key=_order_key)
     return out
 
@@ -741,7 +940,7 @@ def fault_payload(sub: str = "") -> dict:
             "sub": s if s in SUB_KEYS else LC.DEFAULT_SUB, "counts": None, "counts_text": None,
             "counts_legend": counts_legend(), "tiles": [], "order_note": ORDER_NOTE, "screens": None,
             "playbook": None, "track_record": None, "focus": None, "fault": True, "fault_text": FAULT_TEXT,
-            "scan": None}
+            "scan": None, "ended": None}                                     # + "ended" 2026-11-12 [C4]
 
 
 def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT,
@@ -759,16 +958,23 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
     screens_doc = _soft("screens", st.latest_screens, session)
     caps = _caps_from(screens_doc)
     latest_at = GT._at_utc(latest)                      # the raw stamp behind the served pass.at (GT.pass_stamp)
-    tiles_by = {s: tiles_for(reads, s, caps=caps, latest_at=latest_at) for s in SETUP_SUBS}
-    sub_k = resolve_sub(sub, focus, tiles_by=tiles_by, screens_doc=screens_doc)
+    from . import ledger as LG
+    # 2026-11-12 🏁 ended cards fold: the 🏁's own answer per card (READ ONLY; fails closed → {} → nothing folds by it)
+    trades = _soft("🏁 trades", LG.card_trades, st, session, default={}) or {}
+    ctx = {"trades": trades, "now": now, "session": session, "is_today": is_today}
+    all_by = {s: tiles_for(reads, s, caps=caps, latest_at=latest_at, ctx=ctx) for s in SETUP_SUBS}
+    sub_k = resolve_sub(sub, focus, tiles_by=all_by, screens_doc=screens_doc)      # over ALL cards (ended included)
     lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
     lim = max(1, min(lim, GC.TILE_LIMIT_MAX))
     # 2026-11-11 ORDER_VARIANT A (cut first — the same cards as before the change; re-read cards first among them):
     # chosen by the main session as the set-preserving default after his "It still show HQ as the first ticker for
     # me"; re-read first, then the cut = HIS CALL, not built.
+    # 2026-11-12 🏁 fold: the live list = live_tiles (THE split); the ended cards ride ONE served `ended` block. The cut
+    # and the re-read partition below run on the live cards exactly as before (ORDER_VARIANT A unchanged).
+    tiles_by = {s: live_tiles(t) for s, t in all_by.items()}
+    ended_by = {s: [t for t in all_by[s] if t.get("ended") is True] for s in SETUP_SUBS}
     shown = {s: _reread_first(_clip_focus(t, focus, lim), focus) for s, t in tiles_by.items()}
     screens_by = {k: screen_block(k, screens_doc, latest, session) for k in SCREEN_SUBS}
-    from . import ledger as LG
     from . import playbook as PB
     pb = _soft("playbook", PB.playbook)
     tr = _soft("track record", LG.served_block, st, session, now, span=span if isinstance(span, str) else "")
@@ -778,6 +984,10 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
     subs = [{"key": k, "emoji": e, "label": lab, "n": n_of.get(k, 0), "title": _soft("sub title", sub_title, k,
                                                                                     default=f"{e} {lab}")}
             for k, e, lab in LC.SUBS]
+    for s_ in subs:                                                         # 2026-11-12 🏁 fold: the chip's title
+        k_end = len(ended_by.get(s_["key"]) or [])
+        if k_end > 0:
+            s_["title"] = f"{s_['title']}{ENDED_SUB_TAIL.format(n=k_end)}"
     counts, counts_text = counts_block(reads, latest, session)
     f = (focus or "").strip().upper() if isinstance(focus, str) else ""
     out = {"tab": LC.LUK_TAB, "label": LC.LUK_TAB_LABEL, "title": TITLE, "honesty": honesty(),
@@ -790,7 +1000,9 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
            "playbook": pb if sub_k == PLAYBOOK_SUB else None,
            "track_record": tr if sub_k == TRACK_SUB else None,
            "focus": f or None, "fault": False, "fault_text": None,
-           "scan": _soft("scan line", scan_block, latest, lease, now, session, in_window, default=None)}
+           "scan": _soft("scan line", scan_block, latest, lease, now, session, in_window, default=None),
+           "ended": (ended_block(ended_by[sub_k], focus, lim, is_today=is_today, session=session)
+                     if sub_k in SETUP_SUBS else None)}                       # 2026-11-12 🏁 fold
     return GT._plain(out)
 
 
@@ -800,4 +1012,6 @@ __all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TE
            "latency_text", "cost_text", "scan_block", "rescan_title", "PASS_TEXT_ON_DEMAND", "RESCAN_TITLE",
            "not_reread", "NOT_REREAD_TEXT", "REREAD_ORDER_TEXT", "STATE_ORDER_TEXT",
            "PASS_REREAD_TAIL", "COST_REREAD_TEXT", "COST_REREAD_LAST_TEXT", "COST_MISSED_TEXT", "PUSH_REREAD_TAIL",
-           "NOT_RUNG_TEXT", "LIVE_LEVEL_STATES", "next_read_sec", "not_rung_text", "live_level"]
+           "NOT_RUNG_TEXT", "LIVE_LEVEL_STATES", "next_read_sec", "not_rung_text", "live_level",
+           "CARD_CLOSE_EXIT_ON", "FOLD_KEYS", "ENDED_KEYS", "TRADE_STATES", "LIVE_FOLD_SESSION", "window_end",
+           "window_closed_hhmm", "close_exit", "fold_of", "live_tiles", "ended_block"]

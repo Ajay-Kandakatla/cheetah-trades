@@ -495,3 +495,80 @@ def test_the_constants_are_read_by_name_never_retyped():
     assert "LC.LUK_PASS_BUDGET_SEC - LC.LUK_GRADE_BUDGET_SEC" in src and "LC.LUK_REREAD_MAX" in src
     assert "GC.TILE_LIMIT_DEFAULT" in src and "TB.tiles_for" in src and "TB._clip_focus" in src
     assert "_exists(" not in inspect.getsource(LR._rang)                         # never the fail-open read
+
+
+# ── WP-C (luk ended cards fold, 2026-11-12): the re-read skips a stopped card — the board's own live/ended split ─────
+# Ajay 2026-11-12, verbatim: "I want it to be realtime". `_board_names` runs `TB.live_tiles` over `TB.tiles_for` (ctx
+# None → only a `stopped` read is ended; no chart_maps.live_card import [C6]); today's alert names are appended as before.
+def _stopped_fixture():
+    st, colls = mk_store()
+    seed(colls, "S1", _r(PBR, "stopped", entry=f"{DAY} 09:33"))
+    seed(colls, "T1", _r(PBR, "triggered", entry=f"{DAY} 09:34"))
+    seed(colls, "S2", _r(ORH, "stopped", entry=f"{DAY} 09:32"))
+    seed(colls, "F1", _r(ORH, "forming"))
+    seed(colls, "L1", _r(IDP, "listed"))
+    return st, colls
+
+
+def test_WPC_a_stopped_card_is_not_re_read_a_triggered_one_is():
+    st, _colls = _stopped_fixture()
+    names = LR._board_names(st.reads(D), [])
+    assert "T1" in names and "F1" in names and "L1" in names
+    assert "S1" not in names and "S2" not in names                               # NEGATIVE: an ended card
+    assert sorted(names) == ["F1", "L1", "T1"]
+
+
+def test_WPC_the_split_is_the_boards_own_ended_flag():
+    st, _colls = _stopped_fixture()
+    for setup in LC.SETUPS:
+        tiles = TB.tiles_for(st.reads(D), setup, caps={})
+        assert {t["symbol"] for t in TB.live_tiles(tiles)} == {t["symbol"] for t in tiles
+                                                                if t.get("state") != "stopped"}
+        assert all(t.get("ended") is True for t in tiles if t.get("state") == "stopped")
+        assert all(t.get("ended") is not True for t in tiles if t.get("state") != "stopped")
+
+
+def test_WPC_NEGATIVE_a_stopped_card_is_still_appended_when_it_is_a_today_alert_name():
+    st, _colls = _stopped_fixture()
+    rows = [{"symbol": "s1", "at": f"{DAY}T09:34:00"}, {"symbol": "T1", "at": f"{DAY}T09:35:00"}]
+    names = LR._board_names(st.reads(D), rows)
+    assert names[:3] == LR._board_names(st.reads(D), [])                       # the board part is unchanged
+    assert names[-1] == "S1" and names.count("S1") == 1 and names.count("T1") == 1
+    assert "S2" not in names                                                    # NEGATIVE: no alert row → not read
+
+
+def test_WPC_one_engine_names_equal_the_union_of_the_board_tiles_in_session_with_a_stopped_card():
+    st, colls = _stopped_fixture()
+    for i in range(GC.TILE_LIMIT_DEFAULT + 3):
+        seed(colls, f"O{i:02d}", _r(ORH, "triggered", entry=f"{DAY} 09:{30 + i % 29:02d}"))
+    shown = set()
+    for setup in LC.SETUPS:
+        shown |= {t["symbol"] for t in TB.build(setup, now=at("09:37"), store=st)["tiles"]}
+    names = LR._board_names(st.reads(D), [])
+    assert set(names) == shown and len(names) == len(set(names))
+    assert "S1" not in shown and "S2" not in shown and "T1" in shown           # NEGATIVE: stopped off both
+
+
+def test_WPC_board_names_calls_the_split_by_name():
+    import inspect
+    src = inspect.getsource(LR._board_names)
+    assert "TB.live_tiles(TB.tiles_for(" in src and "TB.live_tiles" in src
+    assert "\"stopped\"" not in src and "'stopped'" not in src                 # never a second split by literal
+
+
+def test_WPC_C6_board_names_runs_with_live_card_blocked(monkeypatch):
+    import importlib
+    import sys
+
+    import chart_maps
+    st, _colls = _stopped_fixture()
+    rows = [{"symbol": "S1", "at": f"{DAY}T09:34:00"}]
+    want = LR._board_names(st.reads(D), rows)
+    monkeypatch.setitem(sys.modules, "chart_maps.live_card", None)
+    monkeypatch.delattr(chart_maps, "live_card", raising=False)                 # `from chart_maps import …` too
+    assert LR._board_names(st.reads(D), rows) == want                          # same names, no error
+    assert want[-1] == "S1" and set(want[:-1]) == {"F1", "L1", "T1"}
+    with pytest.raises(ImportError):                                            # NEGATIVE bite: the block holds
+        importlib.import_module("chart_maps.live_card")
+    with pytest.raises(ImportError):
+        exec("from chart_maps import live_card", {})

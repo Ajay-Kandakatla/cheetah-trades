@@ -21,7 +21,12 @@
  * cardLive.patchTile splices it (intraday bars are never patched — only the now line and the served `vs`). Under the
  * plan lines: the served `vs.text` and the served `vs.pct_text` (each only when served, and only on a card that
  * carries a served `live_level` — a stopped card gets no live words). A served `not_rung_text` prints as a
- * .luk-not-rung pill in the pills row. The state pill, `data-state` and the card order are never touched. */
+ * .luk-not-rung pill in the pills row. The state pill, `data-state` and the card order are never touched.
+ *
+ * 🏁 2026-11-12 (ended cards fold, lukend spec §3.7; his words are quoted in LukBoard.tsx). A served `trade_text` prints
+ * as a .luk-trade pill in the pills row. A card with `ended` strictly true prints its served `ended_text` first in the
+ * extras (.luk-ended-line) and, when the live poll latched it, the served vs words of that answer (`ended_vs_text`);
+ * the card carries data-ended="true". This file types no word. */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
@@ -49,10 +54,14 @@ export function LukCard({ tile: t, focus = false, houseChips = null, live, nowLa
   ) : null;
   const chips = LUK_CHIP_KEYS.map((k) => [k, lukText(t.chips?.[k])] as const).filter(([, v]) => v);
   const notReread = t.not_reread === true ? lukText(t.not_reread_text) : null;
+  const tradeText = lukText(t.trade_text);
+  const ended = t.ended === true;
+  const endedText = ended ? lukText(t.ended_text) : null;
+  const endedVs = ended ? lukText(t.ended_vs_text) : null;
   return (
     <div className={`luk-card luk-state-${(t.state || '').replace(/[^a-z_]/gi, '')}${focus ? ' luk-focus' : ''}`}
          data-testid={`luk-tile-${t.symbol}`} data-state={t.state}
-         data-not-reread={notReread ? 'true' : undefined}>
+         data-not-reread={notReread ? 'true' : undefined} data-ended={ended ? 'true' : undefined}>
       {chart.bars.length ? (
         <>
           {house}
@@ -66,12 +75,15 @@ export function LukCard({ tile: t, focus = false, houseChips = null, live, nowLa
         </div>
       )}
       <div className="luk-extras">
+        {endedText ? <p className="luk-line luk-ended-line" data-testid={`luk-ended-${t.symbol}`}>{endedText}</p> : null}
+        {endedVs ? <p className="luk-line luk-live" data-testid={`luk-ended-vs-${t.symbol}`}>{endedVs}</p> : null}
         <div className="luk-pills">
           <span className={`luk-state luk-state-${(t.state || '').replace(/[^a-z_]/gi, '')}`}
                 data-testid={`luk-state-${t.symbol}`}>{t.state_label}</span>
           {lukText(t.frame_text) ? <span className="luk-frame" data-testid={`luk-frame-${t.symbol}`}>{t.frame_text}</span> : null}
           {notReread ? <span className="luk-not-reread" data-testid={`luk-not-reread-${t.symbol}`}>{notReread}</span> : null}
           {notRung ? <span className="luk-not-rung" data-testid={`luk-not-rung-${t.symbol}`}>{notRung}</span> : null}
+          {tradeText ? <span className="luk-trade" data-testid={`luk-trade-${t.symbol}`}>{tradeText}</span> : null}
         </div>
         {lukText(t.trigger_text) ? <p className="luk-plan" data-testid={`luk-trigger-${t.symbol}`}>{t.trigger_text}</p> : null}
         {lukText(t.stop_text) ? <p className="luk-plan" data-testid={`luk-stop-${t.symbol}`}>{t.stop_text}</p> : null}

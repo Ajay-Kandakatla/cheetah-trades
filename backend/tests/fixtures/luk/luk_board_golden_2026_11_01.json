@@ -46,6 +46,16 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "ended": {
+   "emoji": "🏁",
+   "head_text": "ended today — stopped or closed below the daily 9 EMA (Luk's exit)",
+   "more_text": null,
+   "n": 0,
+   "note_text": "Folded, never deleted — each card says how its trade ended; every 🥇 A+ among them is graded on the 🏁 Track record.",
+   "open": false,
+   "tiles": [],
+   "toggle_text": "open"
+  },
   "fault": false,
   "fault_text": null,
   "focus": null,
@@ -124,8 +134,8 @@
     "emoji": "🔔",
     "key": "opening_range_high",
     "label": "Opening range",
-    "n": 3,
-    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+    "n": 2,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40) · 1 ended — folded under the cards"
    },
    {
     "emoji": "📦",
@@ -265,6 +275,9 @@
     ],
     "curves": [],
     "curves5": [],
+    "ended": false,
+    "ended_text": null,
+    "ended_why": null,
     "entry_bar_t": "2026-11-03 09:42",
     "frame_text": "1-minute candle",
     "gajjala": {
@@ -287,6 +300,12 @@
      }
     ],
     "listed_why": null,
+    "live_fold": {
+     "kind": "under_stop",
+     "session": "rth",
+     "text": "🏁 ended — the live price traded at or under the stop 11.98 (Luk's exit) · the next pass reads it on the closed bar",
+     "until_epoch": 1793739600.0
+    },
     "live_level": {
      "stop": 11.98,
      "tf": "5m",
@@ -308,6 +327,7 @@
     "stop_text": "stop 11.98 (−3.4%) · R $0.42",
     "symbol": "AAA",
     "tf": "5m",
+    "trade_text": null,
     "trigger": 12.4,
     "trigger_text": "trigger 12.40 · broke on the 1-minute candle closing 09:42 ET",
     "vol_avg": null,
@@ -407,6 +427,9 @@
     ],
     "curves": [],
     "curves5": [],
+    "ended": false,
+    "ended_text": null,
+    "ended_why": null,
     "entry_bar_t": "2026-11-03 09:55",
     "frame_text": "5-minute candle",
     "gajjala": {
@@ -429,6 +452,7 @@
      }
     ],
     "listed_why": "stop too wide by his rule — 6.2% > 5% of the trigger",
+    "live_fold": null,
     "live_level": {
      "stop": 46.9,
      "tf": "5m",
@@ -450,6 +474,7 @@
     "stop_text": "stop 46.90 (−6.2%) · R $3.10 · stop = the 5-minute entry candle low (entry-to-LOD > 5%)",
     "symbol": "CCC",
     "tf": "5m",
+    "trade_text": null,
     "trigger": 50.0,
     "trigger_text": "trigger 50.00 · broke on the 5-minute candle closing 09:55 ET",
     "vol_avg": null,
@@ -549,6 +574,9 @@
     ],
     "curves": [],
     "curves5": [],
+    "ended": false,
+    "ended_text": null,
+    "ended_why": null,
     "entry_bar_t": "2026-11-03 09:50",
     "frame_text": "5-minute candle",
     "gajjala": {
@@ -571,6 +599,7 @@
      }
     ],
     "listed_why": "more than 3% above the low of day — his no-chase rule",
+    "live_fold": null,
     "live_level": {
      "stop": 19.2,
      "tf": "5m",
@@ -592,6 +621,7 @@
     "stop_text": "stop 19.20 (−4.0%) · R $0.80",
     "symbol": "BBB",
     "tf": "5m",
+    "trade_text": null,
     "trigger": 20.0,
     "trigger_text": "trigger 20.00 · broke on the 5-minute candle closing 09:50 ET",
     "vol_avg": null,
@@ -663,6 +693,7 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "ended": null,
   "fault": false,
   "fault_text": null,
   "focus": null,
@@ -890,8 +921,8 @@
     "emoji": "🔔",
     "key": "opening_range_high",
     "label": "Opening range",
-    "n": 3,
-    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+    "n": 2,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40) · 1 ended — folded under the cards"
    },
    {
     "emoji": "📦",
@@ -1002,6 +1033,7 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "ended": null,
   "fault": false,
   "fault_text": null,
   "focus": null,
@@ -1080,8 +1112,8 @@
     "emoji": "🔔",
     "key": "opening_range_high",
     "label": "Opening range",
-    "n": 3,
-    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40)"
+    "n": 2,
+    "title": "🔔 Opening range — take-out of the first 1-minute candle high, stop at its low (lS9zbnLi1Gg 0:38:40) · 1 ended — folded under the cards"
    },
    {
     "emoji": "📦",

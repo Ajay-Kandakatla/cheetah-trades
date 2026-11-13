@@ -178,3 +178,63 @@ describe('📱 🔄 Luk scan-now button — wraps inside the title row', () => {
     expect(btn).not.toMatch(/style=\{/);
   });
 });
+
+/* 🏁 2026-11-12 (ended cards fold, lukend spec §3.8). Ajay, verbatim: "Is this still good ro enter? From Luks" → "I
+ * shouldn't be seeing this" → "I want it to be realtime". The ONE fold line under the cards (a <details>) and the served
+ * trade pill on a live trade card — at 430 px the fold never exceeds its column, its served line wraps anywhere, and the
+ * trade pill joins the ONE-line chip-wrap selector list. NEGATIVES: the pre-fix strings fail each matcher; no inline style. */
+describe('📱 🏁 Luk ended fold + trade pill — wrap, never widen', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('.luk-ended carries min-width: 0; its summary wraps anywhere; the ended line wraps anywhere', async () => {
+    const src = await css();
+    expect(rule(src, /\.luk-ended/)).toMatch(/min-width:\s*0\b/);
+    expect(rule(src, /\.luk-ended > summary/)).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(src, /\.luk-ended-line/)).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+  it('the chip-wrap selector list carries .luk-pills .luk-trade on the same line, still wrapping; .luk-trade is a min-width 0 pill', async () => {
+    const src = await css();
+    const r = chipWrapRule(src);
+    expect(r).not.toBeNull();
+    expect(r!.selectors).toContain('.luk-pills .luk-trade');
+    expect(r!.decl).toMatch(/white-space:\s*normal/);
+    expect(r!.decl).toMatch(/overflow-wrap:\s*anywhere/);
+    const pill = rule(src, /\.luk-trade/);
+    expect(pill).toMatch(/border-radius:\s*999px/);
+    expect(pill).toMatch(/min-width:\s*0\b/);
+  });
+  it('NEGATIVE: the pre-fix strings fail the same matchers', () => {
+    const PRE = `.luk-ended { display: block; }
+.luk-ended > summary { cursor: pointer; }
+.luk-ended-line { color: red; }
+.luk-trade { display: inline-block; }`;
+    expect(rule(PRE, /\.luk-ended/)).not.toMatch(/min-width:\s*0\b/);
+    expect(rule(PRE, /\.luk-ended > summary/)).not.toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(PRE, /\.luk-ended-line/)).not.toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(PRE, /\.luk-trade/)).not.toMatch(/min-width:\s*0\b/);
+    const pre = '\n.luk-chip-row .cm-badge, .luk-card .cm-tile-chips .cm-badge, .luk-pills .luk-state, .luk-pills .luk-frame, .luk-pills .luk-not-reread, .luk-pills .luk-not-rung {\n  white-space: normal; overflow-wrap: anywhere;\n}';
+    expect(chipWrapRule(pre)!.selectors).not.toContain('.luk-pills .luk-trade');
+    expect(rule('.luk-card { min-width: 0; }', /\.luk-ended/)).toBeNull();
+  });
+  it('DOM at 430 px: the long served fold line + trade pill carry their classes; NEGATIVE: no inline style anywhere', async () => {
+    const LONG = 'ended today — a very long unbreakable served fold sentence that would widen the column on a phone if it could not wrap';
+    const board = { tab: 'luk', title: 'T', sub: 'pullback_reversal', subs: [{ key: 'pullback_reversal', label: 'Pullback reversal', n: 1 }],
+      tiles: [{ symbol: 'AAA', setup: 'pullback_reversal', state: 'triggered', state_label: 'triggered earlier', criteria: [], bars5: [],
+        trade_text: LONG }],
+      ended: { n: 3, emoji: '🏁', head_text: LONG, toggle_text: 'open', note_text: LONG, open: true,
+        tiles: [{ symbol: 'ZZZ', setup: 'pullback_reversal', state: 'stopped', state_label: 'stopped', criteria: [], bars5: [],
+          ended: true, ended_text: LONG }] } };
+    vi.stubGlobal('fetch', vi.fn(async (u: string) => ({ ok: true, status: 200,
+      json: async () => (String(u).includes('/chart-maps/luk') ? board : {}) })));
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 430 });
+    const { container } = render(<MemoryRouter initialEntries={['/chart-maps?tab=luk']}><LukBoard /></MemoryRouter>);
+    await waitFor(() => expect(container.querySelector('.luk-board[data-state="loaded"]')).not.toBeNull());
+    expect(container.querySelector('[data-testid="luk-ended"]')!.className).toBe('luk-ended');
+    expect(container.querySelector('[data-testid="luk-trade-AAA"]')!.closest('.luk-pills')).not.toBeNull();
+    expect(container.querySelector('[data-testid="luk-ended-ZZZ"]')!.className).toMatch(/\bluk-ended-line\b/);
+    expect(container.querySelector('[data-testid="luk-ended-grid"]')!.className).toMatch(/\bluk-grid\b/);
+    for (const el of Array.from(container.querySelectorAll('*'))) {
+      expect((el as HTMLElement).getAttribute('style')).toBeNull();
+      expect(el.getAttribute('nowrap')).toBeNull();
+    }
+  });
+});

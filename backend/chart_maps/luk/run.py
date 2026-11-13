@@ -341,16 +341,19 @@ def _overlay(today_docs: list, ring_docs: dict) -> list:
 
 
 def _board_names(today_docs: list, alert_rows: Optional[list]) -> list:
-    """Every card the board shows by default — luk.tab.tiles_for(docs, setup, caps={}) cut by
-    luk.tab._clip_focus(…, "", GC.TILE_LIMIT_DEFAULT) per LC.SETUPS sub (the board's own engine, imported), interleaved
-    by position (card 1 of each sub, then card 2, …) — cut to LC.LUK_REREAD_MAX; then today's alert symbols
-    (alert_rows: `at` desc, symbol asc) not already listed. Upper-cased, de-duplicated, in that order. Reads its
-    arguments only."""
+    """Every card the board shows by default — luk.tab.tiles_for(docs, setup, caps={}) split by luk.tab.live_tiles
+    (the board's own live/ended split, 2026-11-12: with no ctx only a `stopped` card is ended, so a stopped card is
+    not re-read; no chart_maps.live_card import) and cut by luk.tab._clip_focus(…, "", GC.TILE_LIMIT_DEFAULT) per
+    LC.SETUPS sub (the board's own engine, imported), interleaved by position (card 1 of each sub, then card 2, …) —
+    cut to LC.LUK_REREAD_MAX; then today's alert symbols (alert_rows: `at` desc, symbol asc) not already listed — a
+    stopped card's alert name is still appended. Upper-cased, de-duplicated, in that order. Reads its arguments
+    only."""
     from chart_maps.gajjala import constants as GC
     from . import tab as TB
     docs = [d for d in today_docs or [] if isinstance(d, dict)]
     per = [[str(t.get("symbol") or "").upper() for t in
-            TB._clip_focus(TB.tiles_for(docs, setup, caps={}), "", GC.TILE_LIMIT_DEFAULT)] for setup in LC.SETUPS]
+            TB._clip_focus(TB.live_tiles(TB.tiles_for(docs, setup, caps={})), "", GC.TILE_LIMIT_DEFAULT)]
+           for setup in LC.SETUPS]
     shown: list = []
     for i in range(max((len(p) for p in per), default=0)):
         for p in per:

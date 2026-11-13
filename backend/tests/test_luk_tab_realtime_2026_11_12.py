@@ -229,10 +229,14 @@ def test_NEGATIVE_no_finite_level_no_live_level(trig, stop):
 
 
 def test_the_board_serves_live_levels_on_its_cards():
-    tiles = _build(sub=ORH)["tiles"]
-    by = {t["symbol"]: t["live_level"] for t in tiles}
+    out = _build(sub=ORH)
+    by = {t["symbol"]: t["live_level"] for t in out["tiles"]}
     assert by["AAA"] == {"trigger": 12.6, "stop": 11.98, "tf": LUK.primary}            # forming
-    assert by["CCC"] is None                                                             # stopped
+    # RE-PINNED 2026-11-12 (🏁 ended cards fold, SPEC lukend §3.3 rule 1): the stopped CCC is folded — read it from
+    # the served `ended` block; still no live level on it
+    assert "CCC" not in by
+    ended = {t["symbol"]: t["live_level"] for t in out["ended"]["tiles"]}
+    assert ended["CCC"] is None                                                          # stopped
 
 
 # ── next_read_sec (critique C3) ───────────────────────────────────────────────────────────────────────────────────
