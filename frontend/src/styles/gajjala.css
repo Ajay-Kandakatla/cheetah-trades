@@ -386,3 +386,7 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-cross { min-width: 0; }
 .gg-cross-up { color: var(--positive, #16a34a); }
 .gg-cross-down { color: var(--negative, #dc2626); }
+
+/* 📶 2026-11-15 — the served base-count line on a Gajjala card (it carries .gg-line, so the 430 px wrap rule above holds):
+   muted, ONE tone for every count — never red, no colour by count (HIS CALL #4). */
+.gg-run-bases { min-width: 0; color: var(--ink-subtle, #94a3b8); }

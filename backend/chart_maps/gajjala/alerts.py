@@ -477,6 +477,23 @@ def refusal(r: dict, sym: str, entry_t: str, frames, now, session, ctx: Optional
     return window_reason(entry_t, session, r.get("frame") or v.primary) or extra_suppression(r, ctx, session)
 
 
+def _rb_fields(frames, sym, entry_t, logged: Optional[dict] = None) -> dict:
+    """📶 2026-11-15 (Ajay "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I
+    need that tracked in to Gajjala's") — {"run_base_n", "run_base_forming"} of `sym` AT its entry bar
+    (run_bases.claim_fields over the pass's own frames), {} when unknown or on any fault (logged once per `logged`
+    dict). Stamped on the claim / refusal / shadow / 🧪 held records only — never in ctx, never read by `compose`, never
+    a gate. Information only; UNMEASURED."""
+    try:
+        from . import run_bases as RB
+        return RB.claim_fields(frames.get(sym) if isinstance(frames, dict) else None, entry_t)
+    except Exception as exc:                                    # noqa: BLE001
+        if logged is None or not logged.get("done"):
+            log.warning("gajjala alerts: base count stamp failed for %s: %s", sym, type(exc).__name__)
+            if logged is not None:
+                logged["done"] = True
+        return {}
+
+
 def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: Optional[Callable] = None,
              owner: Optional[str] = None, dry: bool = False, ctx: Optional[dict] = None,
              mode: Optional[str] = None) -> dict:
@@ -508,6 +525,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             if isinstance(r, dict) and r.get("state") == "none" and str(r.get("reason") or "").startswith("awaiting"):
                 counts["awaiting_answer"] += 1
     closed = _closed_reason(now)
+    rb_log: dict = {}                                           # 📶 a stamp fault is logged ONCE per pass
     for entry_t, _o, sym, setup, r in _candidates(reads):
         counts["aplus"] += 1
         key = claim_key(session, sym, setup, v)
@@ -521,6 +539,7 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             base["promo"] = True
             if isinstance(c.get("promo_text"), str) and c["promo_text"]:
                 base["promo_text"] = c["promo_text"]
+        base.update(_rb_fields(frames, sym, entry_t, rb_log))   # 📶 2026-11-15 — the base count AT the entry bar (keys only when known)
         state = refusal(dict(r, setup=setup), sym, entry_t, frames.get(sym) if isinstance(frames, dict) else None,
                         now, session, ctx.get(sym), v, coll, closed=closed)
         if state == "claimed_before":

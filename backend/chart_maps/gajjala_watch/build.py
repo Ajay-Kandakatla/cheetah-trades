@@ -28,6 +28,7 @@ from chart_maps.gajjala import bars as B
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import detectors as DT
 from chart_maps.gajjala import run as RUN
+from chart_maps.gajjala import run_bases as RB
 from chart_maps.gajjala import tab as GT
 from daytrading.data import ET_PREMARKET_OPEN, ET_RTH_OPEN
 
@@ -151,10 +152,31 @@ def tile(frames_obj, tf: str, end: dtime) -> dict:
                                 "price": m["ema"]} for m in blk.pop("_marks")], p["bars"])
     F = frames_obj.frame(tf)
     ok = k5(F, len(F) - 1)
-    return {"tf": tf, "label": C.FRAME_WORDS[tf], "bars": p["bars"], "curves": p["curves"], "vol_avg": p["vol_avg"],
-            "markers": markers, "ema_cross": blk or None, "uptrend": {"ok": ok, "short": UPTREND_SHORT[ok]},
-            "axis": axis(frames_obj.session, _frame_min(tf), p["bars"], end),
-            "as_of_bar_t": F.t[-1] if F.t else None}
+    out = {"tf": tf, "label": C.FRAME_WORDS[tf], "bars": p["bars"], "curves": p["curves"], "vol_avg": p["vol_avg"],
+           "markers": markers, "ema_cross": blk or None, "uptrend": {"ok": ok, "short": UPTREND_SHORT[ok]},
+           "axis": axis(frames_obj.session, _frame_min(tf), p["bars"], end),
+           "as_of_bar_t": F.t[-1] if F.t else None}
+    out.update(run_bases_keys(F, tf, p["bars"]))
+    return out
+
+
+def run_bases_keys(F, tf: str, bars: list) -> dict:
+    """📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I need
+    that tracked in to Gajjala's"; spec ggbase WP-E): on the counting frame ONLY (GC.RUN_BASE_FRAME — the 5-min chart),
+    the card's base-count line and marks from the ONE engine (`run_bases.count` → `card_block` / `ellipses`) — the same
+    📶 line Gajjala's cards print. {"run_bases": …} / {"ellipses": […]}, each key only when non-empty; every other frame
+    → {}. Information only — nothing gates, sorts, filters or pushes on it (the cross push never reads it). UNMEASURED."""
+    if tf != GC.RUN_BASE_FRAME or F is None:
+        return {}
+    rb = RB.count(F)
+    out: dict = {}
+    card = RB.card_block(rb)
+    if card:
+        out["run_bases"] = card
+    marks = RB.ellipses(rb, bars, tf)
+    if marks:
+        out["ellipses"] = marks
+    return out
 
 
 def _iso(session) -> str:
@@ -211,4 +233,4 @@ def seen(tiles_coll, syms) -> dict:
 
 
 __all__ = ["session_of", "frames", "status_of", "axis_end", "axis", "tile", "tile_update", "write", "seen", "k5",
-           "uptrend_rule", "UPTREND_SHORT", "STATUSES"]
+           "run_bases_keys", "uptrend_rule", "UPTREND_SHORT", "STATUSES"]

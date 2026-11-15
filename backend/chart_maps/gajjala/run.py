@@ -97,6 +97,31 @@ def _upto(raw, now):
     return raw if keep.all() else raw[keep]
 
 
+def _run_bases_of(frames: dict, who: str) -> dict:
+    """📶 2026-11-15 (Ajay "There is a concept of 3 bases and climax run can you bake that in to the app please") —
+    {SYM: run_bases.count block} over each name's counting frame (GC.RUN_BASE_FRAME), one try per name: a failing
+    name has no key (logged ONCE per pass) and the pass never breaks. Information only — stored on the read doc, never
+    in ctx / alert_ctx, never a gate."""
+    out: dict = {}
+    try:
+        from . import run_bases as RB
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("%s: run_bases unavailable: %s", who, type(exc).__name__)
+        return out
+    logged = False
+    for s, fr in (frames or {}).items():
+        try:
+            blk = RB.count(RB.frame_of(fr))
+        except Exception as exc:                                # noqa: BLE001
+            if not logged:
+                log.warning("%s: base count failed for %s: %s", who, s, type(exc).__name__)
+                logged = True
+            continue
+        if isinstance(blk, dict):
+            out[s] = blk
+    return out
+
+
 def in_window(now: datetime) -> bool:
     """PASS_OPEN_ET ≤ now ≤ PASS_CLOSE_ET (ET) on a market day (the house calendar)."""
     from catalysts.medical.reaction import is_market_day
@@ -471,6 +496,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
         reads = {s: deps.read_all(fr.detector_frames(), {"symbol": s, "float_read": floats.get(s),
                                                           D.K11_CTX_KEY: sv.get(s)})
                  for s, fr in frames.items()}
+        run_bases = _run_bases_of(frames, "gajjala pass")   # 📶 2026-11-15 — the base count, stored only (never ctx / alert_ctx)
 
         # float chain step 3 — paced Yahoo, 🎾-alive names first; a changed float re-reads ONLY the 🎾 setup.
         # Never on an on-open pass (C7: one snapshot + the minute fetches, like a cron pass — no Yahoo).
@@ -575,9 +601,12 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             p = B.tile_prior_payload(fr, "5m", from_et=GC.RS_TILE_PRIOR_FROM_ET)   # 🎾 the prior session's tail (2026-11-08), drawing only
             tile.update(bars5_prior=p["bars"], curves5_prior=p["curves"], vol_avg5_prior=p["vol_avg"])
             mine()
-            st.upsert_read(session, s, {"as_of_bar_t5": fr.as_of_bar_t5, "as_of_bar_t15": fr.as_of_bar_t15,
-                                        "setups": reads.get(s) or {}, "ctx": ctx, "tile": tile,
-                                        "listed": listed.get(s), "stopped_today": stopped}, now=now)
+            rdoc = {"as_of_bar_t5": fr.as_of_bar_t5, "as_of_bar_t15": fr.as_of_bar_t15,
+                    "setups": reads.get(s) or {}, "ctx": ctx, "tile": tile,
+                    "listed": listed.get(s), "stopped_today": stopped}
+            if isinstance(run_bases.get(s), dict):              # 📶 the key only when the count returned a block
+                rdoc["run_bases"] = run_bases[s]
+            st.upsert_read(session, s, rdoc, now=now)
             alert_ctx[s] = {"float_text": (fr_read or {}).get("text"), "price": row.get("price"),
                             "last_halt_resume_et": ctx["last_halt_resume_et"], "reg_gain_pct": ctx["reg_gain_pct"]}
             if tag:

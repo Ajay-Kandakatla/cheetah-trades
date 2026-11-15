@@ -304,6 +304,11 @@ NOT_BUILT = ("Not built — Playbook text only (each would need your numbers)", 
     ("The CGC \"classic momentum breakout\" as its own sub-tab.", None, None),
     ("Business Insider's \"two EMA touches\" minimum for the Kiss & Fly.", "1:55:28", S9),
     ("A post-market journal with his own fields (your answer R2-8: not now).", "15:57–17:03", S8),
+    # 📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please"): the
+    # cards COUNT the bases (run_bases.py, docs/gajjala/run_bases_2026_11_15.md); ACTING on the count stays not built.
+    ("Acting on the base count — peel at the 3rd base, out at the 4th — and GG's counter-rule trigger. The cards COUNT "
+     "the bases as information only (📶, 5-minute bars, my definition — your call); nothing peels, exits or rings on it.",
+     "40:54–41:18", S8),
 ])
 
 

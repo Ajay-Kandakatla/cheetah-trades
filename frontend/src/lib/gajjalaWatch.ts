@@ -14,6 +14,7 @@
  * or a sentence about a stock. The ONE FE sentence is GGW_FETCH_FAILED (the request itself failed — there is no payload
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
 import type { CmAxis, CmTile } from './chartMaps';
+import { ggRunBasesLine } from './gajjala';
 
 /** The tab id (== backend chart_maps/gajjala_watch/constants.TAB). */
 export const GGW_TAB = 'gajjala_watch';
@@ -85,9 +86,15 @@ export type GgwRowState = 'ok' | 'pending' | 'no_prints' | 'no_bars' | 'failed' 
 export type GgwUptrend = { ok: boolean | null; short: string };
 export type GgwHeld = { text: string };
 export type GgwCross = Record<string, unknown>;
+/** 📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I need
+ *  that tracked in to Gajjala's"): the served base-count line of the 5-min frame — backend build.run_bases_keys → the ONE
+ *  engine's run_bases.card_block, the same line Gajjala's cards print. `text` verbatim, `title` (GG's quotes + the
+ *  definition) on hover. Information only, UNMEASURED. */
+export type GgwRunBases = { text: string; title: string };
 export type GgwFrame = {
   tf: string; label: string; tile: CmTile; axis: CmAxis | null;
   ema_cross: GgwCross | null; uptrend: GgwUptrend | null; held: GgwHeld | null;
+  run_bases: GgwRunBases | null;
 };
 export type GgwRang = { frame: string; at_et: string | null; text: string };
 export type GgwRow = {
@@ -164,6 +171,10 @@ function parseFrame(v: unknown, symbol: string): GgwFrame | null {
   return {
     tf: v.tf, label: typeof v.label === 'string' ? v.label : v.tf, tile, axis: parseAxis(v.axis),
     ema_cross: isObj(v.ema_cross) ? v.ema_cross : null, uptrend: up, held,
+    /* 📶 lib/gajjala's ONE reader of a served card block (trimmed text + title; blank / junk → null). The served
+     * `ellipses` beside it are NOT drawn here: PatternChart's ellipse layer maps by bar index, not by the served
+     * 04:00 axis this board draws on (spec ggbase WP-E — main session's call). */
+    run_bases: isObj(v.run_bases) ? ggRunBasesLine(v.run_bases) : null,
   };
 }
 

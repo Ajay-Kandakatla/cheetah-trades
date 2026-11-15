@@ -1,7 +1,7 @@
 """Gajjala's tab — the 20:15 ET nightly (spec §3.10): float warm, the 30-session halt-history backfill, and the 🎾
 squeeze-history warm for the NEXT session.
 
-    python -m chart_maps.gajjala.nightly [--session YYYY-MM-DD] [--steps floats,halts,history,grade]
+    python -m chart_maps.gajjala.nightly [--session YYYY-MM-DD] [--steps floats,halts,history,bases,grade]
 
 The pass (run.py) computes the bounded in-pass part; this job does the rest once the tape is shut, for tomorrow:
   floats   every name listed tomorrow (qualified today or the session before — scanner.listed_symbols) + tonight's
@@ -14,6 +14,10 @@ The pass (run.py) computes the bounded in-pass part; this job does the rest once
            A failed read is retried the next night; nothing is marked read on a failure — and a read with ZERO
            halts that day counts as failed (probed sessions: 28 to 95; an empty list is a feed miss, not a calm day).
   history  the 🎾 chip for every name above, stored under TOMORROW's date (the session it is shown in).
+  bases    📶 (2026-11-15, Ajay "I need that tracked in to Gajjala's"): the session's base count per name — every GG5
+           read doc's stored `run_bases` block (run_bases.count) — kept as ONE gajjala_state doc
+           `run_bases|YYYY-MM-DD` {date, frame, rows: [{symbol, as_of_bar_t, n, forming, state, runs}] by symbol,
+           n_names, at, version}; no read doc with a block → nothing written. Its own try. INFORMATION ONLY.
   grade    🏁 the Track record (2026-10-16, ledger.grade_step) — LAST, in its own try: every 🧠 push that rang and every
            A+ shadow / live claim of the last LEDGER_GRADE_LOOKBACK_SESSIONS market days whose column has ended is
            graded by GG's trade math into gajjala_ledger (same session on the night it ends, next session the night
@@ -62,7 +66,8 @@ from . import context as CX
 log = logging.getLogger("chart_maps.gajjala.nightly")
 
 ET = ZoneInfo("America/New_York")
-STEPS = ("floats", "halts", "history", "grade")           # 🏁 grade LAST (2026-10-16): its failure never stops a step
+STEPS = ("floats", "halts", "history", "bases", "grade")  # 🏁 grade LAST (2026-10-16): its failure never stops a step
+RUN_BASES_STATE_FMT = "run_bases|{date}"                  # 📶 2026-11-15 — the session's base-count snapshot (kept)
 
 
 def default_session(now: Optional[datetime] = None) -> date:
@@ -130,12 +135,39 @@ def names_for_tomorrow(store, session: date) -> tuple:
     return syms, {s: {"change_pct": best.get(s, 0.0)} for s in syms}
 
 
+def snapshot_bases(store, session: date, now: datetime) -> dict:
+    """📶 The "bases" step (2026-11-15): every read doc of `session` carrying a dict `run_bases` (store.run_bases_of —
+    ONE projected find) → a row {symbol, as_of_bar_t, n, forming, state, runs}, sorted by symbol → ONE
+    store.set_state(RUN_BASES_STATE_FMT); no row → no write. -> {"names": rows, "with_bases": rows whose block holds at
+    least one base in any run}. Read-only on every provider; idempotent (the same doc id, the rows replaced)."""
+    rows = []
+    frame = version = None
+    for d in store.run_bases_of(session) or []:
+        blk = d.get("run_bases") if isinstance(d, dict) else None
+        sym = str(d.get("symbol") or "").upper() if isinstance(d, dict) else ""
+        if not isinstance(blk, dict) or not sym:
+            continue
+        runs = blk.get("runs") if isinstance(blk.get("runs"), list) else []
+        rows.append({"symbol": sym, "as_of_bar_t": blk.get("as_of_bar_t"), "n": blk.get("n"),
+                     "forming": blk.get("forming"), "state": blk.get("state"), "runs": runs})
+        frame = frame if frame is not None else blk.get("frame")
+        version = version if version is not None else blk.get("version")
+    rows.sort(key=lambda r: r["symbol"])
+    with_bases = sum(1 for r in rows if any(isinstance(x, dict) and x.get("bases") for x in r["runs"]))
+    if rows:
+        iso = session.isoformat()
+        store.set_state(RUN_BASES_STATE_FMT.format(date=iso),
+                        {"date": iso, "frame": frame, "rows": rows, "n_names": len(rows), "at": now.isoformat(),
+                         "version": version})
+    return {"names": len(rows), "with_bases": with_bases}
+
+
 def run(session: Optional[date] = None, *, store=None, now: Optional[datetime] = None, steps=STEPS,
         fetch_halts: Optional[Callable] = None, daily_loader: Optional[Callable] = None,
         status_lookup: Optional[Callable] = None, massive_lookup: Optional[Callable] = None,
         sleep: Callable = time.sleep, ledger_load_day: Optional[Callable] = None,
         ledger_split_lookup: Optional[Callable] = None) -> dict:
-    """The four steps for `session` (default: today ET / the last market day). -> a summary dict (+ `errors`).
+    """Every step of `steps` for `session` (default: today ET / the last market day). -> a summary dict (+ `errors`).
     `ledger_load_day` / `ledger_split_lookup` are the 🏁 grade step's injectable loaders (ledger.grade_step)."""
     from catalysts.medical.reaction import next_market_day
 
@@ -173,6 +205,12 @@ def run(session: Optional[date] = None, *, store=None, now: Optional[datetime] =
         except Exception as exc:                                # noqa: BLE001
             log.exception("gajjala nightly: history step failed")
             out["errors"].append(f"history: {type(exc).__name__}")
+    if "bases" in steps:                                         # 📶 2026-11-15 — before grade, its own try
+        try:
+            out["bases"] = snapshot_bases(store, session, now)
+        except Exception as exc:                                # noqa: BLE001
+            log.exception("gajjala nightly: bases step failed")
+            out["errors"].append(f"bases: {type(exc).__name__}")
     if "grade" in steps:                                         # LAST (the B8 pattern): its failure never stops a step
         try:
             from . import ledger as LG

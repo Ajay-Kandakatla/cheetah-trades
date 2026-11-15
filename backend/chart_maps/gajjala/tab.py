@@ -86,6 +86,7 @@ from chart_maps.gajjala import entry_zone as EZ               # 🧪 2026-11-08 
 from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from chart_maps.gajjala import trader_names as TN             # 📌 2026-10-27 — the trader tag's served words
 from chart_maps.gajjala import promo_names as PN              # 🎪 2026-10-29 — the promo tag's served words
+from chart_maps.gajjala import run_bases as RB                # 📶 2026-11-15 — GG's base count (card line + chart marks; display only)
 from chart_maps.gajjala import squeeze_marks as SM            # 🎾 2026-11-08 — GG's chart marks on the squeeze card
 from chart_maps.gajjala import stages as SG                   # 🧭 2026-11-11 — the setup stages on every card (display only)
 from chart_maps.gajjala import variant as V                   # 🚩 2026-10-27 — GG5 (this tab) / GG1 (the 1-minute page)
@@ -1489,6 +1490,10 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         g["_ema_gap_pct"] = _ema_gap_pct(read)
     if cross:                                                        # 🔀 2026-11-15 — the served cross words (absent = no cross)
         g["ema_cross"] = cross
+    rb_blk = doc.get("run_bases")                                    # 📶 2026-11-15 — the stored base count (absent = no key)
+    rb = RB.card_block(rb_blk) if rb_blk is not None else None
+    if rb is not None:                                               # the served line words (display only, never a sort key)
+        g["run_bases"] = rb
     if kf_rank and setup in GC.RVOL_SORT_SETUPS:                     # 💋 order keys (2026-11-11), popped before serving
         rv = (doc.get("ctx") or {}).get("rvol")
         rv = rv if isinstance(rv, dict) else None
@@ -1511,6 +1516,9 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         tile["ellipses"] = (SM.ellipses(read, fr["bars"], entry_t=(markers[0]["date"] if markers else None),
                                         carry_row=carry_row, prev_iso=prev_iso)
                             if fr["tf"] == read_tf else [])          # drawn ONLY on the frame the read was taken on
+    rb_marks = RB.ellipses(rb_blk, fr["bars"], fr["tf"]) if rb_blk is not None else []
+    if rb_marks:                                                     # 📶 one GG mark per base — the counting frame only
+        tile["ellipses"] = (tile.get("ellipses") or []) + rb_marks   # 🎾: squeeze marks THEN the bases; others: key only when non-empty
     return tile
 
 

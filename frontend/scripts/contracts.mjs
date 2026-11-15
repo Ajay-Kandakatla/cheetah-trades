@@ -17140,7 +17140,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-15: 🌫️ chart-maps-gajjala-day-read-2026-11-15 FIRST — Ajay: "yes" to the choppy-day label).
         // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
         // WIDENED +1 (2026-11-15: 👀 chart-maps-gajjala-watch-2026-11-15 FIRST — Ajay: the Gajjala Watch dashboard).
-        if (!allIds.slice(0, 4).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 4 of NEW_FEATURES (found ${allIds.slice(0, 5).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — slice(0, 4) → slice(0, 5).
+        if (!allIds.slice(0, 5).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 5 of NEW_FEATURES (found ${allIds.slice(0, 6).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

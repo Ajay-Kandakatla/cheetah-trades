@@ -249,14 +249,32 @@ def frame_block(sym: str, tf: str, t: dict, held_doc) -> dict:
     if blk is not None:
         blk = {k: v for k, v in blk.items() if not str(k).startswith("_")}       # `_marks` never served
     up = t.get("uptrend") if isinstance(t.get("uptrend"), dict) else {}
-    return {"tf": tf, "label": t.get("label") or C.FRAME_WORDS.get(tf, tf),
-            "tile": {"symbol": sym, "href": "", "bars": _list(t.get("bars")), "curves": _list(t.get("curves")),
-                     "markers": _list(t.get("markers")), "lines": [], "bands": [], "stats": [], "why": "",
-                     "vol_avg": t.get("vol_avg") if isinstance(t.get("vol_avg"), dict) else None},
-            "axis": t.get("axis") if isinstance(t.get("axis"), dict) else None,
-            "ema_cross": blk,
-            "uptrend": {"ok": up.get("ok"), "short": up.get("short")},
-            "held": _held(blk, (held_doc or {}).get(tf) if isinstance(held_doc, dict) else None)}
+    out = {"tf": tf, "label": t.get("label") or C.FRAME_WORDS.get(tf, tf),
+           "tile": {"symbol": sym, "href": "", "bars": _list(t.get("bars")), "curves": _list(t.get("curves")),
+                    "markers": _list(t.get("markers")), "lines": [], "bands": [], "stats": [], "why": "",
+                    "vol_avg": t.get("vol_avg") if isinstance(t.get("vol_avg"), dict) else None},
+           "axis": t.get("axis") if isinstance(t.get("axis"), dict) else None,
+           "ema_cross": blk,
+           "uptrend": {"ok": up.get("ok"), "short": up.get("short")},
+           "held": _held(blk, (held_doc or {}).get(tf) if isinstance(held_doc, dict) else None)}
+    out.update(_run_bases(tf, t))
+    return out
+
+
+def _run_bases(tf: str, t: dict) -> dict:
+    """📶 2026-11-15 (spec ggbase WP-E): the stored base-count line (`run_bases`, build.run_bases_keys → the ONE engine's
+    `card_block`) and its marks (`ellipses`) of the counting frame (GC.RUN_BASE_FRAME) passed through as stored — each
+    key only when present and usable; any other frame → {} (a stray key on the 1-/3-min frame is never served)."""
+    if tf != GC.RUN_BASE_FRAME:
+        return {}
+    out: dict = {}
+    rb = t.get("run_bases")
+    if isinstance(rb, dict) and isinstance(rb.get("text"), str) and rb["text"].strip():
+        out["run_bases"] = rb
+    marks = [e for e in _list(t.get("ellipses")) if isinstance(e, dict)]
+    if marks:
+        out["ellipses"] = marks
+    return out
 
 
 def status_text(status, sym: str, *, has_frames: bool, doc: dict, session: str, is_today: bool,

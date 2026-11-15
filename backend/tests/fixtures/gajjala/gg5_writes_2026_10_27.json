@@ -712,6 +712,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:30",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:25",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:30",
@@ -2231,6 +2252,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:40",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:40",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:40",
@@ -2775,6 +2817,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:30",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:25",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:30",
@@ -3296,6 +3359,8 @@
        "mode": "live",
        "price": 11.2,
        "risk_pct": 1.4245014245014245,
+       "run_base_forming": false,
+       "run_base_n": 0,
        "setup": "bull_flag",
        "state": "claimed",
        "stop": 10.8125,
@@ -4867,6 +4932,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:30",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:25",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:30",
@@ -6386,6 +6472,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:40",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:40",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:40",
@@ -6930,6 +7037,27 @@
        "of": 3,
        "since": "2026-10-13"
       },
+      "run_bases": {
+       "as_of_bar_t": "2026-10-13 10:30",
+       "depth_floor": false,
+       "forming": false,
+       "frame": "5m",
+       "from": "rth",
+       "n": 0,
+       "restart": true,
+       "runs": [
+        {
+         "bases": [],
+         "from_t": "2026-10-13 10:20",
+         "high_t": "2026-10-13 10:25",
+         "n": 0,
+         "state": "running"
+        }
+       ],
+       "state": "running",
+       "until": "rth",
+       "version": 1
+      },
       "setups": {
        "bull_flag": {
         "as_of_bar_t": "2026-10-13 10:30",
@@ -7452,6 +7580,8 @@
        "note": "shadow — not sent",
        "price": 11.2,
        "risk_pct": 1.4245014245014245,
+       "run_base_forming": false,
+       "run_base_n": 0,
        "setup": "bull_flag",
        "state": "shadow",
        "stop": 10.8125,

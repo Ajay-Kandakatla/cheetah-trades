@@ -67,6 +67,16 @@ wording only; every other entry is the BOARD golden alone):
   (no doc on file). Same check on the FE fixtures by their own `-k golden` recipes: 1m board 51 (3 absent), on_open 51
   (3), potential 34 (2), track_record 51 (3); Luk golden 3 (`day_read: null` — the test build is not the owner)
   (docs/chart_maps/gajjala_day_read_2026_11_15.md).
+  2026-11-15 — Ajay "There is a concept of 3 bases and climax run can you bake that in to the app please" / "I need
+  that tracked in to Gajjala's"; the WRITES move put to him (HIS CALL #12) and answered "Yes, record it". BOARD and,
+  for the third time, WRITES regenerated (WRITES alone with `-k test_gg5_writes_are_byte_identical`, BOARD alone with
+  `-k test_gg5_board_is_byte_identical`). ALL ADDED, 0 changed, 0 removed. WRITES 5595 -> 5689 leaves (+94):
+  `run_bases` {version, frame, from, until, restart, depth_floor, as_of_bar_t, runs, n, forming, state} on the three
+  read docs per mode (90 leaves; n 0, state running on the fixture day) and `run_base_n` 0 + `run_base_forming` false
+  on the A+ claim's $setOnInsert per mode (4). BOARD 12361 -> 12375 leaves (+14): the ONE 📓 Not built item appended
+  last (section 13, item 12) per mode — no card carries `run_bases` / `ellipses` (no base on the fixture day). Same
+  check on the on_open FE fixture by its `-k golden` recipe: 2128 -> 2135 (+7, the 📓 item)
+  (docs/gajjala/run_bases_2026_11_15.md).
 """
 from __future__ import annotations
 

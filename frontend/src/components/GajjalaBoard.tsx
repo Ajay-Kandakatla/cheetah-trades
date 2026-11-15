@@ -210,6 +210,7 @@ import {
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
   ggEmaCrossLine, type GgEmaCross,
+  ggRunBasesLine, type GgRunBases,
   type GgBoard, type GgBrokerFlags, type GgDay2Block, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
@@ -1042,6 +1043,19 @@ function GgEmaCrossLine({ cross, sym }: { cross: GgEmaCross | null | undefined; 
   );
 }
 
+/** 📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I need
+ *  that tracked in to Gajjala's"): the SERVED base-count line (backend run_bases.card_block — GG verified rule E6, the
+ *  definition is Cheetah's, UNMEASURED, information only), verbatim, with the served title (GG's quotes + the definition)
+ *  on hover. Muted, one tone for every count — never red. Absent block / blank text → nothing. No counter line. */
+function GgRunBasesLine({ bases, sym }: { bases: GgRunBases | null | undefined; sym: string }) {
+  const line = ggRunBasesLine(bases);
+  if (!line) return null;
+  return (
+    <div className="cm-note gg-line gg-run-bases" data-testid={`gg-run-bases-${sym}`}
+         title={line.title || undefined}>{line.text}</div>
+  );
+}
+
 /** State pill, plan line, the 🔴 served live line, criteria checklist and the chip row under a tile. */
 function CardExtras({ read, board, sub, sym, live }: {
   read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null;
@@ -1087,6 +1101,7 @@ function CardExtras({ read, board, sub, sym, live }: {
       {plan ? <div className="gg-plan" data-testid="gg-plan">{plan}</div> : null}
       <GgBreakoutLine breakout={read.breakout} sym={sym} />
       <GgEmaCrossLine cross={read.ema_cross} sym={sym} />
+      <GgRunBasesLine bases={read.run_bases} sym={sym} />
       {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
       {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
@@ -1282,6 +1297,8 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
         {trChip(row.replay_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-replay-${row.key}`}>{row.replay_text}</span> : null}
         {trChip(row.rang_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-rang-${row.key}`}>{row.rang_text}</span> : null}
         {trChip(row.thin_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-thin-${row.key}`}>{row.thin_text}</span> : null}
+        {/* 📶 2026-11-15: the served base-count chip of the claim at its entry bar (ledger BASE_TEXT), verbatim. */}
+        {trChip(row.base_text) ? <span className="gg-tr-chip gg-tr-base" data-testid={`gg-tr-base-${row.key}`}>{row.base_text}</span> : null}
       </td>
     );
     case 'plan': return (

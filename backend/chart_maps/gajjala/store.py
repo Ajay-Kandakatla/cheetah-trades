@@ -566,6 +566,18 @@ class GajjalaStore:
     def get_read(self, session, sym: str) -> Optional[dict]:
         return self._find_one(READS, {"_id": key(session, sym)})
 
+    def run_bases_of(self, session) -> list:
+        """📶 2026-11-15 — the session's read docs projected to {symbol, run_bases} (the nightly "bases" snapshot): ONE
+        find, the tile bars never loaded. [] on a read fault / no handle (logged) — the step then writes nothing."""
+        c = self.coll(READS)
+        if c is None:
+            return []
+        try:
+            return list(c.find({"date": _iso(session)}, {"symbol": 1, "run_bases": 1}))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: run_bases read failed: %s", exc)
+            return []
+
     # ── gajjala_halts ──────────────────────────────────────────────────────────────────────────────────────────
     def upsert_halt(self, session, sym: str, fields: dict) -> None:
         self._upsert(HALTS, key(session, sym), dict(fields, date=_iso(session), symbol=sym.upper()))

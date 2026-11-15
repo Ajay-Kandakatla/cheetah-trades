@@ -317,6 +317,7 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
             promo_adds = set()
         reads: dict = {}
         sv: dict = {}
+        run_bases = RUN._run_bases_of(frames, "gajjala 1m")   # 📶 2026-11-15 — counted on the 5m frame (GC.RUN_BASE_FRAME), stored only
         alert_ctx: dict = {}
         pot_ctx: dict = {}
         for s, fr in frames.items():
@@ -339,8 +340,11 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
                 tile.update({f"bars{suf}": p["bars"], f"curves{suf}": p["curves"], f"vol_avg{suf}": p["vol_avg"]})
                 as_of[f"as_of_bar_t{suf}"] = fr.as_of_bar_t.get(tf)
             mine()
-            st.upsert_read(session, s, dict(as_of, setups=reads.get(s) or {}, ctx=ctx, tile=tile,
-                                            listed=listed.get(s), stopped_today=stopped), now=now)
+            rdoc = dict(as_of, setups=reads.get(s) or {}, ctx=ctx, tile=tile, listed=listed.get(s),
+                        stopped_today=stopped)
+            if isinstance(run_bases.get(s), dict):              # 📶 the key only when the count returned a block
+                rdoc["run_bases"] = run_bases[s]
+            st.upsert_read(session, s, rdoc, now=now)
             alert_ctx[s] = {"float_text": (float_read or {}).get("text"), "price": _last_close(fr),
                             "last_halt_resume_et": ctx.get("last_halt_resume_et"),
                             "reg_gain_pct": ctx.get("reg_gain_pct")}

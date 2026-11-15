@@ -340,6 +340,8 @@ def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
     if line != LINES[2] and doc.get("promo") is True:   # 🎪 2026-10-29: the claim / tracker doc's stamp — keys ONLY then
         extra["promo"] = True
         extra["promo_text"] = doc.get("promo_text") if isinstance(doc.get("promo_text"), str) else None
+    if line != LINES[2]:                                # 📶 2026-11-15: the claim's base-count stamp — keys ONLY then
+        extra.update(_run_base_stamp(doc))
     return {**extra, "id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
@@ -348,6 +350,28 @@ def alert_of(doc: dict, kind: str, variant=None) -> Optional[dict]:
             # 📌 2026-10-27: the flagged trader's key the claim / tracker doc carries (a ⏪ replay never has one)
             "trader": (doc.get("trader") if line != LINES[2] and isinstance(doc.get("trader"), str)
                        and doc.get("trader") else None)}
+
+
+def _run_base_stamp(doc: dict) -> dict:
+    """📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" ·
+    "I need that tracked in to Gajjala's"): the claim doc's base count AT its entry bar (alerts.run_pass via
+    run_bases.claim_fields) -> {"run_base_n", "run_base_forming"} ONLY when the doc carries an int (never a bool)
+    n >= 0 AND a bool flag; else {} (the row shape of before). INFORMATION ONLY — never a grade, gate or count input."""
+    n, f = doc.get("run_base_n"), doc.get("run_base_forming")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0 or not isinstance(f, bool):
+        return {}
+    return {"run_base_n": n, "run_base_forming": f}
+
+
+def base_text_of(row: dict) -> Optional[str]:
+    """📶 the 🏁 chip: BASE_FORMING_TEXT (n + 1) when the stamp says a base was forming at the entry bar, else
+    BASE_TEXT (n) when n >= 1, else None (no chip — the served row carries no key)."""
+    st = _run_base_stamp(row if isinstance(row, dict) else {})
+    if not st:
+        return None
+    if st["run_base_forming"]:
+        return BASE_FORMING_TEXT.format(n=st["run_base_n"] + 1)
+    return BASE_TEXT.format(n=st["run_base_n"]) if st["run_base_n"] >= 1 else None
 
 
 def _sort_key(row: dict) -> tuple:
@@ -995,6 +1019,10 @@ NO_PLAN_TEXT = "no trigger or stop on the alert"                                
 NO_RISK_TEXT = "trigger = stop on the alert — no risk to size"                                           # E4
 NO_TIME_TEXT = "no alert time"                                                                           # E3
 THIN_TEXT = "thin R"                                                                                     # E4
+# 📶 2026-11-15 — the claim's base count at its entry bar (GG verified rule E6; the count definition is MINE, not GG's —
+# docs/gajjala/run_bases_2026_11_15.md). Served verbatim; INFORMATION ONLY, never counted, graded or gated on.
+BASE_TEXT = "📶 base {n}"
+BASE_FORMING_TEXT = "📶 base {n} forming"
 # ⏪ the replayed line (DECISIONS11 D4 / D5 / D10, BUILD_SPEC11 §3.11, AMENDMENTS11 F10) — served words, frozen
 REPLAYED_HEAD = "⏪ Replayed with today's detectors (never rang, not in any %)"            # DECISIONS11 D5
 REPLAY_NOTE = ("Replayed on the study's same-day universe (a subset of what the live scanner lists), no float gate, "
@@ -1831,6 +1859,9 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "dup_of": None, "dup_text": None})                                # 🔁 2026-11-02 (set below)
         if row.get("promo") is True:                                                     # 🎪 2026-10-29 — only then
             built[-1]["promo_text"] = row.get("promo_text")
+        bt = None if replayed else base_text_of(row)                                    # 📶 2026-11-15 — only then
+        if bt is not None:
+            built[-1]["base_text"] = bt
     # 🔁 one count per stock per day (Ajay 2026-11-02): a duplicate is listed + chipped, never tallied, never flagged
     dups = dedupe_trades([f for f in facts if f])
     by_id = {b["id"]: b for b in built}

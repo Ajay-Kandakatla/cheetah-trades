@@ -215,7 +215,8 @@ def test_NEGATIVE_feed_ignoring_haltdate_marks_only_the_real_day(monkeypatch):
 
 # ── 🏁 the grade step (2026-10-16, BUILD_SPEC9 §3.5) — LAST, its own try, picked up by the existing crontab line ────
 def test_the_grade_step_is_last_and_runs_by_default():
-    assert NG.STEPS == ("floats", "halts", "history", "grade")
+    # WIDENED 2026-11-15 (📶 base count): the "bases" snapshot joins BEFORE grade — grade stays LAST
+    assert NG.STEPS == ("floats", "halts", "history", "bases", "grade")
 
 
 def test_main_with_no_args_runs_grade_because_the_crontab_line_passes_no_steps(monkeypatch):

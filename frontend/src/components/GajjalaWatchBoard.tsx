@@ -141,6 +141,12 @@ function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boo
       <figcaption className="ggw-cap">
         <span className="ggw-cap-label">{f.uptrend ? `${f.label} · ${f.uptrend.short}` : f.label}</span>
         {f.held ? <span className="ggw-chip ggw-held" data-testid="ggw-held">{f.held.text}</span> : null}
+        {/* 📶 the served base-count line of the 5-min frame (the ONE engine's card line), verbatim; hover = served title */}
+        {f.run_bases ? (
+          <span className="ggw-chip ggw-bases" data-testid="ggw-bases" title={f.run_bases.title || undefined}>
+            {f.run_bases.text}
+          </span>
+        ) : null}
       </figcaption>
     </figure>
   );

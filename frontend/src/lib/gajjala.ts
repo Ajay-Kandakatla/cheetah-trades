@@ -237,7 +237,27 @@ export type GgRead = {
   /** 🔀 2026-11-15: the served 9 / 21 EMA cross words of the card's drawn frame (backend tab.ema_cross_block, ➖ Fade
    *  cards only) — absent when the frame has no cross. The chart marks come as `markers` (kind ema_cross_up / _dn). */
   ema_cross?: GgEmaCross | null;
+  /** 📶 2026-11-15 (Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I need
+   *  that tracked in to Gajjala's"): the served base-count block (backend run_bases.card_block — GG verified rule E6, the
+   *  definition is Cheetah's, UNMEASURED, information only). Absent / null when the current run has no base. The FE prints
+   *  `text` verbatim with `title` on hover; it composes no word. */
+  run_bases?: GgRunBases | null;
 };
+
+/* ---- 📶 Base count (2026-11-15) — every word SERVED; the FE types none. ---- */
+/** The card block: the current run's base number `n`, its `state` (forming / broke / stalled), the served line `text`,
+ *  the served hover `title` (GG's quotes + the definition) and the counted `frame`. */
+export type GgRunBases = { n?: number | null; state?: string | null; text?: string | null; title?: string | null;
+  frame?: string | null };
+
+/** 📶 The card line of a served base-count block: its `text` and `title` (both trimmed). No block / no text → null
+ *  (nothing printed); a missing / blank title → "" (no hover). Any other served key is ignored. */
+export function ggRunBasesLine(x: GgRunBases | null | undefined): { text: string; title: string } | null {
+  const text = x && typeof x.text === 'string' ? x.text.trim() : '';
+  if (!text) return null;
+  const title = typeof x?.title === 'string' ? x.title.trim() : '';
+  return { text, title };
+}
 
 /* ---- 🔀 9 / 21 EMA cross (2026-11-15) — every word SERVED; the FE types none. ---- */
 /** One cross of the drawn frame: its bar stamp, direction ("up" | "down") and the served sentence. */
@@ -543,6 +563,9 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
    *  🧪 Gajjala · Audited 🏁 only, under the served head key "audit"; drawn by TrRowCells' default branch (TrCell).
    *  `state` (passed / held / not_judged / not_read) is a CSS hook only; absent on 🚩 / 1-min rows. */
   audit?: GgTrCell | null;
+  /** 📶 2026-11-15: the served base-count chip of the claim at its entry bar (ledger BASE_TEXT "📶 base n" /
+   *  BASE_FORMING_TEXT "📶 base n forming") — absent when the claim carries no count or n is 0 and not forming. */
+  base_text?: string | null;
   /** 🔁 One count per stock per day (2026-11-02, Ajay: "make sure you are not accounting for duplicates of the same stock
    *  as winner unless it did the same pattern again and met all the criteria on the same day"): `dup_of` = the id of the
    *  counted row this one duplicates (ledger.dedupe_trades), `dup_text` = its served 🔁 chip; null / absent on a counted

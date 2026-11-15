@@ -338,7 +338,8 @@ def run_step(st, gga, reads: dict, frames: dict, now: datetime, session, *, aler
                     "kind": v.push_kind_setup, "mode": "shadow", "entry_bar_t": r.get("entry_bar_t"),
                     "frame": r.get("frame"), "trigger": r.get("trigger"), "stop": r.get("stop"),
                     "risk_pct": r.get("risk_pct"), "price": c.get("price"), "audit": _audit_block(audit),
-                    "at": now.isoformat()})
+                    "at": now.isoformat(),
+                    **AL._rb_fields(frames, sym, r.get("entry_bar_t"))})   # 📶 2026-11-15 — the base count AT the entry bar (keys only when known)
             for sym, setup, r in partials:                      # [C5] first-wins, no push, no claim, never a 🏁 row
                 c = actx.get(sym) or {}
                 AL._record(coll, f"{AL.claim_key(session, sym, setup, v)}#{AUD.K3S_PARTIAL_ROW_STATE}", {

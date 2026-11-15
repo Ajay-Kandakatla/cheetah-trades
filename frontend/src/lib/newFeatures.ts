@@ -22,6 +22,19 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "There is a concept of 3 bases and climax run can you bake that in to the app please" + "I need
+  // that tracked in to Gajjala's"; GG's words S8 40:54–41:18 "first base, second base, third base, this is a climax run … I was
+  // peeling off early" + S8 1:00:37 "fourth base, I came out of everything" (verified rule E6, single source). His 11-15 answers:
+  // count from the 09:30 open to the close, shortest base = K4_HF_BASE_MIN (6 bars), restart after a pause longer than
+  // K4_HF_BASE_MAX (24 bars = 2 hours), "Just show it". backend/chart_maps/gajjala/run_bases.py = ONE pure engine (5-min frame,
+  // RUN_BASE_* constants); the card line, ellipses, A+ claim stamp (run_base_n), 🏁 chip and nightly snapshot all read it.
+  // Information only — no gate, push, sort, peel or lane reads it. UNMEASURED. Doc docs/gajjala/run_bases_2026_11_15.md.
+  {
+    id: 'chart-maps-gajjala-run-bases-2026-11-15',
+    label: '📶 Base count on 🚩 Gajjala\'s cards — you said: “There is a concept of 3 bases and climax run can you bake that in to the app please” and “I need that tracked in to Gajjala\'s”. Each Gajjala card with a base in its current run now shows one line — “📶 1st base”, “📶 2nd base”…; the 3rd base reads “3rd base — climax run, GG peels early” and the 4th “4th base — GG came out of everything” — with when it broke out or since when it is forming, on 5-minute bars, and the 5-minute chart circles each base. The count runs from the 09:30 open to the close, counts only bases of 6 or more 5-minute bars (30 minutes), and starts again at 1 after a pause of more than 2 hours. Information only — nothing rings, peels, sorts or trades on it. Each A+ alert records the base it fired in, shown on the 🏁 Track record. My definition, not GG\'s — your call. UNMEASURED. Not advice.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-15, verbatim: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add
   // remove tickers from the dashboard." + "I need 1 min 3 min and 5 min charts... Not the SEPA" + "brighter and thicker 21 EMA and
   // 9 EMA" + "I need alerts on these from 1 min" + "I wanna fit 3x3 tikers" + "Any chart I view ... from 4 AM ... right side with gaps".

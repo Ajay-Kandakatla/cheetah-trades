@@ -360,3 +360,21 @@ RS_TILE_PRIOR_TO_ET = _dt.time(20, 0)     # Cheetah default (MINE) — = daytrad
 RS_TILE_PRIOR_BARS_MAX = ((RS_TILE_PRIOR_TO_ET.hour - RS_TILE_PRIOR_FROM_ET.hour) * 60) // LEDGER_TAPE_TF_MIN   # derived — MINE: 15:00 → 20:00 in 5-minute bars → 60 (the only literal is 60 min/h, as on LEDGER_TAPE_BARS_MAX; never retype 15 or 20 here)
 RS_TILE_TODAY_BARS_MAX = LEDGER_TAPE_BARS_MAX // LEDGER_TAPE_SESSIONS  # derived — MINE: one 16-hour session in 5-minute bars → 192 (= GG1M_TILE_BARS_MAX's expression, the 5-minute page's cap)
 RS_TILE_BARS_MAX = RS_TILE_PRIOR_BARS_MAX + RS_TILE_TODAY_BARS_MAX     # derived — MINE: the most bars a 🎾 card ever serves → 252
+
+# 📶 base count (2026-11-15) — Ajay, verbatim: "There is a concept of 3 bases and climax run can you bake that in to the app
+# please" · "I need that tracked in to Gajjala's". GG verified rule E6 (single_source, his example(s), his_call): S8 40:54–41:18,
+# S8 1:00:37; counter-rule S9 55:18–57:49 (quoted, NOT computed — its trigger "100% in 20 minutes" has no constant). INFORMATION
+# ONLY — nothing gates, sorts, filters, pushes or trades on it; UNMEASURED (Ajay 2026-11-15 "Just show it"). Every count
+# number is an EXISTING constant by name. Ajay's answers 2026-11-15 set FROM / UNTIL / MIN / RESTART; the other switch
+# defaults are MINE, not GG's (HIS CALL #1 / #2, docs/gajjala/run_bases_2026_11_15.md).
+RUN_BASE_FRAME = "5m"                      # GG verified T1, S8 1:40:07 "I tried 1 minute 3 minute 5 minute 15 minutes … I concluded on the five minute" — the 1-min page counts on its 5m frame too (HIS CALL #2)
+RUN_BASE_HOURS = ("session", "rth")        # MINE — "session" = the detectors' today (premarket on / through 20:00); "rth" = daytrading.data ET_RTH_OPEN / ET_RTH_CLOSE
+RUN_BASE_FROM = "rth"                      # Ajay 2026-11-15 "Can you check what he says I think he is identifying 3 times and then 3rd assumes as climax run" — GG gives no start clock; he counts the run he trades and names "entering on bias from the premarket run" a mistake → the count starts at the 09:30 open
+RUN_BASE_UNTIL = "rth"                     # Ajay 2026-11-15 (the same answer) — the count runs to the regular 16:00 close
+RUN_BASE_LEG_MIN_BARS = BF_LEG_MIN_BARS    # MINE to reuse (HIS CALL #1b) — GG S9 1:59:24 "at least two big green bars"
+RUN_BASE_MIN_BARS = K4_HF_BASE_MIN         # Ajay 2026-11-15 "What does he say I think 2nd option" — the shortest base = his horizontal-base minimum (a 1-bar flag no longer counts)
+RUN_BASE_MAX_BARS = K4_HF_BASE_MAX         # MINE to reuse (HIS CALL #1d) — the longest base his setups read (Fade, 24 bars)
+RUN_BASE_DEPTH_FLOOR = False               # Cheetah default (MINE, not GG — HIS CALL #1g): True = K3_DEPTH_FRAC on every base (K3_DEPTH_SETUPS binds no base setup today)
+RUN_BASE_RESTART = True                    # Ajay 2026-11-15 "Yes, restart" — a pause longer than RUN_BASE_MAX_BARS ends the run; the next run counts from 1
+RUN_BASE_CLIMAX_N = 3                      # GG S8 40:54–41:18 "third base, this is a climax run … I was peeling off early" (E6)
+RUN_BASE_OUT_N = 4                         # GG S8 1:00:37 "fourth base, I came out of everything" (E6)

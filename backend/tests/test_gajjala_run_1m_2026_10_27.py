@@ -338,8 +338,10 @@ def test_the_read_doc_keys_are_exactly_the_specs(monkeypatch):
     db, shared, st = world(monkeypatch)
     R1.run_iteration(NOW, store=st, deps=deps())
     doc = db["gajjala_1m_reads"].docs["2026-10-13|GGA"]
+    # WIDENED 2026-11-15 — 📶 `run_bases` (Ajay "There is a concept of 3 bases and climax run can you bake that in to the
+    # app please"; the base count on the 5m frame, stored only — spec ggbase §3.3)
     assert set(doc) - {"_id"} == {"as_of_bar_t1", "as_of_bar_t5", "setups", "ctx", "tile", "listed", "stopped_today",
-                                  "date", "symbol", "updated_at", "at"}
+                                  "date", "symbol", "updated_at", "at", "run_bases"}
     assert set(doc["tile"]) == {"bars1", "curves1", "vol_avg1", "bars5", "curves5", "vol_avg5"}
     assert doc["as_of_bar_t1"] == "2026-10-13 10:08" and doc["as_of_bar_t5"] == "2026-10-13 10:05"
     assert 0 < len(doc["tile"]["bars1"]) <= GC.GG1M_TILE_BARS_MAX
