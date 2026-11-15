@@ -167,3 +167,18 @@ def test_cut_bars_is_index_intradays_filter():
 def test_the_recorder_never_reads_the_warm_doc():
     src = (PR.__file__ and open(PR.__file__).read())
     assert "day_read_index" not in src and "WARM_ID" not in src
+
+
+def test_NEGATIVE_a_raising_fetch_never_stops_the_other_symbol_or_the_read():
+    st = Store()
+
+    def boom(sym, session):
+        if sym == "QQQ":
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+        return bars(200, 198)
+    inp = DR.warm_index(st, blank(), et_at(10, 31), D, fetch=boom)
+    assert inp["index_intraday"][f"QQQ|{SESS}"] is None
+    assert inp["index_intraday"][f"IWM|{SESS}"] == PR.cut_bars(bars(200, 198), SESS)
+    assert set(st.d[DR.WARM_ID]["bars"]) == {"IWM"}
+    tags = LIB.compute(dict(inp, sessions=[SESS], constants=CONST), SESS)
+    assert tags["GD7_by1030"]["status"] == "missing"

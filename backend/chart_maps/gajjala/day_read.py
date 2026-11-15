@@ -14,6 +14,7 @@ Docs: docs/chart_maps/gajjala_day_read_2026_11_15.md.
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -23,6 +24,8 @@ from . import audited_rules as AR
 from . import variant as V
 
 # the probe (pandas, pymongo, chart_maps.gajjala.*) and portfolio.store are imported LAZILY inside inputs_for()
+
+log = logging.getLogger(__name__)
 
 STATE_ID = "day_read"                                    # the ONE gajjala_state doc (GG5's)
 # 2026-11-15 — Ajay "yes" to warming QQQ / IWM for GD7: one minute-bar fetch per symbol per session, after 10:30 ET,
@@ -199,7 +202,11 @@ def warm_index(st, inputs: dict, now: datetime, session: date, *, fetch=None) ->
     fetched = False
     for s in need:
         if not bars.get(s):
-            kept = PR.cut_bars((fetch or _fetch_bars)(s, session), sess)
+            try:
+                kept = PR.cut_bars((fetch or _fetch_bars)(s, session), sess)
+            except Exception:                           # noqa: BLE001 — a raising fetch never costs the other 7 reads
+                log.warning("day read: %s 10:30 warm fetch failed", s, exc_info=True)
+                kept = []
             if kept and _complete(kept, sess):
                 bars[s], fetched = kept, True
         if bars.get(s):
