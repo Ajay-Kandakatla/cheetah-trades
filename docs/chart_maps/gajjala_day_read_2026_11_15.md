@@ -63,13 +63,22 @@ median {m}"; GD7 the lib's value verbatim; LD3i "9 − 21 EMA {±x.xx}"; LD9 "{w
   in `asof_text` render in ET (`%Y-%m-%d %H:%M ET`, no microseconds, no offset); date-only and non-ISO strings stay as
   they are.
 
-Default view (Rule #5): head + caption visible; the eight chips, the note and the read rule fold under the served
-`fold_text` "the 8 reads".
+Default view: head + caption visible; the eight chips, the note and the read rule sit under the served `fold_text`
+"the 8 reads", **OPEN by default** (Ajay 2026-11-15 "Yes" to unfolding them; a tap folds). Still owner-only (his "No" to
+showing it to the household, same day).
 
 **GD7 reads "not read" on every session day by construction.** `daytrading/data.py` `load_intraday` caches a day's
 minute bars only when that day is not today, so `intraday_cache` never holds the live session's QQQ / IWM bars; the
-nightly recorder sees the same MISSING when no reader asked for them. Warming them = a scheduled provider fetch = HIS
-CALL.
+nightly recorder sees the same MISSING when no reader asked for them.
+
+**GD7 warm — ON since 2026-11-15 (his "Yes").** `day_read.warm_index`, on the 🚩 pass, for TODAY only and only at or
+after 10:30 ET, when intraday_cache has no QQQ / IWM bars for the session: fetches each symbol's minute bars ONCE through
+`daytrading.data.load_intraday` (which never caches the live day), cuts them with the probe's own `cut_bars` (the
+filter `index_intraday` uses), and stores the cut in gajjala_state `day_read_index` — only when it reaches the 10:29 bar,
+so a provider that has not caught up is retried next pass, never frozen. Cost: 2 Massive minute fetches per session
+(more only on failed / short fetches). A warmed symbol's asof date reads the session. **The nightly recorder does not
+read this doc** — its inputs are the frozen prereg's, so GD7 stays "not read" in the record (letting it read the warm
+copy would be a prereg amendment = HIS CALL). Tests: `backend/tests/test_gajjala_day_read_gd7_warm_2026_11_15.py`.
 
 ## The intraday read vs the nightly record [C1]
 
@@ -132,11 +141,11 @@ GD3w_pre may differ for the [C1] reason. The recorder's store is never opened.
 ## HIS CALLs
 
 1. The guard relaxation — the lib's "nothing served imports this file" became "ONE served importer, day_read.py".
-2. Who sees it — owner-only on all three surfaces; widening = his word.
+2. Who sees it — ANSWERED 2026-11-15 "No": owner-only stays.
 3. 🧪 Gajjala · Audited — no day read there by default.
-4. GD7 "not read" by construction — warming QQQ / IWM minute bars = 2 scheduled Massive fetches per session.
+4. GD7 warm — ANSWERED 2026-11-15 "Yes": built (see above). Open: should the nightly recorder read the warm copy (prereg amendment)?
 5. The recorder has written no forward record yet (directory absent 2026-11-14) — confirm the scheduled task runs.
-6. The fold — head + caption visible, chips folded; unfolding by default is one line.
+6. The fold — ANSWERED 2026-11-15 "Yes": open by default.
 7. BOARD golden dated regen (ADDED leaves only); WRITES golden untouched by design. Done 2026-11-15, checked
    key-for-key against the pre-regen bytes: 0 changed, 0 removed, every added leaf under `day_read` — GG5 BOARD 374
    (22 `absent` blocks), FE 1m board 51, on_open 51, potential 34, track_record 51, Luk golden 3 (`null`, not the

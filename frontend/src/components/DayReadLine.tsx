@@ -1,7 +1,8 @@
 /**
  * 🌫️ 2026-11-15 — the day read line (spec §3.7). Ajay 2026-11-15 said yes to an information-only day label on the
  * Gajjala tab. Prints the served block (backend chart_maps/gajjala/day_read.served_block) verbatim: the head and the
- * caption visible; the chips, the note and the read rule folded under the served `fold_text` (an older API without
+ * caption visible; the chips, the note and the read rule under the served `fold_text`, OPEN by default (Ajay
+ * 2026-11-15 "Yes" to unfolding them; a tap still folds) (an older API without
  * `fold_text` gets them unfolded). The absent state = head + caption + the read rule. A null block renders nothing.
  * Every word is served — this file types none (source-guarded in DayReadLine.test.tsx). Never a gate, sort or filter.
  */
@@ -40,7 +41,7 @@ export function DayReadLine({ block }: { block?: DayRead | null }) {
       ) : null}
       {chipList ? (
         typeof block.fold_text === 'string' ? (
-          <details className="dr-fold" data-testid="day-read-fold">
+          <details className="dr-fold" data-testid="day-read-fold" open>
             <summary data-testid="day-read-fold-summary">{block.fold_text}</summary>
             {chipList}{note}{date}
           </details>

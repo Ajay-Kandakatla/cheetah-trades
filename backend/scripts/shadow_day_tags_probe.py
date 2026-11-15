@@ -190,16 +190,22 @@ def index_intraday(db, sessions: list) -> dict:
         for d in sessions:
             doc = db.intraday_cache.find_one({"symbol": s, "date": d}, {"bars": 1})
             bs = (doc or {}).get("bars") or []
-            cut = datetime.combine(date.fromisoformat(d), AR.T2_FIRST_HOUR_END_ET, tzinfo=ET)
-            keep = []
-            for b in bs:
-                t = bar_t(b.get("ts_utc"))
-                if b.get("session") != "rth" or t is None or t + timedelta(minutes=1) > cut:
-                    continue
-                keep.append([iso(b.get("ts_utc")), b.get("open"), b.get("high"), b.get("low"), b.get("close"),
-                             b.get("volume"), b.get("session")])
-            out["%s|%s" % (s, d)] = keep if doc and bs else None
+            out["%s|%s" % (s, d)] = cut_bars(bs, d) if doc and bs else None
     return out
+
+
+def cut_bars(bs: list, d: str) -> list:
+    """intraday_cache-shaped bar dicts → [[ts_utc, o, h, l, c, v, session], …]: the rth bars that CLOSED by 10:30 ET on
+    `d`. index_intraday's filter, shared with the served day read's 10:30 warm (chart_maps/gajjala/day_read.py)."""
+    cut = datetime.combine(date.fromisoformat(d), AR.T2_FIRST_HOUR_END_ET, tzinfo=ET)
+    keep = []
+    for b in bs:
+        t = bar_t(b.get("ts_utc"))
+        if b.get("session") != "rth" or t is None or t + timedelta(minutes=1) > cut:
+            continue
+        keep.append([iso(b.get("ts_utc")), b.get("open"), b.get("high"), b.get("low"), b.get("close"),
+                     b.get("volume"), b.get("session")])
+    return keep
 
 
 def last_cache_date(db, sym: str):

@@ -14,7 +14,7 @@ Docs: docs/chart_maps/gajjala_day_read_2026_11_15.md.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from scripts import shadow_day_tags_lib as LIB          # the lib is stdlib-only: safe at import time
@@ -25,6 +25,10 @@ from . import variant as V
 # the probe (pandas, pymongo, chart_maps.gajjala.*) and portfolio.store are imported LAZILY inside inputs_for()
 
 STATE_ID = "day_read"                                    # the ONE gajjala_state doc (GG5's)
+# 2026-11-15 — Ajay "yes" to warming QQQ / IWM for GD7: one minute-bar fetch per symbol per session, after 10:30 ET,
+# kept in this gajjala_state doc (never intraday_cache — load_intraday never caches the live day). The nightly recorder
+# does NOT read it (its inputs are the frozen prereg's).
+WARM_ID = "day_read_index"
 FORMS = LIB.TAG_FORMS                                    # the chip order = the lib's order
 # [C3] "reads" = the lib's own noun (LIB.READS); each form IS one read, so the count never double-counts.
 # His word for the day lives in the ✨ label and the doc only — the prereg defines no such measure.
@@ -150,8 +154,64 @@ def tags_of(inputs: dict, session) -> dict:
     return LIB.compute(inputs, _iso(session))
 
 
-def compute(now: datetime, session: date, *, db=None) -> dict:
-    inputs = inputs_for(now, session=session, db=db)
+def _fetch_bars(sym: str, session: date) -> list:
+    """Today's rth minute bars for `sym` through daytrading.data.load_intraday (it never caches the live day), shaped
+    like an intraday_cache doc's bars. Empty on any failure."""
+    from daytrading import data as DD                   # noqa: PLC0415 — pandas: lazy
+    df = DD.load_intraday(sym, session, include_premarket=False)
+    if df is None or df.empty:
+        return []
+    out = []
+    for ts, r in df.iterrows():
+        out.append({"ts_utc": ts.isoformat(), "open": float(r["open"]), "high": float(r["high"]),
+                    "low": float(r["low"]), "close": float(r["close"]), "volume": float(r["volume"]),
+                    "session": r.get("session")})
+    return out
+
+
+def _complete(kept: list, sess: str) -> bool:
+    """The cut holds the last minute before 10:30 (its bar starts at 10:29 ET) — a fetch the provider has not caught up
+    on is never stored, so the session's read is never frozen on a short tape."""
+    t = LIB.et_of(kept[-1][0])
+    last = (datetime.combine(date.fromisoformat(sess), AR.T2_FIRST_HOUR_END_ET) - timedelta(minutes=1)).time()
+    return t is not None and t.date().isoformat() == sess and t.time() >= last
+
+
+def warm_index(st, inputs: dict, now: datetime, session: date, *, fetch=None) -> dict:
+    """GD7's QQQ / IWM bars for TODAY when intraday_cache has none: after the 10:30 ET cut only, read from the WARM_ID
+    doc, else fetched ONCE per symbol (a cut that reaches 10:29 is stored; a failed, empty or short fetch is retried next
+    pass). Fills
+    inputs["index_intraday"] and sets asof qqq_last_date / iwm_last_date to the session for a warmed symbol. Any other
+    session, a pre-cut clock or a cache hit → inputs untouched."""
+    from scripts import shadow_day_tags_probe as PR     # noqa: PLC0415 — lazy
+    sess = _iso(session)
+    at = now if now.tzinfo is not None else now.replace(tzinfo=LIB.UTC)
+    et = at.astimezone(LIB.ET)
+    if st is None or sess != et.date().isoformat() or et.time() < AR.T2_FIRST_HOUR_END_ET:
+        return inputs
+    intra = inputs.setdefault("index_intraday", {})
+    need = [s for s in LIB.INDEX_SYMS if not intra.get(f"{s}|{sess}")]
+    if not need:
+        return inputs
+    doc = st.get_state(WARM_ID)
+    doc = doc if isinstance(doc, dict) and doc.get("session") == sess else {"session": sess, "bars": {}}
+    bars = dict(doc.get("bars") or {})
+    fetched = False
+    for s in need:
+        if not bars.get(s):
+            kept = PR.cut_bars((fetch or _fetch_bars)(s, session), sess)
+            if kept and _complete(kept, sess):
+                bars[s], fetched = kept, True
+        if bars.get(s):
+            intra[f"{s}|{sess}"] = bars[s]
+            inputs.setdefault("asof", {})[f"{s.lower()}_last_date"] = sess
+    if fetched:
+        st.set_state(WARM_ID, {"session": sess, "bars": bars, "fetched_at": at.astimezone(LIB.UTC)})
+    return inputs
+
+
+def compute(now: datetime, session: date, *, db=None, st=None, fetch=None) -> dict:
+    inputs = warm_index(st, inputs_for(now, session=session, db=db), now, session, fetch=fetch)
     at = now if now.tzinfo is not None else now.replace(tzinfo=LIB.UTC)
     return {"session": _iso(session), "computed_at": at.astimezone(LIB.UTC), "tags": tags_of(inputs, session),
             "asof": inputs.get("asof"), "constants": inputs.get("constants"),
@@ -160,7 +220,7 @@ def compute(now: datetime, session: date, *, db=None) -> dict:
 
 def run_step(st, now: datetime, session: date) -> Optional[dict]:
     """The pass hook: ONE compute, ONE gajjala_state write. Never swallows — run.py's own try does."""
-    doc = compute(now, session)
+    doc = compute(now, session, st=st)
     st.set_state(STATE_ID, doc)
     return doc
 

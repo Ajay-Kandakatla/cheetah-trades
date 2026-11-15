@@ -79,12 +79,12 @@ describe('DayReadLine — the served block, verbatim', () => {
     expect(screen.getByTestId('day-read').className).toBe('dr');
   });
 
-  it('C-R5: the chips + note + read rule sit in a CLOSED <details> whose summary is the served fold_text', () => {
+  it('C-R5: the chips + note + read rule sit in an OPEN <details> (his 2026-11-15 yes) whose summary is the served fold_text', () => {
     render(<DayReadLine block={clone(READ)} />);
     const fold = screen.getByTestId('day-read-fold') as HTMLDetailsElement;
     expect(fold.tagName).toBe('DETAILS');
-    expect(fold.hasAttribute('open')).toBe(false);
-    expect(fold.open).toBe(false);
+    expect(fold.hasAttribute('open')).toBe(true);
+    expect(fold.open).toBe(true);
     const sum = screen.getByTestId('day-read-fold-summary');
     expect(sum.tagName).toBe('SUMMARY');
     expect(sum.textContent).toBe('the 8 reads');

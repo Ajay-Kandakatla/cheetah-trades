@@ -518,8 +518,16 @@ def _mods(tree, nodes=None):
 
 
 def test_day_read_imports_no_gate_or_provider_module():
-    mods = _mods(ast.parse(MODULE.read_text()))
-    assert [m for m in mods if BANNED.match(m) or BANNED_GG.match(m)] == []
+    """2026-11-15 his "Yes" to the GD7 warm: `daytrading.data` is allowed, and ONLY inside `_fetch_bars`."""
+    tree = ast.parse(MODULE.read_text())
+    fetch = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_fetch_bars"]
+    assert len(fetch) == 1
+    inside = set(_mods(tree, list(ast.walk(fetch[0]))))
+    assert inside == {"daytrading", "daytrading.data"}
+    mods = _mods(tree)
+    rest = [m for m in mods if m not in inside]
+    assert [m for m in rest if BANNED.match(m) or BANNED_GG.match(m)] == []
+    assert mods.count("daytrading.data") == 1
     assert "chart_maps.gajjala.audited_rules" in mods and "scripts.shadow_day_tags_lib" in mods
 
 
