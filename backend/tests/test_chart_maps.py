@@ -844,7 +844,10 @@ def test_metrics_survive_a_row_with_nothing_in_it():
                       # 2026-09-16 — declared so the dropdown key resolves;
                       # always None, because the 🪜 ordering is two numbers
                       # and never one sortable float (see tile_metrics).
-                      "band_structure"}
+                      "band_structure",
+                      # 2026-11-15 WIDENED — 9/21 EMA blink column
+                      # (blink-other-boards); attach-owned, None on an empty row.
+                      "ema_blink"}
     assert all(v is None for v in m.values())
     assert B.tile_metrics(None)["volume"] is None
 

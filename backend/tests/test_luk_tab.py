@@ -14,6 +14,10 @@ down.
 read carries PASS_AT, so no fixture card is tagged and no order moves (the cases live in
 tests/test_luk_not_reread_2026_11_11.py).
 
+2026-11-15 (🔀 blinker, SPEC blinker §3.6): every card gains `ema_blink` (tile key only — PAYLOAD_KEYS unchanged); the
+golden was regenerated ADDITIVELY (3 added leaves, all `ema_blink: null` — the fixture cards carry `curves5: []`; the
+cases live in tests/test_ema_blink_watch_luk_2026_11_15.py).
+
 The golden `tests/fixtures/luk/luk_board_golden_2026_11_01.json` is regenerated ONLY by an explicit command:
     LUK_WRITE_GOLDEN=1 .venv/bin/python -m pytest tests/test_luk_tab.py -q -k golden -p no:cacheprovider
 """

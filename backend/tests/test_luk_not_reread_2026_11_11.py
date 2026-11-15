@@ -342,8 +342,9 @@ def test_NEGATIVE_no_internal_key_and_no_new_top_level_key():
         assert not any(k.startswith("_") for k in t)
         # WIDENED 2026-11-12 (🥇 realtime cards, SPEC lukrt §3.3): + live_level, not_rung_text
         # WIDENED 2026-11-12 (🏁 ended cards fold, SPEC lukend §3.9): ∪ T.FOLD_KEYS
+        # WIDENED 2026-11-15 (🔀 blinker, SPEC blinker §3.6): + ema_blink
         assert set(t) == (PRE_CHANGE_TILE_KEYS | {"not_reread", "not_reread_text", "live_level", "not_rung_text"}
-                          | set(T.FOLD_KEYS))
+                          | set(T.FOLD_KEYS) | {"ema_blink"})
     assert set(out) == set(T.PAYLOAD_KEYS)
     assert set(T.fault_payload()) == set(T.PAYLOAD_KEYS)
 

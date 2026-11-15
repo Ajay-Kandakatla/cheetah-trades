@@ -79,6 +79,8 @@ import GajjalaBoard from '../components/GajjalaBoard';
 import LukBoard from '../components/LukBoard';
 import LongTermBoard from '../components/LongTermBoard';
 import GajjalaWatchBoard from '../components/GajjalaWatchBoard';
+import { emaBlinkTabDot, useEmaBlinkTabs } from '../lib/emaBlinkTabs';
+import '../styles/emaBlinkTab.css';
 import { useCurrentUser } from '../hooks/useUser';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
@@ -1072,6 +1074,10 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     const t = window.setTimeout(attempt, Math.max(0, CM_RESTORE_DEADLINE_MS - (Date.now() - mountedAt.current)) + 1);
     return () => { cancelAnimationFrame(raf); ro?.disconnect(); window.clearTimeout(t); };
   }, [tab, loading, tiles.length]);
+  /* 🔀 The tab-button dot (2026-11-15, Ajay: "Or atleast closing in on other tabs for me"): ONE page-level chain
+   * on the served refresh_sec (lib/emaBlinkTabs.ts). On every tab — the dot's job is to pull him to a tab he is NOT
+   * on. The server names the tabs; the FE lists none. */
+  const blinkTabs = useEmaBlinkTabs(true);
   /* The control row's own gate, lifted to a const so the "Fetching …" line can
    * render inside that row when it exists and in the note slot when it does
    * not — exactly one of the two, never both. */
@@ -1175,6 +1181,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                  setTab(t);
                }}>
               {TAB_META[t].label}
+              {(() => {
+                const d = emaBlinkTabDot(blinkTabs, t);
+                return d ? <span className={`cm-tab-blink ema-blink-${d.tier}`} data-testid={`cm-tab-blink-${t}`}
+                                 title={d.text ?? undefined} aria-label={d.text ?? undefined} /> : null;
+              })()}
             </a>
           ))}
         </div>

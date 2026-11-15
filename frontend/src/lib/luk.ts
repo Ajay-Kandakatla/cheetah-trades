@@ -13,7 +13,7 @@
  *
  * Takes only TYPES from ./chartMaps (which imports the param names from here for its border rule), so there is no
  * runtime cycle. */
-import type { CmBar, CmCurve, CmTile } from './chartMaps';
+import type { CmBar, CmCurve, CmEmaBlink, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
 import type { GgBoard, GgScan, GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
@@ -93,6 +93,8 @@ export type LukTile = {
   ended?: boolean | null; ended_why?: string | null; ended_text?: string | null; trade_text?: string | null;
   live_fold?: LukLiveFold | null;
   ended_vs_text?: string | null;
+  /** 🔀 2026-11-15 (SPEC blinker §3.6): the served 9/21 EMA cross blinker of the card's 5-minute frame (curves5). */
+  ema_blink?: CmEmaBlink | null;
 };
 /** 🏁 the served live-fold rule of one trade card (tab.fold_of rule 4): fold when a FRESH poll answer's `vs.kind` equals
  *  `kind`, the answer's session equals `session` and its `as_of_epoch` is before `until_epoch`. `text` = the served
@@ -282,6 +284,7 @@ export function lukChartTile(t: LukTile): CmTile & { vol_avg?: ServedVolAvg | nu
     curves: (t.curves ?? t.curves5 ?? undefined) as CmCurve[] | undefined,
     vol_avg: t.vol_avg ?? t.vol_avg5 ?? null,
     bands: [], lines: t.lines ?? [], markers: t.markers ?? [], stats: [], why: '',
+    ema_blink: t.ema_blink ?? null,
   };
 }
 

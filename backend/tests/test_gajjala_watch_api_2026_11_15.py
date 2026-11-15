@@ -355,7 +355,7 @@ def test_ok_row_shape_three_frames_in_order():
     assert r["as_of_et"] == "10:30"
     assert [f["tf"] for f in r["frames"]] == [tf for tf, _r in C.FRAMES]
     f = r["frames"][0]
-    assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held"}
+    assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held", "ema_blink"}   # + ema_blink 2026-11-15 (🔀 blinker §3.5)
     assert set(f["tile"]) == {"symbol", "href", "bars", "curves", "markers", "lines", "bands", "stats", "why", "vol_avg"}
     assert f["tile"]["href"] == "" and f["tile"]["symbol"] == "OMH" and f["uptrend"] == {"ok": True, "short": "K5 ✓"}
     assert f["axis"]["slots"] == 720 and f["ema_cross"]["crosses"][0]["dir"] == "up"

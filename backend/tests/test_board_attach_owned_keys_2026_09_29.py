@@ -50,7 +50,8 @@ BS_READ = {"applicable": True, "score": None, "stat": "stub",
 # --------------------------------------------------------------------------
 def test_owned_keys_are_tile_metrics_columns_that_are_always_None():
     m = B.tile_metrics({})
-    assert B.ATTACH_OWNED_KEYS == ("explosive", "band_structure")
+    # WIDENED 2026-11-15 (🔀 blinker, SPEC blinker §3.7): + ema_blink
+    assert B.ATTACH_OWNED_KEYS == ("explosive", "band_structure", "ema_blink")
     for k in B.ATTACH_OWNED_KEYS:
         assert k in m and m[k] is None
     # the richest row still leaves them None — the attachers own the value
@@ -64,6 +65,7 @@ def test_owned_keys_are_exactly_the_attachers_idempotence_keys():
     None on the tile silences it."""
     assert '"explosive" not in t' in inspect.getsource(B.attach_explosive)
     assert '"band_structure" not in t' in inspect.getsource(B.attach_band_structure)
+    assert '"ema_blink" not in t' in inspect.getsource(B.attach_ema_blink)      # WIDENED 2026-11-15
 
 
 def test_published_metrics_drops_only_the_owned_keys_and_never_mutates():

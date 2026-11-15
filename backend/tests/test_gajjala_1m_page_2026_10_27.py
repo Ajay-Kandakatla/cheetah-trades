@@ -35,6 +35,8 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import pytest
 
+from chart_maps import ema_blink as EB
+
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import ledger as LG
 from chart_maps.gajjala import potential as PT
@@ -305,6 +307,10 @@ def test_NEGATIVE_served_words_sweep_no_5_minute_word_or_gg5_link_on_any_gg1_sub
         out.pop("playbook", None)
         for s in _walk_strings(out):
             if s == honesty:                      # the ONE allowed "5-minute bars" — GG trades on them
+                continue
+            # WIDENED 2026-11-15: the 🔀 blink ℹ️ cites the 11-15 replay-video check, which measured 5-minute AND
+            # 1-minute bars — a sourced citation, not this page's frame word
+            if s == EB.info():
                 continue
             for b in BANNED:
                 assert b not in s, (sub, b, s)

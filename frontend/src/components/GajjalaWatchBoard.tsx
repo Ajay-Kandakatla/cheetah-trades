@@ -38,6 +38,8 @@ import {
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
+import { EmaBlinkDot } from './EmaBlink';
+import { emaBlinkLine } from '../lib/emaBlink';
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
@@ -132,6 +134,7 @@ function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): number | null 
 function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties }) {
   const box = useRef<HTMLDivElement>(null);
   const fitH = useFitBox(box, fit);
+  const blink = emaBlinkLine(f.ema_blink);
   return (
     <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
       <div className="ggw-chartbox" ref={box}>
@@ -139,12 +142,21 @@ function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boo
                       height={fit && fitH ? fitH : ggwChartHeight(f.tf, phone)} />
       </div>
       <figcaption className="ggw-cap">
+        {/* 🔀 the served 9/21 EMA cross blinker of THIS frame — the dot first, then its served sentence as one chip; the
+            chart box itself carries no dot (C9: the svg's top-right holds the price axis). */}
+        <EmaBlinkDot block={f.ema_blink} testid={`ggw-ema-blink-dot-${f.tile.symbol}-${f.tf}`} />
         <span className="ggw-cap-label">{f.uptrend ? `${f.label} · ${f.uptrend.short}` : f.label}</span>
         {f.held ? <span className="ggw-chip ggw-held" data-testid="ggw-held">{f.held.text}</span> : null}
         {/* 📶 the served base-count line of the 5-min frame (the ONE engine's card line), verbatim; hover = served title */}
         {f.run_bases ? (
           <span className="ggw-chip ggw-bases" data-testid="ggw-bases" title={f.run_bases.title || undefined}>
             {f.run_bases.text}
+          </span>
+        ) : null}
+        {blink ? (
+          <span className="ggw-chip ema-blink-chip" data-testid={`ggw-ema-blink-${f.tile.symbol}-${f.tf}`}
+                title={blink.title || undefined}>
+            {blink.text}
           </span>
         ) : null}
       </figcaption>

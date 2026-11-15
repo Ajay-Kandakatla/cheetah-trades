@@ -110,6 +110,7 @@
     "state": "absent",
     "tags": {}
    },
+   "ema_blink_info": "UNMEASURED — information, not an entry. The 2026-11-15 check of every replay video: a 9-over-21 cross on 5-minute bars timed a runner well (+36.6% mean ride on the 38 video charts) but did not pick one — on 1,497 other names the same rule lost 2.0% net and won 27% of the time; on 1-minute bars it crossed about 12 times per chart on the video names. 'Closing in' = the gap is smaller than 3 closed bars ago; the bars-to-cross number is a straight-line projection, 24 bars at most. Cheetah's definition, not Gajjala's.",
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 1 minute away.",
    "enterable": {
     "empty_text": null,
@@ -250,6 +251,17 @@
     "refresh_sec": 60,
     "tape": "rth"
    },
+   "sort": "default",
+   "sorts": [
+    {
+     "key": "default",
+     "label": "↩ the board's own order"
+    },
+    {
+     "key": "ema_blink",
+     "label": "🔀 closest to the 9/21 cross"
+    }
+   ],
    "strip": {
     "best_change_pct": 40.0,
     "best_symbol": "GGA",
@@ -437,6 +449,23 @@
        ]
       }
      ],
+     "ema_blink": {
+      "above": true,
+      "bars_since_cross": 4,
+      "bars_to_cross": null,
+      "blink": true,
+      "closeness": 4,
+      "cross_t": "2026-10-27 10:04",
+      "fast": 9,
+      "gap_pct": 2.61,
+      "slow": 21,
+      "state": "crossed_up",
+      "t": "2026-10-27 10:08",
+      "text": "● 9 EMA over the 21 EMA since 10:04 ET · 4 bars",
+      "tf": "1m",
+      "tier": "up",
+      "title": "🔀 9/21 EMA blinker — information only, UNMEASURED (ℹ️ Rules has the read)"
+     },
      "gajjala": {
       "bars_since_entry": 0,
       "broke": true,
@@ -706,6 +735,23 @@
        ]
       }
      ],
+     "ema_blink": {
+      "above": true,
+      "bars_since_cross": 4,
+      "bars_to_cross": null,
+      "blink": true,
+      "closeness": 4,
+      "cross_t": "2026-10-27 10:04",
+      "fast": 9,
+      "gap_pct": 2.34,
+      "slow": 21,
+      "state": "crossed_up",
+      "t": "2026-10-27 10:08",
+      "text": "● 9 EMA over the 21 EMA since 10:04 ET · 4 bars",
+      "tf": "1m",
+      "tier": "up",
+      "title": "🔀 9/21 EMA blinker — information only, UNMEASURED (ℹ️ Rules has the read)"
+     },
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {
@@ -1015,6 +1061,7 @@
     "state": "absent",
     "tags": {}
    },
+   "ema_blink_info": "UNMEASURED — information, not an entry. The 2026-11-15 check of every replay video: a 9-over-21 cross on 5-minute bars timed a runner well (+36.6% mean ride on the 38 video charts) but did not pick one — on 1,497 other names the same rule lost 2.0% net and won 27% of the time; on 1-minute bars it crossed about 12 times per chart on the video names. 'Closing in' = the gap is smaller than 3 closed bars ago; the bars-to-cross number is a straight-line projection, 24 bars at most. Cheetah's definition, not Gajjala's.",
    "empty_note": "Nothing forming on his list right now — the next pass is at most 1 minute away.",
    "enterable": {
     "empty_text": null,
@@ -1109,6 +1156,17 @@
     "refresh_sec": 60,
     "tape": "rth"
    },
+   "sort": "default",
+   "sorts": [
+    {
+     "key": "default",
+     "label": "↩ the board's own order"
+    },
+    {
+     "key": "ema_blink",
+     "label": "🔀 closest to the 9/21 cross"
+    }
+   ],
    "strip": {
     "best_change_pct": 40.0,
     "best_symbol": "GGA",
@@ -1304,6 +1362,23 @@
        ]
       }
      ],
+     "ema_blink": {
+      "above": true,
+      "bars_since_cross": 4,
+      "bars_to_cross": null,
+      "blink": true,
+      "closeness": 4,
+      "cross_t": "2026-10-27 10:04",
+      "fast": 9,
+      "gap_pct": 2.34,
+      "slow": 21,
+      "state": "crossed_up",
+      "t": "2026-10-27 10:08",
+      "text": "● 9 EMA over the 21 EMA since 10:04 ET · 4 bars",
+      "tf": "1m",
+      "tier": "up",
+      "title": "🔀 9/21 EMA blinker — information only, UNMEASURED (ℹ️ Rules has the read)"
+     },
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {
@@ -1623,6 +1698,23 @@
        ]
       }
      ],
+     "ema_blink": {
+      "above": true,
+      "bars_since_cross": 4,
+      "bars_to_cross": null,
+      "blink": true,
+      "closeness": 4,
+      "cross_t": "2026-10-27 10:04",
+      "fast": 9,
+      "gap_pct": 2.61,
+      "slow": 21,
+      "state": "crossed_up",
+      "t": "2026-10-27 10:08",
+      "text": "● 9 EMA over the 21 EMA since 10:04 ET · 4 bars",
+      "tf": "1m",
+      "tier": "up",
+      "title": "🔀 9/21 EMA blinker — information only, UNMEASURED (ℹ️ Rules has the read)"
+     },
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {

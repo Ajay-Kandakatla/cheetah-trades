@@ -647,7 +647,20 @@ def tile_of(doc: dict, setup: str, *, caps: dict, latest_at: Optional[datetime] 
             "live_level": live_level(read),                                     # 2026-11-12 realtime cards
             "not_rung_text": not_rung_text(doc, setup, st),                     # 2026-11-12 (critique C2)
             **fold_of(doc, setup, read, ctx),                                   # 2026-11-12 🏁 ended cards fold
+            "ema_blink": _ema_blink(curves, bars),                              # 2026-11-15 🔀 blinker (§3.6)
             "gajjala": {"setup": setup, "state": st}}
+
+
+def _ema_blink(curves: list, bars: list) -> Optional[dict]:
+    """🔀 2026-11-15 (SPEC blinker §3.6): the card's 9/21 blinker block on the frame it DRAWS (`curves5` / `bars5`,
+    LUK.primary) through THE engine (chart_maps.ema_blink → ema_cross.blink_read) — display only: no Luk sort, gate,
+    push or `_order_key` reads it. Missing curves → None; any failure → None (the card still serves)."""
+    try:
+        from chart_maps import ema_blink as EB
+        return EB.block_from_curves(curves, bars, tf=LUK.primary)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("luk tab: ema_blink unavailable: %s", exc)
+        return None
 
 
 # ── 🏁 2026-11-12 ended cards fold (SPEC lukend §3.3) ─────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@
  * the chart heights. Every word and every number the board prints is SERVED — nothing here types a rule, a threshold
  * or a sentence about a stock. The ONE FE sentence is GGW_FETCH_FAILED (the request itself failed — there is no payload
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
-import type { CmAxis, CmTile } from './chartMaps';
+import type { CmAxis, CmEmaBlink, CmTile } from './chartMaps';
 import { ggRunBasesLine } from './gajjala';
 
 /** The tab id (== backend chart_maps/gajjala_watch/constants.TAB). */
@@ -95,6 +95,9 @@ export type GgwFrame = {
   tf: string; label: string; tile: CmTile; axis: CmAxis | null;
   ema_cross: GgwCross | null; uptrend: GgwUptrend | null; held: GgwHeld | null;
   run_bases: GgwRunBases | null;
+  /** 🔀 2026-11-15 (SPEC blinker §3.5): the served 9/21 EMA cross blinker of THIS frame (frame-level sibling of
+   *  `ema_cross`, read off the stored curves) — the figcaption prints its dot; the chart box carries none. */
+  ema_blink: CmEmaBlink | null;
 };
 export type GgwRang = { frame: string; at_et: string | null; text: string };
 export type GgwRow = {
@@ -175,6 +178,7 @@ function parseFrame(v: unknown, symbol: string): GgwFrame | null {
      * `ellipses` beside it are NOT drawn here: PatternChart's ellipse layer maps by bar index, not by the served
      * 04:00 axis this board draws on (spec ggbase WP-E — main session's call). */
     run_bases: isObj(v.run_bases) ? ggRunBasesLine(v.run_bases) : null,
+    ema_blink: isObj(v.ema_blink) ? (v.ema_blink as CmEmaBlink) : null,
   };
 }
 

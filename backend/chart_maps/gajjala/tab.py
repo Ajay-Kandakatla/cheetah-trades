@@ -72,6 +72,16 @@ Gajjals landing page.. Call all strategies. I want this table to rank based how 
 GC.TABLE_SUB (FIRST in the strip) builds every setup's cards with the setup subs' own builder and serves ONE `table`
 block (all_table.block — the tiers, the cut, his 🚫 names last per tier, GG's 18); `tiles` stays []. GG1 / 🧪 resolve it
 to the default sub and never list it. Display order only — UNMEASURED.
+
+🔀 BLINKER (2026-11-15, SPEC blinker §3.4 / WP-B). Ajay, verbatim: "On All of the charts and also the tabs I need a new
+blinker to show me EMA uptrends 9 crossing over 21 EMA please.." · "Each chart's own frame" · "Yes and I need some sort of
+urgency or fast blink for the one are closer together than approaching with sort also aligned with it" · "Or atleast
+closing in on other tabs for me". Every card (`setup_tile`, the ☀️ / 🌙 `_list_tile`, the 🧠 cards through setup_tile)
+serves `ema_blink` = chart_maps.ema_blink's block over the DRAWN frame's own stored 9 / 21 EMA curves (ema_blink_of —
+THE engine, no second EMA; None without bars). `?sort=ema_blink` (GC.BLINK_SORT_KEY, read off the RAW `sort`) re-orders
+the five setup subs and 🧠 by ema_blink.sort_key BEFORE the cut — stable, so the non-blinking tail keeps the board's own
+order; broker_bottom still runs after. Those six subs serve `sorts` / `sort` / `ema_blink_info` (+ the 🔀 `order_note`
+under the opt-in); ☀️ keeps SORTS_PM; 📋 / 🌙 / 📓 / 🏁 are untouched. Information only — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -1506,7 +1516,9 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
     tile = {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr["tf"], vv), "tf": fr["tf"], "bars": fr["bars"],
             "vol_avg": vol_avg, "bands": EZ.bands(read, vv), "lines": _tile_lines(read), "markers": markers, "stats": stats,
-            "why": read.get("reason") or "", "badges": [], "curves": fr["curves"], "gajjala": g}
+            "why": read.get("reason") or "", "badges": [], "curves": fr["curves"],
+            "ema_blink": ema_blink_of(fr),                           # 🔀 2026-11-15 — the DRAWN frame, every setup
+            "gajjala": g}
     if kf_rank and setup == "kiss_fly":                              # 💋 the toggle's flag (2026-11-11 addendum), served
         tile["kiss_now"] = kiss_now_of(read)
     if wide:                                                         # 🎾 GG's chart marks (2026-11-08)
@@ -1553,6 +1565,58 @@ def ema_cross_block(fr: dict) -> Optional[dict]:
             "crosses": [{k: it[k] for k in ("t", "dir", "text")} for it in items], "_marks": items}
 
 
+BLINK_SORT_DEFAULT = "default"      # TRANSPORT — the served "board's own order" chip key (SPEC blinker §3.4); any other value reads default
+
+
+def ema_blink_of(fr: Optional[dict]) -> Optional[dict]:
+    """🔀 BLINKER (2026-11-15, SPEC blinker §3.4). Ajay, verbatim: "On All of the charts and also the tabs I need a new
+    blinker to show me EMA uptrends 9 crossing over 21 EMA please.." · FRAME "Each chart's own frame". The served block of
+    ONE drawn card frame (`fr` = _tile_frame's {tf, bars, curves}, the frame the card DRAWS — the 15m toggle reads the 15m
+    curves, the 🎾 wide frame its merged prior tail + today): chart_maps.ema_blink.block_from_curves over the frame's own
+    stored 9 / 21 EMA curves (THE engine ema_cross.blink_read — no second EMA), closed bars only. None when the frame has
+    no bars or cannot be judged; a raising read → None (never a card down). Information only — no gate, push, A+ rule,
+    count or default order reads it. UNMEASURED."""
+    if not isinstance(fr, dict) or not fr.get("bars"):
+        return None
+    try:
+        from chart_maps import ema_blink as EB
+        return EB.block_from_curves(fr.get("curves"), fr.get("bars"), tf=fr.get("tf"))
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: ema blink read failed: %s", exc)
+        return None
+
+
+def is_blink_sort(sort) -> bool:
+    """🔀 the opt-in `?sort=` value GC.BLINK_SORT_KEY, read off the RAW query (the ☀️ coercion into SORTS_PM is separate)."""
+    return isinstance(sort, str) and sort.strip().lower() == GC.BLINK_SORT_KEY
+
+
+def blink_sorted(tiles: list) -> list:
+    """🔀 `?sort=ema_blink` — THE ordering ema_blink.sort_key laid over the board's own order: a STABLE sort, so every
+    non-blinking card keeps the default relative order [C2]; build runs it BEFORE the cut (a closing-in card past the
+    limit is shown) and broker_bottom after it (his 🚫 names last, standing). A raising key → the board's own order."""
+    try:
+        from chart_maps import ema_blink as EB
+        return sorted(tiles, key=EB.sort_key)
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: ema blink sort failed: %s", exc)
+        return list(tiles)
+
+
+def blink_board(out: dict, blink_sort: bool) -> None:
+    """🔀 the served sort chips, the chosen sort and the long words ONCE per payload [C8] — the five setup subs and 🧠
+    only (☀️ keeps SORTS_PM, HIS CALL #7). Under the blink sort the order note is ema_blink.order_text(); otherwise the
+    sub's own note stands. Every value is computed FIRST, then assigned (a raise adds nothing)."""
+    from chart_maps import ema_blink as EB
+    add = {"sorts": [{"key": BLINK_SORT_DEFAULT, "label": EB.SORT_DEFAULT_LABEL},
+                     {"key": GC.BLINK_SORT_KEY, "label": EB.sort_label()}],
+           "sort": GC.BLINK_SORT_KEY if blink_sort else BLINK_SORT_DEFAULT,
+           "ema_blink_info": EB.info()}
+    if blink_sort:
+        add["order_note"] = EB.order_text()
+    out.update(add)
+
+
 def _strip_private(tiles: list) -> None:
     for t in tiles:
         g = t.get("gajjala")
@@ -1581,6 +1645,7 @@ def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: di
     return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr.get("tf"), v), "bars": fr["bars"],
             "vol_avg": fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None, "bands": [],
             "lines": [], "markers": [], "stats": stats, "why": "", "badges": [], "curves": fr["curves"],
+            "ema_blink": ema_blink_of(fr),                           # 🔀 2026-11-15 — None when the row has no bars
             "gajjala": g}
 
 
@@ -2437,6 +2502,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     pass_at = _at_utc(pass_doc)
     cron = _soft("cron pass read", _cron_ref, st, pass_doc, default=None)
     lease = _soft("lease read", st.lease_state, now, default={}) or {}
+    blink_sort = is_blink_sort(sort)            # 🔀 2026-11-15 — the RAW value, before the ☀️ coercion below
     sk = (sort or "").strip().lower() if isinstance(sort, str) else ""
     sk = sk if sk in dict(SORTS_PM) else SORT_PM_DEFAULT
     try:
@@ -2533,6 +2599,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                             pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
                                             rang=_rang(words_entries, session, sym, setup), kf_rank=True))
         tiles.sort(key=order_key)                                       # 🚫 the partition runs at the serving site, AFTER the cut
+        if blink_sort and setup == sub_k:                               # 🔀 2026-11-15 opt-in — BEFORE the cut, stable (📋 never)
+            tiles = blink_sorted(tiles)
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
 
@@ -2597,6 +2665,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                              HF_ORDER_TEXT if sub_k == "horizontal_fade" else          # 🧪 2026-11-08 — the ➖ word
                              KF_ORDER_TEXT[GC.KF_EMA_SORT] if sub_k in GC.RVOL_SORT_SETUPS else   # 💋 2026-11-11
                              VOL_ORDER_TEXT)                                           # 2026-11-09 — every other setup sub
+        _soft("ema blink sort chips", blink_board, out, blink_sort)     # 🔀 2026-11-15 — sorts / sort / info (+ the 🔀 note)
         out["list_note"] = (_soft("vcp list note", vcp_list_note, unlisted.get(sub_k, 0))
                             if sub_k == "intraday_vcp" else                       # BUILD_SPEC18 D3 — served line
                             _soft("kiss list note", kf_list_note, per_setup[sub_k])   # 💋 2026-11-11 — before the cut
@@ -2619,12 +2688,15 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["empty_note"] = None if out["table"] else TABLE_FAULT_TEXT
     elif sub_k == GC.POTENTIAL_SUB:
         entries = _entries_once()                       # D4: ONE read (D10: above the tiles, tri-state; the window read)
-        out["tiles"] = broker_bottom((_soft("potential tiles", _potential_tiles, pots, st=st, session=session,
-                                            tf_ask=tf_ask, scan_row=_row, sess=sess, listed=listed, halts_by=halts_by,
-                                            pass_at=pass_at, v=v, carry=ah_prev, prev_iso=prev.isoformat(),
-                                            entries=entries if live_push else None, default=[])
+        pot_order = blink_sorted if blink_sort else list                # 🔀 2026-11-15 opt-in — BEFORE the cut, stable
+        out["tiles"] = broker_bottom((pot_order(_soft("potential tiles", _potential_tiles, pots, st=st, session=session,
+                                                      tf_ask=tf_ask, scan_row=_row, sess=sess, listed=listed,
+                                                      halts_by=halts_by, pass_at=pass_at, v=v, carry=ah_prev,
+                                                      prev_iso=prev.isoformat(),
+                                                      entries=entries if live_push else None, default=[]))
                                       if pot_ok else [])[:lim], order_flags)   # 🚫 2026-11-09 — his names last among the cards shown
         out["order_note"] = POT_ORDER_TEXT                              # 2026-11-09 — the 🧠 ordering word, served
+        _soft("ema blink sort chips", blink_board, out, blink_sort)     # 🔀 2026-11-15 — sorts / sort / info (+ the 🔀 note)
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
                              sess=sess, entries=entries, v=v, live=live_push) if pot_ok else None
         out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms, v)
@@ -2703,4 +2775,5 @@ __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT"
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
            "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
-           "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT"]
+           "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT", "ema_blink_of", "is_blink_sort", "blink_sorted",
+           "blink_board", "BLINK_SORT_DEFAULT"]

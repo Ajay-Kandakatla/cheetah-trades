@@ -202,7 +202,7 @@ def test_NEGATIVE_existing_docs_without_the_count_serve_the_exact_old_frame_keys
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH", ups=(f"{SESSION} 09:35",))
     r = PL.build(at(S, 10, 30), db=db)["rows"][0]
     for f in r["frames"]:
-        assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held"}
+        assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held"} | {"ema_blink"}   # + ema_blink 2026-11-15 (🔀 blinker §3.5): the frame gains the blink key; the count keys stay absent
 
 
 def test_NEGATIVE_the_held_chip_is_unchanged_by_the_count():

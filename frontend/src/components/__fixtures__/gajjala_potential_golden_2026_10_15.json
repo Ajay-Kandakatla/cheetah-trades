@@ -110,6 +110,7 @@
     "state": "absent",
     "tags": {}
    },
+   "ema_blink_info": "UNMEASURED — information, not an entry. The 2026-11-15 check of every replay video: a 9-over-21 cross on 5-minute bars timed a runner well (+36.6% mean ride on the 38 video charts) but did not pick one — on 1,497 other names the same rule lost 2.0% net and won 27% of the time; on 1-minute bars it crossed about 12 times per chart on the video names. 'Closing in' = the gap is smaller than 3 closed bars ago; the bars-to-cross number is a straight-line projection, 24 bars at most. Cheetah's definition, not Gajjala's.",
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,
@@ -344,6 +345,17 @@
     "refresh_sec": 300,
     "tape": "rth"
    },
+   "sort": "default",
+   "sorts": [
+    {
+     "key": "default",
+     "label": "↩ the board's own order"
+    },
+    {
+     "key": "ema_blink",
+     "label": "🔀 closest to the 9/21 cross"
+    }
+   ],
    "strip": {
     "best_change_pct": 120.0,
     "best_symbol": "AAA",
@@ -578,6 +590,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {
@@ -890,6 +903,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {
@@ -1235,6 +1249,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": null,
       "broke": false,
@@ -1504,6 +1519,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {
@@ -1809,6 +1825,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": 0,
       "broke": true,
@@ -2050,6 +2067,7 @@
     "state": "absent",
     "tags": {}
    },
+   "ema_blink_info": "UNMEASURED — information, not an entry. The 2026-11-15 check of every replay video: a 9-over-21 cross on 5-minute bars timed a runner well (+36.6% mean ride on the 38 video charts) but did not pick one — on 1,497 other names the same rule lost 2.0% net and won 27% of the time; on 1-minute bars it crossed about 12 times per chart on the video names. 'Closing in' = the gap is smaller than 3 closed bars ago; the bars-to-cross number is a straight-line projection, 24 bars at most. Cheetah's definition, not Gajjala's.",
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,
@@ -2171,6 +2189,17 @@
     "refresh_sec": 300,
     "tape": "rth"
    },
+   "sort": "default",
+   "sorts": [
+    {
+     "key": "default",
+     "label": "↩ the board's own order"
+    },
+    {
+     "key": "ema_blink",
+     "label": "🔀 closest to the 9/21 cross"
+    }
+   ],
    "strip": {
     "best_change_pct": 120.0,
     "best_symbol": "AAA",
@@ -2405,6 +2434,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
@@ -2741,6 +2771,7 @@
       }
      ],
      "ellipses": [],
+     "ema_blink": null,
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
@@ -3094,6 +3125,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
@@ -3487,6 +3519,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
@@ -3815,6 +3848,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "focus": true,
      "gajjala": {
       "bars_since_entry": null,
@@ -4157,6 +4191,7 @@
        ]
       }
      ],
+     "ema_blink": null,
      "gajjala": {
       "bars_since_entry": null,
       "breakout": {

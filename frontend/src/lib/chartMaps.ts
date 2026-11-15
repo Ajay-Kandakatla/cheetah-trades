@@ -1384,6 +1384,19 @@ export type CmTile = {
   /** 🎾 Gajjala Reversal Squeeze cards only (2026-11-08): GG's chart circles. Absent
    *  everywhere else; `[]` on a 🎾 card whose frame is not the read's own. */
   ellipses?: CmEllipse[];
+  /** 🔀 2026-11-15 (SPEC blinker §3.7 / §3.4): the served 9/21 EMA cross blinker of this card's own drawn frame
+   *  (backend chart_maps/ema_blink.block) — Gajjala cards, 👀 frames, 🥇 Luk cards and every daily board (the latest
+   *  CLOSED bar). null / absent = no read → no dot, no line. Information only, UNMEASURED; words SERVED. */
+  ema_blink?: CmEmaBlink | null;
+};
+
+/** 🔀 The served blinker block (backend chart_maps/ema_blink.block). `tier` is one of lib/emaBlink EMA_BLINK_TIERS
+ *  (fastest first); `text` / `title` are the served sentences — the FE types none. */
+export type CmEmaBlink = {
+  state?: string | null; tier?: string | null; blink?: boolean | null; closeness?: number | null;
+  bars_to_cross?: number | null; bars_since_cross?: number | null; gap_pct?: number | null; above?: boolean | null;
+  cross_t?: string | null; t?: string | null; tf?: string | null; text?: string | null; title?: string | null;
+  fast?: number | null; slow?: number | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1625,6 +1638,9 @@ export const IZ_OPEN_PARAM = 'iz_open';
 export type CmBoard = {
   tab: CmTab;
   count: number;
+  /** 🔀 2026-11-15 (SPEC blinker §3.7, C8): the blinker's long explanation, served ONCE per payload when any tile
+   *  carries a block (backend ema_blink.info). Absent on an older API. */
+  ema_blink_info?: string | null;
   /** The sort actually applied. The winners tabs read a ledger with no live
    *  volume, so the backend answers `theme` there and sends an empty `sorts`. */
   sort?: string;

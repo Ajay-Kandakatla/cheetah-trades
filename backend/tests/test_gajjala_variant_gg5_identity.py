@@ -77,6 +77,15 @@ wording only; every other entry is the BOARD golden alone):
   last (section 13, item 12) per mode — no card carries `run_bases` / `ellipses` (no base on the fixture day). Same
   check on the on_open FE fixture by its `-k golden` recipe: 2128 -> 2135 (+7, the 📓 item)
   (docs/gajjala/run_bases_2026_11_15.md).
+  2026-11-15 — Ajay "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over
+  21 EMA please.." / "Or atleast closing in on other tabs for me" (🔀 blinker, SPEC blinker §3.4 WP-B): BOARD only (WRITES
+  byte-identical — the block is read at serve time off the stored curves, nothing written). BOARD 12375 -> 12687 leaves
+  (+312), ALL ADDED, 0 changed, 0 removed: `ema_blink` on every card (240 leaves — 16 cards, crossed_up on all 16 on the
+  fixture day) and, on the five setup subs + 🧠 per mode, `sorts` (48), `sort` "default" (12) and `ema_blink_info` (12).
+  No tile reordered, no `order_note` moved (the blink sort is opt-in). Same check on the FE fixtures by their own
+  `-k golden` recipes: 1m board 2119 -> 2191 (+72), on_open 2135 -> 2177 (+42), potential 3355 -> 3378 (+23, 11 cards
+  `ema_blink: null` — no finite 9 EMA on that fixture), track_record unchanged (🏁 carries no card)
+  (docs/chart_maps/ema_blink_2026_11_15.md).
 """
 from __future__ import annotations
 

@@ -1018,7 +1018,9 @@ describe('the Catalysts tab', () => {
     // would draw AVGO tiles under the Catalysts heading.
     await new Promise((r) => setTimeout(r, 30));
     const urls = fetchSpy.mock.calls.map((c: any[]) => String(c[0]));
-    expect(urls.some((u: string) => u.includes('/chart-maps'))).toBe(false);
+    // Board fetches only (`/chart-maps?<qs>`); the page-level GET
+    // /chart-maps/ema-blink (tab dots, 2026-11-15) is not a board fetch.
+    expect(urls.some((u: string) => u.includes('/chart-maps?'))).toBe(false);
     expect(screen.queryByText('AVGO')).not.toBeInTheDocument();
     expect(screen.queryByText(/Nothing matched on this tab/)).not.toBeInTheDocument();
   });

@@ -966,7 +966,9 @@ def test_16_NEG_only_the_two_attacher_keys_are_withheld_from_the_tile(dm_board):
         mp.undo()
     assert captured
     metric_keys = set(B.tile_metrics({}))
-    assert set(B._DM_ATTACH_OWNED) == {"explosive", "band_structure"}
+    # 2026-11-15 WIDENED — "ema_blink" joined ATTACH_OWNED_KEYS (blink-other-boards);
+    # _DM_ATTACH_OWNED is an alias, so the 🏎️ attach is unchanged, only the pin moves.
+    assert set(B._DM_ATTACH_OWNED) == {"explosive", "band_structure", "ema_blink"}
     assert set(B._DM_ATTACH_OWNED) <= metric_keys           # they ARE tile_metrics keys
     for t in captured:
         for k in B._DM_ATTACH_OWNED:

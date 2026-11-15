@@ -749,7 +749,8 @@ def test_SOURCE_GUARD_no_gate_lane_scan_or_board_reads_the_short_interest_read()
 def test_SOURCE_GUARD_nothing_attaches_or_sorts_by_short_interest():
     from chart_maps import board
 
-    assert board.ATTACH_OWNED_KEYS == ("explosive", "band_structure")
+    # 2026-11-15 WIDENED — "ema_blink" (blink-other-boards); still no SI key.
+    assert board.ATTACH_OWNED_KEYS == ("explosive", "band_structure", "ema_blink")
     bad = re.compile(r"short|(^|_)si(_|$)")
     assert not [k for k in board.tile_metrics({}) if bad.search(k)]
     assert not [k for k in board.SORTS if bad.search(k)]

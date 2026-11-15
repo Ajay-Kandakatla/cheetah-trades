@@ -724,3 +724,75 @@ def test_gg_watch_n_is_his_18_with_his_dated_words():
     assert GC.GG_WATCH_N == 18
     line = next(l for l in Path(GC.__file__).read_text(encoding="utf-8").splitlines() if l.startswith("GG_WATCH_N ="))
     assert "Ajay 2026-11-13" in line and "18 stocks simultaneously" in line and "never a cap" in line
+
+
+# ── 🔀 blinker (2026-11-15, SPEC blinker §3.1) ─────────────────────────────────────────────────────────────────────
+# Ajay 2026-11-15: "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over
+# 21 EMA please.." — every number MINE (HIS CALL #1–#6) or an existing constant by name; no window typed.
+_BLINK_NAMES = ("BLINK_NARROW_BARS", "BLINK_MAX_BARS", "BLINK_NEAR_BARS", "BLINK_IMMINENT_BARS",
+                "BLINK_DAILY_UP_MAX_BARS", "BLINK_SORT_KEY", "BLINK_TAB_REFRESH_SEC")
+
+
+def _blink_block_src() -> str:
+    lines = {n: ln for n, _v, ln in _assigns()}
+    lo = min(lines[n] for n in _BLINK_NAMES)
+    hi = max(lines[n] for n in _BLINK_NAMES)
+    start = lo
+    while start > 1 and LINES[start - 2].startswith("#"):
+        start -= 1
+    return "\n".join(LINES[start - 1:hi])
+
+
+def test_blink_values_reuse_the_existing_constants_by_name():
+    assert GC.BLINK_NARROW_BARS is GC.K5_SLOPE_BARS and GC.BLINK_MAX_BARS is GC.K4_HF_BASE_MAX
+    assert GC.BLINK_NEAR_BARS is GC.BLINK_NARROW_BARS
+    assert GC.BLINK_IMMINENT_BARS == 1 and GC.BLINK_DAILY_UP_MAX_BARS == 0
+    assert GC.BLINK_TAB_REFRESH_SEC == GC.GG1M_CADENCE_SEC
+    assert GC.BLINK_SORT_KEY == "ema_blink"
+    assert (GC.BLINK_NARROW_BARS, GC.BLINK_MAX_BARS, GC.BLINK_TAB_REFRESH_SEC) == (3, 24, 60)
+
+
+def test_blink_block_is_the_last_block_and_carries_his_words():
+    names = [n for n, _v, _ln in _assigns()]
+    assert tuple(names[-len(_BLINK_NAMES):]) == _BLINK_NAMES
+    src = _blink_block_src()
+    assert "On All of the charts and also the tabs I need a new blinker" in src
+    assert "Or atleast closing in on other tabs for me" in src and "UNMEASURED" in src
+
+
+def test_blink_names_are_named_not_retyped():
+    by = {n: v for n, v, _ln in _assigns()}
+    for n, ref in (("BLINK_NARROW_BARS", "K5_SLOPE_BARS"), ("BLINK_MAX_BARS", "K4_HF_BASE_MAX"),
+                   ("BLINK_NEAR_BARS", "BLINK_NARROW_BARS"), ("BLINK_TAB_REFRESH_SEC", "GG1M_CADENCE_SEC")):
+        assert isinstance(by[n], ast.Name) and by[n].id == ref, n
+
+
+def test_blink_mine_numbers_carry_the_cheetah_default_tag():
+    lines = {n: ln for n, _v, ln in _assigns()}
+    for n in ("BLINK_IMMINENT_BARS", "BLINK_DAILY_UP_MAX_BARS"):
+        c = _comment(lines[n])
+        assert c.startswith("Cheetah default") and "not GG" in c and "HIS CALL" in c, (n, c)
+    for n in ("BLINK_NARROW_BARS", "BLINK_MAX_BARS"):
+        assert _comment(lines[n]).startswith("MINE to reuse"), n
+    assert _comment(lines["BLINK_SORT_KEY"]).startswith("TRANSPORT")
+    assert _comment(lines["BLINK_TAB_REFRESH_SEC"]).startswith("derived")
+
+
+def test_NEGATIVE_the_blink_block_types_no_window_and_no_none():
+    src = _blink_block_src()
+    assert '"04:00"' not in src and '"20:05"' not in src and "04:00" not in src and "20:05" not in src
+    assert '"16:00"' not in src
+    by = {n: v for n, v, _ln in _assigns()}
+    for n in _BLINK_NAMES:
+        assert not (isinstance(by[n], ast.Constant) and by[n].value is None), n
+    assert not ({"BLINK_WINDOW_OPEN_ET", "BLINK_WINDOW_CLOSE_ET", "BLINK_UP_MAX_BARS"} & set(by))
+    assert "bounce" not in src.lower() and "buy" not in src.lower()
+
+
+def test_NEGATIVE_the_none_guard_still_bites_on_a_blink_line(monkeypatch):
+    """The provenance / None guards cover the new block: a None BLINK line (written into the AST the guard reads)
+    fails the None-set pin."""
+    tree = ast.parse(SRC + "\nBLINK_MAX_BARS = None  # MINE\n")
+    nones = {n.targets[0].id for n in tree.body if isinstance(n, ast.Assign) and len(n.targets) == 1
+             and isinstance(n.targets[0], ast.Name) and isinstance(n.value, ast.Constant) and n.value.value is None}
+    assert "BLINK_MAX_BARS" in nones and nones != set(GC.OFF_BY_DEFAULT) | {"K4_BF_LONG_FLAG_MAX"}

@@ -33,6 +33,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
+import { EmaBlinkDot, EmaBlinkLine } from './EmaBlink';
 import { MomentumBurstChip } from './MomentumBurstChip';
 import { isBurst, type BurstRead } from '../lib/momentumBurst';
 import { clipStrip, keyPadStrip, padStrip, padTitle } from '../lib/zonePad';
@@ -1027,6 +1028,11 @@ export const PatternChart = memo(function PatternChart(
         <div className="cm-tile-head">
           <div className="cm-tile-id">
             <b>{tile.symbol}</b>
+            {/* 🔀 9/21 EMA cross blinker (Ajay 2026-11-15: "On All of the charts and also the tabs I need a new blinker
+                to show me EMA uptrends 9 crossing over 21 EMA please.."): the SERVED block's dot, INLINE right after
+                the symbol — a flex child of the wrapping head, never absolute, never over the svg (C9). The chartOnly
+                path above renders none (the 👀 figcaption carries its dot). */}
+            <EmaBlinkDot block={tile.ema_blink} testid={`ema-blink-dot-${tile.symbol}`} />
             {tile.name ? <span className="cm-tile-name">{tile.name}</span> : null}
             {/* What the company IS: theme, growth, promo origin, the served
                 company facts. Never an entry read. */}
@@ -1117,6 +1123,8 @@ export const PatternChart = memo(function PatternChart(
         ) : null}
 
         <svg {...svgProps}>{svgLayers}</svg>
+        {/* 🔀 the served blinker sentence, verbatim, right under the chart (nothing when the block does not blink). */}
+        <EmaBlinkLine block={tile.ema_blink} sym={tile.symbol} />
 
         {setupHas || planHas || timingHas ? (
           <div className="cm-rungs">

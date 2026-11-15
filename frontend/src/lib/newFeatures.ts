@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over
+  // 21 EMA please.." + "I need some sort of urgency or fast blink for the one are closer together than approaching with sort also
+  // aligned with it" + "Or atleast closing in on other tabs for me." ONE read ema_cross.blink_read (THE engine) + chart_maps/ema_blink.py;
+  // Gajjala cards / 1-min / 🧪 / 👀 / 🥇 + tab-button dots; other boards via board.attach_ema_blink. Information only. UNMEASURED.
+  // Doc docs/chart_maps/ema_blink_2026_11_15.md.
+  {
+    id: 'chart-maps-ema-blink-2026-11-15',
+    label: '🔀 9/21 EMA blinker — you said: “On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over 21 EMA please..” and “I need some sort of urgency or fast blink for the one are closer together than approaching with sort also aligned with it”. Every Gajjala chart (🚩 5-min, 🚩 1-min, 🧪, 👀 Watch, 🥇 Luk) shows a dot next to the ticker: green, blinking fastest right after the 9 crosses over the 21 and pulsing calmly while it stays over; amber when the 9 is under the 21 and closing in, blinking faster the fewer bars are left to the cross. A new sort “🔀 closest to the 9/21 cross” puts them in the same order as the blink speed. Tab buttons blink when any card on that tab blinks, and the other Chart Maps boards show the same dot on their own chart. Information only — nothing rings or trades on it. The bar counts are my definition, not GG\'s — your call. UNMEASURED. Not advice.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-15, verbatim: "There is a concept of 3 bases and climax run can you bake that in to the app please" + "I need
   // that tracked in to Gajjala's"; GG's words S8 40:54–41:18 "first base, second base, third base, this is a climax run … I was
   // peeling off early" + S8 1:00:37 "fourth base, I came out of everything" (verified rule E6, single source). His 11-15 answers:

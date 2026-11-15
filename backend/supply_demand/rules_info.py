@@ -1246,6 +1246,20 @@ def _gg_run_bases_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_ema_blink_clause() -> str:
+    """🔀 2026-11-15 (Ajay "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9
+    crossing over 21 EMA please..") — the section note's ONE clause on the card / tab blinker, built by
+    chart_maps.ema_blink.rules_line() (every number a constant read at call time — never typed here): " " + the line,
+    or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps import ema_blink as EB
+        line = EB.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala ema blink clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_watch_cross_clause() -> str:
     """👀 2026-11-15 (Ajay "I need dashboard to add tickers to Gajjalas watch dashboard … from the videos I notice that
     when ever 9 EMA crosses over 21 EMA on uptrend is where the bullish momentum started I need alerts on these from 1
@@ -1457,6 +1471,7 @@ def _gajjala_section() -> dict:
                  + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
                  + _gg_fade_cross_clause()                 # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross (marks + push)
                  + _gg_run_bases_clause()                  # 📶 2026-11-15 — GG's base count (information only)
+                 + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)

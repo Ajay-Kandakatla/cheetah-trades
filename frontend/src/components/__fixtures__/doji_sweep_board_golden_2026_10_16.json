@@ -333,6 +333,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -483,6 +484,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -631,6 +633,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -779,6 +782,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -1172,6 +1176,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -1320,6 +1325,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -1468,6 +1474,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -1863,6 +1870,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -2254,6 +2262,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -2404,6 +2413,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -2552,6 +2562,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"
@@ -2947,6 +2958,7 @@
       "text": "no demand band — no stored bands for this name"
      }
     },
+    "ema_blink": null,
     "enterable": {
      "kind": "demand",
      "verdict": "WATCH"

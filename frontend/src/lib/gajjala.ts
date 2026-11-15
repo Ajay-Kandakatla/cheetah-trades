@@ -92,7 +92,7 @@
  * no rule, number or sentence: all of it is served. `floor_reached` is a COUNT flag, never printed as a verdict.
  * Shadow only. UNMEASURED.
  */
-import type { CmTile } from './chartMaps';
+import type { CmEmaBlink, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgEntryMarks, GgNewMark } from './ggEntryMarks';
 import type { GgTapePayload } from '../components/GgEntryTape';
@@ -731,7 +731,9 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
    *  null / absent = unknown (NEVER treated as false — the 💋 toggle never hides it). Display only. */
   kiss_now?: boolean | null;
   /** ✨ 2026-11-12 (entry marks §3.5): the served card blinker — drawn until its served `until`; absent → nothing. */
-  new_mark?: GgNewMark | null };
+  new_mark?: GgNewMark | null;
+  /** 🔀 2026-11-15 (SPEC blinker §3.4): the served 9/21 EMA cross blinker of the DRAWN frame — PatternChart prints it. */
+  ema_blink?: CmEmaBlink | null };
 
 /** 💋 2026-11-11 (kiss rvol spec addendum): the served toggle block — the 💋 sub only. Every word SERVED (the FE types
  *  none): `label` = the chip, `hint` = its native title, `hidden_text_template` = the line printed under the chip while it
@@ -815,6 +817,9 @@ export type GgBoard = {
   awaiting?: { setup: string; his_call: string; text: string }[];
   sorts?: { key: string; label: string }[];
   sort?: string | null;
+  /** 🔀 2026-11-15 (SPEC blinker §3.4, C8): the blinker's long explanation, served ONCE on the five setup subs + 🧠;
+   *  absent on an older API. */
+  ema_blink_info?: string | null;
   /** 🎾 2026-10-18 (DECISIONS13 D3): the served ordering word (tab.RS_ORDER_TEXT) — the squeeze sub; ➖ 2026-11-08: the fade
    *  sub serves its own (tab.HF_ORDER_TEXT, "closest to merged on top"); null on every other sub, absent on an older API.
    *  Printed verbatim; the FE types none. */

@@ -518,6 +518,31 @@ async def chart_maps_ema_frames(
     return JSONResponse(await asyncio.to_thread(_run))
 
 
+@router.get("/chart-maps/ema-blink")
+async def chart_maps_ema_blink(email: Optional[str] = Depends(maybe_current_user)):
+    """🔀 The tab-button dot feed (2026-11-15, SPEC blinker §3.8). Ajay: "On All of the charts and also the tabs I
+    need a new blinker to show me EMA uptrends 9 crossing over 21 EMA please.." · "Or atleast closing in on other
+    tabs for me".
+
+    ONE served count per Gajjala-family tab (`chart_maps.ema_blink.tab_counts`): projected Mongo reads of the stored
+    frames through THE frame builder — never a scan, never a bar fetch, never a write. `n` = the SYMBOLS in the tab's
+    store for its session with a card at or near the 9/21 cross on the tab's PRIMARY frame (past the board's cut
+    included, the 15-minute toggle excluded) — served as `n_means`. 👀 Watch is the owner's only (ollama_chat.api
+    .is_primary_admin of the forwarded X-User-Email; a direct call with the Depends OBJECT is a non-owner). A failing
+    tab answers None, never a 500. `refresh_sec` is served (0 outside the pass window / on a closed day).
+    Information only — UNMEASURED; nothing here gates, pushes or trades.
+    """
+    from rotation.api import _scrub
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it
+    from . import ema_blink as EB
+    owner = bool(is_primary_admin(email if isinstance(email, str) else ""))
+
+    def _run():
+        return _scrub(EB.tab_counts(None, owner=owner))
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
 @router.get("/chart-maps/gajjala")
 async def chart_maps_gajjala(
     sub: str = Query("", description="bull_flag (default) | all_strategies (📋 the ranked table, 2026-11-13) | "

@@ -256,9 +256,22 @@ def frame_block(sym: str, tf: str, t: dict, held_doc) -> dict:
            "axis": t.get("axis") if isinstance(t.get("axis"), dict) else None,
            "ema_cross": blk,
            "uptrend": {"ok": up.get("ok"), "short": up.get("short")},
-           "held": _held(blk, (held_doc or {}).get(tf) if isinstance(held_doc, dict) else None)}
+           "held": _held(blk, (held_doc or {}).get(tf) if isinstance(held_doc, dict) else None),
+           "ema_blink": _ema_blink(tf, t)}
     out.update(_run_bases(tf, t))
     return out
+
+
+def _ema_blink(tf: str, t: dict) -> Optional[dict]:
+    """🔀 2026-11-15 (SPEC blinker §3.5): the frame's 9/21 blinker block, read by THE engine (chart_maps.ema_blink →
+    ema_cross.blink_read) off this frame's STORED curves + bars — no fetch (the module docstring holds). A frame
+    sibling of `ema_cross`, never inside `tile`. Missing / ragged curves → None; any failure → None (the row stays ok)."""
+    try:
+        from chart_maps import ema_blink as EB
+        return EB.block_from_curves(t.get("curves"), t.get("bars"), tf=tf)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("gajjala_watch: ema_blink %s unavailable: %s", tf, exc)
+        return None
 
 
 def _run_bases(tf: str, t: dict) -> dict:

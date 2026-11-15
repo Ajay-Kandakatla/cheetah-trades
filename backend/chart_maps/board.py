@@ -1144,6 +1144,12 @@ def tile_metrics(row: dict) -> dict:
         # the real ordering runs in `board()` on
         # `band_structure.band_structure_key` over the tiles it cut to.
         "band_structure": None,
+        # 🔀 The 9/21 EMA blinker (2026-11-15, SPEC blinker §3.7) — a POST-CUT
+        # sort like 🪜: declared so the dropdown key resolves, ALWAYS None. The
+        # read lives on the tile (`attach_ema_blink`, after the cut, where the
+        # bars exist) and the ordering runs in `board()` on
+        # `chart_maps.ema_blink.sort_key` — never on this column.
+        "ema_blink": None,
         "conviction": _f((row.get("conviction") or {}).get("score")
                          if isinstance(row.get("conviction"), dict)
                          else row.get("conviction")),
@@ -1164,7 +1170,9 @@ def tile_metrics(row: dict) -> dict:
 # tab, and both sorts fall to an all-None column (found live on 🔑 Key Levels,
 # 🌀 AMD and Keltner). The `_m` sort columns keep every key; only the FLAT
 # spread drops these. Every flat spread goes through `published_metrics`.
-ATTACH_OWNED_KEYS = ("explosive", "band_structure")
+# WIDENED 2026-11-15 (🔀 blinker, SPEC blinker §3.7): + ema_blink —
+# `attach_ema_blink` is idempotent by key presence the same way.
+ATTACH_OWNED_KEYS = ("explosive", "band_structure", "ema_blink")
 
 
 def published_metrics(m: Optional[dict]) -> dict:
@@ -1224,6 +1232,11 @@ SORTS: dict[str, str] = {
     # `attach_live_now` has run — so the ordering happens in `board()` and says
     # so (`band_structure.BOARD_SCOPE_NOTE`).
     "band_structure": "🪜 Thin ceiling, layered floor",
+    # 🔀 The 9/21 EMA blinker (2026-11-15). A POST-CUT sort (below): it orders
+    # the tiles the default cut chose, never selects them. The literal equals
+    # `chart_maps.ema_blink.sort_label()` (pinned by a test — that function
+    # builds it from the EMA_FAST / EMA_SLOW constants).
+    "ema_blink": "🔀 closest to the 9/21 cross",
 }
 
 # Sorts that are NOT applied inside `_finish`, because the read they order by
@@ -1240,7 +1253,9 @@ SORTS: dict[str, str] = {
 # tells him the board is "showing its default order". A post-cut sort orders
 # the page; it never selects it. The 🧨 sort is the other precedent and the
 # opposite case — it IS applied in `_finish`, over every tile, before the cut.
-POST_CUT_SORTS = ("band_structure",)
+# WIDENED 2026-11-15: + ema_blink — the 🔀 read needs the tile's bars, which
+# `_finish` only attaches after the cut.
+POST_CUT_SORTS = ("band_structure", "ema_blink")
 
 
 def is_explicit_sort(sort: str) -> bool:
@@ -1455,6 +1470,90 @@ def attach_explosive(tiles: list) -> int:
         if read is not None:
             done += 1
     return done
+
+
+def attach_ema_blink(tiles: list, now=None) -> int:
+    """🔀 Fill `tile['ema_blink']` — the 9/21 EMA blinker block — off the
+    tile's own DAILY bars (2026-11-15, SPEC blinker §3.7; Ajay: "Or atleast
+    closing in on other tabs for me"). Returns how many tiles got a block.
+
+    The `attach_explosive` shape: idempotent by KEY PRESENCE (None is a real
+    answer — "not covered"), fail-open, never raises, never drops a tile. ONE
+    engine: `chart_maps.ema_blink.block_from_bars` → `ema_cross.blink_from_bars`
+    (the house `_masked_ema`; no second EMA here).
+
+    THE LIVE BAR (critique C1): during RTH `with_today_bar` makes the last
+    daily bar today's FORMING bar, untagged. `daily_through(now)` — computed
+    ONCE per call — drops every bar stamped today until today's close
+    (`rth_close_time`, the half-day clock included), so the block always reads
+    the latest CLOSED daily bar. Crossed-up blinks only on the cross bar itself
+    (`GC.BLINK_DAILY_UP_MAX_BARS`). A tile without bars → None, never faked.
+    """
+    todo = [t for t in tiles if isinstance(t, dict) and t.get("symbol")
+            and "ema_blink" not in t]
+    if not todo:
+        return 0
+    try:
+        from chart_maps import ema_blink as EB
+        from chart_maps.gajjala import constants as GC
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: ema blink unavailable: %s", exc)
+        return 0
+    try:
+        through = EB.daily_through(now)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: ema blink clock unavailable: %s", exc)
+        return 0
+    done = 0
+    for t in todo:
+        bars = t.get("bars")
+        blk = None
+        if isinstance(bars, list) and bars:
+            try:
+                blk = EB.block_from_bars(bars, tf=EB.DAILY_FRAME, through=through,
+                                         up_max_bars=GC.BLINK_DAILY_UP_MAX_BARS)
+            except Exception as exc:                            # noqa: BLE001
+                log.debug("chart-maps: ema blink %s failed: %s", t.get("symbol"), exc)
+                blk = None
+        t["ema_blink"] = blk
+        if blk is not None:
+            done += 1
+    return done
+
+
+def _ema_blink_board(out: dict, now=None) -> None:
+    """🔀 The board-level half of the blinker, run by `board()` for EVERY tab
+    right after `attach_explosive`: the per-tile attach, the long words ONCE per
+    payload (`ema_blink_info`, critique C8 — the tile carries only the short
+    title), and the opt-in POST-CUT order. The sort runs only when the served
+    `sort` is the blink key AND the tab offers it (a tab serving its own
+    `sorts` gets the dot, not the sort — HIS CALL #9). Never raises."""
+    tiles = out.get("tiles") or []
+    try:
+        n = attach_ema_blink(tiles, now=now)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: ema blink attach failed: %s", exc)
+        return
+    try:
+        from chart_maps import ema_blink as EB
+        from chart_maps.gajjala import constants as GC
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: ema blink words unavailable: %s", exc)
+        return
+    if n:
+        try:
+            out["ema_blink_info"] = EB.info()
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: ema blink info failed: %s", exc)
+    offered = {s.get("key") for s in (out.get("sorts") or []) if isinstance(s, dict)}
+    if out.get("sort") == GC.BLINK_SORT_KEY and GC.BLINK_SORT_KEY in offered:
+        try:
+            tiles.sort(key=EB.sort_key)                         # stable: the non-blinking tail keeps its order
+            if not any((t.get("ema_blink") or {}).get("blink") for t in tiles
+                       if isinstance(t, dict)):
+                out["sort_unavailable"] = EB.sort_unavailable()
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: ema blink sort failed: %s", exc)
 
 
 def _live_from_snaps(tiles: list, raw: dict) -> dict:
@@ -8039,6 +8138,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # avoiding a control that does nothing. A no-op (and no Mongo query) for
     # every tab that already attached it.
     attach_explosive(out.get("tiles") or [])
+    # 🔀 The 9/21 EMA blinker (2026-11-15), every tab, after the cut — the bars
+    # exist only now. The live daily bar is dropped inside (critique C1).
+    _ema_blink_board(out)
     # The banner prose that goes with the chip, once per payload — the same
     # dict `bounce_room.api_payload` puts on the non-tile boards, so the tile
     # tabs' `CmBoard.study` slot leads with the measured verdict instead of

@@ -1,0 +1,43 @@
+/* 🔀 9/21 EMA cross blinker — the card dot + line (2026-11-15, SPEC blinker §3.9, WP-E). Ajay: "I need some sort of
+   urgency or fast blink for the one are closer together than approaching".
+   The dot is an INLINE flex child of the wrapping card head (.cm-tile-head wraps; .cm-tile-id holds it right after the
+   symbol) — it never sits over the chart's price axis or the 🔴 live tag, and it never widens a card at 430 px.
+   Pulse speeds are MONOTONE in lib/emaBlink EMA_BLINK_TIERS order (fresh fastest … up slowest) — display pacing, MINE
+   (HIS CALL #10); styles/emaBlinkTab.css carries the same table for the tab dot. Reduced motion → a steady dot. */
+
+@keyframes ema-blink-pulse { 50% { opacity: .15; } }
+
+.ema-blink-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  vertical-align: middle;
+  margin-left: .3rem;
+  box-shadow: 0 0 0 1px var(--surface, #0b0e14);
+}
+
+.ema-blink-fresh, .ema-blink-up { background: var(--positive, #22c55e); }
+.ema-blink-imminent, .ema-blink-near, .ema-blink-closing { background: var(--warn, #f59e0b); }
+
+.ema-blink-dot.ema-blink-fresh { animation: ema-blink-pulse .45s ease-in-out infinite; }
+.ema-blink-dot.ema-blink-imminent { animation: ema-blink-pulse .6s ease-in-out infinite; }
+.ema-blink-dot.ema-blink-near { animation: ema-blink-pulse .9s ease-in-out infinite; }
+.ema-blink-dot.ema-blink-closing { animation: ema-blink-pulse 1.6s ease-in-out infinite; }
+.ema-blink-dot.ema-blink-up { animation: ema-blink-pulse 2.2s ease-in-out infinite; }
+
+.ema-blink-line {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: .75rem;
+}
+.ema-blink-line.ema-blink-crossed_up { color: var(--positive, #22c55e); }
+.ema-blink-line.ema-blink-closing_in { color: var(--warn, #f59e0b); }
+
+/* The doubled class lifts this to (0,2,0) — equal to the tier rules above, and later in the file, so it WINS; a bare
+   .ema-blink-dot (0,1,0) would lose to .ema-blink-dot.ema-blink-fresh and the dot would keep pulsing. */
+@media (prefers-reduced-motion: reduce) {
+  .ema-blink-dot.ema-blink-dot { animation: none; }
+}

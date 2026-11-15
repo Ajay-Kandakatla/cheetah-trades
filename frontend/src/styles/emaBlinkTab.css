@@ -1,0 +1,21 @@
+/* 🔀 The tab-button dot (2026-11-15, ema-blink spec §3.9 WP-F). Ajay: "Or atleast closing in on other tabs for me."
+ * The dot sits ABSOLUTE inside the tab anchor's own right padding (.cm-tab: padding 0.35rem 0.75rem) so the strip
+ * never widens and the label text is untouched (the ggEntryMarks.css precedent). Colours, keyframes and durations are
+ * the card dot's (emaBlinkCard.css) — a FE test pins the two duration tables equal and monotone in tier order (the
+ * fastest = fresh). Display pacing is MINE (spec §7 #10). Reduced motion → a steady dot. */
+.cm-tabs .cm-tab { position: relative; }
+.cm-tab-blink {
+  position: absolute; top: 2px; right: 4px;
+  width: 6px; height: 6px; border-radius: 50%;
+  pointer-events: none;
+}
+@keyframes ema-blink-tab-pulse { 50% { opacity: .15 } }
+.cm-tab-blink.ema-blink-fresh    { background: var(--positive, #22c55e); animation: ema-blink-tab-pulse .45s ease-in-out infinite; }
+.cm-tab-blink.ema-blink-imminent { background: var(--warn, #f59e0b);     animation: ema-blink-tab-pulse .6s ease-in-out infinite; }
+.cm-tab-blink.ema-blink-near     { background: var(--warn, #f59e0b);     animation: ema-blink-tab-pulse .9s ease-in-out infinite; }
+.cm-tab-blink.ema-blink-closing  { background: var(--warn, #f59e0b);     animation: ema-blink-tab-pulse 1.6s ease-in-out infinite; }
+.cm-tab-blink.ema-blink-up       { background: var(--positive, #22c55e); animation: ema-blink-tab-pulse 2.2s ease-in-out infinite; }
+/* Reduced motion: (0,3,0) outranks the per-tier (0,2,0) rules above, so the steady dot really is steady. */
+@media (prefers-reduced-motion: reduce) {
+  .cm-tabs .cm-tab .cm-tab-blink { animation: none; }
+}

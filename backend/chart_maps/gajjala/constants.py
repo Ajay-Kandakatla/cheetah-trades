@@ -378,3 +378,22 @@ RUN_BASE_DEPTH_FLOOR = False               # Cheetah default (MINE, not GG — H
 RUN_BASE_RESTART = True                    # Ajay 2026-11-15 "Yes, restart" — a pause longer than RUN_BASE_MAX_BARS ends the run; the next run counts from 1
 RUN_BASE_CLIMAX_N = 3                      # GG S8 40:54–41:18 "third base, this is a climax run … I was peeling off early" (E6)
 RUN_BASE_OUT_N = 4                         # GG S8 1:00:37 "fourth base, I came out of everything" (E6)
+
+# 🔀 blinker (2026-11-15) — Ajay, verbatim: "On All of the charts and also the tabs I need a new blinker to show me EMA
+# uptrends 9 crossing over 21 EMA please.." · WHERE "All Gajjala tabs" · FRAME "Each chart's own frame" · DURATION "Yes
+# and I need some sort of urgency or fast blink for the one are closer together than approaching with sort also aligned
+# with it" · "Or atleast closing in on other tabs for me". INFORMATION ONLY — no gate, push, alert, A+ rule, lane, sort
+# default or track record reads it; the opt-in sort is BLINK_SORT_KEY. The read is ema_cross.blink_read over the frame's
+# own EMA_FAST / EMA_SLOW curves (no new EMA). Every number is MINE (HIS CALL #n, docs/chart_maps/ema_blink_2026_11_15.md)
+# or an existing constant reused by name. A crossed-up Gajjala card blinks for as long as the 9 stays over the 21 on its
+# drawn frame — Ajay 2026-11-15 "Yes" to "until 9 drops under 21" (no age cap: blink_read's up_max_bars default, no
+# constant). The tab-dot feed re-reads only while THE pass window is open on a market day (run.in_window: PASS_OPEN_ET /
+# PASS_CLOSE_ET + market_hours.gate.closed_reason — no second window typed here). UNMEASURED
+# (eod-audits/research/2026-11-15_video_9x21_upcross: a cross times a runner, never picks one; 1-minute ≈ 12 crosses a chart).
+BLINK_NARROW_BARS = K5_SLOPE_BARS            # MINE to reuse (HIS CALL #1) — "closing in" = the 9/21 gap is smaller than it was this many closed bars ago (his K5 EMA-slope lookback)
+BLINK_MAX_BARS = K4_HF_BASE_MAX              # MINE to reuse (HIS CALL #2) — a cross projected further out than this many bars is not "closing in" (the longest base his setups read)
+BLINK_NEAR_BARS = BLINK_NARROW_BARS          # derived — MINE (HIS CALL #3): "near" = the cross is projected within this many bars
+BLINK_IMMINENT_BARS = 1                      # Cheetah default (MINE, not GG — HIS CALL #3): "imminent" = projected on the next closed bar — the frame's own unit, no other number; a gap of exactly 0 counts as imminent
+BLINK_DAILY_UP_MAX_BARS = 0                  # Cheetah default (MINE, not GG — HIS CALL #4): the daily Chart Maps boards blink crossed-up only when the cross bar IS the latest CLOSED bar ("crossed this session"); None = the Gajjala rule above
+BLINK_SORT_KEY = "ema_blink"                 # TRANSPORT — the opt-in `sort` value (GG setup subs + 🧠; board.SORTS / POST_CUT_SORTS on the other boards); the FE contract pins the spelling
+BLINK_TAB_REFRESH_SEC = GG1M_CADENCE_SEC     # derived — MINE (HIS CALL #6): the tab-dot count (GET /chart-maps/ema-blink) re-reads once per closed 1-minute bar while run.in_window(now) holds; 0 otherwise
