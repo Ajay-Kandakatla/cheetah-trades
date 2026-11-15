@@ -1218,6 +1218,20 @@ def _gg_break_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_fade_cross_clause() -> str:
+    """🔀 2026-11-15 (Ajay "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in horizonal
+    fade when that happens?") — the section note's ONE clause on the ➖ Fade EMA cross, built by
+    chart_maps.gajjala.alerts.fade_cross_rules_line() (every number a constant, the mode read at call time — never typed
+    here): " " + the line, or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import alerts as GAL
+        line = GAL.fade_cross_rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala fade cross clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1412,6 +1426,7 @@ def _gajjala_section() -> dict:
                     "not the rule." % GC.BROKER_NAME)
                  + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
                  + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
+                 + _gg_fade_cross_clause()                 # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross (marks + push)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

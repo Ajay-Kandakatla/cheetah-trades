@@ -197,6 +197,10 @@ class Deps:
     # nothing is written — tests, replays, dry runs; the cron and on-open paths of main() pass day_read.run_step. Never
     # a key of out, never read by any gate.
     day_read: Optional[Callable] = None
+    # 🔀 2026-11-15 (Ajay "can you add an alert in horizonal fade when that happens?"): the ➖ Fade 9 / 21 EMA cross push,
+    # alerts.run_fade_cross's signature. None = the step does not run (tests, replays, dry runs, the on-open pass); the
+    # cron path of main() and the ⏱ bar-close child pass alerts.run_fade_cross. Never a key of out, never a gate.
+    fade_cross: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -634,6 +638,12 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")
             out["potential"] = {}
+        if deps.fade_cross is not None and not push_dry:       # 🔀 2026-11-15 — the ➖ cross push, its OWN try (never an open)
+            try:
+                xc = deps.fade_cross(reads, frames, now, session, store=st, owner=deps.owner, volume=sv)
+                log.info("gajjala pass: 🔀 fade cross %s", {k: n for k, n in (xc or {}).items() if n})
+            except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
+                log.exception("gajjala pass: the 🔀 fade cross push failed")
         if deps.day_read is not None and not dry:              # 🌫️ 2026-11-15 — ONE read per pass; information only
             try:
                 if on_demand:
@@ -798,13 +808,16 @@ def dry_deps() -> Deps:
 
 
 def _cron_deps() -> Deps:
-    """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags and the 🌫️ day read (2026-11-15) on, everything else the
+    """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags, the 🌫️ day read and the 🔀 fade cross (2026-11-15) on, everything else the
     defaults. ONE definition (GG LIVE spec §3.4, 2026-11-09): run.main's cron path and the ⏱ bar-close child in `on`
     mode (bar_close.wait_and_run) both call run_pass with it."""
     from . import trader_names as TN
     from . import promo_names as PN
     from . import day_read as DR                                # 🌫️ 2026-11-15 — lazy: the day read's engine wrapper
-    return Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags, day_read=DR.run_step)
+    from . import alerts as AL                                  # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross push
+    d = Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags, day_read=DR.run_step)
+    d.fade_cross = AL.run_fade_cross
+    return d
 
 
 def _spawn_bar_close() -> None:

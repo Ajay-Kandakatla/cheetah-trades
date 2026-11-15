@@ -569,7 +569,153 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     return counts
 
 
+
+# ── 🔀 the ➖ Fade 9 / 21 EMA cross push (2026-11-15) ────────────────────────────────────────────────────────────────
+# Ajay, verbatim: "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in horizonal fade when
+# that happens?" · "For any stocks that crossing over and add the same feedback in to that horizontal fade charts".
+# ADDITIVE: no A+ gate, detector rule or threshold moves; the A+ run_pass above is untouched. Information, never an entry.
+FADE_CROSS_PREFIX = "GGX"                                # the claim id's prefix — never "GG:" (the A+ claims the 🏁 reads)
+FADE_CROSS_STATES = ("cross_claimed", "cross_pushed", "cross_no_target", "cross_failed")   # never a ledger.LEDGER_ALERT_STATES word
+FADE_CROSS_TAIL = "UNMEASURED — information only, not an entry"
+FADE_CROSS_BODY = "{fast} EMA crossed above {slow} EMA on the {frame} bar closing {hhmm} ET · close {px}"
+FADE_CROSS_COUNT_KEYS = ("listed", "cross", "pushed", "dry", "off", "claimed_before", "late", "suppressed_closed",
+                         "suppressed_premarket", "suppressed_first15", "suppressed_window", "under_floor",
+                         "no_target", "failed")
+
+
+def fade_cross_mode() -> str:
+    """GC.FADE_CROSS_PUSH_MODE when it is one of FADE_CROSS_PUSH_MODES, else "off" (fail closed). Read at CALL time."""
+    m = GC.FADE_CROSS_PUSH_MODE
+    return m if isinstance(m, str) and m in GC.FADE_CROSS_PUSH_MODES else GC.FADE_CROSS_PUSH_MODES[0]
+
+
+def fade_cross_key(session, sym: str, setup: str) -> str:
+    """Once per (symbol, setup, ET session) — "GGX:{date}|{SYM}|{setup}"."""
+    return f"{FADE_CROSS_PREFIX}:{_session_iso(session)[:10]}|{(sym or '').upper()}|{setup}"
+
+
+def _fade_cross_send(owner: str, payload: dict) -> dict:
+    """The sender of GC.FADE_CROSS_PUSH_KIND — fail closed: a kind without a sender raises before push.hooks is touched."""
+    from push import hooks
+    if GC.FADE_CROSS_PUSH_KIND == GC.POTENTIAL_PUSH_KIND:
+        return hooks.notify_gajjala_potential(owner=owner, payload=payload)
+    if GC.FADE_CROSS_PUSH_KIND == GC.PUSH_KIND:
+        return hooks.notify_gajjala_setup(owner=owner, payload=payload)
+    raise RuntimeError(f"no sender for the 🔀 kind {GC.FADE_CROSS_PUSH_KIND!r}")
+
+
+def fade_cross_compose(sym: str, setup: str, cross: dict, frame: str) -> dict:
+    """The device payload of one 🔀 cross: every number is the cross bar's own (its close); UNMEASURED tail."""
+    sym = (sym or "").upper()
+    emoji, label = SETUP_META.get(setup, ("🚩", setup))
+    close = bar_close_et(cross.get("ts"))
+    hhmm = close.strftime("%H:%M") if close else "—"
+    body = " · ".join((FADE_CROSS_BODY.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW, frame=frame, hhmm=hhmm,
+                                              px=_px(cross.get("close"))), FADE_CROSS_TAIL))
+    title = f"🔀 {sym} · {emoji} {label} · {GC.EMA_FAST} EMA over {GC.EMA_SLOW} EMA"
+    return {"title": title, "body": body, "tag": f"ggx-{setup}-{sym}",
+            "url": f"/chart-maps?tab={V.GG5.tab}&sub={setup}&focus={sym}", "kind": GC.FADE_CROSS_PUSH_KIND,
+            "ticker": sym, "items": [{"symbol": sym, "text": body}]}
+
+
+def run_fade_cross(reads: dict, frames: dict, now: datetime, session, *, store, send: Optional[Callable] = None,
+                   owner: Optional[str] = None, dry: bool = False, volume: Optional[dict] = None) -> dict:
+    """🔀 Ring the first 9-over-21 EMA cross of a ➖ Fade name — once per (name, setup, ET session). GG5 only.
+
+    Which names: a read of a GC.FADE_CROSS_SETUPS setup whose state is one of tab.TILE_STATES (it has a card on that
+    sub). Which cross: ema_cross.latest_up_cross of the read's own frame (the card's default frame; the Fade reads
+    15-minute first), TODAY, closed bars only (bars.Frames holds nothing else) — and only when that cross bar is the
+    frame's latest closed bar and fresh (`pushable`'s clock: is_fresh / max_entry_age_sec). A down cross never rings
+    (the card marks it). Refusals, in order: mode off · late · closed day · the A+ push window (window_reason) · GG's
+    session-volume floor (GC.K11_MIN_SESSION_VOLUME — the same floor every Gajjala push keeps; `volume` = {SYM: the
+    session volume K11 reads}, unknown → held) · dry · the insert-only claim (`fade_cross_key`, BEFORE the send) ·
+    the send (owner-scoped, GC.FADE_CROSS_PUSH_KIND — the 🧠 kind, no new keep-set kind). Refusals are counted, never
+    written (no ledger row). -> counts (FADE_CROSS_COUNT_KEYS)."""
+    from . import ema_cross as EX
+    from .tab import TILE_STATES
+    from supply_demand.demand_alerts import claim_key as _claim
+    counts = {k: 0 for k in FADE_CROSS_COUNT_KEYS}
+    v = V.of(store)
+    if not V.is_gg5(v):
+        return counts
+    send = send or _fade_cross_send
+    vol = volume or {}
+    coll = store.alerts_coll() if store is not None else None
+    closed = None
+    session_iso = _session_iso(session)[:10]
+    order = {s: i for i, s in enumerate(GC.SETUPS)}
+    for sym in sorted(str(s).upper() for s in (reads or {})):
+        by_setup = (reads or {}).get(sym) or {}
+        for setup in sorted(GC.FADE_CROSS_SETUPS, key=lambda x: order.get(x, len(order))):
+            r = by_setup.get(setup)
+            if not isinstance(r, dict) or r.get("state") not in TILE_STATES:
+                continue
+            counts["listed"] += 1
+            fr = frames.get(sym) if isinstance(frames, dict) else None
+            if fr is None:
+                continue
+            tf = r.get("frame") if r.get("frame") in getattr(fr, "by", {}) else v.slow
+            F = fr.frame(tf)
+            x = EX.latest_up_cross(EX.frame_crosses(F), session_iso)
+            if x is None:
+                continue
+            counts["cross"] += 1
+            if fade_cross_mode() == GC.FADE_CROSS_PUSH_MODES[0]:
+                counts["off"] += 1
+                continue
+            if x["ts"] != (F.t[-1] if F.t else None) or not is_fresh({"entry_bar_t": x["ts"]}, now, v):
+                counts["claimed_before" if _exists(coll, fade_cross_key(session, sym, setup)) else "late"] += 1
+                continue
+            if closed is None:
+                closed = _closed_reason(now) or ""
+            if closed:
+                counts["suppressed_closed"] += 1
+                continue
+            w = window_reason(x["ts"], session, F.frame)
+            if w:
+                counts[w] += 1
+                continue
+            sv = EX.finite(vol.get(sym))                          # None / NaN / inf / bool → unknown → held
+            if sv is None or sv < GC.K11_MIN_SESSION_VOLUME:
+                counts["under_floor"] += 1
+                continue
+            if dry:
+                counts["dry"] += 1
+                continue
+            key = fade_cross_key(session, sym, setup)
+            payload = fade_cross_compose(sym, setup, x, F.frame)
+            doc = {"date": session_iso, "symbol": sym, "setup": setup, "frame": F.frame, "bar_t": x["ts"],
+                   "close": x["close"], "kind": GC.FADE_CROSS_PUSH_KIND, "state": FADE_CROSS_STATES[0],
+                   "at": now.isoformat()}
+            if not _claim(coll, key, doc):
+                counts["claimed_before"] += 1
+                continue
+            try:
+                res = send(owner or _owner(), payload) or {}
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala 🔀: send failed for %s %s: %s", sym, setup, type(exc).__name__)
+                counts["failed"] += 1
+                _settle(coll, key, {"state": FADE_CROSS_STATES[3], "result": {"error": type(exc).__name__}})
+                continue
+            sent, targets = int(res.get("sent") or 0), int(res.get("total_targets") or 0)
+            st = (FADE_CROSS_STATES[1] if sent > 0 else FADE_CROSS_STATES[2] if targets == 0
+                  else FADE_CROSS_STATES[3])
+            counts[{FADE_CROSS_STATES[1]: "pushed", FADE_CROSS_STATES[2]: "no_target"}.get(st, "failed")] += 1
+            _settle(coll, key, {"state": st, "result": {k: res.get(k) for k in ("sent", "failed", "total_targets",
+                                                                                "skipped")}})
+    return counts
+
+
+def fade_cross_rules_line() -> str:
+    """The ℹ️ panel clause — every number from the constants at CALL time."""
+    return (f"🔀 ➖ Fade cards mark every {GC.EMA_FAST} EMA cross over / under the {GC.EMA_SLOW} EMA of the session on "
+            f"closed bars; the first cross ABOVE on the latest closed bar rings once per name per session (the 🧠 "
+            f"alert kind), inside the A+ push hours, never the first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes, never on a "
+            f"closed day, held under GG's {GC.K11_MIN_SESSION_VOLUME:,}-share session floor; a cross under never rings; "
+            f"mode {fade_cross_mode()}. UNMEASURED — information, not an entry.")
+
 __all__ = ["KIND", "push_mode", "max_entry_age_sec", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
            "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "refusal", "run_pass", "shadow_session_count", "COUNT_KEYS",
            "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT",
-           "CHASE_TEXT", "CHASE_PAST_TEXT", "chase_text"]
+           "CHASE_TEXT", "CHASE_PAST_TEXT", "chase_text", "run_fade_cross", "fade_cross_compose", "fade_cross_key",
+           "fade_cross_mode", "fade_cross_rules_line", "FADE_CROSS_STATES", "FADE_CROSS_COUNT_KEYS"]

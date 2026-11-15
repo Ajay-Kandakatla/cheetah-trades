@@ -163,6 +163,15 @@ POTENTIAL_ONE_RING_PER_NAME = True           # Ajay 2026-11-11 "Also apply your 
 GAJJALA_BREAK_PUSH_MODES = ("off", "shadow", "live")   # Ajay 2026-11-11 "please tell me to enter based on this" — the three states of the ⚡ break push
 GAJJALA_BREAK_PUSH_MODE = "shadow"           # HIS CALL #1 — Ajay 2026-11-11 "please tell me to enter based on this"; SHADOW until his word ("live" = rings his phone)
 GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND   # HIS CALL #2 — rides the 🧠 kind (no 8th OWNER_KEEP_SET kind); "gajjala_break" only on his word
+# 🔀 2026-11-15 — Ajay, verbatim: "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in
+# horizonal fade when that happens?" · "For any stocks that crossing over and add the same feedback in to that horizontal
+# fade charts". The cross is the ONE engine chart_maps.gajjala.ema_cross over the frame's own EMA_FAST / EMA_SLOW (no new number);
+# the card marks every cross of the session (tab.ema_cross_block), the push rings the first 9-over-21 cross on a closed bar
+# once per name per session (alerts.run_fade_cross). Information only — no gate, threshold, detector rule or A+ moves.
+FADE_CROSS_SETUPS = ("horizontal_fade",)     # Ajay 2026-11-15 "can you add an alert in horizonal fade" — the ➖ sub only; other subs = HIS CALL
+FADE_CROSS_PUSH_MODES = ("off", "live")      # Ajay 2026-11-15 — the two states of the 🔀 cross push ("off" = one word, nothing rings)
+FADE_CROSS_PUSH_MODE = "live"                # Ajay 2026-11-15 "can you add an alert in horizonal fade when that happens?" — rings his phone
+FADE_CROSS_PUSH_KIND = POTENTIAL_PUSH_KIND   # Ajay 2026-11-15 — rides the 🧠 kind (the GAJJALA_BREAK_PUSH_KIND precedent: no new OWNER_KEEP_SET kind)
 FOCUS_N = 5                                  # Ajay 2026-11-11 "Also apply your proposal too." — proposal #9 "Focus 5"; GG U14 "4–5 active (1–2 in poor markets)"
 ENTRY_MARK_NEW_MIN = 30                      # Ajay 2026-11-12 "an Indicator or new tickers with in last 30 mins like blinkers or something would be nice" — how long a ✨ blinker stays on a Gajjala card / sub chip (display only)
 PASS_MINUTE_OFFSET = 1                       # TRANSPORT — = the crontab minute field "1-56/5" of chart_maps.gajjala.run (test pins it)

@@ -209,6 +209,7 @@ import {
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
+  ggEmaCrossLine, type GgEmaCross,
   type GgBoard, type GgBrokerFlags, type GgDay2Block, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrKind, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
@@ -1029,6 +1030,18 @@ function GgZoneLines({ tile }: { tile: GgTile }) {
   ))}</>;
 }
 
+/** 🔀 2026-11-15 (Ajay: "For any stocks that crossing over and add the same feedback in to that horizontal fade
+ *  charts"): the SERVED 9 / 21 EMA cross sentence (tab.ema_cross_block, the latest cross of the drawn frame), verbatim,
+ *  toned by its served `dir`. Absent block → nothing. */
+function GgEmaCrossLine({ cross, sym }: { cross: GgEmaCross | null | undefined; sym: string }) {
+  const line = ggEmaCrossLine(cross);
+  if (!line) return null;
+  return (
+    <div className={`cm-note gg-line gg-cross${line.tone ? ` gg-cross-${line.tone}` : ''}`}
+         data-testid={`gg-ema-cross-${sym}`}>{line.text}</div>
+  );
+}
+
 /** State pill, plan line, the 🔴 served live line, criteria checklist and the chip row under a tile. */
 function CardExtras({ read, board, sub, sym, live }: {
   read: GgRead | null; board: GgBoard; sub: GgSub | null; sym: string; live: string | null;
@@ -1073,6 +1086,7 @@ function CardExtras({ read, board, sub, sym, live }: {
       </div>
       {plan ? <div className="gg-plan" data-testid="gg-plan">{plan}</div> : null}
       <GgBreakoutLine breakout={read.breakout} sym={sym} />
+      <GgEmaCrossLine cross={read.ema_cross} sym={sym} />
       {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
       {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}

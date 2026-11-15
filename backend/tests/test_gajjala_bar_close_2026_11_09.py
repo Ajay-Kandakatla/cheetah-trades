@@ -485,8 +485,10 @@ def test_the_cron_path_keeps_its_deps(monkeypatch):
     _child, rp = _main_env(monkeypatch)
     RUN.main([])
     # WIDENED 2026-11-15 (choppy spec §3.5): the cron Deps also carry the 🌫️ day read
+    # WIDENED 2026-11-15 (🔀 Ajay "can you add an alert in horizonal fade when that happens?"): and the ➖ cross push
+    from chart_maps.gajjala import alerts as AL
     assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
-                                              day_read=DR.run_step)
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross)
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)
     assert RUN._cron_deps() == rp.calls[0][1]["deps"]                    # ONE definition for both paths
 

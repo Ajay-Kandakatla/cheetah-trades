@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in horizonal
+  // fade when that happens?" + "For any stocks that crossing over and add the same feedback in to that horizontal fade charts".
+  // backend/chart_maps/gajjala/ema_cross.py = ONE cross engine (closed bars only); tab.py marks every cross on ➖ Fade cards;
+  // alerts.run_fade_cross pushes the 9-over-21 up-cross once per name per session (GGX: latch, rides the 🧠 kind). UNMEASURED.
+  // Doc docs/chart_maps/gajjala_fade_ema_cross_2026_11_15.md.
+  {
+    id: 'chart-maps-gajjala-fade-ema-cross-2026-11-15',
+    label: '🔀 9/21 EMA cross on ➖ Horizontal Fade — you said: “I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in horizonal fade when that happens?” Every Fade chart now marks each time the 9 EMA crosses the 21 EMA (up and down), with the time in words, and your phone rings once per stock per day when the 9 crosses ABOVE the 21 on a closed bar. Information only — UNMEASURED. Not advice.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-15, verbatim: "yes" — to "do you want a 'choppy day' label on the Gajjala tab now, just as information?"
   // (his words before it, 2026-11-14: "Also lately I am seeing very choppy market but Gajjals examples are very bullish").
   // backend/chart_maps/gajjala/day_read.py serves `day_read` (primary owner only) on 🚩 Gajjala, the 1-minute page and the

@@ -380,3 +380,9 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   border-top: 2px dashed var(--gold, #c9a227); white-space: normal; overflow-wrap: anywhere;
   color: var(--ink-subtle, #94a3b8); font-size: 0.74rem;
 }
+
+/* 🔀 2026-11-15 — the served 9 / 21 EMA cross line on a ➖ Fade card (it carries .gg-line, so the 430 px wrap rule above
+   holds): green when the latest cross is up, red when it is down. */
+.gg-cross { min-width: 0; }
+.gg-cross-up { color: var(--positive, #16a34a); }
+.gg-cross-down { color: var(--negative, #dc2626); }

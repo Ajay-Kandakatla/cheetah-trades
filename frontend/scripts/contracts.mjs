@@ -17114,7 +17114,8 @@ const CONTRACTS = [
         const ZID = 'chart-maps-long-term-zone-enterable-2026-11-14';
         const allIds = [...nf.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
         // WIDENED +1 (2026-11-15: 🌫️ chart-maps-gajjala-day-read-2026-11-15 FIRST — Ajay: "yes" to the choppy-day label).
-        if (!allIds.slice(0, 2).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 2 of NEW_FEATURES (found ${allIds.slice(0, 3).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
+        if (!allIds.slice(0, 3).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 3 of NEW_FEATURES (found ${allIds.slice(0, 4).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

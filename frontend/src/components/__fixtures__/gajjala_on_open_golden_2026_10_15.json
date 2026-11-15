@@ -2775,6 +2775,18 @@
        }
       ],
       "cycles": null,
+      "ema_cross": {
+       "crosses": [
+        {
+         "dir": "up",
+         "t": "2026-10-13 10:20",
+         "text": "🔀 9 EMA crossed above 21 EMA at 10:20 ET"
+        }
+       ],
+       "dir": "up",
+       "text": "🔀 9 EMA crossed above 21 EMA at 10:20 ET",
+       "tf": "5m"
+      },
       "entry_bar_t": null,
       "flag_k": null,
       "frame": "5m",
@@ -2896,7 +2908,14 @@
        "tone": "stop"
       }
      ],
-     "markers": [],
+     "markers": [
+      {
+       "date": "2026-10-13 10:20",
+       "kind": "ema_cross_up",
+       "label": "🔀 9 EMA crossed above 21 EMA at 10:20 ET",
+       "price": 10.1
+      }
+     ],
      "name": null,
      "stats": [
       {

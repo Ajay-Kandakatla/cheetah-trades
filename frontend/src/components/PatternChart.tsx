@@ -674,6 +674,25 @@ export const PatternChart = memo(function PatternChart(
                 </g>
               );
             }
+            if (m.kind === 'ema_cross_up' || m.kind === 'ema_cross_dn') {
+              // 🔀 2026-11-15 (Gajjala ➖ Fade): a 9 / 21 EMA cross — a small diamond ON the served EMA value at the
+              // cross bar (the bar's close when none is served); green up, red down. The served sentence is its
+              // tooltip; the card prints the latest one under the chart (phones have no hover).
+              const up = m.kind === 'ema_cross_up';
+              const px = typeof m.price === 'number' && Number.isFinite(m.price) ? m.price : bar.c;
+              const yC = yFor(px, domain, H, PAD_Y);
+              const r = 3.6;
+              return (
+                <polygon key={`mk-${m.date}-${mi}`}
+                         className={up ? 'pc-ema-cross pc-ema-cross-up' : 'pc-ema-cross pc-ema-cross-dn'}
+                         data-testid={`pc-ema-cross-${up ? 'up' : 'dn'}`}
+                         points={`${x},${yC - r} ${x + r},${yC} ${x},${yC + r} ${x - r},${yC}`}
+                         fill={up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)'}
+                         stroke="var(--surface, #0b0e14)" strokeWidth={0.8} opacity={0.95}>
+                  {m.label ? <title>{m.label}</title> : null}
+                </polygon>
+              );
+            }
             if (m.kind === 'sweep' || m.kind === 'bos' || m.kind === 'choch'
                 || m.kind === 'orb_up' || m.kind === 'orb_dn') {
               const yG = yFor(bar.h, domain, H, PAD_Y) - 3;

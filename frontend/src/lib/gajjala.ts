@@ -234,7 +234,25 @@ export type GgRead = {
   stages?: GgStages | null;
   /** ⏸ 2026-11-12: the served no-breakout / breakout line (backend breakout_state.block) — absent when no line. */
   breakout?: GgBreakout | null;
+  /** 🔀 2026-11-15: the served 9 / 21 EMA cross words of the card's drawn frame (backend tab.ema_cross_block, ➖ Fade
+   *  cards only) — absent when the frame has no cross. The chart marks come as `markers` (kind ema_cross_up / _dn). */
+  ema_cross?: GgEmaCross | null;
 };
+
+/* ---- 🔀 9 / 21 EMA cross (2026-11-15) — every word SERVED; the FE types none. ---- */
+/** One cross of the drawn frame: its bar stamp, direction ("up" | "down") and the served sentence. */
+export type GgEmaCrossItem = { t?: string | null; dir?: string | null; text?: string | null };
+/** The card block: the LATEST cross on top-level (`dir`, `text`) + every cross of the session (`crosses`). */
+export type GgEmaCross = { tf?: string | null; dir?: string | null; text?: string | null; crosses?: GgEmaCrossItem[] | null };
+
+/** 🔀 The card line of a served cross block: its `text` (trimmed) and a tone class from its `dir` ("up" → up, "down"
+ *  → down, anything else → no tone). No block / no text → null (nothing printed). */
+export function ggEmaCrossLine(x: GgEmaCross | null | undefined): { text: string; tone: 'up' | 'down' | null } | null {
+  const text = x && typeof x.text === 'string' ? x.text.trim() : '';
+  if (!text) return null;
+  const tone = x?.dir === 'up' ? 'up' : x?.dir === 'down' ? 'down' : null;
+  return { text, tone };
+}
 
 /* ---- ⏸ No-breakout line (2026-11-12, no-breakout spec §3.3) — every word SERVED; the FE types none. ---- */
 /** The served block: `head` (bold), `detail` (" · …" parts), `text` = head + detail, `hint` (definitions, on hover). */

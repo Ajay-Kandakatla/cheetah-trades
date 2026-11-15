@@ -224,6 +224,13 @@ KF_ORDER_TEXT = {"rvol_first": "💋 A+ and triggered, then kissing the 9 EMA no
                                "then closest to the 9 EMA",
                  "ema_first": "💋 A+ and triggered, then kissing the 9 EMA now, on top · then closest to the 9 EMA · "
                               "then highest relative volume"}
+# 🔀 2026-11-15 — Ajay, verbatim: "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in
+# horizonal fade when that happens?" · "For any stocks that crossing over and add the same feedback in to that horizontal
+# fade charts". Every cross of the card's drawn frame (ema_cross — the ONE engine) is a marker on the chart; the LATEST is
+# the card's one line. {fast} / {slow} = constants EMA_FAST / EMA_SLOW at CALL time. Served — the FE prints them verbatim.
+EMA_CROSS_TEXT = {"up": "🔀 {fast} EMA crossed above {slow} EMA at {hhmm} ET",
+                  "down": "🔀 {fast} EMA crossed under {slow} EMA at {hhmm} ET"}
+EMA_CROSS_MARK = {"up": "ema_cross_up", "down": "ema_cross_dn"}   # the served marker kinds (PatternChart draws each its own tone)
 RVOL_STAT_KEY = "Rel volume"                        # 💋 the card stat (chart_maps.drop10_tab.rvol_text words), shown only when known
 # 💋 the "lifting off the 9 EMA" toggle (2026-11-11 addendum) — every word served; the FE fills {shown} {hidden} {unknown}
 KF_FILTER_LABEL = "💋 lifting off the 9 EMA only"
@@ -1456,6 +1463,10 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
               if "audit" in read and read.get("state") == _held_state() else None)   # 🧪 2026-11-01
     markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": mlabel}]
                        if mlabel and read.get("entry_bar_t") else [], fr["bars"])
+    cross = ema_cross_block(fr) if setup in GC.FADE_CROSS_SETUPS else None   # 🔀 2026-11-15 — display only
+    if cross:
+        markers = markers + _on_bars([{"date": m["t"], "kind": EMA_CROSS_MARK[m["dir"]], "label": m["text"],
+                                       "price": m["ema"]} for m in cross.pop("_marks")], fr["bars"])
     chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
@@ -1476,6 +1487,8 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
         g["_volume"] = chips.get("volume")                           # the card's own Volume number (_chips ← scan_row), no new read
     if setup == "horizontal_fade":                                   # ➖ order key (2026-11-08), popped before serving
         g["_ema_gap_pct"] = _ema_gap_pct(read)
+    if cross:                                                        # 🔀 2026-11-15 — the served cross words (absent = no cross)
+        g["ema_cross"] = cross
     if kf_rank and setup in GC.RVOL_SORT_SETUPS:                     # 💋 order keys (2026-11-11), popped before serving
         rv = (doc.get("ctx") or {}).get("rvol")
         rv = rv if isinstance(rv, dict) else None
@@ -1499,6 +1512,37 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
                                         carry_row=carry_row, prev_iso=prev_iso)
                             if fr["tf"] == read_tf else [])          # drawn ONLY on the frame the read was taken on
     return tile
+
+
+def ema_cross_block(fr: dict) -> Optional[dict]:
+    """🔀 2026-11-15 — the crosses of ONE drawn card frame (`fr` = _tile_frame's {tf, bars, curves}): ema_cross over the
+    frame's own served 9 / 21 EMA curves (the pass's orderflow.signals.ema values, bars.EMA_TONES), aligned with its bars —
+    closed bars only (the stored tile never holds the bar still printing). The card's first drawn bar has no prior bar on
+    the card and is never a cross. -> {"tf", "dir", "text", "crosses": [{"t", "dir", "text"}]} with the LATEST cross on
+    top-level, or None when the frame has no cross (the key is then absent — no line, no marker). Display only."""
+    from chart_maps.gajjala import bars as B
+    from chart_maps.gajjala import ema_cross as EX
+    bars = [b for b in (fr or {}).get("bars") or [] if isinstance(b, dict)]
+    if len(bars) < 2:
+        return None
+    by = {c.get("tone"): c.get("values") for c in (fr.get("curves") or []) if isinstance(c, dict)}
+    (fast_tone, _fl, _fp), (slow_tone, _sl, _sp) = B.EMA_TONES
+    xs = EX.crosses_from_emas(by.get(fast_tone), by.get(slow_tone), [b.get("t") for b in bars],
+                              [b.get("c") for b in bars])
+    if not xs:
+        return None
+    items = []
+    for x in xs:
+        hhmm = _hhmm(x["ts"])
+        if not hhmm:
+            continue
+        items.append({"t": x["ts"], "dir": x["dir"], "ema": x["ema_fast"],
+                      "text": EMA_CROSS_TEXT[x["dir"]].format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW, hhmm=hhmm)})
+    if not items:
+        return None
+    last = items[-1]
+    return {"tf": fr.get("tf"), "dir": last["dir"], "text": last["text"],
+            "crosses": [{k: it[k] for k in ("t", "dir", "text")} for it in items], "_marks": items}
 
 
 def _strip_private(tiles: list) -> None:
