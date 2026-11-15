@@ -17113,7 +17113,8 @@ const CONTRACTS = [
         else if (zbar.includes('lt-zone-')) errs.push('LtZoneFilterBar.tsx mints an `lt-zone-` id — that prefix is the 🧭 strip / 🔔 block (use lt-zf-*)');
         const ZID = 'chart-maps-long-term-zone-enterable-2026-11-14';
         const allIds = [...nf.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
-        if (allIds[0] !== ZID) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be FIRST in NEW_FEATURES (found ${allIds.slice(0, 3).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-15: 🌫️ chart-maps-gajjala-day-read-2026-11-15 FIRST — Ajay: "yes" to the choppy-day label).
+        if (!allIds.slice(0, 2).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 2 of NEW_FEATURES (found ${allIds.slice(0, 3).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

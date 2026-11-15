@@ -780,7 +780,8 @@ def test_nothing_outside_scripts_and_tests_imports_the_package():
             continue
         if "shadow_day_tags" in p.read_text(errors="ignore"):
             hits.append(str(p))
-    assert hits == []
+    # 2026-11-15 (Ajay "yes" to the 🌫️ day read, information only): ONE named served importer, nothing else
+    assert hits == [str(BACKEND / "chart_maps" / "gajjala" / "day_read.py")]
 
 
 def test_the_probe_holds_no_mongo_write_and_no_banned_import():
@@ -1058,5 +1059,6 @@ def test_the_probe_never_calls_cached_frame_meta_and_presets_before_any_read():
     calls = [n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)]
     assert "cached_frame_meta" not in calls and "_get_mongo" not in calls and "_get_db" not in calls
     main = src[src.index("def main("):]
-    assert main.index("PS._db = db") < main.index("gg5_rows(") and main.index("P._mongo_coll = db.price_cache") < \
-        main.index("iwm_daily(db)")
+    # 2026-11-15: main()'s reads moved verbatim into build_inputs() (defined above main) — both presets precede its call
+    assert main.index("PS._db = db") < main.index("build_inputs(") and \
+        main.index("P._mongo_coll = db.price_cache") < main.index("build_inputs(")

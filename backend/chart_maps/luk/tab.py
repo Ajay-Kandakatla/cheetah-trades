@@ -163,6 +163,7 @@ SUB_META = {k: (e, label) for k, e, label in LC.SUBS}
 PAYLOAD_KEYS = ("tab", "label", "title", "honesty", "variant", "session", "pass", "strip", "subs", "sub", "counts",
                 "counts_text", "counts_legend", "tiles", "order_note", "screens", "playbook", "track_record", "focus",
                 "fault", "fault_text", "scan",                                    # + "scan" 2026-11-11 (🔄 scan now)
+                "day_read",                                                       # + "day_read" 2026-11-15 (🌫️ owner only)
                 "ended")                                                          # + "ended" 2026-11-12 (🏁 fold)
 UNIT_SEC_PER_MIN = 60                                                       # a unit, not a rule
 
@@ -940,14 +941,24 @@ def fault_payload(sub: str = "") -> dict:
             "sub": s if s in SUB_KEYS else LC.DEFAULT_SUB, "counts": None, "counts_text": None,
             "counts_legend": counts_legend(), "tiles": [], "order_note": ORDER_NOTE, "screens": None,
             "playbook": None, "track_record": None, "focus": None, "fault": True, "fault_text": FAULT_TEXT,
+            "day_read": None,                                                # + "day_read" 2026-11-15 (🌫️)
             "scan": None, "ended": None}                                     # + "ended" 2026-11-12 [C4]
 
 
 def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT,
-          now: Optional[datetime] = None, store=None, owner: bool = False) -> dict:
+          now: Optional[datetime] = None, store=None, owner: bool = False, gg5_store=None) -> dict:
     """The served board (Mongo only). `sub` = one of LC.SUBS' keys (unknown → DEFAULT_SUB; empty + `focus` → the
-    server picks); `span` = the 🏁 day picker (ignored elsewhere); `focus` = a symbol to put first; `owner` is
-    accepted for the route's shape and changes nothing yet."""
+    server picks); `span` = the 🏁 day picker (ignored elsewhere); `focus` = a symbol to put first; `owner` (`is True`
+    only — the primary admin) is served the 🌫️ day read (2026-11-15, Ajay "yes", information only), anyone else reads
+    None. `gg5_store` = 🚩 GG5's store, whose ONE state doc holds the day read (None → GS.default() on the live route
+    only: a call that injects `store=` without `gg5_store` serves None and never reaches Mongo)."""
+    if gg5_store is not None:
+        gg5 = gg5_store
+    elif store is None:
+        from chart_maps.gajjala import store as GS                   # lazy — the live route's GG5 store
+        gg5 = GS.default()
+    else:
+        gg5 = None
     st = _store(store)
     now = GT._et(now or GT._clock())
     session, is_today, in_window = session_for(now)
@@ -1003,7 +1014,16 @@ def build(sub: str = "", *, span: str = "", focus: str = "", limit: int = GC.TIL
            "scan": _soft("scan line", scan_block, latest, lease, now, session, in_window, default=None),
            "ended": (ended_block(ended_by[sub_k], focus, lim, is_today=is_today, session=session)
                      if sub_k in SETUP_SUBS else None)}                       # 2026-11-12 🏁 fold
+    # 🌫️ 2026-11-15 — the day read (information only): GG5's ONE state doc; the owner only; never a sort or a count
+    out["day_read"] = (_soft("day read", _day_read, gg5, session, now, default=None)
+                       if (owner is True and gg5 is not None) else None)
     return GT._plain(out)
+
+
+def _day_read(gg5, session: date, now: datetime) -> Optional[dict]:
+    """🌫️ 2026-11-15 — the served block from 🚩 GG5's ONE state doc (the gajjala tab's own rule, mirrored)."""
+    from chart_maps.gajjala import day_read as DR                    # lazy — day_read imports the recorder's probe
+    return DR.served_block(DR.load_doc(gg5), session, now)
 
 
 __all__ = ["TITLE", "HONESTY_LIVE", "HONESTY_SHADOW", "PUSH_TEXT_LIVE", "PUSH_TEXT_SHADOW", "honesty", "push_text",

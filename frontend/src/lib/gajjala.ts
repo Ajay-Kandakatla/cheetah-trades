@@ -96,6 +96,7 @@ import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgEntryMarks, GgNewMark } from './ggEntryMarks';
 import type { GgTapePayload } from '../components/GgEntryTape';
+import type { DayRead } from './dayRead';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
 export type GgSub = 'all_strategies' | GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
@@ -825,6 +826,9 @@ export type GgBoard = {
   /** 📋 2026-11-13: the All strategies table (backend chart_maps/gajjala/all_table.block) — the GG5 table sub only;
    *  null when the build faulted (the served `empty_note` says so), absent elsewhere and on an older API. */
   table?: GgTableBlock | null;
+  /** 🌫️ 2026-11-15: the served day read (day_read.served_block) — the primary owner only; null for anyone else and on
+   *  🧪 audited; absent on an older API. Information only; printed by DayReadLine, never read by any rule here. */
+  day_read?: DayRead | null;
 };
 
 /* ---- 📋 All strategies table (2026-11-13, spec §3.2 / §3.5). Ajay: "build be a table like track record on Gajjals landing

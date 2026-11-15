@@ -1,0 +1,11 @@
+/* 🌫️ 2026-11-15 — the day read (DayReadLine). Information only: no red/green state colour (not a verdict).
+ * 📱 430 px from day one: min-width 0 + max-width 100% on the block, wrapping chips, wrap-anywhere on the long served
+ * strings (the gajjala.css .gg-card / .gg-stages shape). */
+.dr { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; }
+.dr-head { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.dr-fold > summary { cursor: pointer; font-size: 0.74rem; color: var(--ink-subtle, #94a3b8); }
+.dr-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.dr-chip { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-size: 0.74rem; border: 1px solid var(--line, rgba(148,163,184,.35)); }
+.dr-on { border-color: var(--gold, #c9a227); }
+.dr-missing, .dr-pending { color: var(--ink-subtle, #94a3b8); font-style: italic; }
+.dr-caption, .dr-muted { min-width: 0; overflow-wrap: anywhere; color: var(--ink-subtle, #94a3b8); font-size: 0.74rem; margin: 0; }

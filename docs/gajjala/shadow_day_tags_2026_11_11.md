@@ -162,3 +162,16 @@ import, lib + CLI parse as Python 3.9 and import the stdlib only, the crontab na
 skip until it is frozen. The live-proof sequence is replayed hermetically on the fixture (recompute then plain run: the
 target only, `.r2` inputs, prefix kept; NEGATIVE an in-sample MISSING is never retried and an equal re-run writes
 nothing).
+
+## 2026-11-15 — ONE served importer
+
+ONE served importer, `backend/chart_maps/gajjala/day_read.py` (🌫️ Day read, information only — Ajay "yes";
+`docs/chart_maps/gajjala_day_read_2026_11_15.md`); "Nothing is served" above now reads with that one exception. Lib full
+sha moved `5f363a9c…` → `282eacecadfa782281191228d83c34f25920854959d00640c75d2e16cd6070d0` by the 2-line docstring only;
+the code body sha `e7e6df818ee4a78f65b5013ca999647c499b6aa59f3f16eef513f3cc0e137d7a` (bytes from `import gzip` to EOF) is
+unchanged and is the parity anchor (pinned in `backend/tests/test_gajjala_day_read_2026_11_15.py`). The probe's `main()`
+body moved verbatim into `build_inputs(db, now, only=…)` (probe sha `6838c056…` →
+`6b5f95c1bbe8a1009527e4f4e7d80b17601fbd2ed719d8c802ac3bfeffde5fd9`; stdout byte-identical, pinned by the same file). The
+two recorder guards are amended: the import guard names `day_read.py` as the only hit, and both presets precede
+`build_inputs(` in `main()`. The prereg, its `.sha256`, `days.csv` and the 22 × 8 pin are unchanged. The store is still
+read by nothing before the read date — neither the served read nor its verification opens it.

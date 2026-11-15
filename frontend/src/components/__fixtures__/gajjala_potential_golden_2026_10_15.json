@@ -89,6 +89,27 @@
      "word": "📌 trader"
     }
    ],
+   "day_read": {
+    "caption": "Information only — not a gate, not measured. In the 22 sessions studied no read flagged the worse days; GD6b read the opposite way (not significant after correction); LD3i and LD9 had too few days.",
+    "chips": [],
+    "computed_at_et": null,
+    "counts": {
+     "missing": 0,
+     "off": 0,
+     "on": 0,
+     "pending": 0,
+     "read": 0
+    },
+    "fold_text": null,
+    "grades_through_et": null,
+    "head": "🌫️ Day read: no read on file for this session yet — it is read on every 5-minute 🚩 pass",
+    "is_today": true,
+    "note": null,
+    "read_date_text": "Read once, when every page holds 30 recorded entry weeks forward from 2026-11-12 (the prereg's MEASURE_FLOOR_WEEKS rule); nothing is read before then.",
+    "session": "2026-10-13",
+    "state": "absent",
+    "tags": {}
+   },
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,
@@ -2008,6 +2029,27 @@
      "word": "📌 trader"
     }
    ],
+   "day_read": {
+    "caption": "Information only — not a gate, not measured. In the 22 sessions studied no read flagged the worse days; GD6b read the opposite way (not significant after correction); LD3i and LD9 had too few days.",
+    "chips": [],
+    "computed_at_et": null,
+    "counts": {
+     "missing": 0,
+     "off": 0,
+     "on": 0,
+     "pending": 0,
+     "read": 0
+    },
+    "fold_text": null,
+    "grades_through_et": null,
+    "head": "🌫️ Day read: no read on file for this session yet — it is read on every 5-minute 🚩 pass",
+    "is_today": true,
+    "note": null,
+    "read_date_text": "Read once, when every page holds 30 recorded entry weeks forward from 2026-11-12 (the prereg's MEASURE_FLOOR_WEEKS rule); nothing is read before then.",
+    "session": "2026-10-13",
+    "state": "absent",
+    "tags": {}
+   },
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
    "enterable": {
     "empty_text": null,

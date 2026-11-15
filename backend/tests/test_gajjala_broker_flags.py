@@ -63,9 +63,14 @@ def flag(st, *syms, removed=()):
     return st
 
 
+# 🌫️ 2026-11-15 — the day read is owner-only by the same rule (Ajay "yes" to the day read): dropped with the tags here;
+# its own NEGATIVE (a non-owner is served `day_read: None`) is asserted wherever this helper compares the two payloads.
+OWNER_ONLY_KEYS = BROKER_KEYS + ("day_read",)
+
+
 def strip_broker(o):
     if isinstance(o, dict):
-        return {k: strip_broker(v) for k, v in o.items() if k not in BROKER_KEYS}
+        return {k: strip_broker(v) for k, v in o.items() if k not in OWNER_ONLY_KEYS}
     if isinstance(o, list):
         return [strip_broker(v) for v in o]
     return o
@@ -366,6 +371,7 @@ def test_NEGATIVE_nothing_hidden_the_owner_payload_minus_the_tags_is_the_non_own
     own, other = make(True), make(False)
     assert own["broker_flags"] and own["broker_flags"]["editable"] is True
     assert_all_null(other)
+    assert "day_read" in own and other["day_read"] is None          # 🌫️ 2026-11-15: owner-only, NEGATIVE for everyone else
     assert json.dumps(strip_broker(own), sort_keys=True, default=str) == json.dumps(strip_broker(other),
                                                                                     sort_keys=True, default=str)
 

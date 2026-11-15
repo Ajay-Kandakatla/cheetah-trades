@@ -481,9 +481,13 @@ def test_the_cron_path_spawns_one_child_also_when_gap_refused(monkeypatch):
 def test_the_cron_path_keeps_its_deps(monkeypatch):
     from chart_maps.gajjala import promo_names as PN
     from chart_maps.gajjala import trader_names as TN
+    from chart_maps.gajjala import day_read as DR
     _child, rp = _main_env(monkeypatch)
     RUN.main([])
-    assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)
+    # WIDENED 2026-11-15 (choppy spec §3.5): the cron Deps also carry the 🌫️ day read
+    assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
+                                              day_read=DR.run_step)
+    assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)
     assert RUN._cron_deps() == rp.calls[0][1]["deps"]                    # ONE definition for both paths
 
 

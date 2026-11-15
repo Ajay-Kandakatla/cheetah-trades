@@ -17,6 +17,7 @@ import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgTapePayload } from '../components/GgEntryTape';
 import type { GgBoard, GgScan, GgTrAplus, GgTrCategory, GgTrCell, GgTrRow, GgTrSort, GgTrViews } from './gajjala';
+import type { DayRead } from './dayRead';
 import type { CardLiveAnswer, CardLiveLevel, CardLiveLevels, CardLiveQuote } from './cardLive';
 import { ggScanAdvanced } from './gajjala';
 
@@ -183,6 +184,9 @@ export type LukBoard = {
   scan?: GgScan | null;
   /** 🏁 2026-11-12: the served ended block — on every setup sub (n 0 included), null on screens / 📓 / 🏁. */
   ended?: LukEnded | null;
+  /** 🌫️ 2026-11-15: the served day read (🚩 GG5's ONE state doc, day_read.served_block) — the primary owner only; null
+   *  for anyone else; absent on an older API. Information only; printed by DayReadLine. */
+  day_read?: DayRead | null;
 };
 export type LukTapePayload = GgTapePayload;
 

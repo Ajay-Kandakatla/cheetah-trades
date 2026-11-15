@@ -1,5 +1,5 @@
-"""Shadow day tags (rec157 WP-2, 2026-11-11) — the pure library. RECORD ONLY: nothing served imports this file, nothing
-here gates, mutes or pushes; no page shows a word of it.
+"""Shadow day tags (rec157 WP-2, 2026-11-11) — the pure library. RECORD + READ: the nightly recorder (shadow_day_tags.py)
+and ONE served reader, chart_maps/gajjala/day_read.py (🌫️ Day read, information only — Ajay 2026-11-15 "yes"), import this file; nothing here gates, mutes or pushes.
 
 Stdlib only, Python 3.9-safe (the host venv). The formulas are the study's, function for function:
 /Users/ajay/clinet-test/eod-audits/research/2026-11-11_track_record_patterns/day_indicators.py (STUDY below, line

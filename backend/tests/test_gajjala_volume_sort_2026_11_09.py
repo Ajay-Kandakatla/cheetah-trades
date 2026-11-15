@@ -247,6 +247,7 @@ def test_flagged_name_sits_last_on_the_setup_sub_for_the_owner_and_everyone_else
     assert syms(own) == syms(other) == want
     assert own["tiles"][-1]["broker_text"] == GT.BROKER_FLAG_TEXT and own["tiles"][0]["broker_text"] is None
     assert_all_null(other)                                           # the words stay his
+    assert own["day_read"] is not None and other["day_read"] is None  # 🌫️ 2026-11-15: owner-only (stripped below)
     # the nothing-hidden invariant holds with the list in play: owner minus the tags == non-owner, byte for byte
     assert json.dumps(strip_broker(own), sort_keys=True, default=str) == json.dumps(strip_broker(other),
                                                                                     sort_keys=True, default=str)

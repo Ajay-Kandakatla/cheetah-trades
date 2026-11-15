@@ -46,6 +46,7 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "day_read": null,
   "ended": {
    "emoji": "🏁",
    "head_text": "ended today — stopped or closed below the daily 9 EMA (Luk's exit)",
@@ -693,6 +694,7 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "day_read": null,
   "ended": null,
   "fault": false,
   "fault_text": null,
@@ -1033,6 +1035,7 @@
    }
   ],
   "counts_text": "1 A+ · 1 triggered earlier · 1 forming · 3 listed · 1 stopped — over 6 shortlisted of 1200 screened",
+  "day_read": null,
   "ended": null,
   "fault": false,
   "fault_text": null,

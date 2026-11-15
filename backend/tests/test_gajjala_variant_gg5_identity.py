@@ -60,6 +60,13 @@ wording only; every other entry is the BOARD golden alone):
   new {n, until, title}) and `new_mark` {kind, at_et, until, text, title} on 14 tiles (🚩 GGA aplus 10:40 / GGB ready
   10:41, 🧠 GGB armed 10:41, ➖ / 💋 GGA + GGB "listed" — card only) in each mode. plan_text, subs, counts and tile
   order byte-equal (docs/gajjala/entry_marks_2026_11_12.md).
+  2026-11-15 — Ajay "yes" to "do you want a 'choppy day' label on the Gajjala tab now, just as information?": BOARD
+  only (WRITES byte-identical — the day read is GG5's ONE state doc, written by its own pass step, never a WRITES
+  scenario; the fixture stores carry no such doc). BOARD = 374 leaves, ALL ADDED, none changed or removed: the one
+  key `day_read` on all 22 boards (both modes), each the `absent` block of chart_maps/gajjala/day_read.served_block
+  (no doc on file). Same check on the FE fixtures by their own `-k golden` recipes: 1m board 51 (3 absent), on_open 51
+  (3), potential 34 (2), track_record 51 (3); Luk golden 3 (`day_read: null` — the test build is not the owner)
+  (docs/chart_maps/gajjala_day_read_2026_11_15.md).
 """
 from __future__ import annotations
 

@@ -1937,6 +1937,14 @@ def _soft(what: str, fn, *a, default=None, **kw):
         return default
 
 
+def _day_read(st, session: date, now: datetime) -> Optional[dict]:
+    """🌫️ 2026-11-15 (Ajay "yes" to the day read, information only) — the served block from GG5's ONE state doc
+    (day_read.STATE_ID, written once per 🚩 GG5 pass). Never a gate, a sort, a filter or a count of this board."""
+    from . import day_read as DR                                    # lazy — day_read imports the recorder's probe
+    gg5 = getattr(st, "shared", None) or st                         # GG1's store answers GG5's state through `shared`
+    return DR.served_block(DR.load_doc(gg5), session, now)
+
+
 def _safe_list(fn, *a) -> list:
     """A store read that may be missing (an older store) or fail: [] — the documented "no data" answer."""
     try:
@@ -2517,6 +2525,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                         v=v, default=None)
     out["enterable"] = _soft("A+ banner", aplus_block, reads_by, pass_doc, now, in_window=in_window,
                              scan=out["scan"] or {}, cron=cron, session=session, v=v, default=None)
+    # 🌫️ 2026-11-15 — the day read (information only): GG5's ONE state doc; the owner only (the 🚫 words' rule); never on 🧪
+    out["day_read"] = (_soft("day read", _day_read, st, session, now, default=None)
+                       if (owner is True and not aud) else None)
     if aud:                                     # 🧪 2026-11-01 — the strip and the held A+ section, every sub
         out["audited"] = _soft("audit strip", AT.audited_block, st, session, now, latest, astats, default=None)
         out["held"] = _soft("held A+", AT.held_block, reads_by, pass_doc, now, in_window=in_window,

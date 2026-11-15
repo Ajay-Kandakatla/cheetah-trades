@@ -57,6 +57,7 @@ import type { CmTapeSession } from '../lib/chartMaps';
 import { useCardLive } from '../hooks/useCardLive';
 import { useCurrentUser } from '../hooks/useUser';
 import { LukStrip } from './LukStrip';
+import { DayReadLine } from './DayReadLine';
 import { LukCard } from './LukCard';
 import { LukScreens } from './LukScreens';
 import { LukPlaybook } from './LukPlaybook';
@@ -350,6 +351,8 @@ export default function LukBoard() {
             {liveFooter ? <span className="luk-muted" data-testid="luk-live-footer">{liveFooter}</span> : null}
           </div>
           <LukStrip strip={board.strip} />
+          {/* 🌫️ 2026-11-15: the served day read (owner only, information only) — after the 🧭 strip, before the subs. */}
+          <DayReadLine block={board.day_read ?? null} />
           {subs.length ? (
             <nav className="cat-tabs luk-subs" aria-label="Luk sub-tabs" data-testid="luk-subs">
               {subs.map((s) => {

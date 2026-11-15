@@ -433,8 +433,12 @@ def test_NEGATIVE_default_deps_never_fetch_and_main_passes_default_fetch():
     # WIDENED 2026-11-09 (GG LIVE §3.4): the cron Deps live in ONE helper, `_cron_deps()` (shared with the ⏱
     # bar-close child); main's cron call passes it and the helper is where default_fetch is wired.
     assert "run_pass(now, store=st, deps=_cron_deps(), symbols=syms)" in src
-    assert "Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)" in inspect.getsource(RUN._cron_deps)
-    assert "run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags))" in src   # the open never re-reads
+    # WIDENED 2026-11-15 (choppy spec §3.5, Ajay "yes" to the day read): both Deps also carry the 🌫️ day read
+    # (day_read=DR.run_step); still no trader_fetch on the open
+    assert ("Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags, day_read=DR.run_step)"
+            in inspect.getsource(RUN._cron_deps))
+    assert ("run_on_demand(now, store=st, deps=Deps(promo_tags=PN.default_tags, day_read=DR.run_step))"
+            in src)   # the open never re-reads
     assert "dry_deps()" in src and "trader_fetch" not in inspect.getsource(RUN.dry_deps)
     body = inspect.getsource(RUN.run_pass)
     i, j, k = body.index("SC.scan_rows("), body.index("TN.run_step("), body.index("SC.record_scan(")

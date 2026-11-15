@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "yes" — to "do you want a 'choppy day' label on the Gajjala tab now, just as information?"
+  // (his words before it, 2026-11-14: "Also lately I am seeing very choppy market but Gajjals examples are very bullish").
+  // backend/chart_maps/gajjala/day_read.py serves `day_read` (primary owner only) on 🚩 Gajjala, the 1-minute page and the
+  // 🥇 tab from the recorder's OWN engine (scripts/shadow_day_tags_lib.compute — the frozen 2026-11-11 prereg's reads),
+  // one stored read per 🚩 pass. Information only: no gate, push, sort, filter or lane reads it; no outcome is served.
+  // UNMEASURED (in-sample the reads were inverted). Doc docs/chart_maps/gajjala_day_read_2026_11_15.md.
+  {
+    id: 'chart-maps-gajjala-day-read-2026-11-15',
+    label: '🌫️ Day read on 🚩 Gajjala, the 1-minute page and 🥇 — you said “yes” to a choppy-day label, after “lately I am seeing very choppy market but Gajjals examples are very bullish”. A line at the top shows how many of the pre-registered day reads are on today (fewer runners than usual, most setups failed this week, QQQ and IWM red into 10:30, IWM 9 EMA under its 21, big techs under their EMAs, risk halved after losses); tap to see each one and when it was read. “Not read” is never counted as off. Information only — it blocks nothing, mutes nothing and reorders nothing. In the 22 sessions studied these reads pointed the opposite way, so they are being recorded forward and read once at the date fixed in advance. UNMEASURED. Not advice.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-14 (verbatim in the label, his spelling kept): "Make a enterable check box in longterm stocks with zone
   // and filters please". backend/long_term_list/zones.py serves ONE `zone` block per saved row (both zone sheets merged,
   // read by the ONE engine sepa.pankaj_picks.setup_status — the tab's in-zone pad PANKAJ_ZONE_PAD_PCT) + `zone_rules`

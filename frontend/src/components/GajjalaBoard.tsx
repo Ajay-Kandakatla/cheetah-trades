@@ -219,6 +219,7 @@ import { GgAuditedStrip } from './GgAuditedStrip';
 import { GgAuditedHeld } from './GgAuditedHeld';
 import { GgAuditedCompare } from './GgAuditedCompare';
 import { GgAllTable } from './GgAllTable';
+import { DayReadLine } from './DayReadLine';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -660,6 +661,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {pass.warming_text || 'warming · no pass this session yet'}
         </div>
       ) : null}
+      {/* 🌫️ 2026-11-15: the served day read (owner only, information only) — after stale/warming, before the scan lines. */}
+      <DayReadLine block={board?.day_read ?? null} />
       {scanning && scanningLine ? (
         <div className="cm-note gg-scanning" role="status" data-testid="gg-scanning">{scanningLine}</div>
       ) : null}

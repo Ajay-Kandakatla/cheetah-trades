@@ -274,16 +274,13 @@ def pillars(db) -> tuple:
     return out, cached
 
 
-def main(argv: list) -> None:
-    only = None
-    if "--sessions" in argv:
-        only = set(argv[argv.index("--sessions") + 1].split(","))
-    now = datetime.now(UTC)
+def build_inputs(db, now: datetime, *, only=None) -> dict:
+    """The recorder's `inputs` blob (the dict main() prints), built from `db` at `now` (UTC): sessions
+    market_days(FIRST_SESSION, today ET), last_closed_session, constants BY NAME, gg5_rows, passes, index_intraday
+    (limited to `only` when given), iwm_daily, pillars, asof. Returns scrub(out) — JSON-safe. No write, no fetch.
+    2026-11-15: main()'s body moved here verbatim so the ONE served reader (chart_maps/gajjala/day_read.py) builds the
+    same blob; the caller owns the handle presets (main() sets them before this call)."""
     today = now.astimezone(ET).date()
-    db = MongoClient(os.getenv("MONGO_URL", "mongodb://mongo:27017"))[os.getenv("MONGO_DB", "cheetah")]
-    import portfolio.store as PS
-    PS._db = db                          # ST reads through this handle; _get_db's create_index never runs
-    P._mongo_coll = db.price_cache       # any sepa.prices read hits this handle; _get_mongo's create_index never runs
     sessions = market_days(FIRST_SESSION, today)
     try:
         rows, graded = gg5_rows(now, today)
@@ -313,7 +310,20 @@ def main(argv: list) -> None:
                  "pillars_last_date": {s: (r[-1][0] if r else None) for s, r in sorted(pil.items())},
                  "pillars_cached_at": pil_cached},
     }
-    sys.stdout.write(json.dumps(scrub(out), sort_keys=True, allow_nan=False, separators=(",", ":")))
+    return scrub(out)
+
+
+def main(argv: list) -> None:
+    only = None
+    if "--sessions" in argv:
+        only = set(argv[argv.index("--sessions") + 1].split(","))
+    now = datetime.now(UTC)
+    db = MongoClient(os.getenv("MONGO_URL", "mongodb://mongo:27017"))[os.getenv("MONGO_DB", "cheetah")]
+    import portfolio.store as PS
+    PS._db = db                          # ST reads through this handle; _get_db's create_index never runs
+    P._mongo_coll = db.price_cache       # any sepa.prices read hits this handle; _get_mongo's create_index never runs
+    sys.stdout.write(json.dumps(build_inputs(db, now, only=only), sort_keys=True, allow_nan=False,
+                                separators=(",", ":")))
 
 
 if __name__ == "__main__":
