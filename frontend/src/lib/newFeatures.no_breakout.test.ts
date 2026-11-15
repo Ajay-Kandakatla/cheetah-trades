@@ -14,21 +14,22 @@ describe('✨ the ⏸ no-breakout entry (2026-11-12)', () => {
   // WIDENED +1 (2026-11-12: 🏁 Luk stop R from the fill FIRST — Ajay: "Do your receommendations") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🟢 Gajjala entry marks FIRST — Ajay: "Can you show me green on these tabs") — every NEW_FEATURES[n] pin below → [n+1].
   // WIDENED +1 (2026-11-12: 🏁 Luk ended-fold FIRST — Ajay: "I shouldn't be seeing this") — every NEW_FEATURES[n] pin below → [n+1].
-  it('is FOURTH (the 🏁 Luk ended-fold ✨, the 🟢 entry-marks ✨ and the 🏁 Luk stop-R ✨ went FIRST 2026-11-12), listed once, dated 2026-11-12, routed to the 🧠 sub', () => {
+  it('is TWELFTH (the 🏁 Luk ended-fold ✨, the 🟢 entry-marks ✨ and the 🏁 Luk stop-R ✨ went FIRST 2026-11-12; every later ✨ through the 🔀 9/21 EMA cross ✨ 2026-11-15 went FIRST too), listed once, dated 2026-11-12, routed to the 🧠 sub', () => {
     // WIDENED +1 (2026-11-12: 🔔 Long Term alerts FIRST — Ajay: "add an alert list when stocks reach Pankaj's zones") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-13: 📋 All strategies table FIRST — Ajay: "Call all strategies") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-13: 📅 Long Term table ✨ FIRST — Ajay: \"Creat a table instead of cards\") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-14: 🎯 Long Term Enterable (zones) ✨ FIRST — Ajay: "Make a enterable check box in longterm stocks with zone and filters please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-long-term-table-2026-11-13');
-    expect(NEW_FEATURES[3].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
-    expect(NEW_FEATURES[4].id).toBe('long-term-alerts-2026-11-12');
-    expect(NEW_FEATURES[5].id).toBe('long-term-list-2026-11-12');   // 2026-11-12: the 📅 Long Term ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 Under Value tiny-base ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
-    expect(NEW_FEATURES[10].id).toBe(ID);
+    // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[4].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
+    expect(NEW_FEATURES[5].id).toBe('long-term-alerts-2026-11-12');
+    expect(NEW_FEATURES[6].id).toBe('long-term-list-2026-11-12');   // 2026-11-12: the 📅 Long Term ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 Under Value tiny-base ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-luk-ended-fold-2026-11-12');   // 2026-11-12: the 🏁 Luk ended-fold ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');   // 2026-11-12: the 🟢 entry-marks ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-luk-stop-r-from-fill-2026-11-12');   // 2026-11-12: the 🏁 Luk stop-R ✨ went FIRST — every older index below is +1
+    expect(NEW_FEATURES[11].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=potential');
@@ -52,7 +53,8 @@ describe('✨ the ⏸ no-breakout entry (2026-11-12)', () => {
   });
 
   it('NEGATIVE: the 🥇 Luk realtime ✨ is not replaced — still listed once, right after this entry', () => {
-    expect(NEW_FEATURES[11].id).toBe('chart-maps-luk-realtime-2026-11-12');
+    // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
+    expect(NEW_FEATURES[12].id).toBe('chart-maps-luk-realtime-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-luk-realtime-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
