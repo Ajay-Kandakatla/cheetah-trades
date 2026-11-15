@@ -60,7 +60,7 @@ The admin email never appears in an answer; the frontend never compares emails.
 
 Stored docs only — never a bar fetch: the list (one `find_one`), the tile docs of the listed names (ONE
 `find({_id: {$in: names}})`), the loop state doc (one `find_one`, `_id: "latest"`), today's pushed claims (ONE
-`find({date: session, state: "cross_pushed"})`). Every read is fenced; Mongo down still answers `state: "ok"` with no rows.
+`find({date: session, state: "cross_pushed"})`). Every read is fenced; no database or an unreadable list answers `state: "error"` + the served reason (never the empty words); the loop and build child keep the fail-soft `[]`.
 
 Head: `title`, `session`, `is_today`, `in_window`, `refresh_sec` (= `GG1M_CADENCE_SEC` in the window, else 0),
 `next_window_sec` (out of the window only: seconds to the next market day's `PASS_OPEN_ET` 04:00 — today's when it is a

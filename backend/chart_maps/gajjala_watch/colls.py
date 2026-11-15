@@ -6,7 +6,13 @@
   * `gajjala_watch_state`  — the loop state docs and the lease doc.
 
 Every call is fenced: Mongo down → None / [] plus a log line, never a raise into the caller (the `long_term_list.store`
-pattern). `loop_reads_soon` is the ONE definition of "the minute loop will read a newly added name within about a
+pattern) — EXCEPT `owner_symbols(db, strict=True)`, the board's reader: an unreadable list raises so the GET serves
+`error` with a reason, never "Your watch is empty" over his names (fix 2026-11-15). The loop / build child keep the
+fail-soft [].
+
+ONE spelling per stock (fix 2026-11-15): `fold` = the house fold `chart_maps.gajjala.store.broker_fold` ("." and "-"
+are one ticker) is the equality key; `house` = the stored / fetched spelling, the class separator as a dot (BRK.B — the
+Massive minute feed's spelling; `intraday_cache` holds only dotted class shares). BRK-B and BRK.B are one name. `loop_reads_soon` is the ONE definition of "the minute loop will read a newly added name within about a
 minute" — the API's build-child guard and the loop tests both use it.
 """
 from __future__ import annotations
@@ -44,25 +50,46 @@ def colls(db=None) -> Optional[dict]:
         return None
 
 
-def owner_symbols(db=None) -> list:
-    """The owner's watch list in his order: the `symbols` of the list doc, strings only, de-duplicated (first wins).
-    Any failure → []; never raises."""
+def fold(sym) -> str:
+    """The house equality key — `chart_maps.gajjala.store.broker_fold` (imported, never retyped): BRK.B == BRK-B."""
+    from chart_maps.gajjala.store import broker_fold
+    return broker_fold(sym)
+
+
+def house(sym) -> str:
+    """The ONE stored spelling of a ticker: upper case, the class separator a dot (BRK-B → BRK.B). "" for a non-str."""
+    return fold(sym).replace("-", ".")
+
+
+def owner_symbols(db=None, strict: bool = False) -> list:
+    """The owner's watch list in his order: the `symbols` of the list doc, strings only, in the house spelling,
+    de-duplicated by `fold` (first wins). A missing / malformed doc → []. Any failure → [] (never raises) — unless
+    `strict`: then no database or a failing read RAISES (the board's GET answers `error`, never an empty watch)."""
     try:
         c = colls(db)
         if c is None:
-            return []
+            raise RuntimeError("no database")
         doc = c["list"].find_one({"_id": C.LIST_DOC_ID})
-        raw = (doc or {}).get("symbols") if isinstance(doc, dict) else None
-        if not isinstance(raw, (list, tuple)):
-            return []
-        out: list = []
-        for s in raw:
-            if isinstance(s, str) and s and s not in out:
-                out.append(s)
-        return out
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: owner list unreadable: %s", exc)
+        if strict:
+            raise
         return []
+    return symbols_of(doc)
+
+
+def symbols_of(doc) -> list:
+    """The `symbols` of a list doc — strings only, house spelling, de-duplicated by `fold` in order. Never raises."""
+    raw = doc.get("symbols") if isinstance(doc, dict) else None
+    out: list = []
+    keys: set = set()
+    for s in raw if isinstance(raw, (list, tuple)) else ():
+        if isinstance(s, str) and s.strip():
+            k = fold(s)
+            if k not in keys:
+                keys.add(k)
+                out.append(house(s))
+    return out
 
 
 def enabled() -> bool:

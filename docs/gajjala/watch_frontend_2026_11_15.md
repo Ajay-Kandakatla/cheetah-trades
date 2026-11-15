@@ -22,7 +22,7 @@ Spec: gajjala-watch spec §3.8, work package WP-C. Backend routes and payload: `
 | Three optional chart props (`chartOnly`, `emaStyle="bold"`, `axis`) | `components/PatternChart.tsx` |
 | Owner-only tab, the wide page | `pages/ChartMaps.tsx` |
 
-Every word on the board is served by the backend (`chart_maps/gajjala_watch/payload.py`). The frontend writes one sentence of its own, "Could not load the watch.", for when the request fails and nothing was served. It also uses a few marks: ⚠️ on a served stale flag, ✕, ℹ️ and "·".
+Every word on the board is served by the backend (`chart_maps/gajjala_watch/payload.py`). The frontend writes one sentence of its own, "Could not load the watch.", for when the request fails and nothing was served. A served `{state: "error", reason}` (`payload.error_payload`) prints **its reason verbatim** — on the first load in place of the board, on a refresh in the head above the board that stays up (2026-11-15 fix #4). It also uses a few marks: ⚠️ on a served stale flag, ✕, ℹ️ and "·".
 
 ## Owner only
 
@@ -45,25 +45,40 @@ Every word on the board is served by the backend (`chart_maps/gajjala_watch/payl
 
   Below the head is the replay's dark panel: the **1-min chart full width on top**, and the **3-min and 5-min charts side by side** under it (stacked on a phone).
 - **Captions.** Each chart is captioned `label · K5 ✓/✗/—`, plus the served `held` chip when there is one. The K5 rule, the push sentence and the honesty line print **once**, in the collapsed ℹ️ in the head, never under every chart.
-- **Heights** (viewBox units; PatternChart `W` = 620): 1-min **120**, 3-min / 5-min **180**, phone **190** (the house default).
+- **Heights** (viewBox units; PatternChart `W` = 620): 1-min **120**, 3-min / 5-min **180**, phone **190** (the house default). Above the phone break these are now only the starting point and the share of the tile height each chart gets (see "3 rows on one screen" below); on a phone they are used as they are.
 
-  Arithmetic at 2560×1440 (≈ 1330 px inner height; nav + Chart Maps head + pinned tabs + board head ≈ 236 px → ≈ 1094 px for 3 rows + 2 gaps → ≈ 356 px per tile):
+  **The first arithmetic was wrong (corrected 2026-11-15).** It assumed ≈ 236 px above the grid. A Playwright render of the real page (scratch Vite, every API call mocked) measured the grid's top at **357 px** and **56 px** of page below it. With fixed heights the 9th tile ended at **1459 px** on a 1440 px screen and at **1316 px** on 1080 — the 3×3 did not fit on either.
 
-  | Quantity | Arithmetic | Result |
-  |---|---|---|
-  | Tile width | (2560 − 32 − 2 × 13) / 3 − 22 | ≈ 812 px |
-  | 3-min / 5-min width | half the tile less the 8 px gap | ≈ 402 px |
-  | 1-min height | 812 × 120 / 620 | ≈ 157 px |
-  | 3-min / 5-min height | 402 × 180 / 620 | ≈ 117 px |
-  | Tile height | 19 pad + 24 head + 2 × 14 captions + 157 + 117 + 8 gap | ≈ **353 px ≤ 356** |
+  | Screen | Above the grid | Below | Room for 3 rows + 2 × 13 gaps | Row | Fixed-height tile (before) |
+  |---|---|---|---|---|---|
+  | 2560×1440 | 357 | 56 | 1440 − 357 − 56 − 26 = 1001 | **333 px** | 359 px (overflowed) |
+  | 1920×1080 | 357 | 56 | 1080 − 357 − 56 − 26 = 641 | **213 px** | 311 px (overflowed) |
 
-  If the measured screen overflows, the heights are HIS CALL #10, not the executor's to change.
+## 3 rows on one screen (2026-11-15 fix #3)
+
+His words: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any given time on this tashboard".
+
+- **Rows from the viewport.** Above 640 px the board measures the grid's top on the page and what sits below it (ancestors' bottom padding and margins plus any element laid out under the grid, never the slack of a short page). It sets `--ggw-row-h = (innerHeight − top − below − 2 gaps) / 3` and adds `.ggw-grid--fit` (`lib/gajjalaWatch` `ggwFitRowHeight`). It re-measures on a window resize and when the board head changes size.
+- **Charts fill the row.** In a fitted tile the head and captions keep their size and the charts take the rest. The 1-min chart and the 3-/5-min pair split it 120 : 90, the same proportion `GGW_CHART_H` gives them at any width (`GGW_FIT_GROW`; the pair is half as wide). Each chart box is measured and its viewBox height is set to fill it exactly (`ggwFitViewBoxH`): no stretching, no overflow.
+- **Floor.** A row is never shorter than **200 px** (`GGW_FIT_ROW_MIN_PX`). This number is MINE, a layout choice, and moving it is HIS CALL. A shorter window scrolls instead of shrinking the charts further.
+- **Phone.** At 640 px and under nothing changes: one scrolling column at the house 190.
+- **Measured** (Playwright, mocked API, 9 tickers, light and dark identical):
+
+  | Screen | Tile | 1-min chart | 3-/5-min chart | 9 tiles on screen | Page scroll |
+  |---|---|---|---|---|---|
+  | 2560×1440 | 333 px | 794 × 143 px | 393 × 105 px | yes (9th ends 1382) | none |
+  | 1920×1080 | 213 px | 581 × 74 px | 286 × 54 px | yes (9th ends 1022) | none |
+  | 1280×800 | 200 px (floor) | 367 × 67 px | 180 × 48 px | no | scrolls |
+  | 430×932 | 460 px | 362 × 112 px | 362 × 112 px | one column | scrolls, as before |
+
+  At 1920×1080 the charts are small. The 357 px above the grid (nav, Chart Maps head, pinned tabs, the WHY box, Enterable only) belongs to the Chart Maps page, not to this tab. Shrinking that is HIS CALL.
 
 ## The look: the replay video
 
 - **Palette provenance.** `eod-audits/replays/replay_gif.py:576-581` PALETTE: bg (13,17,23), grid (38,43,52), text (225,228,232), dim (135,142,152), up (38,186,104), down (235,72,72). The 9 EMA is `#FACC15` and the 21 EMA is `#BE78FF` (`replay_gif.py:579`). Both lines are 2 px, drawn over the candles (`replay_video.py:258-260`, `:339-350`).
 - **`.ggw-dark`** sets `--surface`, `--bg-raised`, `--bg-sunken` and `--cm-card` to the replay background, and `--rule`, `--ink`, `--text-muted`, `--positive` and `--negative` to the replay colours. The chart-only tile therefore paints the replay panel.
-- **`lib/chartMaps.ts` `EMA_BOLD`** holds the two colours and widths. It is the one source for the chart and the legend swatches.
+- **`lib/chartMaps.ts` `EMA_BOLD`** holds the two colours and widths. It is the one source for the chart, the right-edge EMA price labels (fix #2) and the legend swatches.
+- **The tile's own text palette (2026-11-15 fix #1).** The tile is always dark (`--cm-card` rgb(22, 26, 34), the colour it always painted). In the light theme it used to inherit the page `--ink` #1A1A1A, so SYM, ✕ and Yahoo ↗ were dark on dark. `.ggw-tile` now sets the replay's `--ink`, `--text-muted`, `--rule`, `--positive` and `--negative`, plus `color: var(--ink)`. Measured light and dark: SYM / ✕ / Yahoo ↗ are rgb(225, 228, 232) on rgb(22, 26, 34).
 
 ## PatternChart props: each default draws exactly as before
 
@@ -71,6 +86,7 @@ PatternChart draws every Chart Maps card, so all three props are optional and ch
 
 - **`chartOnly`** — a plain `div.cm-tile.cm-tile-chart-only`, never a router link, so there is no SEPA link anywhere on the board. The head, rungs, footer and ▸ more are skipped. The svg, hover crosshair and markers stay.
 - **`emaStyle="bold"`** — the `ema9` / `ema21` curves are drawn **after the candles** (21 first, then 9 on top) in `EMA_BOLD`, with `vector-effect: non-scaling-stroke` and opacity 1. The 9/21 cross diamonds are taken out of the marker pass and drawn in their own group after the bold EMAs, so a cross is never hidden under the lines. Other curves keep their look and their place under the candles.
+  - Since 2026-11-15 (fix #2) the right-edge `9 EMA …` / `21 EMA …` price labels and their pointers are also drawn in `EMA_BOLD` (`boldEmaLabels`). They used to stay blue and amber beside a gold 9 line and a violet 21 line. A label is recoloured only when both its text and its colour are the EMA's own, so a served line in the same tone keeps its colour. Without the prop the label array is returned untouched. 586 renders of 293 fixture tiles at two heights, without the prop, were compared with the pre-fix PatternChart: the HTML was identical (React's generated ids aside).
 - **`axis`** — the served time axis (`{slots, x, shade, ticks}`; backend `build.axis`):
   - One x mapper, `sx(i) = xFor(axis.x[i], axis.slots)`, is used at every x site. Bar width and hover use `axis.slots`, and hover snaps to the nearest printed bar (`nearestAxisBar`).
   - The served pre-market / after-hours shade replaces the extended-hours runs, and the served hourly ticks replace the date ticks.

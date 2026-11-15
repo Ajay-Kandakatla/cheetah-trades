@@ -41,7 +41,12 @@
 @media (max-width: 640px) { .ggw-grid { grid-template-columns: 1fr; } }
 
 .ggw-tile, .ggw-frame { min-width: 0; max-width: 100%; }
+/* 2026-11-15 fix #1: the tile is ALWAYS dark, so it carries its own text palette (the replay's) — in the light theme
+ * the page --ink (#1A1A1A) painted SYM, ✕ and Yahoo ↗ dark on dark. --cm-card keeps the colour the tile always had. */
 .ggw-tile {
+  --ink: rgb(225, 228, 232); --text-muted: rgb(135, 142, 152); --rule: rgb(38, 43, 52);
+  --positive: rgb(38, 186, 104); --negative: rgb(235, 72, 72); --cm-card: rgb(22, 26, 34);
+  color: var(--ink);
   border: 1px solid var(--rule, #2a2f3a); border-radius: 10px; padding: 9px 11px 10px;
   background: var(--cm-card, #161a22);
 }
@@ -74,4 +79,23 @@
   display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; align-items: center; min-height: 14px;
   font-size: 0.68rem; line-height: 14px; color: var(--text-muted, #8795a0); padding: 0 4px;
   white-space: normal; overflow-wrap: anywhere; min-width: 0;
+}
+
+/* 2026-11-15 fix #3 — 3 rows on one screen (Ajay: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any
+ * given time"). Above the phone break the board measures the grid's top and what sits below it and sets
+ * --ggw-row-h = (innerHeight − top − below − 2 gaps) / 3 (lib/gajjalaWatch ggwFitRowHeight, floor GGW_FIT_ROW_MIN_PX),
+ * then adds .ggw-grid--fit. Each tile is a flex column; the charts take what the head and captions leave, and each
+ * chart box is measured so its viewBox height fills it exactly (no distortion). Without the class (a phone, or before
+ * the first measure) every rule below is inert and the tiles size from their charts as before. */
+@media (min-width: 641px) {
+  .ggw-grid.ggw-grid--fit { grid-auto-rows: var(--ggw-row-h); }
+  .ggw-grid--fit .ggw-tile { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .ggw-grid--fit .ggw-tile-head { flex: none; }
+  .ggw-grid--fit .ggw-charts { flex: 1 1 0; min-height: 0; }
+  .ggw-grid--fit .ggw-charts > .ggw-frame,
+  .ggw-grid--fit .ggw-frame-pair { flex-basis: 0; flex-shrink: 1; min-height: 0; }
+  .ggw-grid--fit .ggw-frame-pair { grid-template-rows: minmax(0, 1fr); }
+  .ggw-grid--fit .ggw-frame { display: flex; flex-direction: column; min-height: 0; }
+  .ggw-grid--fit .ggw-chartbox { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  .ggw-grid--fit .ggw-cap { flex: none; }
 }

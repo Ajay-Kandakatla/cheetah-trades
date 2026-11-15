@@ -6,7 +6,7 @@ watch at any given time on this tashboard" · "Any chart I view make sure you ar
 behaviour and also the right side with gaps to see where it might go".
 
 READS STORED DOCS ONLY — never a bar fetch, never a snapshot (the minute loop / the build child write the tile docs):
-  * the list (`colls.owner_symbols`, one find_one);
+  * the list (`colls.owner_symbols(strict=True)`, one find_one — unreadable → `error`, never an empty watch);
   * the tile docs of the listed names (ONE `find({_id: {$in: names}})`; an unlisted `only` name is never read);
   * the loop state doc (ONE find_one `_id = C.STATE_LATEST_ID`);
   * today's pushed claims (ONE `find({date: session, state: "cross_pushed"})`).
@@ -37,6 +37,7 @@ ET = ZoneInfo("America/New_York")
 TITLE_TEXT = "{label} — your tickers on {minutes}-minute bars from {open} ET"
 OWNER_ONLY_TEXT = "{label} is private — shown to the account owner only."
 ERROR_TEXT = "The watch could not be built: {why}"
+LIST_UNREADABLE_WHY = "your ticker list could not be read — try again"          # never "Your watch is empty" (fix 2026-11-15)
 HONESTY_TEXT = ("A {fast}-over-{slow} cross is information, not an entry. UNMEASURED: nothing has measured what follows a "
                 "cross on these frames.")
 LEGEND_TEXT = "{period} EMA"
@@ -329,7 +330,14 @@ def _build(now: datetime, db, only) -> dict:
     session, is_today, in_window = _session_of(now)
     siso = session.isoformat()[:10] if isinstance(session, (date, datetime)) else str(session)[:10]
     cs = CO.colls(db)
-    symbols = CO.owner_symbols(db) if cs is not None else []
+    # fix 2026-11-15: no database / an unreadable list → `error` with the served reason — never `ok` + [] + the empty
+    # words over his names (the loop / build child keep the fail-soft reader).
+    if cs is None:
+        return error_payload(LIST_UNREADABLE_WHY)
+    try:
+        symbols = CO.owner_symbols(db, strict=True)
+    except Exception:                                          # noqa: BLE001 — logged by the reader
+        return error_payload(LIST_UNREADABLE_WHY)
     if only is None:
         names = list(symbols)
     else:

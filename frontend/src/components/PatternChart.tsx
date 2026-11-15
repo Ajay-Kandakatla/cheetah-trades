@@ -50,8 +50,29 @@ import {
 } from '../lib/ggEllipses';
 
 const W = 620;
+/** The viewBox width every PatternChart draws at (👀 Gajjala's Watch sizes a chart's viewBox height to fill a box). */
+export const PATTERN_CHART_VIEW_W = W;
 const PAD_Y = 10;
 const LABEL_FS = 9.5;
+
+/** 👀 emaStyle="bold" (2026-11-15 fix #2): the right-edge '9 EMA' / '21 EMA' price labels (and their pointers) take the
+ *  EMA_BOLD colours of the lines they name — a gold 9 line is never captioned in blue, a violet 21 never in amber.
+ *  A label is the EMA's only when BOTH its text (curveLabels' own `${label} ${value}`) and its colour (toneColor of
+ *  that tone) match. Without the prop the labels are returned untouched (the same array: byte-identical renders). */
+export function boldEmaLabels<T extends { text: string; color: string }>(
+  labels: T[], curves: CmCurve[] | undefined, emaStyle: 'bold' | undefined,
+): T[] {
+  if (emaStyle !== 'bold') return labels;
+  const tones = new Map<string, 'ema9' | 'ema21'>();
+  for (const l of curveLabels((curves || []).filter((c) => c.tone === 'ema9' || c.tone === 'ema21'))) {
+    tones.set(l.label, l.tone as 'ema9' | 'ema21');
+  }
+  if (!tones.size) return labels;
+  return labels.map((l) => {
+    const tone = tones.get(l.text);
+    return tone && l.color === toneColor(tone) ? { ...l, color: EMA_BOLD[tone].color } : l;
+  });
+}
 
 const BAND_FILL: Record<string, string> = {
   base: 'var(--positive, #22c55e)',
@@ -188,8 +209,8 @@ export const PatternChart = memo(function PatternChart(
    * board's (2026-09-23). Every other overlay speaks for itself. */
   const offBoard = offDomainBands(tile.bands || [], domain)
     .filter((o) => isOutline(String(o.band.kind)));
-  const labels = lineLabels(
-    [...(tile.lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS);
+  const labels = boldEmaLabels(lineLabels(
+    [...(tile.lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS), tile.curves, emaStyle);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units

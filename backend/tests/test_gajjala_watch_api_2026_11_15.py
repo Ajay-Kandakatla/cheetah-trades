@@ -548,10 +548,11 @@ def test_head_words_and_legend():
     assert PL.build(FRI_IN, db=_db(["OMH"]))["full"] is False
 
 
-def test_NEGATIVE_no_database_still_answers_ok_empty(monkeypatch):
+def test_NEGATIVE_no_database_is_an_error_never_an_empty_watch(monkeypatch):
+    # PIN MOVED 2026-11-15 (fix): was `ok` + [] — an unreadable list now serves `error` + the reason, no empty words
     monkeypatch.setattr(CO, "_db", lambda: None)
     out = PL.build(FRI_IN)
-    assert out["state"] == "ok" and out["rows"] == [] and out["symbols"] == [] and out["pass"] is None
+    assert out == PL.error_payload(PL.LIST_UNREADABLE_WHY) and "empty_text" not in out
 
 
 def test_NEGATIVE_failing_reads_never_raise():

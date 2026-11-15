@@ -27,7 +27,8 @@ export function ggwSymbolPath(sym: string): string {
 export function ggwRowsPath(syms: ReadonlyArray<string>): string {
   return `${GGW_PATH}?symbols=${encodeURIComponent(syms.join(','))}`;
 }
-/** The one FE sentence: the GET itself failed, so nothing was served. */
+/** The one FE sentence: the GET itself failed, so nothing was served. A served `state: "error"` prints ITS reason
+ *  verbatim instead (2026-11-15 fix #4) — this sentence is only for when no reason was served. */
 export const GGW_FETCH_FAILED = 'Could not load the watch.';
 
 /** The look he liked: the replay video's dark panel (eod-audits/replays/replay_gif.py:576-581 PALETTE — bg (13,17,23),
@@ -42,10 +43,35 @@ export const GGW_PANEL = {
   down: 'rgb(235, 72, 72)',
 } as const;
 
-/** Chart heights in viewBox units (PatternChart W = 620) — MINE, HIS CALL #10. At 2560×1440 the tile is ≈ 812 px wide:
- *  1-min 812 × 120 / 620 ≈ 157 px, 3-min / 5-min ≈ 402 × 180 / 620 ≈ 117 px → a tile ≈ 353 px, three rows fit
- *  (spec §3.8 arithmetic; docs/gajjala/watch_frontend_2026_11_15.md). */
+/** Chart heights in viewBox units (PatternChart W = 620) — MINE, HIS CALL #10. The first arithmetic (≈ 236 px above
+ *  the grid → three rows fit) was WRONG: measured 357 px above and 56 below, the fixed-height 3×3 overflowed at both
+ *  2560×1440 and 1920×1080. Above the phone break these are now the starting height and the SHARE of a fitted tile
+ *  (GGW_FIT_GROW); the rows are sized from the viewport (ggwFitRowHeight; docs/gajjala/watch_frontend_2026_11_15.md). */
 export const GGW_CHART_H = { '1m': 120, '3m': 180, '5m': 180 } as const;
+/** 👀 3 rows on one screen (2026-11-15 fix #3; Ajay: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any
+ *  given time"). Above the phone break the grid rows are sized from the viewport: row = (innerHeight − the grid's
+ *  measured top − what sits below it − 2 row gaps) / GGW_FIT_ROWS, never under GGW_FIT_ROW_MIN_PX. The charts then
+ *  flex to fill the row, the 1-min and the 3-/5-min pair sharing the height in the SAME proportion GGW_CHART_H gives
+ *  them at any width (the pair is half the width, so its share is GGW_CHART_H['3m'] / 2). */
+export const GGW_FIT_ROWS = 3;
+/** The tile floor for a short desktop window — MINE (layout, not a rule): below it the page scrolls instead of the
+ *  charts shrinking further. 1920×1080 measures ≈ 213 px a row, so it still fits there. HIS CALL to move. */
+export const GGW_FIT_ROW_MIN_PX = 200;
+/** The flex shares of the 1-min chart and the 3-/5-min pair inside a fitted tile (derived from GGW_CHART_H). */
+export const GGW_FIT_GROW = { top: GGW_CHART_H['1m'], pair: GGW_CHART_H['3m'] / 2 } as const;
+/** One fitted grid row in CSS px, or null when there is nothing to fit (no viewport / junk numbers). */
+export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap: number }): number | null {
+  const ok = [m.vh, m.top, m.below, m.gap].every((x) => typeof x === 'number' && Number.isFinite(x));
+  if (!ok || m.vh <= 0) return null;
+  const free = m.vh - Math.max(0, m.top) - Math.max(0, m.below) - (GGW_FIT_ROWS - 1) * Math.max(0, m.gap);
+  return Math.max(GGW_FIT_ROW_MIN_PX, Math.floor(free / GGW_FIT_ROWS));
+}
+/** The viewBox height that makes a `viewW`-wide chart exactly fill a w × h CSS box (no distortion, no overflow);
+ *  null when the box has no size yet (then the GGW_CHART_H height is used). */
+export function ggwFitViewBoxH(w: number, h: number, viewW: number): number | null {
+  if (!(w > 0) || !(h > 0) || !(viewW > 0)) return null;
+  return Math.max(1, Math.floor((viewW * h) / w));
+}
 /** ≤ 640 px: the house default height, one column. */
 export const GGW_CHART_H_PHONE = 190;
 /** The phone break (one column, GGW_CHART_H_PHONE) — the same 640 px as `.ggw-grid` in gajjalaWatch.css. */
@@ -84,7 +110,9 @@ export type GgwBoard = {
   pass: GgwPass | null; info: GgwInfo | null; legend: GgwLegend[]; rows: GgwRow[];
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
-export type GgwPayload = GgwBoard | GgwOwnerOnly;
+/** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
+export type GgwServedError = { state: 'error'; reason: string | null; title: string | null };
+export type GgwPayload = GgwBoard | GgwOwnerOnly | GgwServedError;
 /** The add / remove answer (store.add / store.remove). */
 export type GgwWriteAnswer = { state: string; symbols: string[]; symbol: string | null; text: string | null };
 
@@ -157,10 +185,12 @@ function parseRow(v: unknown): GgwRow | null {
   };
 }
 
-/** The served payload, or null for junk. `owner_only` → exactly {state, reason, title} (nothing else is kept). */
+/** The served payload, or null for junk. `owner_only` / `error` → exactly {state, reason, title} (nothing else is
+ *  kept; an `error` reason is the server's sentence, printed as served). */
 export function parseGgw(raw: unknown): GgwPayload | null {
   if (!isObj(raw)) return null;
   if (raw.state === 'owner_only') return { state: 'owner_only', reason: str(raw.reason), title: str(raw.title) };
+  if (raw.state === 'error') return { state: 'error', reason: str(raw.reason), title: str(raw.title) };
   if (raw.state !== 'ok' || !Array.isArray(raw.rows)) return null;
   const pass = isObj(raw.pass) ? { at_et: str(raw.pass.at_et), text: str(raw.pass.text), stale: raw.pass.stale === true } : null;
   const info = isObj(raw.info) ? {

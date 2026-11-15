@@ -27,17 +27,17 @@
  * No house chips on this tab (🚀 growth, 🧨 explosive, 🩳 short interest, 🎯 enterable): each tile is the chart alone, his
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
  * list order orders this board (the order he added the names in, as served). */
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, GGW_PATH, GGW_PHONE_MQ, ggwChartHeight, ggwMergeRows, ggwPendingSymbols,
-  ggwRowsPath, ggwSplitFrames, ggwSymbolPath, parseGgw,
+  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_PATH, GGW_PHONE_MQ, ggwChartHeight, ggwFitRowHeight,
+  ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames, ggwSymbolPath, parseGgw,
   type GgwBoard, type GgwFrame, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
-import { PatternChart } from './PatternChart';
+import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
@@ -64,11 +64,80 @@ const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 
-function Frame({ f, phone }: { f: GgwFrame; phone: boolean }) {
+/** What sits BELOW `el` on the page: every ancestor's bottom padding / border / margin and every later sibling that
+ *  is laid out under it. Never the slack of a short page (a min-height:100vh shell would otherwise shrink the rows
+ *  on every measure), never a side-by-side sibling. */
+function belowOf(el: HTMLElement): number {
+  let below = 0;
+  let node: HTMLElement | null = el;
+  while (node && node.parentElement && node !== document.documentElement) {
+    const parent: HTMLElement = node.parentElement;
+    const nodeBottom = node.getBoundingClientRect().bottom;
+    below += parseFloat(getComputedStyle(node).marginBottom) || 0;
+    for (let sib = node.nextElementSibling as HTMLElement | null; sib; sib = sib.nextElementSibling as HTMLElement | null) {
+      const cs = getComputedStyle(sib);
+      if (cs.display === 'none' || cs.position === 'absolute' || cs.position === 'fixed') continue;
+      const r = sib.getBoundingClientRect();
+      if (r.height <= 0 || r.top < nodeBottom - 1) continue;
+      below += r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+    }
+    const pcs = getComputedStyle(parent);
+    below += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
+    node = parent;
+  }
+  return below;
+}
+
+/** The fitted grid row height (px) above the phone break, or null (phone / no layout yet / jsdom). */
+function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElement>,
+                    phone: boolean, deps: unknown): number | null {
+  const [rowH, setRowH] = useState<number | null>(null);
+  useEffect(() => {
+    if (phone || typeof window === 'undefined') { setRowH(null); return; }
+    const measure = () => {
+      const g = grid.current;
+      if (!g) { setRowH(null); return; }
+      const r = g.getBoundingClientRect();
+      if (!(r.width > 0)) { setRowH(null); return; }
+      const gap = parseFloat(getComputedStyle(g).rowGap) || 0;
+      setRowH(ggwFitRowHeight({ vh: window.innerHeight, top: r.top + window.scrollY, below: belowOf(g), gap }));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    if (ro && head.current) ro.observe(head.current);
+    return () => { window.removeEventListener('resize', measure); ro?.disconnect(); };
+  }, [phone, grid, head, deps]);
+  return rowH;
+}
+
+/** In a fitted tile: the viewBox height that fills this chart's measured box (null → the GGW_CHART_H height). */
+function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): number | null {
+  const [h, setH] = useState<number | null>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!fit || !el) { setH(null); return; }
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setH(ggwFitViewBoxH(r.width, r.height, PATTERN_CHART_VIEW_W));
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [box, fit]);
+  return h;
+}
+
+function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties }) {
+  const box = useRef<HTMLDivElement>(null);
+  const fitH = useFitBox(box, fit);
   return (
-    <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`}>
-      <PatternChart tile={f.tile} chartOnly emaStyle="bold" axis={f.axis}
-                    height={ggwChartHeight(f.tf, phone)} />
+    <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
+      <div className="ggw-chartbox" ref={box}>
+        <PatternChart tile={f.tile} chartOnly emaStyle="bold" axis={f.axis}
+                      height={fit && fitH ? fitH : ggwChartHeight(f.tf, phone)} />
+      </div>
       <figcaption className="ggw-cap">
         <span className="ggw-cap-label">{f.uptrend ? `${f.label} · ${f.uptrend.short}` : f.label}</span>
         {f.held ? <span className="ggw-chip ggw-held" data-testid="ggw-held">{f.held.text}</span> : null}
@@ -77,8 +146,8 @@ function Frame({ f, phone }: { f: GgwFrame; phone: boolean }) {
   );
 }
 
-function Tile({ row, phone, removeLabel, focused, onRemove, busy }: {
-  row: GgwRow; phone: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
+function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy }: {
+  row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   onRemove: (sym: string) => void;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
@@ -115,10 +184,10 @@ function Tile({ row, phone, removeLabel, focused, onRemove, busy }: {
       </div>
       {top || pair.length ? (
         <div className="ggw-dark ggw-charts">
-          {top ? <Frame f={top} phone={phone} /> : null}
+          {top ? <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined} /> : null}
           {pair.length ? (
-            <div className="ggw-frame-pair">
-              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} />)}
+            <div className="ggw-frame-pair" style={fit ? { flexGrow: GGW_FIT_GROW.pair } : undefined}>
+              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} />)}
             </div>
           ) : null}
         </div>
@@ -133,6 +202,8 @@ export default function GajjalaWatchBoard() {
   const phone = usePhone();
   const [load, setLoad] = useState<Load>({ phase: 'loading' });
   const [refreshFailed, setRefreshFailed] = useState(false);
+  /** A served `state: "error"` reason while a board is already up — printed verbatim in the head. */
+  const [servedErr, setServedErr] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -145,6 +216,10 @@ export default function GajjalaWatchBoard() {
   const pendSince = useRef<Map<string, number>>(new Map());
   const focusDone = useRef(false);
   const loadAllRef = useRef<() => void>(() => {});
+  const gridRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const rowH = useFitRows(gridRef, headRef, phone, load);
+  const fit = rowH != null;
 
   const clearMain = () => { if (mainTimer.current) { clearTimeout(mainTimer.current); mainTimer.current = null; } };
   const clearPend = () => { if (pendTimer.current) { clearTimeout(pendTimer.current); pendTimer.current = null; } };
@@ -201,7 +276,15 @@ export default function GajjalaWatchBoard() {
         if (!alive.current) return;
         const p = parseGgw(raw);
         if (!p) throw new Error('junk');
+        if (p.state === 'error' && board.current) {
+          /* The server said why it could not build the board: keep the board up, print ITS words, keep the chain. */
+          setServedErr(p.reason);
+          setRefreshFailed(!p.reason);
+          armMain(board.current);
+          return;
+        }
         setRefreshFailed(false);
+        setServedErr(null);
         if (p.state === 'ok') {
           board.current = p;
           armMain(p);
@@ -273,11 +356,18 @@ export default function GajjalaWatchBoard() {
   if (p.state === 'owner_only') {
     return <div className="ggw-board"><p className="ggw-line ggw-owner-only">{p.reason}</p></div>;
   }
+  if (p.state === 'error') {
+    return (
+      <div className="ggw-board">
+        <p className="ggw-line ggw-warn ggw-served-error" data-testid="ggw-served-error">{p.reason ?? GGW_FETCH_FAILED}</p>
+      </div>
+    );
+  }
 
   const addLabel = p.add_label ?? '';
   return (
     <div className="ggw-board" data-testid="ggw-board">
-      <div className="ggw-head">
+      <div className="ggw-head" ref={headRef}>
         {p.title ? <h2 className="ggw-title">{p.title}</h2> : null}
         <form className="ggw-add" onSubmit={onAdd}>
           <input className="ggw-input" type="text" value={draft} aria-label={addLabel || undefined}
@@ -295,6 +385,9 @@ export default function GajjalaWatchBoard() {
           <span className={`ggw-line ggw-pass${p.pass.stale ? ' ggw-warn' : ''}`} data-testid="ggw-pass">
             {p.pass.stale ? '⚠️ ' : ''}{p.pass.text}
           </span>
+        ) : null}
+        {servedErr ? (
+          <span className="ggw-line ggw-warn ggw-served-error" data-testid="ggw-served-error">{`⚠️ ${servedErr}`}</span>
         ) : null}
         {refreshFailed ? <span className="ggw-line ggw-warn">{`⚠️ ${GGW_FETCH_FAILED}`}</span> : null}
         {p.legend.length ? (
@@ -320,9 +413,10 @@ export default function GajjalaWatchBoard() {
         ) : null}
       </div>
       {p.rows.length ? (
-        <div className="ggw-grid">
+        <div className={`ggw-grid${fit ? ' ggw-grid--fit' : ''}`} ref={gridRef}
+             style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
           {p.rows.map((r) => (
-            <Tile key={r.symbol} row={r} phone={phone} removeLabel={p.remove_label} busy={busy}
+            <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
                   focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} />
           ))}
         </div>

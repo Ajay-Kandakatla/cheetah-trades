@@ -100,12 +100,7 @@ describe('👀 look (HIS CALL #10)', () => {
     expect(ggwChartHeight('1m', true)).toBe(190);
     expect(GGW_PHONE_MQ).toBe('(max-width: 640px)');
   });
-  it('the 3×3 arithmetic at 2560 px holds (≈ 353 px a tile ≤ 356)', () => {
-    const tileW = (2560 - 32 - 2 * 13) / 3 - 22;
-    const pairW = (tileW - 8) / 2;
-    const tileH = 19 + 24 + 2 * 14 + tileW * GGW_CHART_H['1m'] / 620 + pairW * GGW_CHART_H['3m'] / 620 + 8;
-    expect(tileH).toBeLessThanOrEqual(356);
-  });
+  // The 3×3-fits-one-screen pin moved to GajjalaWatchBoard.fixes.test.tsx (ggwFitRowHeight, measured 357 px above + 56 below).
   it('the replay palette (replay_gif.py:576-581) and the bold 9 / 21 (replay_gif.py:579)', () => {
     expect(GGW_PANEL.bg).toBe('rgb(13, 17, 23)');
     expect(GGW_PANEL.grid).toBe('rgb(38, 43, 52)');

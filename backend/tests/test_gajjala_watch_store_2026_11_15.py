@@ -32,7 +32,7 @@ def _stored(db):
 # ── normalize ──────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_normalize_strips_and_upper_cases():
     assert ST.normalize(" omh ") == "OMH"
-    assert ST.normalize("brk.b") == "BRK.B" and ST.normalize("mog-a") == "MOG-A"
+    assert ST.normalize("brk.b") == "BRK.B" and ST.normalize("mog-a") == "MOG.A"      # PIN MOVED 2026-11-15: ONE house spelling
 
 
 @pytest.mark.parametrize("raw", ["", "   ", "TOOLONGX", "$OMH", "OM H", "OMH1", None, 5, 5.0, ["OMH"], {"s": "OMH"}])

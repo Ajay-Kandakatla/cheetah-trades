@@ -128,11 +128,15 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         per_name: dict = {}
         stats: dict = {}
         budget = GC.GG1M_MINUTE_BUDGET_SEC if budget_sec is None else budget_sec
+        w0 = RUN._utc(deps.wall())
         F = BLD.frames(syms, session, now, load_day=deps.load_day, budget_sec=budget, stats=stats,
                        per_name=per_name)
+        # fix 2026-11-15: freshness is judged on the clock AFTER the fetch — `now` plus the wall time the fetch took
+        # (a host sleep mid-fetch makes the cross stale: never sent late). The tile docs keep `now`.
+        now_x = now + max(timedelta(0), RUN._utc(deps.wall()) - w0)
         held: dict = {}
         try:
-            counts = XA.run(F, now, session, coll=(cs["alerts"] if cs else None), send=deps.send, owner=deps.owner,
+            counts = XA.run(F, now_x, session, coll=(cs["alerts"] if cs else None), send=deps.send, owner=deps.owner,
                             dry=dry, seen=seen, held=held)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala watch: cross push failed: %s", type(exc).__name__)
