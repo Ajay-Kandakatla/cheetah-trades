@@ -15,10 +15,10 @@ import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  gutterWidth, hoverLines, lineLabels, markerIndex, offDomainBands, priceAt,
+  EMA_BOLD, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
-  type CmBadge, type CmStat, type CmTile,
+  type CmAxis, type CmBadge, type CmCurve, type CmMarker, type CmStat, type CmTile,
 } from '../lib/chartMaps';
 import {
   cardLadder, FOLD_GROUPS, FOLD_LABEL, planLineKey, type FoldItem, type OuterChip,
@@ -102,7 +102,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, study, bandStudy, burst, outerChips, expandAll }: {
+  { tile, height = 190, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis }: {
     tile: CmTile; height?: number;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
@@ -121,6 +121,18 @@ export const PatternChart = memo(function PatternChart(
     /** ⊞ The page's "Expand all" answer for every card's ▸ more. A card he
      *  opens or closes by hand keeps his choice until ⊞ is pressed again. */
     expandAll?: boolean;
+    /** 👀 Gajjala's Watch (2026-11-15; Ajay: "Not the SEPA"): the chart alone — no SEPA link, no head, no rungs, no
+     *  footer, no ▸ more. The svg, the hover crosshair and the markers stay. Default false = every card as before. */
+    chartOnly?: boolean;
+    /** 👀 'bold' (Ajay: "a brighter and thicker 21 EMA and 9 EMA"): the ema9 / ema21 curves in EMA_BOLD (the replay's
+     *  yellow / purple, 2 px, non-scaling) drawn OVER the candles, 21 then 9, and the 9 / 21 cross diamonds drawn after
+     *  them. Default = the curves under the candles in toneColor, as before. */
+    emaStyle?: 'bold';
+    /** 👀 A served time axis (Ajay: "from 4 AM … and also the right side with gaps"): bar i sits at slot axis.x[i] of
+     *  axis.slots, the served shade replaces the extended-hours runs, the served ticks replace the date ticks, slots
+     *  right of the last bar stay empty, and candle bodies keep their true width (no 1.4 floor — thin 1-min bars, as in
+     *  the replay). Default = one slot per bar, as before. */
+    axis?: CmAxis | null;
   },
 ) {
   const location = useLocation();
@@ -188,16 +200,75 @@ export const PatternChart = memo(function PatternChart(
   const plotW = W - padR;
   // Every tick draws its LINE; only the non-colliding ones draw a NUMBER.
   const axisText = dropCollidingTicks(axis, labels);
-  const bw = barWidth(bars.length, W, padR);
-  const ticks = timeTicks(bars);
+  /* 👀 ONE x mapper (2026-11-15). Without a served time axis bar i is slot i of bars.length — exactly xFor(i,
+   * bars.length) as before; with one, bar i sits at slot ta.x[i] of ta.slots, so 04:00 is the left edge and the slots
+   * after the last print stay empty out to the close. */
+  const ta = timeAxis && Array.isArray(timeAxis.x) && timeAxis.x.length === bars.length && timeAxis.slots > 0
+    ? timeAxis : null;
+  const nX = ta ? ta.slots : bars.length;
+  const slotX = (s: number) => xFor(s, nX, W, padR);
+  const sx = (i: number) => slotX(ta ? ta.x[i] : i);
+  const bw = barWidth(nX, W, padR);
+  const ticks = ta ? (ta.ticks || []).map((t) => ({ i: t.slot, label: t.label })) : timeTicks(bars);
+  const tickX = (i: number) => (ta ? slotX(i) : sx(i));
   // Extended-hours runs (live frame): consecutive bars flagged pre/ah become
   // one shaded span each, so the overnight stretch reads at a glance.
-  const extSpans: { from: number; to: number }[] = [];
-  bars.forEach((b, i) => {
-    if (!b.s) return;
-    const last = extSpans[extSpans.length - 1];
-    if (last && last.to === i - 1) last.to = i; else extSpans.push({ from: i, to: i });
-  });
+  // 👀 With a served axis the served pre-market / after-hours spans replace them ([from_slot, to_slot) slots).
+  const extSpans: { from: number; to: number; x0: number; x1: number; kind?: string }[] = [];
+  if (ta) {
+    for (const sp of ta.shade || []) {
+      if (!(sp.to_slot > sp.from_slot)) continue;
+      extSpans.push({ from: sp.from_slot, to: sp.to_slot - 1, kind: sp.kind || 'shade',
+                      x0: slotX(sp.from_slot) - bw / 2, x1: slotX(sp.to_slot - 1) + bw / 2 });
+    }
+  } else {
+    bars.forEach((b, i) => {
+      if (!b.s) return;
+      const last = extSpans[extSpans.length - 1];
+      if (last && last.to === i - 1) last.to = i; else extSpans.push({ from: i, to: i, x0: 0, x1: 0 });
+    });
+    for (const sp of extSpans) {
+      sp.x0 = sx(sp.from) - bw / 2;
+      sp.x1 = sx(sp.to) + bw / 2;
+    }
+  }
+  const bold = emaStyle === 'bold';
+  const isBoldCurve = (c: CmCurve) => bold && (c.tone === 'ema9' || c.tone === 'ema21');
+  const isCross = (m: CmMarker) => m.kind === 'ema_cross_up' || m.kind === 'ema_cross_dn';
+  /** A curve's drawn runs — split on nulls (a gap is never joined through). */
+  const curveSegs = (c: CmCurve): string[] => {
+    const segs: string[] = [];
+    let cur: string[] = [];
+    (c.values || []).forEach((v, i) => {
+      if (v == null || !Number.isFinite(v)) {
+        if (cur.length > 1) segs.push(cur.join(' '));
+        cur = [];
+        return;
+      }
+      cur.push(`${sx(i)},${yFor(v, domain, H, PAD_Y)}`);
+    });
+    if (cur.length > 1) segs.push(cur.join(' '));
+    return segs;
+  };
+  /* 🔀 2026-11-15 (Gajjala ➖ Fade): a 9 / 21 EMA cross — a small diamond ON the served EMA value at the
+   * cross bar (the bar's close when none is served); green up, red down. The served sentence is its
+   * tooltip; the card prints the latest one under the chart (phones have no hover). */
+  const crossDiamond = (m: CmMarker, mi: number, x: number, bar: { c: number }) => {
+    const up = m.kind === 'ema_cross_up';
+    const px = typeof m.price === 'number' && Number.isFinite(m.price) ? m.price : bar.c;
+    const yC = yFor(px, domain, H, PAD_Y);
+    const r = 3.6;
+    return (
+      <polygon key={`mk-${m.date}-${mi}`}
+               className={up ? 'pc-ema-cross pc-ema-cross-up' : 'pc-ema-cross pc-ema-cross-dn'}
+               data-testid={`pc-ema-cross-${up ? 'up' : 'dn'}`}
+               points={`${x},${yC - r} ${x + r},${yC} ${x},${yC + r} ${x - r},${yC}`}
+               fill={up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)'}
+               stroke="var(--surface, #0b0e14)" strokeWidth={0.8} opacity={0.95}>
+        {m.label ? <title>{m.label}</title> : null}
+      </polygon>
+    );
+  };
   const theme = themeLabel(tile.theme);
   const last = bars[bars.length - 1];
   /* 🌀 Every AMD raid (Ajay 2026-09-24: "Show all the possible raids, past
@@ -225,7 +296,9 @@ export const PatternChart = memo(function PatternChart(
    * pointer is outside, so none of this runs on the 24-tile board unless you
    * are actually pointing at a tile. */
   const hx = hover ? Math.min(hover.x, plotW) : 0;
-  const hIdx = hover ? barIndexAt(hx, bars.length, W, padR) : -1;
+  const hIdx = hover
+    ? (ta ? nearestAxisBar(barIndexAt(hx, nX, W, padR), ta.x) : barIndexAt(hx, bars.length, W, padR))
+    : -1;
   const hBar = hIdx >= 0 ? bars[hIdx] : null;
   // A pointer in the volume pane is not on a price — no price chip there.
   const hPrice = hover && (!hasVol || hover.y <= H) ? priceAt(hover.y, domain, H, PAD_Y) : null;
@@ -234,7 +307,7 @@ export const PatternChart = memo(function PatternChart(
   const TIP_W = 104;
   const TIP_H = tipLines.length * 11 + 8;
   const tip = hover
-    ? tooltipPos(xFor(Math.max(hIdx, 0), bars.length, W, padR), hover.y,
+    ? tooltipPos(sx(Math.max(hIdx, 0)), hover.y,
                  TIP_W, TIP_H, plotW, SVG_H)
     : null;
 
@@ -357,109 +430,14 @@ export const PatternChart = memo(function PatternChart(
     return null;
   };
 
-  return (
-    <Link
-      to={withSource(tile.href, 'chart-maps', location.search)}
-      state={{ from: backTarget, label: 'Chart Maps' }}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-      aria-label={`${tile.symbol} — open SEPA detail`}
-    >
-      <div className="cm-tile">
-        <div className="cm-tile-head">
-          <div className="cm-tile-id">
-            <b>{tile.symbol}</b>
-            {tile.name ? <span className="cm-tile-name">{tile.name}</span> : null}
-            {/* What the company IS: theme, growth, promo origin, the served
-                company facts. Never an entry read. */}
-            <div className="cm-tile-ident">
-              {theme ? <span className="cm-badge cm-badge-theme">{theme}</span> : null}
-              {/* 🚀 Explosive Growth (Ajay 2026-09-11: "I am hoping this new
-                  list will be considerd in all chart maps. Like in Deep demand
-                  scan"). Every tile board renders through this component, so one
-                  chip here lights up Back in Demand, Deep Demand, Quick Reversal,
-                  Breaking, VCP and the rest. ⛔ tone when the trading engine will
-                  refuse the name — good sales must not make it look clean. */}
-              {skip.has('growth') ? null : <GrowthChip symbol={tile.symbol} />}
-              {skip.has('promo') ? null : <PromoOriginChip symbol={tile.symbol} />}
-              {/* 🩳 short interest (Ajay 2026-10-03: "add this field to all our
-                  chart maps scan") — served chip text with its FINRA date. */}
-              {skip.has('short') ? null : <ShortInterestChip symbol={tile.symbol} />}
-              {ladder.ident.map(pill)}
-            </div>
-          </div>
-          <div className="cm-tile-actions">
-            {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
-              * every board; the Signals tab reads the same store. */}
-            {skip.has('watch') ? null : <SignalWatchButton symbol={tile.symbol} />}
-            {/* Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" /
-              * "To external ones please" — the external link-out is Yahoo's quote page (lib/yahooLink); the chart's
-              * timeframe is not carried (Yahoo has no interval parameter). */}
-            <button type="button" className="cm-tv"
-                    title={yahooTitle(tile.symbol)}
-                    aria-label={yahooTitle(tile.symbol)}
-                    onClick={(e) => openYahoo(e, tile.symbol)}>
-              {YAHOO_LABEL}
-            </button>
-          </div>
-        </div>
-
-        {entryHas || priceHas ? (
-          <div className="cm-rungs">
-            {/* ① ENTRY — can I enter? 🎯 first, then the served verdicts and
-                vetoes (warn → good → muted), then the zone pill ONLY when it
-                disagrees with the board's premise (amber, his call #4). */}
-            {entryHas ? (
-              <div className="cm-rung cm-rung-entry">
-                <span className="cm-rung-tag">ENTRY</span>
-                <div className="cm-rung-items">
-                  {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see
-                      the stocks that are enterable." Prop-fed off the tile,
-                      exactly like the 🧨 chip — nothing here decides the
-                      verdict. The n/a kind folds into READS. */}
-                  {ladder.enterableOnFace ? enterableChip : null}
-                  {ladder.entryNotes.map((n, i) => (
-                    <span key={`n-${i}-${n}`} className="cm-rung-note">{`\u00B7 ${n}`}</span>
-                  ))}
-                  {ladder.entry.map(pill)}
-                  {ladder.zone && ladder.zone.onFace ? zonePill : null}
-                </div>
-              </div>
-            ) : null}
-            {/* ② PRICE — where is it now? Position pills, the approach LINE in
-                its served tone, the ⚡ momentum burst, then tape and money. */}
-            {priceHas ? (
-              <div className="cm-rung cm-rung-price">
-                <span className="cm-rung-tag">PRICE</span>
-                <div className="cm-rung-items">
-                  {ladder.price.map(pill)}
-                  {/* 🔑 Key level (2026-09-25): the served chip, only while
-                      the price is through a level now or after it CLOSED
-                      through one. Display only — UNMEASURED. */}
-                  {ladder.keyLevel ? (
-                    <span className={`cm-badge cm-badge-${ladder.keyLevel.tone} cm-keylevel`}>
-                      {ladder.keyLevel.text}
-                    </span>
-                  ) : null}
-                  {ladder.approach ? (
-                    <span className={`cm-approach cm-approach-${ladder.approach.tone}`}>
-                      {ladder.approach.text}
-                    </span>
-                  ) : null}
-                  {/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide
-                      nothing"). Served per tile by chart_maps/board.attach_burst
-                      and handed down by the page only while its checkbox is
-                      ticked. Renders nothing unless the server said ⚡. UNMEASURED. */}
-                  <MomentumBurstChip read={burst} />
-                  {ladder.priceAfter.map(pill)}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${SVG_H}`} className="cm-svg" role="img"
-             onMouseMove={onMove} onMouseLeave={onLeave}
-             aria-label={`${tile.symbol} daily chart, ${bars.length} bars`}>
+  /* The chart's layers, shared by the card (inside its router link) and the 👀 chart-only tile. */
+  const svgProps = {
+    ref: svgRef, viewBox: `0 0 ${W} ${SVG_H}`, className: 'cm-svg', role: 'img',
+    onMouseMove: onMove, onMouseLeave: onLeave,
+    'aria-label': `${tile.symbol} daily chart, ${bars.length} bars`,
+  };
+  const svgLayers = (
+        <>
           {/* price scale — drawn FIRST so bands, candles and plan lines all sit
               on top of it. Numbers live in the right gutter, never over the
               price action. */}
@@ -588,7 +566,7 @@ export const PatternChart = memo(function PatternChart(
                 cur = [];
                 return;
               }
-              cur.push(`${xFor(i, bars.length, W, padR)},${yV(v)}`);
+              cur.push(`${sx(i)},${yV(v)}`);
             });
             if (cur.length > 1) segs.push(cur.join(' L'));
             // Fewer bars than the window: the average exists at ONE bar only,
@@ -617,7 +595,7 @@ export const PatternChart = memo(function PatternChart(
                   const v = vols[i];
                   const fill = volumeColor(b.o, b.c);
                   if (v == null || v <= 0 || !fill) return null;
-                  const x = xFor(i, bars.length, W, padR);
+                  const x = sx(i);
                   const w = Math.max(bw * 0.64, 1.4);
                   const y = yV(v);
                   return (
@@ -653,7 +631,7 @@ export const PatternChart = memo(function PatternChart(
           {(tile.markers || []).map((m, mi) => {
             const i = markerIndex(bars, m.date);
             if (i < 0) return null;
-            const x = xFor(i, bars.length, W, padR);
+            const x = sx(i);
             const bar = bars[i];
             if (m.kind === 'buy' || m.kind === 'sell') {
               const buy = m.kind === 'buy';
@@ -675,23 +653,9 @@ export const PatternChart = memo(function PatternChart(
               );
             }
             if (m.kind === 'ema_cross_up' || m.kind === 'ema_cross_dn') {
-              // 🔀 2026-11-15 (Gajjala ➖ Fade): a 9 / 21 EMA cross — a small diamond ON the served EMA value at the
-              // cross bar (the bar's close when none is served); green up, red down. The served sentence is its
-              // tooltip; the card prints the latest one under the chart (phones have no hover).
-              const up = m.kind === 'ema_cross_up';
-              const px = typeof m.price === 'number' && Number.isFinite(m.price) ? m.price : bar.c;
-              const yC = yFor(px, domain, H, PAD_Y);
-              const r = 3.6;
-              return (
-                <polygon key={`mk-${m.date}-${mi}`}
-                         className={up ? 'pc-ema-cross pc-ema-cross-up' : 'pc-ema-cross pc-ema-cross-dn'}
-                         data-testid={`pc-ema-cross-${up ? 'up' : 'dn'}`}
-                         points={`${x},${yC - r} ${x + r},${yC} ${x},${yC + r} ${x - r},${yC}`}
-                         fill={up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)'}
-                         stroke="var(--surface, #0b0e14)" strokeWidth={0.8} opacity={0.95}>
-                  {m.label ? <title>{m.label}</title> : null}
-                </polygon>
-              );
+              // 👀 Under emaStyle="bold" the diamonds are drawn in their own group AFTER the bold EMAs (below).
+              if (bold) return null;
+              return crossDiamond(m, mi, x, bar);
             }
             if (m.kind === 'sweep' || m.kind === 'bos' || m.kind === 'choch'
                 || m.kind === 'orb_up' || m.kind === 'orb_dn') {
@@ -773,8 +737,8 @@ export const PatternChart = memo(function PatternChart(
                           + (m.unsure ? ' pc-amd-raid-unsure' : '')}
                data-raid-mark={m.mark}>
               <title>{m.text}</title>
-              <circle cx={xFor(m.i, bars.length, W, padR)} cy={m.y} r={m.r} />
-              <text x={xFor(m.i, bars.length, W, padR)} y={m.y + 2.3} fontSize={6.5}
+              <circle cx={sx(m.i)} cy={m.y} r={m.r} />
+              <text x={sx(m.i)} y={m.y + 2.3} fontSize={6.5}
                     fontWeight={700} textAnchor="middle">{m.mark}</text>
             </g>
           ))}
@@ -822,17 +786,9 @@ export const PatternChart = memo(function PatternChart(
             * on a long frame, and joining across that gap would draw a
             * straight segment through a channel that did not exist yet. */}
           {(tile.curves || []).map((c, ci) => {
-            const segs: string[] = [];
-            let cur: string[] = [];
-            (c.values || []).forEach((v, i) => {
-              if (v == null || !Number.isFinite(v)) {
-                if (cur.length > 1) segs.push(cur.join(' '));
-                cur = [];
-                return;
-              }
-              cur.push(`${xFor(i, bars.length, W, padR)},${yFor(v, domain, H, PAD_Y)}`);
-            });
-            if (cur.length > 1) segs.push(cur.join(' '));
+            // 👀 bold 9 / 21 EMAs are drawn after the candles instead (below).
+            if (isBoldCurve(c)) return null;
+            const segs = curveSegs(c);
             return segs.map((pts, si) => (
               <polyline key={`cv-${ci}-${c.label}-${si}`} points={pts} fill="none"
                         stroke={toneColor(c.tone)} strokeWidth={1.1}
@@ -844,10 +800,9 @@ export const PatternChart = memo(function PatternChart(
           {/* extended-hours shading (live frame only) — down through the
               volume pane too, so a thin overnight column reads as overnight */}
           {extSpans.map((sp) => {
-            const x0 = xFor(sp.from, bars.length, W, padR) - bw / 2;
-            const x1 = xFor(sp.to, bars.length, W, padR) + bw / 2;
+            const { x0, x1 } = sp;
             return (
-              <rect key={`ext-${sp.from}`} className="pc-ext"
+              <rect key={`ext-${sp.from}`} className="pc-ext" data-shade={sp.kind}
                     x={x0} y={PAD_Y} width={Math.max(x1 - x0, 1)}
                     height={(hasVol ? pane.volBot : H - PAD_Y) - PAD_Y}
                     fill="var(--ink, #e7e7e7)" opacity={0.06} />
@@ -856,7 +811,7 @@ export const PatternChart = memo(function PatternChart(
 
           {/* candles */}
           {bars.map((b, i) => {
-            const x = xFor(i, bars.length, W, padR);
+            const x = sx(i);
             const up = b.c >= b.o;
             const col = up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)';
             const yo = yFor(b.o, domain, H, PAD_Y);
@@ -866,8 +821,8 @@ export const PatternChart = memo(function PatternChart(
                 <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
                       x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
                       stroke={col} strokeWidth={0.9} />
-                <rect x={x - Math.max(bw * 0.32, 0.8)} y={Math.min(yo, yc)}
-                      width={Math.max(bw * 0.64, 1.4)}
+                <rect x={x - (ta ? bw * 0.32 : Math.max(bw * 0.32, 0.8))} y={Math.min(yo, yc)}
+                      width={ta ? bw * 0.64 : Math.max(bw * 0.64, 1.4)}
                       height={Math.max(Math.abs(yo - yc), 0.9)} fill={col} />
               </g>
             );
@@ -917,6 +872,33 @@ export const PatternChart = memo(function PatternChart(
             );
           })()}
 
+          {/* 👀 BOLD 9 / 21 EMA (Gajjala's Watch, 2026-11-15; Ajay: "a brighter and thicker 21 EMA and 9 EMA"): the
+              replay's look — drawn OVER the candles, the 21 first and the 9 on top, 2 px at any tile size; then the
+              9 / 21 cross diamonds last, so a cross is never hidden under the lines. Only under emaStyle="bold". */}
+          {bold ? (
+            <g className="pc-ema-bold">
+              {(['ema21', 'ema9'] as const).flatMap((tone) => (tile.curves || [])
+                .map((c, ci) => ({ c, ci }))
+                .filter(({ c }) => c.tone === tone)
+                .flatMap(({ c, ci }) => curveSegs(c).map((pts, si) => (
+                  <polyline key={`cvb-${ci}-${tone}-${si}`} className={`pc-ema-bold-${tone}`}
+                            data-tone={tone} points={pts} fill="none"
+                            stroke={EMA_BOLD[tone].color} strokeWidth={EMA_BOLD[tone].width}
+                            vectorEffect="non-scaling-stroke" opacity={1} />
+                ))))}
+            </g>
+          ) : null}
+          {bold ? (
+            <g className="pc-ema-cross-layer">
+              {(tile.markers || []).map((m, mi) => {
+                if (!isCross(m)) return null;
+                const i = markerIndex(bars, m.date);
+                if (i < 0) return null;
+                return crossDiamond(m, mi, sx(i), bars[i]);
+              })}
+            </g>
+          ) : null}
+
           {/* pointers: a label pushed off its level points back to it
             * (Ajay 2026-09-08: "These overlap, can you use some pointers") */}
           {labels
@@ -939,7 +921,7 @@ export const PatternChart = memo(function PatternChart(
             // A first-of-window "Aug '25" centered on bar 0 would clip at the
             // left edge — keep every label inside the plot.
             <text key={`tk-${t.i}`}
-                  x={Math.max(xFor(t.i, bars.length, W, padR), t.label.length * 2.2)}
+                  x={Math.max(tickX(t.i), t.label.length * 2.2)}
                   y={SVG_H - 2}
                   fontSize="8.5" fill="var(--text-muted, #7c869b)"
                   textAnchor="middle">{t.label}</text>
@@ -956,8 +938,8 @@ export const PatternChart = memo(function PatternChart(
                     stroke="var(--text-muted, #94a3b8)" strokeWidth={0.7}
                     strokeDasharray="2,3" opacity={0.75} />
               {hIdx >= 0 ? (
-                <line x1={xFor(hIdx, bars.length, W, padR)} y1={PAD_Y}
-                      x2={xFor(hIdx, bars.length, W, padR)}
+                <line x1={sx(hIdx)} y1={PAD_Y}
+                      x2={sx(hIdx)}
                       y2={hasVol ? pane.volBot : H - PAD_Y}
                       stroke="var(--text-muted, #94a3b8)" strokeWidth={0.7}
                       strokeDasharray="2,3" opacity={0.6} />
@@ -1004,7 +986,116 @@ export const PatternChart = memo(function PatternChart(
               ) : null}
             </g>
           ) : null}
-        </svg>
+        </>
+  );
+
+  /* 👀 chartOnly (Gajjala's Watch, 2026-11-15; Ajay: "Not the SEPA"): the chart alone in a plain tile — never a router
+   * link, so no SEPA link anywhere; no head, no rungs, no footer, no ▸ more. */
+  if (chartOnly) {
+    return <div className="cm-tile cm-tile-chart-only"><svg {...svgProps}>{svgLayers}</svg></div>;
+  }
+
+  return (
+    <Link
+      to={withSource(tile.href, 'chart-maps', location.search)}
+      state={{ from: backTarget, label: 'Chart Maps' }}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      aria-label={`${tile.symbol} — open SEPA detail`}
+    >
+      <div className="cm-tile">
+        <div className="cm-tile-head">
+          <div className="cm-tile-id">
+            <b>{tile.symbol}</b>
+            {tile.name ? <span className="cm-tile-name">{tile.name}</span> : null}
+            {/* What the company IS: theme, growth, promo origin, the served
+                company facts. Never an entry read. */}
+            <div className="cm-tile-ident">
+              {theme ? <span className="cm-badge cm-badge-theme">{theme}</span> : null}
+              {/* 🚀 Explosive Growth (Ajay 2026-09-11: "I am hoping this new
+                  list will be considerd in all chart maps. Like in Deep demand
+                  scan"). Every tile board renders through this component, so one
+                  chip here lights up Back in Demand, Deep Demand, Quick Reversal,
+                  Breaking, VCP and the rest. ⛔ tone when the trading engine will
+                  refuse the name — good sales must not make it look clean. */}
+              {skip.has('growth') ? null : <GrowthChip symbol={tile.symbol} />}
+              {skip.has('promo') ? null : <PromoOriginChip symbol={tile.symbol} />}
+              {/* 🩳 short interest (Ajay 2026-10-03: "add this field to all our
+                  chart maps scan") — served chip text with its FINRA date. */}
+              {skip.has('short') ? null : <ShortInterestChip symbol={tile.symbol} />}
+              {ladder.ident.map(pill)}
+            </div>
+          </div>
+          <div className="cm-tile-actions">
+            {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
+              * every board; the Signals tab reads the same store. */}
+            {skip.has('watch') ? null : <SignalWatchButton symbol={tile.symbol} />}
+            {/* Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" /
+              * "To external ones please" — the external link-out is Yahoo's quote page (lib/yahooLink); the chart's
+              * timeframe is not carried (Yahoo has no interval parameter). */}
+            <button type="button" className="cm-tv"
+                    title={yahooTitle(tile.symbol)}
+                    aria-label={yahooTitle(tile.symbol)}
+                    onClick={(e) => openYahoo(e, tile.symbol)}>
+              {YAHOO_LABEL}
+            </button>
+          </div>
+        </div>
+
+        {entryHas || priceHas ? (
+          <div className="cm-rungs">
+            {/* ① ENTRY — can I enter? 🎯 first, then the served verdicts and
+                vetoes (warn → good → muted), then the zone pill ONLY when it
+                disagrees with the board's premise (amber, his call #4). */}
+            {entryHas ? (
+              <div className="cm-rung cm-rung-entry">
+                <span className="cm-rung-tag">ENTRY</span>
+                <div className="cm-rung-items">
+                  {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see
+                      the stocks that are enterable." Prop-fed off the tile,
+                      exactly like the 🧨 chip — nothing here decides the
+                      verdict. The n/a kind folds into READS. */}
+                  {ladder.enterableOnFace ? enterableChip : null}
+                  {ladder.entryNotes.map((n, i) => (
+                    <span key={`n-${i}-${n}`} className="cm-rung-note">{`\u00B7 ${n}`}</span>
+                  ))}
+                  {ladder.entry.map(pill)}
+                  {ladder.zone && ladder.zone.onFace ? zonePill : null}
+                </div>
+              </div>
+            ) : null}
+            {/* ② PRICE — where is it now? Position pills, the approach LINE in
+                its served tone, the ⚡ momentum burst, then tape and money. */}
+            {priceHas ? (
+              <div className="cm-rung cm-rung-price">
+                <span className="cm-rung-tag">PRICE</span>
+                <div className="cm-rung-items">
+                  {ladder.price.map(pill)}
+                  {/* 🔑 Key level (2026-09-25): the served chip, only while
+                      the price is through a level now or after it CLOSED
+                      through one. Display only — UNMEASURED. */}
+                  {ladder.keyLevel ? (
+                    <span className={`cm-badge cm-badge-${ladder.keyLevel.tone} cm-keylevel`}>
+                      {ladder.keyLevel.text}
+                    </span>
+                  ) : null}
+                  {ladder.approach ? (
+                    <span className={`cm-approach cm-approach-${ladder.approach.tone}`}>
+                      {ladder.approach.text}
+                    </span>
+                  ) : null}
+                  {/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide
+                      nothing"). Served per tile by chart_maps/board.attach_burst
+                      and handed down by the page only while its checkbox is
+                      ticked. Renders nothing unless the server said ⚡. UNMEASURED. */}
+                  <MomentumBurstChip read={burst} />
+                  {ladder.priceAfter.map(pill)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <svg {...svgProps}>{svgLayers}</svg>
 
         {setupHas || planHas || timingHas ? (
           <div className="cm-rungs">

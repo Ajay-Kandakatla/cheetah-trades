@@ -42,7 +42,9 @@ import pytest
 @pytest.fixture(autouse=True, scope="session")
 def _never_touch_a_real_database():
     import os
-    prior = {k: os.environ.get(k) for k in ("MONGO_URL", "MONGO_DB", "LUK_ENABLED", "GAJJALA_BAR_CLOSE_MODE")}
+    from chart_maps.gajjala_watch import constants as WC
+    prior = {k: os.environ.get(k) for k in ("MONGO_URL", "MONGO_DB", "LUK_ENABLED", "GAJJALA_BAR_CLOSE_MODE",
+                                            WC.ENV_ENABLED)}
     os.environ["MONGO_URL"] = "mongodb://mongo.disabled-in-tests.invalid:27017"
     os.environ["MONGO_DB"] = "cheetah_test_should_never_exist"
     # 🥇 2026-11-01 — Luk's kill switch ASSIGNED off for the whole session (never
@@ -54,6 +56,10 @@ def _never_touch_a_real_database():
     # chart_maps/gajjala/bar_close.mode(), never raise it): an unguarded RUN.main([]) test would otherwise spawn a REAL
     # detached bar-close child. Tests that exercise the mode monkeypatch.setenv / delenv it themselves. Restored on teardown.
     os.environ["GAJJALA_BAR_CLOSE_MODE"] = "off"
+    # 👀 2026-11-15 — the watch's minute loop ASSIGNED off for the session the same way (the Luk pattern): an unguarded
+    # RUN.main([]) test would otherwise spawn a REAL detached `chart_maps.gajjala_watch.loop --loop`. Tests that
+    # exercise the spawn monkeypatch.setenv it themselves. Restored on teardown.
+    os.environ[WC.ENV_ENABLED] = "0"
 
     try:
         import pymongo

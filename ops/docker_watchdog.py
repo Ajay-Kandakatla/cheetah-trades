@@ -157,6 +157,7 @@ CRON_DETACHED_CHILD_ARGS = frozenset({
     ("-m", "chart_maps.gajjala.run_1m", "--loop"),       # the 1-minute loop (2026-10-27)
     ("-m", "chart_maps.luk.run", "--child"),             # Luk's pass (2026-11-01)
     ("-m", "chart_maps.gajjala.run", "--at-bar-close"),  # the bar-close probe (2026-11-09)
+    ("-m", "chart_maps.gajjala_watch.loop", "--loop"),  # 👀 the watch loop (2026-11-15)
 })
 _BACKEND_NAME = "com.docker.backend"
 _UI_MARK = "/Docker Desktop.app/Contents/MacOS/Docker Desktop"

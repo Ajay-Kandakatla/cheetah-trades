@@ -1594,7 +1594,8 @@ PY = "/usr/local/bin/python"
 LOOP_1M = PY + " -m chart_maps.gajjala.run_1m --loop"
 LUK_CHILD = PY + " -m chart_maps.luk.run --child"
 BAR_CLOSE = PY + " -m chart_maps.gajjala.run --at-bar-close"
-CHILDREN = [LOOP_1M, LUK_CHILD, BAR_CLOSE]
+WATCH_LOOP = PY + " -m chart_maps.gajjala_watch.loop --loop"      # 👀 2026-11-15 — the watch's minute loop
+CHILDREN = [LOOP_1M, LUK_CHILD, BAR_CLOSE, WATCH_LOOP]
 GG_PASS = PY + " -m market_hours.gate chart_maps.gajjala.run"      # the pass itself IS a job
 HAND_RERUN = PY + " -m rotation.sector_news_tags"                 # a `docker exec` re-run IS a job
 HIBERNATE_DRIFT = 11018.0
@@ -1648,6 +1649,9 @@ def test_C36c_NEGATIVE_a_job_beside_the_children_still_waits_and_the_alert_names
     PY + " -m chart_maps.luk.run --child --now x",
     PY + " -m chart_maps.gajjala.run --at-bar-close --symbols IREN",
     PY + " -m chart_maps.gajjala.bar_close --at-bar-close",
+    PY + " -m chart_maps.gajjala_watch.loop --build",                 # 👀 the API's build child is a job
+    PY + " -m chart_maps.gajjala_watch.loop --loop --dry-run",        # an extra flag
+    PY + " -m chart_maps.gajjala_watch.loop",                         # a bare iteration
     "/bin/sh -c cd /app && python -m chart_maps.gajjala.run_1m --loop",  # a shell wrapper
     "sh -c python -m chart_maps.luk.run --child",
     "-m chart_maps.gajjala.run_1m --loop",                            # no interpreter
@@ -1692,14 +1696,17 @@ def test_C37b_NEGATIVE_children_only_never_bypasses_pause_off_gap_or_the_small_d
 
 def test_C38_the_exempt_argv_are_the_backends_own_spawn_constants():
     from chart_maps.gajjala import bar_close, run_1m
+    from chart_maps.gajjala_watch import constants as WC
     from chart_maps.luk import run as luk_run
     spawned = {tuple(run_1m.ARGV_LOOP[1:]), tuple(luk_run.ARGV_CHILD[1:]),
-               tuple(bar_close.ARGV_CHILD[1:])}
+               tuple(bar_close.ARGV_CHILD[1:]), tuple(WC.ARGV_LOOP[1:])}
     assert spawned == set(wd.CRON_DETACHED_CHILD_ARGS), "a renamed child must be re-pinned here"
-    assert len(wd.CRON_DETACHED_CHILD_ARGS) == 3
+    assert len(wd.CRON_DETACHED_CHILD_ARGS) == 4                    # RE-PINNED 2026-11-15: + 👀 the watch loop (C2.1)
     assert tuple(run_1m.ARGV_ON_DEMAND[1:]) not in wd.CRON_DETACHED_CHILD_ARGS, \
         "an on-open run is a pass, not a detached child"
-    for argv in (run_1m.ARGV_LOOP, luk_run.ARGV_CHILD, bar_close.ARGV_CHILD):
+    assert tuple(WC.ARGV_BUILD[1:]) not in wd.CRON_DETACHED_CHILD_ARGS, \
+        "the watch's build child runs in the api container — never exempt"
+    for argv in (run_1m.ARGV_LOOP, luk_run.ARGV_CHILD, bar_close.ARGV_CHILD, WC.ARGV_LOOP):
         assert os.path.basename(argv[0]).startswith("python"), argv   # sys.executable
         assert wd.cron_detached_child(" ".join(argv)) is True
     for s in CHILDREN:

@@ -1,0 +1,77 @@
+/* 👀 Gajjala's Watch (2026-11-15, gajjala-watch spec §3.8). Ajay: "I have a 27 inch monitor I wanna fit 3x3 tikers on
+ * watch at any given time on this tashboard" — three tiles a row above 1260 px, two from 641 px, one at 640 px and under.
+ * The dark panel is the replay video's (eod-audits/replays/replay_gif.py:576-581 PALETTE = lib/gajjalaWatch GGW_PANEL).
+ * 430 px (the phone gotcha): every tile / frame min-width:0, every chip and served line wraps. */
+
+/* The 1500 px Chart Maps cap is lifted on THIS tab only (a 2560 px monitor holds three ≈ 812 px tiles). */
+.cm-page.cm-page--wide { max-width: none; }
+
+.ggw-board { min-width: 0; max-width: 100%; }
+
+.ggw-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem;
+  margin: 0 0 0.6rem; min-width: 0;
+}
+.ggw-title { font-size: 0.95rem; margin: 0; color: var(--ink, #e7e7e7); white-space: normal; overflow-wrap: anywhere; }
+.ggw-add { display: inline-flex; gap: 0.35rem; align-items: center; min-width: 0; }
+.ggw-input {
+  width: 8.5rem; max-width: 100%; min-width: 0; text-transform: uppercase;
+  background: var(--bg-sunken, #0f1115); color: var(--ink, #e7e7e7);
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 6px; padding: 0.2rem 0.45rem; font-size: 0.8rem;
+}
+.ggw-input:disabled { opacity: 0.55; }
+.ggw-btn {
+  background: none; border: 1px solid var(--rule, #2a2f3a); color: var(--ink, #e7e7e7);
+  border-radius: 6px; padding: 0.15rem 0.5rem; font-size: 0.75rem; cursor: pointer; white-space: nowrap;
+}
+.ggw-btn:disabled { opacity: 0.5; cursor: default; }
+.ggw-line { font-size: 0.76rem; color: var(--text-muted, #8595ad); margin: 0; white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.ggw-warn { color: var(--warn, #e8a33d); }
+.ggw-legend { display: inline-flex; flex-wrap: wrap; gap: 0.6rem; font-size: 0.74rem; color: var(--text-muted, #8595ad); }
+.ggw-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; white-space: normal; }
+.ggw-swatch { display: inline-block; width: 1.4rem; height: 2px; border-radius: 1px; }
+.ggw-info { font-size: 0.76rem; min-width: 0; max-width: 100%; }
+.ggw-info > summary { cursor: pointer; list-style: none; }
+.ggw-info[open] { flex-basis: 100%; }
+.ggw-info > p { margin: 0.25rem 0; }
+
+/* The grid: 3 columns on his 27-inch monitor, 2 on a laptop / tablet, 1 on a phone. */
+.ggw-grid { display: grid; gap: 13px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1260px) { .ggw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .ggw-grid { grid-template-columns: 1fr; } }
+
+.ggw-tile, .ggw-frame { min-width: 0; max-width: 100%; }
+.ggw-tile {
+  border: 1px solid var(--rule, #2a2f3a); border-radius: 10px; padding: 9px 11px 10px;
+  background: var(--cm-card, #161a22);
+}
+.ggw-tile-focus { outline: 2px solid var(--accent, #c2ef50); outline-offset: 2px; animation: ggw-focus 2.4s ease-out 1 forwards; }
+@keyframes ggw-focus { 0% { outline-color: var(--accent, #c2ef50); } 100% { outline-color: transparent; } }
+.ggw-tile-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.45rem; min-height: 24px; min-width: 0; }
+.ggw-sym { font-size: 0.95rem; color: var(--ink, #e7e7e7); }
+.ggw-chip {
+  font-size: 0.7rem; border: 1px solid var(--rule, #2a2f3a); border-radius: 999px; padding: 0 0.45rem;
+  color: var(--text-muted, #8595ad); white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+}
+.ggw-rang { color: var(--positive, #22c55e); }
+.ggw-held { color: var(--warn, #e8a33d); }
+.ggw-actions { margin-left: auto; display: inline-flex; gap: 0.3rem; }
+
+/* The replay's dark panel (C4.9: --cm-card too, so the chart-only tile paints the replay bg). */
+.ggw-dark {
+  --surface: rgb(13, 17, 23); --bg-raised: rgb(13, 17, 23); --bg-sunken: rgb(13, 17, 23); --cm-card: rgb(13, 17, 23);
+  --rule: rgb(38, 43, 52); --ink: rgb(225, 228, 232); --text-muted: rgb(135, 142, 152);
+  --positive: rgb(38, 186, 104); --negative: rgb(235, 72, 72);
+  background: rgb(13, 17, 23); border-radius: 8px; color: rgb(225, 228, 232);
+}
+.ggw-charts { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; min-width: 0; }
+.ggw-frame-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+@media (max-width: 640px) { .ggw-frame-pair { grid-template-columns: 1fr; } }
+.ggw-frame { margin: 0; }
+.ggw-frame .cm-tile-chart-only { padding: 0; border: 0; border-radius: 0; background: var(--cm-card, rgb(13, 17, 23)); }
+.ggw-frame .cm-tile-chart-only:hover { border-color: transparent; }
+.ggw-cap {
+  display: flex; flex-wrap: wrap; gap: 0.2rem 0.4rem; align-items: center; min-height: 14px;
+  font-size: 0.68rem; line-height: 14px; color: var(--text-muted, #8795a0); padding: 0 4px;
+  white-space: normal; overflow-wrap: anywhere; min-width: 0;
+}

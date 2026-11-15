@@ -78,6 +78,8 @@ import NewsTabBoard from '../components/NewsTabBoard';
 import GajjalaBoard from '../components/GajjalaBoard';
 import LukBoard from '../components/LukBoard';
 import LongTermBoard from '../components/LongTermBoard';
+import GajjalaWatchBoard from '../components/GajjalaWatchBoard';
+import { useCurrentUser } from '../hooks/useUser';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
@@ -208,9 +210,16 @@ export function ChartMaps() {
   // FeatureRoute around this page has already waited for it in practice).
   const feats = useMyFeatures();
   const canCatalysts = !feats.loaded || feats.features.has('catalysts');
-  const tabs = canCatalysts ? CM_TABS : CM_TABS.filter((t) => t !== 'catalysts');
+  const tabsByFeature = canCatalysts ? CM_TABS : CM_TABS.filter((t) => t !== 'catalysts');
+  // 👀 Gajjala's Watch (2026-11-15) is the primary owner's own list — the server answers anyone else `owner_only`, and
+  // the tab is not offered to a loaded non-owner (the catalysts shape; spec C4.8). Permissive while /auth/me loads, so
+  // his push deep link (?tab=gajjala_watch&focus=SYM) never bounces to the first tab.
+  const { user: me, loading: meLoading } = useCurrentUser();
+  const canWatch = meLoading || !!me?.is_primary_admin;
+  const tabs = canWatch ? tabsByFeature : tabsByFeature.filter((t) => t !== 'gajjala_watch');
   const rawTab = parseTab(params.get('tab'));
-  const tab = rawTab === 'catalysts' && !canCatalysts ? parseTab(null) : rawTab;
+  const tab = (rawTab === 'catalysts' && !canCatalysts) || (rawTab === 'gajjala_watch' && !canWatch)
+    ? parseTab(null) : rawTab;
   /* 📌 Pinned tab strip + "lands where he was" (Ajay 2026-09-28: "Pin the tab
    * I am in, as I navigate back and fort lost where I am"). lib/cmPinnedTab.ts
    * owns the rules; docs/chart_maps/pinned_tab_strip_2026_09_28.md. */
@@ -1120,7 +1129,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const ictSrc = useMemo(() => ictSource(data?.source), [data?.source]);
 
   return (
-    <div className="cm-page" ref={pageRef}>
+    <div className={tab === 'gajjala_watch' ? 'cm-page cm-page--wide' : 'cm-page'} ref={pageRef}>
       <div className="cm-head">
         <h1 className="cm-title">
           🗺️ Chart Maps
@@ -1697,6 +1706,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            state kept and no on-open POST for this page. Must sit BEFORE the
            SupportLevels fallback below. */
         <GajjalaBoard key="gajjala_1m" variant="gajjala_1m" />
+      ) : tab === 'gajjala_watch' ? (
+        /* 👀 Gajjala's Watch (Ajay 2026-11-15: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be
+           able to remove and add remove tickers from the dashboard. When I add a ticker I need 1 min 3 min and 5 min
+           charts... Not the SEPA"). His own tickers on its own owner-only endpoint (GET /chart-maps/gajjala-watch),
+           filled by the watch's minute loop; the page is wide on this tab only (3×3 on his 27-inch
+           monitor). Must sit BEFORE the SupportLevels fallback below. */
+        <GajjalaWatchBoard />
       ) : tab === 'gajjala_audited' ? (
         /* 🧪 Gajjala · Audited (Ajay 2026-11-01: "I would like you to create a
            new tab for Gajjals when you modifiy with audit of End of day.."

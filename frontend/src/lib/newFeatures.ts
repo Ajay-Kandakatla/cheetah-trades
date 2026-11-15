@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add
+  // remove tickers from the dashboard." + "I need 1 min 3 min and 5 min charts... Not the SEPA" + "brighter and thicker 21 EMA and
+  // 9 EMA" + "I need alerts on these from 1 min" + "I wanna fit 3x3 tikers" + "Any chart I view ... from 4 AM ... right side with gaps".
+  // backend/chart_maps/gajjala_watch/ (owner list, detached minute loop, ONE cross engine ema_cross.py, 1-min up-cross push once per
+  // ticker/session riding gajjala_potential). Owner-only tab. UNMEASURED. Docs docs/gajjala/watch_*_2026_11_15.md.
+  {
+    id: 'chart-maps-gajjala-watch-2026-11-15',
+    label: '👀 Gajjala\'s Watch — you said: “I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add remove tickers from the dashboard.” Add or remove up to 12 tickers; 9 tiles fit 3×3 on your big screen. Each tile shows the 1-min chart on top and the 3-min and 5-min below, from 4 AM with room on the right to the close, with a thick gold 9 EMA and violet 21 EMA. Your phone rings once per ticker per day when the 1-min 9 EMA crosses above the 21 EMA. Not the SEPA chart. UNMEASURED. Not advice.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-15, verbatim: "I like how you put the 9 EMA and 21 ema cross over for OMH can you add an alert in horizonal
   // fade when that happens?" + "For any stocks that crossing over and add the same feedback in to that horizontal fade charts".
   // backend/chart_maps/gajjala/ema_cross.py = ONE cross engine (closed bars only); tab.py marks every cross on ➖ Fade cards;

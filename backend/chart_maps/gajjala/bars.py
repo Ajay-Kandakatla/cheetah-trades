@@ -34,6 +34,9 @@ log = logging.getLogger("chart_maps.gajjala.bars")
 RULES = {"5m": "5min", "15m": "15min"}
 # 2026-10-27 (BUILD_SPEC27 §3.3): every frame label any variant builds → its pandas rule; RULES above stays GG5's pair
 RULE_OF = {"1m": "1min", "5m": "5min", "15m": "15min"}
+# 2026-11-15 (Ajay "When I add a ticker I need 1 min 3 min and 5 min charts"): the 3-minute frame, display + the owner's
+# watch only — no variant builds it, alerts.FRAME_MINUTES is NOT given it (a 3-minute frame never rings)
+RULE_OF["3m"] = "3min"
 EMA_TONES = (("ema9", "9 EMA", GC.EMA_FAST), ("ema21", "21 EMA", GC.EMA_SLOW))
 
 
@@ -214,9 +217,12 @@ def _minutes_by_bucket(raw: pd.DataFrame, frame: Frame, rule: str) -> dict:
     return out
 
 
-def build_frames(symbol: str, session, now, raw_prev, raw_today, *, variant=None) -> Optional[Frames]:
+def build_frames(symbol: str, session, now, raw_prev, raw_today, *, variant=None,
+                 rules: Optional[tuple] = None) -> Optional[Frames]:
     """Frames from the two raw 1-minute days, one per rule of the variant (GG5 5m + 15m; GG1 1m + 5m — 2026-10-27);
-    None when the PRIMARY frame has no bar today yet (nothing to read)."""
+    None when the PRIMARY frame has no bar today yet (nothing to read). `rules` (2026-11-15, additive): an explicit
+    ((tf, pandas rule), …) built instead of the variant's — primary = the FIRST tf, slow = the LAST; None = the
+    variant's rules exactly as before (every GG byte unchanged)."""
     from supply_demand.timeframes import resample_ohlcv
     session_iso = session.isoformat() if isinstance(session, (date, datetime)) else str(session)
     if raw_today is None or len(raw_today) == 0:
@@ -225,30 +231,37 @@ def build_frames(symbol: str, session, now, raw_prev, raw_today, *, variant=None
     raw = pd.concat(parts).sort_index()
     raw = raw[~raw.index.duplicated(keep="last")]
     v = V.of(variant)
+    rule_list = tuple(rules) if rules is not None else v.rules
+    primary = rule_list[0][0] if rules is not None else v.primary
+    slow = rule_list[-1][0] if rules is not None else v.slow
     out = {}
-    for tf, rule in v.rules:
+    for tf, rule in rule_list:
         res = resample_ohlcv(raw, rule)
         closed = closed_only(res, now) if res is not None else None
         if closed is None or closed.empty:
             closed = pd.DataFrame(columns=["open", "high", "low", "close", "volume"],
                                   index=pd.DatetimeIndex([]))
         out[tf] = build_frame(closed, session_iso, rule)
-    if not len(out[v.primary].today):
+    if not len(out[primary].today):
         return None
-    for tf, rule in v.rules:
+    for tf, rule in rule_list:
         out[tf].minutes = _minutes_by_bucket(raw, out[tf], rule)
-    return Frames(symbol, session_iso, out, raw, primary=v.primary, slow=v.slow)
+    return Frames(symbol, session_iso, out, raw, primary=primary, slow=slow)
 
 
 def frames_for(symbols, session, now, *, load_day: Optional[Callable] = None, workers: int = board.BAR_WORKERS,
-               budget_sec: float = GC.PASS_BUDGET_SEC, stats: Optional[dict] = None, variant=None) -> dict:
+               budget_sec: float = GC.PASS_BUDGET_SEC, stats: Optional[dict] = None, variant=None,
+               rules: Optional[tuple] = None, per_name: Optional[dict] = None) -> dict:
     """{SYM: Frames} for the listed names. The prior market day comes from the 1-minute cache; today is fetched
     with `force=True` (never cached — the loader's ET "today"). A name that raises, has no bar today, or would
     start after `budget_sec` is skipped; `stats` (filled in place) counts each: loaded / no_bars / failed /
     over_budget. A None that came from a PROVIDER failure (the 429 cap, the breaker open, non-200 —
     `dt_data.last_fetch_failed`) counts as failed, never as "no bar today". The loader is asked in Massive's
     spelling (`symbols.for_massive`: MOG-A → MOG.A — Massive returns nothing for the dash form); the dict key stays
-    the listed (dash) symbol. `variant` (2026-10-27) picks the frames build_frames makes (None = GG5)."""
+    the listed (dash) symbol. `variant` (2026-10-27) picks the frames build_frames makes (None = GG5).
+    2026-11-15 (additive): `rules` is handed to build_frames as is (None = the variant's); `per_name`, when a dict, is
+    filled {SYM: {"status": loaded | no_bars | failed | over_budget, "prev": the prior session loaded ≥ 1 bar}} —
+    `stats` keys and counts are unchanged either way."""
     from daytrading import data as dt_data
     from catalysts.medical.reaction import prev_market_day
     from sepa.symbols import for_massive
@@ -262,30 +275,34 @@ def frames_for(symbols, session, now, *, load_day: Optional[Callable] = None, wo
 
     def one(sym: str):
         if time.monotonic() > deadline:
-            return sym, None, "over_budget"
+            return sym, None, "over_budget", False
+        prev_ok = False
         try:
             msym = for_massive(sym)
             dt_data.clear_fetch_failed()
             raw_prev = load(msym, prev, include_premarket=True, include_afterhours=True)
+            prev_ok = raw_prev is not None and len(raw_prev) > 0
             failed = raw_prev is None and dt_data.last_fetch_failed()
             dt_data.clear_fetch_failed()
             raw_today = load(msym, d, force=True, include_premarket=True, include_afterhours=True)
             failed = failed or (raw_today is None and dt_data.last_fetch_failed())
-            fr = build_frames(sym, d, now, raw_prev, raw_today, variant=variant)
+            fr = build_frames(sym, d, now, raw_prev, raw_today, variant=variant, rules=rules)
             if fr is None:
-                return sym, None, ("failed" if failed else "no_bars")
-            return sym, fr, "loaded"
+                return sym, None, ("failed" if failed else "no_bars"), prev_ok
+            return sym, fr, "loaded", prev_ok
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala bars %s failed: %s", sym, exc)
-            return sym, None, "failed"
+            return sym, None, "failed", prev_ok
 
     syms = [s for s in dict.fromkeys(symbols or []) if s]
     out: dict = {}
     if not syms:
         return out
     with ThreadPoolExecutor(max_workers=max(1, min(int(workers), len(syms)))) as ex:
-        for sym, fr, status in ex.map(one, syms):
+        for sym, fr, status, prev_ok in ex.map(one, syms):
             st[status] += 1
+            if isinstance(per_name, dict):
+                per_name[sym] = {"status": status, "prev": bool(prev_ok)}
             if fr is not None:
                 out[sym] = fr
     return out

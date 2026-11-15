@@ -25,6 +25,11 @@ const FEATS = vi.hoisted(() => ({ loaded: true, set: new Set(['chart-maps', 'cat
 vi.mock('../hooks/useMyFeatures', () => ({
   useMyFeatures: () => ({ loaded: FEATS.loaded, features: FEATS.set, catalog: [], email: null }),
 }));
+// WIDENED 2026-11-15 — 👀 gajjala_watch is offered to the primary owner only (gajjala-watch spec C4.8); this page runs
+// as the owner so the DOM strip still equals CM_TABS.
+vi.mock('../hooks/useUser', () => ({
+  useCurrentUser: () => ({ user: { is_primary_admin: true }, loading: false }),
+}));
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
   t: `2026-08-${String(i + 1).padStart(2, '0')}`,

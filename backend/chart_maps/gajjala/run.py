@@ -790,6 +790,26 @@ def _spawn_luk() -> None:
         log.warning("luk pass: spawn step failed: %s", type(exc).__name__)
 
 
+def _spawn_watch() -> None:
+    """👀 Gajjala's Watch (2026-11-15 — Ajay "I need dashboard to add tickers to Gajjalas watch dashboard … I need alerts
+    on these from 1 min"): at the START of the CRON path (before the store, the lease and run_pass — the minute loop's
+    iteration 0 must read the bar that closed at the tick), SPAWN the watch's minute loop as a DETACHED child and go on
+    at once — never in-process (the run_1m rule). No Mongo or provider read here: the loop reads the owner's list
+    itself. Only when the watch is on (its constant and env switch). Fenced: one log line, never raises, never changes
+    the exit code. Not on --dry-run / --now / --on-demand / --symbols / --at-bar-close."""
+    try:
+        from chart_maps.gajjala_watch import colls as WCO
+        from chart_maps.gajjala_watch import constants as WC
+        from . import run_1m as R1
+        if not WCO.enabled():
+            log.info("gajjala watch: off — not spawned")
+            return
+        proc = R1._popen(list(WC.ARGV_LOOP), WC.PROC_NAME_LOOP)
+        log.info("gajjala watch: spawned (pid %s)", getattr(proc, "pid", None))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch: spawn step failed: %s", type(exc).__name__)
+
+
 def dry_deps() -> Deps:
     """Every writer and sender a recorder (the store side is `dry_store`)."""
     sent: list = []
@@ -865,6 +885,8 @@ def main(argv=None) -> int:
     if args.now and not args.dry_run and not args.on_demand:
         log.warning("gajjala pass: a --now replay rings the real sender unless --dry-run; refusing")
         return 2
+    if not args.dry_run and not args.on_demand and not syms and not args.now:
+        _spawn_watch()                                          # 👀 the watch's minute loop (2026-11-15): cron path, at the START
     if args.dry_run:
         if args.on_demand:
             out = run_on_demand(now, store=dry_store(), deps=dry_deps())

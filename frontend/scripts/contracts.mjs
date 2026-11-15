@@ -1645,6 +1645,8 @@ const CONTRACTS = [
         luk: 'src/components/LukBoard.tsx',
         // 2026-11-12: 📅 Long Term inserted — its own board component; the house chips sit on every SAVED row.
         long_term: 'src/components/LongTermBoard.tsx',
+        // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
+        gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
       };
       /* A tab whose rows are not TICKERS has nothing for the chip to read.
        * Exempt only in writing, the NO_TOGGLE way below: the file must SAY so,
@@ -1652,7 +1654,12 @@ const CONTRACTS = [
        *   news (2026-09-24) — its rows are sectors, macro releases and
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
-      const NO_CHIP = { news: /no ticker rows on this tab/ };
+      const NO_CHIP = {
+        news: /no ticker rows on this tab/,
+        // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
+        // chips on the tiles instead = HIS CALL.
+        gajjala_watch: /No house chips on this tab/,
+      };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
@@ -2243,11 +2250,18 @@ const CONTRACTS = [
         luk: 'src/components/LukBoard.tsx',
         // 2026-11-12: 📅 Long Term inserted — its own board component; the house chips sit on every SAVED row.
         long_term: 'src/components/LongTermBoard.tsx',
+        // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
+        gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
       };
       /* Same written-exemption rule as the growth contract: a tab with no
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
-      const NO_CHIP = { news: /no ticker rows on this tab/ };
+      const NO_CHIP = {
+        news: /no ticker rows on this tab/,
+        // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
+        // chips on the tiles instead = HIS CALL.
+        gajjala_watch: /No house chips on this tab/,
+      };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
@@ -2319,6 +2333,9 @@ const CONTRACTS = [
         //   long_term (2026-11-12: 📅 Long Term inserted) — his saved list from 11-12 is drawn in its saved (seed) order,
         //           as served; a 🧨 ordering would re-rank the list he saved. The 🧨 read is a chip on each saved row.
         long_term: /his saved list keeps its saved order/,
+        //   gajjala_watch (2026-11-15: 👀 Gajjala's Watch inserted) — his list order (the order he added the names in, as
+        //           served) orders this board; the tiles carry no 🧨 chip (NO_CHIP above).
+        gajjala_watch: /his\s+\*?\s*list order orders this board/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -5970,8 +5987,8 @@ const CONTRACTS = [
         // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 — 🕯️ took the slot between 🚩 and 〰️.
         // 2026-10-27: 🚩 1-minute page inserted — gajjala_1m follows gajjala, doji_sweep follows gajjala_1m.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — the four-way chain gajjala → gajjala_audited → gajjala_1m → doji_sweep (→ ema_frames).
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted right after the 1-minute page — gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep (→ ema_frames).
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'luk' must follow 'gajjala_1m', 'doji_sweep' must follow 'luk' and 'ema_frames' must follow 'doji_sweep'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted right after the 1-minute page — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep (→ ema_frames).
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'gajjala_watch' must follow 'gajjala_1m', 'luk' must follow 'gajjala_watch', 'doji_sweep' must follow 'luk' and 'ema_frames' must follow 'doji_sweep'");
       }
       if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
       if (/\n  gajjala: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry gajjala (🎯 n/a, the 📉 / 🔻 precedent)');
@@ -6776,10 +6793,17 @@ const CONTRACTS = [
         luk: 'src/components/LukBoard.tsx',
         // 2026-11-12: 📅 Long Term inserted — its own board component; the house chips sit on every SAVED row.
         long_term: 'src/components/LongTermBoard.tsx',
+        // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
+        gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
       };
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
-      const NO_CHIP = { news: /no ticker rows on this tab/ };
+      const NO_CHIP = {
+        news: /no ticker rows on this tab/,
+        // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
+        // chips on the tiles instead = HIS CALL.
+        gajjala_watch: /No house chips on this tab/,
+      };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
@@ -8078,8 +8102,8 @@ const CONTRACTS = [
         if (tabs.filter((t) => t === 'doji_sweep').length !== 1) errs.push("CM_TABS lists 'doji_sweep' more than once");
         // 2026-10-27: 🚩 1-minute page inserted — doji_sweep follows gajjala_1m, gajjala_1m follows gajjala.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m → doji_sweep.
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep.
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'luk', 'luk' right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep.
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'luk', 'luk' right after 'gajjala_watch', 'gajjala_watch' right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
         if (tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'ema_frames' must sit right after 'doji_sweep'");
       }
       if (/\n  doji_sweep: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry doji_sweep (🎯 n/a)');
@@ -12866,7 +12890,7 @@ const CONTRACTS = [
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m.
         if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1) errs.push("CM_TABS: 'gajjala_1m' must sit right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
         // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — luk right after gajjala_1m, doji_sweep right after luk.
-        if (tabs.indexOf('luk') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_1m', and 'doji_sweep' right after 'luk'");
+        if (tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'gajjala_watch' must sit right after 'gajjala_1m', 'luk' right after 'gajjala_watch', and 'doji_sweep' right after 'luk'");
       }
       if (!/&& t !== 'gajjala_1m'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_1m' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_1m'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_1m'");
@@ -13807,8 +13831,8 @@ const CONTRACTS = [
       else {
         if (tabs.filter((t) => t === 'gajjala_audited').length !== 1) errs.push("CM_TABS lists 'gajjala_audited' more than once");
         const at = (t) => tabs.indexOf(t);
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — the chain gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep.
-        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('luk') !== at('gajjala_1m') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → luk → doji_sweep");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — the chain gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep.
+        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('gajjala_watch') !== at('gajjala_1m') + 1 || at('luk') !== at('gajjala_watch') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep");
       }
       if (!/&& t !== 'gajjala_audited'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_audited' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_audited'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_audited'");
@@ -14146,7 +14170,7 @@ const CONTRACTS = [
       else {
         if (tabs.filter((t) => t === 'luk').length !== 1) errs.push("CM_TABS lists 'luk' more than once");
         const at = (t) => tabs.indexOf(t);
-        if (at('luk') !== at('gajjala_1m') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_1m' and right before 'doji_sweep'");
+        if (at('gajjala_watch') !== at('gajjala_1m') + 1 || at('luk') !== at('gajjala_watch') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_watch' (itself right after 'gajjala_1m') and right before 'doji_sweep'");
       }
       if (!/&& t !== 'luk'/.test(cm)) errs.push("isBoardTab must return false for 'luk' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'luk'/.test(cm)) errs.push("the CmTab union must carry 'luk'");
@@ -17115,7 +17139,8 @@ const CONTRACTS = [
         const allIds = [...nf.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
         // WIDENED +1 (2026-11-15: 🌫️ chart-maps-gajjala-day-read-2026-11-15 FIRST — Ajay: "yes" to the choppy-day label).
         // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
-        if (!allIds.slice(0, 3).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 3 of NEW_FEATURES (found ${allIds.slice(0, 4).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-15: 👀 chart-maps-gajjala-watch-2026-11-15 FIRST — Ajay: the Gajjala Watch dashboard).
+        if (!allIds.slice(0, 4).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 4 of NEW_FEATURES (found ${allIds.slice(0, 5).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

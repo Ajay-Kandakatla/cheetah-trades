@@ -17,7 +17,9 @@ describe('🧪 Gajjala · Audited — tab slot (2026-11-01)', () => {
     expect(CM_TABS.indexOf('gajjala_audited')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala_audited') + 1);
     // WIDENED 2026-11-01 — 🥇 luk right after gajjala_1m, before doji_sweep (luk spec §3.13, critique C4)
-    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    // WIDENED 2026-11-15 — 👀 gajjala_watch between gajjala_1m and luk (gajjala-watch spec §3.8)
+    expect(CM_TABS.indexOf('gajjala_watch')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
     expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
     expect(parseTab('gajjala_audited')).toBe('gajjala_audited');
     // NEGATIVE: the hyphenated endpoint spelling and his own spelling are not tab ids

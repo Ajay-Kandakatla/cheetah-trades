@@ -33,7 +33,7 @@ import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
 import { LUK_CAT_PARAM, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'luk' | 'doji_sweep' | 'long_term';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'gajjala_watch' | 'luk' | 'doji_sweep' | 'long_term';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -153,6 +153,13 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // counts it from the first open. Label and slot are his call (BUILD_SPEC27
   // §7 #10).
   'gajjala_1m',
+  // 👀 Gajjala's Watch (Ajay 2026-11-15: "I need dashboard to add tickers to
+  // Gajjalas watch dashboard. I wanna be able to remove and add remove tickers
+  // from the dashboard."). Right after 🚩 Gajjala's 1-min, before 🥇 Luk's —
+  // TAB ORDER IS EARNED; tabUsageKey counts it from the first open. Owner only
+  // (pages/ChartMaps filters it for a loaded non-owner). Label and slot are his
+  // call (gajjala-watch spec §7 #9).
+  'gajjala_watch',
   // 🥇 Luk's (Ajay 2026-11-01: "look at other winners of US stocks champion
   // ship and pic the next best one like Gajjala. Implement their strategy
   // please if they have online resources." … "I need something like Gajjlala
@@ -377,7 +384,12 @@ export function isBoardTab(t: CmTab): boolean {
     // GET /chart-maps/long-term: his saved list re-read weekly by the server
     // (owner only). Not a universe pass, so the board loader and its controls
     // are skipped and LongTermBoard draws it.
-    && t !== 'long_term';
+    && t !== 'long_term'
+    // 👀 Gajjala's Watch (2026-11-15) — its own owner-only endpoint,
+    // GET /chart-maps/gajjala-watch: his own tickers on 1- / 3- / 5-minute bars,
+    // filled by the watch's minute loop. Not a universe pass, so the board
+    // loader and its controls are skipped and GajjalaWatchBoard draws it.
+    && t !== 'gajjala_watch';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -465,6 +477,13 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   long_term: {
     label: '\u{1F4C5} Long Term',
     blurb: '\u{1F4C5} Your saved long-term lists, re-read every week from the other tabs\u2019 own data: what dropped out of its stage or its sales tier, what started moving, and each list\u2019s new names this week. Ajay: "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet.." Shown to the account owner only. UNMEASURED \u2014 none of these lists is a buy signal. Not advice.',
+  },
+  // 👀 Gajjala's Watch (Ajay 2026-11-15, gajjala-watch spec §3.8). Every word and number on the BOARD is served by
+  // backend chart_maps/gajjala_watch/payload.py; this blurb carries his ask verbatim and no rule number. Label =
+  // backend chart_maps/gajjala_watch/constants.TAB_LABEL (contracts). Owner only. UNMEASURED.
+  gajjala_watch: {
+    label: "\u{1F440} Gajjala's Watch",
+    blurb: '\u{1F440} Your own tickers on 1-, 3- and 5-minute charts with a bold 9 and 21 EMA, every 9 / 21 cross marked. Ajay 2026-11-15: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add remove tickers from the dashboard. When I add a ticker I need 1 min 3 min and 5 min charts... Not the SEPA and I need clear distinction or may be a brighter and thicker 21 EMA and 9 EMA, from the videos I notice that when ever 9 EMA crosses over 21 EMA on uptrend is where the bullish momentum started I need alerts on these from 1 min to I can be ready... I think the cross over is slow but once it picks up its very rapid.." Shown to the account owner only. UNMEASURED \u2014 a cross is information, not an entry. Not advice.',
   },
   luk: {
     label: '\u{1F947} Luk\'s',
@@ -2666,6 +2685,36 @@ export function yFor(price: number, d: Domain, height: number, padY = 8): number
   const span = d.hi - d.lo || 1e-9;
   const t = (price - d.lo) / span;
   return padY + (1 - t) * (height - 2 * padY);
+}
+
+/** 👀 The 9 / 21 EMA in the replay's colours (Gajjala's Watch, 2026-11-15; Ajay: "I need clear distinction or may be
+ *  a brighter and thicker 21 EMA and 9 EMA"). 9 EMA yellow, 21 EMA purple, both 2 px — the palette of
+ *  eod-audits/replays/replay_gif.py:579 and the line width of replay_video.py:258-260. Drawn by PatternChart only under
+ *  `emaStyle="bold"`; every other chart keeps toneColor. */
+export const EMA_BOLD = {
+  ema9: { color: '#FACC15', width: 2 },
+  ema21: { color: '#BE78FF', width: 2 },
+} as const;
+
+/** 👀 A served time axis (Gajjala's Watch, chart_maps/gajjala_watch/build.axis): `slots` minute-grid slots from 04:00
+ *  ET to the close, `x[i]` = the slot of served bar i, `shade` = pre-market / after-hours slot spans [from, to), `ticks`
+ *  = hourly labels. Display only — the server computes every slot. */
+export type CmAxis = {
+  slots: number;
+  x: number[];
+  shade?: { from_slot: number; to_slot: number; kind?: string }[] | null;
+  ticks?: { slot: number; label: string }[] | null;
+};
+
+/** The served bar nearest a slot (hover snaps to a printed bar, never to an empty slot). -1 with no bars. */
+export function nearestAxisBar(slot: number, xs: ReadonlyArray<number>): number {
+  let best = -1;
+  let gap = Infinity;
+  for (let i = 0; i < xs.length; i += 1) {
+    const d = Math.abs(xs[i] - slot);
+    if (d < gap) { gap = d; best = i; }
+  }
+  return best;
 }
 
 /** Index → SVG x for the centre of bar `i`. */

@@ -143,4 +143,6 @@ export const BURST_EXEMPT: Record<string, string> = {
   luk: 'his setup state orders this board (A+ \u2192 triggered \u2192 forming \u2192 listed); the \u26A1 burst is a daily-volume read',
   // 📅 Long Term (2026-11-12, long-term spec §3.13): his saved list in its saved order; nothing re-orders it.
   long_term: 'his saved list keeps its saved order \u2014 the \u26A1 burst is a daily-volume read',
+  // 👀 Gajjala's Watch (2026-11-15, gajjala-watch spec §3.8): his own tickers in the order he added them.
+  gajjala_watch: 'your own tickers in your order \u2014 never ranked',
 };

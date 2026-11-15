@@ -1232,6 +1232,21 @@ def _gg_fade_cross_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_cross_clause() -> str:
+    """👀 2026-11-15 (Ajay "I need dashboard to add tickers to Gajjalas watch dashboard … from the videos I notice that
+    when ever 9 EMA crosses over 21 EMA on uptrend is where the bullish momentum started I need alerts on these from 1
+    min") — the section note's ONE clause on the watch's cross push (frames from its constants), built by
+    chart_maps.gajjala_watch.cross_alerts.rules_line() (every number a constant, the mode read at call time — never typed
+    here): " " + the line, or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala_watch import cross_alerts as GWX
+        line = GWX.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch cross clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1427,6 +1442,7 @@ def _gajjala_section() -> dict:
                  + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
                  + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
                  + _gg_fade_cross_clause()                 # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross (marks + push)
+                 + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

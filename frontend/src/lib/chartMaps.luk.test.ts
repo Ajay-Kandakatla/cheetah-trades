@@ -13,7 +13,9 @@ const ASK = ['look at other winners of US stocks champion ship and pic the next 
 describe('🥇 Luk\'s — tab slot', () => {
   it('sits once, right after gajjala_1m and right before doji_sweep', () => {
     expect(CM_TABS.filter((t) => t === 'luk')).toHaveLength(1);
-    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
+    // WIDENED 2026-11-15 — 👀 gajjala_watch sits between gajjala_1m and luk (gajjala-watch spec §3.8)
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    expect(CM_TABS.indexOf('gajjala_watch')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
     expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
     expect(parseTab('luk')).toBe('luk');
     expect(parseTab(' LUK ')).toBe('luk');
