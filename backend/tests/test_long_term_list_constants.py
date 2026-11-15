@@ -31,6 +31,11 @@ def test_app_numbers_are_imported_not_retyped():
     assert C.BENCHMARK == RB.BENCHMARK and C.BENCHMARK_ALT == RB.BENCHMARK_ALT
     assert C.STAGE_DROP_PAIRS == ((2, 3), (2, 4))
     assert C.STAGE_DROP_TO == (3, 4)
+    # 2026-11-14 (ltenter spec §3.1): 🎯 Enterable (zones) proximity = his demand-alert gate, imported by name.
+    from supply_demand import alert_gates as AG
+    from catalysts import gabbar_levels as GL
+    assert C.ENTERABLE_ABOVE_PCT is AG.ALERT_MAX_ABOVE_DEMAND_PCT
+    assert C.GABBAR_SNAPSHOT_DATE == GL.BAND_ATTRIBUTION["snapshot_date"]
 
 
 def test_held_switches_default_off():

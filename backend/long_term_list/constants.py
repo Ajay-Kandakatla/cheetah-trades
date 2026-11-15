@@ -28,6 +28,8 @@ from pathlib import Path
 from sepa import sales as S, stage_transitions as STX, scanner as SC, longterm as LT, pankaj_picks as PK
 from chart_maps import fallen_tab as FAL, undervalue_peers as UVP, board as B
 from rotation import hottest as H, backtest as RB
+from supply_demand import alert_gates as AG
+from catalysts import gabbar_levels as GL
 
 MARK = "\U0001F4C5"                                   # 📅
 TAB_KEY = "long_term"
@@ -112,6 +114,18 @@ ACCEL_MIN_DOLLAR_VOL = 3_000_000.0
 # ── 🧭 Pankaj's long-term list ──
 PANKAJ_ZONE_PAD_PCT = PK.ZONE_PAD_PCT                 # APP 0.5 (the /pankaj page's in-zone pad) — §7 #23
 
+# ── 🎯 Enterable (zones) — a display filter on the table (2026-11-14, Ajay: "Make a enterable check box in longterm
+#    stocks with zone and filters please"). Inside = the /pankaj pad (PANKAJ_ZONE_PAD_PCT). Just above = his standing
+#    demand-alert proximity, imported by name. Never a push, never a gate, never an ordering. UNMEASURED.
+#    Spec: scratchpad ltenter/spec.md §3.1.
+ENTERABLE_ABOVE_PCT = AG.ALERT_MAX_ABOVE_DEMAND_PCT   # HIS 1.0 — Ajay 2026-09-05 (alert_gates.py) — §7 #1
+GABBAR_SNAPSHOT_DATE = GL.BAND_ATTRIBUTION["snapshot_date"]   # APP — the Gabbar table's snapshot date
+ZONE_SOURCES = ("pankaj", "gabbar")                    # APP — the two sheets the tab already carries
+GABBAR_DEEP_LEVEL_KEY = "conservative 2+"              # MINE — one filter chip for every band deeper than conservative 1 — §7 #8
+GABBAR_DEEP_FROM = 2                                   # MINE — band INDEX in get_bands order (0 aggressive, 1 conservative 1) from which a band folds into the deep chip
+ZONE_REASON_CODES = ("below", "above", "no_zone", "no_price", "filtered")   # MINE — the hidden-count reasons
+ZONE_FILTER_LS_KEY = "lt_zone_filter_v1"               # MINE — the per-viewer localStorage key (the FE pins the same literal)
+
 # ── notices ──
 STAGE_DROP_PAIRS = tuple(p for p in STX.TRANSITIONS if p[0] == 2)          # ((2,3),(2,4))
 STAGE_DROP_TO = tuple(sorted({p[1] for p in STAGE_DROP_PAIRS}))           # (3, 4)
@@ -169,6 +183,8 @@ CONSTANT_SOURCES = {
     "ACCEL_MIN_PRIOR_YOY_PCT": "MINE", "ACCEL_MIN_PCT_BELOW_HIGH": "MINE", "ACCEL_MIN_PCT_ABOVE_LOW": "MINE",
     "ACCEL_STAGES": "MINE", "ACCEL_MIN_DOLLAR_VOL": "MINE",
     "PANKAJ_ZONE_PAD_PCT": "APP",
+    "ENTERABLE_ABOVE_PCT": "HIS", "GABBAR_SNAPSHOT_DATE": "APP", "ZONE_SOURCES": "APP",
+    "GABBAR_DEEP_LEVEL_KEY": "MINE", "GABBAR_DEEP_FROM": "MINE", "ZONE_REASON_CODES": "MINE", "ZONE_FILTER_LS_KEY": "MINE",
     "STAGE_DROP_PAIRS": "MINE", "STARTED_MOVING_PAIR": "MINE", "RING_KINDS": "MINE",
     "FORWARD_BASE_KIND": "MINE", "FORWARD_MIN_SESSIONS": "APP", "FORWARD_CI_PCT": "MINE",
     "FORWARD_BOOT_DRAWS": "MINE", "FORWARD_PLACEBO_DRAWS": "MINE", "FORWARD_RNG_SEED": "MINE",

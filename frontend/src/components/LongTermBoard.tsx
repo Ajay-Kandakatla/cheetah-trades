@@ -15,7 +15,7 @@
  * on a name new to it) → forward (an inline chart only once the served record is past "too early") → history → rules
  * and caveats. A request that fails prints FETCH_FAILED (the ONE FE sentence).
  *
- * No filter here — his saved list keeps its saved order (rows in seed order, as served). The ONE display sort (📋
+ * Order — his saved list keeps its saved order (rows in seed order, as served). The ONE display sort (📋
  * 2026-11-13) is a tap on the Today header: worst today first, tap again = the saved order back. The
  * four house chips (🚀 GrowthChip, 🩳 ShortInterestChip, 🧨 ExplosiveChip, 🎯 EnterableChip) sit on every SAVED row from
  * ONE useBounceRoom call over the saved symbols on screen (the LukBoard pattern); weekly strip rows carry no house chips
@@ -25,14 +25,26 @@
  * (🌱 / ⚠️ section marks, ✨ on a served `new`, the verdict marks, "·" separators, the table headers). The ONE number
  * the FE computes is 📋 Today (2026-11-13): the served now print vs the served previous close (lib/longTerm ltTodayPct),
  * display only — the rows keep their saved order unless he taps the Today header (worst first; tap again = saved).
- * 📋 2026-11-13: the saved rows render as one table per section instead of cards. UNMEASURED. */
+ * 📋 2026-11-13: the saved rows render as one table per section instead of cards. UNMEASURED.
+ *
+ * 🎯 Enterable (zones) (2026-11-14, Ajay: "Make a enterable check box in longterm stocks with zone and filters please"):
+ * the 🎯 zone checkbox is a stable filter over the saved rows — it never reorders them. A Zone column after Today reads
+ * each row's served `zone` bands against the live print this table already polls (lib/ltZones; no new request), the
+ * checkbox (default OFF, saved per viewer) hides the rows that are not inside / just above a zone, and the count line
+ * always names the state. The filter runs BEFORE the Today sort; the room and live reads still ask for every saved
+ * name. Not the house 🎯 chip's read. UNMEASURED. */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { API } from '../lib/apiBase';
 import {
   FETCH_FAILED, LT_CHART, LT_PATH, listOr, ltCategoryRows, ltForwardLines, ltMark, ltPctText, ltPctTone, ltSavedSymbols,
   ltSortRows, ltState, ltText, ltTodayPct, ltToken, textOr,
-  type LtAny, type LtCategory, type LtPayload, type LtRow, type LtTop, type LtZoneAlert,
+  ltSavedRows, type LtAny, type LtCategory, type LtPayload, type LtRow, type LtTop, type LtZoneAlert, type LtZoneRules,
 } from '../lib/longTerm';
+import {
+  LT_ZONE_DEFAULT, loadLtZoneFilter, ltLevelKey, ltZoneCellText, ltZoneEffective, ltZonePartition, ltZonePrice, ltZoneRead,
+  saveLtZoneFilter, type LtZoneFilter, type LtZoneRead,
+} from '../lib/ltZones';
+import { LtZoneFilterBar } from './LtZoneFilterBar';
 import { TickerLink } from './TickerLink';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { GrowthChip } from './GrowthChip';
@@ -51,7 +63,9 @@ function Line({ text, testId, className = 'lt-line' }: { text: unknown; testId?:
 
 /* 📋 2026-11-13 (Ajay: "Creat a table instead of cards so i can view them
  * quickly"): every saved row is ONE table row — same served fields and testids the card carried, one line per name. */
-function RowLine({ row, houseChips, today }: { row: LtRow; houseChips: ReactNode; today: number | null }) {
+function RowLine({ row, houseChips, today, zone, words }: {
+  row: LtRow; houseChips: ReactNode; today: number | null; zone: LtZoneRead | null; words: Record<string, string> | null;
+}) {
   const chips = listOr(row.chips);
   const fields = listOr(row.fields);
   const events = listOr(row.events);
@@ -65,6 +79,16 @@ function RowLine({ row, houseChips, today }: { row: LtRow; houseChips: ReactNode
         {ltText(row.sector) ? <span className="lt-muted lt-sub">{row.sector}</span> : null}
       </td>
       <td className={`lt-td-num${tone}`} data-testid={`lt-today-${row.symbol}`}>{ltPctText(today)}</td>
+      {words ? (
+        <td className={`lt-td-zone lt-z-${ltToken(zone?.state)}`} data-testid={`lt-zcell-${row.symbol}`}
+            data-state={zone?.state ?? undefined}
+            data-enterable={zone && zone.enterable !== null ? String(zone.enterable) : undefined}>
+          <span>{zone ? ltZoneCellText(zone, words) : ''}</span>
+          {ltText(row.zone?.gabbar_text) ? (
+            <span className="lt-sub lt-muted" data-testid={`lt-zcell-note-${row.symbol}`}>{row.zone?.gabbar_text}</span>
+          ) : null}
+        </td>
+      ) : null}
       <td data-testid={`lt-stage-${row.symbol}`}>{textOr(row.stage?.text)}</td>
       <td data-testid={`lt-sales-${row.symbol}`}>{textOr(row.sales?.text)}</td>
       <td>
@@ -77,7 +101,7 @@ function RowLine({ row, houseChips, today }: { row: LtRow; houseChips: ReactNode
           </span>
         ))}
       </td>
-      <td>
+      <td className="lt-td-checks">
         {fields.length ? (
           <div className="lt-fields">
             {fields.map((f) => (
@@ -110,9 +134,9 @@ function RowLine({ row, houseChips, today }: { row: LtRow; houseChips: ReactNode
   );
 }
 
-function RowTable({ rows, render, worstFirst, onSort, pct, testId }: {
+function RowTable({ rows, render, worstFirst, onSort, pct, testId, zoneCol }: {
   rows: LtRow[]; render: (r: LtRow) => ReactNode; worstFirst: boolean; onSort: () => void;
-  pct: (s: string) => number | null; testId?: string;
+  pct: (s: string) => number | null; testId?: string; zoneCol: boolean;
 }) {
   const ordered = ltSortRows(rows, pct, worstFirst);
   return (
@@ -127,6 +151,7 @@ function RowTable({ rows, render, worstFirst, onSort, pct, testId }: {
                 {worstFirst ? 'Today ▲ worst first' : 'Today'}
               </button>
             </th>
+            {zoneCol ? <th>{'Zone'}</th> : null}
             <th>{'Stage'}</th>
             <th>{'Sales'}</th>
             <th>{'Status'}</th>
@@ -214,6 +239,28 @@ export default function LongTermBoard() {
   /* 📋 Today: the live read over the same saved symbols (hooks/useLtToday — the board GET stays one read). */
   const live = useLtToday(savedSymbols);
   const [worstFirst, setWorstFirst] = useState(false);
+  /* 🎯 zones: the served zone_rules (absent on an older API → no bar, no Zone column, every row shows). */
+  const zoneRules: LtZoneRules | null = p?.zone_rules && typeof p.zone_rules === 'object' ? p.zone_rules : null;
+  const words = zoneRules && zoneRules.words && typeof zoneRules.words === 'object' ? zoneRules.words : null;
+  const [zf, setZf] = useState<LtZoneFilter>(() => LT_ZONE_DEFAULT);
+  useEffect(() => {
+    if (!zoneRules) return;
+    const levels = new Set((Array.isArray(zoneRules.levels) ? zoneRules.levels : []).map((l) => ltLevelKey({ source: l.source, level: l.key })));
+    const reasons = new Set((Array.isArray(zoneRules.reasons) ? zoneRules.reasons : []).map((r) => r.code));
+    setZf(loadLtZoneFilter(levels, reasons));
+  }, [zoneRules]);
+  const changeZf = (f: LtZoneFilter) => { setZf(f); saveLtZoneFilter(f); };
+  const eff = ltZoneEffective(zf);
+  const reads = useMemo(() => {
+    const m = new Map<string, LtZoneRead>();
+    if (!zoneRules) return m;
+    for (const r of ltSavedRows(p)) {
+      const s = r.symbol.toUpperCase();
+      m.set(s, ltZoneRead(r.zone, ltZonePrice(live?.quotes?.[s], live, r.zone), zoneRules, eff));
+    }
+    return m;
+  }, [p, live, zoneRules, eff]);
+  const part = useMemo(() => (zoneRules ? ltZonePartition(ltSavedRows(p), reads, zf, zoneRules) : null), [p, reads, zf, zoneRules]);
 
   const house = (sym: string) => {
     const r = room.map.get(sym.toUpperCase());
@@ -227,11 +274,21 @@ export default function LongTermBoard() {
     );
   };
   const pct = (sym: string) => ltTodayPct(live?.quotes?.[sym.toUpperCase()], live?.as_of);
-  const line = (row: LtRow) => <RowLine key={row.symbol} row={row} houseChips={house(row.symbol)} today={pct(row.symbol)} />;
-  const table = (rows: LtRow[], testId?: string) => (
-    <RowTable rows={rows} render={line} worstFirst={worstFirst} onSort={() => setWorstFirst((w) => !w)} pct={pct}
-              testId={testId} />
+  const line = (row: LtRow) => (
+    <RowLine key={row.symbol} row={row} houseChips={house(row.symbol)} today={pct(row.symbol)}
+             zone={reads.get(row.symbol.toUpperCase()) ?? null} words={words} />
   );
+  /* The 🎯 filter runs FIRST (a stable partition over the saved rows), then RowTable's Today sort over what is shown. */
+  const table = (rows: LtRow[], key: string) => {
+    const shown = part ? rows.filter((r) => part.shown.has(r.symbol.toUpperCase())) : rows;
+    if (rows.length && !shown.length) {
+      return <p className="lt-line lt-muted" data-testid={`lt-zf-empty-${key}`}>{textOr(words?.section_empty)}</p>;
+    }
+    return (
+      <RowTable rows={shown} render={line} worstFirst={worstFirst} onSort={() => setWorstFirst((w) => !w)} pct={pct}
+                testId={`lt-table-${key}`} zoneCol={!!words} />
+    );
+  };
 
   if (load.phase === 'loading') {
     return <div className="lt-board" data-state="loading" aria-busy="true"><span className="lt-muted">{'…'}</span></div>;
@@ -286,6 +343,8 @@ export default function LongTermBoard() {
         ) : null}
       </header>
 
+      {zoneRules && part ? <LtZoneFilterBar rules={zoneRules} zf={zf} onChange={changeZf} part={part} /> : null}
+
       {digest ? (
         <section className="lt-section" data-testid="lt-digest" data-section="digest">
           {ltText(digest.title) ? <h3 className="lt-h">{digest.title}</h3> : null}
@@ -330,7 +389,7 @@ export default function LongTermBoard() {
       {changed.length ? (
         <section className="lt-section lt-changed" data-testid="lt-changed" data-section="changed">
           <h3 className="lt-h" aria-hidden="true">{'⚠️'}</h3>
-          {table(changed, 'lt-table-changed')}
+          {table(changed, 'changed')}
         </section>
       ) : null}
 
@@ -344,7 +403,7 @@ export default function LongTermBoard() {
             <Line text={c.criteria_text} testId={`lt-criteria-${c.key}`} />
             <Line text={c.caveat} testId={`lt-caveat-${c.key}`} className="lt-line lt-muted" />
             <Line text={c.also_text} className="lt-line lt-muted" />
-            {rows.length ? table(rows, `lt-table-${c.key}`) : null}
+            {rows.length ? table(rows, c.key) : null}
             <Line text={c.moved_text} testId={`lt-moved-${c.key}`} className="lt-moved" />
             {top.length || ltText(c.top_text) ? (
               <div className="lt-top" data-testid={`lt-strip-${c.key}`}>

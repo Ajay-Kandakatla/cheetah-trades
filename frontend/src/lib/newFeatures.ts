@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-14 (verbatim in the label, his spelling kept): "Make a enterable check box in longterm stocks with zone
+  // and filters please". backend/long_term_list/zones.py serves ONE `zone` block per saved row (both zone sheets merged,
+  // read by the ONE engine sepa.pankaj_picks.setup_status — the tab's in-zone pad PANKAJ_ZONE_PAD_PCT) + `zone_rules`
+  // (proximity ENTERABLE_ABOVE_PCT = alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT, HIS 2026-09-05, by name). The FE
+  // (lib/ltZones + LtZoneFilterBar) re-reads it against the live print the table already polls; checkbox default OFF,
+  // per-viewer localStorage 'lt_zone_filter_v1'; the count line always names the state. Display filter only: no push, no
+  // gate, no reorder. Pankaj's name stays out of the public bundle. UNMEASURED. Docs
+  // docs/chart_maps/long_term_zone_enterable_2026_11_14.md. Pinned by scripts/contracts.mjs ("📅 Long Term tab (2026-11-12)").
+  {
+    id: 'chart-maps-long-term-zone-enterable-2026-11-14',
+    label: '🎯 Enterable (zones) on the 📅 Long Term table — you said: “Make a enterable check box in longterm stocks with zone and filters please”. A new Zone column reads every saved name against the two zone sheets on the tab (inside, just above, above, below), on the live print in session and the close after. Tick the box and only the names inside a zone or just above one stay in view; chips pick the sheet and the zone level, and the count line says how many are hidden and why — tap a reason to bring those rows back. Your choice is remembered on this device. Display filter only — rings nothing, reorders nothing. UNMEASURED. Not advice.',
+    addedAt: '2026-11-14',
+    route: '/chart-maps?tab=long_term',
+  },
   // Ajay 2026-11-13 (verbatim, his spelling kept): "Creat a table instead of cards so i can view them quickly". The 📅
   // Long Term tab's saved rows render as ONE table per section (LongTermBoard RowTable) — same served fields; plus a
   // 📋 Today column from ONE POST /chart-maps/live (hooks/useLtToday; now print vs the served previous close; blank when

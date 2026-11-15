@@ -25,6 +25,7 @@ from long_term_list import sources as SRC
 from long_term_list import store as ST
 from long_term_list import weekly as WK
 from long_term_list import words as W
+from long_term_list import zones as Z
 from tests.test_long_term_list_store import FakeColl
 from tests.test_long_term_list_weekly import make_facts
 
@@ -101,7 +102,10 @@ def test_owner_gets_seed_only_before_the_first_run(wired):
     assert body["state"] == "seed_only" and body["title"] == C.TITLE
     rows = [x for c in body["categories"] for x in c["rows"]] + body["changed"]
     assert len(rows) == 109 and len({x["symbol"] for x in rows}) == 109
-    assert len(wired.closes_calls) == 1 and sorted(wired.closes_calls[0]) == sorted(SEED.pankaj_entries(SEED.load()))
+    seed = SEED.load()
+    want = sorted(set(SEED.pankaj_entries(seed)) | set(Z.zone_symbols(seed)))      # 🎯 2026-11-14: Pankaj ∪ zone names
+    assert len(wired.closes_calls) == 1 and sorted(wired.closes_calls[0]) == want
+    assert set(Z.zone_symbols(seed)) - set(SEED.pankaj_entries(seed))                 # NEG: the union is wider than Pankaj
     assert any(z["symbol"] == "TSM" for z in body["zones"]["at_zone"])
 
 

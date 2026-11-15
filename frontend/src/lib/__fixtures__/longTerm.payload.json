@@ -116,6 +116,103 @@
    "log_empty_text": null
   }
  },
+ "zone_rules": {
+  "pad_pct": 0.5,
+  "above_pct": 1.0,
+  "snapshot_date": "2026-05-17",
+  "ls_key": "lt_zone_filter_v1",
+  "text": "🎯 Enterable (zones): the price inside one of the name's zones (within 0.5% of an edge — the /pankaj page's rule) or at most 1% above its top (your <1% from-demand alert rule, 2026-09-05). Under the zone = fell through it, not enterable. Pankaj's zones from his sheet; Gabbar's bands from the 05-17 snapshot, split-adjusted where verified. A display filter only — it rings nothing and reorders nothing. UNMEASURED.",
+  "sources": [
+   {
+    "key": "both",
+    "label": "Pankaj + Gabbar"
+   },
+   {
+    "key": "pankaj",
+    "label": "Pankaj"
+   },
+   {
+    "key": "gabbar",
+    "label": "Gabbar"
+   }
+  ],
+  "levels": [
+   {
+    "source": "pankaj",
+    "key": "Agg",
+    "label": "Pankaj Agg"
+   },
+   {
+    "source": "pankaj",
+    "key": "C1",
+    "label": "Pankaj C1"
+   },
+   {
+    "source": "pankaj",
+    "key": "C2",
+    "label": "Pankaj C2"
+   },
+   {
+    "source": "pankaj",
+    "key": "C3",
+    "label": "Pankaj C3"
+   },
+   {
+    "source": "gabbar",
+    "key": "aggressive",
+    "label": "Gabbar aggressive"
+   },
+   {
+    "source": "gabbar",
+    "key": "conservative 1",
+    "label": "Gabbar conservative 1"
+   },
+   {
+    "source": "gabbar",
+    "key": "conservative 2+",
+    "label": "Gabbar conservative 2+"
+   }
+  ],
+  "reasons": [
+   {
+    "code": "below",
+    "label": "below the zone"
+   },
+   {
+    "code": "above",
+    "label": "above the zone — too far"
+   },
+   {
+    "code": "no_zone",
+    "label": "no zone on either sheet"
+   },
+   {
+    "code": "no_price",
+    "label": "no price read"
+   },
+   {
+    "code": "filtered",
+    "label": "no zone under this filter"
+   }
+  ],
+  "words": {
+   "inside": "inside",
+   "near": "just above",
+   "above": "above the zone",
+   "below": "below the zone",
+   "no_price": "no price read",
+   "no_zone": "no zone on either sheet",
+   "filtered": "no zone under this filter",
+   "live": "live",
+   "close": "close",
+   "enterable": "enterable",
+   "not_enterable": "not enterable",
+   "unknown": "unknown",
+   "dash": "—",
+   "section_empty": "Every name here is hidden by the 🎯 filter.",
+   "not_house_chip": "Not the 🎯 house chip's read."
+  }
+ },
  "started_moving": [
   {
    "symbol": "NVDA",
@@ -183,6 +280,20 @@
     }
    ],
    "pankaj": null,
+   "zone": {
+    "bands": [],
+    "gabbar_text": null,
+    "close": {
+     "basis": "close",
+     "price": null,
+     "date": null,
+     "state": "no_zone",
+     "enterable": null,
+     "band": null,
+     "pct": null,
+     "text": "no zone on either sheet"
+    }
+   },
    "caveat_tag": "💎 UNMEASURED"
   }
  ],
@@ -241,6 +352,60 @@
      ],
      "events": [],
      "pankaj": null,
+     "zone": {
+      "bands": [
+       {
+        "source": "gabbar",
+        "key": "aggressive",
+        "level": "aggressive",
+        "label": "Gabbar aggressive",
+        "lo": 180,
+        "hi": 190
+       },
+       {
+        "source": "gabbar",
+        "key": "conservative 1",
+        "level": "conservative 1",
+        "label": "Gabbar conservative 1",
+        "lo": 148,
+        "hi": 160
+       },
+       {
+        "source": "gabbar",
+        "key": "conservative 2",
+        "level": "conservative 2+",
+        "label": "Gabbar conservative 2",
+        "lo": 110,
+        "hi": 120
+       },
+       {
+        "source": "gabbar",
+        "key": "conservative 3",
+        "level": "conservative 2+",
+        "label": "Gabbar conservative 3",
+        "lo": 80,
+        "hi": 90
+       }
+      ],
+      "gabbar_text": "Gabbar bands from the 05-17 snapshot",
+      "close": {
+       "basis": "close",
+       "price": 191.52,
+       "date": "2026-11-13",
+       "state": "near",
+       "enterable": true,
+       "band": {
+        "source": "gabbar",
+        "key": "aggressive",
+        "level": "aggressive",
+        "label": "Gabbar aggressive",
+        "lo": 180,
+        "hi": 190
+       },
+       "pct": 0.8,
+       "text": "just above Gabbar aggressive 180–190 · +0.8% · close 11-13"
+      }
+     },
      "caveat_tag": "🚀 UNMEASURED"
     },
     {
@@ -284,6 +449,20 @@
      ],
      "events": [],
      "pankaj": null,
+     "zone": {
+      "bands": [],
+      "gabbar_text": null,
+      "close": {
+       "basis": "close",
+       "price": null,
+       "date": null,
+       "state": "no_zone",
+       "enterable": null,
+       "band": null,
+       "pct": null,
+       "text": "no zone on either sheet"
+      }
+     },
      "caveat_tag": "🚀 UNMEASURED"
     }
    ],
@@ -374,6 +553,20 @@
       }
      ],
      "pankaj": null,
+     "zone": {
+      "bands": [],
+      "gabbar_text": null,
+      "close": {
+       "basis": "close",
+       "price": null,
+       "date": null,
+       "state": "no_zone",
+       "enterable": null,
+       "band": null,
+       "pct": null,
+       "text": "no zone on either sheet"
+      }
+     },
      "caveat_tag": "💎 UNMEASURED"
     },
     {
@@ -432,6 +625,68 @@
       "tier_text": "Pankaj: Tier A · ZT 8.1",
       "zones_text": "Agg 120–125 · C1 110–115",
       "zone_text": "6.2% over Pankaj's Agg zone top (125)"
+     },
+     "zone": {
+      "bands": [
+       {
+        "source": "pankaj",
+        "key": "Agg",
+        "level": "Agg",
+        "label": "Pankaj Agg",
+        "lo": 120,
+        "hi": 125
+       },
+       {
+        "source": "pankaj",
+        "key": "C1",
+        "level": "C1",
+        "label": "Pankaj C1",
+        "lo": 110,
+        "hi": 115
+       },
+       {
+        "source": "gabbar",
+        "key": "aggressive",
+        "level": "aggressive",
+        "label": "Gabbar aggressive",
+        "lo": 97,
+        "hi": 102
+       },
+       {
+        "source": "gabbar",
+        "key": "conservative 1",
+        "level": "conservative 1",
+        "label": "Gabbar conservative 1",
+        "lo": 80,
+        "hi": 85
+       },
+       {
+        "source": "gabbar",
+        "key": "conservative 2",
+        "level": "conservative 2+",
+        "label": "Gabbar conservative 2",
+        "lo": 60,
+        "hi": 70
+       }
+      ],
+      "gabbar_text": "Gabbar bands from the 05-17 snapshot",
+      "close": {
+       "basis": "close",
+       "price": 132.75,
+       "date": "2026-11-13",
+       "state": "above",
+       "enterable": false,
+       "band": {
+        "source": "pankaj",
+        "key": "Agg",
+        "level": "Agg",
+        "label": "Pankaj Agg",
+        "lo": 120,
+        "hi": 125
+       },
+       "pct": 6.2,
+       "text": "above the zone Pankaj Agg 120–125 · +6.2% · close 11-13"
+      }
      },
      "caveat_tag": "💎 UNMEASURED"
     }
@@ -508,6 +763,52 @@
       "zones_text": "Agg 175–180 · C1 170–175 · C2 160–170",
       "zone_text": "In Pankaj's C2 zone (160–170) at the 11-13 close"
      },
+     "zone": {
+      "bands": [
+       {
+        "source": "pankaj",
+        "key": "Agg",
+        "level": "Agg",
+        "label": "Pankaj Agg",
+        "lo": 175,
+        "hi": 180
+       },
+       {
+        "source": "pankaj",
+        "key": "C1",
+        "level": "C1",
+        "label": "Pankaj C1",
+        "lo": 170,
+        "hi": 175
+       },
+       {
+        "source": "pankaj",
+        "key": "C2",
+        "level": "C2",
+        "label": "Pankaj C2",
+        "lo": 160,
+        "hi": 170
+       }
+      ],
+      "gabbar_text": "Gabbar tracks NVDA but has drawn no level",
+      "close": {
+       "basis": "close",
+       "price": 166.19,
+       "date": "2026-11-13",
+       "state": "inside",
+       "enterable": true,
+       "band": {
+        "source": "pankaj",
+        "key": "C2",
+        "level": "C2",
+        "label": "Pankaj C2",
+        "lo": 160,
+        "hi": 170
+       },
+       "pct": 0.0,
+       "text": "inside Pankaj C2 160–170 · close 11-13"
+      }
+     },
      "caveat_tag": "🌱 UNMEASURED"
     },
     {
@@ -555,6 +856,20 @@
      ],
      "events": [],
      "pankaj": null,
+     "zone": {
+      "bands": [],
+      "gabbar_text": null,
+      "close": {
+       "basis": "close",
+       "price": null,
+       "date": null,
+       "state": "no_zone",
+       "enterable": null,
+       "band": null,
+       "pct": null,
+       "text": "no zone on either sheet"
+      }
+     },
      "caveat_tag": "🌱 UNMEASURED"
     },
     {
@@ -594,6 +909,29 @@
      ],
      "events": [],
      "pankaj": null,
+     "zone": {
+      "bands": [
+       {
+        "source": "pankaj",
+        "key": "C1",
+        "level": "C1",
+        "label": "Pankaj C1",
+        "lo": 30,
+        "hi": 32
+       }
+      ],
+      "gabbar_text": null,
+      "close": {
+       "basis": "close",
+       "price": null,
+       "date": null,
+       "state": "no_price",
+       "enterable": null,
+       "band": null,
+       "pct": null,
+       "text": "no price read"
+      }
+     },
      "caveat_tag": "🌱 UNMEASURED"
     }
    ],
@@ -650,6 +988,44 @@
       "tier_text": "Pankaj: Tier A · ZT 8.8",
       "zones_text": "Agg 400–410 · C1 380–390",
       "zone_text": "In Pankaj's Agg zone (400–410) at the 11-13 close"
+     },
+     "zone": {
+      "bands": [
+       {
+        "source": "pankaj",
+        "key": "Agg",
+        "level": "Agg",
+        "label": "Pankaj Agg",
+        "lo": 400,
+        "hi": 410
+       },
+       {
+        "source": "pankaj",
+        "key": "C1",
+        "level": "C1",
+        "label": "Pankaj C1",
+        "lo": 380,
+        "hi": 390
+       }
+      ],
+      "gabbar_text": "Gabbar tracks TSM but has drawn no level",
+      "close": {
+       "basis": "close",
+       "price": 405.49,
+       "date": "2026-11-13",
+       "state": "inside",
+       "enterable": true,
+       "band": {
+        "source": "pankaj",
+        "key": "Agg",
+        "level": "Agg",
+        "label": "Pankaj Agg",
+        "lo": 400,
+        "hi": 410
+       },
+       "pct": 0.0,
+       "text": "inside Pankaj Agg 400–410 · close 11-13"
+      }
      },
      "caveat_tag": "🧭 his picks"
     }

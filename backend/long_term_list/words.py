@@ -659,6 +659,65 @@ def also_text(cat_doc: dict) -> Optional[str]:
     return None
 
 
+# ── 🎯 Enterable (zones) — a display filter on the table (2026-11-14, spec ltenter §3.3) ──
+# Ajay 2026-11-14: "Make a enterable check box in longterm stocks with zone and filters please". Every number is a
+# constants.py name; the FE prints these served words and types none of its own. UNMEASURED.
+ZONE_RULES_TEXT = (f"🎯 Enterable (zones): the price inside one of the name's zones (within {C.PANKAJ_ZONE_PAD_PCT:g}% of an "
+                   f"edge — the /pankaj page's rule) or at most {C.ENTERABLE_ABOVE_PCT:g}% above its top (your "
+                   f"<{C.ENTERABLE_ABOVE_PCT:g}% from-demand alert rule, 2026-09-05). Under the zone = fell through it, not "
+                   f"enterable. Pankaj's zones from his sheet; Gabbar's bands from the {mmdd(C.GABBAR_SNAPSHOT_DATE)} "
+                   f"snapshot, split-adjusted where verified. A display filter only — it rings nothing and reorders "
+                   f"nothing. UNMEASURED.")
+ZONE_WORDS = {"inside": "inside", "near": "just above", "above": "above the zone", "below": "below the zone",
+              "no_price": "no price read", "no_zone": "no zone on either sheet", "filtered": "no zone under this filter",
+              "live": "live", "close": "close", "enterable": "enterable", "not_enterable": "not enterable",
+              "unknown": "unknown",
+              "dash": DASH,   # the FE prints it for a close with no date — mirrors mmdd(None); never typed FE-side
+              "section_empty": "Every name here is hidden by the 🎯 filter.",
+              "not_house_chip": "Not the 🎯 house chip's read."}
+ZONE_REASON_LABELS = {"below": "below the zone", "above": "above the zone — too far", "no_zone": "no zone on either sheet",
+                      "no_price": "no price read", "filtered": "no zone under this filter"}
+ZONE_SOURCE_LABELS = {"both": "Pankaj + Gabbar", "pankaj": "Pankaj", "gabbar": "Gabbar"}
+_ZONE_BAND_STATES = ("inside", "near", "above", "below")
+
+
+def zone_sources() -> list:
+    return [{"key": k, "label": ZONE_SOURCE_LABELS[k]} for k in ("both",) + tuple(C.ZONE_SOURCES)]
+
+
+def zone_levels(order, gabbar_keys) -> list:
+    """Pankaj's zone keys in zone order, then the Gabbar level keys DERIVED from the bands (zones.gabbar_level_keys)."""
+    return ([{"source": "pankaj", "key": zk, "label": f"Pankaj {zk}"} for zk in order or ()]
+            + [{"source": "gabbar", "key": k, "label": f"Gabbar {k}"} for k in gabbar_keys or ()])
+
+
+def zone_reasons() -> list:
+    return [{"code": c, "label": ZONE_REASON_LABELS[c]} for c in C.ZONE_REASON_CODES]
+
+
+def gabbar_text(snapshot, ratio=None, split_date=None) -> str:
+    out = f"Gabbar bands from the {mmdd(snapshot)} snapshot"
+    if _is_num(ratio):
+        out += f" · ÷{ratio:g} split-adjusted ({mmdd(split_date)})"
+    return out
+
+
+def gabbar_tracked_text(sym) -> str:
+    return f"Gabbar tracks {sym} but has drawn no level"
+
+
+def zone_cell_text(state, band, pct, basis, date) -> str:
+    """One Zone cell line. inside/near/above/below: "<word> <band label> <lo>–<hi>[ · ±x.x%] · <basis> <mm-dd>";
+    any other state: its word only."""
+    head = ZONE_WORDS.get(state, ZONE_WORDS["unknown"])
+    if state not in _ZONE_BAND_STATES or not isinstance(band, dict):
+        return head
+    out = f"{head} {band.get('label')} {_edges(band.get('lo'), band.get('hi'))}"
+    if state != "inside" and _is_num(pct):
+        out += f" · {pct:+.1f}%"
+    return out + f" · {ZONE_WORDS.get(basis, basis)} {mmdd(date)}"
+
+
 # ── forward ──
 def forward_too_early(n, base, n_names) -> str:
     return (f"Too early — {n} of {C.FORWARD_MIN_SESSIONS} sessions since the {base} open. "
@@ -734,6 +793,9 @@ def rules_lines(*, include_pankaj: bool = False) -> list:
     out.append(_rule("schedule", "Schedule", SCHEDULE_TEXT, ()))
     out.append(_rule("push", "Phone push", pushed_text(), ("DIGEST_PUSH_MODE", "DIGEST_BODY_LINES")))
     out.append(_rule("zone_alert", "Zone reach push", zone_rule_text(), ("PANKAJ_ZONE_PAD_PCT", "ZONE_PUSH_MODE")))
+    if include_pankaj:                                          # owner-only: the rule names Pankaj (§7 #9)
+        out.append(_rule("zone_enterable", "🎯 Enterable (zones)", ZONE_RULES_TEXT,
+                         ("PANKAJ_ZONE_PAD_PCT", "ENTERABLE_ABOVE_PCT", "GABBAR_DEEP_LEVEL_KEY", "ZONE_REASON_CODES")))
     out.append(_rule("forward", "Forward record", FORWARD_METHOD_TEXT,
                      ("FORWARD_BASE_KIND", "FORWARD_MIN_SESSIONS", "FORWARD_CI_PCT", "FORWARD_BOOT_DRAWS",
                       "FORWARD_PLACEBO_DRAWS")))

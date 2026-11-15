@@ -22,9 +22,10 @@ from . import forward as FW
 from . import notices as N
 from . import seed as SD
 from . import words as W
+from . import zones as Z
 
 TOP_KEYS = ("state", "reason", "title", "saved_on", "measured", "note", "not_a_signal", "his_words", "as_of",
-            "digest", "zones", "started_moving", "changed", "categories", "forward", "history", "rules", "caveats")
+            "digest", "zones", "zone_rules", "started_moving", "changed", "categories", "forward", "history", "rules", "caveats")
 
 
 def _scrub(o):
@@ -249,9 +250,11 @@ def _caveats(seed) -> list:
 
 
 def build_payload(seed, baseline, runs, forward_docs, zone_closes, *, now=None, owner: bool, zone_live=None,
-                  zone_day=None, log_session=None) -> dict:
+                  zone_day=None, log_session=None, zone_closes_all=None) -> dict:
     """The served dict (already NaN-scrubbed). Never raises: a failure is state "error" + reason.
-    zone_live / zone_day / log_session: the 🔔 zone pass's stored doc (None = no pass read)."""
+    zone_live / zone_day / log_session: the 🔔 zone pass's stored doc (None = no pass read).
+    zone_closes_all (2026-11-14, 🎯 Enterable (zones)): the closes of EVERY zone name (Pankaj ∪ Gabbar) for the
+    per-row `zone` block; None = `zone_closes`. The 🧭 strip / 🔔 block keep reading `zone_closes` only."""
     if not owner:
         return owner_only_payload()
     try:
@@ -262,14 +265,15 @@ def build_payload(seed, baseline, runs, forward_docs, zone_closes, *, now=None, 
                 return error_payload(f"The saved list file changed: {exc}")
             except OSError as exc:
                 return error_payload(f"The saved list file could not be read: {exc}")
-        out = _build(seed, baseline or {}, list(runs or []), list(forward_docs or []), zone_closes or {}, now)
+        out = _build(seed, baseline or {}, list(runs or []), list(forward_docs or []), zone_closes or {}, now,
+                     zone_closes_all)
         out["zones"]["alert"] = _zone_alert(seed, zone_closes or {}, zone_live, zone_day, log_session)
         return _scrub(out)
     except Exception as exc:                                    # noqa: BLE001
         return error_payload(f"The Long Term list could not be built: {exc}")
 
 
-def _build(seed, baseline, runs, forward_docs, zone_closes, now) -> dict:
+def _build(seed, baseline, runs, forward_docs, zone_closes, now, zone_closes_all=None) -> dict:
     runs = sorted(runs, key=lambda r: (_run_session(r), str(r.get("_id") or "")), reverse=True)
     latest = runs[0] if runs else None
     state = "ready" if latest else "seed_only"
@@ -277,6 +281,8 @@ def _build(seed, baseline, runs, forward_docs, zone_closes, now) -> dict:
     order = SD.zone_order(seed)
     pk = SD.pankaj_entries(seed)
     reads = _pankaj_reads(seed, zone_closes)
+    all_closes = zone_closes_all or zone_closes or {}
+    all_closes = all_closes if isinstance(all_closes, dict) else {}
     b_names = baseline.get("names") or {}
     b_cats = baseline.get("categories") or {}
     ev_by_sym = _events_by_symbol(runs)
@@ -326,6 +332,7 @@ def _build(seed, baseline, runs, forward_docs, zone_closes, now) -> dict:
             "fields": fields,
             "events": ev_by_sym.get(sym, []),
             "pankaj": _pankaj_block(pk[sym], reads.get(sym), order) if sym in pk else None,
+            "zone": Z.row_block(sym, pk.get(sym), order, all_closes.get(sym)),
             "caveat_tag": W.CAVEAT_TAGS.get(cats[0], "UNMEASURED"),
         }
         if section == "changed":
@@ -406,6 +413,7 @@ def _build(seed, baseline, runs, forward_docs, zone_closes, now) -> dict:
                   "sources": _sources_list(latest)},
         "digest": digest,
         "zones": _zones_section(seed, reads, zone_closes),
+        "zone_rules": Z.rules_block(order, seed),
         "started_moving": sorted(started, key=lambda s: s["symbol"]),
         "changed": [t[2] for t in changed],
         "categories": categories,

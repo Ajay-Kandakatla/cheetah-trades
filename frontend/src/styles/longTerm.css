@@ -22,7 +22,7 @@
 .lt-pills, .lt-house-chips, .lt-fields { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
 .lt-strip { display: flex; flex-wrap: wrap; gap: 0.35rem; min-width: 0; }
 
-.lt-pill, .lt-field, .lt-line, .lt-status, .lt-strip-item, .lt-house-chips .cm-badge, .lt-pills .cm-badge {
+.lt-pill, .lt-field, .lt-line, .lt-status, .lt-strip-item, .lt-house-chips .cm-badge, .lt-pills .cm-badge, .lt-zf-chip, .lt-zf-reason {
   white-space: normal; overflow-wrap: anywhere;
 }
 .lt-line { margin: 0; font-size: 0.8rem; }
@@ -76,7 +76,7 @@
 }
 .lt-table td.lt-td-sym { min-width: 7rem; font-weight: 600; }
 .lt-table td.lt-td-num { min-width: 4.5rem; font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
-.lt-table td:nth-child(6) { min-width: 14rem; }
+.lt-table td.lt-td-checks { min-width: 14rem; }
 .lt-table tr[data-status="changed"] td { background: color-mix(in srgb, var(--negative, #ef4444) 7%, transparent); }
 .lt-sub { display: block; font-weight: 400; }
 .lt-up { color: var(--positive, #22c55e); }
@@ -85,3 +85,21 @@
   font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline dotted;
 }
 .lt-sort:focus-visible { outline: 2px solid var(--accent, #3b82f6); outline-offset: 2px; }
+
+/* 🎯 Enterable (zones) (2026-11-14, Ajay: "Make a enterable check box in longterm stocks with zone and filters please").
+   The bar wraps on the 430 px phone (flex-wrap, min-width: 0); its chips join the wrap rule above, so a long served
+   label breaks instead of widening the page. The Zone column scrolls with the table inside .lt-table-wrap. */
+.lt-zf-bar { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; min-width: 0; max-width: 100%; }
+.lt-zf-toggle { display: inline-flex; gap: 0.3rem; align-items: center; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.lt-zf-chip, .lt-zf-reason {
+  font: inherit; font-size: 0.75rem; color: inherit; background: none; cursor: pointer; max-width: 100%;
+  padding: 0.06rem 0.45rem; border-radius: 999px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.lt-zf-reason { margin: 0 0.15rem; }
+.lt-zf-chip[aria-pressed="true"], .lt-zf-reason[aria-pressed="true"] { border-color: var(--accent, #3b82f6); }
+.lt-zf-chip:disabled { opacity: 0.45; cursor: default; }
+.lt-zf-chip:focus-visible, .lt-zf-reason:focus-visible { outline: 2px solid var(--accent, #3b82f6); outline-offset: 2px; }
+.lt-table td.lt-td-zone { min-width: 9rem; }
+.lt-z-inside, .lt-z-near { color: var(--positive, #22c55e); }
+.lt-z-below { color: var(--negative, #ef4444); }
+.lt-z-above, .lt-z-no_price, .lt-z-no_zone, .lt-z-filtered { color: var(--ink-muted, #94a3b8); }

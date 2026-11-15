@@ -10,7 +10,7 @@ import { API } from '../lib/apiBase';
 import { CARD_LIVE_MS, CARD_LIVE_PATH } from '../lib/cardLive';
 import type { LtLiveQuote } from '../lib/longTerm';
 
-export type LtLive = { as_of?: string; quotes?: Record<string, LtLiveQuote> };
+export type LtLive = { as_of?: string; session?: string | null; quotes?: Record<string, LtLiveQuote> };
 
 export function useLtToday(symbols: readonly string[]): LtLive | null {
   const key = symbols.join(',');

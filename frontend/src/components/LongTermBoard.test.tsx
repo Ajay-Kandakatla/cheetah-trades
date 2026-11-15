@@ -298,7 +298,8 @@ describe('📅 LongTermBoard — words (spec SERVED-WORD RULE, C8)', () => {
   });
   it('NEGATIVE: the board / helper / stylesheet / fixture sources carry no banned word, no b-word, no attribution', async () => {
     for (const rel of ['src/components/LongTermBoard.tsx', 'src/lib/longTerm.ts', 'src/styles/longTerm.css',
-      'src/lib/__fixtures__/longTerm.payload.json', 'src/lib/__fixtures__/longTerm.owner_only.json']) {
+      'src/lib/__fixtures__/longTerm.payload.json', 'src/lib/__fixtures__/longTerm.owner_only.json',
+      'src/lib/ltZones.ts', 'src/components/LtZoneFilterBar.tsx']) {
       const src = (await readSource(rel)).replace(NOT_A_SIGNAL, '');
       expect(src, rel).not.toMatch(BANNED);
       expect(src, rel).not.toMatch(/\bbounce\b/i);
@@ -313,7 +314,7 @@ describe('📅 LongTermBoard — words (spec SERVED-WORD RULE, C8)', () => {
     expect(literals.length).toBeGreaterThan(0);
     for (const t of literals) expect(t, t).not.toMatch(/\d/);
   });
-  it('the NO_TOGGLE phrase is in the source; NEGATIVE: no ExplosiveFirstToggle, no 🎯 filter', async () => {
+  it('the NO_TOGGLE phrase is in the source; NEGATIVE: no ExplosiveFirstToggle, no HOUSE 🎯 EnterableFilterProvider (the zone checkbox is lib/ltZones)', async () => {
     const src = await readSource('src/components/LongTermBoard.tsx');
     expect(src).toContain('his saved list keeps its saved order');
     expect(src).not.toMatch(/<ExplosiveFirstToggle/);

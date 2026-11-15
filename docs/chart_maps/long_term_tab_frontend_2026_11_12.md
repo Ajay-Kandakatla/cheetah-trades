@@ -83,3 +83,52 @@ Ajay 2026-11-13, verbatim: "Creat a table instead of cards so i can view them qu
   `LongTermBoard.phone.test.tsx` and contracts). The `.lt-card` / `.lt-grid` rules are gone.
 - Tests: `LongTermBoard.table.test.tsx` (helper unit tests, live POST body, blank on a failed read, sort round trip,
   owner_only asks nothing).
+
+## 🎯 Enterable (zones) — 2026-11-14
+
+Ajay 2026-11-14: "Make a enterable check box in longterm stocks with zone and filters please". Display filter only — it
+rings nothing, gates nothing and never reorders a row. UNMEASURED. Not the house 🎯 chip's read (the label says "(zones)").
+
+- **Keys read** (served by backend `long_term_list/zones.py`, see `long_term_zone_enterable_2026_11_14.md`): top-level
+  `zone_rules` {pad_pct, above_pct, snapshot_date, ls_key, text, sources, levels, reasons, words}; per saved row `zone`
+  {bands[{source, key, level, label, lo, hi}], gabbar_text, close{basis, price, date, state, enterable, band, pct, text}}.
+  Types in `lib/longTerm.ts` (`LtZone*`); `LtLive.session` (hooks/useLtToday) and `LtLiveQuote.now.as_of / add_line /
+  session` carry the served CardLiveNow keys — no casts.
+- **Price basis** (`lib/ltZones.ltZonePrice`, no new request — the table's one `/chart-maps/live` POST): (1) LIVE only when
+  the answer's `session` is a string other than `closed` AND the house flags the print `now.add_line === true` (a carried
+  print of another day is served with add_line false — e.g. Friday's print read in Monday pre-market — and is NOT live);
+  `at` = the quote's own `now.as_of` ("HH:MM:SS ET"), else the answer stamp's time part. (2) Else the closed bar: today's
+  bar while a session is open is still forming → `prev_bar`; otherwise `bar` (after the close today's bar IS the closed
+  bar); a missing session counts as closed. (3) Else the served `zone.close.price`. NaN / 0 / missing → the next rule.
+- **The read** (`ltZoneRead`, transliteration of backend `zones.read` over `pankaj_picks.setup_status`): no band → no_zone;
+  every band dropped by the filter → filtered; no price → no_price; first band the price sits in (padded by the served
+  `pad_pct`) → inside; else the closest band at most the served `above_pct` over its top → near ("just above"); else the
+  nearest band → above / below (not enterable). 1 dp via `Math.round(x*10)/10` (the engine's `round(x, 1)`; the shared
+  case table has no .x5 ties). The cell text = `words.zone_cell_text`'s composition; the close basis prints
+  `close MM-DD` through `ltMmdd` (mirror of `words.mmdd`; `words.dash` for no date).
+- **Cross-pin**: `ltZones.test.ts` re-derives every fixture row's served `zone.close` (state, enterable, pct, band.key) and
+  its `text` byte for byte, and runs the spec §3.6 case table (pinned on the backend too).
+- **Filter semantics**: checkbox default OFF. OFF = no filter at all — the Zone column shows the unfiltered read (both
+  sheets, every level) and the sheet / level chips are not drawn; the saved choices come back pressed when he ticks it.
+  ON = a stable partition over the saved rows (`ltZonePartition`, never a sort): a row shows when its read is enterable
+  or its reason is un-hidden. The filter runs BEFORE the Today sort. `savedSymbols` (room + live POST) is unchanged — every
+  saved name is still asked for. A table whose rows are all hidden prints the served `words.section_empty` (⚠️ changed
+  included — HIS CALL). Level chips: `[]` = all (every chip drawn pressed); a click while all are pressed keeps only that
+  level; un-pressing the last one returns to all; a level chip whose sheet is excluded renders disabled, never hidden.
+- **Count line** (always drawn when `zone_rules` is served): OFF → "showing all · 🎯 enterable only"; ON → "N hidden" + one
+  chip per served reason that holds something back (baseline > 0) or is un-hidden, text "baseline label" (served label,
+  title `words.not_house_chip`), ordered baseline desc → label asc → code asc (never reshuffles on a click), then "show all".
+- **Persistence**: `localStorage['lt_zone_filter_v1']` (== backend `ZONE_FILTER_LS_KEY`, test-pinned) holds {on, source,
+  levels, unhide}; read once after the payload lands, written on every change, both in try/catch (blocked storage → the
+  default, never a throw); unknown level / reason / source keys are dropped on read. Per viewer, per browser.
+- **Ids**: only `lt-zf-*` (bar, checkbox, chips, count, empty-section line) and `lt-zcell-*` (cell + note). `lt-zone-*` is the
+  🧭 strip / 🔔 block's prefix — a NEGATIVE test pins no collision. The bar sits right after `<header>` with no
+  `data-section` (the section-order pin is unchanged).
+- **Phone (430 px)**: `.lt-zf-bar` = flex-wrap + `min-width: 0`; `.lt-zf-chip` / `.lt-zf-reason` join the wrap rule
+  (`white-space: normal; overflow-wrap: anywhere`); `td.lt-td-zone` min-width 9rem; the table still scrolls inside
+  `.lt-table-wrap`; never nowrap. The Checks column's 14rem min width moved from `td:nth-child(6)` to `td.lt-td-checks`
+  (the Zone column shifts the column index).
+- **FE-typed words**: only the control words "🎯 Enterable (zones)", "hidden", "showing all", "show all", "enterable only"
+  and the "Zone" header; every other word is served. An older API with no `zone_rules` → no bar, no Zone column, every row.
+- **Tests**: `src/lib/ltZones.test.ts`, `src/components/LongTermBoard.zonefilter.test.tsx`, additions in
+  `LongTermBoard.phone.test.tsx`; `LongTermBoard.test.tsx` scans `ltZones.ts` + `LtZoneFilterBar.tsx` for the word rule.

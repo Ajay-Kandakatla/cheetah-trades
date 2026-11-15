@@ -15,6 +15,10 @@ builds a week (`weekly.run` / `sources.load_all` are not called here). Every fai
 🔔 2026-11-12 (pkzone spec §3.7): the owner's GET also reads the zone pass's stored session doc
 (`long_term_zone_state`, one find) for the `zones.alert` block — still never a fetch, never a snapshot; the latch
 collection is never touched here. Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …".
+
+🎯 2026-11-14 (ltenter spec §3.4): the ONE closes read now covers Pankaj's names ∪ every saved name with a Gabbar band
+(`zones.zone_symbols`); the 🧭 strip / 🔔 block get the Pankaj subset only, the per-row `zone` block gets all of it.
+Ajay 2026-11-14: "Make a enterable check box in longterm stocks with zone and filters please".
 """
 from __future__ import annotations
 
@@ -69,11 +73,16 @@ def owner_payload(now: Optional[datetime] = None, *, db=None) -> dict:
         cs = ST.colls(db)
         runs = ST.runs_desc(cs["runs"]) if cs else []
         fwd = ST.forward_docs(cs["forward"]) if cs else []
+        pankaj = set(SEED.pankaj_entries(seed))
         try:
-            closes = SRC.pankaj_closes(sorted(SEED.pankaj_entries(seed)), now)
+            from . import zones as Z
+            syms = sorted(pankaj | set(Z.zone_symbols(seed)))      # 🎯 2026-11-14: ONE read over Pankaj ∪ Gabbar names
+            closes = SRC.pankaj_closes(syms, now)
         except Exception as exc:                                # noqa: BLE001
             log.warning("chart-maps/long-term: 🧭 closes unreadable: %s", exc)
             closes = {}
+        closes = closes if isinstance(closes, dict) else {}
+        pk_closes = {s: c for s, c in closes.items() if s in pankaj}
         zone_live = zone_day = ls = None
         try:
             from . import zone_watch as ZW
@@ -83,8 +92,8 @@ def owner_payload(now: Optional[datetime] = None, *, db=None) -> dict:
             zone_live = ZW.serve_state(zone_day, now)
         except Exception as exc:                                # noqa: BLE001
             log.warning("chart-maps/long-term: 🔔 zone state unreadable: %s", exc)
-        return PL.build_payload(seed, baseline, runs, fwd, closes, now=now, owner=True, zone_live=zone_live,
-                                zone_day=zone_day, log_session=ls)
+        return PL.build_payload(seed, baseline, runs, fwd, pk_closes, now=now, owner=True, zone_live=zone_live,
+                                zone_day=zone_day, log_session=ls, zone_closes_all=closes)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("chart-maps/long-term: payload failed: %s", exc)
         return PL.error_payload(f"The Long Term list could not be built: {type(exc).__name__}")

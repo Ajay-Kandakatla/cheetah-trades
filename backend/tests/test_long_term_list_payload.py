@@ -82,6 +82,7 @@ def test_ready_section_order_and_keys():
     p = _ready()
     assert p["state"] == "ready" and p["reason"] is None
     assert tuple(p.keys()) == P.TOP_KEYS
+    assert "zone_rules" in P.TOP_KEYS                                   # 2026-11-14 🎯 Enterable (zones)
     assert [c["key"] for c in p["categories"]] == list(C.CATEGORY_KEYS)
     assert p["measured"] is False and p["not_a_signal"] == W.NOT_A_SIGNAL
     assert p["as_of"]["week"] == "2026-W47" and p["as_of"]["session"] == "2026-11-20"
@@ -243,6 +244,7 @@ def _live_zone_payload():
 
 def test_golden_key_set():
     # 2026-11-12: + the 🔔 zones.alert paths (a live pass with a log, built in _live_zone_payload).
+    # 2026-11-14 (ltenter spec §3.9): + zone_rules and the per-row zone block — regenerated, additive only.
     paths = sorted(key_paths(_ready()) | key_paths(_seed_only()) | key_paths(_live_zone_payload()))
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     assert golden["owner_only"] == sorted(P.owner_only_payload())

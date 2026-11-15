@@ -16956,9 +16956,11 @@ const CONTRACTS = [
       const board = quiet('src/components/LongTermBoard.tsx');
       const lib = quiet('src/lib/longTerm.ts');
       const css = quiet('src/styles/longTerm.css');
+      const zbar = quiet('src/components/LtZoneFilterBar.tsx');   // 🎯 Enterable (zones) 2026-11-14 — this tab's own words too
       // 1. no buy/sell vocabulary (and no b-word) in this tab's own words after the ONE allowed sentence
       if (!words.includes(`NOT_A_SIGNAL = "${NOT_A_SIGNAL}"`)) errs.push(`words.py must carry NOT_A_SIGNAL = "${NOT_A_SIGNAL}" — the one allowed sentence`);
-      for (const [f, s] of [['backend/long_term_list/words.py', words], ['src/components/LongTermBoard.tsx', board], ['src/lib/longTerm.ts', lib]]) {
+      for (const [f, s] of [['backend/long_term_list/words.py', words], ['src/components/LongTermBoard.tsx', board], ['src/lib/longTerm.ts', lib],
+                         ['src/components/LtZoneFilterBar.tsx', zbar]]) {
         if (!s) { errs.push(`${f} is missing`); continue; }
         const rest = s.split(NOT_A_SIGNAL).join('');
         const w = BANNED.exec(rest);
@@ -16994,7 +16996,10 @@ const CONTRACTS = [
            * `forward.points` is served as []. An element key under a golden array that the golden carries NO child
            * for is accepted only when the backend package writes it as a literal dict key ("key": …) — so the FE can
            * never read a key nobody serves, and the gap closes itself once the golden covers that array. */
-          const engine = quiet('../backend/long_term_list/forward.py') + quiet('../backend/long_term_list/payload.py');
+          // 2026-11-14 (🎯 Enterable (zones), ltenter spec C10): zones.py + words.py write the `zone` / `zone_rules` array
+          // element literals, so the childless-array tolerance must see them too.
+          const engine = quiet('../backend/long_term_list/forward.py') + quiet('../backend/long_term_list/payload.py')
+            + quiet('../backend/long_term_list/zones.py') + quiet('../backend/long_term_list/words.py');
           const childless = (arr) => known.has(arr) && ![...known].some((k) => k.startsWith(`${arr}[]`));
           const extra = [...paths(fx, '', new Set())].filter((k) => {
             if (known.has(k)) return false;
@@ -17055,11 +17060,13 @@ const CONTRACTS = [
       const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED 2026-11-12 (🔔 Long Term alerts ✨ went FIRST — Ajay: "add an alert list when stocks reach Pankaj's zones"):
       // the 📅 ✨ is one of the first two; the 🔔 ✨ is FIRST, routed to the tab, both his lines verbatim, UNMEASURED.
-      if (!ids.slice(0, 3).includes(ID)) errs.push(`the 📅 Long Term ✨ '${ID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-14: 🎯 Long Term Enterable (zones) ✨ went FIRST — Ajay: "Make a enterable check box in longterm stocks with zone and filters please").
+      if (!ids.slice(0, 4).includes(ID)) errs.push(`the 📅 Long Term ✨ '${ID}' must be one of the first four in NEW_FEATURES (found ${ids.slice(0, 4).join(', ') || 'none'})`);
       {
         const AID = 'long-term-alerts-2026-11-12';
         // WIDENED +1 (2026-11-13: 📋 All strategies table ✨ went FIRST — Ajay: "Call all strategies"): the 🔔 ✨ is one of the first two.
-        if (!ids.slice(0, 2).includes(AID)) errs.push(`the 🔔 Long Term alerts ✨ '${AID}' must be one of the first two in NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-14: 🎯 Long Term Enterable (zones) ✨ went FIRST — Ajay: "Make a enterable check box in longterm stocks with zone and filters please").
+        if (!ids.slice(0, 3).includes(AID)) errs.push(`the 🔔 Long Term alerts ✨ '${AID}' must be one of the first three in NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
         const am = new RegExp(`\\{ id: '${AID}'[^}]*\\}`).exec(nf);
         const at = am ? am[0] : '';
         if (!at) errs.push(`newFeatures.ts lost the ✨ '${AID}'`);
@@ -17084,6 +17091,46 @@ const CONTRACTS = [
         if (!/none of these lists is a buy signal/i.test(lab[1])) errs.push('the 📅 Long Term ✨ must say none of these lists is a buy signal');
         if (/pankaj/i.test(lab[1])) errs.push("the 📅 Long Term ✨ names Pankaj — his sheet stays out of the public bundle");
         if (/bounc|\bedge\b/i.test(lab[1])) errs.push('the 📅 Long Term ✨ must not say the b-word or "edge"');
+      }
+      // 10. 🎯 Enterable (zones) on the table (2026-11-14, ltenter spec §4 main-session) — Ajay 2026-11-14: "Make a enterable
+      //     check box in longterm stocks with zone and filters please". The proximity is the house gate BY NAME (never a
+      //     typed number), one localStorage key on both sides, storage only in lib/ltZones (both directions in try/catch),
+      //     the `lt-zone-*` testid prefix stays the 🧭 strip's / 🔔 block's (C1), and the ✨ is FIRST with his words.
+      {
+        const zlib = quiet('src/lib/ltZones.ts');
+        const above = /^ENTERABLE_ABOVE_PCT\s*=\s*([^#\n]*)/m.exec(src);
+        if (!above) errs.push('constants.py lost ENTERABLE_ABOVE_PCT');
+        else if (above[1].trim() !== 'AG.ALERT_MAX_ABOVE_DEMAND_PCT' || /\d/.test(above[1].replace('AG.ALERT_MAX_ABOVE_DEMAND_PCT', ''))) errs.push(`constants.py ENTERABLE_ABOVE_PCT must be AG.ALERT_MAX_ABOVE_DEMAND_PCT by name, never a typed number (found '${above[1].trim()}')`);
+        const lsBe = /^ZONE_FILTER_LS_KEY\s*=\s*"([^"]+)"/m.exec(src);
+        const lsFe = /export const LT_ZONE_LS_KEY = '([^']+)'/.exec(zlib);
+        if (!lsBe) errs.push('constants.py lost ZONE_FILTER_LS_KEY = "…"');
+        else if (!lsFe) errs.push('src/lib/ltZones.ts lost export const LT_ZONE_LS_KEY');
+        else if (lsBe[1] !== lsFe[1]) errs.push(`ltZones.ts LT_ZONE_LS_KEY '${lsFe[1]}' != constants.ZONE_FILTER_LS_KEY '${lsBe[1]}'`);
+        if (!zlib) errs.push('src/lib/ltZones.ts is missing');
+        else if ((zlib.match(/try \{/g) || []).length < 2) errs.push('src/lib/ltZones.ts must wrap BOTH localStorage directions in try { } (≥ 2 `try {`)');
+        if (/localStorage/.test(board)) errs.push('LongTermBoard.tsx names localStorage — the zone filter storage lives in lib/ltZones only');
+        if (!zbar) errs.push('src/components/LtZoneFilterBar.tsx is missing');
+        else if (zbar.includes('lt-zone-')) errs.push('LtZoneFilterBar.tsx mints an `lt-zone-` id — that prefix is the 🧭 strip / 🔔 block (use lt-zf-*)');
+        const ZID = 'chart-maps-long-term-zone-enterable-2026-11-14';
+        const allIds = [...nf.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+        if (allIds[0] !== ZID) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be FIRST in NEW_FEATURES (found ${allIds.slice(0, 3).join(', ') || 'none'})`);
+        if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
+        const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
+        const ze = zm ? zm[0] : '';
+        if (!ze) errs.push(`newFeatures.ts lost the ✨ '${ZID}'`);
+        else {
+          if (!ze.includes("route: '/chart-maps?tab=long_term'")) errs.push(`the ✨ '${ZID}' must route to /chart-maps?tab=long_term`);
+          if (!ze.includes("addedAt: '2026-11-14'")) errs.push(`the ✨ '${ZID}' must be dated 2026-11-14`);
+          if (!ze.includes('Make a enterable check box in longterm stocks with zone and filters please')) errs.push(`the ✨ '${ZID}' must quote him verbatim`);
+          if (!ze.includes('UNMEASURED')) errs.push(`the ✨ '${ZID}' must say UNMEASURED`);
+          if (!ze.includes('Display filter only — rings nothing, reorders nothing.')) errs.push(`the ✨ '${ZID}' must say "Display filter only — rings nothing, reorders nothing."`);
+          if (/pankaj/i.test(ze)) errs.push(`the ✨ '${ZID}' names Pankaj — his sheet stays out of the public bundle`);
+          if (/bounc|\bedge\b/i.test(ze)) errs.push(`the ✨ '${ZID}' must not say the b-word or "edge"`);
+          if (/\b(buy|buying|bought|sell|selling|sold)\b/i.test(ze)) errs.push(`the ✨ '${ZID}' carries buy/sell vocabulary`);
+        }
+        if (!quiet('../docs/chart_maps/long_term_zone_enterable_2026_11_14.md')) errs.push('docs/chart_maps/long_term_zone_enterable_2026_11_14.md is missing');
+        for (const t of ['../backend/tests/test_long_term_zone_enterable_2026_11_14.py', 'src/lib/ltZones.test.ts',
+                         'src/components/LongTermBoard.zonefilter.test.tsx']) if (!quiet(t)) errs.push(`${t} is missing`);
       }
       // 9. docs + tests on both sides
       for (const d of ['../docs/chart_maps/long_term_criteria_2026_11_12.md', '../docs/chart_maps/long_term_data_2026_11_12.md',

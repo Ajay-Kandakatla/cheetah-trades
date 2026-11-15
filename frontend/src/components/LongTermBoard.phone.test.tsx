@@ -5,7 +5,7 @@
  * LukBoard.phone pattern) plus DOM guards on the classes the cards carry. NEGATIVES: a pre-fix stylesheet fails each
  * matcher; no element carries an inline width / no-wrap style.
  */
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixture from '../lib/__fixtures__/longTerm.payload.json';
@@ -75,6 +75,44 @@ describe('📱 Long Term pills / fields / lines — wrap instead of widening the
   it('NEGATIVE: the stylesheet never sets nowrap (the pre-fix sample does, and is caught)', async () => {
     expect(await css()).not.toMatch(/nowrap/);
     expect(PRE_FIX).toMatch(/nowrap/);
+  });
+});
+
+/* 🎯 Enterable (zones) (2026-11-14, ltenter spec §3.7): the bar wraps at 430 px and its chips join the wrap rule; the Zone
+ * column has a min width and scrolls with the table inside .lt-table-wrap. NEGATIVES: a pre-fix sample fails each matcher. */
+const PRE_FIX_ZF = `.lt-zf-bar { display: flex; }
+.lt-zf-chip { white-space: nowrap; }`;
+
+describe('📱 🎯 zone filter bar — wraps at 430 px', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('.lt-zf-bar carries flex-wrap: wrap and min-width: 0; .lt-zf-chip / .lt-zf-reason join the wrap rule', async () => {
+    const src = await css();
+    const bar = rule(src, /\.lt-zf-bar/);
+    expect(bar).not.toBeNull();
+    expect(bar).toMatch(/flex-wrap:\s*wrap/);
+    expect(bar).toMatch(/min-width:\s*0\b/);
+    const r = wrapRule(src)!;
+    expect(r.selectors).toContain('.lt-zf-chip');
+    expect(r.selectors).toContain('.lt-zf-reason');
+    expect(r.decl).toMatch(/white-space:\s*normal/);
+    expect(src).toMatch(/td\.lt-td-zone\s*\{[^}]*min-width:\s*\d/);
+  });
+  it('NEGATIVE: the pre-fix sample fails the same matchers; the sheet still has no nowrap', async () => {
+    expect(rule(PRE_FIX_ZF, /\.lt-zf-bar/)).not.toMatch(/flex-wrap:\s*wrap/);
+    expect(rule(PRE_FIX_ZF, /\.lt-zf-bar/)).not.toMatch(/min-width:\s*0\b/);
+    expect(PRE_FIX_ZF).toMatch(/nowrap/);
+    expect(await css()).not.toMatch(/nowrap/);
+  });
+  it('DOM: no inline width / white-space on the bar or its chips (box ticked)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => JSON.parse(JSON.stringify(fixture)) })));
+    const { container } = render(<MemoryRouter initialEntries={['/chart-maps?tab=long_term']}><LongTermBoard /></MemoryRouter>);
+    await waitFor(() => expect(container.querySelector('[data-testid="lt-zf-on"]')).not.toBeNull());
+    fireEvent.click(container.querySelector('[data-testid="lt-zf-on"]')!);
+    const bar = container.querySelector('.lt-zf-bar')!;
+    expect(bar.querySelectorAll('.lt-zf-chip').length).toBeGreaterThan(0);
+    for (const el of [bar, ...bar.querySelectorAll('*')]) {
+      expect(el.getAttribute('style') || '').not.toMatch(/width|white-space|nowrap/i);
+    }
   });
 });
 

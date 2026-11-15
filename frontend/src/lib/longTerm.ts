@@ -32,10 +32,26 @@ export type LtKind = 'fundamental' | 'market' | 'stage' | 'info';
 export type LtField = { category: string; key: string; label: string; kind: LtKind | string; text: string | null; verdict: LtVerdict | string };
 export type LtEvent = { date: string | null; kind: string; text: string | null };
 export type LtPankaj = { tier_text: string | null; zones_text: string | null; zone_text: string | null };
+/* 🎯 Enterable (zones) (2026-11-14, Ajay: "Make a enterable check box in longterm stocks with zone and filters please").
+ * ONE served `zone` block per saved row (backend long_term_list/zones.row_block: both sheets merged, read by the ONE
+ * engine pankaj_picks.setup_status) and ONE `zone_rules` block (the pad, the proximity, the served words). The FE
+ * re-reads the same rule against the live print the table already polls (lib/ltZones). Display only. UNMEASURED. */
+export type LtZoneBand = { source: 'pankaj' | 'gabbar' | string; key: string; level: string; label: string; lo: number; hi: number };
+export type LtZoneState = 'inside' | 'near' | 'above' | 'below' | 'no_price' | 'no_zone' | 'filtered';
+export type LtZoneClose = {
+  basis: string; price: number | null; date: string | null; state: LtZoneState | string; enterable: boolean | null;
+  band: LtZoneBand | null; pct: number | null; text: string | null;
+};
+export type LtZone = { bands: LtZoneBand[]; gabbar_text: string | null; close: LtZoneClose | null };
+export type LtZoneRules = {
+  pad_pct: number; above_pct: number; snapshot_date: string | null; ls_key: string; text: string | null;
+  sources: { key: string; label: string }[]; levels: { source: string; key: string; label: string }[];
+  reasons: { code: string; label: string }[]; words: Record<string, string>;
+};
 export type LtRow = {
   symbol: string; name: string | null; sector: string | null; chips: LtChip[];
   stage: LtStage | null; sales: LtSales | null; status: LtStatus | null;
-  fields: LtField[]; events: LtEvent[]; pankaj: LtPankaj | null; caveat_tag: string | null;
+  fields: LtField[]; events: LtEvent[]; pankaj: LtPankaj | null; zone?: LtZone | null; caveat_tag: string | null;
 };
 export type LtTop = { symbol: string; name: string | null; sector: string | null; rank_text: string | null; new: boolean };
 export type LtCategory = {
@@ -78,6 +94,7 @@ export type LtPayload = {
   as_of: LtAsOf | null;
   digest: LtDigest | null;
   zones: LtZones | null;
+  zone_rules?: LtZoneRules | null;
   started_moving: LtStarted[];
   changed: LtRow[];
   categories: LtCategory[];
@@ -198,7 +215,9 @@ export function ltForwardLines(fwd: LtForward | null | undefined): LtLine[] {
  * answer's ET date), else `bar.c` (no today bar yet → the last closed bar is the previous close). Anything missing or
  * non-positive → null and the cell stays blank — never 0%. Display only; it sorts only when he taps the header. */
 export type LtLiveQuote = {
-  bar?: { t?: unknown; c?: unknown } | null; prev_bar?: { c?: unknown } | null; now?: { price?: unknown } | null;
+  bar?: { t?: unknown; c?: unknown } | null; prev_bar?: { t?: unknown; c?: unknown } | null;
+  /* `as_of` / `add_line` / `session`: the served CardLiveNow keys the 🎯 Zone cell reads (lib/cardLive CardLiveNow). */
+  now?: { price?: unknown; as_of?: unknown; add_line?: unknown; session?: unknown } | null;
 };
 const ltPos = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && x > 0;
 
