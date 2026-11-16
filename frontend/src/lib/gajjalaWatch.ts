@@ -50,8 +50,9 @@ export const GGW_PANEL = {
  *  (GGW_FIT_GROW); the rows are sized from the viewport (ggwFitRowHeight; docs/gajjala/watch_frontend_2026_11_15.md). */
 export const GGW_CHART_H = { '1m': 120, '3m': 180, '5m': 180 } as const;
 /** 👀 3 rows on one screen (2026-11-15 fix #3; Ajay: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any
- *  given time"). Above the phone break the grid rows are sized from the viewport: row = (innerHeight − the grid's
- *  measured top − what sits below it − 2 row gaps) / GGW_FIT_ROWS, never under GGW_FIT_ROW_MIN_PX. The charts then
+ *  given time"). Above the phone break the grid rows are sized from the viewport: row = (innerHeight − what the board
+ *  holds above the grid (2026-11-16: measured from the BOARD's top, no longer the page's) − (rows − 1) row gaps) / rows,
+ *  never under GGW_FIT_ROW_MIN_PX. The charts then
  *  flex to fill the row, the 1-min and the 3-/5-min pair sharing the height in the SAME proportion GGW_CHART_H gives
  *  them at any width (the pair is half the width, so its share is GGW_CHART_H['3m'] / 2). */
 export const GGW_FIT_ROWS = 3;
@@ -61,12 +62,57 @@ export const GGW_FIT_ROW_MIN_PX = 200;
 /** The flex shares of the 1-min chart and the 3-/5-min pair inside a fitted tile (derived from GGW_CHART_H). */
 export const GGW_FIT_GROW = { top: GGW_CHART_H['1m'], pair: GGW_CHART_H['3m'] / 2 } as const;
 /** One fitted grid row in CSS px, or null when there is nothing to fit (no viewport / junk numbers). */
-export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap: number }): number | null {
+export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap: number },
+                                rows: number = GGW_FIT_ROWS): number | null {
   const ok = [m.vh, m.top, m.below, m.gap].every((x) => typeof x === 'number' && Number.isFinite(x));
   if (!ok || m.vh <= 0) return null;
-  const free = m.vh - Math.max(0, m.top) - Math.max(0, m.below) - (GGW_FIT_ROWS - 1) * Math.max(0, m.gap);
-  return Math.max(GGW_FIT_ROW_MIN_PX, Math.floor(free / GGW_FIT_ROWS));
+  const n = Number.isInteger(rows) && rows >= 1 ? rows : GGW_FIT_ROWS;
+  const free = m.vh - Math.max(0, m.top) - Math.max(0, m.below) - (n - 1) * Math.max(0, m.gap);
+  return Math.max(GGW_FIT_ROW_MIN_PX, Math.floor(free / n));
 }
+/** 👀 Charts per screen (2026-11-16). Ajay: "I need bigger may be 2 on each screen side by side its not clear and give
+ *  me a strech button to see full chart". 2 = two tiles side by side filling one screen (his word, the default);
+ *  4 = 2 × 2; 9 = 3 × 3 (his 2026-11-15 "fit 3x3 tikers"). Layout only — the 4 and 9 options are MINE, kept so the
+ *  11-15 ask is one click away. `rows` feeds ggwFitRowHeight; `cols` picks the grid class. */
+export const GGW_LAYOUTS = {
+  2: { cols: 2, rows: 1 },
+  4: { cols: 2, rows: 2 },
+  9: { cols: 3, rows: GGW_FIT_ROWS },
+} as const;
+export type GgwLayout = keyof typeof GGW_LAYOUTS;
+export const GGW_LAYOUT_ORDER: ReadonlyArray<GgwLayout> = [2, 4, 9];
+export const GGW_LAYOUT_DEFAULT: GgwLayout = 2;
+/** This browser's last pick (a per-viewer convenience; a missing / blocked / junk value → the default). */
+export const GGW_LAYOUT_KEY = 'ggw.layout';
+export function parseGgwLayout(v: unknown): GgwLayout {
+  const n = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v.trim()) : v;
+  return n === 2 || n === 4 || n === 9 ? n : GGW_LAYOUT_DEFAULT;
+}
+export function readGgwLayout(): GgwLayout {
+  try { return parseGgwLayout(window.localStorage.getItem(GGW_LAYOUT_KEY)); } catch { return GGW_LAYOUT_DEFAULT; }
+}
+export function saveGgwLayout(l: GgwLayout): void {
+  try { window.localStorage.setItem(GGW_LAYOUT_KEY, String(l)); } catch { /* private window: the pick lasts this visit */ }
+}
+/** The pick is also the page size (Ajay 2026-11-16: "two stocks with 3 charts each at any given moment instead of 6 …
+ *  but I also wanna be able to move current one in the view"): the board shows that many tiles at once; ◀ ▶, the
+ *  ticker buttons and the ← → keys move the view. Page of the i-th tile, and the page clamped to the list. */
+export function ggwPageCount(n: number, size: number): number {
+  return size > 0 && n > 0 ? Math.ceil(n / size) : 1;
+}
+export function ggwClampPage(page: number, n: number, size: number): number {
+  const last = ggwPageCount(n, size) - 1;
+  return Number.isInteger(page) ? Math.min(Math.max(0, page), last) : 0;
+}
+export function ggwPageOf(index: number, size: number): number {
+  return size > 0 && index > 0 ? Math.floor(index / size) : 0;
+}
+/** ◀ ▶ — the pager's glyphs (structural). */
+export const GGW_PAGER = { prev: '◀', next: '▶', prevTitle: 'Previous (←)', nextTitle: 'Next (→)' } as const;
+
+/** ⤢ / ⤡ — the stretch control's glyphs and titles (structural, no word about a stock). */
+export const GGW_STRETCH = { open: '⤢', close: '⤡', closeTitle: 'Back to the board (Esc)' } as const;
+export function ggwStretchTitle(sym: string): string { return `Stretch ${sym} to full screen`; }
 /** The viewBox height that makes a `viewW`-wide chart exactly fill a w × h CSS box (no distortion, no overflow);
  *  null when the box has no size yet (then the GGW_CHART_H height is used). */
 export function ggwFitViewBoxH(w: number, h: number, viewW: number): number | null {
@@ -255,6 +301,17 @@ export function ggwMergeRows(b: GgwBoard, partial: GgwBoard): GgwBoard {
 export function ggwSplitFrames(frames: ReadonlyArray<GgwFrame>): { top: GgwFrame | null; pair: GgwFrame[] } {
   const top = frames.find((f) => f.tf === '1m') ?? null;
   return { top, pair: frames.filter((f) => f !== top) };
+}
+
+/** ⤢ The full-screen order, top to bottom (Ajay 2026-11-16: "I wanna see all 3 of one stock for stretch like 5, 3 and
+ *  1"): 5-min, 3-min, 1-min, each full width and the same height; a frame not named here follows in served order. */
+export const GGW_STRETCH_ORDER = ['5m', '3m', '1m'] as const;
+export function ggwStretchFrames(frames: ReadonlyArray<GgwFrame>): GgwFrame[] {
+  const rank = (f: GgwFrame) => {
+    const i = (GGW_STRETCH_ORDER as ReadonlyArray<string>).indexOf(f.tf);
+    return i < 0 ? GGW_STRETCH_ORDER.length : i;
+  };
+  return frames.map((f, i) => ({ f, i })).sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i).map((x) => x.f);
 }
 
 /** The chart height for one frame (viewBox units). */

@@ -20,11 +20,11 @@ describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
     // WIDENED +1 (2026-11-14: 🎯 Long Term Enterable (zones) ✨ FIRST — Ajay: "Make a enterable check box in longterm stocks with zone and filters please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[7].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-long-term-table-2026-11-13');
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
-    expect(NEW_FEATURES[10].id).toBe('long-term-alerts-2026-11-12');
-    expect(NEW_FEATURES[11].id).toBe(ID);
+    expect(NEW_FEATURES[8].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
+    expect(NEW_FEATURES[11].id).toBe('long-term-alerts-2026-11-12');
+    expect(NEW_FEATURES[12].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=long_term');
@@ -61,8 +61,8 @@ describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
   it('NEGATIVE: the 💎 tiny-base ✨ and the 🏁 Luk ended-fold ✨ are not replaced — each listed once, right after this entry; ids stay unique', () => {
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[12].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
-    expect(NEW_FEATURES[13].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
+    expect(NEW_FEATURES[13].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
+    expect(NEW_FEATURES[14].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-undervalue-tiny-base-2026-11-12').length).toBe(1);
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-luk-ended-fold-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
@@ -81,7 +81,7 @@ describe('✨ the 🎯 Enterable (zones) entry on the 📅 Long Term table (2026
   it('is THIRD (the 🔀 9/21 EMA cross ✨ and the 🌫️ day-read ✨ went FIRST 2026-11-15), listed once, dated 2026-11-14, routed to ?tab=long_term', () => {
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[7].id).toBe(ZID);
+    expect(NEW_FEATURES[8].id).toBe(ZID);
     expect(NEW_FEATURES.filter((x) => x.id === ZID).length).toBe(1);
     expect(z?.addedAt).toBe('2026-11-14');
     expect(z?.route).toBe('/chart-maps?tab=long_term');
@@ -115,7 +115,7 @@ describe('✨ the 🎯 Enterable (zones) entry on the 📅 Long Term table (2026
     expect('we buy here').toMatch(/\b(buy|buying|bought|sell|selling|sold)\b/i);
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[8].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[9].id).toBe('chart-maps-long-term-table-2026-11-13');
     expect(NEW_FEATURES.filter((x) => x.id === 'long-term-list-2026-11-12').length).toBe(1);
     expect(NEW_FEATURES.filter((x) => x.id === 'long-term-alerts-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);

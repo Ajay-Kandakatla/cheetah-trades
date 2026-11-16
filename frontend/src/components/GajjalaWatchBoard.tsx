@@ -15,6 +15,11 @@
  * one Yahoo ↗, ✕ (DELETE, no confirm); the replay's dark panel with the 1-min chart full width on top and the 3-min +
  * 5-min side by side below — PatternChart chartOnly (no SEPA link), emaStyle bold, the served 04:00 axis.
  *
+ * 2026-11-16, Ajay: "I need bigger may be 2 on each screen side by side its not clear and give me a strech button to
+ * see full chart" — a "2 · 4 · 9 per screen" pick in the head (2 = two tiles side by side filling one screen, the
+ * default; 9 = his 11-15 3 × 3), remembered in this browser; ⤢ on every tile opens it over the whole window (⤡ / Esc
+ * back). Layout only: no word, order or rule changes.
+ *
  * Cadence (spec C4.5 / C2.4 / C2.7): one setTimeout chain re-GETs the board at the served refresh_sec while the page is
  * visible; out of window, ONE re-GET at the served next_window_sec; while a row is pending, the pending names only
  * (?symbols=) every pending_poll_sec up to pending_wait_max_sec; one full re-GET after an add or a remove. No
@@ -28,13 +33,15 @@
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
  * list order orders this board (the order he added the names in, as served). */
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_PATH, GGW_PHONE_MQ, ggwChartHeight, ggwFitRowHeight,
-  ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames, ggwSymbolPath, parseGgw,
-  type GgwBoard, type GgwFrame, type GgwPayload, type GgwRow, type GgwWriteAnswer,
+  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
+  GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
+  ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, parseGgw, readGgwLayout, saveGgwLayout,
+  type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
@@ -67,33 +74,9 @@ const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
 
-/** What sits BELOW `el` on the page: every ancestor's bottom padding / border / margin and every later sibling that
- *  is laid out under it. Never the slack of a short page (a min-height:100vh shell would otherwise shrink the rows
- *  on every measure), never a side-by-side sibling. */
-function belowOf(el: HTMLElement): number {
-  let below = 0;
-  let node: HTMLElement | null = el;
-  while (node && node.parentElement && node !== document.documentElement) {
-    const parent: HTMLElement = node.parentElement;
-    const nodeBottom = node.getBoundingClientRect().bottom;
-    below += parseFloat(getComputedStyle(node).marginBottom) || 0;
-    for (let sib = node.nextElementSibling as HTMLElement | null; sib; sib = sib.nextElementSibling as HTMLElement | null) {
-      const cs = getComputedStyle(sib);
-      if (cs.display === 'none' || cs.position === 'absolute' || cs.position === 'fixed') continue;
-      const r = sib.getBoundingClientRect();
-      if (r.height <= 0 || r.top < nodeBottom - 1) continue;
-      below += r.height + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
-    }
-    const pcs = getComputedStyle(parent);
-    below += (parseFloat(pcs.paddingBottom) || 0) + (parseFloat(pcs.borderBottomWidth) || 0);
-    node = parent;
-  }
-  return below;
-}
-
 /** The fitted grid row height (px) above the phone break, or null (phone / no layout yet / jsdom). */
 function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElement>,
-                    phone: boolean, deps: unknown): number | null {
+                    phone: boolean, deps: unknown, rows: number): number | null {
   const [rowH, setRowH] = useState<number | null>(null);
   useEffect(() => {
     if (phone || typeof window === 'undefined') { setRowH(null); return; }
@@ -103,14 +86,19 @@ function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElem
       const r = g.getBoundingClientRect();
       if (!(r.width > 0)) { setRowH(null); return; }
       const gap = parseFloat(getComputedStyle(g).rowGap) || 0;
-      setRowH(ggwFitRowHeight({ vh: window.innerHeight, top: r.top + window.scrollY, below: belowOf(g), gap }));
+      /* 2026-11-16: measured from the BOARD's top, not the page's — the banners above the tabs grew past one screen,
+       * so a page-top measure left every row at the floor. With the board scrolled to the top, its head, the pager
+       * and `rows` rows fill exactly one window (his "two stocks with 3 charts each at any given moment"). */
+      const b = g.closest('.ggw-board');
+      const boardTop = b ? b.getBoundingClientRect().top : r.top;
+      setRowH(ggwFitRowHeight({ vh: window.innerHeight, top: r.top - boardTop, below: 0, gap }, rows));
     };
     measure();
     window.addEventListener('resize', measure);
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     if (ro && head.current) ro.observe(head.current);
     return () => { window.removeEventListener('resize', measure); ro?.disconnect(); };
-  }, [phone, grid, head, deps]);
+  }, [phone, grid, head, deps, rows]);
   return rowH;
 }
 
@@ -165,15 +153,25 @@ function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boo
   );
 }
 
-function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy }: {
+function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   onRemove: (sym: string) => void;
+  /** On the board: ⤢ opens this tile full screen. */
+  onStretch?: (sym: string) => void;
+  /** In the full-screen view: ⤡ goes back (and ✕ is not offered there — no remove one click from closing). */
+  onUnstretch?: () => void;
+  /** Not on the current page: kept mounted (its charts keep their bars) but not shown. */
+  offPage?: boolean;
+  /** In the full-screen view: ◀ ▶ step to the previous / next stock of HIS list. */
+  onPrev?: () => void;
+  onNext?: () => void;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
   const rm = removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol;
   return (
-    <section className={`ggw-tile${focused ? ' ggw-tile-focus' : ''}`} id={`ggw-${row.symbol}`}
-             data-testid={`ggw-tile-${row.symbol}`} data-state={row.state}>
+    <section className={`ggw-tile${focused ? ' ggw-tile-focus' : ''}`} id={onUnstretch ? undefined : `ggw-${row.symbol}`}
+             data-testid={onUnstretch ? `ggw-stretch-tile-${row.symbol}` : `ggw-tile-${row.symbol}`} data-state={row.state}
+             hidden={offPage || undefined}>
       <div className="ggw-tile-head">
         <b className="ggw-sym">{row.symbol}</b>
         {row.text ? (
@@ -191,17 +189,49 @@ function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy }: {
           <span key={`${r.frame}-${r.at_et}-${i}`} className="ggw-chip ggw-rang" data-testid="ggw-rang">{r.text}</span>
         ))}
         <span className="ggw-actions">
+          {onStretch ? (
+            <button type="button" className="ggw-btn ggw-stretch-btn" title={ggwStretchTitle(row.symbol)}
+                    aria-label={ggwStretchTitle(row.symbol)} data-testid={`ggw-stretch-btn-${row.symbol}`}
+                    onClick={() => onStretch(row.symbol)}>
+              {GGW_STRETCH.open}
+            </button>
+          ) : null}
           <button type="button" className="ggw-btn ggw-yahoo" title={yahooTitle(row.symbol)}
                   aria-label={yahooTitle(row.symbol)} onClick={(e) => openYahoo(e, row.symbol)}>
             {YAHOO_LABEL}
           </button>
-          <button type="button" className="ggw-btn ggw-remove" title={rm} aria-label={rm} disabled={busy}
-                  onClick={() => onRemove(row.symbol)}>
-            {'✕'}
-          </button>
+          {onPrev ? (
+            <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle}
+                    aria-label={GGW_PAGER.prevTitle} data-testid="ggw-stretch-prev" onClick={onPrev}>
+              {GGW_PAGER.prev}
+            </button>
+          ) : null}
+          {onNext ? (
+            <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle}
+                    aria-label={GGW_PAGER.nextTitle} data-testid="ggw-stretch-next" onClick={onNext}>
+              {GGW_PAGER.next}
+            </button>
+          ) : null}
+          {onUnstretch ? (
+            <button type="button" className="ggw-btn ggw-unstretch" title={GGW_STRETCH.closeTitle}
+                    aria-label={GGW_STRETCH.closeTitle} data-testid="ggw-unstretch" onClick={onUnstretch}>
+              {GGW_STRETCH.close}
+            </button>
+          ) : (
+            <button type="button" className="ggw-btn ggw-remove" title={rm} aria-label={rm} disabled={busy}
+                    onClick={() => onRemove(row.symbol)}>
+              {'✕'}
+            </button>
+          )}
         </span>
       </div>
-      {top || pair.length ? (
+      {onUnstretch && row.frames.length ? (
+        <div className="ggw-dark ggw-charts ggw-charts--stretch" data-testid="ggw-stretch-charts">
+          {ggwStretchFrames(row.frames).map((f) => (
+            <Frame key={f.tf} f={f} phone={phone} fit={fit} style={fit ? { flexGrow: 1 } : undefined} />
+          ))}
+        </div>
+      ) : top || pair.length ? (
         <div className="ggw-dark ggw-charts">
           {top ? <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined} /> : null}
           {pair.length ? (
@@ -212,6 +242,39 @@ function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy }: {
         </div>
       ) : null}
     </section>
+  );
+}
+
+/** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
+ *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
+ *  the board's own rows, so the minute GET keeps moving its bars. */
+function Stretch({ row, phone, removeLabel, onClose, onStep }: {
+  row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      else if (onStep && e.key === 'ArrowLeft') onStep(-1);
+      else if (onStep && e.key === 'ArrowRight') onStep(1);
+    };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose, onStep]);
+  useEffect(() => {
+    (document.querySelector('[data-testid="ggw-unstretch"]') as HTMLElement | null)?.focus?.();
+  }, []);
+  return createPortal(
+    <div className="ggw-stretch" role="dialog" aria-modal="true" aria-label={ggwStretchTitle(row.symbol)}
+         data-testid="ggw-stretch" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
+        <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
+              onRemove={() => {}} onUnstretch={onClose}
+              onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -227,6 +290,23 @@ export default function GajjalaWatchBoard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [outlined, setOutlined] = useState<string | null>(null);
+  const [layout, setLayoutState] = useState<GgwLayout>(readGgwLayout);
+  const [stretched, setStretched] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const closeStretch = useCallback(() => setStretched(null), []);
+  /* The page size: the pick on a desktop; a phone shows every tile in one column. */
+  const size = phone ? Number.POSITIVE_INFINITY : layout;
+  const boardRef = useRef<HTMLDivElement>(null);
+  /* A page move by HIM (◀ ▶, a ticker, ← →) brings the board's top to the window's top, so the two tiles fill it. */
+  const goPage = (pg: number) => {
+    setPage(pg);
+    boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
+  const setLayout = (l: GgwLayout) => {
+    setPage((pg) => (Number.isFinite(size) ? ggwPageOf(pg * (size as number), l) : 0));   // keep the first tile in view
+    setLayoutState(l);
+    saveGgwLayout(l);
+  };
 
   const alive = useRef(true);
   const board = useRef<GgwBoard | null>(null);
@@ -237,7 +317,7 @@ export default function GajjalaWatchBoard() {
   const loadAllRef = useRef<() => void>(() => {});
   const gridRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
-  const rowH = useFitRows(gridRef, headRef, phone, load);
+  const rowH = useFitRows(gridRef, headRef, phone, load, GGW_LAYOUTS[layout].rows);
   const fit = rowH != null;
 
   const clearMain = () => { if (mainTimer.current) { clearTimeout(mainTimer.current); mainTimer.current = null; } };
@@ -336,12 +416,46 @@ export default function GajjalaWatchBoard() {
   /* ?focus=SYM (a push deep link): scroll that tile into view and outline it, once. */
   useEffect(() => {
     if (focusDone.current || !focus || load.phase !== 'loaded' || load.p.state !== 'ok') return;
-    if (!load.p.rows.some((r) => r.symbol === focus)) return;
+    const at = load.p.rows.findIndex((r) => r.symbol === focus);
+    if (at < 0) return;
     focusDone.current = true;
+    if (Number.isFinite(size)) setPage(ggwPageOf(at, size as number));
     setOutlined(focus);
     const el = typeof document !== 'undefined' ? document.getElementById(`ggw-${focus}`) : null;
     el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
-  }, [focus, load]);
+  }, [focus, load, size]);
+
+  /* ⤢ the stretched name left the list → forget it (it never re-opens by itself when the name is added back). */
+  useEffect(() => {
+    if (!stretched || load.phase !== 'loaded' || load.p.state !== 'ok') return;
+    if (!load.p.rows.some((r) => r.symbol === stretched)) setStretched(null);
+  }, [stretched, load]);
+
+  /* ← → move the view a page (never while typing in the add box, never under the full-screen view). */
+  const rowsNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows : null;
+  const nRows = rowsNow?.length ?? 0;
+  useEffect(() => {
+    if (stretched || !Number.isFinite(size) || nRows <= (size as number)) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const d = e.key === 'ArrowLeft' ? -1 : 1;
+      setPage((pg) => ggwClampPage(ggwClampPage(pg, nRows, size as number) + d, nRows, size as number));
+      boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [stretched, size, nRows]);
+  /* In the full-screen view ◀ ▶ / ← → step through HIS list one stock at a time (wrapping), and the board's page
+   * follows, so closing it lands on the stock last viewed. */
+  const stepStretch = useCallback((d: -1 | 1) => {
+    if (!rowsNow || rowsNow.length < 2) return;
+    const i = rowsNow.findIndex((r) => r.symbol === stretched);
+    const j = ((i < 0 ? 0 : i) + d + rowsNow.length) % rowsNow.length;
+    setStretched(rowsNow[j].symbol);
+    if (Number.isFinite(size)) setPage(ggwPageOf(j, size as number));
+  }, [rowsNow, size, stretched]);
 
   const write = (method: 'POST' | 'DELETE', sym: string) => {
     setBusy(true);
@@ -385,8 +499,14 @@ export default function GajjalaWatchBoard() {
   }
 
   const addLabel = p.add_label ?? '';
+  /* A name removed (here or on another device) while stretched simply closes the full-screen view. */
+  const stretchRow = stretched ? p.rows.find((r) => r.symbol === stretched) ?? null : null;
+  const paged = Number.isFinite(size) && p.rows.length > (size as number);
+  const cur = paged ? ggwClampPage(page, p.rows.length, size as number) : 0;
+  const pages = paged ? ggwPageCount(p.rows.length, size as number) : 1;
+  const onPage = (i: number) => !paged || ggwPageOf(i, size as number) === cur;
   return (
-    <div className="ggw-board" data-testid="ggw-board">
+    <div className="ggw-board" data-testid="ggw-board" ref={boardRef}>
       <div className="ggw-head" ref={headRef}>
         {p.title ? <h2 className="ggw-title">{p.title}</h2> : null}
         <form className="ggw-add" onSubmit={onAdd}>
@@ -423,6 +543,18 @@ export default function GajjalaWatchBoard() {
             })}
           </span>
         ) : null}
+        {p.rows.length && !phone ? (
+          <span className="ggw-layout" role="group" aria-label="Charts per screen" data-testid="ggw-layout">
+            {GGW_LAYOUT_ORDER.map((l) => (
+              <button key={l} type="button" className={`ggw-btn ggw-layout-btn${l === layout ? ' is-on' : ''}`}
+                      aria-pressed={l === layout} title={`${l} per screen`} data-testid={`ggw-layout-${l}`}
+                      onClick={() => setLayout(l)}>
+                {String(l)}
+              </button>
+            ))}
+            <span className="ggw-layout-label">per screen</span>
+          </span>
+        ) : null}
         {p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text) ? (
           <details className="ggw-info">
             <summary aria-label="info">{'ℹ️'}</summary>
@@ -432,17 +564,43 @@ export default function GajjalaWatchBoard() {
           </details>
         ) : null}
       </div>
+      {paged ? (
+        <nav className="ggw-pager" aria-label="Move the view" data-testid="ggw-pager">
+          <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle} aria-label={GGW_PAGER.prevTitle}
+                  data-testid="ggw-pager-prev" disabled={cur <= 0} onClick={() => goPage(cur - 1)}>
+            {GGW_PAGER.prev}
+          </button>
+          {p.rows.map((r, i) => (
+            <button key={r.symbol} type="button" className={`ggw-btn ggw-pager-sym${onPage(i) ? ' is-on' : ''}`}
+                    aria-current={onPage(i) || undefined} data-testid={`ggw-pager-${r.symbol}`}
+                    onClick={() => goPage(ggwPageOf(i, size as number))}>
+              {r.symbol}
+            </button>
+          ))}
+          <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle} aria-label={GGW_PAGER.nextTitle}
+                  data-testid="ggw-pager-next" disabled={cur >= pages - 1} onClick={() => goPage(cur + 1)}>
+            {GGW_PAGER.next}
+          </button>
+          <span className="ggw-pager-at" data-testid="ggw-pager-at">{`${cur + 1} / ${pages}`}</span>
+        </nav>
+      ) : null}
       {p.rows.length ? (
-        <div className={`ggw-grid${fit ? ' ggw-grid--fit' : ''}`} ref={gridRef}
+        <div className={`ggw-grid${GGW_LAYOUTS[layout].cols === 2 ? ' ggw-grid--cols2' : ''}${fit ? ' ggw-grid--fit' : ''}`}
+             ref={gridRef} data-layout={layout}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
-          {p.rows.map((r) => (
+          {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
-                  focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} />
+                  focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
+                  offPage={!onPage(i)} />
           ))}
         </div>
       ) : (
         p.empty_text ? <p className="ggw-line ggw-empty" data-testid="ggw-empty">{p.empty_text}</p> : null
       )}
+      {stretchRow ? (
+        <Stretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
+                 onStep={p.rows.length > 1 ? stepStretch : null} />
+      ) : null}
     </div>
   );
 }

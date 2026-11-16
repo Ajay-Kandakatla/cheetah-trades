@@ -38,7 +38,11 @@
 /* The grid: 3 columns on his 27-inch monitor, 2 on a laptop / tablet, 1 on a phone. */
 .ggw-grid { display: grid; gap: 13px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 1260px) { .ggw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 2026-11-16 (Ajay: "I need bigger may be 2 on each screen side by side"): the 2- and 4-per-screen picks are two
+ * columns at every desktop width; the phone is still one column (this rule is the more specific one, so it is restated). */
+.ggw-grid.ggw-grid--cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .ggw-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .ggw-grid.ggw-grid--cols2 { grid-template-columns: 1fr; } }
 
 .ggw-tile, .ggw-frame { min-width: 0; max-width: 100%; }
 /* 2026-11-15 fix #1: the tile is ALWAYS dark, so it carries its own text palette (the replay's) — in the light theme
@@ -99,3 +103,32 @@
   .ggw-grid--fit .ggw-chartbox { flex: 1 1 0; min-height: 0; overflow: hidden; }
   .ggw-grid--fit .ggw-cap { flex: none; }
 }
+
+/* 2026-11-16 (his GP screenshot: the 5-min chart squeezed to a strip under a two-line caption): in a fitted tile the
+ * caption is ONE line — the chart keeps its height; the full sentence is one ⤢ away. */
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-cap { flex-wrap: nowrap; overflow: hidden; }
+  .ggw-grid--fit .ggw-cap > * { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ggw-grid--fit .ggw-cap > .ema-blink-dot, .ggw-grid--fit .ggw-cap > .ggw-cap-label { flex-shrink: 0; }
+}
+
+/* "2 · 4 · 9 per screen" — the pick in the head. */
+.ggw-layout { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.74rem; color: var(--text-muted, #8595ad); }
+.ggw-layout-btn { min-width: 1.7rem; }
+.ggw-layout-btn.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+.ggw-stretch-btn, .ggw-unstretch { font-size: 0.9rem; line-height: 1; padding: 0.1rem 0.4rem; }
+
+/* ⤢ Stretch: one tile over the whole window (Ajay 2026-11-16: "give me a strech button to see full chart"). The inner
+ * grid carries .ggw-grid--fit above the phone break, so the tile's charts fill the window by the same fit rules. */
+.ggw-stretch {
+  position: fixed; inset: 0; z-index: 5000; overflow: auto; padding: 12px;
+  background: rgba(5, 7, 10, 0.94);
+}
+.ggw-grid.ggw-grid--stretch { grid-template-columns: minmax(0, 1fr); --ggw-row-h: calc(100vh - 24px); }
+@supports (height: 100dvh) { .ggw-grid.ggw-grid--stretch { --ggw-row-h: calc(100dvh - 24px); } }
+
+/* ◀ OMH AMD XYZQ ▶ — the pager over the grid: that many tiles at once (the pick), the rest one click / ← → away. */
+.ggw-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0 0 0.5rem; min-width: 0; }
+.ggw-pager-sym.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+.ggw-pager-at { font-size: 0.74rem; color: var(--text-muted, #8595ad); }
+.ggw-tile[hidden] { display: none; }

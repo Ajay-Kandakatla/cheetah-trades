@@ -14,7 +14,7 @@ import { boldEmaLabels, PATTERN_CHART_VIEW_W, PatternChart } from './PatternChar
 import { EMA_BOLD, toneColor, type CmTile } from '../lib/chartMaps';
 import {
   GGW_CHART_H, GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FIT_ROW_MIN_PX, GGW_FIT_ROWS, GGW_PHONE_MQ, ggwFitRowHeight,
-  ggwFitViewBoxH, parseGgw,
+  ggwFitViewBoxH, GGW_LAYOUT_DEFAULT, GGW_LAYOUTS, parseGgw,
 } from '../lib/gajjalaWatch';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -185,7 +185,9 @@ describe('#3 the board fits its rows to the viewport above the phone break', () 
     const c = await mountBoard(false, { width: 800, height: 150, top: 300 });
     const grid = c.querySelector('.ggw-grid') as HTMLElement;
     expect(grid.classList.contains('ggw-grid--fit')).toBe(true);
-    const want = ggwFitRowHeight({ vh: window.innerHeight, top: 300, below: 0, gap: 0 });
+    // WIDENED 2026-11-16: the default is now 2 per screen (one fitted row) — Ajay "two charts to fit the screen".
+    // and the rows are measured from the BOARD's top (every stubbed rect shares top 300 → 0 above the grid, nothing below).
+    const want = ggwFitRowHeight({ vh: window.innerHeight, top: 0, below: 0, gap: 0 }, GGW_LAYOUTS[GGW_LAYOUT_DEFAULT].rows);
     expect(grid.style.getPropertyValue('--ggw-row-h')).toBe(`${want}px`);
     const h = ggwFitViewBoxH(800, 150, 620);
     expect(vbs(c)).toEqual([`0 0 620 ${h}`, `0 0 620 ${h}`, `0 0 620 ${h}`]);

@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "I need bigger may be 2 on each screen side by side its not clear and give me a strech button to
+  // see full chart" + "I wanna see all 3 of one stock for stretch like 5, 3 and 1" + "two stocks with 3 charts each at any given
+  // moment instead of 6 … but I also wanna be able to move current one in the view". 👀 Gajjala's Watch: a 2 · 4 · 9 per-screen
+  // pick (2 = default, remembered per browser), ◀ ▶ / ticker buttons / ← → move the view, ⤢ opens one stock full screen with
+  // its 5-, 3- and 1-min charts stacked (◀ ▶ / ← → step, ⤡ / Esc back). Layout only. Doc docs/gajjala/watch_two_up_stretch_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-two-up-stretch-2026-11-16',
+    label: '👀 Bigger watch charts — you said: “I need bigger may be 2 on each screen side by side its not clear and give me a strech button to see full chart”. Two stocks fill the screen (◀ ▶ or ← → to move), and ⤢ opens one stock full screen with its 5-, 3- and 1-min charts.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-15, verbatim: "I need something in the videos you show different colors yellow for 9 EMA here and its inverted in
   // the app also can you switch its up in the app please..  Also make the lines a little more thick". toneColor ema9/ema21 =
   // EMA_BOLD (9 #FACC15, 21 #BE78FF), EMA_LINE_W 2 on every PatternChart (was 1.1), 👀 bold 2 → 3, LiveCandlesChart too.
