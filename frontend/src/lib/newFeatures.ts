@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove
+  // from these give me an x option to remove as well". 👀 ticker buttons toggle any name on/off (one name fills the width),
+  // a "1 per screen" pick, × on every ticker (removes it from the watch). Layout only. Doc
+  // docs/gajjala/watch_toggle_tickers_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-toggle-tickers-2026-11-16',
+    label: '👀 Pick any stock, 1 at a time — you said: “make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove from these give me an x option to remove as well”. Tap a ticker to show/hide it; × removes it from the watch.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim (on the ⤢ full-screen POLA): "This is good but they are not very clear as the lines are too thick
   // may be reduce thick ness and make the bars lil more transparent to be over the EMA lines?". EMA_BOLD 3 → 2 px and the
   // candles under emaStyle="bold" at EMA_BOLD_CANDLE_OPACITY (0.55) — the 👀 Watch charts only. Doc

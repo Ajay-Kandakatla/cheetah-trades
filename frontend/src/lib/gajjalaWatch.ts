@@ -75,18 +75,19 @@ export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap
  *  4 = 2 × 2; 9 = 3 × 3 (his 2026-11-15 "fit 3x3 tikers"). Layout only — the 4 and 9 options are MINE, kept so the
  *  11-15 ask is one click away. `rows` feeds ggwFitRowHeight; `cols` picks the grid class. */
 export const GGW_LAYOUTS = {
+  1: { cols: 1, rows: 1 },                       // 2026-11-16 — Ajay: "1 at a time instead of 2 minimum"
   2: { cols: 2, rows: 1 },
   4: { cols: 2, rows: 2 },
   9: { cols: 3, rows: GGW_FIT_ROWS },
 } as const;
 export type GgwLayout = keyof typeof GGW_LAYOUTS;
-export const GGW_LAYOUT_ORDER: ReadonlyArray<GgwLayout> = [2, 4, 9];
+export const GGW_LAYOUT_ORDER: ReadonlyArray<GgwLayout> = [1, 2, 4, 9];
 export const GGW_LAYOUT_DEFAULT: GgwLayout = 2;
 /** This browser's last pick (a per-viewer convenience; a missing / blocked / junk value → the default). */
 export const GGW_LAYOUT_KEY = 'ggw.layout';
 export function parseGgwLayout(v: unknown): GgwLayout {
   const n = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v.trim()) : v;
-  return n === 2 || n === 4 || n === 9 ? n : GGW_LAYOUT_DEFAULT;
+  return n === 1 || n === 2 || n === 4 || n === 9 ? n : GGW_LAYOUT_DEFAULT;
 }
 export function readGgwLayout(): GgwLayout {
   try { return parseGgwLayout(window.localStorage.getItem(GGW_LAYOUT_KEY)); } catch { return GGW_LAYOUT_DEFAULT; }
@@ -106,6 +107,22 @@ export function ggwClampPage(page: number, n: number, size: number): number {
 }
 export function ggwPageOf(index: number, size: number): number {
   return size > 0 && index > 0 ? Math.floor(index / size) : 0;
+}
+/** 2026-11-16 — Ajay: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove
+ *  from these give me an x option to remove as well". A ticker button TOGGLES that name in the shown set: `shown` = the
+ *  names on screen now (the page, or the last pick), `sym` flips in or out, the result keeps HIS list order; an empty
+ *  result → null (back to the pages). Names no longer on the list drop out. */
+export function ggwToggleShown(list: ReadonlyArray<string>, shown: ReadonlyArray<string>, sym: string): string[] | null {
+  const on = new Set(shown.filter((s) => list.includes(s)));
+  if (on.has(sym)) on.delete(sym); else if (list.includes(sym)) on.add(sym);
+  const next = list.filter((s) => on.has(s));
+  return next.length ? next : null;
+}
+/** The grid of a pick of `n` names under a layout of `cols` columns: never more columns than names (one name fills the
+ *  width), and as many fitted rows as it takes. */
+export function ggwPickGrid(n: number, cols: number): { cols: number; rows: number } {
+  const c = Math.max(1, Math.min(Math.max(1, n), Math.max(1, cols)));
+  return { cols: c, rows: Math.max(1, Math.ceil(Math.max(1, n) / c)) };
 }
 /** ◀ ▶ — the pager's glyphs (structural). */
 export const GGW_PAGER = { prev: '◀', next: '▶', prevTitle: 'Previous (←)', nextTitle: 'Next (→)' } as const;

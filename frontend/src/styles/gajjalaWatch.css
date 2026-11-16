@@ -141,3 +141,14 @@
   .ggw-grid--stretch.ggw-grid--fit .ggw-cap { flex-wrap: wrap; overflow: visible; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-cap > * { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+
+/* 2026-11-16 — "1 at a time": one column; the ticker buttons toggle, each with its own × (removes the name). */
+.ggw-grid.ggw-grid--cols1 { grid-template-columns: minmax(0, 1fr); }
+.ggw-pager-item { display: inline-flex; align-items: stretch; }
+.ggw-pager-item .ggw-pager-sym { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ggw-pager-x { border-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; padding: 0.15rem 0.35rem;
+  color: var(--text-muted, #8595ad); }
+.ggw-pager-x:hover:not(:disabled) { color: var(--negative, #ef4444); }
+.ggw-pager-item.is-on .ggw-pager-x { border-color: var(--accent, #c2ef50); }
+/* the lit ticker / per-screen buttons are FILLED, so they read in the light theme too (lime text on a light ground did not) */
+.ggw-pager-sym.is-on, .ggw-layout-btn.is-on { background: var(--accent, #c2ef50); color: #11160a; border-color: var(--accent, #c2ef50); }

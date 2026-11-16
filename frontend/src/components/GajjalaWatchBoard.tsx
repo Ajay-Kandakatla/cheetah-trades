@@ -40,7 +40,7 @@ import { EMA_BOLD } from '../lib/chartMaps';
 import {
   GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
   GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
-  ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, parseGgw, readGgwLayout, saveGgwLayout,
+  ggwPickGrid, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
@@ -293,16 +293,20 @@ export default function GajjalaWatchBoard() {
   const [layout, setLayoutState] = useState<GgwLayout>(readGgwLayout);
   const [stretched, setStretched] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  /** 2026-11-16 — the names HE toggled on (null = the pages). */
+  const [pick, setPick] = useState<string[] | null>(null);
   const closeStretch = useCallback(() => setStretched(null), []);
   /* The page size: the pick on a desktop; a phone shows every tile in one column. */
   const size = phone ? Number.POSITIVE_INFINITY : layout;
   const boardRef = useRef<HTMLDivElement>(null);
   /* A page move by HIM (◀ ▶, a ticker, ← →) brings the board's top to the window's top, so the two tiles fill it. */
   const goPage = (pg: number) => {
+    setPick(null);
     setPage(pg);
     boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   };
   const setLayout = (l: GgwLayout) => {
+    setPick(null);
     /* keep the first SHOWN tile in view (the stored page clamped first — review fix: a stale page after removals) */
     setPage((pg) => (Number.isFinite(size) ? ggwPageOf(ggwClampPage(pg, nRows, size as number) * (size as number), l) : 0));
     setLayoutState(l);
@@ -319,7 +323,12 @@ export default function GajjalaWatchBoard() {
   const loadAllRef = useRef<() => void>(() => {});
   const gridRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
-  const rowH = useFitRows(gridRef, headRef, phone, load, GGW_LAYOUTS[layout].rows);
+  /* The pick (his toggled names still on the list) and its grid; no pick → the layout's own grid. */
+  const listNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows.map((r) => r.symbol) : [];
+  const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
+  const usePick = picked.length > 0;
+  const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols) : GGW_LAYOUTS[layout];
+  const rowH = useFitRows(gridRef, headRef, phone, load, grid.rows);
   const fit = rowH != null;
 
   const clearMain = () => { if (mainTimer.current) { clearTimeout(mainTimer.current); mainTimer.current = null; } };
@@ -422,6 +431,7 @@ export default function GajjalaWatchBoard() {
     if (at < 0) return;
     focusDone.current = true;
     if (Number.isFinite(size)) setPage(ggwPageOf(at, size as number));
+    setPick(null);
     setOutlined(focus);
     pendingFocus.current = focus;
   }, [focus, load, size]);
@@ -452,6 +462,7 @@ export default function GajjalaWatchBoard() {
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       const d = e.key === 'ArrowLeft' ? -1 : 1;
+      setPick(null);
       setPage((pg) => ggwClampPage(ggwClampPage(pg, nRows, size as number) + d, nRows, size as number));
       boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     };
@@ -519,7 +530,14 @@ export default function GajjalaWatchBoard() {
   const paged = Number.isFinite(size) && p.rows.length > (size as number);
   const cur = paged ? ggwClampPage(page, p.rows.length, size as number) : 0;
   const pages = paged ? ggwPageCount(p.rows.length, size as number) : 1;
-  const onPage = (i: number) => !paged || ggwPageOf(i, size as number) === cur;
+  const onPage = (i: number) => (usePick ? picked.includes(p.rows[i].symbol)
+    : !paged || ggwPageOf(i, size as number) === cur);
+  /* 2026-11-16 — a ticker button toggles that name; the names on screen now are the base. */
+  const toggle = (sym: string) => {
+    const list = p.rows.map((r) => r.symbol);
+    setPick(ggwToggleShown(list, list.filter((_s, i) => onPage(i)), sym));
+    boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
   return (
     <div className="ggw-board" data-testid="ggw-board" ref={boardRef}>
       <div className="ggw-head" ref={headRef}>
@@ -579,29 +597,40 @@ export default function GajjalaWatchBoard() {
           </details>
         ) : null}
       </div>
-      {paged ? (
+      {p.rows.length > 1 ? (
         <nav className="ggw-pager" aria-label="Move the view" data-testid="ggw-pager">
           <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle} aria-label={GGW_PAGER.prevTitle}
-                  data-testid="ggw-pager-prev" disabled={cur <= 0} onClick={() => goPage(cur - 1)}>
+                  data-testid="ggw-pager-prev" disabled={!paged || (!usePick && cur <= 0)}
+                  onClick={() => goPage(Math.max(0, cur - 1))}>
             {GGW_PAGER.prev}
           </button>
-          {p.rows.map((r, i) => (
-            <button key={r.symbol} type="button" className={`ggw-btn ggw-pager-sym${onPage(i) ? ' is-on' : ''}`}
-                    aria-current={onPage(i) || undefined} data-testid={`ggw-pager-${r.symbol}`}
-                    onClick={() => goPage(ggwPageOf(i, size as number))}>
-              {r.symbol}
-            </button>
-          ))}
+          {p.rows.map((r, i) => {
+            const rm = p.remove_label ? `${p.remove_label} ${r.symbol}` : r.symbol;
+            return (
+              <span key={r.symbol} className={`ggw-pager-item${onPage(i) ? ' is-on' : ''}`}>
+                <button type="button" className={`ggw-btn ggw-pager-sym${onPage(i) ? ' is-on' : ''}`}
+                        aria-pressed={onPage(i)} data-testid={`ggw-pager-${r.symbol}`}
+                        onClick={() => toggle(r.symbol)}>
+                  {r.symbol}
+                </button>
+                <button type="button" className="ggw-btn ggw-pager-x" title={rm} aria-label={rm} disabled={busy}
+                        data-testid={`ggw-pager-x-${r.symbol}`} onClick={() => write('DELETE', r.symbol)}>
+                  {'×'}
+                </button>
+              </span>
+            );
+          })}
           <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle} aria-label={GGW_PAGER.nextTitle}
-                  data-testid="ggw-pager-next" disabled={cur >= pages - 1} onClick={() => goPage(cur + 1)}>
+                  data-testid="ggw-pager-next" disabled={!paged || (!usePick && cur >= pages - 1)}
+                  onClick={() => goPage(Math.min(pages - 1, cur + 1))}>
             {GGW_PAGER.next}
           </button>
-          <span className="ggw-pager-at" data-testid="ggw-pager-at">{`${cur + 1} / ${pages}`}</span>
+          {paged && !usePick ? <span className="ggw-pager-at" data-testid="ggw-pager-at">{`${cur + 1} / ${pages}`}</span> : null}
         </nav>
       ) : null}
       {p.rows.length ? (
-        <div className={`ggw-grid ggw-grid--cols${GGW_LAYOUTS[layout].cols}${fit ? ' ggw-grid--fit' : ''}`}
-             ref={gridRef} data-layout={layout}
+        <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}`}
+             ref={gridRef} data-layout={layout} data-pick={usePick ? picked.length : undefined}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
           {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}

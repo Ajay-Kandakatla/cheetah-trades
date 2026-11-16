@@ -171,7 +171,10 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     fireEvent.click(screen.getByTestId('ggw-pager-next'));
     expect(shown()).toEqual(syms.slice(2, 4));
     expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(syms.length <= 4);
+    // WIDENED 2026-11-16 ("make These toggleable"): a ticker toggles into the names on screen; ◀ goes back to the pages
     fireEvent.click(screen.getByTestId(`ggw-pager-${syms[0]}`));
+    expect(shown()).toEqual([syms[0], ...syms.slice(2, 4)]);
+    fireEvent.click(screen.getByTestId('ggw-pager-prev'));                    // ◀ clears the pick, one page back
     expect(shown()).toEqual(syms.slice(0, 2));
     fireEvent.keyDown(document, { key: 'ArrowRight' });
     expect(shown()).toEqual(syms.slice(2, 4));
@@ -183,12 +186,16 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     fireEvent.keyDown(document, { key: 'ArrowLeft' });                           // NEGATIVE: never before the first page
     expect(shown()).toEqual(syms.slice(0, 2));
     fireEvent.click(screen.getByTestId('ggw-layout-9'));
-    expect(screen.queryByTestId('ggw-pager')).toBeNull();                        // all fit → no pager
+    // WIDENED 2026-11-16: the ticker bar stays (its toggles and × still work); all fit → ◀ ▶ off, no page count
+    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId('ggw-pager-at')).toBeNull();
     expect(shown()).toEqual(syms);
   });
-  it('NEGATIVE: on a phone every tile shows in one column, no pager', async () => {
+  it('NEGATIVE: on a phone every tile shows in one column; ◀ ▶ are off (WIDENED 2026-11-16: the ticker toggles stay)', async () => {
     const { c } = await mount(true);
-    expect(screen.queryByTestId('ggw-pager')).toBeNull();
+    expect((screen.getByTestId('ggw-pager-prev') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId('ggw-pager-at')).toBeNull();
     expect(Array.from(c.querySelectorAll('.ggw-grid > .ggw-tile')).every((t) => !(t as HTMLElement).hidden)).toBe(true);
   });
   it('?focus= a name on page 2 → that page shows it', async () => {
