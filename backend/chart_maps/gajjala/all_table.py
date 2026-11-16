@@ -22,6 +22,15 @@ an RTH bar carries none) — SPARK_SESSION inverts that map BY NAME into the tap
 PURE. No store, no fetch, no wall clock (`now` comes from tab.build). Every word the table prints is typed here and
 nowhere else; every number is a served text from the tab's own formatters. Nothing here rings, gates, counts or
 trades. UNMEASURED — no study says this order wins.
+
+🩳 2026-11-16 — Ajay (screenshot of this table), verbatim: "Add a short interest colume fo this table when available".
+A last head `si` ("Short interest") worded by the ONE house read (short_interest.read.si_block → its `chip` / `title`,
+via si_cell); tab.build hands `block` an injected reader (`si_read`) called ONCE after the cut with the kept rows'
+upper-cased symbols. The reader returns None when no short-interest store is reachable (the fault: SI_FAULT_TEXT is
+served, every row kept) and a dict otherwise (a name absent from it = no record on file). A name with no FINRA record
+prints NOTHING — never 0, never a dash. This module imports nothing from short_interest (the seam is the reader).
+DISPLAY ONLY — GG's verified rule U10 (verified_rules.json): no short-interest threshold or filter anywhere; no rank,
+tier, near order, gate or alert reads it. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -46,8 +55,12 @@ ET = ZoneInfo("America/New_York")
 TIERS = ("aplus", "potential", "forming", "rest")                       # tier_key, rank order; tier = 1..4
 TIER_WORDS = {"aplus": "🎯 A+", "potential": "🧠 potential",
               "forming": "forming — close to a setup", "rest": "a rule failed / stopped"}
+# 2026-11-16 — Ajay (screenshot of this table): "Add a short interest colume fo this table when available". The house 🩳
+# read (short_interest.read.si_block) words the cell; a name with no FINRA record on file prints NOTHING (never 0, never a
+# dash). DISPLAY ONLY — GG's verified rule U10 (verified_rules.json:597): no short-interest threshold or filter anywhere.
 HEADS = (("rank", "#"), ("symbol", "Ticker"), ("spark", "Tape"), ("category", "Category"), ("price", "Price"),
-         ("plan", "Trigger / stop"), ("dist", "To trigger"), ("ema9", "To 9 EMA"), ("volume", "Volume"), ("float", "Float"))
+         ("plan", "Trigger / stop"), ("dist", "To trigger"), ("ema9", "To 9 EMA"), ("volume", "Volume"), ("float", "Float"),
+         ("si", "Short interest"))
 TITLE = "📋 All strategies — every card on his five setups, ranked the way he watches"
 ORDER_TEXT = ("🎯 A+ first (newest break on top) · 🧠 potential next (trigger armed before building, then highest volume) · "
               "then forming, closest to a setup: 💋 EMA Kiss & Fly → ➖ Horizontal Fade (9 and 21 EMA merging) → "
@@ -69,6 +82,15 @@ NEAR_ORDER_TEXT = ("Nearest the trigger first (the To trigger number as printed,
                    "(price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones "
                    "that have it · your 🚫 names last")
 EMA9_TITLE = "Price vs the card's 9 EMA on its latest closed bar ({tf}) — + above, − under"
+# 🩳 2026-11-16 — the Short interest column's served keys and words (DISPLAY ONLY — U10).
+SI_KEYS = ("si_text", "si_title", "si_stale", "si_asof")
+SI_HEAD_TITLE = ("🩳 FINRA short interest at the last settlement, worded exactly as the 🩳 chip on every other board: "
+                 "% of float when a float is on file, else % of shares outstanding, else the shares-short count · days to "
+                 "cover · settlement m/d. Blank = no record on file — never 0. 'stale' = a newer settlement was due and "
+                 "this app still holds the older one. Hover a cell for the settlement date. A data label — no rule, "
+                 "rank or alert reads it.")
+SI_FAULT_TEXT = ("🩳 short interest could not be read this build (no short-interest store reachable) — the column is "
+                 "blank, not a count of zero")
 # tile bar flag → the tape's session word, read off chart_maps/support.py:1141 BY NAME; a bar without `s` → SPARK_RTH
 SPARK_SESSION = {flag: word for word, flag in _SUP._SESSION_FLAG.items()}
 SPARK_RTH = "rth"
@@ -197,16 +219,19 @@ def row_of(tile: dict, *, doc: dict, tier_key: str, pot_row: Optional[dict], sca
             "ema9_gap_pct": e9_gap, "ema9_gap_text": GT._pct(e9_gap),
             "ema9_title": EMA9_TITLE.format(tf=tile.get("tf") or "") if e9 is not None else None,
             "near_rank": None, "entry_plan": GT.is_entry_plan(read), "in_watch": False,
-            "vol_dried": chips.get("vol_dried") or None,
+            "vol_dried": chips.get("vol_dried") or None, **{k: None for k in SI_KEYS},
             "spark": spark_of(tile, doc=doc, read=read, now=now, v=v,
                               title=f"{category} · {state_label}" if state_label else category)}
 
 
 def block(per_setup: dict, pots: list, *, reads_by: dict, flags, sess: dict, in_window: bool, now, v=None,
-          scan_row: Callable, cad_min: int) -> dict:
+          scan_row: Callable, cad_min: int, si_read: Optional[Callable] = None) -> dict:
     """The served `table` block (SPEC §3.2 steps 1–7): tiers → concat → cut (tab._capped) → his 🚫 names last per tier
     INSIDE the cut (tab.broker_bottom) → rank 1..N → `in_watch` over the first GG_WATCH_N distinct names. A raising
-    row is skipped and counted (faults_n / fault_text), never silent."""
+    row is skipped and counted (faults_n / fault_text), never silent.
+    🩳 2026-11-16: `si_read(symbols)` is called ONCE, after the cut and both ranks, with the kept rows' distinct
+    upper-cased symbols. None (or a raise) = no short-interest store this build → `si_fault_text` = SI_FAULT_TEXT, every
+    row kept, every si key None; a dict = the read ({SYM: si_block}; an absent name = no record on file, not a fault)."""
     reads_by = reads_by or {}
     pot_by = {(row["symbol"], row["setup"]): (key, row) for key, row, _d, _r in pots or []}
     tiers: dict = {k: [] for k in TIERS}
@@ -249,6 +274,18 @@ def block(per_setup: dict, pots: list, *, reads_by: dict, flags, sess: dict, in_
     watch_rows = sum(1 for r in final if r["in_watch"])
     for i, r in enumerate(near_order(final, flags)):
         r["near_rank"] = i + 1
+    si_fault = None
+    if si_read is not None and final:
+        syms = sorted({str(r.get("symbol") or "").upper() for r in final} - {""})   # ≤ TILE_LIMIT_MAX ≤ read.MAP_MAX_SYMBOLS
+        try:
+            si_by = si_read(syms)
+        except Exception as exc:                                    # noqa: BLE001 — a raising fake; the real read returns None
+            log.warning("gajjala all table: short interest read raised: %s", exc)
+            si_by = None
+        if si_by is None:                                           # no short-interest handle this build — the honest fault
+            si_fault = SI_FAULT_TEXT
+        else:
+            attach_si(final, si_by if isinstance(si_by, dict) else {})
     empty = None
     if not final:
         empty = (EMPTY_TEXT_OPEN.format(mins=GT._mins(cad_min)) if in_window else
@@ -261,7 +298,8 @@ def block(per_setup: dict, pots: list, *, reads_by: dict, flags, sess: dict, in_
             "faults_n": faults, "fault_text": FAULT_TEXT.format(n=faults) if faults else None,
             "empty_text": empty, "honesty": HONESTY, "tape_head": TP.TAPE_HEAD,
             "sorts": {"default": SORT_GG, "options": [{"key": k, "label": lb} for k, lb in SORTS],
-                      "near_text": NEAR_ORDER_TEXT}}
+                      "near_text": NEAR_ORDER_TEXT},
+            "si_head_title": SI_HEAD_TITLE, "si_fault_text": si_fault}
 
 
 def _shown_abs(x) -> Optional[float]:
@@ -299,7 +337,30 @@ def attach_live(rows: list, live: dict) -> None:
             log.debug("gajjala all table: live print failed: %s", exc)
 
 
+def si_cell(blk: Optional[dict]) -> dict:
+    """The four served keys from the house block (short_interest.read.si_block). No block, or a block without a chip
+    (a remembered miss / no record) → every key None: the cell prints nothing — never 0, never a dash. The float-
+    suspect rule and the third 'N sh' basis are already inside the chip (read.chip_text); nothing is re-derived here."""
+    if not isinstance(blk, dict) or not isinstance(blk.get("chip"), str) or not blk["chip"]:
+        return {k: None for k in SI_KEYS}
+    st = blk.get("stale")
+    return {"si_text": blk["chip"], "si_title": blk.get("title") if isinstance(blk.get("title"), str) else None,
+            "si_stale": bool(st) if isinstance(st, bool) else None, "si_asof": blk.get("settlement_date")}
+
+
+def attach_si(rows: list, si_by: dict) -> None:
+    """Fill SI_KEYS on each row from {SYM: block}. The lookup key is str(r.get("symbol") or "").upper() — the
+    attach_live precedent (si_map keys are upper-cased; a tile's symbol is its raw string). Never raises, never
+    reorders, never adds or drops a row."""
+    by = si_by if isinstance(si_by, dict) else {}
+    for r in rows if isinstance(rows, list) else ():
+        try:
+            r.update(si_cell(by.get(str(r.get("symbol") or "").upper())))
+        except Exception as exc:                                    # noqa: BLE001
+            log.debug("gajjala all table: short interest cell failed: %s", exc)
+
+
 __all__ = ["TIERS", "TIER_WORDS", "HEADS", "TITLE", "ORDER_TEXT", "WATCH_TEXT", "EMPTY_TEXT_OPEN", "EMPTY_TEXT_CLOSED",
            "MORE_TEXT", "FAULT_TEXT", "HONESTY", "SPARK_SESSION", "SPARK_RTH", "SORT_GG", "SORT_NEAR", "SORTS",
            "NEAR_ORDER_TEXT", "EMA9_TITLE", "tier_of", "spark_bars", "spark_of", "ema9_of", "row_of", "near_order",
-           "block", "attach_live"]
+           "block", "attach_live", "SI_KEYS", "SI_HEAD_TITLE", "SI_FAULT_TEXT", "si_cell", "attach_si"]

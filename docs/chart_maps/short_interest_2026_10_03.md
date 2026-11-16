@@ -131,6 +131,7 @@ read). **The repo crontab is not the live crontab**: installing them is HIS ops 
 | 20 board tabs (zones, deep_demand, quick_bounce, breaking, keltner, amd, key_levels, dual_momentum, ath, resiliency, fallen, ipo, gabbar, vcp, topping, ict, undervalue, zero_dte, earnings, winners) | `PatternChart` tile chip |
 | support, holdings, potus, ema_frames | wrapper head (the tile skips its copy via `OuterChip 'short'`) |
 | session, signals, hot_pullback, overnight, hot_sectors, bonde, growth, gnt, catalysts, patterns | their row chip |
+| 🚩 Gajjala's 📋 All strategies table (GG5 + 1-minute; 🧪 none) — 2026-11-16 | the last `si` column: the SERVED chip text per row (`all_table.attach_si` over ONE `read.si_map` per build), blank = no record (docs/gajjala/all_table_short_interest_2026_11_16.md) |
 | ticker page `/sepa/{SYM}` | header chip on every tab + `ShortInterestPanel` in the Smart Money tab |
 | news | **none** — no ticker rows on this tab |
 | IPO upcoming strip (not yet trading), SPY/QQQ index strip | **none** |

@@ -903,6 +903,11 @@ export type GgTableRow = {
   live_price?: number | null; live_price_text?: string | null;
   broker_text?: string | null; trader_text?: string | null; promo_text?: string | null;
   new_mark?: GgNewMark | null;
+  /** 🩳 2026-11-16 — Ajay: "Add a short interest colume fo this table when available". The house 🩳 chip text verbatim
+   *  (all_table.si_cell over short_interest.read.si_block), its hover sentence (opens with the FINRA settlement date),
+   *  the stale flag (a class hook only — the text carries the word) and the settlement date. All null = no record on
+   *  file → an empty cell, never 0. Absent on an older API. Display only. */
+  si_text?: string | null; si_title?: string | null; si_stale?: boolean | null; si_asof?: string | null;
 };
 export type GgTableBlock = {
   title?: string | null;
@@ -915,6 +920,9 @@ export type GgTableBlock = {
   empty_text?: string | null; honesty?: string | null; tape_head?: string | null;
   /** 2026-11-16 — the served sort words: `default` (GG's), the options' keys + labels, and the near order's line. */
   sorts?: { default?: string | null; options?: { key: string; label: string }[] | null; near_text?: string | null } | null;
+  /** 🩳 2026-11-16 — the served hover on the Short interest head, and the sentence served when no short-interest store
+   *  was reachable this build (the column is blank, not zero); null when read. Absent on an older API. */
+  si_head_title?: string | null; si_fault_text?: string | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the

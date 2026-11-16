@@ -394,3 +394,8 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-all-sorts { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
 .gg-all-sort.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
 .gg-all-sym .ggw-card-btn { margin-left: 0.3rem; font-size: 0.7rem; padding: 0 0.35rem; white-space: nowrap; }
+/* 🩳 2026-11-16 — the Short interest cell (the served 🩳 chip text, ~35–40 chars): ONE line inside .gg-tr-scroll like
+   the rank cell and the 🚫 / 📌 chips; the table scrolls sideways, the page never widens; no px width (F10).
+   Stale = muted; the served word "stale" is the marker. */
+.gg-all-table td.gg-all-si { white-space: nowrap; overflow-wrap: normal; }
+.gg-all-table td.gg-all-si-stale { color: var(--ink-subtle, #94a3b8); }

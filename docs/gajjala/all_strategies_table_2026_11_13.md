@@ -45,6 +45,7 @@ vol_dried, spark, (+ broker_text, trader_text, promo_text, new_mark, live_price,
 curves. `spark` = `tape.LITE_KEYS`: TODAY's frame only (`tab._tile_frame(doc, tf, v)`, never the 🎾 wide frame), `t` = the
 ET wall clock as epoch ms, `s` = `support._SESSION_FLAG` inverted (pre → premarket, ah → afterhours, none → rth), strided by
 `promo_tape.lite_payload`; one `alert` rule at the entry bar on a break, else none; tone up / dn vs the trigger.
+**2026-11-16 (🩳):** heads gain `si` ("Short interest") LAST; every row gains `si_text` / `si_title` / `si_stale` / `si_asof` (null = no record — blank, never 0) and the block gains `si_head_title` / `si_fault_text` — docs/gajjala/all_table_short_interest_2026_11_16.md.
 
 ## Frontend (WP-B, summary)
 `GgAllTable.tsx` prints the served heads, rows, divider after the last `in_watch` row, and the 🏁 mini from the preset

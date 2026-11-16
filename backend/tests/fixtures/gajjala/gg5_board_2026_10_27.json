@@ -343,6 +343,10 @@
      {
       "key": "float",
       "label": "Float"
+     },
+     {
+      "key": "si",
+      "label": "Short interest"
      }
     ],
     "honesty": "display order only — no gate, count or alert changes · UNMEASURED",
@@ -388,6 +392,10 @@
       "setup": "bull_flag",
       "setup_emoji": "🚩",
       "setup_label": "Bull Flag",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -483,6 +491,10 @@
       "setup": "bull_flag",
       "setup_emoji": "🚩",
       "setup_label": "Bull Flag",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -565,6 +577,10 @@
       "setup": "kiss_fly",
       "setup_emoji": "💋",
       "setup_label": "EMA Kiss & Fly",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -647,6 +663,10 @@
       "setup": "horizontal_fade",
       "setup_emoji": "➖",
       "setup_label": "Horizontal Fade",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -734,6 +754,10 @@
       "setup": "horizontal_fade",
       "setup_emoji": "➖",
       "setup_label": "Horizontal Fade",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -816,6 +840,10 @@
       "setup": "kiss_fly",
       "setup_emoji": "💋",
       "setup_label": "EMA Kiss & Fly",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -867,6 +895,8 @@
       "volume_text": "3.0M"
      }
     ],
+    "si_fault_text": "🩳 short interest could not be read this build (no short-interest store reachable) — the column is blank, not a count of zero",
+    "si_head_title": "🩳 FINRA short interest at the last settlement, worded exactly as the 🩳 chip on every other board: % of float when a float is on file, else % of shares outstanding, else the shares-short count · days to cover · settlement m/d. Blank = no record on file — never 0. 'stale' = a newer settlement was due and this app still holds the older one. Hover a cell for the settlement date. A data label — no rule, rank or alert reads it.",
     "sorts": {
      "default": "gg",
      "near_text": "Nearest the trigger first (the To trigger number as printed, either side), then nearest the 9 EMA (price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones that have it · your 🚫 names last",
@@ -9572,6 +9602,10 @@
      {
       "key": "float",
       "label": "Float"
+     },
+     {
+      "key": "si",
+      "label": "Short interest"
      }
     ],
     "honesty": "display order only — no gate, count or alert changes · UNMEASURED",
@@ -9617,6 +9651,10 @@
       "setup": "bull_flag",
       "setup_emoji": "🚩",
       "setup_label": "Bull Flag",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -9712,6 +9750,10 @@
       "setup": "bull_flag",
       "setup_emoji": "🚩",
       "setup_label": "Bull Flag",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -9794,6 +9836,10 @@
       "setup": "kiss_fly",
       "setup_emoji": "💋",
       "setup_label": "EMA Kiss & Fly",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -9876,6 +9922,10 @@
       "setup": "horizontal_fade",
       "setup_emoji": "➖",
       "setup_label": "Horizontal Fade",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -9963,6 +10013,10 @@
       "setup": "horizontal_fade",
       "setup_emoji": "➖",
       "setup_label": "Horizontal Fade",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGB 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -10045,6 +10099,10 @@
       "setup": "kiss_fly",
       "setup_emoji": "💋",
       "setup_label": "EMA Kiss & Fly",
+      "si_asof": null,
+      "si_stale": null,
+      "si_text": null,
+      "si_title": null,
       "spark": {
        "aria": "GGA 5-minute tape around the A+ entry",
        "as_of": "2026-10-13T10:42:00-04:00",
@@ -10096,6 +10154,8 @@
       "volume_text": "3.0M"
      }
     ],
+    "si_fault_text": "🩳 short interest could not be read this build (no short-interest store reachable) — the column is blank, not a count of zero",
+    "si_head_title": "🩳 FINRA short interest at the last settlement, worded exactly as the 🩳 chip on every other board: % of float when a float is on file, else % of shares outstanding, else the shares-short count · days to cover · settlement m/d. Blank = no record on file — never 0. 'stale' = a newer settlement was due and this app still holds the older one. Hover a cell for the settlement date. A data label — no rule, rank or alert reads it.",
     "sorts": {
      "default": "gg",
      "near_text": "Nearest the trigger first (the To trigger number as printed, either side), then nearest the 9 EMA (price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones that have it · your 🚫 names last",

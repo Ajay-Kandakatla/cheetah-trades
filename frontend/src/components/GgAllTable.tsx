@@ -17,7 +17,12 @@
  * please" + "Add those columns to the Table and a Add to watch button". The server serves TWO orders — `rank` (GG's) and
  * `near_rank` (nearest the trigger, then nearest the 9 EMA, 🚫 last) — and the sort words; the toggle only picks which
  * SERVED rank lays the rows out (remembered in this browser, `gg-all-sort`). "GG's 18" is GG's order's divider, so it
- * shows under GG's order only. The served "To 9 EMA" cell; ➕/➖ Watch (the ONE GgWatchButton, owner only) by the ticker. */
+ * shows under GG's order only. The served "To 9 EMA" cell; ➕/➖ Watch (the ONE GgWatchButton, owner only) by the ticker.
+ *
+ * 2026-11-16 — Ajay (screenshot of this table): "Add a short interest colume fo this table when available". The served
+ * `si` head (label "Short interest", hover = the served si_head_title) prints the row's served si_text (the house 🩳 chip
+ * verbatim) with the served si_title on hover; no record → an EMPTY cell (never 0, never a dash). The stale hook is a
+ * class only — the served text carries the word. The served si_fault_text prints under the fault line. DISPLAY ONLY. */
 import { Fragment, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { GgEntryMiniTape } from './GgEntryTape';
@@ -126,6 +131,13 @@ function cellOf(key: string, row: GgTableRow, answer: CardLiveAnswer | null | un
       return <td key={key} className="gg-tr-cell">{str(row.volume_text)}{small(row.rvol_text)}</td>;
     case 'float':
       return <td key={key}>{str(row.float_text)}</td>;
+    case 'si':
+      return (
+        <td key={key} className={`gg-all-si${row.si_stale === true ? ' gg-all-si-stale' : ''}`}
+            title={str(row.si_title) ?? undefined} data-testid={`gg-all-si-${rid(row)}`}>
+          {str(row.si_text)}
+        </td>
+      );
     default:
       return <td key={key} />;
   }
@@ -184,7 +196,11 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
         <div className="gg-tr-scroll">
           <table className="gg-tr-table gg-all-table" data-testid="gg-all-table">
             <thead>
-              <tr>{heads.map((h) => <th key={h.key}>{h.key === 'spark' && tapeHead ? tapeHead : h.label}</th>)}</tr>
+              <tr>{heads.map((h) => (
+                <th key={h.key} title={h.key === 'si' ? (str(block.si_head_title) ?? undefined) : undefined}>
+                  {h.key === 'spark' && tapeHead ? tapeHead : h.label}
+                </th>
+              ))}</tr>
             </thead>
             <tbody>
               {shown.map((r, i) => (
@@ -205,6 +221,7 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
       ) : null}
       {str(block.more_text) ? <div className="gg-muted" data-testid="gg-all-more">{block.more_text}</div> : null}
       {str(block.fault_text) ? <div className="cm-note cm-note-err" data-testid="gg-all-fault">{block.fault_text}</div> : null}
+      {str(block.si_fault_text) ? <div className="cm-note cm-note-err" data-testid="gg-all-si-fault">{block.si_fault_text}</div> : null}
       {!rows.length && str(block.empty_text) ? <div className="cm-note" data-testid="gg-all-empty">{block.empty_text}</div> : null}
       {str(block.honesty) ? <div className="gg-muted" data-testid="gg-all-honesty">{block.honesty}</div> : null}
     </section>

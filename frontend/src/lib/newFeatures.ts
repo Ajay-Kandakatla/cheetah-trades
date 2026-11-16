@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Add a short interest colume fo this table when available". 📋 All strategies (5-min + 1-min
+  // pages): a Short interest column after Float — the house 🩳 FINRA read (one bulk Mongo read per build), settlement date on
+  // hover, blank when no record. Display only: no sort, rank or gate reads it. Doc docs/gajjala/all_table_short_interest_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-all-table-short-interest-2026-11-16',
+    label: '🩳 Short interest on 📋 All strategies — you said: “Add a short interest colume fo this table when available”. A Short interest column now sits after Float (FINRA, settlement date on hover); blank when there is no record.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-16, verbatim: "Can you make the watch list charts live please" · "Realtime updates.. Like the 1 min chart I need
   // it to be live live.. per sec change" · "Also on the Watch list I need live volume to be shown at the bottom" · "Of each chart" ·
   // "Of a ticker". 👀 every Watch chart (1/3/5-min) moves with the ONE socket's prints about once a second: forming candle,

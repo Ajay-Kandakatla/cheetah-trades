@@ -2688,9 +2688,16 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                  in_window=in_window, v=v, flags=order_flags) if pot_ok else None
     elif table_sub:                             # 📋 2026-11-13 — ONE ranked table over every setup's cards (all_table.py)
         from chart_maps.gajjala import all_table as TBL
+        from short_interest import read as SR   # 🩳 2026-11-16 — the ONE house read; lazy like TBL
+        si_today = _et(now).date()              # the chip's calendar (read._today) on the build clock — the ONE helper
+
+        def _si_read(syms):                     # None = no handle (the fault); a dict = the read (absent name = no record)
+            db = SR.SIC._get_db()
+            return None if db is None else SR.si_map(syms, db=db, today=si_today)
+
         out["table"] = _soft("all strategies table", TBL.block, per_setup, pots if pot_ok else [], reads_by=reads_by,
                              flags=order_flags, sess=sess, in_window=in_window, now=now, v=v, scan_row=_row,
-                             cad_min=_cad(v), default=None)
+                             cad_min=_cad(v), si_read=_si_read, default=None)
         out["empty_note"] = None if out["table"] else TABLE_FAULT_TEXT
     elif sub_k == GC.POTENTIAL_SUB:
         entries = _entries_once()                       # D4: ONE read (D10: above the tiles, tri-state; the window read)

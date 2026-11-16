@@ -17,6 +17,10 @@ broken at 10:41 (one A+); GGB truncated before its break bar (forming, its last 
 A moved GG5 byte is a BUG, never a regen. Recipe (the untouched tree only; a dated regen below, each for a 🚩 change
 by his word, is the only exception):
   GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_variant_gg5_identity.py
+Only ever regen through pytest (2026-11-16, 🩳). The golden carries NO short-interest text: the hermetic build has no
+Mongo handle (conftest refuses MongoClient), so every si key is None and si_fault_text is the fault sentence. A regen
+that ever reaches a real store writes GGB's live FINRA chip (a wall-clock-dependent string — 'stale' flips on FINRA's
+calendar) and the NEGATIVE in test_gg5_board_is_byte_identical fails before the byte pin drifts.
 
 Dated regens (each a 🚩 change by his word, the diff verified key-for-key; the WRITES golden moved ONCE, 2026-11-10,
 wording only; every other entry is the BOARD golden alone):
@@ -86,6 +90,11 @@ wording only; every other entry is the BOARD golden alone):
   `-k golden` recipes: 1m board 2119 -> 2191 (+72), on_open 2135 -> 2177 (+42), potential 3355 -> 3378 (+23, 11 cards
   `ema_blink: null` — no finite 9 EMA on that fixture), track_record unchanged (🏁 carries no card)
   (docs/chart_maps/ema_blink_2026_11_15.md).
+  2026-11-16 — Ajay (screenshot of the 📋 table) "Add a short interest colume fo this table when available": BOARD only
+  (WRITES byte-identical, sha1 6093b1ab… — the table is build-only, never run_pass). BOARD = 56 leaves, ALL ADDED, 0
+  changed, 0 removed, every one under <mode>/all_strategies/table: the head {key si, label "Short interest"} LAST (2),
+  si_text / si_title / si_stale / si_asof = null on all 6 rows (24), si_head_title + si_fault_text (2) — per mode. The 1-minute
+  golden does not move (it builds no table) (docs/gajjala/all_table_short_interest_2026_11_16.md).
 """
 from __future__ import annotations
 
@@ -262,7 +271,14 @@ def test_gg5_board_is_byte_identical(monkeypatch):
     """REGENERATED 2026-11-13 (📋 All strategies, SPEC REV 2 §4 WP-A step 5, the recipe): the key-for-key diff = every
     board's `subs` gains the 📋 entry FIRST (count = the five setup subs' cards, 6 on this fixture day) and each mode
     gains the `all_strategies` board (its `table`, 6 rows). Dropping those two, the old and new files are IDENTICAL —
-    no tile byte moved. The WRITES golden is byte-identical (sha1 54ab4af3…, unchanged by the regen)."""
+    no tile byte moved. The WRITES golden is byte-identical (sha1 54ab4af3…, unchanged by the regen).
+    REGENERATED 2026-11-16 (🩳 Short interest column, SPEC REV 2 §4 WP-A step 3): 56 leaves ADDED under
+    <mode>/all_strategies/table only (the `si` head LAST, the four si keys null on every row, si_head_title,
+    si_fault_text), 0 changed, 0 removed; WRITES byte-identical. The golden carries NO
+    short-interest text: the hermetic build has no Mongo handle (conftest refuses MongoClient), so every si key is None
+    and si_fault_text is the fault sentence. A regen that ever reaches a real store writes GGB's live FINRA chip (a
+    wall-clock-dependent string — 'stale' flips on FINRA's calendar) and this NEGATIVE fails before the byte pin
+    drifts."""
     stores, _t = writes_text(monkeypatch)
     text = board_text(stores)
     _check(BOARD, text)
@@ -273,3 +289,13 @@ def test_gg5_board_is_byte_identical(monkeypatch):
             assert b["tab"] == "gajjala", k
             assert "variant" not in b, k                                          # NEGATIVE: GG5 serves no variant block
     assert "gajjala_1m" not in text and "tab=gajjala_1m" not in text              # NEGATIVE
+    # NEGATIVE 2026-11-16 (🩳): the golden carries no short-interest text — no SI handle in the hermetic build
+    from chart_maps.gajjala import all_table as TBL
+    for mode in MODES:
+        table = doc[mode]["all_strategies"]["table"]
+        assert table["rows"], mode
+        for r in table["rows"]:
+            assert all(r[k] is None for k in TBL.SI_KEYS), (mode, r["symbol"])
+        assert table["si_fault_text"] == TBL.SI_FAULT_TEXT, mode
+        assert table["si_head_title"] == TBL.SI_HEAD_TITLE, mode
+        assert table["heads"][-1] == {"key": "si", "label": "Short interest"}, mode

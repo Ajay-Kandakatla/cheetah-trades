@@ -17149,7 +17149,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 16).includes(ZID))  /* WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 17).includes(ZID))  /* WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17222,10 +17222,10 @@ const CONTRACTS = [
       if (!comp) errs.push('src/components/GgAllTable.tsx is missing');
       if (at && comp) {
         const hm = /^HEADS = \(([\s\S]*?)\)\n[A-Z]/m.exec(at);
-        const heads = hm ? [...hm[1].matchAll(/\("([a-z_]+)", "([^"]+)"\)/g)].map((m) => [m[1], m[2]]) : [];
+        const heads = hm ? [...hm[1].matchAll(/\("([a-z0-9_]+)", "([^"]+)"\)/g)].map((m) => [m[1], m[2]]) : [];
         if (!heads.length) errs.push('all_table.py lost HEADS = (("key", "label"), …)');
         const cc = code(comp);
-        const cases = [...cc.matchAll(/^\s*case '([a-z_]+)':/gm)].map((m) => m[1]);
+        const cases = [...cc.matchAll(/^\s*case '([a-z0-9_]+)':/gm)].map((m) => m[1]);
         const hk = heads.map((h) => h[0]);
         if (heads.length && [...hk].sort().join() !== [...cases].sort().join()) errs.push(`GgAllTable.tsx cell switch [${cases.join(', ')}] != all_table.HEADS keys [${hk.join(', ')}]`);
         if (!/^\s*default:\s*\n?\s*return <td key=\{key\} \/>;/m.test(cc)) errs.push('GgAllTable.tsx must keep the default: empty-cell rule (an unknown served head prints an empty <td>)');

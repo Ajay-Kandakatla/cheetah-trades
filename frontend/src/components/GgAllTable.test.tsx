@@ -332,7 +332,8 @@ function typed(body: string): string[] {
 /* The served words the file must never type — spec §3.2's HEADS labels and TIER_WORDS (test data here: the FE must not
  * depend on the backend file existing), plus tape.py's ENTRY_TAPE_WORDS phrases. */
 const SERVED_WORDS = ['Ticker', 'Tape', 'Category', 'Price', 'Trigger / stop', 'To trigger', 'Volume', 'Float',
-  '\u{1F3AF} A+', '\u{1F9E0} potential', 'forming — close to a setup', 'a rule failed / stopped', "GG's", 'All strategies'];
+  '\u{1F3AF} A+', '\u{1F9E0} potential', 'forming — close to a setup', 'a rule failed / stopped', "GG's", 'All strategies',
+  'Short interest'];
 function tapeWords(tapePy: string): string[] {
   const out: string[] = [];
   const blk = /^ENTRY_TAPE_WORDS = \{([\s\S]*?)\n\}/m.exec(tapePy);
