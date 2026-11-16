@@ -161,7 +161,14 @@ describe('F8 [C8] — the pre-board fallback strip', () => {
     expect(btns[0].getAttribute('data-testid')).toBe(`gg-sub-${GG_TABLE_SUB}`);
   });
 
-  for (const v of ['gajjala_1m', 'gajjala_audited', 'luk'] as const) {
+  // WIDENED 2026-11-16 — Ajay: "Can you build and all strategies in Gallajas one min too": the 1-minute page lists 📋 first.
+  it("🚩 the 1-minute page before its first board: 📋 is the FIRST button too", () => {
+    fetchMock.mockImplementation(never);
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=gajjala_1m']}><GajjalaBoard variant="gajjala_1m" /></MemoryRouter>);
+    expect(subBtns()[0].getAttribute('data-testid')).toBe(`gg-sub-${GG_TABLE_SUB}`);
+  });
+
+  for (const v of ['gajjala_audited', 'luk'] as const) {
     it(`NEGATIVE: the ${v} page before its first board → NO 📋 button; the other subs keep their order`, () => {
       fetchMock.mockImplementation(never);
       render(<MemoryRouter initialEntries={['/chart-maps?tab=gajjala']}><GajjalaBoard variant={v} /></MemoryRouter>);

@@ -276,6 +276,13 @@
    "sub_resolved_from": "param",
    "subs": [
     {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
      "count": 2,
      "emoji": "🚩",
      "key": "bull_flag",
@@ -1180,6 +1187,13 @@
    "sub": "potential",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",
@@ -2327,6 +2341,13 @@
    "sub": "track_record",
    "sub_resolved_from": "param",
    "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
     {
      "count": 2,
      "emoji": "🚩",

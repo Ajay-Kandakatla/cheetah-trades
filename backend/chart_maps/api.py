@@ -543,6 +543,23 @@ async def chart_maps_ema_blink(email: Optional[str] = Depends(maybe_current_user
     return JSONResponse(await asyncio.to_thread(_run))
 
 
+def _gg_table_live(out: dict, tag: str) -> None:
+    """📋 the All strategies table's ONE live fan-out (2026-11-13 on GG5; 2026-11-16 the 1-minute page too — the board turns
+    its card poll off on the table, so the row price is this print or the pass's): one snapshot over the rows, then
+    all_table.attach_live. A raising snapshot → {} (the pass's price stands); no table → nothing."""
+    tbl = out.get("table")
+    rows = tbl.get("rows") if isinstance(tbl, dict) else None
+    if not rows:
+        return
+    try:
+        live = board_mod._live_snapshot(rows)
+    except Exception as exc:
+        log.debug("%s: table live snapshot failed: %s", tag, exc)
+        live = {}
+    from .gajjala import all_table as TBL
+    TBL.attach_live(rows, live)
+
+
 @router.get("/chart-maps/gajjala")
 async def chart_maps_gajjala(
     sub: str = Query("", description="bull_flag (default) | all_strategies (📋 the ranked table, 2026-11-13) | "
@@ -608,16 +625,7 @@ async def chart_maps_gajjala(
                 board_mod.attach_live_now(tiles, out, live=live)
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/gajjala: live now-line failed: %s", exc)
-        tbl = out.get("table")                              # 📋 2026-11-13 — ONE fan-out over the table's rows
-        rows = tbl.get("rows") if isinstance(tbl, dict) else None
-        if rows:
-            try:
-                live = board_mod._live_snapshot(rows)
-            except Exception as exc:
-                log.debug("chart-maps/gajjala: table live snapshot failed: %s", exc)
-                live = {}
-            from .gajjala import all_table as TBL
-            TBL.attach_live(rows, live)
+        _gg_table_live(out, "chart-maps/gajjala")          # 📋 2026-11-13 — ONE fan-out over the table's rows
         return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))
@@ -731,6 +739,7 @@ async def chart_maps_gajjala_1m(
                 board_mod.attach_live_now(tiles, out, live=live)
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/gajjala-1m: live now-line failed: %s", exc)
+        _gg_table_live(out, "chart-maps/gajjala-1m")       # 📋 2026-11-16 — the 1-minute table's rows, the same fan-out
         return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))

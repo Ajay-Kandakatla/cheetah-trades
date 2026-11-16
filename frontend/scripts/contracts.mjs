@@ -17146,7 +17146,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-15: 🟡🟣 chart-maps-ema-colors-videos-2026-11-15 FIRST — Ajay: "yellow for 9 EMA ... switch its up in the app") — slice(0, 7) → slice(0, 8).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-two-up-stretch-2026-11-16 FIRST — Ajay: "I need bigger may be 2 on each screen side by side") — slice(0, 8) → slice(0, 9).
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-all-table-near-sort-2026-11-16 FIRST — Ajay: "sort the table of all strategies by nearest") — slice(0, 9) → slice(0, 10).
-        if (!allIds.slice(0, 10).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 10 of NEW_FEATURES (found ${allIds.slice(0, 11).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
+        if (!allIds.slice(0, 11).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 11 of NEW_FEATURES (found ${allIds.slice(0, 12).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17239,11 +17240,12 @@ const CONTRACTS = [
         if (!/servedChip\(row\.broker_text, 'gg-broker',/.test(cc)) errs.push("GgAllTable.tsx must print the 🚫 chip through servedChip(row.broker_text, 'gg-broker', …) — the identical span to the board's GgBrokerChip");
         if (/\bbounc/i.test(cc) || /\bbounc/i.test(at)) errs.push('the 📋 table says the b-word — "reversal", never the b-word');
       }
-      // 4. the board: the table branch, one live poll on the rows, 📋 never on the 1-min / 🧪 / 🥇 fallback strips
+      // 4. the board: the table branch, one live poll on the rows, 📋 never on the 🧪 / 🥇 fallback strips (1-min since 2026-11-16)
       const board = code(quiet('src/components/GajjalaBoard.tsx'));
       for (const need of [
         'const onTable = activeSub === GG_TABLE_SUB;',
-        "GG_SUBS.filter((s) => vkey === 'gajjala' || s.key !== GG_TABLE_SUB)",
+        // WIDENED 2026-11-16 — Ajay: "Can you build and all strategies in Gallajas one min too": 📋 on the 1-minute page too
+        "GG_SUBS.filter((s) => vkey === 'gajjala' || vkey === 'gajjala_1m' || s.key !== GG_TABLE_SUB)",
         '<GgAllTable',
       ]) if (!board.includes(need)) errs.push(`GajjalaBoard.tsx must carry: ${need}`);
       if ((board.match(/ptt__mini-cell/g) || []).length > 1) errs.push('GajjalaBoard.tsx carries a second ptt__mini-cell — the table lives in GgAllTable.tsx');

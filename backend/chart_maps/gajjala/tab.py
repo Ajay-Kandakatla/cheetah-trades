@@ -1779,6 +1779,12 @@ def _pushed_potential_setup(potentials, sym: str, day: str) -> Optional[str]:
         return None
 
 
+def table_on(v=None) -> bool:
+    """📋 the All strategies table's pages: GG5 (2026-11-13) and the 1-minute page (2026-11-16 — Ajay: "Can you build and
+    all strategies in Gallajas one min too and same sort criteria"). 🧪 Audited never (it fails open to DEFAULT_SUB)."""
+    return V.of(v).key in (V.GG5.key, V.GG1.key)
+
+
 def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, listed: dict,
                 pm_syms: set, post_syms: set, potentials: Optional[list] = None, v=None) -> tuple:
     """(sub, resolved_from). An explicit known sub wins; an unknown one → DEFAULT_SUB (fail open). Empty sub + a
@@ -1787,7 +1793,7 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
     store.potentials(session), a failure → none), else the best-ranked read's setup, else ☀️ / 🌙 when the name is
     on that list, else the default."""
     s = (sub or "").strip().lower()
-    if s == GC.TABLE_SUB and not V.is_gg5(V.of(v)):                 # 📋 2026-11-13 — GG5 only: GG1 / 🧪 fail open
+    if s == GC.TABLE_SUB and not table_on(v):                      # 📋 GG5 + (2026-11-16) the 1-minute page; 🧪 fails open
         return GC.DEFAULT_SUB, "default"
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
@@ -2539,7 +2545,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     tf_ask = (tf or "").strip().lower() if isinstance(tf, str) else ""
     tf_ask = tf_ask if tf_ask in v.tfs else ""                      # no / unknown tf → each card its read's frame
     tf_k = tf_ask or (v.slow if sub_k == "horizontal_fade" else v.primary)   # GG5: "15m" / "5m", as always
-    table_sub = gg5 and sub_k == GC.TABLE_SUB                       # 📋 2026-11-13 — every setup's cards, one table
+    table_sub = table_on(v) and sub_k == GC.TABLE_SUB              # 📋 every setup's cards, one table (GG5 + 1-minute)
     sess = _session_block(now, session, is_today, in_window, v)
 
     def _row(sym):
@@ -2609,7 +2615,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     pot_title = next(r["text"] for r in legend if r["key"] == "potential")
     subs = []
     for key, e, label in GC.SUBS:
-        if key == GC.TABLE_SUB and not gg5:     # 📋 2026-11-13 — GG5 only; the 1-minute / 🧪 strips never show it
+        if key == GC.TABLE_SUB and not table_on(v):   # 📋 GG5 + the 1-minute page (2026-11-16); the 🧪 strip never shows it
             continue
         if key == GC.TABLE_SUB:                 # 📋 every card on the five setup subs (n_tiles — no tile built for it)
             n = sum(n_tiles.get(s, 0) for s in GC.SETUPS)

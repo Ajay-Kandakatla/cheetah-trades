@@ -303,8 +303,10 @@ def test_T8_NEGATIVE_a_raising_block_serves_the_fault_sentence(monkeypatch):
     assert out["subs"][0]["key"] == GC.TABLE_SUB                                    # the strip still serves
 
 
-# ── T9 GG5 only ──────────────────────────────────────────────────────────────────────────────────────────────────
-@pytest.mark.parametrize("variant", [V.GG1, V.GGA], ids=["gg1", "gga"])
+# ── T9 GG5 + (2026-11-16) the 1-minute page; 🧪 never ───────────────────────────────────────────────────────────────
+# WIDENED 2026-11-16 — Ajay: "Can you build and all strategies in Gallajas one min too and same sort criteria": GG1 left
+# this parametrize (it now serves the table — tests/test_gajjala_all_table_1m_2026_11_16.py); 🧪 still fails open.
+@pytest.mark.parametrize("variant", [V.GGA], ids=["gga"])
 def test_T9_other_pages_fail_open_and_never_list_it(variant):
     out = board(store(t1_docs()), variant=variant)
     assert out["sub"] == GC.DEFAULT_SUB and out["sub_resolved_from"] == "default"

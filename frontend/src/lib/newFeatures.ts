@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Can you build and all strategies in Gallajas one min too and same sort criteria and then add to
+  // watch list I think it's there from 1 min if it's not". tab.table_on = GG5 + GG1: the 1-minute page lists 📋 first and
+  // serves the same all_table block (both orders, To 9 EMA off the 1-minute card frame, ➕ Watch by the ticker; the 1-minute
+  // cards already carry ➕ Watch). 🧪 never. Display only. Doc docs/gajjala/all_table_1m_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-1m-all-table-2026-11-16',
+    label: '📋 All strategies on Gajjala\'s 1-min — you said: “Can you build and all strategies in Gallajas one min too and same sort criteria and then add to watch list”. Same table, same Nearest trigger → 9 EMA sort, To 9 EMA column and ➕ Watch.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_1m&sub=all_strategies',
+  },
   // Ajay 2026-11-16, verbatim: "Can you sort the table of all strategies by nearest to A+ support and then nearest to the EMA.
   // please" + "Add those columns to the Table and a Add to watch button" (his answers: nearest = closest to the trigger; the
   // 9 EMA; a remembered toggle). all_table.near_order serves `near_rank` beside GG's `rank`; "To 9 EMA" column; ➕/➖ Watch

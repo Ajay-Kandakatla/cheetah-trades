@@ -179,6 +179,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from '
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
+import { GgWatchButton } from './GgWatchButton';
 import { GgNewMark, GgSubMarksView } from './GgEntryMarks';
 import { GrowthChip } from './GrowthChip';
 import { ShortInterestChip } from './ShortInterestChip';
@@ -592,7 +593,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   /* 📋 2026-11-13 [C8]: the pre-board fallback strip shows the table chip on 🚩 Gajjala's only — the 1-min / 🧪 / 🥇 pages
    * never flash it (their servers never serve the sub). */
   const subs = board?.subs?.length ? board.subs
-    : GG_SUBS.filter((s) => vkey === 'gajjala' || s.key !== GG_TABLE_SUB).map((s) => ({ ...s, count: null, title: null }));
+    : GG_SUBS.filter((s) => vkey === 'gajjala' || vkey === 'gajjala_1m' || s.key !== GG_TABLE_SUB)   // 📋 + 1-min 2026-11-16
+      .map((s) => ({ ...s, count: null, title: null }));
   const entryMarks = board?.entry_marks?.subs ?? null;
   const session = board?.session;
   const pass = board?.pass;
@@ -869,6 +871,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                               data-testid={`gg-tile-link-${t.symbol}`}>{t.symbol}</Link>
                       ) : <strong>{t.symbol}</strong>}
                       {t.name ? ` ${t.name}` : ''}
+                      {/* ➕/➖ Watch on a card with no chart yet too (2026-11-16 — Ajay: "add to watch list I think it's there
+                        * from 1 min if it's not"; a barred card carries it in PatternChart's action row). Owner only. */}
+                      <GgWatchButton symbol={t.symbol} />
                     </div>
                   )}
                   <GgZoneLines tile={t} />
