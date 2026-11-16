@@ -107,7 +107,8 @@ describe('👀 look (HIS CALL #10)', () => {
     expect(GGW_PANEL.up).toBe('rgb(38, 186, 104)');
     expect(GGW_PANEL.down).toBe('rgb(235, 72, 72)');
     // WIDENED 2026-11-15 (Ajay: "make the lines a little more thick"): 2 → 3 px.
-    expect(EMA_BOLD).toEqual({ ema9: { color: '#FACC15', width: 3 }, ema21: { color: '#BE78FF', width: 3 } });
+    // WIDENED 2026-11-16 (Ajay: "the lines are too thick may be reduce thick ness"): 3 → 2 px.
+    expect(EMA_BOLD).toEqual({ ema9: { color: '#FACC15', width: 2 }, ema21: { color: '#BE78FF', width: 2 } });
   });
   it('nearestAxisBar snaps a slot to the nearest printed bar — NEGATIVE: no bars → -1', () => {
     expect(nearestAxisBar(5, [0, 3, 10])).toBe(1);

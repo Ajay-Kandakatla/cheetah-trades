@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
-import { EMA_BOLD, xFor, type CmAxis, type CmTile } from '../lib/chartMaps';
+import { EMA_BOLD, EMA_BOLD_CANDLE_OPACITY, xFor, type CmAxis, type CmTile } from '../lib/chartMaps';
 
 afterEach(() => cleanup());
 
@@ -52,20 +52,32 @@ const padR = (c: HTMLElement) => {
 };
 
 describe('PatternChart emaStyle="bold"', () => {
-  it('ema9 polyline: #FACC15, width 3, non-scaling, opacity 1, AFTER the candles and AFTER ema21', () => {
+  it('ema9 polyline: #FACC15, width 2, non-scaling, opacity 1, AFTER the candles and AFTER ema21', () => {
     const { container } = draw({ emaStyle: 'bold' });
     const e9 = container.querySelector('polyline.pc-ema-bold-ema9')!;
     const e21 = container.querySelector('polyline.pc-ema-bold-ema21')!;
     expect(e9.getAttribute('stroke')).toBe(EMA_BOLD.ema9.color);
     expect(e9.getAttribute('stroke')).toBe('#FACC15');
     // WIDENED 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): 9 yellow, 21 purple, thicker.
-    expect(e9.getAttribute('stroke-width')).toBe('3');
+    // WIDENED again 2026-11-16 (Ajay: "the lines are too thick may be reduce thick ness"): 3 → 2.
+    expect(e9.getAttribute('stroke-width')).toBe('2');
     expect(e9.getAttribute('vector-effect')).toBe('non-scaling-stroke');
     expect(e9.getAttribute('opacity')).toBe('1');
     expect(e21.getAttribute('stroke')).toBe('#BE78FF');
     const lastBody = candleBodies(container).pop()!;
     expect(order(container, lastBody, e21)).toBe(true);
     expect(order(container, e21, e9)).toBe(true);
+  });
+  it('2026-11-16: under bold the candles draw at EMA_BOLD_CANDLE_OPACITY so the lines read over them; NEGATIVE: not without it', () => {
+    const groups = (c: HTMLElement) => candleBodies(c).map((r) => Number((r.parentNode as Element).getAttribute('opacity')));
+    const bold = groups(draw({ emaStyle: 'bold' }).container);
+    cleanup();
+    const plain = groups(draw().container);
+    expect(EMA_BOLD_CANDLE_OPACITY).toBeGreaterThan(0);
+    expect(EMA_BOLD_CANDLE_OPACITY).toBeLessThan(1);
+    expect(bold.length).toBe(plain.length);
+    bold.forEach((o, i) => expect(o).toBeCloseTo(plain[i] * EMA_BOLD_CANDLE_OPACITY, 9));
+    expect(plain.every((o) => o > EMA_BOLD_CANDLE_OPACITY)).toBe(true);
   });
   it('[C4.3] every pc-ema-cross-* polygon comes after the ema9 polyline in DOM order', () => {
     const { container } = draw({ emaStyle: 'bold' });

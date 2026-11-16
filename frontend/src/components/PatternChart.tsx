@@ -15,7 +15,7 @@ import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  EMA_BOLD, EMA_LINE_W, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  EMA_BOLD, EMA_BOLD_CANDLE_OPACITY, EMA_LINE_W, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmAxis, type CmBadge, type CmCurve, type CmMarker, type CmStat, type CmTile,
@@ -841,7 +841,7 @@ export const PatternChart = memo(function PatternChart(
             const yo = yFor(b.o, domain, H, PAD_Y);
             const yc = yFor(b.c, domain, H, PAD_Y);
             return (
-              <g key={b.t} opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? 0.7 : 1)}>
+              <g key={b.t} opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? 0.7 : 1) * (bold ? EMA_BOLD_CANDLE_OPACITY : 1)}>
                 <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
                       x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
                       stroke={col} strokeWidth={0.9} />

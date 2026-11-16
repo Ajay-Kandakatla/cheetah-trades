@@ -17147,7 +17147,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-two-up-stretch-2026-11-16 FIRST — Ajay: "I need bigger may be 2 on each screen side by side") — slice(0, 8) → slice(0, 9).
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-all-table-near-sort-2026-11-16 FIRST — Ajay: "sort the table of all strategies by nearest") — slice(0, 9) → slice(0, 10).
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
-        if (!allIds.slice(0, 11).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 11 of NEW_FEATURES (found ${allIds.slice(0, 12).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
+        if (!allIds.slice(0, 12).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 12 of NEW_FEATURES (found ${allIds.slice(0, 13).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

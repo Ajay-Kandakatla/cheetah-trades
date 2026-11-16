@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim (on the ⤢ full-screen POLA): "This is good but they are not very clear as the lines are too thick
+  // may be reduce thick ness and make the bars lil more transparent to be over the EMA lines?". EMA_BOLD 3 → 2 px and the
+  // candles under emaStyle="bold" at EMA_BOLD_CANDLE_OPACITY (0.55) — the 👀 Watch charts only. Doc
+  // docs/gajjala/watch_thinner_ema_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-thinner-ema-2026-11-16',
+    label: '👀 Clearer watch charts — you said: “they are not very clear as the lines are too thick may be reduce thick ness and make the bars lil more transparent”. Thinner 9 / 21 EMA lines and lighter candles under them.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim: "Can you build and all strategies in Gallajas one min too and same sort criteria and then add to
   // watch list I think it's there from 1 min if it's not". tab.table_on = GG5 + GG1: the 1-minute page lists 📋 first and
   // serves the same all_table block (both orders, To 9 EMA off the 1-minute card frame, ➕ Watch by the ticker; the 1-minute

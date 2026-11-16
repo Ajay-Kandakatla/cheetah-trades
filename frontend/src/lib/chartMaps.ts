@@ -2708,15 +2708,20 @@ export function yFor(price: number, d: Domain, height: number, padY = 8): number
  *  eod-audits/replays/replay_gif.py:579 and the line width of replay_video.py:258-260. Drawn by PatternChart only under
  *  `emaStyle="bold"`; every other chart keeps toneColor. */
 export const EMA_BOLD = {
-  ema9: { color: '#FACC15', width: 3 },
-  ema21: { color: '#BE78FF', width: 3 },
+  ema9: { color: '#FACC15', width: 2 },
+  ema21: { color: '#BE78FF', width: 2 },
 } as const;
+/** 👀 2026-11-16 (Ajay, on the ⤢ full-screen POLA: "they are not very clear as the lines are too thick may be reduce thick
+ *  ness and make the bars lil more transparent to be over the EMA lines?"): the bold 9 / 21 go back 3 → 2 px (non-scaling,
+ *  so the same at any size) and the candles under `emaStyle="bold"` draw at this opacity, so the lines read over them.
+ *  MINE (layout, not a rule) — HIS CALL to move. Every other chart is untouched. */
+export const EMA_BOLD_CANDLE_OPACITY = 0.55;
 
 /** The 9 / 21 EMA on EVERY chart in the replay videos' colours (Ajay 2026-11-15: "I need something in the videos you
  *  show different colors yellow for 9 EMA here and its inverted in the app also can you switch its up in the app
  *  please..  Also make the lines a little more thick"). The old app colours were a blue 9 and an amber 21 — the
  *  yellow-ish line was the 21, the reverse of the videos. Now 9 = yellow, 21 = purple (EMA_BOLD's colours) and both
- *  are drawn at EMA_LINE_W on the ordinary charts (was 1.1); the 👀 bold charts go 2 → 3 px. */
+ *  are drawn at EMA_LINE_W on the ordinary charts (was 1.1); the 👀 bold charts went 2 → 3 px, then back to 2 (2026-11-16). */
 export const EMA_LINE_W = 2;
 
 /** 👀 A served time axis (Gajjala's Watch, chart_maps/gajjala_watch/build.axis): `slots` minute-grid slots from 04:00
