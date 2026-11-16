@@ -42,7 +42,10 @@
  * columns at every desktop width; the phone is still one column (this rule is the more specific one, so it is restated). */
 .ggw-grid.ggw-grid--cols2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 640px) { .ggw-grid { grid-template-columns: 1fr; } }
+/* Review fix: "9 per screen" keeps 3 columns at every desktop width (below 1260 px the bare rule would make it 2 × 5). */
+.ggw-grid.ggw-grid--cols3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 640px) { .ggw-grid.ggw-grid--cols2 { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .ggw-grid.ggw-grid--cols3 { grid-template-columns: 1fr; } }
 
 .ggw-tile, .ggw-frame { min-width: 0; max-width: 100%; }
 /* 2026-11-15 fix #1: the tile is ALWAYS dark, so it carries its own text palette (the replay's) — in the light theme
@@ -132,3 +135,9 @@
 .ggw-pager-sym.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
 .ggw-pager-at { font-size: 0.74rem; color: var(--text-muted, #8595ad); }
 .ggw-tile[hidden] { display: none; }
+
+/* Review fix: the full-screen view has the room — its captions wrap again, the whole served sentence shows. */
+@media (min-width: 641px) {
+  .ggw-grid--stretch.ggw-grid--fit .ggw-cap { flex-wrap: wrap; overflow: visible; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-cap > * { white-space: normal; overflow: visible; text-overflow: clip; }
+}

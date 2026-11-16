@@ -303,7 +303,8 @@ export default function GajjalaWatchBoard() {
     boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   };
   const setLayout = (l: GgwLayout) => {
-    setPage((pg) => (Number.isFinite(size) ? ggwPageOf(pg * (size as number), l) : 0));   // keep the first tile in view
+    /* keep the first SHOWN tile in view (the stored page clamped first — review fix: a stale page after removals) */
+    setPage((pg) => (Number.isFinite(size) ? ggwPageOf(ggwClampPage(pg, nRows, size as number) * (size as number), l) : 0));
     setLayoutState(l);
     saveGgwLayout(l);
   };
@@ -314,6 +315,7 @@ export default function GajjalaWatchBoard() {
   const pendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendSince = useRef<Map<string, number>>(new Map());
   const focusDone = useRef(false);
+  const pendingFocus = useRef<string | null>(null);
   const loadAllRef = useRef<() => void>(() => {});
   const gridRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
@@ -421,9 +423,18 @@ export default function GajjalaWatchBoard() {
     focusDone.current = true;
     if (Number.isFinite(size)) setPage(ggwPageOf(at, size as number));
     setOutlined(focus);
-    const el = typeof document !== 'undefined' ? document.getElementById(`ggw-${focus}`) : null;
-    el?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    pendingFocus.current = focus;
   }, [focus, load, size]);
+  /* Review fix: the scroll waits until the focused tile is SHOWN — a tile on page 2+ is still hidden (no box, so
+   * scrollIntoView is a no-op) in the commit that asks for its page. */
+  useEffect(() => {
+    const want = pendingFocus.current;
+    if (!want || typeof document === 'undefined') return;
+    const el = document.getElementById(`ggw-${want}`);
+    if (!el || el.hidden) return;
+    pendingFocus.current = null;
+    el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  });
 
   /* ⤢ the stretched name left the list → forget it (it never re-opens by itself when the name is added back). */
   useEffect(() => {
@@ -447,6 +458,10 @@ export default function GajjalaWatchBoard() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [stretched, size, nRows]);
+  /* Review fix: the stored page follows the list (removals, a smaller pick), so a later add never jumps the view back. */
+  useEffect(() => {
+    if (nRows > 0 && Number.isFinite(size)) setPage((pg) => ggwClampPage(pg, nRows, size as number));
+  }, [nRows, size]);
   /* In the full-screen view ◀ ▶ / ← → step through HIS list one stock at a time (wrapping), and the board's page
    * follows, so closing it lands on the stock last viewed. */
   const stepStretch = useCallback((d: -1 | 1) => {
@@ -585,7 +600,7 @@ export default function GajjalaWatchBoard() {
         </nav>
       ) : null}
       {p.rows.length ? (
-        <div className={`ggw-grid${GGW_LAYOUTS[layout].cols === 2 ? ' ggw-grid--cols2' : ''}${fit ? ' ggw-grid--fit' : ''}`}
+        <div className={`ggw-grid ggw-grid--cols${GGW_LAYOUTS[layout].cols}${fit ? ' ggw-grid--fit' : ''}`}
              ref={gridRef} data-layout={layout}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
           {p.rows.map((r, i) => (

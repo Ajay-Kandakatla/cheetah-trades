@@ -34,3 +34,12 @@ open, removed name closes and never re-opens, no frame dropped, no duplicate id)
 `GajjalaWatchBoard.fixes.test.tsx` (default = one fitted row, board-top measure), ✨ index pins +1, contracts slice 8 → 9.
 
 UNMEASURED — a layout, not a signal.
+
+## Review fixes (independent review, 5 confirmed, all fixed)
+1. A `?focus=SYM` push link to a name on page 2+ never scrolled (scrollIntoView ran on the still-hidden tile) → the
+   scroll now waits until the tile is shown.
+2. The stored page went stale after removals (a later add jumped the view back; a pick change landed on the wrong
+   tiles) → the page is clamped to the list, and the pick change starts from the shown page.
+3. "9 per screen" below 1260 px drew 2 × 5 → `.ggw-grid--cols3` keeps 3 columns at every desktop width.
+4. The ⤢ view also cut captions to one line → captions wrap again there.
+5. Two tests could not fail (board-top measure; duplicate id) → rewritten; both review-fix tests mutation-checked.

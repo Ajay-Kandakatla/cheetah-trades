@@ -201,12 +201,61 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect((r.container.querySelector(`[data-testid="ggw-tile-${syms[3]}"]`) as HTMLElement).hidden).toBe(false);
     expect((r.container.querySelector(`[data-testid="ggw-tile-${syms[0]}"]`) as HTMLElement).hidden).toBe(true);
   });
+  it('review fix: ?focus= on page 2 scrolls ONLY once the tile is shown (never on the hidden tile)', async () => {
+    const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
+    const calls: Array<{ id: string; hidden: boolean }> = [];
+    (Element.prototype as any).scrollIntoView = function (this: HTMLElement) { calls.push({ id: this.id, hidden: this.hidden }); };
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {} }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => clone(fixture) })));
+    render(<MemoryRouter initialEntries={[`/chart-maps?tab=gajjala_watch&focus=${syms[3]}`]}><GajjalaWatchBoard /></MemoryRouter>);
+    for (let i = 0; i < 4; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    const mine = calls.filter((x) => x.id === `ggw-${syms[3]}`);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].hidden).toBe(false);
+  });
+  it('review fix: the page follows the list — removals clamp it, and a later add never jumps the view back', async () => {
+    const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
+    let n = syms.length;
+    const board = () => { const b = clone(fixture) as any; b.rows = b.rows.slice(0, n); return b; };
+    const { c } = await mount(false, board);
+    const shown = () => Array.from(c.querySelectorAll('.ggw-grid > .ggw-tile')).filter((t) => !(t as HTMLElement).hidden)
+      .map((t) => (t as HTMLElement).dataset.testid);
+    fireEvent.click(screen.getByTestId('ggw-pager-next'));
+    expect(shown()).toEqual([`ggw-tile-${syms[2]}`, `ggw-tile-${syms[3]}`]);
+    const tick = async () => {
+      await act(async () => { await vi.advanceTimersByTimeAsync(((fixture as any).refresh_sec || 60) * 1000 + 10); });
+      for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    };
+    n = 2; await tick();
+    expect(shown()).toEqual([`ggw-tile-${syms[0]}`, `ggw-tile-${syms[1]}`]);
+    n = syms.length; await tick();
+    expect(shown()).toEqual([`ggw-tile-${syms[0]}`, `ggw-tile-${syms[1]}`]);     // NEGATIVE: no jump back to page 2
+  });
+  it('review fix: rows are measured from the BOARD top, and the 2 / 4 / 9 picks size 1 / 2 / 3 rows', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const top = this.classList.contains('ggw-board') ? 100 : 180;
+      return { width: 800, height: 150, top, left: 0, x: 0, y: top, right: 800, bottom: top + 150, toJSON: () => ({}) } as DOMRect;
+    });
+    const { c } = await mount(false);
+    const rowH = () => (c.querySelector('.ggw-grid') as HTMLElement).style.getPropertyValue('--ggw-row-h');
+    const vh = window.innerHeight;
+    expect(rowH()).toBe(`${ggwFitRowHeight({ vh, top: 80, below: 0, gap: 0 }, 1)}px`);
+    expect(rowH()).not.toBe(`${ggwFitRowHeight({ vh, top: 180, below: 0, gap: 0 }, 1)}px`);   // NEGATIVE: not the page top
+    fireEvent.click(screen.getByTestId('ggw-layout-4'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(rowH()).toBe(`${ggwFitRowHeight({ vh, top: 80, below: 0, gap: 0 }, 2)}px`);
+    fireEvent.click(screen.getByTestId('ggw-layout-9'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(rowH()).toBe(`${ggwFitRowHeight({ vh, top: 80, below: 0, gap: 0 }, 3)}px`);
+    expect((c.querySelector('.ggw-grid') as HTMLElement).classList.contains('ggw-grid--cols3')).toBe(true);
+  });
   it('full screen: ◀ ▶ and ← → step one stock at a time (wrapping) and the board page follows', async () => {
     const { c } = await mount(false);
     const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
     fireEvent.click(screen.getByTestId(`ggw-stretch-btn-${syms[1]}`));
     const at = () => screen.getByTestId('ggw-stretch').querySelector('.ggw-sym')!.textContent;
     expect(at()).toBe(syms[1]);
+    expect(document.querySelectorAll(`#ggw-${syms[1]}`)).toHaveLength(1);         // NEGATIVE: the stretched copy has no id
     fireEvent.click(screen.getByTestId('ggw-stretch-next'));
     expect(at()).toBe(syms[2]);
     fireEvent.keyDown(document, { key: 'ArrowRight' });
@@ -219,13 +268,14 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect(at()).toBe(syms[syms.length - 1]);                                     // wraps
     fireEvent.keyDown(document, { key: 'Escape' });
     expect((c.querySelector(`[data-testid="ggw-tile-${syms[syms.length - 1]}"]`) as HTMLElement).hidden).toBe(false);
-    expect(document.querySelectorAll(`#ggw-${syms[0]}`)).toHaveLength(1);         // NEGATIVE: no duplicate id
   });
   it('CSS: 2 columns for the 2 / 4 picks, one column on a phone, the fitted caption is one line, the layer covers the window', async () => {
     const css = await readSource('src/styles/gajjalaWatch.css');
     expect(css).toMatch(/\.ggw-grid\.ggw-grid--cols2\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
     expect(css).toMatch(/@media \(max-width: 640px\) \{ \.ggw-grid\.ggw-grid--cols2 \{ grid-template-columns: 1fr; \} \}/);
     expect(css).toMatch(/\.ggw-tile\[hidden\] \{ display: none; \}/);
+    expect(css).toMatch(/\.ggw-grid\.ggw-grid--cols3 \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
+    expect(css).toMatch(/\.ggw-grid--stretch\.ggw-grid--fit \.ggw-cap \{ flex-wrap: wrap; overflow: visible; \}/);
     expect(css).toMatch(/\.ggw-grid--fit \.ggw-cap \{ flex-wrap: nowrap; overflow: hidden; \}/);
     expect(css).toMatch(/\.ggw-stretch \{\s*position: fixed; inset: 0;/);
     expect(css).toMatch(/\.ggw-grid\.ggw-grid--stretch \{ grid-template-columns: minmax\(0, 1fr\); --ggw-row-h: calc\(100vh - 24px\); \}/);
