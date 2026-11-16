@@ -127,6 +127,44 @@ export function ggwPickGrid(n: number, cols: number): { cols: number; rows: numb
 /** ◀ ▶ — the pager's glyphs (structural). */
 export const GGW_PAGER = { prev: '◀', next: '▶', prevTitle: 'Previous (←)', nextTitle: 'Next (→)' } as const;
 
+/** 🔗 2026-11-16 — Ajay: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I can
+ *  share with someone". The view lives in the page link — `per` = the per-screen pick, `show` = his toggled names
+ *  (comma list), `page` = 1-based page — and in this browser (`ggw.layout`, `ggw.pick`). A link wins over the browser; a
+ *  junk value is ignored (never throws, never an empty board — a name not on the list just drops out). */
+export const GGW_URL = { per: 'per', show: 'show', page: 'page' } as const;
+export const GGW_PICK_KEY = 'ggw.pick';
+export function parseGgwPick(v: unknown): string[] | null {
+  if (typeof v !== 'string') return null;
+  const out: string[] = [];
+  for (const raw of v.split(',')) {
+    const s = raw.trim().toUpperCase();
+    if (/^[A-Z0-9][A-Z0-9.\-]{0,9}$/.test(s) && !out.includes(s)) out.push(s);
+  }
+  return out.length ? out : null;
+}
+export function parseGgwPage(v: unknown): number {
+  const n = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v.trim()) : NaN;
+  return Number.isInteger(n) && n >= 1 ? n - 1 : 0;
+}
+export function readGgwPick(): string[] | null {
+  try { return parseGgwPick(window.localStorage.getItem(GGW_PICK_KEY)); } catch { return null; }
+}
+export function saveGgwPick(p: ReadonlyArray<string> | null): void {
+  try {
+    if (p && p.length) window.localStorage.setItem(GGW_PICK_KEY, p.join(','));
+    else window.localStorage.removeItem(GGW_PICK_KEY);
+  } catch { /* private window: the pick lasts this visit */ }
+}
+/** The view's params on top of `prev` (every other param — tab, focus — kept): per always; show only with a pick; page
+ *  only past the first page and only without a pick. */
+export function ggwViewParams(prev: URLSearchParams, v: { layout: number; pick: ReadonlyArray<string> | null; page: number }): URLSearchParams {
+  const n = new URLSearchParams(prev);
+  n.set(GGW_URL.per, String(v.layout));
+  if (v.pick && v.pick.length) n.set(GGW_URL.show, v.pick.join(',')); else n.delete(GGW_URL.show);
+  if (!(v.pick && v.pick.length) && v.page > 0) n.set(GGW_URL.page, String(v.page + 1)); else n.delete(GGW_URL.page);
+  return n;
+}
+
 /** ⤢ / ⤡ — the stretch control's glyphs and titles (structural, no word about a stock). */
 export const GGW_STRETCH = { open: '⤢', close: '⤡', closeTitle: 'Back to the board (Esc)' } as const;
 export function ggwStretchTitle(sym: string): string { return `Stretch ${sym} to full screen`; }

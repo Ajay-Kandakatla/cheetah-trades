@@ -40,7 +40,8 @@ import { EMA_BOLD } from '../lib/chartMaps';
 import {
   GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
   GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
-  ggwPickGrid, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, parseGgw, readGgwLayout, saveGgwLayout,
+  ggwPickGrid, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
+  parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
@@ -279,7 +280,7 @@ function Stretch({ row, phone, removeLabel, onClose, onStep }: {
 }
 
 export default function GajjalaWatchBoard() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const focus = (params.get(GGW_FOCUS_PARAM) || '').trim().toUpperCase() || null;
   const phone = usePhone();
   const [load, setLoad] = useState<Load>({ phase: 'loading' });
@@ -290,11 +291,19 @@ export default function GajjalaWatchBoard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [outlined, setOutlined] = useState<string | null>(null);
-  const [layout, setLayoutState] = useState<GgwLayout>(readGgwLayout);
+  /* 🔗 2026-11-16 — the view comes from the link first (a shared link opens on the same view), else this browser. */
+  const [layout, setLayoutState] = useState<GgwLayout>(() => (params.get(GGW_URL.per)
+    ? parseGgwLayout(params.get(GGW_URL.per)) : readGgwLayout()));
   const [stretched, setStretched] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(() => parseGgwPage(params.get(GGW_URL.page)));
   /** 2026-11-16 — the names HE toggled on (null = the pages). */
-  const [pick, setPick] = useState<string[] | null>(null);
+  const [pick, setPick] = useState<string[] | null>(() => (params.has(GGW_URL.show)
+    ? parseGgwPick(params.get(GGW_URL.show)) : (params.has(GGW_URL.per) ? null : readGgwPick())));
+  /* 🔗 every change writes the link (replace — no history step per tap) and this browser. */
+  useEffect(() => {
+    saveGgwPick(pick);
+    setParams((prev) => ggwViewParams(prev, { layout, pick, page }), { replace: true });
+  }, [layout, pick, page, setParams]);
   const closeStretch = useCallback(() => setStretched(null), []);
   /* The page size: the pick on a desktop; a phone shows every tile in one column. */
   const size = phone ? Number.POSITIVE_INFINITY : layout;

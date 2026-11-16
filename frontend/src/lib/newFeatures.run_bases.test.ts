@@ -34,8 +34,8 @@ describe('✨ the 📶 run-bases entry (2026-11-15)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
   it('is FIRST, listed once, dated and routed to 🚩 Gajjala', () => {
-    expect(NEW_FEATURES[8].id).toBe(ID);
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-gajjala-watch-2026-11-15');
+    expect(NEW_FEATURES[9].id).toBe(ID);
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-watch-2026-11-15');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-15');

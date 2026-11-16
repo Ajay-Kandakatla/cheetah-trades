@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I
+  // can share with someone". 👀 the per-screen pick, the toggled names and the page live in the link (?per= &show= &page=)
+  // and in this browser. Layout only. Doc docs/gajjala/watch_view_in_link_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-view-in-link-2026-11-16',
+    label: '🔗 Your 👀 Watch view stays — you said: “Can you make the board persist please... Like the 1 selection and the stock selection too.. So I can share with someone”. The per-screen pick and the names you picked stay after a reload and ride in the link.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove
   // from these give me an x option to remove as well". 👀 ticker buttons toggle any name on/off (one name fills the width),
   // a "1 per screen" pick, × on every ticker (removes it from the watch). Layout only. Doc
