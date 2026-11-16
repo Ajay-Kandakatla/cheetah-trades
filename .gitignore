@@ -12,7 +12,7 @@ env/
 *.env.bak.*
 
 # Node / Vite
-node_modules/
+node_modules
 dist/
 .vite/
 *.log
