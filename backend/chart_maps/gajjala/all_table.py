@@ -47,7 +47,7 @@ TIERS = ("aplus", "potential", "forming", "rest")                       # tier_k
 TIER_WORDS = {"aplus": "🎯 A+", "potential": "🧠 potential",
               "forming": "forming — close to a setup", "rest": "a rule failed / stopped"}
 HEADS = (("rank", "#"), ("symbol", "Ticker"), ("spark", "Tape"), ("category", "Category"), ("price", "Price"),
-         ("plan", "Trigger / stop"), ("dist", "To trigger"), ("volume", "Volume"), ("float", "Float"))
+         ("plan", "Trigger / stop"), ("dist", "To trigger"), ("ema9", "To 9 EMA"), ("volume", "Volume"), ("float", "Float"))
 TITLE = "📋 All strategies — every card on his five setups, ranked the way he watches"
 ORDER_TEXT = ("🎯 A+ first (newest break on top) · 🧠 potential next (trigger armed before building, then highest volume) · "
               "then forming, closest to a setup: 💋 EMA Kiss & Fly → ➖ Horizontal Fade (9 and 21 EMA merging) → "
@@ -60,6 +60,15 @@ EMPTY_TEXT_CLOSED = "No card on any of his five setups on the {label} list."
 MORE_TEXT = "{n} more rows below the {cap}-row transport cap — not shown this read"
 FAULT_TEXT = "{n} row(s) could not be built this read — skipped, never hidden by a rule"
 HONESTY = "display order only — no gate, count or alert changes · UNMEASURED"
+# 2026-11-16 — Ajay: "Can you sort the table of all strategies by nearest to A+ support and then nearest to the EMA. please"
+# (his answers: nearest = closest to the trigger; the EMA = the 9; a remembered toggle, GG's order one click away). A SECOND
+# served order (`near_rank`) beside GG's (`rank`); the FE only picks which served rank to show — it never sorts.
+SORT_GG, SORT_NEAR = "gg", "near"
+SORTS = ((SORT_GG, "Gajjala's order"), (SORT_NEAR, "Nearest trigger → 9 EMA"))
+NEAR_ORDER_TEXT = ("Nearest the trigger first (the To trigger number as printed, either side), then nearest the 9 EMA "
+                   "(price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones "
+                   "that have it · your 🚫 names last")
+EMA9_TITLE = "Price vs the card's 9 EMA on its latest closed bar ({tf}) — + above, − under"
 # tile bar flag → the tape's session word, read off chart_maps/support.py:1141 BY NAME; a bar without `s` → SPARK_RTH
 SPARK_SESSION = {flag: word for word, flag in _SUP._SESSION_FLAG.items()}
 SPARK_RTH = "rth"
@@ -135,6 +144,20 @@ def spark_of(tile: dict, *, doc: dict, read: dict, now: datetime, v=None, title:
             "as_of": now.isoformat() if isinstance(now, datetime) else None}
 
 
+def ema9_of(doc: dict, tf: str, v=None) -> Optional[float]:
+    """The 9 EMA on the card frame's LATEST stored bar (tab._tile_frame — closed bars only; the curve tone is
+    bars.EMA_TONES[0], never typed); None when the frame has no bar or the EMA is still warming on it (never 0)."""
+    from chart_maps.gajjala import bars as B
+    fr = GT._tile_frame(doc or {}, tf, v)
+    n = len(fr.get("bars") or [])
+    tone = B.EMA_TONES[0][0]
+    vals = next((c.get("values") for c in fr.get("curves") or [] if isinstance(c, dict) and c.get("tone") == tone), None)
+    if not n or not isinstance(vals, list) or len(vals) < n:
+        return None
+    e = GT._f(vals[n - 1])
+    return e if e is not None and e > 0 else None
+
+
 def row_of(tile: dict, *, doc: dict, tier_key: str, pot_row: Optional[dict], scan_row: dict, now, v=None) -> dict:
     """One served row from the setup sub's OWN card (named keys only — never a "_"-prefixed stash, never bars/curves).
     state_word = the tile's served variant / grade label (long flag, near-kiss, VCP "B") else potential.state_word."""
@@ -155,6 +178,8 @@ def row_of(tile: dict, *, doc: dict, tier_key: str, pot_row: Optional[dict], sca
     volume = GT._f(chips.get("volume"))
     trig, stop = GT._f(g.get("trigger")), GT._f(g.get("stop"))
     dist = (trig - price) / price * 100 if (trig is not None and price is not None and trig > 0 and price > 0) else None
+    e9 = ema9_of(doc, tile.get("tf"), v)
+    e9_gap = (price - e9) / e9 * 100 if (e9 is not None and price is not None and price > 0) else None
     fl = chips.get("float") if isinstance(chips.get("float"), dict) else None
     rv = next((s.get("v") for s in tile.get("stats") or [] if isinstance(s, dict) and s.get("k") == GT.RVOL_STAT_KEY),
               None)
@@ -168,7 +193,10 @@ def row_of(tile: dict, *, doc: dict, tier_key: str, pot_row: Optional[dict], sca
             "volume": volume, "volume_text": GT._compact(volume), "rvol_text": rv if isinstance(rv, str) and rv else None,
             "float_text": (fl or {}).get("text") or None, "trigger": trig, "stop": stop,
             "risk_pct": GT._f(g.get("risk_pct")), "plan_text": g.get("plan_text"), "dist_pct": dist,
-            "dist_text": GT._pct(dist), "entry_plan": GT.is_entry_plan(read), "in_watch": False,
+            "dist_text": GT._pct(dist), "ema9": e9, "ema9_text": GT._px(e9) if e9 is not None else None,
+            "ema9_gap_pct": e9_gap, "ema9_gap_text": GT._pct(e9_gap),
+            "ema9_title": EMA9_TITLE.format(tf=tile.get("tf") or "") if e9 is not None else None,
+            "near_rank": None, "entry_plan": GT.is_entry_plan(read), "in_watch": False,
             "vol_dried": chips.get("vol_dried") or None,
             "spark": spark_of(tile, doc=doc, read=read, now=now, v=v,
                               title=f"{category} · {state_label}" if state_label else category)}
@@ -219,6 +247,8 @@ def block(per_setup: dict, pots: list, *, reads_by: dict, flags, sess: dict, in_
             watch.append(r["symbol"])
         r["in_watch"] = r["symbol"] in watch
     watch_rows = sum(1 for r in final if r["in_watch"])
+    for i, r in enumerate(near_order(final, flags)):
+        r["near_rank"] = i + 1
     empty = None
     if not final:
         empty = (EMPTY_TEXT_OPEN.format(mins=GT._mins(cad_min)) if in_window else
@@ -229,7 +259,29 @@ def block(per_setup: dict, pots: list, *, reads_by: dict, flags, sess: dict, in_
             "rows": final, "n": n, "more_n": more_n,
             "more_text": MORE_TEXT.format(n=more_n, cap=GC.TILE_LIMIT_MAX) if more_n else None,
             "faults_n": faults, "fault_text": FAULT_TEXT.format(n=faults) if faults else None,
-            "empty_text": empty, "honesty": HONESTY, "tape_head": TP.TAPE_HEAD}
+            "empty_text": empty, "honesty": HONESTY, "tape_head": TP.TAPE_HEAD,
+            "sorts": {"default": SORT_GG, "options": [{"key": k, "label": lb} for k, lb in SORTS],
+                      "near_text": NEAR_ORDER_TEXT}}
+
+
+def _shown_abs(x) -> Optional[float]:
+    """|x| as the table PRINTS it (GT._pct, one decimal) — two rows the eye reads as equally near tie, so the 9 EMA
+    breaks the tie (his "then nearest to the EMA"); None → None (sorts after every known value, never as 0)."""
+    t = GT._pct(x)
+    return abs(float(t.rstrip("%"))) if t else None
+
+
+def near_order(rows: list, flags=None) -> list:
+    """📋 2026-11-16 — the rows nearest the trigger first (|To trigger| as printed), then nearest the 9 EMA (|price vs
+    the 9 EMA|), an unknown on either key after every known one, then GG's rank (stable). His 🚫 names last (the
+    2026-11-09 invariant, tab.broker_bottom — a stable partition). Pure; a new list, the rows untouched."""
+    inf = float("inf")
+
+    def key(r):
+        d, e = _shown_abs(r.get("dist_pct")), GT._f(r.get("ema9_gap_pct"))
+        return (d is None, d if d is not None else inf, e is None, abs(e) if e is not None else inf,
+                r.get("rank") or inf)
+    return GT.broker_bottom(sorted(rows, key=key), flags)
 
 
 def attach_live(rows: list, live: dict) -> None:
@@ -248,5 +300,6 @@ def attach_live(rows: list, live: dict) -> None:
 
 
 __all__ = ["TIERS", "TIER_WORDS", "HEADS", "TITLE", "ORDER_TEXT", "WATCH_TEXT", "EMPTY_TEXT_OPEN", "EMPTY_TEXT_CLOSED",
-           "MORE_TEXT", "FAULT_TEXT", "HONESTY", "SPARK_SESSION", "SPARK_RTH", "tier_of", "spark_bars", "spark_of",
-           "row_of", "block", "attach_live"]
+           "MORE_TEXT", "FAULT_TEXT", "HONESTY", "SPARK_SESSION", "SPARK_RTH", "SORT_GG", "SORT_NEAR", "SORTS",
+           "NEAR_ORDER_TEXT", "EMA9_TITLE", "tier_of", "spark_bars", "spark_of", "ema9_of", "row_of", "near_order",
+           "block", "attach_live"]

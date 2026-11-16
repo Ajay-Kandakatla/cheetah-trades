@@ -390,3 +390,7 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 /* 📶 2026-11-15 — the served base-count line on a Gajjala card (it carries .gg-line, so the 430 px wrap rule above holds):
    muted, ONE tone for every count — never red, no colour by count (HIS CALL #4). */
 .gg-run-bases { min-width: 0; color: var(--ink-subtle, #94a3b8); }
+/* 📋 2026-11-16 — the sort toggle (Gajjala's order · Nearest trigger → 9 EMA) and the ➕ Watch beside the ticker. */
+.gg-all-sorts { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
+.gg-all-sort.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+.gg-all-sym .ggw-card-btn { margin-left: 0.3rem; font-size: 0.7rem; padding: 0 0.35rem; white-space: nowrap; }

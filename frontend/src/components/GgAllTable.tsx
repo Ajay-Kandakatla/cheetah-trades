@@ -11,8 +11,14 @@
  * "now · AH", never a price — board.now_label — so it never reaches the cell). This file types no head,
  * tier or tape word and imports nothing from GajjalaBoard (the `ptt__mini-cell` and list-table pins live there; the 🚫
  * chip is GgTraderChip's servedChip — the identical span to the board's GgBrokerChip, contracts 9300-9318).
- * Display order only — no gate, count or alert changes; UNMEASURED. */
-import { Fragment, type ReactNode } from 'react';
+ * Display order only — no gate, count or alert changes; UNMEASURED.
+ *
+ * 2026-11-16 — Ajay: "Can you sort the table of all strategies by nearest to A+ support and then nearest to the EMA.
+ * please" + "Add those columns to the Table and a Add to watch button". The server serves TWO orders — `rank` (GG's) and
+ * `near_rank` (nearest the trigger, then nearest the 9 EMA, 🚫 last) — and the sort words; the toggle only picks which
+ * SERVED rank lays the rows out (remembered in this browser, `gg-all-sort`). "GG's 18" is GG's order's divider, so it
+ * shows under GG's order only. The served "To 9 EMA" cell; ➕/➖ Watch (the ONE GgWatchButton, owner only) by the ticker. */
+import { Fragment, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { GgEntryMiniTape } from './GgEntryTape';
 import { GgTraderChip, servedChip } from './GgTraderChip';
@@ -20,6 +26,15 @@ import { GgNewMark } from './GgEntryMarks';
 import { ggHref, type GgTableBlock, type GgTableRow } from '../lib/gajjala';
 import type { CardLiveAnswer } from '../lib/cardLive';
 import { withSource } from '../lib/navSource';
+import { GgWatchButton } from './GgWatchButton';
+
+export const GG_ALL_SORT_KEY = 'gg-all-sort';
+function readSort(): string | null {
+  try { return window.localStorage.getItem(GG_ALL_SORT_KEY); } catch { return null; }
+}
+function saveSort(k: string): void {
+  try { window.localStorage.setItem(GG_ALL_SORT_KEY, k); } catch { /* private window: the pick lasts this visit */ }
+}
 
 /** A served string, or null — null / "" / a non-string prints nothing. */
 const str = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null);
@@ -50,6 +65,7 @@ function SymCell({ row, search, back }: { row: GgTableRow; search: string; back:
       <GgTraderChip text={row.trader_text} testid={`gg-trader-all-${rid(row)}`}
                     promoText={row.promo_text} promoTestid={`gg-promo-all-${rid(row)}`} />
       <GgNewMark mark={row.new_mark} sym={`all-${rid(row)}`} />
+      <GgWatchButton symbol={row.symbol} />
     </td>
   );
 }
@@ -67,11 +83,16 @@ function SparkCell({ row }: { row: GgTableRow }) {
 }
 
 /** One cell per served head key (the 🏁 `default:` rule — an unknown key is an empty cell). */
-function cellOf(key: string, row: GgTableRow, answer: CardLiveAnswer | null | undefined, search: string, back: string): ReactNode {
+function cellOf(key: string, row: GgTableRow, answer: CardLiveAnswer | null | undefined, search: string, back: string,
+                near = false): ReactNode {
   const small = (x: unknown, tid?: string) => (str(x) ? <small data-testid={tid}>{x as string}</small> : null);
   switch (key) {
     case 'rank':
-      return <td key={key} className="gg-all-rank">{typeof row.rank === 'number' ? row.rank : null}</td>;
+      return (
+        <td key={key} className="gg-all-rank">
+          {near ? (typeof row.near_rank === 'number' ? row.near_rank : null) : (typeof row.rank === 'number' ? row.rank : null)}
+        </td>
+      );
     case 'symbol':
       return <SymCell key={key} row={row} search={search} back={back} />;
     case 'spark':
@@ -95,6 +116,12 @@ function cellOf(key: string, row: GgTableRow, answer: CardLiveAnswer | null | un
       return <td key={key} className="gg-all-plan">{str(row.plan_text)}</td>;
     case 'dist':
       return <td key={key}>{str(row.dist_text)}</td>;
+    case 'ema9':
+      return (
+        <td key={key} className="gg-tr-cell" title={str(row.ema9_title) ?? undefined} data-testid={`gg-all-ema9-${rid(row)}`}>
+          {str(row.ema9_gap_text)}{small(row.ema9_text)}
+        </td>
+      );
     case 'volume':
       return <td key={key} className="gg-tr-cell">{str(row.volume_text)}{small(row.rvol_text)}</td>;
     case 'float':
@@ -115,6 +142,7 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
   block: GgTableBlock | null | undefined; emptyNote?: string | null; answer?: CardLiveAnswer | null;
   search: string; back: string;
 }) {
+  const [picked, setPicked] = useState<string | null>(readSort);   // before any early return (rules of hooks)
   /* An older API / a faulted build: no block → the served empty_note only. */
   if (!block || typeof block !== 'object') {
     return str(emptyNote) ? <div className="cm-note" data-testid="gg-empty">{emptyNote}</div> : null;
@@ -124,15 +152,34 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
   const rows = (Array.isArray(block.rows) ? block.rows : [])
     .filter((r) => r && typeof r === 'object' && typeof r.symbol === 'string' && r.symbol && typeof r.setup === 'string');
   const tapeHead = str(block.tape_head);
+  /* The served sort options; a stored pick the server no longer serves → the served default. */
+  const opts = (Array.isArray(block.sorts?.options) ? block.sorts!.options! : [])
+    .filter((o) => o && typeof o.key === 'string' && typeof o.label === 'string');
+  const def = str(block.sorts?.default) ?? 'gg';
+  const sortKey = picked && opts.some((o) => o.key === picked) ? picked : def;
+  const near = sortKey === 'near' && rows.every((r) => typeof r.near_rank === 'number');
+  const shown = near ? [...rows].sort((a, b) => (a.near_rank as number) - (b.near_rank as number)) : rows;
+  const orderText = near ? str(block.sorts?.near_text) : str(block.order_text);
+  const pick = (k: string) => { setPicked(k); saveSort(k); };
   const watchText = str(block.watch?.text);
   /* The divider goes after the LAST served in_watch row, only when a later row exists. */
   let lastWatch = -1;
   rows.forEach((r, i) => { if (r.in_watch === true) lastWatch = i; });
-  const divideAt = lastWatch >= 0 && lastWatch < rows.length - 1 ? lastWatch : -1;
+  const divideAt = !near && lastWatch >= 0 && lastWatch < rows.length - 1 ? lastWatch : -1;
   return (
     <section className="gg-all" data-testid="gg-all">
       {str(block.title) ? <h3 className="gg-all-title" data-testid="gg-all-title">{block.title}</h3> : null}
-      {str(block.order_text) ? <div className="gg-muted gg-all-order" data-testid="gg-all-order">{block.order_text}</div> : null}
+      {opts.length > 1 && rows.length > 1 ? (
+        <div className="gg-all-sorts" role="group" aria-label="Sort" data-testid="gg-all-sorts">
+          {opts.map((o) => (
+            <button key={o.key} type="button" className={`cm-tv gg-all-sort${o.key === sortKey ? ' is-on' : ''}`}
+                    aria-pressed={o.key === sortKey} data-testid={`gg-all-sort-${o.key}`} onClick={() => pick(o.key)}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {orderText ? <div className="gg-muted gg-all-order" data-testid="gg-all-order">{orderText}</div> : null}
       {rows.length && heads.length ? (
         <div className="gg-tr-scroll">
           <table className="gg-tr-table gg-all-table" data-testid="gg-all-table">
@@ -140,10 +187,10 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
               <tr>{heads.map((h) => <th key={h.key}>{h.key === 'spark' && tapeHead ? tapeHead : h.label}</th>)}</tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {shown.map((r, i) => (
                 <Fragment key={rid(r)}>
                   <tr data-testid={`gg-all-row-${rid(r)}`} className={rowClass(r)}>
-                    {heads.map((h) => cellOf(h.key, r, answer, search, back))}
+                    {heads.map((h) => cellOf(h.key, r, answer, search, back, near))}
                   </tr>
                   {i === divideAt ? (
                     <tr className="gg-all-divider" data-testid="gg-all-divider">

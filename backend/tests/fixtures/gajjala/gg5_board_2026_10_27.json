@@ -333,6 +333,10 @@
       "label": "To trigger"
      },
      {
+      "key": "ema9",
+      "label": "To 9 EMA"
+     },
+     {
       "key": "volume",
       "label": "Volume"
      },
@@ -355,6 +359,11 @@
       "change_text": "+40.0%",
       "dist_pct": -2.0647321428571366,
       "dist_text": "-2.1%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": true,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -362,6 +371,7 @@
       "kind": null,
       "kind_label": null,
       "name": null,
+      "near_rank": 5,
       "new_mark": {
        "at_et": "10:40",
        "kind": "aplus",
@@ -444,6 +454,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": true,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -451,6 +466,7 @@
       "kind": "armed",
       "kind_label": "trigger armed",
       "name": null,
+      "near_rank": 2,
       "new_mark": {
        "at_et": "10:41",
        "kind": "ready",
@@ -520,6 +536,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -527,6 +548,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 3,
       "new_mark": {
        "at_et": "10:41",
        "kind": "listed",
@@ -596,6 +618,11 @@
       "change_text": "+40.0%",
       "dist_pct": 0.44642857142857784,
       "dist_text": "+0.4%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -603,6 +630,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 1,
       "new_mark": {
        "at_et": "10:31",
        "kind": "listed",
@@ -677,6 +705,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -684,6 +717,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 4,
       "new_mark": {
        "at_et": "10:41",
        "kind": "listed",
@@ -753,6 +787,11 @@
       "change_text": "+40.0%",
       "dist_pct": -2.0647321428571366,
       "dist_text": "-2.1%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -760,6 +799,7 @@
       "kind": null,
       "kind_label": null,
       "name": null,
+      "near_rank": 6,
       "new_mark": {
        "at_et": "10:31",
        "kind": "listed",
@@ -827,6 +867,20 @@
       "volume_text": "3.0M"
      }
     ],
+    "sorts": {
+     "default": "gg",
+     "near_text": "Nearest the trigger first (the To trigger number as printed, either side), then nearest the 9 EMA (price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones that have it · your 🚫 names last",
+     "options": [
+      {
+       "key": "gg",
+       "label": "Gajjala's order"
+      },
+      {
+       "key": "near",
+       "label": "Nearest trigger → 9 EMA"
+      }
+     ]
+    },
     "tape_head": "Tape",
     "title": "📋 All strategies — every card on his five setups, ranked the way he watches",
     "watch": {
@@ -9508,6 +9562,10 @@
       "label": "To trigger"
      },
      {
+      "key": "ema9",
+      "label": "To 9 EMA"
+     },
+     {
       "key": "volume",
       "label": "Volume"
      },
@@ -9530,6 +9588,11 @@
       "change_text": "+40.0%",
       "dist_pct": -2.0647321428571366,
       "dist_text": "-2.1%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": true,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -9537,6 +9600,7 @@
       "kind": null,
       "kind_label": null,
       "name": null,
+      "near_rank": 5,
       "new_mark": {
        "at_et": "10:40",
        "kind": "aplus",
@@ -9619,6 +9683,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": true,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -9626,6 +9695,7 @@
       "kind": "armed",
       "kind_label": "trigger armed",
       "name": null,
+      "near_rank": 2,
       "new_mark": {
        "at_et": "10:41",
        "kind": "ready",
@@ -9695,6 +9765,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -9702,6 +9777,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 3,
       "new_mark": {
        "at_et": "10:41",
        "kind": "listed",
@@ -9771,6 +9847,11 @@
       "change_text": "+40.0%",
       "dist_pct": 0.44642857142857784,
       "dist_text": "+0.4%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -9778,6 +9859,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 1,
       "new_mark": {
        "at_et": "10:31",
        "kind": "listed",
@@ -9852,6 +9934,11 @@
       "change_text": "+37.5%",
       "dist_pct": 0.5714285714285714,
       "dist_text": "+0.6%",
+      "ema9": 10.4115,
+      "ema9_gap_pct": 5.052105844498869,
+      "ema9_gap_text": "+5.1%",
+      "ema9_text": "10.41",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGB?tab=supply&tf=5m_today",
@@ -9859,6 +9946,7 @@
       "kind": "building",
       "kind_label": "building",
       "name": null,
+      "near_rank": 4,
       "new_mark": {
        "at_et": "10:41",
        "kind": "listed",
@@ -9928,6 +10016,11 @@
       "change_text": "+40.0%",
       "dist_pct": -2.0647321428571366,
       "dist_text": "-2.1%",
+      "ema9": 10.64336,
+      "ema9_gap_pct": 5.229927391350098,
+      "ema9_gap_text": "+5.2%",
+      "ema9_text": "10.64",
+      "ema9_title": "Price vs the card's 9 EMA on its latest closed bar (5m) — + above, − under",
       "entry_plan": false,
       "float_text": "shares out 5.0M (Massive)",
       "href": "/sepa/GGA?tab=supply&tf=5m_today",
@@ -9935,6 +10028,7 @@
       "kind": null,
       "kind_label": null,
       "name": null,
+      "near_rank": 6,
       "new_mark": {
        "at_et": "10:31",
        "kind": "listed",
@@ -10002,6 +10096,20 @@
       "volume_text": "3.0M"
      }
     ],
+    "sorts": {
+     "default": "gg",
+     "near_text": "Nearest the trigger first (the To trigger number as printed, either side), then nearest the 9 EMA (price vs the card's latest closed-bar 9 EMA) · a row with no trigger or no 9 EMA sits after the ones that have it · your 🚫 names last",
+     "options": [
+      {
+       "key": "gg",
+       "label": "Gajjala's order"
+      },
+      {
+       "key": "near",
+       "label": "Nearest trigger → 9 EMA"
+      }
+     ]
+    },
     "tape_head": "Tape",
     "title": "📋 All strategies — every card on his five setups, ranked the way he watches",
     "watch": {

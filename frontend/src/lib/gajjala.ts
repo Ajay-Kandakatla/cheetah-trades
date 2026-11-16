@@ -892,6 +892,11 @@ export type GgTableRow = {
   trigger?: number | null; stop?: number | null; risk_pct?: number | null; plan_text?: string | null;
   dist_pct?: number | null; dist_text?: string | null; entry_plan?: boolean | null; in_watch?: boolean | null;
   vol_dried?: string | null;
+  /** 2026-11-16 — the card frame's latest closed-bar 9 EMA, price vs it (+ above / − under) and the hover words. */
+  ema9?: number | null; ema9_text?: string | null; ema9_gap_pct?: number | null; ema9_gap_text?: string | null;
+  ema9_title?: string | null;
+  /** 2026-11-16 — the SECOND served order: nearest the trigger, then nearest the 9 EMA, 🚫 last (all_table.near_order). */
+  near_rank?: number | null;
   /** the preset lite tape for GgEntryMiniTape (tape.LITE_KEYS shape) — zero per-row fetches. */
   spark?: GgTapePayload | null;
   /** the route's live fan-out (all_table.attach_live) — served texts only. */
@@ -908,6 +913,8 @@ export type GgTableBlock = {
   n?: number | null; more_n?: number | null; more_text?: string | null;
   faults_n?: number | null; fault_text?: string | null;
   empty_text?: string | null; honesty?: string | null; tape_head?: string | null;
+  /** 2026-11-16 — the served sort words: `default` (GG's), the options' keys + labels, and the near order's line. */
+  sorts?: { default?: string | null; options?: { key: string; label: string }[] | null; near_text?: string | null } | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the

@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Can you sort the table of all strategies by nearest to A+ support and then nearest to the EMA.
+  // please" + "Add those columns to the Table and a Add to watch button" (his answers: nearest = closest to the trigger; the
+  // 9 EMA; a remembered toggle). all_table.near_order serves `near_rank` beside GG's `rank`; "To 9 EMA" column; ➕/➖ Watch
+  // by the ticker. Display order only. Doc docs/gajjala/all_table_near_sort_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-all-table-near-sort-2026-11-16',
+    label: '📋 All strategies: nearest-to-trigger sort, To 9 EMA column, ➕ Watch — you said: “Can you sort the table of all strategies by nearest to A+ support and then nearest to the EMA. please” and “Add those columns to the Table and a Add to watch button”.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala&sub=all_strategies',
+  },
   // Ajay 2026-11-16, verbatim: "I need bigger may be 2 on each screen side by side its not clear and give me a strech button to
   // see full chart" + "I wanna see all 3 of one stock for stretch like 5, 3 and 1" + "two stocks with 3 charts each at any given
   // moment instead of 6 … but I also wanna be able to move current one in the view". 👀 Gajjala's Watch: a 2 · 4 · 9 per-screen
