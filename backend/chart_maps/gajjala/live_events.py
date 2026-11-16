@@ -7,8 +7,9 @@ ONE event type, `gajjala.update`, published through the existing bus (`events.pu
 change to the bus, `SSE_HEADERS` or `quote.update`. Three payload kinds, keys FIXED (QUOTES_KEYS / QUOTE_KEYS /
 PASS_KEYS / LANE_KEYS — a test pins them):
 
-  quotes  {"kind", "variant", "quotes": {SYM: {"price", "as_of_epoch", "vs"}}} — per variant (the board's tab key:
-          gajjala | gajjala_1m | gajjala_audited), at most one batch every GG_LIVE_QUOTE_BATCH_SEC, only the symbols
+  quotes  {"kind", "variant", "quotes": {SYM: {"price", "as_of_epoch", "vs", "size"}}} — per variant (the board's tab
+          key: gajjala | gajjala_1m | gajjala_audited, + 👀 gajjala_watch since 2026-11-16 — `quote_tabs()`), at most
+          one batch every GG_LIVE_QUOTE_BATCH_SEC, only the symbols
           with a new FILTERED print since that variant's last batch (the hub filters every print ONCE through
           `live_hub.PRINT_KINDS` and routes it here only for a variant with live interest). `vs` = the poll's OWN
           vs-words function (INJECTED by chart_maps/api.py through `set_vs_fn` — this module never imports the card
@@ -21,6 +22,11 @@ PASS_KEYS / LANE_KEYS — a test pins them):
 Delivery: the bus broadcasts every event to every connected `/events` tab (events/sse.py — no per-user queue). The
 owner-only delivery Ajay asked for needs a bus change (a user tag on the subscriber queue) that the main session owns;
 until then `gajjala.update` carries only public prices and data-free nudges (docs/gajjala/live_tab_2026_11_09.md).
+
+👀 Watch live (2026-11-16; Ajay: "Also on the Watch list I need live volume to be shown at the bottom" · "Of each
+chart"): size = the summed sizes of the hub-filtered prints of that symbol since this variant's last batch; one
+socket, so a kick window is blind (the blind fraction is measured in docs/gajjala/watch_live_feed_blind_2026_11_16.md).
+The watch tab's batches carry the owner-only audience; the 🚩 variants publish as before.
 
 Called by the hub (`backend/live_hub.py`, §3.2): `on_print` from the read loop (sync, O(1), never raises), `flush`
 from the hub's 1 s loop, `on_pass` / `on_lane_change` on a pointer change. Display only: the pass, the store, the
@@ -44,13 +50,13 @@ KIND_PASS = "pass"
 KIND_LANE = "lane"
 KINDS = (KIND_QUOTES, KIND_PASS, KIND_LANE)
 QUOTES_KEYS = ("kind", "variant", "quotes")
-QUOTE_KEYS = ("price", "as_of_epoch", "vs")
+QUOTE_KEYS = ("price", "as_of_epoch", "vs", "size")    # `size` LAST (2026-11-16) — the 🚩 readers pick keys by name
 PASS_KEYS = ("kind", "variant", "pass_id", "finished_at_epoch")
 LANE_KEYS = ("kind", "day", "changed_at_epoch")
 
 _lock = threading.Lock()
 _vs_fn: Optional[Callable] = None      # the poll's vs-words function — set by chart_maps/api.py (set_vs_fn), never imported
-_pending: dict = {}                    # variant → {SYM: {"price", "as_of_epoch", "level"}}
+_pending: dict = {}                    # variant → {SYM: {"price", "as_of_epoch", "level", "size"}}
 _last_batch: dict = {}                 # variant → epoch of its last published quotes batch
 
 
@@ -79,6 +85,18 @@ def variant_keys() -> tuple:
     retyped here."""
     from . import variant as V
     return tuple(v.tab for v in V.VARIANTS)
+
+
+def extra_tabs() -> tuple:
+    """The board keys that ride the quotes path WITHOUT being a Variant — 👀 the watch (2026-11-16). The ONE place
+    this module names the watch (lazy: chart_maps.gajjala_watch.constants imports only GC + sys)."""
+    from chart_maps.gajjala_watch import constants as GW
+    return (GW.TAB,)
+
+
+def quote_tabs() -> tuple:
+    """Every board key `on_print` accepts: the Variant tabs + `extra_tabs()`. Pass nudges stay `variant_keys()`."""
+    return variant_keys() + extra_tabs()
 
 
 def pass_variants(collection: str) -> tuple:
@@ -141,6 +159,15 @@ def _price(p) -> Optional[float]:
     return f if math.isfinite(f) and f > 0 else None
 
 
+def _size(s) -> Optional[float]:
+    """A print's size → float when a finite number > 0 (never a bool, never a string); anything else → None (the
+    print's price still rides, its size is not counted)."""
+    if isinstance(s, bool) or not isinstance(s, (int, float)):
+        return None
+    f = float(s)
+    return f if math.isfinite(f) and f > 0 else None
+
+
 def _print_epoch(pr: dict) -> Optional[float]:
     """The print's time: the SIP stamp (`t_ms`) when the feed carried one, else the receive time (`recv`)."""
     t = pr.get("t_ms")
@@ -149,17 +176,39 @@ def _print_epoch(pr: dict) -> Optional[float]:
     return _epoch(pr.get("recv"))
 
 
-def _publish(payload: dict) -> None:
+def _audience(variant: str):
+    """None for every Variant tab (broadcast, as before); the watch tab → `GW.live_audience()` (the owner only). A
+    failing audience source → frozenset() = nobody + one warning — never a broadcast."""
+    if variant in variant_keys():
+        return None
+    try:
+        from chart_maps.gajjala_watch import constants as GW
+        if variant != GW.TAB:
+            return frozenset()
+        aud = GW.live_audience()
+        if not isinstance(aud, (set, frozenset)):
+            raise TypeError(f"live_audience() gave {type(aud).__name__}, not a set")
+        return frozenset(aud)
+    except Exception as exc:                                        # noqa: BLE001 — fail closed
+        log.warning("live events: %s audience unavailable, publishing to nobody: %s", variant, exc)
+        return frozenset()
+
+
+def _publish(payload: dict, audience=None) -> None:
     from events import publish
-    publish(EVENT_TYPE, payload)
+    if audience is None:
+        publish(EVENT_TYPE, payload)                                # the 🚩 call — byte-identical to 2026-11-09
+    else:
+        publish(EVENT_TYPE, payload, audience=audience)
 
 
 # ── the hub's calls ──────────────────────────────────────────────────────────────────────────────────────────────
 def on_print(variant: str, pr: dict, level) -> None:
-    """One FILTERED print for a variant with live interest (the hub's routing). Latest wins per (variant, symbol) —
-    an older print never replaces a newer one. Sync, O(1), never raises."""
+    """One FILTERED print for a board key with live interest (the hub's routing; `quote_tabs()`). Latest wins per
+    (variant, symbol) — an older print never replaces a newer one's price, but its size is still added (a late SIP
+    stamp never drops real volume). A junk price → no entry, no size. Sync, O(1), never raises."""
     try:
-        if not isinstance(pr, dict) or not isinstance(variant, str) or variant not in variant_keys():
+        if not isinstance(pr, dict) or not isinstance(variant, str) or variant not in quote_tabs():
             return
         sym = pr.get("sym")
         px = _price(pr.get("p"))
@@ -167,12 +216,16 @@ def on_print(variant: str, pr: dict, level) -> None:
         if not isinstance(sym, str) or not sym.strip() or px is None or at is None:
             return
         sym = sym.strip().upper()
+        sz = _size(pr.get("s")) or 0.0
         with _lock:
             slot = _pending.setdefault(variant, {})
             prev = slot.get(sym)
             if prev is not None and prev["as_of_epoch"] > at:
+                prev["size"] += sz
                 return
-            slot[sym] = {"price": px, "as_of_epoch": at, "level": level if isinstance(level, dict) else None}
+            total = (prev["size"] if prev is not None else 0.0) + sz
+            slot[sym] = {"price": px, "as_of_epoch": at, "level": level if isinstance(level, dict) else None,
+                         "size": total}
     except Exception as exc:                                        # noqa: BLE001 — the read loop never stops here
         log.debug("live events: on_print failed: %s", exc)
 
@@ -216,13 +269,15 @@ def flush(now, alive: Optional[Callable[[str, str], bool]] = None) -> list:
                 except Exception as exc:                            # noqa: BLE001 — display words never fail a quote
                     log.debug("live events: %s vs words failed: %s", sym, exc)
                     vs = None
-                quotes[sym] = {"price": e["price"], "as_of_epoch": e["as_of_epoch"], "vs": vs}
+                size = float(e.get("size") or 0.0)
+                quotes[sym] = {"price": e["price"], "as_of_epoch": e["as_of_epoch"], "vs": vs,
+                               "size": int(size) if size.is_integer() else size}
             if not quotes:
                 continue
             payload = {"kind": KIND_QUOTES, "variant": v, "quotes": quotes}
             with _lock:
                 _last_batch[v] = now_s
-            _publish(payload)
+            _publish(payload, _audience(v))
             out.append(payload)
     except Exception as exc:                                        # noqa: BLE001 — the hub loop never stops here
         log.debug("live events: flush failed: %s", exc)

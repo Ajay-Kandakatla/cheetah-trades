@@ -25,6 +25,11 @@ export function ggwSymbolPath(sym: string): string {
   return `${GGW_PATH}/symbols/${encodeURIComponent(String(sym).trim())}`;
 }
 /** The board route asking only for these rows (the pending poll, spec C2.4) — head keys are still served. */
+/** 👀 LIVE (2026-11-16, watch-live spec §3.4): the owner-gated live-interest route (== backend constants.API_LIVE_PATH —
+ *  a backend source-read test pins equality). The board POSTs its symbols here; the hub then streams their prints. */
+export const GGW_LIVE_PATH = `${GGW_PATH}/live`;
+/** The 9 / 21 EMA tip on the forming live bar. */
+export const GGW_LIVE_EMA_TIP = true;   // HIS CALL #1 answered 2026-11-16 "live live.. per sec change" (docs/gajjala/watch_live_2026_11_16.md) — the 9/21 tip on the forming bar
 export function ggwRowsPath(syms: ReadonlyArray<string>): string {
   return `${GGW_PATH}?symbols=${encodeURIComponent(syms.join(','))}`;
 }
@@ -204,8 +209,16 @@ export type GgwCross = Record<string, unknown>;
  *  engine's run_bases.card_block, the same line Gajjala's cards print. `text` verbatim, `title` (GG's quotes + the
  *  definition) on hover. Information only, UNMEASURED. */
 export type GgwRunBases = { text: string; title: string };
+/** 👀 LIVE (2026-11-16): the served axis plus the three keys the live candle buckets on — `start_epoch` = the session's
+ *  04:00 ET epoch the server's slots are measured from, `frame_min` = the frame's minutes, `from_et` = "04:00". Absent
+ *  on an older stored doc → null (that frame then carries no live bar; the axis itself is kept as before). */
+export type GgwAxis = CmAxis & { start_epoch: number | null; frame_min: number | null; from_et: string | null };
+/** 👀 LIVE: the frame's served UNROUNDED 9 / 21 EMA at its last stored bar (backend build.tile `ema_tail`) — the seed of
+ *  the forming bar's tip (GGW_LIVE_EMA_TIP, HIS CALL #1). */
+export type GgwEmaTail = { ema9: number; ema21: number };
 export type GgwFrame = {
-  tf: string; label: string; tile: CmTile; axis: CmAxis | null;
+  tf: string; label: string; tile: CmTile; axis: GgwAxis | null;
+  ema_tail: GgwEmaTail | null;
   ema_cross: GgwCross | null; uptrend: GgwUptrend | null; held: GgwHeld | null;
   run_bases: GgwRunBases | null;
   /** 🔀 2026-11-15 (SPEC blinker §3.5): the served 9/21 EMA cross blinker of THIS frame (frame-level sibling of
@@ -246,7 +259,9 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-function parseAxis(v: unknown): CmAxis | null {
+const AXIS_FROM_RE = /^\d{2}:\d{2}$/;
+
+function parseAxis(v: unknown): GgwAxis | null {
   if (!isObj(v)) return null;
   const slots = num(v.slots);
   if (slots == null || slots <= 0 || !Array.isArray(v.x) || !v.x.every((x: unknown) => num(x) != null)) return null;
@@ -258,7 +273,21 @@ function parseAxis(v: unknown): CmAxis | null {
     ? v.ticks.filter((t: unknown) => isObj(t) && num(t.slot) != null && typeof t.label === 'string')
       .map((t: any) => ({ slot: t.slot, label: t.label }))
     : [];
-  return { slots, x: v.x.slice(), shade, ticks };
+  const se = num(v.start_epoch);
+  const fm = num(v.frame_min);
+  return {
+    slots, x: v.x.slice(), shade, ticks,
+    start_epoch: se != null && se > 0 ? se : null,
+    frame_min: fm != null && Number.isInteger(fm) && fm > 0 ? fm : null,
+    from_et: typeof v.from_et === 'string' && AXIS_FROM_RE.test(v.from_et) ? v.from_et : null,
+  };
+}
+
+function parseEmaTail(v: unknown): GgwEmaTail | null {
+  if (!isObj(v)) return null;
+  const e9 = num(v.ema9);
+  const e21 = num(v.ema21);
+  return e9 != null && e21 != null ? { ema9: e9, ema21: e21 } : null;
 }
 
 function parseTile(v: unknown, symbol: string): CmTile | null {
@@ -286,6 +315,7 @@ function parseFrame(v: unknown, symbol: string): GgwFrame | null {
   const held = isObj(v.held) && str(v.held.text) ? { text: v.held.text as string } : null;
   return {
     tf: v.tf, label: typeof v.label === 'string' ? v.label : v.tf, tile, axis: parseAxis(v.axis),
+    ema_tail: parseEmaTail(v.ema_tail),
     ema_cross: isObj(v.ema_cross) ? v.ema_cross : null, uptrend: up, held,
     /* 📶 lib/gajjala's ONE reader of a served card block (trimmed text + title; blank / junk → null). The served
      * `ellipses` beside it are NOT drawn here: PatternChart's ellipse layer maps by bar index, not by the served
@@ -311,6 +341,13 @@ function parseRow(v: unknown): GgwRow | null {
       .filter((r: unknown) => isObj(r) && str(r.text))
       .map((r: any) => ({ frame: String(r.frame ?? ''), at_et: str(r.at_et), text: r.text })),
   };
+}
+
+/** 👀 LIVE (2026-11-16) — the ONE rule for "this row may carry live bars": a served `ok` row of TODAY's session whose
+ *  last server read did not fail. A stale row (its frames are the last GOOD ones) and a prior-session row carry none —
+ *  they show their stored bars only. Used by ggwLive.ggwFrameMetas and the board's Tile. */
+export function ggwRowLive(row: GgwRow): boolean {
+  return row.state === 'ok' && row.from_session == null && !row.stale;
 }
 
 /** The served payload, or null for junk. `owner_only` / `error` → exactly {state, reason, title} (nothing else is

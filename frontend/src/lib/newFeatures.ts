@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Can you make the watch list charts live please" · "Realtime updates.. Like the 1 min chart I need
+  // it to be live live.. per sec change" · "Also on the Watch list I need live volume to be shown at the bottom" · "Of each chart" ·
+  // "Of a ticker". 👀 every Watch chart (1/3/5-min) moves with the ONE socket's prints about once a second: forming candle,
+  // live volume column, now line, 9/21 tips. Display only — crosses/🔔/pushes stay on closed bars; the next GET wins.
+  // Doc docs/gajjala/watch_live_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-live-2026-11-16',
+    label: '⚡ Live 👀 Watch charts — you said: “Realtime updates.. Like the 1 min chart I need it to be live live.. per sec change” and “I need live volume to be shown at the bottom”. Every chart’s last candle, volume bar, now line and 9/21 EMA move about every second.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim: "Also the bars are not very visible here" · "Also cannot tell where the GP ticker is now" ·
   // "All the charts are shrinked too much" · "And the Diamon shapes are too big make them small". 👀 Watch charts only:
   // a pick fills the per-screen choice (scroll for more), a full-width chart keeps its text size, brighter + wider bars,

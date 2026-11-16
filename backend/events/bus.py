@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Iterable
 
 log = logging.getLogger("events.bus")
 
@@ -95,6 +95,7 @@ def publish_throttled(
     payload: dict[str, Any] | None = None,
     *,
     min_interval_s: float = 0.5,
+    audience: Iterable[str] | None = None,
 ) -> None:
     """publish() but coalesces calls with the same (type_, key) inside
     a `min_interval_s` window. Quote streams use this so we send at most
@@ -104,6 +105,8 @@ def publish_throttled(
     quotes (last-write-wins is what the UI shows anyway), and not
     appropriate for event-style messages where every payload matters
     (use plain publish() for those).
+
+    `audience` passes through to publish() unchanged.
     """
     if not _subscribers:
         return
@@ -113,11 +116,22 @@ def publish_throttled(
     if now - last < min_interval_s:
         return
     _last_publish_ts[(type_, key)] = now
-    publish(type_, payload)
+    publish(type_, payload, audience=audience)
 
 
-def publish(type_: str, payload: dict[str, Any] | None = None) -> None:
+def publish(
+    type_: str,
+    payload: dict[str, Any] | None = None,
+    *,
+    audience: Iterable[str] | None = None,
+) -> None:
     """Fan-out a single event to every subscriber.
+
+    `audience` = the lower-cased emails that may receive this envelope;
+    absent = everyone on the bus (today's behaviour). The SSE loop
+    filters; the key never reaches the wire. (2026-11-16, WP-B
+    events-audience: an EMPTY audience is still attached and the event
+    then reaches NOBODY — fail closed.)
 
     Safe to call from:
       - async handlers (direct path)
@@ -134,6 +148,12 @@ def publish(type_: str, payload: dict[str, Any] | None = None) -> None:
         "ts":      time.time(),
         "payload": payload or {},
     }
+    if audience is not None:
+        envelope["audience"] = frozenset(
+            e.strip().lower()
+            for e in audience
+            if isinstance(e, str) and e.strip()
+        )
     loop = _bind_loop()
     if loop is None:
         return

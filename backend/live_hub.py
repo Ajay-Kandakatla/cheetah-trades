@@ -31,7 +31,8 @@ What it does (nothing here changes a rule, a gate, a push or a detector):
     INTEREST_TTL_SEC, at most INTEREST_MAX symbols per variant (the excess is refused, never silently cut).
 
 Variants are named by their TAB string ("gajjala", "gajjala_1m", "gajjala_audited"); `register_interest` also accepts a
-variant key ("gga") and normalizes it to the tab. Every `now` handed to a consumer is a tz-aware ET datetime.
+variant key ("gga") and normalizes it to the tab, and the EXTRA_TABS board keys (👀 "gajjala_watch", 2026-11-16 — no
+level, so its quotes carry `vs` null). Every `now` handed to a consumer is a tz-aware ET datetime.
 Consumers (`trading.gajjala_stream`, `chart_maps.gajjala.live_events`) are lazy imports; a missing module or a raising
 consumer logs one line (rate-limited) and never stops the loop or the socket's read loop. Everything assumes ONE
 uvicorn worker (one socket, one hub, one listener).
@@ -51,6 +52,7 @@ import live_feed
 from chart_maps import live_card
 from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import variant as V
+from chart_maps.gajjala_watch import constants as GW
 from orderflow import tape as OT
 from trading import gajjala_entry as GE
 
@@ -74,6 +76,7 @@ ERR_LOG_EVERY_SEC = 60.0                                 # MINE — one log line
 STREAM_MOD = "trading.gajjala_stream"
 EVENTS_MOD = "chart_maps.gajjala.live_events"
 BREAK_MOD = "chart_maps.gajjala.break_watch"            # ⚡ 2026-11-11 (entry spec §3.1) — fenced like the others
+EXTRA_TABS = (GW.TAB,)                                   # 👀 the watch rides the same socket (2026-11-16); a board key, never a Variant
 assert all(k in OT.PRINT_KINDS for k in PRINT_KINDS)
 
 # ── state (single process) ──────────────────────────────────────────────────────────────────────────────────────
@@ -487,9 +490,9 @@ def register_interest(variant: str, symbols: list, levels: Optional[dict] = None
     feed (kicked / down / quiet) still registers → on True with that state, so the board prints the served word."""
     state, word = live_feed.state_word()
     v = V.by_key(variant) or V.by_tab(variant)
-    if v is None or not _running or state == "off":
+    tab = v.tab if v is not None else (variant if variant in EXTRA_TABS else None)
+    if tab is None or not _running or state == "off":
         return {"on": False, "word": word, "state": state}
-    tab = v.tab
     now = time.time()
     syms = live_card.normalize(symbols)
     lv: dict = {}
@@ -536,5 +539,5 @@ def gate_ok() -> bool:
 
 
 __all__ = ["HUB_POLL_SEC", "HUB_IDLE_SEC", "INTEREST_TTL_SEC", "INTEREST_MAX", "BAR_CLOSE_OFFSET_SEC",
-           "BAR_CLOCK_LATE_MAX_SEC", "LANE_WATCH_STATES", "PRINT_KINDS", "run", "tick", "apply", "read_world",
-           "on_print", "register_interest", "interest_of", "watched", "doc_view", "gate_ok", "submit", "active"]
+           "BAR_CLOCK_LATE_MAX_SEC", "LANE_WATCH_STATES", "PRINT_KINDS", "EXTRA_TABS", "run", "tick", "apply",
+           "read_world", "on_print", "register_interest", "interest_of", "watched", "doc_view", "gate_ok", "submit", "active"]

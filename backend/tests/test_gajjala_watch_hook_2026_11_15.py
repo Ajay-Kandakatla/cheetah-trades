@@ -7,7 +7,8 @@ Ajay, verbatim (2026-11-15): "I need dashboard to add tickers to Gajjalas watch 
 The call sits at the START of the cron path (after the --now refusal, BEFORE the store, the lease and run_pass) so the
 loop's iteration 0 reads the bar that closed at the tick. NEGATIVES: --dry-run / --now / --on-demand / --symbols /
 --at-bar-close never spawn; the switch off never spawns; a raising spawn keeps the exit code; the parent reads no Mongo
-and no provider; the only file under chart_maps/gajjala/ that names the watch is run.py.
+and no provider; the only files under chart_maps/gajjala/ that name the watch are run.py and (since 2026-11-16,
+the live tab) live_events.py.
 """
 from __future__ import annotations
 
@@ -63,7 +64,9 @@ def test_only_gajjala_run_py_names_the_watch():
     hits = sorted(p.relative_to(GG_DIR).as_posix() for p in GG_DIR.rglob("*")
                   if p.is_file() and "__pycache__" not in p.parts
                   and "gajjala_watch" in p.read_text(encoding="utf-8", errors="ignore"))
-    assert hits == ["run.py"]
+    # 2026-11-16 (spec ggw_live §3.1, WP-A1): live_events.py now names chart_maps.gajjala_watch.constants for
+    # extra_tabs()/quote_tabs() — the watch's live tab. Widened from ["run.py"]; nothing else may join.
+    assert hits == ["live_events.py", "run.py"]
 
 
 def _main_fn(tree):

@@ -7,8 +7,9 @@ import fixture from '../components/__fixtures__/gajjala_watch_board_2026_11_15.j
 import { CM_TABS, EMA_BOLD, TAB_META, isBoardTab, nearestAxisBar, parseTab } from './chartMaps';
 import { BURST_EXEMPT } from './momentumBurst';
 import {
-  GGW_CHART_H, GGW_CHART_H_PHONE, GGW_PANEL, GGW_PATH, GGW_PHONE_MQ, GGW_TAB, ggwChartHeight, ggwMergeRows,
-  ggwPendingSymbols, ggwRowsPath, ggwSplitFrames, ggwSymbolPath, parseGgw, type GgwBoard,
+  GGW_CHART_H, GGW_CHART_H_PHONE, GGW_LIVE_EMA_TIP, GGW_LIVE_PATH, GGW_PANEL, GGW_PATH, GGW_PHONE_MQ, GGW_TAB,
+  ggwChartHeight, ggwMergeRows, ggwPendingSymbols, ggwRowLive, ggwRowsPath, ggwSplitFrames, ggwSymbolPath, parseGgw,
+  type GgwBoard, type GgwRow,
 } from './gajjalaWatch';
 
 const ok = () => parseGgw(JSON.parse(JSON.stringify(fixture))) as GgwBoard;
@@ -138,5 +139,113 @@ describe('👀 tab registry', () => {
     expect(b).toContain('Shown to the account owner only. UNMEASURED — a cross is information, not an entry. Not advice.');
     expect(b).not.toMatch(/\bbuy\b/i);
     expect(b).not.toMatch(new RegExp('b' + 'ounce', 'i'));
+  });
+});
+
+/* ── 👀 Watch LIVE (2026-11-16, watch-live spec §3.4 / §4 WP-C). Ajay: "Can you make the watch list charts live please" ·
+ * "Of each chart". The live route, the axis' live keys (an older payload parses EXACTLY as before — the axis is never
+ * dropped for a missing key), the served EMA tail, HIS CALL #1 OFF, and the ONE live-row rule (C2). NEGATIVES. */
+async function fsMod(): Promise<any> {
+  const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+  return mod?.default || mod;
+}
+const root = (globalThis as any).process?.cwd?.() || '.';
+
+const LIVE_AXIS = { start_epoch: 1794819600.0, frame_min: 1, from_et: '04:00' };
+const withLiveAxis = (over: Record<string, unknown> = {}) => {
+  const raw = JSON.parse(JSON.stringify(fixture));
+  Object.assign(raw.rows[0].frames[0].axis, LIVE_AXIS, over);
+  return raw;
+};
+
+describe('👀 LIVE — route and HIS CALL #1', () => {
+  it('GGW_LIVE_PATH is the board route + /live', () => {
+    expect(GGW_LIVE_PATH).toBe(GGW_PATH + '/live');
+    expect(GGW_LIVE_PATH).toBe('/chart-maps/gajjala-watch/live');
+  });
+  it('GGW_LIVE_EMA_TIP is ON (his 11-16 "live live"), with the HIS CALL #1 comment on its line', async () => {
+    expect(GGW_LIVE_EMA_TIP).toBe(true);
+    const src: string = (await fsMod()).readFileSync(`${root}/src/lib/gajjalaWatch.ts`, 'utf8');
+    const line = src.split('\n').find((l) => l.includes('export const GGW_LIVE_EMA_TIP'));
+    expect(line).toMatch(/GGW_LIVE_EMA_TIP = true;\s*\/\/ HIS CALL #1/);
+  });
+});
+
+describe('👀 LIVE — parseAxis keeps start_epoch / frame_min / from_et', () => {
+  it('served keys are kept', () => {
+    const ax = (parseGgw(withLiveAxis()) as GgwBoard).rows[0].frames[0].axis!;
+    expect(ax.start_epoch).toBe(1794819600);
+    expect(ax.frame_min).toBe(1);
+    expect(ax.from_et).toBe('04:00');
+    const ax5 = (parseGgw(withLiveAxis({ frame_min: 5 })) as GgwBoard).rows[0].frames[0].axis!;
+    expect(ax5.frame_min).toBe(5);
+  });
+  it('NEGATIVE: junk → null for that key only, the axis itself is kept', () => {
+    const cases: [string, unknown][] = [
+      ['start_epoch', 'x'], ['start_epoch', -1], ['start_epoch', 0], ['start_epoch', NaN], ['start_epoch', null],
+      ['frame_min', 'x'], ['frame_min', -1], ['frame_min', 0], ['frame_min', 1.5], ['frame_min', '1'],
+      ['from_et', '4:00'], ['from_et', 'x'], ['from_et', 400], ['from_et', '04:00 ET'],
+    ];
+    for (const [k, v] of cases) {
+      const ax = (parseGgw(withLiveAxis({ [k]: v })) as GgwBoard).rows[0].frames[0].axis;
+      expect(ax, `${k}=${String(v)}`).not.toBeNull();
+      expect((ax as any)[k], `${k}=${String(v)}`).toBeNull();
+      expect(ax!.slots).toBe(720);
+    }
+  });
+  it('NEGATIVE: the 2026-11-15 fixture (no start_epoch / frame_min) parses with nulls and the SAME slots / x / shade / ticks', () => {
+    const b = ok();
+    for (const [ri, row] of b.rows.entries()) {
+      for (const [fi, f] of row.frames.entries()) {
+        const raw = (fixture as any).rows[ri].frames[fi].axis;
+        const ax = f.axis!;
+        expect(ax).not.toBeNull();
+        expect(ax.start_epoch).toBeNull();
+        expect(ax.frame_min).toBeNull();
+        expect(ax.from_et).toBe(raw.from_et);                    // build.axis already served from_et on 11-15
+        expect(ax.from_et).toBe('04:00');
+        expect(ax.slots).toBe(raw.slots);
+        expect(ax.x).toEqual(raw.x);
+        expect(ax.shade).toEqual(raw.shade);
+        expect(ax.ticks).toEqual(raw.ticks);
+        expect(Object.keys(ax).sort()).toEqual(['frame_min', 'from_et', 'shade', 'slots', 'start_epoch', 'ticks', 'x']);
+      }
+    }
+  });
+});
+
+describe('👀 LIVE — ema_tail (the served unrounded 9 / 21 at the last stored bar)', () => {
+  const withTail = (t: unknown) => {
+    const raw = JSON.parse(JSON.stringify(fixture));
+    raw.rows[0].frames[0].ema_tail = t;
+    return (parseGgw(raw) as GgwBoard).rows[0].frames[0];
+  };
+  it('finite numbers are kept verbatim', () => {
+    expect(withTail({ ema9: 1.4835731234567, ema21: 1.4988891234567 }).ema_tail).toEqual({ ema9: 1.4835731234567, ema21: 1.4988891234567 });
+  });
+  it('NEGATIVE: absent / junk → null', () => {
+    expect(ok().rows[0].frames[0].ema_tail).toBeNull();
+    for (const junk of [null, 'x', 3, [], {}, { ema9: 1 }, { ema9: 'x', ema21: 2 }, { ema9: NaN, ema21: 2 }, { ema9: 1, ema21: Infinity }]) {
+      expect(withTail(junk).ema_tail, JSON.stringify(junk)).toBeNull();
+    }
+  });
+});
+
+describe('👀 LIVE — ggwRowLive, the ONE rule (C2)', () => {
+  const row = (over: Partial<GgwRow> = {}): GgwRow => ({
+    symbol: 'GP', state: 'ok', text: null, from_session: null, as_of_et: null, stale: false, frames: [], rang: [], ...over,
+  });
+  it('true only for an ok, today\'s, not-stale row', () => {
+    expect(ggwRowLive(row())).toBe(true);
+    expect(ggwRowLive(ok().rows[0])).toBe(true);           // OMH in the fixture
+  });
+  it('NEGATIVE: stale / prior session / not ok → false', () => {
+    expect(ggwRowLive(row({ stale: true }))).toBe(false);
+    expect(ggwRowLive(row({ from_session: '2026-11-13' }))).toBe(false);
+    for (const state of ['pending', 'failed', 'no_prints', 'no_bars', 'over_budget', 'OK', '']) {
+      expect(ggwRowLive(row({ state })), state).toBe(false);
+    }
+    expect(ggwRowLive(ok().rows[3])).toBe(false);          // NVDA is stale in the fixture
+    expect(ggwRowLive(ok().rows[1])).toBe(false);          // AMD is pending
   });
 });

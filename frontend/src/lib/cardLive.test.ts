@@ -445,7 +445,8 @@ describe('GG LIVE — parseGgUpdate', () => {
       .toEqual({ kind: 'lane', day: '2026-11-09', changed_at_epoch: 2 });
     const q = parseGgUpdate({ kind: 'quotes', variant: 'gajjala', quotes: {
       xlab: { price: 2, as_of_epoch: 3, vs: VS_A }, BAD: { price: 'x', as_of_epoch: 3, vs: null } } });
-    expect(q).toEqual({ kind: 'quotes', variant: 'gajjala', quotes: { XLAB: { price: 2, as_of_epoch: 3, vs: VS_A } } });
+    // WIDENED 2026-11-16 (watch-live §3.4, C6): parseGgUpdate ALWAYS writes `size` (absent → null).
+    expect(q).toEqual({ kind: 'quotes', variant: 'gajjala', quotes: { XLAB: { price: 2, as_of_epoch: 3, vs: VS_A, size: null } } });
   });
 
   it('NEGATIVE: anything else is null', () => {
@@ -472,5 +473,55 @@ describe('GG LIVE — streamFeedWord (the footer word only when degraded)', () =
     expect(streamFeedWord(withStream({ on: false, word: null, state: 'down' }))).toBeNull();
     expect(streamFeedWord(withStream({ on: false, word: '  ', state: 'down' }))).toBeNull();
     expect(streamFeedWord(withStream({ on: true, word: W }))).toBeNull();     // no served state → not degraded
+  });
+});
+
+/* ── 👀 Watch LIVE (2026-11-16, watch-live spec §3.4 / §4 WP-C, C6) — the streamed `size` (the live volume column).
+ * Ajay: "Also on the Watch list I need live volume to be shown at the bottom". `size` is OPTIONAL on GgStreamQuote (the
+ * typed literals above compile untouched — tsc is the proof) and parseGgUpdate ALWAYS writes it. NEGATIVES: junk size →
+ * null while the PRICE still applies; patchQuotes never carries size into the answer; mergeQuotesEvt is unaffected. */
+describe('👀 Watch LIVE — size on the streamed quote', () => {
+  const parseQ = (q: unknown) => (parseGgUpdate({ kind: 'quotes', variant: 'gajjala_watch', quotes: { gp: q } }) as GgQuotesEvent).quotes;
+
+  it('a positive finite size is carried verbatim', () => {
+    expect(parseQ({ price: 1.48, as_of_epoch: 10, vs: null, size: 350 }).GP).toEqual({ price: 1.48, as_of_epoch: 10, vs: null, size: 350 });
+    expect(parseQ({ price: 1.48, as_of_epoch: 10, vs: null, size: 12.5 }).GP.size).toBe(12.5);
+  });
+
+  it('NEGATIVE: absent / 0 / -1 / NaN / "x" / Infinity / null / true → size null, the quote (and its price) KEPT', () => {
+    for (const size of [undefined, 0, -1, NaN, 'x', Infinity, null, true, '100']) {
+      const raw: Record<string, unknown> = { price: 1.5, as_of_epoch: 11, vs: null };
+      if (size !== undefined) raw.size = size;
+      const q = parseQ(raw);
+      expect(q.GP, `size ${String(size)}`).toEqual({ price: 1.5, as_of_epoch: 11, vs: null, size: null });
+    }
+  });
+
+  it('every parsed quote carries the size key', () => {
+    const quotes = (parseGgUpdate({ kind: 'quotes', variant: 'gajjala', quotes: {
+      A: { price: 1, as_of_epoch: 1, vs: null }, B: { price: 2, as_of_epoch: 2, vs: VS_A, size: 7 }, C: { price: 3, as_of_epoch: 3 } } }) as GgQuotesEvent).quotes;
+    expect(Object.keys(quotes).sort()).toEqual(['A', 'B', 'C']);
+    for (const q of Object.values(quotes)) expect('size' in q).toBe(true);
+    expect(Object.keys(quotes.B)).toEqual(['price', 'as_of_epoch', 'vs', 'size']);
+  });
+
+  it('NEGATIVE: patchQuotes never carries size into the answer (the quote keys are unchanged)', () => {
+    const a = answer({ XLAB: quote({ vs: VS_B }) });
+    const keysBefore = Object.keys(a.quotes.XLAB).sort();
+    const nowKeysBefore = Object.keys(a.quotes.XLAB.now!).sort();
+    const out = patchQuotes(a, qevt({ XLAB: { price: 2.91, as_of_epoch: NOW.as_of_epoch + 5, vs: VS_A, size: 500 } }))!;
+    expect(out).not.toBe(a);
+    expect(out.quotes.XLAB.now!.price).toBe(2.91);
+    expect(Object.keys(out.quotes.XLAB).sort()).toEqual(keysBefore);
+    expect(Object.keys(out.quotes.XLAB.now!).sort()).toEqual(nowKeysBefore);
+    expect(JSON.stringify(out)).not.toContain('"size"');
+  });
+
+  it('mergeQuotesEvt: newer wins regardless of size; an older batch with a size never overwrites', () => {
+    const a = qevt({ XLAB: { price: 1, as_of_epoch: 10, vs: null, size: 100 } });
+    expect(mergeQuotesEvt(a, qevt({ XLAB: { price: 9, as_of_epoch: 9, vs: null, size: 999 } }))).toBe(a);
+    expect(mergeQuotesEvt(a, qevt({ XLAB: { price: 9, as_of_epoch: 10, vs: null, size: 999 } }))).toBe(a);
+    const m = mergeQuotesEvt(a, qevt({ XLAB: { price: 2, as_of_epoch: 11, vs: null, size: null } }));
+    expect(m.quotes.XLAB).toEqual({ price: 2, as_of_epoch: 11, vs: null, size: null });
   });
 });

@@ -31,6 +31,7 @@ from chart_maps.gajjala import run as RUN
 from chart_maps.gajjala import run_bases as RB
 from chart_maps.gajjala import tab as GT
 from daytrading.data import ET_PREMARKET_OPEN, ET_RTH_OPEN
+from orderflow import signals as EMA
 
 from . import constants as C
 
@@ -106,7 +107,9 @@ def axis(session, frame_min: int, bars, end: dtime) -> dict:
     """The 04:00 ET axis of one chart: `slots` = (end − 04:00) / frame_min; a bar's slot = (its close − frame_min −
     04:00) / frame_min (a bar is stamped at its close, bars.py); pre-market shaded [04:00, 09:30); after-hours shaded
     [regular close, end) when `end` is the extended close; hourly ticks from 04:00 "HH:MM". Empty slots right of the
-    last bar stay empty (the replay's look)."""
+    last bar stay empty (the replay's look). 👀 LIVE (2026-11-16): + `start_epoch` (the float epoch of THIS `start`,
+    the session's 04:00 ET the slots are measured from) and `frame_min` (`fm`), so the board buckets a live print on
+    the server's own grid — `floor((t − start_epoch) / (fm·60))`, closed=left — with no clock arithmetic of its own."""
     fm = max(1, int(frame_min))
     start = _at(session, ET_PREMARKET_OPEN)
     stop = _at(session, end)
@@ -129,7 +132,7 @@ def axis(session, frame_min: int, bars, end: dtime) -> dict:
         ticks.append({"slot": slot(h), "label": h.strftime("%H:%M")})
         h += timedelta(hours=1)
     return {"from_et": start.strftime("%H:%M"), "to_et": stop.strftime("%H:%M"), "slots": slots, "x": xs,
-            "shade": shade, "ticks": ticks}
+            "shade": shade, "ticks": ticks, "start_epoch": start.timestamp(), "frame_min": fm}
 
 
 # ── one chart, one tile ───────────────────────────────────────────────────────────────────────────────────────────
@@ -157,7 +160,19 @@ def tile(frames_obj, tf: str, end: dtime) -> dict:
            "axis": axis(frames_obj.session, _frame_min(tf), p["bars"], end),
            "as_of_bar_t": F.t[-1] if F.t else None}
     out.update(run_bases_keys(F, tf, p["bars"]))
+    out.update(ema_tail_keys(F))
     return out
+
+
+def ema_tail_keys(F) -> dict:
+    """👀 LIVE (2026-11-16): {"ema_tail": {"ema9", "ema21"}} = the LAST value of each EMA over the FULL 2-session frame,
+    UNROUNDED, from the ONE engine (`orderflow.signals.ema`, the same kernel `bars._masked_ema` rounds to 6 dp for the
+    curves) — the seed a forming bar's tip would chain from (drawn only on HIS CALL #1). {} for an empty frame."""
+    if F is None or not len(F):
+        return {}
+    close = F.df["close"].astype(float)
+    return {"ema_tail": {"ema9": float(EMA.ema(close, GC.EMA_FAST).iloc[-1]),
+                         "ema21": float(EMA.ema(close, GC.EMA_SLOW).iloc[-1])}}
 
 
 def run_bases_keys(F, tf: str, bars: list) -> dict:

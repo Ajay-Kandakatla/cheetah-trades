@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import math
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -30,6 +31,7 @@ from chart_maps.gajjala import constants as GC
 from . import colls as CO
 from . import constants as C
 
+EMA_TAIL_KEYS = ("ema9", "ema21")                        # = build.ema_tail_keys / bars.EMA_TONES tones (👀 LIVE 2026-11-16)
 log = logging.getLogger("chart_maps.gajjala_watch.payload")
 ET = ZoneInfo("America/New_York")
 
@@ -274,8 +276,25 @@ def frame_block(sym: str, tf: str, t: dict, held_doc) -> dict:
            "ema_cross": blk,
            "uptrend": {"ok": up.get("ok"), "short": up.get("short")},
            "held": _held(blk, (held_doc or {}).get(tf) if isinstance(held_doc, dict) else None),
-           "ema_blink": _ema_blink(tf, t)}
+           "ema_blink": _ema_blink(tf, t),
+           "ema_tail": _ema_tail(t)}
     out.update(_run_bases(tf, t))
+    return out
+
+
+def _ema_tail(t: dict) -> Optional[dict]:
+    """👀 LIVE (2026-11-16): the stored UNROUNDED 9 / 21 EMA tail (build.ema_tail_keys) as a FRAME sibling — never inside
+    `tile`. Served only when both values are finite floats; anything else → None (an old doc lacks it until the next
+    minute read rewrites it)."""
+    raw = t.get("ema_tail")
+    if not isinstance(raw, dict):
+        return None
+    out = {}
+    for key in EMA_TAIL_KEYS:
+        v = raw.get(key)
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+            return None
+        out[key] = float(v)
     return out
 
 

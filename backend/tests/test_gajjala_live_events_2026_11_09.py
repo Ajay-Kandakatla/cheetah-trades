@@ -306,7 +306,8 @@ def test_payload_keys_exactly_as_the_spec(wired):
     LE.on_print("gajjala_audited", _pr("XLAB", 9.1, t), {"trigger": 9.0, "stop": 8.0})
     q = LE.flush(t)[0]
     assert tuple(q) == LE.QUOTES_KEYS == ("kind", "variant", "quotes") and q["kind"] == "quotes"
-    assert tuple(q["quotes"]["XLAB"]) == LE.QUOTE_KEYS == ("price", "as_of_epoch", "vs")
+    # WIDENED 2026-11-16 (👀 watch live, spec §3.1): `size` LAST — the 🚩 FE readers pick keys by name
+    assert tuple(q["quotes"]["XLAB"]) == LE.QUOTE_KEYS == ("price", "as_of_epoch", "vs", "size")
     assert set(q["quotes"]["XLAB"]["vs"]) == {"kind", "text", "pct_text"}   # pct_text WIDENED 2026-11-12 (🥇 WP-C)
     p = LE.on_pass("gajjala", "2026-09-03|14:01", datetime(2026, 9, 3, 18, 1, 12))
     assert tuple(p) == LE.PASS_KEYS == ("kind", "variant", "pass_id", "finished_at_epoch")
@@ -452,3 +453,205 @@ def test_negative_real_feed_off_serves_state_off_with_the_off_word(wired, real_f
     s = _client().post("/chart-maps/live", json={"symbols": ["XLAB"], "stream": True, "variant": "gajjala"}).json()
     assert s["stream"]["state"] == "off", "state ≠ live → the board prints the served word"
     assert s["stream"]["word"] == LF.FEED_WORDS["off"]
+
+
+
+# ══ 👀 Watch live (spec 2026-11-16 §3.1, WP-A1) — live size + the watch tab on the quotes path + the audience ══════
+# Ajay 2026-11-16: "Can you make the watch list charts live please" · "Also on the Watch list I need live volume to
+# be shown at the bottom" · "Of each chart".
+from chart_maps.gajjala_watch import constants as GW          # noqa: E402
+
+OWNER_AUD = frozenset({"o@x"})
+
+
+def _prs(sym, p, t_s, s):
+    return {"sym": sym, "p": p, "s": s, "c": [], "t_ms": int(round(t_s * 1000)), "recv": t_s, "trfi": False,
+            "kind": "regular"}
+
+
+@pytest.fixture
+def pub(wired, monkeypatch):
+    """`events.publish` recording (args, kwargs) — the audience keyword is visible; GW.live_audience set to the test
+    owner (raising=False: passes before AND after WP-A2 adds the function)."""
+    import events
+    calls: list = []
+    monkeypatch.setattr(events, "publish", lambda *a, **k: calls.append((a, k)))
+    monkeypatch.setattr(GW, "live_audience", lambda: OWNER_AUD, raising=False)
+    return calls
+
+
+def test_three_prints_in_one_second_are_one_batch_sizes_summed_and_never_carried(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.46, t - 0.9, 100), None)
+    LE.on_print("gajjala_watch", _prs("GP", 1.47, t - 0.5, 200), None)
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t - 0.1, 50), None)
+    out = LE.flush(t)
+    assert len(out) == 1
+    q = out[0]["quotes"]["GP"]
+    assert q["price"] == 1.48 and q["as_of_epoch"] == pytest.approx(t - 0.1)
+    assert q["size"] == 350 and isinstance(q["size"], int)
+    LE.on_print("gajjala_watch", _prs("GP", 1.49, t + 1.2, 75), None)
+    q2 = LE.flush(t + 1.5)[0]["quotes"]["GP"]
+    assert q2["size"] == 75, "NEG: the next batch counts only the new prints — size never carries over"
+    assert LE.flush(t + 5) == [], "no new print → no batch"
+
+
+def test_size_waits_with_the_price_when_the_batch_is_not_due(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala", _prs("XLAB", 9.1, t, 100), None)
+    assert LE.flush(t)[0]["quotes"]["XLAB"]["size"] == 100
+    LE.on_print("gajjala", _prs("XLAB", 9.2, t + 0.2, 30), None)
+    assert LE.flush(t + 0.5) == [], "batch not due"
+    LE.on_print("gajjala", _prs("XLAB", 9.3, t + 0.7, 20), None)
+    q = LE.flush(t + 1.0)[0]["quotes"]["XLAB"]
+    assert (q["price"], q["size"]) == (9.3, 50), "counted in exactly one batch, never dropped while waiting"
+
+
+def test_an_older_stamped_print_adds_its_size_but_never_moves_price(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.50, t, 100), None)
+    LE.on_print("gajjala_watch", _prs("GP", 1.40, t - 3, 400), None)       # arrives late, older SIP stamp
+    q = LE.flush(t)[0]["quotes"]["GP"]
+    assert (q["price"], q["as_of_epoch"]) == (1.50, t), "NEG: the older print never replaces the newer price"
+    assert q["size"] == 500, "its real volume is still counted"
+
+
+def test_an_equal_stamp_replaces_the_price_and_adds_the_size(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.50, t, 100), None)
+    LE.on_print("gajjala_watch", _prs("GP", 1.51, t, 10), None)
+    q = LE.flush(t)[0]["quotes"]["GP"]
+    assert (q["price"], q["size"]) == (1.51, 110)
+
+
+@pytest.mark.parametrize("bad", [None, 0, -5, float("nan"), float("inf"), True, False, "100", [100], {"s": 1}])
+def test_negative_a_bad_size_is_never_counted_the_price_still_rides(pub, bad):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, bad), None)
+    q = LE.flush(t)[0]["quotes"]["GP"]
+    assert q["price"] == 1.48 and q["size"] == 0 and isinstance(q["size"], int), "no valid size seen → 0"
+    LE.on_print("gajjala_watch", _prs("GP", 1.49, t + 1, 100), None)
+    LE.on_print("gajjala_watch", _prs("GP", 1.50, t + 1.1, bad), None)
+    q = LE.flush(t + 1.5)[0]["quotes"]["GP"]
+    assert (q["price"], q["size"]) == (1.50, 100), "a bad size adds nothing beside a good one"
+
+
+def test_negative_a_print_without_an_s_key_counts_nothing(pub):
+    t = FIXED.timestamp()
+    pr = _prs("GP", 1.48, t, 1)
+    del pr["s"]
+    LE.on_print("gajjala_watch", pr, None)
+    assert LE.flush(t)[0]["quotes"]["GP"]["size"] == 0
+
+
+def test_a_fractional_size_stays_a_float_an_integral_float_becomes_int(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, 0.5), None)
+    LE.on_print("gajjala_watch", _prs("AKAN", 2.0, t, 100.0), None)
+    qs = LE.flush(t)[0]["quotes"]
+    assert qs["GP"]["size"] == 0.5 and isinstance(qs["GP"]["size"], float)
+    assert qs["AKAN"]["size"] == 100 and isinstance(qs["AKAN"]["size"], int)
+    assert list(qs) == ["AKAN", "GP"], "symbols ascending (unchanged)"
+
+
+@pytest.mark.parametrize("junk", [float("nan"), -1, 0, True, None, "1.48"])
+def test_negative_a_junk_price_makes_no_entry_and_its_size_is_not_counted(pub, junk):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", junk, t, 500), None)
+    assert LE.flush(t) == [] and pub == [], "no entry at all"
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t + 1, 100), None)
+    LE.on_print("gajjala_watch", _prs("GP", junk, t + 1.1, 500), None)
+    q = LE.flush(t + 1.5)[0]["quotes"]["GP"]
+    assert (q["price"], q["size"]) == (1.48, 100), "NEG: the junk print's size never rides"
+
+
+def test_the_watch_tab_rides_the_quotes_path_with_null_vs(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, 350), None)
+    out = LE.flush(t)
+    assert out == [{"kind": "quotes", "variant": "gajjala_watch",
+                    "quotes": {"GP": {"price": 1.48, "as_of_epoch": t, "vs": None, "size": 350}}}]
+    assert tuple(out[0]["quotes"]["GP"]) == LE.QUOTE_KEYS
+
+
+def test_extra_tabs_and_quote_tabs_name_the_watch_once():
+    assert LE.extra_tabs() == (GW.TAB,) == ("gajjala_watch",)
+    assert LE.quote_tabs() == LE.variant_keys() + LE.extra_tabs()
+    assert GW.TAB not in LE.variant_keys(), "the watch is a board key, never a Variant"
+
+
+def test_negative_unknown_and_near_miss_tabs_still_dropped(pub):
+    t = FIXED.timestamp()
+    for tab in ("GAJJALA_WATCH", "gajjala_watch ", "gajjala_5m", "", "ggw", "watch"):
+        LE.on_print(tab, _prs("GP", 1.48, t, 100), None)
+    assert LE.flush(t) == [] and pub == []
+
+
+def test_negative_the_watch_gets_no_pass_nudge(pub):
+    fin = datetime(2026, 11, 16, 18, 6, 9)
+    assert LE.on_pass("gajjala_watch", "2026-11-16|13:06", fin) is None
+    assert pub == [], "on_pass keeps variant_keys() — nothing published for the watch"
+    assert "gajjala_watch" not in LE.pass_variants("gajjala_passes") + LE.pass_variants("gajjala_1m_passes")
+
+
+# ── audience [C1] ────────────────────────────────────────────────────────────────────────────────────────────────
+def test_a_gajjala_batch_is_published_byte_identical_to_today_no_keyword(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala", _prs("XLAB", 9.1, t, 100), None)
+    out = LE.flush(t)
+    assert pub == [(("gajjala.update", out[0]), {})], "NEG: no audience keyword at all — not even audience=None"
+
+
+@pytest.mark.parametrize("variant", ["gajjala", "gajjala_1m", "gajjala_audited"])
+def test_every_variant_tab_has_no_audience(variant):
+    assert LE._audience(variant) is None
+
+
+def test_a_watch_batch_carries_the_owner_only_audience(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, 100), None)
+    out = LE.flush(t)
+    assert pub == [(("gajjala.update", out[0]), {"audience": frozenset({"o@x"})})]
+
+
+def test_both_variants_in_one_second_two_publishes_each_with_its_own_audience(pub):
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, 100), None)
+    LE.on_print("gajjala", _prs("GP", 1.48, t, 100), None)
+    out = LE.flush(t)
+    assert [p["variant"] for p in out] == ["gajjala", "gajjala_watch"], "variants ascending"
+    assert [(a[1]["variant"], k) for a, k in pub] == [("gajjala", {}), ("gajjala_watch", {"audience": OWNER_AUD})]
+
+
+def test_negative_a_raising_audience_source_publishes_to_nobody_with_one_warning(pub, monkeypatch, caplog):
+    def boom():
+        raise RuntimeError("no admin email")
+
+    monkeypatch.setattr(GW, "live_audience", boom, raising=False)
+    t = FIXED.timestamp()
+    LE.on_print("gajjala_watch", _prs("GP", 1.48, t, 100), None)
+    with caplog.at_level("WARNING", logger="chart_maps.gajjala.live_events"):
+        out = LE.flush(t)
+    assert len(out) == 1
+    assert pub == [(("gajjala.update", out[0]), {"audience": frozenset()})], "fail closed — never a broadcast"
+    warns = [r for r in caplog.records if r.levelname == "WARNING" and r.name == "chart_maps.gajjala.live_events"]
+    assert len(warns) == 1 and "nobody" in warns[0].getMessage()
+
+
+@pytest.mark.parametrize("bad", ["o@x", ["o@x"], None, 1])
+def test_negative_a_non_set_audience_fails_closed(pub, monkeypatch, bad):
+    monkeypatch.setattr(GW, "live_audience", lambda: bad, raising=False)
+    assert LE._audience("gajjala_watch") == frozenset()
+
+
+def test_negative_a_missing_audience_source_fails_closed(pub, monkeypatch):
+    monkeypatch.delattr(GW, "live_audience", raising=False)
+    assert LE._audience("gajjala_watch") == frozenset(), "before WP-A2: nobody, never everyone"
+
+
+def test_source_pin_the_flag_call_is_unchanged():
+    src = SRC.read_text()
+    body = src[src.index("def _publish("):src.index("# ── the hub's calls")]
+    assert len(re.findall(r"\n\s+publish\(EVENT_TYPE, payload\)\s", body)) == 1, "the 🚩 call, unchanged"
+    assert body.count("publish(EVENT_TYPE, payload, audience=audience)") == 1
+    assert len(re.findall(r"(?<![\w])publish\(", body)) == 2, "exactly the two calls — no third path"

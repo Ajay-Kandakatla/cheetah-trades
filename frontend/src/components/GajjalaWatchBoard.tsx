@@ -22,8 +22,21 @@
  *
  * Cadence (spec C4.5 / C2.4 / C2.7): one setTimeout chain re-GETs the board at the served refresh_sec while the page is
  * visible; out of window, ONE re-GET at the served next_window_sec; while a row is pending, the pending names only
- * (?symbols=) every pending_poll_sec up to pending_wait_max_sec; one full re-GET after an add or a remove. No
- * useCardLive, no live-card poll: the minute GET moves the bars.
+ * (?symbols=) every pending_poll_sec up to pending_wait_max_sec; one full re-GET after an add or a remove.
+ *
+ * LIVE (2026-11-16, watch-live spec §3.5, WP-D) — Ajay: "Can you make the watch list charts live please" ·
+ * "Realtime updates.. Like the 1 min chart I need it to be live live.. per sec change" · "Also on the Watch list I need
+ * live volume to be shown at the bottom" · "Of each chart". The SAME live stack as the 🚩 boards, never a second one:
+ * one socket → backend live_hub (the watch tab rides it as an extra tab, never a Variant) → `gajjala.update` quotes
+ * with the summed print `size` at most once a second → the house bus → /events → hooks/useGgwLive (one subscription,
+ * the owner-gated live-interest POST renewed every 30 s) → lib/ggwLive.ggwApplyBatch folds the raw batches into
+ * forming candles per (symbol, frame) on the SERVER's own 04:00 grid (the axis' start_epoch / frame_min) →
+ * lib/ggwLive.ggwLiveFrame splices them AFTER the stored bars at render time: the last candle moves, its volume column
+ * grows at the bottom, the dashed `now` line follows. DISPLAY ONLY — every cross read, blinker, 🔔 and push stays on
+ * the CLOSED stored bars; the next GET wins; a stale row stops its live tail (ggwRowLive); the batches reach the owner's
+ * tabs only (events audience). The 9 / 21 tips follow the forming close (GGW_LIVE_EMA_TIP, HIS CALL
+ * #1 answered 11-16). An off-page tile gets no live bars (its charts never re-render on a batch). The served feed word prints in the
+ * head only when the feed is degraded. docs/gajjala/watch_live_2026_11_16.md.
  *
  * The FE composes NO word about a stock: every visible string is served, except GGW_FETCH_FAILED (no payload to serve
  * one) and structural glyphs (⚠️ on a served stale flag, ✕, ℹ️, "·"). UNMEASURED — a cross is information, not an
@@ -32,18 +45,20 @@
  * No house chips on this tab (🚀 growth, 🧨 explosive, 🩳 short interest, 🎯 enterable): each tile is the chart alone, his
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
  * list order orders this board (the order he added the names in, as served). */
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
+  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LIVE_EMA_TIP, ggwRowLive, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
   GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
   ggwPickGrid, ggwFitViewW, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
+import { ggwApplyBatch, ggwFrameMetas, ggwLiveFrame, type GgwFrameMeta, type GgwLiveBar, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
+import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import { loadGgwList } from '../lib/ggWatchList';
@@ -52,6 +67,7 @@ import { emaBlinkLine } from '../lib/emaBlink';
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
+const NO_SYMBOLS: string[] = [];
 
 function phoneNow(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -123,14 +139,20 @@ function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): { w: number; h
   return h;
 }
 
-function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties }) {
+function Frame({ f, phone, fit, style, live }: {
+  f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties;
+  /** This frame's forming bars (lib/ggwLive), or undefined → the stored frame exactly as served. */
+  live?: GgwLiveBar[];
+}) {
   const box = useRef<HTMLDivElement>(null);
   const fitH = useFitBox(box, fit);
   const blink = emaBlinkLine(f.ema_blink);
+  /* The SAME frame object when nothing is live, so PatternChart's memo skips the redraw. */
+  const shown = useMemo(() => ggwLiveFrame(f, live, { emaTip: GGW_LIVE_EMA_TIP }), [f, live]);
   return (
     <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
       <div className="ggw-chartbox" ref={box}>
-        <PatternChart tile={f.tile} chartOnly emaStyle="bold" axis={f.axis}
+        <PatternChart tile={shown.tile} chartOnly emaStyle="bold" axis={shown.axis}
                       viewW={fit && fitH ? fitH.w : undefined}
                       height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)} />
       </div>
@@ -157,8 +179,10 @@ function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boo
   );
 }
 
-function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext }: {
+function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
+  /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
+  live?: GgwLiveSym;
   onRemove: (sym: string) => void;
   /** On the board: ⤢ opens this tile full screen. */
   onStretch?: (sym: string) => void;
@@ -232,15 +256,18 @@ function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch
       {onUnstretch && row.frames.length ? (
         <div className="ggw-dark ggw-charts ggw-charts--stretch" data-testid="ggw-stretch-charts">
           {ggwStretchFrames(row.frames).map((f) => (
-            <Frame key={f.tf} f={f} phone={phone} fit={fit} style={fit ? { flexGrow: 1 } : undefined} />
+            <Frame key={f.tf} f={f} phone={phone} fit={fit} style={fit ? { flexGrow: 1 } : undefined} live={live?.by[f.tf]} />
           ))}
         </div>
       ) : top || pair.length ? (
         <div className="ggw-dark ggw-charts">
-          {top ? <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined} /> : null}
+          {top ? (
+            <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined}
+                   live={live?.by[top.tf]} />
+          ) : null}
           {pair.length ? (
             <div className="ggw-frame-pair" style={fit ? { flexGrow: GGW_FIT_GROW.pair } : undefined}>
-              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} />)}
+              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} />)}
             </div>
           ) : null}
         </div>
@@ -252,8 +279,9 @@ function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch
 /** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
  *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
  *  the board's own rows, so the minute GET keeps moving its bars. */
-function Stretch({ row, phone, removeLabel, onClose, onStep }: {
+function Stretch({ row, phone, removeLabel, onClose, onStep, live }: {
   row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
+  live?: GgwLiveSym;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -274,7 +302,7 @@ function Stretch({ row, phone, removeLabel, onClose, onStep }: {
          data-testid="ggw-stretch" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
         <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
-              onRemove={() => {}} onUnstretch={onClose}
+              onRemove={() => {}} onUnstretch={onClose} live={live}
               onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
       </div>
     </div>,
@@ -342,6 +370,20 @@ export default function GajjalaWatchBoard() {
   const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];
   const rowH = useFitRows(gridRef, headRef, phone, load, grid.rows);
   const fit = rowH != null;
+
+  /* the live tail: forming bars per (symbol, frame), folded from the raw batches against the metas of the rows that
+   * may carry live bars (ggwRowLive — ok, today's, not stale). Owner + in window only: a non-owner never reaches an ok
+   * board, and out of window refresh_sec is 0. */
+  const [live, setLive] = useState<GgwLiveMap>({});
+  const metas = useMemo<Record<string, GgwFrameMeta[]>>(
+    () => (load.phase === 'loaded' && load.p.state === 'ok' ? ggwFrameMetas(load.p.rows) : {}), [load]);
+  const metasRef = useRef(metas);
+  metasRef.current = metas;
+  const onBatch = useCallback((evt: GgwBatch) => setLive((prev) => ggwApplyBatch(prev, evt, metasRef.current)), []);
+  const liveOn = load.phase === 'loaded' && load.p.state === 'ok' && load.p.rows.length > 0 && load.p.refresh_sec > 0;
+  const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? load.p.symbols : NO_SYMBOLS,
+    liveOn, onBatch);
+  const liveOf = (r: GgwRow, shown: boolean): GgwLiveSym | undefined => (shown && ggwRowLive(r) ? live[r.symbol] : undefined);
 
   const clearMain = () => { if (mainTimer.current) { clearTimeout(mainTimer.current); mainTimer.current = null; } };
   const clearPend = () => { if (pendTimer.current) { clearTimeout(pendTimer.current); pendTimer.current = null; } };
@@ -575,6 +617,7 @@ export default function GajjalaWatchBoard() {
           <span className="ggw-line ggw-warn ggw-served-error" data-testid="ggw-served-error">{`⚠️ ${servedErr}`}</span>
         ) : null}
         {refreshFailed ? <span className="ggw-line ggw-warn">{`⚠️ ${GGW_FETCH_FAILED}`}</span> : null}
+        {feedWord ? <span className="ggw-line ggw-warn" data-testid="ggw-feed-word">{feedWord}</span> : null}
         {p.legend.length ? (
           <span className="ggw-legend">
             {p.legend.map((l) => {
@@ -647,7 +690,7 @@ export default function GajjalaWatchBoard() {
           {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
                   focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-                  offPage={!onPage(i)} />
+                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} />
           ))}
         </div>
       ) : (
@@ -655,7 +698,7 @@ export default function GajjalaWatchBoard() {
       )}
       {stretchRow ? (
         <Stretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
-                 onStep={p.rows.length > 1 ? stepStretch : null} />
+                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} />
       ) : null}
     </div>
   );

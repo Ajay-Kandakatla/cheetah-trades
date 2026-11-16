@@ -18,16 +18,26 @@ add remove tickers from the dashboard."
     (`payload.list_payload`), read off the event loop; anyone else gets exactly `owner_only` and nothing is read; a
     failing read answers `error`, never an empty list (an empty list would offer ➕ on a name already watched).
 
+  * `POST   /chart-maps/gajjala-watch/live` (👀 LIVE 2026-11-16, Ajay: "Can you make the watch list charts live
+    please" · "I need it to be live live.. per sec change") — `require_primary_admin` (404 for anyone else, resolved
+    BEFORE the body — the body is read inside the handler, so even malformed JSON from a non-owner is a 404; nothing
+    registered). Body `{"symbols": [...]}` (not a list → 422 `live_card.BAD_BODY_TEXT`) →
+    `live_card.normalize` → `live_hub.register_interest(C.TAB, syms, None)` on the event loop (sync, no I/O); a body
+    `variant` is IGNORED (always the watch tab). Answer `{state, stream: {on, word, state}, tab, symbols}` with the
+    SAME fallbacks as `chart_maps.api._stream_interest` (the feed's own word when the hub gives none; hub missing /
+    raising → `on: false`). No Mongo read, no snapshot, nothing written — the prices arrive as `gajjala.update`.
+
 The admin email never appears in an answer. UNMEASURED — a cross is information, not an entry.
 """
 from __future__ import annotations
 
 import asyncio
 import gzip
+import json
 import logging
 import threading
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -139,3 +149,57 @@ async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_ad
 @router.delete(C.API_SYMBOL_PATH)
 async def gajjala_watch_remove(symbol: str, email: str = Depends(require_primary_admin)):
     return await asyncio.to_thread(ST.remove, symbol, by=email)
+
+
+def _feed_pair() -> tuple:
+    """(word, state) of the ONE socket through `live_feed.state_word()` — (None, None) when absent or raising
+    (the `chart_maps.api._feed_view` shape, re-read here so this router never imports the card routes)."""
+    try:
+        import live_feed                                        # lazy: the api process owns the socket
+        state, word = live_feed.state_word()
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("gajjala_watch: feed state unavailable: %s", exc)
+        return None, None
+    return (word if isinstance(word, str) and word.strip() else None,
+            state if isinstance(state, str) and state.strip() else None)
+
+
+def _live_interest(syms: list) -> dict:
+    """Register the watch's live interest with the hub → {"on", "word", "state"} — the `_stream_interest` fallbacks:
+    the hub's served pair, else the feed's own; hub missing / raising → on False with the feed's word. Never raises."""
+    word, state = _feed_pair()
+    try:
+        import live_hub                                         # lazy: the hub lives in the api process
+        res = live_hub.register_interest(C.TAB, syms, None)
+    except Exception as exc:                                    # noqa: BLE001 — the route answers either way
+        log.debug("gajjala_watch: live interest failed: %s", exc)
+        return {"on": False, "word": word, "state": state}
+    res = res if isinstance(res, dict) else {}
+    w, st = res.get("word"), res.get("state")
+    return {"on": res.get("on") is True, "word": w if isinstance(w, str) and w.strip() else word,
+            "state": st if isinstance(st, str) and st.strip() else state}
+
+
+def _parse_body(raw: bytes) -> Any:
+    """The live POST body → a parsed value; empty / malformed / not UTF-8 → None (the route then answers 422
+    `BAD_BODY_TEXT`). Parsed INSIDE the handler, after `require_primary_admin`, so a non-owner's malformed JSON never
+    reaches FastAPI's body parser — it gets the gate's 404 like every other body (REFIX 2026-11-16)."""
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+@router.post(C.API_LIVE_PATH)
+async def gajjala_watch_live(request: Request, email: str = Depends(require_primary_admin)):
+    """👀 LIVE: the owner's board registers its names with the hub every renewal; the variant is ALWAYS the watch tab.
+    The body is read HERE (no declared body parameter): FastAPI parses a declared body before the dependency runs."""
+    from chart_maps import live_card as LC
+    payload = _parse_body(await request.body())
+    syms_in = payload.get("symbols") if isinstance(payload, dict) else None
+    if not isinstance(syms_in, list):
+        return JSONResponse({"detail": LC.BAD_BODY_TEXT}, status_code=422)
+    syms = LC.normalize(syms_in)
+    return {"state": "ok", "stream": _live_interest(syms), "tab": C.TAB, "symbols": syms}

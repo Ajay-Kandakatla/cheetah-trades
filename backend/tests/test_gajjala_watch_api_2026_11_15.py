@@ -154,8 +154,9 @@ def wired(monkeypatch, db):
 def test_paths_are_the_constants_and_registered_once():
     got = sorted((r.path, m) for r in API.router.routes for m in getattr(r, "methods", ()))
     # WIDENED 2026-11-15: + GET C.API_LIST_PATH for the ➕/➖ card button (test_gajjala_watch_card_button_2026_11_15.py).
+    # WIDENED 2026-11-16: + POST C.API_LIVE_PATH (👀 LIVE, test_gajjala_watch_live_2026_11_16.py).
     assert got == sorted([(C.API_PATH, "GET"), (C.API_SYMBOL_PATH, "POST"), (C.API_SYMBOL_PATH, "DELETE"),
-                          (C.API_LIST_PATH, "GET")])
+                          (C.API_LIST_PATH, "GET"), (C.API_LIVE_PATH, "POST")])
     src = (Path(__file__).resolve().parents[1] / "main.py").read_text()
     assert src.count("from chart_maps.gajjala_watch.api import router as gajjala_watch_router") == 1
     assert src.count("app.include_router(gajjala_watch_router)") == 1
@@ -357,7 +358,8 @@ def test_ok_row_shape_three_frames_in_order():
     assert r["as_of_et"] == "10:30"
     assert [f["tf"] for f in r["frames"]] == [tf for tf, _r in C.FRAMES]
     f = r["frames"][0]
-    assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held", "ema_blink"}   # + ema_blink 2026-11-15 (🔀 blinker §3.5)
+    assert set(f) == {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held", "ema_blink", "ema_tail"}   # + ema_blink 2026-11-15 (🔀 blinker §3.5); + ema_tail 2026-11-16 (👀 LIVE)
+    assert f["ema_tail"] is None                                                       # an old doc carries no tail
     assert set(f["tile"]) == {"symbol", "href", "bars", "curves", "markers", "lines", "bands", "stats", "why", "vol_avg"}
     assert f["tile"]["href"] == "" and f["tile"]["symbol"] == "OMH" and f["uptrend"] == {"ok": True, "short": "K5 ✓"}
     assert f["axis"]["slots"] == 720 and f["ema_cross"]["crosses"][0]["dir"] == "up"

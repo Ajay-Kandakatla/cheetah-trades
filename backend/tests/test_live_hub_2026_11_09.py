@@ -523,3 +523,78 @@ def test_a_kicked_feed_still_registers_with_the_kicked_state(hub, monkeypatch):
     out = H.register_interest("gajjala", ["ABC"])
     assert out == {"on": True, "word": kicked, "state": "kicked"}
     assert H.interest_of("gajjala", "ABC") is not None
+
+
+# ══ 👀 Watch live (spec 2026-11-16 §3.2, WP-A1) — the watch tab rides the same socket ═══════════════════════════════
+# Ajay 2026-11-16: "Can you make the watch list charts live please" · "Of each chart".
+from pathlib import Path                                         # noqa: E402
+
+from chart_maps.gajjala import live_events as LE                 # noqa: E402 — the REAL module (fixture stubs sys.modules)
+from chart_maps.gajjala_watch import constants as GW             # noqa: E402
+
+HUB_SRC = Path(H.__file__).read_text()
+
+
+def test_extra_tabs_is_the_watch_tab_and_matches_live_events():
+    assert H.EXTRA_TABS == (GW.TAB,) == tuple(LE.extra_tabs()) == ("gajjala_watch",)
+    assert "EXTRA_TABS" in H.__all__
+
+
+def test_the_watch_tab_registers_with_no_level_and_routes_prints(hub):
+    out = H.register_interest("gajjala_watch", ["gp", "GP"])
+    assert out["on"] is True and "refused" not in out
+    rec = H.interest_of("gajjala_watch", "GP")
+    assert rec is not None and rec["level"] is None, "the watch sends no level → vs null"
+    H.tick(_at(10, 3, 0))
+    assert "GP" in H.watched(), "watch interest joins the hub's watch set"
+    pr = _pr("GP")
+    H.on_print(pr)
+    (variant, e_pr, level), = hub.events.of("on_print")
+    assert variant == "gajjala_watch" and e_pr is pr and level is None and pr["kind"] == "regular"
+    assert hub.stream.of("on_print") == [], "NEG: the watch never reaches the lane"
+
+
+def test_NEG_a_non_flow_print_on_a_watch_name_reaches_nobody(hub):
+    assert H.register_interest("gajjala_watch", ["GP"])["on"] is True
+    H.tick(_at(10, 3, 0))
+    pr = _pr("GP", c=[22])
+    H.on_print(pr)
+    assert hub.events.of("on_print") == [] and hub.stream.of("on_print") == []
+    assert "kind" not in pr, "the ONE filter ran before every consumer"
+
+
+def test_the_watch_and_a_variant_on_one_name_each_get_the_print(hub):
+    l5 = {"trigger": 2.5, "stop": 2.3, "tf": "5m"}
+    assert H.register_interest("gajjala", ["GP"], {"GP": l5})["on"]
+    assert H.register_interest("gajjala_watch", ["GP"])["on"]
+    H.tick(_at(10, 3, 0))
+    H.on_print(_pr("GP"))
+    assert {c[0]: c[2] for c in hub.events.of("on_print")} == {"gajjala": l5, "gajjala_watch": None}
+
+
+@pytest.mark.parametrize("tab", ["gajjala_5m", "", "GAJJALA_WATCH", " gajjala_watch", "gajjala_watch ", "ggw", None])
+def test_NEG_near_miss_watch_names_are_off(hub, tab):
+    out = H.register_interest(tab, ["GP"])
+    assert out["on"] is False and isinstance(out["word"], str) and out["word"]
+    assert H._interest == {}
+
+
+def test_NEG_the_watch_tab_is_off_when_the_hub_is_not_running_or_the_feed_is_off(hub, monkeypatch):
+    monkeypatch.setattr(H, "_running", False)
+    assert H.register_interest("gajjala_watch", ["GP"])["on"] is False
+    monkeypatch.setattr(H, "_running", True)
+    monkeypatch.setattr(live_feed, "state_word", lambda *a, **k: ("off", live_feed.FEED_WORDS["off"]))
+    assert H.register_interest("gajjala_watch", ["GP"])["on"] is False
+    assert H._interest == {}
+
+
+def test_the_watch_tab_cap_is_its_own(hub):
+    syms = [f"S{i:02d}" for i in range(H.INTEREST_MAX)]
+    assert H.register_interest("gajjala", syms)["on"] is True
+    assert H.register_interest("gajjala_watch", ["XTRA"])["on"] is True, "the cap is per tab"
+
+
+def test_source_pin_print_kinds_unchanged():
+    assert H.PRINT_KINDS == ("regular",)
+    assert 'PRINT_KINDS = ("regular",)' in HUB_SRC, "the hub filter is not widened for the watch (HIS CALL #3)"
+    assert HUB_SRC.count("PRINT_KINDS = ") == 1

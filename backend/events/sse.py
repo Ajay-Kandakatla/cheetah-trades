@@ -22,9 +22,10 @@ import json
 import logging
 from typing import Any, Awaitable, Callable, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from auth import maybe_current_user
 from .bus import subscribe, unsubscribe
 from events.sse_headers import SSE_HEADERS
 
@@ -52,17 +53,40 @@ def set_symbol_registrar(fn: SymbolRegistrar) -> None:
 HEARTBEAT_S = 25.0
 
 
+def audience_allows(envelope: dict, email: str | None) -> bool:
+    """May this connection's user receive this envelope? (2026-11-16,
+    WP-B events-audience.) No `audience` key → everyone (today's
+    behaviour). Otherwise only a signed-in email in the set; an empty
+    audience, a missing email or a non-set `audience` value → False
+    (fail closed)."""
+    if "audience" not in envelope:
+        return True
+    aud = envelope["audience"]
+    if not isinstance(aud, (set, frozenset)):
+        return False
+    return isinstance(email, str) and email.strip().lower() in aud
+
+
 def _frame(event_type: str, data: dict) -> bytes:
     """Encode one SSE event. Newlines in the data are escaped by
     json.dumps so the frame stays single-line, which is what
-    EventSource expects."""
-    body = json.dumps(data, separators=(",", ":"), default=str)
+    EventSource expects. Only type / ts / payload are serialized — an
+    envelope's `audience` never reaches the wire."""
+    wire = {"type": data["type"], "ts": data["ts"], "payload": data["payload"]}
+    body = json.dumps(wire, separators=(",", ":"), default=str)
     return f"event: {event_type}\ndata: {body}\n\n".encode("utf-8")
 
 
 @router.get("/events")
-async def events(request: Request) -> StreamingResponse:
+async def events(
+    request: Request,
+    email: Optional[str] = Depends(maybe_current_user),
+) -> StreamingResponse:
     """Stream bus events to the caller.
+
+    `maybe_current_user` never raises, so this route adds no gate (the
+    auth middleware in main.py remains the gate); the email only filters
+    envelopes that carry an `audience`.
 
     Returns a chunked text/event-stream. Lifetime = the TCP connection;
     EventSource will reconnect on its own if the stream drops.
@@ -85,6 +109,8 @@ async def events(request: Request) -> StreamingResponse:
                     # Comment line — ignored by EventSource but keeps
                     # the TCP connection warm.
                     yield b": ping\n\n"
+                    continue
+                if not audience_allows(evt, email):
                     continue
                 yield _frame(evt["type"], evt)
         except asyncio.CancelledError:

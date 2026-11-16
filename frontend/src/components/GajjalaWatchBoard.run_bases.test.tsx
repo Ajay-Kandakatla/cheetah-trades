@@ -43,6 +43,10 @@ async function mount(b: any) {
   await flush();
   return r;
 }
+// The junk-block NEGATIVE mounts the board 8 times (~1.5 s alone); under a loaded full suite it crossed vitest's
+// 5 s default and its timeout cascaded into the next test. A per-test budget for that ONE test (test harness only —
+// no app number); every assertion is unchanged.
+const EIGHT_MOUNTS_TIMEOUT_MS = 20_000;
 const cap = (c: HTMLElement, sym: string, tf: string) =>
   c.querySelector(`[data-testid="ggw-tile-${sym}"] .ggw-frame[data-tf="${tf}"] figcaption`)!;
 
@@ -74,7 +78,7 @@ describe('📶 base count on the 👀 watch', () => {
     }
     const { container } = await mount(board((b) => { b.rows[0].frames[2].run_bases.title = '  '; }));
     expect(container.querySelector('[data-testid="ggw-bases"]')!.hasAttribute('title')).toBe(false);
-  });
+  }, EIGHT_MOUNTS_TIMEOUT_MS);
   it('NEGATIVE: a stale counter_text and other served keys are never printed; the FE types no word', async () => {
     const { container } = await mount(board((b) => {
       Object.assign(b.rows[0].frames[2].run_bases, { counter_text: 'COUNTER-SHOULD-NOT-PRINT', state: 'STATE-WORD' });

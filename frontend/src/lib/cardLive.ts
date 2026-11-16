@@ -50,8 +50,11 @@ export type CardLiveAnswer = {
   served: number; missing: string[]; fault: string | null; quotes: Record<string, CardLiveQuote>;
   stream?: CardLiveStream | null;
 };
-/** One streamed price (backend live_events QUOTE_KEYS): the print, its time, the served `vs` words (or null). */
-export type GgStreamQuote = { price: number; as_of_epoch: number; vs: CardLiveVs | null };
+/** One streamed price (backend live_events QUOTE_KEYS): the print, its time, the served `vs` words (or null).
+ *  👀 2026-11-16 (watch-live §3.4, C6): `size` = the summed sizes of the hub-filtered prints of that symbol since the
+ *  variant's last batch (the live volume column). OPTIONAL on the type so hand-built literals stay valid; parseGgUpdate
+ *  ALWAYS writes it (a positive finite number, else null). patchQuotes / mergeQuotesEvt never read it. */
+export type GgStreamQuote = { price: number; as_of_epoch: number; vs: CardLiveVs | null; size?: number | null };
 /** The three `gajjala.update` payloads (backend live_events — keys fixed there). */
 export type GgQuotesEvent = { kind: 'quotes'; variant: string; quotes: Record<string, GgStreamQuote> };
 export type GgPassEvent = { kind: 'pass'; variant: string; pass_id: string; finished_at_epoch: number };
@@ -207,7 +210,11 @@ export function parseGgUpdate(p: unknown): GgUpdate | null {
   if (p.kind === 'quotes' && typeof p.variant === 'string' && isObj(p.quotes)) {
     const quotes: Record<string, GgStreamQuote> = {};
     for (const [s, q] of Object.entries(p.quotes)) {
-      if (validStreamQuote(q)) quotes[s.trim().toUpperCase()] = { price: q.price, as_of_epoch: q.as_of_epoch, vs: q.vs ?? null };
+      if (validStreamQuote(q)) {
+        quotes[s.trim().toUpperCase()] = {
+          price: q.price, as_of_epoch: q.as_of_epoch, vs: q.vs ?? null, size: pos(q.size) ? q.size : null,
+        };
+      }
     }
     return { kind: 'quotes', variant: p.variant, quotes };
   }

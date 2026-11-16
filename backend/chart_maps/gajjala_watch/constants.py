@@ -13,6 +13,7 @@ TAB_LABEL = "👀 Gajjala's Watch"                      # MINE — HIS CALL #9
 API_PATH = "/chart-maps/gajjala-watch"
 API_SYMBOL_PATH = API_PATH + "/symbols/{symbol}"
 API_LIST_PATH = API_PATH + "/symbols"                     # ➕/➖ card button: the owner's names only (2026-11-15)
+API_LIVE_PATH = API_PATH + "/live"                       # 👀 LIVE (2026-11-16): the owner registers the board's live interest (== FE GGW_LIVE_PATH)
 FRAMES = (("1m", "1min"), ("3m", "3min"), ("5m", "5min"))   # his words "1 min 3 min and 5 min charts" — order = draw order
 FRAME_WORDS = {"1m": "1-min", "3m": "3-min", "5m": "5-min"}
 AXIS_FRAME = "1m"                                      # the frame whose bars set the tile's axis end (C1.7)
@@ -36,3 +37,12 @@ LIST_DOC_ID, STATE_LATEST_ID, LOOP_STATE_ID = "owner", "latest", "loop"   # the 
 ARGV_LOOP = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--loop")    # = ops/docker_watchdog CRON_DETACHED_CHILD_ARGS entry
 ARGV_BUILD = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--build")  # the API's add-time child; builds every pending name
 PROC_NAME_LOOP, PROC_NAME_BUILD = "gajjala-watch-loop", "gajjala-watch-build"
+
+
+def live_audience() -> frozenset:
+    """👀 LIVE (2026-11-16, Ajay: "Can you make the watch list charts live please"): the ONE audience of the watch's
+    `gajjala.update` batches — the primary owner's lower-cased email, the SAME identity `api._is_owner` gates the board
+    with (ollama_chat.api.PRIMARY_ADMIN_EMAIL). Imported LAZILY so this module's top keeps importing only `sys` + `GC`
+    (the cron child's import graph is unchanged). Broadcasting to the household instead = HIS CALL #2."""
+    from ollama_chat.api import PRIMARY_ADMIN_EMAIL
+    return frozenset({PRIMARY_ADMIN_EMAIL.strip().lower()})
