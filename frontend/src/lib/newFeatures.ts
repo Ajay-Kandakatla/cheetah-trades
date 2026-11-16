@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Also the bars are not very visible here" · "Also cannot tell where the GP ticker is now" ·
+  // "All the charts are shrinked too much" · "And the Diamon shapes are too big make them small". 👀 Watch charts only:
+  // a pick fills the per-screen choice (scroll for more), a full-width chart keeps its text size, brighter + wider bars,
+  // a dashed "now" price line, smaller cross diamonds. Layout only. Doc docs/gajjala/watch_bigger_clearer_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-watch-bigger-clearer-2026-11-16',
+    label: '👀 Bigger, clearer Watch charts — you said: “All the charts are shrinked too much” and “the Diamon shapes are too big make them small”. Each picked stock now fills the screen, bars are brighter, a dashed “now” line shows the price, and the diamonds are small.',
+    addedAt: '2026-11-16',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I
   // can share with someone". 👀 the per-screen pick, the toggled names and the page live in the link (?per= &show= &page=)
   // and in this browser. Layout only. Doc docs/gajjala/watch_view_in_link_2026_11_16.md.

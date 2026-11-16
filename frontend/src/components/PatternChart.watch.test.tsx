@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
-import { EMA_BOLD, EMA_BOLD_CANDLE_OPACITY, xFor, type CmAxis, type CmTile } from '../lib/chartMaps';
+import { EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, boldNowLines, xFor, type CmAxis, type CmTile } from '../lib/chartMaps';
 
 afterEach(() => cleanup());
 
@@ -191,5 +191,54 @@ describe('PatternChart axis', () => {
     const b = candleBodies(container);
     const cx = Number(b[0].getAttribute('x')) + Number(b[0].getAttribute('width')) / 2;
     expect(cx).toBeCloseTo(xFor(0, N, 620, pr), 6);
+  });
+});
+
+/* 2026-11-16 — Ajay: "Also the bars are not very visible here" · "Also cannot tell where the GP ticker is now" · "All the
+ * charts are shrinked too much" · "the Diamon shapes are too big make them small". NEGATIVE on each: without
+ * emaStyle="bold" / viewW the chart draws exactly as before. */
+describe('PatternChart 2026-11-16 watch fixes', () => {
+  const diamondR = (c: HTMLElement) => {
+    const pts = c.querySelector('polygon.pc-ema-cross')!.getAttribute('points')!.split(' ').map((p) => p.split(',').map(Number));
+    return (pts[1][0] - pts[3][0]) / 2;
+  };
+  it('the cross diamonds are smaller under bold; NEGATIVE: 3.6 elsewhere', () => {
+    expect(diamondR(draw({ emaStyle: 'bold' }).container)).toBeCloseTo(EMA_BOLD_DIAMOND_R, 6);
+    cleanup();
+    expect(diamondR(draw().container)).toBeCloseTo(3.6, 6);
+    expect(EMA_BOLD_DIAMOND_R).toBeLessThan(3.6);
+  });
+  it('bold candles are brighter than before (0.55) and a bold axis body fills EMA_BOLD_CANDLE_BODY of its slot', () => {
+    expect(EMA_BOLD_CANDLE_OPACITY).toBeGreaterThan(0.55);
+    const b = Number(candleBodies(draw({ emaStyle: 'bold', axis: AXIS }).container)[0].getAttribute('width'));
+    cleanup();
+    const p = Number(candleBodies(draw({ axis: AXIS }).container)[0].getAttribute('width'));
+    expect(b / p).toBeCloseTo(EMA_BOLD_CANDLE_BODY / 0.64, 6);              // NEGATIVE: the plain axis body keeps 0.64
+  });
+  it('bold draws a now line + "now <close>" label at the last close; NEGATIVE: none without bold, never two', () => {
+    const { container } = draw({ emaStyle: 'bold' });
+    expect(container.querySelectorAll('line[data-tone="now"]')).toHaveLength(1);
+    expect(container.textContent).toContain(`now ${bars[N - 1].c.toFixed(2)}`);
+    cleanup();
+    expect(draw().container.querySelectorAll('line[data-tone="now"]')).toHaveLength(0);
+    cleanup();
+    const served = draw({ emaStyle: 'bold' }, tile({ lines: [{ price: 10.01, label: 'now', tone: 'now' }] })).container;
+    expect(served.querySelectorAll('line[data-tone="now"]')).toHaveLength(1);
+  });
+  it('boldNowLines: NEGATIVES — no bars / junk close / not bold → the lines untouched (same array)', () => {
+    const ls = [{ price: 1, label: 'x', tone: 'buy' as const }];
+    expect(boldNowLines(ls, [], 'bold')).toBe(ls);
+    expect(boldNowLines(ls, [{ c: Number.NaN }], 'bold')).toBe(ls);
+    expect(boldNowLines(ls, [{ c: 0 }], 'bold')).toBe(ls);
+    expect(boldNowLines(ls, [{ c: 2 }], undefined)).toBe(ls);
+    expect(boldNowLines(undefined, [{ c: 2 }], 'bold')).toEqual([{ price: 2, label: 'now', tone: 'now' }]);
+  });
+  it('viewW sets the viewBox width; NEGATIVE: junk or absent → 620', () => {
+    expect(draw({ viewW: 1400 }).container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1400 190');
+    cleanup();
+    for (const v of [undefined, 0, -5, Number.NaN]) {
+      expect(draw({ viewW: v }).container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 620 190');
+      cleanup();
+    }
   });
 });

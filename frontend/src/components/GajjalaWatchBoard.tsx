@@ -40,7 +40,7 @@ import { EMA_BOLD } from '../lib/chartMaps';
 import {
   GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
   GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
-  ggwPickGrid, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
+  ggwPickGrid, ggwFitViewW, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
@@ -104,14 +104,16 @@ function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElem
 }
 
 /** In a fitted tile: the viewBox height that fills this chart's measured box (null → the GGW_CHART_H height). */
-function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): number | null {
-  const [h, setH] = useState<number | null>(null);
+function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): { w: number; h: number } | null {
+  const [h, setH] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
     const el = box.current;
     if (!fit || !el) { setH(null); return; }
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setH(ggwFitViewBoxH(r.width, r.height, PATTERN_CHART_VIEW_W));
+      const w = ggwFitViewW(r.width, PATTERN_CHART_VIEW_W);
+      const vh = ggwFitViewBoxH(r.width, r.height, w);
+      setH((p) => (vh == null ? null : p && p.w === w && p.h === vh ? p : { w, h: vh }));
     };
     measure();
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
@@ -129,7 +131,8 @@ function Frame({ f, phone, fit, style }: { f: GgwFrame; phone: boolean; fit: boo
     <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
       <div className="ggw-chartbox" ref={box}>
         <PatternChart tile={f.tile} chartOnly emaStyle="bold" axis={f.axis}
-                      height={fit && fitH ? fitH : ggwChartHeight(f.tf, phone)} />
+                      viewW={fit && fitH ? fitH.w : undefined}
+                      height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)} />
       </div>
       <figcaption className="ggw-cap">
         {/* 🔀 the served 9/21 EMA cross blinker of THIS frame — the dot first, then its served sentence as one chip; the
@@ -336,7 +339,7 @@ export default function GajjalaWatchBoard() {
   const listNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows.map((r) => r.symbol) : [];
   const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
   const usePick = picked.length > 0;
-  const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols) : GGW_LAYOUTS[layout];
+  const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];
   const rowH = useFitRows(gridRef, headRef, phone, load, grid.rows);
   const fit = rowH != null;
 

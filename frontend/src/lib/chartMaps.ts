@@ -2715,7 +2715,25 @@ export const EMA_BOLD = {
  *  ness and make the bars lil more transparent to be over the EMA lines?"): the bold 9 / 21 go back 3 → 2 px (non-scaling,
  *  so the same at any size) and the candles under `emaStyle="bold"` draw at this opacity, so the lines read over them.
  *  MINE (layout, not a rule) — HIS CALL to move. Every other chart is untouched. */
-export const EMA_BOLD_CANDLE_OPACITY = 0.55;
+export const EMA_BOLD_CANDLE_OPACITY = 0.85;
+/** 👀 2026-11-16 (Ajay, GP on 1-min: "Also the bars are not very visible here"): 0.55 hid the candles, so the bold candles
+ *  go back up to EMA_BOLD_CANDLE_OPACITY (0.85; the lines stay on top) and a bold axis-mode candle body fills this share
+ *  of its slot (0.64 elsewhere). MINE (layout) — HIS CALL to move. */
+export const EMA_BOLD_CANDLE_BODY = 0.8;
+/** 👀 2026-11-16 (Ajay: "the Diamon shapes are too big make them small"): the 9 / 21 cross diamond's half-size under
+ *  `emaStyle="bold"` (3.6 elsewhere). MINE (layout). */
+export const EMA_BOLD_DIAMOND_R = 2.4;
+/** 👀 2026-11-16 (Ajay: "Also cannot tell where the GP ticker is now"): under `emaStyle="bold"` a chart with no served
+ *  'now' line gains one at its LAST bar's close — the house dashed now line + its "now 1.42" gutter label. A served
+ *  'now' line wins (never two); no bars or a junk close → the lines untouched. Every other chart is untouched. */
+export function boldNowLines(lines: CmLine[] | undefined, bars: ReadonlyArray<{ c: number }>,
+                             emaStyle: 'bold' | undefined): CmLine[] | undefined {
+  if (emaStyle !== 'bold') return lines;
+  const last = bars[bars.length - 1];
+  if (!last || typeof last.c !== 'number' || !Number.isFinite(last.c) || last.c <= 0) return lines;
+  if ((lines || []).some((l) => l.tone === 'now')) return lines;
+  return [...(lines || []), { price: last.c, label: 'now', tone: 'now' }];
+}
 
 /** The 9 / 21 EMA on EVERY chart in the replay videos' colours (Ajay 2026-11-15: "I need something in the videos you
  *  show different colors yellow for 9 EMA here and its inverted in the app also can you switch its up in the app

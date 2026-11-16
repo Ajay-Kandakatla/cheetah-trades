@@ -15,7 +15,7 @@ import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  EMA_BOLD, EMA_BOLD_CANDLE_OPACITY, EMA_LINE_W, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmAxis, type CmBadge, type CmCurve, type CmMarker, type CmStat, type CmTile,
@@ -51,9 +51,10 @@ import {
   ELLIPSE_LABEL_FS, ellipseGeom, ellipseStroke, ellipseTitle, ellipseTone,
 } from '../lib/ggEllipses';
 
-const W = 620;
-/** The viewBox width every PatternChart draws at (👀 Gajjala's Watch sizes a chart's viewBox height to fill a box). */
-export const PATTERN_CHART_VIEW_W = W;
+const VIEW_W = 620;
+/** The viewBox width every PatternChart draws at by default (👀 Gajjala's Watch sizes a fitted chart's viewBox to its box,
+ *  `viewW`). */
+export const PATTERN_CHART_VIEW_W = VIEW_W;
 const PAD_Y = 10;
 const LABEL_FS = 9.5;
 
@@ -125,8 +126,11 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis }: {
     tile: CmTile; height?: number;
+    /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
+     *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
+    viewW?: number;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
     study?: ExplosiveStudy | null;
@@ -159,6 +163,7 @@ export const PatternChart = memo(function PatternChart(
   },
 ) {
   const location = useLocation();
+  const W = typeof viewW === 'number' && Number.isFinite(viewW) && viewW > 0 ? Math.round(viewW) : VIEW_W;
   const bars = tile.bars || [];
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
@@ -184,7 +189,7 @@ export const PatternChart = memo(function PatternChart(
       x: ((e.clientX - r.left) / r.width) * W,
       y: ((e.clientY - r.top) / r.height) * height,
     });
-  }, [height]);
+  }, [height, W]);
 
   const onLeave = useCallback(() => setHover(null), []);
 
@@ -203,7 +208,8 @@ export const PatternChart = memo(function PatternChart(
   const hasVol = volMax > 0;
   const pane = volumePaneLayout(SVG_H, PAD_Y, hasVol);
   const H = pane.priceH;
-  const domain = barDomain(bars, tile.bands, tile.lines, 6, tile.curves);
+  const lines = boldNowLines(tile.lines, bars, emaStyle);
+  const domain = barDomain(bars, tile.bands, lines, 6, tile.curves);
   const bands = clipBands(tile.bands || [], domain);
   /* The BOARD bands that fell outside the plot. Only the board ones: they are
    * the ones the served note points at by name, and a reader who cannot find
@@ -212,7 +218,7 @@ export const PatternChart = memo(function PatternChart(
   const offBoard = offDomainBands(tile.bands || [], domain)
     .filter((o) => isOutline(String(o.band.kind)));
   const labels = boldEmaLabels(lineLabels(
-    [...(tile.lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS), tile.curves, emaStyle);
+    [...(lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS), tile.curves, emaStyle);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units
@@ -280,7 +286,7 @@ export const PatternChart = memo(function PatternChart(
     const up = m.kind === 'ema_cross_up';
     const px = typeof m.price === 'number' && Number.isFinite(m.price) ? m.price : bar.c;
     const yC = yFor(px, domain, H, PAD_Y);
-    const r = 3.6;
+    const r = emaStyle === 'bold' ? EMA_BOLD_DIAMOND_R : 3.6;
     return (
       <polygon key={`mk-${m.date}-${mi}`}
                className={up ? 'pc-ema-cross pc-ema-cross-up' : 'pc-ema-cross pc-ema-cross-dn'}
@@ -768,7 +774,7 @@ export const PatternChart = memo(function PatternChart(
 
           {/* 🧱 A 🔑 support low's served pad (2026-09-30): a faint fuchsia
               strip from the level down to pad_price, under the line itself. */}
-          {(tile.lines || []).map((l, li) => {
+          {(lines || []).map((l, li) => {
             const raw = keyPadStrip(l);
             const pad = clipStrip(raw, domain);
             if (!raw || !pad) return null;
@@ -786,7 +792,7 @@ export const PatternChart = memo(function PatternChart(
           })}
 
           {/* plan levels */}
-          {(tile.lines || [])
+          {(lines || [])
             .filter((l) => l.price >= domain.lo && l.price <= domain.hi)
             .map((l, li) => {
               const y = yFor(l.price, domain, H, PAD_Y);
@@ -845,8 +851,8 @@ export const PatternChart = memo(function PatternChart(
                 <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
                       x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
                       stroke={col} strokeWidth={0.9} />
-                <rect x={x - (ta ? bw * 0.32 : Math.max(bw * 0.32, 0.8))} y={Math.min(yo, yc)}
-                      width={ta ? bw * 0.64 : Math.max(bw * 0.64, 1.4)}
+                <rect x={x - (ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) / 2 : Math.max(bw * 0.32, 0.8))} y={Math.min(yo, yc)}
+                      width={ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) : Math.max(bw * 0.64, 1.4)}
                       height={Math.max(Math.abs(yo - yc), 0.9)} fill={col} />
               </g>
             );

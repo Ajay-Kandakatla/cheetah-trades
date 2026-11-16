@@ -120,9 +120,13 @@ export function ggwToggleShown(list: ReadonlyArray<string>, shown: ReadonlyArray
 }
 /** The grid of a pick of `n` names under a layout of `cols` columns: never more columns than names (one name fills the
  *  width), and as many fitted rows as it takes. */
-export function ggwPickGrid(n: number, cols: number): { cols: number; rows: number } {
+export function ggwPickGrid(n: number, cols: number, maxRows?: number): { cols: number; rows: number } {
   const c = Math.max(1, Math.min(Math.max(1, n), Math.max(1, cols)));
-  return { cols: c, rows: Math.max(1, Math.ceil(Math.max(1, n) / c)) };
+  const need = Math.max(1, Math.ceil(Math.max(1, n) / c));
+  /* 2026-11-16 fix — Ajay: "All the charts are shrinked too much". A pick never squeezes more rows onto one screen than
+   * the per-screen choice holds: "1 per screen" with 4 names = 4 full-screen tiles to scroll, never 4 quarter-screens. */
+  const cap = Number.isInteger(maxRows) && (maxRows as number) >= 1 ? (maxRows as number) : need;
+  return { cols: c, rows: Math.min(need, cap) };
 }
 /** ◀ ▶ — the pager's glyphs (structural). */
 export const GGW_PAGER = { prev: '◀', next: '▶', prevTitle: 'Previous (←)', nextTitle: 'Next (→)' } as const;
@@ -173,6 +177,14 @@ export function ggwStretchTitle(sym: string): string { return `Stretch ${sym} to
 export function ggwFitViewBoxH(w: number, h: number, viewW: number): number | null {
   if (!(w > 0) || !(h > 0) || !(viewW > 0)) return null;
   return Math.max(1, Math.floor((viewW * h) / w));
+}
+/** 2026-11-16 fix — Ajay: "All the charts are shrinked too much" + "the Diamon shapes are too big". A fixed 620-unit
+ *  viewBox stretched to a full-width tile blew text and diamonds up ~3×. A fitted chart's viewBox width follows its box
+ *  instead: 1 unit = GGW_TEXT_SCALE px, never under the house 620 (so a narrow tile draws exactly as before). */
+export const GGW_TEXT_SCALE = 1.3;
+export function ggwFitViewW(w: number, base: number): number {
+  if (!(w > 0) || !(base > 0)) return base;
+  return Math.max(base, Math.round(w / GGW_TEXT_SCALE));
 }
 /** ≤ 640 px: the house default height, one column. */
 export const GGW_CHART_H_PHONE = 190;

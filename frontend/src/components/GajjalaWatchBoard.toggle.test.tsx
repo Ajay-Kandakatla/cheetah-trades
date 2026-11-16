@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fixture from './__fixtures__/gajjala_watch_board_2026_11_15.json';
 import GajjalaWatchBoard from './GajjalaWatchBoard';
-import { GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PHONE_MQ, ggwPickGrid, ggwToggleShown, parseGgwLayout } from '../lib/gajjalaWatch';
+import { GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PHONE_MQ, GGW_TEXT_SCALE, ggwFitViewW, ggwPickGrid, ggwToggleShown, parseGgwLayout } from '../lib/gajjalaWatch';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 function memStorage(): Storage {
@@ -43,6 +43,17 @@ describe('lib', () => {
     expect(ggwPickGrid(2, 3)).toEqual({ cols: 2, rows: 1 });
     expect(ggwPickGrid(5, 1)).toEqual({ cols: 1, rows: 5 });
     expect(ggwPickGrid(0, 0)).toEqual({ cols: 1, rows: 1 });
+  });
+  it('2026-11-16 fix ("All the charts are shrinked too much"): a pick never puts more rows on a screen than the per-screen choice', () => {
+    expect(ggwPickGrid(4, 1, 1)).toEqual({ cols: 1, rows: 1 });     // "1" + 4 names = 4 full-screen tiles to scroll
+    expect(ggwPickGrid(4, 2, 1)).toEqual({ cols: 2, rows: 1 });
+    expect(ggwPickGrid(5, 2, 2)).toEqual({ cols: 2, rows: 2 });
+    expect(ggwPickGrid(1, 2, 1)).toEqual({ cols: 1, rows: 1 });
+    expect(ggwPickGrid(5, 1, 0)).toEqual({ cols: 1, rows: 5 });     // NEGATIVE: a junk cap is ignored
+    expect(ggwFitViewW(620, 620)).toBe(620);                       // NEGATIVE: a narrow box draws as before
+    expect(ggwFitViewW(1830, 620)).toBe(Math.round(1830 / GGW_TEXT_SCALE));
+    expect(ggwFitViewW(0, 620)).toBe(620);
+    expect(ggwFitViewW(Number.NaN, 620)).toBe(620);
   });
 });
 
