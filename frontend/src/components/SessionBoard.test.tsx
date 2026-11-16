@@ -147,7 +147,11 @@ describe('SessionBoard', () => {
       .mockReturnValueOnce(p15)
       .mockResolvedValueOnce({ json: () => Promise.resolve(
         payload({ tf: '60m', session: '2026-08-31' })) } as any);
-    vi.stubGlobal('fetch', spy);
+    // WIDENED 2026-11-15: the ➕/➖ Watch card button (GgWatchButton) reads its list once per page — that GET is
+    // answered owner_only here and never counted as a board request.
+    vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => (String(url).includes('/chart-maps/gajjala-watch/symbols')
+      ? Promise.resolve({ ok: true, json: () => Promise.resolve({ state: 'owner_only', reason: 'r', title: 't' }) })
+      : spy(url, init))));
     const { container } = render(<SessionBoard />);
     const select = container.querySelector('select') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: '60m' } });

@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "can you add an add to watch list button on all the stocks to move them and also remove button from
+  // watch list too." ➕/➖ Watch in PatternChart's action row (every Chart Maps card), owner only; ONE list GET
+  // (GET /chart-maps/gajjala-watch/symbols) shared by every card; writes ride the existing 👀 POST / DELETE routes; served words.
+  {
+    id: 'chart-maps-gajjala-watch-card-button-2026-11-15',
+    label: '➕/➖ Watch on every card — you said: “can you add an add to watch list button on all the stocks to move them and also remove button from watch list too.” Every Chart Maps card (🚩 Gajjala 5-min, 1-min, 🧪, 🥇 Luk and every other board) now has a “➕ Watch” button that puts the stock on 👀 Gajjala\'s Watch in one click; once it is there the button turns green and reads “➖ Watch” — click it to take the stock off. When the watch is full (12) ➕ is greyed out and says so. Only you see it.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-15, verbatim: "On All of the charts and also the tabs I need a new blinker to show me EMA uptrends 9 crossing over
   // 21 EMA please.." + "I need some sort of urgency or fast blink for the one are closer together than approaching with sort also
   // aligned with it" + "Or atleast closing in on other tabs for me." ONE read ema_cross.blink_read (THE engine) + chart_maps/ema_blink.py;

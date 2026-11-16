@@ -12,6 +12,7 @@ TAB = "gajjala_watch"
 TAB_LABEL = "👀 Gajjala's Watch"                      # MINE — HIS CALL #9
 API_PATH = "/chart-maps/gajjala-watch"
 API_SYMBOL_PATH = API_PATH + "/symbols/{symbol}"
+API_LIST_PATH = API_PATH + "/symbols"                     # ➕/➖ card button: the owner's names only (2026-11-15)
 FRAMES = (("1m", "1min"), ("3m", "3min"), ("5m", "5min"))   # his words "1 min 3 min and 5 min charts" — order = draw order
 FRAME_WORDS = {"1m": "1-min", "3m": "3-min", "5m": "5-min"}
 AXIS_FRAME = "1m"                                      # the frame whose bars set the tile's axis end (C1.7)

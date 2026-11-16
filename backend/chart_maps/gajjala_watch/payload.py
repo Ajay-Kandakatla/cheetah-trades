@@ -116,6 +116,23 @@ def error_payload(why: str) -> dict:
     return {"state": "error", "reason": ERROR_TEXT.format(why=why), "title": title()}
 
 
+# ➕/➖ Watch on every card (Ajay 2026-11-15: "can you add an add to watch list button on all the stocks to move them and
+# also remove button from watch list too."). The served button words; the FE composes none.
+CARD_ADD_LABEL = "➕ Watch"
+CARD_REMOVE_LABEL = "➖ Watch"
+CARD_ADD_TITLE = "Add {sym} to 👀 Gajjala's Watch"
+CARD_REMOVE_TITLE = "Remove {sym} from 👀 Gajjala's Watch"
+
+
+def list_payload(symbols: list) -> dict:
+    """The owner's names for the card buttons — {state, symbols, max, full, full_text, labels}. Never a chart."""
+    syms = [s for s in symbols if isinstance(s, str)]
+    return {"state": "ok", "symbols": syms, "max": C.MAX_SYMBOLS, "full": len(syms) >= C.MAX_SYMBOLS,
+            "full_text": full_text(),
+            "labels": {"add": CARD_ADD_LABEL, "remove": CARD_REMOVE_LABEL,
+                       "add_title": CARD_ADD_TITLE, "remove_title": CARD_REMOVE_TITLE}}
+
+
 def full_text() -> str:
     return FULL_TEXT.format(max=C.MAX_SYMBOLS)
 

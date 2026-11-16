@@ -38,6 +38,7 @@ import {
 } from '../lib/gajjalaWatch';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
+import { loadGgwList } from '../lib/ggWatchList';
 import { EmaBlinkDot } from './EmaBlink';
 import { emaBlinkLine } from '../lib/emaBlink';
 import '../styles/gajjalaWatch.css';
@@ -353,6 +354,7 @@ export default function GajjalaWatchBoard() {
       })
       .catch(() => { if (alive.current) setMsg(null); })
       .finally(() => {
+        void loadGgwList(true);                                  // the ➕/➖ card buttons read the same list — even after unmount
         if (!alive.current) return;
         setBusy(false);
         loadAllRef.current();

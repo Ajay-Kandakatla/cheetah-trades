@@ -26,6 +26,7 @@ import {
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { SignalWatchButton } from './SignalWatchButton';
+import { GgWatchButton } from './GgWatchButton';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
 import { ShortInterestChip } from './ShortInterestChip';
@@ -1055,6 +1056,9 @@ export const PatternChart = memo(function PatternChart(
           <div className="cm-tile-actions">
             {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
               * every board; the Signals tab reads the same store. */}
+            {/* Ajay 2026-11-15: "can you add an add to watch list button on all the stocks to move them and also remove
+              * button from watch list too." — ➕/➖ 👀 Gajjala's Watch, owner only (renders nothing for anyone else). */}
+            <GgWatchButton symbol={tile.symbol} />
             {skip.has('watch') ? null : <SignalWatchButton symbol={tile.symbol} />}
             {/* Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" /
               * "To external ones please" — the external link-out is Yahoo's quote page (lib/yahooLink); the chart's

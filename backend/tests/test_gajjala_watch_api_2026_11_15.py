@@ -153,7 +153,9 @@ def wired(monkeypatch, db):
 # ── routes ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_paths_are_the_constants_and_registered_once():
     got = sorted((r.path, m) for r in API.router.routes for m in getattr(r, "methods", ()))
-    assert got == sorted([(C.API_PATH, "GET"), (C.API_SYMBOL_PATH, "POST"), (C.API_SYMBOL_PATH, "DELETE")])
+    # WIDENED 2026-11-15: + GET C.API_LIST_PATH for the ➕/➖ card button (test_gajjala_watch_card_button_2026_11_15.py).
+    assert got == sorted([(C.API_PATH, "GET"), (C.API_SYMBOL_PATH, "POST"), (C.API_SYMBOL_PATH, "DELETE"),
+                          (C.API_LIST_PATH, "GET")])
     src = (Path(__file__).resolve().parents[1] / "main.py").read_text()
     assert src.count("from chart_maps.gajjala_watch.api import router as gajjala_watch_router") == 1
     assert src.count("app.include_router(gajjala_watch_router)") == 1
