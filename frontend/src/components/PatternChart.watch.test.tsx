@@ -52,13 +52,14 @@ const padR = (c: HTMLElement) => {
 };
 
 describe('PatternChart emaStyle="bold"', () => {
-  it('ema9 polyline: #FACC15, width 2, non-scaling, opacity 1, AFTER the candles and AFTER ema21', () => {
+  it('ema9 polyline: #FACC15, width 3, non-scaling, opacity 1, AFTER the candles and AFTER ema21', () => {
     const { container } = draw({ emaStyle: 'bold' });
     const e9 = container.querySelector('polyline.pc-ema-bold-ema9')!;
     const e21 = container.querySelector('polyline.pc-ema-bold-ema21')!;
     expect(e9.getAttribute('stroke')).toBe(EMA_BOLD.ema9.color);
     expect(e9.getAttribute('stroke')).toBe('#FACC15');
-    expect(e9.getAttribute('stroke-width')).toBe('2');
+    // WIDENED 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): 9 yellow, 21 purple, thicker.
+    expect(e9.getAttribute('stroke-width')).toBe('3');
     expect(e9.getAttribute('vector-effect')).toBe('non-scaling-stroke');
     expect(e9.getAttribute('opacity')).toBe('1');
     expect(e21.getAttribute('stroke')).toBe('#BE78FF');
@@ -80,17 +81,18 @@ describe('PatternChart emaStyle="bold"', () => {
     expect(kc.getAttribute('stroke-width')).toBe('1.1');
     expect(order(container, kc, candleBodies(container)[0])).toBe(true);
   });
-  it('NEGATIVE: without the prop — width 1.1, toneColor, opacity 0.85, polylines before the candles, diamonds where they were', () => {
+  it('NEGATIVE: without the prop — width EMA_LINE_W (2), toneColor, opacity 0.85, polylines before the candles, diamonds where they were', () => {
     const { container } = draw();
     expect(container.querySelector('.pc-ema-bold')).toBeNull();
     expect(container.querySelector('.pc-ema-cross-layer')).toBeNull();
     const pl = Array.from(container.querySelectorAll('polyline'));
     expect(pl).toHaveLength(2);
     for (const p of pl) {
-      expect(p.getAttribute('stroke-width')).toBe('1.1');
+      // WIDENED 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): 9 yellow, 21 purple, thicker.
+      expect(p.getAttribute('stroke-width')).toBe('2');
       expect(p.getAttribute('opacity')).toBe('0.85');
       expect(p.getAttribute('vector-effect')).toBeNull();
-      expect(p.getAttribute('stroke')).toMatch(/^var\(--/);
+      expect(['#FACC15', '#BE78FF']).toContain(p.getAttribute('stroke'));
       expect(order(container, p, candleBodies(container)[0])).toBe(true);
     }
     const d = container.querySelector('[data-testid="pc-ema-cross-up"]')!;

@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-15, verbatim: "I need something in the videos you show different colors yellow for 9 EMA here and its inverted in
+  // the app also can you switch its up in the app please..  Also make the lines a little more thick". toneColor ema9/ema21 =
+  // EMA_BOLD (9 #FACC15, 21 #BE78FF), EMA_LINE_W 2 on every PatternChart (was 1.1), 👀 bold 2 → 3, LiveCandlesChart too.
+  {
+    id: 'chart-maps-ema-colors-videos-2026-11-15',
+    label: '🟡🟣 9 / 21 EMA colours like the videos — you said: “I need something in the videos you show different colors yellow for 9 EMA here and its inverted in the app also can you switch its up in the app please..  Also make the lines a little more thick”. Every chart now draws the 9 EMA in yellow and the 21 EMA in purple, the same as the replay videos (before, the 9 was blue and the 21 amber), and both lines are thicker. Nothing else on the charts changed.',
+    addedAt: '2026-11-15',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-15, verbatim: "can you add an add to watch list button on all the stocks to move them and also remove button from
   // watch list too." ➕/➖ Watch in PatternChart's action row (every Chart Maps card), owner only; ONE list GET
   // (GET /chart-maps/gajjala-watch/symbols) shared by every card; writes ride the existing 👀 POST / DELETE routes; served words.

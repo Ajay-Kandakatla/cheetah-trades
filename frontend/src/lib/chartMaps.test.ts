@@ -1,4 +1,4 @@
-import { splitBlurb } from './chartMaps';
+import { EMA_LINE_W, splitBlurb } from './chartMaps';
 /* chartMaps — geometry + formatting for the Chart Maps study board.
  *
  * Negatives carry the weight here: empty bar arrays, non-finite prices, bands
@@ -2663,9 +2663,12 @@ describe("🚩 Gajjala's tab registry", () => {
     expect(m.blurb).not.toMatch(/closed (through|above) (the|its) trigger/);
   });
 
-  it("the 21 EMA has its own tone, colour and label priority (≠ the 9 EMA's blue)", () => {
+  it("the 21 EMA has its own tone, colour and label priority (≠ the 9 EMA's yellow)", () => {
+    // WIDENED 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): 9 yellow, 21 purple, thicker.
     expect(toneColor('ema21')).not.toBe(toneColor('ema9'));
-    expect(toneColor('ema21')).toBe('var(--cm-amberlt, #f59e0b)');
+    expect(toneColor('ema21')).toBe('#BE78FF');
+    expect(toneColor('ema9')).toBe('#FACC15');
+    expect(EMA_LINE_W).toBe(2);
     expect(toneColor('ema21')).not.toBe(toneColor('neutral'));
   });
 

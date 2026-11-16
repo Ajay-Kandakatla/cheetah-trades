@@ -89,8 +89,9 @@ describe('GajjalaBoard × the payload fixture (real PatternChart)', () => {
     await screen.findByTestId('gg-tile-PFAI');
     const tile = screen.getByTestId('gg-tile-PFAI');
     const strokes = new Set([...tile.querySelectorAll('path, polyline')].map((p) => p.getAttribute('stroke')).filter(Boolean));
-    expect([...strokes].some((s) => String(s).includes('#2563eb'))).toBe(true);
-    expect([...strokes].some((s) => String(s).includes('#f59e0b'))).toBe(true);
+    // WIDENED 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): 9 yellow, 21 purple, thicker.
+    expect([...strokes].some((s) => String(s).includes('#FACC15'))).toBe(true);
+    expect([...strokes].some((s) => String(s).includes('#BE78FF'))).toBe(true);
     expect(container.textContent).toContain('BUY > 4.12');
   });
 });

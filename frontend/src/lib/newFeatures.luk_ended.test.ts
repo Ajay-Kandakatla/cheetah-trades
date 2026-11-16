@@ -16,7 +16,7 @@ describe('✨ the 🏁 Luk ended trades fold entry (2026-11-12)', () => {
     // WIDENED +1 (2026-11-14: 🎯 Long Term Enterable (zones) ✨ FIRST — Ajay: "Make a enterable check box in longterm stocks with zone and filters please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[12].id).toBe(ID);
+    expect(NEW_FEATURES[13].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=luk');
@@ -55,7 +55,7 @@ describe('✨ the 🏁 Luk ended trades fold entry (2026-11-12)', () => {
   it('NEGATIVE: the 🟢 entry-marks ✨ is not replaced — still listed once, right after this entry; ids stay unique', () => {
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[13].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');
+    expect(NEW_FEATURES[14].id).toBe('chart-maps-gajjala-entry-marks-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-entry-marks-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });

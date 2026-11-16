@@ -15,13 +15,17 @@ import { API } from '../lib/apiBase';
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { EMA_FAST, EMA_SLOW, emaSeries, emaStep } from '../lib/ema';
 import { VOLUME_SMA_COLOR, volumeColor, volumeSma, volumeSmaWindow } from '../lib/volumePane';
+import { EMA_BOLD } from '../lib/chartMaps';
 
 const UP = '#22c55e';
 const DOWN = '#ef4444';
 // EMA overlay colours — deliberately NEITHER the up-green nor the down-red, so
 // a trend line can never be misread as a candle body at a glance.
-const EMA_FAST_COLOR = '#eab308';   // 9  — amber, the fast line
-const EMA_SLOW_COLOR = '#60a5fa';   // 21 — blue, the slow line
+// 2026-11-15 (Ajay: "yellow for 9 EMA ... switch its up in the app ... make the lines a little more thick"): the replay
+// videos' colours — 9 yellow, 21 purple (lib/chartMaps EMA_BOLD) — at 2 px.
+const EMA_FAST_COLOR = EMA_BOLD.ema9.color;    // 9  — yellow, the fast line
+const EMA_SLOW_COLOR = EMA_BOLD.ema21.color;   // 21 — purple, the slow line
+const EMA_LINE_PX = 2;
 
 export type ChartInterval = 'D' | '1m';
 
@@ -118,11 +122,11 @@ export function LiveCandlesChart({ symbol, interval }: { symbol: string; interva
     // entries were missing). Drawn on every interval — 1m for the intraday
     // read, D for swing context — from the same bars as the candles.
     const emaFast = chart.addLineSeries({
-      color: EMA_FAST_COLOR, lineWidth: 1, priceLineVisible: false,
+      color: EMA_FAST_COLOR, lineWidth: EMA_LINE_PX, priceLineVisible: false,
       lastValueVisible: true, crosshairMarkerVisible: false, title: `EMA ${EMA_FAST}`,
     });
     const emaSlow = chart.addLineSeries({
-      color: EMA_SLOW_COLOR, lineWidth: 1, priceLineVisible: false,
+      color: EMA_SLOW_COLOR, lineWidth: EMA_LINE_PX, priceLineVisible: false,
       lastValueVisible: true, crosshairMarkerVisible: false, title: `EMA ${EMA_SLOW}`,
     });
 

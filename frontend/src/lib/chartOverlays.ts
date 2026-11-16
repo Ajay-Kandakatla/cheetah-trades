@@ -104,7 +104,7 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   //
   // No 50, no 21, no 10. The periods are his (Rule #1), and each line is a
   // DRAWING: nothing sorts, filters, gates or alerts on it (Rule #10).
-  { key: 'ema9', label: '9 EMA', swatch: 'var(--cm-vcp, #2563eb)',
+  { key: 'ema9', label: '9 EMA', swatch: '#FACC15',   // = EMA_BOLD.ema9 (yellow, the videos' 9 — 2026-11-15)
     hint: 'the 9-day exponential moving average of the close — a fast line that weights recent closes most; a drawing, not a signal',
     lineTones: ['ema9'] },
   { key: 'sma20', label: '20 SMA', swatch: 'var(--cm-mint, #6ee7b7)',

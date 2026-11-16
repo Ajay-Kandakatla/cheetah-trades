@@ -15,7 +15,7 @@ import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  EMA_BOLD, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  EMA_BOLD, EMA_LINE_W, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmAxis, type CmBadge, type CmCurve, type CmMarker, type CmStat, type CmTile,
@@ -814,7 +814,8 @@ export const PatternChart = memo(function PatternChart(
             const segs = curveSegs(c);
             return segs.map((pts, si) => (
               <polyline key={`cv-${ci}-${c.label}-${si}`} points={pts} fill="none"
-                        stroke={toneColor(c.tone)} strokeWidth={1.1}
+                        stroke={toneColor(c.tone)}
+                        strokeWidth={c.tone === 'ema9' || c.tone === 'ema21' ? EMA_LINE_W : 1.1}
                         strokeDasharray={(c.label || '').includes('mid') ? '5,4' : undefined}
                         opacity={0.85} />
             ));

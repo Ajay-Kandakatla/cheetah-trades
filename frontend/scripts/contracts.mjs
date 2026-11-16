@@ -17143,7 +17143,8 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — slice(0, 4) → slice(0, 5).
         // WIDENED +1 (2026-11-15: 🔀 chart-maps-ema-blink-2026-11-15 FIRST — Ajay: "I need a new blinker to show me EMA uptrends 9 crossing over 21 EMA") — slice(0, 5) → slice(0, 6).
         // WIDENED +1 (2026-11-15: ➕ chart-maps-gajjala-watch-card-button-2026-11-15 FIRST — Ajay: "can you add an add to watch list button on all the stocks") — slice(0, 6) → slice(0, 7).
-        if (!allIds.slice(0, 7).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 7 of NEW_FEATURES (found ${allIds.slice(0, 8).join(', ') || 'none'})`);
+        // WIDENED +1 (2026-11-15: 🟡🟣 chart-maps-ema-colors-videos-2026-11-15 FIRST — Ajay: "yellow for 9 EMA ... switch its up in the app") — slice(0, 7) → slice(0, 8).
+        if (!allIds.slice(0, 8).includes(ZID)) errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 8 of NEW_FEATURES (found ${allIds.slice(0, 9).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

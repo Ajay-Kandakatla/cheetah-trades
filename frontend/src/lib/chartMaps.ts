@@ -2708,9 +2708,16 @@ export function yFor(price: number, d: Domain, height: number, padY = 8): number
  *  eod-audits/replays/replay_gif.py:579 and the line width of replay_video.py:258-260. Drawn by PatternChart only under
  *  `emaStyle="bold"`; every other chart keeps toneColor. */
 export const EMA_BOLD = {
-  ema9: { color: '#FACC15', width: 2 },
-  ema21: { color: '#BE78FF', width: 2 },
+  ema9: { color: '#FACC15', width: 3 },
+  ema21: { color: '#BE78FF', width: 3 },
 } as const;
+
+/** The 9 / 21 EMA on EVERY chart in the replay videos' colours (Ajay 2026-11-15: "I need something in the videos you
+ *  show different colors yellow for 9 EMA here and its inverted in the app also can you switch its up in the app
+ *  please..  Also make the lines a little more thick"). The old app colours were a blue 9 and an amber 21 — the
+ *  yellow-ish line was the 21, the reverse of the videos. Now 9 = yellow, 21 = purple (EMA_BOLD's colours) and both
+ *  are drawn at EMA_LINE_W on the ordinary charts (was 1.1); the 👀 bold charts go 2 → 3 px. */
+export const EMA_LINE_W = 2;
 
 /** 👀 A served time axis (Gajjala's Watch, chart_maps/gajjala_watch/build.axis): `slots` minute-grid slots from 04:00
  *  ET to the close, `x[i]` = the slot of served bar i, `shade` = pre-market / after-hours slot spans [from, to), `ticks`
@@ -3155,11 +3162,12 @@ export function toneColor(tone: CmLineTone): string {
   // missing its cases and every new tone falling through to the grid grey.
   // All three are existing variables with existing fallbacks in this app; no
   // new hex is invented here.
-  if (tone === 'ema9') return 'var(--cm-vcp, #2563eb)';
+  // 2026-11-15 (his word): the 9 EMA is YELLOW like the replay videos — was blue (--cm-vcp).
+  if (tone === 'ema9') return EMA_BOLD.ema9.color;
   if (tone === 'sma20') return 'var(--cm-mint, #6ee7b7)';
   if (tone === 'sma200') return 'var(--gold, #c9a227)';
-  // 🚩 Gajjala's 21 EMA (2026-10-13): amber, so it never reads as the blue 9.
-  if (tone === 'ema21') return 'var(--cm-amberlt, #f59e0b)';
+  // 🚩 Gajjala's 21 EMA: PURPLE like the replay videos (2026-11-15, his word) — was amber, which read as the videos' 9.
+  if (tone === 'ema21') return EMA_BOLD.ema21.color;
   // 🔑 Key levels (2026-09-25): the bright fuchsia he asked for ("give it a
   // brigh color"), the same token its checkbox swatch shows. Broken or not,
   // one colour — the dash is what says "through it".
