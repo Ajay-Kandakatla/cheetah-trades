@@ -157,3 +157,81 @@ describe('🚩 ggcRow — the open card\'s plan on the served frames', () => {
     expect(ggcRow(card(), pay()).stale).toBe(false);
   });
 });
+
+/* 📺 2026-11-17 (video view spec §3.4 / WP-D). Ajay 11-16: "the graphs in the videos are so clear like I can easily identify
+ * the trend"; 11-17 "Yes to all defaults" → his call #4: inside 📺 hide the 🧪 entry band and the ➖ diamonds, keep the A+ tag,
+ * trigger / stop and the now line. The ⤢ view strips through the SAME videoLayers the cards use. NEGATIVES: no look → the
+ * card's own references (byte-identical rows); the card is never mutated; bars / axis / stamps / text are untouched. */
+describe('📺 ggcRow(card, p, \'video\') — the overlay stripped like the cards', () => {
+  const mixed = (over: Partial<GgTile> = {}): GgTile => ({
+    symbol: 'OMH', href: '/sepa/OMH?tab=supply&tf=5m_today', bars: [], stats: [], why: '', tf: '5m',
+    lines: [
+      { label: 'TRIGGER 4.20', price: 4.2, tone: 'buy' }, { label: 'STOP 3.90', price: 3.9, tone: 'stop' },
+      { label: 'now', price: 4.0, tone: 'now' }, { label: 'TARGET 4.80', price: 4.8, tone: 'target' },
+      { label: '9 EMA', price: 4.05, tone: 'neutral' },
+    ] as any,
+    bands: [{ kind: 'gg_entry', lo: 3.95, hi: 4.05, label: '🧪 entry' }] as any,
+    markers: [
+      { date: '2026-11-13 09:35', kind: 'buy', label: 'A+' }, { date: '2026-11-13 09:40', kind: 'ema_cross_up' },
+      { date: '2026-11-13 09:45', kind: 'ema_cross_dn' }, { date: '2026-11-13 09:50', kind: 'sweep', label: 'sw' },
+    ] as any,
+    gajjala: { plan_text: 'trigger 4.20 · stop 3.90 · risk 7.1%' } as any, ...over,
+  } as GgTile);
+  const pay = (over: Record<string, unknown> = {}) => parseGgc(rawAnswer(over)) as GgcPayload;
+
+  it('every frame: bands [], lines only buy / stop / now, markers only kind buy and only on the card\'s tf', () => {
+    const row = ggcRow(mixed(), pay(), 'video');
+    expect(row.frames).toHaveLength(3);
+    for (const fr of row.frames) {
+      expect(fr.tile.bands).toEqual([]);
+      expect((fr.tile.lines || []).map((l) => l.tone)).toEqual(['buy', 'stop', 'now']);
+      for (const m of fr.tile.markers || []) expect(m.kind).toBe('buy');
+    }
+    expect(row.frames.find((x) => x.tf === '5m')!.tile.markers).toEqual([{ date: '2026-11-13 09:35', kind: 'buy', label: 'A+' }]);
+    expect(row.frames.find((x) => x.tf === '15m')!.tile.markers).toEqual([]);
+    expect(row.frames.find((x) => x.tf === '1m')!.tile.markers).toEqual([]);
+  });
+
+  it('NEGATIVE: a card with no tf → no markers on any frame under the look either', () => {
+    for (const fr of ggcRow(mixed({ tf: null }), pay(), 'video').frames) expect(fr.tile.markers).toEqual([]);
+  });
+
+  it('NEGATIVE: no look (absent or undefined) → the card\'s OWN lines / bands / markers references, today\'s rows', () => {
+    const c = mixed();
+    for (const row of [ggcRow(c, pay()), ggcRow(c, pay(), undefined)]) {
+      for (const fr of row.frames) {
+        expect(fr.tile.lines).toBe(c.lines);
+        expect(fr.tile.bands).toBe(c.bands);
+      }
+      expect(row.frames.find((x) => x.tf === '5m')!.tile.markers).toBe(c.markers);
+    }
+    const p = pay();
+    expect(JSON.stringify(ggcRow(c, p, undefined))).toBe(JSON.stringify(ggcRow(c, p)));
+  });
+
+  it('NEGATIVE: the card is never mutated by the look', () => {
+    const c = mixed();
+    const before = clone(c);
+    ggcRow(c, pay(), 'video');
+    expect(c).toEqual(before);
+    expect(c.bands).toHaveLength(1);
+    expect(c.markers).toHaveLength(4);
+  });
+
+  it('NEGATIVE: bars, axis, stamps, text and state are the same with and without the look', () => {
+    const p = pay({ stale: true, as_of_et: '08:02', is_today: false });
+    const plain = ggcRow(mixed(), p);
+    const video = ggcRow(mixed(), p, 'video');
+    expect(video.text).toBe(plain.text);
+    expect(video.state).toBe(plain.state);
+    expect(video.stale).toBe(true);
+    expect(video.as_of_et).toBe('08:02');
+    expect(video.from_session).toBe(plain.from_session);
+    video.frames.forEach((fr, i) => {
+      expect(fr.tf).toBe(plain.frames[i].tf);
+      expect(fr.tile.bars).toBe(p.frames[i].tile.bars);
+      expect(fr.tile.curves).toBe(p.frames[i].tile.curves);
+      expect(fr.axis).toBe(p.frames[i].axis);
+    });
+  });
+});

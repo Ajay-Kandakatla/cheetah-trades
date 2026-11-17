@@ -54,10 +54,17 @@ export type EllipseGeom = {
   labelX: number; labelY: number; above: boolean;
 };
 
+/** 📺 2026-11-17 — a served time axis (PatternChart's `ta`): bar i sits at slot x[i] of `slots`. */
+export type EllipseAxis = { x: ReadonlyArray<number>; slots: number } | null | undefined;
+
 /** One served structure → one ellipse around its bars and its price range.
- *  null when either stamp is off the served bars or lo/hi is not a finite number. */
+ *  null when either stamp is off the served bars or lo/hi is not a finite number.
+ *  📺 2026-11-17 (Ajay "Yes to all defaults", spec default #8 — fix the ellipse to honour the axis FIRST): with a served
+ *  axis whose x matches the bars and whose slots > 0, x maps through xFor(axis.x[i], slots) — the SAME mapper as the
+ *  candles. Without one (or a mismatched one): the old one-slot-per-bar numbers exactly. */
 export function ellipseGeom(
   e: CmEllipse, bars: CmBar[], domain: Domain, H: number, padY: number, W: number, padR: number,
+  axis?: EllipseAxis,
 ): EllipseGeom | null {
   if (!e || !bars || !bars.length) return null;
   const a = stampIndex(bars, e.from_t);
@@ -68,10 +75,11 @@ export function ellipseGeom(
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
   const i0 = Math.min(a, b);
   const i1 = Math.max(a, b);
-  const n = bars.length;
+  const ax = axis && Array.isArray(axis.x) && axis.x.length === bars.length && axis.slots > 0 ? axis : null;
+  const n = ax ? ax.slots : bars.length;
   const bw = barWidth(n, W, padR);
-  const x0 = xFor(i0, n, W, padR);
-  const x1 = xFor(i1, n, W, padR);
+  const x0 = xFor(ax ? ax.x[i0] : i0, n, W, padR);
+  const x1 = xFor(ax ? ax.x[i1] : i1, n, W, padR);
   const yTop = yFor(Math.max(lo, hi), domain, H, padY);
   const yBot = yFor(Math.min(lo, hi), domain, H, padY);
   const cx = (x0 + x1) / 2;

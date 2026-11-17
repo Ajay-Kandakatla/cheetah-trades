@@ -347,7 +347,10 @@ def test_a_squeeze_card_serves_ellipses_and_the_wide_bars():
     bare["setups"][RS].pop("structure")
     b = _tile(bare)
     diff = {k for k in set(t) | set(b) if t.get(k) != b.get(k)}
-    assert diff <= {"bars", "curves", "vol_avg", "ellipses"} and "ellipses" in diff
+    # WIDENED 2026-11-17 (📺 card axis, spec ggvideo §4 WP-A): the bare today-only frame is ONE date → it serves the
+    # 04:00 `axis`; the wide two-date card serves none (tab.card_axis).
+    assert diff <= {"bars", "curves", "vol_avg", "ellipses", "axis"} and "ellipses" in diff
+    assert "axis" in b and "axis" not in t
     assert len(b["bars"]) == 192 and kinds(b["ellipses"]) == ["entry"]
 
 

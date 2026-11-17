@@ -1262,7 +1262,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 🏁 chart-maps-luk-ended-fold-2026-11-12 FIRST — Ajay: "I shouldn't be seeing this").
       // WIDENED +1 (2026-11-12: 💎 Under Value tiny-base fix FIRST — Ajay: "We got wrong numbers for Joby").
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 18).map((m) => m[1]);
+      // WIDENED +1 (2026-11-17: 📺 chart-maps-gajjala-video-view-2026-11-17 FIRST — Ajay: "the graphs in the videos are so clear like I can easily identify the trend").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 19).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -1270,6 +1271,41 @@ const CONTRACTS = [
         if (!lab[1].includes("Then default my landing page to Gajjala's tab in chartmaps on the app always.")) errs.push('the 🏠 landing ✨ label must quote him verbatim');
         if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1])) errs.push('the 🏠 landing ✨ label: never "edge", never the b-word');
       }
+      return errs;
+    },
+  },
+  {
+    name: '📺 Gajjala video view (2026-11-17)',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-11-16: "Also the graphs in the videos are so clear like I can easily identify the trend" · "Why aren't our
+    // regular ones like that"; 2026-11-17 "Yes to all defaults". The axis is SERVED (gajjala_watch.build.axis, one engine):
+    // no FE file may carry a second clock axis. The toggle is remembered per device and never touches a fetch.
+    // Doc docs/gajjala/video_view_2026_11_17.md.
+    checks: (src) => {
+      const errs = [];
+      const lib = read('src/lib/gajjala.ts');
+      const vl = read('src/lib/videoLook.ts');
+      for (const [n, t] of [['GajjalaBoard.tsx', src], ['lib/gajjala.ts', lib], ['lib/videoLook.ts', vl]]) {
+        if (t.includes('04:00')) errs.push(`${n}: no clock literal — the axis is served by the ONE engine`);
+      }
+      if (!/export const GG_LOOK_LS = 'gg-video-look';/.test(lib)) errs.push("GG_LOOK_LS must be 'gg-video-look'");
+      const ld = /export function loadGgLook\(\)[\s\S]*?\n\}/.exec(lib);
+      if (!ld || !ld[0].includes("=== '1'")) errs.push("loadGgLook must read ON only from a strict '1' (absent → ON)");
+      if (ld && /fetch\(/.test(ld[0])) errs.push('loadGgLook must never fetch');
+      if (!/GG_VIDEO_LOOK_VKEYS: ReadonlyArray<string> = \['gajjala', 'gajjala_audited'\]/.test(lib)) errs.push('the 📺 toggle mounts on the 🚩 5-min and 🧪 boards only (the 1-minute page is not built)');
+      const title = /export const GG_LOOK_VIDEO_TITLE = '([^']+)'/.exec(lib);
+      if (!title || !title[1].includes('Reversal Squeeze')) errs.push('GG_LOOK_VIDEO_TITLE must name the 🎾 Reversal Squeeze exception');
+      if (!/axis=\{t\.axis \?\? null\}/.test(src)) errs.push('the card must pass the served axis (axis={t.axis ?? null})');
+      if (!/look=\{lookOn \? 'video' : undefined\}/.test(src)) errs.push("the card must pass look={lookOn ? 'video' : undefined}");
+      const nf = read('src/lib/newFeatures.ts');
+      const lab = /id: 'chart-maps-gajjala-video-view-2026-11-17'[\s\S]*?label: '([^']+)'/.exec(nf);
+      if (!lab) errs.push('the 📺 ✨ entry is missing');
+      else {
+        if (!lab[1].includes('the graphs in the videos are so clear like I can easily identify the trend')) errs.push('the 📺 ✨ label must quote him verbatim');
+        if (!lab[1].includes('Reversal Squeeze')) errs.push('the 📺 ✨ label must name the 🎾 Reversal Squeeze exception');
+        if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1]) || /better entr/i.test(lab[1])) errs.push('the 📺 ✨ label: never "edge", the b-word or "better entries"');
+      }
+      try { read('../docs/gajjala/video_view_2026_11_17.md'); } catch { errs.push('docs/gajjala/video_view_2026_11_17.md must exist'); }
       return errs;
     },
   },
@@ -17149,7 +17185,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 18).includes(ZID))  /* WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 19).includes(ZID))  /* WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

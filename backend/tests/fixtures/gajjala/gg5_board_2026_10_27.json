@@ -1282,6 +1282,84 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -1593,6 +1671,82 @@
      "why": ""
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -2262,6 +2416,82 @@
    "tf": "15m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -2577,6 +2807,84 @@
      "why": "base 1 of 6 bars"
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -3606,6 +3914,82 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -3908,6 +4292,84 @@
      "why": "low 4.5% above the 9 EMA — waiting for the kiss"
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -6604,6 +7066,82 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -6920,6 +7458,84 @@
      "why": ""
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -10541,6 +11157,84 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -10852,6 +11546,82 @@
      "why": ""
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -11521,6 +12291,82 @@
    "tf": "15m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -11836,6 +12682,84 @@
      "why": "base 1 of 6 bars"
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -12865,6 +13789,82 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -13167,6 +14167,84 @@
      "why": "low 4.5% above the 9 EMA — waiting for the kiss"
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -15863,6 +16941,82 @@
    "tf": "5m",
    "tiles": [
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [
@@ -16179,6 +17333,84 @@
      "why": ""
     },
     {
+     "axis": {
+      "frame_min": 5,
+      "from_et": "04:00",
+      "shade": [
+       {
+        "from_slot": 0,
+        "kind": "pre",
+        "to_slot": 66
+       }
+      ],
+      "slots": 144,
+      "start_epoch": 1791878400.0,
+      "ticks": [
+       {
+        "label": "04:00",
+        "slot": 0
+       },
+       {
+        "label": "05:00",
+        "slot": 12
+       },
+       {
+        "label": "06:00",
+        "slot": 24
+       },
+       {
+        "label": "07:00",
+        "slot": 36
+       },
+       {
+        "label": "08:00",
+        "slot": 48
+       },
+       {
+        "label": "09:00",
+        "slot": 60
+       },
+       {
+        "label": "10:00",
+        "slot": 72
+       },
+       {
+        "label": "11:00",
+        "slot": 84
+       },
+       {
+        "label": "12:00",
+        "slot": 96
+       },
+       {
+        "label": "13:00",
+        "slot": 108
+       },
+       {
+        "label": "14:00",
+        "slot": 120
+       },
+       {
+        "label": "15:00",
+        "slot": 132
+       },
+       {
+        "label": "16:00",
+        "slot": 144
+       }
+      ],
+      "to_et": "16:00",
+      "x": [
+       72,
+       73,
+       74,
+       75,
+       76,
+       77,
+       78,
+       79
+      ]
+     },
      "badges": [],
      "bands": [],
      "bars": [

@@ -11,7 +11,7 @@
  *
  * All geometry lives in lib/chartMaps.ts. This file only draws.
  */
-import { Fragment, memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
@@ -51,6 +51,7 @@ import type { ServedVolAvg } from '../lib/volumePane';
 import {
   ELLIPSE_LABEL_FS, ellipseGeom, ellipseStroke, ellipseTitle, ellipseTone,
 } from '../lib/ggEllipses';
+import { VIDEO_PANEL_STYLE, videoLayers } from '../lib/videoLook';
 
 const VIEW_W = 620;
 /** The viewBox width every PatternChart draws at by default (👀 Gajjala's Watch sizes a fitted chart's viewBox to its box,
@@ -127,7 +128,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look }: {
     tile: CmTile; height?: number;
     /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
      *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
@@ -167,11 +168,19 @@ export const PatternChart = memo(function PatternChart(
      *  action row. A FUNCTION of the symbol so ONE stable (useCallback) reference serves every card — this component is
      *  memo'd. Default (absent) = the whole card is the SEPA link, as before. chartOnly ignores it. */
     onOpenView?: (symbol: string) => void;
+    /** 📺 2026-11-17 — the replay-video look: bold 9/21 over the candles, the dark panel inline, the SVG stripped to
+     *  candles / EMAs / BUY·STOP·now / A+ tag / volume. The ladder, head and chips read the full tile. Absent →
+     *  byte-identical. (Ajay 2026-11-16: "the graphs in the videos are so clear like I can easily identify the trend".) */
+    look?: 'video';
   },
 ) {
   const location = useLocation();
   const W = typeof viewW === 'number' && Number.isFinite(viewW) && viewW > 0 ? Math.round(viewW) : VIEW_W;
   const bars = tile.bars || [];
+  /* 📺 The SVG inputs under the video look (lib/videoLook.ts) — a NEW object with only the video's layers; without the
+   * look it IS the tile, so every read below is byte-identical. Above the early return (hook order). */
+  const layers = useMemo(() => (look === 'video' ? videoLayers(tile) : tile), [tile, look]);
+  const ema: 'bold' | undefined = look === 'video' ? 'bold' : emaStyle;
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   /* 📋 ▸ more, per card per session (the SepaCandidateCard "#3 declutter"
@@ -215,17 +224,17 @@ export const PatternChart = memo(function PatternChart(
   const hasVol = volMax > 0;
   const pane = volumePaneLayout(SVG_H, PAD_Y, hasVol);
   const H = pane.priceH;
-  const lines = boldNowLines(tile.lines, bars, emaStyle);
-  const domain = barDomain(bars, tile.bands, lines, 6, tile.curves);
-  const bands = clipBands(tile.bands || [], domain);
+  const lines = boldNowLines(layers.lines, bars, ema);
+  const domain = barDomain(bars, layers.bands, lines, 6, layers.curves);
+  const bands = clipBands(layers.bands || [], domain);
   /* The BOARD bands that fell outside the plot. Only the board ones: they are
    * the ones the served note points at by name, and a reader who cannot find
    * the dashed band is being invited to read the solid intraday ones as the
    * board's (2026-09-23). Every other overlay speaks for itself. */
-  const offBoard = offDomainBands(tile.bands || [], domain)
+  const offBoard = offDomainBands(layers.bands || [], domain)
     .filter((o) => isOutline(String(o.band.kind)));
   const labels = boldEmaLabels(lineLabels(
-    [...(lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS), tile.curves, emaStyle);
+    [...(lines || []), ...curveLabels(layers.curves)], domain, H, PAD_Y, LABEL_FS), layers.curves, ema);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units
@@ -268,7 +277,7 @@ export const PatternChart = memo(function PatternChart(
       sp.x1 = sx(sp.to) + bw / 2;
     }
   }
-  const bold = emaStyle === 'bold';
+  const bold = ema === 'bold';
   const isBoldCurve = (c: CmCurve) => bold && (c.tone === 'ema9' || c.tone === 'ema21');
   const isCross = (m: CmMarker) => m.kind === 'ema_cross_up' || m.kind === 'ema_cross_dn';
   /** A curve's drawn runs — split on nulls (a gap is never joined through). */
@@ -293,7 +302,7 @@ export const PatternChart = memo(function PatternChart(
     const up = m.kind === 'ema_cross_up';
     const px = typeof m.price === 'number' && Number.isFinite(m.price) ? m.price : bar.c;
     const yC = yFor(px, domain, H, PAD_Y);
-    const r = emaStyle === 'bold' ? EMA_BOLD_DIAMOND_R : 3.6;
+    const r = ema === 'bold' ? EMA_BOLD_DIAMOND_R : 3.6;
     return (
       <polygon key={`mk-${m.date}-${mi}`}
                className={up ? 'pc-ema-cross pc-ema-cross-up' : 'pc-ema-cross pc-ema-cross-dn'}
@@ -316,14 +325,16 @@ export const PatternChart = memo(function PatternChart(
    * so two circles on one row need that many units of bars between them.
    * Display only. */
   const raids = sanitizeAmdRaids((tile as any).amd_raids);
-  const raidMarks = amdRaidMarks(raids, bars, {
+  /* 📺 the circles read the SVG layers (none under the look); the chip below keeps the tile's raids. */
+  const svgRaids = layers === tile ? raids : sanitizeAmdRaids((layers as any).amd_raids);
+  const raidMarks = amdRaidMarks(svgRaids, bars, {
     minGapBars: Math.max(1, Math.ceil(11 / (plotW / Math.max(bars.length, 1)))),
     lowY: (i) => yFor(bars[i].l, domain, H, PAD_Y),
     highY: (i) => yFor(bars[i].h, domain, H, PAD_Y),
     top: PAD_Y + RAID_R,
     // clear of the squeeze dot row at H - PAD_Y - 2
     bottom: H - PAD_Y - 4 - RAID_R,
-    occupied: occupiedFromMarkers(tile.markers || [], bars),
+    occupied: occupiedFromMarkers(layers.markers || [], bars),
     // 📊 the rows shrink with the price pane, so a circle keeps its side
     rowScale: H / SVG_H,
   });
@@ -468,7 +479,9 @@ export const PatternChart = memo(function PatternChart(
 
   /* The chart's layers, shared by the card (inside its router link) and the 👀 chart-only tile. */
   const svgProps = {
-    ref: svgRef, viewBox: `0 0 ${W} ${SVG_H}`, className: 'cm-svg', role: 'img',
+    ref: svgRef, viewBox: `0 0 ${W} ${SVG_H}`, className: look === 'video' ? 'cm-svg pc-look-video' : 'cm-svg', role: 'img',
+    'data-look': look === 'video' ? 'video' : undefined,
+    style: look === 'video' ? VIDEO_PANEL_STYLE : undefined,
     onMouseMove: onMove, onMouseLeave: onLeave,
     'aria-label': `${tile.symbol} daily chart, ${bars.length} bars`,
   };
@@ -664,7 +677,7 @@ export const PatternChart = memo(function PatternChart(
               buy/sell markers render as candle-anchored tags (the GainzAlgo
               convention: BUY under the bar, SELL above it); sweep/BOS/ORB
               markers as small glyphs; anything else keeps the gold line. */}
-          {(tile.markers || []).map((m, mi) => {
+          {(layers.markers || []).map((m, mi) => {
             const i = markerIndex(bars, m.date);
             if (i < 0) return null;
             const x = sx(i);
@@ -821,7 +834,7 @@ export const PatternChart = memo(function PatternChart(
             * split on nulls: the EMA/ATR warm-up leaves the left edge empty
             * on a long frame, and joining across that gap would draw a
             * straight segment through a channel that did not exist yet. */}
-          {(tile.curves || []).map((c, ci) => {
+          {(layers.curves || []).map((c, ci) => {
             // 👀 bold 9 / 21 EMAs are drawn after the candles instead (below).
             if (isBoldCurve(c)) return null;
             const segs = curveSegs(c);
@@ -875,8 +888,8 @@ export const PatternChart = memo(function PatternChart(
               are the <title> hover only. Served by squeeze_marks.py; nothing is computed here
               but the geometry (lib/ggEllipses.ts). Absent / [] → nothing renders at all. */}
           {(() => {
-            const marks = (tile.ellipses || [])
-              .map((e) => ({ e, g: ellipseGeom(e, bars, domain, H, PAD_Y, W, padR) }))
+            const marks = (layers.ellipses || [])
+              .map((e) => ({ e, g: ellipseGeom(e, bars, domain, H, PAD_Y, W, padR, ta) }))
               .filter((m) => m.g != null);
             if (!marks.length) return null;
             return (
@@ -914,7 +927,7 @@ export const PatternChart = memo(function PatternChart(
               9 / 21 cross diamonds last, so a cross is never hidden under the lines. Only under emaStyle="bold". */}
           {bold ? (
             <g className="pc-ema-bold">
-              {(['ema21', 'ema9'] as const).flatMap((tone) => (tile.curves || [])
+              {(['ema21', 'ema9'] as const).flatMap((tone) => (layers.curves || [])
                 .map((c, ci) => ({ c, ci }))
                 .filter(({ c }) => c.tone === tone)
                 .flatMap(({ c, ci }) => curveSegs(c).map((pts, si) => (
@@ -927,7 +940,7 @@ export const PatternChart = memo(function PatternChart(
           ) : null}
           {bold ? (
             <g className="pc-ema-cross-layer">
-              {(tile.markers || []).map((m, mi) => {
+              {(layers.markers || []).map((m, mi) => {
                 if (!isCross(m)) return null;
                 const i = markerIndex(bars, m.date);
                 if (i < 0) return null;

@@ -92,7 +92,7 @@
  * no rule, number or sentence: all of it is served. `floor_reached` is a COUNT flag, never printed as a verdict.
  * Shadow only. UNMEASURED.
  */
-import type { CmEmaBlink, CmTile } from './chartMaps';
+import type { CmAxis, CmEmaBlink, CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 import type { GgEntryMarks, GgNewMark } from './ggEntryMarks';
 import type { GgTapePayload } from '../components/GgEntryTape';
@@ -733,7 +733,10 @@ export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | 
   /** ✨ 2026-11-12 (entry marks §3.5): the served card blinker — drawn until its served `until`; absent → nothing. */
   new_mark?: GgNewMark | null;
   /** 🔀 2026-11-15 (SPEC blinker §3.4): the served 9/21 EMA cross blinker of the DRAWN frame — PatternChart prints it. */
-  ema_blink?: CmEmaBlink | null };
+  ema_blink?: CmEmaBlink | null;
+  /** 📺 2026-11-17: the served pre-market-to-close clock axis (tab.card_axis — the Watch's build.axis); absent on GG1 and 🎾 tail
+   *  cards. The board hands it to PatternChart on every card, 📺 on or off (his call #2). */
+  axis?: CmAxis | null };
 
 /** 💋 2026-11-11 (kiss rvol spec addendum): the served toggle block — the 💋 sub only. Every word SERVED (the FE types
  *  none): `label` = the chip, `hint` = its native title, `hidden_text_template` = the line printed under the chip while it
@@ -966,7 +969,7 @@ export function ggQuery(q: { sub?: GgSub | null; tf?: GgTf | null; focus?: strin
 }
 
 /** The re-read cadence the SERVER sets (`session.refresh_sec`, 300 inside the
- *  04:00–20:00 window, 0 when closed). null = no timer. */
+ *  4 AM–8 PM ET window, 0 when closed). null = no timer. */
 export function ggRefreshMs(board: unknown): number | null {
   const s = (board as GgBoard | null | undefined)?.session?.refresh_sec;
   return typeof s === 'number' && Number.isFinite(s) && s > 0 ? s * 1000 : null;
@@ -1231,3 +1234,32 @@ export function saveGgKissFilter(on: boolean): void {
     /* losing it must cost nothing */
   }
 }
+
+/** 📺 2026-11-17 — Ajay 11-16: "the graphs in the videos are so clear like I can easily identify the trend / Why aren't our regular
+ *  ones like that"; 11-17 "Yes to all defaults" → ON by default. Stored '1' = ON, '0' = OFF; absent or a blocked store = the default
+ *  (ON); ANY other value = OFF — strict, so a future value never reads as ON. Key in the gg-kiss-filter style.
+ *  Per viewer, per device (the 💋 precedent). Display only — no GET, no query param, no fetch reads it. */
+export const GG_LOOK_LS = 'gg-video-look';
+export const GG_LOOK_DEFAULT_ON = true;
+export function loadGgLook(): boolean {
+  try {
+    const v = window.localStorage.getItem(GG_LOOK_LS);
+    return v === null ? GG_LOOK_DEFAULT_ON : v === '1';
+  } catch {
+    return GG_LOOK_DEFAULT_ON;
+  }
+}
+export function saveGgLook(on: boolean): void {
+  try {
+    window.localStorage.setItem(GG_LOOK_LS, on ? '1' : '0');
+  } catch {
+    /* losing it must cost nothing */
+  }
+}
+/** The boards that offer 📺 (his call #3): the 🚩 5-min tab and 🧪 Audited; the 1-minute page later. */
+export const GG_VIDEO_LOOK_VKEYS: ReadonlyArray<string> = ['gajjala', 'gajjala_audited'];
+export const GG_LOOK_VIDEO_LABEL = '📺 Video view';
+/** Says "4 AM", never the clock literal — the main-session contract greps this file for a second axis engine.
+ *  Names the 🎾 exception — 138 of 141 read docs carry a prior tail, so the 🎾 sub he reads most does NOT get the clock axis or the
+ *  taller chart. */
+export const GG_LOOK_VIDEO_TITLE = 'Draw the cards like the replay videos: from the 4 AM pre-market open to the close with room on the right, 9 / 21 EMA over the candles, trigger and stop only, dark ground, taller chart. The 🎾 Reversal Squeeze card keeps its prior-session tail and its height, one slot per bar as today. Display only — no rule, alert or ring changes. Tap to turn off.';

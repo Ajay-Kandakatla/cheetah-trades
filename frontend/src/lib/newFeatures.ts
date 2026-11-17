@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Also the graphs in the videos are so clear like I can easily identify the trend" · "Why aren't our
+  // regular ones like that". 2026-11-17: "Yes to all defaults". 🚩 5-min + 🧪 Audited cards: the served pre-market-open → close axis
+  // on every card (the 👀 Watch's ONE engine) and the 📺 Video view toggle, ON by default. Display only, UNMEASURED. The 🎾 exception
+  // is named — 138 of 141 read docs carry a prior tail. Doc docs/gajjala/video_view_2026_11_17.md.
+  {
+    id: 'chart-maps-gajjala-video-view-2026-11-17',
+    label: '📺 Video view on 🚩 Gajjala cards — you said: “the graphs in the videos are so clear like I can easily identify the trend” and “Why aren’t our regular ones like that”. Every 5-min and 🧪 card now runs from the 4 AM pre-market open to the close with room on the right, like the replays — except the 🎾 Reversal Squeeze card, which keeps its prior-session tail and its height. 📺 Video view is on: yellow 9 / purple 21 EMA over the candles, only the trigger and stop lines, dark ground, taller chart. Tap 📺 Video view to turn it off. Display only: no rule, alert or ring changed.',
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-16, verbatim: "Also when I click on a card from any of the Gajjala I would like us to open the 3 chart extension
   // like in the Watch list... Also put a SEPA page link for it separaetely on the card I I want to but default its 3 chart
   // extension with 1 min, 3 min and 5 mins" · "Actually instead of 3 mins make it 15 mins timeframe". A click on any 🚩 card

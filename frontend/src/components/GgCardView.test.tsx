@@ -158,3 +158,76 @@ describe('GgCardView — the GET cadence [C1]', () => {
     expect(screen.queryByText(GGC_FETCH_FAILED)).toBeNull();
   });
 });
+
+/* 📺 2026-11-17 (video view spec §3.4 / WP-D, his call #4): the ⤢ view follows the board's toggle — under look="video" no 🧪
+ * band and no ➖ diamonds in any frame, the bold EMAs stay (the frames were already bold), the A+ tag stays. NEGATIVES: no look
+ * → the band on every frame and the diamonds on the card's frame, exactly as today; the frames GET count never moves with look. */
+describe('GgCardView — 📺 look="video"', () => {
+  const planCard = (sym: string): GgTile => ({
+    ...card(sym),
+    lines: [{ label: 'TRIGGER 4.15', price: 4.15, tone: 'buy' }, { label: 'STOP 3.95', price: 3.95, tone: 'stop' }],
+    bands: [{ kind: 'gg_entry', lo: 4.0, hi: 4.05, label: '🧪 entry' }],
+    markers: [
+      { date: '2026-11-13 04:10', kind: 'ema_cross_up', label: 'served cross up' },
+      { date: '2026-11-13 05:50', kind: 'ema_cross_dn', label: 'served cross dn' },
+      { date: '2026-11-13 07:30', kind: 'buy', label: 'A+' },
+    ],
+  } as unknown as GgTile);
+  const lookView = (sym: string, seq: number, look?: 'video', c: GgTile = planCard(sym)) => (
+    <MemoryRouter>
+      <GgCardView card={c} at={sym} variant="gajjala" boardSeq={seq} onClose={() => {}} onStep={null} look={look} />
+    </MemoryRouter>
+  );
+  const frameEl = (sym: string, tf: string) => screen.getByTestId(`ggw-frame-${sym}-${tf}`);
+
+  it('no [data-band-kind] and no .pc-ema-cross in any frame; .pc-ema-bold and the A+ tag stay', async () => {
+    render(lookView('PFAI', 1, 'video'));
+    await waitFor(() => expect(svgIn('PFAI', '1m')).not.toBeNull());
+    for (const tf of GGC_STRETCH_ORDER) {
+      const el = frameEl('PFAI', tf);
+      expect(el.querySelectorAll('[data-band-kind]'), tf).toHaveLength(0);
+      expect(el.querySelectorAll('.pc-ema-cross'), tf).toHaveLength(0);
+      expect(el.querySelector('.pc-ema-bold'), tf).not.toBeNull();
+    }
+    expect([...frameEl('PFAI', '5m').querySelectorAll('text')].some((t) => t.textContent === 'A+')).toBe(true);
+  });
+
+  it('NEGATIVE: without look the band draws on every frame and the diamonds on the card\'s 5m frame, as today', async () => {
+    render(lookView('PFAI', 1));
+    await waitFor(() => expect(svgIn('PFAI', '1m')).not.toBeNull());
+    for (const tf of GGC_STRETCH_ORDER) {
+      expect(frameEl('PFAI', tf).querySelectorAll('[data-band-kind="gg_entry"]').length, tf).toBeGreaterThan(0);
+      expect(frameEl('PFAI', tf).querySelector('.pc-ema-bold'), tf).not.toBeNull();
+    }
+    expect(frameEl('PFAI', '5m').querySelectorAll('.pc-ema-cross')).toHaveLength(2);
+    expect(frameEl('PFAI', '15m').querySelectorAll('.pc-ema-cross')).toHaveLength(0);
+    expect(frameEl('PFAI', '1m').querySelectorAll('.pc-ema-cross')).toHaveLength(0);
+    expect([...frameEl('PFAI', '5m').querySelectorAll('text')].some((t) => t.textContent === 'A+')).toBe(true);
+  });
+
+  it('NEGATIVE: look={undefined} renders the same frames HTML as no look prop at all', async () => {
+    const a = render(lookView('PFAI', 1));
+    await waitFor(() => expect(svgIn('PFAI', '1m')).not.toBeNull());
+    const plain = screen.getByTestId('ggw-stretch-tile-PFAI').innerHTML;
+    a.unmount();
+    render(
+      <MemoryRouter>
+        <GgCardView card={planCard('PFAI')} at="PFAI" variant="gajjala" boardSeq={1} onClose={() => {}} onStep={null} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(svgIn('PFAI', '1m')).not.toBeNull());
+    expect(screen.getByTestId('ggw-stretch-tile-PFAI').innerHTML).toBe(plain);
+  });
+
+  it('NEGATIVE: toggling look never re-GETs — the frames GET count is unchanged by look', async () => {
+    const r = render(lookView('PFAI', 1));
+    await waitFor(() => expect(svgIn('PFAI', '1m')).not.toBeNull());
+    r.rerender(lookView('PFAI', 1, 'video'));
+    await act(async () => {});
+    expect(frameEl('PFAI', '5m').querySelectorAll('.pc-ema-cross')).toHaveLength(0);
+    r.rerender(lookView('PFAI', 1));
+    await act(async () => {});
+    expect(frameEl('PFAI', '5m').querySelectorAll('.pc-ema-cross')).toHaveLength(2);
+    expect(gets()).toEqual(['PFAI']);
+  });
+});

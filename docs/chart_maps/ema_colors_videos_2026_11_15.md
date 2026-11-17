@@ -12,3 +12,5 @@ also can you switch its up in the app please..  Also make the lines a little mor
   LiveCandlesChart 1 → 2 px. Other curves (Keltner, 20 / 200 SMA) unchanged.
 - Note: the 200 SMA stays gold (#c9a227) — close in hue to the new yellow 9; the 20 SMA stays mint.
 - Display only. No scan, gate, sort or alert reads a colour.
+
+- 2026-11-17: the 🚩 5-min and 🧪 Audited cards now draw these colours bold OVER the candles by default (📺 Video view toggle) — see docs/gajjala/video_view_2026_11_17.md.

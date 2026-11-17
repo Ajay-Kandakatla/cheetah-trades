@@ -12,6 +12,7 @@
  * UNMEASURED — a chart view is information, not an entry. */
 import type { GgTile } from './gajjala';
 import { parseFrame, type GgwFrame, type GgwRow } from './gajjalaWatch';
+import { videoLayers } from './videoLook';
 
 /** The frames route base (== backend card_frames.API_BASE — a backend source-read test pins equality). */
 export const GGC_PATH = '/chart-maps/gajjala/frames';
@@ -52,11 +53,15 @@ export function parseGgc(raw: unknown): GgcPayload | GgcError | null {
 
 /** The card's plan on the served frames: `lines` + `bands` of the card on EVERY frame (prices, frame-free); `markers`
  *  ONLY on the frame whose tf === card.tf (PatternChart maps them by date — a mark outside the frame's bars drops). The
- *  head line = the served `text` (no bars at all), else the card's served plan line, else none. */
-export function ggcRow(card: GgTile, p: GgcPayload): GgwRow {
-  const lines = Array.isArray(card.lines) ? card.lines : [];
-  const bands = Array.isArray(card.bands) ? card.bands : [];
-  const markers = Array.isArray(card.markers) ? card.markers : [];
+ *  head line = the served `text` (no bars at all), else the card's served plan line, else none.
+ *  📺 2026-11-17 (video view spec §3.4, his call #4): `look === 'video'` strips the overlay through the SAME
+ *  lib/videoLook.videoLayers the cards use — no 🧪 band, no ➖ diamonds; BUY / STOP / now + the A+ tag kept. `look`
+ *  absent → the card's own `lines` / `bands` / `markers` references, byte-identical to before. */
+export function ggcRow(card: GgTile, p: GgcPayload, look?: 'video'): GgwRow {
+  const src = look === 'video' ? videoLayers(card) : card;
+  const lines = Array.isArray(src.lines) ? src.lines : [];
+  const bands = Array.isArray(src.bands) ? src.bands : [];
+  const markers = Array.isArray(src.markers) ? src.markers : [];
   return {
     symbol: p.symbol,
     state: p.text ? 'no_bars' : 'ok',

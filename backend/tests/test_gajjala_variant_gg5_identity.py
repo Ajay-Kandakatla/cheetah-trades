@@ -95,6 +95,17 @@ wording only; every other entry is the BOARD golden alone):
   changed, 0 removed, every one under <mode>/all_strategies/table: the head {key si, label "Short interest"} LAST (2),
   si_text / si_title / si_stale / si_asof = null on all 6 rows (24), si_head_title + si_fault_text (2) — per mode. The 1-minute
   golden does not move (it builds no table) (docs/gajjala/all_table_short_interest_2026_11_16.md).
+  2026-11-17 — Ajay "Also the graphs in the videos are so clear like I can easily identify the trend" / "Why aren't our
+  regular ones like that", then "Yes to all defaults" (the 04:00 → close clock axis on EVERY 🚩 5-min and 🧪 card, reusing
+  gajjala_watch.build.axis — tab.card_axis): BOARD only (WRITES byte-identical, sha1 6093b1ab… — display only, nothing
+  written; the 1-minute golden byte-identical, sha1 b22927f7… — GG1 serves no axis). BOARD 12831 -> 13487 leaves (+656),
+  ALL ADDED, 0 changed, 0 removed, every one under …/tiles/<n>/axis: the one key `axis` (41 leaves, slots 144, to_et
+  16:00) on the 16 setup / 🧠 tiles — 2 per sub on bull_flag, horizontal_fade, kiss_fly and potential, both modes (the
+  spec's "8" counted sub boards, not tiles). The golden's reversal_squeeze / premarket / postmarket subs hold 0 tiles, so
+  ☀️ 🌙 🎾 are covered by tests/test_gajjala_card_axis_2026_11_17.py, not by this golden. No tile reordered; order_key,
+  counts and sorts byte-equal (the same file builds the board with card_axis off and pins equality minus `axis`). Same
+  check on the FE fixtures by their own `-k golden` recipes, `axis` ADDED only: on_open 2177 -> 2261 (+84, 2 tiles),
+  potential 3378 -> 3884 (+506, 11 tiles) (docs/gajjala/video_view_2026_11_17.md).
 """
 from __future__ import annotations
 

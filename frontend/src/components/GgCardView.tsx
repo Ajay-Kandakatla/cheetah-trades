@@ -35,7 +35,7 @@ type Load =
 
 const NO_FRAMES = { from_session: null, as_of_et: null, stale: false, frames: [], rang: [] };
 
-export function GgCardView({ card, at, variant, boardSeq, onClose, onStep }: {
+export function GgCardView({ card, at, variant, boardSeq, onClose, onStep, look }: {
   /** The OPEN card (the board's drawn tile) — its lines / bands / markers / plan line overlay the frames. */
   card: GgTile;
   /** The open symbol. */
@@ -47,6 +47,9 @@ export function GgCardView({ card, at, variant, boardSeq, onClose, onStep }: {
   onClose: () => void;
   /** null with one card (the Watch rule: no ◀ ▶). */
   onStep: ((d: -1 | 1) => void) | null;
+  /** 📺 the board's toggle (2026-11-17); the frames are already bold + dark + on the served axis, so the look only strips
+   *  the overlay: no 🧪 band, no ➖ diamonds, BUY/STOP/now + the A+ tag kept. Never a GET input. */
+  look?: 'video';
 }) {
   const phone = usePhone();
   const [load, setLoad] = useState<Load | null>(null);
@@ -75,11 +78,11 @@ export function GgCardView({ card, at, variant, boardSeq, onClose, onStep }: {
   const cur = load && load.at === at ? load : null;
   const payload = cur && cur.kind === 'ok' ? cur.p : null;
   const row = useMemo<GgwRow>(() => {
-    if (payload) return ggcRow(card, payload);
+    if (payload) return ggcRow(card, payload, look);
     if (cur && cur.kind === 'error') return { symbol: at, state: 'error', text: cur.reason ?? GGC_FETCH_FAILED, ...NO_FRAMES };
     if (cur && cur.kind === 'failed') return { symbol: at, state: 'error', text: GGC_FETCH_FAILED, ...NO_FRAMES };
     return { symbol: at, state: 'loading', text: null, ...NO_FRAMES };
-  }, [card, payload, cur, at]);
+  }, [card, payload, cur, at, look]);
 
   /* the live tail — the board's own stream, folded per (symbol, frame) on the served grid */
   const [live, setLive] = useState<GgwLiveMap>({});

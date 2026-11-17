@@ -202,6 +202,7 @@ import {
 import type { CmBand, CmTapeSession } from '../lib/chartMaps';
 import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
+import { VIDEO_LOOK_H } from '../lib/videoLook';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
@@ -211,6 +212,7 @@ import {
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
+  GG_LOOK_VIDEO_LABEL, GG_LOOK_VIDEO_TITLE, GG_VIDEO_LOOK_VKEYS, loadGgLook, saveGgLook,
   ggEmaCrossLine, type GgEmaCross,
   ggRunBasesLine, type GgRunBases,
   type GgBoard, type GgBrokerFlags, type GgDay2Block, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
@@ -551,6 +553,18 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const [kissOn, setKissOn] = useState<boolean>(() => loadGgKissFilter());
   const kissBlock = ggKissFilterBlock(board, activeSub);
   const kissSplit = ggKissFilterSplit(patchedTiles, kissBlock != null && kissOn);
+  /* 📺 2026-11-17 (Ajay 11-16: "the graphs in the videos are so clear like I can easily identify the trend" · "Why aren't our
+   * regular ones like that"; 11-17 "Yes to all defaults"): the per-viewer Video view toggle, ON by default, remembered in
+   * localStorage like 💋 (lib/gajjala.ts loadGgLook). Offered on the 🚩 5-min tab and 🧪 Audited only (his call #3). Display
+   * only — no GET, no query param, no fetch reads it; the room POST, the live poll and the served order are untouched. */
+  const [look, setLook] = useState<boolean>(() => loadGgLook());
+  const lookAllowed = GG_VIDEO_LOOK_VKEYS.includes(vkey);
+  const lookOn = look && lookAllowed;
+  const toggleLook = () => {
+    const next = !look;
+    setLook(next);
+    saveGgLook(next);
+  };
   /* The live-patched cards the grid DRAWS (every card unless the 💋 toggle is ON), in the served order. */
   const liveTiles = kissSplit.visible;
   /* ⤢ 2026-11-16 (ggcard3 §3.6) — Ajay: "when I click on a card from any of the Gajjala I would like us to open the 3 chart
@@ -636,7 +650,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
   return (
     <GgVariantContext.Provider value={vkey}>
-    <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'} data-variant={vkey}>
+    <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'} data-variant={vkey}
+         data-look={lookOn ? 'video' : undefined}>
       {/* (0) 🚩 2026-10-27: the 1-minute page's SERVED title + honesty line (variant.served_block) — verbatim; absent on
           🚩 Gajjala's, so nothing prints there. */}
       {servedText(board?.variant?.title) ? (
@@ -796,6 +811,13 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                 {s.label}
               </button>
             ))}
+            {/* 📺 the Video view toggle — a wrapping .cm-phase-btn after the sorts; 🚩 5-min + 🧪 Audited only. */}
+            {lookAllowed ? (
+              <button type="button" data-testid="gg-look-video" aria-pressed={lookOn} title={GG_LOOK_VIDEO_TITLE}
+                      className={`cm-phase-btn gg-look-btn${lookOn ? ' cm-phase-on' : ''}`} onClick={toggleLook}>
+                {GG_LOOK_VIDEO_LABEL}
+              </button>
+            ) : null}
           </div>
           {/* (5b) 🧠 this setup's own potentials — setup subs only; nothing on an older API. */}
           {isGgSetup(activeSub) && board.potential ? (
@@ -878,7 +900,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     <GgNewMark mark={t.new_mark} sym={t.symbol} />
                   </div>
                   {t.bars?.length ? (
-                    <PatternChart tile={t} onOpenView={openView}
+                    /* 📺 his call #2: the served clock axis on every card, 📺 on or off; the 🎾 card (the 🎾 sub and a 🧠 card
+                       of a 🎾 read, both .gg-wide) keeps the 190 default height under 📺. */
+                    <PatternChart tile={t} onOpenView={openView} axis={t.axis ?? null}
+                                  look={lookOn ? 'video' : undefined}
+                                  height={lookOn && t.gajjala?.setup !== 'reversal_squeeze' ? VIDEO_LOOK_H : undefined}
                                   outerChips={outerChipsFor(GG_OUTER_CHIPS, t, {
                                     enterable: row?.enterable,
                                     explosive: row?.explosive,
@@ -917,7 +943,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           </div>
           {/* ⤢ the open card's three charts (a portal on <body>) — mounted with the board's landed-GET counter. */}
           {cardView && viewTile ? (
-            <GgCardView card={viewTile} at={cardView} variant={vkey} boardSeq={boardSeq} onClose={closeView}
+            <GgCardView card={viewTile} at={cardView} variant={vkey} boardSeq={boardSeq} look={lookOn ? 'video' : undefined} onClose={closeView}
                         onStep={liveTiles.length > 1 ? stepView : null} />
           ) : null}
           {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of

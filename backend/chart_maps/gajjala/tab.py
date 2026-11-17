@@ -1142,6 +1142,54 @@ def _wide_frame(today: dict, prior: list, prior_curves, prior_vol) -> dict:
     return {"tf": today["tf"], "bars": bars, "curves": curves, "vol_avg": vol}
 
 
+CARD_AXIS_VARIANT_KEYS = (V.GG5.key, V.GGA.key)   # 📺 2026-11-17 (his call #3): the 1-minute page later (GG1M_TILE_BARS_MAX cap)
+CARD_AXIS_DROP_LOG = "card_axis dropped %s %s %s: %s"   # sym, tf, day, reason — DEBUG; the EOD audit greps it
+
+
+def _iso_day(d: str) -> bool:
+    try:
+        date.fromisoformat(d)
+    except ValueError:
+        return False
+    return True
+
+
+def card_axis(fr: dict, v=None, *, sym: str = "") -> Optional[dict]:
+    """📺 2026-11-17 — the served 04:00 ET axis of ONE drawn card frame (`fr` = _tile_frame's {tf, bars, …}): the 👀 Watch's ONE
+    engine gajjala_watch.build.axis + axis_end over the card's own closed bars (end = the regular close, or the extended close
+    once a served bar closes after it; half days per alerts._closes). None (NO key served) when: the variant is not in
+    CARD_AXIS_VARIANT_KEYS (by design, silent); the frame has no bars (silent); the bars span more than one session date (the
+    🎾 prior tail — his call #6; by design, silent); or a bar is junk / its slot cannot be computed — a stray bar: logged ONCE at
+    DEBUG as CARD_AXIS_DROP_LOG with `sym`, never a partial axis. Display only — no sort, count, gate or write reads it.
+    Ajay 2026-11-16: "the graphs in the videos are so clear like I can easily identify the trend" → 11-17 "Yes to all defaults"."""
+    vv = V.of(v)
+    if vv.key not in CARD_AXIS_VARIANT_KEYS:
+        return None
+    raw = fr.get("bars") or []
+    bars = [b for b in raw if isinstance(b, dict)]
+    tf = fr.get("tf")
+    if not bars:
+        return None
+    days = [str(b.get("t") or "")[:10] for b in bars]
+    if len(bars) != len(raw) or any(len(d) != 10 or not _iso_day(d) for d in set(days)):
+        log.debug(CARD_AXIS_DROP_LOG, sym, tf, days[-1], "junk bar")
+        return None
+    day = days[-1]
+    if any(d != day for d in days):
+        return None                                                  # two dates = the 🎾 tail rule (his call #6), not a defect
+    from chart_maps.gajjala_watch import build as WB          # lazy — build imports this module at load (build.py:32)
+    ax = WB.axis(day, V.frame_minutes(tf, vv), bars, WB.axis_end(day, bars))
+    xs = ax.get("x") or []
+    if len(xs) != len(bars):
+        log.debug(CARD_AXIS_DROP_LOG, sym, tf, day, "x length %d != bars %d" % (len(xs), len(bars)))
+        return None
+    bad = [x for x in xs if not isinstance(x, int) or isinstance(x, bool) or x < 0 or x >= ax["slots"]]
+    if bad:
+        log.debug(CARD_AXIS_DROP_LOG, sym, tf, day, "slot out of range %r" % (bad[:3],))
+        return None
+    return ax
+
+
 def chart_href(sym: str, tf: Optional[str], v=None) -> str:
     """The card's click target (Ajay 2026-11-06): the house ticker page's Supply / Demand tab (chart_maps.board._href,
     unchanged for every other board) opened on the Support-tab frame of the frame the card is DRAWN on — `tf` when it
@@ -1519,6 +1567,9 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
             "why": read.get("reason") or "", "badges": [], "curves": fr["curves"],
             "ema_blink": ema_blink_of(fr),                           # 🔀 2026-11-15 — the DRAWN frame, every setup
             "gajjala": g}
+    ax = card_axis(fr, vv, sym=sym)                                  # 📺 2026-11-17 — the 04:00 ET axis (absent = none)
+    if ax is not None:
+        tile["axis"] = ax
     if kf_rank and setup == "kiss_fly":                              # 💋 the toggle's flag (2026-11-11 addendum), served
         tile["kiss_now"] = kiss_now_of(read)
     if wide:                                                         # 🎾 GG's chart marks (2026-11-08)
@@ -1642,11 +1693,15 @@ def _list_tile(sym: str, sub: str, doc: Optional[dict], tf: str, *, scan_row: di
     g.update(extra)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
-    return {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr.get("tf"), v), "bars": fr["bars"],
-            "vol_avg": fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None, "bands": [],
-            "lines": [], "markers": [], "stats": stats, "why": "", "badges": [], "curves": fr["curves"],
-            "ema_blink": ema_blink_of(fr),                           # 🔀 2026-11-15 — None when the row has no bars
-            "gajjala": g}
+    t = {"symbol": sym, "name": doc.get("name"), "href": chart_href(sym, fr.get("tf"), v), "bars": fr["bars"],
+         "vol_avg": fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None, "bands": [],
+         "lines": [], "markers": [], "stats": stats, "why": "", "badges": [], "curves": fr["curves"],
+         "ema_blink": ema_blink_of(fr),                              # 🔀 2026-11-15 — None when the row has no bars
+         "gajjala": g}
+    ax = card_axis(fr, v, sym=sym)                                   # 📺 2026-11-17 — the 04:00 ET axis (absent = none)
+    if ax is not None:
+        t["axis"] = ax
+    return t
 
 
 # ── ☀️ Premarket (K9) / 🌙 Post-market (K10) — WP2's engines over what the pass stored ─────────────────────────────

@@ -68,7 +68,23 @@ def test_only_gajjala_run_py_names_the_watch():
     # extra_tabs()/quote_tabs() — the watch's live tab. Widened from ["run.py"].
     # 2026-11-16 (spec ggcard3 §3.1, WP-C): card_frames.py — the card three-chart view, display-only — imports the
     # Watch's axis/stale readers (gajjala_watch.build + .payload). Widened again; nothing else may join.
-    assert hits == ["card_frames.py", "live_events.py", "run.py"]
+    # 📺 2026-11-17 (spec ggvideo, WP gg-card-axis): tab.card_axis lazily imports gajjala_watch.build (axis +
+    # axis_end) for the card's own time axis — display-only. Widened to include tab.py; nothing else may join.
+    assert hits == ["card_frames.py", "live_events.py", "run.py", "tab.py"]
+
+
+def test_NEGATIVE_tab_imports_only_the_watch_build_reader_never_its_switch_or_store():
+    # 📺 2026-11-17 (spec ggvideo, WP gg-card-axis): tab.py may name the Watch ONLY through gajjala_watch.build.
+    tree = ast.parse((GG_DIR / "tab.py").read_text(encoding="utf-8"))
+    mods = sorted({f"{n.module}.{a.name}" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+                   and (n.module or "").startswith("chart_maps.gajjala_watch") for a in n.names}
+                  | {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+                     if a.name.startswith("chart_maps.gajjala_watch")})
+    assert mods == ["chart_maps.gajjala_watch.build"]
+    src = (GG_DIR / "tab.py").read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import constants", "gajjala_watch import loop",
+                   "gajjala_watch import payload", "WCO."):
+        assert banned not in src
 
 
 def test_NEGATIVE_card_frames_imports_only_the_watch_readers_never_its_switch_or_store():
