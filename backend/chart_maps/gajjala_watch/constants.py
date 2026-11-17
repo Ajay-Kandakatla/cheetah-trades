@@ -47,7 +47,8 @@ AUTO_MIN_VOLUME = GC.K11_MIN_SESSION_VOLUME        # GG's floor, the SAME number
 AUTO_VOLUME_SOURCES = ("scan", "tracker")          # [C2] the scan row, else GG5's tracker last.session_volume (K11's number)
 AUTO_REMOVE_STATES = ("back_under", "stop_printed")            # [C1] breakout_state.STATES — "not progressing" (HIS CALL #3)
 AUTO_KEEP_STATES = ("waiting", "broke_vol", "broke_quiet", "broke_unjudged")  # [C1] ⏸ = holding above the trigger → kept
-AUTO_DROP_GRACE_SEC = GC.PASS_CADENCE_SEC          # [C3] a potential NOWHERE this long before "dropped" removes it (HIS CALL #9)
+AUTO_DROP_GRACE_SEC = GC.PASS_CADENCE_SEC          # [C3] SUPERSEDED 2026-11-17 12:55 (accumulate): NOTHING reads it for removal
+                                                   # now — a lapsed name stays; kept for the old docs / tests only
 AUTO_REMOVED_SHOWN = AUTO_MAX_SYMBOLS              # [C3] the newest removals served (every event stays in the doc)
 AUTO_PUSH_MODES = GC.FADE_CROSS_PUSH_MODES         # ("off", "live")
 AUTO_PUSH_MODE = "off"                             # HIS CALL #4 — auto names never ring the 1-min cross push; "live" = his word

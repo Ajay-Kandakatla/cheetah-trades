@@ -22,14 +22,25 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every 👀 Watch row (his + 🤖)
+  // carries a served 🎯 A+ block when a 🚩 5-min / 1-min / 🧪 read today is A+, A+ (triggered) or A+, then stopped
+  // (payload.aplus_section, one projected find per store, 🧪 through audited_tab.overlay_reads). Display only, UNMEASURED.
+  // Doc docs/gajjala/watch_aplus_tag_2026_11_17.md.
+  {
+    id: 'chart-maps-gajjala-watch-aplus-tag-2026-11-17',
+    label: '🎯 A+ tag on 👀 Gajjala’s Watch — you said: “Also add an A+ tag on watch list as they become A+”. Any name on your watch — yours or 🤖 — gets a 🎯 A+ chip with the time as soon as a 🚩 5-min, 1-min or 🧪 card marks it A+ (it stays, saying “triggered” or “then stopped” after). Its ticker button gets a 🎯 too. Display only: no new alert.',
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-17, verbatim: "Can you add more stocks in to watch list basically I need portentials from Gajjals's 1 min
   // and regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing".
   // 🤖 auto section on 👀 Watch (chart_maps/gajjala_watch/auto.py, inside the minute loop): 🧠 potentials from 🚩 5-min,
-  // 1-min and 🧪 with today's volume ≥ GG's K11 floor; leaves on ↩️ / ✖️ or a potential nowhere for the pass clock. His names
-  // never touched; auto names never ring a push. UNMEASURED. Doc docs/gajjala/watch_auto_potentials_2026_11_17.md.
+  // 1-min and 🧪 with today's volume ≥ GG's K11 floor; 12:55 ET same day he asked "keep adding more to watch list as they come in
+  // to Potentials intraday" → names build up all session, leave on ↩️ / ✖️ or ×; at the cap a current potential takes the seat of
+  // the oldest lapsed one. His names never touched; auto names never ring a push. UNMEASURED. Doc docs/gajjala/watch_auto_potentials_2026_11_17.md.
   {
     id: 'chart-maps-gajjala-watch-auto-potentials-2026-11-17',
-    label: '🤖 Auto names on 👀 Gajjala’s Watch — you said: “I need portentials from Gajjals’s 1 min and regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing”. Every minute in the pass window, 🧠 potentials from 🚩 5-min, 1-min and 🧪 with today’s volume at or over 1,000,000 shares (GG’s floor) are added after your names, tagged 🤖 with the board they came from, up to 18. A name leaves when its card reads ↩️ back under or ✖️ stop printed, or when no board lists it as a potential any more; ⏸ waiting above its trigger stays. Your own names are never touched. × on a 🤖 name keeps it off until tomorrow. 🤖 names never send a phone alert.',
+    label: '🤖 Auto names on 👀 Gajjala’s Watch — you said: “I need portentials from Gajjals’s 1 min and regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing” and “please keep adding more to watch list as they come in to Potentials intraday”. Every name that becomes a 🧠 potential on 🚩 5-min, 1-min or 🧪 today with at least 1,000,000 shares traded (GG’s floor) joins after your names, tagged 🤖 with its board — a potential right now first, then today’s earlier ones, up to 18. They stay all session; one leaves when its card reads ↩️ back under or ✖️ stop printed, when you tap ×, or — when the list is full — the oldest one whose potential lapsed makes room for a new live potential. Your own names are never touched. 🤖 names never send a phone alert.',
     addedAt: '2026-11-17',
     route: '/chart-maps?tab=gajjala_watch',
   },

@@ -242,6 +242,16 @@ export type GgwRowAuto = {
   volume_text: string | null; volume_source: string | null;
   added_et: string | null; added_text: string | null; leaving_text: string | null; remove_title: string | null;
 };
+/** 🎯 2026-11-17 (spec ggwaplus) — Ajay: "Also add an A+ tag on watch list as they become A+". One served A+ read of the
+ *  name on a Gajjala board this session (backend payload.aplus_items): `source_word` / `setup_label` / `word` / `at_et`
+ *  are served words. Display only — UNMEASURED. */
+export type GgwAplusItem = {
+  source: string; source_word: string | null; setup: string; setup_label: string | null; state: string;
+  word: string | null; at_et: string | null;
+};
+/** 🎯 The row's served A+ block: `text` = the chip (the first item's clock already inside it), `title` = its hover,
+ *  `tag` = the pager prefix. null when no board reads the name A+ (and on every row of an older server). */
+export type GgwRowAplus = { tag: string; text: string; title: string | null; items: GgwAplusItem[] };
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
@@ -249,6 +259,8 @@ export type GgwRow = {
   /** 🤖 null on HIS rows (and on every row of an older server). Optional ONLY so the 🚩 card view's own row builders
    *  (lib/gajjalaCardView.ggcRow, GgCardView) stay valid — parseGgw always sets it. */
   auto?: GgwRowAuto | null;
+  /** 🎯 null when no A+ (optional for the same reason as `auto` — parseGgw always sets it). */
+  aplus?: GgwRowAplus | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -375,6 +387,21 @@ function parseRowAuto(v: unknown): GgwRowAuto | null {
   };
 }
 
+/** 🎯 A row's A+ block: an object with a served `tag` and `text`, else null (junk never draws a chip). An item
+ *  without a served `source` / `setup` / `state` is dropped. */
+export function parseRowAplus(v: unknown): GgwRowAplus | null {
+  if (!isObj(v) || !str(v.tag) || !str(v.text)) return null;
+  return {
+    tag: v.tag, text: v.text, title: str(v.title),
+    items: (Array.isArray(v.items) ? v.items : [])
+      .filter((it: unknown) => isObj(it) && str(it.source) && str(it.setup) && str(it.state))
+      .map((it: any) => ({
+        source: it.source, source_word: str(it.source_word), setup: it.setup, setup_label: str(it.setup_label),
+        state: it.state, word: str(it.word), at_et: str(it.at_et),
+      })),
+  };
+}
+
 /** 🤖 The board's auto block: an object with a served `state`, else null. A removal without `text_full` is dropped. */
 function parseAuto(v: unknown): GgwAuto | null {
   if (!isObj(v) || !str(v.state)) return null;
@@ -414,6 +441,7 @@ function parseRow(v: unknown): GgwRow | null {
       .filter((r: unknown) => isObj(r) && str(r.text))
       .map((r: any) => ({ frame: String(r.frame ?? ''), at_et: str(r.at_et), text: r.text })),
     auto: parseRowAuto(v.auto),
+    aplus: parseRowAplus(v.aplus),
   };
 }
 

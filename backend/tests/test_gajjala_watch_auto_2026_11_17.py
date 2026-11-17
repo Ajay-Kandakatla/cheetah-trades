@@ -103,15 +103,22 @@ def scan(sym, vol, d=S):
     return {"_id": f"{d.isoformat()}|{sym}", "date": d.isoformat(), "symbol": sym, "last": {"volume": vol}}
 
 
-def tracker(sym, vol, at_=T0, setup="bull_flag", d=S):
-    return {"_id": ST.potential_key(d, sym, setup), "date": d.isoformat(), "symbol": sym, "setup": setup,
-            "last": {"at": utc(at_), "session_volume": vol}}
+def tracker(sym, vol, at_=T0, setup="bull_flag", d=S, first_seen=None, first_kind="armed"):
+    t = {"_id": ST.potential_key(d, sym, setup), "date": d.isoformat(), "symbol": sym, "setup": setup,
+         "last": {"at": utc(at_), "session_volume": vol}}
+    if first_seen is not None:                                  # 2026-11-17 12:55 accumulate: the add order
+        t.update(first_seen=utc(first_seen), first_seen_et=PT._hhmm(first_seen), first_kind=first_kind)
+    return t
 
 
-def stores(gg5=(), gg1=(), scans=(), trackers=(), *, gg5_fail=False, gg1_fail=False, trackers_fail=False):
+def stores(gg5=(), gg1=(), scans=(), trackers=(), *, gg5_fail=False, gg1_fail=False, trackers_fail=False,
+           trackers1=(), trackers1_fail=False):
+    """2026-11-17 12:55 (accumulate): the GG1 store carries its own 🧠 tracker too (`trackers1`) — the engine reads
+    both stores' trackers each step."""
     g5 = ST.GajjalaStore(colls={ST.READS: FakeColl(gg5, fail=gg5_fail), ST.SCAN: FakeColl(scans),
                                 ST.POTENTIALS: FakeColl(trackers, fail=trackers_fail)})
-    g1 = ST.GajjalaStore(colls={ST.READS: FakeColl(gg1, fail=gg1_fail)}, variant=V.GG1)
+    g1 = ST.GajjalaStore(colls={ST.READS: FakeColl(gg1, fail=gg1_fail),
+                                ST.POTENTIALS: FakeColl(trackers1, fail=trackers1_fail)}, variant=V.GG1)
     return {V.GG5.key: g5, V.GG1.key: g1}
 
 
@@ -235,7 +242,9 @@ def test_C2_NEGATIVE_a_scan_row_under_the_floor_wins_over_a_louder_tracker():
 def test_C2_NEGATIVE_a_gg1_only_potential_without_any_number_is_refused_and_counted():
     db = fake_db()
     res = run(db, stores(gg1=[rdoc("LGHL")]))
-    assert res["added"] == [] and res["skipped"] == {"volume_unknown": 1, "under_floor": 0}
+    # PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §2): SKIPPED_KEYS gained "full" (appended) — the count dict carries it.
+    # PIN MOVED 2026-11-17 (Amendment A4): and "failed" (appended) — a ↩️ / ✖️ backlog name is counted, never added.
+    assert res["added"] == [] and res["skipped"] == {"volume_unknown": 1, "under_floor": 0, "full": 0, "failed": 0}
 
 
 def test_C2_NEGATIVE_an_unreadable_tracker_set_is_scan_only_and_never_raises():
@@ -301,8 +310,10 @@ def test_the_cap_keeps_the_loudest_and_a_louder_newcomer_never_displaces():
     res = run(db, stores(gg5=reads, scans=sc))
     assert res["n"] == C.AUTO_MAX_SYMBOLS == len(stored(db)["entries"])
     assert res["added"] == list(reversed(names))[:C.AUTO_MAX_SYMBOLS]
+    assert res["skipped"]["full"] == len(names) - C.AUTO_MAX_SYMBOLS                # 12:55: the overflow is counted
     res = run(db, stores(gg5=reads + [rdoc("LOUD")], scans=sc + [scan("LOUD", 9e9)]), now=T0 + timedelta(minutes=1))
     assert "LOUD" not in res["symbols"] and res["added"] == [] and res["n"] == C.AUTO_MAX_SYMBOLS
+    assert res["skipped"]["full"] == len(names) - C.AUTO_MAX_SYMBOLS + 1 and res["removed"] == []   # live: never out
 
 
 # ── [C4] frozen order ────────────────────────────────────────────────────────────────────────────────────────────
@@ -393,7 +404,9 @@ def _back():
     return stores(gg5=[rdoc("AIMD")], scans=[scan("AIMD", 5e6)])
 
 
-def test_C3_dropped_waits_for_the_grace_and_a_potential_again_clears_it():
+def test_C3_lapsed_is_stamped_kept_and_a_potential_again_clears_it():
+    """PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §2): the [C3] grace removal is GONE — Ajay "please keep adding more to
+    watch list as they come in to Potentials intraday". A lapsed name STAYS (stamped dropped_since, the lapsed word)."""
     db = fake_db(auto=auto_doc([entry("AIMD")]))
     res = run(db, _dropped())
     assert res["leaving"] == ["AIMD"] and res["symbols"] == ["AIMD"]
@@ -402,14 +415,10 @@ def test_C3_dropped_waits_for_the_grace_and_a_potential_again_clears_it():
     assert stored(db)["entries"][0]["dropped_since"] is None
     t1 = T0 + timedelta(seconds=120)
     run(db, _dropped(), now=t1)
-    res = run(db, _dropped(), now=t1 + timedelta(seconds=C.AUTO_DROP_GRACE_SEC - 60))
-    assert res["symbols"] == ["AIMD"] and stored(db)["entries"][0]["dropped_since"] == utc(t1)
-    res = run(db, _dropped(), now=t1 + timedelta(seconds=C.AUTO_DROP_GRACE_SEC))
-    assert res["symbols"] == [] and res["removed"][0]["reason"] == "dropped"
-    rec = stored(db)["removed"][0]
-    word = PT.state_word("partial", None)
-    assert rec["text"] == A._words().AUTO_DROPPED_TEXT.format(grace_min=C.AUTO_DROP_GRACE_SEC // 60, word=word)
-    assert str(C.AUTO_DROP_GRACE_SEC // 60) in rec["text"] and rec["state"] == "partial"
+    for extra in (C.AUTO_DROP_GRACE_SEC, C.AUTO_DROP_GRACE_SEC * 2, 3600):        # NEG: the old grace removes nothing
+        res = run(db, _dropped(), now=t1 + timedelta(seconds=extra))
+        assert res["symbols"] == ["AIMD"] and res["removed"] == [] and res["leaving"] == ["AIMD"]
+    assert stored(db)["entries"][0]["dropped_since"] == utc(t1) and stored(db)["removed"] == []
 
 
 def test_C3_NEGATIVE_the_aimd_flip_never_removes():
@@ -420,13 +429,14 @@ def test_C3_NEGATIVE_the_aimd_flip_never_removes():
     assert stored(db)["removed"] == []
 
 
-def test_C3_gone_from_a_non_empty_listed_set_is_the_graveyard_after_the_same_grace():
+def test_C3_gone_from_a_non_empty_listed_set_is_lapsed_and_stays():
+    """PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §2): off the scan = lapsed (graveyard) — it STAYS until made room for."""
     st = stores(gg5=[rdoc("GONE")], scans=[scan("OTHER", 5e6)])
     db = fake_db(auto=auto_doc([entry("GONE")]))
     res = run(db, st)
     assert res["leaving"] == ["GONE"]
     res = run(db, st, now=T0 + timedelta(seconds=C.AUTO_DROP_GRACE_SEC))
-    assert res["symbols"] == [] and PT.state_word("graveyard", None) in stored(db)["removed"][0]["text"]
+    assert res["symbols"] == ["GONE"] and res["removed"] == [] and stored(db)["removed"] == []
 
 
 def test_C3_every_removal_event_is_stored_and_returned():
@@ -726,11 +736,325 @@ def test_the_real_engine_inside_the_loop_adds_and_the_state_doc_says_so(monkeypa
     assert st["auto"]["added"] == ["AAA"] and st["n_names"] == 2 and stored(db)["entries"][0]["symbol"] == "AAA"
 
 
+# ── ACCUMULATE (2026-11-17 12:55 ET, spec ggwauto2) ──────────────────────────────────────────────────────────────
+# Ajay, verbatim: "please keep adding more to watch list as they come in to Potentials intraday".
+def _lapsed_read(sym, d=S):
+    return rdoc(sym, setups={"bull_flag": flat("bull_flag", "invalid")}, d=d)
+
+
+def test_ACC_a_tracker_only_lapsed_name_with_floor_volume_is_added_and_stays():
+    """PIN MOVED 2026-11-17 (Amendment A3): a tracker-only name lands with dropped_since = its tracker's last.at (the
+    real lapse time), not None — it reads "lapsed" from its first minute and the stamp never moves after."""
+    lapse = at(S, 9, 45)
+    st = stores(gg5=[_lapsed_read("TRK")], scans=[scan("TRK", 2e6)],
+                trackers=[tracker("TRK", 2e6, at_=lapse, setup="kiss_fly", first_seen=at(S, 9, 41),
+                                  first_kind="building")])
+    db = fake_db()
+    res = run(db, st)
+    assert res["added"] == ["TRK"] and res["reason"] is None and res["leaving"] == ["TRK"]
+    e = stored(db)["entries"][0]
+    assert e["sources"] == ["gajjala", "gga"] and e["setup"] == "kiss_fly" and e["kind"] == "building"
+    assert e["volume"] == 2e6 and e["volume_source"] == "scan" and e["dropped_since"] == utc(lapse)
+    for m in (1, 10, 60):
+        res = run(db, st, now=T0 + timedelta(minutes=m))
+        assert res["symbols"] == ["TRK"] and res["removed"] == [] and res["leaving"] == ["TRK"]
+    assert stored(db)["entries"][0]["dropped_since"] == utc(lapse)
+
+
+def test_ACC_a_gg1_tracker_only_name_is_tagged_one_minute_and_uses_the_gg5_tracker_number():
+    st = stores(gg1=[_lapsed_read("ONE")], trackers=[tracker("ONE", 1_500_000)],
+                trackers1=[tracker("ONE", None, first_seen=at(S, 9, 50))])
+    res = run(fake_db(), st)
+    assert res["added"] == ["ONE"]
+    st2 = stores(trackers1=[tracker("SOLO", None, first_seen=at(S, 9, 50))], scans=[scan("SOLO", 3e6)])
+    db = fake_db()
+    run(db, st2)
+    assert stored(db)["entries"][0]["sources"] == ["gajjala_1m"]
+
+
+@pytest.mark.parametrize("vol,key", [(999_999, "under_floor"), (None, "volume_unknown")])
+def test_ACC_NEGATIVE_a_tracker_only_name_under_the_floor_or_without_a_number_is_not_added(vol, key):
+    st = stores(trackers1=[tracker("LOW", None, first_seen=at(S, 9, 50))],
+                scans=[scan("LOW", vol)] if vol is not None else [])
+    db = fake_db()
+    res = run(db, st)
+    assert res["added"] == [] and res["skipped"][key] == 1 and stored(db) is None
+
+
+def test_ACC_NEGATIVE_a_tracker_only_name_off_a_non_empty_listed_set_is_not_added():
+    st = stores(scans=[scan("OTHER", 5e6)], trackers=[tracker("GONE", 5e6, first_seen=at(S, 9, 31))])
+    res = run(fake_db(), st)
+    assert res["added"] == [] and sum(res["skipped"].values()) == 0
+
+
+def test_ACC_NEGATIVE_his_name_and_his_dismissed_name_are_never_added_from_a_tracker():
+    trk = [tracker("AAA", 5e6, first_seen=at(S, 9, 31)), tracker("BBB", 5e6, first_seen=at(S, 9, 32)),
+           tracker("CCC", 5e6, first_seen=at(S, 9, 33))]
+    db = fake_db(manual=["AAA"], auto=auto_doc(dismissed=["BBB"]))
+    res = run(db, stores(scans=[scan(s, 5e6) for s in ("AAA", "BBB", "CCC")], trackers=trk))
+    assert res["added"] == ["CCC"]
+
+
+def test_ACC_the_add_order_is_current_potentials_first_then_trackers_newest_first():
+    """PIN MOVED 2026-11-17 (Amendment A1 — his "as they come in"): the CURRENT potentials go first in order_key order
+    (a tracker doc gives a current potential no place); then the tracker-only names first_seen DESCENDING (ties
+    symbol). Was: one first_seen-ascending order."""
+    reads = [rdoc("CUR"), rdoc("CUR2"), _lapsed_read("T1"), _lapsed_read("T2"), _lapsed_read("T3")]
+    trk = [tracker("T1", 2e6, setup="bull_flag", first_seen=at(S, 9, 40)),
+           tracker("T1", 2e6, setup="kiss_fly", first_seen=at(S, 9, 20), first_kind="building"),   # T1's earliest
+           tracker("T2", 2e6, first_seen=at(S, 9, 35)), tracker("T3", 2e6, first_seen=at(S, 9, 35)),
+           tracker("CUR2", 2e6, first_seen=at(S, 9, 10))]
+    sc = [scan(s, 2e6) for s in ("CUR", "T1", "T2", "T3")] + [scan("CUR2", 9e6)]
+    db = fake_db()
+    res = run(db, stores(gg5=reads, scans=sc, trackers=trk))
+    assert res["added"] == ["CUR2", "CUR", "T2", "T3", "T1"]
+    t1 = stored(db)["entries"][4]
+    assert t1["setup"] == "kiss_fly" and t1["kind"] == "building"                  # its EARLIEST doc's words
+    assert [e["dropped_since"] is None for e in stored(db)["entries"]] == [True, True, False, False, False]
+    cur2 = stored(db)["entries"][0]
+    assert cur2["kind"] == "armed" and cur2["volume"] == 9e6               # a current potential keeps its live words
+
+
+def test_ACC_the_tracker_read_is_one_projected_find_per_store_of_the_session_prefix():
+    st = stores(trackers=[tracker("AAA", 5e6, first_seen=at(S, 9, 31))], scans=[scan("AAA", 5e6), scan("OLD", 5e6)])
+    odd = tracker("OLD", 5e6, first_seen=at(S, 9, 30))
+    odd["_id"] = ST.potential_key(PREV, "OLD", "bull_flag")                        # NEG: another session's id
+    st[V.GG5.key].coll(ST.POTENTIALS).docs[odd["_id"]] = odd
+    finds = {k: [] for k in st}
+    for k, store in st.items():
+        c = store.coll(ST.POTENTIALS)
+        real = c.find
+        c.find = (lambda real_, log_: lambda q=None, projection=None: (log_.append((q, projection)), real_(q))[1])(
+            real, finds[k])
+    res = run(fake_db(), st)
+    assert res["added"] == ["AAA"]
+    for k in st:
+        assert len(finds[k]) == 1 and finds[k][0][0] == {"date": ISO} and finds[k][0][1] == A._TRACKER_FIELDS
+
+
+def _full_of(entries_syms, lapsed=(), since=None):
+    ents = []
+    for i, s in enumerate(entries_syms):
+        ents.append(entry(s, added_at=T0 - timedelta(minutes=60 - i),
+                          dropped_since=since if (s in lapsed and since) else None))
+    return auto_doc(ents)
+
+
+def test_ACC_at_the_cap_a_new_arrival_evicts_the_oldest_added_lapsed_name():
+    names = [f"L{i:02d}" for i in range(C.AUTO_MAX_SYMBOLS)]
+    since = at(S, 9, 47)
+    db = fake_db(auto=_full_of(names, lapsed=names[1:], since=since))
+    reads = [_lapsed_read(s) for s in names] + [rdoc("NEW"), rdoc("NEW2")]
+    res = run(db, stores(gg5=reads, scans=[scan("NEW", 5e6), scan("NEW2", 4e6)]))
+    assert res["added"] == ["NEW", "NEW2"] and res["n"] == C.AUTO_MAX_SYMBOLS
+    assert [r["symbol"] for r in res["removed"]] == ["L00", "L01"]                # oldest-added first
+    assert all(r["reason"] == "made_room" for r in res["removed"]) and A.REASONS[-1] == "made_room"
+    recs = stored(db)["removed"]
+    assert recs[0]["text"] == A._words().AUTO_MADE_ROOM_TEXT.format(new="NEW", since_et="10:01")   # stamped now
+    assert recs[1]["text"] == A._words().AUTO_MADE_ROOM_TEXT.format(new="NEW2", since_et="09:47")  # the stored stamp
+    assert "NEW" in recs[0]["text"] and stored(db)["entries"][-2:][0]["symbol"] == "NEW"
+    assert [e["symbol"] for e in stored(db)["entries"]] == names[2:] + ["NEW", "NEW2"]           # order frozen
+
+
+def test_ACC_NEGATIVE_a_name_made_room_for_is_not_re_added_from_its_tracker():
+    names = [f"L{i:02d}" for i in range(C.AUTO_MAX_SYMBOLS)]
+    trk = [tracker(s, 5e6, first_seen=at(S, 9, 30 + i % 20)) for i, s in enumerate(names)]
+    db = fake_db(auto=_full_of(names, lapsed=names, since=at(S, 9, 47)))
+    reads = [_lapsed_read(s) for s in names] + [rdoc("NEW")]
+    sc = [scan(s, 5e6) for s in names + ["NEW"]]
+    res = run(db, stores(gg5=reads, scans=sc, trackers=trk))
+    assert res["added"] == ["NEW"] and [r["symbol"] for r in res["removed"]] == ["L00"]
+    for m in (1, 2, 3):
+        res = run(db, stores(gg5=reads, scans=sc, trackers=trk), now=T0 + timedelta(minutes=m))
+        assert res["added"] == [] and res["removed"] == [] and "L00" not in res["symbols"]   # no churn
+    reads2 = [r for r in reads if r["symbol"] != "L00"] + [rdoc("L00")]                       # comes in AGAIN
+    res = run(db, stores(gg5=reads2, scans=sc, trackers=trk), now=T0 + timedelta(minutes=4))
+    assert res["added"] == ["L00"] and [r["symbol"] for r in res["removed"]] == ["L01"]
+
+
+def test_ACC_NEGATIVE_a_live_a_broke_kept_or_an_unknown_name_is_never_evicted_full_is_counted():
+    names = [f"P{i:02d}" for i in range(C.AUTO_MAX_SYMBOLS - 2)] + ["WAIT", "UNK"]
+    since = at(S, 9, 0)
+    db = fake_db(auto=_full_of(names, lapsed=("WAIT", "UNK"), since=since))       # stale stamps: NOT lapsed now
+    wait = bdoc("WAIT", broke(b=WAITING), WAITING)
+    off = bdoc("UNK", broke(b=WAITING), WAITING)
+    off["setups"]["bull_flag"]["entry_bar_t"] = f"{ISO} 09:00"                     # off_chart → unknown
+    stop = bdoc("UNK", broke(b=STOP_PRINTED), STOP_PRINTED)
+    g5 = [rdoc(s) for s in names[:-2]] + [wait, off, rdoc("NEW")]
+    sc = [scan(s, 5e6) for s in names] + [scan("NEW", 9e6)]                      # all listed (none "gone")
+    res = run(db, stores(gg5=g5, gg1=[stop], scans=sc))
+    assert res["added"] == [] and res["removed"] == [] and res["skipped"]["full"] == 1
+    assert res["symbols"] == names and stored(db)["removed"] == []
+
+
+def test_ACC_NEGATIVE_a_tracker_fault_adds_nothing_from_trackers_evicts_nothing_and_never_wipes():
+    names = [f"L{i:02d}" for i in range(C.AUTO_MAX_SYMBOLS)]
+    for which in ("gg5", "gg1"):
+        db = fake_db(auto=_full_of(names, lapsed=names, since=at(S, 9, 47)))
+        st = stores(gg5=[_lapsed_read(s) for s in names] + [rdoc("NEW")], scans=[scan("NEW", 5e6), scan("TRK", 5e6)],
+                    trackers=[tracker("TRK", 5e6, first_seen=at(S, 9, 2))], trackers_fail=which == "gg5",
+                    trackers1=[tracker("TRK", 5e6, first_seen=at(S, 9, 2))], trackers1_fail=which == "gg1")
+        res = run(db, st)
+        assert res["added"] == [] and res["removed"] == [] and res["skipped"]["full"] == 1, which
+        assert res["symbols"] == names and res["leaving"] == names
+    db = fake_db()                                                                  # room: current adds still land
+    st = stores(gg5=[rdoc("NEW")], scans=[scan("NEW", 5e6), scan("TRK", 5e6)],
+                trackers1=[tracker("TRK", 5e6, first_seen=at(S, 9, 2))], trackers_fail=True)
+    assert run(db, st)["added"] == ["NEW"]
+
+
+@pytest.mark.parametrize("b", [BACK_UNDER, STOP_PRINTED])
+def test_ACC_back_under_or_stop_printed_still_removes_at_once_and_is_not_re_added_from_its_tracker(b):
+    doc = bdoc("BRK", broke(b=b), b)
+    st = stores(gg5=[doc], gg1=[doc], scans=[scan("BRK", 5e6)], trackers=[tracker("BRK", 5e6, first_seen=at(S, 9, 5))])
+    db = fake_db(auto=auto_doc([entry("BRK")]))
+    res = run(db, st)
+    assert res["symbols"] == [] and res["removed"][0]["reason"] == "not_progressing" and res["added"] == []
+    res = run(db, st, now=T0 + timedelta(minutes=1))
+    assert res["added"] == [] and res["symbols"] == []
+
+
+def test_ACC_dry_writes_nothing():
+    st = stores(gg5=[_lapsed_read("TRK")], scans=[scan("TRK", 5e6)], trackers=[tracker("TRK", 5e6, first_seen=T0)])
+    db = fake_db()
+    res = run(db, st, dry=True)
+    assert res["writes"]["entries"][0]["symbol"] == "TRK" and db[C.COLL_LIST].writes == 0 and stored(db) is None
+
+
+def test_ACC_a_session_change_still_clears_and_yesterdays_trackers_are_not_read():
+    db = fake_db(auto=auto_doc([entry("OLD", dropped_since=T0)], removed=[{"symbol": "X"}], session=PREV.isoformat()))
+    st = stores(gg5=[_lapsed_read("OLD")], scans=[scan("OLD", 5e6), scan("YDAY", 5e6)],
+                trackers=[tracker("YDAY", 5e6, d=PREV, first_seen=at(PREV, 9, 31))])
+    res = run(db, st)
+    d = stored(db)
+    assert d["session"] == ISO and d["entries"] == [] and d["removed"] == [] and res["added"] == []
+
+
+def test_ACC_words_and_keys():
+    # PIN MOVED 2026-11-17 (Amendment A4): "failed" appended after "full" — never reordered.
+    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed")
+    assert A.REASONS[:4] == ("not_progressing", "dropped", "dismissed", "on_your_list")         # never reordered
+    W = A._words()
+    assert set(re.findall(r"\{(\w+)", W.AUTO_MADE_ROOM_TEXT)) == {"new", "since_et"}
+    assert "lapsed" in W.AUTO_LEAVING_TEXT and "first out" in W.AUTO_LEAVING_TEXT
+    src = inspect.getsource(A._compute)
+    assert "AUTO_DROP_GRACE_SEC" not in src and "AUTO_DROPPED_TEXT" not in src                 # nothing reads the grace
+
+
+# ── AMENDMENT A (2026-11-17, main session): a CURRENT potential first; the backlog only fills free seats ───────────
+def _backlog(n=40, live=("LIVE",), first_minute=0):
+    """The probe_churn scenario: n lapsed backlog names with a GG5 tracker doc each (first_seen 09:00 + i minutes, no
+    read doc → lapsed) + the live potentials, every name on the scan at ≥ the floor."""
+    names = [f"B{i:02d}" for i in range(n)]
+    t9 = at(S, 9, 0)
+    trk = [tracker(s, 2e6, at_=t9 + timedelta(minutes=i, seconds=30), first_seen=t9 + timedelta(minutes=i))
+           for i, s in enumerate(names)]
+    trk += [tracker(s, 3e6, first_seen=at(S, 9, 59)) for s in live]
+    sc = [scan(s, 2e6) for s in names] + [scan(s, 3e6) for s in live]
+    return names, stores(gg5=[rdoc(s) for s in live], scans=sc, trackers=trk)
+
+
+def test_AMD_A5_the_churn_scenario_live_first_backlog_fills_free_seats_and_never_churns():
+    cap = C.AUTO_MAX_SYMBOLS
+    names, st = _backlog()
+    db = fake_db(manual=[])
+    res = run(db, st, manual=[])
+    newest = list(reversed(names))[:cap - 1]
+    assert res["added"] == ["LIVE"] + newest and res["symbols"][0] == "LIVE" and res["n"] == cap
+    assert res["removed"] == [] and res["skipped"]["full"] == len(names) - (cap - 1)
+    snap = copy.deepcopy(stored(db)["entries"])
+    for m in (1, 2, 3):                                                             # NEG: nothing evicted, nothing re-added
+        res = run(db, st, now=T0 + timedelta(minutes=m), manual=[])
+        assert res["added"] == [] and res["removed"] == [] and res["changed"] is False
+        assert res["skipped"]["full"] == len(names) - (cap - 1)
+    assert stored(db)["entries"] == snap and stored(db)["removed"] == []
+    _n, st2 = _backlog(live=("LIVE", "LIVE2"))
+    res = run(db, st2, now=T0 + timedelta(minutes=4), manual=[])
+    assert res["added"] == ["LIVE2"] and [r["symbol"] for r in res["removed"]] == [newest[0]]   # oldest-added lapsed
+    assert res["removed"][0]["reason"] == "made_room" and "LIVE2" in res["removed"][0]["text"]
+    assert "LIVE" in res["symbols"] and res["n"] == cap
+    for m in (5, 6):                                                                # NEG: the evicted one stays out
+        res = run(db, st2, now=T0 + timedelta(minutes=m), manual=[])
+        assert res["added"] == [] and res["removed"] == [] and newest[0] not in res["symbols"]
+
+
+def test_AMD_NEGATIVE_a_tracker_only_name_never_evicts_a_lapsed_one():
+    names = [f"L{i:02d}" for i in range(C.AUTO_MAX_SYMBOLS)]
+    db = fake_db(auto=_full_of(names, lapsed=names, since=at(S, 9, 47)))
+    st = stores(gg5=[_lapsed_read(s) for s in names] + [_lapsed_read("TRK")], scans=[scan("TRK", 9e6)],
+                trackers=[tracker("TRK", 9e6, first_seen=at(S, 9, 58))])
+    res = run(db, st)
+    assert res["added"] == [] and res["removed"] == [] and res["skipped"]["full"] == 1
+    assert res["symbols"] == names and stored(db)["removed"] == []
+
+
+def test_AMD_A3_dropped_since_is_the_newest_last_at_across_its_docs_and_now_when_missing():
+    t5 = tracker("TRK", 5e6, at_=at(S, 9, 40), first_seen=at(S, 9, 30))
+    t5b = tracker("TRK", 5e6, at_=at(S, 9, 52), setup="kiss_fly", first_seen=at(S, 9, 35))
+    t1 = tracker("TRK", None, at_=at(S, 9, 44), first_seen=at(S, 9, 33))
+    db = fake_db()
+    run(db, stores(scans=[scan("TRK", 5e6)], trackers=[t5, t5b], trackers1=[t1]))
+    e = stored(db)["entries"][0]
+    assert e["dropped_since"] == utc(at(S, 9, 52)) and e["setup"] == "bull_flag"    # newest stamp; earliest doc's setup
+    out = A.tracker_sets(S, shared={"listed": {}, "scan_by": {}, "trackers": None},
+                         docs={k: [t5, t5b] if k == V.GG5.key else [t1] for k in C.AUTO_READ_SOURCES})
+    assert out[CO.fold("TRK")][1]["last_at"] == utc(at(S, 9, 52))
+    for bad in (None, "09:40", 5):                                                  # NEG: a bad stamp → now
+        t = tracker("BAD", 5e6, first_seen=at(S, 9, 30))
+        t["last"]["at"] = bad
+        db = fake_db()
+        run(db, stores(scans=[scan("BAD", 5e6)], trackers=[t]))
+        assert stored(db)["entries"][0]["dropped_since"] == utc(T0), bad
+    t = tracker("NOLAST", 5e6, first_seen=at(S, 9, 30))
+    t["last"] = "junk"
+    db = fake_db()
+    run(db, stores(scans=[scan("NOLAST", 5e6)], trackers=[t]))
+    assert stored(db)["entries"][0]["dropped_since"] == utc(T0)
+
+
+def test_AMD_A3_a_tracker_only_name_progress_keeps_lands_without_a_lapse_stamp():
+    """A broke read still ⏸ waiting above its trigger reads KEEP — the step's own clear rule: no "lapsed" word."""
+    wait = bdoc("WAIT", broke(b=WAITING), WAITING)
+    db = fake_db()
+    res = run(db, stores(gg5=[wait], scans=[scan("WAIT", 5e6)],
+                         trackers=[tracker("WAIT", 5e6, at_=at(S, 9, 40), first_seen=at(S, 9, 30))]))
+    assert res["added"] == ["WAIT"] and res["leaving"] == [] and stored(db)["entries"][0]["dropped_since"] is None
+
+
+@pytest.mark.parametrize("b", [BACK_UNDER, STOP_PRINTED])
+def test_AMD_A4_NEGATIVE_a_backlog_name_that_already_failed_is_not_added_and_counted_failed(b):
+    doc = bdoc("BRK", broke(b=b), b)
+    st = stores(gg5=[doc], gg1=[doc], scans=[scan("BRK", 5e6), scan("OK", 5e6)],
+                trackers=[tracker("BRK", 5e6, first_seen=at(S, 9, 5)), tracker("OK", 5e6, first_seen=at(S, 9, 1))])
+    db = fake_db()
+    res = run(db, st)
+    assert res["added"] == ["OK"] and res["skipped"]["failed"] == 1 and res["removed"] == []
+    assert "BRK" not in [e["symbol"] for e in stored(db)["entries"]]
+    res = run(db, st, now=T0 + timedelta(minutes=1))
+    assert res["added"] == [] and res["skipped"]["failed"] == 1                     # still never added
+
+
+def test_AMD_A4_NEGATIVE_a_full_list_never_reads_progress_for_the_backlog(monkeypatch):
+    names, st = _backlog(n=C.AUTO_MAX_SYMBOLS + 5, live=())
+    db = fake_db(manual=[])
+    run(db, st, manual=[])
+    seen = []
+    real = A.progress
+    monkeypatch.setattr(A, "progress", lambda sym, *a, **k: (seen.append(sym), real(sym, *a, **k))[1])
+    res = run(db, st, now=T0 + timedelta(minutes=1), manual=[])
+    assert res["skipped"]["full"] == 5 and sorted(seen) == sorted(res["symbols"])   # entries only, no backlog read
+
+
 # ── words / rules ────────────────────────────────────────────────────────────────────────────────────────────────
 def test_rules_line_follows_the_constants(monkeypatch):
     line = A.rules_line()
     assert f"{C.AUTO_MIN_VOLUME:,}" in line and f"up to {C.AUTO_MAX_SYMBOLS}" in line and "UNMEASURED" in line
-    assert f"{C.AUTO_DROP_GRACE_SEC // 60} minutes" in line and "mode off" in line and "⏸" in line
+    # PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §3): no grace clause; "any time today", stays, the cap makes room.
+    assert f"{C.AUTO_DROP_GRACE_SEC // 60} minutes" not in line and "mode off" in line and "⏸" in line
+    assert "at any time today" in line and "stays all session" in line and "makes room" in line
+    # 2026-11-17 Amendment A: the order words — a current potential first, the earlier ones newest first, free seats.
+    assert "a current potential first" in line and "newest first into free seats only" in line
+    assert "makes room for a current potential" in line and "oldest first" not in line
     monkeypatch.setattr(C, "AUTO_PUSH_MODE", "live")
     monkeypatch.setattr(C, "AUTO_KEEP_STATES", ("broke_vol",))
     live = A.rules_line()

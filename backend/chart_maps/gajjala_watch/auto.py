@@ -25,6 +25,30 @@ to his own list leaves the auto section ("on_your_list"). An UNKNOWN (a read fau
 could not be read) never removes — unknown is not gone (R1: `store._find` swallows faults, so every read here is its own
 try/except).
 
+ACCUMULATE (2026-11-17 12:55 ET, spec ggwauto2 — Ajay, verbatim: "please keep adding more to watch list as they come
+in to Potentials intraday"). SUPERSEDES the ADD source and the [C3] "dropped" removal above:
+  * ADD SOURCE = every name with a 🧠 tracker doc of TODAY's session in the GG5 or GG1 store (`ST.POTENTIALS`, ONE
+    projected find per store per step — `tracker_sets`) UNION the current potentials (`potential_sets`, unchanged). A
+    tracker-only candidate: setup = the doc with the earliest `first_seen`, kind = its `first_kind`, sources = the
+    stores it appears in (+ the borrowers). ONE order per step (`arrivals`): the earliest tracker doc's `first_seen`
+    ascending (ties symbol); a current potential with no tracker doc yet sorts last, by `potential.order_key`. The
+    listed filter, the volume floor, his names, his × and the names already on the list apply unchanged. A tracker-only
+    name removed earlier THIS session is not re-added from its tracker doc alone (a current potential again still is) —
+    without it a name made room for would come straight back every minute (executor's judgement, 2026-11-17).
+  * A lapsed name (progress verdict "dropped") now STAYS all session, stamped `dropped_since` (cleared when it is a
+    potential / progressing again) and served with the "lapsed" word — `C.AUTO_DROP_GRACE_SEC` removes nothing now.
+  * AT THE CAP each arrival that does not fit removes the OLDEST-ADDED name lapsed THIS step (reason "made_room", text
+    payload.AUTO_MADE_ROOM_TEXT). A potential, a broke-kept or an unknown name is never evicted; none lapsed → the
+    arrival is skipped, counted "full". A tracker read fault → no tracker adds and no "made room" that step.
+  * AMENDMENT A (2026-11-17, main session — his "as they come in"; SUPERSEDES the ONE order above): each step's
+    arrivals are (i) the CURRENT 🧠 potentials not on the list, in `potential.order_key` order, THEN (ii) the
+    tracker-only names (came in earlier today, not a potential now), `first_seen` DESCENDING (newest first; ties
+    symbol; none carrying a first_seen last). Only a CURRENT potential evicts ("made_room"); a tracker-only name takes a
+    FREE seat or is skipped ("full") — no minute-to-minute churn. A tracker-only name is read by `progress` first: ↩️ / ✖️
+    → not added, counted "failed"; else it lands with `dropped_since` = the newest `last.at` across its tracker docs
+    (the real lapse time; a missing / bad stamp → now) — None when `progress` reads it KEEP (a broke read still
+    progressing: the step's own clear rule).
+
 SESSION. The doc carries its session; a new session clears entries, removed and dismissed (HIS CALL #5). `dismiss` (his ×,
 api.py DELETE) performs that reset itself on a stale doc [C7].
 
@@ -54,10 +78,16 @@ from .store import _CAS_TRIES
 
 log = logging.getLogger("chart_maps.gajjala_watch.auto")
 
-REASONS = ("not_progressing", "dropped", "dismissed", "on_your_list")      # the stored removal reasons
+REASONS = ("not_progressing", "dropped", "dismissed", "on_your_list",      # the stored removal reasons — APPEND only:
+           "made_room")                                                   # "dropped" = old docs only (12:55 accumulate)
 STEP_REASONS = ("list_unreadable", "boards_unreadable", "closed", "write_failed")
 STATES_DISMISS = ("dismissed", "absent", "error")
-SKIPPED_KEYS = ("volume_unknown", "under_floor")
+SKIPPED_KEYS = ("volume_unknown", "under_floor", "full",                 # "full" appended 2026-11-17 12:55
+                "failed")                                                  # "failed" appended (Amendment A4) — APPEND only
+_TRACKER_FIELDS = {"symbol": 1, "setup": 1, "date": 1, "first_seen": 1, "first_kind": 1, "last.at": 1,
+                   "last.state": 1, "last.session_volume": 1}             # the ONE projected tracker find per store
+_FAR = datetime.max.replace(tzinfo=timezone.utc)
+_READ = object()                                                          # shared_sets: "read the trackers yourself"
 BY_LOOP = "loop"
 _REMOVE_WORDS = {"back_under": "↩️ back under", "stop_printed": "✖️ stop printed"}
 _KEEP_WORDS = {"waiting": "⏸ waiting above its trigger"}
@@ -160,10 +190,11 @@ def _cas(coll, doc: dict, fields: dict) -> bool:
 
 
 # ── the boards (read-only) ────────────────────────────────────────────────────────────────────────────────────────
-def shared_sets(session, store=None) -> dict:
+def shared_sets(session, store=None, *, tracker_docs=_READ) -> dict:
     """[C5][F25] Read ONCE per step from the GG5 store (every variant's scan set is GG5's): `listed` (the board's filter;
     {} on a raise — empty hides nothing), `scan_by` {SYM: scan doc}, `trackers` {SYM: the GG5 tracker doc with the
-    newest last.at} or None on a READ FAULT (store.potentials' own rule)."""
+    newest last.at} or None on a READ FAULT (store.potentials' own rule). `tracker_docs` (2026-11-17 12:55): the GG5
+    tracker docs the step already read (`_tracker_docs`; None = a fault) — so GG5's tracker is found ONCE per step."""
     st = store if store is not None else ST.default()
     try:
         listed = SC.listed_symbols(st, session) or {}
@@ -171,7 +202,7 @@ def shared_sets(session, store=None) -> dict:
         log.warning("gajjala watch 🤖: listed read failed: %s", type(exc).__name__)
         listed = {}
     scan_by = {_up(d.get("symbol")): d for d in st.scan_docs([session]) if isinstance(d, dict) and _up(d.get("symbol"))}
-    docs = st.potentials(session)
+    docs = st.potentials(session) if tracker_docs is _READ else tracker_docs
     trackers: Optional[dict] = None
     if docs is not None:
         trackers = {}
@@ -283,6 +314,91 @@ def merge(sets) -> list:
     return out
 
 
+# ── came in to Potentials today (2026-11-17 12:55 accumulate) ─────────────────────────────────────────────────────
+def _tracker_docs(st, iso: str) -> Optional[list]:
+    """ONE projected find of a store's 🧠 tracker (`ST.POTENTIALS`) for the session — the docs whose `_id` carries the
+    "<iso>|" prefix; None on a READ FAULT (no handle, or the find raised — unknown is never "none")."""
+    c = st.coll(ST.POTENTIALS) if st is not None else None
+    if c is None:
+        return None
+    try:
+        docs = list(c.find({"date": iso}, _TRACKER_FIELDS))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch 🤖: trackers unreadable: %s", type(exc).__name__)
+        return None
+    pre = f"{iso}|"
+    return [d for d in docs if isinstance(d, dict) and isinstance(d.get("_id"), str) and d["_id"].startswith(pre)]
+
+
+def _setup_rank(setup) -> int:
+    return GC.SETUPS.index(setup) if setup in GC.SETUPS else len(GC.SETUPS)
+
+
+def tracker_sets(session, *, shared: dict, docs: Optional[dict]) -> Optional[dict]:
+    """{FOLD: (SYM, cand, sources)} — every name with a 🧠 tracker doc of the session in the GG5 or GG1 store (`docs` =
+    {read source key: `_tracker_docs` answer}); None when ANY store's read faulted. The listed filter applies (only when
+    the listed set is non-empty — tab.build). cand: setup = the doc with the earliest `first_seen` (ties: GC.SETUPS
+    order), kind = its `first_kind`, volume = `volume_of` (unchanged), `first_seen` (None when no doc carries one),
+    `last_at` (Amendment A3: the NEWEST `last.at` across its docs — the lapse time; None when none carries one);
+    sources = the stores it appears in, + every borrower of a present store (as `merge`)."""
+    listed = shared.get("listed") or {}
+    scan_by = shared.get("scan_by") or {}
+    by: dict = {}
+    for key in C.AUTO_READ_SOURCES:
+        ds = (docs or {}).get(key)
+        if ds is None:
+            return None
+        for d in ds:
+            sym = _up(d.get("symbol")) if isinstance(d, dict) else ""
+            if not sym or (listed and sym not in listed):
+                continue
+            fs = _utc(d.get("first_seen"))
+            la = _utc((d.get("last") or {}).get("at")) if isinstance(d.get("last"), dict) else None
+            setup = d.get("setup")
+            rank = (fs or _FAR, _setup_rank(setup))
+            k = CO.fold(sym)
+            cur = by.get(k)
+            if cur is None:
+                by[k] = {"symbol": CO.house(sym), "up": sym, "rank": rank, "first_seen": fs, "setup": setup,
+                         "kind": d.get("first_kind"), "present": {key}, "last_at": la}
+                continue
+            cur["present"].add(key)
+            if la is not None and (cur["last_at"] is None or la > cur["last_at"]):
+                cur["last_at"] = la
+            if rank < cur["rank"]:
+                cur.update(rank=rank, first_seen=fs, setup=setup, kind=d.get("first_kind"))
+    bor = _borrowers()
+    out: dict = {}
+    for k, t in by.items():
+        vol, vsrc = volume_of(t["up"], (scan_by.get(t["up"]) or {}).get("last"), shared.get("trackers"))
+        cand = {"setup": t["setup"] if isinstance(t["setup"], str) else None,
+                "kind": t["kind"] if isinstance(t["kind"], str) else None, "volume": vol, "volume_source": vsrc,
+                "float_shares": None, "order_key": None, "first_seen": t["first_seen"], "last_at": t["last_at"]}
+        srcs = [s for s in C.AUTO_SOURCES if s in t["present"] or bor.get(s) in t["present"]]
+        out[k] = (t["symbol"], cand, srcs)
+    return out
+
+
+def arrivals(merged: list, tracked: Optional[dict]) -> list:
+    """[(SYM, cand, sources, tracker_only)] — Amendment A1 (his "as they come in"): (i) every CURRENT potential, in
+    `merged`'s own `potential.order_key` order [C4] (its live cand and sources); THEN (ii) the tracker-only names (a
+    tracker doc today, not a potential now), `first_seen` DESCENDING — newest first, ties symbol; a tracker-only name
+    without a first_seen last (by symbol)."""
+    tracked = tracked or {}
+    rows, seen = [], set()
+    for _ok, sym, cand, srcs in merged or []:
+        seen.add(CO.fold(sym))
+        rows.append((sym, cand, srcs, False))
+    later = []
+    for k, (sym, cand, srcs) in tracked.items():
+        if k in seen:
+            continue
+        fs = cand.get("first_seen")
+        later.append(((0, -fs.timestamp(), sym) if fs is not None else (1, 0.0, sym), sym, cand, srcs))
+    later.sort(key=lambda r: r[0])
+    return rows + [(sym, cand, srcs, True) for _key, sym, cand, srcs in later]
+
+
 # ── progress (one name, every board) ──────────────────────────────────────────────────────────────────────────────
 def _source_verdict(doc, v, first_setup) -> dict:
     """One board's verdict on one read doc: keep (a potential / a broke read still progressing) · remove (↩️ / ✖️, with
@@ -392,10 +508,12 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     entries, removed, dismissed = _lists(doc, iso)
     mk = {CO.fold(m) for m in manual or [] if isinstance(m, str)}
     dk = {CO.fold(s) for s in dismissed}
-    shared = shared_sets(session, store=stores.get(V.GG5.key))
+    tdocs = {k: _tracker_docs(stores.get(k), iso) for k in C.AUTO_READ_SOURCES}          # ONE find per store
+    shared = shared_sets(session, store=stores.get(V.GG5.key), tracker_docs=tdocs.get(V.GG5.key))
     sets = potential_sets(session, shared=shared, stores=stores)
     gone_now: list = []
     kept: list = []
+    lapsed: dict = {}                                          # {FOLD: progress} — lapsed THIS step (evictable)
     for e in entries:
         sym, k = e["symbol"], CO.fold(e["symbol"])
         if k in mk:
@@ -408,19 +526,15 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             gone_now.append(_rec(sym, now, REASONS[0], state=p["state"], source=p["source"], text=p["text"]))
             continue
         if p["reason"] == REASONS[1]:
-            if sets is not None:                               # unknown boards → no "dropped" judgement this step
-                since = e.get("dropped_since") if _utc(e.get("dropped_since")) else now
-                e["dropped_since"] = since
-                if (now - _utc(since)).total_seconds() >= C.AUTO_DROP_GRACE_SEC:
-                    text = _words().AUTO_DROPPED_TEXT.format(grace_min=C.AUTO_DROP_GRACE_SEC // 60, word=p["word"])
-                    gone_now.append(_rec(sym, now, REASONS[1], state=p["state"], source=p["source"], text=text))
-                    continue
+            if sets is not None:                               # unknown boards → no "lapsed" judgement this step
+                e["dropped_since"] = e.get("dropped_since") if _utc(e.get("dropped_since")) else now
+                lapsed[k] = p                                  # 12:55 accumulate: STAYS (no grace removal)
         elif p["keep"] and not p["unknown"]:
             e["dropped_since"] = None
         kept.append(e)
     entries = kept
-    removed += gone_now
     merged = merge(sets) if sets is not None else []
+    tracked = tracker_sets(session, shared=shared, docs=tdocs) if sets is not None else None
     by = {CO.fold(sym): (cand, srcs) for _ok, sym, cand, srcs in merged}
     for e in entries:                                          # words move, positions do not
         hit = by.get(CO.fold(e["symbol"]))
@@ -437,22 +551,48 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
         reason = STEP_REASONS[2]
     else:
         have = {CO.fold(e["symbol"]) for e in entries}
-        room = max(0, C.AUTO_MAX_SYMBOLS - len(entries))
-        for _ok, sym, cand, srcs in merged:                    # merged is already in order_key order [C4]
+        out_today = {CO.fold(r.get("symbol")) for r in removed + gone_now if isinstance(r.get("symbol"), str)}
+        victims = [e for e in entries if CO.fold(e["symbol"]) in lapsed]           # oldest-added first (frozen order)
+        evict = tracked is not None                            # a tracker fault → nothing removed for "made room"
+        for sym, cand, srcs, tracker_only in arrivals(merged, tracked):
             k = CO.fold(sym)
-            if k in mk or k in dk or k in have:
+            if k in mk or k in dk or k in have or (tracker_only and k in out_today):
                 continue
             if not good_volume(cand):
                 skipped[SKIPPED_KEYS[0] if PT._num(cand.get("volume")) is None else SKIPPED_KEYS[1]] += 1
                 continue
-            if len(added) >= room:
-                continue                                       # never displace (HIS CALL #8)
+            full = len(entries) + len(added) >= C.AUTO_MAX_SYMBOLS
+            since = None
+            if tracker_only:                                   # Amendment A2–A4: a FREE seat only, never evicts
+                if full:
+                    skipped[SKIPPED_KEYS[2]] += 1
+                    continue
+                p = progress(sym, session, stores=stores, shared=shared,
+                             entry={"sources": list(srcs), "setup": cand["setup"]})
+                if p["reason"] == REASONS[0]:
+                    skipped[SKIPPED_KEYS[3]] += 1              # ↩️ / ✖️ already — it failed, never added
+                    continue
+                if not (p["keep"] and not p["unknown"]):
+                    since = cand.get("last_at") or now         # the real lapse time (A3)
+            elif full:
+                if not (evict and victims):
+                    skipped[SKIPPED_KEYS[2]] += 1              # full of live names — never displace one
+                    continue
+                v = victims.pop(0)
+                vk = CO.fold(v["symbol"])
+                entries = [e for e in entries if CO.fold(e["symbol"]) != vk]
+                out_today.add(vk)
+                p = lapsed[vk]
+                text = _words().AUTO_MADE_ROOM_TEXT.format(new=sym, since_et=PT._hhmm(_utc(v["dropped_since"])))
+                gone_now.append(_rec(v["symbol"], now, REASONS[4], state=p.get("state"), source=p.get("source"),
+                                     text=text))
             have.add(k)
             added.append({"symbol": sym, "sources": list(srcs), "setup": cand["setup"], "kind": cand["kind"],
                           "volume": cand["volume"], "volume_source": cand["volume_source"],
                           "float_shares": cand["float_shares"], "added_at": now, "added_et": PT._hhmm(now),
-                          "dropped_since": None})
+                          "dropped_since": since})
         entries = entries + added
+    removed += gone_now
     res = {"symbols": [e["symbol"] for e in entries], "added": [e["symbol"] for e in added],
            "removed": [{k: r.get(k) for k in ("symbol", "reason", "state", "text")} for r in gone_now],
            "leaving": [e["symbol"] for e in entries if _utc(e.get("dropped_since"))],
@@ -585,16 +725,18 @@ def rules_line() -> str:
     mode = push_mode()
     push = (f"auto names do not ring the {frames} cross (mode {mode})" if mode == C.AUTO_PUSH_MODES[0]
             else f"auto names ring the {frames} cross like yours (mode {mode})")
-    grace = C.AUTO_DROP_GRACE_SEC // 60
-    return (f"🤖 Gajjala's Watch adds, once a minute during the {GC.PASS_OPEN_ET}–{GC.PASS_CLOSE_ET} ET pass window, the 🧠 "
-            f"potentials the {boards} boards serve with today's volume at or over {C.AUTO_MIN_VOLUME:,} shares (GG's "
-            f"K11 floor; the scan row, else the pass's own stored number), up to {C.AUTO_MAX_SYMBOLS} at a time, in the "
-            f"order added; an auto name leaves the watch when every board reads it {gone}, or when it has been a "
-            f"potential nowhere for {grace} minutes"
+    return (f"🤖 Gajjala's Watch adds, once a minute during the {GC.PASS_OPEN_ET}–{GC.PASS_CLOSE_ET} ET pass window, every "
+            f"name that came into a 🧠 potential on the {boards} boards at any time today with today's volume at or "
+            f"over {C.AUTO_MIN_VOLUME:,} shares (GG's K11 floor; the scan row, else the pass's own stored number), up to "
+            f"{C.AUTO_MAX_SYMBOLS} at a time, in the order added — a current potential first, then today's earlier ones "
+            f"newest first into free seats only (one already {gone} is not added); an auto name stays all session and "
+            f"leaves when every board reads it {gone}, or on your ×; at {C.AUTO_MAX_SYMBOLS} the oldest name whose "
+            f"potential lapsed makes room for a current potential"
             + (f"; {stays} stays" if stays else "")
             + f"; your own names are never touched; {push}. UNMEASURED.")
 
 
 __all__ = ["REASONS", "STEP_REASONS", "STATES_DISMISS", "SKIPPED_KEYS", "read_doc", "entries_of", "current_symbols",
-           "shared_sets", "volume_of", "potential_sets", "good_volume", "merge", "progress", "step", "dismiss",
+           "shared_sets", "volume_of", "potential_sets", "good_volume", "merge", "tracker_sets", "arrivals", "progress",
+           "step", "dismiss",
            "hold_crosses", "push_mode", "rules_line"]

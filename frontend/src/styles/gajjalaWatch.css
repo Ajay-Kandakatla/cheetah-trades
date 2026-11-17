@@ -165,3 +165,10 @@
 .ggw-auto-removed summary { font-size: 0.74rem; color: var(--text-muted, #8595ad); cursor: pointer; }
 .ggw-auto-removed[open] { flex-basis: 100%; }
 .ggw-auto-removed > p { margin: 0.2rem 0; }
+
+/* 🎯 2026-11-17 (spec ggwaplus) — Ajay: "Also add an A+ tag on watch list as they become A+". The served A+ chip on a
+ * tile (a .ggw-chip: wraps at 430 px, min-width 0) and the pager button of that name: a POSITIVE outline (the theme's
+ * own --positive, the Gajjala cards' A+ colour — reads in both themes); a lit (filled) button keeps it as a ring. */
+.ggw-chip.ggw-aplus { color: var(--positive, #22c55e); border-color: var(--positive, #22c55e); font-weight: 600; }
+.ggw-pager-sym.ggw-pager-sym--aplus { border-color: var(--positive, #22c55e); box-shadow: inset 0 0 0 1px var(--positive, #22c55e); }
+.ggw-pager-sym.ggw-pager-sym--aplus.is-on { box-shadow: 0 0 0 2px var(--positive, #22c55e); }

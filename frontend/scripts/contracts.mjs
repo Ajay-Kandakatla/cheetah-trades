@@ -1264,7 +1264,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-12: 📅 long-term-list-2026-11-12 FIRST — Ajay: "Save this entire list for me. In a New tab - Long Term").
       // WIDENED +1 (2026-11-17: 📺 chart-maps-gajjala-video-view-2026-11-17 FIRST — Ajay: "the graphs in the videos are so clear like I can easily identify the trend").
       // WIDENED +1 (2026-11-17: 🤖 chart-maps-gajjala-watch-auto-potentials-2026-11-17 FIRST — Ajay: "Remove as they are not progressing").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 20).map((m) => m[1]);
+      // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-tag-2026-11-17 FIRST — Ajay: "Also add an A+ tag on watch list as they become A+").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -1291,10 +1292,19 @@ const CONTRACTS = [
       if (!lab) errs.push('the 🤖 ✨ entry is missing');
       else {
         if (!lab[1].includes('Remove as they are not progressing')) errs.push('the 🤖 ✨ label must quote him verbatim');
+        if (!lab[1].includes('keep adding more to watch list as they come in to Potentials intraday')) errs.push('the 🤖 ✨ label must quote his 12:55 ET ask verbatim');
+        if (/potential nowhere|no board lists it/.test(lab[1])) errs.push('the 🤖 ✨ label must not promise the retired lapse removal');
         if (!lab[1].includes('never send a phone alert')) errs.push('the 🤖 ✨ label must say auto names never send a phone alert');
         if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1]) || /better entr/i.test(lab[1])) errs.push('the 🤖 ✨ label: never "edge", the b-word or "better entries"');
       }
       try { read('../docs/gajjala/watch_auto_potentials_2026_11_17.md'); } catch { errs.push('docs/gajjala/watch_auto_potentials_2026_11_17.md must exist'); }
+      const tile = read('src/components/GajjalaWatchTile.tsx');
+      if (!/ggw-aplus/.test(tile)) errs.push('the 🎯 A+ chip (.ggw-aplus) must render on the watch tile');
+      const al = /id: 'chart-maps-gajjala-watch-aplus-tag-2026-11-17'[\s\S]*?label: '([^']+)'/.exec(nf);
+      if (!al) errs.push('the 🎯 A+ ✨ entry is missing');
+      else if (!al[1].includes('Also add an A+ tag on watch list as they become A+')) errs.push('the 🎯 A+ ✨ label must quote him verbatim');
+      else if (/\bedge\b/i.test(al[1]) || /bounc/i.test(al[1])) errs.push('the 🎯 A+ ✨ label: never "edge", never the b-word');
+      try { read('../docs/gajjala/watch_aplus_tag_2026_11_17.md'); } catch { errs.push('docs/gajjala/watch_aplus_tag_2026_11_17.md must exist'); }
       return errs;
     },
   },
@@ -17209,7 +17219,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 20).includes(ZID))  /* WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 21).includes(ZID))  /* WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';

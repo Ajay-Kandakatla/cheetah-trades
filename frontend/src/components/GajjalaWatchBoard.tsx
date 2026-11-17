@@ -488,10 +488,13 @@ export default function GajjalaWatchBoard() {
             const rm = r.auto?.remove_title ?? (p.remove_label ? `${p.remove_label} ${r.symbol}` : r.symbol);
             return (
               <span key={r.symbol} className={`ggw-pager-item${r.auto ? ' ggw-pager-item--auto' : ''}${onPage(i) ? ' is-on' : ''}`}>
-                <button type="button" className={`ggw-btn ggw-pager-sym${onPage(i) ? ' is-on' : ''}`}
+                {/* 🎯 a name a Gajjala board reads A+ this session: the served tag first + the --aplus outline. */}
+                <button type="button"
+                        className={`ggw-btn ggw-pager-sym${r.aplus ? ' ggw-pager-sym--aplus' : ''}${onPage(i) ? ' is-on' : ''}`}
                         aria-pressed={onPage(i)} data-testid={`ggw-pager-${r.symbol}`}
+                        title={r.aplus?.title ?? undefined}
                         onClick={() => toggle(r.symbol)}>
-                  {r.auto ? `${r.auto.tag} ${r.symbol}` : r.symbol}
+                  {[r.aplus?.tag, r.auto?.tag, r.symbol].filter(Boolean).join(' ')}
                 </button>
                 <button type="button" className="ggw-btn ggw-pager-x" title={rm} aria-label={rm} disabled={busy}
                         data-testid={`ggw-pager-x-${r.symbol}`} onClick={() => write('DELETE', r.symbol)}>

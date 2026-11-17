@@ -17,7 +17,10 @@
  * portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
  * interval.. Remove as they are not progressing". A row the server added carries `auto`: the tile head prints its served
  * chip after SYM (hover = the served added / volume / leaving words) and the ✕ title is its served `remove_title`.
- * Rows without `auto` (his, the 🚩 cards) render exactly as before. */
+ * Rows without `auto` (his, the 🚩 cards) render exactly as before.
+ *
+ * 🎯 2026-11-17 (spec ggwaplus) — Ajay: "Also add an A+ tag on watch list as they become A+". A row with a served
+ * `aplus` block prints its chip right after SYM (text verbatim, hover = the served title). No block → nothing. */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -151,6 +154,12 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
              hidden={offPage || undefined}>
       <div className="ggw-tile-head">
         <b className="ggw-sym">{row.symbol}</b>
+        {/* 🎯 the served A+ chip (spec ggwaplus 2026-11-17) — its text verbatim, hover = the served title. No block → no chip. */}
+        {row.aplus ? (
+          <span className="ggw-chip ggw-aplus" data-testid="ggw-aplus" title={row.aplus.title ?? undefined}>
+            {row.aplus.text}
+          </span>
+        ) : null}
         {/* 🤖 the served auto chip (watch-auto 2026-11-17) — its text verbatim; hover = the served added / volume /
             leaving words. A row without `auto` (his, a 🚩 card) draws nothing here. */}
         {row.auto ? (

@@ -13,7 +13,7 @@ Once a minute, inside the watch's own minute loop (`loop.run_iteration`, under i
 engine `backend/chart_maps/gajjala_watch/auto.py` (`step`) reads what the three Gajjala boards already stored. It never
 fetches bars for this.
 
-- **Add** (only inside the 🚩 pass window, `run.in_window`, 04:00–20:05 ET on a market day): a 🧠 potential
+- **Add** (*source and cap rule SUPERSEDED 12:55 — see "Accumulate (12:55 ET)" below*) (only inside the 🚩 pass window, `run.in_window`, 04:00–20:05 ET on a market day): a 🧠 potential
   (`potential.potential_kind`, the board's own test: forming, a base begun, no variant / grade) of a LISTED read on the
   🚩 5-min board (GG5) or the 🚩 1-min board (GG1). Today's volume must be at least `AUTO_MIN_VOLUME`, which is GG's K11
   floor of 1,000,000 shares. Names on his own list are never added. A name he × removed is not added again until the
@@ -30,7 +30,7 @@ fetches bars for this.
   bars. **⏸ waiting KEEPS the name.** Waiting means it is holding at or above the trigger with no new high since, which
   is the consolidation after GG's entry signal. A fresh break (no line yet), 🔊 / 🔇 / ⤴️ and a 🧠 potential on any board
   also keep the name. An unknown state (1-min `off_chart`, a read fault) keeps it too.
-- **Remove — dropped** [C3]: a name that is a 🧠 potential on no board, with no broke read keeping it, gets
+- **Remove — dropped** [C3] (*SUPERSEDED 12:55 — a lapsed name now stays; see "Accumulate (12:55 ET)" below*): a name that is a 🧠 potential on no board, with no broke read keeping it, gets
   `dropped_since` stamped. It is removed only after `AUTO_DROP_GRACE_SEC` (= `GC.PASS_CADENCE_SEC`, 300 s). If it is a
   potential again within that time, the stamp clears. A name gone from a non-empty listed set reads "🪦 graveyard" and
   gets the same grace.
@@ -68,7 +68,7 @@ fetches bars for this.
 {_id: "auto", session: "YYYY-MM-DD", rev: int,
  entries: [{symbol, sources, setup, kind, volume, volume_source: "scan"|"tracker", float_shares,
             added_at (UTC), added_et "HH:MM", dropped_since: UTC | null}],     # add order, frozen
- removed: [{symbol, at, at_et, reason: not_progressing|dropped|dismissed|on_your_list, state, source, text}],
+ removed: [{symbol, at, at_et, reason: not_progressing|dropped|dismissed|on_your_list|made_room, state, source, text}],
  dismissed: ["SYM", …], updated_at, by}
 ```
 
@@ -154,8 +154,8 @@ filter only when non-empty · C6 `alerts` = the engine's own counts, documented 
 6. **His × on a MANUAL name** also blocks an auto re-add that session — MINE.
 7. **Order** [C4]: frozen add order (a batch added in one minute lands in `potential.order_key` order; nothing moves
    afterwards) — the manual board's rule. A minute re-sort by `order_key` (the 🧠 sub's behaviour) = his word.
-8. **At the cap** a louder new potential never displaces an auto name — MINE.
-9. **Drop grace** [C3]: a name that is a potential nowhere leaves after `AUTO_DROP_GRACE_SEC = GC.PASS_CADENCE_SEC` (300
+8. **At the cap** a louder new potential never displaces an auto name — MINE. (*12:55: a LIVE name is still never displaced; the oldest LAPSED one makes room — below.*)
+9. **Drop grace** [C3] (*SUPERSEDED 12:55 — nothing reads `AUTO_DROP_GRACE_SEC` for removal now*): a name that is a potential nowhere leaves after `AUTO_DROP_GRACE_SEC = GC.PASS_CADENCE_SEC` (300
    s, the GG5 pass clock) — MINE to reuse; a different number, or "out for the day once removed" = his call. Re-add after
    removal is allowed (every event recorded).
 10. **➕ Watch on an auto name's card** promotes it to his list (manual cap applies); the card button still reads ➕ on an
@@ -188,3 +188,80 @@ filter only when non-empty · C6 `alerts` = the engine's own counts, documented 
 `test_gajjala_watch_loop_2026_11_15.py` (the empty-list lease), `test_gajjala_watch_cross_2026_11_15.py`
 (`HELD_REASONS ⊆ COUNT_KEYS ∪ {failed, no_target, suppressed_auto}`), `test_gajjala_watch_live_2026_11_16.py`
 (`auto.py` joins the live-stack source guard).
+
+## Accumulate (12:55 ET, 2026-11-17)
+
+Ajay, ~12:50 ET, verbatim: "Why is NCPL not on the app and please keep adding more to watch list as they come in to
+Potentials intraday".
+
+**Why the list held 1** (live store, 12:51 ET, read-only): 47 names had a 🧠 tracker doc today (GG5 + GG1), 21 of them
+with scan volume ≥ 1M. The engine added a name only at the minute it was a CURRENT 🧠 potential, so every potential
+before the 11:56 ET deploy was missed; and the [C3] "dropped" rule removed a name 5 minutes after its potential lapsed —
+nearly every potential lapses within minutes.
+
+**What changed** (`auto.py`, `payload.py`; `constants.py` comment only):
+
+- **Add source** = every name with a 🧠 tracker doc of TODAY's session in the GG5 or GG1 store (`ST.POTENTIALS` — ONE
+  projected find per store per step, `date` = the session and the `_id` prefix "<iso>|"; GG5's find also feeds the
+  [C2] tracker volume) UNION the current potentials (unchanged). A tracker-only name: setup = its doc with the earliest
+  `first_seen`, kind = that doc's `first_kind`, sources = the stores it appears in (+ 🧪 when GG5 is present).
+- **One order per step** (*SUPERSEDED by Amendment A below*): the earliest tracker doc's `first_seen` ascending (ties: symbol). A current potential with no
+  tracker doc yet sorts last, by `potential.order_key`. A current potential keeps its live words (setup, kind, volume).
+- **Unchanged gates**: the listed filter (non-empty listed set only), `AUTO_MIN_VOLUME`, unknown volume refused
+  (`volume_unknown`), his names, his ×, names already on the list.
+- **A lapsed name STAYS** all session, stamped `dropped_since` (cleared when it is a potential / progressing again),
+  served "potential lapsed HH:MM ET — first out when a new one comes in". `AUTO_DROP_GRACE_SEC` is kept for the old
+  docs / tests; nothing reads it for removal. `AUTO_DROPPED_TEXT` is kept for docs written before 12:55.
+- **↩️ back under / ✖️ stop printed** still remove at once with the card's line; his × unchanged.
+- **At the cap** (`AUTO_MAX_SYMBOLS`, unchanged; *Amendment A: only a CURRENT potential evicts*): each arrival that does not fit removes the OLDEST-ADDED name that
+  lapsed THIS step — new reason `made_room` (appended to `REASONS`), text "made room for NEW — potential lapsed HH:MM
+  ET". A potential, a broke-kept (⏸ / 🔊 / 🔇 / ⤴️) or an unknown name is never evicted. None lapsed → the arrival is
+  skipped and counted `full` (appended to `SKIPPED_KEYS`).
+- **Faults**: a tracker read fault in either store → no tracker adds and no "made room" that step (current-potential adds
+  into free room still land); nothing is ever wiped.
+- **Words** (*order words moved by Amendment A*): the hint and the ℹ️ rules clause say names that came into a 🧠 potential at any time today are added
+  (oldest first), stay all session, leave on ↩️ / ✖️ or ×, and at the cap the oldest lapsed one makes room. No
+  "minutes" clause.
+
+**Executor's judgement (flag for HIS CALL)**: a tracker-only name removed earlier THIS session (any reason — made room,
+↩️ / ✖️, ➕ moved to his list) is NOT re-added from its tracker doc alone; it comes back only as a CURRENT 🧠 potential
+(the pre-12:55 rule). Without this, a name made room for would return the next minute and evict another lapsed name —
+the list would churn every minute; a ✖️ name would be re-added and removed on alternate minutes.
+
+**Not done** (*the pre-check is DONE by Amendment A4 below*): no pre-check of ↩️ / ✖️ before a tracker-only add — a backlog name that already failed its breakout is
+added and leaves at the next minute with the card's line (one event each, never re-added). No FE change (served words
+flow through). UNMEASURED — display / selection only; no push, no fetch, no claim.
+
+Tests: `backend/tests/test_gajjala_watch_auto_2026_11_17.py` (`test_ACC_*`, plus the [C3] / rules-line / skipped pins
+moved with dated comments) and `backend/tests/test_gajjala_watch_auto_served_2026_11_17.py` (hint pin moved, the lapsed
+word, `made_room` and old `dropped` removals render).
+
+### Amendment A (2026-11-17, main session — supersedes the one order rule above)
+
+His words "as they come in": a CURRENT potential always goes first; the morning backlog only fills free seats.
+
+- **Order** (`auto.arrivals`): each step's arrivals are (i) the CURRENT 🧠 potentials not on the list, in
+  `potential.order_key` order, THEN (ii) the tracker-only names (came in earlier today, not a potential now),
+  `first_seen` DESCENDING — newest first (ties: symbol; a doc without a `first_seen` last).
+- **Eviction** (`made_room`, the oldest-added lapsed name) happens ONLY to seat a CURRENT potential. A tracker-only name
+  takes a FREE seat or is skipped and counted `full` — it never evicts, so the list does not churn minute to minute.
+  Cap full of live / kept names and a current potential arrives → `full` (unchanged). A tracker read fault still blocks
+  every eviction that step.
+- **Lapse stamp**: a tracker-only name lands with `dropped_since` = the NEWEST `last.at` across its tracker docs (both
+  stores, every setup) — the served "potential lapsed HH:MM ET" is the real lapse time. A missing / bad stamp → now.
+  *Executor's judgement*: when `progress` reads the name KEEP (a broke read still ⏸ waiting above its trigger) it lands
+  with no stamp — the step's own rule ("cleared when progressing") applied at the add, so it never reads "lapsed".
+- **Failed backlog** (`progress` before every tracker-only add): ↩️ back under / ✖️ stop printed → not added, counted in
+  the new `SKIPPED_KEYS` entry `failed` (appended after `full`). `progress` runs only when a seat is free — a full list
+  reads no backlog name. A name removed earlier this session is still not re-added from its tracker doc (a current
+  potential again still is).
+- **Words**: the hint and the ℹ️ rules clause now say "a current potential first, then today's earlier ones newest first
+  into free seats only (one already ↩️ / ✖️ is not added)" and "the oldest name whose potential lapsed makes room for a
+  current potential". `AUTO_LEAVING_TEXT` unchanged.
+
+Tests (`test_AMD_*` in `backend/tests/test_gajjala_watch_auto_2026_11_17.py`): the probe_churn scenario (40 lapsed
+backlog + 1 live, cap 18 → live first, 17 newest backlog names; minutes 1–3 nothing evicted / re-added; a 2nd live
+potential evicts the oldest-added lapsed name, which stays out), a tracker-only name never evicts, `dropped_since` =
+newest `last.at` (bad → now), a KEEP read lands unstamped, a ↩️ / ✖️ backlog name counted `failed`, a full list reads
+no backlog progress. Pins moved with dated comments: the add-order test, the first tracker-only test (stamp), the
+skipped-dict and `SKIPPED_KEYS` pins, the hint and rules-line words.

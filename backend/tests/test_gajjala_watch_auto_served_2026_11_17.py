@@ -212,6 +212,28 @@ def test_leaving_text_only_while_dropped_since_is_set():
     rows = PL.build(FRI_IN, db=_db([], [_entry("KEEP"), _entry("LEAV", dropped_since=since)]))["rows"]
     assert rows[0]["auto"]["leaving_text"] is None                                     # NEG: dropped_since null
     assert rows[1]["auto"]["leaving_text"] == PL.AUTO_LEAVING_TEXT.format(since_et="10:22")
+    assert rows[1]["auto"]["leaving_text"] == "potential lapsed 10:22 ET — first out when a new one comes in"   # 12:55
+
+
+def test_ACC_a_made_room_removal_serves_its_stored_text_and_an_old_dropped_doc_still_renders():
+    """2026-11-17 12:55 accumulate: reason "made_room" (new) serves the engine's stored words verbatim; a doc written
+    before 12:55 carrying reason "dropped" still renders through its stored text (never a KeyError, never blank)."""
+    made = dict(_removal(0, reason="made_room", text=PL.AUTO_MADE_ROOM_TEXT.format(new="NEWX", since_et="10:22")),
+                state="invalid")
+    old = dict(_removal(1, reason="dropped",
+                        text=PL.AUTO_DROPPED_TEXT.format(grace_min=int(C.AUTO_DROP_GRACE_SEC) // 60, word="invalid")))
+    out = PL.build(FRI_IN, db=_db([], [], removed=[made, old]))["auto"]["removed"]
+    assert out[1]["reason"] == "made_room" and out[1]["text"] == "made room for NEWX — potential lapsed 10:22 ET"
+    assert out[1]["text_full"].endswith(out[1]["text"]) and "NEWX" in out[1]["text_full"]
+    assert out[0]["reason"] == "dropped" and out[0]["text"] == old["text"]
+    nil = PL.build(FRI_IN, db=_db([], [], removed=[dict(_removal(2, reason="made_room"), text=None)]))
+    assert nil["auto"]["removed"][0]["text"] == "made_room"                          # NEG: no text → the reason, never ""
+
+
+def test_ACC_NEGATIVE_the_hint_formats_without_a_grace_field(monkeypatch):
+    monkeypatch.delattr(C, "AUTO_DROP_GRACE_SEC", raising=False)                     # nothing in the words reads it
+    h = PL.auto_hint()
+    assert "{" not in h and h.endswith("UNMEASURED.")
 
 
 def test_added_et_falls_back_to_the_stored_stamp():
@@ -315,7 +337,14 @@ def test_board_block_words_and_numbers_from_the_constants():
     assert a["title"] == PL.AUTO_TITLE_TEXT.format(n=2, cap=C.AUTO_MAX_SYMBOLS)
     h = a["hint"]
     assert f"{int(C.AUTO_MIN_VOLUME):,}" in h and f"up to {C.AUTO_MAX_SYMBOLS}." in h
-    assert f"for {int(C.AUTO_DROP_GRACE_SEC) // 60} minutes" in h
+    # PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §3): the grace clause is gone — names that came in at any time today
+    # stay all session; at the cap the oldest lapsed one makes room.
+    # PIN MOVED 2026-11-17 (Amendment A1/A2): no "oldest first" — a current potential first, the earlier ones newest
+    # first into free seats only; only a current potential makes room.
+    assert f"for {int(C.AUTO_DROP_GRACE_SEC) // 60} minutes" not in h and "minutes" not in h
+    assert "at any time today" in h and "oldest first" not in h and "stays all session" in h
+    assert "A current potential goes first" in h and "newest first, into free seats only" in h
+    assert f"At {C.AUTO_MAX_SYMBOLS} the oldest name whose potential lapsed makes room for a current potential" in h
     for k in C.AUTO_SOURCES:
         assert C.AUTO_SOURCE_WORDS[k] in h
     assert "{" not in h and "}" not in h and h.endswith("UNMEASURED.")

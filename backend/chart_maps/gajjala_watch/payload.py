@@ -10,6 +10,8 @@ READS STORED DOCS ONLY — never a bar fetch, never a snapshot (the minute loop 
   * the tile docs of the listed names (ONE `find({_id: {$in: names}})`; an unlisted `only` name is never read);
   * the loop state doc (ONE find_one `_id = C.STATE_LATEST_ID`);
   * today's pushed claims (ONE `find({date: session, state: "cross_pushed"})`).
+  * 🎯 (2026-11-17, spec ggwaplus): the Gajjala boards' reads of the served names — ONE projected find per read
+    store (GG5, GG1) + the 🧪 board's own overlay call (`aplus_section`); display only, never a fetch.
 
 Rows follow HIS list order — the server never reorders. A doc with `frames` is `ok` (stale + the status sentence when
 its last read was not `loaded`: the last good charts stay, C1.2); a doc without frames serves its status; no doc =
@@ -98,21 +100,25 @@ STORE_NO_SYMBOL = "That ticker"
 
 # 🤖 auto section words (2026-11-17, spec ggwauto §3.4) — every number a {} field filled from its constant at call time.
 AUTO_TITLE_TEXT = "🤖 {n} of {cap} auto from the Gajjala boards"
-AUTO_HINT_TEXT = ("Added once a minute in the pass window: the 🧠 potentials on the {boards} boards with today's volume at "
-                  "or over {floor:,} shares (GG's K11 floor — the scan row, else the pass's own stored number), in the "
-                  "order added, up to {cap}. Removed when every board reads ↩️ back under or ✖️ stop printed, or when it "
-                  "has been a potential nowhere for {grace_min} minutes; ⏸ waiting above its trigger stays. The {gga} tag "
-                  "means the {gga} board shows this {gg5} potential (it borrows them). Your own names are never touched. "
-                  "{push_word} × removes a name until tomorrow. UNMEASURED.")
+AUTO_HINT_TEXT = ("Added once a minute in the pass window: every name that came into a 🧠 potential on the {boards} "
+                  "boards at any time today with today's volume at or over {floor:,} shares (GG's K11 floor — the scan "
+                  "row, else the pass's own stored number), up to {cap}. A current potential goes first; today's earlier "
+                  "ones follow newest first, into free seats only, and one that already read ↩️ back under or ✖️ stop "
+                  "printed is not added. A name stays all session; it leaves when every board reads ↩️ back under or ✖️ "
+                  "stop printed, or on your ×; ⏸ waiting above its trigger stays. At {cap} the oldest name whose "
+                  "potential lapsed makes room for a current potential. The {gga} tag means the {gga} board shows this "
+                  "{gg5} potential (it borrows them). Your own names are never touched. {push_word} × removes a name "
+                  "until tomorrow. UNMEASURED.")       # 2026-11-17 12:55 accumulate; order words = Amendment A
 AUTO_EMPTY_TEXT = "No 🧠 potential with volume at or over {floor:,} on the boards right now"
 AUTO_PUSH_WORDS = {"off": "Auto names do not ring the {push_frames} cross.",           # by auto.push_mode()
                    "live": "Auto names ring the {push_frames} cross like yours."}
 AUTO_ROW_TEXT = "{tag} auto · {sources} · {setup} · {kind}"
 AUTO_VOL_TEXT = {"scan": "vol {vol}", "tracker": "vol {vol} (pass number)"}          # [C2] by the entry's volume_source
 AUTO_ADDED_TEXT = "added {at_et} ET"
-AUTO_LEAVING_TEXT = "leaving — a potential nowhere since {since_et} ET"             # [C3] only while dropped_since is set
+AUTO_LEAVING_TEXT = "potential lapsed {since_et} ET — first out when a new one comes in"   # only while dropped_since is set (12:55)
 AUTO_REMOVED_TEXT = "{symbol} · {at_et} ET · {text}"                                # → each removal's `text_full`
-AUTO_DROPPED_TEXT = "no longer a 🧠 potential on any Gajjala board for {grace_min} min — {word}"   # auto.step's words
+AUTO_DROPPED_TEXT = "no longer a 🧠 potential on any Gajjala board for {grace_min} min — {word}"   # OLD docs only (12:55)
+AUTO_MADE_ROOM_TEXT = "made room for {new} — potential lapsed {since_et} ET"       # auto.step "made_room" (12:55)
 AUTO_ON_LIST_TEXT = "➕ now on your list"
 AUTO_DISMISSED_TEXT = "× removed by you — not added again today"
 AUTO_REMOVE_TITLE = "Remove {sym} (auto — not added again today)"
@@ -438,7 +444,7 @@ def auto_hint() -> str:
     push_word = AUTO_PUSH_WORDS.get(mode, AUTO_PUSH_WORDS[C.AUTO_PUSH_MODES[0]]).format(push_frames=frames)
     return AUTO_HINT_TEXT.format(boards=_and([words.get(k) for k in C.AUTO_SOURCES]),
                                  floor=int(C.AUTO_MIN_VOLUME), cap=C.AUTO_MAX_SYMBOLS,
-                                 grace_min=int(C.AUTO_DROP_GRACE_SEC) // 60, gga=words.get(gga), gg5=words.get(gg5),
+                                 gga=words.get(gga), gg5=words.get(gg5),
                                  push_word=push_word)
 
 
@@ -564,6 +570,118 @@ def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: da
         return {}, None
 
 
+# ── 🎯 A+ tag (2026-11-17, spec ggwaplus) ───────────────────────────────────────────────────────────────────────────
+# Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every row (his AND 🤖) carries
+# `aplus` when ANY Gajjala board's stored read of that name THIS session has a setup in tab.MARKED_STATES. Display only:
+# no push, no ring, no claim, no gate, nothing written. UNMEASURED. Reads: ONE projected find per read store (🚩 5-min =
+# GG5's `gajjala_reads`, 🚩 1-min = GG1's) by `_id $in [ST.key(session, SYM)]` — never the tile bars, never a fetch — and
+# 🧪 = THE 🧪 board's own overlay (`audited_tab.overlay_reads`, the call tab.py makes on GG5's reads; it reads the 🧪
+# overlay docs once) — a 🚩 A+ the audit holds serves `aplus_held` there (no 🧪 item), a K3S admit can be a 🧪-only A+.
+APLUS_TAG = "🎯"
+APLUS_TEXT = "🎯 A+"
+APLUS_TEXT_AT = "{text} {at_et}"                                    # the first item's clock, served INSIDE `text`
+# = tab.recap's inline word map (chart_maps/gajjala/tab.py:1796 — a dict literal there, not a constant): defined ONCE here;
+# its keys == tab.MARKED_STATES (a test pins both).
+APLUS_WORDS = {"aplus": "A+", "triggered": "A+ (triggered)", "stopped": "A+, then stopped"}
+APLUS_ITEM_TEXT = "{source} {setup} {word} at {at_et} ET"
+APLUS_ITEM_NO_TIME_TEXT = "{source} {setup} {word}"
+APLUS_TITLE_TEXT = "{text} on the Gajjala boards this session: {items} — display only, nothing rings · UNMEASURED"
+APLUS_ITEM_SEP = " · "
+APLUS_READ_FIELDS = {"symbol": 1, "setups": 1, "updated_at": 1}   # updated_at: the 🧪 overlay's freshness check (3)
+
+
+def _aplus_stores() -> dict:
+    """{source key: its real store} — GG5 → store.default(), GG1 / 🧪 → store.for_variant (🧪 borrows GG5's reads and
+    owns its overlay). Tests replace this function."""
+    from chart_maps.gajjala import store as ST
+    from chart_maps.gajjala import variant as V
+    return {v.key: (ST.default() if V.is_gg5(v) else ST.for_variant(v)) for v in V.VARIANTS}
+
+
+def _aplus_find(st, ids: list) -> dict:
+    """{SYM: read doc} — the ONE projected find of a store's reads. Raises on a fault / a missing handle (the caller
+    serves null — an unknown read is never "no A+")."""
+    from chart_maps.gajjala import store as ST
+    c = st.coll(ST.READS) if st is not None else None
+    if c is None:
+        raise LookupError("no reads handle")
+    want = set(ids)
+    out: dict = {}
+    for d in c.find({"_id": {"$in": list(ids)}}, APLUS_READ_FIELDS):
+        if isinstance(d, dict) and d.get("_id") in want and isinstance(d.get("symbol"), str):
+            out[d["symbol"].upper()] = d
+    return out
+
+
+def aplus_items(reads_by: dict, source: str) -> dict:
+    """{SYM: [item]} of one board's (served) reads — every setup whose state is in tab.MARKED_STATES."""
+    from chart_maps.gajjala import alerts as AL
+    from chart_maps.gajjala import tab
+    out: dict = {}
+    for sym, doc in (reads_by or {}).items():
+        setups = doc.get("setups") if isinstance(doc, dict) and isinstance(doc.get("setups"), dict) else {}
+        for setup in GC.SETUPS:
+            r = setups.get(setup)
+            st = r.get("state") if isinstance(r, dict) else None
+            if st not in tab.MARKED_STATES:
+                continue
+            close = AL.bar_close_et(r.get("entry_bar_t"))
+            out.setdefault(sym, []).append({
+                "source": source, "source_word": C.AUTO_SOURCE_WORDS[source], "setup": setup,
+                "setup_label": tab._setup_label(setup), "state": st, "word": APLUS_WORDS[st],
+                "at_et": close.strftime("%H:%M") if close is not None else None})
+    return out
+
+
+def _aplus_item_text(it: dict) -> str:
+    kw = dict(source=it["source_word"], setup=it["setup_label"], word=it["word"])
+    return (APLUS_ITEM_TEXT.format(at_et=it["at_et"], **kw) if it.get("at_et")
+            else APLUS_ITEM_NO_TIME_TEXT.format(**kw))
+
+
+def aplus_row_block(items: list) -> Optional[dict]:
+    """The row's `aplus` block — items ordered by at_et (a missing clock last), then GC.SETUPS order, then the source
+    (C.AUTO_SOURCES order); None when no item."""
+    if not items:
+        return None
+    items = sorted(items, key=lambda it: (it.get("at_et") is None, it.get("at_et") or "",
+                                          GC.SETUPS.index(it["setup"]), C.AUTO_SOURCES.index(it["source"])))
+    first = items[0].get("at_et")
+    text = APLUS_TEXT_AT.format(text=APLUS_TEXT, at_et=first) if first else APLUS_TEXT
+    return {"tag": APLUS_TAG, "text": text, "items": items,
+            "title": APLUS_TITLE_TEXT.format(text=APLUS_TEXT,
+                                             items=APLUS_ITEM_SEP.join(_aplus_item_text(it) for it in items))}
+
+
+def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> dict:
+    """{SYM: aplus block} for `names` (only tagged names are keys). ONE projected read find per read store (GG5, GG1)
+    plus the 🧪 board's own overlay call on GG5's reads. ANY fault → {} (every row serves null; the board answers)."""
+    if not names:
+        return {}
+    try:
+        from chart_maps.gajjala import store as ST
+        from chart_maps.gajjala import variant as V
+        stores = stores if stores is not None else _aplus_stores()
+        ids = [ST.key(siso, s) for s in names]
+        gg5 = _aplus_find(stores[V.GG5.key], ids)
+        gg1 = _aplus_find(stores[V.GG1.key], ids)
+        from chart_maps.gajjala import audited_tab as AT
+        gga, _stats = AT.overlay_reads(gg5, stores[V.GGA.key], siso)       # THE 🧪 board's call (tab.py), reused
+        by: dict = {}
+        for source, reads in ((V.GG5.key, gg5), (V.GG1.key, gg1), (V.GGA.key, gga)):
+            for sym, its in aplus_items(reads, source).items():
+                by.setdefault(sym, []).extend(its)
+        out = {}
+        for s in names:
+            blk = aplus_row_block(by.get(str(s).upper(), []))
+            if blk is not None:
+                out[s] = blk
+        return out
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: A+ tag unavailable: %s", type(exc).__name__)
+        return {}
+
+
 # ── the payload ──────────────────────────────────────────────────────────────────────────────────────────────────
 def _session_of(now: datetime) -> tuple:
     from chart_maps.gajjala import tab
@@ -619,8 +737,10 @@ def _build(now: datetime, db, only) -> dict:
     rows = [row(s, tiles.get(s), session=siso, is_today=is_today, in_window=in_window, now=now,
                 claims=[c for c in claims if c.get("symbol") == s and c.get("state") == PUSHED_STATE])
             for s in names]
+    aplus_by = aplus_section(names, siso)                    # 🎯 2026-11-17 (spec ggwaplus) — display only
     for r in rows:
         r["auto"] = auto_by.get(r["symbol"])
+        r["aplus"] = aplus_by.get(r["symbol"])
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
     out = {"state": "ok", "title": title(), "session": siso, "is_today": bool(is_today), "in_window": bool(in_window),
            "refresh_sec": GC.GG1M_CADENCE_SEC if in_window else 0,
