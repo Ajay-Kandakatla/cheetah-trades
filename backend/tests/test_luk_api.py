@@ -19,6 +19,7 @@ import pytest
 from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import tape as GTP
 from chart_maps.gajjala import variant as V
+from chart_maps.gajjala import card_frames as CF
 from chart_maps.luk import tab as LT
 from chart_maps.luk import tape as LTP
 from chart_maps.luk.variant import LUK
@@ -30,7 +31,8 @@ GG_ROUTES = {("/chart-maps/gajjala", "GET"), ("/chart-maps/gajjala/scan", "POST"
              ("/chart-maps/gajjala-1m/scan", "POST"), ("/chart-maps/gajjala-1m/entry-tape", "GET"),
              ("/chart-maps/gajjala-audited", "GET"), ("/chart-maps/gajjala-audited/scan", "POST"),
              ("/chart-maps/gajjala-audited/entry-tape", "GET"), ("/chart-maps/gajjala/broker-flags", "GET"),
-             ("/chart-maps/gajjala/broker-flags", "POST"), ("/chart-maps/gajjala/broker-flags/{symbol}", "DELETE")}
+             ("/chart-maps/gajjala/broker-flags", "POST"), ("/chart-maps/gajjala/broker-flags/{symbol}", "DELETE"),
+             (CF.API_PATH, "GET")}   # 2026-11-16 spec ggcard3 §3.1: the card three-chart view GET (pin moved)
 
 
 class Rec:

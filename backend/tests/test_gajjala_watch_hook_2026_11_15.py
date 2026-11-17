@@ -8,7 +8,7 @@ The call sits at the START of the cron path (after the --now refusal, BEFORE the
 loop's iteration 0 reads the bar that closed at the tick. NEGATIVES: --dry-run / --now / --on-demand / --symbols /
 --at-bar-close never spawn; the switch off never spawns; a raising spawn keeps the exit code; the parent reads no Mongo
 and no provider; the only files under chart_maps/gajjala/ that name the watch are run.py and (since 2026-11-16,
-the live tab) live_events.py.
+the live tab) live_events.py and (since 2026-11-16, the read-only card three-chart view GET) card_frames.py.
 """
 from __future__ import annotations
 
@@ -65,8 +65,23 @@ def test_only_gajjala_run_py_names_the_watch():
                   if p.is_file() and "__pycache__" not in p.parts
                   and "gajjala_watch" in p.read_text(encoding="utf-8", errors="ignore"))
     # 2026-11-16 (spec ggw_live §3.1, WP-A1): live_events.py now names chart_maps.gajjala_watch.constants for
-    # extra_tabs()/quote_tabs() — the watch's live tab. Widened from ["run.py"]; nothing else may join.
-    assert hits == ["live_events.py", "run.py"]
+    # extra_tabs()/quote_tabs() — the watch's live tab. Widened from ["run.py"].
+    # 2026-11-16 (spec ggcard3 §3.1, WP-C): card_frames.py — the card three-chart view, display-only — imports the
+    # Watch's axis/stale readers (gajjala_watch.build + .payload). Widened again; nothing else may join.
+    assert hits == ["card_frames.py", "live_events.py", "run.py"]
+
+
+def test_NEGATIVE_card_frames_imports_only_the_watch_readers_never_its_switch_or_store():
+    tree = ast.parse((GG_DIR / "card_frames.py").read_text(encoding="utf-8"))
+    mods = sorted({f"{n.module}.{a.name}" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+                   and (n.module or "").startswith("chart_maps.gajjala_watch") for a in n.names}
+                  | {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+                     if a.name.startswith("chart_maps.gajjala_watch")})
+    assert mods == ["chart_maps.gajjala_watch.build", "chart_maps.gajjala_watch.payload"]
+    src = (GG_DIR / "card_frames.py").read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import constants", "gajjala_watch import loop",
+                   "WCO.", "_popen", "spawn"):
+        assert banned not in src
 
 
 def _main_fn(tree):

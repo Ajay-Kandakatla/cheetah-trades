@@ -46,46 +46,26 @@
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
  * list order orders this board (the order he added the names in, as served). */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FIT_GROW, GGW_FOCUS_PARAM, GGW_LIVE_EMA_TIP, ggwRowLive, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH, GGW_PHONE_MQ,
-  GGW_STRETCH, ggwChartHeight, ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwFitViewBoxH, ggwMergeRows, ggwPendingSymbols, ggwRowsPath, ggwSplitFrames,
-  ggwPickGrid, ggwFitViewW, ggwStretchFrames, ggwStretchTitle, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
+  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH,
+  ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
+  ggwPickGrid, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
-  type GgwBoard, type GgwFrame, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
+  type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
-import { ggwApplyBatch, ggwFrameMetas, ggwLiveFrame, type GgwFrameMeta, type GgwLiveBar, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
+import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
 import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
-import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
-import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
+/* 2026-11-16 (ggcard3 WP-A): the tile, its frames and the ⤢ full-screen view live in GajjalaWatchTile.tsx (a pure move)
+ * so the 🚩 cards open the SAME view. */
+import { GgwStretch, Tile, usePhone } from './GajjalaWatchTile';
 import { loadGgwList } from '../lib/ggWatchList';
-import { EmaBlinkDot } from './EmaBlink';
-import { emaBlinkLine } from '../lib/emaBlink';
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
 const NO_SYMBOLS: string[] = [];
-
-function phoneNow(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    && window.matchMedia(GGW_PHONE_MQ).matches;
-}
-
-function usePhone(): boolean {
-  const [phone, setPhone] = useState<boolean>(phoneNow);
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const m = window.matchMedia(GGW_PHONE_MQ);
-    const h = () => setPhone(m.matches);
-    h();
-    m.addEventListener?.('change', h);
-    return () => m.removeEventListener?.('change', h);
-  }, []);
-  return phone;
-}
 
 const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
@@ -117,197 +97,6 @@ function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElem
     return () => { window.removeEventListener('resize', measure); ro?.disconnect(); };
   }, [phone, grid, head, deps, rows]);
   return rowH;
-}
-
-/** In a fitted tile: the viewBox height that fills this chart's measured box (null → the GGW_CHART_H height). */
-function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): { w: number; h: number } | null {
-  const [h, setH] = useState<{ w: number; h: number } | null>(null);
-  useEffect(() => {
-    const el = box.current;
-    if (!fit || !el) { setH(null); return; }
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      const w = ggwFitViewW(r.width, PATTERN_CHART_VIEW_W);
-      const vh = ggwFitViewBoxH(r.width, r.height, w);
-      setH((p) => (vh == null ? null : p && p.w === w && p.h === vh ? p : { w, h: vh }));
-    };
-    measure();
-    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
-    ro?.observe(el);
-    return () => ro?.disconnect();
-  }, [box, fit]);
-  return h;
-}
-
-function Frame({ f, phone, fit, style, live }: {
-  f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties;
-  /** This frame's forming bars (lib/ggwLive), or undefined → the stored frame exactly as served. */
-  live?: GgwLiveBar[];
-}) {
-  const box = useRef<HTMLDivElement>(null);
-  const fitH = useFitBox(box, fit);
-  const blink = emaBlinkLine(f.ema_blink);
-  /* The SAME frame object when nothing is live, so PatternChart's memo skips the redraw. */
-  const shown = useMemo(() => ggwLiveFrame(f, live, { emaTip: GGW_LIVE_EMA_TIP }), [f, live]);
-  return (
-    <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
-      <div className="ggw-chartbox" ref={box}>
-        <PatternChart tile={shown.tile} chartOnly emaStyle="bold" axis={shown.axis}
-                      viewW={fit && fitH ? fitH.w : undefined}
-                      height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)} />
-      </div>
-      <figcaption className="ggw-cap">
-        {/* 🔀 the served 9/21 EMA cross blinker of THIS frame — the dot first, then its served sentence as one chip; the
-            chart box itself carries no dot (C9: the svg's top-right holds the price axis). */}
-        <EmaBlinkDot block={f.ema_blink} testid={`ggw-ema-blink-dot-${f.tile.symbol}-${f.tf}`} />
-        <span className="ggw-cap-label">{f.uptrend ? `${f.label} · ${f.uptrend.short}` : f.label}</span>
-        {f.held ? <span className="ggw-chip ggw-held" data-testid="ggw-held">{f.held.text}</span> : null}
-        {/* 📶 the served base-count line of the 5-min frame (the ONE engine's card line), verbatim; hover = served title */}
-        {f.run_bases ? (
-          <span className="ggw-chip ggw-bases" data-testid="ggw-bases" title={f.run_bases.title || undefined}>
-            {f.run_bases.text}
-          </span>
-        ) : null}
-        {blink ? (
-          <span className="ggw-chip ema-blink-chip" data-testid={`ggw-ema-blink-${f.tile.symbol}-${f.tf}`}
-                title={blink.title || undefined}>
-            {blink.text}
-          </span>
-        ) : null}
-      </figcaption>
-    </figure>
-  );
-}
-
-function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live }: {
-  row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
-  /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
-  live?: GgwLiveSym;
-  onRemove: (sym: string) => void;
-  /** On the board: ⤢ opens this tile full screen. */
-  onStretch?: (sym: string) => void;
-  /** In the full-screen view: ⤡ goes back (and ✕ is not offered there — no remove one click from closing). */
-  onUnstretch?: () => void;
-  /** Not on the current page: kept mounted (its charts keep their bars) but not shown. */
-  offPage?: boolean;
-  /** In the full-screen view: ◀ ▶ step to the previous / next stock of HIS list. */
-  onPrev?: () => void;
-  onNext?: () => void;
-}) {
-  const { top, pair } = ggwSplitFrames(row.frames);
-  const rm = removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol;
-  return (
-    <section className={`ggw-tile${focused ? ' ggw-tile-focus' : ''}`} id={onUnstretch ? undefined : `ggw-${row.symbol}`}
-             data-testid={onUnstretch ? `ggw-stretch-tile-${row.symbol}` : `ggw-tile-${row.symbol}`} data-state={row.state}
-             hidden={offPage || undefined}>
-      <div className="ggw-tile-head">
-        <b className="ggw-sym">{row.symbol}</b>
-        {row.text ? (
-          <span className={`ggw-line ggw-row-text${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-row-text">
-            {row.text}
-          </span>
-        ) : null}
-        {row.from_session ? <span className="ggw-chip ggw-from" data-testid="ggw-from">{row.from_session}</span> : null}
-        {row.as_of_et ? (
-          <span className={`ggw-chip ggw-asof${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-asof">
-            {row.stale ? '⚠️ ' : ''}{row.as_of_et}
-          </span>
-        ) : null}
-        {row.rang.map((r, i) => (
-          <span key={`${r.frame}-${r.at_et}-${i}`} className="ggw-chip ggw-rang" data-testid="ggw-rang">{r.text}</span>
-        ))}
-        <span className="ggw-actions">
-          {onStretch ? (
-            <button type="button" className="ggw-btn ggw-stretch-btn" title={ggwStretchTitle(row.symbol)}
-                    aria-label={ggwStretchTitle(row.symbol)} data-testid={`ggw-stretch-btn-${row.symbol}`}
-                    onClick={() => onStretch(row.symbol)}>
-              {GGW_STRETCH.open}
-            </button>
-          ) : null}
-          <button type="button" className="ggw-btn ggw-yahoo" title={yahooTitle(row.symbol)}
-                  aria-label={yahooTitle(row.symbol)} onClick={(e) => openYahoo(e, row.symbol)}>
-            {YAHOO_LABEL}
-          </button>
-          {onPrev ? (
-            <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle}
-                    aria-label={GGW_PAGER.prevTitle} data-testid="ggw-stretch-prev" onClick={onPrev}>
-              {GGW_PAGER.prev}
-            </button>
-          ) : null}
-          {onNext ? (
-            <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle}
-                    aria-label={GGW_PAGER.nextTitle} data-testid="ggw-stretch-next" onClick={onNext}>
-              {GGW_PAGER.next}
-            </button>
-          ) : null}
-          {onUnstretch ? (
-            <button type="button" className="ggw-btn ggw-unstretch" title={GGW_STRETCH.closeTitle}
-                    aria-label={GGW_STRETCH.closeTitle} data-testid="ggw-unstretch" onClick={onUnstretch}>
-              {GGW_STRETCH.close}
-            </button>
-          ) : (
-            <button type="button" className="ggw-btn ggw-remove" title={rm} aria-label={rm} disabled={busy}
-                    onClick={() => onRemove(row.symbol)}>
-              {'✕'}
-            </button>
-          )}
-        </span>
-      </div>
-      {onUnstretch && row.frames.length ? (
-        <div className="ggw-dark ggw-charts ggw-charts--stretch" data-testid="ggw-stretch-charts">
-          {ggwStretchFrames(row.frames).map((f) => (
-            <Frame key={f.tf} f={f} phone={phone} fit={fit} style={fit ? { flexGrow: 1 } : undefined} live={live?.by[f.tf]} />
-          ))}
-        </div>
-      ) : top || pair.length ? (
-        <div className="ggw-dark ggw-charts">
-          {top ? (
-            <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined}
-                   live={live?.by[top.tf]} />
-          ) : null}
-          {pair.length ? (
-            <div className="ggw-frame-pair" style={fit ? { flexGrow: GGW_FIT_GROW.pair } : undefined}>
-              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} />)}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-/** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
- *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
- *  the board's own rows, so the minute GET keeps moving its bars. */
-function Stretch({ row, phone, removeLabel, onClose, onStep, live }: {
-  row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
-  live?: GgwLiveSym;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      else if (onStep && e.key === 'ArrowLeft') onStep(-1);
-      else if (onStep && e.key === 'ArrowRight') onStep(1);
-    };
-    document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [onClose, onStep]);
-  useEffect(() => {
-    (document.querySelector('[data-testid="ggw-unstretch"]') as HTMLElement | null)?.focus?.();
-  }, []);
-  return createPortal(
-    <div className="ggw-stretch" role="dialog" aria-modal="true" aria-label={ggwStretchTitle(row.symbol)}
-         data-testid="ggw-stretch" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
-        <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
-              onRemove={() => {}} onUnstretch={onClose} live={live}
-              onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
-      </div>
-    </div>,
-    document.body,
-  );
 }
 
 export default function GajjalaWatchBoard() {
@@ -697,7 +486,7 @@ export default function GajjalaWatchBoard() {
         p.empty_text ? <p className="ggw-line ggw-empty" data-testid="ggw-empty">{p.empty_text}</p> : null
       )}
       {stretchRow ? (
-        <Stretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
+        <GgwStretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
                  onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} />
       ) : null}
     </div>

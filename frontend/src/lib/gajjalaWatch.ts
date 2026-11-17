@@ -224,6 +224,12 @@ export type GgwFrame = {
   /** 🔀 2026-11-15 (SPEC blinker §3.5): the served 9/21 EMA cross blinker of THIS frame (frame-level sibling of
    *  `ema_cross`, read off the stored curves) — the figcaption prints its dot; the chart box carries none. */
   ema_blink: CmEmaBlink | null;
+  /** 2026-11-16 (ggcard3 §3.2, C3) — OPTIONAL, present only when SERVED (the 🚩 card view's frames GET); absent on every
+   *  Watch frame and never defaulted to a value. `empty_text` = the served words for a frame with no stored bars;
+   *  `as_of_et` / `stale` = THIS frame's own source-doc stamp and the house stale verdict for that source. */
+  empty_text?: string | null;
+  as_of_et?: string | null;
+  stale?: boolean;
 };
 export type GgwRang = { frame: string; at_et: string | null; text: string };
 export type GgwRow = {
@@ -306,7 +312,9 @@ function parseTile(v: unknown, symbol: string): CmTile | null {
   } as CmTile;
 }
 
-function parseFrame(v: unknown, symbol: string): GgwFrame | null {
+/** One served frame block, or null for junk (exported 2026-11-16 for lib/gajjalaCardView — body unchanged but for the
+ *  three optional keys, each kept ONLY when the server sent it). */
+export function parseFrame(v: unknown, symbol: string): GgwFrame | null {
   if (!isObj(v) || !str(v.tf)) return null;
   const tile = parseTile(v.tile, symbol);
   if (!tile) return null;
@@ -322,6 +330,9 @@ function parseFrame(v: unknown, symbol: string): GgwFrame | null {
      * 04:00 axis this board draws on (spec ggbase WP-E — main session's call). */
     run_bases: isObj(v.run_bases) ? ggRunBasesLine(v.run_bases) : null,
     ema_blink: isObj(v.ema_blink) ? (v.ema_blink as CmEmaBlink) : null,
+    ...('empty_text' in v ? { empty_text: str(v.empty_text) } : {}),
+    ...('as_of_et' in v ? { as_of_et: str(v.as_of_et) } : {}),
+    ...('stale' in v ? { stale: v.stale === true } : {}),
   };
 }
 
@@ -408,12 +419,15 @@ export function ggwSplitFrames(frames: ReadonlyArray<GgwFrame>): { top: GgwFrame
 }
 
 /** ⤢ The full-screen order, top to bottom (Ajay 2026-11-16: "I wanna see all 3 of one stock for stretch like 5, 3 and
- *  1"): 5-min, 3-min, 1-min, each full width and the same height; a frame not named here follows in served order. */
+ *  1"): 5-min, 3-min, 1-min, each full width and the same height; a frame not named here follows in served order.
+ *  2026-11-16 (ggcard3): `order` = another surface's order (the 🚩 card view's lib/gajjalaCardView.GGC_STRETCH_ORDER);
+ *  absent → this Watch order, unchanged. */
 export const GGW_STRETCH_ORDER = ['5m', '3m', '1m'] as const;
-export function ggwStretchFrames(frames: ReadonlyArray<GgwFrame>): GgwFrame[] {
+export function ggwStretchFrames(frames: ReadonlyArray<GgwFrame>,
+                                 order: ReadonlyArray<string> = GGW_STRETCH_ORDER): GgwFrame[] {
   const rank = (f: GgwFrame) => {
-    const i = (GGW_STRETCH_ORDER as ReadonlyArray<string>).indexOf(f.tf);
-    return i < 0 ? GGW_STRETCH_ORDER.length : i;
+    const i = order.indexOf(f.tf);
+    return i < 0 ? order.length : i;
   };
   return frames.map((f, i) => ({ f, i })).sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i).map((x) => x.f);
 }

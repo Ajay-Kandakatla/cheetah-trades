@@ -152,3 +152,6 @@
 .ggw-pager-item.is-on .ggw-pager-x { border-color: var(--accent, #c2ef50); }
 /* the lit ticker / per-screen buttons are FILLED, so they read in the light theme too (lime text on a light ground did not) */
 .ggw-pager-sym.is-on, .ggw-layout-btn.is-on { background: var(--accent, #c2ef50); color: #11160a; border-color: var(--accent, #c2ef50); }
+
+/* 2026-11-16 (ggcard3 WP-A): the 🚩 card view's served words for a frame with no stored bars, on the dark panel. */
+.ggw-stretch--card .ggw-frame-empty { padding: 12px; }

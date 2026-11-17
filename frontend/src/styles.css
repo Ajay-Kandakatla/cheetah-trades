@@ -13996,3 +13996,25 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 @media (max-width: 760px) {
   .iz-macro-where { flex-basis: 100%; margin-left: 0; }
 }
+
+/* 🚩 Gajjala card → ⤢ three-chart view + a separate SEPA page link (2026-11-16, spec ggcard3 §3.5). Ajay: "when I click
+ * on a card from any of the Gajjala I would like us to open the 3 chart extension like in the Watch list... Also put a
+ * SEPA page link for it separaetely on the card". The body is a role="button" root (PatternChart onOpenView); the link
+ * wears the .cm-tv chip look in the action row. Only boards that pass onOpenView get these classes. */
+.cm-tile-openview { cursor: pointer; }
+.cm-tile-openview:focus-visible { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
+.cm-sepa-link {
+  border: 1px solid var(--rule, #2a2f3a);
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 6px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.cm-sepa-link:hover { color: var(--ink, #e7e7e7); border-color: var(--text-muted, #94a3b8); }
+.cm-sepa-link:focus-visible { outline: 2px solid var(--gold, #c9a227); outline-offset: 1px; }

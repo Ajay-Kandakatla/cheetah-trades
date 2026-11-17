@@ -49,7 +49,10 @@ export function ggwFrameMetas(rows: ReadonlyArray<GgwRow>): Record<string, GgwFr
   const out: Record<string, GgwFrameMeta[]> = {};
   for (const r of rows || []) {
     if (!r || !ggwRowLive(r)) continue;
-    const metas = (r.frames || []).map(ggwFrameMeta).filter((m): m is GgwFrameMeta => !!m);
+    /* 2026-11-16 (ggcard3 C3): a frame SERVED as stale carries no live bar — the per-frame twin of the row rule. A frame
+     * without the key (every Watch frame) is unchanged. */
+    const metas = (r.frames || []).filter((f) => !(f && f.stale === true))
+      .map(ggwFrameMeta).filter((m): m is GgwFrameMeta => !!m);
     if (metas.length) out[r.symbol] = metas;
   }
   return out;
@@ -99,13 +102,16 @@ function prune(prev: GgwLiveMap, metas: Record<string, GgwFrameMeta[]>): GgwLive
   return changed ? out : prev;
 }
 
-/** One quote batch folded into the forming candles. Rules (spec §3.4, each pinned): another kind / variant → `prev`;
+/** One quote batch folded into the forming candles. Rules (spec §3.4, each pinned): another kind / variant → `prev`
+ *  (`variant` = the bus tab whose batches this surface folds — default GGW_TAB, the Watch; the 🚩 card view passes its
+ *  board's variant key, ggcard3 2026-11-16);
  *  a symbol without live metas → skipped; a quote not newer than the symbol's last folded stamp → skipped WHOLE (a
  *  replayed or older batch never adds volume twice); per frame, a bucket ≤ the last stored bucket or ≥ the served
  *  slots → skipped; the same bucket moves h / l / c and sums v; a later bucket opens at the print. A NEW map only when
  *  something changed; untouched symbols keep their object identity. */
-export function ggwApplyBatch(prev: GgwLiveMap, evt: GgQuotesEvent, metas: Record<string, GgwFrameMeta[]>): GgwLiveMap {
-  if (!evt || evt.kind !== 'quotes' || evt.variant !== GGW_TAB || !evt.quotes) return prev;
+export function ggwApplyBatch(prev: GgwLiveMap, evt: GgQuotesEvent, metas: Record<string, GgwFrameMeta[]>,
+                              variant: string = GGW_TAB): GgwLiveMap {
+  if (!evt || evt.kind !== 'quotes' || evt.variant !== variant || !evt.quotes) return prev;
   const base = prune(prev, metas);
   let out: GgwLiveMap | null = null;
   for (const [sym, q] of Object.entries(evt.quotes)) {

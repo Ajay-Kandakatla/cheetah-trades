@@ -33,6 +33,10 @@
    track on a one-column auto-fill grid (641–860 px) and overflow it. At ≤ 640 px .cm-grid is one column (styles.css), so the
    phone draws exactly as before; min-width: 0 / max-width: 100% above still hold. Kept OUT of the pinned .gg-card rule. */
 .gg-card.gg-wide { grid-column: 1 / -1; }
+/* ⤢ 2026-11-16 (ggcard3 §3.6): a charted card's body is the button that opens the three-chart view (PatternChart
+   `onOpenView`, the .cm-* look lives in styles.css). Phone gotcha (430 px): the clickable root can never be wider than the
+   card. Kept OUT of the pinned .gg-card rule. */
+.gg-card .cm-tile-openview { min-width: 0; max-width: 100%; }
 .gg-chip-row .cm-badge, .gg-pot-tells .cm-badge, .cm-tile-chips .cm-badge {
   white-space: normal; overflow-wrap: anywhere;
 }

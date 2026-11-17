@@ -175,10 +175,11 @@
  * renders nothing when its served block is absent, so 🚩 Gajjala's and the 1-min page draw exactly as before. A held
  * tile prints its served state_label with the served state as its class (gg-state-aplus_held). Shadow. UNMEASURED.
  */
-import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
+import { GgCardView } from './GgCardView';
 import { GgWatchButton } from './GgWatchButton';
 import { GgNewMark, GgSubMarksView } from './GgEntryMarks';
 import { GrowthChip } from './GrowthChip';
@@ -552,6 +553,27 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const kissSplit = ggKissFilterSplit(patchedTiles, kissBlock != null && kissOn);
   /* The live-patched cards the grid DRAWS (every card unless the 💋 toggle is ON), in the served order. */
   const liveTiles = kissSplit.visible;
+  /* ⤢ 2026-11-16 (ggcard3 §3.6) — Ajay: "when I click on a card from any of the Gajjala I would like us to open the 3 chart
+   * extension like in the Watch list" · "instead of 3 mins make it 15 mins timeframe". A charted card's body opens the
+   * Watch's full-screen view (GgCardView: 15-min / 5-min / 1-min); the stock page is the card's separate "SEPA page"
+   * link. ONE stable callback for every card (PatternChart is memo'd — a per-card arrow would redraw every svg on every
+   * quotes batch). ◀ ▶ / ← → step through the DRAWN cards (wrapping); the view closes when its symbol leaves them; it
+   * re-GETs only when this board's own GET lands (`boardSeq`). Bar-less ☀️/🌙 tiles keep their Link (no view). */
+  const [cardView, setCardView] = useState<string | null>(null);
+  const openView = useCallback((sym: string) => setCardView(sym), []);
+  const closeView = useCallback(() => setCardView(null), []);
+  const viewTile = cardView ? liveTiles.find((t) => t.symbol === cardView) ?? null : null;
+  const viewGone = viewTile == null;
+  useEffect(() => { if (cardView && viewGone) setCardView(null); }, [cardView, viewGone]);
+  const drawnKey = liveTiles.map((t) => t.symbol).join(',');
+  const stepView = useCallback((d: -1 | 1) => {
+    const syms = drawnKey ? drawnKey.split(',') : [];
+    if (syms.length < 2) return;
+    setCardView((cur) => {
+      const i = cur == null ? -1 : syms.indexOf(cur);
+      return syms[((i < 0 ? 0 : i) + d + syms.length) % syms.length];
+    });
+  }, [drawnKey]);
   const kissLine = kissBlock && kissOn ? ggKissFilterLine(kissBlock, kissSplit) : null;
   const toggleKiss = () => {
     const next = !kissOn;
@@ -856,7 +878,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     <GgNewMark mark={t.new_mark} sym={t.symbol} />
                   </div>
                   {t.bars?.length ? (
-                    <PatternChart tile={t}
+                    <PatternChart tile={t} onOpenView={openView}
                                   outerChips={outerChipsFor(GG_OUTER_CHIPS, t, {
                                     enterable: row?.enterable,
                                     explosive: row?.explosive,
@@ -893,6 +915,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               ) : card;
             })}
           </div>
+          {/* ⤢ the open card's three charts (a portal on <body>) — mounted with the board's landed-GET counter. */}
+          {cardView && viewTile ? (
+            <GgCardView card={viewTile} at={cardView} variant={vkey} boardSeq={boardSeq} onClose={closeView}
+                        onStep={liveTiles.length > 1 ? stepView : null} />
+          ) : null}
           {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of
               this sub ("this view is confusing are there 2 potential here?" → "Oh I think we should bring them to the top
               of the view"): the 2 live potentials are what the sub is named for; the 74-row history came first and hid them. */}

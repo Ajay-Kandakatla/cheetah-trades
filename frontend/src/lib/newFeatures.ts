@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-16, verbatim: "Also when I click on a card from any of the Gajjala I would like us to open the 3 chart extension
+  // like in the Watch list... Also put a SEPA page link for it separaetely on the card I I want to but default its 3 chart
+  // extension with 1 min, 3 min and 5 mins" · "Actually instead of 3 mins make it 15 mins timeframe". A click on any 🚩 card
+  // (5-min, 1-minute, 🧪 Audited) opens the ⤢ view with 15m / 5m / 1m stacked from the stored pass docs (no fetch); a separate
+  // "SEPA page" link keeps the old stock-page href. The 👀 Watch's own ⤢ keeps 5m / 3m / 1m. Doc docs/gajjala/card_three_charts_2026_11_16.md.
+  {
+    id: 'chart-maps-gajjala-card-three-charts-2026-11-16',
+    label: '⤢ Click any 🚩 card → 15, 5 and 1-min charts — you said: “when I click on a card from any of the Gajjala I would like us to open the 3 chart extension like in the Watch list” and “instead of 3 mins make it 15 mins”. The stock page is now the separate “SEPA page” link on the card.',
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-16, verbatim: "Add a short interest colume fo this table when available". 📋 All strategies (5-min + 1-min
   // pages): a Short interest column after Float — the house 🩳 FINRA read (one bulk Mongo read per build), settlement date on
   // hover, blank when no record. Display only: no sort, rank or gate reads it. Doc docs/gajjala/all_table_short_interest_2026_11_16.md.

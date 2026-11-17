@@ -11,7 +11,7 @@
  *
  * All geometry lives in lib/chartMaps.ts. This file only draws.
  */
-import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
@@ -25,6 +25,7 @@ import {
 } from '../lib/cardLadder';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
+import { openViewTestId, openViewTitle, SEPA_LINK_LABEL, sepaLinkTestId, sepaLinkTitle } from '../lib/cardLinks';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GgWatchButton } from './GgWatchButton';
 import { GrowthChip } from './GrowthChip';
@@ -126,7 +127,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView }: {
     tile: CmTile; height?: number;
     /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
      *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
@@ -160,6 +161,12 @@ export const PatternChart = memo(function PatternChart(
      *  right of the last bar stay empty, and candle bodies keep their true width (no 1.4 floor — thin 1-min bars, as in
      *  the replay). Default = one slot per bar, as before. */
     axis?: CmAxis | null;
+    /** 🚩 Gajjala cards (2026-11-16, spec ggcard3 §3.5; Ajay: "when I click on a card from any of the Gajjala I would like
+     *  us to open the 3 chart extension like in the Watch list... Also put a SEPA page link for it separaetely on the
+     *  card"): the card body opens the ⤢ view for this symbol and the stock page moves to a "SEPA page" link in the
+     *  action row. A FUNCTION of the symbol so ONE stable (useCallback) reference serves every card — this component is
+     *  memo'd. Default (absent) = the whole card is the SEPA link, as before. chartOnly ignores it. */
+    onOpenView?: (symbol: string) => void;
   },
 ) {
   const location = useLocation();
@@ -1025,14 +1032,10 @@ export const PatternChart = memo(function PatternChart(
     return <div className="cm-tile cm-tile-chart-only"><svg {...svgProps}>{svgLayers}</svg></div>;
   }
 
-  return (
-    <Link
-      to={withSource(tile.href, 'chart-maps', location.search)}
-      state={{ from: backTarget, label: 'Chart Maps' }}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-      aria-label={`${tile.symbol} — open SEPA detail`}
-    >
-      <div className="cm-tile">
+  /* 🚩 onOpenView (spec ggcard3 §3.5): the same body inside a role="button" root instead of the router Link. Without it
+   * the JSX below is today's, node for node (the SEPA link renders nothing). */
+  const tileInner = (
+      <>
         <div className="cm-tile-head">
           <div className="cm-tile-id">
             <b>{tile.symbol}</b>
@@ -1061,6 +1064,20 @@ export const PatternChart = memo(function PatternChart(
             </div>
           </div>
           <div className="cm-tile-actions">
+            {/* 🚩 the SEPA page link, FIRST, only when the body opens the ⤢ view (Ajay 2026-11-16: "Also put a SEPA page
+              * link for it separaetely on the card"). The served tile.href (with its &tf=) — the target the whole card
+              * had before; the click never reaches the root's onOpenView. */}
+            {onOpenView ? (
+              <Link to={withSource(tile.href, 'chart-maps', location.search)}
+                    state={{ from: backTarget, label: 'Chart Maps' }}
+                    className="cm-sepa-link"
+                    data-testid={sepaLinkTestId(tile.symbol)}
+                    aria-label={sepaLinkTitle(tile.symbol)}
+                    title={sepaLinkTitle(tile.symbol)}
+                    onClick={(e) => e.stopPropagation()}>
+                {SEPA_LINK_LABEL}
+              </Link>
+            ) : null}
             {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
               * every board; the Signals tab reads the same store. */}
             {/* Ajay 2026-11-15: "can you add an add to watch list button on all the stocks to move them and also remove
@@ -1236,7 +1253,38 @@ export const PatternChart = memo(function PatternChart(
             })}
           </div>
         ) : null}
+      </>
+  );
+
+  if (onOpenView) {
+    /* [C5] a keydown that bubbled from a focused inner link / button (the SEPA link, Yahoo, ➕ Watch, ▸ more) is left
+     * alone: Enter on the SEPA link navigates, Enter on a button does its own thing. Only a key ON the root opens. */
+    const onRootKey = (e: KeyboardEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onOpenView(tile.symbol);
+      }
+    };
+    return (
+      <div className="cm-tile cm-tile-openview" role="button" tabIndex={0}
+           aria-label={openViewTitle(tile.symbol)}
+           data-testid={openViewTestId(tile.symbol)}
+           onClick={() => onOpenView(tile.symbol)}
+           onKeyDown={onRootKey}>
+        {tileInner}
       </div>
+    );
+  }
+
+  return (
+    <Link
+      to={withSource(tile.href, 'chart-maps', location.search)}
+      state={{ from: backTarget, label: 'Chart Maps' }}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      aria-label={`${tile.symbol} — open SEPA detail`}
+    >
+      <div className="cm-tile">{tileInner}</div>
     </Link>
   );
 });

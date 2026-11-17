@@ -27,6 +27,7 @@ from . import board as board_mod
 from . import ema_frames as ema_frames_mod
 from . import support as support_mod
 from .gajjala import constants as gajjala_consts
+from .gajjala import card_frames as gajjala_card_frames   # 🚩 2026-11-16 — the card's three-chart view (route path only)
 
 log = logging.getLogger("chart_maps.api")
 router = APIRouter(tags=["chart-maps"])
@@ -676,6 +677,24 @@ async def chart_maps_gajjala_entry_tape(
         return JSONResponse(_scrub(p))
 
     return await asyncio.to_thread(_run)
+
+
+@router.get(gajjala_card_frames.API_PATH)
+async def gajjala_card_frames_get(symbol: str):
+    """🚩 Card → the three-chart view (spec ggcard3 §3.1, 2026-11-16; Ajay: "when I click on a card from any of the
+    Gajjala I would like us to open the 3 chart extension like in the Watch list" · "instead of 3 mins make it 15 mins
+    timeframe"). READ-ONLY: the 15m / 5m / 1m frames off the stored GG5 / GG1 read docs (card_frames.build — two
+    find_one reads, no fetch, no write), built off the event loop. No owner gate (the cards' own audience). A
+    non-ticker → 404 with the served sentence; any other fault → 200 `state: "error"`, never a 500. NaN → null."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from rotation.api import _scrub
+    CF = gajjala_card_frames
+    out = await asyncio.to_thread(CF.build, symbol if isinstance(symbol, str) else "",
+                                  datetime.now(ZoneInfo("America/New_York")))
+    if out.get("state") == "bad_symbol":
+        return JSONResponse({"detail": CF.BAD_SYMBOL_TEXT}, status_code=404)
+    return JSONResponse(_scrub(out))
 
 
 # ── 🚩 Gajjala's 1-minute page (2026-10-27, BUILD_SPEC27 §3.7 / WP-C) ────────────────────────────────────────────────
