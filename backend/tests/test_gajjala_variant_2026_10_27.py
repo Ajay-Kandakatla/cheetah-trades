@@ -23,6 +23,7 @@ from chart_maps.gajjala import detectors as D
 from chart_maps.gajjala import potential as PT
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import variant as V
+from chart_maps.gajjala_watch import constants as WC
 from tests.fixtures.gajjala import detector_frames as FX
 from tests.test_gajjala_potential import Rec, bf_armed, seed
 from tests.test_gajjala_run import NOW, PRIOR_1M, S, TODAY_1M, at
@@ -590,7 +591,8 @@ def test_gg1_shadow_run_pass_never_calls_send(monkeypatch):
     doc = st.alerts_coll().docs["SHADOW:GG1:2026-10-13|GGA|bull_flag"]
     assert doc["state"] == "shadow" and doc["kind"] == "gajjala_1m_setup" and doc["frame"] == "1m"
     wp = doc["would_push"]
-    assert wp["url"] == "/chart-maps?tab=gajjala_1m&sub=bull_flag&focus=GGA" and wp["kind"] == "gajjala_1m_setup"
+    assert wp["url"] == AL.ENTRY_URL.format(tab=WC.TAB, sym="GGA") and wp["kind"] == "gajjala_1m_setup"   # RE-PINNED 2026-11-17: url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
+    assert "tab=gajjala_1m" not in wp["url"] and "sub=" not in wp["url"]             # NEGATIVE 2026-11-17: never the old 1-minute tab url, no sub
     assert wp["tag"] == "gg1-bull_flag-GGA" and "on the 1m bar closing 10:40 ET" in wp["body"]
     assert shared.coll(ST.ALERTS).docs == {}                                          # NEGATIVE: GG5's ledger untouched
     again = AL.run_pass({"GGA": {"bull_flag": _aplus()}}, _frames(), at(10, 41, ss=20), S, store=st, send=send)
@@ -613,9 +615,12 @@ def test_NEGATIVE_a_1m_aplus_91_s_old_is_late():
     assert "GG1:2026-10-13|GGA|bull_flag#late" in st.alerts_coll().docs
 
 
-def test_NEGATIVE_gg5_compose_is_unchanged():
+def test_NEGATIVE_gg5_compose_kind_tag_body_unchanged_url_moved_2026_11_17():
+    # RENAMED + RE-PINNED 2026-11-17 (was test_NEGATIVE_gg5_compose_is_unchanged): the url moved to the 👀 Watch
+    # (Ajay: "an alert for me please Missed AKAN and GP"); kind, tag and body stay GG5's, byte-identical.
     p = AL.compose(_aplus(frame="5m"), "gga", {}, session=S)
-    assert p["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA" and p["kind"] == "gajjala_setup"
+    assert p["url"] == AL.ENTRY_URL.format(tab=WC.TAB, sym="GGA") and p["kind"] == "gajjala_setup"
+    assert "tab=gajjala&" not in p["url"] and "sub=" not in p["url"]                 # NEGATIVE: never the old 🚩 tab url, no sub
     assert p["tag"] == "gg-bull_flag-GGA" and "on the 5m bar closing" in p["body"]
     q = AL.compose(dict(_aplus(), frame=None), "gga", {}, session=S, variant=V.GG1)
     assert "on the 1m bar closing 10:40 ET" in q["body"] and q["kind"] == "gajjala_1m_setup"

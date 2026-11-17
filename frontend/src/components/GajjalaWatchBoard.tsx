@@ -422,6 +422,10 @@ export default function GajjalaWatchBoard() {
             {p.auto.title}
           </span>
         ) : null}
+        {/* 🎯 2026-11-17 (spec ggwaplus2): the served line naming the A+ names the last minute could not seat. */}
+        {p.auto?.skipped_text ? (
+          <span className="ggw-line ggw-warn" data-testid="ggw-auto-skipped">{p.auto.skipped_text}</span>
+        ) : null}
         {p.auto?.state === 'unreadable' && p.auto.text ? (
           <span className="ggw-line ggw-warn" data-testid="ggw-auto-unreadable">{p.auto.text}</span>
         ) : null}

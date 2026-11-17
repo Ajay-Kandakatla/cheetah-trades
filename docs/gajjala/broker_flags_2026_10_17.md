@@ -125,6 +125,9 @@ to 2026-10-16. Refusals, claims, the window and the send path are unchanged; a f
 
 🎯 A+ (E1 / E2 of `docs/gajjala/entry_live_2026_10_16.md`, widened):
 
+2026-11-17: the flagged A+ title now leads 🎯 A+ — `🎯 A+ · GGA · 💋 EMA Kiss & Fly · 🚫` (the ` · 🚫` suffix rule
+unchanged; body byte-identical; docs/gajjala/aplus_push_title_watch_2026_11_17.md).
+
 ```
 title   💋 GGA · EMA Kiss & Fly A+ entry · 🚫
 body    broke 11.00 on the 5m bar closing 10:35 ET · stop 10.81 (−1.7%) · Kissed and honored the 9 EMA; entry = the kiss bar's high · 🧠 potential rang 10:05 ET · Float 3.2M · 🚫 not eligible at Fidelity · UNMEASURED — his setup, not a buy signal

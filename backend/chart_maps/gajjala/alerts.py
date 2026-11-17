@@ -61,6 +61,7 @@ from supply_demand.timeframes import HALF_DAYS
 
 from . import constants as GC
 from . import variant as V
+from chart_maps.gajjala_watch import constants as WC     # 2026-11-17: the 👀 Watch tab the A+ push opens (WC imports only sys + GC — no cycle)
 
 log = logging.getLogger("chart_maps.gajjala.alerts")
 
@@ -97,6 +98,12 @@ ENTRY_WORDS = {
 # signed % vs the trigger, {r} the R left to the +{m}R target (m = GC.LEDGER_R_MULT). GG1 only (never GG5 / GGA); no threshold.
 CHASE_TEXT = "last {px} · {pct} vs the trigger · {r}R left to +{m}R"
 CHASE_PAST_TEXT = "last {px} · {pct} vs the trigger · already past +{m}R"
+# 🎯 2026-11-17 — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP".
+# The A+ entry title LEADS with 🎯 A+ (the lock screen's first glyphs; == gajjala_watch.payload.APLUS_TEXT, a test pins
+# equality) and the tap opens the 👀 Watch tab on that name (WC.TAB — never WC.API_PATH). Body / items / tag / kind unchanged.
+APLUS_TITLE_LEAD = "🎯 A+"
+TITLE_TEXT = "{lead} · {sym} · {emoji} {label}"          # e.g. "🎯 A+ · AKAN · 🎾 Reversal Squeeze"
+ENTRY_URL = "/chart-maps?tab={tab}&focus={sym}"           # the 👀 Watch (no sub); push/recent.ITEM_URL_BY_KIND carries the same string
 POTENTIAL_RANG_TEXT = "🧠 potential rang {at} ET"      # DECISIONS10 D2 — only when today's 🧠 potential of the same key RANG
 _HHMM = re.compile(r"\d\d:\d\d")
 # A+ that never ring: the state each refusal is recorded (and counted) as.
@@ -328,7 +335,11 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     `variant` (2026-10-27): the kind, the url's tab and the tag prefix ("gg-" GG5 / "gg1-" the 1-minute page) and the
     frame a read without one is said on (its primary).
     `last_px` (2026-11-11, proposal #3): on the one-minute page ONLY (V.GG1), `chase_text(trigger, stop, last_px)`
-    right after the stop bit when it is non-empty; GG5 and 🧪 GGA ignore it (byte-identical)."""
+    right after the stop bit when it is non-empty; GG5 and 🧪 GGA ignore it (byte-identical).
+    🎯 (2026-11-17, Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP"):
+    the title LEADS with APLUS_TITLE_LEAD — TITLE_TEXT "🎯 A+ · {SYM} · {emoji} {label}" (the "A+ entry" tail dropped;
+    the 🚫 suffix rule unchanged) — and the url is ENTRY_URL on the 👀 Watch tab (WC.TAB, focus = the name), the same
+    for GG5, the 1-minute page and 🧪's shadow record (one tab, no sub). Body, items, tag, kind: byte-identical."""
     v = V.of(variant)
     ctx = tile_ctx or {}
     sym = (sym or "").upper()
@@ -353,12 +364,12 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     body = " · ".join(b for b in bits if b)
     head = f"{sym} · {emoji} {label} A+ entry"
     line = " · ".join(b for b in (head, f"broke {_px(read.get('trigger'))}", stop_bit, words) if b)
-    title = f"{emoji} {sym} · {label} A+ entry"
+    title = TITLE_TEXT.format(lead=APLUS_TITLE_LEAD, sym=sym, emoji=emoji, label=label)
     if bt:
         from .tab import BROKER_FLAG_ICON                       # AMENDMENTS12 A1: the lock screen always shows it
         title = f"{title} · {BROKER_FLAG_ICON}"
     return {"title": title, "body": body, "tag": f"{_tag_prefix(v)}-{setup}-{sym}",
-            "url": f"/chart-maps?tab={v.tab}&sub={setup}&focus={sym}", "kind": v.push_kind_setup, "ticker": sym,
+            "url": ENTRY_URL.format(tab=WC.TAB, sym=sym), "kind": v.push_kind_setup, "ticker": sym,
             "items": [{"symbol": sym, "text": line}]}
 
 

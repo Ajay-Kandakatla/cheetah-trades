@@ -82,6 +82,13 @@ lock screen clips the body to about 180 characters (`push/sender.py`).
 
 url: `/chart-maps?tab=gajjala&sub={setup}&focus={SYM}` (unchanged; = `potential.deep_link`).
 
+WIDENED 2026-11-17 — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP".
+E1 is now `🎯 A+ · {SYM} · {emoji} {label}` (`alerts.TITLE_TEXT`, lead `alerts.APLUS_TITLE_LEAD` == the 👀 Watch's
+`payload.APLUS_TEXT`; the "A+ entry" tail dropped; the ` · 🚫` suffix rule unchanged) and the url is the 👀 Watch tab on
+that name, `/chart-maps?tab=gajjala_watch&focus={SYM}` (`alerts.ENTRY_URL` + `gajjala_watch.constants.TAB`) — the same
+for 🚩 5-min, 🚩 1-min and 🧪's shadow record. E2–E5 (body, item line, entry words, 🧠 clause) are FROZEN, byte-identical.
+The 🧠 potential url (`potential.deep_link`) is unchanged. `docs/gajjala/aplus_push_title_watch_2026_11_17.md`.
+
 ### `{ENTRY}` — the setup's entry in the words of his rules (`alerts.ENTRY_WORDS`)
 
 One clause per setup, in `constants.SETUPS` order, from `backend/chart_maps/gajjala/verified_rules.json`. The EMA
@@ -105,10 +112,10 @@ line cites its rule ids in a comment; the contracts check every cited id belongs
 ### Example (💋 Kiss & Fly, regular hours, a 🧠 potential that rang)
 
 ```
-title   💋 GGA · EMA Kiss & Fly A+ entry
+title   💋 GGA · EMA Kiss & Fly A+ entry          (since 2026-11-17: 🎯 A+ · GGA · 💋 EMA Kiss & Fly)
 body    broke 11.00 on the 5m bar closing 10:35 ET · stop 10.81 (−1.7%) · Kissed and honored the 9 EMA; entry = the kiss bar's high · 🧠 potential rang 10:05 ET · Float 3.2M · UNMEASURED — his setup, not a buy signal
 item    GGA · 💋 EMA Kiss & Fly A+ entry · broke 11.00 · stop 10.81 (−1.7%) · Kissed and honored the 9 EMA; entry = the kiss bar's high
-url     /chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA
+url     /chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA   (since 2026-11-17: /chart-maps?tab=gajjala_watch&focus=GGA)
 ```
 
 WIDENED 2026-10-17: + ` · 🚫 not eligible at Fidelity` before UNMEASURED and ` · 🚫` on the title when the name is on his list (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1) — the flagged example is in `docs/gajjala/broker_flags_2026_10_17.md`. The example above is unflagged and stays exact.

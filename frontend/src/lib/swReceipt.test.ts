@@ -29,6 +29,7 @@ type Harness = {
   show: ReturnType<typeof vi.fn>;
   calls: string[];
   sandbox: any;
+  listeners: Record<string, (ev: any) => void>;   // 2026-11-17: the click test fires notificationclick
 };
 
 /** Evaluate sw.js with a fake worker global; `config` is what the Cache API hands back
@@ -61,7 +62,7 @@ function boot(opts: { config?: { api: string } | null; endpoint?: string | null;
     });
     await Promise.all(pending);
   };
-  return { fire, fetch, show, calls, sandbox };
+  return { fire, fetch, show, calls, sandbox, listeners };
 }
 
 const PUSH = { title: '🚩 NIXX A+', body: 'his setup, not a buy signal', kind: 'gajjala_setup',
@@ -144,5 +145,79 @@ describe('sw.js — the delivery receipt (2026-10-21)', () => {
     const h = boot({ config: null });
     await h.fire(PUSH);
     expect(h.fetch.mock.calls[0][0]).toBe('https://pounce.example:8000/push/receipt');
+  });
+});
+
+/* 🎯 2026-11-17 — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and
+ * GP". The two 🚩 A+ entry kinds join STICKY_KINDS (requireInteraction): on Mac Chrome the notification stays until
+ * he acts. iOS Safari IGNORES requireInteraction — on his iPhone only the 🎯 A+ title lead helps. The tap opens the
+ * payload's own url (the 👀 Watch, alerts.compose ENTRY_URL). */
+describe('sw.js — the A+ push stays on screen on desktop (2026-11-17)', () => {
+  const sticky = async (kind?: string) => {
+    const h = boot();
+    await h.fire(kind === undefined ? { title: 'x' } : { title: 'x', kind });
+    const [, options] = h.show.mock.calls[0] as unknown as [string, NotificationOptions];
+    return options.requireInteraction;
+  };
+
+  it('gajjala_setup and gajjala_1m_setup are sticky', async () => {
+    expect(await sticky('gajjala_setup')).toBe(true);
+    expect(await sticky('gajjala_1m_setup')).toBe(true);
+  });
+
+  it('volume_breakout and rising_momentum stay sticky', async () => {
+    expect(await sticky('volume_breakout')).toBe(true);
+    expect(await sticky('rising_momentum')).toBe(true);
+  });
+
+  it('NEGATIVE: potentials, Luk, long_term and a kind-less ping are not sticky', async () => {
+    for (const k of ['gajjala_potential', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_setupX']) {
+      expect(await sticky(k)).toBe(false);
+    }
+    expect(await sticky(undefined)).toBe(false);
+  });
+
+  it('the title and url ride through untouched', async () => {
+    const h = boot();
+    const url = '/chart-maps?tab=gajjala_watch&focus=AKAN';
+    await h.fire({ title: '🎯 A+ · AKAN · 🎾 Reversal Squeeze', kind: 'gajjala_1m_setup', url });
+    const [title, options] = h.show.mock.calls[0] as unknown as [string, NotificationOptions & { data: any }];
+    expect(title).toBe('🎯 A+ · AKAN · 🎾 Reversal Squeeze');
+    expect(options.data.url).toBe(url);
+  });
+
+  const click = async (h: Harness, url: string) => {
+    const pending: Promise<unknown>[] = [];
+    const close = vi.fn();
+    h.listeners.notificationclick({
+      notification: { close, data: { url } },
+      waitUntil: (p: Promise<unknown>) => { pending.push(p); },
+    });
+    await Promise.all(pending);
+    return close;
+  };
+
+  it('a tap with no open window opens the Watch url', async () => {
+    const h = boot();
+    const openWindow = vi.fn(async () => null);
+    h.sandbox.clients.openWindow = openWindow;
+    const url = '/chart-maps?tab=gajjala_watch&focus=AKAN';
+    const close = await click(h, url);
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(openWindow).toHaveBeenCalledWith(url);
+  });
+
+  it('a tap with the app open focuses it and navigates to the Watch url (no new window)', async () => {
+    const h = boot();
+    const navigate = vi.fn();
+    const focus = vi.fn();
+    const openWindow = vi.fn(async () => null);
+    h.sandbox.clients.matchAll = async () => [{ focus, navigate }];
+    h.sandbox.clients.openWindow = openWindow;
+    const url = '/chart-maps?tab=gajjala_watch&focus=GP';
+    await click(h, url);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(url);
+    expect(openWindow).not.toHaveBeenCalled();
   });
 });

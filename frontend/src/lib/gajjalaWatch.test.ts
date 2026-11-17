@@ -4,6 +4,7 @@
  * the pending-row helpers. NEGATIVES throughout. */
 import { describe, expect, it } from 'vitest';
 import fixture from '../components/__fixtures__/gajjala_watch_board_2026_11_15.json';
+import autoFixture from '../components/__fixtures__/gajjala_watch_board_auto_2026_11_17.json';
 import { CM_TABS, EMA_BOLD, TAB_META, isBoardTab, nearestAxisBar, parseTab } from './chartMaps';
 import { BURST_EXEMPT } from './momentumBurst';
 import {
@@ -249,3 +250,36 @@ describe('👀 LIVE — ggwRowLive, the ONE rule (C2)', () => {
     expect(ggwRowLive(ok().rows[1])).toBe(false);          // AMD is pending
   });
 });
+
+/* 🎯 2026-11-17 (spec ggwaplus2 §3.4) — Ajay: "Push new Apluses immediately in to watch list". Two new served fields: the
+ * row's `auto.why` and the board's `auto.skipped_text`. Junk → null; an older payload → absent / null. */
+describe('🎯 parseGgw — A+ seats (why / skipped_text)', () => {
+  const base = () => {
+    const b = JSON.parse(JSON.stringify(autoFixture));
+    return b;
+  };
+  it('round-trips why and skipped_text', () => {
+    const raw = base();
+    raw.rows[12].auto.why = 'aplus';
+    raw.rows[13].auto.why = 'potential';
+    raw.auto.skipped_text = '🎯 A+ not seated — every seat holds an A+ or your own name: AZI';
+    const b = parseGgw(raw) as GgwBoard;
+    expect(b.rows[12].auto?.why).toBe('aplus');
+    expect(b.rows[13].auto?.why).toBe('potential');
+    expect(b.auto?.skipped_text).toBe(raw.auto.skipped_text);
+  });
+  it('NEGATIVE: junk why / skipped_text → null; absent → why absent, skipped_text null', () => {
+    for (const junk of [null, '', ' ', 3, [], {}]) {
+      const raw = base();
+      raw.rows[12].auto.why = junk;
+      raw.auto.skipped_text = junk;
+      const b = parseGgw(raw) as GgwBoard;
+      expect(b.rows[12].auto?.why).toBeNull();
+      expect(b.auto?.skipped_text).toBeNull();
+    }
+    const b = parseGgw(base()) as GgwBoard;
+    expect(b.rows[12].auto && 'why' in b.rows[12].auto).toBe(false);
+    expect(b.auto?.skipped_text).toBeNull();
+  });
+});
+

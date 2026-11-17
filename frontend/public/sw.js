@@ -10,6 +10,10 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+/* Stays on screen until he acts on Mac Chrome; iOS Safari IGNORES requireInteraction (his iPhone sees only the title lead):
+   the two 🚩 A+ entry kinds joined 2026-11-17 — Ajay: "an alert for me please Missed AKAN and GP". */
+const STICKY_KINDS = ['volume_breakout', 'rising_momentum', 'gajjala_setup', 'gajjala_1m_setup'];
+
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
@@ -25,7 +29,7 @@ self.addEventListener('push', (event) => {
     badge: '/icon-192.png',
     tag: payload.tag || 'cheetah',
     data: { url: payload.url || (payload.data && payload.data.url) || '/', ...payload },
-    requireInteraction: payload.kind === 'volume_breakout' || payload.kind === 'rising_momentum',
+    requireInteraction: STICKY_KINDS.indexOf(payload.kind) >= 0,
     vibrate: [200, 100, 200],
   };
 

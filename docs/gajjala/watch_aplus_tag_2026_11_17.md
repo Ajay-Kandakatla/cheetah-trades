@@ -35,3 +35,7 @@ matches what `recap` serves. The board names come from `C.AUTO_SOURCE_WORDS` and
 
 **Tests.** `backend/tests/test_gajjala_watch_aplus_2026_11_17.py` and
 `frontend/src/components/GajjalaWatchBoard.aplus.test.tsx`.
+
+**2026-11-17 (spec ggwaplus2).** The tag's classifier is now shared with the 🤖 auto engine: `payload.aplus_by_symbol`
+(factored out of `aplus_section`, byte-identical) is the ONE call both use — the auto step seats every name it tags (see
+`watch_auto_potentials_2026_11_17.md`, "A+ seats").

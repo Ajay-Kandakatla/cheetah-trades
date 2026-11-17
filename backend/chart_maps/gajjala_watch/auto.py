@@ -49,6 +49,21 @@ in to Potentials intraday"). SUPERSEDES the ADD source and the [C3] "dropped" re
     (the real lapse time; a missing / bad stamp → now) — None when `progress` reads it KEEP (a broke read still
     progressing: the step's own clear rule).
 
+🎯 A+ SEATS (2026-11-17 ~17:20 ET, spec ggwaplus2 WP-1 — Ajay, verbatim: "Push new Apluses immediately in to watch list
+and an alert for me please Missed AKAN and GP"). Each in-window step classifies A+ with THE 🎯 tag's classifier
+(`payload.aplus_by_symbol` over the step's OWN read docs + the 🧪 board's `audited_tab.overlay_reads`; the read projection
+carries `updated_at` for the 🧪 freshness check) — `aplus_sets`. Every A+ name (tab.MARKED_STATES on any of the three
+boards; 🥇 Luk never) is seated FIRST, earliest A+ first (`aplus_arrivals`): a free seat, else (C.AUTO_APLUS_EVICTS) the
+oldest-added name lapsed THIS step, else the oldest-added 🧠 potential — never another A+, never his name; none → the
+name is listed in `aplus_skipped`. No volume floor (K11 — the same number — is judged on every A+ on all three boards);
+the volume words = `volume_of` or none. An A+ entry carries `why` C.AUTO_APLUS_WHY + its `aplus` block (the tag's first
+item), STAYS all session (C.AUTO_APLUS_STAYS — never `progress()`-read, never lapsed; only his ×), and its A+ words
+(`aplus`, `sources`, `setup`) follow the live read every step; a step with no hit keeps the LAST block (the Watch's last
+sighting). A 🧠 potential entry that becomes A+ is promoted IN PLACE (`promoted` True, its seat clock unchanged). A name
+removed earlier today comes back as A+ (a board arrival — `out_today` blocks tracker-only arrivals only); his × blocks.
+`aplus_sets` answers None (unknown, never "none") on any read fault, a missing 🧪 overlay handle or a raise → no A+ add,
+no refresh, no promote that step. Potential entries never gain a key. UNMEASURED — display / selection only.
+
 SESSION. The doc carries its session; a new session clears entries, removed and dismissed (HIS CALL #5). `dismiss` (his ×,
 api.py DELETE) performs that reset itself on a stale doc [C7].
 
@@ -79,7 +94,8 @@ from .store import _CAS_TRIES
 log = logging.getLogger("chart_maps.gajjala_watch.auto")
 
 REASONS = ("not_progressing", "dropped", "dismissed", "on_your_list",      # the stored removal reasons — APPEND only:
-           "made_room")                                                   # "dropped" = old docs only (12:55 accumulate)
+           "made_room",                                                   # "dropped" = old docs only (12:55 accumulate)
+           "made_room_aplus")                                             # 🎯 2026-11-17 (spec ggwaplus2) — an A+ seat
 STEP_REASONS = ("list_unreadable", "boards_unreadable", "closed", "write_failed")
 STATES_DISMISS = ("dismissed", "absent", "error")
 SKIPPED_KEYS = ("volume_unknown", "under_floor", "full",                 # "full" appended 2026-11-17 12:55
@@ -123,9 +139,12 @@ def _borrowers() -> dict:
 
 
 def _default_stores() -> dict:
-    """{read source key: its real store} — GG5 → store.default(), GG1 → store.for_variant(V.GG1)."""
+    """{read source key: its real store} — GG5 → store.default(), GG1 → store.for_variant(V.GG1); 🎯 2026-11-17 + the 🧪
+    store (store.for_variant(V.GGA) — its overlay handle, for the A+ classifier)."""
     vs = _variants()
-    return {k: (ST.default() if V.is_gg5(vs[k]) else ST.for_variant(vs[k])) for k in C.AUTO_READ_SOURCES}
+    out = {k: (ST.default() if V.is_gg5(vs[k]) else ST.for_variant(vs[k])) for k in C.AUTO_READ_SOURCES}
+    out[V.GGA.key] = ST.for_variant(V.GGA)
+    return out
 
 
 def _words():
@@ -233,28 +252,34 @@ def volume_of(sym, scan_row, trackers) -> tuple:
     return None, None
 
 
+_READ_FIELDS = {"symbol": 1, "setups": 1, "ctx": 1, "updated_at": 1}    # updated_at: the 🧪 freshness check (3), 2026-11-17
+
+
 def _read_docs(st, iso: str):
-    """The session's read docs of one store, projected (symbol, setups, ctx — never the tile bars). None on a fault."""
+    """The session's read docs of one store, projected (symbol, setups, ctx, updated_at — never the tile bars). None on
+    a fault."""
     c = st.coll(ST.READS) if st is not None else None
     if c is None:
         return None
     try:
-        return list(c.find({"date": iso}, {"symbol": 1, "setups": 1, "ctx": 1}))
+        return list(c.find({"date": iso}, _READ_FIELDS))
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala watch 🤖: reads unreadable: %s", type(exc).__name__)
         return None
 
 
-def potential_sets(session, *, shared: dict, stores: Optional[dict] = None) -> Optional[dict]:
+def potential_sets(session, *, shared: dict, stores: Optional[dict] = None, docs=_READ) -> Optional[dict]:
     """{source key: {SYM: cand}} for C.AUTO_READ_SOURCES — None when ANY store cannot be read (the whole answer is
-    unknown, never "none"). cand = the setup with the least potential.order_key among the name's 🧠 setups."""
+    unknown, never "none"). cand = the setup with the least potential.order_key among the name's 🧠 setups. `docs`
+    (2026-11-17): {read source: the step's `_read_docs` answer} — read ONCE per step and shared with `aplus_sets`."""
     stores = stores if stores is not None else _default_stores()
     iso = _iso(session)
     listed = shared.get("listed") or {}
     scan_by = shared.get("scan_by") or {}
+    pre = docs
     out: dict = {}
     for key in C.AUTO_READ_SOURCES:
-        docs = _read_docs(stores.get(key), iso)
+        docs = _read_docs(stores.get(key), iso) if pre is _READ else (pre or {}).get(key)
         if docs is None:
             return None
         cands: dict = {}
@@ -399,6 +424,59 @@ def arrivals(merged: list, tracked: Optional[dict]) -> list:
     return rows + [(sym, cand, srcs, True) for _key, sym, cand, srcs in later]
 
 
+# ── 🎯 A+ (2026-11-17, spec ggwaplus2 WP-1) ───────────────────────────────────────────────────────────────────────
+def _by_symbol(docs) -> dict:
+    out: dict = {}
+    for d in docs or []:
+        sym = _up(d.get("symbol")) if isinstance(d, dict) else ""
+        if sym and sym not in out:
+            out[sym] = d
+    return out
+
+
+def aplus_sets(session, *, docs: dict, stores: dict) -> Optional[dict]:
+    """{FOLD: (SYM, ap, sources)} — every name in tab.MARKED_STATES on any of the three boards THIS session, by THE 🎯
+    tag's classifier (`payload.aplus_by_symbol` + the 🧪 board's `audited_tab.overlay_reads`) over the step's OWN read
+    docs (`docs` = {read source: `_read_docs` answer}). ap = the tag's sorted first item {source, source_word, setup,
+    setup_label, state, word, at_et}; sources = the tag's own source list (C.AUTO_SOURCES order — a 🚩 5-min A+ with no
+    overlay doc passes through as 🧪 too, as the 🧪 board lists it). No listed filter (the tag has none). None —
+    unknown, never "none" — when a read set faulted, the 🧪 store / its overlay handle is missing, or anything raises.
+    A 🧪 overlay FIND fault is swallowed by store.overlays (→ "no overlay") and cannot be told apart here."""
+    try:
+        if not isinstance(docs, dict) or any(docs.get(k) is None for k in C.AUTO_READ_SOURCES):
+            return None
+        sta = (stores or {}).get(V.GGA.key)
+        if sta is None or sta.coll(ST.OVERLAY) is None:
+            return None
+        from chart_maps.gajjala import audited_tab as AT                # lazy: the 🧪 board's module (0.6 s once)
+        PL = _words()
+        gg5, gg1 = _by_symbol(docs[V.GG5.key]), _by_symbol(docs[V.GG1.key])
+        gga, _stats = AT.overlay_reads(gg5, sta, _iso(session))
+        out: dict = {}
+        for sym, items in PL.aplus_by_symbol(gg5, gg1, gga).items():
+            blk = PL.aplus_row_block(items)
+            k = CO.fold(sym)
+            if blk is None or k in out:
+                continue
+            have = {it.get("source") for it in blk["items"]}
+            out[k] = (CO.house(sym), dict(blk["items"][0]), [s for s in C.AUTO_SOURCES if s in have])
+        return out
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch 🤖: A+ classifier failed: %s", type(exc).__name__)
+        return None
+
+
+def aplus_arrivals(aps: Optional[dict]) -> list:
+    """[(SYM, ap, sources)] — earliest A+ first (`ap.at_et` ascending, a missing clock last), ties symbol."""
+    rows = list((aps or {}).values())
+    rows.sort(key=lambda r: (r[1].get("at_et") is None, r[1].get("at_et") or "", r[0]))
+    return rows
+
+
+def _is_aplus(e) -> bool:
+    return isinstance(e, dict) and e.get("why") == C.AUTO_APLUS_WHY
+
+
 # ── progress (one name, every board) ──────────────────────────────────────────────────────────────────────────────
 def _source_verdict(doc, v, first_setup) -> dict:
     """One board's verdict on one read doc: keep (a potential / a broke read still progressing) · remove (↩️ / ✖️, with
@@ -510,7 +588,20 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     dk = {CO.fold(s) for s in dismissed}
     tdocs = {k: _tracker_docs(stores.get(k), iso) for k in C.AUTO_READ_SOURCES}          # ONE find per store
     shared = shared_sets(session, store=stores.get(V.GG5.key), tracker_docs=tdocs.get(V.GG5.key))
-    sets = potential_sets(session, shared=shared, stores=stores)
+    rdocs = {k: _read_docs(stores.get(k), iso) for k in C.AUTO_READ_SOURCES}             # ONE read find per store
+    sets = potential_sets(session, shared=shared, stores=stores, docs=rdocs)
+    # 🎯 2026-11-17 (spec ggwaplus2): the A+ set — in window only (out of window: no add, no promote, no refresh)
+    aps = aplus_sets(session, docs=rdocs, stores=stores) if in_window else None
+    if aps is not None:                                        # words move, positions do not [C4]; unknown ≠ none
+        for e in entries:
+            k = CO.fold(e["symbol"])
+            if k in mk or k in dk or k not in aps:
+                continue                                       # no hit → an A+ entry keeps its LAST block
+            _s, ap, srcs = aps[k]
+            e.update(aplus=dict(ap), sources=list(srcs), setup=ap.get("setup"))
+            if not _is_aplus(e):                               # a 🧠 potential that became A+ — promoted in place
+                e.update(why=C.AUTO_APLUS_WHY, kind=None, dropped_since=None, promoted=True, aplus_at=now,
+                         aplus_et=PT._hhmm(now))
     gone_now: list = []
     kept: list = []
     lapsed: dict = {}                                          # {FOLD: progress} — lapsed THIS step (evictable)
@@ -521,6 +612,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             continue
         if k in dk:
             continue                                           # recorded by dismiss
+        if _is_aplus(e) and C.AUTO_APLUS_STAYS:                # 🎯 an A+ seat stays all session (HIS CALL #2)
+            kept.append(e)
+            continue
         p = progress(sym, session, stores=stores, shared=shared, entry=e)
         if p["reason"] == REASONS[0]:
             gone_now.append(_rec(sym, now, REASONS[0], state=p["state"], source=p["source"], text=p["text"]))
@@ -537,13 +631,14 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     tracked = tracker_sets(session, shared=shared, docs=tdocs) if sets is not None else None
     by = {CO.fold(sym): (cand, srcs) for _ok, sym, cand, srcs in merged}
     for e in entries:                                          # words move, positions do not
-        hit = by.get(CO.fold(e["symbol"]))
+        hit = by.get(CO.fold(e["symbol"])) if not _is_aplus(e) else None      # an A+ entry's words come from `aps`
         if hit:
             cand, srcs = hit
             e.update(sources=list(srcs), setup=cand["setup"], kind=cand["kind"], volume=cand["volume"],
                      volume_source=cand["volume_source"], float_shares=cand["float_shares"])
     skipped = {k: 0 for k in SKIPPED_KEYS}
     added: list = []
+    aplus_skipped: list = []
     reason = None
     if sets is None:
         reason = STEP_REASONS[1]
@@ -554,6 +649,40 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
         out_today = {CO.fold(r.get("symbol")) for r in removed + gone_now if isinstance(r.get("symbol"), str)}
         victims = [e for e in entries if CO.fold(e["symbol"]) in lapsed]           # oldest-added first (frozen order)
         evict = tracked is not None                            # a tracker fault → nothing removed for "made room"
+        for sym, ap, srcs in aplus_arrivals(aps):              # 🎯 A+ FIRST (spec ggwaplus2 §3.3 step 4)
+            k = CO.fold(sym)
+            if k in mk or k in dk or k in have:
+                continue
+            if not C.AUTO_APLUS_STAYS and k in out_today:      # the alternative of HIS CALL #2: a removal sticks today
+                continue
+            if len(entries) + len(added) >= C.AUTO_MAX_SYMBOLS:
+                if not (evict and C.AUTO_APLUS_EVICTS):
+                    aplus_skipped.append(sym)                  # a tracker fault / free seats only → never displace
+                    continue
+                was_lapsed = bool(victims)
+                v = victims.pop(0) if was_lapsed else next((e for e in entries if not _is_aplus(e)), None)
+                if v is None:
+                    aplus_skipped.append(sym)                  # every seat an A+ (his names are not seats here)
+                    continue
+                vk = CO.fold(v["symbol"])
+                entries = [e for e in entries if CO.fold(e["symbol"]) != vk]
+                out_today.add(vk)
+                if was_lapsed:
+                    p = lapsed[vk]
+                    text = _words().AUTO_MADE_ROOM_APLUS_LAPSED_TEXT.format(
+                        new=sym, since_et=PT._hhmm(_utc(v["dropped_since"])))
+                    gone_now.append(_rec(v["symbol"], now, REASONS[5], state=p.get("state"), source=p.get("source"),
+                                         text=text))
+                else:                                          # no lapsed name: the oldest-added 🧠 potential
+                    gone_now.append(_rec(v["symbol"], now, REASONS[5],
+                                         text=_words().AUTO_MADE_ROOM_APLUS_TEXT.format(new=sym)))
+            scan_row = ((shared.get("scan_by") or {}).get(_up(sym)) or {}).get("last")
+            vol, vsrc = volume_of(sym, scan_row, shared.get("trackers"))   # (None, None) when neither knows it — no floor
+            have.add(k)
+            added.append({"symbol": sym, "sources": list(srcs), "setup": ap.get("setup"), "kind": None,
+                          "volume": vol, "volume_source": vsrc, "float_shares": None, "added_at": now,
+                          "added_et": PT._hhmm(now), "dropped_since": None, "why": C.AUTO_APLUS_WHY,
+                          "aplus": dict(ap), "promoted": False, "aplus_at": now, "aplus_et": PT._hhmm(now)})
         for sym, cand, srcs, tracker_only in arrivals(merged, tracked):
             k = CO.fold(sym)
             if k in mk or k in dk or k in have or (tracker_only and k in out_today):
@@ -597,7 +726,7 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
            "removed": [{k: r.get(k) for k in ("symbol", "reason", "state", "text")} for r in gone_now],
            "leaving": [e["symbol"] for e in entries if _utc(e.get("dropped_since"))],
            "n": len(entries), "cap": C.AUTO_MAX_SYMBOLS, "skipped": skipped, "reason": reason,
-           "removed_total": len(removed)}
+           "removed_total": len(removed), "aplus_skipped": aplus_skipped}
     res["changed"] = _changed(doc, iso, entries, removed, dismissed)
     return res, {"session": iso, "entries": entries, "removed": removed, "dismissed": dismissed}
 
@@ -614,7 +743,8 @@ def step(now, session, *, db=None, manual: list, dry: bool = False, stores: Opti
         doc = read_doc(cs)
         if doc is None:
             return {"symbols": [], "added": [], "removed": [], "leaving": [], "n": 0, "cap": C.AUTO_MAX_SYMBOLS,
-                    "skipped": {k: 0 for k in SKIPPED_KEYS}, "reason": STEP_REASONS[0], "changed": False}
+                    "skipped": {k: 0 for k in SKIPPED_KEYS}, "reason": STEP_REASONS[0], "changed": False,
+                    "aplus_skipped": []}
         res, new = _compute(doc, now, session, manual, stores, in_window)
         if dry:
             res["writes"] = new
@@ -733,10 +863,15 @@ def rules_line() -> str:
             f"leaves when every board reads it {gone}, or on your ×; at {C.AUTO_MAX_SYMBOLS} the oldest name whose "
             f"potential lapsed makes room for a current potential"
             + (f"; {stays} stays" if stays else "")
+            + f"; a name that becomes {_words().APLUS_TEXT} on any of the {boards} boards today takes a seat at once, "
+            f"ahead of the potentials (at {C.AUTO_MAX_SYMBOLS} it displaces the oldest name whose potential lapsed, "
+            f"then the oldest-added potential, never another A+ or your own name) and stays all session — {gone} "
+            f"never removes it"
             + f"; your own names are never touched; {push}. UNMEASURED.")
 
 
 __all__ = ["REASONS", "STEP_REASONS", "STATES_DISMISS", "SKIPPED_KEYS", "read_doc", "entries_of", "current_symbols",
            "shared_sets", "volume_of", "potential_sets", "good_volume", "merge", "tracker_sets", "arrivals", "progress",
+           "aplus_sets", "aplus_arrivals",
            "step", "dismiss",
            "hold_crosses", "push_mode", "rules_line"]

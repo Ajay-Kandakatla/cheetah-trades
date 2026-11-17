@@ -132,7 +132,8 @@ def test_end_to_end_qualifier_to_aplus_to_one_push(live):
     assert out["qualifiers"] == ["GGA"] and out["n_listed"] == 1 and out["n_read"] == 1
     assert "GGA:bull_flag" in out["aplus"]
     pushed = [a[1] for a, _k in send.calls]
-    assert any(p["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA" for p in pushed)
+    assert any(p["url"] == "/chart-maps?tab=gajjala_watch&focus=GGA" and p["tag"] == "gg-bull_flag-GGA"
+               for p in pushed)                                           # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert len(send.calls) == out["alerts"]["pushed"] == len(out["aplus"])
     doc = st.get_read(S, "GGA")
     assert doc["setups"]["bull_flag"]["state"] == "aplus"
@@ -148,14 +149,14 @@ def test_end_to_end_qualifier_to_aplus_to_one_push(live):
 
 def test_the_shipped_pass_rings_each_aplus_once():
     """DECISIONS10 D1 — no fixture: the shipped mode rings every A+ of the pass exactly once, through the injected
-    sender (make_deps: send= / owner= — never alerts._owner() or push.hooks), and each title is the A+ entry."""
+    sender (make_deps: send= / owner= — never alerts._owner() or push.hooks), and each title leads 🎯 A+ (2026-11-17)."""
     st = fake_store()
     deps, _snap, send, _status = make_deps()
     out = RUN.run_pass(NOW, store=st, deps=deps)
     assert "GGA:bull_flag" in out["aplus"]
     assert out["alerts"]["pushed"] == len(out["aplus"]) == len(send.calls) >= 1
     assert out["alerts"]["shadow"] == 0 and out["alerts"]["shadow_mode"] == 0
-    assert all(a[0] == "owner@example.com" and a[1]["title"].endswith("A+ entry") for a, _k in send.calls)
+    assert all(a[0] == "owner@example.com" and a[1]["title"].startswith("🎯 A+ · ") for a, _k in send.calls)   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert "GG:2026-10-13|GGA|bull_flag" in st.alerts_coll().docs
     assert not any(k.startswith("SHADOW:") for k in st.alerts_coll().docs)
     again = RUN.run_pass(NOW + timedelta(seconds=GC.PASS_CADENCE_SEC), store=st, deps=deps)   # NEGATIVE: no second ring

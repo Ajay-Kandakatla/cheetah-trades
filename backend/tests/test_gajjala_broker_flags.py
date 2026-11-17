@@ -573,10 +573,11 @@ def _ab(**kw):
 
 def test_the_aplus_body_says_it_before_unmeasured_and_the_title_carries_the_icon():
     p = _ab(broker_text=GT.BROKER_FLAG_TEXT)
+    # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert p["body"] == ("broke 11.00 on the 5m bar closing 10:35 ET · stop 10.81 (−1.7%) · Kissed and honored the 9 "
                          "EMA; entry = the kiss bar's high · 🧠 potential rang 10:05 ET · Float 3.2M · 🚫 not eligible "
                          "at Fidelity · UNMEASURED — his setup, not a buy signal")
-    assert p["title"] == "💋 GGA · EMA Kiss & Fly A+ entry · 🚫" and p["title"].endswith(" · " + GT.BROKER_FLAG_ICON)
+    assert p["title"] == "🎯 A+ · GGA · 💋 EMA Kiss & Fly · 🚫" and p["title"].endswith(" · " + GT.BROKER_FLAG_ICON)
     ah = AL.compose(TA.read("kiss_fly", entry=TA.stamp(16, 35)), "gga", {}, session=TA.S,
                     broker_text=GT.BROKER_FLAG_TEXT)["body"]
     assert ah.index(AL.AH_TAG) < ah.index(TEXT) < ah.index(AL.UNMEASURED_TAIL)
@@ -585,7 +586,7 @@ def test_the_aplus_body_says_it_before_unmeasured_and_the_title_carries_the_icon
 @pytest.mark.parametrize("bad", [None, "", 5])
 def test_NEGATIVE_unflagged_aplus_body_and_title_are_todays(bad):
     p = _ab(broker_text=bad)
-    assert p["body"] == OLD_BODY and p["title"] == "💋 GGA · EMA Kiss & Fly A+ entry"
+    assert p["body"] == OLD_BODY and p["title"] == "🎯 A+ · GGA · 💋 EMA Kiss & Fly"   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert _ab() == p
 
 

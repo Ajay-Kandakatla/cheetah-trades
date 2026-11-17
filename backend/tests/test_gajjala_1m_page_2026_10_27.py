@@ -575,8 +575,11 @@ def test_the_two_kinds_are_the_variant_strings_and_registered_everywhere():
     for k in (AS.GAJJALA_1M_KIND, AS.GAJJALA_1M_POTENTIAL_KIND):
         assert AS.CADENCE_SEC[k] == GC.GG1M_CADENCE_SEC and k not in AS.DAILY_PASS_KINDS
         assert k in gate.MARKET_ALERT_KINDS and k not in gate.PERSONAL_KINDS
-        assert R.item_url(k, "GGB") == "/chart-maps?tab=gajjala_1m&focus=GGB"
-        assert R.ITEM_URL_BY_KIND[k].startswith(f"/chart-maps?tab={GG1.tab}&")
+        if k == AS.GAJJALA_1M_KIND:                                     # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
+            assert R.item_url(k, "GGB") == "/chart-maps?tab=gajjala_watch&focus=GGB"
+        else:
+            assert R.item_url(k, "GGB") == "/chart-maps?tab=gajjala_1m&focus=GGB"
+            assert R.ITEM_URL_BY_KIND[k].startswith(f"/chart-maps?tab={GG1.tab}&")
         assert subs.default_prefs()[k] is False
     for fn, kind in ((GG1.send_setup, GG1.push_kind_setup), (GG1.send_potential, GG1.push_kind_potential)):
         seen = []

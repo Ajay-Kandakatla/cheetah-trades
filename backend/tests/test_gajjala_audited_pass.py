@@ -28,6 +28,7 @@ from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import run as RUN
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import variant as V
+from chart_maps.gajjala_watch import constants as WC
 from tests import test_gajjala_variant_gg5_identity as IDT
 from tests.fixtures.gajjala import detector_frames as FX
 from tests.test_gajjala_run import NOW, S, Rec, at, make_deps
@@ -174,7 +175,8 @@ def test_forced_pass_rings_a_shadow_claim_with_the_gga_kind_url_and_tag(monkeypa
     assert key.startswith("SHADOW:GGA:") and al[key]["state"] == "shadow"
     wp = al[key]["would_push"]
     assert wp["kind"] == "gajjala_audited_setup" == V.GGA.push_kind_setup
-    assert "tab=gajjala_audited" in wp["url"] and wp["tag"] == "gga-bull_flag-GGA"
+    assert wp["url"] == AL.ENTRY_URL.format(tab=WC.TAB, sym="GGA") and wp["tag"] == "gga-bull_flag-GGA"   # RE-PINNED 2026-11-17: url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
+    assert "tab=gajjala_audited" not in wp["url"] and "sub=" not in wp["url"]   # NEGATIVE 2026-11-17: never the old 🧪 tab url, no sub
     assert not [k for k in al if k.endswith(f"#{AUD.HELD_ROW_STATE}")]   # NEGATIVE: an audited A+ is never held
     assert not [k for k in al if k.startswith("GG:") or k.startswith("SHADOW:GG:")]   # NEGATIVE: never a GG5 id
 

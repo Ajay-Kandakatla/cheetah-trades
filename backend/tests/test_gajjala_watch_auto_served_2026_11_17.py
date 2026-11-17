@@ -165,8 +165,11 @@ def test_a_manual_row_has_auto_null_an_auto_row_the_full_block():
     his, auto = out["rows"]
     assert his["auto"] is None
     a = auto["auto"]
+    # PIN MOVED 2026-11-17 (spec ggwaplus2 WP-1 — Ajay: "Push new Apluses immediately in to watch list"): + `why`
+    # ("potential" here; "aplus" for an A+ seat).
     assert set(a) == {"tag", "sources", "source_words", "text", "volume_text", "volume_source", "added_et",
-                      "added_text", "leaving_text", "remove_title"}
+                      "added_text", "leaving_text", "remove_title", "why"}
+    assert a["why"] == "potential"
     assert a["tag"] == C.AUTO_TAG and a["sources"] == ["gajjala", "gga"]
     assert a["source_words"] == [C.AUTO_SOURCE_WORDS["gajjala"], C.AUTO_SOURCE_WORDS["gga"]]
     from chart_maps.gajjala import potential as PT
@@ -331,8 +334,10 @@ def test_NEGATIVE_a_fold_duplicate_of_his_name_is_his():
 def test_board_block_words_and_numbers_from_the_constants():
     out = PL.build(FRI_IN, db=_db(["OMH"], [_entry("XXII"), _entry("LGHL", sources=("gajjala_1m",))]))
     a = out["auto"]
+    # PIN MOVED 2026-11-17 (spec ggwaplus2 WP-1): + `skipped_text` (the loop's last-step A+ names with no seat; None here).
     assert set(a) == {"state", "cap", "n", "symbols", "title", "hint", "empty_text", "text", "removed",
-                      "removed_total", "removed_title", "push_mode"}
+                      "removed_total", "removed_title", "push_mode", "skipped_text"}
+    assert a["skipped_text"] is None
     assert a["cap"] == C.AUTO_MAX_SYMBOLS and a["n"] == 2 and a["push_mode"] == C.AUTO_PUSH_MODE
     assert a["title"] == PL.AUTO_TITLE_TEXT.format(n=2, cap=C.AUTO_MAX_SYMBOLS)
     h = a["hint"]

@@ -107,8 +107,12 @@ AUTO_HINT_TEXT = ("Added once a minute in the pass window: every name that came 
                   "printed is not added. A name stays all session; it leaves when every board reads ↩️ back under or ✖️ "
                   "stop printed, or on your ×; ⏸ waiting above its trigger stays. At {cap} the oldest name whose "
                   "potential lapsed makes room for a current potential. The {gga} tag means the {gga} board shows this "
-                  "{gg5} potential (it borrows them). Your own names are never touched. {push_word} × removes a name "
-                  "until tomorrow. UNMEASURED.")       # 2026-11-17 12:55 accumulate; order words = Amendment A
+                  "{gg5} potential (it borrows them). A name that becomes {aplus} on any of these boards today takes a seat "
+                  "at once, ahead of the potentials — at {cap} it displaces the oldest name whose potential lapsed, "
+                  "then the oldest-added potential, never another A+ or your own name — and stays all session; ↩️ "
+                  "back under or ✖️ stop printed never remove it (the {aplus} chip says so). Your own names are never "
+                  "touched. {push_word} × removes a name until tomorrow. UNMEASURED.")
+# 2026-11-17 12:55 accumulate; order words = Amendment A; the 🎯 A+ sentence = spec ggwaplus2 WP-1 (17:20 ET)
 AUTO_EMPTY_TEXT = "No 🧠 potential with volume at or over {floor:,} on the boards right now"
 AUTO_PUSH_WORDS = {"off": "Auto names do not ring the {push_frames} cross.",           # by auto.push_mode()
                    "live": "Auto names ring the {push_frames} cross like yours."}
@@ -126,6 +130,17 @@ AUTO_UNREADABLE_TEXT = "🤖 the auto list could not be read — showing your na
 AUTO_REMOVED_TITLE = "🤖 removed today · {n}"                                         # n = removed_total (every event)
 AUTO_NO_WORD = "—"
 AUTO_STATES = ("ok", "unreadable")
+# 🎯 A+ seats (2026-11-17 ~17:20 ET, spec ggwaplus2 WP-1 — Ajay: "Push new Apluses immediately in to watch list and an
+# alert for me please Missed AKAN and GP"). Two clocks, both named: the A+ clock and the seat clock (HIS CALL #20).
+AUTO_APLUS_ADDED_TEXT = "{tag} A+ {at_et} ET ({source} {setup}) · seated {added_et} ET"
+AUTO_APLUS_ADDED_NO_TIME_TEXT = "{tag} A+ ({source} {setup}) · seated {added_et} ET"
+AUTO_APLUS_KEPT_TEXT = "{tag} A+ {at_et} ET ({source} {setup}) · seated {added_et} ET as a potential"
+AUTO_APLUS_KEPT_NO_TIME_TEXT = "{tag} A+ ({source} {setup}) · seated {added_et} ET as a potential"
+AUTO_MADE_ROOM_APLUS_TEXT = "made room for the A+ {new}"                            # auto.step "made_room_aplus"
+AUTO_MADE_ROOM_APLUS_LAPSED_TEXT = "made room for the A+ {new} — potential lapsed {since_et} ET"
+AUTO_APLUS_SKIPPED_TEXT = "{tag} A+ not seated — every seat holds an A+ or your own name: {names}"
+AUTO_APLUS_REMOVE_TITLE = "Remove {sym} (auto A+ — not added again today)"
+AUTO_WHY_WORDS = {"aplus": C.AUTO_APLUS_WHY, "potential": "potential"}               # the served `why` values
 AUTO_MODULE = "chart_maps.gajjala_watch.auto"
 
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
@@ -445,7 +460,7 @@ def auto_hint() -> str:
     return AUTO_HINT_TEXT.format(boards=_and([words.get(k) for k in C.AUTO_SOURCES]),
                                  floor=int(C.AUTO_MIN_VOLUME), cap=C.AUTO_MAX_SYMBOLS,
                                  gga=words.get(gga), gg5=words.get(gg5),
-                                 push_word=push_word)
+                                 push_word=push_word, aplus=APLUS_TEXT)
 
 
 def auto_title(n: int) -> str:
@@ -476,25 +491,57 @@ def auto_volume_text(volume, source) -> Optional[str]:
     return t.format(vol=vol) if vol else None
 
 
+def _word_or_none(v) -> Optional[str]:
+    return v if isinstance(v, str) and v.strip() else None
+
+
+def auto_aplus_added_text(entry: dict, added_et: Optional[str]) -> Optional[str]:
+    """🎯 2026-11-17 (spec ggwaplus2 §3.2): an A+ entry's `added_text` — the A+ clock AND the seat clock (C9). KEPT words
+    when the entry was a 🧠 potential first (`promoted`), ADDED words otherwise; the NO_TIME pair when the A+ block has no
+    clock. None without a seat clock."""
+    if not added_et:
+        return None
+    ap = entry.get("aplus") if isinstance(entry.get("aplus"), dict) else {}
+    at_et = _word_or_none(ap.get("at_et"))
+    kw = dict(tag=APLUS_TAG, source=_word_or_none(ap.get("source_word")) or AUTO_NO_WORD,
+              setup=_word_or_none(ap.get("setup_label")) or AUTO_NO_WORD, added_et=added_et)
+    if entry.get("promoted") is True:
+        return (AUTO_APLUS_KEPT_TEXT.format(at_et=at_et, **kw) if at_et
+                else AUTO_APLUS_KEPT_NO_TIME_TEXT.format(**kw))
+    return AUTO_APLUS_ADDED_TEXT.format(at_et=at_et, **kw) if at_et else AUTO_APLUS_ADDED_NO_TIME_TEXT.format(**kw)
+
+
 def auto_row_block(entry: dict, now: datetime) -> dict:
-    """The `auto` block of one auto row — every word served, the FE composes none."""
+    """The `auto` block of one auto row — every word served, the FE composes none. 🎯 2026-11-17 (spec ggwaplus2): `why`
+    ("aplus" for an A+ seat, else "potential"); an A+ row's kind slot = the A+ word of its state, its `added_text` names
+    both clocks, it never serves `leaving_text`, its remove title says "auto A+"."""
     sym = entry.get("symbol") if isinstance(entry.get("symbol"), str) else ""
     sources = [s for s in _list(entry.get("sources")) if isinstance(s, str) and s in C.AUTO_SOURCES]
     source_words = [C.AUTO_SOURCE_WORDS[s] for s in sources if isinstance(C.AUTO_SOURCE_WORDS.get(s), str)]
     vsrc = entry.get("volume_source")
     added_et = entry.get("added_et") if isinstance(entry.get("added_et"), str) and entry.get("added_et") else None
     added_et = added_et or _clock(entry.get("added_at"), now)
-    since_et = _clock(entry.get("dropped_since"), now) if entry.get("dropped_since") else None
+    is_aplus = entry.get("why") == C.AUTO_APLUS_WHY
+    if is_aplus:
+        ap = entry.get("aplus") if isinstance(entry.get("aplus"), dict) else {}
+        kind = APLUS_WORDS.get(ap.get("state")) if isinstance(ap.get("state"), str) else None
+        added_text = auto_aplus_added_text(entry, added_et)
+        since_et = None
+    else:
+        kind = _kind_word(entry.get("kind"))
+        added_text = AUTO_ADDED_TEXT.format(at_et=added_et) if added_et else None
+        since_et = _clock(entry.get("dropped_since"), now) if entry.get("dropped_since") else None
     return {"tag": C.AUTO_TAG, "sources": sources, "source_words": source_words,
             "text": AUTO_ROW_TEXT.format(tag=C.AUTO_TAG, sources=" · ".join(source_words) or AUTO_NO_WORD,
                                          setup=_setup_word(entry.get("setup")) or AUTO_NO_WORD,
-                                         kind=_kind_word(entry.get("kind")) or AUTO_NO_WORD),
+                                         kind=kind or AUTO_NO_WORD),
             "volume_text": auto_volume_text(entry.get("volume"), vsrc),
             "volume_source": vsrc if isinstance(vsrc, str) and vsrc in AUTO_VOL_TEXT else None,
             "added_et": added_et,
-            "added_text": AUTO_ADDED_TEXT.format(at_et=added_et) if added_et else None,
+            "added_text": added_text,
             "leaving_text": AUTO_LEAVING_TEXT.format(since_et=since_et) if since_et else None,
-            "remove_title": AUTO_REMOVE_TITLE.format(sym=sym)}
+            "remove_title": (AUTO_APLUS_REMOVE_TITLE if is_aplus else AUTO_REMOVE_TITLE).format(sym=sym),
+            "why": AUTO_WHY_WORDS["aplus"] if is_aplus else AUTO_WHY_WORDS["potential"]}
 
 
 _REMOVED_FALLBACK = {"on_your_list": AUTO_ON_LIST_TEXT, "dismissed": AUTO_DISMISSED_TEXT}
@@ -539,9 +586,30 @@ def auto_read(cs: dict, symbols: list, siso: str) -> tuple:
     return AUTO_STATES[0], entries, removed
 
 
-def auto_board(state: str, entries: list, removed: list, *, in_window: bool, now: datetime) -> dict:
+def auto_skipped_text(state: str, state_doc, siso: Optional[str]) -> Optional[str]:
+    """🎯 2026-11-17 (spec ggwaplus2 §3.2): the board's `skipped_text` — only when the auto block is ok, the loop state
+    doc is of THIS session and its `auto.aplus_skipped` (the LAST step's, never history) is a non-empty list of str."""
+    if state != AUTO_STATES[0] or not isinstance(state_doc, dict) or not siso or state_doc.get("session") != siso:
+        return None
+    blk = state_doc.get("auto")
+    names = blk.get("aplus_skipped") if isinstance(blk, dict) else None
+    if not isinstance(names, list):
+        return None
+    names = [n for n in names if isinstance(n, str) and n.strip()]
+    return AUTO_APLUS_SKIPPED_TEXT.format(tag=APLUS_TAG, names=", ".join(names)) if names else None
+
+
+def auto_board(state: str, entries: list, removed: list, *, in_window: bool, now: datetime, state_doc=None,
+               siso: Optional[str] = None) -> dict:
     """The board's `auto` block: [C3] `removed` = the newest C.AUTO_REMOVED_SHOWN (stored newest LAST → served newest
-    first), `removed_total` = every event of the session."""
+    first), `removed_total` = every event of the session. 🎯 `skipped_text` (2026-11-17) from the loop state doc of
+    THIS session (`siso`; None → the session of `now`)."""
+    if siso is None and isinstance(state_doc, dict):
+        try:
+            sess = _session_of(now)[0]
+            siso = sess.isoformat()[:10] if isinstance(sess, (date, datetime)) else str(sess)[:10]
+        except Exception:                                      # noqa: BLE001 — no session → no words
+            siso = None
     n = len(entries) if state == AUTO_STATES[0] else 0
     newest = list(reversed(removed))[:max(0, int(C.AUTO_REMOVED_SHOWN))]
     return {"state": state, "cap": C.AUTO_MAX_SYMBOLS, "n": n, "symbols": [e["symbol"] for e in entries],
@@ -550,21 +618,23 @@ def auto_board(state: str, entries: list, removed: list, *, in_window: bool, now
                            if (n == 0 and in_window and state == AUTO_STATES[0]) else None),
             "text": AUTO_UNREADABLE_TEXT if state == AUTO_STATES[1] else None,
             "removed": [auto_removed_item(r, now) for r in newest], "removed_total": len(removed),
-            "removed_title": AUTO_REMOVED_TITLE.format(n=len(removed)), "push_mode": C.AUTO_PUSH_MODE}
+            "removed_title": AUTO_REMOVED_TITLE.format(n=len(removed)), "push_mode": C.AUTO_PUSH_MODE,
+            "skipped_text": auto_skipped_text(state, state_doc, siso)}
 
 
-def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: datetime) -> tuple:
+def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: datetime, state_doc=None) -> tuple:
     """({SYM: row auto block} in the STORED order, the board's `auto` block). Any failure composing the words → the
     auto names are left out and the block says `unreadable` (None when even that cannot be composed) — his rows and
-    the board always answer."""
+    the board always answer. `state_doc` = the loop state doc (🎯 `skipped_text`, 2026-11-17)."""
     try:
         state, entries, removed = auto_read(cs, symbols, siso)
         blocks = {e["symbol"]: auto_row_block(e, now) for e in entries}
-        return blocks, auto_board(state, entries, removed, in_window=in_window, now=now)
+        return blocks, auto_board(state, entries, removed, in_window=in_window, now=now, state_doc=state_doc,
+                                  siso=siso)
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: auto section failed: %s", exc)
     try:
-        return {}, auto_board(AUTO_STATES[1], [], [], in_window=in_window, now=now)
+        return {}, auto_board(AUTO_STATES[1], [], [], in_window=in_window, now=now, siso=siso)
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: auto block unavailable: %s", exc)
         return {}, None
@@ -653,6 +723,18 @@ def aplus_row_block(items: list) -> Optional[dict]:
                                              items=APLUS_ITEM_SEP.join(_aplus_item_text(it) for it in items))}
 
 
+def aplus_by_symbol(gg5: dict, gg1: dict, gga: dict) -> dict:
+    """{SYM: [item]} — THE classifier of the 🎯 tag (2026-11-17, factored out for spec ggwaplus2 so the 🤖 auto engine
+    seats A+ names by the SAME call): `aplus_items` over the 🚩 5-min reads, the 🚩 1-min reads and the 🧪 overlaid
+    reads (`audited_tab.overlay_reads` on the 5-min reads), merged in that source order."""
+    from chart_maps.gajjala import variant as V
+    by: dict = {}
+    for source, reads in ((V.GG5.key, gg5), (V.GG1.key, gg1), (V.GGA.key, gga)):
+        for sym, its in aplus_items(reads, source).items():
+            by.setdefault(sym, []).extend(its)
+    return by
+
+
 def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> dict:
     """{SYM: aplus block} for `names` (only tagged names are keys). ONE projected read find per read store (GG5, GG1)
     plus the 🧪 board's own overlay call on GG5's reads. ANY fault → {} (every row serves null; the board answers)."""
@@ -667,10 +749,7 @@ def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> d
         gg1 = _aplus_find(stores[V.GG1.key], ids)
         from chart_maps.gajjala import audited_tab as AT
         gga, _stats = AT.overlay_reads(gg5, stores[V.GGA.key], siso)       # THE 🧪 board's call (tab.py), reused
-        by: dict = {}
-        for source, reads in ((V.GG5.key, gg5), (V.GG1.key, gg1), (V.GGA.key, gga)):
-            for sym, its in aplus_items(reads, source).items():
-                by.setdefault(sym, []).extend(its)
+        by = aplus_by_symbol(gg5, gg1, gga)
         out = {}
         for s in names:
             blk = aplus_row_block(by.get(str(s).upper(), []))
@@ -711,15 +790,22 @@ def _build(now: datetime, db, only) -> dict:
         symbols = CO.owner_symbols(db, strict=True)
     except Exception:                                          # noqa: BLE001 — logged by the reader
         return error_payload(LIST_UNREADABLE_WHY)
+    # 🎯 2026-11-17 (spec ggwaplus2): the loop state doc is read FIRST (one read, the same handle) — the auto block's
+    # `skipped_text` comes from its `auto.aplus_skipped`.
+    state_doc = None
+    try:
+        state_doc = cs["state"].find_one({"_id": C.STATE_LATEST_ID})
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: state doc unreadable: %s", exc)
     # 🤖 2026-11-17: the auto doc (one more stored read); his names first, then the auto names in the STORED order.
-    auto_by, auto_out = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now)
+    auto_by, auto_out = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now, state_doc=state_doc)
     every = list(symbols) + list(auto_by)
     if only is None:
         names = every
     else:
         wanted = {s for s in only if isinstance(s, str)}
         names = [s for s in every if s in wanted]
-    tiles, state_doc, claims = {}, None, []
+    tiles, claims = {}, []
     if cs is not None:
         if names:
             try:
@@ -730,10 +816,6 @@ def _build(now: datetime, db, only) -> dict:
                 claims = [d for d in cs["alerts"].find({"date": siso, "state": PUSHED_STATE}) if isinstance(d, dict)]
             except Exception as exc:                           # noqa: BLE001
                 log.warning("gajjala_watch: claims unreadable: %s", exc)
-        try:
-            state_doc = cs["state"].find_one({"_id": C.STATE_LATEST_ID})
-        except Exception as exc:                               # noqa: BLE001
-            log.warning("gajjala_watch: state doc unreadable: %s", exc)
     rows = [row(s, tiles.get(s), session=siso, is_today=is_today, in_window=in_window, now=now,
                 claims=[c for c in claims if c.get("symbol") == s and c.get("state") == PUSHED_STATE])
             for s in names]

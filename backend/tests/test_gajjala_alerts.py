@@ -122,8 +122,8 @@ def test_live_rings_once_with_the_composed_payload(live):
     owner, p = send.calls[0]
     assert owner == "owner@example.com"
     assert p["kind"] == "gajjala_setup" and p["ticker"] == "GGA"
-    assert p["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
-    assert p["title"] == "🚩 GGA · Bull Flag A+ entry"                 # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
+    assert p["url"] == "/chart-maps?tab=gajjala_watch&focus=GGA"     # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
+    assert p["title"] == "🎯 A+ · GGA · 🚩 Bull Flag"                  # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert p["items"] == [{"symbol": "GGA", "text": p["items"][0]["text"]}] and p["items"][0]["text"].startswith("GGA")
     assert "UNMEASURED" in p["body"] and "not a buy signal" in p["body"]
     # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); AMENDMENTS10 F9 — numbers first
@@ -165,8 +165,8 @@ def test_a_different_setup_on_the_same_symbol_rings(live):
     r1, r2 = read("bull_flag"), read("kiss_fly")
     counts = AL.run_pass({"GGA": {"bull_flag": r1, "kiss_fly": r2}}, {"GGA": frames_at(r1["entry_bar_t"])},
                          at(10, 6), S, store=st, send=send, owner="o")
-    assert counts["pushed"] == 2 and [p["url"].split("sub=")[1].split("&")[0] for _o, p in send.calls] == \
-        ["bull_flag", "kiss_fly"]
+    assert counts["pushed"] == 2 and [p["tag"] for _o, p in send.calls] == \
+        ["gg-bull_flag-GGA", "gg-kiss_fly-GGA"]                           # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP") — the url has no sub; the tag names the setup
 
 
 def test_NEGATIVE_a_key_recorded_in_shadow_is_not_claimable_live_the_same_day(monkeypatch):
@@ -437,9 +437,9 @@ def test_compose_every_setup(setup):
     p = AL.compose(read(setup, entry=stamp(16, 35)), "gga", {"float_text": "Float 3.1M"}, session=S)
     emoji, label = AL.SETUP_META[setup]
     # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); AMENDMENTS10 F9 — the entry words ride the body and the item, after the numbers
-    assert p["title"] == f"{emoji} GGA · {label} A+ entry" and AL.entry_words(setup) in p["body"]
+    assert p["title"] == f"🎯 A+ · GGA · {emoji} {label}" and AL.entry_words(setup) in p["body"]   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert AL.entry_words(setup) in p["items"][0]["text"]
-    assert p["url"] == f"/chart-maps?tab=gajjala&sub={setup}&focus=GGA"
+    assert p["url"] == "/chart-maps?tab=gajjala_watch&focus=GGA"     # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert p["kind"] == "gajjala_setup" and p["ticker"] == "GGA" and p["tag"] == f"gg-{setup}-GGA"
     assert "Float 3.1M" in p["body"] and "UNMEASURED" in p["body"]
     for text in (p["title"], p["body"], p["items"][0]["text"]):
@@ -448,7 +448,7 @@ def test_compose_every_setup(setup):
 
 def test_compose_squeeze_label_and_stop_risk():
     p = AL.compose(read("reversal_squeeze", trigger=2.0, stop=1.9), "SQZ", {}, session=S)
-    assert p["title"] == "🎾 SQZ · Reversal Squeeze A+ entry"         # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
+    assert p["title"] == "🎯 A+ · SQZ · 🎾 Reversal Squeeze"          # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert "stop 1.90 (−5.0%)" in p["body"]
 
 
@@ -480,7 +480,7 @@ def test_the_alerts_row_is_registered():
 
 def test_the_item_url_resolves_the_sub_from_focus():
     from push import recent as R
-    assert R.item_url("gajjala_setup", "NVDA") == "/chart-maps?tab=gajjala&focus=NVDA"
+    assert R.item_url("gajjala_setup", "NVDA") == "/chart-maps?tab=gajjala_watch&focus=NVDA"   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert "gajjala_setup" not in R.DIGEST_KINDS                      # NEGATIVE: every A+ its own push, no digest
 
 
@@ -497,7 +497,7 @@ def test_a_shadow_aplus_reaches_the_alerts_page_list_with_the_push_line_and_link
     it = items[0]
     payload = AL.compose(read(), "GGA", {}, session=S)
     assert it["symbol"] == "GGA" and it["setup"] == "bull_flag" and it["date"] == S.isoformat()
-    assert it["url"] == payload["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+    assert it["url"] == payload["url"] == "/chart-maps?tab=gajjala_watch&focus=GGA"   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert it["text"] == payload["items"][0]["text"] and "Bull Flag A+" in it["text"]
     assert it["trigger"] == 11.0 and it["stop"] == 10.8125 and it["entry_bar_t"] == stamp(10, 5)
     assert it["note"] == AL.SHADOW_NOTE == "shadow — not sent"
@@ -651,13 +651,13 @@ def test_the_body_is_the_entry_story_in_order():
     """BUILD_SPEC10 §3.3 example as amended by AMENDMENTS10 F9 (numbers first)."""
     p = AL.compose(read("kiss_fly", entry=stamp(10, 35)), "gga", {"float_text": "Float 3.2M"}, session=S,
                    potential_at_et="10:05")
-    assert p["title"] == "💋 GGA · EMA Kiss & Fly A+ entry"
+    assert p["title"] == "🎯 A+ · GGA · 💋 EMA Kiss & Fly"            # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     assert p["body"] == ("broke 11.00 on the 5m bar closing 10:35 ET · stop 10.81 (−1.7%) · Kissed and honored the 9 "
                          "EMA; entry = the kiss bar's high · 🧠 potential rang 10:05 ET · Float 3.2M · UNMEASURED — "
                          "his setup, not a buy signal")
     assert p["items"] == [{"symbol": "GGA", "text": "GGA · 💋 EMA Kiss & Fly A+ entry · broke 11.00 · stop 10.81 "
                                                     "(−1.7%) · Kissed and honored the 9 EMA; entry = the kiss bar's high"}]
-    assert p["url"] == "/chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA"
+    assert p["url"] == "/chart-maps?tab=gajjala_watch&focus=GGA"     # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     bare = AL.compose(read("kiss_fly", entry=stamp(10, 35)), "gga", {"float_text": "Float 3.2M"}, session=S)
     assert "potential rang" not in bare["body"] and bare["body"].endswith(AL.UNMEASURED_TAIL)
     for bad in ("x", "9:5", None, 5, "10:05 ET", ""):                    # NEGATIVE: no clause from a malformed time

@@ -241,6 +241,10 @@ export type GgwRowAuto = {
   tag: string; sources: string[]; source_words: string[]; text: string;
   volume_text: string | null; volume_source: string | null;
   added_et: string | null; added_text: string | null; leaving_text: string | null; remove_title: string | null;
+  /** 🎯 2026-11-17 (spec ggwaplus2 — Ajay: "Push new Apluses immediately in to watch list"): the served seat reason —
+   *  "aplus" (an A+ seat) or "potential"; null on junk; ABSENT on an older server (the key is set only when served — the
+   *  11-17 auto fixture's blocks stay byte-equal). The FE composes no word from it. */
+  why?: string | null;
 };
 /** 🎯 2026-11-17 (spec ggwaplus) — Ajay: "Also add an A+ tag on watch list as they become A+". One served A+ read of the
  *  name on a Gajjala board this session (backend payload.aplus_items): `source_word` / `setup_label` / `word` / `at_et`
@@ -272,6 +276,8 @@ export type GgwAuto = {
   state: string; cap: number | null; n: number; symbols: string[];
   title: string | null; hint: string | null; empty_text: string | null; text: string | null;
   removed: GgwAutoRemoved[]; removed_total: number | null; removed_title: string | null; push_mode: string | null;
+  /** 🎯 2026-11-17 (spec ggwaplus2): the served line when the loop's last step had A+ names with no seat; null else. */
+  skipped_text: string | null;
 };
 export type GgwPass = { at_et: string | null; text: string | null; stale: boolean };
 export type GgwInfo = {
@@ -384,6 +390,7 @@ function parseRowAuto(v: unknown): GgwRowAuto | null {
     volume_text: str(v.volume_text), volume_source: str(v.volume_source),
     added_et: str(v.added_et), added_text: str(v.added_text), leaving_text: str(v.leaving_text),
     remove_title: str(v.remove_title),
+    ...('why' in v ? { why: str(v.why) } : {}),
   };
 }
 
@@ -422,6 +429,7 @@ function parseAuto(v: unknown): GgwAuto | null {
     removed_total: total != null && total >= 0 ? total : null,
     removed_title: str(v.removed_title),
     push_mode: str(v.push_mode),
+    skipped_text: str(v.skipped_text),
   };
 }
 

@@ -538,7 +538,9 @@ def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
     item line (`would_push.items[0].text`, composed by alerts.compose — the one
     wording engine; the page never recomposes it); `url` is the deep link the
     push would have opened (`/chart-maps?tab=gajjala&sub=<setup>&focus=<SYM>`),
-    an internal path or None. A Mongo read, nothing parsed or scanned; never
+    an internal path or None. url = the push's own (alerts.compose ENTRY_URL —
+    since 2026-11-17 `/chart-maps?tab=gajjala_watch&focus=<SYM>`; older shadow
+    docs carry the card url). A Mongo read, nothing parsed or scanned; never
     raises — a dead ledger is [] ."""
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)

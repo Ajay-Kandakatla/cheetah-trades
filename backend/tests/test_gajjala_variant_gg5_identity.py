@@ -106,6 +106,14 @@ wording only; every other entry is the BOARD golden alone):
   counts and sorts byte-equal (the same file builds the board with card_axis off and pins equality minus `axis`). Same
   check on the FE fixtures by their own `-k golden` recipes, `axis` ADDED only: on_open 2177 -> 2261 (+84, 2 tiles),
   potential 3378 -> 3884 (+506, 11 tiles) (docs/gajjala/video_view_2026_11_17.md).
+  2026-11-17 (later) — Ajay "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP":
+  the A+ push title leads 🎯 A+ and its url opens the 👀 Watch (alerts.compose TITLE_TEXT / ENTRY_URL). WRITES alone
+  regenerated (`-k test_gg5_writes_are_byte_identical`), for the fourth time, WORDING ONLY: 5492 leaves before and after,
+  4 CHANGED, 0 added, 0 removed — the A+ payload's `title` ("🚩 GGA · Bull Flag A+ entry" -> "🎯 A+ · GGA · 🚩 Bull Flag")
+  and `url` ("/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA" -> "/chart-maps?tab=gajjala_watch&focus=GGA") at
+  live/sent/1/0/1 (the payload the live sender was handed) and at the shadow claim's $setOnInsert/would_push (writes/29);
+  body / items / tag / kind byte-equal. sha1 6093b1ab… -> 7d857dc9…. BOARD byte-identical (the board serves no compose
+  title) (docs/gajjala/aplus_push_title_watch_2026_11_17.md).
 """
 from __future__ import annotations
 

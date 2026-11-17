@@ -366,7 +366,7 @@ def test_item_urls_match_each_kinds_single_push_url():
     # NEGATIVE: an unknown / None kind falls back to the page's own chip destination
     assert R.item_url("morning_brief", "NVDA") == R.item_url(None, "NVDA") == "/sepa/NVDA?tab=supply"
     # 🚩 2026-10-13: gajjala_setup joined (9 → 10) — the Gajjala's tab; the endpoint resolves the sub from focus.
-    assert R.item_url("gajjala_setup", "NVDA") == "/chart-maps?tab=gajjala&focus=NVDA"
+    assert R.item_url("gajjala_setup", "NVDA") == "/chart-maps?tab=gajjala_watch&focus=NVDA"   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     # 🎢 / 🗺️ 2026-10-14 tape kinds joined (10 → 12) — the Tape tab, back-linked to Chart Maps.
     assert R.item_url("tape_burst_highbeta", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
     assert R.item_url("tape_burst_chartmaps", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
@@ -377,8 +377,8 @@ def test_item_urls_match_each_kinds_single_push_url():
     # WIDENED 2026-10-19 — 🌙 overnight_movers ("Can you do an over night scan for all the stocks they are all growing over night"; ships OFF, owner-only): 14 → 15 — the Support tab on Chart Maps (the key_level_alert precedent).
     assert R.item_url("overnight_movers", "NVDA") == "/chart-maps?tab=support&symbol=NVDA"
     # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent): 15 → 17 — its tab, the sub resolved by the endpoint from focus.
-    assert R.item_url("gajjala_1m_setup", "NVDA") == R.item_url("gajjala_1m_potential", "NVDA") == \
-        "/chart-maps?tab=gajjala_1m&focus=NVDA"
+    assert R.item_url("gajjala_1m_potential", "NVDA") == "/chart-maps?tab=gajjala_1m&focus=NVDA"
+    assert R.item_url("gajjala_1m_setup", "NVDA") == "/chart-maps?tab=gajjala_watch&focus=NVDA"   # RE-PINNED 2026-11-17: title leads 🎯 A+, url = the 👀 Watch (Ajay: "an alert for me please Missed AKAN and GP")
     # WIDENED 2026-11-01: 🥇 luk_setup (Ajay "Lets make it live. also alerts too."; LIVE, owner keep-set): 17 → 18 — its tab, the sub resolved by the endpoint from focus.
     assert R.item_url("luk_setup", "NVDA") == "/chart-maps?tab=luk&focus=NVDA"
     assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 18

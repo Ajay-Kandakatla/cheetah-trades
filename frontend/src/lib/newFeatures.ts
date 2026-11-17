@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-17 ~17:20 ET, verbatim: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP".
+  // A+ names from 🚩 5-min / 1-min / 🧪 take a 🤖 seat on 👀 Watch at the next loop minute (gajjala_watch/auto.py) and stay all
+  // session; the A+ push title leads with 🎯 A+ (alerts.APLUS_TITLE_LEAD == payload.APLUS_TEXT) and its tap opens the Watch
+  // (alerts.ENTRY_URL, WC.TAB). sw.js makes the two A+ kinds sticky on Mac Chrome only — iOS ignores it, so the label never says
+  // "stays on screen". UNMEASURED. Doc docs/gajjala/aplus_push_title_watch_2026_11_17.md.
+  {
+    id: 'chart-maps-gajjala-watch-aplus-push-2026-11-17',
+    label: '🎯 A+ names onto 👀 Gajjala’s Watch + a 🎯 A+ alert — you said: “Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP”. A+ names from the three Gajjala boards take a 👀 Watch seat at the next minute and stay all session; the A+ alert now leads with 🎯 A+ and opens the Watch.',
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every 👀 Watch row (his + 🤖)
   // carries a served 🎯 A+ block when a 🚩 5-min / 1-min / 🧪 read today is A+, A+ (triggered) or A+, then stopped
   // (payload.aplus_section, one projected find per store, 🧪 through audited_tab.overlay_reads). Display only, UNMEASURED.

@@ -265,3 +265,58 @@ potential evicts the oldest-added lapsed name, which stays out), a tracker-only 
 newest `last.at` (bad → now), a KEEP read lands unstamped, a ↩️ / ✖️ backlog name counted `failed`, a full list reads
 no backlog progress. Pins moved with dated comments: the add-order test, the first tracker-only test (stamp), the
 skipped-dict and `SKIPPED_KEYS` pins, the hint and rules-line words.
+
+## A+ seats (17:20 ET, 2026-11-17)
+
+Ajay, verbatim: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP". Then: "Is
+AZI A+" — **No**: 🚩 5-min 🎾 `partial` (K3 volume not dried), 🚩 1-min 🎾 `partial`, 💋 `partial`; the 🧪 K3S admit
+was judged on its break pass and failed (`{admit: K3S, aplus: False}` → held). AZI is on his own list, so the 🎯 chip
+appears on his row the moment it becomes A+; it is never an auto entry while it is his. Spec ggwaplus2, WP-1.
+
+- **Which names.** Every name with a setup in `tab.MARKED_STATES` (A+, A+ triggered, A+ then stopped) on any of the three
+  Gajjala boards THIS session, by THE 🎯 tag's classifier — `payload.aplus_by_symbol` (factored out of `aplus_section`,
+  byte-identical) over the step's OWN read docs plus the 🧪 board's `audited_tab.overlay_reads`. `auto.aplus_sets` →
+  `{FOLD: (SYM, the tag's first item, the tag's source list)}`. The read projection gained `updated_at` (the 🧪
+  freshness check). 🥇 Luk is never a source. No listed-set filter (the tag has none — HIS CALL #7).
+- **When.** At the next loop minute, inside the 04:00–20:00 ET pass window only (out of the window: no add, no promote,
+  no refresh). "Immediately" = ≤ 60 s after the A+ read lands, never the same second.
+- **Seat order (`AUTO_APLUS_EVICTS`, HIS CALL #1).** A+ arrivals go FIRST, earliest A+ clock first. A free seat; else the
+  oldest-added name whose potential lapsed THIS step; else the oldest-added 🧠 potential — never another A+, never his
+  name (reason `made_room_aplus`, words `AUTO_MADE_ROOM_APLUS_[LAPSED_]TEXT`). Every seat an A+ → the name is listed in
+  the step's `aplus_skipped` (loop state doc `auto.aplus_skipped`, served as the board's `skipped_text` — the LAST step,
+  never history). A tracker read fault → nothing evicted (the made-room guard). A potential arrival at the cap never
+  evicts an A+ seat.
+- **Stays (`AUTO_APLUS_STAYS`, HIS CALL #2).** An A+ seat is never `progress()`-read: ↩️ back under / ✖️ stop printed never
+  remove it, it never lapses; only his × (blocks the day) or his ➕ ("on your list") take it off. With the switch False
+  it is judged like a potential and, once removed, is not re-seated the same day (executor's judgement — without it the
+  switch would remove and re-add every minute).
+- **Words move, positions do not.** Every in-window step an A+ entry's `aplus` / `sources` / `setup` follow the live read
+  (AKAN: "A+ 10:21" → "A+ (triggered) 16:44"); its seat clock never moves. A step where the name is in NO marked state
+  (the day's one read per name was overwritten — CRDF) keeps the LAST block and the seat: the Watch's last sighting,
+  while the live 🎯 chip is gone (HIS CALL #21).
+- **Promote.** A 🧠 potential entry that becomes A+ is promoted in place: `why "aplus"`, `promoted True`, `kind None`,
+  `dropped_since None`, `aplus_at` = the step; its row reads "… · seated HH:MM ET as a potential".
+- **Comes back.** A name removed earlier today (↩️ / ✖️ / made room) returns as A+ — the existing board-arrival rule
+  (`out_today` blocks tracker-only arrivals only); no READD switch. His × still blocks for the day.
+- **Volume.** No floor: K11 (the same number as `AUTO_MIN_VOLUME`) is judged on every A+ on all three boards. The words
+  come from `volume_of` (scan row, else GG5's tracker); neither → no volume words, still seated. **No numeric K11 field is
+  stored on a read** (`ctx.session_volume` does not exist; the number lives only in a criterion LABEL, never parsed).
+  `AUTO_VOLUME_SOURCES` unchanged.
+- **The 🧪 window (K3S).** A 🧪-only A+ (the K3S admit) is visible to the ONE classifier only while the 🚩 read is on its
+  break pass (`bars_since_entry == 0`) and the overlay is at least as fresh as the read (`updated_at`, fail-closed when
+  missing) — ≤ one 5-min pass. A lease miss / host sleep inside that window loses it for the day, exactly as on the 🎯
+  tag. Once seated it STAYS with its last block. Widening = HIS CALL #18.
+- **Unaudited passes through as 🧪.** A 🚩 5-min A+ with no overlay doc carries `sources ["gajjala","gga"]` — the 🧪 board
+  lists that row (audit cell "unaudited"); the Watch mirrors the tag mirrors the board (a filter = HIS CALL #19).
+- **Faults.** A read fault on either board, a missing 🧪 store / overlay handle, or a raising classifier → `aplus_sets`
+  None (unknown, never "none"): no A+ add, no promote, no refresh; A+ entries kept; potentials unaffected. An overlay
+  FIND fault is swallowed by `store.overlays` (→ "no overlay") and cannot be told apart: 🚩 A+ names still seat (passing
+  through as 🧪).
+- **Served.** Row `auto.why` ("aplus" / "potential"); an A+ row's kind slot = the A+ word of its state, `added_text` =
+  "🎯 A+ {at_et} ET ({source} {setup}) · seated {added_et} ET" (+ " as a potential" when promoted; HIS CALL #20),
+  `leaving_text` null, remove title "auto A+". Board `auto.skipped_text`. The hint and the ℹ️ clause carry one sentence.
+  Potential entries never gain a key; with no marked read the doc written is byte-identical.
+
+Tests: `backend/tests/test_gajjala_watch_auto_aplus_2026_11_17.py`, the served key-set pins in
+`test_gajjala_watch_auto_served_2026_11_17.py` (dated), `frontend/src/lib/gajjalaWatch.test.ts`,
+`frontend/src/components/GajjalaWatchBoard.aplusAuto.test.tsx`. UNMEASURED — display / selection only.

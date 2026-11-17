@@ -128,10 +128,11 @@ ITEM_URL_BY_KIND = {
     "supply_break_alert":   DEFAULT_ITEM_URL,
     "key_level_alert":      "/chart-maps?tab=support&symbol={sym}",
     "med_catalyst":         "/sepa/{sym}?tab=catalyst",
-    # 🚩 2026-10-13 — the Gajjala's tab, the sub resolved by the endpoint from
-    # the day's claim (chart_maps/gajjala/tab.resolve_sub); the single push's
-    # url carries the sub itself (alerts.compose).
-    "gajjala_setup":        "/chart-maps?tab=gajjala&focus={sym}",
+    # 🚩 2026-10-13 — the Gajjala's tab. 2026-11-17 — the 👀 Watch, where the
+    # push now lands (Ajay: "Push new Apluses immediately in to watch list and an
+    # alert for me please Missed AKAN and GP"); the Watch has no sub;
+    # alerts.compose ENTRY_URL (a test pins equality).
+    "gajjala_setup":        "/chart-maps?tab=gajjala_watch&focus={sym}",
     # 🧠 2026-10-15 — Ajay: "Give me an alert all continous tracker on these
     # specifically …". The sub is resolved by the endpoint from today's pushed
     # potential (chart_maps/gajjala/tab.resolve_sub, focus_potential); the
@@ -140,8 +141,10 @@ ITEM_URL_BY_KIND = {
     # 🚩 2026-10-27 — the 1-minute page's two kinds (recorded in shadow, never
     # sent while GAJJALA_1M_PUSH_MODE is shadow): its tab, the sub resolved by the
     # endpoint (tab.resolve_sub over the 1-minute store); the single payload's url
-    # carries the sub itself (alerts.compose / potential.deep_link, variant GG1).
-    "gajjala_1m_setup":     "/chart-maps?tab=gajjala_1m&focus={sym}",
+    # carries the sub itself (potential.deep_link, variant GG1).
+    # 2026-11-17 — the A+ kind: the 👀 Watch, where the push now lands; the Watch
+    # has no sub; alerts.compose ENTRY_URL (a test pins equality).
+    "gajjala_1m_setup":     "/chart-maps?tab=gajjala_watch&focus={sym}",
     "gajjala_1m_potential": "/chart-maps?tab=gajjala_1m&focus={sym}",
     # 🥇 2026-11-01 — a Luk's A+ (LIVE by his call, Ajay: "Lets make it live. also
     # alerts too."): its tab, the sub resolved by chart_maps/luk/tab.resolve_sub

@@ -8,7 +8,8 @@ The call sits at the START of the cron path (after the --now refusal, BEFORE the
 loop's iteration 0 reads the bar that closed at the tick. NEGATIVES: --dry-run / --now / --on-demand / --symbols /
 --at-bar-close never spawn; the switch off never spawns; a raising spawn keeps the exit code; the parent reads no Mongo
 and no provider; the only files under chart_maps/gajjala/ that name the watch are run.py and (since 2026-11-16,
-the live tab) live_events.py and (since 2026-11-16, the read-only card three-chart view GET) card_frames.py.
+the live tab) live_events.py and (since 2026-11-16, the read-only card three-chart view GET) card_frames.py and
+(since 2026-11-17, the A+ push url → the 👀 Watch tab, constants only) alerts.py.
 """
 from __future__ import annotations
 
@@ -70,7 +71,28 @@ def test_only_gajjala_run_py_names_the_watch():
     # Watch's axis/stale readers (gajjala_watch.build + .payload). Widened again; nothing else may join.
     # 📺 2026-11-17 (spec ggvideo, WP gg-card-axis): tab.card_axis lazily imports gajjala_watch.build (axis +
     # axis_end) for the card's own time axis — display-only. Widened to include tab.py; nothing else may join.
-    assert hits == ["card_frames.py", "live_events.py", "run.py", "tab.py"]
+    # 🎯 2026-11-17 (spec ggwaplus2 §3.5, WP-2): alerts.py imports gajjala_watch.constants (WC.TAB) so the A+ push url
+    # lands on the 👀 Watch tab — Ajay "an alert for me please Missed AKAN and GP". Compose-only; constants ONLY (pinned
+    # by the NEGATIVE below). Widened to include alerts.py; nothing else may join.
+    assert hits == ["alerts.py", "card_frames.py", "live_events.py", "run.py", "tab.py"]
+
+
+def test_NEGATIVE_alerts_imports_only_the_watch_constants_never_its_switch_store_or_loop():
+    # 🎯 2026-11-17 (spec ggwaplus2 §3.5, WP-2): alerts.py may name the Watch ONLY through gajjala_watch.constants.
+    tree = ast.parse((GG_DIR / "alerts.py").read_text(encoding="utf-8"))
+    mods = sorted({f"{n.module}.{a.name}" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+                   and (n.module or "").startswith("chart_maps.gajjala_watch") for a in n.names}
+                  | {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+                     if a.name.startswith("chart_maps.gajjala_watch")})
+    assert mods == ["chart_maps.gajjala_watch.constants"]
+    # the only Watch value alerts.py reads is the tab key (the push url) — never the switch, the API path or a store.
+    reads = sorted({n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+                    and isinstance(n.value, ast.Name) and n.value.id == "WC"})
+    assert reads == ["TAB"]
+    src = (GG_DIR / "alerts.py").read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import loop", "gajjala_watch import build",
+                   "gajjala_watch import payload", "_popen", "spawn_child", "spawn_loop"):
+        assert banned not in src
 
 
 def test_NEGATIVE_tab_imports_only_the_watch_build_reader_never_its_switch_or_store():

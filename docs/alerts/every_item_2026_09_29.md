@@ -61,6 +61,11 @@ A session tag riding on the tail ("+3 more · pre-mkt") is kept as its own line 
 | `leaderboard_breakout` | `/sepa/{sym}?tab=supply` |
 | `accumulation_change` | `/sepa/{sym}?tab=supply` |
 
+2026-11-17: the two 🚩 A+ kinds' item url — `gajjala_setup` and `gajjala_1m_setup` — is the 👀 Watch,
+`/chart-maps?tab=gajjala_watch&focus={sym}` (== `chart_maps/gajjala/alerts.ENTRY_URL`, a test pins equality), so the push
+tap and the /alerts ticker link open ONE tab; the 🧠 potential kinds, `luk_setup` and the count 18 are unchanged
+(docs/gajjala/aplus_push_title_watch_2026_11_17.md).
+
 On /alerts, a `/sepa/` url renders as `TickerLink` with that tab and `from=alerts`, so Back returns to /alerts.
 Any other internal url is linked as-is.
 

@@ -54,6 +54,12 @@ AUTO_PUSH_MODES = GC.FADE_CROSS_PUSH_MODES         # ("off", "live")
 AUTO_PUSH_MODE = "off"                             # HIS CALL #4 — auto names never ring the 1-min cross push; "live" = his word
 AUTO_HELD_REASON = "suppressed_auto"               # == HELD_REASONS[-1] (a test pins it)
 AUTO_TAG = "🤖"
+# 🎯 A+ seats (2026-11-17 ~17:20 ET, spec ggwaplus2 WP-1 — Ajay, verbatim: "Push new Apluses immediately in to watch list
+# and an alert for me please Missed AKAN and GP"). A name in tab.MARKED_STATES on any of the three boards (the 🎯 tag's
+# ONE classifier) takes a seat at the next loop minute. No new number. UNMEASURED.
+AUTO_APLUS_WHY = "aplus"        # the entry's `why` (absent = a 🧠 potential entry; old docs carry none)
+AUTO_APLUS_EVICTS = True        # HIS CALL #1 — an A+ name takes a seat ahead of potentials (lapsed first, then oldest-added); False = free seats only
+AUTO_APLUS_STAYS = True         # HIS CALL #2 — ↩️/✖️ never remove an A+ name (the 🎯 chip says "A+, then stopped"); only his ×
 ARGV_LOOP = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--loop")    # = ops/docker_watchdog CRON_DETACHED_CHILD_ARGS entry
 ARGV_BUILD = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--build")  # the API's add-time child; builds every pending name
 PROC_NAME_LOOP, PROC_NAME_BUILD = "gajjala-watch-loop", "gajjala-watch-build"

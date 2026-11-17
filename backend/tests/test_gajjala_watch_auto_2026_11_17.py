@@ -848,7 +848,8 @@ def test_ACC_at_the_cap_a_new_arrival_evicts_the_oldest_added_lapsed_name():
     res = run(db, stores(gg5=reads, scans=[scan("NEW", 5e6), scan("NEW2", 4e6)]))
     assert res["added"] == ["NEW", "NEW2"] and res["n"] == C.AUTO_MAX_SYMBOLS
     assert [r["symbol"] for r in res["removed"]] == ["L00", "L01"]                # oldest-added first
-    assert all(r["reason"] == "made_room" for r in res["removed"]) and A.REASONS[-1] == "made_room"
+    assert all(r["reason"] == "made_room" for r in res["removed"]) and A.REASONS[4] == "made_room"   # 2026-11-17 ggwaplus2: REASONS now ends "made_room_aplus" (append-only)
+    assert A.REASONS[-1] != "made_room"                                           # NEGATIVE: the plain seat is no longer the last reason
     recs = stored(db)["removed"]
     assert recs[0]["text"] == A._words().AUTO_MADE_ROOM_TEXT.format(new="NEW", since_et="10:01")   # stamped now
     assert recs[1]["text"] == A._words().AUTO_MADE_ROOM_TEXT.format(new="NEW2", since_et="09:47")  # the stored stamp

@@ -1309,6 +1309,61 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🎯 A+ names onto 👀 Gajjala\'s Watch + the A+ alert opens it (2026-11-17)',
+    file: '../backend/chart_maps/gajjala/alerts.py',
+    // Ajay 2026-11-17 ~17:20 ET: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP".
+    // Spec ggwaplus2: the A+ push title leads with 🎯 A+ (== payload.APLUS_TEXT), its tap opens the 👀 Watch tab (WC.TAB, never
+    // WC.API_PATH), the two A+ kinds are sticky in sw.js (Mac Chrome; iOS ignores requireInteraction), the auto block serves
+    // aplus_skipped, and /alerts opens the same tab. Doc docs/gajjala/aplus_push_title_watch_2026_11_17.md.
+    checks: (src) => {
+      const errs = [];
+      if (!/\n\s*"url": ENTRY_URL\.format\(tab=WC\.TAB, sym=sym\)/.test(src)) errs.push('alerts.compose: the url must be ENTRY_URL.format(tab=WC.TAB, sym=sym) — the 👀 Watch tab');
+      if (/ENTRY_URL\.format\([^)]*API_PATH/.test(src)) errs.push('alerts.compose: the tap url must never be WC.API_PATH (the API path, not a page)');
+      if (!/^ENTRY_URL = "\/chart-maps\?tab=\{tab\}&focus=\{sym\}"/m.test(src)) errs.push('alerts.py: ENTRY_URL must be "/chart-maps?tab={tab}&focus={sym}"');
+      if (!/^from chart_maps\.gajjala_watch import constants as WC\b/m.test(src)) errs.push('alerts.py must import gajjala_watch constants as WC (one TAB string)');
+      const lead = (/^APLUS_TITLE_LEAD = "([^"]+)"/m.exec(src) || [])[1];
+      const pl = read('../backend/chart_maps/gajjala_watch/payload.py');
+      const at = (/^APLUS_TEXT = "([^"]+)"/m.exec(pl) || [])[1];
+      if (!lead || !at || lead !== at) errs.push(`alerts.APLUS_TITLE_LEAD (${lead}) must equal gajjala_watch.payload.APLUS_TEXT (${at}) — one A+ word`);
+      const tab = (/^TAB = "([^"]+)"/m.exec(read('../backend/chart_maps/gajjala_watch/constants.py')) || [])[1];
+      if (tab !== 'gajjala_watch') errs.push(`gajjala_watch constants TAB must be "gajjala_watch" (found ${tab})`);
+      const sw = read('public/sw.js');
+      const sk = /const STICKY_KINDS = \[([^\]]*)\]/.exec(sw);
+      if (!sk) errs.push('sw.js lost const STICKY_KINDS');
+      else for (const k of ['gajjala_setup', 'gajjala_1m_setup']) if (!sk[1].includes(`'${k}'`)) errs.push(`sw.js STICKY_KINDS must carry '${k}' (ggwaplus2)`);
+      if (sk && /'(gajjala_potential|gajjala_1m_potential|luk_setup|long_term)'/.test(sk[1])) errs.push('sw.js STICKY_KINDS: only the two 🚩 A+ kinds join — never a 🧠 / Luk / long_term kind');
+      if (!/requireInteraction:\s*STICKY_KINDS\.indexOf\(payload\.kind\) >= 0/.test(sw)) errs.push('sw.js: requireInteraction must read STICKY_KINDS');
+      const lp = read('../backend/chart_maps/gajjala_watch/loop.py');
+      const ok = /^AUTO_OUT_KEYS = \(([\s\S]*?)\)\s*(?:#[^\n]*)?\n/m.exec(lp);
+      if (!ok || !/"aplus_skipped"/.test(ok[1])) errs.push('gajjala_watch/loop.AUTO_OUT_KEYS must carry "aplus_skipped" (ggwaplus2)');
+      const rc = read('../backend/push/recent.py');
+      for (const k of ['gajjala_setup', 'gajjala_1m_setup']) {
+        const m = new RegExp(`"${k}":\\s*"([^"]+)"`).exec(rc);
+        if (!m || m[1] !== '/chart-maps?tab=gajjala_watch&focus={sym}') errs.push(`push/recent.ITEM_URL_BY_KIND["${k}"] must be "/chart-maps?tab=gajjala_watch&focus={sym}" (found ${m ? m[1] : 'none'})`);
+      }
+      for (const k of ['gajjala_potential', 'gajjala_1m_potential']) {
+        const m = new RegExp(`"${k}":\\s*"([^"]+)"`).exec(rc);
+        if (m && /gajjala_watch/.test(m[1])) errs.push(`push/recent.ITEM_URL_BY_KIND["${k}"] must stay on its own tab — only the two A+ kinds open the Watch`);
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-gajjala-watch-aplus-push-2026-11-17';
+      const firstId = (/\bid: '([^']+)'/.exec(arr) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ ${ID} must be the FIRST NEW_FEATURES entry (found ${firstId || 'none'})`);
+      const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
+      if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
+      else {
+        if (!lab[1].includes('Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP')) errs.push('the 🎯 A+ push ✨ label must quote him verbatim');
+        if (!lab[1].includes('opens the Watch')) errs.push('the 🎯 A+ push ✨ label must say the alert opens the Watch');
+        if (/stays on (the )?screen|until you act/i.test(lab[1])) errs.push('the 🎯 A+ push ✨ label must not promise "stays on screen" — iOS ignores requireInteraction');
+        if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1])) errs.push('the 🎯 A+ push ✨ label: never "edge", never the b-word');
+        if (lab[2] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 🎯 A+ push ✨ must route to /chart-maps?tab=gajjala_watch (found ${lab[2]})`);
+      }
+      if (!exists('../docs/gajjala/aplus_push_title_watch_2026_11_17.md')) errs.push('docs/gajjala/aplus_push_title_watch_2026_11_17.md must exist');
+      return errs;
+    },
+  },
+  {
     name: '📺 Gajjala video view (2026-11-17)',
     file: 'src/components/GajjalaBoard.tsx',
     // Ajay 2026-11-16: "Also the graphs in the videos are so clear like I can easily identify the trend" · "Why aren't our
@@ -8798,8 +8853,15 @@ const CONTRACTS = [
       // 4. compose / run_pass (F9: numbers first — compose CONTAINS entry_words(, it does not lead with it)
       const cp = pyBody(al, 'compose'), rp = pyBody(al, 'run_pass');
       // WIDENED 2026-10-17 (AMENDMENTS12 A1 / F6) — a name on his 🚫 list gets " · " + tab.BROKER_FLAG_ICON appended AFTER
-      // the "… A+ entry" title, so a flagged title may end with ` · 🚫`; compose still builds the "… A+ entry" title first.
-      if (!cp || !/A\+ entry"/.test(cp)) errs.push('alerts.compose: the title must end "A+ entry" — or "A+ entry · 🚫" when the name is on his 🚫 list (DECISIONS10 D2, AMENDMENTS12 A1)');
+      // the base title, so a flagged title may end with ` · 🚫`; compose still builds the base title first.
+      // RE-PINNED 2026-11-17 (spec ggwaplus2 §3.5) — Ajay: "Push new Apluses immediately in to watch list and an alert for me
+      // please Missed AKAN and GP". The title now LEADS with APLUS_TITLE_LEAD ("🎯 A+ · AKAN · 🎾 Reversal Squeeze") built from
+      // TITLE_TEXT; the old /A\+ entry"/ pin passed vacuously on `head` (the items line, which still ends "A+ entry").
+      if (!/^APLUS_TITLE_LEAD = "🎯 A\+"/m.test(al)) errs.push('alerts.py: APLUS_TITLE_LEAD must be "🎯 A+" (== gajjala_watch.payload.APLUS_TEXT) — the lock screen\'s first glyphs (ggwaplus2)');
+      if (!/^TITLE_TEXT = "\{lead\} · \{sym\} · \{emoji\} \{label\}"/m.test(al)) errs.push('alerts.py: TITLE_TEXT must be "{lead} · {sym} · {emoji} {label}" — the title leads with the A+ word (ggwaplus2)');
+      if (!cp || !/\btitle = TITLE_TEXT\.format\(lead=APLUS_TITLE_LEAD,/.test(cp)) errs.push('alerts.compose: the title must be TITLE_TEXT.format(lead=APLUS_TITLE_LEAD, …) — or that + " · 🚫" when the name is on his 🚫 list (DECISIONS10 D2, AMENDMENTS12 A1, ggwaplus2)');
+      if (cp && /\btitle = f"[^"\n]*A\+ entry"/.test(cp)) errs.push('alerts.compose: the title must no longer end "A+ entry" — it leads with 🎯 A+ since 2026-11-17 (ggwaplus2)');
+      if (cp && !/title = f"\{title\} · \{BROKER_FLAG_ICON\}"/.test(cp)) errs.push('alerts.compose: the 🚫 suffix rule must stay title = f"{title} · {BROKER_FLAG_ICON}" (AMENDMENTS12 A1)');
       if (!cp || !/entry_words\(/.test(cp) || !/UNMEASURED_TAIL/.test(cp)) errs.push('alerts.compose must contain entry_words( and end with UNMEASURED_TAIL (AMENDMENTS10 F9)');
       if (!rp) errs.push('alerts.py lost def run_pass(');
       else {
@@ -17219,7 +17281,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 21).includes(ZID))  /* WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 22).includes(ZID))  /* WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
