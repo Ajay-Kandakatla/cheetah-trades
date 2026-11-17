@@ -27,13 +27,32 @@ LATCH = "session"                                      # MINE — HIS CALL #3: o
 UPTREND_FILTERS = (None, "k5_cross_frame", "k5_5m")
 UPTREND_FILTER = None                                  # HIS CALL #4 — he said "on uptrend"; None = no filter, K5 shown + recorded
 HELD_REASONS = ("off", "missed_fetch", "suppressed_closed", "suppressed_premarket", "suppressed_first15",
-                "suppressed_window", "under_floor", "not_uptrend", "no_store", "no_target", "failed")
+                "suppressed_window", "under_floor", "not_uptrend", "no_store", "no_target", "failed",
+                "suppressed_auto")                      # 🤖 2026-11-17 — appended LAST (= AUTO_HELD_REASON, auto.hold_crosses)
 ENABLED = True
 ENV_ENABLED = "GAJJALA_WATCH_ENABLED"                  # "0" lowers it (tests/conftest assigns "0")
 CLAIM_PREFIX = "GGW"                                   # never "GG:" — the 🏁 reads GG: claims
 COLL_LIST, COLL_TILES, COLL_ALERTS, COLL_STATE = ("gajjala_watch_list", "gajjala_watch_tiles",
                                                   "gajjala_watch_alerts", "gajjala_watch_state")
 LIST_DOC_ID, STATE_LATEST_ID, LOOP_STATE_ID = "owner", "latest", "loop"   # the lease doc id is store.LEASE_ID
+# 🤖 auto section (2026-11-17 — Ajay: "add more stocks in to watch list … portentials from Gajjals's 1 min and regular and
+# also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing"). auto.py is
+# the ONE engine; every number below is the NAME of an existing constant or MINE with its HIS CALL number. UNMEASURED.
+AUTO_DOC_ID = "auto"                               # the SECOND doc of COLL_LIST (never the owner doc)
+AUTO_MAX_SYMBOLS = GC.GG_WATCH_N                   # MINE to reuse (HIS CALL #1): GG "watches 18 stocks simultaneously"
+AUTO_SOURCES = ("gajjala", "gajjala_1m", "gga")    # == (V.GG5.key, V.GG1.key, V.GGA.key) — a test pins equality
+AUTO_SOURCE_WORDS = {"gajjala": "🚩 5-min", "gajjala_1m": "🚩 1-min", "gga": "🧪"}
+AUTO_READ_SOURCES = ("gajjala", "gajjala_1m")      # the two STORED read sets; "gga" borrows GG5's (variant.GGA.borrows)
+AUTO_MIN_VOLUME = GC.K11_MIN_SESSION_VOLUME        # GG's floor, the SAME number cross_alerts holds the push under (HIS CALL #2)
+AUTO_VOLUME_SOURCES = ("scan", "tracker")          # [C2] the scan row, else GG5's tracker last.session_volume (K11's number)
+AUTO_REMOVE_STATES = ("back_under", "stop_printed")            # [C1] breakout_state.STATES — "not progressing" (HIS CALL #3)
+AUTO_KEEP_STATES = ("waiting", "broke_vol", "broke_quiet", "broke_unjudged")  # [C1] ⏸ = holding above the trigger → kept
+AUTO_DROP_GRACE_SEC = GC.PASS_CADENCE_SEC          # [C3] a potential NOWHERE this long before "dropped" removes it (HIS CALL #9)
+AUTO_REMOVED_SHOWN = AUTO_MAX_SYMBOLS              # [C3] the newest removals served (every event stays in the doc)
+AUTO_PUSH_MODES = GC.FADE_CROSS_PUSH_MODES         # ("off", "live")
+AUTO_PUSH_MODE = "off"                             # HIS CALL #4 — auto names never ring the 1-min cross push; "live" = his word
+AUTO_HELD_REASON = "suppressed_auto"               # == HELD_REASONS[-1] (a test pins it)
+AUTO_TAG = "🤖"
 ARGV_LOOP = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--loop")    # = ops/docker_watchdog CRON_DETACHED_CHILD_ARGS entry
 ARGV_BUILD = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--build")  # the API's add-time child; builds every pending name
 PROC_NAME_LOOP, PROC_NAME_BUILD = "gajjala-watch-loop", "gajjala-watch-build"

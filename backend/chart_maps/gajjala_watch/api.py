@@ -13,7 +13,11 @@ add remove tickers from the dashboard."
     handler). `store.add`; on `added` ONLY, only when the watch is on, and only when the minute loop will NOT read the
     name within about a minute (`colls.loop_reads_soon` False), one `--build` child is requested — single-flight (C2.5): at most ONE alive in this
     container; an alive child re-reads the list before it exits, so a second add while it runs spawns nothing.
-  * `DELETE /chart-maps/gajjala-watch/symbols/{symbol}` — the same gate; `store.remove`.
+  * `DELETE /chart-maps/gajjala-watch/symbols/{symbol}` — the same gate; `store.remove`, then ALWAYS `auto.dismiss`
+    (🤖 2026-11-17, spec ggwauto §3.5): the × on an auto name removes it until tomorrow, and a × on his own name also
+    blocks an auto re-add today (HIS CALL #6). His list answered `absent` and the auto list `dismissed` → the auto
+    answer; otherwise the store's own answer. A raising / missing auto engine is logged and the store's answer stands.
+    The answer shape stays `{state, symbols, symbol, text}` (`symbols` = his list).
   * `GET    /chart-maps/gajjala-watch/symbols` — the ➕/➖ card button (2026-11-15): the owner's names only
     (`payload.list_payload`), read off the event loop; anyone else gets exactly `owner_only` and nothing is read; a
     failing read answers `error`, never an empty list (an empty list would offer ➕ on a name already watched).
@@ -33,6 +37,7 @@ from __future__ import annotations
 
 import asyncio
 import gzip
+import importlib
 import json
 import logging
 import threading
@@ -146,9 +151,22 @@ async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_ad
     return out
 
 
+def _dismiss(symbol, by) -> Any:
+    """🤖 `auto.dismiss`, the engine imported LAZILY through sys.modules (tests inject a stub there)."""
+    return importlib.import_module(PL.AUTO_MODULE).dismiss(symbol, by=by)
+
+
 @router.delete(C.API_SYMBOL_PATH)
 async def gajjala_watch_remove(symbol: str, email: str = Depends(require_primary_admin)):
-    return await asyncio.to_thread(ST.remove, symbol, by=email)
+    out = await asyncio.to_thread(ST.remove, symbol, by=email)
+    try:
+        a = await asyncio.to_thread(_dismiss, symbol, email)
+    except Exception as exc:                                    # noqa: BLE001 — the store's answer stands
+        log.warning("gajjala_watch: auto dismiss failed: %s", exc)
+        a = None
+    if isinstance(out, dict) and out.get("state") == "absent" and isinstance(a, dict) and a.get("state") == "dismissed":
+        return a
+    return out
 
 
 def _feed_pair() -> tuple:

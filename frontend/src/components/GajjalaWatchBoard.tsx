@@ -44,14 +44,26 @@
  *
  * No house chips on this tab (🚀 growth, 🧨 explosive, 🩳 short interest, 🎯 enterable): each tile is the chart alone, his
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
- * list order orders this board (the order he added the names in, as served). */
+ * list order orders this board (the order he added the names in, as served); the 🤖 auto rows follow his, in the order
+ * they were added (the server never re-sorts them).
+ *
+ * 🤖 AUTO (2026-11-17, watch-auto spec §3.6, WP-C) — Ajay: "Can you add more stocks in to watch list basically I need
+ * portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
+ * interval.. Remove as they are not progressing". The server's minute loop adds the 🧠 potentials of the 🚩 5-min,
+ * 🚩 1-min and 🧪 boards with good volume and removes them when they stop progressing (backend
+ * chart_maps/gajjala_watch/auto.py); this board only PRINTS what is served: the head's 🤖 title (hover = the served
+ * hint), the served unreadable / empty words, a collapsed "removed today" strip whose lines are the served `text_full`
+ * verbatim, the 🤖 tag + dashed outline on an auto name in the pager (its × title served), the tile's 🤖 chip
+ * (GajjalaWatchTile) and the ℹ️ clause. The live interest POSTs EVERY row (ggwLiveSymbols — his names, then the auto
+ * names). × on an auto name is the same DELETE (the server dismisses it for the session). UNMEASURED — an auto add is
+ * a board's 🧠 read, not an entry. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
   GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH,
-  ggwClampPage, ggwFitRowHeight, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
+  ggwClampPage, ggwFitRowHeight, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
   ggwPickGrid, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
@@ -170,7 +182,8 @@ export default function GajjalaWatchBoard() {
   metasRef.current = metas;
   const onBatch = useCallback((evt: GgwBatch) => setLive((prev) => ggwApplyBatch(prev, evt, metasRef.current)), []);
   const liveOn = load.phase === 'loaded' && load.p.state === 'ok' && load.p.rows.length > 0 && load.p.refresh_sec > 0;
-  const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? load.p.symbols : NO_SYMBOLS,
+  /* 🤖 2026-11-17: every row (his, then the auto names) — not `symbols` (his names only). */
+  const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? ggwLiveSymbols(load.p) : NO_SYMBOLS,
     liveOn, onBatch);
   const liveOf = (r: GgwRow, shown: boolean): GgwLiveSym | undefined => (shown && ggwRowLive(r) ? live[r.symbol] : undefined);
 
@@ -402,6 +415,27 @@ export default function GajjalaWatchBoard() {
             {p.pass.stale ? '⚠️ ' : ''}{p.pass.text}
           </span>
         ) : null}
+        {/* 🤖 the served auto head: title (hover = the served hint), the unreadable word, the empty word, and the
+            collapsed strip of this session's removals (each line = the served text_full, verbatim). */}
+        {p.auto?.title ? (
+          <span className="ggw-line ggw-auto-title" data-testid="ggw-auto-title" title={p.auto.hint ?? undefined}>
+            {p.auto.title}
+          </span>
+        ) : null}
+        {p.auto?.state === 'unreadable' && p.auto.text ? (
+          <span className="ggw-line ggw-warn" data-testid="ggw-auto-unreadable">{p.auto.text}</span>
+        ) : null}
+        {p.auto && p.auto.n === 0 && p.auto.empty_text ? (
+          <span className="ggw-line ggw-auto-empty" data-testid="ggw-auto-empty">{p.auto.empty_text}</span>
+        ) : null}
+        {p.auto && p.auto.removed.length ? (
+          <details className="ggw-auto-removed" data-testid="ggw-auto-removed">
+            <summary>{p.auto.removed_title ?? '🤖'}</summary>
+            {p.auto.removed.map((r, i) => (
+              <p key={`${r.symbol}-${r.at_et}-${i}`} className="ggw-line" data-testid="ggw-auto-removed-line">{r.text_full}</p>
+            ))}
+          </details>
+        ) : null}
         {servedErr ? (
           <span className="ggw-line ggw-warn ggw-served-error" data-testid="ggw-served-error">{`⚠️ ${servedErr}`}</span>
         ) : null}
@@ -432,12 +466,13 @@ export default function GajjalaWatchBoard() {
             <span className="ggw-layout-label">per screen</span>
           </span>
         ) : null}
-        {p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text) ? (
+        {p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text) ? (
           <details className="ggw-info">
             <summary aria-label="info">{'ℹ️'}</summary>
             {p.info.honesty ? <p className="ggw-line">{p.info.honesty}</p> : null}
             {p.info.uptrend_rule ? <p className="ggw-line">{p.info.uptrend_rule}</p> : null}
             {p.info.push_text ? <p className="ggw-line">{p.info.push_text}</p> : null}
+            {p.info.auto_text ? <p className="ggw-line" data-testid="ggw-info-auto">{p.info.auto_text}</p> : null}
           </details>
         ) : null}
       </div>
@@ -449,13 +484,14 @@ export default function GajjalaWatchBoard() {
             {GGW_PAGER.prev}
           </button>
           {p.rows.map((r, i) => {
-            const rm = p.remove_label ? `${p.remove_label} ${r.symbol}` : r.symbol;
+            /* 🤖 an auto name: the dashed item, the served tag before SYM, the served × title. */
+            const rm = r.auto?.remove_title ?? (p.remove_label ? `${p.remove_label} ${r.symbol}` : r.symbol);
             return (
-              <span key={r.symbol} className={`ggw-pager-item${onPage(i) ? ' is-on' : ''}`}>
+              <span key={r.symbol} className={`ggw-pager-item${r.auto ? ' ggw-pager-item--auto' : ''}${onPage(i) ? ' is-on' : ''}`}>
                 <button type="button" className={`ggw-btn ggw-pager-sym${onPage(i) ? ' is-on' : ''}`}
                         aria-pressed={onPage(i)} data-testid={`ggw-pager-${r.symbol}`}
                         onClick={() => toggle(r.symbol)}>
-                  {r.symbol}
+                  {r.auto ? `${r.auto.tag} ${r.symbol}` : r.symbol}
                 </button>
                 <button type="button" className="ggw-btn ggw-pager-x" title={rm} aria-label={rm} disabled={busy}
                         data-testid={`ggw-pager-x-${r.symbol}`} onClick={() => write('DELETE', r.symbol)}>

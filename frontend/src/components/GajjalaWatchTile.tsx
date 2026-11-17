@@ -11,7 +11,13 @@
  *   - a frame with no bars and a SERVED `empty_text` prints those words in place of the chart (caption still printed);
  *   - a frame with a SERVED `as_of_et` prints its own stamp chip in the caption (`⚠️ ` on a served `stale`, the head
  *     chip's exact look). Watch frames carry neither key → no chip.
- * The FE composes no word about a stock here: every string is served, except the structural glyphs. */
+ * The FE composes no word about a stock here: every string is served, except the structural glyphs.
+ *
+ * 🤖 2026-11-17 (watch-auto spec §3.6, WP-C) — Ajay: "Can you add more stocks in to watch list basically I need
+ * portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
+ * interval.. Remove as they are not progressing". A row the server added carries `auto`: the tile head prints its served
+ * chip after SYM (hover = the served added / volume / leaving words) and the ✕ title is its served `remove_title`.
+ * Rows without `auto` (his, the 🚩 cards) render exactly as before. */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -134,13 +140,22 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   order?: ReadonlyArray<string>;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
-  const rm = removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol;
+  /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
+  const rm = row.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol);
+  const autoTitle = row.auto
+    ? [row.auto.added_text, row.auto.volume_text, row.auto.leaving_text].filter(Boolean).join(' · ') || undefined
+    : undefined;
   return (
     <section className={`ggw-tile${focused ? ' ggw-tile-focus' : ''}`} id={onUnstretch ? undefined : `ggw-${row.symbol}`}
              data-testid={onUnstretch ? `ggw-stretch-tile-${row.symbol}` : `ggw-tile-${row.symbol}`} data-state={row.state}
              hidden={offPage || undefined}>
       <div className="ggw-tile-head">
         <b className="ggw-sym">{row.symbol}</b>
+        {/* 🤖 the served auto chip (watch-auto 2026-11-17) — its text verbatim; hover = the served added / volume /
+            leaving words. A row without `auto` (his, a 🚩 card) draws nothing here. */}
+        {row.auto ? (
+          <span className="ggw-chip ggw-auto" data-testid="ggw-auto" title={autoTitle}>{row.auto.text}</span>
+        ) : null}
         {row.text ? (
           <span className={`ggw-line ggw-row-text${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-row-text">
             {row.text}

@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-17, verbatim: "Can you add more stocks in to watch list basically I need portentials from Gajjals's 1 min
+  // and regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing".
+  // 🤖 auto section on 👀 Watch (chart_maps/gajjala_watch/auto.py, inside the minute loop): 🧠 potentials from 🚩 5-min,
+  // 1-min and 🧪 with today's volume ≥ GG's K11 floor; leaves on ↩️ / ✖️ or a potential nowhere for the pass clock. His names
+  // never touched; auto names never ring a push. UNMEASURED. Doc docs/gajjala/watch_auto_potentials_2026_11_17.md.
+  {
+    id: 'chart-maps-gajjala-watch-auto-potentials-2026-11-17',
+    label: '🤖 Auto names on 👀 Gajjala’s Watch — you said: “I need portentials from Gajjals’s 1 min and regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not progressing”. Every minute in the pass window, 🧠 potentials from 🚩 5-min, 1-min and 🧪 with today’s volume at or over 1,000,000 shares (GG’s floor) are added after your names, tagged 🤖 with the board they came from, up to 18. A name leaves when its card reads ↩️ back under or ✖️ stop printed, or when no board lists it as a potential any more; ⏸ waiting above its trigger stays. Your own names are never touched. × on a 🤖 name keeps it off until tomorrow. 🤖 names never send a phone alert.',
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-16, verbatim: "Also the graphs in the videos are so clear like I can easily identify the trend" · "Why aren't our
   // regular ones like that". 2026-11-17: "Yes to all defaults". 🚩 5-min + 🧪 Audited cards: the served pre-market-open → close axis
   // on every card (the 👀 Watch's ONE engine) and the 📺 Video view toggle, ON by default. Display only, UNMEASURED. The 🎾 exception

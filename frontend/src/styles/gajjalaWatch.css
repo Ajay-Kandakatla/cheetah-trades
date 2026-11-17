@@ -155,3 +155,13 @@
 
 /* 2026-11-16 (ggcard3 WP-A): the 🚩 card view's served words for a frame with no stored bars, on the dark panel. */
 .ggw-stretch--card .ggw-frame-empty { padding: 12px; }
+
+/* 🤖 2026-11-17 (watch-auto spec §3.6) — Ajay: "add more stocks in to watch list … potentials … with good volume to
+ * Watchlist on an interval.. Remove as they are not progressing". The served auto chip on a tile (a .ggw-chip, so it
+ * wraps at 430 px), the dashed pager item of an auto name, and the collapsed "removed today" strip in the head. */
+.ggw-auto { color: var(--accent, #c2ef50); }
+.ggw-pager-item--auto .ggw-pager-sym { border-style: dashed; }
+.ggw-auto-removed { min-width: 0; max-width: 100%; }
+.ggw-auto-removed summary { font-size: 0.74rem; color: var(--text-muted, #8595ad); cursor: pointer; }
+.ggw-auto-removed[open] { flex-basis: 100%; }
+.ggw-auto-removed > p { margin: 0.2rem 0; }

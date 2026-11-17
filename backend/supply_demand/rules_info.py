@@ -1275,6 +1275,21 @@ def _gg_watch_cross_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_auto_clause() -> str:
+    """🤖 2026-11-17 (Ajay "Can you add more stocks in to watch list basically I need portentials from Gajjals's 1 min and
+    regular and also Audited potentials with good volume to Watchlist on an interval.. Remove as they are not
+    progressing") — the section note's ONE clause on the watch's auto section, built by
+    chart_maps.gajjala_watch.auto.rules_line() (every number a constant read at call time — never typed here): " " + the
+    line, or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala_watch import auto as GWA
+        line = GWA.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch auto clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1473,6 +1488,7 @@ def _gajjala_section() -> dict:
                  + _gg_run_bases_clause()                  # 📶 2026-11-15 — GG's base count (information only)
                  + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
+                 + _gg_watch_auto_clause()                 # 🤖 2026-11-17 — the watch's auto section (🧠 potentials)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

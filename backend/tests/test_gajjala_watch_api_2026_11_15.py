@@ -41,6 +41,7 @@ SUN = datetime(2026, 11, 15, 12, 0, tzinfo=ET)              # a Sunday — out o
 SESSION = "2026-11-13"
 RULE_STUB = "STUB-UPTREND-RULE"
 PUSH_STUB = "STUB-PUSH-TEXT"
+AUTO_STUB = "STUB-AUTO-TEXT"                                 # 🤖 2026-11-17 (spec ggwauto WP-B): the auto engine's sentence
 
 
 def _strict(txt):
@@ -113,6 +114,11 @@ def stubs(monkeypatch):
     monkeypatch.setitem(sys.modules, "chart_maps.gajjala_watch.build", types.SimpleNamespace(uptrend_rule=lambda: RULE_STUB))
     monkeypatch.setitem(sys.modules, "chart_maps.gajjala_watch.cross_alerts",
                         types.SimpleNamespace(rules_line=lambda: PUSH_STUB))
+    # 🤖 2026-11-17 (spec ggwauto WP-B): the auto engine as a stub too — no auto doc, an `absent` dismiss (the served
+    # auto section has its own file, test_gajjala_watch_auto_served_2026_11_17.py).
+    monkeypatch.setitem(sys.modules, "chart_maps.gajjala_watch.auto",
+                        types.SimpleNamespace(read_doc=lambda cs: {}, rules_line=lambda: AUTO_STUB,
+                                              dismiss=lambda symbol, by=None: {"state": "absent"}))
 
 
 @pytest.fixture()
@@ -515,10 +521,11 @@ def test_info_holds_the_rule_sentences_once():
     db = _db(["OMH"])
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH", ups=(f"{SESSION} 09:35",))
     out = PL.build(FRI_IN, db=db)
+    # PIN MOVED 2026-11-17 (spec ggwauto §3.4): + `auto_text` — the 🤖 auto rule sentence, served once like the others.
     assert out["info"] == {"honesty": PL.honesty(), "push_text": PUSH_STUB, "uptrend_rule": RULE_STUB,
-                           "push_mode": C.PUSH_MODE, "push_frames": list(C.PUSH_FRAMES)}
+                           "push_mode": C.PUSH_MODE, "push_frames": list(C.PUSH_FRAMES), "auto_text": AUTO_STUB}
     txt = json.dumps(out, default=str)
-    assert txt.count(RULE_STUB) == 1 and txt.count(PUSH_STUB) == 1
+    assert txt.count(RULE_STUB) == 1 and txt.count(PUSH_STUB) == 1 and txt.count(AUTO_STUB) == 1
 
     def _keys(o):
         if isinstance(o, dict):

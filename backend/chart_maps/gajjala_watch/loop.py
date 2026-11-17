@@ -24,6 +24,19 @@ closed 1/3/5-minute frames (budget = min(GG1M_MINUTE_BUDGET_SEC, the time left i
 BUILD CHILD (`--build`, [C2.5]): the API spawns it when a name is added and the loop will not read within the minute;
 it builds every listed name with no tile doc / another session / not loaded, re-reading the list until nothing is left
 (each name tried once). Never the cross push, never a state doc, no lease. UNMEASURED — nothing here trades.
+
+🤖 AUTO (2026-11-17, spec ggwauto §3.3 — Ajay: "I need portentials from Gajjals's 1 min and regular and also Audited
+potentials with good volume to Watchlist on an interval.. Remove as they are not progressing"). Each iteration, under the
+SAME lease and before the frame build, `auto.step` keeps the auto doc (adds / removals, zero fetches); the frames, the
+tiles and the state doc then cover his names + the auto names (his first, the auto names in the order they were added).
+With nothing listed and nothing auto, out of the pass window → no lease (as before); IN the window an empty list claims
+the lease once for the auto step and calls no loader when nothing is added. The cross push (cross_alerts.run, byte
+untouched) is GIVEN his names' frames only while C.AUTO_PUSH_MODE is "off"; an auto name's own-minute up cross is held
+`suppressed_auto` (auto.hold_crosses — never sent, never claimed). [C6] `alerts` stays the cross engine's OWN counts
+over the frames it was GIVEN — `alerts.names` = his names (manual + auto only when the auto mode is "live");
+`alerts.suppressed_auto` (present only when auto names were read) = the held count; `n_names` = manual + auto; `auto.n`
+= the auto count. Never rewritten after the run. `--dry-run --symbols` (the stub) skips the auto step entirely;
+`--dry-run` without it runs `auto.step(dry=True)` → `auto.writes` = the would-be doc, nothing written.
 """
 from __future__ import annotations
 
@@ -43,6 +56,7 @@ from chart_maps.gajjala import run_1m as R1
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import variant as V
 
+from . import auto as AUTO
 from . import build as BLD
 from . import colls as CO
 from . import constants as C
@@ -54,6 +68,7 @@ ET = ZoneInfo("America/New_York")
 LEASE_HELD = "lease held"
 LOOP_REASONS = ("no time left in the slot", "after the extended close", "slot passed (host sleep)", "off")
 NO_TICKERS = "no tickers"
+AUTO_OUT_KEYS = ("n", "cap", "added", "removed", "leaving", "skipped", "reason")    # the state doc's `auto` block
 
 
 def _default_load():
@@ -95,8 +110,9 @@ def _state(cs: Optional[dict], _id: str, fields: dict) -> None:
 # ── one iteration ─────────────────────────────────────────────────────────────────────────────────────────────────
 def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None, dry: bool = False,
                   symbols: Optional[list] = None, budget_sec: Optional[float] = None) -> dict:
-    """One minute: the owner's tickers → closed 1/3/5-minute frames → the cross push → the tile docs → the state doc.
-    `symbols` (the --dry-run --symbols stub) REPLACES the owner list for this call. `dry`: nothing written, nothing
+    """One minute: the owner's tickers (+ 🤖 the auto step's names, 2026-11-17) → closed 1/3/5-minute frames → the cross
+    push (his names' frames only while the auto mode is off) → the tile docs → the state doc.
+    `symbols` (the --dry-run --symbols stub) REPLACES the owner list for this call and skips the auto step. `dry`: nothing written, nothing
     sent, no lease (the writes are returned in `writes`)."""
     deps = deps or Deps()
     now = RUN._utc(now) if now is not None else RUN._utc(deps.wall())
@@ -106,9 +122,13 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         out["reason"] = "off"
         return out
     cs = CO.colls(db)
-    syms = list(dict.fromkeys(s for s in (symbols if symbols is not None else CO.owner_symbols(db)) if s))
-    out["n_names"] = len(syms)
-    if not syms:
+    stub = symbols is not None
+    manual = list(dict.fromkeys(s for s in (symbols if stub else CO.owner_symbols(db)) if s))
+    mk = {CO.fold(s) for s in manual}
+    auto_known = ([] if stub else
+                  [s for s in AUTO.current_symbols(cs, BLD.session_of(now)[0].isoformat()) if CO.fold(s) not in mk])
+    out["n_names"] = len(manual) + len(auto_known)
+    if not manual and (stub or (not auto_known and not RUN.in_window(now))):
         out["reason"] = NO_TICKERS
         if not dry:
             _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS})
@@ -123,6 +143,25 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
             return out
     try:
         session = BLD.session_of(now)[0]
+        if stub:
+            auto_res: dict = {"symbols": [], "reason": "stub"}
+        else:
+            auto_res = {"symbols": auto_known, "reason": "error"}
+            try:
+                auto_res = AUTO.step(now, session, db=db, manual=manual, dry=dry)
+            except Exception as exc:                            # noqa: BLE001 — the last entries stay served
+                log.warning("gajjala watch 🤖: auto step failed: %s", type(exc).__name__)
+        auto_syms = [s for s in dict.fromkeys(auto_res.get("symbols") or []) if CO.fold(s) not in mk]
+        syms = manual + auto_syms
+        auto_out = {k: auto_res.get(k) for k in AUTO_OUT_KEYS}
+        auto_out.update(n=len(auto_syms), cap=C.AUTO_MAX_SYMBOLS)
+        out["auto"] = dict(auto_out, writes=auto_res["writes"]) if dry and "writes" in auto_res else auto_out
+        out["n_names"] = len(syms)
+        if not syms:
+            out["reason"] = NO_TICKERS
+            if not dry:
+                _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS, "auto": auto_out})
+            return out
         tiles = cs["tiles"] if cs else None
         seen = BLD.seen(tiles, syms)
         per_name: dict = {}
@@ -135,12 +174,21 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         # (a host sleep mid-fetch makes the cross stale: never sent late). The tile docs keep `now`.
         now_x = now + max(timedelta(0), RUN._utc(deps.wall()) - w0)
         held: dict = {}
+        auto_live = AUTO.push_mode() == C.AUTO_PUSH_MODES[1]
+        ak = {CO.fold(s) for s in auto_syms}
+        F_push = {s: f for s, f in F.items() if auto_live or CO.fold(s) not in ak}      # [C6] his names' frames only
         try:
-            counts = XA.run(F, now_x, session, coll=(cs["alerts"] if cs else None), send=deps.send, owner=deps.owner,
-                            dry=dry, seen=seen, held=held)
+            counts = XA.run(F_push, now_x, session, coll=(cs["alerts"] if cs else None), send=deps.send,
+                            owner=deps.owner, dry=dry, seen=seen, held=held)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala watch: cross push failed: %s", type(exc).__name__)
             counts = {"error": 1}
+        if auto_syms and not auto_live:
+            try:
+                counts[C.AUTO_HELD_REASON] = AUTO.hold_crosses({s: f for s, f in F.items() if CO.fold(s) in ak},
+                                                               now_x, session, held)
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala watch 🤖: auto hold failed: %s", type(exc).__name__)
         updates = []
         for sym in syms:
             try:
@@ -158,7 +206,7 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         if not dry:
             _state(cs, C.STATE_LATEST_ID, {"at": now, "session": session.isoformat(), "n_names": len(syms),
                                            "n_read": len(F), "bars": stats, "alerts": counts,
-                                           "wall_s": out["wall_s"], "reason": None})
+                                           "wall_s": out["wall_s"], "reason": None, "auto": auto_out})
         return out
     finally:
         if lst is not None and claim is not None:

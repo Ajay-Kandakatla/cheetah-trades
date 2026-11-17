@@ -232,15 +232,41 @@ export type GgwFrame = {
   stale?: boolean;
 };
 export type GgwRang = { frame: string; at_et: string | null; text: string };
+/** 🤖 2026-11-17 (watch-auto spec §3.6, WP-C) — Ajay: "Can you add more stocks in to watch list basically I need
+ *  portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
+ *  interval.. Remove as they are not progressing". The served block on a row the server ADDED from the Gajjala boards'
+ *  🧠 potentials (backend chart_maps/gajjala_watch/auto.py → payload.row `auto`). Every string is served: `text` = the
+ *  chip, `added_text` / `volume_text` / `leaving_text` = its hover, `remove_title` = the × title. HIS rows carry null. */
+export type GgwRowAuto = {
+  tag: string; sources: string[]; source_words: string[]; text: string;
+  volume_text: string | null; volume_source: string | null;
+  added_et: string | null; added_text: string | null; leaving_text: string | null; remove_title: string | null;
+};
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
   frames: GgwFrame[]; rang: GgwRang[];
+  /** 🤖 null on HIS rows (and on every row of an older server). Optional ONLY so the 🚩 card view's own row builders
+   *  (lib/gajjalaCardView.ggcRow, GgCardView) stay valid — parseGgw always sets it. */
+  auto?: GgwRowAuto | null;
+};
+/** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
+export type GgwAutoRemoved = {
+  symbol: string; at_et: string | null; reason: string | null; state: string | null; text: string | null; text_full: string;
+};
+/** 🤖 The board's served auto head: `title` (hover = `hint`), `text` = the unreadable word, `empty_text` when none is
+ *  on, `removed` = the newest removals (of `removed_total`), `removed_title` = the strip's summary. */
+export type GgwAuto = {
+  state: string; cap: number | null; n: number; symbols: string[];
+  title: string | null; hint: string | null; empty_text: string | null; text: string | null;
+  removed: GgwAutoRemoved[]; removed_total: number | null; removed_title: string | null; push_mode: string | null;
 };
 export type GgwPass = { at_et: string | null; text: string | null; stale: boolean };
 export type GgwInfo = {
   honesty: string | null; push_text: string | null; uptrend_rule: string | null;
   push_mode: string | null; push_frames: string[];
+  /** 🤖 the auto section's ℹ️ clause (backend auto.rules_line, served once); null on an older server. */
+  auto_text: string | null;
 };
 export type GgwLegend = { tone: 'ema9' | 'ema21' | string; label: string };
 export type GgwBoard = {
@@ -250,6 +276,8 @@ export type GgwBoard = {
   max_symbols: number | null; symbols: string[]; full: boolean; full_text: string | null;
   add_label: string | null; add_placeholder: string | null; remove_label: string | null; empty_text: string | null;
   pass: GgwPass | null; info: GgwInfo | null; legend: GgwLegend[]; rows: GgwRow[];
+  /** 🤖 the auto section's head (absent / junk → null — an older server serves none; the board then renders as before). */
+  auto: GgwAuto | null;
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
 /** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
@@ -336,6 +364,40 @@ export function parseFrame(v: unknown, symbol: string): GgwFrame | null {
   };
 }
 
+/** 🤖 A row's auto block: an object with a served `tag` and `text`, else null (junk never draws a chip). */
+function parseRowAuto(v: unknown): GgwRowAuto | null {
+  if (!isObj(v) || !str(v.tag) || !str(v.text)) return null;
+  return {
+    tag: v.tag, sources: strs(v.sources), source_words: strs(v.source_words), text: v.text,
+    volume_text: str(v.volume_text), volume_source: str(v.volume_source),
+    added_et: str(v.added_et), added_text: str(v.added_text), leaving_text: str(v.leaving_text),
+    remove_title: str(v.remove_title),
+  };
+}
+
+/** 🤖 The board's auto block: an object with a served `state`, else null. A removal without `text_full` is dropped. */
+function parseAuto(v: unknown): GgwAuto | null {
+  if (!isObj(v) || !str(v.state)) return null;
+  const n = num(v.n);
+  const total = num(v.removed_total);
+  return {
+    state: v.state,
+    cap: num(v.cap),
+    n: n != null && n >= 0 ? n : 0,
+    symbols: strs(v.symbols),
+    title: str(v.title), hint: str(v.hint), empty_text: str(v.empty_text), text: str(v.text),
+    removed: (Array.isArray(v.removed) ? v.removed : [])
+      .filter((r: unknown) => isObj(r) && str(r.text_full))
+      .map((r: any) => ({
+        symbol: typeof r.symbol === 'string' ? r.symbol : '', at_et: str(r.at_et), reason: str(r.reason),
+        state: str(r.state), text: str(r.text), text_full: r.text_full,
+      })),
+    removed_total: total != null && total >= 0 ? total : null,
+    removed_title: str(v.removed_title),
+    push_mode: str(v.push_mode),
+  };
+}
+
 function parseRow(v: unknown): GgwRow | null {
   if (!isObj(v) || !str(v.symbol)) return null;
   const symbol = v.symbol as string;
@@ -351,6 +413,7 @@ function parseRow(v: unknown): GgwRow | null {
     rang: (Array.isArray(v.rang) ? v.rang : [])
       .filter((r: unknown) => isObj(r) && str(r.text))
       .map((r: any) => ({ frame: String(r.frame ?? ''), at_et: str(r.at_et), text: r.text })),
+    auto: parseRowAuto(v.auto),
   };
 }
 
@@ -372,6 +435,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
   const info = isObj(raw.info) ? {
     honesty: str(raw.info.honesty), push_text: str(raw.info.push_text), uptrend_rule: str(raw.info.uptrend_rule),
     push_mode: str(raw.info.push_mode), push_frames: strs(raw.info.push_frames),
+    auto_text: str(raw.info.auto_text),
   } : null;
   return {
     state: 'ok',
@@ -397,7 +461,14 @@ export function parseGgw(raw: unknown): GgwPayload | null {
       .filter((l: unknown) => isObj(l) && str(l.tone) && str(l.label))
       .map((l: any) => ({ tone: l.tone, label: l.label })),
     rows: raw.rows.map(parseRow).filter((r: GgwRow | null): r is GgwRow => !!r),
+    auto: parseAuto(raw.auto),
   };
+}
+
+/** 🤖 The live-interest list (2026-11-17): EVERY row's symbol in served order — his names, then the auto names — so an
+ *  auto tile's charts move live like his (the board used to POST `symbols`, his names only). */
+export function ggwLiveSymbols(b: GgwBoard): string[] {
+  return b.rows.map((r) => r.symbol);
 }
 
 /** The rows still waiting for their first read (the pending poll asks for these only). */

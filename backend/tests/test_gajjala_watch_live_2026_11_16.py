@@ -558,7 +558,7 @@ def test_source_guard_cross_alerts_is_byte_untouched():
     assert hashlib.sha256((PKG / "cross_alerts.py").read_bytes()).hexdigest() == CROSS_ALERTS_SHA
 
 
-@pytest.mark.parametrize("name", ["loop.py", "build.py", "cross_alerts.py"])
+@pytest.mark.parametrize("name", ["loop.py", "build.py", "cross_alerts.py", "auto.py"])   # 🤖 auto.py 2026-11-17
 def test_source_guard_the_minute_path_never_names_the_live_stack(name):
     src = (PKG / name).read_text(encoding="utf-8")
     for bad in ("live_events", "live_hub", "gajjala.update", '"size"', "'size'"):

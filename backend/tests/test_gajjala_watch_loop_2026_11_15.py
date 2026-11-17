@@ -199,15 +199,24 @@ def test_NEGATIVE_the_loop_survives_a_raising_iteration(monkeypatch):
 
 # ── one iteration ────────────────────────────────────────────────────────────────────────────────────────────────
 def test_NEGATIVE_an_empty_list_claims_no_lease_and_calls_no_loader(monkeypatch):
+    # 🤖 2026-11-17 (spec ggwauto §4 WP-A re-pin): IN the pass window an empty list now claims the lease ONCE for the
+    # auto step (it may add 🧠 potentials) and still calls no loader when nothing is added; OUT of the window with
+    # nothing listed and nothing auto → still no lease.
     db = fake_db(symbols=[])
     calls = frames_spy(monkeypatch)
+    steps = []
+    monkeypatch.setattr(L.AUTO, "step", lambda *a, **k: (steps.append(k), {"symbols": [], "reason": None})[1])
     loads = []
     out = L.run_iteration(at(S, 10, 1, 30), db=db, deps=L.Deps(load_day=lambda *a, **k: loads.append(a)))
     assert out["reason"] == "no tickers" and not out["ran"] and calls == [] and loads == []
-    assert ST.LEASE_ID not in db[C.COLL_STATE].docs
+    assert len(steps) == 1 and db[C.COLL_STATE].docs[ST.LEASE_ID]["status"] == "done"
     assert db[C.COLL_STATE].docs[C.STATE_LATEST_ID]["reason"] == "no tickers"
     out = L.run_iteration(at(S, 10, 1, 30), db=fake_db(symbols=None), deps=L.Deps(load_day=lambda *a, **k: None))
     assert out["reason"] == "no tickers"
+    db = fake_db(symbols=[])
+    out = L.run_iteration(at(S, 20, 30, 30), db=db, deps=L.Deps(load_day=lambda *a, **k: loads.append(a)))
+    assert out["reason"] == "no tickers" and ST.LEASE_ID not in db[C.COLL_STATE].docs and len(steps) == 2
+    assert calls == [] and loads == []
 
 
 def test_NEGATIVE_env_0_is_off(monkeypatch):

@@ -291,7 +291,9 @@ def test_no_device_is_no_target_and_the_latch_lands_before_the_send():
 
 
 def test_held_reasons_are_the_constants_words():
-    assert set(C.HELD_REASONS) <= set(XA.COUNT_KEYS) | {"failed", "no_target"}
+    # 🤖 2026-11-17 (spec ggwauto §4 WP-A re-pin): "suppressed_auto" is recorded by auto.hold_crosses, outside the
+    # cross engine (byte-identical) — the one held reason that is not a COUNT_KEYS word.
+    assert set(C.HELD_REASONS) <= set(XA.COUNT_KEYS) | {"failed", "no_target", C.AUTO_HELD_REASON}
     assert "late" not in C.HELD_REASONS and "claimed_before" not in C.HELD_REASONS
 
 
