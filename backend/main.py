@@ -806,6 +806,8 @@ app.include_router(long_term_router)
 # 👀 Gajjala's Watch (2026-11-15), owner-only: his own tickers on 1/3/5-min charts + the 1-min 9/21 EMA cross push.
 from chart_maps.gajjala_watch.api import router as gajjala_watch_router  # noqa: E402
 app.include_router(gajjala_watch_router)
+from chart_maps.replays.api import router as replays_router  # noqa: E402  🎬 Replays (2026-11-17), owner-only
+app.include_router(replays_router)
 
 # Bonde board (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see
 # explicitly new ones getting added"). Pradeep Bonde's own screen — his sales

@@ -827,7 +827,8 @@ describe('the Earnings Flow tab', () => {
        // table reads (spec §7.2, his call).
        // WIDENED 2026-11-12 — 📅 long_term IMMEDIATELY after 🚀 growth (long-term
        // spec §3.13 / §7 #12, his call).
-       'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+       // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call).
+       'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'replays', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -942,7 +943,8 @@ describe('the Support Levels tab', () => {
     // WIDENED 2026-11-01: `luk` is the nineteenth — its own GET /chart-maps/luk read (luk spec §3.13).
     // WIDENED 2026-11-12: `long_term` is the twentieth — its own GET /chart-maps/long-term read (long-term spec §3.13).
     // WIDENED 2026-11-15: `gajjala_watch` is the twenty-first — its own owner-only GET /chart-maps/gajjala-watch read (gajjala-watch spec §3.8).
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'gajjala_watch', 'luk', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call): `replays` is the twenty-second — its own owner-only GET /chart-maps/replays read.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'gajjala_watch', 'luk', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'replays', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1844,7 +1846,8 @@ describe('tab order — most-used first', () => {
     // WIDENED 2026-11-01 — 🥇 luk after 🚩 gajjala_1m (luk spec §3.13)
     // WIDENED 2026-11-12 — 📅 long_term after 🚀 growth (long-term spec §3.13)
     // WIDENED 2026-11-15 — 👀 gajjala_watch after 🚩 gajjala_1m (gajjala-watch spec §3.8)
-    expect(CM_TABS).toHaveLength(44);   // +gajjala_watch 2026-11-15; +long_term 2026-11-12; +luk 2026-11-01; +gajjala_audited 2026-11-01; +gajjala_1m 2026-10-27; +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2)
+    expect(CM_TABS).toHaveLength(45);   // +replays 2026-11-17; +gajjala_watch 2026-11-15; +long_term 2026-11-12; +luk 2026-11-01; +gajjala_audited 2026-11-01; +gajjala_1m 2026-10-27; +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2351,7 +2354,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep' && t !== 'gajjala_1m' && t !== 'gajjala_audited' && t !== 'luk' && t !== 'long_term' && t !== 'gajjala_watch')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-11-15 — 👀 gajjala_watch after 🚩 gajjala_1m; WIDENED 2026-11-12 — 📅 long_term after 🚀 growth; WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala; WIDENED 2026-11-01 — 🧪 gajjala_audited after 🚩 gajjala; WIDENED 2026-11-01 — 🥇 luk after 🚩 gajjala_1m
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep' && t !== 'gajjala_1m' && t !== 'gajjala_audited' && t !== 'luk' && t !== 'long_term' && t !== 'gajjala_watch' && t !== 'replays')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call); WIDENED 2026-11-15 — 👀 gajjala_watch after 🚩 gajjala_1m; WIDENED 2026-11-12 — 📅 long_term after 🚀 growth; WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala; WIDENED 2026-10-27 — 🚩 gajjala_1m after 🚩 gajjala; WIDENED 2026-11-01 — 🧪 gajjala_audited after 🚩 gajjala; WIDENED 2026-11-01 — 🥇 luk after 🚩 gajjala_1m
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });

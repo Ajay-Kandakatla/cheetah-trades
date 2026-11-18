@@ -1,0 +1,29 @@
+/* 🎬 Replays tab (2026-11-17, replays spec §3.3). The card grid reuses the house .cm-grid; only what is new to this
+   tab lives here (prefix rp-).
+
+   📱 Phone (430 px — the 🚩 2026-10-19 lesson): a grid / flex item's default `min-width: auto` lets ONE unbreakable
+   served word set the card's minimum and push the page sideways. Every card and video stays inside its column, every
+   served chip and line wraps, and the 🎾 tracker table scrolls INSIDE its own wrapper — never the page. This sheet
+   never sets the no-wrap white-space value. */
+
+.rp-board { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.6rem; }
+.rp-title { font-size: 1.05rem; font-weight: 600; margin: 0; }
+.rp-h { font-size: 0.95rem; margin: 0.2rem 0; overflow-wrap: anywhere; }
+.rp-muted { color: var(--ink-subtle, #94a3b8); }
+.rp-select { align-self: flex-start; max-width: 100%; font-size: 0.85rem; padding: 0.15rem 0.3rem; }
+.rp-group, .rp-rs { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; max-width: 100%; }
+
+.rp-card { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.3rem; padding: 0.45rem 0.6rem; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 8px; background: var(--cm-card, var(--bg-surface, transparent)); }
+.rp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; }
+.rp-video { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; background: #000; border-radius: 4px; }
+.rp-chips { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; }
+.rp-chip, .rp-why, .rp-story, .rp-plan, .rp-line { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.rp-chip { display: inline-block; padding: 0.06rem 0.4rem; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); }
+.rp-why, .rp-story, .rp-plan, .rp-line { margin: 0; font-size: 0.8rem; }
+.rp-story { color: var(--ink-muted, #64748b); }
+
+.rp-rs-wrap { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.rp-rs-table { border-collapse: collapse; font-size: 0.75rem; }
+.rp-rs-table th, .rp-rs-table td { padding: 0.15rem 0.4rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); text-align: left; }
+
+@media (max-width: 640px) { .rp-chip { font-size: .72rem; } }

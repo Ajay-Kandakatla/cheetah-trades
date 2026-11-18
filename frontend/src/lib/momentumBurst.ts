@@ -145,4 +145,6 @@ export const BURST_EXEMPT: Record<string, string> = {
   long_term: 'his saved list keeps its saved order \u2014 the \u26A1 burst is a daily-volume read',
   // 👀 Gajjala's Watch (2026-11-15, gajjala-watch spec §3.8): his own tickers in the order he added them.
   gajjala_watch: 'your own tickers in your order \u2014 never ranked',
+  // 🎬 Replays (2026-11-17, replays spec §3.3): videos in the served group order; nothing ranks them.
+  replays: 'videos in the served group order \u2014 never ranked',
 };

@@ -20,6 +20,10 @@ services:
       MONGO_DB: cheetah
       TZ: America/New_York
       # Twilio was removed — all notifications now route via Web Push.
+      # 🎬 Replays tab (2026-11-17): where the two read-only binds below land.
+      # Equals backend chart_maps/replays/constants.py ROOT_DEFAULT (pinned by
+      # backend/tests/test_replays_compose_2026_11_17.py).
+      REPLAYS_DIR: /data/replays
     volumes:
       # Cron writes scan JSON here; api reads it. Shared with the cron service.
       - cheetah-scans:/root/.cheetah
@@ -35,6 +39,18 @@ services:
       # (oauth2-proxy v7.7.1 does not hot-reload the file). Overrides the copy
       # baked into the image so list_users() / signup also see live edits.
       - ./backend/oauth2-emails.txt:/app/oauth2-emails.txt
+      # 🎬 Replays tab (2026-11-17, Ajay: "Can you store the videos in to the
+      # app please"). The nightly replay MP4s + sidecar JSON written by
+      # eod-audits/replays/run.sh (~1 GB, growing ~170 MB a night) and the
+      # 🎾 Reversal Squeeze tracker ledger. READ-ONLY: the api only lists and
+      # streams them; run.sh on the host stays the only writer. Relative
+      # `../eod-audits` because every tree that runs compose
+      # (cheetah-market-app, cheetah-deploy, .wt-*) is a sibling of eod-audits
+      # in the same parent folder — never an absolute host path here.
+      # Api ONLY: cron and frontend get nothing. Rollback = delete these two
+      # lines (the tab then answers its no_folder sentence).
+      - ../eod-audits/replays/videos:/data/replays/videos:ro
+      - ../eod-audits/replays/rs_potentials:/data/replays/rs_potentials:ro
     depends_on:
       - mongo
     ports:

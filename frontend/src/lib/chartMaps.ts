@@ -33,7 +33,7 @@ import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 import { ON_OWN_PARAMS } from './overnightSession';
 import { LUK_CAT_PARAM, LUK_SORT_PARAM, LUK_SPAN_PARAM, LUK_SUB_PARAM, LUK_TAB } from './luk';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'gajjala_watch' | 'luk' | 'doji_sweep' | 'long_term';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'gajjala_audited' | 'gajjala_1m' | 'gajjala_watch' | 'luk' | 'doji_sweep' | 'long_term' | 'replays';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -203,6 +203,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // re-cut moves it on the evidence. Label and slot are his call (long-term
   // spec §7 #12).
   'long_term',
+  // 🎬 Replays (Ajay 2026-11-17: "Can you store the videos in to the app
+  // please"). IMMEDIATELY after 📅 Long Term — TAB ORDER IS EARNED;
+  // tabUsageKey counts it from the first open and the next re-cut moves it on
+  // the evidence. Owner only (ChartMaps.tsx hides it beside 👀 Watch for a
+  // loaded non-owner). Label and slot are his call (replays spec §7 #2).
+  'replays',
   // 🆕 IPOs ≤2y (Ajay 2026-09-19: "IPO of hot sector theme of stocks and
   // then add them as a tab in Chart maps"). A tile board off the chart-maps
   // dispatcher, beside the growth board it was asked for next to; no usage
@@ -385,6 +391,11 @@ export function isBoardTab(t: CmTab): boolean {
     // (owner only). Not a universe pass, so the board loader and its controls
     // are skipped and LongTermBoard draws it.
     && t !== 'long_term'
+    // 🎬 Replays (2026-11-17) — its own owner-only endpoint,
+    // GET /chart-maps/replays: the nightly replay videos of one session, read
+    // off his research folder through a read-only mount. Not a universe pass,
+    // so the board loader and its controls are skipped and ReplaysBoard draws it.
+    && t !== 'replays'
     // 👀 Gajjala's Watch (2026-11-15) — its own owner-only endpoint,
     // GET /chart-maps/gajjala-watch: his own tickers on 1- / 3- / 5-minute bars,
     // filled by the watch's minute loop. Not a universe pass, so the board
@@ -477,6 +488,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   long_term: {
     label: '\u{1F4C5} Long Term',
     blurb: '\u{1F4C5} Your saved long-term lists, re-read every week from the other tabs\u2019 own data: what dropped out of its stage or its sales tier, what started moving, and each list\u2019s new names this week. Ajay: "Yeah I wanna find out the ones that are actually great in fundamentals and growth and sales and no debt but not growing in price action yet.." Shown to the account owner only. UNMEASURED \u2014 none of these lists is a buy signal. Not advice.',
+  },
+  // 🎬 Replays (Ajay 2026-11-17, replays spec §3.3). Every word on the BOARD is served by backend
+  // chart_maps/replays/store.py; this blurb carries his asks verbatim and no rule number. Label = backend
+  // chart_maps/replays/constants.TAB_LABEL (contracts). Owner only. UNMEASURED. NO ENTERABLE_KIND entry (the
+  // long_term / gajjala_watch precedent — that map is a cast; replays spec C4).
+  replays: {
+    label: '\u{1F3AC} Replays',
+    blurb: '\u{1F3AC} The nightly replay videos of our \u{1F6A9} rings \u2014 A+ winners and losers, the biggest mover, the \u{1F3BE} Reversal Squeeze potentials \u2014 each from the 4 AM pre-market to 8 PM, served from the research folder on this machine. Ajay 2026-11-17: "Can you store the videos in to the app please" \u00B7 2026-11-16: "I only wanna see ones from 4 AM to 8 pm please". Shown to the account owner only. UNMEASURED \u2014 a replay is for your eyes, not a signal. Not advice.',
   },
   // 👀 Gajjala's Watch (Ajay 2026-11-15, gajjala-watch spec §3.8). Every word and number on the BOARD is served by
   // backend chart_maps/gajjala_watch/payload.py; this blurb carries his ask verbatim and no rule number. Label =

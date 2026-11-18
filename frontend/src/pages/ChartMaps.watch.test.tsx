@@ -63,7 +63,7 @@ describe('👀 the tab is the primary owner\'s', () => {
     coOwner();
     const { container, queryByTestId } = await mount('gajjala_watch');
     expect(tabKeys(container)).not.toContain('gajjala_watch');
-    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => t !== 'gajjala_watch'));
+    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => t !== 'gajjala_watch' && t !== 'replays'));   // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call): the co-owner never sees either owner-only tab
     expect(selected(container)).toBe(DEFAULT_TAB);
     expect(queryByTestId('ggw-stub')).toBeNull();
   });

@@ -79,6 +79,7 @@ import GajjalaBoard from '../components/GajjalaBoard';
 import LukBoard from '../components/LukBoard';
 import LongTermBoard from '../components/LongTermBoard';
 import GajjalaWatchBoard from '../components/GajjalaWatchBoard';
+import ReplaysBoard from '../components/ReplaysBoard';
 import { emaBlinkTabDot, useEmaBlinkTabs } from '../lib/emaBlinkTabs';
 import '../styles/emaBlinkTab.css';
 import { useCurrentUser } from '../hooks/useUser';
@@ -218,9 +219,12 @@ export function ChartMaps() {
   // his push deep link (?tab=gajjala_watch&focus=SYM) never bounces to the first tab.
   const { user: me, loading: meLoading } = useCurrentUser();
   const canWatch = meLoading || !!me?.is_primary_admin;
-  const tabs = canWatch ? tabsByFeature : tabsByFeature.filter((t) => t !== 'gajjala_watch');
+  // 🎬 Replays (2026-11-17) — the second owner-only tab, the same gate: offered to the primary owner (and while
+  // /auth/me loads), hidden from a loaded non-owner, whose ?tab=replays lands on the first tab (replays spec §3.3).
+  const tabs = canWatch ? tabsByFeature : tabsByFeature.filter((t) => t !== 'gajjala_watch' && t !== 'replays');
   const rawTab = parseTab(params.get('tab'));
   const tab = (rawTab === 'catalysts' && !canCatalysts) || (rawTab === 'gajjala_watch' && !canWatch)
+    || (rawTab === 'replays' && !canWatch)
     ? parseTab(null) : rawTab;
   /* 📌 Pinned tab strip + "lands where he was" (Ajay 2026-09-28: "Pin the tab
    * I am in, as I navigate back and fort lost where I am"). lib/cmPinnedTab.ts
@@ -1691,6 +1695,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            the server, owner only. Must sit BEFORE the SupportLevels fallback
            below. */
         <LongTermBoard />
+      ) : tab === 'replays' ? (
+        /* 🎬 Replays (Ajay 2026-11-17: "Can you store the videos in to the app
+           please"). The nightly replay videos of one session on its own
+           owner-only endpoint (GET /chart-maps/replays), read off his research
+           folder through a read-only mount. Must sit BEFORE the SupportLevels
+           fallback below. */
+        <ReplaysBoard />
       ) : tab === 'catalysts' ? (
         /* The Catalysts page body, mounted as a tab (Ajay 2026-09-05: "move
          * catalyst tab in to Chart maps"). Same component as the old

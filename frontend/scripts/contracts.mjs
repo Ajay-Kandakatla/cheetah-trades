@@ -1265,7 +1265,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-17: 📺 chart-maps-gajjala-video-view-2026-11-17 FIRST — Ajay: "the graphs in the videos are so clear like I can easily identify the trend").
       // WIDENED +1 (2026-11-17: 🤖 chart-maps-gajjala-watch-auto-potentials-2026-11-17 FIRST — Ajay: "Remove as they are not progressing").
       // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-tag-2026-11-17 FIRST — Ajay: "Also add an A+ tag on watch list as they become A+").
-      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 21).map((m) => m[1]);
+      // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please").
+      const ids = [...nf.matchAll(/\{ id: '([^']+)'/g)].slice(0, 22).map((m) => m[1]);
       if (!ids.includes('chart-maps-landing-gajjala-tab-2026-11-10')) errs.push(`the 🏠 landing ✨ must be FIRST in NEW_FEATURES (found ${ids.join(', ') || 'none'})`);
       const lab = /id: 'chart-maps-landing-gajjala-tab-2026-11-10'[\s\S]*?label: "([^"]+)"/.exec(nf);
       if (!lab) errs.push('the 🏠 landing ✨ lost its label');
@@ -1348,8 +1349,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-watch-aplus-push-2026-11-17';
-      const firstId = (/\bid: '([^']+)'/.exec(arr) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ ${ID} must be the FIRST NEW_FEATURES entry (found ${firstId || 'none'})`);
+      // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please") — FIRST → one of the first two.
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first two NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
       else {
@@ -1772,6 +1774,8 @@ const CONTRACTS = [
         long_term: 'src/components/LongTermBoard.tsx',
         // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
         gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
+        // 2026-11-17: 🎬 Replays inserted — its own board (videos, not ticker rows); no house chips, exempt in writing (NO_CHIP).
+        replays: 'src/components/ReplaysBoard.tsx',
       };
       /* A tab whose rows are not TICKERS has nothing for the chip to read.
        * Exempt only in writing, the NO_TOGGLE way below: the file must SAY so,
@@ -1784,6 +1788,8 @@ const CONTRACTS = [
         // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
         // chips on the tiles instead = HIS CALL.
         gajjala_watch: /No house chips on this tab/,
+        // 2026-11-17: 🎬 Replays — the cards are videos, not ticker rows (replays spec §7 #7).
+        replays: /No house chips on this tab/,
       };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
@@ -2377,6 +2383,8 @@ const CONTRACTS = [
         long_term: 'src/components/LongTermBoard.tsx',
         // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
         gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
+        // 2026-11-17: 🎬 Replays inserted — its own board (videos, not ticker rows); no house chips, exempt in writing (NO_CHIP).
+        replays: 'src/components/ReplaysBoard.tsx',
       };
       /* Same written-exemption rule as the growth contract: a tab with no
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
@@ -2386,6 +2394,8 @@ const CONTRACTS = [
         // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
         // chips on the tiles instead = HIS CALL.
         gajjala_watch: /No house chips on this tab/,
+        // 2026-11-17: 🎬 Replays — the cards are videos, not ticker rows (replays spec §7 #7).
+        replays: /No house chips on this tab/,
       };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
@@ -2461,6 +2471,9 @@ const CONTRACTS = [
         //   gajjala_watch (2026-11-15: 👀 Gajjala's Watch inserted) — his list order (the order he added the names in, as
         //           served) orders this board; the tiles carry no 🧨 chip (NO_CHIP above).
         gajjala_watch: /his\s+\*?\s*list order orders this board/,
+        //   replays (2026-11-17: 🎬 Replays inserted) — the served group order orders this board; nothing ranks the
+        //           videos and there is no 🧨 read on a video card (replays spec §7 #5).
+        replays: /served group order orders this board/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -6920,6 +6933,8 @@ const CONTRACTS = [
         long_term: 'src/components/LongTermBoard.tsx',
         // 2026-11-15: 👀 Gajjala's Watch inserted — its own board; no house chips, exempt in writing (NO_CHIP).
         gajjala_watch: 'src/components/GajjalaWatchBoard.tsx',
+        // 2026-11-17: 🎬 Replays inserted — its own board (videos, not ticker rows); no house chips, exempt in writing (NO_CHIP).
+        replays: 'src/components/ReplaysBoard.tsx',
       };
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
@@ -6928,6 +6943,8 @@ const CONTRACTS = [
         // 2026-11-15: 👀 Gajjala's Watch — each tile is the chart alone, his words "Not the SEPA" (spec §3.8);
         // chips on the tiles instead = HIS CALL.
         gajjala_watch: /No house chips on this tab/,
+        // 2026-11-17: 🎬 Replays — the cards are videos, not ticker rows (replays spec §7 #7).
+        replays: /No house chips on this tab/,
       };
       // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
@@ -17281,7 +17298,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 22).includes(ZID))  /* WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 23).includes(ZID))  /* WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17402,6 +17419,127 @@ const CONTRACTS = [
       for (const d of ['../docs/gajjala/all_strategies_table_2026_11_13.md']) if (!quiet(d)) errs.push(`${d} is missing`);
       for (const t of ['../backend/tests/test_gajjala_all_table_2026_11_13.py', 'src/components/GgAllTable.test.tsx',
                        'src/components/GajjalaBoard.all_table.test.tsx']) if (!quiet(t)) errs.push(`${t} is missing`);
+      return errs;
+    },
+  },
+  {
+    name: '🎬 Replays (2026-11-17)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-11-17: "Can you store the videos in to the app please" (2026-11-16: "I only wanna see ones from 4 AM to 8 pm
+    // please"). The nightly replay videos are served read-only, owner only, from chart_maps/replays/ (store.py accepts only
+    // window == FULL_DAY_WINDOW; one bad sidecar → CARD_ERRORS → skipped_bad). The board composes no word about a stock.
+    // Pins: tab slot right after 📅 long_term (itself right after growth), non-board, NO ENTERABLE_KIND key, BURST_EXEMPT,
+    // the label == constants.TAB_LABEL, the owner gate on BOTH routes, VIDEO_HEADERS (identity = the GZip 206 trap;
+    // private = Cloudflare never caches), the <video> attributes, the functional setParams, the owner-only filter, the two
+    // :ro compose binds on `api` only, no window literal / admin email in the replay FE files, the ✨ FIRST.
+    // Spec scratchpad replaytab/spec.md §3, §4 main-session.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (rel) => { try { return read(rel); } catch { return ''; } };
+      const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1').replace(/\{\/\*[\s\S]*?\*\/\}/g, '');
+      const unesc = (s) => s.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+      // 1. the slot: once, right after long_term; long_term still right after growth
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+      if (tabs.filter((t) => t === 'replays').length !== 1) errs.push("CM_TABS must list 'replays' exactly once");
+      if (tabs.indexOf('replays') !== tabs.indexOf('long_term') + 1) errs.push("'replays' must sit right after 'long_term' in CM_TABS (slot = HIS CALL #2)");
+      if (tabs.indexOf('long_term') !== tabs.indexOf('growth') + 1) errs.push("'long_term' must still sit right after 'growth' in CM_TABS");
+      // 2. non-board; NO ENTERABLE_KIND key (the long_term / gajjala_watch precedent — the map is a cast)
+      const ib = /export function isBoardTab\(t: CmTab\): boolean \{([\s\S]*?)\n\}/.exec(src);
+      if (!ib || !/t !== 'replays'/.test(code(ib[1]))) errs.push("isBoardTab must carry t !== 'replays' (the tab has its own endpoint)");
+      const ek = /export const ENTERABLE_KIND = \{([\s\S]*?)\n\} as Record<CmTab, EnterableKind>;/.exec(src);
+      if (!ek) errs.push('ENTERABLE_KIND declaration not found');
+      else if (/^\s*replays\s*:/m.test(code(ek[1]))) errs.push('ENTERABLE_KIND must carry NO replays key (replays spec C4)');
+      const mb = quiet('src/lib/momentumBurst.ts');
+      const be = /export const BURST_EXEMPT: Record<string, string> = \{([\s\S]*?)\n\};/.exec(mb);
+      if (!be || !/^\s*replays: 'videos in the served group order (\\u2014|—) never ranked',$/m.test(be[1])) errs.push("momentumBurst.BURST_EXEMPT must carry replays: 'videos in the served group order — never ranked'");
+      // 3. the label == backend constants.TAB_LABEL
+      const cpy = quiet('../backend/chart_maps/replays/constants.py');
+      if (!cpy) errs.push('backend/chart_maps/replays/constants.py is missing');
+      const beLabel = (/^TAB_LABEL = "([^"]+)"/m.exec(cpy) || [])[1];
+      const feLabelRaw = (/^  replays: \{\n\s*label: '([^']+)',/m.exec(src) || [])[1];
+      const feLabel = feLabelRaw ? unesc(feLabelRaw) : null;
+      if (!beLabel || feLabel !== beLabel) errs.push(`TAB_META.replays.label '${feLabel || 'missing'}' != constants.TAB_LABEL '${beLabel || 'missing'}'`);
+      // 4. the owner gate on BOTH routes, the headers on the FileResponse; VIDEO_HEADERS identity + private
+      const api = quiet('../backend/chart_maps/replays/api.py');
+      if (!api) errs.push('backend/chart_maps/replays/api.py is missing');
+      else {
+        const routes = [...api.matchAll(/@router\.(?:get|api_route)\(([^\n]*)\)\s*\nasync def \w+\(([^\n]*)\):/g)];
+        if (routes.length !== 2) errs.push(`replays/api.py must declare exactly two routes (found ${routes.length})`);
+        for (const r of routes) if (!/email: str = Depends\(require_primary_admin\)/.test(r[2])) errs.push(`replays/api.py route ${r[1].trim()} must take Depends(require_primary_admin)`);
+        if (!/^from ollama_chat\.api import require_primary_admin$/m.test(api)) errs.push('replays/api.py must import the ONE gate (ollama_chat.api.require_primary_admin)');
+        if (!/return FileResponse\([^\n]*headers=C\.VIDEO_HEADERS\)$/m.test(api)) errs.push('replays/api.py FileResponse must carry headers=C.VIDEO_HEADERS');
+      }
+      const vh = /^VIDEO_HEADERS = \{([\s\S]*?)\}/m.exec(cpy);
+      if (!vh) errs.push('constants.py lost VIDEO_HEADERS = { … }');
+      else {
+        if (!/"Content-Encoding":\s*"identity"/.test(vh[1])) errs.push('VIDEO_HEADERS must carry "Content-Encoding": "identity" — GZipMiddleware corrupts a ≥ 1024-byte 206 otherwise');
+        const cc = (/"Cache-Control":\s*"([^"]*)"/.exec(vh[1]) || [])[1];
+        if (!cc || !/\bprivate\b/.test(cc)) errs.push('VIDEO_HEADERS "Cache-Control" must contain private — a Cloudflare-cached 200 would bypass the owner gate');
+      }
+      // 5. store: the accept rule names FULL_DAY_WINDOW; the card build sits in try … except CARD_ERRORS
+      const st = quiet('../backend/chart_maps/replays/store.py');
+      if (!/body\.get\("window"\) != C\.FULL_DAY_WINDOW/.test(st)) errs.push('replays/store.py accept rule must compare window to C.FULL_DAY_WINDOW');
+      if (!/except C\.CARD_ERRORS:/.test(st)) errs.push('replays/store.py must build each card inside try … except C.CARD_ERRORS (one bad sidecar → skipped_bad)');
+      if (!/^FULL_DAY_WINDOW = "04:00-20:00 ET"/m.test(cpy)) errs.push('constants.FULL_DAY_WINDOW must stay "04:00-20:00 ET" (his 11-16 rule)');
+      // 6. the board: <video> attributes, functional setParams, the two written exemptions
+      const board = quiet('src/components/ReplaysBoard.tsx');
+      if (!board) errs.push('src/components/ReplaysBoard.tsx is missing');
+      else {
+        const bc = code(board);
+        const vid = /<video\b[^>]*\/?>/.exec(bc);
+        if (!vid) errs.push('ReplaysBoard.tsx must render a <video>');
+        else {
+          for (const need of [/\bcontrols\b/, /preload="metadata"/, /\bplaysInline\b/]) if (!need.test(vid[0])) errs.push(`ReplaysBoard.tsx <video> must carry ${need.source}`);
+          for (const bad of [/\bautoPlay\b/, /\bmuted\b/, /\bposter\b/, /\bdownload\b/]) if (bad.test(vid[0])) errs.push(`ReplaysBoard.tsx <video> must not carry ${bad.source}`);
+        }
+        if (!/setParams\(\(prev\) => rpDateParams\(prev,/.test(bc)) errs.push('ReplaysBoard.tsx must change the date through setParams((prev) => rpDateParams(prev, …)) — every other param survives');
+        if (!/No house chips on this tab/.test(board)) errs.push('ReplaysBoard.tsx lost the written NO_CHIP exemption');
+        if (!/served group order orders this board/.test(board)) errs.push('ReplaysBoard.tsx lost the written NO_TOGGLE exemption');
+      }
+      // 7. owner only on the page: filtered beside gajjala_watch
+      const page = quiet('src/pages/ChartMaps.tsx');
+      if (!page.includes("tabsByFeature.filter((t) => t !== 'gajjala_watch' && t !== 'replays')")) errs.push("ChartMaps.tsx must filter 'replays' beside 'gajjala_watch' for a non-owner");
+      if (!/\(rawTab === 'replays' && !canWatch\)/.test(page)) errs.push("ChartMaps.tsx must send ?tab=replays to the fallback for a non-owner");
+      // 8. compose: the two :ro binds on `api`, none on cron / frontend
+      const dc = quiet('../docker-compose.yml');
+      const svc = (name) => (new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z][a-z_-]*:$|^[a-z])`, 'm').exec(dc) || [])[1] || '';
+      const apiSvc = svc('api');
+      for (const b of ['../eod-audits/replays/videos:/data/replays/videos:ro', '../eod-audits/replays/rs_potentials:/data/replays/rs_potentials:ro']) {
+        if (!apiSvc.includes(`- ${b}`)) errs.push(`docker-compose.yml api must bind ${b}`);
+      }
+      for (const other of ['cron', 'frontend']) if (/eod-audits\/replays/.test(svc(other))) errs.push(`docker-compose.yml ${other} must not mount the replays folder`);
+      // 9. the replay FE files type no window literal and no admin email (the served text carries the window)
+      const tm = (/^  replays: \{\n[\s\S]*?\n  \},/m.exec(src) || [''])[0];
+      for (const [rel, body] of [['src/lib/replays.ts', quiet('src/lib/replays.ts')], ['src/components/ReplaysBoard.tsx', board],
+                                 ['src/styles/replays.css', quiet('src/styles/replays.css')], ['chartMaps.ts TAB_META.replays', tm]]) {
+        if (!body) { errs.push(`${rel} is missing`); continue; }
+        if (body.includes('04:00-20:00')) errs.push(`${rel} types the window literal 04:00-20:00 — it is served (constants.FULL_DAY_WINDOW)`);
+        if (/ajaykandakatla/i.test(body)) errs.push(`${rel} carries the admin email — never in the bundle`);
+      }
+      // 10. the ✨: FIRST, once, dated, routed, his words verbatim, UNMEASURED; NEGATIVE: no b-word, no "edge"
+      const nf = quiet('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-replays-tab-2026-11-17';
+      const ids = [...arr.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      if (ids[0] !== ID) errs.push(`the 🎬 Replays ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+      const lab = new RegExp(`id: '${ID}',\\s*\\n\\s*label: "([^"]+)",\\s*\\n\\s*addedAt: '2026-11-17',\\s*\\n\\s*route: '/chart-maps\\?tab=replays',`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' must carry its label, addedAt '2026-11-17' and route '/chart-maps?tab=replays'`);
+      else {
+        if (!lab[1].includes('“Can you store the videos in to the app please”')) errs.push('the 🎬 ✨ must quote his ask verbatim');
+        if (!lab[1].includes('UNMEASURED')) errs.push('the 🎬 ✨ must say UNMEASURED');
+        if (!lab[1].includes('Owner only.')) errs.push('the 🎬 ✨ must say Owner only.');
+        if (/bounc|\bedge\b/i.test(lab[1])) errs.push('the 🎬 ✨ must not say the b-word or "edge"');
+      }
+      // 11. docs + tests on every side
+      for (const d of ['../docs/chart_maps/replays_tab_2026_11_17.md', '../docs/chart_maps/replays_tab_frontend_2026_11_17.md',
+                       '../docs/chart_maps/replays_storage_2026_11_17.md']) if (!quiet(d)) errs.push(`${d} is missing`);
+      for (const t of ['../backend/tests/test_replays_store_2026_11_17.py', '../backend/tests/test_replays_api_2026_11_17.py',
+                       '../backend/tests/test_replays_compose_2026_11_17.py', 'src/lib/replays.test.ts',
+                       'src/components/ReplaysBoard.test.tsx', 'src/components/ReplaysBoard.phone.test.tsx',
+                       'src/pages/ChartMaps.replays.test.tsx', 'src/lib/newFeatures.replays.test.ts']) if (!quiet(t)) errs.push(`${t} is missing`);
       return errs;
     },
   },

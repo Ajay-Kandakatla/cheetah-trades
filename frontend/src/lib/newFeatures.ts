@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-17, verbatim: "Can you store the videos in to the app please" (and 2026-11-16: "I only wanna see ones from 4 AM to 8 pm please").
+  // 🎬 Replays tab (owner only): the nightly replay videos served read-only from the research folder (chart_maps/replays/),
+  // grouped by the server; only full 4 AM–8 PM ET reels are listed (constants.FULL_DAY_WINDOW). UNMEASURED. Docs docs/chart_maps/replays_tab_2026_11_17.md.
+  {
+    id: 'chart-maps-replays-tab-2026-11-17',
+    label: "🎬 Replays — you said: “Can you store the videos in to the app please”. The nightly replay videos of our 🚩 rings, in the app on your Mac and your phone: pick the session, see the A+ winners and losers, the biggest mover and the 🎾 Reversal Squeeze potentials with their tracker, each video from 4 AM to 8 PM (your 11-16 rule — nothing shorter is listed). Owner only. UNMEASURED; a replay is for your eyes, not a signal.",
+    addedAt: '2026-11-17',
+    route: '/chart-maps?tab=replays',
+  },
   // Ajay 2026-11-17 ~17:20 ET, verbatim: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP".
   // A+ names from 🚩 5-min / 1-min / 🧪 take a 🤖 seat on 👀 Watch at the next loop minute (gajjala_watch/auto.py) and stay all
   // session; the A+ push title leads with 🎯 A+ (alerts.APLUS_TITLE_LEAD == payload.APLUS_TEXT) and its tap opens the Watch

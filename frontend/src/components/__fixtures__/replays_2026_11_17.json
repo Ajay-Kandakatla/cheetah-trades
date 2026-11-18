@@ -1,0 +1,436 @@
+{
+ "_note": "Hand fixture in the replays spec §3.1 payload shape (2026-11-17, WP-FE). Values mirror the §1.1 sidecars; the real-payload probe is the main session's.",
+ "ready": {
+  "state": "ready",
+  "title": "🎬 Replays",
+  "tab": "replays",
+  "date": "2026-11-17",
+  "dates": [
+   "2026-11-17",
+   "2026-11-16",
+   "2026-11-13"
+  ],
+  "window": "04:00-20:00 ET",
+  "window_note": "Only replays that run 04:00-20:00 ET are listed.",
+  "groups": [
+   {
+    "key": "aplus_winners",
+    "label": "🏁 A+ winners",
+    "videos": [
+     {
+      "file": "GP_bull_flag_24x.mp4",
+      "src": "/chart-maps/replays/video/2026-11-17/GP_bull_flag_24x.mp4",
+      "symbol": "GP",
+      "setup": "bull_flag",
+      "setup_text": "🏳️ Bull Flag",
+      "page": "gajjala",
+      "page_text": "5-min",
+      "grade": "W +1R",
+      "why": [
+       "5-min A+ winner · rang 2026-11-17 09:52 ET"
+      ],
+      "story": "Flagged at 09:40, broke the flag high at 09:52, ran to +1R by 10:20.",
+      "ring_id": "2026-11-17|GP|bull_flag|aplus",
+      "ring_day": "2026-11-17",
+      "carried": false,
+      "speed": 24.0,
+      "speed_text": "24x",
+      "minutes": 16.0,
+      "length_text": "16 min",
+      "move_pct": 41.2,
+      "move_base": "fill",
+      "trig_pct": 3.1,
+      "fill_px": null,
+      "no_risk": false,
+      "window": "04:00-20:00 ET",
+      "plan_word": null,
+      "potential": null,
+      "group": "aplus_winners"
+     }
+    ]
+   },
+   {
+    "key": "aplus_losers",
+    "label": "A+ losers",
+    "videos": [
+     {
+      "file": "VIVK_kiss_fly_24x.mp4",
+      "src": "/chart-maps/replays/video/2026-11-17/VIVK_kiss_fly_24x.mp4",
+      "symbol": "VIVK",
+      "setup": "kiss_fly",
+      "setup_text": "💋 EMA Kiss & Fly",
+      "page": "gajjala_1m",
+      "page_text": "1-min",
+      "grade": "L −1R",
+      "why": [
+       "1-min A+ loser · rang 2026-11-17 10:14 ET"
+      ],
+      "story": "Kissed the 9 EMA at 10:12, rang at 10:14, stopped at 10:31.",
+      "ring_id": "2026-11-17|VIVK|kiss_fly|aplus",
+      "ring_day": "2026-11-17",
+      "carried": false,
+      "speed": 24.0,
+      "speed_text": "24x",
+      "minutes": 16.0,
+      "length_text": "16 min",
+      "move_pct": -6.4,
+      "move_base": "fill",
+      "trig_pct": 3.1,
+      "fill_px": null,
+      "no_risk": false,
+      "window": "04:00-20:00 ET",
+      "plan_word": null,
+      "potential": null,
+      "group": "aplus_losers"
+     }
+    ]
+   },
+   {
+    "key": "rs_potentials",
+    "label": "🎾 Reversal Squeeze potentials",
+    "videos": [
+     {
+      "file": "AKAD_reversal_squeeze_24x.mp4",
+      "src": "/chart-maps/replays/video/2026-11-17/AKAD_reversal_squeeze_24x.mp4",
+      "symbol": "AKAD",
+      "setup": "reversal_squeeze",
+      "setup_text": "🎾 Reversal Squeeze",
+      "page": "gajjala",
+      "page_text": "5-min",
+      "grade": "not on the Track record",
+      "why": [
+       "🎾 potential stored 08:05 ET",
+       "trigger 2.41 · stop 2.12",
+       "no A+ ring this session"
+      ],
+      "story": "Stored as a 🎾 potential pre-market; the high came at 11:02.",
+      "ring_id": "2026-11-17|AKAD|reversal_squeeze|potential",
+      "ring_day": "2026-11-17",
+      "carried": false,
+      "speed": 24.0,
+      "speed_text": "24x",
+      "minutes": 16.0,
+      "length_text": "16 min",
+      "move_pct": 88.0,
+      "move_base": "fill",
+      "trig_pct": 3.1,
+      "fill_px": null,
+      "no_risk": false,
+      "window": "04:00-20:00 ET",
+      "plan_word": "🎾 Reversal Squeeze potential",
+      "potential": {
+       "first_stored_et": "08:05 ET",
+       "trigger": "2.41",
+       "stop": "2.12",
+       "page_text": "5-min",
+       "setup_text": "🎾 Reversal Squeeze"
+      },
+      "group": "rs_potentials"
+     }
+    ]
+   },
+   {
+    "key": "biggest_mover",
+    "label": "biggest mover",
+    "videos": [
+     {
+      "file": "AMST_bull_flag_24x.mp4",
+      "src": "/chart-maps/replays/video/2026-11-17/AMST_bull_flag_24x.mp4",
+      "symbol": "AMST",
+      "setup": "bull_flag",
+      "setup_text": "🏳️ Bull Flag",
+      "page": "gajjala_1m",
+      "page_text": "1-min",
+      "grade": "no entry",
+      "why": [
+       "biggest mover of 2026-11-17"
+      ],
+      "story": "Up 212% on the day; no A+ ring.",
+      "ring_id": "2026-11-17|AMST|bull_flag|potential",
+      "ring_day": "2026-11-17",
+      "carried": false,
+      "speed": 24.0,
+      "speed_text": "24x",
+      "minutes": 16.0,
+      "length_text": "16 min",
+      "move_pct": 212.0,
+      "move_base": "fill",
+      "trig_pct": 3.1,
+      "fill_px": null,
+      "no_risk": false,
+      "window": "04:00-20:00 ET",
+      "plan_word": null,
+      "potential": null,
+      "group": "biggest_mover"
+     }
+    ]
+   },
+   {
+    "key": "other",
+    "label": "other (carried after-close rings)",
+    "videos": [
+     {
+      "file": "CENN_reversal_squeeze_24x.mp4",
+      "src": "/chart-maps/replays/video/2026-11-17/CENN_reversal_squeeze_24x.mp4",
+      "symbol": "CENN",
+      "setup": "reversal_squeeze",
+      "setup_text": "🎾 Reversal Squeeze",
+      "page": "gajjala",
+      "page_text": "5-min",
+      "grade": "W +1R",
+      "why": [
+       "5-min A+ winner · rang 2026-11-16 17:46 ET, after the close"
+      ],
+      "story": "Rang after the close on 11-16; +1R the next morning.",
+      "ring_id": "2026-11-16|CENN|reversal_squeeze|aplus",
+      "ring_day": "2026-11-16",
+      "carried": true,
+      "speed": 24.0,
+      "speed_text": "24x",
+      "minutes": 16.0,
+      "length_text": "16 min",
+      "move_pct": 18.0,
+      "move_base": "fill",
+      "trig_pct": 3.1,
+      "fill_px": null,
+      "no_risk": false,
+      "window": "04:00-20:00 ET",
+      "plan_word": null,
+      "potential": null,
+      "group": "other"
+     }
+    ]
+   }
+  ],
+  "counts": {
+   "videos": 5,
+   "skipped_window": 0,
+   "no_sidecar": 0,
+   "skipped_bad": 0
+  },
+  "rs": {
+   "title": "🎾 Reversal Squeeze potentials — tracker",
+   "note": "descriptive — UNMEASURED, not an edge; no placebo, so no average or median return is printed",
+   "columns": [
+    {
+     "key": "symbol",
+     "label": "Symbol"
+    },
+    {
+     "key": "page",
+     "label": "Page"
+    },
+    {
+     "key": "first_seen_et",
+     "label": "First stored"
+    },
+    {
+     "key": "first_kind",
+     "label": "Kind"
+    },
+    {
+     "key": "first_trigger",
+     "label": "Trigger"
+    },
+    {
+     "key": "first_stop",
+     "label": "Stop"
+    },
+    {
+     "key": "push_et",
+     "label": "🧠 push"
+    },
+    {
+     "key": "push_grade",
+     "label": "🧠 grade"
+    },
+    {
+     "key": "went_aplus_et",
+     "label": "A+ this page"
+    },
+    {
+     "key": "aplus_setup",
+     "label": "A+ setup"
+    },
+    {
+     "key": "other_page_aplus_et",
+     "label": "A+ other page"
+    },
+    {
+     "key": "triggered_et",
+     "label": "Triggered"
+    },
+    {
+     "key": "stop_before_trigger",
+     "label": "Stop first"
+    },
+    {
+     "key": "high_before_stop_pct",
+     "label": "High before stop %"
+    },
+    {
+     "key": "high_after_pct",
+     "label": "High after %"
+    },
+    {
+     "key": "close_2000_pct",
+     "label": "20:00 %"
+    },
+    {
+     "key": "video",
+     "label": "Video"
+    }
+   ],
+   "rows": [
+    {
+     "cells": {
+      "symbol": "AKAD",
+      "page": "5-min",
+      "first_seen_et": "08:05",
+      "first_kind": "reversal_squeeze",
+      "first_trigger": "2.41",
+      "first_stop": "2.12",
+      "push_et": "—",
+      "push_grade": "—",
+      "went_aplus_et": "—",
+      "aplus_setup": "—",
+      "other_page_aplus_et": "—",
+      "triggered_et": "—",
+      "stop_before_trigger": "—",
+      "high_before_stop_pct": "—",
+      "high_after_pct": "88.0",
+      "close_2000_pct": "—",
+      "video": "AKAD_reversal_squeeze_24x.mp4"
+     }
+    },
+    {
+     "cells": {
+      "symbol": "GP",
+      "page": "1-min",
+      "first_seen_et": "08:05",
+      "first_kind": "reversal_squeeze",
+      "first_trigger": "2.41",
+      "first_stop": "2.12",
+      "push_et": "—",
+      "push_grade": "—",
+      "went_aplus_et": "—",
+      "aplus_setup": "—",
+      "other_page_aplus_et": "—",
+      "triggered_et": "—",
+      "stop_before_trigger": "—",
+      "high_before_stop_pct": "—",
+      "high_after_pct": "88.0",
+      "close_2000_pct": "—",
+      "video": "GP_reversal_squeeze_24x.mp4"
+     }
+    }
+   ],
+   "text": null
+  }
+ },
+ "empty": {
+  "state": "empty",
+  "title": "🎬 Replays",
+  "tab": "replays",
+  "date": "2026-11-08",
+  "dates": [
+   "2026-11-17",
+   "2026-11-16",
+   "2026-11-13"
+  ],
+  "window": "04:00-20:00 ET",
+  "window_note": "Only replays that run 04:00-20:00 ET are listed.",
+  "text": "No 04:00-20:00 ET replays for this session.",
+  "groups": [],
+  "counts": {
+   "videos": 0,
+   "skipped_window": 0,
+   "no_sidecar": 0,
+   "skipped_bad": 0
+  },
+  "rs": {
+   "title": "🎾 Reversal Squeeze potentials — tracker",
+   "note": "descriptive — UNMEASURED, not an edge; no placebo, so no average or median return is printed",
+   "columns": [
+    {
+     "key": "symbol",
+     "label": "Symbol"
+    },
+    {
+     "key": "page",
+     "label": "Page"
+    },
+    {
+     "key": "first_seen_et",
+     "label": "First stored"
+    },
+    {
+     "key": "first_kind",
+     "label": "Kind"
+    },
+    {
+     "key": "first_trigger",
+     "label": "Trigger"
+    },
+    {
+     "key": "first_stop",
+     "label": "Stop"
+    },
+    {
+     "key": "push_et",
+     "label": "🧠 push"
+    },
+    {
+     "key": "push_grade",
+     "label": "🧠 grade"
+    },
+    {
+     "key": "went_aplus_et",
+     "label": "A+ this page"
+    },
+    {
+     "key": "aplus_setup",
+     "label": "A+ setup"
+    },
+    {
+     "key": "other_page_aplus_et",
+     "label": "A+ other page"
+    },
+    {
+     "key": "triggered_et",
+     "label": "Triggered"
+    },
+    {
+     "key": "stop_before_trigger",
+     "label": "Stop first"
+    },
+    {
+     "key": "high_before_stop_pct",
+     "label": "High before stop %"
+    },
+    {
+     "key": "high_after_pct",
+     "label": "High after %"
+    },
+    {
+     "key": "close_2000_pct",
+     "label": "20:00 %"
+    },
+    {
+     "key": "video",
+     "label": "Video"
+    }
+   ],
+   "rows": [],
+   "text": "No 🎾 tracker rows for this session."
+  }
+ },
+ "no_folder": {
+  "state": "no_folder",
+  "title": "🎬 Replays",
+  "tab": "replays",
+  "text": "The replay folder is not mounted on this server.",
+  "dates": [],
+  "date": null
+ }
+}
