@@ -684,7 +684,8 @@ async def gajjala_card_frames_get(symbol: str):
     """🚩 Card → the three-chart view (spec ggcard3 §3.1, 2026-11-16; Ajay: "when I click on a card from any of the
     Gajjala I would like us to open the 3 chart extension like in the Watch list" · "instead of 3 mins make it 15 mins
     timeframe"). READ-ONLY: the 15m / 5m / 1m frames off the stored GG5 / GG1 read docs (card_frames.build — two
-    find_one reads, no fetch, no write), built off the event loop. No owner gate (the cards' own audience). A
+    find_one reads, no write; 📈 2026-11-18: a 1m frame with no stored bars is built on demand for this ONE symbol by
+    the 👀 Watch's builder — one minute fetch), built off the event loop. No owner gate (the cards' own audience). A
     non-ticker → 404 with the served sentence; any other fault → 200 `state: "error"`, never a 500. NaN → null."""
     from datetime import datetime
     from zoneinfo import ZoneInfo

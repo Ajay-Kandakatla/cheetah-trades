@@ -26,6 +26,16 @@ stamp is the tile's `loaded_at` (the frames' own load time — a failed read mov
 its `at`; stale through GG1M_STALE_AFTER_SEC by name (`variant.stale_after_sec(GG1)`, the Watch's own threshold). A
 name not on the Watch serves the retired words (`variant.word("card_1m_empty", GG1, sym=…)`) while the switch is off,
 EMPTY_TEXT while on. Reversible: a GG1 read doc for the session always wins (the page running again leads).
+
+📈 2026-11-18 (Ajay: "Also I need to keep 1 min charts when I am viewing specific stock") — his Watch is full, so most
+card names had no 1m chart. When NEITHER a GG1 doc NOR a same-session Watch 1m tile has bars, the 1m frame is built ON
+DEMAND for that ONE symbol by the Watch's own builder: `gajjala_watch.build.frames([sym], …)` (bars.frames_for — the
+prior day from the 1-minute day cache, today re-fetched: ONE minute fetch for today, this name only) and
+`build.tile_update(…)` for the tile bytes the Watch would store — its update is READ, never written (no tile doc, no
+Watch seat). Only the real path (`stores=None`) or a test's 4th `stores` element fetches; a 2- / 3-tuple never does.
+A fetch fault / no bar → the served empty words above (fail open; 15m / 5m untouched). Every frame now serves
+`source` = {"kind": gajjala | gajjala_1m | watch | on_demand, "at": ISO ET or None} (None with no bars); the stamp of
+an on-demand frame is its build time, never stale. No board load calls this — only the ⤢ view's GET.
 """
 from __future__ import annotations
 
@@ -55,6 +65,7 @@ FALLBACK_5M = V.GG1                                            # no GG5 doc → 
 
 EMPTY_TEXT = "No {minutes}-minute bars stored for {sym} this session yet — a pass has to read it first"
 NO_FRAMES_TEXT = "No bars stored for {sym} this session yet"
+SOURCE_WATCH, SOURCE_ON_DEMAND = "watch", "on_demand"         # a frame's `source.kind` beyond the variant keys
 BAD_SYMBOL_TEXT = "Not a ticker"
 
 
@@ -113,6 +124,18 @@ def _stores(stores) -> tuple:
     return ST.default(), ST.for_variant(V.GG1), (WCOLLS.colls() or {}).get("tiles")
 
 
+def _tile_1m(frames) -> Optional[dict]:
+    """The 1m frame of a Watch tile's `frames` map ({tf: tile}) → {tf, bars, curves, vol_avg}; None without 1m bars."""
+    frames = frames if isinstance(frames, dict) else {}
+    t = frames.get("1m") if isinstance(frames.get("1m"), dict) else {}
+    bars = t.get("bars")
+    if not isinstance(bars, list) or not bars:
+        return None
+    va = t.get("vol_avg")
+    return {"tf": "1m", "bars": list(bars), "curves": list(t.get("curves") or []),
+            "vol_avg": va if isinstance(va, dict) else None}
+
+
 def _watch_1m(tiles_coll, sym: str, session) -> tuple:
     """(frame, source) of the 👀 Watch's stored 1m tile for `sym` — ONE find_one; only a doc of the SAME session with
     non-empty 1m bars counts. source = {"at": the tile's loaded_at, else its at}. No coll / a fault → (None, None)."""
@@ -122,18 +145,54 @@ def _watch_1m(tiles_coll, sym: str, session) -> tuple:
         doc = tiles_coll.find_one({"_id": sym}, {"session": 1, "at": 1, "loaded_at": 1, "frames.1m": 1})
         if not isinstance(doc, dict) or doc.get("session") != session.isoformat():
             return None, None
-        frames = doc.get("frames") if isinstance(doc.get("frames"), dict) else {}
-        t = frames.get("1m") if isinstance(frames.get("1m"), dict) else {}
-        bars = t.get("bars")
-        if not isinstance(bars, list) or not bars:
+        fr = _tile_1m(doc.get("frames"))
+        if fr is None:
             return None, None
-        va = t.get("vol_avg")
         at = doc.get("loaded_at") if doc.get("loaded_at") is not None else doc.get("at")
-        return ({"tf": "1m", "bars": list(bars), "curves": list(t.get("curves") or []),
-                 "vol_avg": va if isinstance(va, dict) else None}, {"at": at})
+        return fr, {"at": at}
     except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
         log.debug("card_frames: watch 1m tile of %s unavailable: %s", sym, type(exc).__name__)
         return None, None
+
+
+def _on_demand_1m(sym: str, session, now, *, load_day=None) -> tuple:
+    """📈 2026-11-18: (frame, source) of the 1m frame built NOW for `sym` by the 👀 Watch's own builder —
+    `BLD.frames([sym], …)` (ONE name; today's minutes re-fetched, the prior day from the 1-minute day cache) then
+    `BLD.tile_update(…)`, whose update is only READ for its `frames.1m` tile (nothing is written). source = {"at": the
+    update's loaded_at}. `load_day` = the minute loader (None → the Watch's own default). Any fault / no bar today /
+    no 1m bars → (None, None): the caller serves its empty words."""
+    try:
+        F = BLD.frames([sym], session, now, load_day=load_day, stats={}, per_name={})
+        fr = F.get(sym) if isinstance(F, dict) else None
+        if fr is None:
+            return None, None
+        _flt, upd = BLD.tile_update(sym, fr, session, now, "loaded")
+        sets = upd.get("$set") if isinstance(upd, dict) and isinstance(upd.get("$set"), dict) else {}
+        out = _tile_1m(sets.get("frames"))
+        if out is None:
+            return None, None
+        return out, {"at": sets.get("loaded_at")}
+    except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
+        log.debug("card_frames: on-demand 1m of %s unavailable: %s", sym, type(exc).__name__)
+        return None, None
+
+
+def _fetcher(stores):
+    """The on-demand 1m builder of this call: the real path (`stores=None`) → `_on_demand_1m` with the Watch's own
+    loader; a test's 4th `stores` element (a callable (sym, session, now) → (frame, source)) → that; a 2- / 3-tuple →
+    None (never fetches)."""
+    if stores is None:
+        return _on_demand_1m
+    st = tuple(stores)
+    return st[3] if len(st) >= 4 and callable(st[3]) else None
+
+
+def _source(kind, src) -> Optional[dict]:
+    """A frame's served `source` = {"kind", "at": the stamp as ISO ET (None when unreadable)}; None without a source."""
+    if not src or not kind:
+        return None
+    at_et = PL._to_et(src.get("at"))
+    return {"kind": kind, "at": at_et.isoformat() if at_et is not None else None}
 
 
 def _empty_text(tf: str, sym: str) -> str:
@@ -146,7 +205,7 @@ def _empty_text(tf: str, sym: str) -> str:
     return EMPTY_TEXT.format(minutes=frame_minutes(tf), sym=sym)
 
 
-def _frame_block(sym: str, tf: str, fr: dict, src, src_v, session, end, now, in_window: bool) -> dict:
+def _frame_block(sym: str, tf: str, fr: dict, src, src_v, kind, session, end, now, in_window: bool) -> dict:
     bars = list(fr.get("bars") or [])
     curves = list(fr.get("curves") or [])
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
@@ -159,6 +218,7 @@ def _frame_block(sym: str, tf: str, fr: dict, src, src_v, session, end, now, in_
             "ema_tail": ema_tail(curves) if bars else None,
             "as_of_et": PL._clock(src.get("at"), now) if src else None,
             "stale": frame_stale(src.get("at"), now, in_window, src_v) if src else False,
+            "source": _source(kind, src) if bars else None,
             "empty_text": None if bars else _empty_text(tf, sym)}
 
 
@@ -169,6 +229,7 @@ def _build(symbol, now, stores) -> dict:
     now = GT._et(now)
     session, is_today, in_window = GT.session_for(now)
     s5, s1, wt = _stores(stores)
+    fetch = _fetcher(stores)
     g5 = s5.get_read(session, sym)
     g1 = s1.get_read(session, sym)
     g5 = g5 if isinstance(g5, dict) else None
@@ -181,15 +242,21 @@ def _build(symbol, now, stores) -> dict:
         if tf == "5m" and g5 is None and g1 is not None:
             src, src_v = g1, FALLBACK_5M
         fr = GT._tile_frame(src, tf, src_v) if src else {"bars": [], "curves": [], "vol_avg": None}
+        kind = src_v.key
         if tf == "1m" and not fr.get("bars"):                  # 2026-11-18: no GG1 bars → the Watch's 1m tile
             wfr, wsrc = _watch_1m(wt, sym, session)
             if wfr is not None:
-                fr, src, src_v = wfr, wsrc, V.GG1
-        picked.append((tf, fr, src, src_v))
+                fr, src, src_v, kind = wfr, wsrc, V.GG1, SOURCE_WATCH
+            elif fetch is not None:                            # 📈 neither → built on demand (ONE name, ONE fetch)
+                ofr, osrc = fetch(sym, session, now)
+                if ofr is not None:
+                    fr, src, src_v, kind = ofr, osrc, V.GG1, SOURCE_ON_DEMAND
+        picked.append((tf, fr, src, src_v, kind))
 
-    every_bar = [b for _tf, fr, _s, _v in picked for b in (fr.get("bars") or [])]
+    every_bar = [b for _tf, fr, _s, _v, _k in picked for b in (fr.get("bars") or [])]
     end = BLD.axis_end(session, every_bar)                     # [C2] the ONE end over ALL three frames' bars
-    frames = [_frame_block(sym, tf, fr, src, src_v, session, end, now, in_window) for tf, fr, src, src_v in picked]
+    frames = [_frame_block(sym, tf, fr, src, src_v, kind, session, end, now, in_window)
+              for tf, fr, src, src_v, kind in picked]
     by = {f["tf"]: f for f in frames}
     head = by["15m"] if g5 is not None else by["1m"]           # the CARD's own doc (GG5 lists the name); GG1-only → GG1
     has_bars = any(f["tile"]["bars"] for f in frames)
@@ -200,8 +267,9 @@ def _build(symbol, now, stores) -> dict:
 
 def build(symbol: str, now=None, *, stores=None) -> dict:
     """The view's answer for one symbol. Never raises: any fault → {"state": "error", "reason": <exception name>}.
-    `stores` = (GG5 store, GG1 store[, Watch tiles coll]) for tests; None → the real ones (two find_one reads, plus
-    one of the Watch's tile when the 1m frame has no GG1 bars — nothing else)."""
+    `stores` = (GG5 store, GG1 store[, Watch tiles coll[, on-demand 1m builder]]) for tests; None → the real ones (two
+    find_one reads, plus one of the Watch's tile when the 1m frame has no GG1 bars, plus — 📈 2026-11-18 — ONE
+    on-demand minute fetch for this symbol when that tile is absent too; nothing is written)."""
     try:
         return _build(symbol, now, stores)
     except Exception as exc:                                   # noqa: BLE001 — the view serves the fault, never a 500

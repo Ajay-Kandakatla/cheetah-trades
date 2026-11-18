@@ -474,6 +474,8 @@ def test_route_registered_once_at_the_constant_and_matches_the_fe_path():
 
 # ── source guards ─────────────────────────────────────────────────────────────────────────────────────────────────
 def test_NEGATIVE_module_writes_nothing_fetches_nothing_and_imports_no_pass_module():
+    # 📈 2026-11-18: the module still types no loader; its ONE on-demand 1m fetch goes through the Watch's builder
+    # (gajjala_watch.build.frames) — pinned in tests/test_gajjala_card_frames_on_demand_2026_11_18.py.
     assert not re.search(r"update_one|upsert|insert|load_intraday|Massive|resample_ohlcv|requests.", SRC)
     imports = [ln for ln in SRC.splitlines() if re.match(r"\s*(from|import)\s", ln)]
     for ln in imports:

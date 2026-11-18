@@ -1,5 +1,9 @@
 # 🚩 Gajjala card → ⤢ three charts (15-min / 5-min / 1-min) + a separate "SEPA page" link (2026-11-16)
 
+## 2026-11-18 (later) — a 1-min chart for ANY card name, built on demand
+
+Ajay, 2026-11-18: "Also I need to keep 1 min charts when I am viewing specific stock". When neither the 1-minute page's doc nor a same-session 👀 Watch tile has 1-minute bars, `card_frames.py` builds the 1-min frame for that ONE name with the Watch's own builder (`gajjala_watch.build.frames` + `build.tile_update`, the update read, never written — no tile doc, no Watch seat): ONE minute fetch of today per ⤢ GET (prior day from the 1-minute day cache), never on a board load. A fetch fault / no bar keeps the served words below; 15-min / 5-min unchanged. Every frame now serves `source` = {kind: gajjala | gajjala_1m | watch | on_demand, at}; the FE ignores it. This builds HIS CALL #14 option (a) of `docs/gajjala/retire_1m_page_2026_11_18.md`. Tests: `backend/tests/test_gajjala_card_frames_on_demand_2026_11_18.py`. UNMEASURED.
+
 ## 2026-11-18 — the 1-min frame reads the 👀 Watch's tile while the 1-minute page is retired
 
 Ajay, 2026-11-18: "This is good info stop 1 min tab it was a good experiment" and "But keep the one min chart in the
