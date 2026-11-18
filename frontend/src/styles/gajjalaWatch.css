@@ -176,3 +176,21 @@
 .ggw-chip.ggw-aplus { color: var(--positive, #22c55e); border-color: var(--positive, #22c55e); font-weight: 600; }
 .ggw-pager-sym.ggw-pager-sym--aplus { border-color: var(--positive, #22c55e); box-shadow: inset 0 0 0 1px var(--positive, #22c55e); }
 .ggw-pager-sym.ggw-pager-sym--aplus.is-on { box-shadow: 0 0 0 2px var(--positive, #22c55e); }
+
+/* 🏷️ 2026-11-18 — the tags row above the tile head (Ajay: "add Short Interest tag and other tags on top of stock ticker
+ * information for me to read, like here"). Phone (430 px): wraps, min-width 0; the house .cm-badge is nowrap → wrapped here.
+ * One skin: every chip in the row is a .cm-badge (the card's own). The .gg-stages rules are scoped copies ON PURPOSE: the
+ * Watch chunk does not load gajjala.css. */
+.ggw-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.45rem; min-width: 0; max-width: 100%; margin: 0 0 2px; }
+.ggw-tags .cm-badge, .ggw-tags .gg-stage, .ggw-tags .gg-stages { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.ggw-tags .gg-stages { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 0.74rem; margin: 0; }
+.ggw-tags .gg-stages-title, .ggw-tags .gg-stage-day, .ggw-tags .gg-stage-sep { color: var(--text-muted, #8595ad); }
+.ggw-tags .gg-stage-here { font-weight: 600; }
+/* fitted board tile: ONE line (the 11-16 GP caption rule, .ggw-cap above) — the charts keep their height; the ⤢ view wraps */
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-tags { flex: none; flex-wrap: nowrap; overflow: hidden; }
+  .ggw-grid--fit .ggw-tags > *, .ggw-grid--fit .ggw-tags .gg-stages > * { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ggw-grid--fit .ggw-tags .gg-stages { flex-wrap: nowrap; overflow: hidden; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-tags, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages { flex-wrap: wrap; overflow: visible; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-tags > *, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages > * { white-space: normal; overflow: visible; text-overflow: clip; }
+}

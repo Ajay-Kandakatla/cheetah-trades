@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "Also add Short Interest tag and other tags on top of stock ticker information for me to read,
+  // like here". gajjala_watch/tags.py serves a per-row `tags` block copied from the stored 🚩 GG5 docs (carded names only);
+  // GajjalaWatchTags.GgwTagsRow draws it above each 👀 Watch tile. Doc docs/gajjala/watch_tags_row_2026_11_18.md.
+  {
+    id: 'chart-maps-gajjala-watch-tags-row-2026-11-18',
+    label: '🏷 Tags on top of every 👀 Watch tile — you said: “Also add Short Interest tag and other tags on top of stock ticker information for me to read, like here”. Each Watch tile now opens with a row of tags above the ticker: 🩳 short interest for every name that has a FINRA record, and — when the name is a card on today’s 🚩 Gajjala board — the same setup, stage, room, band and 🚫 broker tags the card shows. A name not on the board shows short interest only. Display only.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-18, verbatim: "All the watch button are not working or not reacting"; "Also I need to keep 1 min charts when
   // I am viewing specific stock"; "For watch list when I add new ones remove the ones that are not active in the watch list".
   // His picks: Watch size "18 (Recommended)" (gajjala_watch/constants.MAX_SYMBOLS = GC.GG_WATCH_N) and "Oldest added"

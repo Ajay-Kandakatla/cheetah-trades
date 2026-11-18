@@ -46,6 +46,10 @@
  * words "Not the SEPA" (spec §3.8) — the chips live on every other Chart Maps board. No 🧨 ordering toggle either: his
  * list order orders this board (the order he added the names in, as served); the 🤖 auto rows follow his, in the order
  * they were added (the server never re-sorts them).
+ * 🏷️ 2026-11-18 (spec wtags) — Ajay: "Also add Short Interest tag and other tags on top of stock ticker information for
+ * me to read, like here": the chips now ride in a tags row ABOVE each tile's head, mounted by GajjalaWatchTile from its
+ * own module (GajjalaWatchTags.tsx — 🚀 / 🩳 on every name, the 🚩 card's own tags on a name carded today); this
+ * file mounts none of them and still orders nothing by them.
  *
  * 🤖 AUTO (2026-11-17, watch-auto spec §3.6, WP-C) — Ajay: "Can you add more stocks in to watch list basically I need
  * portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
@@ -73,6 +77,8 @@ import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
 /* 2026-11-16 (ggcard3 WP-A): the tile, its frames and the ⤢ full-screen view live in GajjalaWatchTile.tsx (a pure move)
  * so the 🚩 cards open the SAME view. */
 import { GgwStretch, Tile, usePhone } from './GajjalaWatchTile';
+/* 🏷️ 2026-11-18 (spec wtags §3.5): the tags row's board-level read — ONE request for the names carded on today's 🚩 board. */
+import { useGgwTags } from './GajjalaWatchTags';
 /* 2026-11-18 (cardview WP-A): the per-screen pick, the pager and the fitted-row hook live in GajjalaWatchLayout.tsx (a
  * pure move) so the 🚩 / 🧪 card grid draws the SAME controls. */
 import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
@@ -285,6 +291,10 @@ export default function GajjalaWatchBoard() {
 
   /* ← → move the view a page (never while typing in the add box, never under the full-screen view). */
   const rowsNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows : null;
+  /* 🏷️ 2026-11-18 — ONE room read for the names CARDED on today's 🚩 board (their served tags block says so); never for an
+   * off-board name (no on-demand zone build for a name no Gajjala board asked about — HIS CALL #3). Empty list → no
+   * request. Unconditional — hooks order. */
+  const tagsOf = useGgwTags(rowsNow);
   const nRows = rowsNow?.length ?? 0;
   useEffect(() => {
     if (stretched || !Number.isFinite(size) || nRows <= (size as number)) return;
@@ -460,7 +470,7 @@ export default function GajjalaWatchBoard() {
           {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
                   focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote />
+                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote tags={tagsOf(r)} />
           ))}
         </div>
       ) : (
@@ -468,7 +478,7 @@ export default function GajjalaWatchBoard() {
       )}
       {stretchRow ? (
         <GgwStretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
-                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote />
+                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)} />
       ) : null}
     </div>
   );

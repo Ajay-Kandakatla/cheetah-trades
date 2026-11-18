@@ -28,6 +28,10 @@ re-sorts them at serve); a fold-duplicate of his name is his. An auto doc of ano
 `symbols` / `full` stay HIS list (the ➕ cap is his). Each row carries `auto` (None for his names); the board carries
 `auto` (cap, count, the newest `C.AUTO_REMOVED_SHOWN` removals newest first with `text_full`, `removed_total`).
 `auto` is imported LAZILY through sys.modules (`importlib`), so a missing / raising engine never breaks the board.
+
+🏷️ (2026-11-18, spec wtags WP-A): the 🚩 card's own tags for a name carded on today's GG5 board — tags.section, stored
+docs by symbol, _build's own clock. Every row carries `tags` (None = not carded on today's 🚩 board, or the read
+faulted — never an invented tag). Imported lazily (`importlib`), any fault → {} (the board answers). Display only.
 """
 from __future__ import annotations
 
@@ -149,6 +153,7 @@ AUTO_APLUS_SKIPPED_TEXT = "{tag} A+ not seated — every seat holds an A+ or you
 AUTO_APLUS_REMOVE_TITLE = "Remove {sym} (auto A+ — not added again today)"
 AUTO_WHY_WORDS = {"aplus": C.AUTO_APLUS_WHY, "potential": "potential"}               # the served `why` values
 AUTO_MODULE = "chart_maps.gajjala_watch.auto"
+TAGS_MODULE = "chart_maps.gajjala_watch.tags"                                         # 🏷️ 2026-11-18 (spec wtags)
 
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
 DOC_STATUSES = ("loaded", "no_prints", "no_bars", "failed", "over_budget")      # build.status_of (WP-B)
@@ -248,6 +253,18 @@ def _lazy_call(module: str, fn: str) -> Optional[str]:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: %s.%s unavailable: %s", module, fn, exc)
         return None
+
+
+def _tags_section(names: list, session, is_today: bool) -> dict:
+    """🏷️ 2026-11-18 — {SYM: tags block} from `tags.section` (imported lazily through sys.modules, the auto / build
+    pattern) with `_build`'s own session / is_today (ONE clock, spec wtags C5); any failure → {} (every row serves null,
+    the board still answers)."""
+    try:
+        out = importlib.import_module(TAGS_MODULE).section(names, session, is_today)
+        return out if isinstance(out, dict) else {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: tags section unavailable: %s", type(exc).__name__)
+        return {}
 
 
 def info() -> dict:
@@ -862,9 +879,11 @@ def _build(now: datetime, db, only) -> dict:
                 claims=[c for c in claims if c.get("symbol") == s and c.get("state") == PUSHED_STATE])
             for s in names]
     aplus_by = aplus_section(names, siso)                    # 🎯 2026-11-17 (spec ggwaplus) — display only
+    tags_by = _tags_section(names, session, is_today)        # 🏷️ 2026-11-18 — display only; _build's own clock (C5)
     for r in rows:
         r["auto"] = auto_by.get(r["symbol"])
         r["aplus"] = aplus_by.get(r["symbol"])
+        r["tags"] = tags_by.get(r["symbol"])                   # None = not carded on today's 🚩 board — never invented
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
     # 🔁 2026-11-18: at the cap ➕ replaces the oldest he added that is not 🎯 A+; only when EVERY one of his names is A+
     # (by THIS board's own tag read — the full board only, never a pending poll) is the add refused → `full_blocked`.

@@ -14,7 +14,7 @@
  * or a sentence about a stock. The ONE FE sentence is GGW_FETCH_FAILED (the request itself failed — there is no payload
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
 import type { CmAxis, CmEmaBlink, CmTile } from './chartMaps';
-import { ggRunBasesLine } from './gajjala';
+import { ggRunBasesLine, type GgStages } from './gajjala';
 
 /** The tab id (== backend chart_maps/gajjala_watch/constants.TAB). */
 export const GGW_TAB = 'gajjala_watch';
@@ -256,6 +256,16 @@ export type GgwAplusItem = {
 /** 🎯 The row's served A+ block: `text` = the chip (the first item's clock already inside it), `title` = its hover,
  *  `tag` = the pager prefix. null when no board reads the name A+ (and on every row of an older server). */
 export type GgwRowAplus = { tag: string; text: string; title: string | null; items: GgwAplusItem[] };
+/** 🏷️ 2026-11-18 (spec wtags §3.2) — Ajay: "Also add Short Interest tag and other tags on top of stock ticker
+ *  information for me to read, like here". The 🚩 GG5 card's own served tags of a Watch name CARDED ON TODAY'S BOARD
+ *  (backend gajjala_watch/tags.py). null = no card on the board (or the read faulted): the tile then prints only its
+ *  🚀 / 🩳 chips and the existing 🤖 / 🎯. Every word served. */
+export type GgwTagSetup = { setup: string; label: string; state: string; state_label: string | null };
+export type GgwTagFloat = { text: string; shares: number | null; src: string | null; as_of: string | null; suspect: boolean };
+export type GgwRowTags = {
+  on_board: true; setups: GgwTagSetup[]; stages: GgStages | null; float: GgwTagFloat | null;
+  broker_text: string | null; trader_text: string | null; promo_text: string | null;
+};
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
@@ -265,6 +275,9 @@ export type GgwRow = {
   auto?: GgwRowAuto | null;
   /** 🎯 null when no A+ (optional for the same reason as `auto` — parseGgw always sets it). */
   aplus?: GgwRowAplus | null;
+  /** 🏷️ 2026-11-18: null when the name is not carded on today's 🚩 board (optional for the same reason as `auto` —
+   *  parseGgw always sets it). */
+  tags?: GgwRowTags | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -414,6 +427,27 @@ export function parseRowAplus(v: unknown): GgwRowAplus | null {
   };
 }
 
+/** 🏷️ A row's tags block (2026-11-18, the parseRowAplus pattern): an object with `on_board === true`, else null (junk
+ *  never draws a chip). A setup without a served `setup` / `label` is dropped; `stages` is kept only with a served
+ *  `title` (GgStages renders nothing otherwise); `float` only with a served `text`; the three texts through str(). */
+export function parseRowTags(v: unknown): GgwRowTags | null {
+  if (!isObj(v) || v.on_board !== true) return null;
+  const fl = isObj(v.float) && str(v.float.text) ? v.float : null;
+  return {
+    on_board: true,
+    setups: (Array.isArray(v.setups) ? v.setups : [])
+      .filter((it: unknown) => isObj(it) && str(it.setup) && str(it.label))
+      .map((it: any) => ({ setup: it.setup, label: it.label, state: str(it.state) ?? '', state_label: str(it.state_label) })),
+    stages: isObj(v.stages) && str(v.stages.title) ? (v.stages as GgStages) : null,
+    float: fl ? {
+      text: fl.text as string, shares: num(fl.shares), src: str(fl.src), as_of: str(fl.as_of), suspect: fl.suspect === true,
+    } : null,
+    broker_text: str(v.broker_text),
+    trader_text: str(v.trader_text),
+    promo_text: str(v.promo_text),
+  };
+}
+
 /** 🤖 The board's auto block: an object with a served `state`, else null. A removal without `text_full` is dropped. */
 function parseAuto(v: unknown): GgwAuto | null {
   if (!isObj(v) || !str(v.state)) return null;
@@ -455,6 +489,7 @@ function parseRow(v: unknown): GgwRow | null {
       .map((r: any) => ({ frame: String(r.frame ?? ''), at_et: str(r.at_et), text: r.text })),
     auto: parseRowAuto(v.auto),
     aplus: parseRowAplus(v.aplus),
+    tags: parseRowTags(v.tags),
   };
 }
 
