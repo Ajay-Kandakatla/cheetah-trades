@@ -90,3 +90,11 @@ Ajay 2026-11-11 08:18 ET, verbatim: "Can you fix the defects please" (audit
   key present, entries unknown (None / raises / no ledger), another key's alert, 🧪 shadow, bare `_track_row`, every
   other state. Pin moved by design: `test_gajjala_potential_tab.py::test_one_alert_rows_read_per_potential_build_and_none_on_another_sub`
   (setup subs and 🌙 now read the same ONE alert_rows on a live page).
+
+## 2026-11-18 (later) — 🩳 tier word on the card label (spec sitier, WP-FE)
+
+Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage relative to float." The 🎾 label
+prints the served chip, which now leads with a tier word — e.g. `🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30`
+(AKAN, plain label) or `🩳 SI EXTREME 44.0% float · 1.0d · 10/30` (CLRO, the bold `gg-si-extreme` label); the label adds
+only `data-si-tier` (the served key), no word, no class, no CSS. Tests: `GgShortInterestLabel.test.tsx`,
+`GajjalaBoard.si_extreme.test.tsx` (AKAN-shape NEGATIVE: no bold label). UNMEASURED. Not advice.

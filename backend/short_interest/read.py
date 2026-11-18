@@ -39,6 +39,24 @@ or None), built by `extreme_block` from SIC.SI_HIGH_PCT by name on the served
 % of float. Display only; UNMEASURED — the 2026-11-17 SI × cradle study
 (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md) was too small to
 call either way. Doc: docs/gajjala/si_extreme_note_2026_11_18.md.
+
+🩳 TIER WORDS + FLOAT CONFIRMATION (2026-11-18, later — Ajay, verbatim)
+  "Yes please and may be add better terminilogy like Moderate with a percentage
+   relative to float."
+  ("Yes please" answered: only call 🩳 EXTREME when it's ≥ 20% of float AND
+   ≥ 10% of all shares — AKAN's stale Yahoo float read 36.4% of float while only
+   ~8.1% of all its shares were short.)
+Two more served keys, `tier` (low / moderate / high / extreme or None) and
+`float_check` (confirmed / unconfirmed / unchecked or None), built by `si_tier`
+on the served 2-dp % of FLOAT from SIC.SI_MODERATE_PCT, SIC.SI_ELEV_PCT,
+SIC.SI_HIGH_PCT and SIC.SI_EXTREME_MIN_PCT_SHARES_OUT by name. EXTREME also
+needs the float confirmed (% of shares outstanding at or above
+SI_EXTREME_MIN_PCT_SHARES_OUT); otherwise the word stops at High and the chip
+says "float unconfirmed" — monotone: more short interest never reads a lower
+word. No tier word on a stale read, a shares-outstanding-only read or a 0 %;
+the float check still runs on a stale read. Every % print goes through
+`_pct_tier` (2-dp only where 1-dp would round up across a cut). Display only;
+nothing sorts, gates or pushes on it. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -266,7 +284,7 @@ _BLOCK_KEYS = (
     "si_shares", "prev_si_shares", "si_change_pct", "avg_daily_volume", "days_to_cover",
     "float_shares", "float_asof", "float_source", "pct_of_float",
     "shares_outstanding", "shares_asof", "shares_source", "pct_of_shares_out",
-    "headline_basis", "float_suspect", "stale", "stale_reason", "next_settlement_date",
+    "headline_basis", "float_suspect", "tier", "float_check", "stale", "stale_reason", "next_settlement_date",
     "next_due_on", "source", "fetched_at", "chip", "title", "rows",
     "extreme",
 )
@@ -297,8 +315,8 @@ def _no_record_block(sym: str, doc: dict) -> dict:
 # reversal squeeze like percentage of short interest on the tickers card and also on watch list".
 # The cut is SIC.SI_HIGH_PCT by name — the app's STANDARD high-short-interest heuristic (client.py: "NOT from a SEPA
 # book"; not GG's), applied here to the SERVED 2-dp % of FLOAT (the 🩳 chip's headline figure; env SI_HIGH_PCT_FLOAT)
-# with `>=` (the 1-dp chip can print "20.0%" for 19.95–19.99 with no note — comparing on the printed figure instead =
-# HIS CALL). NOTE: the constant's home use, client._squeeze_signal,
+# with `>=` (2026-11-18 later: `_pct_tier` prints 2-dp where 1-dp would round up across a cut, so 19.99 prints
+# "19.99%", never "20.0%"; comparing on the printed figure instead = HIS CALL). NOTE: the constant's home use, client._squeeze_signal,
 # applies it to % of shares OUTSTANDING and also admits SI_ELEV_PCT + SI_HIGH_DTC days to cover — neither is mirrored
 # here (HIS CALL #1 in docs/gajjala/si_extreme_note_2026_11_18.md). Float basis (HIS CALL #2): the float stored with the
 # SI record at the last warm — the card's Float chip reads today's shares_cache row and can differ.
@@ -306,14 +324,156 @@ def _no_record_block(sym: str, doc: dict) -> dict:
 # was too small to call either way). Never a push, gate, sort or lane input. A failure here never costs the chip.
 EXTREME_WORD = "EXTREME"
 EXTREME_BASIS = "si_doc_float"
-EXTREME_TAG = EXTREME_WORD + " "                                   # chip_text(b, tag=…) → the chip with EXTREME in it
-EXTREME_SHORT = "%s %s SI %s float"                                # GLYPH, EXTREME_WORD, _pct1(pct_of_float) — the 👀 tile form
+EXTREME_SHORT = "%s SI %s %s float"                                # GLYPH, EXTREME_WORD, _pct_tier(pct_of_float) — the 👀 tile form
 EXTREME_RULE_NOTE = ("at or above %g%% of the float — the app's standard high-short-interest heuristic "
                      "(SI_HIGH_PCT; not from any book, not one of GG's rules)")
 EXTREME_STUDY_NOTE = ("Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small "
                       "to call either way.")
 EXTREME_FLOAT_BASIS_NOTE = ("Float basis: the float stored with this short-interest record at the last warm (%s shares, "
                             "%s, as of %s) — the card's own Float chip reads today's shares_cache row and can differ.")
+EXTREME_CONFIRM_NOTE = ("That is at or above the %g%% of shares outstanding that confirms the float "
+                        "(SI_EXTREME_MIN_PCT_SHARES_OUT).")
+
+# 🩳 TIER words + EXTREME float confirmation (2026-11-18, later). Ajay: "Yes please and may be add better terminilogy
+# like Moderate with a percentage relative to float." A display ladder on the served 2-dp % of FLOAT, half-open, from
+# SIC.SI_MODERATE_PCT, SIC.SI_ELEV_PCT and SIC.SI_HIGH_PCT by name (client.py: a common market convention, not from any
+# book, not one of GG's rules). EXTREME also needs SIC.SI_EXTREME_MIN_PCT_SHARES_OUT of shares outstanding (his yes);
+# an unconfirmed or unchecked float stops at High on the same % of float ladder (monotone in short interest). No word
+# on a stale read, a shares-outstanding-only read, a zero % or an out-of-order ladder (an env mistake never prints a
+# wrong word). Display only — never a push, gate, sort or lane input. UNMEASURED.
+TIER_LOW, TIER_MODERATE, TIER_HIGH, TIER_EXTREME = "low", "moderate", "high", "extreme"
+TIER_ORDER = (TIER_LOW, TIER_MODERATE, TIER_HIGH, TIER_EXTREME)          # rank = TIER_ORDER.index(t)
+TIER_WORDS = {TIER_LOW: "Low", TIER_MODERATE: "Moderate", TIER_HIGH: "High", TIER_EXTREME: EXTREME_WORD}
+TIER_RANGE = {TIER_LOW: "under %g%%", TIER_MODERATE: "%g%% to under %g%%",
+              TIER_HIGH: "%g%% to under %g%%", TIER_EXTREME: "%g%% or more"}
+FLOAT_CONFIRMED, FLOAT_UNCONFIRMED, FLOAT_UNCHECKED = "confirmed", "unconfirmed", "unchecked"
+FLOAT_UNCONFIRMED_WORD = "float unconfirmed"
+TIER_LADDER_NOTE = ("Low under %g%%, Moderate %g%% to under %g%%, High %g%% to under %g%%, EXTREME %g%% or more of the "
+                    "float with at least %g%% of shares outstanding — a common market convention, not from any book, "
+                    "not one of GG's rules")
+# Tier sentences — the title prints "Tier: " + the sentence; the "Tier" row prints the sentence + " Ladder: " + _ladder() + "."
+TIER_TEXT = "%s (%s of the float)."                                   # word, _range(tier)
+TIER_HELD_TEXT = "%s — %s of the float, held below %s until the float is confirmed."   # word, _pct_tier(pf), EXTREME_WORD
+TIER_STALE_TEXT = "not given on a stale read."
+TIER_NO_FLOAT_TEXT = "not given — the tier words count the % of float, and no usable float is on file."  # NOT %-formatted
+TIER_ZERO_TEXT = "not given — too few shares short to read as a share of the float."
+# Float-check sentences — only when float_check is set; the title prints "Float check: " + it, the row prints it.
+FLOAT_CONFIRMED_TEXT = ("confirmed — %s of shares outstanding is short, at least the %g%% of shares outstanding "
+                        "that EXTREME also needs.")                    # _pct_tier(ps), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
+FLOAT_UNCONFIRMED_TEXT = ("%s — the float on file (%s shares, %s, as of %s) puts short interest at %s of the float, "
+                          "but only %s of all shares are short, under the %g%% of shares outstanding that EXTREME "
+                          "also needs.")
+# FLOAT_UNCONFIRMED_WORD, format(fl, ","), float_source or "n/a", float_asof or "n/a",
+# _pct_tier(pf), _pct_tier(ps), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
+FLOAT_UNCHECKED_TEXT = ("not possible — shares outstanding is not on file, and EXTREME also needs at least %g%% of "
+                        "shares outstanding.")                         # SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
+
+
+def _cuts() -> tuple:
+    """Every cut a % print can cross, read from the constants at CALL time."""
+    return (SIC.SI_MODERATE_PCT, SIC.SI_ELEV_PCT, SIC.SI_HIGH_PCT, SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+
+
+def _ladder_ok() -> bool:
+    """The env-tunable cuts in order. Out of order → no tier word anywhere (never a wrong one)."""
+    return 0 < SIC.SI_MODERATE_PCT < SIC.SI_ELEV_PCT < SIC.SI_HIGH_PCT
+
+
+def _ladder() -> str:
+    m, e, h = SIC.SI_MODERATE_PCT, SIC.SI_ELEV_PCT, SIC.SI_HIGH_PCT
+    return TIER_LADDER_NOTE % (m, m, e, e, h, h, SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+
+
+def _range(tier: str) -> str:
+    m, e, h = SIC.SI_MODERATE_PCT, SIC.SI_ELEV_PCT, SIC.SI_HIGH_PCT
+    args = {TIER_LOW: (m,), TIER_MODERATE: (m, e), TIER_HIGH: (e, h), TIER_EXTREME: (h,)}[tier]
+    return TIER_RANGE[tier] % args
+
+
+def _pct_tier(p: float) -> str:
+    """Every served % print: one decimal as `_pct1`, except two decimals when one-decimal rounding would carry the
+    figure UP across a cut (ULCC's share of shares outstanding just under the confirmation never prints as the cut;
+    a % of float just under the EXTREME cut never prints as the cut). The decision stays on the served value."""
+    printed = float("%.1f" % p)
+    if any(p < c <= printed for c in _cuts()):
+        return "%.2f%%" % p
+    return _pct1(p)
+
+
+def tier_of(p) -> Optional[str]:
+    """The ladder word key for a served % of float, or None (None / 0 / negative — never a word next to 0.0%)."""
+    p = _num(p)
+    if p is None or p <= 0:
+        return None
+    if p < SIC.SI_MODERATE_PCT:
+        return TIER_LOW
+    if p < SIC.SI_ELEV_PCT:
+        return TIER_MODERATE
+    if p < SIC.SI_HIGH_PCT:
+        return TIER_HIGH
+    return TIER_EXTREME
+
+
+def float_check(pf, ps) -> Optional[str]:
+    """Only a % of float at or above the EXTREME cut has a float to confirm (None below it)."""
+    pf = _num(pf)
+    if pf is None or pf < SIC.SI_HIGH_PCT:
+        return None
+    ps = _num(ps)
+    if ps is None:
+        return FLOAT_UNCHECKED
+    if ps >= SIC.SI_EXTREME_MIN_PCT_SHARES_OUT:
+        return FLOAT_CONFIRMED
+    return FLOAT_UNCONFIRMED
+
+
+def si_tier(b: Optional[dict]) -> tuple:
+    """(tier, float_check) for one served block. PURE; every leaf read with .get()."""
+    if not b or b.get("headline_basis") != "float" or b.get("status") not in ("ok", "stale"):
+        return (None, None)
+    fc = float_check(b.get("pct_of_float"), b.get("pct_of_shares_out"))   # runs on a stale read too
+    if b.get("status") != "ok" or not _ladder_ok():
+        return (None, fc)
+    t = tier_of(b.get("pct_of_float"))
+    if t == TIER_EXTREME and fc != FLOAT_CONFIRMED:
+        t = TIER_HIGH                                   # the explicit cap — env-proof and monotone
+    return (t, fc)
+
+
+def _tier_sentence(b: Optional[dict]) -> Optional[str]:
+    if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
+        return None
+    if b.get("status") == "stale":
+        return TIER_STALE_TEXT
+    if b.get("headline_basis") != "float":
+        return TIER_NO_FLOAT_TEXT
+    pf = _num(b.get("pct_of_float"))
+    if pf is None:
+        return None
+    if pf <= 0:
+        return TIER_ZERO_TEXT
+    tier = b.get("tier")
+    word = TIER_WORDS.get(tier) if isinstance(tier, str) else None
+    if word is None:
+        return None                                     # an out-of-order ladder or a failed tier: no sentence, never a guess
+    if tier == TIER_HIGH and b.get("float_check") in (FLOAT_UNCONFIRMED, FLOAT_UNCHECKED):
+        return TIER_HELD_TEXT % (word, _pct_tier(pf), EXTREME_WORD)
+    return TIER_TEXT % (word, _range(tier))
+
+
+def _float_sentence(b: Optional[dict]) -> Optional[str]:
+    fc = (b or {}).get("float_check")
+    if fc == FLOAT_CONFIRMED:
+        return FLOAT_CONFIRMED_TEXT % (_pct_tier(b["pct_of_shares_out"]), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+    if fc == FLOAT_UNCONFIRMED:
+        fl = b.get("float_shares")
+        return FLOAT_UNCONFIRMED_TEXT % (FLOAT_UNCONFIRMED_WORD, format(fl, ",") if isinstance(fl, int) else "n/a",
+                                         b.get("float_source") or "n/a", b.get("float_asof") or "n/a",
+                                         _pct_tier(b["pct_of_float"]), _pct_tier(b["pct_of_shares_out"]),
+                                         SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
+    if fc == FLOAT_UNCHECKED:
+        return FLOAT_UNCHECKED_TEXT % SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
+    return None
 
 
 def extreme_block(b: Optional[dict]) -> Optional[dict]:
@@ -325,19 +485,22 @@ def extreme_block(b: Optional[dict]) -> Optional[dict]:
     pf = _num(b.get("pct_of_float"))
     if pf is None or pf < SIC.SI_HIGH_PCT:          # `>=` on the served 2-dp value (the chip's printed figure)
         return None
-    return {"text": chip_text(b, tag=EXTREME_TAG),
-            "short": EXTREME_SHORT % (GLYPH, EXTREME_WORD, _pct1(pf)),
+    if b.get("tier") != TIER_EXTREME:                # 2026-11-18 later: ok + float + CONFIRMED, else no note
+        return None
+    return {"text": chip_text(b),
+            "short": EXTREME_SHORT % (GLYPH, EXTREME_WORD, _pct_tier(pf)),
             "title": extreme_title(b, pf),
             "basis": EXTREME_BASIS}
 
 
 def extreme_title(b: dict, pf: float) -> str:
     seg = ["%s %s short interest — %s of the float is sold short at the FINRA settlement %s (published ~%s), %s." %
-           (GLYPH, EXTREME_WORD, _pct1(pf), b.get("settlement_date") or "n/a", b.get("published_on") or "n/a",
+           (GLYPH, EXTREME_WORD, _pct_tier(pf), b.get("settlement_date") or "n/a", b.get("published_on") or "n/a",
             EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT)]
     if b.get("pct_of_shares_out") is not None:
-        seg.append("%s of shares outstanding (%s)." % (_pct1(b["pct_of_shares_out"]),
+        seg.append("%s of shares outstanding (%s)." % (_pct_tier(b["pct_of_shares_out"]),
                                                        _human_shares(b.get("shares_outstanding"))))
+        seg.append(EXTREME_CONFIRM_NOTE % SIC.SI_EXTREME_MIN_PCT_SHARES_OUT)
     if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
         seg.append("%s days to cover (the provider's window)." % _dtc1(b["days_to_cover"]))
     fl = b.get("float_shares")
@@ -424,6 +587,11 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
         "source": str(doc.get("source") or SOURCE_SI),
         "fetched_at": _iso_utc(doc.get("fetched_at")),
     })
+    try:
+        b["tier"], b["float_check"] = si_tier(b)
+    except Exception as exc:                                   # noqa: BLE001 — a tier failure never costs the chip
+        log.warning("short_interest.read: tier %s failed: %s", b.get("symbol"), type(exc).__name__)
+        b["tier"], b["float_check"] = None, None
     b["chip"] = chip_text(b)
     b["title"] = title_text(b)
     b["rows"] = rows_for(b)
@@ -472,17 +640,23 @@ def _conflict_sentence(b: dict) -> str:
             "counts disagree, so the %% shown is of shares outstanding." % (fl, so))
 
 
-def chip_text(b: Optional[dict], *, tag: str = "") -> Optional[str]:
+def chip_text(b: Optional[dict]) -> Optional[str]:
     if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
         return None
     basis = b.get("headline_basis")
     if basis == "float":
-        head = "%s float" % _pct1(b["pct_of_float"])
+        tier = b.get("tier")
+        word = TIER_WORDS.get(tier) if isinstance(tier, str) else None     # an unknown key: no word, never a guess
+        head = "%s float" % _pct_tier(b["pct_of_float"])
+        if word:
+            head = "%s %s" % (word, head)
+        if b.get("float_check") == FLOAT_UNCONFIRMED:                    # stale too — the flag never drops
+            head += " · " + FLOAT_UNCONFIRMED_WORD
     elif basis == "shares_out":
-        head = "%s shs out" % _pct1(b["pct_of_shares_out"])
+        head = "%s shs out" % _pct_tier(b["pct_of_shares_out"])
     else:
         head = "%s sh" % _human_shares(b["si_shares"])
-    parts = ["%s %sSI %s" % (GLYPH, tag, head)]
+    parts = ["%s SI %s" % (GLYPH, head)]
     # A provider 0 next to a positive short count is not a readable figure:
     # drop the segment (the chip never shows "0.0d"); the hover keeps it.
     if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
@@ -512,7 +686,7 @@ def title_text(b: dict) -> str:
     seg.append("%s shares short (%s)." % (format(b["si_shares"], ","),
                                           _change_phrase(b, with_prev_count=False)))
     if b.get("pct_of_float") is not None:
-        s = "%s of float — float %s, %s" % (_pct1(b["pct_of_float"]),
+        s = "%s of float — float %s, %s" % (_pct_tier(b["pct_of_float"]),
                                            _human_shares(b["float_shares"]), b["float_source"])
         if b.get("float_asof"):
             s += ", as of %s" % b["float_asof"]
@@ -521,13 +695,19 @@ def title_text(b: dict) -> str:
         seg.append("% of float: not read (no float on file).")
     if b.get("pct_of_shares_out") is not None:
         s = "%s of shares outstanding — %s, %s" % (
-            _pct1(b["pct_of_shares_out"]), _human_shares(b["shares_outstanding"]),
+            _pct_tier(b["pct_of_shares_out"]), _human_shares(b["shares_outstanding"]),
             b["shares_source"])
         if b.get("shares_asof"):
             s += ", as of %s" % b["shares_asof"]
         seg.append(s + ".")
     else:
         seg.append("% of shares outstanding: not read.")
+    ts = _tier_sentence(b)
+    if ts is not None:
+        seg.append("Tier: " + ts)
+    fs = _float_sentence(b)
+    if fs is not None:
+        seg.append("Float check: " + fs)
     if b.get("days_to_cover") is not None:
         if b.get("avg_daily_volume"):
             seg.append("%s days to cover (shares short ÷ %s average daily volume, the "
@@ -554,7 +734,7 @@ def rows_for(b: dict) -> list:
     rows.append({"k": "Shares short", "v": "%s · %s" % (
         format(b["si_shares"], ","), _change_phrase(b, with_prev_count=True))})
     if b.get("pct_of_float") is not None:
-        v = "%s — float %s (%s" % (_pct1(b["pct_of_float"]), format(b["float_shares"], ","),
+        v = "%s — float %s (%s" % (_pct_tier(b["pct_of_float"]), format(b["float_shares"], ","),
                                    b["float_source"])
         v += (", as of %s)" % b["float_asof"]) if b.get("float_asof") else ")"
     else:
@@ -562,12 +742,18 @@ def rows_for(b: dict) -> list:
     rows.append({"k": "% of float", "v": v})
     if b.get("pct_of_shares_out") is not None:
         v = "%s — shares outstanding %s (%s" % (
-            _pct1(b["pct_of_shares_out"]), format(b["shares_outstanding"], ","),
+            _pct_tier(b["pct_of_shares_out"]), format(b["shares_outstanding"], ","),
             b["shares_source"])
         v += (", as of %s)" % b["shares_asof"]) if b.get("shares_asof") else ")"
     else:
         v = "not read — no shares outstanding on file"
     rows.append({"k": "% of shares outstanding", "v": v})
+    ts = _tier_sentence(b)
+    if ts is not None:
+        rows.append({"k": "Tier", "v": ts + " Ladder: " + _ladder() + "."})
+    fs = _float_sentence(b)
+    if fs is not None:
+        rows.append({"k": "Float check", "v": fs})
     dtc = b.get("days_to_cover")
     if dtc is None:
         v = "not read"
@@ -640,10 +826,14 @@ def rules_section() -> dict:
             "when a float is on file, otherwise % of shares outstanding, and says which. Sites "
             "define float differently, so the same count can read several points apart from "
             "one site to the next.",
-            "%s EXTREME note: on a 🎾 card the %s label turns bold and says EXTREME, and every 👀 Watch "
-            "tile prints a short form, when the served %% of float is %s. It hides on a stale read, a "
-            "suspect float or a shares-outstanding-only read, and never shows 0%%. %s UNMEASURED."
-            % (GLYPH, GLYPH, EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT, EXTREME_STUDY_NOTE),
+            "%s Tier words on every chip, on the served %% of float: %s. EXTREME is %s, and short interest "
+            "must also be at least %g%% of shares outstanding (SI_EXTREME_MIN_PCT_SHARES_OUT) — otherwise the "
+            "float on file is unconfirmed: the word stops at %s and the chip says 'float unconfirmed'. No tier "
+            "word on a stale read, a suspect float or a shares-outstanding-only read, and it never shows 0%%. "
+            "On a 🎾 card a confirmed EXTREME label turns bold, and every 👀 Watch tile prints a short form. "
+            "%s UNMEASURED."
+            % (GLYPH, _ladder(), EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT, SIC.SI_EXTREME_MIN_PCT_SHARES_OUT,
+               TIER_WORDS[TIER_HIGH], EXTREME_STUDY_NOTE),
             "Days to cover = shares short ÷ average daily volume, as the provider computes it; "
             "the volume window differs between sites.",
             "Every number carries its settlement date. It reads STALE once a newer "

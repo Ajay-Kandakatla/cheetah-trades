@@ -127,7 +127,8 @@ def test_S2_a_fresh_record_is_the_house_chip_verbatim(monkeypatch):
     t = table(store(t1_docs()))
     r = by_sym(t)["A1"]
     house = SR.si_block(dict(doc), TODAY)
-    assert r["si_text"] == house["chip"] == "🩳 SI 30.0% float · 2.3d · 9/30"
+    # 2026-11-18 sitier: si_text carries the served tier word (30.0% of float, 24.0% of shares out — confirmed).
+    assert r["si_text"] == house["chip"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
     assert r["si_stale"] is False and r["si_asof"] == "2026-09-30"
     assert r["si_title"] == house["title"] and r["si_title"].startswith("🩳 Short interest — FINRA settlement 2026-09-30")
     assert t["si_fault_text"] is None
@@ -365,7 +366,8 @@ def test_S11_the_1_minute_table_carries_the_column(monkeypatch):
     t5 = table(store(t1_docs()))
     assert t1["heads"] == t5["heads"] and t1["heads"][-1]["key"] == "si"
     assert all(set(TBL.SI_KEYS) <= set(r) for r in t1["rows"])
-    assert by_sym(t1)["A1"]["si_text"] == by_sym(t5)["A1"]["si_text"] == "🩳 SI 30.0% float · 2.3d · 9/30"
+    # 2026-11-18 sitier: the served tier word leads the chip
+    assert by_sym(t1)["A1"]["si_text"] == by_sym(t5)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
 
 
 # ── S12 NaN / private keys ───────────────────────────────────────────────────────────────────────────────────────
@@ -386,7 +388,8 @@ def test_S13_the_gg5_route_serves_the_column(monkeypatch):
     t = body["table"]
     assert t["heads"][-1] == {"key": "si", "label": "Short interest"} and t["si_fault_text"] is None
     by = by_sym(t)
-    assert by["A1"]["si_text"] == "🩳 SI 30.0% float · 2.3d · 9/30"
+    # 2026-11-18 sitier: the served tier word leads the chip
+    assert by["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
     assert by["K1"]["si_text"] is None                                              # NEGATIVE: no record → null
 
 
@@ -406,7 +409,8 @@ def test_S13_the_1_minute_route_serves_the_column(monkeypatch):
                                                           limit=GC.TILE_LIMIT_DEFAULT, span="", email=None)).body)
     t = body["table"]
     assert t["heads"][-1]["key"] == "si" and t["si_fault_text"] is None
-    assert by_sym(t)["A1"]["si_text"] == "🩳 SI 30.0% float · 2.3d · 9/30"
+    # 2026-11-18 sitier: the served tier word leads the chip
+    assert by_sym(t)["A1"]["si_text"] == "🩳 SI EXTREME 30.0% float · 2.3d · 9/30"
     assert by_sym(t)["K1"]["si_text"] is None
 
 
@@ -452,3 +456,10 @@ def test_S15_the_board_golden_carries_no_short_interest_text():
         assert all(r[k] is None for r in t["rows"] for k in TBL.SI_KEYS), mode
         assert t["si_fault_text"] == TBL.SI_FAULT_TEXT, mode
     assert "🩳 SI " not in text
+
+
+# ── 2026-11-18 sitier: the tier words arrive through si_text — no new served key ─────────────────────────────────
+def test_NEGATIVE_sitier_adds_no_served_key_to_the_table():
+    # the gg5 BOARD golden carries exactly these four si_* leaves; a fifth (e.g. si_tier) would move it.
+    assert TBL.SI_KEYS == ("si_text", "si_title", "si_stale", "si_asof")
+    assert not any("tier" in k or "float_check" in k for k in TBL.SI_KEYS)

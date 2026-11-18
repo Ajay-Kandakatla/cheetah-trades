@@ -23,10 +23,16 @@ const GROWTH_PATH = '/growth/tags';
 const TITLE = '🩳 served SI hover sentence — FINRA settlement 2026-10-30.';
 const blk = (sym: string, status: string, chip: string | null, extra: Record<string, unknown> = {}) =>
   ({ symbol: sym, status, chip, title: TITLE, rows: [], ...extra });
-const X = { text: '🩳 EXTREME SI 36.4% float · 1.0d · 10/30', short: '🩳 EXTREME SI 36.4% float', title: 'served extreme hover', basis: 'si_doc_float' };
+/* 2026-11-18 sitier: the EXTREME stand-in re-pinned to the served '🩳 SI EXTREME …' order (spec sitier §3.4). */
+const X = { text: '🩳 SI EXTREME 36.4% float · 1.0d · 10/30', short: '🩳 SI EXTREME 36.4% float', title: 'served extreme hover', basis: 'si_doc_float' };
+/* 2026-11-18 sitier: the CLRO and AKAN shapes, copied from spec sitier §3.4 */
+const CLRO_X = { text: '🩳 SI EXTREME 44.0% float · 1.0d · 10/30', short: '🩳 SI EXTREME 44.0% float', title: 'served CLRO hover', basis: 'si_doc_float' };
+const AK_CHIP = '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30';
 const SI: Record<string, unknown> = {
   OMH: blk('OMH', 'ok', '🩳 SI 359.4K sh · 19.5d · 10/30', { extreme: null }),
   XTRM: blk('XTRM', 'ok', '🩳 SI 36.4% float · 1.0d · 10/30', { extreme: X }),
+  AKAN: blk('AKAN', 'ok', AK_CHIP, { tier: 'high', float_check: 'unconfirmed', extreme: null }),
+  CLRO: blk('CLRO', 'ok', CLRO_X.text, { tier: 'extreme', float_check: 'confirmed', extreme: CLRO_X }),
   STAL: blk('STAL', 'stale', '🩳 SI 2.5M sh · 9.0d · 8/31 · stale', { extreme: null }),
   NREC: blk('NREC', 'no_record', null),
 };
@@ -141,6 +147,45 @@ describe('🏷️ GgwTagsRow', { timeout: 20000 }, () => {
     expect(c.querySelector('[data-testid="si-chip"]')).toBeNull();
     expect(rowEl(c, 'XTRM')).toBeNull();
     expect(c.innerHTML).toBe('');
+  });
+
+  it('2026-11-18 sitier: the AKAN shape → the row prints the served High chip with float unconfirmed + data-si-tier="high"', async () => {
+    routedFetch({ tags: {} });
+    const c = mountRow(rowOf('AKAN'));
+    await settle();
+    await waitFor(() => expect(rowEl(c, 'AKAN')).not.toBeNull());
+    const el = rowEl(c, 'AKAN')!.querySelector('[data-testid="si-chip"]')!;
+    expect(el.textContent).toBe(AK_CHIP);
+    expect(el.getAttribute('data-si-tier')).toBe('high');
+    expect(el.className).toBe('cm-badge cm-badge-muted');
+    expect(c.querySelector('.ggw-si-extreme')).toBeNull();
+  });
+
+  it('NEGATIVE (2026-11-18 sitier): the CLRO shape → NO SI chip in the row (the head note is the one SI line)', async () => {
+    routedFetch({ tags: {} });
+    const c = mountRow(rowOf('CLRO'));
+    await settle();
+    expect(c.querySelector('[data-testid="si-chip"]')).toBeNull();
+    expect(rowEl(c, 'CLRO')).toBeNull();
+    expect(c.textContent).not.toContain('EXTREME');
+  });
+
+  it('control (2026-11-18 sitier): Tile — CLRO → only the head note (tier "extreme"); AKAN → only the row chip', async () => {
+    routedFetch({ tags: {} });
+    const props = { phone: false, fit: false, removeLabel: null, focused: false, busy: false, siNote: true,
+                    tags: { room: null, study: null } };
+    const c = render(<MemoryRouter><Tile row={rowOf('CLRO')} {...props} /><Tile row={rowOf('AKAN')} {...props} /></MemoryRouter>).container;
+    await settle();
+    await waitFor(() => expect(c.querySelector('[data-testid="ggw-si-extreme-CLRO"]')).not.toBeNull());
+    await waitFor(() => expect(c.querySelector('[data-testid="ggw-tile-AKAN"] [data-testid="si-chip"]')).not.toBeNull());
+    const cl = c.querySelector('[data-testid="ggw-tile-CLRO"]')!;
+    expect(cl.querySelectorAll('[data-testid="si-chip"], .ggw-si-extreme')).toHaveLength(1);
+    expect(cl.querySelector('.ggw-si-extreme')!.textContent).toBe(CLRO_X.short);
+    expect(cl.querySelector('.ggw-si-extreme')!.getAttribute('data-si-tier')).toBe('extreme');
+    const ak = c.querySelector('[data-testid="ggw-tile-AKAN"]')!;
+    expect(ak.querySelectorAll('[data-testid="si-chip"], .ggw-si-extreme')).toHaveLength(1);
+    expect(ak.querySelector('[data-testid="si-chip"]')!.textContent).toBe(AK_CHIP);
+    expect(ak.querySelector('.ggw-si-extreme')).toBeNull();
   });
 
   it('control: Tile with siNote + tags — EXTREME → exactly ONE SI element (the head note); plain → the row chip only', async () => {

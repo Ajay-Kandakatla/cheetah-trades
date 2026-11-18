@@ -11,9 +11,13 @@
  * positions is a data label with its FINRA settlement date, not a signal. A
  * stale read says so in its own text. Renders NOTHING when no block is cached
  * (or the block is a no-record) — never a zero.
+ *
+ * 🩳 TIER WORDS (2026-11-18, later). Ajay: "Yes please and may be add better terminilogy like Moderate with a
+ * percentage relative to float." The tier word and any float-unconfirmed flag arrive INSIDE the served text; this file
+ * adds only `data-si-tier` = the served tier key (siTier), types no word, and changes no class or colour.
  */
 import { useShortInterest } from '../hooks/useShortInterest';
-import { siChip } from '../lib/shortInterest';
+import { siChip, siTier } from '../lib/shortInterest';
 
 export function ShortInterestChip({ symbol, className = 'cm-badge' }:
                                   { symbol: string; className?: string }) {
@@ -21,6 +25,7 @@ export function ShortInterestChip({ symbol, className = 'cm-badge' }:
   const c = siChip(read);
   if (!c) return null;
   return (
-    <span className={`${className} ${className}-muted`} title={c.title} data-testid="si-chip">{c.text}</span>
+    <span className={`${className} ${className}-muted`} title={c.title} data-testid="si-chip"
+          data-si-tier={siTier(read) ?? undefined}>{c.text}</span>
   );
 }

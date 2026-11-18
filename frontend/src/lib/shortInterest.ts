@@ -10,6 +10,12 @@
  * defensively and hands the served strings to the chip and the panel verbatim.
  * It does no arithmetic on any short-interest field and holds no threshold:
  * a count of open short positions is a data label, not a signal.
+ *
+ * 🩳 TIER WORDS + FLOAT CONFIRMATION (2026-11-18, later). Ajay: "Yes please and may be add better terminilogy like
+ * Moderate with a percentage relative to float." The tier word, its cut-offs and the float check are all built in
+ * backend/short_interest/read.py and arrive INSIDE the served `chip` / `title` / `rows`. This module only passes the
+ * served `tier` / `float_check` keys through (typed string | null — no word and no key list lives here) and hands
+ * the tier key to the chips as a `data-si-tier` attribute. No colour by tier (the neutral-tone rule holds).
  */
 
 export type SiRow = { k: string; v: string };
@@ -51,6 +57,12 @@ export type ShortInterestRead = {
   rows: SiRow[];
   /** 🩳 EXTREME note (2026-11-18) — absent on an older API → treated as null. */
   extreme?: SiExtreme | null;
+  /** 🩳 tier key (2026-11-18, later) — the served tier of the % of float, or null (stale, no usable float, none).
+   *  The WORD is already inside `chip`; this key only feeds `data-si-tier`. Absent on an older API → null. */
+  tier?: string | null;
+  /** 🩳 float check key (2026-11-18, later) — the served float confirmation, or null when there is nothing to check.
+   *  Its words are already inside `chip` / `title` / `rows`. Absent on an older API → null. */
+  float_check?: string | null;
 };
 
 /** 🩳 EXTREME note (2026-11-18) — the served block built by read.extreme_block; null when the name is not extreme.
@@ -126,4 +138,13 @@ export function siExtreme(read: ShortInterestRead | null | undefined): SiExtreme
   if (typeof n.short !== 'string' || !n.short.trim()) return null;
   if (typeof n.title !== 'string') return null;
   return { text: n.text, short: n.short, title: n.title, basis: typeof n.basis === 'string' ? n.basis : '' };
+}
+
+/** The served tier key, verbatim — or null (no read, not ok, missing, not a plain lowercase key). Computes nothing and
+ *  lists no tier key: the verdict is the server's, and a stale / no_record block never carries one. */
+export function siTier(read: ShortInterestRead | null | undefined): string | null {
+  if (!read || read.status !== 'ok') return null;
+  const t = (read as { tier?: unknown }).tier;
+  if (typeof t !== 'string' || !/^[a-z]+$/.test(t)) return null;
+  return t;
 }

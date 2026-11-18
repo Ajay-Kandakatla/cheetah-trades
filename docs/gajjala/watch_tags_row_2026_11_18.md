@@ -88,6 +88,8 @@ The GET runs every `GC.GG1M_CADENCE_SEC` while in the window. The 🚩 board GET
 
 ## HIS CALL (defaults built; nothing decided as a rule)
 
+> The `🩳 EXTREME SI 36.4% float` quotes below are the first 11-18 form; since the tier build the served form is `🩳 SI EXTREME 44.0% float` (CLRO) and AKAN reads High · float unconfirmed (see the dated section below).
+
 1. **EXTREME names:** the head note (short form `🩳 EXTREME SI 36.4% float`, shipped 11-18) stays, and the tags row prints NO plain SI chip, so each tile has one SI line (default). Alternative: the 🎾 card's label form `🩳 EXTREME SI 36.4% float · 1.0d · 10/30` in the tags row, with the head note dropped (this moves yesterday's pins).
 2. **Fitted board tile:** the tags row is ONE line with an ellipsis (the 11-16 GP caption rule; the ⤢ view and the phone wrap). Alternative: wrap on the board tile too (the charts lose a line per wrapped row).
 3. **Room / band chips scope:** ONE bounce-room POST for the names CARDED on today's 🚩 board only (default: no on-demand zone building for an off-board name like SLSN). Alternative: every Watch name (his own off-board names would queue daily-bar zone builds on the server).
@@ -106,3 +108,29 @@ The GET runs every `GC.GG1M_CADENCE_SEC` while in the window. The 🚩 board GET
 16. **[C6b] Two 🎯 glyphs on one tile:** the head's `🎯 A+` (11-17, "A+ on the Gajjala boards this session") and the row's `🎯 at the band` (the card's enterable chip) mean different things. Default: keep both, each the served word byte-for-byte (Rule #5: one line is his pick). Alternatives: drop the band chip from the Watch row, or drop the head 🎯 when the row prints one.
 
 UNMEASURED. Not advice.
+
+## 2026-11-18 (later) — 🩳 tier words + EXTREME float confirmation (spec sitier, WP-FE)
+
+Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage relative to float."
+
+- **EXTREME short form is now `🩳 SI EXTREME …`** (the word sits after `SI`, like every other tier word), e.g. the
+  head note `🩳 SI EXTREME 44.0% float` for CLRO. The served chip and the note text are the same string now.
+- **AKAN-class names** (36.4% of a stale float, only 8.1% of all shares short) are no longer EXTREME. Their tile has no
+  head note, and the tags row prints the served chip `🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30`; the
+  hover names both the % of float and the % of all shares. The one-SI-line rule is unchanged: a confirmed EXTREME prints
+  only the head note, every other name prints only the row chip.
+- **The Float chip beside it is NOT checked by this build.** It is a different read (shares_cache, ~0.71M for AKAN on
+  11-18) from the float the SI chip names (531,210 on the SI doc), and StockAnalysis says 2.39M. Wiring the Float chip
+  to the served `float_check` is HIS CALL #12 of spec sitier.
+- **FE change = one attribute.** `ShortInterestChip`, `GgShortInterestLabel` and `GgSiExtremeNote` carry
+  `data-si-tier` = the served `tier` key (`siTier`, ok reads only; absent on stale, no-float or an older API). No word
+  is typed in the FE, no class and no CSS changes — the 10-03 neutral tone holds.
+- **Phone (430 px):** `.ggw-tags .cm-badge` wraps, so the longer chip wraps onto a second line. **Fitted board tile
+  (≥ 641 px):** the row is one line with an ellipsis (`.ggw-grid--fit .ggw-tags > *`), so "float unconfirmed" can clip
+  there; the hover carries the full sentence, and the ⤢ view wraps. No CSS edit.
+- **Tests:** `GajjalaWatchTags.test.tsx` (AKAN shape → the High chip + `data-si-tier="high"`; CLRO shape → no row chip;
+  Tile control), `GajjalaWatchBoard.si_extreme.test.tsx` (stand-ins re-pinned; AKAN-shape NEGATIVE: no head note),
+  `GgSiExtremeNote.test.tsx` (re-pinned to CLRO; AKAN-shape NEGATIVE renders nothing), `lib/shortInterest.tier_guard.test.ts`
+  (the six FE SI sources type no tier word, no float flag, no tier-key literal; a `'Moderate'` mutant is caught).
+
+UNMEASURED. Display only — nothing sorts, gates or pushes on it. Not advice.

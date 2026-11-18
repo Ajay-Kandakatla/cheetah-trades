@@ -37,9 +37,12 @@ const BF = 'PFAI';
 const SQ_CHIP = '🩳 SI 21.9% float · 1.0d · 10/15';            // byte-equal to the cardLabels pin
 const BF_CHIP = '🩳 SI 4.2% float · 2.3d · 10/15';
 const TITLE = '🩳 Short interest — FINRA settlement 2026-10-15 (published ~2026-10-24). A count of open short positions — not a forecast.';
-const X_TEXT = '🩳 EXTREME SI 21.9% float · 1.0d · 10/15';
+/* 2026-11-18 sitier: the EXTREME stand-ins re-pinned to the served '🩳 SI EXTREME …' order (spec sitier §3.4). */
+const X_TEXT = '🩳 SI EXTREME 21.9% float · 1.0d · 10/15';
 const X_TITLE = '🩳 EXTREME short interest — served hover sentence (SI_HIGH_PCT heuristic, SI-doc float). Not advice.';
-const extreme = (text = X_TEXT) => ({ text, short: '🩳 EXTREME SI 21.9% float', title: X_TITLE, basis: 'si_doc_float' });
+const extreme = (text = X_TEXT) => ({ text, short: '🩳 SI EXTREME 21.9% float', title: X_TITLE, basis: 'si_doc_float' });
+/* the AKAN shape after sitier (spec §3.4): tier high, float unconfirmed, NO extreme object */
+const AK_CHIP = '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30';
 
 let SI: Record<string, unknown> = {};
 const block = (sym: string, chip: string | null, status = 'ok', x: unknown = null) =>
@@ -99,7 +102,7 @@ for (const variant of ['gajjala', 'gajjala_audited'] as const) {
   describe(`🩳 EXTREME note on the 🎾 card — ${variant}`, () => {
     beforeEach(() => {
       _resetShortInterestCache();
-      SI = { [SQ]: block(SQ, SQ_CHIP, 'ok', extreme()), [BF]: block(BF, BF_CHIP, 'ok', extreme('🩳 EXTREME SI 4.2% float · 2.3d · 10/15')) };
+      SI = { [SQ]: block(SQ, SQ_CHIP, 'ok', extreme()), [BF]: block(BF, BF_CHIP, 'ok', extreme('🩳 SI EXTREME 4.2% float · 2.3d · 10/15')) };
     });
     afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -146,6 +149,20 @@ for (const variant of ['gajjala', 'gajjala_audited'] as const) {
       expect(el.className).toBe('cm-note gg-line gg-si-label');
       expect(el.hasAttribute('data-si-basis')).toBe(false);
       expect(document.querySelector('.gg-si-extreme')).toBeNull();
+    });
+
+    it('NEGATIVE (2026-11-18 sitier): FCHL in the AKAN shape (High · float unconfirmed, extreme null) → no bold label', async () => {
+      SI[SQ] = { ...block(SQ, AK_CHIP, 'ok', null), tier: 'high', float_check: 'unconfirmed' };
+      await mount(pay(), variant);
+      const el = await screen.findByTestId(`gg-si-label-${SQ}`);
+      await waitFor(() => expect(el.textContent).toBe(AK_CHIP));
+      expect(el.className).toBe('cm-note gg-line gg-si-label');
+      expect(el.getAttribute('data-si-tier')).toBe('high');
+      expect(el.hasAttribute('data-si-basis')).toBe(false);
+      const card = screen.getByTestId(`gg-tile-${SQ}`);
+      expect(card.querySelector('.gg-si-extreme')).toBeNull();
+      expect(card.textContent).not.toContain('EXTREME');
+      expect((card.textContent || '').split('🩳').length - 1).toBe(1);
     });
 
     it('NEGATIVE: FCHL stale carrying an extreme object → the stale chip, never the note', async () => {

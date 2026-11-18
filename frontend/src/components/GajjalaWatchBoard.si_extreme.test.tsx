@@ -29,10 +29,11 @@ const RAW = autoFixture as any;
 const ALL: string[] = RAW.rows.map((r: any) => r.symbol);
 const SI_PATH = '/short-interest/map';
 
-/* the served `extreme` object — stand-ins for read.extreme_block's words */
+/* the served `extreme` object — stand-ins for read.extreme_block's words.
+ * 2026-11-18 sitier: re-pinned to the served '🩳 SI EXTREME …' order (spec sitier §3.4). */
 const xOf = (sym: string, pct: string) => ({
-  text: `🩳 EXTREME SI ${pct}% float · 1.0d · 10/30`,
-  short: `🩳 EXTREME SI ${pct}% float`,
+  text: `🩳 SI EXTREME ${pct}% float · 1.0d · 10/30`,
+  short: `🩳 SI EXTREME ${pct}% float`,
   title: `🩳 EXTREME short interest — ${sym} served hover sentence (SI_HIGH_PCT heuristic). Not advice.`,
   basis: 'si_doc_float',
 });
@@ -47,6 +48,9 @@ const ITEMS: Record<string, unknown> = {
   TSLA: blk('TSLA', 'stale', '🩳 SI 30.6% float · 5.0d · 8/31 · stale', { extreme: xOf('TSLA', '30.6') }),
   META: blk('META', 'no_record', null, { extreme: xOf('META', '50.0') }),
   GOOG: blk('GOOG', 'ok', '🩳 SI 33.0% float · 1.0d · 10/30'),                                  // an older API: no key
+  /* 2026-11-18 sitier: the AKAN shape (spec §3.4) — High · float unconfirmed, NO extreme object → no head note */
+  AMZN: blk('AMZN', 'ok', '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30',
+            { tier: 'high', float_check: 'unconfirmed', extreme: null }),
   // AAPL: absent from the map
 };
 const NOTED = ['OMH', 'XXII', 'VTSI'];
@@ -178,7 +182,7 @@ describe('🩳 EXTREME note on the 👀 Watch board', { timeout: 20000 }, () => 
 
   it('NEGATIVE: extreme null / absent name / stale / no_record / older API → nothing; only the extreme names carry it', async () => {
     const c = await mountBoard();
-    for (const sym of ['NVDA', 'AAPL', 'TSLA', 'META', 'GOOG']) {
+    for (const sym of ['NVDA', 'AAPL', 'TSLA', 'META', 'GOOG', 'AMZN']) {
       expect(tile(c, sym), sym).not.toBeNull();
       expect(note(c, sym), sym).toBeNull();
     }
@@ -187,9 +191,19 @@ describe('🩳 EXTREME note on the 👀 Watch board', { timeout: 20000 }, () => 
     expect(c.querySelectorAll('.ggw-si-extreme')).toHaveLength(NOTED.length);
   });
 
+  it('NEGATIVE (2026-11-18 sitier): the AKAN shape (High · float unconfirmed) → no head note, no EXTREME word in the head', async () => {
+    const c = await mountBoard();
+    const t = tile(c, 'AMZN');
+    expect(t).not.toBeNull();
+    expect(note(t, 'AMZN')).toBeNull();
+    expect(t.querySelector('.ggw-si-extreme')).toBeNull();
+    expect(t.querySelector('.ggw-tile-head')!.textContent).not.toContain('EXTREME');
+    expect(headKinds(t)).not.toContain('ggw-si-extreme');
+  });
+
   it('NEGATIVE: never a 0% — no note text, and an empty map draws no note anywhere', async () => {
-    expect(ZERO_PCT.test('🩳 EXTREME SI 0.0% float')).toBe(true);
-    expect(ZERO_PCT.test('🩳 EXTREME SI 25.0% float')).toBe(false);
+    expect(ZERO_PCT.test('🩳 SI EXTREME 0.0% float')).toBe(true);
+    expect(ZERO_PCT.test('🩳 SI EXTREME 25.0% float')).toBe(false);
     const c = await mountBoard();
     for (const e of Array.from(c.querySelectorAll('.ggw-si-extreme'))) expect(e.textContent).not.toMatch(ZERO_PCT);
     cleanup();

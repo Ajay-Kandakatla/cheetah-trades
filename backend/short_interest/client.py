@@ -292,6 +292,15 @@ SI_HIGH_PCT = float(os.getenv("SI_HIGH_PCT_FLOAT", "20"))
 SI_ELEV_PCT = float(os.getenv("SI_ELEV_PCT_FLOAT", "10"))
 SI_HIGH_DTC = float(os.getenv("SI_HIGH_DAYS_TO_COVER", "5"))
 SI_ELEV_DTC = float(os.getenv("SI_ELEV_DAYS_TO_COVER", "2.5"))
+# 🩳 SI TIER words (2026-11-18). Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage
+# relative to float." Display ladder on the served 2-dp % of FLOAT, half-open: Low < SI_MODERATE_PCT <= Moderate
+# < SI_ELEV_PCT <= High < SI_HIGH_PCT <= EXTREME. No official threshold exists — common convention (StockAlarm 5/10/20,
+# MarketBeat + Schwab 10/20, LuxAlgo ~20 extreme). Not from any book, not one of GG's rules. Display only.
+SI_MODERATE_PCT = 5.0
+# EXTREME float confirmation — Ajay 2026-11-18 "Yes please" to "only call 🩳 EXTREME when it's ≥ 20% of float AND ≥ 10%
+# of all shares" (AKAN: a stale Yahoo float, 531,210 vs 2,388,212 shares out after dilution, read 36.4% of float; the
+# true figure is ~8.1%). His number: plain constant, not env-tunable — a change is his call.
+SI_EXTREME_MIN_PCT_SHARES_OUT = 10.0
 
 
 def _fetch_short_interest_rows(symbol: str, limit: int = 4) -> list[dict]:

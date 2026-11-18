@@ -13,6 +13,13 @@ const ITEMS: Record<string, unknown> = {
   OLD: { symbol: 'OLD', status: 'stale', chip: '🩳 SI 30.6% shs out · 5.0d · 8/31 · stale', title: 'old', rows: [] },
   MISS: { symbol: 'MISS', status: 'no_record', chip: null, title: 'Short interest: no FINRA record on file for MISS at the last warm — not read.',
           rows: [{ k: 'Short interest', v: 'not read — no FINRA record at the last warm' }] },
+  /* 🩳 TIER key (2026-11-18, later) — chips copied from spec sitier §3.4 (AKAN live shape, SLSN, stale AKAN). */
+  AKAN: { symbol: 'AKAN', status: 'ok', tier: 'high', float_check: 'unconfirmed', extreme: null,
+          chip: '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30', title: TITLE, rows: [] },
+  SLSN: { symbol: 'SLSN', status: 'ok', tier: null, float_check: null, extreme: null,
+          chip: '🩳 SI 359.4K sh · 19.5d · 10/30', title: TITLE, rows: [] },
+  AKST: { symbol: 'AKST', status: 'stale', tier: null, float_check: 'unconfirmed', extreme: null,
+          chip: '🩳 SI 36.4% float · float unconfirmed · 1.0d · 10/30 · stale', title: TITLE, rows: [] },
 };
 
 function stub(ok = true) {
@@ -82,6 +89,46 @@ describe('ShortInterestChip', () => {
     const el = await screen.findByTestId('si-chip');
     expect(el.textContent).toBe('🩳 SI 33.6% float · 9/15');
     expect(el.textContent).not.toMatch(/0\.0d|\b0%/);
+  });
+});
+
+describe('ShortInterestChip — data-si-tier (2026-11-18, later)', () => {
+  /* Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage relative to float." The word is
+   * inside the served chip; the chip only carries the served tier key as an attribute — no class, no colour. */
+  beforeEach(() => _resetShortInterestCache());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('AKAN shape → the served chip verbatim (word + float unconfirmed) and data-si-tier="high", class unchanged', async () => {
+    stub();
+    render(<ShortInterestChip symbol="AKAN" />);
+    const el = await screen.findByTestId('si-chip');
+    expect(el.textContent).toBe('🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30');
+    expect(el.getAttribute('data-si-tier')).toBe('high');
+    expect(el.className).toBe('cm-badge cm-badge-muted');
+    expect(el.getAttribute('title')).toBe(TITLE);
+  });
+
+  it('NEGATIVE: SLSN shape (tier null) → the chip prints, the attribute is ABSENT', async () => {
+    stub();
+    render(<ShortInterestChip symbol="SLSN" />);
+    const el = await screen.findByTestId('si-chip');
+    expect(el.textContent).toBe('🩳 SI 359.4K sh · 19.5d · 10/30');
+    expect(el.hasAttribute('data-si-tier')).toBe(false);
+  });
+
+  it('NEGATIVE: stale AKAN (tier null, chip still says float unconfirmed) → attribute ABSENT', async () => {
+    stub();
+    render(<ShortInterestChip symbol="AKST" />);
+    const el = await screen.findByTestId('si-chip');
+    expect(el.textContent).toBe('🩳 SI 36.4% float · float unconfirmed · 1.0d · 10/30 · stale');
+    expect(el.hasAttribute('data-si-tier')).toBe(false);
+  });
+
+  it('NEGATIVE: an older API with no tier key → attribute ABSENT', async () => {
+    stub();
+    render(<ShortInterestChip symbol="EOSE" />);
+    const el = await screen.findByTestId('si-chip');
+    expect(el.hasAttribute('data-si-tier')).toBe(false);
   });
 });
 

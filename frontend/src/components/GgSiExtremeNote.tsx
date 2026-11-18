@@ -9,9 +9,13 @@
  * backend/short_interest/read.py — this file types no number and compares nothing. Renders NOTHING when the read is
  * not extreme, stale, no_record, still loading, or the request failed — never a zero. Display only: never a push,
  * gate, sort or lane input. UNMEASURED (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md was too small to
- * call either way). Not advice. */
+ * call either way). Not advice.
+ *
+ * 🩳 TIER WORDS (2026-11-18, later). Ajay: "Yes please and may be add better terminilogy like Moderate with a
+ * percentage relative to float." The tier word and any float-unconfirmed flag arrive INSIDE the served text; this file
+ * adds only `data-si-tier` = the served tier key (siTier), types no word, and changes no class or colour. */
 import { useShortInterest } from '../hooks/useShortInterest';
-import { siExtreme } from '../lib/shortInterest';
+import { siExtreme, siTier } from '../lib/shortInterest';
 
 export function GgSiExtremeNote({
   symbol,
@@ -26,7 +30,8 @@ export function GgSiExtremeNote({
   const e = siExtreme(read);
   if (!e) return null;
   return (
-    <span className={className} title={e.title} data-testid={testid} data-si-basis={e.basis}>
+    <span className={className} title={e.title} data-testid={testid} data-si-basis={e.basis}
+          data-si-tier={siTier(read) ?? undefined}>
       {e.short}
     </span>
   );

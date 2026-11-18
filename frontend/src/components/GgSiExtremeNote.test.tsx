@@ -9,15 +9,19 @@ import { _resetShortInterestCache } from '../hooks/useShortInterest';
  * the SERVED short form, the SERVED sentence on hover; NOTHING when the server sends no note (never a zero). fetch is
  * stubbed — no mock of the hook or the lib, so the real one-bulk-GET path runs. */
 
-const TITLE = '🩳 EXTREME short interest — 36.4% of the float is sold short at the FINRA settlement 2026-10-30 (published ~2026-11-10). A count of open short positions — not a forecast. Not advice.';
-const AKAN_X = { text: '🩳 EXTREME SI 36.4% float · 1.0d · 10/30', short: '🩳 EXTREME SI 36.4% float', title: TITLE, basis: 'si_doc_float' };
-const EOSE_X = { text: '🩳 EXTREME SI 38.4% float · 5.5d · 10/30', short: '🩳 EXTREME SI 38.4% float', title: 'eose served title', basis: 'si_doc_float' };
+/* 2026-11-18 sitier: re-pinned from the AKAN shape to the CLRO shape and the '🩳 SI EXTREME …' order (spec sitier §3.4).
+ * AKAN (36.4% of a stale float, only 8.1% of all shares) is no longer EXTREME — its block carries no note (NEGATIVE below). */
+const TITLE = '🩳 EXTREME short interest — 44.0% of the float is sold short at the FINRA settlement 2026-10-30 (published ~2026-11-10). A count of open short positions — not a forecast. Not advice.';
+const CLRO_X = { text: '🩳 SI EXTREME 44.0% float · 1.0d · 10/30', short: '🩳 SI EXTREME 44.0% float', title: TITLE, basis: 'si_doc_float' };
+const EOSE_X = { text: '🩳 SI EXTREME 38.4% float · 5.5d · 10/30', short: '🩳 SI EXTREME 38.4% float', title: 'eose served title', basis: 'si_doc_float' };
 const ITEMS: Record<string, unknown> = {
-  AKAN: { symbol: 'AKAN', status: 'ok', chip: '🩳 SI 36.4% float · 1.0d · 10/30', title: 'chip title', rows: [], extreme: AKAN_X },
+  CLRO: { symbol: 'CLRO', status: 'ok', tier: 'extreme', float_check: 'confirmed', chip: CLRO_X.text, title: 'chip title', rows: [], extreme: CLRO_X },
+  AKAN: { symbol: 'AKAN', status: 'ok', tier: 'high', float_check: 'unconfirmed', chip: '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30',
+          title: 'chip title', rows: [], extreme: null },
   EOSE: { symbol: 'EOSE', status: 'ok', chip: '🩳 SI 38.4% float · 5.5d · 10/30', title: 'chip title', rows: [], extreme: EOSE_X },
   GP: { symbol: 'GP', status: 'ok', chip: '🩳 SI 4.1% float · 1.0d · 10/30', title: 'chip title', rows: [], extreme: null },
   OLDAPI: { symbol: 'OLDAPI', status: 'ok', chip: '🩳 SI 4.1% float · 1.0d · 10/30', title: 'chip title', rows: [] },
-  OLD: { symbol: 'OLD', status: 'stale', chip: '🩳 SI 30.6% float · 5.0d · 8/31 · stale', title: 'stale', rows: [], extreme: AKAN_X },
+  OLD: { symbol: 'OLD', status: 'stale', chip: '🩳 SI 30.6% float · 5.0d · 8/31 · stale', title: 'stale', rows: [], extreme: CLRO_X },
   MISS: { symbol: 'MISS', status: 'no_record', chip: null, title: 'Short interest: no FINRA record on file for MISS — not read.', rows: [], extreme: null },
 };
 
@@ -42,25 +46,42 @@ describe('GgSiExtremeNote', () => {
 
   it('prints the served short form verbatim with the served title, default classes, SPAN, testid, basis', async () => {
     stub();
-    render(<GgSiExtremeNote symbol="AKAN" testid="ggw-si-extreme-AKAN" />);
-    const el = await screen.findByTestId('ggw-si-extreme-AKAN');
-    expect(el.textContent).toBe('🩳 EXTREME SI 36.4% float');
+    render(<GgSiExtremeNote symbol="CLRO" testid="ggw-si-extreme-CLRO" />);
+    const el = await screen.findByTestId('ggw-si-extreme-CLRO');
+    expect(el.textContent).toBe('🩳 SI EXTREME 44.0% float');
     expect(el.getAttribute('title')).toBe(TITLE);
     expect(el.className).toBe('ggw-chip ggw-si-extreme');
     expect(el.tagName).toBe('SPAN');
     expect(el.getAttribute('data-si-basis')).toBe('si_doc_float');
+    expect(el.getAttribute('data-si-tier')).toBe('extreme');
   });
 
   it('prints the short form, never the longer card text', async () => {
     stub();
-    render(<GgSiExtremeNote symbol="AKAN" testid="t" />);
-    expect((await screen.findByTestId('t')).textContent).not.toBe(AKAN_X.text);
+    render(<GgSiExtremeNote symbol="CLRO" testid="t" />);
+    expect((await screen.findByTestId('t')).textContent).not.toBe(CLRO_X.text);
   });
 
   it('a custom className replaces the default', async () => {
     stub();
-    render(<GgSiExtremeNote symbol="AKAN" testid="t" className="custom-x" />);
+    render(<GgSiExtremeNote symbol="CLRO" testid="t" className="custom-x" />);
     expect((await screen.findByTestId('t')).className).toBe('custom-x');
+  });
+
+  it('NEGATIVE (2026-11-18 sitier): the AKAN shape — tier high, float unconfirmed, extreme null — renders nothing', async () => {
+    const f = stub();
+    const { container } = render(<GgSiExtremeNote symbol="AKAN" testid="t" />);
+    await settle(f);
+    expect(container.innerHTML).toBe('');
+    expect(container.textContent).not.toContain('EXTREME');
+  });
+
+  it('NEGATIVE: an extreme note without a served tier key (older API) → the note prints, no data-si-tier', async () => {
+    stub();
+    render(<GgSiExtremeNote symbol="EOSE" testid="t" />);
+    const el = await screen.findByTestId('t');
+    expect(el.textContent).toBe(EOSE_X.short);
+    expect(el.hasAttribute('data-si-tier')).toBe(false);
   });
 
   it('NEGATIVE: extreme null renders nothing', async () => {
@@ -100,34 +121,40 @@ describe('GgSiExtremeNote', () => {
 
   it('NEGATIVE: a failed fetch renders nothing and does not throw', async () => {
     const f = stub(false);
-    const { container } = render(<GgSiExtremeNote symbol="AKAN" testid="t" />);
+    const { container } = render(<GgSiExtremeNote symbol="CLRO" testid="t" />);
     await settle(f);
     expect(container.innerHTML).toBe('');
   });
 
   it('NEGATIVE: nothing before the read lands (loading is not a zero)', () => {
     stub();
-    const { container } = render(<GgSiExtremeNote symbol="AKAN" testid="t" />);
+    const { container } = render(<GgSiExtremeNote symbol="CLRO" testid="t" />);
     expect(container.innerHTML).toBe('');
   });
 
   it('NEGATIVE: the printed text and hover never carry a 0%', async () => {
     stub();
     render(<>
-      <GgSiExtremeNote symbol="AKAN" testid="a" />
+      <GgSiExtremeNote symbol="CLRO" testid="a" />
       <GgSiExtremeNote symbol="EOSE" testid="b" />
     </>);
+    /* 2026-11-18 sitier: the CLRO pin's "44.0%" tripped the old /\b0(\.0)?%/ (a word boundary sits after the dot);
+     * the house ZERO_PCT form (GajjalaWatchBoard.si_extreme) — a printed zero, never "44.0%" */
+    const ZERO_PCT = /(^|[^\d.])0(\.0+)?%/;
+    expect(ZERO_PCT.test('🩳 SI EXTREME 0.0% float')).toBe(true);
+    expect(ZERO_PCT.test('🩳 SI EXTREME 0% float')).toBe(true);
+    expect(ZERO_PCT.test('🩳 SI EXTREME 44.0% float')).toBe(false);
     for (const id of ['a', 'b']) {
       const el = await screen.findByTestId(id);
-      expect(el.textContent).not.toMatch(/\b0(\.0)?%/);
-      expect(el.getAttribute('title') || '').not.toMatch(/\b0(\.0)?%/);
+      expect(el.textContent).not.toMatch(ZERO_PCT);
+      expect(el.getAttribute('title') || '').not.toMatch(ZERO_PCT);
     }
   });
 
   it('three notes + one card label on one screen cost ONE /short-interest/map GET', async () => {
     const f = stub();
     render(<>
-      <GgSiExtremeNote symbol="AKAN" testid="a" />
+      <GgSiExtremeNote symbol="CLRO" testid="a" />
       <GgSiExtremeNote symbol="EOSE" testid="b" />
       <GgSiExtremeNote symbol="GP" testid="c" />
       <GgShortInterestLabel symbol="GP" testid="lbl" />

@@ -24,7 +24,8 @@ const ENV: string | undefined = (globalThis as { process?: { env?: Record<string
 type Case = {
   name: string;
   doc: Record<string, unknown> | null;
-  block: { symbol?: string; chip: string | null; title: string; rows: { k: string; v: string }[] } | null;
+  block: { symbol?: string; status?: string; tier?: string | null; float_check?: string | null;
+           chip: string | null; title: string; rows: { k: string; v: string }[] } | null;
 };
 
 async function load(): Promise<{ today: string; cases: Case[] }> {
@@ -77,6 +78,10 @@ describe('🩳 served payload → chip + panel, verbatim', () => {
         const chip = screen.getByTestId('si-chip');
         expect(chip.textContent, c.name).toBe(c.block.chip);
         expect(chip.getAttribute('title'), c.name).toBe(c.block.title);
+        /* 🩳 2026-11-18 sitier: the attribute is the SERVED tier key on an ok read, absent otherwise (an older
+         * payload with no key reads null on both sides, so this passes before and after the backend fixture regen). */
+        const want = c.block.status === 'ok' ? (c.block.tier ?? null) : null;
+        expect(chip.getAttribute('data-si-tier'), c.name).toBe(want);
       } else {
         expect(container.querySelector('[data-testid=si-chip]'), c.name).toBeNull();
       }
@@ -86,6 +91,13 @@ describe('🩳 served payload → chip + panel, verbatim', () => {
           k: dt.textContent, v: panel.querySelectorAll('dd')[i]?.textContent,
         }));
         expect(rows, c.name).toEqual(c.block.rows);
+        /* 🩳 2026-11-18 sitier: the served "Tier" / "Float check" rows print verbatim when served */
+        for (const k of ['Tier', 'Float check']) {
+          const served = c.block.rows.find((r) => r.k === k);
+          const shown = rows.find((r) => r.k === k);
+          if (served) expect(shown, `${c.name} ${k}`).toEqual(served);
+          else expect(shown, `${c.name} ${k}`).toBeUndefined();
+        }
       } else {
         expect(panel.textContent, c.name).toContain(SI_NOT_WARMED_TEXT);
       }

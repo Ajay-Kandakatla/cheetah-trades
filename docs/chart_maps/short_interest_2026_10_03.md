@@ -74,6 +74,32 @@ and `rows` verbatim and computes nothing.
   hover and on the ticker page. Definitional, not a tuned filter.
 - The cached `squeeze` label is never served; no colour or threshold on the chip.
 
+### 2026-11-18 (later) — tier words + float check
+
+Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage relative to float."
+Built in `read.py` (`si_tier`); full rule in `docs/gajjala/si_extreme_note_2026_11_18.md`.
+
+| status / basis | chip (2026-11-18 later) |
+|---|---|
+| `ok`, float, confirmed ≥ 20% | `🩳 SI EXTREME 33.6% float · 4.1d · 9/15` |
+| `ok`, float, 10–20% | `🩳 SI High 10.0% float · 2.0d · 9/15` |
+| `ok`, float, ≥ 20% but < 10% of shares outstanding | `🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30` |
+| `ok`, float, 5–10% / under 5% | `🩳 SI Moderate …` / `🩳 SI Low 1.0% float · 4.7d · 9/15` |
+| `ok`, float, 0% | `🩳 SI 0.0% float · …` (no word) |
+| `stale`, float | `🩳 SI 36.4% float · float unconfirmed · 1.0d · 10/30 · stale` (no word; the flag stays) |
+| shares out only / neither count | unchanged: `🩳 SI 30.6% shs out · …` / `🩳 SI 440.3K sh · …` |
+
+- Ladder (served % of float, half-open): Low < `SI_MODERATE_PCT` 5 ≤ Moderate < `SI_ELEV_PCT` 10 ≤ High <
+  `SI_HIGH_PCT` 20 ≤ EXTREME, and EXTREME also needs ≥ `SI_EXTREME_MIN_PCT_SHARES_OUT` 10% of shares
+  outstanding. A common market convention, not from any book. Display only, no colour (the neutral tone holds).
+- The hover adds `Tier: <word> (<its own range> of the float).` (or why no word is given) and, at ≥ 20% of
+  float, `Float check: confirmed — …` / `float unconfirmed — …` / `not possible — …`.
+- The ticker page adds two rows after "% of shares outstanding": **Tier** (the sentence + the full ladder)
+  and **Float check** (only when there is a float to check).
+- Seam print: a % that one-decimal rounding would carry up across a cut prints two decimals (`19.99%`,
+  `9.98%`, `4.99%`), so the figure never reads as the cut it is below.
+- Served keys `tier` / `float_check` (string or null). The FE types no tier word.
+
 ## Freshness — FINRA's calendar, not a cache age
 
 - Settlements: the 15th (or the business day before) and the last business day of each month.

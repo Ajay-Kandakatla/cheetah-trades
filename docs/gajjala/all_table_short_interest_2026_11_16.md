@@ -86,3 +86,12 @@ A data label. Short interest on this app's universe is unmeasured and documented
 6. 🧪 Audited keeps no table; GG5 + 1-minute only — confirm no third page.
 7. Served-row column (built) vs a FE-side join through `useShortInterest`.
 8. The fault sentence under the table when no store is reachable (built) vs a silent blank column.
+
+## 2026-11-18 (later) — the tier word arrives through `si_text`
+
+Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage relative to float."
+The 🩳 column's `si_text` is still the house chip verbatim, so it now carries the served tier word
+(`🩳 SI EXTREME 30.0% float · 2.3d · 9/30`, `🩳 SI High 36.4% float · float unconfirmed · …`). **No new served
+key:** `SI_KEYS` is still `("si_text", "si_title", "si_stale", "si_asof")` (a NEGATIVE pins it), so the gg5 BOARD
+and WRITES goldens do not move. No colour, no sort, no gate. On the phone the `td.gg-all-si` nowrap widens the
+column and the table scrolls. Rule and HIS CALLs: `docs/gajjala/si_extreme_note_2026_11_18.md`.

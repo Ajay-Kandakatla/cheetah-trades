@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSiMap, siChip, siExtreme, SI_NOT_WARMED_TEXT, SI_REQUEST_FAILED_TEXT, type ShortInterestRead } from './shortInterest';
+import { parseSiMap, siChip, siExtreme, siTier, SI_NOT_WARMED_TEXT, SI_REQUEST_FAILED_TEXT, type ShortInterestRead } from './shortInterest';
 
 /* 🩳 Short interest — the FE shapes the served block and prints it verbatim.
  * Ajay 2026-10-03: "can you add this field to all our chart maps scan. also
@@ -98,9 +98,10 @@ describe('parseSiMap', () => {
 /* 🩳 EXTREME note (2026-11-18). Ajay: "When there are extreme cases of short interest make a not for them on reversal
  * squeeze like percentage of short interest on the tickers card and also on watch list". The FE returns the SERVED
  * note verbatim or null — no arithmetic, no threshold. */
+/* 2026-11-18 sitier: re-pinned to the '🩳 SI EXTREME …' order (spec sitier §3.4, fixture eose_v2_float). */
 const EXTREME = {
-  text: '🩳 EXTREME SI 33.6% float · 4.1d · 9/15',
-  short: '🩳 EXTREME SI 33.6% float',
+  text: '🩳 SI EXTREME 33.6% float · 4.1d · 9/15',
+  short: '🩳 SI EXTREME 33.6% float',
   title: '🩳 EXTREME short interest — served hover sentence. A count of open short positions — not a forecast. Not advice.',
   basis: 'si_doc_float',
 };
@@ -165,5 +166,65 @@ describe('siExtreme', () => {
     expect(siExtreme(m.EOSE)).toEqual(EXTREME);
     expect(m.GP.extreme).toBeNull();
     expect(siExtreme(m.GP)).toBeNull();
+  });
+});
+
+/* 🩳 TIER key (2026-11-18, later). Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage
+ * relative to float." siTier hands the SERVED key to data-si-tier verbatim, or null — it computes nothing. The chip
+ * stand-ins are copied from spec sitier §3.4 (AKAN live shape). */
+const AKAN_TIER = {
+  ...EOSE, symbol: 'AKAN', status: 'ok', tier: 'high', float_check: 'unconfirmed', extreme: null,
+  chip: '🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30',
+} as unknown as ShortInterestRead;
+
+describe('siTier', () => {
+  it('returns the served key on an ok read', () => {
+    expect(siTier(AKAN_TIER)).toBe('high');
+    expect(siTier({ ...EOSE, tier: 'extreme' } as ShortInterestRead)).toBe('extreme');
+    expect(siTier({ ...EOSE, tier: 'low' } as ShortInterestRead)).toBe('low');
+  });
+
+  it('NEGATIVE: a stale or no_record block → null even when a key rides along', () => {
+    expect(siTier({ ...AKAN_TIER, status: 'stale' } as ShortInterestRead)).toBeNull();
+    expect(siTier({ ...AKAN_TIER, status: 'no_record', chip: null } as ShortInterestRead)).toBeNull();
+  });
+
+  it('NEGATIVE: null / undefined read → null', () => {
+    expect(siTier(null)).toBeNull();
+    expect(siTier(undefined)).toBeNull();
+  });
+
+  it('NEGATIVE: the key missing (older API) or null → null', () => {
+    expect('tier' in EOSE).toBe(false);
+    expect(siTier(EOSE)).toBeNull();
+    expect(siTier({ ...EOSE, tier: null } as ShortInterestRead)).toBeNull();
+  });
+
+  it('NEGATIVE: a non-string, an empty string, a capitalised word or a key with a space → null', () => {
+    const bad = (x: unknown) => siTier({ ...EOSE, tier: x } as unknown as ShortInterestRead);
+    expect(bad(3)).toBeNull();
+    expect(bad(true)).toBeNull();
+    expect(bad({ k: 'high' })).toBeNull();
+    expect(bad(['high'])).toBeNull();
+    expect(bad('')).toBeNull();
+    expect(bad('Moderate')).toBeNull();
+    expect(bad('high tier')).toBeNull();
+    expect(bad('high-1')).toBeNull();
+  });
+
+  it('parseSiMap passes tier and float_check through untouched (and null stays null)', () => {
+    const m = parseSiMap({ items: { AKAN: AKAN_TIER, SLSN: { ...EOSE, symbol: 'SLSN', tier: null, float_check: null } } });
+    expect(m.AKAN.tier).toBe('high');
+    expect(m.AKAN.float_check).toBe('unconfirmed');
+    expect(m.AKAN.chip).toBe(AKAN_TIER.chip);
+    expect(siTier(m.AKAN)).toBe('high');
+    expect(m.SLSN.tier).toBeNull();
+    expect(m.SLSN.float_check).toBeNull();
+    expect(siTier(m.SLSN)).toBeNull();
+  });
+
+  it('the tier key never changes the chip or the EXTREME note (both stay the served strings)', () => {
+    expect(siChip(AKAN_TIER)).toEqual({ text: AKAN_TIER.chip, title: AKAN_TIER.title, stale: false });
+    expect(siExtreme(AKAN_TIER)).toBeNull();
   });
 });

@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "Yes please and may be add better terminilogy like Moderate with a percentage relative to
+  // float." (his yes to "only call 🩳 EXTREME when it's ≥ 20% of float AND ≥ 10% of all shares"). short_interest/read.py
+  // serves `tier` + `float_check` on every ok read; the FE prints the served chip verbatim. Docs
+  // docs/gajjala/si_extreme_note_2026_11_18.md + docs/chart_maps/short_interest_2026_10_03.md.
+  {
+    id: 'gajjala-si-tier-words-2026-11-18',
+    label: '🩳 Short interest now says how much — you said: “Yes please and may be add better terminilogy like Moderate with a percentage relative to float.” Every 🩳 chip now leads with a word next to the % of the float sold short: Low, Moderate, High or EXTREME (the cut-offs are in ℹ️ Rules → 🩳). EXTREME now also needs enough of ALL shares sold short, so an old, too-small float can no longer call a name EXTREME: AKAN reads High 36.4% of its float on file, marked “float unconfirmed” — only 8.1% of all its shares are short. The 👀 tile’s own Float chip is a separate read and is not checked by this. No word when no float is on file. Display only — nothing sorts, gates or pushes on it. UNMEASURED. Not advice.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-18, verbatim: "For the divergence thing create a separate tab that are potentially diverging with uptrend and
   // volume breakout." His picks: "Fresh cross, gap widening" + "GG's day floor + bar spike". chart_maps/gajjala/diverging_tab.py
   // reads the stored 5-min tiles through the 🧨 engine; rule words built from GC.DIVERGING_* on the page. No record, no push.

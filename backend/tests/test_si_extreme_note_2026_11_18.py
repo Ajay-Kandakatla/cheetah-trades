@@ -57,54 +57,80 @@ def _ratio(si, fl=100_000, so=400_000, **over):
     return _akan(short_interest=si, float_shares=fl, shares_outstanding=so, **over)
 
 
+def _clro(**over):
+    """2026-11-18 sitier: CLRO as the live read served it 2026-11-18 — 44.05% of float AND 14.62% of shares
+    outstanding, so the float is CONFIRMED and the EXTREME note fires (AKAN no longer does)."""
+    d = _akan(_id="CLRO", symbol="CLRO", short_interest=391_224, float_shares=888_130, float_asof="2026-11-10",
+              shares_outstanding=2_675_412)
+    d.update(over)
+    return d
+
+
 def _eose(**over):
     d = copy.deepcopy(CASES["eose_v2_float"]["doc"])
     d.update(over)
     return d
 
 
-# ═════════════════════════════════════════════ the AKAN pin (live probe)
-def test_akan_pin_text_short_basis_and_title():
+# ═════════════════════════════════════════════ the AKAN / CLRO pins (live probe)
+def test_NEGATIVE_akan_unconfirmed_float_gets_no_note():
+    # 2026-11-18 sitier: AKAN's float on file is stale after a dilution — 36.4% of it, but only 8.1% of all
+    # shares. His yes ("≥ 20% of float AND ≥ 10% of all shares") → High, "float unconfirmed", no EXTREME note.
     b = SR.si_block(_akan(), TODAY)
     assert b["status"] == "ok" and b["headline_basis"] == "float"
     assert b["pct_of_float"] == 36.41 and b["pct_of_shares_out"] == 8.1
-    assert b["chip"] == "🩳 SI 36.4% float · 1.0d · 10/30"
+    assert b["tier"] == "high" and b["float_check"] == "unconfirmed"
+    assert b["chip"] == "🩳 SI High 36.4% float · float unconfirmed · 1.0d · 10/30"
+    assert b["extreme"] is None and "EXTREME" not in b["chip"]
+
+
+def test_clro_pin_text_short_basis_and_title():
+    # 2026-11-18 sitier: the positive pin moved from AKAN to CLRO (confirmed float).
+    b = SR.si_block(_clro(), TODAY)
+    assert b["status"] == "ok" and b["headline_basis"] == "float"
+    assert b["pct_of_float"] == 44.05 and b["pct_of_shares_out"] == 14.62
+    assert b["tier"] == "extreme" and b["float_check"] == "confirmed"
+    assert b["chip"] == "🩳 SI EXTREME 44.0% float · 1.0d · 10/30"
     e = b["extreme"]
     assert set(e) == {"text", "short", "title", "basis"}
-    assert e["text"] == "🩳 EXTREME SI 36.4% float · 1.0d · 10/30"
-    assert e["text"] == b["chip"].replace("🩳 SI", "🩳 EXTREME SI", 1)     # one engine
-    assert e["short"] == "🩳 EXTREME SI 36.4% float"
+    assert e["text"] == b["chip"]                                   # one engine: the note IS the chip
+    assert e["short"] == "🩳 SI EXTREME 44.0% float"
     assert e["basis"] == "si_doc_float" == SR.EXTREME_BASIS
     t = e["title"]
     assert t.startswith(
-        "🩳 EXTREME short interest — 36.4% of the float is sold short at the FINRA settlement "
+        "🩳 EXTREME short interest — 44.0% of the float is sold short at the FINRA settlement "
         "2026-10-30 (published ~2026-11-10), at or above 20% of the float — the app's standard "
         "high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules).")
-    for want in ("at or above 20% of the float", "SI_HIGH_PCT", "not one of GG's rules", "531,210",
+    for want in ("at or above 20% of the float", "SI_HIGH_PCT", "not one of GG's rules", "888,130",
                  "too small to call either way", "not a forecast", "Not advice.",
-                 "8.1% of shares outstanding (2.4M)", "1.0 days to cover"):
+                 "14.6% of shares outstanding (2.7M)", "1.0 days to cover",
+                 "at or above the 10% of shares outstanding that confirms the float",
+                 "SI_EXTREME_MIN_PCT_SHARES_OUT"):
         assert want in t, want
     for never in ("band", "did not run"):
         assert never not in t.lower()
 
 
 def test_exactly_at_the_cut_gets_the_note():
-    b = SR.si_block(_ratio(20_000), TODAY)
-    assert b["pct_of_float"] == 20.0 == SIC.SI_HIGH_PCT
-    assert b["extreme"] is not None and b["extreme"]["short"] == "🩳 EXTREME SI 20.0% float"
+    # 2026-11-18 sitier: so=200_000 so the 20.0% of float is confirmed (10.0% of shares outstanding).
+    b = SR.si_block(_ratio(20_000, so=200_000), TODAY)
+    assert b["pct_of_float"] == 20.0 == SIC.SI_HIGH_PCT and b["pct_of_shares_out"] == 10.0
+    assert b["extreme"] is not None and b["extreme"]["short"] == "🩳 SI EXTREME 20.0% float"
 
 
 def test_NEGATIVE_below_the_cut_is_none_and_the_chip_is_unchanged():
     b = SR.si_block(_ratio(19_990), TODAY)
     assert b["pct_of_float"] == 19.99
     assert b["extreme"] is None
-    assert b["chip"] == "🩳 SI 20.0% float · 1.0d · 10/30"      # the chip prints 20.0 — the 2-dp value decides
+    # 2026-11-18 sitier: the word High, and the seam prints 2-dp — never "20.0%" next to no note.
+    assert b["chip"] == "🩳 SI High 19.99% float · 1.0d · 10/30"
     assert "EXTREME" not in b["chip"] and "EXTREME" not in b["title"]
 
 
 def test_the_rounding_seam_follows_the_served_figure():
-    b = SR.si_block(_ratio(19_996), TODAY)
-    assert b["pct_of_float"] == 20.0                           # raw 19.996 → served 20.0
+    # 2026-11-18 sitier: so=200_000 → served 20.0 / 10.0, confirmed.
+    b = SR.si_block(_ratio(19_996, so=200_000), TODAY)
+    assert b["pct_of_float"] == 20.0 and b["pct_of_shares_out"] == 10.0     # raw 19.996 → served 20.0
     assert b["extreme"] is not None
 
 
@@ -115,6 +141,8 @@ def test_NEGATIVE_stale_reads_get_no_note():
     late = SR.si_block(_akan(), date(2026, 11, 30))
     assert late["status"] == "stale" and late["pct_of_float"] == 36.41
     assert late["extreme"] is None and late["chip"].endswith("· stale")
+    # 2026-11-18 sitier: the float check runs on a stale read too — the flag never drops.
+    assert late["float_check"] == "unconfirmed" and "float unconfirmed" in late["chip"]
 
 
 def test_NEGATIVE_no_record_is_none_and_the_key_is_present():
@@ -148,16 +176,17 @@ def test_NEGATIVE_the_clients_dtc_disjunction_is_not_mirrored():
 
 @pytest.mark.parametrize("dtc", [0, 0.0, None, float("nan")])
 def test_NEGATIVE_a_zero_or_missing_dtc_drops_the_segment(dtc):
-    b = SR.si_block(_akan(days_to_cover=dtc), TODAY)
+    b = SR.si_block(_clro(days_to_cover=dtc), TODAY)               # 2026-11-18 sitier: CLRO shape
     e = b["extreme"]
-    assert e["text"] == "🩳 EXTREME SI 36.4% float · 10/30"
+    assert e["text"] == "🩳 SI EXTREME 44.0% float · 10/30"
     assert "0.0d" not in e["text"] and "days to cover" not in e["title"]
-    assert e["short"] == "🩳 EXTREME SI 36.4% float"
+    assert e["short"] == "🩳 SI EXTREME 44.0% float"
     json.dumps(b, allow_nan=False)
 
 
 def test_NEGATIVE_extreme_block_reads_every_optional_with_get():
-    b = SR.si_block(_akan(), TODAY)
+    b = SR.si_block(_clro(), TODAY)                                # 2026-11-18 sitier: CLRO shape
+    assert SR.extreme_block(b) is not None
     for k in ("pct_of_float",):
         bb = dict(b)
         bb.pop(k)
@@ -166,12 +195,12 @@ def test_NEGATIVE_extreme_block_reads_every_optional_with_get():
 
 
 def test_missing_float_source_published_on_and_float_asof_read_na():
-    b = SR.si_block(_akan(), TODAY)
+    b = SR.si_block(_clro(), TODAY)                                # 2026-11-18 sitier: CLRO shape
     for k in ("float_source", "published_on", "float_asof", "settlement_date"):
         b.pop(k, None)
-    e_title = SR.extreme_title(b, 36.41)
-    assert "n/a" in e_title and "531,210" in e_title
-    bb = SR.si_block(_akan(float_source=None, float_asof=None), TODAY)
+    e_title = SR.extreme_title(b, 44.05)
+    assert "n/a" in e_title and "888,130" in e_title
+    bb = SR.si_block(_clro(float_source=None, float_asof=None), TODAY)
     assert bb["extreme"] is not None
 
 
@@ -191,24 +220,27 @@ def _boom(*a, **k):
 
 
 def test_NEGATIVE_a_raising_note_never_costs_the_chip(monkeypatch, caplog):
-    before = SR.si_block(_akan(), TODAY)
+    before = SR.si_block(_clro(), TODAY)                           # 2026-11-18 sitier: CLRO shape
+    assert before["extreme"] is not None
     monkeypatch.setattr(SR, "extreme_title", _boom)
-    b = SR.si_block(_akan(), TODAY)
+    b = SR.si_block(_clro(), TODAY)
     assert b is not None and b["extreme"] is None
     assert b["chip"] == before["chip"] and b["title"] == before["title"] and b["rows"] == before["rows"]
     assert any("extreme note" in r.getMessage() for r in caplog.records)
-    db = FakeDB({SIC.SI_COLL: FakeColl([_akan()], name=SIC.SI_COLL)})
-    m = SR.si_map(["AKAN"], db=db, today=TODAY)
-    assert list(m) == ["AKAN"] and m["AKAN"]["chip"] == before["chip"] and m["AKAN"]["extreme"] is None
+    db = FakeDB({SIC.SI_COLL: FakeColl([_clro()], name=SIC.SI_COLL)})
+    m = SR.si_map(["CLRO"], db=db, today=TODAY)
+    assert list(m) == ["CLRO"] and m["CLRO"]["chip"] == before["chip"] and m["CLRO"]["extreme"] is None
 
 
 # ═════════════════════════════════════════════ the map
 def test_si_map_carries_extreme_and_absent_names_stay_absent():
-    db = FakeDB({SIC.SI_COLL: FakeColl([_akan(), _akan(_id="GP", symbol="GP", short_interest=34_675,
+    # 2026-11-18 sitier: CLRO shape carries the note; GP stays Low 4.1%.
+    db = FakeDB({SIC.SI_COLL: FakeColl([_clro(), _akan(_id="GP", symbol="GP", short_interest=34_675,
                                                       float_shares=854_034)], name=SIC.SI_COLL)})
-    m = SR.si_map(["AKAN", "GP", "NOPE"], db=db, today=TODAY)
-    assert list(m) == ["AKAN", "GP"]
-    assert m["AKAN"]["extreme"]["text"] == "🩳 EXTREME SI 36.4% float · 1.0d · 10/30"
+    m = SR.si_map(["CLRO", "GP", "NOPE"], db=db, today=TODAY)
+    assert list(m) == ["CLRO", "GP"]
+    assert m["CLRO"]["extreme"]["text"] == "🩳 SI EXTREME 44.0% float · 1.0d · 10/30"
+    assert m["GP"]["tier"] == "low" and m["GP"]["chip"].startswith("🩳 SI Low 4.1% float")
     assert m["GP"]["pct_of_float"] == 4.06 and m["GP"]["extreme"] is None
     assert "NOPE" not in m
 
@@ -222,7 +254,8 @@ def test_block_key_order_ends_with_extreme():
 # ═════════════════════════════════════════════ wording
 def _served_strings():
     out = []
-    docs = [c["doc"] for c in CASES.values()] + [_akan(), _ratio(20_000), _akan(days_to_cover=None)]
+    # 2026-11-18 sitier: the three AKAN docs → confirmed shapes (AKAN no longer serves a note).
+    docs = [c["doc"] for c in CASES.values()] + [_clro(), _ratio(20_000, so=200_000), _clro(days_to_cover=None)]
     for d in docs:
         for today in (FIX_TODAY, TODAY):
             e = SR.si_block(d, today)["extreme"]
@@ -261,15 +294,14 @@ def test_rules_pick_is_built_from_the_constant(monkeypatch):
 @pytest.mark.parametrize("name", sorted(CASES))
 def test_chip_text_default_equals_the_fixture_chip(name):
     b = CASES[name]["block"]
-    assert SR.chip_text(b) == b["chip"]
-    assert SR.chip_text(b, tag="") == b["chip"]
+    assert SR.chip_text(b) == b["chip"]                         # 2026-11-18 sitier: the tag= kwarg is gone
 
 
 @pytest.mark.parametrize("name", sorted(CASES))
 def test_every_fixture_extreme_leaf_is_what_extreme_block_serves(name):
     b = CASES[name]["block"]
     assert SR.extreme_block(b) == b["extreme"]
-    want = {"eose_v2_float", "dtc_missing"}
+    want = {"eose_v2_float", "dtc_missing", "clro_shape_extreme"}     # 2026-11-18 sitier: + CLRO shape
     assert (b["extreme"] is not None) == (name in want)
 
 
@@ -315,6 +347,10 @@ def test_SOURCE_GUARD_no_numeric_literal_in_the_extreme_slice():
     ("EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT", "EXTREME_RULE_NOTE % 20"),
     ('"at or above %g%% of the float', '"at or above 20% of the float'),
     ("b[\"days_to_cover\"] > 0", "b[\"days_to_cover\"] > 0.5"),
+    # 2026-11-18 sitier: the tier slice sits inside the guarded slice
+    ("< SIC.SI_MODERATE_PCT", "< 5"),
+    (">= SIC.SI_EXTREME_MIN_PCT_SHARES_OUT", ">= 10"),
+    ('"under %g%%"', '"under 5%"'),
 ])
 def test_NEGATIVE_the_source_guard_catches_a_typed_number(mutant):
     old, new = mutant
@@ -329,4 +365,8 @@ def test_SOURCE_GUARD_the_note_is_not_read_by_any_gate_push_or_sort():
         p = BACKEND / rel
         files = [p] if p.is_file() else (list(p.rglob("*.py")) if p.exists() else [])
         for f in files:
-            assert "extreme_block" not in f.read_text(encoding="utf-8", errors="ignore"), f
+            txt = f.read_text(encoding="utf-8", errors="ignore")
+            assert "extreme_block" not in txt, f
+            # 2026-11-18 sitier: nor the tier words / float check
+            for name in ("si_tier", "tier_of", "float_check", "FLOAT_UNCONFIRMED"):
+                assert name not in txt, (f, name)

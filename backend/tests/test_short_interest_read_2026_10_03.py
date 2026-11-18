@@ -253,15 +253,20 @@ def test_every_fixture_case_is_exactly_what_si_block_serves(name):
 
 def test_the_fixture_chips_match_the_spec_by_hand():
     chip = {n: c["block"]["chip"] for n, c in CASES.items()}
-    assert chip["eose_v2_float"] == "🩳 SI 33.6% float · 4.1d · 9/15"
-    assert chip["bynd_v2_float"] == "🩳 SI 1.0% float · 4.7d · 9/15"
+    # 2026-11-18 sitier: float-basis ok chips lead with the tier word; three new cases.
+    assert chip["eose_v2_float"] == "🩳 SI EXTREME 33.6% float · 4.1d · 9/15"
+    assert chip["bynd_v2_float"] == "🩳 SI Low 1.0% float · 4.7d · 9/15"
     assert chip["fcg_v2_no_denoms"] == "🩳 SI 440.3K sh · 1.0d · 9/15"
     assert chip["eose_v1_legacy_stale"].endswith("· 8/31 · stale")
     assert chip["no_record_miss"] is None
-    assert chip["dtc_missing"] == "🩳 SI 33.6% float · 9/15"
+    assert chip["dtc_missing"] == "🩳 SI EXTREME 33.6% float · 9/15"
+    assert chip["akan_shape_unconfirmed"] == "🩳 SI High 36.4% float · float unconfirmed · 1.0d · 9/15"
+    assert chip["clro_shape_extreme"] == "🩳 SI EXTREME 44.0% float · 1.0d · 9/15"
+    assert chip["float_unchecked"] == "🩳 SI High 36.0% float · 1.0d · 9/15"
     assert set(CASES) == {"eose_v2_float", "bynd_v2_float", "fcg_v2_no_denoms",
                           "uhal_v2_conflict", "eose_v1_legacy_stale", "no_record_miss",
-                          "dtc_missing"}
+                          "dtc_missing", "akan_shape_unconfirmed", "clro_shape_extreme",
+                          "float_unchecked"}
     b = CASES["bynd_v2_float"]["block"]
     assert b["pct_of_float"] == 1.02 and b["pct_of_shares_out"] == 0.99   # not 29.6
     e = CASES["eose_v2_float"]["block"]
@@ -330,9 +335,10 @@ def test_NEGATIVE_bad_float_AND_shares_fall_back_to_the_share_count(bad):
 def test_NEGATIVE_a_zero_days_to_cover_never_prints_0_0d():
     b = SR.si_block(_eose(days_to_cover=0.0), FIX_TODAY)
     assert b["days_to_cover"] == 0.0
-    assert "0.0d" not in b["chip"] and b["chip"] == "🩳 SI 33.6% float · 9/15"
+    # 2026-11-18 sitier: the EXTREME word leads (33.59% of float, 33.18% of shares outstanding — confirmed).
+    assert "0.0d" not in b["chip"] and b["chip"] == "🩳 SI EXTREME 33.6% float · 9/15"
     tiny = SR.si_block(_eose(days_to_cover=0.03), FIX_TODAY)
-    assert tiny["chip"] == "🩳 SI 33.6% float · <0.1d · 9/15"
+    assert tiny["chip"] == "🩳 SI EXTREME 33.6% float · <0.1d · 9/15"
 
 
 def test_NEGATIVE_nan_days_to_cover_is_none_and_drops_the_segment():
@@ -502,7 +508,8 @@ def test_THREE_calls_on_a_new_settlement_write_v2_docs(monkeypatch, sleeps):
     assert d1["shares_outstanding"] is None and d1["pct_of_shares"] is None
     # the served read of a freshly written doc
     b = SR.si_block(d0, date(2026, 9, 28))
-    assert b["chip"] == "🩳 SI 10.0% float · 2.0d · 9/15" and b["status"] == "ok"
+    # 2026-11-18 sitier: 10.0% of float reads High.
+    assert b["chip"] == "🩳 SI High 10.0% float · 2.0d · 9/15" and b["status"] == "ok"
 
 
 @pytest.mark.parametrize("label,fail,ref_fail,bulk_latest", [
