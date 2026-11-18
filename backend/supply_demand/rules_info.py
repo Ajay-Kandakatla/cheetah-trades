@@ -1296,11 +1296,15 @@ def _gg_one_minute_clause() -> str:
     chart_maps.gajjala.variant GG1 (its frames' minutes) and GC.GG1M_RECORD_FROM, never typed: " " + the clause, or ""
     when the module cannot load (the panel never breaks on it). 2026-10-29 (BUILD_SPEC29 critic F2, words only — Ajay
     "Only give me Gajjalas chart notifications from both tabs,"): the push half follows V.push_mode(GG1) at call time,
-    the live date V.LIVE_SINCE_1M — never typed here."""
+    the live date V.LIVE_SINCE_1M — never typed here. ⏹ 2026-11-18 (Ajay "This is good info stop 1 min tab it was a
+    good experiment"): while the page is retired (`not V.enabled(GG1)`) the clause is V.word("rules_clause", GG1) — the
+    retired sentence from the ONE words engine."""
     try:
         from chart_maps.gajjala import constants as GC
         from chart_maps.gajjala import variant as V
         v = V.GG1
+        if not V.enabled(v):
+            return " " + V.word("rules_clause", v)
         p, s = V.frame_minutes(v.primary, v), V.frame_minutes(v.slow, v)
         live = V.push_mode(v) == "live"
         since = V.LIVE_SINCE_1M if live else None

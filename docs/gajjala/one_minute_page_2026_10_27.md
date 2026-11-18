@@ -1,5 +1,17 @@
 # 🚩 Gajjala's 1-minute page (2026-10-27)
 
+## 2026-11-18 — RETIRED by his call (reversible; history kept)
+
+Ajay, 2026-11-18, about 00:10 ET: "This is good info stop 1 min tab it was a good experiment" — then, about 00:20 ET:
+"But keep the one min chart in the watch list I still want them".
+
+`GAJJALA_1M_ENABLED = False` (the kill switch below, the ONE switch — no second one; `GAJJALA_1M_PUSH_MODE` stays
+"live"). No spawn, no pass, no Massive minute fetch, no A+ or 🧠 push, no loop state write; the tab is hidden from the
+strip but `?tab=gajjala_1m` still opens this page on its 🏁 Track record (2026-10-27 to 2026-11-17), with retired words.
+The 👀 Watch keeps its own 1-minute charts; a card's ⤢ 1-minute view reads the Watch's stored tile. Everything below is
+how the page RAN 2026-10-27 to 2026-11-17 and how it runs again if the word flips back. Full write-up, what stays, how
+to turn it back on, and the HIS CALLs: `docs/gajjala/retire_1m_page_2026_11_18.md`. UNMEASURED.
+
 Spec: BUILD_SPEC27. Tab `gajjala_1m` on Chart Maps, right after 🚩 Gajjala's. **UNMEASURED.** Nothing has measured a
 1-minute read. The 2026-10-14 study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md). This page makes no
 edge claim, and its 🏁 Track record is operational accounting, not a backtest.

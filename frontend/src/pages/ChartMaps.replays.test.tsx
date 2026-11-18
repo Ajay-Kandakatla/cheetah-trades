@@ -19,7 +19,7 @@ vi.mock('../components/LukBoard', () => ({ default: () => <div data-testid="luk-
 vi.mock('../components/LongTermBoard', () => ({ default: () => <div data-testid="lt-stub" /> }));
 
 import ChartMaps from './ChartMaps';
-import { CM_TABS, DEFAULT_TAB } from '../lib/chartMaps';
+import { CM_TABS, DEFAULT_TAB, isRetiredTab } from '../lib/chartMaps';
 
 const BOARD = { tab: 'zones', count: 0, matched: 0, scanned: 100, tiles: [], disclaimer: 'Study board.' };
 beforeEach(() => {
@@ -49,7 +49,7 @@ describe('🎬 the tab is the primary owner\'s', () => {
   it('shown for is_primary_admin; ?tab=replays renders the board', async () => {
     owner();
     const { container, queryByTestId } = await mount('replays');
-    expect(tabKeys(container)).toEqual(CM_TABS);
+    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => !isRetiredTab(t)));   // WIDENED 2026-11-18: ⏹ retired tabs leave the strip
     expect(selected(container)).toBe('replays');
     expect(queryByTestId('rp-stub')).not.toBeNull();
   });
@@ -63,7 +63,7 @@ describe('🎬 the tab is the primary owner\'s', () => {
     coOwner();
     const { container, queryByTestId } = await mount('replays');
     expect(tabKeys(container)).not.toContain('replays');
-    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => t !== 'gajjala_watch' && t !== 'replays'));
+    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => t !== 'gajjala_watch' && t !== 'replays' && !isRetiredTab(t)));   // WIDENED 2026-11-18
     expect(selected(container)).toBe(DEFAULT_TAB);
     expect(queryByTestId('rp-stub')).toBeNull();
   });

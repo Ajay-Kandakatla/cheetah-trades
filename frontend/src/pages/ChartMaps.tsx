@@ -43,7 +43,7 @@ import {
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab, type CmTile,
-  splitBlurb, FALLEN_DEPTH_PARAM,
+  splitBlurb, FALLEN_DEPTH_PARAM, isRetiredTab,
 } from '../lib/chartMaps';
 // The room floor's TWO states come from the one shared list (2026-09-17) — the
 // same array the Back in Demand panel renders. See lib/bounceRoom.ts.
@@ -221,7 +221,9 @@ export function ChartMaps() {
   const canWatch = meLoading || !!me?.is_primary_admin;
   // 🎬 Replays (2026-11-17) — the second owner-only tab, the same gate: offered to the primary owner (and while
   // /auth/me loads), hidden from a loaded non-owner, whose ?tab=replays lands on the first tab (replays spec §3.3).
-  const tabs = canWatch ? tabsByFeature : tabsByFeature.filter((t) => t !== 'gajjala_watch' && t !== 'replays');
+  // ⏹ RETIRED 2026-11-18 (Ajay: "This is good info stop 1 min tab it was a good experiment") — a retired tab leaves the
+  // strip (isRetiredTab) but rawTab / tab below still route its ?tab= deep link to its 🏁 history page.
+  const tabs = (canWatch ? tabsByFeature : tabsByFeature.filter((t) => t !== 'gajjala_watch' && t !== 'replays')).filter((t) => !isRetiredTab(t));
   const rawTab = parseTab(params.get('tab'));
   const tab = (rawTab === 'catalysts' && !canCatalysts) || (rawTab === 'gajjala_watch' && !canWatch)
     || (rawTab === 'replays' && !canWatch)
@@ -1726,7 +1728,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            KEY is load-bearing (BUILD_SPEC27 §6): without it React REUSES the
            🚩 Gajjala's board above (same component type, same slot) — its
            state kept and no on-open POST for this page. Must sit BEFORE the
-           SupportLevels fallback below. */
+           SupportLevels fallback below.
+           RETIRED 2026-11-18 — hidden from the strip (isRetiredTab), still mounted on ?tab= for its 🏁 history; the server
+           words say retired. */
         <GajjalaBoard key="gajjala_1m" variant="gajjala_1m" />
       ) : tab === 'gajjala_watch' ? (
         /* 👀 Gajjala's Watch (Ajay 2026-11-15: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be

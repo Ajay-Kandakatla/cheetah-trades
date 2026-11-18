@@ -474,7 +474,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // digits = variant.py GG1's frames. UNMEASURED.
   gajjala_1m: {
     label: "Gajjala's 1-min",
-    blurb: '\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here rings your phone live since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); what it recorded 2026-10-27 to 10-28 was never sent. Its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.',
+    blurb: '\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first). RETIRED 2026-11-18 by your call: "This is good info stop 1 min tab it was a good experiment" — its 1-minute pass no longer runs and nothing from it rings; this page keeps its \u{1F3C1} Track record (2026-10-27 to 2026-11-17). Its alerts rang your phone 2026-10-29 to 2026-11-17; what it recorded 2026-10-27 to 10-28 was never sent. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." GG trades these setups on 5-minute bars — this page was a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.',
   },
   // 🥇 Luk's (Ajay 2026-11-01, luk spec §3.13). Every word and number on the
   // BOARD is served by backend chart_maps/luk/tab.py; this blurb carries his ask
@@ -3479,3 +3479,8 @@ export function splitBlurb(blurb: string): { head: string; rest: string } {
   }
   return { head: text, rest: '' };
 }
+
+/** ⏹ Retired tabs (2026-11-18): hidden from the strip, still routable by `?tab=` so their history pages stay reachable.
+ *  Ajay 2026-11-18: "This is good info stop 1 min tab it was a good experiment". Served words say the rest. */
+export const RETIRED_CM_TABS: ReadonlyArray<CmTab> = ['gajjala_1m'];
+export function isRetiredTab(t: CmTab): boolean { return RETIRED_CM_TABS.includes(t); }

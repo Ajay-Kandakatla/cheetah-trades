@@ -2755,21 +2755,25 @@ describe('🚩 Gajjala 1-minute tab registry (2026-10-27)', () => {
     expect(GAJJALA_TABS).toEqual(['gajjala', 'gajjala_audited', 'gajjala_1m']);  // WIDENED 2026-11-01 — 🧪 gajjala_audited joins
   });
 
-  it('TAB_META: the label and the blurb as BUILD_SPEC27 §3.8 writes them', () => {
+  it('TAB_META: the label and the blurb as BUILD_SPEC27 §3.8 writes them (re-pinned 2026-11-18: RETIRED)', () => {
     const m = TAB_META.gajjala_1m;
     expect(m.label).toBe("Gajjala's 1-min");
-    expect(m.blurb).toBe('\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first), about once a minute. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." Every alert here rings your phone live since 2026-10-29 (your call: "Only give me Gajjalas chart notifications from both tabs,"); what it recorded 2026-10-27 to 10-28 was never sent. Its \u{1F3C1} Track record starts 2026-10-27. GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.');
-    // WIDENED 2026-10-29 (BUILD_SPEC29 D2/D6): live since 2026-10-29 by his call — the blurb drops the word shadow
+    // RE-PINNED 2026-11-18 (retire-1m spec §3.10) — Ajay: "This is good info stop 1 min tab it was a good experiment".
+    // The blurb says RETIRED and past tense; it drops "rings your phone live since 2026-10-29" and "about once a minute".
+    expect(m.blurb).toBe('\u{1F6A9} Gajjala’s five setups — the same rules, over the same scanner list — read on CLOSED 1-minute candles (the Fade on 5-minute first). RETIRED 2026-11-18 by your call: "This is good info stop 1 min tab it was a good experiment" — its 1-minute pass no longer runs and nothing from it rings; this page keeps its \u{1F3C1} Track record (2026-10-27 to 2026-11-17). Its alerts rang your phone 2026-10-29 to 2026-11-17; what it recorded 2026-10-27 to 10-28 was never sent. Ajay 2026-10-27: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." GG trades these setups on 5-minute bars — this page was a Cheetah variant. UNMEASURED — nothing here trades or enters a lane. Not advice.');
+    // WIDENED 2026-10-29 (BUILD_SPEC29 D2/D6): the blurb never says the word shadow
     // (the contract: shadow iff GAJJALA_1M_PUSH_MODE is "shadow") and says what the shadow days were.
-    for (const w of [HIS_1, 'Only give me Gajjalas chart notifications from both tabs,', 'live since 2026-10-29',
+    for (const w of [HIS_1, 'RETIRED 2026-11-18', 'This is good info stop 1 min tab it was a good experiment',
       '2026-10-27 to 10-28 was never sent', 'Cheetah variant', 'UNMEASURED', 'Not advice.']) expect(m.blurb).toContain(w);
     expect(m.blurb).not.toMatch(/\bshadow\b/);
+    // NEGATIVE (2026-11-18): no live-ring promise and no cadence word on a retired page
+    expect(m.blurb).not.toMatch(/rings your phone live since|about once a minute/);
   });
 
   it('NEGATIVE: the blurb never says the b-word / "fake", never promises a ring, never claims an edge', () => {
     const b = TAB_META.gajjala_1m.blurb;
     expect(b).not.toMatch(new RegExp(['b' + 'ounce', 'fake'].join('|'), 'i'));
-    // WIDENED 2026-10-29: it rings live now ("rings your phone live since 2026-10-29") — the guard keeps the rest.
+    // WIDENED 2026-10-29 / RE-PINNED 2026-11-18: retired — the guard keeps the rest.
     expect(b).not.toMatch(/phone rings|edge|win rate/i);
     expect(b).not.toMatch(/until you say so|recorded in shadow/i);
     // NEGATIVE: the label is its own, never 🚩 Gajjala's

@@ -321,7 +321,8 @@ PROMO_NAMES_MAX = 25                     # Cheetah default (MINE, not GG — HIS
 # BUILD_SPEC27 §3.2. The variant (chart_maps/gajjala/variant.py GG1) runs GG's SAME rules on 1-minute bars; every number
 # below is MINE (a Cheetah transport / page default) or derived — NO GG number is copied or changed here, and none of
 # his K-numbers moves. UNMEASURED: nothing has measured a 1-minute read.
-GAJJALA_1M_ENABLED = True                # MINE — kill switch; env GAJJALA_1M_ENABLED=0 also stops it (read by run.main + run_1m)
+GAJJALA_1M_ENABLED = False               # Ajay 2026-11-18 ~00:10 ET ("This is good info stop 1 min tab it was a good experiment") — the 1-minute PAGE retired: no spawn, no pass, no fetch, no push, no write; its 🏁 record stays readable; True 2026-10-27 … 2026-11-17. Flip back = this one word (env GAJJALA_1M_ENABLED=0 also stops it; read through variant.enabled). The 👀 Watch keeps its 1-minute charts ("But keep the one min chart in the watch list I still want them") — its bars never ran through this pass; the ⤢ card frame reads the Watch's stored 1m tile.
+GAJJALA_1M_RETIRED_ON = "2026-11-18"    # Ajay 2026-11-18 (the words above) — served in the retired sentences only; no gate reads it
 GAJJALA_1M_PUSH_MODE = "live"            # Ajay 2026-10-29 ("Only give me Gajjalas chart notifications from both tabs, / I am missing out the ones in noise." — HIS CALL #1 of the 1-minute page answered); "shadow" 2026-10-27…28 (recorded, never sent)
 GG1M_TAB_LABEL = "Gajjala's 1-min"       # MINE — HIS CALL #10
 GG1M_CADENCE_SEC = 60                    # TRANSPORT — one iteration per closed 1-minute bar

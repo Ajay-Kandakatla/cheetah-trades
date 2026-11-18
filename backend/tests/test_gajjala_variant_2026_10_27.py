@@ -29,6 +29,16 @@ from tests.test_gajjala_potential import Rec, bf_armed, seed
 from tests.test_gajjala_run import NOW, PRIOR_1M, S, TODAY_1M, at
 from tests.test_gajjala_store import FakeColl, fake_store
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 OK_SEND = {"sent": 1, "failed": 0, "total_targets": 1}
 
 
@@ -116,7 +126,12 @@ def test_numbers_are_read_at_call_time(monkeypatch):
 
 def test_the_mine_constants():
     # WIDENED 2026-10-29 — HIS CALL #1 answered (Ajay: "Only give me Gajjalas chart notifications from both tabs"): live
-    assert GC.GAJJALA_1M_ENABLED is True and GC.GAJJALA_1M_PUSH_MODE == "live" and V.push_mode(V.GG1) == "live"
+    # RE-PINNED 2026-11-18 — the page retired (Ajay: "This is good info stop 1 min tab it was a good experiment"): the
+    # switch SHIPS False (read off the source — the module's ON fixture patches the attribute); the mode stays "live"
+    import re as _re
+    from pathlib import Path as _P
+    shipped = _re.search(r"^GAJJALA_1M_ENABLED = (\w+)", _P(GC.__file__).read_text(), _re.M).group(1)
+    assert shipped == "False" and GC.GAJJALA_1M_PUSH_MODE == "live" and V.push_mode(V.GG1) == "live"
     assert (GC.GG1M_CADENCE_SEC, GC.GG1M_MAX_NAMES, GC.GG1M_MINUTE_BUDGET_SEC, GC.GG1M_SLOT_MARGIN_SEC) == (60, 60, 35, 20)
     assert (GC.GG1M_LEASE_SEC, GC.GG1M_LEASE_MIN_GAP_SEC) == (55, 0)
     assert GC.GG1M_STALE_AFTER_SEC == max(300, 3 * GC.GG1M_CADENCE_SEC) == 300

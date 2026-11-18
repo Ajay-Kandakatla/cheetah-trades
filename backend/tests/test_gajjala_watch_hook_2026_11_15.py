@@ -115,11 +115,22 @@ def test_NEGATIVE_card_frames_imports_only_the_watch_readers_never_its_switch_or
                    and (n.module or "").startswith("chart_maps.gajjala_watch") for a in n.names}
                   | {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
                      if a.name.startswith("chart_maps.gajjala_watch")})
-    assert mods == ["chart_maps.gajjala_watch.build", "chart_maps.gajjala_watch.payload"]
+    # ⏹ 2026-11-18 (spec ret1m2 §3.13, watch WP): the 🚩 1-minute page retired by his word ("But keep the one min
+    # chart in the watch list I still want them") — the card's 1m frame falls back to the 👀 Watch's stored 1m tile,
+    # read through gajjala_watch.colls (WCOLLS) with ONE find_one. Re-pinned from [build, payload]; colls joins as a
+    # READER only (pinned below: one `WCOLLS.colls()` call, nothing else off it). constants / loop / switch stay banned.
+    assert mods == ["chart_maps.gajjala_watch.build", "chart_maps.gajjala_watch.colls",
+                    "chart_maps.gajjala_watch.payload"]
     src = (GG_DIR / "card_frames.py").read_text(encoding="utf-8")
-    for banned in ("gajjala_watch import colls", "gajjala_watch import constants", "gajjala_watch import loop",
-                   "WCO.", "_popen", "spawn"):
+    for banned in ("gajjala_watch import constants", "gajjala_watch import loop", "WCO.", "_popen", "spawn"):
         assert banned not in src
+    wcolls = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+              and isinstance(n.value, ast.Name) and n.value.id == "WCOLLS"]
+    assert [n.attr for n in wcolls] == ["colls"]
+    finds = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr in ("find_one", "find", "insert_one", "insert_many", "update_one", "update_many",
+                                 "replace_one", "delete_one", "delete_many", "bulk_write")]
+    assert [n.func.attr for n in finds] == ["find_one"]
 
 
 def _main_fn(tree):

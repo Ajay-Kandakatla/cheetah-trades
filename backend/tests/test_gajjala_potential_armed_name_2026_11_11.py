@@ -27,6 +27,17 @@ from tests.test_gajjala_store import fake_store
 from tests.test_gajjala_variant_2026_10_27 import frame_1m, gg1_store
 
 
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
+
+
 @pytest.fixture(autouse=True)
 def _no_override(monkeypatch):
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)

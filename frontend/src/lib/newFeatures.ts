@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18 ~00:10 ET, verbatim: "This is good info stop 1 min tab it was a good experiment"; ~00:20 ET: "But keep the
+  // one min chart in the watch list I still want them". The 🚩 1-minute page (GG1) retired by its ONE switch
+  // (gajjala/constants.GAJJALA_1M_ENABLED = False, read through variant.enabled): no spawn, pass, fetch, push or write; the
+  // tab leaves the strip (chartMaps.RETIRED_CM_TABS) but ?tab=gajjala_1m still opens its 🏁. The 👀 Watch keeps its own
+  // 1-minute charts; a card's ⤢ 1-minute view reads the Watch's tile for names on it. UNMEASURED.
+  // Doc docs/gajjala/retire_1m_page_2026_11_18.md.
+  {
+    id: 'chart-maps-gajjala-1m-retired-2026-11-18',
+    label: '⏹ 1-minute page retired — its record stays. You said: “This is good info stop 1 min tab it was a good experiment” and “But keep the one min chart in the watch list I still want them”. The 🚩 Gajjala’s 1-min tab is off: its 1-minute pass no longer runs, nothing from it rings your phone, and it left the tab strip. Its 🏁 Track record (2026-10-27 to 2026-11-17) stays readable here. The 👀 Gajjala’s Watch keeps its 1-minute charts, and a card’s ⤢ 1-minute view now reads the Watch’s chart for the names on it. UNMEASURED. Not advice.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala_1m&sub=track_record',
+  },
   // Ajay 2026-11-17, verbatim: "Can you store the videos in to the app please" (and 2026-11-16: "I only wanna see ones from 4 AM to 8 pm please").
   // 🎬 Replays tab (owner only): the nightly replay videos served read-only from the research folder (chart_maps/replays/),
   // grouped by the server; only full 4 AM–8 PM ET reels are listed (constants.FULL_DAY_WINDOW). UNMEASURED. Docs docs/chart_maps/replays_tab_2026_11_17.md.

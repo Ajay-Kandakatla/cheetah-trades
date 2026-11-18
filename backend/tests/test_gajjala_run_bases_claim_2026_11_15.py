@@ -25,6 +25,17 @@ from tests.test_gajjala_run import S, make_deps
 from tests.test_gajjala_run_bases_2026_11_15 import THREE, frame_of
 from tests.test_gajjala_store import fake_store
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
+
 # THREE from 09:35: leg 09:50–09:55 · base 1 10:00–10:25 · break 10:30 · base 2 10:40–11:05 · break 11:10 ·
 # base 3 forming 11:20–11:45
 BREAK_2 = stamp(11, 10)

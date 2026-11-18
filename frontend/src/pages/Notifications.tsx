@@ -208,16 +208,18 @@ export const CATEGORIES: CategoryDef[] = [
      record for it from today..". Shadow 2026-10-27 to 10-28 (recorded, never sent); LIVE since 2026-10-29 by his call
      (BUILD_SPEC29 D2 — backend constants.GAJJALA_1M_PUSH_MODE "live"): "Only give me Gajjalas chart notifications from
      both tabs," / "I am missing out the ones in noise." False in push/subs.default_prefs (everyone else starts off),
-     in OWNER_KEEP_SET (on for his devices). UNMEASURED. */
+     in OWNER_KEEP_SET (on for his devices). RETIRED 2026-11-18 (Ajay: "This is good info stop 1 min tab it was a good
+     experiment") — the page's pass is off (constants.GAJJALA_1M_ENABLED); both rows stay, past tense, for the history.
+     UNMEASURED. */
   { key: 'gajjala_1m_setup', label: 'Gajjala 1-min A+', emoji: '🚩', group: 'trading',
-    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-10-29, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. Mute it here. '
+    detail: 'RETIRED 2026-11-18 — your call: "This is good info stop 1 min tab it was a good experiment". Nothing new fires from the 1-minute page (its pass is off — constants.GAJJALA_1M_ENABLED); this switch stays for the history and rings nothing. It was ON FOR YOUR PHONE — LIVE SINCE 2026-10-29 to 2026-11-17, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. '
       + 'The page itself is your ask: "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min candles please." From 2026-10-27 to 10-28 it ran in shadow — those A+ were recorded on /alerts and in its \u{1F3C1} Track record, never sent, and stay listed that way. '
-      + 'WHAT FIRES: an A+ entry on \u{1F6A9} Gajjala’s 1-min page — his five setups, the same rules, read on CLOSED 1-minute candles (the Fade on 5-minute first) over the same scanner list as \u{1F6A9} Gajjala’s. Every A+ is its own push, listed on /alerts and in that page’s \u{1F3C1} Track record (from 2026-10-27). '
-      + 'GG trades these setups on 5-minute bars — this page is a Cheetah variant. UNMEASURED. Not a recommendation.' },
+      + 'WHAT FIRED: an A+ entry on \u{1F6A9} Gajjala’s 1-min page — his five setups, the same rules, read on CLOSED 1-minute candles (the Fade on 5-minute first) over the same scanner list as \u{1F6A9} Gajjala’s. Every A+ was its own push, listed on /alerts and in that page’s \u{1F3C1} Track record (from 2026-10-27). '
+      + 'GG trades these setups on 5-minute bars — this page was a Cheetah variant. UNMEASURED. Not a recommendation.' },
   { key: 'gajjala_1m_potential', label: 'Gajjala 1-min potential', emoji: '\u{1F9E0}', group: 'trading',
-    detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-10-29, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. Mute it here. '
+    detail: 'RETIRED 2026-11-18 — your call: "This is good info stop 1 min tab it was a good experiment". Nothing new fires from the 1-minute page (its pass is off — constants.GAJJALA_1M_ENABLED); this switch stays for the history and rings nothing. It was ON FOR YOUR PHONE — LIVE SINCE 2026-10-29 to 2026-11-17, your call: "Only give me Gajjalas chart notifications from both tabs," and "I am missing out the ones in noise."; everyone else starts off. '
       + 'You asked for the page and its record: "do everything and also add the track record for it from today..". From 2026-10-27 to 10-28 it ran in shadow — those potentials were recorded, never sent, and stay listed that way. '
-      + 'WHAT FIRES: the first time a listed name is a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session, each its own push, listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27). '
+      + 'WHAT FIRED: the first time a listed name was a \u{1F9E0} potential in one of his five setups on \u{1F6A9} Gajjala’s 1-min page (CLOSED 1-minute candles), once per name, setup and session, each its own push, listed on /alerts and counted in that page’s \u{1F3C1} Track record (from 2026-10-27). '
       + 'UNMEASURED — a potential, not an entry. Not a recommendation.' },
   /* 🥇 Luk's A+ (2026-11-01, luk-live spec §3.7). LIVE since 2026-11-01 by his call — Ajay 2026-11-01: "Lets make it
      live. also alerts too." (backend chart_maps/luk/constants.LUK_PUSH_MODE "live"). False in push/subs.default_prefs

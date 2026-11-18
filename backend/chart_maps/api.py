@@ -733,8 +733,12 @@ async def chart_maps_gajjala_1m(
     def _run():
         lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
         sub_s, span_s = (sub if isinstance(sub, str) else ""), (span if isinstance(span, str) else "")
+        focus_s = focus if isinstance(focus, str) else ""
+        # ⏹ 2026-11-18 [C3] — the retired page's first landing (no sub, no focus) opens on its 🏁: the ONE helper
+        # tab.default_sub (resolve_sub reads it too), so that GET carries the same today read ?sub=track_record would
+        eff = GT.default_sub(sub_s, focus_s, V.GG1) or sub_s
         today = None
-        if sub_s.strip().lower() == GC.LEDGER_SUB:                   # 🏁 only — every other sub stays Mongo-only
+        if eff.strip().lower() == GC.LEDGER_SUB:                     # 🏁 only — every other sub stays Mongo-only
             try:
                 from .gajjala import ledger as LG
                 today = LG.today_read(None, span=span_s, store=ST.for_variant(V.GG1))

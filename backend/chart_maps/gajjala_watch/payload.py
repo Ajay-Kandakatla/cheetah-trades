@@ -448,6 +448,15 @@ def _auto_mod():
     return importlib.import_module(AUTO_MODULE)
 
 
+def _active_sources() -> tuple:
+    """The engine's ACTIVE source tags (`auto.sources()` — 2026-11-18: the retired 1-minute page drops out while its
+    switch is off); an engine without it (a test stub) → the registry C.AUTO_SOURCES."""
+    try:
+        return tuple(_auto_mod().sources())
+    except Exception:                                  # noqa: BLE001 — no engine / a stub without sources()
+        return tuple(C.AUTO_SOURCES)
+
+
 def auto_hint() -> str:
     gg5, _gg1, gga = C.AUTO_SOURCES                    # == (V.GG5.key, V.GG1.key, V.GGA.key) — WP-A's test pins it
     words = C.AUTO_SOURCE_WORDS
@@ -457,7 +466,7 @@ def auto_hint() -> str:
     except Exception:                                  # no engine → the fail-closed word
         mode = C.AUTO_PUSH_MODES[0]
     push_word = AUTO_PUSH_WORDS.get(mode, AUTO_PUSH_WORDS[C.AUTO_PUSH_MODES[0]]).format(push_frames=frames)
-    return AUTO_HINT_TEXT.format(boards=_and([words.get(k) for k in C.AUTO_SOURCES]),
+    return AUTO_HINT_TEXT.format(boards=_and([words.get(k) for k in _active_sources()]),
                                  floor=int(C.AUTO_MIN_VOLUME), cap=C.AUTO_MAX_SYMBOLS,
                                  gga=words.get(gga), gg5=words.get(gg5),
                                  push_word=push_word, aplus=APLUS_TEXT)
@@ -662,10 +671,11 @@ APLUS_READ_FIELDS = {"symbol": 1, "setups": 1, "updated_at": 1}   # updated_at: 
 
 def _aplus_stores() -> dict:
     """{source key: its real store} — GG5 → store.default(), GG1 / 🧪 → store.for_variant (🧪 borrows GG5's reads and
-    owns its overlay). Tests replace this function."""
+    owns its overlay). Tests replace this function. 2026-11-18: an enabled variant only (the retired 1-minute page's
+    store is not opened while its switch is off)."""
     from chart_maps.gajjala import store as ST
     from chart_maps.gajjala import variant as V
-    return {v.key: (ST.default() if V.is_gg5(v) else ST.for_variant(v)) for v in V.VARIANTS}
+    return {v.key: (ST.default() if V.is_gg5(v) else ST.for_variant(v)) for v in V.VARIANTS if V.enabled(v)}
 
 
 def _aplus_find(st, ids: list) -> dict:
@@ -736,7 +746,8 @@ def aplus_by_symbol(gg5: dict, gg1: dict, gga: dict) -> dict:
 
 
 def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> dict:
-    """{SYM: aplus block} for `names` (only tagged names are keys). ONE projected read find per read store (GG5, GG1)
+    """{SYM: aplus block} for `names` (only tagged names are keys). ONE projected read find per read store (GG5, GG1 —
+    GG1 only when `stores` carries it, i.e. while the 1-minute page is on, 2026-11-18)
     plus the 🧪 board's own overlay call on GG5's reads. ANY fault → {} (every row serves null; the board answers)."""
     if not names:
         return {}
@@ -746,7 +757,7 @@ def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> d
         stores = stores if stores is not None else _aplus_stores()
         ids = [ST.key(siso, s) for s in names]
         gg5 = _aplus_find(stores[V.GG5.key], ids)
-        gg1 = _aplus_find(stores[V.GG1.key], ids)
+        gg1 = _aplus_find(stores[V.GG1.key], ids) if V.GG1.key in stores else {}   # 2026-11-18: retired → absent
         from chart_maps.gajjala import audited_tab as AT
         gga, _stats = AT.overlay_reads(gg5, stores[V.GGA.key], siso)       # THE 🧪 board's call (tab.py), reused
         by = aplus_by_symbol(gg5, gg1, gga)

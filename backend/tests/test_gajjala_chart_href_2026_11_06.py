@@ -29,6 +29,17 @@ from tests.test_gajjala_audited_tab import gga_store
 from tests.test_gajjala_tab import (BF, NOW, ROWS_AH, R, _pm_store, _post_store, bars, latest, ordering_store,
                                     read_doc, scan_doc, store_with, utc)
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
+
 ROOT = Path(__file__).resolve().parents[2]
 GOLDENS = (ROOT / "backend" / "tests" / "fixtures" / "gajjala" / "gg5_board_2026_10_27.json",
            ROOT / "frontend" / "src" / "components" / "__fixtures__" / "gajjala_on_open_golden_2026_10_15.json",

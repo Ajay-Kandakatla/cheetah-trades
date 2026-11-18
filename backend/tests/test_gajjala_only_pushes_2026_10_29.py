@@ -27,6 +27,16 @@ from tests.test_gajjala_potential import Rec, bf_armed, seed
 from tests.test_gajjala_run import S, at
 from tests.test_gajjala_variant_2026_10_27 import _aplus, _frames, boom, frame_1m, gg1_store
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 # WIDENED 2026-11-01: six → SEVEN — 🥇 luk_setup joined (Ajay 2026-11-01: "Lets make it live. also alerts too.").
 # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
 EIGHT = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
@@ -114,7 +124,17 @@ def test_the_keep_set_comment_carries_his_words_and_each_removed_kind_once():
 # ── D2: the 1-minute live path ───────────────────────────────────────────────────────────────────────────────────
 def test_the_1m_mode_ships_live():
     assert GC.GAJJALA_1M_PUSH_MODE == "live" and V.push_mode(V.GG1) == "live" == AL.push_mode(V.GG1)
-    assert GC.GAJJALA_1M_ENABLED is True
+    # RE-PINNED 2026-11-18 — the page retired (Ajay: "This is good info stop 1 min tab it was a good experiment"): the
+    # switch SHIPS False (was True 2026-10-27 … 2026-11-17); the mode line stays "live", untouched
+    assert _shipped_1m_enabled() == "False"
+
+
+def _shipped_1m_enabled() -> str:
+    """2026-11-18 — the SHIPPED value of the switch, read off constants.py's source (the module's ON fixture patches the
+    attribute, never the file)."""
+    import re as _re
+    from pathlib import Path as _P
+    return _re.search(r"^GAJJALA_1M_ENABLED = (\w+)", _P(GC.__file__).read_text(), _re.M).group(1)
 
 
 def test_live_an_aplus_calls_the_1m_setup_hook_once(monkeypatch):

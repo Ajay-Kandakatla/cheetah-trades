@@ -1,5 +1,17 @@
 # 🚩 Gajjala card → ⤢ three charts (15-min / 5-min / 1-min) + a separate "SEPA page" link (2026-11-16)
 
+## 2026-11-18 — the 1-min frame reads the 👀 Watch's tile while the 1-minute page is retired
+
+Ajay, 2026-11-18: "This is good info stop 1 min tab it was a good experiment" and "But keep the one min chart in the
+watch list I still want them". The 1-minute page's pass (the source of the 1-min row in the table below) no longer runs,
+so `card_frames.py` fills an EMPTY 1-min frame from the 👀 Watch's stored 1-minute tile (`gajjala_watch_tiles`,
+`frames["1m"]`) of the SAME session — ONE stored read, no fetch, no write; stamp = the Watch doc's `at`, stale through
+`GG1M_STALE_AFTER_SEC` by name. Names on the Watch (his list + the 🤖 auto names) draw a 1-minute chart; a name not on
+it prints served words ("… the 1-minute page retired 2026-11-18 by your call; a card's 1-minute view now comes from the
+👀 Gajjala's Watch, and SYM is not on it"). A prior-session Watch tile never draws as today. The 15-min and 5-min frames
+are unchanged. Reversible: when the page runs again, its own 1-minute read doc leads by itself. A fresh fetch per card
+tap for the other names = HIS CALL #14 in `docs/gajjala/retire_1m_page_2026_11_18.md`. UNMEASURED.
+
 Ajay, verbatim:
 - "Also when I click on a card from any of the Gajjala I would like us to open the 3 chart extension like in the Watch
   list... Also put a SEPA page link for it separaetely on the card I I want to but default its 3 chart extension with

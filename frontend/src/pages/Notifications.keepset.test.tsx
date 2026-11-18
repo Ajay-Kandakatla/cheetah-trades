@@ -191,9 +191,17 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     }
     // the keep-set kinds still lead ON (the check is not a blanket ban)
     /* WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …") */
-    for (const k of ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup',
-      'long_term']) {
+    /* RE-PINNED 2026-11-18 (retire-1m spec §3.10): the two 🚩 1-min kinds stay IN the keep-set (ON) but the page is
+       RETIRED (Ajay: "This is good info stop 1 min tab it was a good experiment") — their detail leads RETIRED and
+       still carries the keep-set fact "ON FOR YOUR PHONE — LIVE SINCE 2026-10-29". Every other keep-set kind leads ON. */
+    for (const k of ['gajjala_setup', 'gajjala_potential', 'luk_setup', 'long_term']) {
       expect(CATEGORIES.find((c) => c.key === k)!.detail.startsWith('ON FOR YOUR PHONE'), k).toBe(true);
+    }
+    for (const k of ['gajjala_1m_setup', 'gajjala_1m_potential']) {
+      const d = CATEGORIES.find((c) => c.key === k)!.detail;
+      expect(d.startsWith('RETIRED 2026-11-18'), k).toBe(true);
+      expect(d.includes('ON FOR YOUR PHONE — LIVE SINCE 2026-10-29'), k).toBe(true);
+      expect(KEEP_SET.includes(k), k).toBe(true);   // NEGATIVE guard: retired words never mean "out of the keep-set"
     }
   });
 

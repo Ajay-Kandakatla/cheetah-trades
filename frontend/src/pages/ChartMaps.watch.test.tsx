@@ -19,7 +19,11 @@ vi.mock('../components/LukBoard', () => ({ default: () => <div data-testid="luk-
 vi.mock('../components/LongTermBoard', () => ({ default: () => <div data-testid="lt-stub" /> }));
 
 import ChartMaps from './ChartMaps';
-import { CM_TABS, DEFAULT_TAB } from '../lib/chartMaps';
+import { CM_TABS, DEFAULT_TAB, isRetiredTab } from '../lib/chartMaps';
+
+/* RE-PINNED 2026-11-18 (retire-1m spec §3.10): the strip = CM_TABS minus RETIRED_CM_TABS (🚩 gajjala_1m retired —
+ * Ajay: "This is good info stop 1 min tab it was a good experiment"). */
+const STRIP_TABS = CM_TABS.filter((t) => !isRetiredTab(t));
 
 const BOARD = { tab: 'zones', count: 0, matched: 0, scanned: 100, tiles: [], disclaimer: 'Study board.' };
 beforeEach(() => {
@@ -49,7 +53,7 @@ describe('👀 the tab is the primary owner\'s', () => {
   it('shown for is_primary_admin; ?tab=gajjala_watch renders the board', async () => {
     owner();
     const { container, queryByTestId } = await mount('gajjala_watch');
-    expect(tabKeys(container)).toEqual(CM_TABS);
+    expect(tabKeys(container)).toEqual(STRIP_TABS);
     expect(selected(container)).toBe('gajjala_watch');
     expect(queryByTestId('ggw-stub')).not.toBeNull();
   });
@@ -63,7 +67,7 @@ describe('👀 the tab is the primary owner\'s', () => {
     coOwner();
     const { container, queryByTestId } = await mount('gajjala_watch');
     expect(tabKeys(container)).not.toContain('gajjala_watch');
-    expect(tabKeys(container)).toEqual(CM_TABS.filter((t) => t !== 'gajjala_watch' && t !== 'replays'));   // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call): the co-owner never sees either owner-only tab
+    expect(tabKeys(container)).toEqual(STRIP_TABS.filter((t) => t !== 'gajjala_watch' && t !== 'replays'));   // WIDENED 2026-11-17 (🎬 replays owner-only) + 2026-11-18 (⏹ retired tabs leave the strip)
     expect(selected(container)).toBe(DEFAULT_TAB);
     expect(queryByTestId('ggw-stub')).toBeNull();
   });

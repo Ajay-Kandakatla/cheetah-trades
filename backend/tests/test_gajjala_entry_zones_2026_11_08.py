@@ -26,6 +26,16 @@ from tests.fixtures.gajjala import detector_frames as FX
 from tests.test_gajjala_store import FakeColl
 from tests.test_gajjala_tab import NOW, R, latest, read_doc, scan_doc, store_with
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 BF, KF, HF, VCP, RS = "bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze"
 BASE = {"from_t": "2026-10-13 10:00", "to_t": "2026-10-13 10:10", "bars": 3}
 B_WORD = re.compile("b" + "ounc", re.I)

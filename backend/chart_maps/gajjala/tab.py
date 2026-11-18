@@ -1840,6 +1840,19 @@ def table_on(v=None) -> bool:
     return V.of(v).key in (V.GG5.key, V.GG1.key)
 
 
+def default_sub(sub: str, focus: str, v=None) -> Optional[str]:
+    """⏹ 2026-11-18 — the retired 1-minute page opens on its 🏁 (Ajay: "This is good info stop 1 min tab it was a good
+    experiment"): GC.LEDGER_SUB when `sub` AND `focus` are both empty, the variant is GG1 and `variant.enabled(GG1)` is
+    False; else None. An explicit `sub=` or a `focus` symbol (the push/recent deep links) keep the 2026-10-27
+    resolution. The ONE rule — read by `resolve_sub` AND by the api route (so the first landing carries the 🏁's today
+    read); GG5 / GGA / the page switched on → always None."""
+    if (sub or "").strip() or (focus or "").strip():
+        return None
+    if V.of(v) is not V.GG1 or V.enabled(V.GG1):
+        return None
+    return GC.LEDGER_SUB
+
+
 def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, listed: dict,
                 pm_syms: set, post_syms: set, potentials: Optional[list] = None, v=None) -> tuple:
     """(sub, resolved_from). An explicit known sub wins; an unknown one → DEFAULT_SUB (fail open). Empty sub + a
@@ -1848,6 +1861,9 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
     store.potentials(session), a failure → none), else the best-ranked read's setup, else ☀️ / 🌙 when the name is
     on that list, else the default."""
     s = (sub or "").strip().lower()
+    d = default_sub(sub, focus, v)                                 # ⏹ 2026-11-18 — the retired 1-minute page → 🏁
+    if d is not None:
+        return d, "default"
     if s == GC.TABLE_SUB and not table_on(v):                      # 📋 GG5 + (2026-11-16) the 1-minute page; 🧪 fails open
         return GC.DEFAULT_SUB, "default"
     if s:

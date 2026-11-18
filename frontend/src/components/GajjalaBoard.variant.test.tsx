@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import hand from './__fixtures__/gajjala_board_2026_10_13.json';
 import trGolden from './__fixtures__/gajjala_track_record_golden_2026_10_16.json';
@@ -42,6 +42,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
 
 import GajjalaBoard from './GajjalaBoard';
 import ChartMaps from '../pages/ChartMaps';
+import { tabSearch } from '../lib/chartMaps';
 import { GG1M_PASSES, PASSES, TAPE_PASSES, cadenceOf, sessionLine, staleAfterSec } from '../pages/Alerts';
 import { CATEGORIES, PRESETS } from '../pages/Notifications';
 import { ALERT_KINDS, kindLabel } from '../lib/alertKinds';
@@ -372,7 +373,10 @@ describe('ChartMaps mounts the 1-minute board (2026-10-27)', () => {
     await waitFor(() => expect(getsTo(P1).length).toBeGreaterThan(0));
     expect(getsTo(P1)[0].url).toContain('/chart-maps/gajjala-1m?');
     expect(getsTo(P5)).toHaveLength(0);
-    expect(screen.getByRole('tab', { name: "Gajjala's 1-min" })).toHaveAttribute('aria-selected', 'true');
+    // RE-PINNED 2026-11-18 (retire-1m spec §3.10): the tab is RETIRED — hidden from the strip (isRetiredTab), the
+    // ?tab= deep link above still mounts its board. NEGATIVE: no strip button for it; 🚩 Gajjala's button stays.
+    expect(screen.queryByRole('tab', { name: "Gajjala's 1-min" })).toBeNull();
+    expect(screen.getByRole('tab', { name: "Gajjala's" })).toBeInTheDocument();
   });
 
   it("NEGATIVE: ?tab=gajjala still fetches /chart-maps/gajjala? and never the 1-minute endpoint", async () => {
@@ -386,10 +390,17 @@ describe('ChartMaps mounts the 1-minute board (2026-10-27)', () => {
 
   it('switching gajjala → gajjala_1m REMOUNTS: a second on-open POST, to the 1-minute path (key="gajjala_1m")', async () => {
     stub();
-    const { container } = page('tab=gajjala&sub=bull_flag');
+    // RE-PINNED 2026-11-18 (retire-1m spec §3.10): the 1-min tab is hidden from the strip, so the switch goes by the
+    // ?tab= deep link, built by the SAME tabSearch the strip uses (the border drop of `sub` still exercised).
+    const Go = () => {
+      const nav = useNavigate();
+      return <button type="button" data-testid="go-1m"
+        onClick={() => nav(`/chart-maps?${tabSearch(new URLSearchParams('tab=gajjala&sub=bull_flag'), 'gajjala_1m')}`)} />;
+    };
+    const { container } = render(<MemoryRouter initialEntries={['/chart-maps?tab=gajjala&sub=bull_flag']}><Go /><ChartMaps /></MemoryRouter>);
     await waitFor(() => expect(container.querySelector('.gg-board')?.getAttribute('data-state')).toBe('loaded'));
     await waitFor(() => expect(postsTo(`${P5}/scan`)).toHaveLength(1));
-    fireEvent.click(screen.getByRole('tab', { name: "Gajjala's 1-min" }));
+    fireEvent.click(screen.getByTestId('go-1m'));
     await waitFor(() => expect(container.querySelector('.gg-board')?.getAttribute('data-variant')).toBe('gajjala_1m'));
     await waitFor(() => expect(postsTo(`${P1}/scan`)).toHaveLength(1));
     await waitFor(() => expect(getsTo(P1).length).toBeGreaterThan(0));
@@ -433,14 +444,18 @@ describe('the two 1-minute kinds on /alerts, /notifications and the kind registr
     expect(ALERT_KINDS.gajjala_potential.label).toBe('Gajjala potential');
   });
 
-  it('Notifications: one row each, the live labels, ON FOR YOUR PHONE / LIVE SINCE 2026-10-29 + UNMEASURED in the detail', () => {
+  // RE-PINNED 2026-11-18 (retire-1m spec §3.10 / C2): the page retired by his call — "This is good info stop 1 min tab it
+  // was a good experiment" — the detail now LEADS with RETIRED 2026-11-18 and still carries LIVE SINCE 2026-10-29.
+  it('Notifications: one row each, the live labels, RETIRED 2026-11-18 lead + LIVE SINCE 2026-10-29 + UNMEASURED in the detail (re-pinned 2026-11-18)', () => {
     const want: Record<string, string> = { gajjala_1m_setup: 'Gajjala 1-min A+', gajjala_1m_potential: 'Gajjala 1-min potential' };
     for (const k of KINDS) {
       const rows = CATEGORIES.filter((c) => c.key === k);
       expect(rows, k).toHaveLength(1);
       expect(rows[0].label).toBe(want[k]);
       expect(rows[0].group).toBe('trading');
-      expect(rows[0].detail).toMatch(/^ON FOR YOUR PHONE — LIVE SINCE 2026-10-29/);
+      expect(rows[0].detail).toMatch(/^RETIRED 2026-11-18 — your call: "This is good info stop 1 min tab it was a good experiment"/);
+      expect(rows[0].detail).toContain('LIVE SINCE 2026-10-29');
+      expect(rows[0].detail).toContain('rings nothing');
       expect(rows[0].detail).toContain(HIS_29);
       expect(rows[0].detail).toContain('UNMEASURED');
       // the shadow days stay honest: recorded, never sent, 2026-10-27 to 10-28

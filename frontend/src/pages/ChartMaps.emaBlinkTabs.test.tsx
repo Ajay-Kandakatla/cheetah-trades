@@ -90,7 +90,9 @@ describe('(b) the dot rides exactly the served tabs with n > 0 and a tier', () =
   });
   it('NEGATIVE: n 0 → no dot; gajjala_watch null → no dot; a key the FE does not list → ignored', async () => {
     const { container } = await mount('zones');
-    expect(anchorOf(container, 'gajjala_1m')).not.toBeNull();
+    // RE-PINNED 2026-11-18 (retire-1m spec §3.10): gajjala_1m is RETIRED — no strip anchor (CM_TABS minus
+    // RETIRED_CM_TABS; Ajay: "This is good info stop 1 min tab it was a good experiment"), so no dot can ride it.
+    expect(anchorOf(container, 'gajjala_1m')).toBeNull();
     expect(container.querySelector('[data-testid="cm-tab-blink-gajjala_1m"]')).toBeNull();
     expect(anchorOf(container, 'gajjala_watch')).not.toBeNull();
     expect(container.querySelector('[data-testid="cm-tab-blink-gajjala_watch"]')).toBeNull();

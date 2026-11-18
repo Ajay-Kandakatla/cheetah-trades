@@ -32,6 +32,16 @@ from chart_maps.gajjala import variant as V
 from tests.fixtures.gajjala import detector_frames as FX
 from tests.test_gajjala_store import FakeColl, fake_store
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 ET = ZoneInfo("America/New_York")
 UTC = timezone.utc
 S = date(2026, 10, 13)                                   # a Tuesday — a market day
@@ -271,7 +281,9 @@ def test_NEGATIVE_switched_off_no_spawn_and_no_iteration(monkeypatch, how):
     else:
         monkeypatch.setenv("GAJJALA_1M_ENABLED", "0")
     out, seen, st = _loop(monkeypatch, at(10, 31, 10))
-    assert seen == [] and out["reason"] == "off" and st.get_state(R1.LOOP_STATE_ID)["reason"] == "off"
+    # RE-PINNED 2026-11-18 [C5] — the retired page writes nothing: no "loop" state doc (was reason "off"); the fake
+    # store's get_state on a missing id answers {}
+    assert seen == [] and out["reason"] == "off" and st.get_state(R1.LOOP_STATE_ID) == {}
     spawn = Rec(True)
     monkeypatch.setattr(R1, "spawn_loop", spawn)
     monkeypatch.setattr(RUN, "in_window", lambda *_a, **_k: True)

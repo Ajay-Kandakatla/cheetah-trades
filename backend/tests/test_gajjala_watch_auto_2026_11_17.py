@@ -48,6 +48,14 @@ def _on(monkeypatch):
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def gg1_on(monkeypatch):
+    """2026-11-18 — the 1-minute page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it
+    was a good experiment"); this module pins how the 🤖 auto section read the 🚩 1-min board 2026-11-17 and how it reads
+    it again if the word flips back. The OFF behaviour: tests/test_gajjala_watch_1m_retired_2026_11_18.py."""
+    monkeypatch.setattr(GC, "GAJJALA_1M_ENABLED", True)
+
+
 # ── builders ─────────────────────────────────────────────────────────────────────────────────────────────────────
 def utc(t):
     return t.astimezone(timezone.utc)

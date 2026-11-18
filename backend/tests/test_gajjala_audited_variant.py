@@ -20,6 +20,17 @@ from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import ledger as LG
 from chart_maps.gajjala import variant as V
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
+
 FMT = dict(p=5, s=15, tail="tail", floor=AUD.MEASURE_FLOOR_WEEKS, m=AUD.G3_MAX_AGE_MIN, mr=AUD.G3_MISSED_R,
            r=GC.LEDGER_R_MULT, n=0, hhmm="10:41", n_read=1, n_orig=1, n_aud=1, n_held=0, original_only=0,
            audited_only=0, open="04:00", close="20:00", cad=5, rth_open="09:30", mute_end="09:45",

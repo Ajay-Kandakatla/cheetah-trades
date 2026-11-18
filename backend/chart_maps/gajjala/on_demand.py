@@ -192,7 +192,10 @@ def _clamp_eta(sec: float) -> int:
 def _text(state: str, latest: Optional[dict], now: datetime, *, holder=None, started=None, age=None,
           first_wait=None, via_open: bool = False, variant=None) -> str:
     """W10–W14 (BUILD_SPEC5 §3.7) + W12c (A12) + W11b (final critic 2026-10-16: reused on an open's release).
-    2026-10-27: the cadence word is the variant's (V.cadence_sec — GG5 = PASS_CADENCE_SEC at call time)."""
+    2026-10-27: the cadence word is the variant's (V.cadence_sec — GG5 = PASS_CADENCE_SEC at call time).
+    ⏹ 2026-11-18: a refusal of the retired 1-minute page says the retired sentence (variant.word "scan_retired")."""
+    if state == "refused" and V.of(variant) is V.GG1 and not V.enabled(V.GG1):
+        return V.word("scan_retired", V.GG1)
     cad = V.cadence_sec(variant) // 60
     at = _stamp((latest or {}).get("at")) if isinstance(latest, dict) else None
     hhmm = at.astimezone(ET).strftime("%H:%M") if at is not None else None
@@ -281,6 +284,8 @@ def request(now: Optional[datetime] = None, *, store=None, spawn: Optional[Calla
             log.warning("gajjala on-open: latest pass read failed: %s", exc)
             latest = None
         latest = latest if isinstance(latest, dict) else None
+        if rv is V.GG1 and not V.enabled(rv):                       # ⏹ 2026-11-18 [C4] — the retired 1-minute page:
+            return _resp("refused", latest, now, variant=rv)        # refused FIRST, in every window — no child, no lease
         if (_closed(now) if profile is None else profile.closed(now)):
             return _resp("closed", latest, now, variant=rv, profile=profile)
         if profile is not None and profile.refusal is not None:

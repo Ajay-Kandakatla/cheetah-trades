@@ -778,6 +778,8 @@ export type GgPlaybook = {
 export type GgVariantBlock = {
   key: string; tab: string; label?: string | null; title?: string | null; honesty?: string | null;
   tfs?: string[] | null; primary?: string | null; slow?: string | null; api_base?: string | null; record_from?: string | null;
+  /** ⏹ 2026-11-18: present only while the 1-minute page is retired (variant.served_block) — `on` = the retire date, `text` = the served sentence. */
+  retired?: { on?: string | null; text?: string | null } | null;
 };
 
 export type GgBoard = {

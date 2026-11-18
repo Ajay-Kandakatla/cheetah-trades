@@ -717,6 +717,8 @@ def _gate_block_ok(p) -> bool:
 
 
 def _default_send(owner: str, payload: dict, variant=None) -> dict:
+    if V.of(variant) is V.GG1 and not V.enabled(V.GG1):   # ⏹ 2026-11-18 — the retired 1-minute page never sends
+        raise RuntimeError(V.RETIRED_NEVER_SENDS)
     from push import hooks
     if V.is_gg5(variant):
         return hooks.notify_gajjala_potential(owner=owner, payload=payload)
@@ -767,6 +769,10 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     from . import store as ST
     from . import tab as GT
     var = V.of(store)
+    if not V.enabled(var):                  # ⏹ 2026-11-18 — the retired 1-minute page: nothing tracked, written or sent;
+        counts = {k: 0 for k in COUNT_KEYS}  # "off" = a key ONLY a retired variant's counts carry (GG5 / GGA untouched)
+        counts["off"] = 1
+        return counts
     shadow = (not V.is_gg5(var)) and V.push_mode(var) == "shadow"
     if send is None:
         send = _default_send if V.is_gg5(var) else (lambda o, p: _default_send(o, p, var))

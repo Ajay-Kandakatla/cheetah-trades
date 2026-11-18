@@ -1,5 +1,14 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-18 — the two 1-minute kinds stay in the set; the switch stops their sends
+
+Ajay, 2026-11-18: "This is good info stop 1 min tab it was a good experiment". The 🚩 1-minute page is retired by
+`GAJJALA_1M_ENABLED = False` (`docs/gajjala/retire_1m_page_2026_11_18.md`). `OWNER_KEEP_SET` is UNCHANGED — still
+EIGHT, `gajjala_1m_setup` and `gajjala_1m_potential` included — because the switch already stops every send (both
+`_default_send`s refuse; nothing is composed). On /notifications both rows stay toggleable and their detail leads
+"RETIRED 2026-11-18" while still stating the LIVE SINCE 2026-10-29 fact. Removing the two kinds from the set (a
+keep-set change + an `owner_prefs_apply` run + re-pins) or moving them to `DISABLED_ALERT_KINDS` = HIS CALL.
+
 ## 2026-11-12 — 📅 long_term joins: EIGHT since 2026-11-12
 
 > "add an alert list when stocks reach Pankaj's zones and also tell me if you finish the long term tabs in general"

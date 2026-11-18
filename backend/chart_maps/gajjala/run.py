@@ -796,7 +796,7 @@ def _spawn_1m() -> None:
     try:
         from . import run_1m as R1
         if not R1.enabled():
-            log.info("gajjala 1m loop: off (GAJJALA_1M_ENABLED) — not spawned")
+            log.info("gajjala 1m loop: off (GAJJALA_1M_ENABLED — the page retired 2026-11-18) — not spawned")
             return
         ok = R1.spawn_loop()
         log.info("gajjala 1m loop: %s", "spawned" if ok else "spawn failed")

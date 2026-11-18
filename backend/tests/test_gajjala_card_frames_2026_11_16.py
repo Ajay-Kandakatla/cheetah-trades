@@ -87,10 +87,11 @@ def _g1_doc(at, *, last1="16:00", last5="16:00"):
             "tile": {"bars1": b1, "curves1": _curves(len(b1)), "bars5": b5, "curves5": _curves(len(b5))}}
 
 
-def _stores(g5=None, g1=None):
+def _stores(g5=None, g1=None, wt=None):
+    """(GG5 store, GG1 store) — 2026-11-18: + the 👀 Watch tiles coll third when `wt` is given (a 3-tuple)."""
     s5 = ST.GajjalaStore({ST.READS: FakeColl([g5] if g5 else [])})
     s1 = ST.GajjalaStore({ST.READS: FakeColl([g1] if g1 else [])}, variant=V.GG1, shared=s5)
-    return s5, s1
+    return (s5, s1) if wt is None else (s5, s1, wt)
 
 
 def _utc(dt):
@@ -212,14 +213,152 @@ def test_frame_stale_uses_variant_stale_after_sec():
 
 
 # ── missing docs ──────────────────────────────────────────────────────────────────────────────────────────────────
-def test_NEGATIVE_no_gg1_doc_the_1m_frame_serves_words():
+def test_NEGATIVE_no_source_at_all_the_1m_frame_says_retired_while_off_and_the_old_words_while_on(monkeypatch):
+    """Re-pinned 2026-11-18 (was test_NEGATIVE_no_gg1_doc_the_1m_frame_serves_words): the 1-minute page retired by his
+    word — with no GG1 doc and no Watch tile the 1m frame serves the retired words (shipped OFF); the switch back on →
+    the 2026-11-16 EMPTY_TEXT, byte-identical (the old assertion, kept as the ON half). Only the 1m frame's words move."""
+    assert GC.GAJJALA_1M_ENABLED is False                      # the shipped default — no monkeypatch
     out = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None))
     f1 = out["frames"][2]
     assert f1["tf"] == "1m" and f1["tile"]["bars"] == [] and f1["axis"] is None
     assert f1["as_of_et"] is None and f1["stale"] is False and f1["ema_blink"] is None and f1["ema_tail"] is None
-    assert f1["empty_text"] == CF.EMPTY_TEXT.format(minutes=1, sym=SYM)
-    assert "1-minute" in f1["empty_text"] and SYM in f1["empty_text"]
+    assert f1["empty_text"] == V.word("card_1m_empty", V.GG1, sym=SYM)
+    assert "retired 2026-11-18" in f1["empty_text"] and "👀" in f1["empty_text"] and SYM in f1["empty_text"]
+    assert "{" not in f1["empty_text"]
     assert out["frames"][0]["tile"]["bars"] and out["text"] is None
+    none = CF.build(SYM, IN_RTH, stores=_stores(None, None))
+    assert none["frames"][0]["empty_text"] == CF.EMPTY_TEXT.format(minutes=15, sym=SYM)     # NEG: 15m words unchanged
+    assert none["frames"][1]["empty_text"] == CF.EMPTY_TEXT.format(minutes=5, sym=SYM)      # NEG: 5m words unchanged
+    monkeypatch.setattr(GC, "GAJJALA_1M_ENABLED", True)
+    on = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None))["frames"][2]
+    assert on["empty_text"] == CF.EMPTY_TEXT.format(minutes=1, sym=SYM)
+    assert "1-minute" in on["empty_text"] and SYM in on["empty_text"]
+    on_none = CF.build(SYM, IN_RTH, stores=_stores(None, None))
+    assert on_none["frames"][0]["empty_text"] == none["frames"][0]["empty_text"]
+
+
+# ── ⏹ 2026-11-18: the 1m frame falls back to the 👀 Watch's stored 1m tile ─────────────────────────────────────────────
+def _watch_doc(at, *, session=SESSION, last1="16:00", loaded_at=None):
+    b1, b3, b5 = _bars(1, last1, session=session), _bars(3, last1, session=session), _bars(5, last1, session=session)
+    return {"_id": SYM, "symbol": SYM, "session": session, "at": at, "loaded_at": at if loaded_at is None else loaded_at,
+            "status": "loaded",
+            "frames": {"1m": {"tf": "1m", "bars": b1, "curves": _curves(len(b1)), "vol_avg": {"values": [2.0]}},
+                       "3m": {"tf": "3m", "bars": b3, "curves": _curves(len(b3)), "vol_avg": None},
+                       "5m": {"tf": "5m", "bars": b5, "curves": _curves(len(b5)), "vol_avg": None}}}
+
+
+class RaisingColl:
+    def __init__(self):
+        self.calls = 0
+
+    def find_one(self, *a, **k):
+        self.calls += 1
+        raise RuntimeError("mongo down")
+
+
+def test_1m_falls_back_to_the_watch_tile_when_no_gg1_doc_2026_11_18():
+    g5 = _g5_doc(_utc(IN_RTH - timedelta(seconds=60)))
+    wd = _watch_doc(_utc(IN_RTH - timedelta(seconds=30)), last1="16:30")       # past RTH → moves the ONE end
+    out = CF.build(SYM, IN_RTH, stores=_stores(g5, None, wt=FakeColl([wd])))
+    two = CF.build(SYM, IN_RTH, stores=_stores(g5, None))
+    f1 = out["frames"][2]
+    assert f1["tile"]["bars"] == wd["frames"]["1m"]["bars"] and f1["tile"]["curves"] == wd["frames"]["1m"]["curves"]
+    assert f1["tile"]["vol_avg"] == {"values": [2.0]} and f1["empty_text"] is None
+    assert f1["as_of_et"] == PL._clock(wd["at"], IN_RTH) == "15:29" and f1["stale"] is False
+    assert f1["axis"] is not None and f1["ema_tail"] is not None and f1["ema_blink"] is not None
+    end = BLD.axis_end(SESSION, out["frames"][0]["tile"]["bars"] + out["frames"][1]["tile"]["bars"] + f1["tile"]["bars"])
+    assert f1["axis"] == BLD.axis(SESSION, 1, f1["tile"]["bars"], end)
+    assert f1["axis"]["to_et"] != two["frames"][0]["axis"]["to_et"]                 # the end saw the Watch bars
+    for i in (0, 1):                                                               # 15m / 5m tiles untouched
+        assert out["frames"][i]["tile"] == two["frames"][i]["tile"]
+        assert out["frames"][i]["as_of_et"] == two["frames"][i]["as_of_et"]
+    assert out["as_of_et"] == two["as_of_et"] and out["text"] is None              # the head = the GG5 card's doc
+
+
+def test_NEGATIVE_a_stale_watch_tile_is_flagged_by_the_gg1_threshold_by_name(monkeypatch):
+    """A failed Watch read moves `at` but keeps the old frames — the stamp is `loaded_at`, so the frame shows stale."""
+    old = _utc(IN_RTH - timedelta(seconds=GC.GG1M_STALE_AFTER_SEC + 60))
+    wd = _watch_doc(_utc(IN_RTH - timedelta(seconds=5)), loaded_at=old)
+    f1 = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None, wt=FakeColl([wd])))["frames"][2]
+    assert f1["tile"]["bars"] and f1["stale"] is True and f1["as_of_et"] == PL._clock(old, IN_RTH)
+    monkeypatch.setattr(GC, "GG1M_STALE_AFTER_SEC", 10 ** 6)
+    f1 = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None, wt=FakeColl([wd])))["frames"][2]
+    assert f1["stale"] is False
+
+
+def test_NEGATIVE_a_prior_session_watch_tile_never_draws_as_today():
+    wd = _watch_doc(_utc(IN_RTH - timedelta(days=1)), session="2026-11-12")
+    out = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None, wt=FakeColl([wd])))
+    f1 = out["frames"][2]
+    assert f1["tile"]["bars"] == [] and f1["axis"] is None and f1["as_of_et"] is None
+    assert f1["empty_text"] == V.word("card_1m_empty", V.GG1, sym=SYM)
+
+
+def test_NEGATIVE_a_watch_tile_with_no_1m_bars_never_draws():
+    wd = _watch_doc(_utc(IN_RTH))
+    wd["frames"]["1m"]["bars"] = []
+    f1 = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None, wt=FakeColl([wd])))["frames"][2]
+    assert f1["tile"]["bars"] == [] and f1["empty_text"]
+    other = dict(_watch_doc(_utc(IN_RTH)), _id="AMD", symbol="AMD")                   # another name's tile
+    f1 = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None, wt=FakeColl([other])))["frames"][2]
+    assert f1["tile"]["bars"] == [] and SYM in f1["empty_text"]
+
+
+def test_NEGATIVE_a_gg1_doc_wins_over_the_watch_tile_the_on_path():
+    g1 = _g1_doc(_utc(IN_RTH - timedelta(seconds=30)), last1="15:00")
+    wd = _watch_doc(_utc(IN_RTH), last1="15:29")
+    wt = FakeColl([wd])
+    out = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), g1, wt=wt))
+    ref = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), g1))
+    assert out["frames"][2]["tile"]["bars"] == GT._tile_frame(g1, "1m", V.GG1)["bars"]
+    assert out["frames"][2]["tile"]["bars"] != wd["frames"]["1m"]["bars"]
+    assert out == ref                                                              # byte-identical to the 10-16 path
+
+
+def test_NEGATIVE_a_raising_or_absent_watch_coll_never_breaks_the_view():
+    g5 = _g5_doc(_utc(IN_RTH))
+    two = CF.build(SYM, IN_RTH, stores=_stores(g5, None))
+    rc = RaisingColl()
+    for wt in (rc, None):
+        out = CF.build(SYM, IN_RTH, stores=(*_stores(g5, None), wt))
+        assert out["state"] == "ok"
+        assert out["frames"][2]["tile"]["bars"] == [] and out["frames"][2]["empty_text"]
+        assert out["frames"][0]["tile"] == two["frames"][0]["tile"] and out["frames"][1]["tile"] == two["frames"][1]["tile"]
+        assert out == two
+    assert rc.calls == 1
+
+
+def test_NEGATIVE_two_tuple_stores_read_no_watch_coll(monkeypatch):
+    def boom(db=None):
+        raise AssertionError("the Watch colls must not be read for a 2-tuple")
+    monkeypatch.setattr(CF.WCOLLS, "colls", boom)
+    out = CF.build(SYM, IN_RTH, stores=_stores(_g5_doc(_utc(IN_RTH)), None))
+    assert out["state"] == "ok" and out["frames"][2]["tile"]["bars"] == []
+    assert CF._stores(_stores(None, None))[2] is None
+    tiles = FakeColl([_watch_doc(_utc(IN_RTH))])
+    monkeypatch.setattr(CF.WCOLLS, "colls", lambda db=None: {"tiles": tiles})
+    monkeypatch.setattr(ST, "default", lambda: "S5")
+    monkeypatch.setattr(ST, "for_variant", lambda v: "S1")
+    assert CF._stores(None) == ("S5", "S1", tiles)
+    monkeypatch.setattr(CF.WCOLLS, "colls", lambda db=None: None)                    # no database → skipped
+    assert CF._stores(None) == ("S5", "S1", None)
+
+
+def test_the_route_serves_the_watch_1m_for_a_watch_name(monkeypatch):
+    g5 = _g5_doc(_utc(IN_RTH - timedelta(seconds=60)))
+    wd = _watch_doc(_utc(IN_RTH - timedelta(seconds=30)))
+    wd["frames"]["1m"]["curves"][0]["values"][-3] = float("nan")
+    s = _stores(g5, None, wt=FakeColl([wd]))
+    real = CF.build
+    monkeypatch.setattr(CF, "build", lambda symbol, now=None, **_k: real(symbol, IN_RTH, stores=s))
+    app = FastAPI()
+    app.include_router(API.router)
+    r = TestClient(app).get(f"{CF.API_BASE}/{SYM}")
+    assert r.status_code == 200 and "NaN" not in r.text
+    body = _strict(r.text)
+    f1 = body["frames"][2]
+    assert f1["tf"] == "1m" and f1["tile"]["bars"] == wd["frames"]["1m"]["bars"] and f1["empty_text"] is None
+    assert f1["tile"]["curves"][0]["values"][-3] is None
 
 
 def test_NEGATIVE_no_gg5_doc_5m_comes_from_gg1_with_the_gg1_stamp():

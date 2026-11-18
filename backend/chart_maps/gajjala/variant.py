@@ -25,9 +25,16 @@ alert was recorded in SHADOW, never sent, 2026-10-27 … 2026-10-28; since 2026-
 ones in noise."). The words follow the MODE at call time: in "shadow" (a flip back is one word) `word()` serves
 WORDS_1M_SHADOW's sentence for each key it carries, so a served sentence never says "rings your phone" while nothing
 rings.
+
+⏹ 2026-11-18 — the 1-minute PAGE retired, reversibly (Ajay ~00:10 ET: "This is good info stop 1 min tab it was a good
+experiment"; ~00:20 ET: "But keep the one min chart in the watch list I still want them"). `enabled(v)` is the ONE
+predicate every GG1 entry point reads (GC.GAJJALA_1M_ENABLED + the env; GG5 / GGA always True). While it is off `word()`
+serves WORDS_1M_RETIRED's sentence FIRST for each key it carries (before the shadow swap) and `served_block()` gains a
+`retired` block; nothing else moves, and flipping the one word back restores every 2026-10-27 … 2026-11-17 byte.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping, Optional
@@ -166,6 +173,57 @@ WORDS_1M_SHADOW: Mapping = MappingProxyType({
                        "study of the 5-minute setups read NULL (docs/gajjala/study_2026_10_13.md); nothing has "
                        "measured this page. " + DUP_RULE_TEXT),                                  # 🔁 2026-11-02
 })
+
+
+# ⏹ 2026-11-18 — the retired page's words (SPEC retire-1m §3.2). His two sentences are typed ONCE here; card_frames and
+# rules_info read them through word(). {retired_on} = GC.GAJJALA_1M_RETIRED_ON, {from} = GC.GG1M_RECORD_FROM, {p}/{s}
+# as above; {sym} is filled only by the ⤢ card frame (word("card_1m_empty", GG1, sym=…)). Served INSTEAD of WORDS_1M /
+# WORDS_1M_SHADOW for the keys it carries whenever `not enabled(GG1)`; the four keys retired / scan_retired /
+# rules_clause / card_1m_empty exist ONLY here (ON: word() returns None for them, as for any unknown key).
+_HIS_WORDS_RETIRE = "This is good info stop 1 min tab it was a good experiment"
+_HIS_WORDS_KEEP_WATCH = "But keep the one min chart in the watch list I still want them"
+RETIRED_NEVER_SENDS = "the 1-minute page is retired — nothing is composed or sent"   # the audited_rules.NEVER_SENDS shape
+WORDS_1M_RETIRED: Mapping = MappingProxyType({
+    "title": ("🚩 Gajjala's — the same rules on {p}-minute candles · RETIRED {retired_on} by your call · its record "
+              "stays · UNMEASURED"),
+    "retired": ("⏹ This page retired {retired_on} by your call (\"" + _HIS_WORDS_RETIRE + "\"): the {p}-minute pass no "
+                "longer runs and nothing from it rings or is written. Its 🏁 Track record ({from} to the last session "
+                "before {retired_on}) stays readable here, graded by GG's trade math. The 👀 Gajjala's Watch keeps its "
+                "1-minute charts, by your call (\"" + _HIS_WORDS_KEEP_WATCH + "\"); they never came from this page's "
+                "pass, and a card's ⤢ 1-minute view now reads the Watch's chart for the names on it. Turning it back "
+                "on is one word in constants.py (GAJJALA_1M_ENABLED). UNMEASURED."),
+    "honesty": ("GG trades these setups on {s}-minute bars; this page ran the same bar-count rules on {p}-minute bars "
+                "from {from} by your call, and retired {retired_on} by your call (\"" + _HIS_WORDS_RETIRE + "\"). Its "
+                "alerts rang your phone " + LIVE_SINCE_1M + " to the last session before {retired_on}; {from} to "
+                "2026-10-28 they were recorded, never sent. Nothing new runs. Nothing measured."),
+    "push": ("📲 Retired {retired_on} — no A+ is composed or sent from this page any more. The A+ that rang "
+             + LIVE_SINCE_1M + " to the last session before {retired_on} stay in the 🏁. UNMEASURED."),
+    "push_potential": "🧠 Retired {retired_on} — no potential is recorded or sent from this page any more. {tail}.",
+    "scan_retired": ("🔄 not run — this page retired {retired_on} by your call (\"" + _HIS_WORDS_RETIRE + "\"); the "
+                     "board shows its last pass and its 🏁 record."),
+    "ledger_title": ("🏁 Track record — every {p}-minute Gajjala alert {from} to the last session before {retired_on} "
+                     "(page retired by your call), graded by GG's trade math · UNMEASURED"),
+    "ledger_honesty": ("A ledger of this page's alerts as they rang: {from} to 2026-10-28 recorded, never sent; "
+                       + LIVE_SINCE_1M + " to the last session before {retired_on} sent to your phone. The page "
+                       "retired {retired_on} by your call (\"" + _HIS_WORDS_RETIRE + "\") — no new row joins; rows "
+                       "still pending are graded by the nightly as before. Each row's kind says which. Graded by GG's "
+                       "own trade math on 1-minute bars — not a backtest, small n. " + DUP_RULE_TEXT),
+    "ledger_empty": ("No 1-minute alert on this span — the record runs {from} to the last session before {retired_on} "
+                     "(the page retired)."),
+    "rules_clause": ("🚩 {p}-minute page: ran the same rules on CLOSED {p}-minute bars (the Fade on {s}-minute first) "
+                     "over the same list from {from} by your call; RETIRED {retired_on} by your call (\""
+                     + _HIS_WORDS_RETIRE + "\") — the pass no longer runs, nothing from it rings; its 🏁 record stays "
+                     "readable on its page. The 👀 Watch keeps its 1-minute charts; a card's ⤢ 1-minute view reads the "
+                     "Watch's chart for the names on it."),
+    "card_1m_empty": ("No 1-minute bars stored for {sym} this session — the 1-minute page retired {retired_on} by your "
+                      "call; a card's 1-minute view now comes from the 👀 Gajjala's Watch, and {sym} is not on it"),
+})
+
+
+class _KeepUnknown(dict):
+    """format_map helper for the retired words: an unknown placeholder ({sym} without a sym) stays as typed."""
+    def __missing__(self, key):
+        return "{" + key + "}"
 
 
 # 🧪 The audited tab's served words — FROZEN (BUILD SPEC 2026-11-01 §3.2). Every key of WORDS_1M (so the 🏁 / 🧠 /
@@ -342,6 +400,16 @@ def tape_bars_max(v=None) -> int:
     return _const(of(v).tape_bars_const)
 
 
+def enabled(v=None) -> bool:
+    """⏹ 2026-11-18 — the ONE predicate every GG1 entry point reads (the spawn, the pass entry, the loop, the on-open 🔄,
+    the A+ and 🧠 push paths, the words, the default sub). GG5 / GGA → always True. GG1 → GC.GAJJALA_1M_ENABLED (Ajay
+    2026-11-18: "This is good info stop 1 min tab it was a good experiment" → False) AND the env GAJJALA_1M_ENABLED is
+    not "0" — read at CALL time (tests monkeypatch both); the env can only turn it off, never on."""
+    if of(v) is not GG1:
+        return True
+    return bool(GC.GAJJALA_1M_ENABLED) and os.environ.get("GAJJALA_1M_ENABLED", "1") != "0"
+
+
 def push_mode(v=None) -> str:
     """"live" only when the variant's constant says exactly that; anything else (None, "LIVE", junk) → "shadow"."""
     return "live" if getattr(GC, of(v).push_mode_const, None) == "live" else "shadow"
@@ -365,16 +433,23 @@ def words(v=None) -> Mapping:
 
 def word(key, v=None, **fmt) -> Optional[str]:
     """One served word of the variant, its numbers filled at call time ({p}, {s}, {from}, {tail} + `fmt`); None when
-    the variant has no such word (GG5 always). In shadow mode a key WORDS_1M_SHADOW carries serves that sentence."""
-    tpl = words(v).get(key)
+    the variant has no such word (GG5 always). In shadow mode a key WORDS_1M_SHADOW carries serves that sentence.
+    ⏹ 2026-11-18: while the 1-minute page is retired (`not enabled(GG1)`) a key WORDS_1M_RETIRED carries serves that
+    sentence FIRST (before the shadow swap), {retired_on} filled, an unknown placeholder left as typed."""
+    vv = of(v)
+    retired = vv is GG1 and key in WORDS_1M_RETIRED and not enabled(vv)
+    tpl = WORDS_1M_RETIRED[key] if retired else words(v).get(key)
     if tpl is None:
         return None
-    vv = of(v)
-    if vv is GG1 and push_mode(vv) == "shadow" and key in WORDS_1M_SHADOW:   # 2026-10-29: the words follow the mode
-        tpl = WORDS_1M_SHADOW[key]                                         # (GG1 only — GGA's words are shadow already)
+    if not retired and vv is GG1 and push_mode(vv) == "shadow" and key in WORDS_1M_SHADOW:   # 2026-10-29: the words
+        tpl = WORDS_1M_SHADOW[key]                          # follow the mode (GG1 only — GGA's words are shadow already)
     from .potential import TAIL
     args = {"p": frame_minutes(vv.primary, vv), "s": frame_minutes(vv.slow, vv),
             "from": getattr(GC, vv.record_from_const), "tail": TAIL}
+    if retired:
+        args["retired_on"] = GC.GAJJALA_1M_RETIRED_ON
+        args.update(fmt)
+        return tpl.format_map(_KeepUnknown(args))
     args.update(fmt)
     return tpl.format(**args)
 
@@ -385,6 +460,9 @@ def served_block(v=None) -> Optional[dict]:
     vv = of(v)
     if vv is GG5:
         return None
-    return {"key": vv.key, "tab": vv.tab, "label": vv.label, "title": word("title", vv),
-            "honesty": word("honesty", vv), "tfs": list(vv.tfs), "primary": vv.primary, "slow": vv.slow,
-            "api_base": vv.api_base, "record_from": getattr(GC, vv.record_from_const)}
+    out = {"key": vv.key, "tab": vv.tab, "label": vv.label, "title": word("title", vv),
+           "honesty": word("honesty", vv), "tfs": list(vv.tfs), "primary": vv.primary, "slow": vv.slow,
+           "api_base": vv.api_base, "record_from": getattr(GC, vv.record_from_const)}
+    if vv is GG1 and not enabled(vv):        # ⏹ 2026-11-18 — OFF only; the key is ABSENT while the page runs
+        out["retired"] = {"on": GC.GAJJALA_1M_RETIRED_ON, "text": word("retired", vv)}
+    return out

@@ -383,7 +383,10 @@ def _default_send(owner: str, payload: dict, variant=None) -> dict:
     """push.hooks' sender of the variant (GG5 notify_gajjala_setup — the shipped line; the 1-minute page's is named
     by variant.GG1.send_setup — live since 2026-10-29, and never reached while its mode is shadow). 🧪 2026-11-01: a
     variant with NO sender (the audited tab, send_setup "") refuses — RuntimeError(audited_rules.NEVER_SENDS) — before
-    push.hooks is even imported (fail closed: no sender is ever looked up by an empty name)."""
+    push.hooks is even imported (fail closed: no sender is ever looked up by an empty name). ⏹ 2026-11-18: the retired
+    1-minute page refuses first — RuntimeError(variant.RETIRED_NEVER_SENDS) — push.hooks never imported."""
+    if V.of(variant) is V.GG1 and not V.enabled(V.GG1):
+        raise RuntimeError(V.RETIRED_NEVER_SENDS)
     if not V.is_gg5(variant) and not V.of(variant).send_setup:
         from .audited_rules import NEVER_SENDS
         raise RuntimeError(NEVER_SENDS)
@@ -518,6 +521,10 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     from . import store as ST
     from .tab import broker_text_for
     v = V.of(store)
+    if not V.enabled(v):                    # ⏹ 2026-11-18 — the retired 1-minute page: nothing claimed, composed, recorded
+        counts = {k: 0 for k in COUNT_KEYS}  # or sent; "off" = a key ONLY a retired variant's counts carry (GG5 / GGA:
+        counts["off"] = 1                    # enabled() is always True — not one byte moves)
+        return counts
     gg5 = V.is_gg5(v)
     mode = mode if mode in GC.PUSH_MODES else push_mode(v)
     if send is None:

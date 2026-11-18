@@ -52,6 +52,16 @@ from tests.test_gajjala_run import make_deps, snap_row
 from tests.test_gajjala_store import FakeColl
 from tests.test_gajjala_tab import _walk_strings, run_route
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 ET = ZoneInfo("America/New_York")
 UTC = timezone.utc
 D27 = date(2026, 10, 27)                    # a Tuesday — the 1-minute record's first session

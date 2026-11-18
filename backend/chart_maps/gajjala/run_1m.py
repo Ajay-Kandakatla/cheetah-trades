@@ -27,6 +27,13 @@ no /alerts row, its own pass doc `"{date}|{HH:MM:SS}|open"`.
 
 Every number is a constants.py name (the MINE block, 2026-10-27); GG's own constants are never touched. A Cheetah
 variant — GG trades these setups on 5-minute bars. UNMEASURED: nothing here trades, sizes or enters a lane.
+
+⏹ RETIRED 2026-11-18 by his word (Ajay ~00:10 ET: "This is good info stop 1 min tab it was a good experiment") —
+GC.GAJJALA_1M_ENABLED = False, read through `variant.enabled(GG1)` (the ONE predicate). While off: the cron pass spawns
+no loop; `run_iteration` returns {"ran": False, "reason": "off"} before the window check, the store, the lease or any
+fetch (dry and on-demand alike); `loop` returns reason "off" without constructing a store and WITHOUT writing its "loop"
+state doc — nothing is written. Reversible: flip the one word back and every path above runs as it did 2026-10-27 …
+2026-11-17. The 👀 Watch's own minute loop never ran through this module's pass (it borrows GG1 numbers only).
 """
 from __future__ import annotations
 
@@ -64,8 +71,9 @@ PASS_KEYS = ("n_listed", "n_capped", "n_read", "bars", "alerts", "potential", "s
 
 # ── the switch ────────────────────────────────────────────────────────────────────────────────────────────────────
 def enabled() -> bool:
-    """The kill switch: GC.GAJJALA_1M_ENABLED AND the env GAJJALA_1M_ENABLED is not "0" (read at call time)."""
-    return bool(GC.GAJJALA_1M_ENABLED) and os.environ.get("GAJJALA_1M_ENABLED", "1") != "0"
+    """The kill switch: GC.GAJJALA_1M_ENABLED AND the env GAJJALA_1M_ENABLED is not "0" (read at call time). ⏹ 2026-11-18:
+    the body is `variant.enabled(GG1)` — the ONE predicate every GG1 entry point reads (semantics identical)."""
+    return V.enabled(V.GG1)
 
 
 # ── the slot clock ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -266,6 +274,9 @@ def run_iteration(now: Optional[datetime] = None, *, store=None, deps: Optional[
     out: dict = {"ran": False, "session": session_iso, "at_et": et.isoformat(), "dry": bool(dry), "errors": [],
                  "on_demand": on_demand, "variant": v.key,
                  "slot": {"tick": RUN._utc(tick), "i": (slot or {}).get("i")}}
+    if not enabled():                                           # ⏹ 2026-11-18 — retired: no store, no lease, no fetch,
+        out["reason"] = LOOP_REASONS[2]                         # no gate, no write (dry and on-demand alike)
+        return out
     if not RUN.in_window(now):
         out["reason"] = "outside the pass window"
         return out
@@ -474,11 +485,10 @@ def loop(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps1m] =
     start = RUN._utc(now) if now is not None else RUN._utc(deps.wall())
     tick, next_tick = slot_of(start)
     out: dict = {"tick": tick.isoformat(), "n": 0, "reason": None, "iterations": []}
-    st = store or ST.for_variant(V.GG1)
-    if not enabled():
-        out["reason"] = "off"
-        _end(st, tick, 0, out["reason"], deps.wall())
+    if not enabled():                       # ⏹ 2026-11-18 [C5] — retired: no store constructed and NO "loop" state write
+        out["reason"] = "off"               # (the doc already there is history; nothing from this page is written)
         return out
+    st = store or ST.for_variant(V.GG1)
     i = 0
     while True:
         if not fits(start, next_tick):

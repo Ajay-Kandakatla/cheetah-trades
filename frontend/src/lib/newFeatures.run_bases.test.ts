@@ -1,3 +1,4 @@
+// WIDENED 2026-11-18 — the ⏹ 1-minute page retired ✨ entry now sits FIRST (Ajay: "This is good info stop 1 min tab it was a good experiment"), so every NEW_FEATURES[n] position pin here moved +1 again.
 // WIDENED 2026-11-17 — the 🎬 Replays ✨ entry now sits FIRST, so every NEW_FEATURES[n] position pin here moved +1.
 /* 📶 run-bases ✨ (2026-11-15, ggbase spec main-session) — Ajay: "There is a concept of 3 bases and climax run can you bake
  * that in to the app please" and "I need that tracked in to Gajjala's". FIRST, routed to 🚩 Gajjala's tab, dated, his two
@@ -36,8 +37,8 @@ describe('✨ the 📶 run-bases entry (2026-11-15)', () => {
 
   it('is FIRST, listed once, dated and routed to 🚩 Gajjala', () => {
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[18].id).toBe(ID);
-    expect(NEW_FEATURES[19].id).toBe('chart-maps-gajjala-watch-2026-11-15');
+    expect(NEW_FEATURES[19].id).toBe(ID);
+    expect(NEW_FEATURES[20].id).toBe('chart-maps-gajjala-watch-2026-11-15');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-15');

@@ -17,6 +17,15 @@ in the pass window, older than `variant.stale_after_sec` of the variant whose do
 GG1M_STALE_AFTER_SEC, read BY NAME at call time — no number here). A doc with no readable `at` → no stamp, not stale.
 A frame with no stored bars serves `empty_text`, never an empty chart. No owner gate — the same audience as the cards.
 Display only: no rule, gate, push or trade reads this. UNMEASURED — a chart view is information, not an entry.
+
+⏹ 2026-11-18 — the 🚩 1-minute page retired by his word ("This is good info stop 1 min tab it was a good experiment"),
+and "But keep the one min chart in the watch list I still want them". Its pass no longer writes a GG1 read doc, so the
+1m frame now falls back to the 👀 Watch's stored 1m tile (`gajjala_watch_tiles`, the SAME session only — a prior day's
+"last good frames" never draws as today) when the page's own doc is absent: ONE `find_one`, no fetch, no write. The
+stamp is the tile's `loaded_at` (the frames' own load time — a failed read moves `at` but keeps the old frames), else
+its `at`; stale through GG1M_STALE_AFTER_SEC by name (`variant.stale_after_sec(GG1)`, the Watch's own threshold). A
+name not on the Watch serves the retired words (`variant.word("card_1m_empty", GG1, sym=…)`) while the switch is off,
+EMPTY_TEXT while on. Reversible: a GG1 read doc for the session always wins (the page running again leads).
 """
 from __future__ import annotations
 
@@ -33,6 +42,7 @@ from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import variant as V
 from chart_maps.gajjala_watch import build as BLD
+from chart_maps.gajjala_watch import colls as WCOLLS
 from chart_maps.gajjala_watch import payload as PL
 
 log = logging.getLogger("chart_maps.gajjala.card_frames")
@@ -95,9 +105,45 @@ def _blink(curves, bars, tf: str) -> Optional[dict]:
 
 
 def _stores(stores) -> tuple:
+    """(GG5 store, GG1 store, Watch tiles coll or None). A 2-tuple (tests) reads no Watch tile; None → the real ones,
+    the tiles coll from `gajjala_watch.colls` (no database → None → skipped)."""
     if stores is not None:
-        return stores
-    return ST.default(), ST.for_variant(V.GG1)
+        st = tuple(stores)
+        return (st[0], st[1], st[2]) if len(st) >= 3 else (st[0], st[1], None)
+    return ST.default(), ST.for_variant(V.GG1), (WCOLLS.colls() or {}).get("tiles")
+
+
+def _watch_1m(tiles_coll, sym: str, session) -> tuple:
+    """(frame, source) of the 👀 Watch's stored 1m tile for `sym` — ONE find_one; only a doc of the SAME session with
+    non-empty 1m bars counts. source = {"at": the tile's loaded_at, else its at}. No coll / a fault → (None, None)."""
+    if tiles_coll is None:
+        return None, None
+    try:
+        doc = tiles_coll.find_one({"_id": sym}, {"session": 1, "at": 1, "loaded_at": 1, "frames.1m": 1})
+        if not isinstance(doc, dict) or doc.get("session") != session.isoformat():
+            return None, None
+        frames = doc.get("frames") if isinstance(doc.get("frames"), dict) else {}
+        t = frames.get("1m") if isinstance(frames.get("1m"), dict) else {}
+        bars = t.get("bars")
+        if not isinstance(bars, list) or not bars:
+            return None, None
+        va = t.get("vol_avg")
+        at = doc.get("loaded_at") if doc.get("loaded_at") is not None else doc.get("at")
+        return ({"tf": "1m", "bars": list(bars), "curves": list(t.get("curves") or []),
+                 "vol_avg": va if isinstance(va, dict) else None}, {"at": at})
+    except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
+        log.debug("card_frames: watch 1m tile of %s unavailable: %s", sym, type(exc).__name__)
+        return None, None
+
+
+def _empty_text(tf: str, sym: str) -> str:
+    """The served words of a frame with no bars. The 1m frame while the 1-minute page is retired → the variant's
+    retired words (`card_1m_empty`); every other case → EMPTY_TEXT."""
+    if tf == "1m" and not V.enabled(V.GG1):
+        w = V.word("card_1m_empty", V.GG1, sym=sym)
+        if isinstance(w, str) and w:
+            return w
+    return EMPTY_TEXT.format(minutes=frame_minutes(tf), sym=sym)
 
 
 def _frame_block(sym: str, tf: str, fr: dict, src, src_v, session, end, now, in_window: bool) -> dict:
@@ -113,7 +159,7 @@ def _frame_block(sym: str, tf: str, fr: dict, src, src_v, session, end, now, in_
             "ema_tail": ema_tail(curves) if bars else None,
             "as_of_et": PL._clock(src.get("at"), now) if src else None,
             "stale": frame_stale(src.get("at"), now, in_window, src_v) if src else False,
-            "empty_text": None if bars else EMPTY_TEXT.format(minutes=frame_minutes(tf), sym=sym)}
+            "empty_text": None if bars else _empty_text(tf, sym)}
 
 
 def _build(symbol, now, stores) -> dict:
@@ -122,7 +168,7 @@ def _build(symbol, now, stores) -> dict:
         return {"state": "bad_symbol", "reason": BAD_SYMBOL_TEXT}
     now = GT._et(now)
     session, is_today, in_window = GT.session_for(now)
-    s5, s1 = _stores(stores)
+    s5, s1, wt = _stores(stores)
     g5 = s5.get_read(session, sym)
     g1 = s1.get_read(session, sym)
     g5 = g5 if isinstance(g5, dict) else None
@@ -135,6 +181,10 @@ def _build(symbol, now, stores) -> dict:
         if tf == "5m" and g5 is None and g1 is not None:
             src, src_v = g1, FALLBACK_5M
         fr = GT._tile_frame(src, tf, src_v) if src else {"bars": [], "curves": [], "vol_avg": None}
+        if tf == "1m" and not fr.get("bars"):                  # 2026-11-18: no GG1 bars → the Watch's 1m tile
+            wfr, wsrc = _watch_1m(wt, sym, session)
+            if wfr is not None:
+                fr, src, src_v = wfr, wsrc, V.GG1
         picked.append((tf, fr, src, src_v))
 
     every_bar = [b for _tf, fr, _s, _v in picked for b in (fr.get("bars") or [])]
@@ -150,7 +200,8 @@ def _build(symbol, now, stores) -> dict:
 
 def build(symbol: str, now=None, *, stores=None) -> dict:
     """The view's answer for one symbol. Never raises: any fault → {"state": "error", "reason": <exception name>}.
-    `stores` = (GG5 store, GG1 store) for tests; None → the real ones (two find_one reads, nothing else)."""
+    `stores` = (GG5 store, GG1 store[, Watch tiles coll]) for tests; None → the real ones (two find_one reads, plus
+    one of the Watch's tile when the 1m frame has no GG1 bars — nothing else)."""
     try:
         return _build(symbol, now, stores)
     except Exception as exc:                                   # noqa: BLE001 — the view serves the fault, never a 500

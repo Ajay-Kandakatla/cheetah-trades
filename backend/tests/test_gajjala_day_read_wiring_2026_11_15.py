@@ -35,6 +35,18 @@ from chart_maps.luk import tab as LT
 from tests.test_gajjala_run import NOW, S, make_deps
 from tests.test_gajjala_store import FakeColl, fake_store
 from tests import test_luk_tab as LTT
+from chart_maps.gajjala import constants as GC
+
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 
 BACKEND = Path(__file__).resolve().parents[1]
 SOURCES = {"run": BACKEND / "chart_maps" / "gajjala" / "run.py",

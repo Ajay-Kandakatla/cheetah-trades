@@ -1271,6 +1271,16 @@ the 5-minute setups read NULL.
   bands (the GGB bull_flag card and its 🧠 tile, `red_closes` 3 = the boundary). Doc
   `docs/gajjala/entry_zones_2026_11_08.md` (HIS CALLs #1–#5, #11); contract "🧪 entry zones · 🎾 SI label · ➖ EMA rank
   (2026-11-08)"; ✨ `chart-maps-gajjala-entry-zones-2026-11-08` (routed to the 🧪 tab). UNMEASURED. Not advice.
+- **⏹ RETIRED 2026-11-18, reversibly (history kept)** — Ajay, verbatim: "This is good info stop 1 min tab it was a good
+  experiment" and "But keep the one min chart in the watch list I still want them". The ONE switch
+  `GAJJALA_1M_ENABLED = False` (+ `GAJJALA_1M_RETIRED_ON`; `GAJJALA_1M_PUSH_MODE` stays "live"), read through ONE
+  predicate `variant.enabled(v)`: no spawn, no pass, no Massive minute fetch, no A+ / 🧠 push (both `_default_send`s
+  refuse with `RETIRED_NEVER_SENDS`), no loop state write, the 🔄 refused first in every window; words from
+  `WORDS_1M_RETIRED`. The tab is hidden from the strip (`RETIRED_CM_TABS`) but `?tab=gajjala_1m` opens on its 🏁 with the
+  today read (`tab.default_sub`). STAYS: the 👀 Watch's own 1-minute charts / loop / cross alert, the 🤖 auto names
+  (from 🚩 5-min and 🧪 only), the ⤢ card frame (1-min view from the Watch's stored tile, same session), collections,
+  nightly grade, the two kinds in `OWNER_KEEP_SET`, GG5 / 🧪 bytes. Back on = one word + drop it from `RETIRED_CM_TABS`.
+  Doc `docs/gajjala/retire_1m_page_2026_11_18.md` (14 HIS CALLs). UNMEASURED. Not advice.
 
 ### Chart Maps — 🧪 Gajjala · Audited — `chart_maps/gajjala/audited_rules.py` (2026-11-01)
 Ajay 2026-11-01: *"I would like you to create a new tab for Gajjals when you modifiy with audit of End of day..

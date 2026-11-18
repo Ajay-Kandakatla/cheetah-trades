@@ -64,6 +64,14 @@ removed earlier today comes back as A+ (a board arrival — `out_today` blocks t
 `aplus_sets` answers None (unknown, never "none") on any read fault, a missing 🧪 overlay handle or a raise → no A+ add,
 no refresh, no promote that step. Potential entries never gain a key. UNMEASURED — display / selection only.
 
+⏹ 1-MINUTE PAGE RETIRED (2026-11-18 — Ajay, verbatim: "This is good info stop 1 min tab it was a good experiment", then
+"But keep the one min chart in the watch list I still want them"). The ACTIVE sources follow `variant.enabled` (the ONE
+predicate over GC.GAJJALA_1M_ENABLED): `read_sources()` / `sources()` drop "gajjala_1m" while the page is off — no GG1
+store is read, a GG1-only potential / tracker / A+ never seats, the hint and the ℹ️ line name only the 🚩 5-min and 🧪
+boards. C.AUTO_SOURCES / C.AUTO_SOURCE_WORDS / C.AUTO_READ_SOURCES stay the registry, so an entry stored with
+"gajjala_1m" still prints its words (history). The Watch's own minute bars never came from that pass — untouched.
+Reversible: the switch back on → the three sources return.
+
 SESSION. The doc carries its session; a new session clears entries, removed and dismissed (HIS CALL #5). `dismiss` (his ×,
 api.py DELETE) performs that reset itself on a stale doc [C7].
 
@@ -131,6 +139,19 @@ def _variants() -> dict:
     return {v.key: v for v in V.VARIANTS}
 
 
+def read_sources() -> tuple:
+    """The ACTIVE stored read sets — C.AUTO_READ_SOURCES whose variant is enabled (`variant.enabled`, the ONE switch
+    predicate, read at call time; 2026-11-18: the retired 1-minute page drops out; reversible)."""
+    vs = _variants()
+    return tuple(k for k in C.AUTO_READ_SOURCES if k in vs and V.enabled(vs[k]))
+
+
+def sources() -> tuple:
+    """The ACTIVE source tags — C.AUTO_SOURCES minus a disabled variant's key ("gga" stays: 🧪 is always on)."""
+    vs = _variants()
+    return tuple(k for k in C.AUTO_SOURCES if k not in vs or V.enabled(vs[k]))
+
+
 def _borrowers() -> dict:
     """{source key: the read source it borrows} — derived from variant.borrows (🧪 borrows GG5's reads), never typed."""
     vs = _variants()
@@ -142,7 +163,7 @@ def _default_stores() -> dict:
     """{read source key: its real store} — GG5 → store.default(), GG1 → store.for_variant(V.GG1); 🎯 2026-11-17 + the 🧪
     store (store.for_variant(V.GGA) — its overlay handle, for the A+ classifier)."""
     vs = _variants()
-    out = {k: (ST.default() if V.is_gg5(vs[k]) else ST.for_variant(vs[k])) for k in C.AUTO_READ_SOURCES}
+    out = {k: (ST.default() if V.is_gg5(vs[k]) else ST.for_variant(vs[k])) for k in read_sources()}
     out[V.GGA.key] = ST.for_variant(V.GGA)
     return out
 
@@ -269,7 +290,7 @@ def _read_docs(st, iso: str):
 
 
 def potential_sets(session, *, shared: dict, stores: Optional[dict] = None, docs=_READ) -> Optional[dict]:
-    """{source key: {SYM: cand}} for C.AUTO_READ_SOURCES — None when ANY store cannot be read (the whole answer is
+    """{source key: {SYM: cand}} for the ACTIVE read sources (`read_sources()`) — None when ANY store cannot be read (the whole answer is
     unknown, never "none"). cand = the setup with the least potential.order_key among the name's 🧠 setups. `docs`
     (2026-11-17): {read source: the step's `_read_docs` answer} — read ONCE per step and shared with `aplus_sets`."""
     stores = stores if stores is not None else _default_stores()
@@ -278,7 +299,7 @@ def potential_sets(session, *, shared: dict, stores: Optional[dict] = None, docs
     scan_by = shared.get("scan_by") or {}
     pre = docs
     out: dict = {}
-    for key in C.AUTO_READ_SOURCES:
+    for key in read_sources():
         docs = _read_docs(stores.get(key), iso) if pre is _READ else (pre or {}).get(key)
         if docs is None:
             return None
@@ -320,7 +341,7 @@ def merge(sets) -> list:
     """[(order_key, SYM, cand, sources)] across the read sources, one per fold; `sources` in C.AUTO_SOURCES order with
     every borrower ("gga") added when the source it borrows from is present; order_key = the least; sorted."""
     by: dict = {}
-    for key in C.AUTO_READ_SOURCES:
+    for key in read_sources():
         for sym, cand in ((sets or {}).get(key) or {}).items():
             k = CO.fold(sym)
             if k not in by:
@@ -330,10 +351,10 @@ def merge(sets) -> list:
             e[3].add(key)
             if cand["order_key"] < e[0]:
                 e[0], e[2] = cand["order_key"], cand
-    bor = _borrowers()
+    bor, act = _borrowers(), sources()
     out = []
     for ok, sym, cand, present in by.values():
-        srcs = [s for s in C.AUTO_SOURCES if s in present or bor.get(s) in present]
+        srcs = [s for s in act if s in present or bor.get(s) in present]
         out.append((ok, sym, cand, srcs))
     out.sort(key=lambda x: (x[0], x[1]))
     return out
@@ -369,7 +390,7 @@ def tracker_sets(session, *, shared: dict, docs: Optional[dict]) -> Optional[dic
     listed = shared.get("listed") or {}
     scan_by = shared.get("scan_by") or {}
     by: dict = {}
-    for key in C.AUTO_READ_SOURCES:
+    for key in read_sources():
         ds = (docs or {}).get(key)
         if ds is None:
             return None
@@ -392,14 +413,14 @@ def tracker_sets(session, *, shared: dict, docs: Optional[dict]) -> Optional[dic
                 cur["last_at"] = la
             if rank < cur["rank"]:
                 cur.update(rank=rank, first_seen=fs, setup=setup, kind=d.get("first_kind"))
-    bor = _borrowers()
+    bor, act = _borrowers(), sources()
     out: dict = {}
     for k, t in by.items():
         vol, vsrc = volume_of(t["up"], (scan_by.get(t["up"]) or {}).get("last"), shared.get("trackers"))
         cand = {"setup": t["setup"] if isinstance(t["setup"], str) else None,
                 "kind": t["kind"] if isinstance(t["kind"], str) else None, "volume": vol, "volume_source": vsrc,
                 "float_shares": None, "order_key": None, "first_seen": t["first_seen"], "last_at": t["last_at"]}
-        srcs = [s for s in C.AUTO_SOURCES if s in t["present"] or bor.get(s) in t["present"]]
+        srcs = [s for s in act if s in t["present"] or bor.get(s) in t["present"]]
         out[k] = (t["symbol"], cand, srcs)
     return out
 
@@ -443,15 +464,18 @@ def aplus_sets(session, *, docs: dict, stores: dict) -> Optional[dict]:
     unknown, never "none" — when a read set faulted, the 🧪 store / its overlay handle is missing, or anything raises.
     A 🧪 overlay FIND fault is swallowed by store.overlays (→ "no overlay") and cannot be told apart here."""
     try:
-        if not isinstance(docs, dict) or any(docs.get(k) is None for k in C.AUTO_READ_SOURCES):
+        rs = read_sources()
+        if not isinstance(docs, dict) or any(docs.get(k) is None for k in rs):
             return None
         sta = (stores or {}).get(V.GGA.key)
         if sta is None or sta.coll(ST.OVERLAY) is None:
             return None
         from chart_maps.gajjala import audited_tab as AT                # lazy: the 🧪 board's module (0.6 s once)
         PL = _words()
-        gg5, gg1 = _by_symbol(docs[V.GG5.key]), _by_symbol(docs[V.GG1.key])
+        gg5 = _by_symbol(docs[V.GG5.key])
+        gg1 = _by_symbol(docs.get(V.GG1.key) or []) if V.GG1.key in rs else {}     # 2026-11-18: retired → not read
         gga, _stats = AT.overlay_reads(gg5, sta, _iso(session))
+        act = sources()
         out: dict = {}
         for sym, items in PL.aplus_by_symbol(gg5, gg1, gga).items():
             blk = PL.aplus_row_block(items)
@@ -459,7 +483,7 @@ def aplus_sets(session, *, docs: dict, stores: dict) -> Optional[dict]:
             if blk is None or k in out:
                 continue
             have = {it.get("source") for it in blk["items"]}
-            out[k] = (CO.house(sym), dict(blk["items"][0]), [s for s in C.AUTO_SOURCES if s in have])
+            out[k] = (CO.house(sym), dict(blk["items"][0]), [s for s in act if s in have])
         return out
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala watch 🤖: A+ classifier failed: %s", type(exc).__name__)
@@ -528,7 +552,8 @@ def progress(sym, session, *, stores: Optional[dict] = None, shared: Optional[di
     sym = _up(sym)
     gone = bool(listed) and sym not in listed                     # [C5] only a NON-EMPTY listed set says "gone"
     verdicts: dict = {}
-    for key in C.AUTO_READ_SOURCES:
+    rs = read_sources()
+    for key in rs:
         if gone:
             verdicts[key] = {"verdict": "dropped", "state": "graveyard", "word": PT.state_word("graveyard", None)}
             continue
@@ -547,19 +572,19 @@ def progress(sym, session, *, stores: Optional[dict] = None, shared: Optional[di
             verdicts[key] = {"verdict": "dropped", "state": None, "word": PT.state_word(None, None)}
             continue
         verdicts[key] = _source_verdict(doc, vs[key], first_setup)
-    vals = [verdicts[k]["verdict"] for k in C.AUTO_READ_SOURCES]
+    vals = [verdicts[k]["verdict"] for k in rs]
     out = {"keep": True, "unknown": False, "reason": None, "state": None, "source": None, "text": None, "word": None}
     if "keep" in vals:
         return out
     if "fault" in vals or "unknown" in vals:
         out["unknown"] = True
         return out
-    rem = [k for k in C.AUTO_READ_SOURCES if verdicts[k]["verdict"] == "remove"]
+    rem = [k for k in rs if verdicts[k]["verdict"] == "remove"]
     if rem:
         k = first_src if first_src in rem else rem[0]
         out.update(keep=False, reason=REASONS[0], state=verdicts[k]["state"], source=k, text=verdicts[k]["text"])
         return out
-    k = first_src if first_src in verdicts else C.AUTO_READ_SOURCES[0]
+    k = first_src if first_src in verdicts else rs[0]
     out.update(keep=False, reason=REASONS[1], state=verdicts[k].get("state"), source=k, word=verdicts[k].get("word"))
     return out
 
@@ -586,9 +611,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     entries, removed, dismissed = _lists(doc, iso)
     mk = {CO.fold(m) for m in manual or [] if isinstance(m, str)}
     dk = {CO.fold(s) for s in dismissed}
-    tdocs = {k: _tracker_docs(stores.get(k), iso) for k in C.AUTO_READ_SOURCES}          # ONE find per store
+    tdocs = {k: _tracker_docs(stores.get(k), iso) for k in read_sources()}          # ONE find per store
     shared = shared_sets(session, store=stores.get(V.GG5.key), tracker_docs=tdocs.get(V.GG5.key))
-    rdocs = {k: _read_docs(stores.get(k), iso) for k in C.AUTO_READ_SOURCES}             # ONE read find per store
+    rdocs = {k: _read_docs(stores.get(k), iso) for k in read_sources()}             # ONE read find per store
     sets = potential_sets(session, shared=shared, stores=stores, docs=rdocs)
     # 🎯 2026-11-17 (spec ggwaplus2): the A+ set — in window only (out of window: no add, no promote, no refresh)
     aps = aplus_sets(session, docs=rdocs, stores=stores) if in_window else None
@@ -847,7 +872,7 @@ def push_mode() -> str:
 
 def rules_line() -> str:
     """The ℹ️ clause — every number and word from the constants at CALL time (never typed here)."""
-    words = [C.AUTO_SOURCE_WORDS[k] for k in C.AUTO_SOURCES]
+    words = [C.AUTO_SOURCE_WORDS[k] for k in sources()]
     boards = ", ".join(words[:-1]) + " and " + words[-1] if len(words) > 1 else "".join(words)
     gone = " or ".join(_REMOVE_WORDS.get(s, s) for s in C.AUTO_REMOVE_STATES)
     stays = "; ".join(_KEEP_WORDS[s] for s in C.AUTO_KEEP_STATES if s in _KEEP_WORDS)
@@ -871,7 +896,7 @@ def rules_line() -> str:
 
 
 __all__ = ["REASONS", "STEP_REASONS", "STATES_DISMISS", "SKIPPED_KEYS", "read_doc", "entries_of", "current_symbols",
-           "shared_sets", "volume_of", "potential_sets", "good_volume", "merge", "tracker_sets", "arrivals", "progress",
+           "shared_sets", "volume_of", "read_sources", "sources", "potential_sets", "good_volume", "merge", "tracker_sets", "arrivals", "progress",
            "aplus_sets", "aplus_arrivals",
            "step", "dismiss",
            "hold_crosses", "push_mode", "rules_line"]

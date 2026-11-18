@@ -1350,8 +1350,9 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-watch-aplus-push-2026-11-17';
       // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please") — FIRST → one of the first two.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first two NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — first two → first three.
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 3 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
       else {
@@ -1362,6 +1363,125 @@ const CONTRACTS = [
         if (lab[2] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 🎯 A+ push ✨ must route to /chart-maps?tab=gajjala_watch (found ${lab[2]})`);
       }
       if (!exists('../docs/gajjala/aplus_push_title_watch_2026_11_17.md')) errs.push('docs/gajjala/aplus_push_title_watch_2026_11_17.md must exist');
+      return errs;
+    },
+  },
+  {
+    name: '⏹ 🚩 1-minute page retired (2026-11-18)',
+    file: '../backend/chart_maps/gajjala/constants.py',
+    // Ajay 2026-11-18 ~00:10 ET: "This is good info stop 1 min tab it was a good experiment"; ~00:20 ET: "But keep the one min
+    // chart in the watch list I still want them". The ONE switch (GAJJALA_1M_ENABLED) is off, read through variant.enabled;
+    // the page's history stays routable; the 👀 Watch's own 1-minute frames are the HARD KEEP. Spec ret1m2 §4 (main session).
+    // Doc docs/gajjala/retire_1m_page_2026_11_18.md.
+    checks: (src) => {
+      const errs = [];
+      const RETIRE = 'This is good info stop 1 min tab it was a good experiment';
+      const KEEP = 'But keep the one min chart in the watch list I still want them';
+      const opt = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is missing`); return ''; } };
+      // (1) the ONE switch, off by his word; the push-mode line untouched
+      const sw = /^GAJJALA_1M_ENABLED = (\w+)\s+#(.*)$/m.exec(src);
+      if (!sw || sw[1] !== 'False') errs.push(`constants.GAJJALA_1M_ENABLED must be False (found ${sw ? sw[1] : 'none'})`);
+      else {
+        if (!/^\s*Ajay 2026-11-18/.test(sw[2])) errs.push('constants.GAJJALA_1M_ENABLED comment must start "Ajay 2026-11-18"');
+        if (!sw[2].includes(RETIRE)) errs.push('constants.GAJJALA_1M_ENABLED comment must carry his sentence verbatim');
+      }
+      if (!/^GAJJALA_1M_RETIRED_ON = "2026-11-18"/m.test(src)) errs.push('constants.GAJJALA_1M_RETIRED_ON must be "2026-11-18"');
+      if (!src.includes('\nGAJJALA_1M_PUSH_MODE = "live"            # Ajay 2026-10-29 ("Only give me Gajjalas chart notifications from both tabs, / I am missing out the ones in noise." — HIS CALL #1 of the 1-minute page answered); "shadow" 2026-10-27…28 (recorded, never sent)\n')) errs.push('constants.GAJJALA_1M_PUSH_MODE line must stay byte-identical (the switch stops sends; the mode is untouched)');
+      // (2) the ONE predicate + the retired words
+      const gv = opt('../backend/chart_maps/gajjala/variant.py');
+      if (gv) {
+        if (!/^def enabled\(v=None\) -> bool:/m.test(gv)) errs.push('variant.py must declare `def enabled(v=None) -> bool:` — the ONE predicate every GG1 entry point reads');
+        if (!/^WORDS_1M_RETIRED: Mapping = MappingProxyType\(\{/m.test(gv)) errs.push('variant.py must carry WORDS_1M_RETIRED (MappingProxyType)');
+        if (!gv.includes(`_HIS_WORDS_RETIRE = "${RETIRE}"`)) errs.push('variant._HIS_WORDS_RETIRE must be his sentence verbatim (typed once)');
+        if (!gv.includes(`_HIS_WORDS_KEEP_WATCH = "${KEEP}"`)) errs.push('variant._HIS_WORDS_KEEP_WATCH must be his sentence verbatim (typed once)');
+      }
+      const r1 = opt('../backend/chart_maps/gajjala/run_1m.py');
+      if (r1 && !/^def enabled\(\) -> bool:[\s\S]*?\n    return V\.enabled\(V\.GG1\)\n/m.test(r1)) errs.push('run_1m.enabled() must return V.enabled(V.GG1) (one predicate)');
+      // (3) [C3] the route opens on the 🏁 through ONE helper
+      const tb = opt('../backend/chart_maps/gajjala/tab.py');
+      if (tb && !/^def default_sub\(/m.test(tb)) errs.push('gajjala/tab.py must export def default_sub( [C3]');
+      const api = opt('../backend/chart_maps/api.py');
+      if (api && !/GT\.default_sub\(/.test(api)) errs.push("api.py's gajjala-1m _run must call GT.default_sub( [C3]");
+      // (4) [C4] the GG1 refusal sits BEFORE the closed-day word
+      const od = opt('../backend/chart_maps/gajjala/on_demand.py');
+      if (od) {
+        const body = od.slice(od.indexOf('\ndef request('));
+        const iRef = body.indexOf('if rv is V.GG1 and not V.enabled(rv):');
+        const iClosed = body.indexOf('if (_closed(now) if profile is None else profile.closed(now)):');
+        if (iRef < 0) errs.push('on_demand.request must refuse the retired GG1 (if rv is V.GG1 and not V.enabled(rv):) [C4]');
+        else if (iClosed < 0 || iRef > iClosed) errs.push('on_demand.request: the GG1 refusal must come BEFORE the _closed call (source order) [C4]');
+      }
+      // (5) [C5] the loop's off branch writes nothing
+      if (r1) {
+        const lp = r1.slice(r1.indexOf('\ndef loop('));
+        const off = /\n    if not enabled\(\):[^\n]*\n((?:        [^\n]*\n)+)/.exec(lp);
+        const blk = off ? off[1] : null;
+        if (blk === null) errs.push('run_1m.loop must keep its `if not enabled():` off branch [C5]');
+        else if (/_end\(/.test(blk)) errs.push('run_1m.loop off branch must carry no _end( call — nothing is written while retired [C5]');
+        const iOff = lp.indexOf('if not enabled():'), iSt = lp.indexOf('st = store or ST.for_variant(V.GG1)');
+        if (iOff < 0 || iSt < 0 || iOff > iSt) errs.push('run_1m.loop must return on the off branch BEFORE constructing its store [C5]');
+      }
+      // (6) [C1] the ⤢ card frame reads the Watch tile; SOURCE unchanged
+      const cf = opt('../backend/chart_maps/gajjala/card_frames.py');
+      if (cf) {
+        if (!/_watch_1m\(/.test(cf)) errs.push('card_frames.py must carry _watch_1m( — the 1m view from the 👀 Watch tile [C1]');
+        if (!/card_1m_empty/.test(cf)) errs.push('card_frames.py must serve the card_1m_empty words for names off the Watch [C1]');
+        if (!/^SOURCE = \{"15m": V\.GG5, "5m": V\.GG5, "1m": V\.GG1\}/m.test(cf)) errs.push('card_frames.SOURCE must stay {"15m": V.GG5, "5m": V.GG5, "1m": V.GG1} [C1]');
+      }
+      // (7) the HARD KEEP: the 👀 Watch's frames are untouched
+      const wc = opt('../backend/chart_maps/gajjala_watch/constants.py');
+      if (wc) {
+        if (!/^FRAMES = \(\("1m", "1min"\), \("3m", "3min"\), \("5m", "5min"\)\)/m.test(wc)) errs.push('gajjala_watch FRAMES must stay (("1m","1min"),("3m","3min"),("5m","5min")) — his "keep the one min chart"');
+        if (!/^AXIS_FRAME = "1m"/m.test(wc)) errs.push('gajjala_watch AXIS_FRAME must stay "1m" (the hard keep)');
+        if (!/^PUSH_FRAMES = \("1m",\)/m.test(wc)) errs.push('gajjala_watch PUSH_FRAMES must stay ("1m",) — the 9/21 cross alert stays (the hard keep)');
+      }
+      // (8) the FE: hidden from the strip, still routable
+      const lib = read('src/lib/chartMaps.ts');
+      if (!/^export const RETIRED_CM_TABS: ReadonlyArray<CmTab> = \['gajjala_1m'\];$/m.test(lib)) errs.push("chartMaps.ts must export RETIRED_CM_TABS == ['gajjala_1m']");
+      if (!/^export function isRetiredTab\(/m.test(lib)) errs.push('chartMaps.ts must export isRetiredTab(');
+      const cmt = /export const CM_TABS: CmTab\[\] = \[([\s\S]*?)\];/.exec(lib);
+      if (!cmt || !cmt[1].includes("'gajjala_1m'")) errs.push("CM_TABS must still carry 'gajjala_1m' (the ?tab= deep link and the 🏁 history)");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/\.filter\(\(t\) => !isRetiredTab\(t\)\)/.test(page)) errs.push('ChartMaps.tsx must filter the strip by isRetiredTab');
+      if (!/<GajjalaBoard key="gajjala_1m" variant="gajjala_1m" \/>/.test(page)) errs.push('ChartMaps.tsx must still mount <GajjalaBoard key="gajjala_1m" …/> for ?tab=gajjala_1m');
+      const bm = /\n  gajjala_1m: \{\n\s+label: [^\n]*\n\s+blurb: '((?:[^'\\]|\\.)*)'/.exec(lib);
+      if (!bm) errs.push('TAB_META.gajjala_1m blurb not found');
+      else {
+        if (!bm[1].includes('RETIRED 2026-11-18')) errs.push('TAB_META.gajjala_1m blurb must say "RETIRED 2026-11-18"');
+        if (!bm[1].includes(RETIRE)) errs.push('TAB_META.gajjala_1m blurb must quote his sentence verbatim');
+        if (/rings your phone/.test(bm[1])) errs.push('TAB_META.gajjala_1m blurb must not say "rings your phone" (retired)');
+      }
+      const ntf = read('src/pages/Notifications.tsx');
+      for (const k of ['gajjala_1m_setup', 'gajjala_1m_potential']) {
+        const m = new RegExp(`key: '${k}'[^\\n]*\\n\\s+detail: '([^']*)'([\\s\\S]*?)\\},`).exec(ntf);
+        if (!m) { errs.push(`Notifications.tsx lost the ${k} row`); continue; }
+        const det = m[1] + m[2];
+        if (!m[1].startsWith('RETIRED 2026-11-18')) errs.push(`Notifications ${k} detail must lead with "RETIRED 2026-11-18"`);
+        if (!det.includes('LIVE SINCE 2026-10-29')) errs.push(`Notifications ${k} detail must still say "LIVE SINCE 2026-10-29"`);
+        if (det.includes('WHAT FIRES:')) errs.push(`Notifications ${k} detail must never say "WHAT FIRES:" (nothing fires)`);
+      }
+      // (9) the doc
+      const doc = opt('../docs/gajjala/retire_1m_page_2026_11_18.md');
+      if (doc) {
+        for (const w of [RETIRE, KEEP, 'keep the one min chart']) if (!doc.includes(w)) errs.push(`docs/gajjala/retire_1m_page_2026_11_18.md must carry "${w}" verbatim`);
+        if (/bounc/i.test(doc)) errs.push('the retire doc: "reversal", never the b-word');
+      }
+      // (10) ✨ FIRST, routed, dated
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const ID = 'chart-maps-gajjala-1m-retired-2026-11-18';
+      const firstId = (/\bid: '([^']+)'/.exec(arr) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ ${ID} must be the FIRST NEW_FEATURES entry (found ${firstId || 'none'})`);
+      const lab = new RegExp(`id: '${ID}',\\s*label: '([^']+)',\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
+      if (!lab) errs.push(`the ✨ ${ID} entry (label + addedAt + route) is missing`);
+      else {
+        if (!lab[1].includes(RETIRE) || !lab[1].includes(KEEP)) errs.push('the ⏹ ✨ label must quote BOTH his sentences verbatim');
+        if (!lab[1].includes('1-minute charts')) errs.push('the ⏹ ✨ label must say the 👀 Watch keeps its 1-minute charts');
+        if (!lab[1].includes('UNMEASURED. Not advice.')) errs.push('the ⏹ ✨ label must end its claim with "UNMEASURED. Not advice."');
+        if (/\bedge\b/i.test(lab[1]) || /bounc/i.test(lab[1])) errs.push('the ⏹ ✨ label: never "edge", never the b-word');
+        if (lab[2] !== '2026-11-18') errs.push(`the ⏹ ✨ must be dated 2026-11-18 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala_1m&sub=track_record') errs.push(`the ⏹ ✨ must route to /chart-maps?tab=gajjala_1m&sub=track_record (found ${lab[3]})`);
+      }
       return errs;
     },
   },
@@ -14779,7 +14899,11 @@ const CONTRACTS = [
         const vm = /^DUP_RULE_TEXT = \(([\s\S]*?)\)$/m.exec(gv);
         const vt = vm ? [...vm[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1].replace(/\\"/g, '"')).join('') : '';
         if (!vt.includes(RULE)) errs.push('variant.DUP_RULE_TEXT must quote his rule verbatim (== ledger.DUP_RULE_TEXT, pinned by test_gajjala_ledger_dedupe_2026_11_02.py)');
-        if ((gv.match(/\+ DUP_RULE_TEXT/g) || []).length !== 4) errs.push('variant.py must append DUP_RULE_TEXT at exactly four sites: the 1-minute ledger honesty, its shadow twin, the 🧪 ledger honesty, the compare honesty');
+        // WIDENED 4 → 5 (2026-11-18: ⏹ the 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment";
+        // WORDS_1M_RETIRED.ledger_honesty carries the rule too, so the retired 🏁 keeps the one-count sentence).
+        if ((gv.match(/\+ DUP_RULE_TEXT/g) || []).length !== 5) errs.push('variant.py must append DUP_RULE_TEXT at exactly five sites: the 1-minute ledger honesty, its shadow twin, its retired twin (WORDS_1M_RETIRED.ledger_honesty, 2026-11-18), the 🧪 ledger honesty, the compare honesty');
+        const rb = /^WORDS_1M_RETIRED: Mapping = MappingProxyType\(\{([\s\S]*?)\n\}\)/m.exec(gv);
+        if (!rb || !/"ledger_honesty":[^\n]*(?:\n(?!\s*"ledger_empty")[^\n]*)*?\+ DUP_RULE_TEXT\),\s*\n\s*"ledger_empty"/.test(rb[1])) errs.push('variant.WORDS_1M_RETIRED.ledger_honesty must end with + DUP_RULE_TEXT (the retired 🏁 keeps the one-count rule, 2026-11-18)');
       }
       // (2) the 🥇 ledger imports the engine; Luk's grading math untouched
       const ll = tryRead('../backend/chart_maps/luk/ledger.py', 'luk/ledger.py');
@@ -17298,7 +17422,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 23).includes(ZID))  /* WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 24).includes(ZID))  /* WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17523,7 +17647,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-replays-tab-2026-11-17';
       const ids = [...arr.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
-      if (ids[0] !== ID) errs.push(`the 🎬 Replays ✨ '${ID}' must be FIRST in NEW_FEATURES (found ${ids[0] || 'none'})`);
+      // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — FIRST → one of the first two.
+      if (!ids.slice(0, 2).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first two NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}',\\s*\\n\\s*label: "([^"]+)",\\s*\\n\\s*addedAt: '2026-11-17',\\s*\\n\\s*route: '/chart-maps\\?tab=replays',`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must carry its label, addedAt '2026-11-17' and route '/chart-maps?tab=replays'`);

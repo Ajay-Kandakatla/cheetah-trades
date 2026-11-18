@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import ChartMaps from './ChartMaps';
-import { CM_TABS } from '../lib/chartMaps';
+import { CM_TABS, isRetiredTab } from '../lib/chartMaps';
 import { CM_SCROLL_KEY, tileSymbolFromHref } from '../lib/cmPinnedTab';
 
 const TRACK = vi.hoisted(() => ({ trackFeature: vi.fn() }));
@@ -159,7 +159,10 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-const TOPPING = CM_TABS.indexOf('topping');
+/* RE-PINNED 2026-11-18 (retire-1m spec §3.10): the strip = CM_TABS minus RETIRED_CM_TABS (🚩 gajjala_1m retired —
+ * Ajay: "This is good info stop 1 min tab it was a good experiment"); a retired tab still routes by ?tab=. */
+const STRIP_TABS = CM_TABS.filter((t) => !isRetiredTab(t));
+const TOPPING = STRIP_TABS.indexOf('topping');
 /* The centred scrollLeft for topping under the layout mock (tab i at i*120,
  * 110 wide, strip 400) — derived, so a tab added before it never breaks a pin. */
 const TOPPING_LEFT = Math.round(TOPPING * 120 - (400 - 110) / 2);
@@ -171,7 +174,8 @@ describe('📌 the pinned strip + the active tab in view', () => {
     const list = bar().querySelector('.cm-tabs[role="tablist"]');
     expect(list).not.toBeNull();
     const tabs = Array.from(list!.querySelectorAll('[role="tab"]'));
-    expect(tabs).toHaveLength(CM_TABS.length);
+    expect(tabs).toHaveLength(STRIP_TABS.length);   // RE-PINNED 2026-11-18: CM_TABS minus RETIRED_CM_TABS
+    expect(STRIP_TABS.length).toBe(CM_TABS.length - 1);   // NEGATIVE: exactly one tab retired, nothing else dropped
     expect(tabs.every((t) => t.tagName === 'A')).toBe(true);
   });
 
@@ -219,7 +223,8 @@ describe('📌 the pinned strip + the active tab in view', () => {
     expect(screen.getByRole('tab', { name: 'Back in Demand' })).toHaveAttribute('aria-selected', 'true');
     const order = Array.from(document.querySelectorAll('.cm-tabs > a'))
       .map((a) => new URLSearchParams(a.getAttribute('href')!.slice(1)).get('tab'));
-    expect(order).toEqual(CM_TABS);
+    expect(order).toEqual(STRIP_TABS);   // RE-PINNED 2026-11-18: CM_TABS minus RETIRED_CM_TABS, same order
+    expect(order).not.toContain('gajjala_1m');
   });
 
   it('21. NEGATIVE: a resize after a manual strip scroll never snaps it back', async () => {

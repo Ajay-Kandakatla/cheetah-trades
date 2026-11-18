@@ -31,6 +31,16 @@ from tests.test_gajjala_store import fake_store
 import tests.test_gajjala_1m_page_2026_10_27 as T1
 import tests.test_gajjala_track_record_tab as T5
 
+
+@pytest.fixture(autouse=True, scope="module")
+def gg1_on():
+    """2026-11-18 — the page retired (GC.GAJJALA_1M_ENABLED False, Ajay: "This is good info stop 1 min tab it was a good
+    experiment"); this module pins how it RAN 2026-10-27 … 2026-11-17 and how it runs again if the word flips back.
+    Module scope so the module-scoped fixture day is built ON too; a test that sets the switch False still can."""
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(GC, "GAJJALA_1M_ENABLED", True)
+        yield
+
 COND_ROW_KEYS = frozenset({"promo", "promo_text"})      # served_block: a row carries them ONLY when 🎪-tagged
 WORD_KEYS = frozenset({"title", "honesty", "counts_text", "empty_text"})   # what WORDS_1M rewrites (_variant_words)
 ROW_WORD_KEYS = frozenset({"href", "kind_text"})         # a row: its deep link's tab= and the 🧠 kind word
