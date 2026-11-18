@@ -52,7 +52,10 @@ def test_frames_and_caps():
     assert set(C.PUSH_FRAMES) <= set(C.FRAME_WORDS)
     assert C.MAX_SYMBOLS >= 9
     from daytrading import signal_lab
-    assert C.MAX_SYMBOLS == signal_lab.MAX_SYMBOLS
+    # RE-PINNED 2026-11-18 — his answer "18 (Recommended)" after "All the watch button are not working": GG's own 18, no
+    # longer signal_lab's 12. NEGATIVE: the ⚡ Signals list keeps its own 12 — the two caps are independent now.
+    assert C.MAX_SYMBOLS == GC.GG_WATCH_N == 18
+    assert signal_lab.MAX_SYMBOLS == 12 and C.MAX_SYMBOLS != signal_lab.MAX_SYMBOLS
 
 
 def test_ids_and_argv():

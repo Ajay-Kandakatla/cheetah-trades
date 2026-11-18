@@ -17,7 +17,7 @@ API_LIVE_PATH = API_PATH + "/live"                       # 👀 LIVE (2026-11-16
 FRAMES = (("1m", "1min"), ("3m", "3min"), ("5m", "5min"))   # his words "1 min 3 min and 5 min charts" — order = draw order
 FRAME_WORDS = {"1m": "1-min", "3m": "3-min", "5m": "5-min"}
 AXIS_FRAME = "1m"                                      # the frame whose bars set the tile's axis end (C1.7)
-MAX_SYMBOLS = 12                                       # MINE — HIS CALL #1 (= daytrading.signal_lab.MAX_SYMBOLS; ≥ 9 = his 3x3)
+MAX_SYMBOLS = GC.GG_WATCH_N                            # HIS CALL 2026-11-18 "18 (Recommended)": GG "watches 18 stocks simultaneously" (was 12 = MINE, = signal_lab)
 PUSH_FRAMES = ("1m",)                                  # his words "I need alerts on these from 1 min" — 3m / 5m = HIS CALL #2
 PUSH_MODES = GC.FADE_CROSS_PUSH_MODES                  # ("off", "live")
 PUSH_MODE = "live"                                     # his words "I need alerts on these"
