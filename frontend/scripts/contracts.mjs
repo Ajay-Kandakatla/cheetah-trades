@@ -1351,8 +1351,9 @@ const CONTRACTS = [
       const ID = 'chart-maps-gajjala-watch-aplus-push-2026-11-17';
       // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please") — FIRST → one of the first two.
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — first two → first three.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 3 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first 3 → first 4.
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 4 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
       else {
@@ -1470,8 +1471,9 @@ const CONTRACTS = [
       const nf = read('src/lib/newFeatures.ts');
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-1m-retired-2026-11-18';
-      const firstId = (/\bid: '([^']+)'/.exec(arr) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ ${ID} must be the FIRST NEW_FEATURES entry (found ${firstId || 'none'})`);
+      // WIDENED 2026-11-18 (🩳 gajjala-si-extreme-note-2026-11-18 FIRST) — FIRST → one of the first two.
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 2).map((m) => m[1]);
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first two NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}',\\s*label: '([^']+)',\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + addedAt + route) is missing`);
       else {
@@ -17422,7 +17424,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 24).includes(ZID))  /* WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 25).includes(ZID))  /* WIDENED +1 2026-11-18 (🩳 extreme SI note) · WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17648,7 +17650,8 @@ const CONTRACTS = [
       const ID = 'chart-maps-replays-tab-2026-11-17';
       const ids = [...arr.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — FIRST → one of the first two.
-      if (!ids.slice(0, 2).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first two NEW_FEATURES (found ${ids.slice(0, 2).join(', ') || 'none'})`);
+      // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first two → first three.
+      if (!ids.slice(0, 3).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first three NEW_FEATURES (found ${ids.slice(0, 3).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}',\\s*\\n\\s*label: "([^"]+)",\\s*\\n\\s*addedAt: '2026-11-17',\\s*\\n\\s*route: '/chart-maps\\?tab=replays',`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must carry its label, addedAt '2026-11-17' and route '/chart-maps?tab=replays'`);

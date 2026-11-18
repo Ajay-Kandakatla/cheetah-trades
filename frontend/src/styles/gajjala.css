@@ -70,6 +70,9 @@
    tabs). 🧪 2026-11-08: the served entry-zone sentence under the chart, edged in the board's gold. Both ride .gg-line,
    which already wraps at 430 px — the phone selector lists above are untouched. */
 .gg-si-label { font-weight: 600; }
+/* 🩳 2026-11-18: the served EXTREME short-interest note — GgShortInterestLabel prints it IN PLACE of the chip (one line
+   per card, Rule #5). Rides .gg-line (already in the overflow-wrap: anywhere list) inside .gg-card (min-width: 0). */
+.gg-si-extreme { font-weight: 700; color: var(--warn, #e8a33d); }
 .gg-zone { border-left: 2px solid var(--gold, #c9a227); padding-left: .4rem; }
 
 .gg-recap ul { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.8rem; }

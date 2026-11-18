@@ -67,6 +67,8 @@
 }
 .ggw-rang { color: var(--positive, #22c55e); }
 .ggw-held { color: var(--warn, #e8a33d); }
+/* 2026-11-18 🩳 EXTREME short-interest note (sinote spec §3.6) — rides .ggw-chip, so it wraps on the phone. */
+.ggw-si-extreme { font-weight: 700; color: var(--warn, #e8a33d); }
 .ggw-actions { margin-left: auto; display: inline-flex; gap: 0.3rem; }
 
 /* The replay's dark panel (C4.9: --cm-card too, so the chart-only tile paints the replay bg). */
@@ -113,6 +115,8 @@
   .ggw-grid--fit .ggw-cap { flex-wrap: nowrap; overflow: hidden; }
   .ggw-grid--fit .ggw-cap > * { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ggw-grid--fit .ggw-cap > .ema-blink-dot, .ggw-grid--fit .ggw-cap > .ggw-cap-label { flex-shrink: 0; }
+  /* 2026-11-18: the EXTREME chip is one line in a fitted tile — the 11-16 GP rule; the sentence is on hover. */
+  .ggw-grid--fit .ggw-si-extreme { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* "2 · 4 · 9 per screen" — the pick in the head. */

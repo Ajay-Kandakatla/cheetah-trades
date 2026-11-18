@@ -1,0 +1,32 @@
+/* 🩳 the EXTREME short-interest note ✨ (2026-11-18). Ajay: "When there are extreme cases of short interest make a not for them
+ * on reversal squeeze like percentage of short interest on the tickers card and also on watch list". */
+import { describe, expect, it } from 'vitest';
+import { NEW_FEATURES } from './newFeatures';
+
+const ID = 'gajjala-si-extreme-note-2026-11-18';
+const SAID = 'When there are extreme cases of short interest make a not for them on reversal squeeze like percentage of short interest on the tickers card and also on watch list';
+
+describe('✨ the 🩳 EXTREME short-interest note entry (2026-11-18)', () => {
+  const f = NEW_FEATURES.find((x) => x.id === ID)!;
+
+  it('is FIRST, listed once, dated, routed to the 🎾 Reversal Squeeze sub', () => {
+    expect(NEW_FEATURES[0].id).toBe(ID);
+    expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
+    expect(f.addedAt).toBe('2026-11-18');
+    expect(f.route).toBe('/chart-maps?tab=gajjala&sub=reversal_squeeze');
+  });
+
+  it('quotes him verbatim and names both surfaces', () => {
+    expect(f.label).toContain(`“${SAID}”`);
+    expect(f.label).toContain('🎾 Reversal Squeeze card');
+    expect(f.label).toContain('👀 Watch tile');
+    expect(f.label).toContain('UNMEASURED. Not advice.');
+  });
+
+  it('NEGATIVE: never claims an edge, never the b-word, never says it changes a gate or a push', () => {
+    expect(f.label).not.toMatch(/\bedge\b/i);
+    expect(f.label).not.toMatch(/bounc/i);
+    expect(f.label).not.toMatch(/now (rings|alerts|pushes)|changes the (gate|push)/i);
+    expect(f.label).toContain('Display only');
+  });
+});

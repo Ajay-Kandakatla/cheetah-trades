@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseSiMap, siChip, SI_NOT_WARMED_TEXT, SI_REQUEST_FAILED_TEXT, type ShortInterestRead } from './shortInterest';
+import { parseSiMap, siChip, siExtreme, SI_NOT_WARMED_TEXT, SI_REQUEST_FAILED_TEXT, type ShortInterestRead } from './shortInterest';
 
 /* 🩳 Short interest — the FE shapes the served block and prints it verbatim.
  * Ajay 2026-10-03: "can you add this field to all our chart maps scan. also
@@ -92,5 +92,78 @@ describe('parseSiMap', () => {
     expect(SI_REQUEST_FAILED_TEXT).toMatch(/^Not read/);
     expect(SI_REQUEST_FAILED_TEXT).not.toMatch(/no short-interest record/);
     expect(SI_REQUEST_FAILED_TEXT).not.toBe(SI_NOT_WARMED_TEXT);
+  });
+});
+
+/* 🩳 EXTREME note (2026-11-18). Ajay: "When there are extreme cases of short interest make a not for them on reversal
+ * squeeze like percentage of short interest on the tickers card and also on watch list". The FE returns the SERVED
+ * note verbatim or null — no arithmetic, no threshold. */
+const EXTREME = {
+  text: '🩳 EXTREME SI 33.6% float · 4.1d · 9/15',
+  short: '🩳 EXTREME SI 33.6% float',
+  title: '🩳 EXTREME short interest — served hover sentence. A count of open short positions — not a forecast. Not advice.',
+  basis: 'si_doc_float',
+};
+const EOSE_X = { ...EOSE, extreme: EXTREME } as ShortInterestRead;
+
+describe('siExtreme', () => {
+  it('returns the served note verbatim (every field, nothing recomputed)', () => {
+    const e = siExtreme(EOSE_X);
+    expect(e).toEqual(EXTREME);
+    expect(e).not.toBe(EXTREME);
+  });
+
+  it('a missing basis is an empty string, never a guess', () => {
+    const { basis: _b, ...noBasis } = EXTREME;
+    expect(siExtreme({ ...EOSE, extreme: noBasis } as unknown as ShortInterestRead)).toEqual({ ...noBasis, basis: '' });
+  });
+
+  it('NEGATIVE: null and undefined reads → null', () => {
+    expect(siExtreme(null)).toBeNull();
+    expect(siExtreme(undefined)).toBeNull();
+  });
+
+  it('NEGATIVE: a stale block carrying an extreme object → null', () => {
+    expect(siExtreme({ ...EOSE_X, status: 'stale' } as ShortInterestRead)).toBeNull();
+  });
+
+  it('NEGATIVE: a no_record block → null', () => {
+    expect(siExtreme({ ...EOSE_X, status: 'no_record', chip: null } as ShortInterestRead)).toBeNull();
+  });
+
+  it('NEGATIVE: extreme null → null', () => {
+    expect(siExtreme({ ...EOSE, extreme: null } as ShortInterestRead)).toBeNull();
+  });
+
+  it('NEGATIVE: extreme key missing (older API) → null', () => {
+    expect('extreme' in EOSE).toBe(false);
+    expect(siExtreme(EOSE)).toBeNull();
+  });
+
+  it('NEGATIVE: blank text / missing short / blank short / non-string title → null', () => {
+    const bad = (x: unknown) => siExtreme({ ...EOSE, extreme: x } as unknown as ShortInterestRead);
+    expect(bad({ ...EXTREME, text: '' })).toBeNull();
+    expect(bad({ ...EXTREME, text: '   ' })).toBeNull();
+    const { short: _s, ...noShort } = EXTREME;
+    expect(bad(noShort)).toBeNull();
+    expect(bad({ ...EXTREME, short: ' ' })).toBeNull();
+    expect(bad({ ...EXTREME, title: 7 })).toBeNull();
+    expect(bad({ ...EXTREME, title: null })).toBeNull();
+  });
+
+  it('NEGATIVE: a non-object extreme (string, number, array, true) → null', () => {
+    const bad = (x: unknown) => siExtreme({ ...EOSE, extreme: x } as unknown as ShortInterestRead);
+    expect(bad('🩳 EXTREME')).toBeNull();
+    expect(bad(1)).toBeNull();
+    expect(bad([EXTREME])).toBeNull();
+    expect(bad(true)).toBeNull();
+  });
+
+  it('parseSiMap passes extreme through untouched (and null stays null)', () => {
+    const m = parseSiMap({ items: { EOSE: EOSE_X, GP: { ...EOSE, symbol: 'GP', extreme: null } } });
+    expect(m.EOSE.extreme).toEqual(EXTREME);
+    expect(siExtreme(m.EOSE)).toEqual(EXTREME);
+    expect(m.GP.extreme).toBeNull();
+    expect(siExtreme(m.GP)).toBeNull();
   });
 });

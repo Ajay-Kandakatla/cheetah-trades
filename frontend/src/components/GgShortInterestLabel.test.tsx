@@ -16,6 +16,18 @@ const ITEMS: Record<string, unknown> = {
   BLANK: { symbol: 'BLANK', status: 'ok', chip: '   ', title: TITLE, rows: [] },
 };
 
+/* 🩳 EXTREME note (2026-11-18, spec sinote WP fe-card) — the served `extreme` object; the label prints its `text`. */
+const X_TEXT = '🩳 EXTREME SI 36.4% float · 1.0d · 10/30';
+const X_TITLE = '🩳 EXTREME short interest — served hover sentence (SI_HIGH_PCT heuristic). Not advice.';
+const X = { text: X_TEXT, short: '🩳 EXTREME SI 36.4% float', title: X_TITLE, basis: 'si_doc_float' };
+const AK_CHIP = '🩳 SI 36.4% float · 1.0d · 10/30';
+Object.assign(ITEMS, {
+  AKAN: { symbol: 'AKAN', status: 'ok', chip: AK_CHIP, title: TITLE, rows: [], extreme: X },
+  GPX: { symbol: 'GPX', status: 'ok', chip: '🩳 SI 4.1% float · 1.0d · 10/30', title: TITLE, rows: [], extreme: null },
+  OLDX: { symbol: 'OLDX', status: 'stale', chip: '🩳 SI 30.6% float · 5.0d · 8/31 · stale', title: 'served stale title', rows: [], extreme: X },
+  BADX: { symbol: 'BADX', status: 'ok', chip: AK_CHIP, title: TITLE, rows: [], extreme: { ...X, text: '   ' } },
+});
+
 function stub(ok = true) {
   const f = vi.fn(async (url: string) => {
     if (!ok) throw new Error('down');
@@ -108,6 +120,96 @@ describe('GgShortInterestLabel', () => {
       <GgShortInterestLabel symbol="OLD" testid="c" />
     </>);
     await screen.findByTestId('c');
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(String(f.mock.calls[0][0])).toContain('/short-interest/map?symbols=');
+  });
+});
+
+describe('GgShortInterestLabel — 🩳 EXTREME note (2026-11-18): ONE line, the label IS the note', () => {
+  beforeEach(() => _resetShortInterestCache());
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('an ok block with `extreme` prints extreme.text verbatim, the served title, the extreme class and basis', async () => {
+    stub();
+    render(<GgShortInterestLabel symbol="AKAN" testid="gg-si-label-AKAN" />);
+    const el = await screen.findByTestId('gg-si-label-AKAN');
+    expect(el.textContent).toBe(X_TEXT);
+    expect(el.getAttribute('title')).toBe(X_TITLE);
+    expect(el.className).toBe('cm-note gg-line gg-si-label gg-si-extreme');
+    expect(el.getAttribute('data-si-basis')).toBe('si_doc_float');
+    expect(el.tagName).toBe('DIV');
+  });
+
+  it('NEGATIVE: the extreme form REPLACES the chip — the chip words never print beside it', async () => {
+    stub();
+    const { container } = render(<GgShortInterestLabel symbol="AKAN" testid="t" />);
+    await screen.findByTestId('t');
+    expect(container.textContent).not.toContain(AK_CHIP);
+    expect(container.querySelectorAll('[data-testid="t"]')).toHaveLength(1);
+    expect(container.textContent!.split('🩳').length - 1).toBe(1);
+  });
+
+  it('NEGATIVE: extreme null → the chip branch byte-identical to today (class exact, no data-si-basis)', async () => {
+    stub();
+    render(<GgShortInterestLabel symbol="GPX" testid="t" />);
+    const el = await screen.findByTestId('t');
+    expect(el.textContent).toBe('🩳 SI 4.1% float · 1.0d · 10/30');
+    expect(el.getAttribute('title')).toBe(TITLE);
+    expect(el.className).toBe('cm-note gg-line gg-si-label');
+    expect(el.hasAttribute('data-si-basis')).toBe(false);
+  });
+
+  it('NEGATIVE: an older API without the extreme key → the chip branch (class exact, no data-si-basis)', async () => {
+    stub();
+    render(<GgShortInterestLabel symbol="VJET" testid="t" />);
+    const el = await screen.findByTestId('t');
+    expect(el.className).toBe('cm-note gg-line gg-si-label');
+    expect(el.hasAttribute('data-si-basis')).toBe(false);
+  });
+
+  it('NEGATIVE: a stale block carrying an extreme object → the stale chip, never the note', async () => {
+    stub();
+    render(<GgShortInterestLabel symbol="OLDX" testid="t" />);
+    const el = await screen.findByTestId('t');
+    expect(el.textContent).toBe('🩳 SI 30.6% float · 5.0d · 8/31 · stale');
+    expect(el.className).toBe('cm-note gg-line gg-si-label gg-si-stale');
+    expect(el.className).not.toContain('gg-si-extreme');
+    expect(el.hasAttribute('data-si-basis')).toBe(false);
+    expect(el.textContent).not.toContain('EXTREME');
+  });
+
+  it('NEGATIVE: a malformed extreme (blank text) → the chip, not a blank bold line', async () => {
+    stub();
+    render(<GgShortInterestLabel symbol="BADX" testid="t" />);
+    const el = await screen.findByTestId('t');
+    expect(el.textContent).toBe(AK_CHIP);
+    expect(el.className).toBe('cm-note gg-line gg-si-label');
+    expect(el.hasAttribute('data-si-basis')).toBe(false);
+  });
+
+  it('NEGATIVE: nothing before the read lands, even for an extreme name (loading is not a note)', () => {
+    stub();
+    const { container } = render(<GgShortInterestLabel symbol="AKAN" testid="t" />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: a failed fetch for an extreme name renders nothing and does not throw', async () => {
+    const f = stub(false);
+    const { container } = render(<GgShortInterestLabel symbol="AKAN" testid="t" />);
+    await settle(f);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('the ONE-bulk-GET pin holds with an extreme block in the map', async () => {
+    const f = stub();
+    render(<>
+      <GgShortInterestLabel symbol="AKAN" testid="a" />
+      <GgShortInterestLabel symbol="GPX" testid="b" />
+      <GgShortInterestLabel symbol="OLDX" testid="c" />
+      <GgShortInterestLabel symbol="VJET" testid="d" />
+    </>);
+    await screen.findByTestId('d');
+    await screen.findByTestId('a');
     expect(f).toHaveBeenCalledTimes(1);
     expect(String(f.mock.calls[0][0])).toContain('/short-interest/map?symbols=');
   });

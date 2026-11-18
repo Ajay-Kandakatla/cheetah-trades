@@ -20,7 +20,13 @@
  * Rows without `auto` (his, the 🚩 cards) render exactly as before.
  *
  * 🎯 2026-11-17 (spec ggwaplus) — Ajay: "Also add an A+ tag on watch list as they become A+". A row with a served
- * `aplus` block prints its chip right after SYM (text verbatim, hover = the served title). No block → nothing. */
+ * `aplus` block prints its chip right after SYM (text verbatim, hover = the served title). No block → nothing.
+ *
+ * 🩳 2026-11-18 (spec sinote §3.5, WP fe-watch) — Ajay: "When there are extreme cases of short interest make a not for
+ * them on reversal squeeze like percentage of short interest on the tickers card and also on watch list". `siNote` on
+ * Tile / GgwStretch (the Watch passes it; GgCardView does not, so the 🚩 card's ⤢ view is unchanged) mounts
+ * GgSiExtremeNote after the 🤖 chip: the SERVED short form verbatim, hover = the served sentence, nothing when the read
+ * is not extreme. Display only; UNMEASURED (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md). */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -28,6 +34,7 @@ import {
   ggwFitViewW, ggwSplitFrames, ggwStretchFrames, ggwStretchTitle, type GgwFrame, type GgwRow,
 } from '../lib/gajjalaWatch';
 import { ggwLiveFrame, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
+import { GgSiExtremeNote } from './GgSiExtremeNote';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import { EmaBlinkDot } from './EmaBlink';
@@ -125,7 +132,7 @@ export function Frame({ f, phone, fit, style, live }: {
   );
 }
 
-export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order }: {
+export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
@@ -141,6 +148,8 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   onNext?: () => void;
   /** The full-screen frame order (absent → GGW_STRETCH_ORDER, the Watch's 5 / 3 / 1). */
   order?: ReadonlyArray<string>;
+  /** 🩳 2026-11-18: mount the served EXTREME short-interest note in the head (the Watch only; absent → today's DOM). */
+  siNote?: boolean;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
@@ -165,6 +174,9 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         {row.auto ? (
           <span className="ggw-chip ggw-auto" data-testid="ggw-auto" title={autoTitle}>{row.auto.text}</span>
         ) : null}
+        {/* 🩳 the served EXTREME short-interest note (sinote 2026-11-18) — the served short form verbatim; nothing when
+            the read is not extreme, stale or missing. */}
+        {siNote ? <GgSiExtremeNote symbol={row.symbol} testid={`ggw-si-extreme-${row.symbol}`} /> : null}
         {row.text ? (
           <span className={`ggw-line ggw-row-text${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-row-text">
             {row.text}
@@ -242,13 +254,15 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
 /** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
  *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
  *  the board's own rows, so the minute GET keeps moving its bars. */
-export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind }: {
+export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote }: {
   row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
   live?: GgwLiveSym;
   /** The frame order, top to bottom (absent → GGW_STRETCH_ORDER). */
   order?: ReadonlyArray<string>;
   /** Who opened it: 'card' = a 🚩 card; absent → the Watch's root exactly (no modifier class, no data-kind). */
   kind?: 'watch' | 'card';
+  /** 🩳 2026-11-18: forwarded to the Tile (the Watch passes it; a 🚩 card does not). */
+  siNote?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -270,7 +284,7 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
          data-testid="ggw-stretch" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
         <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
-              onRemove={() => {}} onUnstretch={onClose} live={live} order={order}
+              onRemove={() => {}} onUnstretch={onClose} live={live} order={order} siNote={siNote}
               onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
       </div>
     </div>,

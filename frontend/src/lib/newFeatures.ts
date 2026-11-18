@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "When there are extreme cases of short interest make a not for them on reversal squeeze like
+  // percentage of short interest on the tickers card and also on watch list". short_interest/read.extreme_block: the ONE SI
+  // read serves an EXTREME note when % of float short ≥ client.SI_HIGH_PCT (by name). Display only, UNMEASURED.
+  // Doc docs/gajjala/si_extreme_note_2026_11_18.md.
+  {
+    id: 'gajjala-si-extreme-note-2026-11-18',
+    label: '🩳 EXTREME short interest note — you said: “When there are extreme cases of short interest make a not for them on reversal squeeze like percentage of short interest on the tickers card and also on watch list”. When a stock’s short interest reaches the app’s standard high-short-interest level, its 🎾 Reversal Squeeze card and its 👀 Watch tile say EXTREME with the % of the float short, days to cover and the FINRA date. Display only — the 11-17 study found high short interest did not make cradle days run (too small to call either way). UNMEASURED. Not advice.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+  },
   // Ajay 2026-11-18 ~00:10 ET, verbatim: "This is good info stop 1 min tab it was a good experiment"; ~00:20 ET: "But keep the
   // one min chart in the watch list I still want them". The 🚩 1-minute page (GG1) retired by its ONE switch
   // (gajjala/constants.GAJJALA_1M_ENABLED = False, read through variant.enabled): no spawn, pass, fetch, push or write; the

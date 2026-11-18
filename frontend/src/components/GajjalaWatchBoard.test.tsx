@@ -43,6 +43,8 @@ async function mount(search = '') {
 }
 const gets = (calls: Call[]) => calls.filter((c) => c.method === 'GET');
 const full = (calls: Call[]) => gets(calls).filter((c) => c.url.endsWith(GGW_PATH));
+// 2026-11-18: the 🩳 EXTREME note adds ONE GET /short-interest/map?symbols=… per mount — the Watch's own row polls are the GGW_PATH ones
+const rows = (calls: Call[]) => gets(calls).filter((c) => c.url.includes(GGW_PATH + '?symbols='));
 const noPending = () => { const b = clone(fixture) as any; b.rows = b.rows.filter((r: any) => r.state !== 'pending'); delete b.pending_poll_sec; delete b.pending_wait_max_sec; return b; };
 
 beforeEach(() => { vi.useFakeTimers(); });
@@ -214,7 +216,8 @@ describe('👀 cadence', () => {
     const calls = stubFetch(() => ({ ...noPending(), refresh_sec: 0, next_window_sec: null }));
     await mount();
     await act(async () => { await vi.advanceTimersByTimeAsync(6 * 3600_000); });
-    expect(gets(calls)).toHaveLength(1);
+    expect(full(calls)).toHaveLength(1);
+    expect(rows(calls)).toHaveLength(0);
   });
   it('[C2.7] out of window: ONE re-GET after next_window_sec', async () => {
     let n = 0;
@@ -233,18 +236,18 @@ describe('👀 cadence', () => {
     const poll = (fixture as any).pending_poll_sec as number;
     const max = (fixture as any).pending_wait_max_sec as number;
     await act(async () => { await vi.advanceTimersByTimeAsync(poll * 1000 + 100); });
-    const partial = gets(calls).filter((c) => c.url.includes('?symbols='));
+    const partial = rows(calls);
     expect(partial).toHaveLength(1);
     expect(partial[0].url.endsWith(ggwRowsPath(['AMD']))).toBe(true);
     await act(async () => { await vi.advanceTimersByTimeAsync(max * 1000); });
-    const n = gets(calls).filter((c) => c.url.includes('?symbols=')).length;
+    const n = rows(calls).length;
     expect(n).toBeGreaterThan(3);
     expect(n).toBeLessThanOrEqual(Math.ceil(max / poll));
     await act(async () => { await vi.advanceTimersByTimeAsync(10 * max * 1000); });
-    expect(gets(calls).filter((c) => c.url.includes('?symbols=')).length).toBe(n);
+    expect(rows(calls).length).toBe(n);
     // NEGATIVE: the poll never re-reads the full board, and never names a loaded row
     expect(full(calls)).toHaveLength(1);
-    for (const c of gets(calls).filter((x) => x.url.includes('?symbols='))) expect(c.url).not.toContain('OMH');
+    for (const c of rows(calls)) expect(c.url).not.toContain('OMH');
   });
   it('a pending row that loads is merged in place and the poll stops', async () => {
     const calls = stubFetch(() => ({ ...clone(fixture), refresh_sec: 0, next_window_sec: null }), {
@@ -262,7 +265,7 @@ describe('👀 cadence', () => {
     expect(Array.from(container.querySelectorAll('.ggw-tile')).map((t) => t.getAttribute('data-testid')))
       .toEqual(['ggw-tile-OMH', 'ggw-tile-AMD', 'ggw-tile-XYZQ', 'ggw-tile-NVDA']);
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
-    expect(gets(calls).filter((c) => c.url.includes('?symbols='))).toHaveLength(1);
+    expect(rows(calls)).toHaveLength(1);
   });
   it('[C4.5] NEGATIVE: never a /chart-maps/live request', async () => {
     const calls = stubFetch(() => clone(fixture));

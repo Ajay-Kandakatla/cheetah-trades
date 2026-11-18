@@ -29,6 +29,16 @@ FRESHNESS — FINRA's calendar, not a cache age:
 
 No top-level import of `sepa` or `market_hours`: the holiday list is loaded
 lazily (market_hours.reminder pulls the push stack, as gate.py notes).
+
+🩳 EXTREME NOTE (Ajay 2026-11-18, verbatim)
+  "When there are extreme cases of short interest make a not for them on
+   reversal squeeze like percentage of short interest on the tickers card and
+   also on watch list"
+The block carries one more served key, `extreme` ({text, short, title, basis}
+or None), built by `extreme_block` from SIC.SI_HIGH_PCT by name on the served
+% of float. Display only; UNMEASURED — the 2026-11-17 SI × cradle study
+(eod-audits/research/2026-11-17_si_cradle_squeeze/report.md) was too small to
+call either way. Doc: docs/gajjala/si_extreme_note_2026_11_18.md.
 """
 from __future__ import annotations
 
@@ -258,6 +268,7 @@ _BLOCK_KEYS = (
     "shares_outstanding", "shares_asof", "shares_source", "pct_of_shares_out",
     "headline_basis", "float_suspect", "stale", "stale_reason", "next_settlement_date",
     "next_due_on", "source", "fetched_at", "chip", "title", "rows",
+    "extreme",
 )
 
 
@@ -280,6 +291,62 @@ def _no_record_block(sym: str, doc: dict) -> dict:
                   "v": "not read — no FINRA record at the last warm"}],
     })
     return b
+
+
+# 🩳 EXTREME note (2026-11-18). Ajay: "When there are extreme cases of short interest make a not for them on
+# reversal squeeze like percentage of short interest on the tickers card and also on watch list".
+# The cut is SIC.SI_HIGH_PCT by name — the app's STANDARD high-short-interest heuristic (client.py: "NOT from a SEPA
+# book"; not GG's), applied here to the SERVED 2-dp % of FLOAT (the 🩳 chip's headline figure; env SI_HIGH_PCT_FLOAT)
+# with `>=` (the 1-dp chip can print "20.0%" for 19.95–19.99 with no note — comparing on the printed figure instead =
+# HIS CALL). NOTE: the constant's home use, client._squeeze_signal,
+# applies it to % of shares OUTSTANDING and also admits SI_ELEV_PCT + SI_HIGH_DTC days to cover — neither is mirrored
+# here (HIS CALL #1 in docs/gajjala/si_extreme_note_2026_11_18.md). Float basis (HIS CALL #2): the float stored with the
+# SI record at the last warm — the card's Float chip reads today's shares_cache row and can differ.
+# Display only; UNMEASURED (the 2026-11-17 SI × cradle study, eod-audits/research/2026-11-17_si_cradle_squeeze/report.md,
+# was too small to call either way). Never a push, gate, sort or lane input. A failure here never costs the chip.
+EXTREME_WORD = "EXTREME"
+EXTREME_BASIS = "si_doc_float"
+EXTREME_TAG = EXTREME_WORD + " "                                   # chip_text(b, tag=…) → the chip with EXTREME in it
+EXTREME_SHORT = "%s %s SI %s float"                                # GLYPH, EXTREME_WORD, _pct1(pct_of_float) — the 👀 tile form
+EXTREME_RULE_NOTE = ("at or above %g%% of the float — the app's standard high-short-interest heuristic "
+                     "(SI_HIGH_PCT; not from any book, not one of GG's rules)")
+EXTREME_STUDY_NOTE = ("Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small "
+                      "to call either way.")
+EXTREME_FLOAT_BASIS_NOTE = ("Float basis: the float stored with this short-interest record at the last warm (%s shares, "
+                            "%s, as of %s) — the card's own Float chip reads today's shares_cache row and can differ.")
+
+
+def extreme_block(b: Optional[dict]) -> Optional[dict]:
+    """The served EXTREME note for one block, or None. PURE. None (never a 0 %) when: no block, status != "ok"
+    (no_record / stale), headline_basis != "float" (no float on file, or a suspect float), or the served
+    pct_of_float is below SIC.SI_HIGH_PCT. Every optional is read with .get() — a missing leaf is a None note."""
+    if not b or b.get("status") != "ok" or b.get("headline_basis") != "float":
+        return None
+    pf = _num(b.get("pct_of_float"))
+    if pf is None or pf < SIC.SI_HIGH_PCT:          # `>=` on the served 2-dp value (the chip's printed figure)
+        return None
+    return {"text": chip_text(b, tag=EXTREME_TAG),
+            "short": EXTREME_SHORT % (GLYPH, EXTREME_WORD, _pct1(pf)),
+            "title": extreme_title(b, pf),
+            "basis": EXTREME_BASIS}
+
+
+def extreme_title(b: dict, pf: float) -> str:
+    seg = ["%s %s short interest — %s of the float is sold short at the FINRA settlement %s (published ~%s), %s." %
+           (GLYPH, EXTREME_WORD, _pct1(pf), b.get("settlement_date") or "n/a", b.get("published_on") or "n/a",
+            EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT)]
+    if b.get("pct_of_shares_out") is not None:
+        seg.append("%s of shares outstanding (%s)." % (_pct1(b["pct_of_shares_out"]),
+                                                       _human_shares(b.get("shares_outstanding"))))
+    if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
+        seg.append("%s days to cover (the provider's window)." % _dtc1(b["days_to_cover"]))
+    fl = b.get("float_shares")
+    seg.append(EXTREME_FLOAT_BASIS_NOTE % (format(fl, ",") if isinstance(fl, int) else "n/a",
+                                           b.get("float_source") or "n/a", b.get("float_asof") or "n/a"))
+    seg.append(EXTREME_STUDY_NOTE)
+    seg.append(_NOT_A_FORECAST)
+    seg.append("Not advice.")
+    return " ".join(seg)
 
 
 def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict]:
@@ -360,6 +427,11 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
     b["chip"] = chip_text(b)
     b["title"] = title_text(b)
     b["rows"] = rows_for(b)
+    try:
+        b["extreme"] = extreme_block(b)
+    except Exception as exc:                                   # noqa: BLE001 — the note never costs the chip
+        log.warning("short_interest.read: extreme note %s failed: %s", b.get("symbol"), type(exc).__name__)
+        b["extreme"] = None
     return b
 
 
@@ -400,7 +472,7 @@ def _conflict_sentence(b: dict) -> str:
             "counts disagree, so the %% shown is of shares outstanding." % (fl, so))
 
 
-def chip_text(b: Optional[dict]) -> Optional[str]:
+def chip_text(b: Optional[dict], *, tag: str = "") -> Optional[str]:
     if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
         return None
     basis = b.get("headline_basis")
@@ -410,7 +482,7 @@ def chip_text(b: Optional[dict]) -> Optional[str]:
         head = "%s shs out" % _pct1(b["pct_of_shares_out"])
     else:
         head = "%s sh" % _human_shares(b["si_shares"])
-    parts = ["%s SI %s" % (GLYPH, head)]
+    parts = ["%s %sSI %s" % (GLYPH, tag, head)]
     # A provider 0 next to a positive short count is not a readable figure:
     # drop the segment (the chip never shows "0.0d"); the hover keeps it.
     if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
@@ -568,6 +640,10 @@ def rules_section() -> dict:
             "when a float is on file, otherwise % of shares outstanding, and says which. Sites "
             "define float differently, so the same count can read several points apart from "
             "one site to the next.",
+            "%s EXTREME note: on a 🎾 card the %s label turns bold and says EXTREME, and every 👀 Watch "
+            "tile prints a short form, when the served %% of float is %s. It hides on a stale read, a "
+            "suspect float or a shares-outstanding-only read, and never shows 0%%. %s UNMEASURED."
+            % (GLYPH, GLYPH, EXTREME_RULE_NOTE % SIC.SI_HIGH_PCT, EXTREME_STUDY_NOTE),
             "Days to cover = shares short ÷ average daily volume, as the provider computes it; "
             "the volume window differs between sites.",
             "Every number carries its settlement date. It reads STALE once a newer "

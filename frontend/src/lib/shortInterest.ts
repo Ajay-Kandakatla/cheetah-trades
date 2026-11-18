@@ -49,7 +49,16 @@ export type ShortInterestRead = {
   title: string;
   /** The served ticker-page rows, in order. */
   rows: SiRow[];
+  /** 🩳 EXTREME note (2026-11-18) — absent on an older API → treated as null. */
+  extreme?: SiExtreme | null;
 };
+
+/** 🩳 EXTREME note (2026-11-18) — the served block built by read.extreme_block; null when the name is not extreme.
+ *  Ajay 2026-11-18: "When there are extreme cases of short interest make a not for them on reversal squeeze like
+ *  percentage of short interest on the tickers card and also on watch list". The cut (SI_HIGH_PCT, by name) and every
+ *  word live in backend/short_interest/read.py; this module holds no threshold. Display only, UNMEASURED
+ *  (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md was too small to call either way). */
+export type SiExtreme = { text: string; short: string; title: string; basis: string };
 
 export type ShortInterestMapPayload = {
   items: Record<string, ShortInterestRead>;
@@ -104,4 +113,17 @@ export function siChip(
     title: typeof read.title === 'string' ? read.title : '',
     stale: read.status === 'stale',
   };
+}
+
+/** The served EXTREME note, verbatim — or null (no read, not ok, not extreme, malformed). Computes nothing:
+ *  the verdict is the server's; a stale / no_record block never shows it even if a note rides along. */
+export function siExtreme(read: ShortInterestRead | null | undefined): SiExtreme | null {
+  if (!read || read.status !== 'ok') return null;
+  const e = read.extreme as unknown;
+  if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
+  const n = e as Record<string, unknown>;
+  if (typeof n.text !== 'string' || !n.text.trim()) return null;
+  if (typeof n.short !== 'string' || !n.short.trim()) return null;
+  if (typeof n.title !== 'string') return null;
+  return { text: n.text, short: n.short, title: n.title, basis: typeof n.basis === 'string' ? n.basis : '' };
 }

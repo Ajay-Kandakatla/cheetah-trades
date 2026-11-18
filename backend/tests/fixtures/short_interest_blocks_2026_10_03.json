@@ -85,7 +85,13 @@
       "k": "Source",
       "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
      }
-    ]
+    ],
+    "extreme": {
+     "text": "🩳 EXTREME SI 33.6% float · 4.1d · 9/15",
+     "short": "🩳 EXTREME SI 33.6% float",
+     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). 4.1 days to cover (the provider's window). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+     "basis": "si_doc_float"
+    }
    }
   },
   {
@@ -172,7 +178,8 @@
       "k": "Source",
       "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
      }
-    ]
+    ],
+    "extreme": null
    }
   },
   {
@@ -259,7 +266,8 @@
       "k": "Source",
       "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
      }
-    ]
+    ],
+    "extreme": null
    }
   },
   {
@@ -350,7 +358,8 @@
       "k": "⚠ Counts disagree",
       "v": "⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree, so the % shown is of shares outstanding."
      }
-    ]
+    ],
+    "extreme": null
    }
   },
   {
@@ -427,7 +436,8 @@
       "k": "Source",
       "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
      }
-    ]
+    ],
+    "extreme": null
    }
   },
   {
@@ -474,7 +484,8 @@
       "k": "Short interest",
       "v": "not read — no FINRA record at the last warm"
      }
-    ]
+    ],
+    "extreme": null
    }
   },
   {
@@ -561,7 +572,13 @@
       "k": "Source",
       "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
      }
-    ]
+    ],
+    "extreme": {
+     "text": "🩳 EXTREME SI 33.6% float · 9/15",
+     "short": "🩳 EXTREME SI 33.6% float",
+     "title": "🩳 EXTREME short interest — 33.6% of the float is sold short at the FINRA settlement 2026-09-15 (published ~2026-09-24), at or above 20% of the float — the app's standard high-short-interest heuristic (SI_HIGH_PCT; not from any book, not one of GG's rules). 33.2% of shares outstanding (361.7M). Float basis: the float stored with this short-interest record at the last warm (357,328,674 shares, yfinance floatShares (shares_cache), as of 2026-09-04) — the card's own Float chip reads today's shares_cache row and can differ. Display only — the 2026-11-17 SI × cradle study under eod-audits/research was too small to call either way. A count of open short positions — not a forecast. Not advice.",
+     "basis": "si_doc_float"
+    }
    }
   }
  ]

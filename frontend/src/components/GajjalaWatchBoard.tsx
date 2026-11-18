@@ -522,7 +522,7 @@ export default function GajjalaWatchBoard() {
           {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
                   focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} />
+                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote />
           ))}
         </div>
       ) : (
@@ -530,7 +530,7 @@ export default function GajjalaWatchBoard() {
       )}
       {stretchRow ? (
         <GgwStretch row={stretchRow} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
-                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} />
+                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote />
       ) : null}
     </div>
   );

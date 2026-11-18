@@ -1,3 +1,4 @@
+// WIDENED 2026-11-18 (🩳 extreme SI note): a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-18 — the ⏹ 1-minute page retired ✨ entry now sits FIRST (Ajay: "This is good info stop 1 min tab it was a good experiment"), so every NEW_FEATURES[n] position pin here moved +1 again.
 // WIDENED 2026-11-17 — the 🎬 Replays ✨ entry now sits FIRST, so every NEW_FEATURES[n] position pin here moved +1.
 /* 📅 Long Term ✨ (2026-11-12, longterm spec §4 main session) — Ajay 2026-11-12: "Save this entire list for me. In a New
@@ -23,11 +24,11 @@ describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[23].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
-    expect(NEW_FEATURES[24].id).toBe('chart-maps-long-term-table-2026-11-13');
-    expect(NEW_FEATURES[25].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
-    expect(NEW_FEATURES[26].id).toBe('long-term-alerts-2026-11-12');
-    expect(NEW_FEATURES[27].id).toBe(ID);
+    expect(NEW_FEATURES[24].id).toBe('chart-maps-long-term-zone-enterable-2026-11-14');
+    expect(NEW_FEATURES[25].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[26].id).toBe('chart-maps-gajjala-all-strategies-2026-11-13');
+    expect(NEW_FEATURES[27].id).toBe('long-term-alerts-2026-11-12');
+    expect(NEW_FEATURES[28].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-12');
     expect(f.route).toBe('/chart-maps?tab=long_term');
@@ -65,8 +66,8 @@ describe('✨ the 📅 Long Term tab entry (2026-11-12)', () => {
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[28].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
-    expect(NEW_FEATURES[29].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
+    expect(NEW_FEATURES[29].id).toBe('chart-maps-undervalue-tiny-base-2026-11-12');   // 2026-11-12: the 💎 tiny-base ✨ shipped first on main
+    expect(NEW_FEATURES[30].id).toBe('chart-maps-luk-ended-fold-2026-11-12');
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-undervalue-tiny-base-2026-11-12').length).toBe(1);
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-luk-ended-fold-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
@@ -86,7 +87,7 @@ describe('✨ the 🎯 Enterable (zones) entry on the 📅 Long Term table (2026
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[23].id).toBe(ZID);
+    expect(NEW_FEATURES[24].id).toBe(ZID);
     expect(NEW_FEATURES.filter((x) => x.id === ZID).length).toBe(1);
     expect(z?.addedAt).toBe('2026-11-14');
     expect(z?.route).toBe('/chart-maps?tab=long_term');
@@ -121,7 +122,7 @@ describe('✨ the 🎯 Enterable (zones) entry on the 📅 Long Term table (2026
     // WIDENED +1 (2026-11-15: 🔀 chart-maps-gajjala-fade-ema-cross-2026-11-15 FIRST — Ajay: the OMH 9/21 EMA cross alert).
     // WIDENED +1 (2026-11-15: 📶 chart-maps-gajjala-run-bases-2026-11-15 FIRST — Ajay: "There is a concept of 3 bases and climax run can you bake that in to the app please") — every NEW_FEATURES[n] pin below → [n+1].
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[24].id).toBe('chart-maps-long-term-table-2026-11-13');
+    expect(NEW_FEATURES[25].id).toBe('chart-maps-long-term-table-2026-11-13');
     expect(NEW_FEATURES.filter((x) => x.id === 'long-term-list-2026-11-12').length).toBe(1);
     expect(NEW_FEATURES.filter((x) => x.id === 'long-term-alerts-2026-11-12').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
