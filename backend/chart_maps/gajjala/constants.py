@@ -284,9 +284,11 @@ KF_EMA_SORTS = ("rvol_first", "ema_first")   # MINE — the two 💋 orders KF_E
 # docs/gajjala/all_strategies_table_2026_11_13.md). ONE tuple literal of string-literal triples, no name inside it and no
 # comment on its closing line — frontend/scripts/contracts.mjs parses it with a regex (GG_SUBS == SUBS, in order).
 # 🧨 2026-11-18: ("divergence", "🧨", "Divergence") right after 🎾 (HIS CALL #4 of docs/gajjala/divergence_sub_2026_11_18.md), GG5 only.
+# 🌱 2026-11-18: ("diverging", "🌱", "Diverging") right after 🧨 (HIS CALL #1/#2 of docs/gajjala/diverging_sub_2026_11_18.md), GG5 only.
 SUBS = (("all_strategies", "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("divergence", "🧨", "Divergence"),
+        ("diverging", "🌱", "Diverging"),
         ("premarket", "☀️", "Premarket"), ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
         ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
 TABLE_SUB = SUBS[0][0]                   # "all_strategies" — read off the literal, never a second spelling (2026-11-13)
@@ -309,7 +311,8 @@ BROKER_SYMBOL_MAX_LEN = 10               # TRANSPORT — MINE (DECISIONS12 D5: t
 # — study dir eod-audits/research/2026-11-16_explosive_divergence/; the test pins each against
 # tests/fixtures/gajjala/divergence_study_2026_11_16.json. The engine is divergence.py (one module, three callers).
 DIVERGENCE_SUB = "divergence"
-GG5_ONLY_SUBS = (TABLE_SUB, DIVERGENCE_SUB)   # derived — the subs only the 5-min page shows (tab.resolve_sub fails open off them on 🧪 / 1-min)
+DIVERGING_SUB = "diverging"              # 🌱 2026-11-18 — the forming read (its block sits right after the 🧨 block below)
+GG5_ONLY_SUBS = (TABLE_SUB, DIVERGENCE_SUB, DIVERGING_SUB)   # derived — the subs only the 5-min page shows (tab.resolve_sub fails open off them on 🧪 / 1-min)
 DIVERGENCE_OOS_SPEC_SHA256 = "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90"   # S/OOS_SPEC.md
 DIVERGENCE_DESIGN_SHA256 = "c5a1f2eb7091bb586febf8767f5e553805f27036d3431aeddc8d3c8495224d3f"     # S/design.md
 DIVERGENCE_R1_LEVEL = 0.5552257708108612          # spec default — OOS_SPEC "level q60 … the IS number, never re-estimated"
@@ -337,6 +340,26 @@ DIVERGENCE_IS = {                                 # results.json cohorts.P5M.cel
     "ah":  {"trades": 32, "mean_net": -8.9283, "lo": -15.6032, "hi": -3.1323, "win_pct": 21.9, "median_net": -8.7334,
             "exit_downcross": 17, "exit_close": 15, "lt1_trades": 16, "word": "LOST MONEY"},
 }
+
+# 🌱 Diverging (Ajay 2026-11-18 ~11:50 ET, verbatim: "For the divergence thing create a separate tab that are potentially
+# diverging with uptrend and volume breakout." · "Are you building that now?") — a FORMING read on the 5-min tab, served
+# only: no record, no push, no gate, no trade. UNMEASURED (no prior; the 🧨 rule it feeds lost money in-sample). His two
+# picks, the option text VERBATIM = the rule:
+#  (1) "Fresh cross, gap widening": "The 9 EMA crossed above the 21 EMA and the gap between them has widened for 2+ bars
+#      in a row, but is not yet wide enough to make the 🧨 Divergence record." (5-min bars; uptrend = price above a rising 21 EMA)
+#      "not yet" = under the 🧨 cut on EVERY bar since that cross (HIS CALL #17 of docs/gajjala/diverging_sub_2026_11_18.md).
+#  (2) "GG's day floor + bar spike": "The name has traded GG's daily volume floor (the same one his pushes use), and the
+#      latest 5-min bar's volume is at least 2× its last 20 bars' average."
+#      Early in the session the 20-bar mean is pre-market volume, so most names clear 2× on the first bars (measured 11-18:
+#      59/69 at 09:35, 4/71 at 11:00) — served as words + a per-card count, lookback on RTH bars only = HIS CALL #16.
+# The gap unit, the ATR, the 🧨 cut, the bar floor and the session windows are the 🧨 constants above, read by name
+# (DIVERGENCE_R1_LEVEL, DIVERGENCE_ATR_PERIOD, DIVERGENCE_MIN_BARS, DIVERGENCE_WINDOWS); the volume floor is
+# K11_MIN_SESSION_VOLUME (his pushes' floor) — never a second number for any of them. DIVERGING_SUB sits beside
+# DIVERGENCE_SUB above (GG5_ONLY_SUBS is derived from it).
+DIVERGING_WIDEN_BARS = 2                 # Ajay 2026-11-18 pick (1): "has widened for 2+ bars in a row"
+DIVERGING_BAR_VOL_MULT = 2.0             # Ajay 2026-11-18 pick (2): "at least 2× its last 20 bars' average"
+DIVERGING_BAR_VOL_LOOKBACK = 20          # Ajay 2026-11-18 pick (2): "its last 20 bars' average"
+DIVERGING_EMA21_RISE_BARS = 1            # Cheetah default (MINE, not GG — HIS CALL #4): "rising 21 EMA" = above its value on the previous closed bar (the frame's own unit); K5_SLOPE_BARS (3) is the alternative
 
 # 📌 trader names (2026-10-27, Ajay "Add them to Gajjals, they are pretty good")
 TRADER_TAG = "📌"                        # Cheetah default (MINE, not GG — the 📌 traders board's emoji)

@@ -1,0 +1,28 @@
+/* 🌱 the Diverging sub ✨ (2026-11-18). Ajay: "For the divergence thing create a separate tab that are potentially diverging
+ * with uptrend and volume breakout." */
+import { describe, expect, it } from 'vitest';
+import { NEW_FEATURES } from './newFeatures';
+
+const ID = 'gajjala-diverging-sub-2026-11-18';
+const SAID = 'For the divergence thing create a separate tab that are potentially diverging with uptrend and volume breakout.';
+
+describe('✨ the 🌱 Diverging sub entry (2026-11-18)', () => {
+  const f = NEW_FEATURES.find((x) => x.id === ID)!;
+  it('is FIRST, listed once, dated, routed to the 🌱 sub of the 5-min tab', () => {
+    expect(NEW_FEATURES[0].id).toBe(ID);
+    expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
+    expect(f.addedAt).toBe('2026-11-18');
+    expect(f.route).toBe('/chart-maps?tab=gajjala&sub=diverging');
+  });
+  it('quotes him verbatim and says it is a forming read', () => {
+    expect(f.label).toContain(`“${SAID}”`);
+    expect(f.label).toContain('A forming read, not an entry');
+    expect(f.label).toContain('UNMEASURED. Not advice.');
+  });
+  it('NEGATIVE: never an edge, never the b-word, never says it pushes, never the 1-minute page', () => {
+    expect(f.label).not.toMatch(/\bedge\b/i);
+    expect(f.label).not.toMatch(/bounc/i);
+    expect(f.label).toContain('it never rings your phone');
+    expect(f.route).not.toContain('gajjala_1m');
+  });
+});

@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "For the divergence thing create a separate tab that are potentially diverging with uptrend and
+  // volume breakout." His picks: "Fresh cross, gap widening" + "GG's day floor + bar spike". chart_maps/gajjala/diverging_tab.py
+  // reads the stored 5-min tiles through the 🧨 engine; rule words built from GC.DIVERGING_* on the page. No record, no push.
+  // Doc docs/gajjala/diverging_sub_2026_11_18.md.
+  {
+    id: 'gajjala-diverging-sub-2026-11-18',
+    label: '🌱 Diverging on 🚩 Gajjala’s 5-min tab — you said: “For the divergence thing create a separate tab that are potentially diverging with uptrend and volume breakout.” A new 🌱 chip, right after 🧨, lists names whose 9 EMA crossed above a rising 21 EMA with price above it, the gap widening bar after bar but not yet wide enough for 🧨, after GG’s daily volume floor and with the latest 5-min bar at least 2× its last 20 bars’ volume. A forming read, not an entry — it never rings your phone. UNMEASURED. Not advice.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala&sub=diverging',
+  },
   // Ajay 2026-11-18, verbatim: "Also add Short Interest tag and other tags on top of stock ticker information for me to read,
   // like here". gajjala_watch/tags.py serves a per-row `tags` block copied from the stored 🚩 GG5 docs (carded names only);
   // GajjalaWatchTags.GgwTagsRow draws it above each 👀 Watch tile. Doc docs/gajjala/watch_tags_row_2026_11_18.md.

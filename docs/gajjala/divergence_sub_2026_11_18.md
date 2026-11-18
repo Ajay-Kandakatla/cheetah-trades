@@ -86,6 +86,8 @@ the full-day read is authoritative over the pass's bar (`live_alert` keeps the p
 No push / keep-set kind, no gate, no Auto-Pilot use, no new route, no new crontab line, no backfill run (script exists;
 running it = his call), no 13th 🏁 chip (the record is a fold under 🧨), no "cross today" listing requirement.
 
+See also 🌱 Diverging (diverging_sub_2026_11_18.md): the names under the cut.
+
 ## HIS CALLs (nothing decided for him; the built default marked)
 
 1. Cohort — BUILT: the study's units (today's 🚩 A+ shadow/live + 🧠 pushes with a plan, from the ring; yesterday's

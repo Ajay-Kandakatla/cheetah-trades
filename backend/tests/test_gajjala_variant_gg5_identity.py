@@ -309,13 +309,18 @@ def test_gg5_board_is_byte_identical(monkeypatch):
     short-interest text: the hermetic build has no Mongo handle (conftest refuses MongoClient), so every si key is None
     and si_fault_text is the fault sentence. A regen that ever reaches a real store writes GGB's live FINRA chip (a
     wall-clock-dependent string — 'stale' flips on FINRA's calendar) and this NEGATIVE fails before the byte pin
-    drifts."""
+    drifts.
+    REGENERATED 2026-11-18 (🌱 Diverging after 🧨, docs/gajjala/diverging_sub_2026_11_18.md, SPEC §4 WP-A step 5):
+    584 leaves ADDED (464 = each mode's new `diverging` board — count 0 on this fixture day, `bars_text` served since
+    the two stored tiles end on different bars; 120 = the 🌱 chip in every other board's `subs`), 480 CHANGED (the
+    `subs` entries from index 7 on shift one slot), 0 removed. Dropping every `subs` and every `<mode>/diverging`, the
+    old and new files are IDENTICAL — no tile byte moved. WRITES byte-identical (sha1 7d857dc9…, no regen)."""
     stores, _t = writes_text(monkeypatch)
     text = board_text(stores)
     _check(BOARD, text)
     doc = json.loads(text)
     for mode in MODES:
-        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 12           # WIDENED 2026-11-13 — 📋 first; 2026-11-18 — 🧨 after 🎾
+        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 13           # WIDENED 2026-11-13 — 📋 first; 2026-11-18 — 🧨 after 🎾; WIDENED 2026-11-18 — 🌱 Diverging after 🧨
         for k, b in doc[mode].items():
             assert b["tab"] == "gajjala", k
             assert "variant" not in b, k                                          # NEGATIVE: GG5 serves no variant block

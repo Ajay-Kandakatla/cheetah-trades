@@ -99,7 +99,7 @@ import type { GgTapePayload } from '../components/GgEntryTape';
 import type { DayRead } from './dayRead';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = 'all_strategies' | GgSetup | 'divergence' | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
+export type GgSub = 'all_strategies' | GgSetup | 'divergence' | 'diverging' | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
 export type GgTf = '1m' | '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -141,6 +141,10 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
   /* 🧨 2026-11-18 Ajay "Can you add a tab for in in Gajjals 5 min please" — the Divergence record sub, right after 🎾
    * (== constants.SUBS, GG5 only; the 1-min / 🧪 / 🥇 fallback strips filter it off — GajjalaBoard). */
   { key: 'divergence', emoji: '\u{1F9E8}', label: 'Divergence' },
+  /* 🌱 2026-11-18 Ajay "For the divergence thing create a separate tab that are potentially diverging with uptrend and volume
+   * breakout." — the forming read sub, right after 🧨 (== constants.SUBS, GG5 only; the 1-min / 🧪 / 🥇 fallback strips
+   * filter it off — GajjalaBoard). */
+  { key: 'diverging', emoji: '\u{1F331}', label: 'Diverging' },
   { key: 'premarket', emoji: '☀️', label: 'Premarket' },
   { key: 'postmarket', emoji: '\u{1F319}', label: 'Post-market' },
   { key: 'playbook', emoji: '\u{1F4D3}', label: 'Playbook' },
@@ -152,6 +156,8 @@ const SUB_KEYS = new Set<string>(GG_SUBS.map((s) => s.key));
 export const GG_TABLE_SUB: GgSub = 'all_strategies';
 /** 🧨 the Divergence record sub (== backend constants.DIVERGENCE_SUB, 2026-11-18) — the ONE FE spelling. GG5 only. */
 export const GG_DIVERGENCE_SUB: GgSub = 'divergence';
+/** 🌱 the Diverging forming-read sub (== backend constants.DIVERGING_SUB, 2026-11-18) — the ONE FE spelling. GG5 only. */
+export const GG_DIVERGING_SUB: GgSub = 'diverging';
 
 /** The five setup subs (== backend constants.SETUPS, test-pinned) — the only
  *  subs that carry a 🧠 strip (☀️ / 🌙 / 📓 / 🧠 never do, BUILD_SPEC4 §3.9 (c)). */
@@ -743,6 +749,16 @@ export type GgDivergenceBlock = {
   chartless?: GgDivergenceChartless[] | null; faults_text?: string | null;
   track_record?: GgDivergenceTrack | null; track_record_fault_text?: string | null;
 };
+/** 🌱 the Diverging panel (diverging_tab.block, 2026-11-18) — a forming read, never an entry: no record, no push, no gate.
+ *  Every line is served and printed as handed; `bars_text` is served only when the stored tiles sit on different last bars
+ *  (null on a clean pass). The listed names come as ordinary served tiles (the house card path). UNMEASURED. */
+export type GgDivergingBlock = {
+  title?: string | null; ask_text?: string | null; pick_texts?: string[] | null;
+  rule_label?: string | null; rule_text?: string | null; honesty?: string | null;
+  cohort_text?: string | null; window_text?: string | null; bars_text?: string | null; order_note?: string | null;
+  n?: number | null; n_read?: number | null; faults_text?: string | null; empty_text?: string | null;
+  chartless?: GgDivergenceChartless[] | null;
+};
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;
@@ -901,6 +917,9 @@ export type GgBoard = {
   /** 🧨 2026-11-18: the Divergence block (divergence_tab.block) — the GG5 divergence sub only; null when the record could
    *  not be read (the served `empty_note` says so), absent elsewhere and on an older API. */
   divergence?: GgDivergenceBlock | null;
+  /** 🌱 2026-11-18: the Diverging block (diverging_tab.block) — the GG5 diverging sub only; null when the read could not be
+   *  made (the served `empty_note` says so), absent elsewhere and on an older API. */
+  diverging?: GgDivergingBlock | null;
   /** 🚫 the owner's list block (tab.broker_block) — the primary owner only; null for anyone else, absent on an older API. */
   broker_flags?: GgBrokerFlags | null;
   /** 🚫 the served graveyard tag line (present iff graveyard_text) — owner only; null when no graveyard name is listed. */

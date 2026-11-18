@@ -1866,7 +1866,7 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
         return d, "default"
     if s == GC.TABLE_SUB and not table_on(v):                      # 📋 GG5 + (2026-11-16) the 1-minute page; 🧪 fails open
         return GC.DEFAULT_SUB, "default"
-    if s == GC.DIVERGENCE_SUB and not V.is_gg5(V.of(v)):            # 🧨 2026-11-18 — GG5 only; 1-minute / 🧪 fail open
+    if s in GC.GG5_ONLY_SUBS and s != GC.TABLE_SUB and not V.is_gg5(V.of(v)):   # 🧨 / 🌱 2026-11-18 — GG5 only; 1-minute / 🧪 fail open
         return GC.DEFAULT_SUB, "default"
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
@@ -2686,6 +2686,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     ptags = _soft("promo tags", lambda: PN.tag_map(st.scan_docs(SC._window(session))), default={})
     legend = count_legend(promo=PN.ran((spass or {}).get("promo")) or bool(ptags), audited=aud)   # D1 — ONE legend
     pot_title = next(r["text"] for r in legend if r["key"] == "potential")
+    from chart_maps.gajjala import diverging_tab as DGT              # 🌱 2026-11-18 — ONE evaluation per build (chip + block)
+    dvg = (_soft("diverging read", DGT.evaluate, reads_by, scan_row=_row, session=session, v=v, default=None)
+           if gg5 else None)
     subs = []
     for key, e, label in GC.SUBS:
         if key == GC.TABLE_SUB and not table_on(v):   # 📋 GG5 + the 1-minute page (2026-11-16); the 🧪 strip never shows it
@@ -2699,6 +2702,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         elif key == GC.DIVERGENCE_SUB:          # 🧨 2026-11-18 — today's records (None on a read fault)
             from chart_maps.gajjala import divergence_tab as DVT
             n = _soft("divergence count", DVT.count_today, st, session, default=None)
+        elif key == GC.DIVERGING_SUB:           # 🌱 2026-11-18 — names diverging on their latest stored bar (None on a fault)
+            n = None if dvg is None else len(dvg["rows"])
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
                  else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
@@ -2831,6 +2836,13 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["divergence"] = blk
         out["tiles"] = broker_bottom((blk or {}).pop("_tiles", [])[:lim], order_flags)
         out["empty_note"] = None if blk else DVT.FAULT_TEXT
+    elif sub_k == GC.DIVERGING_SUB:                 # 🌱 2026-11-18 — GG5 only (resolve_sub fails open elsewhere); a forming read
+        blk = _soft("diverging", DGT.block, dvg, session=session, now=now, is_today=is_today, in_window=in_window,
+                    reads_by=reads_by, scan_row=_row, sess=sess, halts_by=halts_by, listed=listed, pass_at=pass_at,
+                    flags=order_flags, v=v, default=None)
+        out["diverging"] = blk
+        out["tiles"] = broker_bottom((blk or {}).pop("_tiles", [])[:lim], order_flags)
+        out["empty_note"] = None if blk else DGT.FAULT_TEXT
     elif sub_k == GC.LEDGER_SUB:
         LG = _ledger()
         span_s = span if isinstance(span, str) else ""

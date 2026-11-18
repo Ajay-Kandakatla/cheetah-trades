@@ -471,13 +471,14 @@ def test_subs_end_with_potential_and_the_other_eight_keep_their_order(store):
     # FIRST in the strip — the other ten now, and subs[:-2] starts with GC.TABLE_SUB; the old eight keep their order
     others = [s for s in out["subs"] if s["key"] != "potential"]
     # WIDENED 2026-11-18 (🧨 Divergence sub after 🎾, GG5 only — docs/gajjala/divergence_sub_2026_11_18.md): eleven now
-    assert len(others) == 11 and all(s["title"] is None for s in others)         # NEGATIVE: the other eleven
+    # WIDENED 2026-11-18 — 🌱 Diverging after 🧨 (GG5 only — docs/gajjala/diverging_sub_2026_11_18.md): twelve now
+    assert len(others) == 12 and all(s["title"] is None for s in others)         # NEGATIVE: the other twelve
     assert {k: out["subs"][-1][k] for k in ("key", "emoji", "label")} == {"key": "track_record", "emoji": "🏁",
                                                                           "label": "Track record"}
     assert out["subs"][0]["key"] == GC.TABLE_SUB == "all_strategies"
     assert [s["key"] for s in out["subs"][:-2]] == [GC.TABLE_SUB, "bull_flag", "kiss_fly", "horizontal_fade",
-                                                     "intraday_vcp", "reversal_squeeze", GC.DIVERGENCE_SUB, "premarket",
-                                                     "postmarket", "playbook"]
+                                                     "intraday_vcp", "reversal_squeeze", GC.DIVERGENCE_SUB,
+                                                     GC.DIVERGING_SUB, "premarket", "postmarket", "playbook"]
 
 
 def test_every_sub_serves_the_live_potential_push_line_under_the_narrowed_a_plus_line(store):
@@ -743,8 +744,10 @@ def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeyp
         # it reads the SAME ONE memoized alert_rows (tab.build's words_entries) — still ONE read, never one per setup
         # MOVED 2026-11-18 (🧨 Divergence sub, spec §3.6): its cards take entry_marks like 📓, so it reads the ONE
         # memoized alert_rows once too — still ONE read
+        # WIDENED 2026-11-18 — 🌱 Diverging after 🧨: its cards go through the same 🧨 card() recipe (entry_marks), so it
+        # reads the ONE memoized alert_rows once too — still ONE read
         assert calls == ([win] if k in GC.SETUPS or k == GC.TABLE_SUB
-                         or k in ("postmarket", "premarket", "playbook", "divergence") else []), k
+                         or k in ("postmarket", "premarket", "playbook", "divergence", "diverging") else []), k
 
 
 def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():

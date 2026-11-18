@@ -419,6 +419,13 @@
      "title": null
     },
     {
+     "count": 0,
+     "emoji": "🌱",
+     "key": "diverging",
+     "label": "Diverging",
+     "title": null
+    },
+    {
      "count": 3,
      "emoji": "☀️",
      "key": "premarket",
@@ -2677,6 +2684,13 @@
      "emoji": "🧨",
      "key": "divergence",
      "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌱",
+     "key": "diverging",
+     "label": "Diverging",
      "title": null
     },
     {

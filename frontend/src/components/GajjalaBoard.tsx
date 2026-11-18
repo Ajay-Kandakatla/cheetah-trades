@@ -210,7 +210,7 @@ import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_DIVERGENCE_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
@@ -229,6 +229,7 @@ import { GgAuditedCompare } from './GgAuditedCompare';
 import { GgAllTable } from './GgAllTable';
 import { DayReadLine } from './DayReadLine';
 import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
+import { GgDivergingPanel } from './GgDiverging';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -639,6 +640,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const subs = board?.subs?.length ? board.subs
     : GG_SUBS.filter((s) => (vkey === 'gajjala' || vkey === 'gajjala_1m' || s.key !== GG_TABLE_SUB)   // 📋 + 1-min 2026-11-16
       && (vkey === 'gajjala' || s.key !== GG_DIVERGENCE_SUB))   // 🧨 2026-11-18 GG5 only
+      .filter((s) => vkey === 'gajjala' || s.key !== GG_DIVERGING_SUB)   /* 🌱 2026-11-18 GG5 only */
       .map((s) => ({ ...s, count: null, title: null }));
   const entryMarks = board?.entry_marks?.subs ?? null;
   const session = board?.session;
@@ -799,6 +801,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         <>
           {/* (3b) 🧨 2026-11-18: the served Divergence panel above the cards — the divergence sub only. */}
           {activeSub === GG_DIVERGENCE_SUB ? <GgDivergencePanel block={board.divergence ?? null} /> : null}
+          {/* (3b) 🌱 2026-11-18: the served Diverging panel above the cards — the diverging sub only. */}
+          {activeSub === GG_DIVERGING_SUB ? <GgDivergingPanel block={board.diverging ?? null} /> : null}
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
           <CountsLine board={board} />
           {(board.awaiting || []).map((a) => (
@@ -807,7 +811,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
           {/* (5) bar size + the ☀️ / 🌙 served sorts. */}
           <div className="cm-phase" role="tablist" aria-label="Bar size">
-            {(activeSub === GG_DIVERGENCE_SUB ? [] : tfs).map((f) => (   /* 🧨 the cards are the 5m frame: no toggle */
+            {/* 🌱 2026-11-18: no toggle on the diverging sub either (its cards are the 5m frame) — chained so the 🧨 line stays as pinned. */}
+            {activeSub === GG_DIVERGING_SUB ? null : (activeSub === GG_DIVERGENCE_SUB ? [] : tfs).map((f) => (   /* 🧨 the cards are the 5m frame: no toggle */
               <button key={f} type="button" role="tab" aria-selected={f === servedTf}
                       data-testid={`gg-tf-${f}`}
                       className={`cm-phase-btn${f === servedTf ? ' cm-phase-on' : ''}`}

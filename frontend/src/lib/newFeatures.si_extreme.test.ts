@@ -1,3 +1,4 @@
+// WIDENED 🌱 gajjala-diverging-sub-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🏷 chart-maps-gajjala-watch-tags-row-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 👀 chart-maps-gajjala-watch-18-replace-oldest-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 👀 chart-maps-gajjala-card-grid-watch-layout-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
@@ -15,7 +16,7 @@ describe('✨ the 🩳 EXTREME short-interest note entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
   it('is FIRST, listed once, dated, routed to the 🎾 Reversal Squeeze sub', () => {
-    expect(NEW_FEATURES[5].id).toBe(ID);
+    expect(NEW_FEATURES[6].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=reversal_squeeze');

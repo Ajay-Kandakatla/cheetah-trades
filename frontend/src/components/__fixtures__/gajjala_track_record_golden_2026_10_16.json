@@ -230,6 +230,13 @@
     },
     {
      "count": 0,
+     "emoji": "🌱",
+     "key": "diverging",
+     "label": "Diverging",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -1919,6 +1926,13 @@
     },
     {
      "count": 0,
+     "emoji": "🌱",
+     "key": "diverging",
+     "label": "Diverging",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -3461,6 +3475,13 @@
      "emoji": "🧨",
      "key": "divergence",
      "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌱",
+     "key": "diverging",
+     "label": "Diverging",
      "title": null
     },
     {

@@ -1353,6 +1353,30 @@ def _gg_divergence_clause() -> str:
     return " " + clause
 
 
+def _gg_diverging_clause() -> str:
+    """🌱 2026-11-18 (Ajay "For the divergence thing create a separate tab that are potentially diverging with uptrend
+    and volume breakout.") — the section note's ONE row on the 🌱 Diverging sub (a forming read, served only): every
+    number a GC constant read at call time (the 🧨 cut is named, never printed — its constant is the full float; the
+    floor is K11_MIN_SESSION_VOLUME, his pushes' floor). " " + the clause, or "" when a constant cannot be read (the
+    panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import constants as GC
+        from chart_maps.gajjala import tab as GTAB
+        tf5, _tf15 = GTAB.TFS                               # the 5-minute frame word, read off the tab (no literal)
+        clause = ("🌱 Diverging (forming read only): listed on the latest stored %s-min bar when the %d EMA crossed "
+                  "above the %d today, the close sits above a rising %d EMA, the %d−%d gap in %d-bar ATRs widened on "
+                  "each of the last %d bars and stayed under the 🧨 cut on every bar since that cross, the bar's volume "
+                  "is ≥ %.1f× its last %d bars' mean and today's volume clears GG's %s-share floor; no push, no gate, "
+                  "no record."
+                  % (tf5.rstrip("m"), GC.EMA_FAST, GC.EMA_SLOW, GC.EMA_SLOW, GC.EMA_FAST, GC.EMA_SLOW,
+                     GC.DIVERGENCE_ATR_PERIOD, GC.DIVERGING_WIDEN_BARS, GC.DIVERGING_BAR_VOL_MULT,
+                     GC.DIVERGING_BAR_VOL_LOOKBACK, f"{int(GC.K11_MIN_SESSION_VOLUME):,}"))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala diverging clause unavailable: %s", exc)
+        return ""
+    return " " + clause
+
+
 def _gg_bottom_word() -> str:
     """🚫 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the ONE served
     word, tab.BROKER_BOTTOM_TEXT, never retyped (lazy: tab imports this package's engines)."""
@@ -1515,6 +1539,7 @@ def _gajjala_section() -> dict:
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_watch_auto_clause()                 # 🤖 2026-11-17 — the watch's auto section (🧠 potentials)
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
+                 + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

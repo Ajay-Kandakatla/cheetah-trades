@@ -150,7 +150,7 @@ def test_the_strip_has_twelve_chips_with_the_divergence_count():
     st = store([rec("AAA"), rec("BBB", bar_t="10:25")], [read_doc("AAA"), read_doc("BBB")])
     out = board(st, GC.DEFAULT_SUB)
     keys = [s["key"] for s in out["subs"]]
-    assert len(keys) == 12 == len(GC.SUBS)
+    assert len(keys) == 13 == len(GC.SUBS)                             # WIDENED 2026-11-18 — 🌱 Diverging after 🧨
     assert keys[6] == DV and keys[-2] == GC.POTENTIAL_SUB and keys[-1] == GC.LEDGER_SUB
     chip = out["subs"][6]
     assert (chip["emoji"], chip["label"], chip["count"]) == ("🧨", "Divergence", 2)
@@ -180,7 +180,8 @@ def test_NEGATIVE_other_pages_fail_open_and_omit_the_chip(variant):
     if variant is V.GGA:
         assert GC.TABLE_SUB not in keys and len(keys) == len(GC.SUBS) - len(GC.GG5_ONLY_SUBS)
     else:                                                               # the 1-minute page keeps 📋 (2026-11-16)
-        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 1
+        # WIDENED 2026-11-18 — 🌱 Diverging after 🧨: the 1-minute page omits both GG5-only read subs (🧨 + 🌱)
+        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 2 and GC.DIVERGING_SUB not in keys
 
 
 def test_NEGATIVE_resolve_sub_fails_open_off_gg5_only():
@@ -471,4 +472,5 @@ def test_NEGATIVE_rules_info_a_missing_constant_drops_only_the_clause(monkeypatc
     from supply_demand import rules_info as RI
     monkeypatch.delattr(GC, "DIVERGENCE_V2_RUN")
     assert RI._gg_divergence_clause() == ""
-    assert "🧨" not in RI._gajjala_section()["note"]
+    # WIDENED 2026-11-18 — the 🌱 Diverging clause names "the 🧨 cut", so the NEGATIVE reads the 🧨 clause's own head
+    assert "🧨 Divergence (record only)" not in RI._gajjala_section()["note"]
