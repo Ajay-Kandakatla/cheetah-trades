@@ -167,13 +167,56 @@ describe('👀 add / remove', () => {
     await flush();
     expect(calls.filter((c) => c.method !== 'GET')).toHaveLength(0);
   });
-  it('full → the input is disabled with the served text', async () => {
-    stubFetch(() => ({ ...noPending(), full: true }));
+  // RE-PINNED 2026-11-18 (was: full → the input disabled). Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added": at the cap the box stays OPEN
+  // (the add replaces the oldest he added); only `full_blocked` (every name 🎯 A+) closes it, its reason a VISIBLE line.
+  const HINT = 'Your watch holds 18 — adding one replaces the oldest you added (never a 🎯 A+)';
+  it('full → the input and Add stay ENABLED, the served hint is a visible line', async () => {
+    stubFetch(() => ({ ...noPending(), full: true, full_blocked: false, full_text: HINT }));
+    const { container, getByTestId } = await mount();
+    const input = container.querySelector('input.ggw-input') as HTMLInputElement;
+    expect(input.disabled).toBe(false);
+    expect(input.placeholder).toBe((fixture as any).add_placeholder);
+    expect(input.title).toBe('');                                              // NEGATIVE: no hover-only reason
+    fireEvent.change(input, { target: { value: 'OMH' } });
+    expect((container.querySelector('button.ggw-add-btn') as HTMLButtonElement).disabled).toBe(false);
+    expect(getByTestId('ggw-full').textContent).toBe(HINT);
+  });
+  it('🔁 full → an add answers "replaced": the sentence is shown, the box clears, the board re-GETs', async () => {
+    const said = 'OMH added — your watch was full, so NVDA (the oldest you added) made room';
+    const calls = stubFetch(() => ({ ...noPending(), full: true, full_blocked: false, full_text: HINT }),
+      { write: { state: 'replaced', symbols: [], symbol: 'OMH', replaced: 'NVDA', text: said } });
+    const { container, getByTestId } = await mount();
+    const before = full(calls).length;
+    const input = container.querySelector('input.ggw-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'OMH' } });
+    fireEvent.submit(input.closest('form')!);
+    await flush(); await flush(); await flush();
+    expect(calls.some((c) => c.method === 'POST' && c.url.endsWith(ggwSymbolPath('OMH')))).toBe(true);
+    expect(getByTestId('ggw-msg').textContent).toBe(said);
+    expect(input.value).toBe('');
+    expect(full(calls).length).toBe(before + 1);
+  });
+  it('NEGATIVE: every name 🎯 A+ (full_blocked) → the box is closed and the refusal is a VISIBLE line', async () => {
+    const refusal = (fixture as any).full_text;
+    stubFetch(() => ({ ...noPending(), full: true, full_blocked: true, full_text: refusal }));
     const { container, getByTestId } = await mount();
     const input = container.querySelector('input.ggw-input') as HTMLInputElement;
     expect(input.disabled).toBe(true);
-    expect(input.placeholder).toBe((fixture as any).full_text);
-    expect(getByTestId('ggw-full').textContent).toBe((fixture as any).full_text);
+    expect(input.placeholder).toBe(refusal);
+    expect(getByTestId('ggw-full').textContent).toBe(refusal);
+    expect((container.querySelector('button.ggw-add-btn') as HTMLButtonElement).disabled).toBe(true);
+  });
+  it('NEGATIVE: an add refused "full" at submit shows the served reason as visible text', async () => {
+    const refusal = (fixture as any).full_text;
+    stubFetch(() => ({ ...noPending(), full: true, full_text: HINT }),
+      { write: { state: 'full', symbols: [], symbol: 'OMH', text: refusal } });
+    const { container, getByTestId } = await mount();
+    const input = container.querySelector('input.ggw-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'OMH' } });
+    fireEvent.submit(input.closest('form')!);
+    await flush(); await flush(); await flush();
+    expect(getByTestId('ggw-msg').textContent).toBe(refusal);
+    expect(input.value).toBe('OMH');                                           // refused → the box keeps his ticker
   });
   it('✕ → DELETE ggwSymbolPath(sym), no confirm, then a full GET', async () => {
     const conf = vi.fn(() => true);

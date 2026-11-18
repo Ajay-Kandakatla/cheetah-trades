@@ -164,12 +164,16 @@ def test_two_adds_at_once_keep_both_names_in_order():
     assert lc.reads == 2
 
 
-def test_NEGATIVE_a_racing_add_that_fills_the_list_is_refused_full():
+def test_a_racing_add_that_fills_the_list_replaces_on_the_fresh_read(monkeypatch):
+    # RE-PINNED 2026-11-18 (was: refused `full`). Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added":
+    # the cap is decided on the FRESH read — the racing ZZ stays, the oldest (not 🎯 A+) makes room for NVDA.
+    monkeypatch.setattr(ST, "aplus_names", lambda names: set())
     names = [f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS - 1)]
     lc = _Racing(_doc(names), lambda docs: docs[C.LIST_DOC_ID]["symbols"].append("ZZ"))
     db = _db(list_coll=lc)
     out = ST.add("NVDA", by="owner", db=db)
-    assert out["state"] == "full" and "NVDA" not in _stored(db) and len(_stored(db)) == C.MAX_SYMBOLS
+    assert out["state"] == "replaced" and out["replaced"] == names[0]
+    assert _stored(db) == names[1:] + ["ZZ", "NVDA"] and len(_stored(db)) == C.MAX_SYMBOLS
 
 
 def test_NEGATIVE_a_racing_same_name_add_is_already():

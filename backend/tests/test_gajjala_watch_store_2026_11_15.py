@@ -76,14 +76,17 @@ def test_add_is_idempotent_already():
     assert db[C.COLL_LIST].writes == 0
 
 
-def test_NEGATIVE_add_at_the_cap_is_full_and_refused():
+def test_add_at_the_cap_replaces_the_oldest(monkeypatch):
+    # RE-PINNED 2026-11-18 (was: `full`, REFUSED, the oldest stays). Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added":
+    # at the cap the OLDEST name he added (not 🎯 A+) makes room; every-name-A+ keeps the old `full` refusal.
+    monkeypatch.setattr(ST, "aplus_names", lambda names: set())
     names = [f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS)]
     db = _db(names)
     out = ST.add("ZZZ", by="owner", db=db)
-    assert out["state"] == "full" and out["symbols"] == names
-    assert _stored(db) == names and names[0] in _stored(db) and "ZZZ" not in _stored(db)   # the OLDEST stays
-    assert out["text"] == PL.full_text() and str(C.MAX_SYMBOLS) in out["text"]
-    assert db[C.COLL_LIST].writes == 0
+    assert out["state"] == "replaced" and out["replaced"] == names[0] and out["symbols"] == names[1:] + ["ZZZ"]
+    assert _stored(db) == names[1:] + ["ZZZ"] and len(_stored(db)) == C.MAX_SYMBOLS
+    assert out["text"] == PL.store_text("replaced", "ZZZ", old=names[0])
+    assert db[C.COLL_LIST].writes == 1
 
 
 def test_add_one_below_the_cap_still_adds():

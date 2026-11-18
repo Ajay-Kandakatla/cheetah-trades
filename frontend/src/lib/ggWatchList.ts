@@ -21,8 +21,12 @@ export type GgwListState = {
   full_text: string | null;
   labels: GgwLabels | null;
   busy: string | null;      // the symbol whose write is in flight
-  msg: { sym: string; text: string; on: boolean } | null;   // `on` = on the list after that answer
+  msg: { sym: string; text: string; on: boolean; state: string | null } | null;   // `on` = on the list after that answer
 };
+
+/** 🔁 2026-11-18: the answers whose served sentence is SHOWN on the clicked card (not only its title) — everything but
+ *  the plain added / removed, so "replaced" names the stock that made room and a refusal says why on a phone tap. */
+export const GGW_ROUTINE_STATES: ReadonlyArray<string> = ['added', 'removed'];
 
 const str = (x: unknown): string | null => (typeof x === 'string' && x.trim() ? x : null);
 
@@ -114,7 +118,7 @@ export function toggleGgw(sym: string): Promise<void> {
         next.symbols = (o.symbols as unknown[]).filter((x): x is string => typeof x === 'string');
       }
       const after = next.symbols ?? _state.symbols;
-      next.msg = text ? { sym: s, text, on: ggwHas(after, s) } : null;
+      next.msg = text ? { sym: s, text, on: ggwHas(after, s), state: str(o?.state) } : null;
       patch(next);
     })
     .catch(() => { patch({ msg: null }); })

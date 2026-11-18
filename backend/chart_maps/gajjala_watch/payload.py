@@ -59,7 +59,13 @@ ADD_LABEL = "Add"
 ADD_PLACEHOLDER = "Ticker, e.g. OMH"
 REMOVE_LABEL = "Remove"
 EMPTY_TEXT = "Your watch is empty — add a ticker to see its {minutes}-minute charts"
-FULL_TEXT = "Your watch holds {max} tickers — remove one to add another"
+FULL_TEXT = "Your watch holds {max} tickers — remove one to add another"   # 2026-11-18: the all-🎯 A+ refusal only
+# 🔁 2026-11-18 — Ajay, verbatim: "For watch list when I add new ones remove the ones that are not active in the watch
+# list"; asked what "not active" means, he picked "Oldest added" — "Remove the one you added longest ago, whatever it is
+# doing." At the cap an add REPLACES the oldest name he added that is not 🎯 A+ (store.add → "replaced").
+FULL_REPLACES_TEXT = "Your watch holds {max} — adding one replaces the oldest you added (never a 🎯 A+)"
+REPLACED_TEXT = "{sym} added — your watch was full, so {old} (the oldest you added) made room"
+REPLACED_PAST_APLUS_TEXT = "{sym} added — your watch was full, so {old} (the oldest you added that is not 🎯 A+) made room"
 PENDING_TEXT = {True: "⏳ first read at the next minute", False: "⏳ reading {sym}'s last session"}
 NO_PRINTS_TEXT = {True: "No prints yet today for {sym} — the chart starts at its first print",
                   False: "No prints for {sym} on {session}"}
@@ -90,6 +96,7 @@ STORE_TEXT = {
     "added": "👀 {sym} added to your watch",
     "already": "{sym} is already on your watch",
     "full": FULL_TEXT,
+    "replaced": REPLACED_TEXT,                                                      # 🔁 2026-11-18 (store.add at the cap)
     "bad_symbol": "Not a ticker — letters only, like OMH or BRK.B",
     "error": "The watch list could not be saved — try again",
     "removed": "{sym} removed from your watch",
@@ -189,13 +196,19 @@ def list_payload(symbols: list) -> dict:
     """The owner's names for the card buttons — {state, symbols, max, full, full_text, labels}. Never a chart."""
     syms = [s for s in symbols if isinstance(s, str)]
     return {"state": "ok", "symbols": syms, "max": C.MAX_SYMBOLS, "full": len(syms) >= C.MAX_SYMBOLS,
-            "full_text": full_text(),
+            "full_text": full_hint(),                    # 🔁 2026-11-18: ➕ at the cap replaces — never disabled
             "labels": {"add": CARD_ADD_LABEL, "remove": CARD_REMOVE_LABEL,
                        "add_title": CARD_ADD_TITLE, "remove_title": CARD_REMOVE_TITLE}}
 
 
 def full_text() -> str:
+    """The all-🎯 A+ refusal (store.add "full") — every name on his list is A+, so nothing can make room."""
     return FULL_TEXT.format(max=C.MAX_SYMBOLS)
+
+
+def full_hint() -> str:
+    """🔁 2026-11-18: the served `full_text` while ➕ still works at the cap (it replaces the oldest he added)."""
+    return FULL_REPLACES_TEXT.format(max=C.MAX_SYMBOLS)
 
 
 def honesty() -> str:
@@ -207,9 +220,13 @@ def held_text(reason) -> Optional[str]:
     return t.format(first=GC.NO_TRADE_AFTER_OPEN_MIN, floor=int(GC.K11_MIN_SESSION_VOLUME)) if t else None
 
 
-def store_text(state: str, symbol: Optional[str]) -> str:
+def store_text(state: str, symbol: Optional[str], *, old: Optional[str] = None, past_aplus: bool = False) -> str:
+    """The served answer sentence. `old` / `past_aplus` fill the 🔁 "replaced" words (2026-11-18): `past_aplus` = an
+    older 🎯 A+ name was kept and the next oldest made room."""
     t = STORE_TEXT.get(state, STORE_TEXT["error"])
-    return t.format(sym=symbol or STORE_NO_SYMBOL, max=C.MAX_SYMBOLS)
+    if state == "replaced" and past_aplus:
+        t = REPLACED_PAST_APLUS_TEXT
+    return t.format(sym=symbol or STORE_NO_SYMBOL, max=C.MAX_SYMBOLS, old=old or STORE_NO_SYMBOL)
 
 
 def push_mode() -> str:
@@ -745,6 +762,28 @@ def aplus_by_symbol(gg5: dict, gg1: dict, gga: dict) -> dict:
     return by
 
 
+def aplus_blocks(names: list, siso: str, *, stores: Optional[dict] = None) -> dict:
+    """{SYM: aplus block} for `names` (only tagged names are keys) — RAISES on any fault (unknown is never "no A+").
+    The strict core of `aplus_section`, also read by store.add (🔁 2026-11-18: an A+ name never makes room)."""
+    if not names:
+        return {}
+    from chart_maps.gajjala import store as ST
+    from chart_maps.gajjala import variant as V
+    stores = stores if stores is not None else _aplus_stores()
+    ids = [ST.key(siso, s) for s in names]
+    gg5 = _aplus_find(stores[V.GG5.key], ids)
+    gg1 = _aplus_find(stores[V.GG1.key], ids) if V.GG1.key in stores else {}   # 2026-11-18: retired → absent
+    from chart_maps.gajjala import audited_tab as AT
+    gga, _stats = AT.overlay_reads(gg5, stores[V.GGA.key], siso)       # THE 🧪 board's call (tab.py), reused
+    by = aplus_by_symbol(gg5, gg1, gga)
+    out = {}
+    for s in names:
+        blk = aplus_row_block(by.get(str(s).upper(), []))
+        if blk is not None:
+            out[s] = blk
+    return out
+
+
 def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> dict:
     """{SYM: aplus block} for `names` (only tagged names are keys). ONE projected read find per read store (GG5, GG1 —
     GG1 only when `stores` carries it, i.e. while the 1-minute page is on, 2026-11-18)
@@ -752,21 +791,7 @@ def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> d
     if not names:
         return {}
     try:
-        from chart_maps.gajjala import store as ST
-        from chart_maps.gajjala import variant as V
-        stores = stores if stores is not None else _aplus_stores()
-        ids = [ST.key(siso, s) for s in names]
-        gg5 = _aplus_find(stores[V.GG5.key], ids)
-        gg1 = _aplus_find(stores[V.GG1.key], ids) if V.GG1.key in stores else {}   # 2026-11-18: retired → absent
-        from chart_maps.gajjala import audited_tab as AT
-        gga, _stats = AT.overlay_reads(gg5, stores[V.GGA.key], siso)       # THE 🧪 board's call (tab.py), reused
-        by = aplus_by_symbol(gg5, gg1, gga)
-        out = {}
-        for s in names:
-            blk = aplus_row_block(by.get(str(s).upper(), []))
-            if blk is not None:
-                out[s] = blk
-        return out
+        return aplus_blocks(names, siso, stores=stores)
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: A+ tag unavailable: %s", type(exc).__name__)
         return {}
@@ -776,6 +801,12 @@ def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> d
 def _session_of(now: datetime) -> tuple:
     from chart_maps.gajjala import tab
     return tab.session_for(now)
+
+
+def session_iso(now: Optional[datetime] = None) -> str:
+    """The board's session as YYYY-MM-DD — the SAME rule `_build` applies (store.add reads the 🎯 A+ set of it)."""
+    session, _t, _w = _session_of(_now(now))
+    return session.isoformat()[:10] if isinstance(session, (date, datetime)) else str(session)[:10]
 
 
 def build(now: Optional[datetime] = None, db=None, only=None) -> dict:
@@ -835,11 +866,14 @@ def _build(now: datetime, db, only) -> dict:
         r["auto"] = auto_by.get(r["symbol"])
         r["aplus"] = aplus_by.get(r["symbol"])
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
+    # 🔁 2026-11-18: at the cap ➕ replaces the oldest he added that is not 🎯 A+; only when EVERY one of his names is A+
+    # (by THIS board's own tag read — the full board only, never a pending poll) is the add refused → `full_blocked`.
+    blocked = bool(full and only is None and symbols and all(s in aplus_by for s in symbols))
     out = {"state": "ok", "title": title(), "session": siso, "is_today": bool(is_today), "in_window": bool(in_window),
            "refresh_sec": GC.GG1M_CADENCE_SEC if in_window else 0,
            "next_window_sec": next_window_sec(now, bool(in_window)),
-           "max_symbols": C.MAX_SYMBOLS, "symbols": list(symbols), "full": full,
-           "full_text": full_text(), "add_label": ADD_LABEL, "add_placeholder": ADD_PLACEHOLDER,
+           "max_symbols": C.MAX_SYMBOLS, "symbols": list(symbols), "full": full, "full_blocked": blocked,
+           "full_text": full_text() if blocked else full_hint(), "add_label": ADD_LABEL, "add_placeholder": ADD_PLACEHOLDER,
            "remove_label": REMOVE_LABEL, "empty_text": empty_text(),
            "pass": pass_block(state_doc, now, bool(in_window)),
            "info": info(), "legend": legend(), "rows": rows,

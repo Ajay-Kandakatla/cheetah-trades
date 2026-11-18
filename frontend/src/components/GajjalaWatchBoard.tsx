@@ -321,7 +321,7 @@ export default function GajjalaWatchBoard() {
       .then((a: GgwWriteAnswer | null) => {
         if (!alive.current) return;
         setMsg(a && typeof a.text === 'string' && a.text.trim() ? a.text : null);
-        if (method === 'POST' && a && (a.state === 'added' || a.state === 'already')) setDraft('');
+        if (method === 'POST' && a && (a.state === 'added' || a.state === 'already' || a.state === 'replaced')) setDraft('');
       })
       .catch(() => { if (alive.current) setMsg(null); })
       .finally(() => {
@@ -375,11 +375,13 @@ export default function GajjalaWatchBoard() {
         {p.title ? <h2 className="ggw-title">{p.title}</h2> : null}
         <form className="ggw-add" onSubmit={onAdd}>
           <input className="ggw-input" type="text" value={draft} aria-label={addLabel || undefined}
-                 placeholder={(p.full ? p.full_text : p.add_placeholder) ?? undefined}
-                 title={p.full ? p.full_text ?? undefined : undefined}
-                 disabled={p.full || busy} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+                 placeholder={(p.full_blocked ? p.full_text : p.add_placeholder) ?? undefined}
+                 disabled={p.full_blocked || busy} autoCapitalize="characters" autoComplete="off" spellCheck={false}
                  onChange={(e) => setDraft(e.target.value)} />
-          <button type="submit" className="ggw-btn ggw-add-btn" disabled={p.full || busy || !draft.trim()}>
+          {/* 🔁 2026-11-18 (Ajay: "For watch list when I add new ones remove the ones that are not active" → "Oldest
+            * added"): at the cap the box stays OPEN — the add replaces the oldest he added; only the all-🎯 A+ case
+            * (full_blocked) closes it, and its reason is the visible ggw-full line below, never a hover title. */}
+          <button type="submit" className="ggw-btn ggw-add-btn" disabled={p.full_blocked || busy || !draft.trim()}>
             {addLabel}
           </button>
         </form>

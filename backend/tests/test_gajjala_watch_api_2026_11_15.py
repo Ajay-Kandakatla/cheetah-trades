@@ -31,6 +31,7 @@ from chart_maps.gajjala_watch import api as API
 from chart_maps.gajjala_watch import colls as CO
 from chart_maps.gajjala_watch import constants as C
 from chart_maps.gajjala_watch import payload as PL
+from chart_maps.gajjala_watch import store as ST
 from tests.test_gajjala_store import FakeColl
 
 ET = ZoneInfo("America/New_York")
@@ -289,10 +290,18 @@ def test_NEGATIVE_no_spawn_unless_added(wired, sym, state):
     assert wired.spawns == []
 
 
-def test_NEGATIVE_no_spawn_when_full(wired, db):
-    db[C.COLL_LIST].docs[C.LIST_DOC_ID]["symbols"] = [f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS)]
+def test_NEGATIVE_no_spawn_when_full(wired, db, monkeypatch):
+    # RE-PINNED 2026-11-18. Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added":
+    # at the cap a replace ADDS a name → one build child; only the all-🎯 A+ refusal (`full`) spawns nothing.
+    names = [f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS)]
+    db[C.COLL_LIST].docs[C.LIST_DOC_ID]["symbols"] = list(names)
+    monkeypatch.setattr(ST, "aplus_names", lambda ns: set(ns))
     assert wired.post(C.API_PATH + "/symbols/ZZZ", headers={"X-User-Email": OWNER}).json()["state"] == "full"
     assert wired.spawns == []
+    monkeypatch.setattr(ST, "aplus_names", lambda ns: set())
+    out = wired.post(C.API_PATH + "/symbols/ZZZ", headers={"X-User-Email": OWNER}).json()
+    assert out["state"] == "replaced" and out["replaced"] == names[0]
+    assert len(wired.spawns) == 1
 
 
 def test_a_raising_spawn_still_answers_added(wired, monkeypatch):
@@ -552,7 +561,10 @@ def test_head_words_and_legend():
     db = _db([f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS)])
     out = PL.build(FRI_IN, db=db)
     assert out["title"] == "👀 Gajjala's Watch — your tickers on 1-, 3- and 5-minute bars from 04:00 ET"
-    assert out["full"] is True and out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} tickers — remove one to add another"
+    # RE-PINNED 2026-11-18 (Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added"): at the cap ➕ replaces, so the served
+    # full_text is the replace hint; the old refusal words serve only when every name is 🎯 A+ (full_blocked).
+    assert out["full"] is True and out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the oldest you added (never a 🎯 A+)"
+    assert out["full_blocked"] is False
     assert out["max_symbols"] == C.MAX_SYMBOLS
     assert out["legend"] == [{"tone": "ema9", "label": f"{GC.EMA_FAST} EMA"}, {"tone": "ema21", "label": f"{GC.EMA_SLOW} EMA"}]
     assert out["info"]["honesty"].startswith(f"A {GC.EMA_FAST}-over-{GC.EMA_SLOW} cross is information, not an entry.")

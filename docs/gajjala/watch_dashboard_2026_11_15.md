@@ -28,6 +28,8 @@ and the cross push are in `watch_cross_alerts_2026_11_15.md`; the board in `watc
 - `normalize(raw)` = `strip().upper()` then `supply_demand.accumulation_changes._TICKER_SHAPE` (imported).
 - `add` → `added` (appended at the END — his order) · `already` · `full` · `bad_symbol` · `error`.
   `full` is REFUSED at `C.MAX_SYMBOLS` (12, HIS CALL #1); Signal Lab's silent drop of the oldest is NOT copied.
+  **SUPERSEDED 2026-11-18** — at the cap an add now replaces the oldest he added (see "🔁 Replace the oldest at the
+  cap" below); `full` is the all-🎯 A+ refusal only.
 - `remove` → `removed` · `absent` (also for a string that is not a ticker) · `error`.
 - Never raises. A removed name's tile doc and claims stay (audit); the board shows listed names only.
 
@@ -114,3 +116,51 @@ call time (a source guard pins it).
 `backend/tests/test_gajjala_watch_store_2026_11_15.py`, `backend/tests/test_gajjala_watch_api_2026_11_15.py`
 (negatives: non-owner reads nothing, 404 writes with no spawn, single-flight, unlisted `?symbols=` never read, no
 reorder, stale / pushed `held` not served, rule sentences once, admin email absent, no typed digit in words).
+
+## 🔁 Replace the oldest at the cap (2026-11-18)
+
+**His words (verbatim):** "For watch list when I add new ones remove the ones that are not active in the watch list".
+Asked what "not active" means, he picked **"Oldest added"** — "Remove the one you added longest ago, whatever it is
+doing." He was told: "A+ names are never removed, and you'll see a line saying which one went." Before it: "All the
+watch button are not working or not reacting" — at the cap every ➕ Watch and the board's Add box were DISABLED with a
+hover-only title (no hover on his phone).
+
+**Store (`store.add`).** At `C.MAX_SYMBOLS` (= `GC.GG_WATCH_N`) the add drops the OLDEST name on his list (list order =
+add order — `add` appends at the END) that is NOT 🎯 A+ this session, appends the new name, and answers `replaced` with
+`replaced: <SYM>`. One compare-and-set: the drop and the append land together or not at all; a racing write → re-read
+and decide again on the fresh list. `STATES_ADD` gained `"replaced"` (appended last).
+- 🎯 A+ = THE Watch tag's own read — `payload.aplus_blocks` (the strict core of `aplus_section`, which stays fail-soft
+  for the board) over his names, session `payload.session_iso()` (the board's own session rule). A+, A+ (triggered) and
+  A+ then stopped all count — an A+ name never makes room.
+- Every name A+ → `full` (FULL_TEXT, the list unchanged). The A+ read faults → `full` too: unknown is never "not A+",
+  nothing is removed on a guess.
+- Below the cap, `already`, `bad_symbol`: nothing removed and the A+ set is not read.
+- **Not blocked.** The replaced name can be ➕ added back by hand at once (`add` keeps no block list). Nothing is
+  written to the 🤖 auto doc: only his × (api DELETE → `auto.dismiss`) blocks an auto re-add today, so the 🤖 engine may
+  seat a replaced name by its own rules (potential + K11 volume, free seat). The "🤖 removed today" strip lists auto
+  removals only (a × of HIS name is not listed there either) — the served `replaced` sentence is the record he sees.
+- `api.py` spawns the `--build` child on `added` OR `replaced` (the new name needs its tile either way).
+
+**Served words (`payload.py`).**
+- `replaced`: "{sym} added — your watch was full, so {old} (the oldest you added) made room"; when an older 🎯 A+ name
+  was passed over: "{sym} added — your watch was full, so {old} (the oldest you added that is not 🎯 A+) made room".
+- `full_text` (card list + board) = "Your watch holds {max} — adding one replaces the oldest you added (never a 🎯 A+)".
+- FULL_TEXT ("Your watch holds {max} tickers — remove one to add another") = the all-A+ refusal only: the `full`
+  answer, and the board's `full_text` when `full_blocked`.
+- Board `full_blocked` = his list is at the cap AND every one of his names carries the board's own 🎯 tag (the full GET
+  only — a `?symbols=` pending poll serves false). The card list (`list_payload`) reads no A+ and serves no
+  `full_blocked`.
+
+**Frontend.** ➕ Watch (`GgWatchButton`) is never disabled at the cap; every answer but a plain added / removed is shown
+as a short visible line beside the clicked button (`ggw-card-msg-<SYM>`, the served sentence verbatim; a tap on it never
+reaches the card link). The board's Add box stays open at the cap (the hint is the visible `ggw-full` line); only
+`full_blocked` closes it, with the refusal as that visible line. A `replaced` answer clears the box and the board re-GETs.
+
+**Tests.** `backend/tests/test_gajjala_watch_replace_oldest_2026_11_18.py`; RE-PINNED: `test_gajjala_watch_store` (cap →
+replaced), `test_gajjala_watch_fixes` (racing fill → replaced on the fresh read), `test_gajjala_watch_api` (replace
+spawns a build, all-A+ `full` does not; head `full_text` = the hint). Frontend: `GgWatchButton.test.tsx`,
+`GajjalaWatchBoard.test.tsx` (each re-pin marked RE-PINNED 2026-11-18 with his words).
+
+**HIS CALL.** Whether a replaced name should also be blocked from a 🤖 auto re-seat today (as his × does) — today it is
+not.
+

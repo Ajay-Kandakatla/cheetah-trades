@@ -292,6 +292,9 @@ export type GgwBoard = {
   refresh_sec: number; next_window_sec: number | null;
   pending_poll_sec: number | null; pending_wait_max_sec: number | null;
   max_symbols: number | null; symbols: string[]; full: boolean; full_text: string | null;
+  /** 🔁 2026-11-18: true ONLY when every one of his names is 🎯 A+ (nothing can make room) — the add box is then
+   *  disabled and `full_text` is the served refusal, shown as a visible line. At the cap otherwise ➕ replaces. */
+  full_blocked: boolean;
   add_label: string | null; add_placeholder: string | null; remove_label: string | null; empty_text: string | null;
   pass: GgwPass | null; info: GgwInfo | null; legend: GgwLegend[]; rows: GgwRow[];
   /** 🤖 the auto section's head (absent / junk → null — an older server serves none; the board then renders as before). */
@@ -302,7 +305,9 @@ export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: 
 export type GgwServedError = { state: 'error'; reason: string | null; title: string | null };
 export type GgwPayload = GgwBoard | GgwOwnerOnly | GgwServedError;
 /** The add / remove answer (store.add / store.remove). */
-export type GgwWriteAnswer = { state: string; symbols: string[]; symbol: string | null; text: string | null };
+/** 🔁 2026-11-18: `replaced` = the oldest name he added that made room (state "replaced" only). */
+export type GgwWriteAnswer = { state: string; symbols: string[]; symbol: string | null; text: string | null;
+  replaced?: string | null };
 
 // ── parsing (junk never reaches the board) ─────────────────────────────────────────────────────────────────────────
 
@@ -487,6 +492,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     symbols: strs(raw.symbols),
     full: raw.full === true,
     full_text: str(raw.full_text),
+    full_blocked: raw.full_blocked === true,
     add_label: str(raw.add_label),
     add_placeholder: str(raw.add_placeholder),
     remove_label: str(raw.remove_label),

@@ -1,3 +1,4 @@
+// WIDENED 👀 chart-maps-gajjala-watch-18-replace-oldest-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 👀 chart-maps-gajjala-card-grid-watch-layout-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🎬 chart-maps-replays-slot-search-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🧨 gajjala-divergence-sub-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
@@ -41,8 +42,8 @@ describe('✨ the 📶 run-bases entry (2026-11-15)', () => {
 
   it('is FIRST, listed once, dated and routed to 🚩 Gajjala', () => {
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[23].id).toBe(ID);
-    expect(NEW_FEATURES[24].id).toBe('chart-maps-gajjala-watch-2026-11-15');
+    expect(NEW_FEATURES[24].id).toBe(ID);
+    expect(NEW_FEATURES[25].id).toBe('chart-maps-gajjala-watch-2026-11-15');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-15');

@@ -11,6 +11,7 @@ the doc themselves so a failed read is an `error`, never an empty list written b
     the house spelling `colls.house`.
   * `add` → `added` (appended at the END, his order) | `already` | `full` (REFUSED at C.MAX_SYMBOLS — Signal Lab's
     silent drop of the oldest is NOT copied) | `bad_symbol` | `error`.
+    🔁 SUPERSEDED 2026-11-18 (below): at the cap an add now REPLACES — `full` is the all-🎯 A+ refusal only.
   * `remove` → `removed` | `absent` (also a string that is not a ticker — it cannot be on the list) | `error`.
 
 Never raises. A removed name's tile doc and claims stay (audit); the payload shows listed names only. Every served
@@ -23,6 +24,19 @@ Fixes 2026-11-15:
     read (a missing doc: only if it is still missing). Another add / remove in between → re-read and decide again
     (up to `_CAS_TRIES` reads), so two adds at once keep both names; the cap refusal and the append-at-the-end order
     are decided on the fresh read.
+
+🔁 Replace the oldest at the cap (2026-11-18 — Ajay, verbatim: "For watch list when I add new ones remove the ones that are
+not active in the watch list"; asked what "not active" means he picked "Oldest added" — "Remove the one you added longest
+ago, whatever it is doing."; told "A+ names are never removed, and you'll see a line saying which one went."):
+  * at C.MAX_SYMBOLS `add` drops the OLDEST name on his list (list order = add order; `add` appends at the END) that is
+    NOT 🎯 A+ this session, appends the new one, and answers `replaced` with `replaced: <SYM>` (one compare-and-set —
+    the drop and the append land together or not at all; a racing write → re-read and decide again).
+  * 🎯 A+ = THE Watch tag's own read (`payload.aplus_blocks` over his names, the session `payload.session_iso`) — an A+
+    name (A+, A+ triggered, A+ then stopped) never makes room. Every name A+ → `full` (FULL_TEXT, list unchanged).
+    The A+ read faults → `full` too (unknown is never "not A+"; nothing is removed on a guess).
+  * the replaced name is NOT blocked: he can ➕ it back at once (`add` keeps no block list). Nothing is written to the 🤖
+    auto doc — only his × (api DELETE → auto.dismiss) blocks an auto re-add today, so the 🤖 engine may seat a replaced
+    name by its own rules. The served `replaced` sentence names it; the "🤖 removed today" strip lists auto removals only.
 """
 from __future__ import annotations
 
@@ -35,7 +49,8 @@ from . import constants as C
 
 log = logging.getLogger("chart_maps.gajjala_watch.store")
 
-STATES_ADD = ("added", "already", "full", "bad_symbol", "error")
+STATES_ADD = ("added", "already", "full", "bad_symbol", "error",
+              "replaced")                                       # 🔁 2026-11-18 — appended LAST
 STATES_REMOVE = ("removed", "absent", "error")
 
 _CAS_TRIES = 3          # reads per add / remove when another write lands between the read and the compare-and-set
@@ -56,9 +71,30 @@ def _symbols_of(doc) -> list:
     return CO.symbols_of(doc)
 
 
-def _answer(state: str, symbols: list, symbol: Optional[str]) -> dict:
+def _answer(state: str, symbols: list, symbol: Optional[str], *, replaced: Optional[str] = None,
+            past_aplus: bool = False) -> dict:
     from . import payload as PL
-    return {"state": state, "symbols": list(symbols), "symbol": symbol, "text": PL.store_text(state, symbol)}
+    out = {"state": state, "symbols": list(symbols), "symbol": symbol,
+           "text": PL.store_text(state, symbol, old=replaced, past_aplus=past_aplus)}
+    if state == "replaced":
+        out["replaced"] = replaced
+    return out
+
+
+def aplus_names(names: list) -> set:
+    """🔁 The names of `names` that carry the Watch's 🎯 A+ tag this session — THE tag's read (`payload.aplus_blocks`).
+    RAISES on a fault (the caller refuses; unknown is never "not A+"). Tests replace this function."""
+    from . import payload as PL
+    return set(PL.aplus_blocks(list(names), PL.session_iso()))
+
+
+def _oldest_not_aplus(cur: list) -> tuple:
+    """(the oldest name of `cur` that is not 🎯 A+ | None, an older A+ name was passed over). RAISES on an A+ fault."""
+    aps = aplus_names(cur)
+    for i, s in enumerate(cur):
+        if s not in aps:
+            return s, i > 0
+    return None, False
 
 
 def _read_doc(coll):
@@ -104,7 +140,17 @@ def add(symbol, *, by, db=None) -> dict:
             if _has(cur, sym):
                 return _answer("already", cur, sym)
             if len(cur) >= C.MAX_SYMBOLS:
-                return _answer("full", cur, sym)
+                try:
+                    old, past = _oldest_not_aplus(cur)
+                except Exception as exc:                       # noqa: BLE001 — unknown A+ → remove nothing
+                    log.warning("gajjala_watch: add %s at the cap — A+ read failed: %s", sym, type(exc).__name__)
+                    return _answer("full", cur, sym)
+                if old is None:                                # every name is 🎯 A+ → nothing makes room
+                    return _answer("full", cur, sym)
+                new = [s for s in cur if s != old] + [sym]
+                if _cas(cs["list"], doc, new, by):
+                    return _answer("replaced", new, sym, replaced=old, past_aplus=past)
+                continue
             new = cur + [sym]
             if _cas(cs["list"], doc, new, by):
                 return _answer("added", new, sym)

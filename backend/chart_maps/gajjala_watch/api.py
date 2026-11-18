@@ -10,7 +10,7 @@ add remove tickers from the dashboard."
     on the event loop (C2.4; the `/sepa/scan` pattern, main.py). `symbols` = the pending poll's names: normalized,
     and only LISTED names are served (an unlisted one is dropped, never read).
   * `POST   /chart-maps/gajjala-watch/symbols/{symbol}` — `require_primary_admin` (404 for anyone else, before the
-    handler). `store.add`; on `added` ONLY, only when the watch is on, and only when the minute loop will NOT read the
+    handler). `store.add`; on `added` / `replaced` (🔁 2026-11-18) ONLY, only when the watch is on, and only when the minute loop will NOT read the
     name within about a minute (`colls.loop_reads_soon` False), one `--build` child is requested — single-flight (C2.5): at most ONE alive in this
     container; an alive child re-reads the list before it exits, so a second add while it runs spawns nothing.
   * `DELETE /chart-maps/gajjala-watch/symbols/{symbol}` — the same gate; `store.remove`, then ALWAYS `auto.dismiss`
@@ -142,7 +142,7 @@ async def gajjala_watch_symbols(email: Optional[str] = Depends(maybe_current_use
 @router.post(C.API_SYMBOL_PATH)
 async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_admin)):
     out = await asyncio.to_thread(ST.add, symbol, by=email)
-    if out.get("state") == "added":
+    if out.get("state") in ("added", "replaced"):            # 🔁 2026-11-18: a replace adds a name too
         try:
             if CO.enabled() and not CO.loop_reads_soon(datetime.now(ET)):     # off → no build child
                 _request_build()

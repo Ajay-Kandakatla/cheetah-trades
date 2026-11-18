@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "All the watch button are not working or not reacting"; "Also I need to keep 1 min charts when
+  // I am viewing specific stock"; "For watch list when I add new ones remove the ones that are not active in the watch list".
+  // His picks: Watch size "18 (Recommended)" (gajjala_watch/constants.MAX_SYMBOLS = GC.GG_WATCH_N) and "Oldest added"
+  // (store.add → `replaced`, never a 🎯 A+). card_frames: the ⤢ 1-min frame builds on demand for any card name.
+  {
+    id: 'chart-maps-gajjala-watch-18-replace-oldest-2026-11-18',
+    label: '👀 Watch holds 18 and never blocks an add — you said: “For watch list when I add new ones remove the ones that are not active in the watch list”. Your Watch now holds 18 names (Gajjala’s own number). When it is full, ➕ Watch adds the new name and removes the oldest one you added — never a 🎯 A+ name — and a line under the button says which one went. And “Also I need to keep 1 min charts when I am viewing specific stock”: the ⤢ view of any Gajjala card draws its 1-minute chart again, even for a name not on your Watch.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-18 ~03:00 ET, verbatim: "I need the watch list kinda chart formant view video view as default here too from
   // the tabs pages"; picked "Tab cards as Watch tiles". components/GgCardGrid + hooks/useGgCardWatch draw the 🚩 / 🧪 card grid
   // with the 👀 Watch's own Tile + pager (GajjalaWatchLayout). Doc docs/gajjala/card_grid_watch_layout_2026_11_18.md.

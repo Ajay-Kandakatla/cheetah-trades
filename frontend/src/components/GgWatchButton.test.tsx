@@ -1,6 +1,6 @@
 /* ➕/➖ Watch on every card (2026-11-15). Ajay: "can you add an add to watch list button on all the stocks to move them
  * and also remove button from watch list too." NEGATIVES: owner_only / error / junk render nothing; the click never
- * bubbles into the card's link; ➕ is disabled at the cap while ➖ still works; ONE list GET for many cards; the list
+ * bubbles into the card's link; ➕ stays enabled at the cap (🔁 2026-11-18 — it replaces the oldest) while ➖ still works; ONE list GET for many cards; the list
  * moves only on the server's answer (never optimistic). */
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -100,13 +100,52 @@ describe('➕/➖ button', () => {
     expect(screen.getByTestId('ggw-card-btn-OMH')).toHaveTextContent('➖ Watch');
   });
 
-  it('NEGATIVE: at the cap ➕ is disabled with the served sentence, ➖ still works', async () => {
+  // RE-PINNED 2026-11-18 (was: ➕ disabled at the cap, the reason in a hover title only). Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added"; and
+  // "All the watch button are not working or not reacting" — a phone has no hover. ➕ stays ENABLED at the cap.
+  it('at the cap ➕ stays enabled (no hover-only title) and ➖ still works', async () => {
     mockFetch(list(['OMH'], true));
     render(<><GgWatchButton symbol="OMH" /><GgWatchButton symbol="AMD" /></>);
     const add = await screen.findByTestId('ggw-card-btn-AMD');
-    expect(add).toBeDisabled();
-    expect(add).toHaveAttribute('title', 'Your watch holds 12 tickers — remove one to add another');
+    expect(add).not.toBeDisabled();
+    expect(add).toHaveAttribute('title', "Add AMD to 👀 Gajjala's Watch");
     expect(screen.getByTestId('ggw-card-btn-OMH')).not.toBeDisabled();
+  });
+
+  it('🔁 at the cap a click POSTs and the served "replaced" sentence is SHOWN beside the button', async () => {
+    let listNow = ['OMH', 'NVDA'];
+    const said = 'AMD added — your watch was full, so OMH (the oldest you added) made room';
+    mockFetch(() => list(listNow, true), {
+      POST: () => { listNow = ['NVDA', 'AMD']; return { state: 'replaced', symbols: listNow, symbol: 'AMD', replaced: 'OMH', text: said }; },
+    });
+    const parent = vi.fn();
+    render(<div onClick={parent}><GgWatchButton symbol="AMD" /><GgWatchButton symbol="OMH" /></div>);
+    fireEvent.click(await screen.findByTestId('ggw-card-btn-AMD'));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/chart-maps/gajjala-watch/symbols/AMD'))).toBe(true));
+    await waitFor(() => expect(screen.getByTestId('ggw-card-msg-AMD')).toHaveTextContent(said));
+    expect(screen.getByTestId('ggw-card-btn-AMD')).toHaveTextContent('➖ Watch');
+    expect(screen.getByTestId('ggw-card-btn-OMH')).toHaveTextContent('➕ Watch');     // the replaced one is off
+    expect(screen.queryByTestId('ggw-card-msg-OMH')).toBeNull();                     // NEGATIVE: only the clicked card
+    fireEvent.click(screen.getByTestId('ggw-card-msg-AMD'));
+    expect(parent).not.toHaveBeenCalled();                                            // NEGATIVE: never the card link
+  });
+
+  it('🔁 the all-A+ refusal is SHOWN on tap (visible text, not a title); the list is unchanged', async () => {
+    const refusal = 'Your watch holds 12 tickers — remove one to add another';
+    mockFetch(list(['OMH'], true), { POST: { state: 'full', symbols: ['OMH'], symbol: 'AMD', text: refusal } });
+    render(<GgWatchButton symbol="AMD" />);
+    fireEvent.click(await screen.findByTestId('ggw-card-btn-AMD'));
+    await waitFor(() => expect(screen.getByTestId('ggw-card-msg-AMD')).toHaveTextContent(refusal));
+    expect(screen.getByTestId('ggw-card-btn-AMD')).toHaveTextContent('➕ Watch');
+    expect(screen.getByTestId('ggw-card-btn-AMD')).not.toBeDisabled();
+  });
+
+  it('NEGATIVE: a plain added answer rides the title only — no extra line on the card', async () => {
+    let listNow = ['OMH'];
+    mockFetch(() => list(listNow), { POST: () => { listNow = ['OMH', 'AMD']; return { state: 'added', symbols: listNow, symbol: 'AMD', text: '👀 AMD added to your watch' }; } });
+    render(<GgWatchButton symbol="AMD" />);
+    fireEvent.click(await screen.findByTestId('ggw-card-btn-AMD'));
+    await waitFor(() => expect(screen.getByTestId('ggw-card-btn-AMD')).toHaveAttribute('title', '👀 AMD added to your watch'));
+    expect(screen.queryByTestId('ggw-card-msg-AMD')).toBeNull();
   });
 
   it('review fix: BRK-B on a card matches BRK.B on the list → ➖ (the backend fold)', async () => {
