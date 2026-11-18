@@ -1,3 +1,4 @@
+import '../test/ggCardWatchOff';   // 2026-11-18: this file pins the OLD card grid; the 👀 Watch layout is the default now
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

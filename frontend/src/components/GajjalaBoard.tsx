@@ -180,6 +180,8 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GgCardView } from './GgCardView';
+import { GgCardGridFrame, GgCardTile, GgCardWatchToggle } from './GgCardGrid';
+import { useGgCardWatch } from '../hooks/useGgCardWatch';
 import { GgWatchButton } from './GgWatchButton';
 import { GgNewMark, GgSubMarksView } from './GgEntryMarks';
 import { GrowthChip } from './GrowthChip';
@@ -589,6 +591,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       return syms[((i < 0 ? 0 : i) + d + syms.length) % syms.length];
     });
   }, [drawnKey]);
+  /* 👀 2026-11-18 (cardview spec §3.6) — Ajay: "I need the watch list kinda chart formant view video view as default here
+   * too from the tabs pages". The drawn cards in the 👀 Watch layout (default ON per device, 🚩 5-min + 🧪 only); `cw.active`
+   * is the ONLY switch — OFF, an empty sub, 🏁 / 📋 and the 1-min page draw the grid below exactly as before. Display only. */
+  const cw = useGgCardWatch({ tiles: liveTiles, vkey, boardSeq, look: lookOn ? 'video' : undefined, focus, stretched: cardView != null, enabled: !onTable });
+  const shownSymbolsDrawn = drawnKey ? drawnKey.split(',') : [];
   const kissLine = kissBlock && kissOn ? ggKissFilterLine(kissBlock, kissSplit) : null;
   const toggleKiss = () => {
     const next = !kissOn;
@@ -822,6 +829,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                 {GG_LOOK_VIDEO_LABEL}
               </button>
             ) : null}
+            {cw.allowed ? <GgCardWatchToggle on={cw.on} onToggle={cw.toggle} /> : null}
           </div>
           {/* (5b) 🧠 this setup's own potentials — setup subs only; nothing on an older API. */}
           {isGgSetup(activeSub) && board.potential ? (
@@ -872,7 +880,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           ) : null}
           {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
           {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}
-          <div className={`cm-grid${loading ? ' cm-grid-stale' : ''}`} aria-busy={loading || undefined}>
+          <GgCardGridFrame cw={cw} loading={loading} symbols={shownSymbolsDrawn}>
             {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
               const isFocus = focus === t.symbol;
@@ -881,7 +889,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                  card of a 🎾 read alike; the served order is untouched. */
               const card = (
                 <div key={t.symbol} data-testid={`gg-tile-${t.symbol}`}
-                     className={`gg-card${isFocus ? ' gg-focus' : ''}${t.gajjala?.setup === 'reversal_squeeze' ? ' gg-wide' : ''}`}
+                     hidden={cw.active && !cw.shown(t.symbol) ? true : undefined}
+                     className={`gg-card${isFocus ? ' gg-focus' : ''}${!cw.active && t.gajjala?.setup === 'reversal_squeeze' ? ' gg-wide' : ''}${cw.active ? ' gg-card--watch' : ''}`}
                      ref={(el) => { if (el) tileRefs.current.set(t.symbol, el); else tileRefs.current.delete(t.symbol); }}>
                   <div className="cm-tile-chips" data-testid={`gg-chips-${t.symbol}`}>
                     <GrowthChip symbol={t.symbol} />
@@ -903,7 +912,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     ) : null}
                     <GgNewMark mark={t.new_mark} sym={t.symbol} />
                   </div>
-                  {t.bars?.length ? (
+                  {t.bars?.length ? (cw.active ? <GgCardTile card={t} cw={cw} onStretch={openView} /> : (
                     /* 📺 his call #2: the served clock axis on every card, 📺 on or off; the 🎾 card (the 🎾 sub and a 🧠 card
                        of a 🎾 read, both .gg-wide) keeps the 190 default height under 📺. */
                     <PatternChart tile={t} onOpenView={openView} axis={t.axis ?? null}
@@ -915,7 +924,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                                     outerStudy: room.payload?.explosive_study,
                                     tileStudy: null,
                                   })} />
-                  ) : (
+                  )) : (
                     <div className="gg-row-head">
                       {ggHref(t.href) ? (
                         <Link to={withSource(ggHref(t.href)!, 'chart-maps', location.search)}
@@ -940,11 +949,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               return t === lastFocusTile ? (
                 <Fragment key={t.symbol}>
                   {card}
-                  <hr className="gg-focus-divider" data-testid="gg-focus-divider" />
+                  <hr className="gg-focus-divider" data-testid="gg-focus-divider" hidden={cw.active && !cw.shown(t.symbol) ? true : undefined} />
                 </Fragment>
               ) : card;
             })}
-          </div>
+          </GgCardGridFrame>
           {/* ⤢ the open card's three charts (a portal on <body>) — mounted with the board's landed-GET counter. */}
           {cardView && viewTile ? (
             <GgCardView card={viewTile} at={cardView} variant={vkey} boardSeq={boardSeq} look={lookOn ? 'video' : undefined} onClose={closeView}

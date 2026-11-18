@@ -26,8 +26,18 @@
  * them on reversal squeeze like percentage of short interest on the tickers card and also on watch list". `siNote` on
  * Tile / GgwStretch (the Watch passes it; GgCardView does not, so the 🚩 card's ⤢ view is unchanged) mounts
  * GgSiExtremeNote after the 🤖 chip: the SERVED short form verbatim, hover = the served sentence, nothing when the read
- * is not extreme. Display only; UNMEASURED (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md). */
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from 'react';
+ * is not extreme. Display only; UNMEASURED (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md).
+ *
+ * 👀 2026-11-18 (cardview spec §3.4, WP-A) — Ajay: "I need the watch list kinda chart formant view video view as default
+ * here too from the tabs pages". The 🚩 / 🧪 card grid draws THIS tile; three opt-in props on Tile, none passed by the
+ * Watch (its DOM is byte-identical):
+ *   - `stack` → the frames stacked in `order` (the ⤢ block) on a board tile, `ggw-charts--stack` + testid
+ *     `ggw-stack-charts`; a fitted empty frame (served words, no bars) gets flexGrow 0 there, so the words take their own
+ *     height and the charts the rest (the ⤢ view keeps flexGrow 1 on every frame);
+ *   - `extra` → caller content right after SYM (absent → nothing);
+ *   - `onRemove` is optional → no ✕ without it (a 🚩 card cannot be removed from a board).
+ * And `data-empty="1"` on a Frame that prints its served empty words (a Watch frame never carries `empty_text`). */
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
   GGW_FIT_GROW, GGW_LIVE_EMA_TIP, GGW_PAGER, GGW_PHONE_MQ, GGW_STRETCH, ggwChartHeight, ggwFitViewBoxH,
@@ -92,7 +102,8 @@ export function Frame({ f, phone, fit, style, live }: {
   /* 2026-11-16 (ggcard3): no stored bars and SERVED words → the words in place of an empty chart. */
   const empty = f.tile.bars.length === 0 && f.empty_text ? f.empty_text : null;
   return (
-    <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}>
+    <figure className="ggw-frame" data-tf={f.tf} data-testid={`ggw-frame-${f.tile.symbol}-${f.tf}`} style={style}
+            data-empty={empty ? '1' : undefined}>
       <div className="ggw-chartbox" ref={box}>
         {empty ? (
           <p className="ggw-line ggw-frame-empty" data-testid={`ggw-frame-empty-${f.tile.symbol}-${f.tf}`}>{empty}</p>
@@ -132,11 +143,13 @@ export function Frame({ f, phone, fit, style, live }: {
   );
 }
 
-export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote }: {
+export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote,
+  stack, extra }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
-  onRemove: (sym: string) => void;
+  /** ✕ removes this name (the Watch). ABSENT → no ✕ at all (a 🚩 / 🧪 card tile). */
+  onRemove?: (sym: string) => void;
   /** On the board: ⤢ opens this tile full screen. */
   onStretch?: (sym: string) => void;
   /** In the full-screen view: ⤡ goes back (and ✕ is not offered there — no remove one click from closing). */
@@ -150,8 +163,13 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   order?: ReadonlyArray<string>;
   /** 🩳 2026-11-18: mount the served EXTREME short-interest note in the head (the Watch only; absent → today's DOM). */
   siNote?: boolean;
+  /** 2026-11-18: a board tile with its frames stacked in `order` (the 🚩 / 🧪 card grid); absent → the Watch's split. */
+  stack?: boolean;
+  /** 2026-11-18: caller content drawn right after SYM (the card grid's own head); absent → nothing. */
+  extra?: ReactNode;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
+  const stacked = !onUnstretch && !!stack;
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
   const rm = row.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol);
   const autoTitle = row.auto
@@ -163,6 +181,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
              hidden={offPage || undefined}>
       <div className="ggw-tile-head">
         <b className="ggw-sym">{row.symbol}</b>
+        {extra ?? null}
         {/* 🎯 the served A+ chip (spec ggwaplus 2026-11-17) — its text verbatim, hover = the served title. No block → no chip. */}
         {row.aplus ? (
           <span className="ggw-chip ggw-aplus" data-testid="ggw-aplus" title={row.aplus.title ?? undefined}>
@@ -220,18 +239,21 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
                     aria-label={GGW_STRETCH.closeTitle} data-testid="ggw-unstretch" onClick={onUnstretch}>
               {GGW_STRETCH.close}
             </button>
-          ) : (
+          ) : onRemove ? (
             <button type="button" className="ggw-btn ggw-remove" title={rm} aria-label={rm} disabled={busy}
                     onClick={() => onRemove(row.symbol)}>
               {'✕'}
             </button>
-          )}
+          ) : null}
         </span>
       </div>
-      {onUnstretch && row.frames.length ? (
-        <div className="ggw-dark ggw-charts ggw-charts--stretch" data-testid="ggw-stretch-charts">
+      {(onUnstretch || stacked) && row.frames.length ? (
+        <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}`}
+             data-testid={stacked ? 'ggw-stack-charts' : 'ggw-stretch-charts'}>
           {ggwStretchFrames(row.frames, order).map((f) => (
-            <Frame key={f.tf} f={f} phone={phone} fit={fit} style={fit ? { flexGrow: 1 } : undefined} live={live?.by[f.tf]} />
+            <Frame key={f.tf} f={f} phone={phone} fit={fit}
+                   style={fit ? { flexGrow: stacked && f.tile.bars.length === 0 && f.empty_text ? 0 : 1 } : undefined}
+                   live={live?.by[f.tf]} />
           ))}
         </div>
       ) : top || pair.length ? (

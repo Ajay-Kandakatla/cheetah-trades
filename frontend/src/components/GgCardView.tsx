@@ -24,7 +24,7 @@ import { subscribe, type BusEvent } from '../lib/eventBus';
 import { GG_UPDATE_EVENT, parseGgUpdate } from '../lib/cardLive';
 import { ggwRowLive, type GgwRow } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap } from '../lib/ggwLive';
-import { GGC_FETCH_FAILED, GGC_STRETCH_ORDER, ggcPath, ggcRow, parseGgc, type GgcPayload } from '../lib/gajjalaCardView';
+import { GGC_FETCH_FAILED, GGC_NO_FRAMES, GGC_STRETCH_ORDER, ggcPath, ggcRow, parseGgc, type GgcPayload } from '../lib/gajjalaCardView';
 import type { GgTile } from '../lib/gajjala';
 import { GgwStretch, usePhone } from './GajjalaWatchTile';
 
@@ -32,8 +32,6 @@ type Load =
   | { at: string; kind: 'ok'; p: GgcPayload }
   | { at: string; kind: 'error'; reason: string | null }
   | { at: string; kind: 'failed' };
-
-const NO_FRAMES = { from_session: null, as_of_et: null, stale: false, frames: [], rang: [] };
 
 export function GgCardView({ card, at, variant, boardSeq, onClose, onStep, look }: {
   /** The OPEN card (the board's drawn tile) — its lines / bands / markers / plan line overlay the frames. */
@@ -79,9 +77,9 @@ export function GgCardView({ card, at, variant, boardSeq, onClose, onStep, look 
   const payload = cur && cur.kind === 'ok' ? cur.p : null;
   const row = useMemo<GgwRow>(() => {
     if (payload) return ggcRow(card, payload, look);
-    if (cur && cur.kind === 'error') return { symbol: at, state: 'error', text: cur.reason ?? GGC_FETCH_FAILED, ...NO_FRAMES };
-    if (cur && cur.kind === 'failed') return { symbol: at, state: 'error', text: GGC_FETCH_FAILED, ...NO_FRAMES };
-    return { symbol: at, state: 'loading', text: null, ...NO_FRAMES };
+    if (cur && cur.kind === 'error') return { symbol: at, state: 'error', text: cur.reason ?? GGC_FETCH_FAILED, ...GGC_NO_FRAMES };
+    if (cur && cur.kind === 'failed') return { symbol: at, state: 'error', text: GGC_FETCH_FAILED, ...GGC_NO_FRAMES };
+    return { symbol: at, state: 'loading', text: null, ...GGC_NO_FRAMES };
   }, [card, payload, cur, at, look]);
 
   /* the live tail — the board's own stream, folded per (symbol, frame) on the served grid */

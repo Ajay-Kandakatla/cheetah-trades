@@ -98,3 +98,15 @@ UNMEASURED — a chart view is information, not an entry.
 12. Stale words on a frame = its stamp with `⚠️ `; the threshold is that source's existing constant
     (`STALE_AFTER_SEC` 900 s, `GG1M_STALE_AFTER_SEC` 300 s). A longer sentence, or a different threshold (a gate
     change), = his word.
+
+## 2026-11-18 — the tiles ARE the board
+
+Ajay 2026-11-18: "I need the watch list kinda chart formant view video view as default here too from the tabs pages" → his
+pick "Tab cards as Watch tiles". The 🚩 5-min and 🧪 Audited card grids now draw, by default, as the 👀 Watch does: each
+charted card's chart slot is the Watch `Tile` over this SAME frames GET (`GGC_PATH/{symbol}`), stacked 15m / 5m / 1m in
+`GGC_STRETCH_ORDER`, with the card's overlay through `ggcRow(card, p, look, { plan: false })` (the plan line prints once,
+in the card's CardExtras). ⤢ on a tile opens this view unchanged. The GET is asked only for the cards on screen, once per
+landed board read; the 1-min frame on a tile is the same served frame (the Watch's stored tile for names on the Watch,
+else the retired words — shrunk to their height on the board tile only). `NO_FRAMES` moved to
+`lib/gajjalaCardView.GGC_NO_FRAMES` (one definition, GgCardView reuses it). A toggle (`👀 Watch layout`, per device) brings
+the small cards back. Details: `docs/gajjala/card_grid_watch_layout_2026_11_18.md`.

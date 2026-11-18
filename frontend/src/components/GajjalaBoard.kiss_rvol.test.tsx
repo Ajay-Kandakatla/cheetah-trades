@@ -85,7 +85,7 @@ const stripComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').repl
 
 /** An in-memory store (the emaFrames.test precedent — this jsdom build has no usable localStorage). */
 function mem() {
-  const m = new Map<string, string>();
+  const m = new Map<string, string>([['gg-card-watch', '0']]);   // 👀 2026-11-18: the small-card grid these tests pin
   return { getItem: (k: string) => (m.has(k) ? m.get(k)! : null), setItem: (k: string, v: string) => { m.set(k, String(v)); },
            removeItem: (k: string) => { m.delete(k); }, clear: () => m.clear() };
 }

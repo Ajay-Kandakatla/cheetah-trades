@@ -106,7 +106,7 @@ async function mount(variant: V = 'gajjala', sub = 'bull_flag') {
 
 /** A recording in-memory store: every key read or written is kept in `touched`. */
 function mem(seed: Record<string, string> = {}) {
-  const m = new Map<string, string>(Object.entries(seed));
+  const m = new Map<string, string>(Object.entries({ 'gg-card-watch': '0', ...seed }));   // 👀 2026-11-18: the small-card grid
   const touched = new Set<string>();
   return {
     touched,
@@ -118,7 +118,7 @@ function mem(seed: Record<string, string> = {}) {
   };
 }
 const blocked = () => ({
-  getItem: () => { throw new Error('blocked'); },
+  getItem: (k: string) => { if (k === 'gg-card-watch') return '0'; throw new Error('blocked'); },   // 👀 2026-11-18: small cards
   setItem: () => { throw new Error('blocked'); },
   removeItem: () => { throw new Error('blocked'); },
   clear: () => undefined,

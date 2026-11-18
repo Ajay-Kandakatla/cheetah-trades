@@ -419,3 +419,26 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-dv-tr-summary { font-weight: 600; font-size: 0.9rem; }
 .gg-dv-spans { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
 .gg-dv-day { margin: 0.3rem 0 0; font-size: 0.82rem; }
+
+/* 👀 2026-11-18 — the card grid in the Watch layout (cardview spec §3.7). Ajay: "I need the watch list kinda chart formant
+   view video view as default here too from the tabs pages". New selectors only, AFTER the pinned .gg-card / .gg-wide rules.
+   The fitted-row rule is (0,3,0) so it beats gajjalaWatch.css's `.ggw-grid.ggw-grid--fit` (0,2,0) by SPECIFICITY, never by
+   sheet order (a chunk split or an import reorder must not make the row a fixed height that clips a card's chrome). */
+.gg-cardwatch { min-width: 0; max-width: 100%; }
+.gg-cardwatch-head { margin: 0 0 0.4rem; }
+.gg-card.gg-card--watch { display: flex; flex-direction: column; gap: 4px; }
+.gg-card.gg-card--watch[hidden], .gg-cardgrid > .gg-focus-divider[hidden] { display: none; }
+.gg-cardwatch-sepa { text-decoration: none; }
+.gg-cardgrid .ggw-frame-empty { padding: 12px; }
+@media (min-width: 641px) {
+  /* a tall card GROWS its row (never clipped); a short one lets its charts fill the screen like the Watch */
+  .ggw-grid.ggw-grid--fit.gg-cardgrid { grid-auto-rows: minmax(var(--ggw-row-h), auto); }
+  .gg-cardgrid.ggw-grid--fit > .gg-card--watch > .ggw-tile { flex: 1 1 auto; min-height: 0; overflow: visible; }
+  .gg-cardgrid.ggw-grid--fit > .gg-card--watch > :not(.ggw-tile) { flex: none; }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts--stack { flex: 1 1 auto; min-height: min-content; }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame:not([data-empty]) { min-height: var(--ggc-frame-min); }
+  /* an EMPTY frame (the served words, e.g. the retired 1-min page) sizes to its words + caption: the Watch's fit rule
+     (flex-basis 0, chartbox flex 1 1 0 + overflow hidden) would make it 0 px and clip the words (refix 2026-11-18) */
+  .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] { flex: none; }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] > .ggw-chartbox { flex: none; min-height: auto; overflow: visible; }
+}

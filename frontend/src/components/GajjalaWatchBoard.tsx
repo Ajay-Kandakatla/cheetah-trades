@@ -57,13 +57,13 @@
  * (GajjalaWatchTile) and the ℹ️ clause. The live interest POSTs EVERY row (ggwLiveSymbols — his names, then the auto
  * names). × on an auto name is the same DELETE (the server dismisses it for the session). UNMEASURED — an auto add is
  * a board's 🧠 read, not an entry. */
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUT_ORDER, GGW_LAYOUTS, GGW_PAGER, GGW_PATH,
-  ggwClampPage, ggwFitRowHeight, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
+  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
+  ggwClampPage, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
   ggwPickGrid, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
@@ -73,6 +73,9 @@ import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
 /* 2026-11-16 (ggcard3 WP-A): the tile, its frames and the ⤢ full-screen view live in GajjalaWatchTile.tsx (a pure move)
  * so the 🚩 cards open the SAME view. */
 import { GgwStretch, Tile, usePhone } from './GajjalaWatchTile';
+/* 2026-11-18 (cardview WP-A): the per-screen pick, the pager and the fitted-row hook live in GajjalaWatchLayout.tsx (a
+ * pure move) so the 🚩 / 🧪 card grid draws the SAME controls. */
+import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
 import { loadGgwList } from '../lib/ggWatchList';
 import '../styles/gajjalaWatch.css';
 
@@ -82,34 +85,6 @@ const NO_SYMBOLS: string[] = [];
 const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))));
-
-/** The fitted grid row height (px) above the phone break, or null (phone / no layout yet / jsdom). */
-function useFitRows(grid: RefObject<HTMLDivElement>, head: RefObject<HTMLDivElement>,
-                    phone: boolean, deps: unknown, rows: number): number | null {
-  const [rowH, setRowH] = useState<number | null>(null);
-  useEffect(() => {
-    if (phone || typeof window === 'undefined') { setRowH(null); return; }
-    const measure = () => {
-      const g = grid.current;
-      if (!g) { setRowH(null); return; }
-      const r = g.getBoundingClientRect();
-      if (!(r.width > 0)) { setRowH(null); return; }
-      const gap = parseFloat(getComputedStyle(g).rowGap) || 0;
-      /* 2026-11-16: measured from the BOARD's top, not the page's — the banners above the tabs grew past one screen,
-       * so a page-top measure left every row at the floor. With the board scrolled to the top, its head, the pager
-       * and `rows` rows fill exactly one window (his "two stocks with 3 charts each at any given moment"). */
-      const b = g.closest('.ggw-board');
-      const boardTop = b ? b.getBoundingClientRect().top : r.top;
-      setRowH(ggwFitRowHeight({ vh: window.innerHeight, top: r.top - boardTop, below: 0, gap }, rows));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
-    if (ro && head.current) ro.observe(head.current);
-    return () => { window.removeEventListener('resize', measure); ro?.disconnect(); };
-  }, [phone, grid, head, deps, rows]);
-  return rowH;
-}
 
 export default function GajjalaWatchBoard() {
   const [params, setParams] = useSearchParams();
@@ -169,7 +144,7 @@ export default function GajjalaWatchBoard() {
   const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
   const usePick = picked.length > 0;
   const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];
-  const rowH = useFitRows(gridRef, headRef, phone, load, grid.rows);
+  const rowH = useGgwFitRows(gridRef, headRef, phone, load, grid.rows);
   const fit = rowH != null;
 
   /* the live tail: forming bars per (symbol, frame), folded from the raw batches against the metas of the rows that
@@ -459,16 +434,7 @@ export default function GajjalaWatchBoard() {
           </span>
         ) : null}
         {p.rows.length && !phone ? (
-          <span className="ggw-layout" role="group" aria-label="Charts per screen" data-testid="ggw-layout">
-            {GGW_LAYOUT_ORDER.map((l) => (
-              <button key={l} type="button" className={`ggw-btn ggw-layout-btn${l === layout ? ' is-on' : ''}`}
-                      aria-pressed={l === layout} title={`${l} per screen`} data-testid={`ggw-layout-${l}`}
-                      onClick={() => setLayout(l)}>
-                {String(l)}
-              </button>
-            ))}
-            <span className="ggw-layout-label">per screen</span>
-          </span>
+          <GgwLayoutPick layout={layout} onPick={setLayout} />
         ) : null}
         {p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text) ? (
           <details className="ggw-info">
@@ -481,39 +447,9 @@ export default function GajjalaWatchBoard() {
         ) : null}
       </div>
       {p.rows.length > 1 ? (
-        <nav className="ggw-pager" aria-label="Move the view" data-testid="ggw-pager">
-          <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle} aria-label={GGW_PAGER.prevTitle}
-                  data-testid="ggw-pager-prev" disabled={!paged || (!usePick && cur <= 0)}
-                  onClick={() => goPage(Math.max(0, cur - 1))}>
-            {GGW_PAGER.prev}
-          </button>
-          {p.rows.map((r, i) => {
-            /* 🤖 an auto name: the dashed item, the served tag before SYM, the served × title. */
-            const rm = r.auto?.remove_title ?? (p.remove_label ? `${p.remove_label} ${r.symbol}` : r.symbol);
-            return (
-              <span key={r.symbol} className={`ggw-pager-item${r.auto ? ' ggw-pager-item--auto' : ''}${onPage(i) ? ' is-on' : ''}`}>
-                {/* 🎯 a name a Gajjala board reads A+ this session: the served tag first + the --aplus outline. */}
-                <button type="button"
-                        className={`ggw-btn ggw-pager-sym${r.aplus ? ' ggw-pager-sym--aplus' : ''}${onPage(i) ? ' is-on' : ''}`}
-                        aria-pressed={onPage(i)} data-testid={`ggw-pager-${r.symbol}`}
-                        title={r.aplus?.title ?? undefined}
-                        onClick={() => toggle(r.symbol)}>
-                  {[r.aplus?.tag, r.auto?.tag, r.symbol].filter(Boolean).join(' ')}
-                </button>
-                <button type="button" className="ggw-btn ggw-pager-x" title={rm} aria-label={rm} disabled={busy}
-                        data-testid={`ggw-pager-x-${r.symbol}`} onClick={() => write('DELETE', r.symbol)}>
-                  {'×'}
-                </button>
-              </span>
-            );
-          })}
-          <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle} aria-label={GGW_PAGER.nextTitle}
-                  data-testid="ggw-pager-next" disabled={!paged || (!usePick && cur >= pages - 1)}
-                  onClick={() => goPage(Math.min(pages - 1, cur + 1))}>
-            {GGW_PAGER.next}
-          </button>
-          {paged && !usePick ? <span className="ggw-pager-at" data-testid="ggw-pager-at">{`${cur + 1} / ${pages}`}</span> : null}
-        </nav>
+        <GgwPager rows={p.rows} onPage={onPage} paged={paged} cur={cur} pages={pages} usePick={usePick} busy={busy}
+                  removeLabel={p.remove_label} onToggle={toggle} onPrev={() => goPage(Math.max(0, cur - 1))}
+                  onNext={() => goPage(Math.min(pages - 1, cur + 1))} onRemove={(s) => write('DELETE', s)} />
       ) : null}
       {p.rows.length ? (
         <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}`}

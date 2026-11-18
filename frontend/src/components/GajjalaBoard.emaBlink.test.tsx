@@ -1,3 +1,4 @@
+import '../test/ggCardWatchOff';
 /* 🔀 9/21 EMA cross blinker on 🚩 Gajjala's board (2026-11-15, SPEC blinker §3.4 / §3.9, WP-E (e)). GajjalaBoard.tsx is
  * NOT edited: the server serves `sorts` ([default, ema_blink]) + `sort` on the setup subs, the board's existing generic
  * chip row renders them, a click writes `?sort=ema_blink` (which rides the next GET), and every tile's served

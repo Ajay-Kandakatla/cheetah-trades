@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18 ~03:00 ET, verbatim: "I need the watch list kinda chart formant view video view as default here too from
+  // the tabs pages"; picked "Tab cards as Watch tiles". components/GgCardGrid + hooks/useGgCardWatch draw the 🚩 / 🧪 card grid
+  // with the 👀 Watch's own Tile + pager (GajjalaWatchLayout). Doc docs/gajjala/card_grid_watch_layout_2026_11_18.md.
+  {
+    id: 'chart-maps-gajjala-card-grid-watch-layout-2026-11-18',
+    label: '👀 Watch layout on the 🚩 Gajjala and 🧪 Audited cards — you said: “I need the watch list kinda chart formant view video view as default here too from the tabs pages”. Every setup sub now opens as the 👀 Watch does: 2 big tiles a screen side by side (1 · 2 · 4 · 9 to pick), each with the live 15, 5 and 1-minute charts and the card’s own trigger, stop, plan, A+ tag, 🎾 SI label, 🚫 broker tag, stages and chips. ◀ ▶ and the tickers move the view, ⤢ opens one stock full screen. Tap 👀 Watch layout to go back to the small cards. Order, filters, counts, the 🏁 Track record and the 📋 table are unchanged. Display only: no rule, alert or ring changed.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-18, verbatim: "Can you put replays tab next to the Gajjala's please I cant find it in search either".
   // lib/chartMaps CM_TABS: 'replays' moved right after 'gajjala_watch'; lib/navSearch: 🎬 Replays + 👀 Watch rows.
   {

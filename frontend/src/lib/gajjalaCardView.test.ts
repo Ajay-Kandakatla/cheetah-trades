@@ -3,13 +3,16 @@
  * 15 mins timeframe". NEGATIVES: the Watch's order is untouched (no 15m inserted); the card order carries no 3m;
  * parseFrame keeps the three optional keys ONLY when served (absent → undefined, never null / false); junk answers are
  * rejected; markers only on the frame the card drew. */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import fixture from '../components/__fixtures__/gajjala_watch_board_2026_11_15.json';
 import type { GgTile } from './gajjala';
 import {
-  GGC_FETCH_FAILED, GGC_PATH, GGC_STRETCH_ORDER, ggcPath, ggcRow, parseGgc, type GgcPayload,
+  GGC_FETCH_FAILED, GGC_FRAME_MIN_PX, GGC_LAYOUT_KEY, GGC_NO_FRAMES, GGC_PATH, GGC_STRETCH_ORDER, GGC_WATCH_DEFAULT_ON,
+  GGC_WATCH_LABEL, GGC_WATCH_LS, GGC_WATCH_TITLE, GGC_WATCH_VKEYS, ggcPath, ggcRow, ggcShown, loadGgcWatch, parseGgc,
+  readGgcLayout, saveGgcLayout, saveGgcWatch, type GgcPayload,
 } from './gajjalaCardView';
-import { GGW_STRETCH_ORDER, ggwStretchFrames, parseFrame, type GgwFrame } from './gajjalaWatch';
+import { GG_VIDEO_LOOK_VKEYS } from './gajjala';
+import { GGW_LAYOUT_DEFAULT, GGW_LAYOUT_KEY, GGW_STRETCH_ORDER, ggwStretchFrames, parseFrame, type GgwFrame } from './gajjalaWatch';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const f = (tf: string) => ({ tf } as unknown as GgwFrame);
@@ -233,5 +236,178 @@ describe('📺 ggcRow(card, p, \'video\') — the overlay stripped like the card
       expect(fr.tile.curves).toBe(p.frames[i].tile.curves);
       expect(fr.axis).toBe(p.frames[i].axis);
     });
+  });
+});
+
+/* 👀 2026-11-18 — the card grid in the Watch layout (spec cardview §3.1 / §4 WP-B). Ajay: "I need the watch list kinda chart
+ * formant view video view as default here too from the tabs pages". NEGATIVES: a non-'1' value reads OFF; a blocked / absent
+ * store reads the default and never throws; the 1-min page and Luk never draw it; the pick never reads the Watch's own key;
+ * ggcRow with no opts is the 11-17 row; ggcShown never shows a name gone from the list. */
+function memStore(seed: Record<string, string> = {}) {
+  const m = new Map<string, string>(Object.entries(seed));
+  const touched = new Set<string>();
+  return {
+    touched,
+    getItem: (k: string) => { touched.add(k); return m.has(k) ? m.get(k)! : null; },
+    setItem: (k: string, v: string) => { touched.add(k); m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+    clear: () => m.clear(),
+    peek: (k: string) => (m.has(k) ? m.get(k)! : null),
+  };
+}
+const blockedStore = () => ({
+  getItem: () => { throw new Error('blocked'); },
+  setItem: () => { throw new Error('blocked'); },
+  removeItem: () => undefined, clear: () => undefined,
+});
+
+describe('👀 loadGgcWatch / saveGgcWatch — default ON, strict "1"', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('absent → ON (the default); "1" → ON; "0" → OFF', () => {
+    const st = memStore();
+    vi.stubGlobal('localStorage', st);
+    expect(GGC_WATCH_LS).toBe('gg-card-watch');
+    expect(GGC_WATCH_DEFAULT_ON).toBe(true);
+    expect(loadGgcWatch()).toBe(true);
+    st.setItem(GGC_WATCH_LS, '1');
+    expect(loadGgcWatch()).toBe(true);
+    st.setItem(GGC_WATCH_LS, '0');
+    expect(loadGgcWatch()).toBe(false);
+  });
+  it('NEGATIVE: any stored value that is not "1" reads OFF ("true", "on", " 1", "")', () => {
+    const st = memStore();
+    vi.stubGlobal('localStorage', st);
+    for (const v of ['true', 'on', ' 1', '1 ', '', 'watch']) {
+      st.setItem(GGC_WATCH_LS, v);
+      expect(loadGgcWatch()).toBe(false);
+    }
+  });
+  it('saveGgcWatch writes "1" / "0"; load + save touch ONLY gg-card-watch', () => {
+    const st = memStore();
+    vi.stubGlobal('localStorage', st);
+    saveGgcWatch(false);
+    expect(st.peek(GGC_WATCH_LS)).toBe('0');
+    saveGgcWatch(true);
+    expect(st.peek(GGC_WATCH_LS)).toBe('1');
+    loadGgcWatch();
+    expect([...st.touched]).toEqual(['gg-card-watch']);
+  });
+  it('NEGATIVE: a throwing store → ON and a save never throws; no storage at all → ON', () => {
+    vi.stubGlobal('localStorage', blockedStore());
+    expect(loadGgcWatch()).toBe(true);
+    expect(() => saveGgcWatch(false)).not.toThrow();
+    vi.stubGlobal('localStorage', undefined);
+    expect(loadGgcWatch()).toBe(true);
+    expect(() => saveGgcWatch(true)).not.toThrow();
+  });
+});
+
+describe('👀 GGC_WATCH_VKEYS — the 🚩 5-min tab and 🧪 Audited only', () => {
+  it('deep-equals GG_VIDEO_LOOK_VKEYS', () => {
+    expect([...GGC_WATCH_VKEYS]).toEqual([...GG_VIDEO_LOOK_VKEYS]);
+    expect([...GGC_WATCH_VKEYS]).toEqual(['gajjala', 'gajjala_audited']);
+  });
+  it('NEGATIVE: never the retired 1-minute page, never Luk', () => {
+    expect(GGC_WATCH_VKEYS).not.toContain('gajjala_1m');
+    expect(GGC_WATCH_VKEYS).not.toContain('luk');
+  });
+});
+
+describe('👀 readGgcLayout / saveGgcLayout — its own key, the Watch parser', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  it('absent / junk / blocked → GGW_LAYOUT_DEFAULT (2); "9" → 9; "1" → 1; "4" → 4', () => {
+    expect(GGC_LAYOUT_KEY).toBe('ggc.layout');
+    const st = memStore();
+    vi.stubGlobal('localStorage', st);
+    expect(readGgcLayout()).toBe(GGW_LAYOUT_DEFAULT);
+    expect(GGW_LAYOUT_DEFAULT).toBe(2);
+    for (const [v, want] of [['9', 9], ['1', 1], ['4', 4], ['3', 2], ['junk', 2], ['', 2]] as const) {
+      st.setItem(GGC_LAYOUT_KEY, v);
+      expect(readGgcLayout()).toBe(want);
+    }
+    vi.stubGlobal('localStorage', blockedStore());
+    expect(readGgcLayout()).toBe(2);
+    expect(() => saveGgcLayout(4)).not.toThrow();
+  });
+  it('NEGATIVE: never reads or writes the Watch\'s ggw.layout (seed ggw.layout=9 → still 2)', () => {
+    const st = memStore({ [GGW_LAYOUT_KEY]: '9' });
+    vi.stubGlobal('localStorage', st);
+    expect(readGgcLayout()).toBe(2);
+    saveGgcLayout(4);
+    expect(st.peek(GGC_LAYOUT_KEY)).toBe('4');
+    expect(st.peek(GGW_LAYOUT_KEY)).toBe('9');
+    expect([...st.touched]).toEqual(['ggc.layout']);
+  });
+});
+
+describe('👀 the control words and the frame floor', () => {
+  it('label + title are FE control words; no b-word', () => {
+    expect(GGC_WATCH_LABEL).toBe('👀 Watch layout');
+    expect(GGC_WATCH_TITLE).toContain('2 per screen');
+    expect(`${GGC_WATCH_LABEL} ${GGC_WATCH_TITLE}`.toLowerCase()).not.toContain('bounce');
+    expect(GGC_FRAME_MIN_PX).toBe(160);
+  });
+  it('GGC_NO_FRAMES is the frame-less row part', () => {
+    expect(GGC_NO_FRAMES).toEqual({ from_session: null, as_of_et: null, stale: false, frames: [], rang: [] });
+  });
+});
+
+describe('👀 ggcRow(card, p, look, { plan: false }) — the board tile head', () => {
+  const tile = (over: Partial<GgTile> = {}): GgTile => ({
+    symbol: 'OMH', href: '/sepa/OMH', bars: [], stats: [], why: '', tf: '5m',
+    lines: [{ label: 'TRIGGER 4.20', price: 4.2, tone: 'buy' }] as any,
+    bands: [{ kind: 'gg_entry', lo: 3.95, hi: 4.05, label: 'entry' }] as any,
+    markers: [{ date: '2026-11-13 09:35', kind: 'buy', label: 'A+' }] as any,
+    gajjala: { plan_text: 'trigger 4.20 · stop 3.90 · risk 7.1%' } as any, ...over,
+  } as GgTile);
+  const pay = (over: Record<string, unknown> = {}) => parseGgc(rawAnswer(over)) as GgcPayload;
+
+  it('head text = the served text ONLY (the plan prints once, below); frames identical to the no-opts row', () => {
+    const c = tile();
+    const p = pay();
+    const a = ggcRow(c, p, undefined, { plan: false });
+    const b = ggcRow(c, p);
+    expect(a.text).toBeNull();
+    expect(b.text).toBe('trigger 4.20 · stop 3.90 · risk 7.1%');
+    expect(JSON.stringify(a.frames)).toBe(JSON.stringify(b.frames));
+    const v1 = ggcRow(c, p, 'video', { plan: false });
+    const v2 = ggcRow(c, p, 'video');
+    expect(JSON.stringify(v1.frames)).toBe(JSON.stringify(v2.frames));
+    const words = pay({ text: 'No bars stored for OMH this session yet' });
+    expect(ggcRow(c, words, undefined, { plan: false }).text).toBe('No bars stored for OMH this session yet');
+    expect(ggcRow(c, words, undefined, { plan: false }).state).toBe('no_bars');
+  });
+  it('NEGATIVE: no opts / { plan: true } / {} → byte-identical to the 11-17 row', () => {
+    const c = tile();
+    const p = pay();
+    const base = JSON.stringify(ggcRow(c, p));
+    expect(JSON.stringify(ggcRow(c, p, undefined, {}))).toBe(base);
+    expect(JSON.stringify(ggcRow(c, p, undefined, { plan: true }))).toBe(base);
+    expect(JSON.stringify(ggcRow(c, p, undefined, undefined))).toBe(base);
+  });
+});
+
+describe('👀 ggcShown — pages, pick, all', () => {
+  const S = ['A', 'B', 'C', 'D', 'E'];
+  it('pages of 2: page 0 → A B; page 1 → C D; page 2 → E; a page past the end clamps to the last', () => {
+    expect([...ggcShown(S, 0, 2, null)]).toEqual(['A', 'B']);
+    expect([...ggcShown(S, 1, 2, null)]).toEqual(['C', 'D']);
+    expect([...ggcShown(S, 2, 2, null)]).toEqual(['E']);
+    expect([...ggcShown(S, 9, 2, null)]).toEqual(['E']);
+    expect([...ggcShown(S, -1, 2, null)]).toEqual(['A', 'B']);
+  });
+  it('size Infinity (the phone without a pager) → all', () => {
+    expect([...ggcShown(S, 3, Infinity, ['B'])]).toEqual(S);
+  });
+  it('a pick → the pick, whatever the page', () => {
+    expect([...ggcShown(S, 0, 2, ['D', 'E'])]).toEqual(['D', 'E']);
+  });
+  it('NEGATIVE: a pick whose names left the list → only the names still listed; none left → the page', () => {
+    expect([...ggcShown(S, 0, 2, ['E', 'ZZZ'])]).toEqual(['E']);
+    expect([...ggcShown(S, 1, 2, ['ZZZ'])]).toEqual(['C', 'D']);
+    expect([...ggcShown(S, 0, 2, [])]).toEqual(['A', 'B']);
+  });
+  it('NEGATIVE: an empty list shows nothing', () => {
+    expect(ggcShown([], 0, 2, null).size).toBe(0);
   });
 });
