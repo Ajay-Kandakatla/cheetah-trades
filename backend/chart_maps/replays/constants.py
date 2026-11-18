@@ -31,7 +31,13 @@ MOVER_WHY_PREFIX = "biggest mover of"                      # == replay_video.py:
 APLUS_SUFFIX = "|aplus"                                    # ring_id tail of an A+ ring
 GROUPS = (("aplus_winners", "🏁 A+ winners"), ("aplus_losers", "A+ losers"),
           ("rs_potentials", "🎾 Reversal Squeeze potentials"), ("biggest_mover", "biggest mover"),
-          ("other", "other (carried after-close rings)"))  # the ask's words, in the ask's order
+          ("other", "other"))                               # the ask's words, in the ask's order
+# Ajay 2026-11-18, verbatim: "Also on the videos categorize winners and losers as categories and then remove 1 mins from
+# them". (1) A carried after-close A+ ring (rang after the close, graded on the next session) now files under 🏁 A+
+# winners / A+ losers by its grade, like any A+ ring (it used to sit under "other" — HIS CALL #3 of 11-17, answered);
+# "other" keeps only an ungraded ring. (2) The 🚩 1-minute page retired 2026-11-18 ("stop 1 min tab"): its reels and its
+# 🎾 tracker rows are never listed (they stay on disk).
+EXCLUDED_PAGES = ("gajjala_1m",)
 GROUP_KEYS = tuple(k for k, _ in GROUPS)
 PAGE_WORDS = {"gajjala": WC.FRAME_WORDS["5m"], "gajjala_1m": WC.FRAME_WORDS["1m"]}
 SETUP_TEXT = {k: f"{e} {l}" for k, e, l in GC.SUBS if k in GC.SETUPS}

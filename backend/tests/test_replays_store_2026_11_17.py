@@ -30,6 +30,15 @@ BACKEND = Path(__file__).resolve().parents[1]
 PKG = BACKEND / "chart_maps" / "replays"
 
 
+@pytest.fixture(autouse=True)
+def _pages_as_of_11_17(request, monkeypatch):
+    """2026-11-18: the 🚩 1-minute page retired (C.EXCLUDED_PAGES). The 11-17 engine tests below keep exercising the
+    generic accept / group / order rules on their 1-min fixtures with the exclusion OFF; tests named `*excluded_page*`
+    run with the real constant."""
+    if "excluded_page" not in request.node.name:
+        monkeypatch.setattr(C, "EXCLUDED_PAGES", ())
+
+
 def _strict(txt):
     def _refuse(tok):
         raise ValueError(f"non-JSON constant {tok}")
@@ -172,7 +181,7 @@ def test_full_window_sidecars_are_listed_and_root_files_never_appear(root):
     assert "jobs.json" not in str(names) and ".sent" not in names
     assert not any("aplus_vs_cross" in n for n in names)
     assert lst["files"] == frozenset(names)
-    assert lst["counts"] == {"videos": 8, "skipped_window": 0, "no_sidecar": 0, "skipped_bad": 0}
+    assert lst["counts"] == {"videos": 8, "skipped_window": 0, "no_sidecar": 0, "skipped_bad": 0, "skipped_page": 0}
 
 
 def test_NEGATIVE_a_16_00_window_is_never_listed(root):
@@ -211,7 +220,7 @@ def test_no_sidecar_counts_only_mp4s_that_truly_lack_one_the_11_13_shape(root):
         write_side(d, s)
     (d / "LOOSE_6x.mp4").write_bytes(b"x")
     lst = ST.read_day(DAY, root)
-    assert lst["counts"] == {"videos": 8, "skipped_window": 9, "no_sidecar": 1, "skipped_bad": 0}
+    assert lst["counts"] == {"videos": 8, "skipped_window": 9, "no_sidecar": 1, "skipped_bad": 0, "skipped_page": 0}
     assert not any(f.startswith("W") and f[1].isdigit() for f in lst["files"])
 
 
@@ -232,7 +241,7 @@ def test_NEGATIVE_a_window_skipped_sidecar_without_its_mp4_changes_nothing(root)
     s.update(file="GONE_kiss_fly_24x.mp4", window="04:00-16:00 ET")
     write_side(d, s, mp4=False)
     lst = ST.read_day(DAY, root)
-    assert lst["counts"] == {"videos": 8, "skipped_window": 1, "no_sidecar": 0, "skipped_bad": 0}
+    assert lst["counts"] == {"videos": 8, "skipped_window": 1, "no_sidecar": 0, "skipped_bad": 0, "skipped_page": 0}
 
 
 def test_NEGATIVE_a_bad_sidecar_still_leaves_its_mp4_in_no_sidecar(root):
@@ -300,7 +309,7 @@ def test_NEGATIVE_one_malformed_card_drops_only_itself(root, field, value):
 
 # ── groups ────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_group_of_the_five_shapes():
-    assert ST.group_of(cenn_carried(), DAY) == "other"
+    assert ST.group_of(cenn_carried(), DAY) == "aplus_winners"   # RE-PINNED 2026-11-18: a carried A+ files by its grade
     assert ST.group_of(amst_mover(), DAY) == "biggest_mover"
     assert ST.group_of(akan_winner(), DAY) == "aplus_winners"
     assert ST.group_of(pavs_loser(), DAY) == "aplus_losers"
@@ -318,7 +327,7 @@ def test_group_of_the_five_shapes():
 def test_carried_and_ring_day_are_served(root):
     cards = {v["file"]: v for v in ST.read_day(DAY, root)["videos"]}
     c = cards["CENN_reversal_squeeze_24x.mp4"]
-    assert c["carried"] is True and c["ring_day"] == PREV and c["group"] == "other"
+    assert c["carried"] is True and c["ring_day"] == PREV and c["group"] == "aplus_winners"   # RE-PINNED 2026-11-18
     a = cards["AKAN_reversal_squeeze_1mpage_24x.mp4"]
     assert a["carried"] is False and a["ring_day"] == DAY
 
@@ -346,9 +355,9 @@ def test_payload_groups_in_order_and_order_inside_groups(root):
                                                "other"]
     assert [g["label"] for g in p["groups"]] == [l for _, l in C.GROUPS]
     by = {g["key"]: [v["symbol"] for v in g["videos"]] for g in p["groups"]}
-    assert by["aplus_winners"] == ["GDHG", "AKAN"]                 # move_pct desc
+    assert by["aplus_winners"] == ["GDHG", "CENN", "AKAN"]         # move_pct desc; RE-PINNED 2026-11-18 (carried CENN W joins)
     assert by["rs_potentials"] == ["AKAD", "GP"]                   # first stored asc
-    assert by["other"] == ["CENN", "AIMD"]
+    assert by["other"] == ["AIMD"]                                 # RE-PINNED 2026-11-18: carried CENN left "other"
     assert by["biggest_mover"] == ["AMST"]
 
 
@@ -453,7 +462,7 @@ def test_payload_ready_shape(root):
     assert p["date"] == DAY and p["dates"] == [DAY]
     assert p["title"] == C.TITLE and p["tab"] == C.TAB
     assert p["window"] == C.FULL_DAY_WINDOW and p["window_note"] == C.WINDOW_NOTE
-    assert set(p["counts"]) == {"videos", "skipped_window", "no_sidecar", "skipped_bad"}
+    assert set(p["counts"]) == {"videos", "skipped_window", "no_sidecar", "skipped_bad", "skipped_page"}   # +skipped_page 2026-11-18
     assert p["rs"]["title"] == C.RS_TITLE and p["rs"]["note"] == C.RS_NOTE
     assert p["rs"]["columns"] == [{"key": k, "label": l} for k, l in C.RS_COLUMNS]
     assert len(p["rs"]["rows"]) == 19 and p["rs"]["text"] is None
@@ -534,3 +543,36 @@ def test_root_comes_from_the_env(monkeypatch, root):
     assert ST.payload()["date"] == DAY
     monkeypatch.delenv(C.ROOT_ENV)
     assert ST.root_dir() == Path(C.ROOT_DEFAULT)
+
+
+# ── 2026-11-18: winners / losers as categories + the 🚩 1-minute page retired ──────────────────────────────────────
+# Ajay 2026-11-18, verbatim: "Also on the videos categorize winners and losers as categories and then remove 1 mins from them".
+def test_carried_aplus_loser_files_under_losers_and_ungraded_stays_other():
+    lo = cenn_carried()
+    lo["grade"] = "L −1R"
+    assert ST.group_of(lo, DAY) == "aplus_losers"
+    nr = cenn_carried()
+    nr["grade"] = "not graded yet"
+    assert ST.group_of(nr, DAY) == "other"                         # NEGATIVE: no W/L grade → never a winner / loser
+    assert [k for k, _ in C.GROUPS][-1] == "other" and dict(C.GROUPS)["other"] == "other"
+
+
+def test_excluded_page_reels_are_never_listed_and_counted_once(root):
+    assert C.EXCLUDED_PAGES == ("gajjala_1m",)
+    lst = ST.read_day(DAY, root)
+    assert all(v["page"] != "gajjala_1m" for v in lst["videos"])
+    assert lst["counts"]["skipped_page"] >= 1 and lst["counts"]["videos"] == len(lst["videos"])
+    assert all(not f.endswith("_1mpage_24x.mp4") or f not in lst["files"] for f in lst["files"])
+    assert ST.resolve_video(DAY, "AKAN_reversal_squeeze_1mpage_24x.mp4", root) is None   # NEGATIVE: never served
+    assert lst["counts"]["no_sidecar"] == 0                         # a 1-min reel HAS a sidecar — never "no sidecar"
+
+
+def test_excluded_page_tracker_rows_are_never_served(root):
+    rows = ST.ledger_rows(DAY, root)
+    assert rows and all(r["cells"]["page"] != C.PAGE_WORDS["gajjala_1m"] for r in rows)
+
+
+def test_excluded_page_switch_off_lists_them_again(root, monkeypatch):
+    monkeypatch.setattr(C, "EXCLUDED_PAGES", ())                   # reversible: the 11-17 listing returns
+    lst = ST.read_day(DAY, root)
+    assert any(v["page"] == "gajjala_1m" for v in lst["videos"]) and lst["counts"]["skipped_page"] == 0

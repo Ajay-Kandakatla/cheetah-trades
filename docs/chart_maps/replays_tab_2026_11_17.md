@@ -100,3 +100,12 @@ other 4}, `skipped_bad` 0, 19 tracker rows; 11-16 = 16 {losers 4, other 12}; 11-
 ## HIS CALLs (spec §7)
 #1 owner-only · #2 label + slot · #3 carried → other · #4 mover by the pipeline's words · #5 order · #6 the 17
 tracker columns · #9 👀/🧠 reels under other · #11 stealth 404 · #16 old winners hidden by his rule · #17 `private`.
+
+## 2026-11-18 — winners / losers as categories, 1-minute reels removed
+
+Ajay 2026-11-18, verbatim: "Also on the videos categorize winners and losers as categories and then remove 1 mins from them".
+
+- A carried after-close A+ ring (rang after the close, graded on the next session) files under 🏁 A+ winners / A+ losers by its grade, like every A+ ring (it used to sit under "other" — HIS CALL #3 of 11-17, answered). "other" keeps only an ungraded ring.
+- `constants.EXCLUDED_PAGES = ("gajjala_1m",)`: the 🚩 1-minute page retired 2026-11-18, so its reels (counted `skipped_page`, never `no_sidecar`) and its 🎾 tracker rows are never listed or served. They stay on disk; an empty tuple brings them back.
+- 11-17 on the real folder after the change: winners CENN, OGEN (Monday after-hours rings) · losers PAVS, TTEC, CRDF · 🎾 8 potentials (5-min) · 10 one-minute reels skipped · tracker 12 rows.
+- The nightly task passes `--pages gajjala`, so no new 1-minute reels are rendered.

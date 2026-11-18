@@ -13,8 +13,8 @@ ACCEPT RULE per `.json` in a day folder (his 11-16 rule decides the window):
   sidecar drops ONE card (`skipped_bad`), never the listing.
 
 GROUPS (`group_of`, in this order): 🎾 plan word or an `rs` list → rs_potentials; `why[0]` starting with the pipeline's
-own "biggest mover of" → biggest_mover; ring day ≠ folder day → other (carried; HIS CALL #3); `|aplus` + grade W/L →
-aplus_winners / aplus_losers; else other.
+own "biggest mover of" → biggest_mover; `|aplus` + grade W/L → aplus_winners / aplus_losers (a carried after-close
+ring too, 2026-11-18); else other. A reel of an EXCLUDED_PAGES page (🚩 1-minute, retired 2026-11-18) → skipped_page.
 
 CACHE: per (root, day) under a lock, keyed by ONE scandir — (dir mtime_ns, n_json, max json mtime_ns, n_mp4); the
 jsons are re-parsed only when the key moves (an in-place sidecar rewrite moves the max json mtime). UNMEASURED.
@@ -89,9 +89,7 @@ def group_of(side: dict, day: str) -> str:
     if str(side["why"][0]).startswith(C.MOVER_WHY_PREFIX):
         return "biggest_mover"
     ring_id = side["ring_id"]
-    if ring_id.split("|")[0] != day:
-        return "other"                                    # carried after-close ring — HIS CALL #3 (one deletable line)
-    if ring_id.endswith(C.APLUS_SUFFIX):
+    if ring_id.endswith(C.APLUS_SUFFIX):                  # a carried after-close A+ files by its grade too (2026-11-18)
         grade = side.get("grade")
         if isinstance(grade, str) and grade.startswith("W"):
             return "aplus_winners"
@@ -139,7 +137,7 @@ def video_payload(side: dict, day: str) -> dict:
 
 
 def _empty_counts() -> dict:
-    return {"videos": 0, "skipped_window": 0, "no_sidecar": 0, "skipped_bad": 0}
+    return {"videos": 0, "skipped_window": 0, "no_sidecar": 0, "skipped_bad": 0, "skipped_page": 0}
 
 
 def _parse_day(d: Path, day: str, names) -> dict:
@@ -166,6 +164,10 @@ def _parse_day(d: Path, day: str, names) -> dict:
         f = body.get("file")
         if not _is_file_name(f) or f != name[: -len(".json")] + ".mp4" or f not in present:
             counts["skipped_bad"] += 1
+            continue
+        if body.get("page") in C.EXCLUDED_PAGES:             # 🚩 1-minute page retired 2026-11-18 — has a sidecar, never listed
+            counts["skipped_page"] += 1
+            window_skipped.add(f)
             continue
         try:
             card = video_payload(body, day)
@@ -252,7 +254,8 @@ def _cell(key: str, v) -> str:
 
 def ledger_read(day: str, root=None):
     rows, err = _ledger_all(root)
-    out = [{"cells": {k: _cell(k, row.get(k)) for k, _ in C.RS_COLUMNS}} for row in rows if row.get("date") == day]
+    out = [{"cells": {k: _cell(k, row.get(k)) for k, _ in C.RS_COLUMNS}} for row in rows
+           if row.get("date") == day and row.get("page") not in C.EXCLUDED_PAGES]
     return out, err
 
 

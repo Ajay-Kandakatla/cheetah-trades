@@ -23,6 +23,13 @@ from fastapi.testclient import TestClient
 
 from chart_maps.replays import api as API
 from chart_maps.replays import constants as C
+
+
+@pytest.fixture(autouse=True)
+def _pages_as_of_11_17(monkeypatch):
+    """2026-11-18: the 🚩 1-minute page retired (C.EXCLUDED_PAGES); these 11-17 route tests keep their 1-min fixtures
+    with the exclusion OFF (the exclusion itself is pinned in test_replays_store_2026_11_17.py)."""
+    monkeypatch.setattr(C, "EXCLUDED_PAGES", ())
 from chart_maps.replays import store as ST
 from tests.test_replays_store_2026_11_17 import (DAY, akan_winner, cenn_carried, pavs_loser, rs_side, write_ledger,
                                                  write_side)
@@ -100,7 +107,7 @@ def test_owner_listing(wired):
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     body = _strict(r.text)
     assert body["state"] == "ready" and body["date"] == DAY and body["dates"] == [DAY]
-    assert [g["key"] for g in body["groups"]] == ["aplus_winners", "aplus_losers", "rs_potentials", "other"]
+    assert [g["key"] for g in body["groups"]] == ["aplus_winners", "aplus_losers", "rs_potentials"]   # RE-PINNED 2026-11-18: the carried CENN W left "other"
     assert len(body["rs"]["rows"]) == 19
     assert "OLD_1600_24x.mp4" not in r.text and "jobs.json" not in r.text
 
