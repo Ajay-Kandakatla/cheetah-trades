@@ -35,6 +35,15 @@ MARK = "\U0001F4C5"                                   # 📅
 TAB_KEY = "long_term"
 TITLE = MARK + " Long Term"
 API_PATH = "/chart-maps/long-term"
+# 👥 2026-11-18 — Ajay: "Can you also make Long Term portfolio accessible to Chiru and Naresh.. Chiru has two names".
+# Read-only viewers of GET API_PATH besides the primary owner (lower-case; compared case-insensitively). Server-side only —
+# never shipped to the FE bundle; the zone / digest pushes stay the owner's. Both Chiru addresses + Naresh's are the ones
+# on the oauth2 allowlist (backend/oauth2-emails.txt).
+SHARED_VIEWER_EMAILS = frozenset({
+    "chiranjeevikarkolla@gmail.com",
+    "chiru01020304@gmail.com",
+    "korvi.nareshkumar@gmail.com",
+})
 SAVED_ON = "2026-11-12"
 SEED_FILE = Path(__file__).parent / "data" / "seed_2026_11_12.json"
 # sha256 of the committed seed — the file is never rewritten (his list, byte-identical).

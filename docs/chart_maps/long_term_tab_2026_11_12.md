@@ -72,3 +72,7 @@ seed + baseline + prior runs → previous flags (the latest run, else the baseli
 
 - The probe numbers (main session, §5.5). The phone push (WP-PUSH held; §7 #1 — LIVE since 2026-11-12, see above). Saving strip names (§7 #5). Opening the tab to other users (§7 #11). Automatic catch-up of a missed week (§7 #9).
 - Every HIS CALL in spec §7 stays his.
+
+## 2026-11-18 — 👥 shared viewers
+
+Ajay: "Can you also make Long Term portfolio accessible to Chiru and Naresh.. Chiru has two names". `long_term_list/constants.SHARED_VIEWER_EMAILS` (both of Chiru's addresses + Naresh's, all on the oauth2 allowlist) read the same `GET /chart-maps/long-term` payload as the owner (`api._is_shared_viewer`, case-insensitive). Everyone else still gets exactly the `owner_only` block. Server-side only, nothing in the FE bundle. Read-only: the 🔔 zone pushes and the weekly digest stay the owner's. No ✨ entry (it would show to users who stay locked). Test `tests/test_long_term_list_shared_viewers_2026_11_18.py`. The commit also brings `backend/oauth2-emails.txt` in line with the live file (two addresses added through the admin API on 2026-09-29 and 2026-10-02 had never been committed).

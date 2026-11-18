@@ -55,6 +55,13 @@ def _is_owner(email) -> bool:
         return False
 
 
+def _is_shared_viewer(email) -> bool:
+    """👥 2026-11-18: one of C.SHARED_VIEWER_EMAILS (case-insensitive, trimmed). Anything else → False."""
+    if not isinstance(email, str) or not email.strip():
+        return False
+    return email.strip().lower() in C.SHARED_VIEWER_EMAILS
+
+
 def owner_payload(now: Optional[datetime] = None, *, db=None) -> dict:
     """The owner's payload. Never raises (state "error" + reason)."""
     from . import payload as PL
@@ -101,9 +108,9 @@ def owner_payload(now: Optional[datetime] = None, *, db=None) -> dict:
 
 @router.get(C.API_PATH)
 async def long_term(email: Optional[str] = Depends(maybe_current_user)):
-    """📅 Long Term — owner-only, stored docs + the 🧭 request-time close read. UNMEASURED; none of these lists is a
+    """📅 Long Term — the owner + C.SHARED_VIEWER_EMAILS (2026-11-18), stored docs + the 🧭 request-time close read. UNMEASURED; none of these lists is a
     signal. A direct call (container smoke test) receives the Depends OBJECT and is served as a non-owner."""
-    if not _is_owner(email):
+    if not (_is_owner(email) or _is_shared_viewer(email)):      # 👥 2026-11-18: + C.SHARED_VIEWER_EMAILS (read-only)
         return _owner_only()
     from growth.api import _scrub
     return _scrub(await asyncio.to_thread(owner_payload))
