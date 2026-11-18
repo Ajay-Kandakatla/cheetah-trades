@@ -29,6 +29,10 @@ Collections
   gajjala_exits     _id "{date}|{SYM}|{setup}|aplus"  🧪 (2026-11-01) the alternative-exit grades (T3 / T5) of the
                     audited 🏁 rows — written ONLY by the GGA store (gajjala_audited_exits, audited_exits.grade_exits,
                     the nightly); GG5 / GG1 never index or write it; closed keys EXITS_KEYS + the exit columns   none
+  gajjala_divergence _id "{date}|{SYM}"       🧨 (2026-11-18) the divergence record — ONE doc per (session, SYM): the
+                    pass's live alert ($setOnInsert) + `live`, the nightly's full-day re-detect (authoritative — a moved
+                    bar keeps the pass's as `live_alert`) and its grade; GG5 ONLY (no variant indexes or writes it);
+                    closed keys DIVERGENCE_KEYS; markers in gajjala_state "divergence_redetect"                   none
 
 🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
 added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
@@ -89,16 +93,20 @@ LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-
 REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4) — written ONLY by scripts/gajjala_replay.py --write; kept, no TTL
 OVERLAY = "gajjala_overlay"                    # 🧪 2026-11-01 — the audit overlay per (session, symbol); written ONLY by the GGA store as gajjala_audited_overlay; GG5 / GG1 never write it
 EXITS = "gajjala_exits"                        # 🧪 2026-11-01 — alternative-exit grades of the audited 🏁 rows; written ONLY by the GGA store as gajjala_audited_exits; kept, no TTL
+DIVERGENCE = "gajjala_divergence"              # 🧨 2026-11-18 — one doc per (session, SYM); kept, no TTL (≥ the 🏁's); GG5 only
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
 # ⚡ 2026-11-11 (entry spec §3.1, WP-BRK): the tracker keys a pass's upsert may never name — the 🧠 claim / holds / 🪦
 # mark, and the ⚡ break watch's claim (`brk`) and holds (`brk_held`), written ONLY by chart_maps.gajjala.break_watch
 POTENTIAL_GUARDED = ("push", "held", "graveyard_on", "brk", "brk_held")
 # 🧪 2026-11-01: OVERLAY and EXITS join ALL before REPLAY (tests pin ALL[-1] == REPLAY — the order carries no meaning)
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, EXITS, REPLAY)
+# 🧨 2026-11-18: DIVERGENCE joins ALL before REPLAY (ALL[-1] stays REPLAY) and OWN (a variant store would prefix it, but
+# only GG5 ever indexes or writes it — ensure_indexes skips it on every other variant)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, OVERLAY, EXITS, DIVERGENCE,
+       REPLAY)
 # 2026-10-27 (BUILD_SPEC27 §3.4): what a variant WRITES under its own prefix vs what it READS from GG5 (ALL = OWN ∪ SHARED)
 # 🧪 2026-11-01: a variant may BORROW some OWN names (Variant.borrows — GGA reads GG5's reads / potentials / passes /
 # replay): a borrowed name resolves to GG5's collection through `shared`, and the variant never indexes or writes it
-OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS)
+OWN = (PASSES, READS, ALERTS, STATE, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS, DIVERGENCE)
 SHARED = (SCAN, AH_CARRY, POST, HALTS, DAILY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
@@ -106,6 +114,12 @@ LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "sa
 # its caller names — audited_rules.EXIT_COLS)
 EXITS_KEYS = frozenset({"date", "symbol", "setup", "kind", "alert", "graded_at", "version"})
 LEDGER_ALERT_STATES = ("shadow", "pushed")     # the A+ rows the ledger reads (ledger.alert_of filters the ids)
+# 🧨 2026-11-18: the closed top-level key set of a divergence doc (upsert_divergence refuses any other). `at` = the write
+# clock (the house key, even without a TTL); live_alert = the pass's alert block when the nightly MOVED the record;
+# redetect_moved / redetect_missing = the nightly's verdict flags; redetected_at = its clock
+DIVERGENCE_KEYS = frozenset({"date", "symbol", "window", "alert", "ring", "recorded_at", "source", "half_day", "live",
+                             "grade", "graded_at", "version", "at", "live_alert", "redetect_moved", "redetect_missing",
+                             "redetected_at"})
 # ⏪ the only top-level keys a replay doc may carry besides `_id` (upsert_replay refuses any other — BUILD_SPEC11 §3.12)
 REPLAY_KEYS = frozenset({"date", "symbol", "setup", "kind", "state", "alert", "same", "next", "bars5", "universe",
                          "float_gate", "detectors_sha", "detectors_sha256", "replayed_at", "caveats"})
@@ -399,6 +413,8 @@ class GajjalaStore:
                 continue
             if name in (OVERLAY, EXITS) and not V.is_audited(self.variant):
                 continue
+            if name == DIVERGENCE and not V.is_gg5(self.variant):  # 🧨 2026-11-18 — GG5 only (the OVERLAY lesson)
+                continue
             c = self.coll(name)
             if c is None:
                 continue
@@ -406,7 +422,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY, OVERLAY, EXITS, DIVERGENCE):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -995,6 +1011,50 @@ class GajjalaStore:
             log.warning("gajjala.store: ledger write failed for %s: %s", _id, exc)
             return False
 
+    # ── 🧨 gajjala_divergence (2026-11-18 — written ONLY by divergence.run_step / grade_step; GG5 only) ──────────────────
+    def upsert_divergence(self, _id: str, insert_fields: dict, set_fields: dict) -> bool:
+        """THE divergence write: ONE `update_one({_id}, {"$setOnInsert": insert_fields, "$set": set_fields},
+        upsert=True)` on gajjala_divergence (an empty side is left out of the update). Refused (logged, False) when a
+        top-level key on either side falls outside DIVERGENCE_KEYS, a key sits on BOTH sides, both sides are empty, or
+        the id is not a non-empty str; never touches another collection. False on a fault / no handle."""
+        ins, sets = dict(insert_fields or {}), dict(set_fields or {})
+        bad = (set(ins) | set(sets)) - DIVERGENCE_KEYS
+        both = set(ins) & set(sets)
+        if bad or both or not (ins or sets) or not isinstance(_id, str) or not _id:
+            log.warning("gajjala.store: refused divergence write %s (outside DIVERGENCE_KEYS: %s; on both sides: %s)",
+                        _id, sorted(bad), sorted(both))
+            return False
+        c = self.coll(DIVERGENCE)
+        if c is None:
+            return False
+        upd = {}
+        if ins:
+            upd["$setOnInsert"] = ins
+        if sets:
+            upd["$set"] = sets
+        try:
+            c.update_one({"_id": _id}, upd, upsert=True)
+            return True
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: divergence write failed for %s: %s", _id, exc)
+            return False
+
+    def divergence_docs(self, sessions: Iterable) -> Optional[list]:
+        """🧨 The divergence docs of these ET sessions. None on a read fault / no handle ([] = none on file)."""
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(DIVERGENCE, {"date": {"$in": days}})
+
+    def divergence_dates(self) -> Optional[list]:
+        """🧨 Every session (ISO date) the record holds a doc for, sorted (the "all" span). None on a read fault."""
+        c = self.coll(DIVERGENCE)
+        if c is None:
+            return None
+        try:
+            return sorted({d for d in c.distinct("date") if isinstance(d, str) and d})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: divergence dates read failed: %s", exc)
+            return None
+
     # ── 🧪 gajjala_overlay (2026-11-01 — the audit overlay; written ONLY by the GGA store's in-pass step) ─────────────
     def upsert_overlay(self, session, sym: str, fields: dict, *, now: Optional[datetime] = None) -> None:
         """One `$set` upsert of the (session, symbol) overlay doc: `fields` + date / symbol / `at` (the TTL clock)."""
@@ -1180,6 +1240,7 @@ for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_c
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
               "claim_potential_push", "settle_potential_push", "mark_potential_graveyard", "potential_pushes",
               "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger", "replay_rows",
-              "replay_dates", "records_on", "upsert_replay", "set_broker_flag"):
+              "replay_dates", "records_on", "upsert_replay", "set_broker_flag", "upsert_divergence",
+              "divergence_docs", "divergence_dates"):
     globals()[_name] = _delegate(_name)
 del _name

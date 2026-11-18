@@ -283,10 +283,11 @@ KF_EMA_SORTS = ("rvol_first", "ema_first")   # MINE — the two 💋 orders KF_E
 # only (tab.resolve_sub fails open off it on the 1-minute / 🧪 pages); DEFAULT_SUB unchanged (HIS CALL #1 of
 # docs/gajjala/all_strategies_table_2026_11_13.md). ONE tuple literal of string-literal triples, no name inside it and no
 # comment on its closing line — frontend/scripts/contracts.mjs parses it with a regex (GG_SUBS == SUBS, in order).
+# 🧨 2026-11-18: ("divergence", "🧨", "Divergence") right after 🎾 (HIS CALL #4 of docs/gajjala/divergence_sub_2026_11_18.md), GG5 only.
 SUBS = (("all_strategies", "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
-        ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),
-        ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
+        ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("divergence", "🧨", "Divergence"),
+        ("premarket", "☀️", "Premarket"), ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
         ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
 TABLE_SUB = SUBS[0][0]                   # "all_strategies" — read off the literal, never a second spelling (2026-11-13)
 # Ajay 2026-11-13, verbatim: "others close to strategies next liek EMA near kiss first, horizontal fade 9 EM Anad 25 EMA
@@ -301,6 +302,41 @@ TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18
 BROKER_NAME = "Fidelity"                 # Ajay 2026-10-17 ("In Fidelity")
 BROKER_FLAG_SEED = ()                    # Ajay 2026-10-17 — EMPTY: he withdrew WORX ("sorry I might be wrong about worx"); a name enters only when Fidelity itself refused it (his own add)
 BROKER_SYMBOL_MAX_LEN = 10               # TRANSPORT — MINE (DECISIONS12 D5: the ticker shape ^[A-Z][A-Z0-9.\-]{0,9}$ = one letter + up to 9)
+
+# 🧨 Divergence (Ajay 2026-11-18 "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish"):
+# a DISPLAY + RECORD of the 11-16 study's REGISTERED pick on the 5-min tab. No push, no gate, no rule. UNMEASURED live;
+# in-sample the rule did not make money (REPORT.md). Every number below is the study's (OOS_SPEC.md by sha; pins_only.json)
+# — study dir eod-audits/research/2026-11-16_explosive_divergence/; the test pins each against
+# tests/fixtures/gajjala/divergence_study_2026_11_16.json. The engine is divergence.py (one module, three callers).
+DIVERGENCE_SUB = "divergence"
+GG5_ONLY_SUBS = (TABLE_SUB, DIVERGENCE_SUB)   # derived — the subs only the 5-min page shows (tab.resolve_sub fails open off them on 🧪 / 1-min)
+DIVERGENCE_OOS_SPEC_SHA256 = "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90"   # S/OOS_SPEC.md
+DIVERGENCE_DESIGN_SHA256 = "c5a1f2eb7091bb586febf8767f5e553805f27036d3431aeddc8d3c8495224d3f"     # S/design.md
+DIVERGENCE_R1_LEVEL = 0.5552257708108612          # spec default — OOS_SPEC "level q60 … the IS number, never re-estimated"
+DIVERGENCE_LEVEL_PCT = 60                         # spec default — OOS_SPEC q60 (pins_only LEVEL_PCTS[0])
+DIVERGENCE_ATR_PERIOD = 14                        # spec default — pins_only ATR_PERIOD = supply_demand.patterns.atr's default (test pins equality)
+DIVERGENCE_V2_RUN = 3                             # spec default — pins_only V2_RUN
+DIVERGENCE_V2_HOUR_BARS = 12                      # spec default — pins_only V2_HOUR_BARS
+DIVERGENCE_V2_MIN_HOUR_BARS = 6                   # spec default — pins_only V2_MIN_HOUR_BARS
+DIVERGENCE_MIN_BARS = 30                          # spec default — pins_only MINBARS (tx.MINBARS)
+DIVERGENCE_WINDOWS = (("rth", "09:35", "15:55"), ("ah", "16:05", "19:55"))   # pins_only WINDOWS — close stamps; pre-market NEVER
+DIVERGENCE_COST_BPS = 0.001                       # spec default — pins_only costs.COST_BPS — tx.net_pct per side
+DIVERGENCE_SLIP_USD = 0.01                        # spec default — pins_only costs.SLIP_USD — per share per side
+DIVERGENCE_OOS_SESSIONS = ("2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-23", "2026-11-24", "2026-11-25", "2026-11-30")   # OOS_SPEC
+DIVERGENCE_ASK_DAY = "2026-11-16"                 # OOS_SPEC — its own block, never a criterion
+DIVERGENCE_OOS_SEAL_ET = "2026-11-30 20:00"       # OOS_SPEC.md:7 "Not read now … after 2026-11-30 20:00 ET" — totals over OOS rows withheld before it
+DIVERGENCE_STATE_ID = "divergence_redetect"       # the ONE gajjala_state doc of the nightly re-detect markers (day_read.STATE_ID pattern)
+DIVERGENCE_IS_WINDOW = ("2026-10-13", "2026-11-13", 24)   # REPORT.md in-sample window; pins_only inputs.sessions
+DIVERGENCE_GRADE_VERSION = 1                      # TRANSPORT — bump to re-grade
+DIVERGENCE_GRADE_MAX_LOADS = LEDGER_BACKFILL_MAX_SYMBOL_DAYS   # derived — the nightly's symbol-day cap, as the 🏁's
+DIVERGENCE_ROWS_MAX = LEDGER_ROWS_MAX             # derived — the 🏁 fold's row cap, as the 🏁's
+DIVERGENCE_IS = {                                 # results.json cohorts.P5M.cells["R1|60|G+V2|X3"] (+ pick.minus_B) / cohorts.P5M.windows.AH.cells[…]
+    "rth": {"trades": 56, "mean_net": -3.0929, "lo": -6.7296, "hi": 1.0578, "win_pct": 26.8, "median_net": -6.4072,
+            "exit_downcross": 38, "exit_close": 18, "lt1_trades": 28, "word": "NOT SHOWN",
+            "vs_listed_mean": 3.2757, "vs_listed_lo": -1.7965, "vs_listed_hi": 8.8953, "vs_listed_p": 0.2207, "vs_listed_word": "NOT SHOWN"},
+    "ah":  {"trades": 32, "mean_net": -8.9283, "lo": -15.6032, "hi": -3.1323, "win_pct": 21.9, "median_net": -8.7334,
+            "exit_downcross": 17, "exit_close": 15, "lt1_trades": 16, "word": "LOST MONEY"},
+}
 
 # 📌 trader names (2026-10-27, Ajay "Add them to Gajjals, they are pretty good")
 TRADER_TAG = "📌"                        # Cheetah default (MINE, not GG — the 📌 traders board's emoji)

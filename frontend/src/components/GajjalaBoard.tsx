@@ -208,7 +208,7 @@ import { trackFeature } from '../lib/usageTracker';
 import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_DIVERGENCE_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
@@ -226,6 +226,7 @@ import { GgAuditedHeld } from './GgAuditedHeld';
 import { GgAuditedCompare } from './GgAuditedCompare';
 import { GgAllTable } from './GgAllTable';
 import { DayReadLine } from './DayReadLine';
+import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -286,7 +287,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
   /* ✅ wins first (2026-10-27): on the 🏁 sub the URL `sort` is the FE-only row order (ggTrSort) — it never rides the GET,
    * so a sort chip click refetches nothing; every other sub keeps its served tile sort on the query. */
-  const sortForGet = (s: GgSub | null) => (s === 'track_record' ? null : sort);
+  const sortForGet = (s: GgSub | null) => (s === 'track_record' || s === GG_DIVERGENCE_SUB ? null : sort);   // 🧨 2026-11-18 its 🏁 fold sorts FE-only
   const reqKey = ggQuery({ sub: urlSub, tf, focus, sort: sortForGet(urlSub), span });
 
   useEffect(() => {
@@ -629,7 +630,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   /* 📋 2026-11-13 [C8]: the pre-board fallback strip shows the table chip on 🚩 Gajjala's only — the 1-min / 🧪 / 🥇 pages
    * never flash it (their servers never serve the sub). */
   const subs = board?.subs?.length ? board.subs
-    : GG_SUBS.filter((s) => vkey === 'gajjala' || vkey === 'gajjala_1m' || s.key !== GG_TABLE_SUB)   // 📋 + 1-min 2026-11-16
+    : GG_SUBS.filter((s) => (vkey === 'gajjala' || vkey === 'gajjala_1m' || s.key !== GG_TABLE_SUB)   // 📋 + 1-min 2026-11-16
+      && (vkey === 'gajjala' || s.key !== GG_DIVERGENCE_SUB))   // 🧨 2026-11-18 GG5 only
       .map((s) => ({ ...s, count: null, title: null }));
   const entryMarks = board?.entry_marks?.subs ?? null;
   const session = board?.session;
@@ -788,6 +790,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         </>
       ) : board ? (
         <>
+          {/* (3b) 🧨 2026-11-18: the served Divergence panel above the cards — the divergence sub only. */}
+          {activeSub === GG_DIVERGENCE_SUB ? <GgDivergencePanel block={board.divergence ?? null} /> : null}
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
           <CountsLine board={board} />
           {(board.awaiting || []).map((a) => (
@@ -796,7 +800,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
 
           {/* (5) bar size + the ☀️ / 🌙 served sorts. */}
           <div className="cm-phase" role="tablist" aria-label="Bar size">
-            {tfs.map((f) => (
+            {(activeSub === GG_DIVERGENCE_SUB ? [] : tfs).map((f) => (   /* 🧨 the cards are the 5m frame: no toggle */
               <button key={f} type="button" role="tab" aria-selected={f === servedTf}
                       data-testid={`gg-tf-${f}`}
                       className={`cm-phase-btn${f === servedTf ? ' cm-phase-on' : ''}`}
@@ -949,6 +953,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of
               this sub ("this view is confusing are there 2 potential here?" → "Oh I think we should bring them to the top
               of the view"): the 2 live potentials are what the sub is named for; the 74-row history came first and hid them. */}
+          {/* (6a) 🧨 the served 🏁 Divergence fold BELOW the cards — the divergence sub only. */}
+          {activeSub === GG_DIVERGENCE_SUB ? (
+            <GgDivergenceTrack tr={board.divergence?.track_record ?? null} faultText={board.divergence?.track_record_fault_text ?? null} />
+          ) : null}
           {activeSub === 'potential' && board.track ? <TrackPanel track={board.track} /> : null}
           {activeSub === 'potential' && board.watch ? <WatchLine watch={board.watch} /> : null}
         </>

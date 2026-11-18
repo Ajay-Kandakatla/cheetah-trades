@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "Do we still capture divergence alerts? Can you add a tab for in in Gajjals 5 min please" and
+  // "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish Cuz I am missing A+ i can chase the
+  // divergency atleast like in these cases I would caught a good chunk of returns". chart_maps/gajjala/divergence.py +
+  // divergence_tab.py; rule words built from GC.DIVERGENCE_* on the page. A record, never a push. Doc
+  // docs/gajjala/divergence_sub_2026_11_18.md.
+  {
+    id: 'gajjala-divergence-sub-2026-11-18',
+    label: '🧨 Divergence on 🚩 Gajjala’s 5-min tab — you said: “yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish Cuz I am missing A+ i can chase the divergency atleast like in these cases I would caught a good chunk of returns”. A new 🧨 chip lists every name that rang a 🚩 push and then opened a wide 9 EMA over 21 EMA gap after the bullish cross, with a chart card and its own 🏁 Track record graded every night. A record only — it never rings your phone. In the 11-16 study this rule lost money in-sample; the live record is UNMEASURED. Not advice.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=gajjala&sub=divergence',
+  },
   // Ajay 2026-11-18, verbatim: "When there are extreme cases of short interest make a not for them on reversal squeeze like
   // percentage of short interest on the tickers card and also on watch list". short_interest/read.extreme_block: the ONE SI
   // read serves an EXTREME note when % of float short ≥ client.SI_HIGH_PCT (by name). Display only, UNMEASURED.

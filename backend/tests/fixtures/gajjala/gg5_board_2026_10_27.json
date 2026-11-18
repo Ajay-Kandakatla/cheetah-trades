@@ -264,6 +264,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -1244,6 +1251,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -2028,6 +2042,553 @@
     }
    ]
   },
+  "divergence": {
+   "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
+   "counts": {
+    "aplus": 1,
+    "awaiting_answer": 0,
+    "forming": 6,
+    "invalid": 0,
+    "listed": 2,
+    "none": 2,
+    "partial": 1,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
+    }
+   ],
+   "day_read": {
+    "caption": "Information only — not a gate, not measured. In the 22 sessions studied no read flagged the worse days; GD6b read the opposite way (not significant after correction); LD3i and LD9 had too few days.",
+    "chips": [],
+    "computed_at_et": null,
+    "counts": {
+     "missing": 0,
+     "off": 0,
+     "on": 0,
+     "pending": 0,
+     "read": 0
+    },
+    "fold_text": null,
+    "grades_through_et": null,
+    "head": "🌫️ Day read: no read on file for this session yet — it is read on every 5-minute 🚩 pass",
+    "is_today": true,
+    "note": null,
+    "read_date_text": "Read once, when every page holds 30 recorded entry weeks forward from 2026-11-12 (the prereg's MEASURE_FLOOR_WEEKS rule); nothing is read before then.",
+    "session": "2026-10-13",
+    "state": "absent",
+    "tags": {}
+   },
+   "divergence": {
+    "ask_text": "Ajay 2026-11-18: “yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish” · “Cuz I am missing A+ i can chase the divergency atleast like in these cases” · “I would caught a good chunk of returns”",
+    "chartless": [],
+    "cohort_text": "Names read: today's 🚩 A+ and 🧠 pushes on this tab (the study's cohort), from their ring onward.",
+    "empty_text": "No name met the rule on its closed bars yet today.",
+    "faults": [],
+    "faults_text": null,
+    "honesty": "The 11-16 study measured this exact rule on 24 sessions (2026-10-13 → 2026-11-13): it did not make money and was not shown better than listed names we never rang. This sub records what the rule would have done — no alert, no gate, no trade. Small numbers mean nothing; read the net % beside the win rate, never the win rate alone.",
+    "is_line": {
+     "ah": {
+      "exit_close": 15,
+      "exit_downcross": 17,
+      "hi": -3.1323,
+      "lo": -15.6032,
+      "lt1_trades": 16,
+      "mean_net": -8.9283,
+      "median_net": -8.7334,
+      "text": "In-sample after hours, 32 trades: −8.93% [−15.60, −3.13] · won 21.9% · LOST MONEY — description only, not the registered line",
+      "trades": 32,
+      "win_pct": 21.9,
+      "word": "LOST MONEY"
+     },
+     "rth": {
+      "exit_close": 18,
+      "exit_downcross": 38,
+      "hi": 1.0578,
+      "lo": -6.7296,
+      "lt1_trades": 28,
+      "mean_net": -3.0929,
+      "median_net": -6.4072,
+      "text": "In-sample RTH, 56 trades: −3.09% net per trade [−6.73, +1.06] · won 26.8% · median −6.41% · exits 38 down-cross / 18 at the mark · 28 fills under $1 · NOT SHOWN (vs listed names +3.28 [−1.80, +8.90], NOT SHOWN)",
+      "trades": 56,
+      "vs_listed_hi": 8.8953,
+      "vs_listed_lo": -1.7965,
+      "vs_listed_mean": 3.2757,
+      "vs_listed_p": 0.2207,
+      "vs_listed_word": "NOT SHOWN",
+      "win_pct": 26.8,
+      "word": "NOT SHOWN"
+     }
+    },
+    "n_exited": 0,
+    "n_open": 0,
+    "n_today": 0,
+    "oos_done_n": 0,
+    "oos_seal_et": "2026-11-30 20:00",
+    "oos_sealed": true,
+    "oos_sessions": [
+     "2026-11-17",
+     "2026-11-18",
+     "2026-11-19",
+     "2026-11-20",
+     "2026-11-23",
+     "2026-11-24",
+     "2026-11-25",
+     "2026-11-30"
+    ],
+    "oos_spec_sha256": "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90",
+    "oos_text": "Out of sample, registered before any read: 2026-11-17 → 2026-11-30 (8 sessions; OOS_SPEC sha 9da1ab8e…) — this record's first two weeks. Each listing's grade shows as it lands; totals over these sessions stay sealed on this tab until 2026-11-30 20:00 ET, when the registered read is taken ONCE. This tab is NOT that read. Eight sessions cannot ship anything.",
+    "order_note": "🧨 open first (no 9/21 down-cross yet), newest listing on top · then exited",
+    "rule_label": "ⓘ what gets listed and how it is graded",
+    "rule_text": "Listed when a closed 5-minute bar between 09:35 and 15:55 ET (or 16:05–19:55 after hours; never pre-market) is the first of the session with the 9 EMA at least 0.555 ATRs (14-bar ATR) over the 21 EMA, after the name rang a 🚩 A+ or 🧠 push on this tab, and its last 3 bars' volume is rising with their mean at or above the 12 bars before. Entry = the next 5-minute bar's open. Exit = the close of the first 5-minute bar whose 9 EMA crosses back under the 21, else the regular-close mark (the 20:00 mark for an after-hours listing). Net % = gross minus 0.10% and $0.01 a share, each side — the study's costs. One listing per stock per session.",
+    "title": "🧨 Divergence — the 9 EMA far over the 21 EMA on a closed 5-min bar, volume rising · a RECORD, not a signal · UNMEASURED",
+    "track_record": {
+     "bucket_order": [
+      "win",
+      "loss",
+      "open",
+      "flat",
+      "out"
+     ],
+     "categories": [
+      {
+       "key": "all",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "📋 all 0"
+      },
+      {
+       "key": "win",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "✅ winners 0"
+      },
+      {
+       "key": "loss",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "❌ losers 0"
+      },
+      {
+       "key": "open",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "⏳ open 0"
+      },
+      {
+       "key": "flat",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "➖ flat 0"
+      },
+      {
+       "key": "out",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "— no fill / not graded 0"
+      }
+     ],
+     "category_empty_text": "No row in this category on this span.",
+     "category_param": "cat",
+     "counts": {
+      "ah": {
+       "dup": 0,
+       "exit_close": 0,
+       "exit_downcross": 0,
+       "flat": 0,
+       "gross_mean": null,
+       "half_day": 0,
+       "loss": 0,
+       "n": 0,
+       "net_mean": null,
+       "net_median": null,
+       "no_print": 0,
+       "open": 0,
+       "pct": null,
+       "sealed_rows": 0,
+       "win": 0
+      },
+      "rth": {
+       "dup": 0,
+       "exit_close": 0,
+       "exit_downcross": 0,
+       "flat": 0,
+       "gross_mean": null,
+       "half_day": 0,
+       "loss": 0,
+       "n": 0,
+       "net_mean": null,
+       "net_median": null,
+       "no_print": 0,
+       "open": 0,
+       "pct": null,
+       "sealed_rows": 0,
+       "win": 0
+      }
+     },
+     "counts_text": {
+      "ah": "AH · nothing to total yet",
+      "rth": "RTH · nothing to total yet"
+     },
+     "days": [],
+     "empty_text": "No 🧨 listing on this span.",
+     "grade_at_et": "20:15",
+     "heads": [
+      {
+       "key": "symbol",
+       "label": "Ticker"
+      },
+      {
+       "key": "window",
+       "label": "Window"
+      },
+      {
+       "key": "at",
+       "label": "Listed"
+      },
+      {
+       "key": "ring",
+       "label": "Rang"
+      },
+      {
+       "key": "entry",
+       "label": "Entry"
+      },
+      {
+       "key": "exit",
+       "label": "Exit"
+      },
+      {
+       "key": "gross",
+       "label": "Gross %"
+      },
+      {
+       "key": "net",
+       "label": "Net %"
+      }
+     ],
+     "honesty": "The 11-16 study measured this exact rule on 24 sessions (2026-10-13 → 2026-11-13): it did not make money and was not shown better than listed names we never rang. This sub records what the rule would have done — no alert, no gate, no trade. Small numbers mean nothing; read the net % beside the win rate, never the win rate alone.",
+     "is_text": "In-sample RTH, 56 trades: −3.09% net per trade [−6.73, +1.06] · won 26.8% · median −6.41% · exits 38 down-cross / 18 at the mark · 28 fills under $1 · NOT SHOWN (vs listed names +3.28 [−1.80, +8.90], NOT SHOWN)",
+     "more_text": null,
+     "oos_progress_text": "OOS session 0 of 8 · sealed read after 2026-11-30 20:00 ET — not this tab",
+     "oos_seal_et": "2026-11-30 20:00",
+     "oos_sealed": true,
+     "rule_label": "ⓘ how each listing is graded",
+     "rule_text": "Graded by the study's exit: entry = the next 5-minute bar's open; exit = the close of the first 5-minute bar whose 9 EMA crosses back under the 21 (after hours: the next print's open after that bar), else the regular-close mark (the 20:00 mark after hours). Net % = gross minus 0.10% and $0.01 a share, each side. One count per stock per day.",
+     "sort_default": "wins",
+     "sort_param": "sort",
+     "sorts": [
+      {
+       "bucket_sort": true,
+       "key": "wins",
+       "label": "✅ wins first"
+      },
+      {
+       "bucket_sort": false,
+       "key": "rang",
+       "label": "🕰️ as rang"
+      }
+     ],
+     "span": "5d",
+     "spans": [
+      {
+       "key": "today",
+       "label": "Today"
+      },
+      {
+       "key": "yesterday",
+       "label": "Yesterday"
+      },
+      {
+       "key": "5d",
+       "label": "Last 5 sessions"
+      },
+      {
+       "key": "10d",
+       "label": "Last 10 sessions"
+      },
+      {
+       "key": "all",
+       "label": "All"
+      }
+     ],
+     "title": "🏁 Divergence record — every 🧨 listing, graded by the study's exit · net of costs · UNMEASURED",
+     "today_text": "Today · listings grade tonight 20:15 ET; the card shows the live read until then"
+    },
+    "track_record_fault_text": null,
+    "window_text": "reading closed bars"
+   },
+   "empty_note": null,
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "broker_text": null,
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "risk_pct": 1.4245014245014245,
+      "setup": "bull_flag",
+      "setup_label": "🚩 Bull Flag",
+      "since_et": "10:40",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:41 ET pass · GGA A+ on the 10:40 ET bar",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:41 ET pass",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     }
+    }
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": "10:41 ET",
+    "at": "2026-10-13T14:41:00+00:00",
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": "ok",
+    "warming": false
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:41 ET · bars through 10:40",
+    "bars_through_et": "10:40",
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:41",
+    "state": "idle",
+    "text": "last pass 10:41 ET · bars through 10:40"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-13",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": 40.0,
+    "best_symbol": "GGA",
+    "quiet": false,
+    "runners_100": 0,
+    "runners_80": 0,
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
+   },
+   "sub": "divergence",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market",
+     "title": null
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record",
+     "title": null
+    }
+   ],
+   "tab": "gajjala",
+   "tf": "5m",
+   "tiles": []
+  },
   "horizontal_fade": {
    "awaiting": [],
    "broker_flags": {
@@ -2374,6 +2935,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -3511,6 +4079,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -3872,6 +4447,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -6396,6 +6978,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -6714,6 +7303,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -7024,6 +7620,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -8441,6 +9044,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -8767,6 +9377,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -9064,6 +9681,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -10139,6 +10763,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -11119,6 +11750,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -11903,6 +12541,553 @@
     }
    ]
   },
+  "divergence": {
+   "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "order_text": "your 🚫 names sit at the bottom of every card board",
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
+   "counts": {
+    "aplus": 1,
+    "awaiting_answer": 0,
+    "forming": 6,
+    "invalid": 0,
+    "listed": 2,
+    "none": 2,
+    "partial": 1,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "counts_legend": [
+    {
+     "key": "aplus",
+     "text": "every rule of the setup met and the bar that traded through the trigger closed on the name's latest closed bar at the pass; it rings only when that bar is fresh and inside the A+ window, once per name and setup a day",
+     "word": "A+"
+    },
+    {
+     "key": "forming",
+     "text": "no rule has failed yet and the break has not printed — “ready” means the next bar over the trigger would be the entry",
+     "word": "forming"
+    },
+    {
+     "key": "partial",
+     "text": "a rule failed — the card says which (“missed: …”); a break that was not A+ reads here too",
+     "word": "partial"
+    },
+    {
+     "key": "triggered",
+     "text": "every rule met and the break printed earlier — the entry has passed; the stop has not printed",
+     "word": "triggered"
+    },
+    {
+     "key": "stopped",
+     "text": "the break printed and then the stop printed",
+     "word": "stopped"
+    },
+    {
+     "key": "invalid",
+     "text": "the structure died — the entry bar traded under the stop first, too many pullback bars, the base broke, or the trigger would equal the stop (a reference bar with no range — no risk)",
+     "word": "invalid"
+    },
+    {
+     "key": "none",
+     "text": "no structure of this setup on the bars, or a judged read blanked by the 🎾 float rule or an unknown float, or a detector error",
+     "word": "none"
+    },
+    {
+     "key": "awaiting_answer",
+     "text": "held by a rule whose number you have not given",
+     "word": "awaiting your number"
+    },
+    {
+     "key": "listed",
+     "text": "the names his scanner listed for the session — every count above is read on these",
+     "word": "listed"
+    },
+    {
+     "key": "potential",
+     "text": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup.",
+     "word": "🧠 Potential"
+    },
+    {
+     "key": "track",
+     "text": "every symbol-and-setup that was a potential at any point that session, with what became of it since — a record, not a list to act on",
+     "word": "📈 Track"
+    },
+    {
+     "key": "trader",
+     "text": "a name a trader you flagged posted in the last 2 market sessions (today included) — on the list by your call without GG's change and volume floors, inside GG's price band and your instrument rule; GG's rules read it like any other name, and no push rings on one until today's volume clears GG's 1M floor",
+     "word": "📌 trader"
+    }
+   ],
+   "day_read": {
+    "caption": "Information only — not a gate, not measured. In the 22 sessions studied no read flagged the worse days; GD6b read the opposite way (not significant after correction); LD3i and LD9 had too few days.",
+    "chips": [],
+    "computed_at_et": null,
+    "counts": {
+     "missing": 0,
+     "off": 0,
+     "on": 0,
+     "pending": 0,
+     "read": 0
+    },
+    "fold_text": null,
+    "grades_through_et": null,
+    "head": "🌫️ Day read: no read on file for this session yet — it is read on every 5-minute 🚩 pass",
+    "is_today": true,
+    "note": null,
+    "read_date_text": "Read once, when every page holds 30 recorded entry weeks forward from 2026-11-12 (the prereg's MEASURE_FLOOR_WEEKS rule); nothing is read before then.",
+    "session": "2026-10-13",
+    "state": "absent",
+    "tags": {}
+   },
+   "divergence": {
+    "ask_text": "Ajay 2026-11-18: “yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish” · “Cuz I am missing A+ i can chase the divergency atleast like in these cases” · “I would caught a good chunk of returns”",
+    "chartless": [],
+    "cohort_text": "Names read: today's 🚩 A+ and 🧠 pushes on this tab (the study's cohort), from their ring onward.",
+    "empty_text": "No name met the rule on its closed bars yet today.",
+    "faults": [],
+    "faults_text": null,
+    "honesty": "The 11-16 study measured this exact rule on 24 sessions (2026-10-13 → 2026-11-13): it did not make money and was not shown better than listed names we never rang. This sub records what the rule would have done — no alert, no gate, no trade. Small numbers mean nothing; read the net % beside the win rate, never the win rate alone.",
+    "is_line": {
+     "ah": {
+      "exit_close": 15,
+      "exit_downcross": 17,
+      "hi": -3.1323,
+      "lo": -15.6032,
+      "lt1_trades": 16,
+      "mean_net": -8.9283,
+      "median_net": -8.7334,
+      "text": "In-sample after hours, 32 trades: −8.93% [−15.60, −3.13] · won 21.9% · LOST MONEY — description only, not the registered line",
+      "trades": 32,
+      "win_pct": 21.9,
+      "word": "LOST MONEY"
+     },
+     "rth": {
+      "exit_close": 18,
+      "exit_downcross": 38,
+      "hi": 1.0578,
+      "lo": -6.7296,
+      "lt1_trades": 28,
+      "mean_net": -3.0929,
+      "median_net": -6.4072,
+      "text": "In-sample RTH, 56 trades: −3.09% net per trade [−6.73, +1.06] · won 26.8% · median −6.41% · exits 38 down-cross / 18 at the mark · 28 fills under $1 · NOT SHOWN (vs listed names +3.28 [−1.80, +8.90], NOT SHOWN)",
+      "trades": 56,
+      "vs_listed_hi": 8.8953,
+      "vs_listed_lo": -1.7965,
+      "vs_listed_mean": 3.2757,
+      "vs_listed_p": 0.2207,
+      "vs_listed_word": "NOT SHOWN",
+      "win_pct": 26.8,
+      "word": "NOT SHOWN"
+     }
+    },
+    "n_exited": 0,
+    "n_open": 0,
+    "n_today": 0,
+    "oos_done_n": 0,
+    "oos_seal_et": "2026-11-30 20:00",
+    "oos_sealed": true,
+    "oos_sessions": [
+     "2026-11-17",
+     "2026-11-18",
+     "2026-11-19",
+     "2026-11-20",
+     "2026-11-23",
+     "2026-11-24",
+     "2026-11-25",
+     "2026-11-30"
+    ],
+    "oos_spec_sha256": "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90",
+    "oos_text": "Out of sample, registered before any read: 2026-11-17 → 2026-11-30 (8 sessions; OOS_SPEC sha 9da1ab8e…) — this record's first two weeks. Each listing's grade shows as it lands; totals over these sessions stay sealed on this tab until 2026-11-30 20:00 ET, when the registered read is taken ONCE. This tab is NOT that read. Eight sessions cannot ship anything.",
+    "order_note": "🧨 open first (no 9/21 down-cross yet), newest listing on top · then exited",
+    "rule_label": "ⓘ what gets listed and how it is graded",
+    "rule_text": "Listed when a closed 5-minute bar between 09:35 and 15:55 ET (or 16:05–19:55 after hours; never pre-market) is the first of the session with the 9 EMA at least 0.555 ATRs (14-bar ATR) over the 21 EMA, after the name rang a 🚩 A+ or 🧠 push on this tab, and its last 3 bars' volume is rising with their mean at or above the 12 bars before. Entry = the next 5-minute bar's open. Exit = the close of the first 5-minute bar whose 9 EMA crosses back under the 21, else the regular-close mark (the 20:00 mark for an after-hours listing). Net % = gross minus 0.10% and $0.01 a share, each side — the study's costs. One listing per stock per session.",
+    "title": "🧨 Divergence — the 9 EMA far over the 21 EMA on a closed 5-min bar, volume rising · a RECORD, not a signal · UNMEASURED",
+    "track_record": {
+     "bucket_order": [
+      "win",
+      "loss",
+      "open",
+      "flat",
+      "out"
+     ],
+     "categories": [
+      {
+       "key": "all",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "📋 all 0"
+      },
+      {
+       "key": "win",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "✅ winners 0"
+      },
+      {
+       "key": "loss",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "❌ losers 0"
+      },
+      {
+       "key": "open",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "⏳ open 0"
+      },
+      {
+       "key": "flat",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "➖ flat 0"
+      },
+      {
+       "key": "out",
+       "n": 0,
+       "n_replayed": 0,
+       "text": "— no fill / not graded 0"
+      }
+     ],
+     "category_empty_text": "No row in this category on this span.",
+     "category_param": "cat",
+     "counts": {
+      "ah": {
+       "dup": 0,
+       "exit_close": 0,
+       "exit_downcross": 0,
+       "flat": 0,
+       "gross_mean": null,
+       "half_day": 0,
+       "loss": 0,
+       "n": 0,
+       "net_mean": null,
+       "net_median": null,
+       "no_print": 0,
+       "open": 0,
+       "pct": null,
+       "sealed_rows": 0,
+       "win": 0
+      },
+      "rth": {
+       "dup": 0,
+       "exit_close": 0,
+       "exit_downcross": 0,
+       "flat": 0,
+       "gross_mean": null,
+       "half_day": 0,
+       "loss": 0,
+       "n": 0,
+       "net_mean": null,
+       "net_median": null,
+       "no_print": 0,
+       "open": 0,
+       "pct": null,
+       "sealed_rows": 0,
+       "win": 0
+      }
+     },
+     "counts_text": {
+      "ah": "AH · nothing to total yet",
+      "rth": "RTH · nothing to total yet"
+     },
+     "days": [],
+     "empty_text": "No 🧨 listing on this span.",
+     "grade_at_et": "20:15",
+     "heads": [
+      {
+       "key": "symbol",
+       "label": "Ticker"
+      },
+      {
+       "key": "window",
+       "label": "Window"
+      },
+      {
+       "key": "at",
+       "label": "Listed"
+      },
+      {
+       "key": "ring",
+       "label": "Rang"
+      },
+      {
+       "key": "entry",
+       "label": "Entry"
+      },
+      {
+       "key": "exit",
+       "label": "Exit"
+      },
+      {
+       "key": "gross",
+       "label": "Gross %"
+      },
+      {
+       "key": "net",
+       "label": "Net %"
+      }
+     ],
+     "honesty": "The 11-16 study measured this exact rule on 24 sessions (2026-10-13 → 2026-11-13): it did not make money and was not shown better than listed names we never rang. This sub records what the rule would have done — no alert, no gate, no trade. Small numbers mean nothing; read the net % beside the win rate, never the win rate alone.",
+     "is_text": "In-sample RTH, 56 trades: −3.09% net per trade [−6.73, +1.06] · won 26.8% · median −6.41% · exits 38 down-cross / 18 at the mark · 28 fills under $1 · NOT SHOWN (vs listed names +3.28 [−1.80, +8.90], NOT SHOWN)",
+     "more_text": null,
+     "oos_progress_text": "OOS session 0 of 8 · sealed read after 2026-11-30 20:00 ET — not this tab",
+     "oos_seal_et": "2026-11-30 20:00",
+     "oos_sealed": true,
+     "rule_label": "ⓘ how each listing is graded",
+     "rule_text": "Graded by the study's exit: entry = the next 5-minute bar's open; exit = the close of the first 5-minute bar whose 9 EMA crosses back under the 21 (after hours: the next print's open after that bar), else the regular-close mark (the 20:00 mark after hours). Net % = gross minus 0.10% and $0.01 a share, each side. One count per stock per day.",
+     "sort_default": "wins",
+     "sort_param": "sort",
+     "sorts": [
+      {
+       "bucket_sort": true,
+       "key": "wins",
+       "label": "✅ wins first"
+      },
+      {
+       "bucket_sort": false,
+       "key": "rang",
+       "label": "🕰️ as rang"
+      }
+     ],
+     "span": "5d",
+     "spans": [
+      {
+       "key": "today",
+       "label": "Today"
+      },
+      {
+       "key": "yesterday",
+       "label": "Yesterday"
+      },
+      {
+       "key": "5d",
+       "label": "Last 5 sessions"
+      },
+      {
+       "key": "10d",
+       "label": "Last 10 sessions"
+      },
+      {
+       "key": "all",
+       "label": "All"
+      }
+     ],
+     "title": "🏁 Divergence record — every 🧨 listing, graded by the study's exit · net of costs · UNMEASURED",
+     "today_text": "Today · listings grade tonight 20:15 ET; the card shows the live read until then"
+    },
+    "track_record_fault_text": null,
+    "window_text": "reading closed bars"
+   },
+   "empty_note": null,
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "broker_text": null,
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
+      "risk_pct": 1.4245014245014245,
+      "setup": "bull_flag",
+      "setup_label": "🚩 Bull Flag",
+      "since_et": "10:40",
+      "stop": 10.8125,
+      "symbol": "GGA",
+      "text": "GGA · 🚩 Bull Flag · trigger 10.97 · stop 10.81 (−1.4%) · A+ since 10:40 ET",
+      "trader_text": null,
+      "trigger": 10.96875,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
+   "entry_marks": {
+    "subs": {
+     "bull_flag": {
+      "green": {
+       "label": "2",
+       "n": 2,
+       "title": "🟢 2 close to an entry — A+ on the latest closed bar: GGA · ready — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 2,
+       "title": "✨ new in the last 30 minutes — GGB ready since the 10:41 ET pass · GGA A+ on the 10:40 ET bar",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     },
+     "potential": {
+      "green": {
+       "label": "1",
+       "n": 1,
+       "title": "🟢 1 close to an entry — 🧠 trigger armed — the next bar over the trigger is the entry: GGB · display only — no order, count or alert changes · UNMEASURED"
+      },
+      "new": {
+       "n": 1,
+       "title": "✨ new in the last 30 minutes — GGB 🧠 trigger armed since the 10:41 ET pass",
+       "until": "2026-10-13T15:11:00+00:00"
+      }
+     }
+    }
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": "10:41 ET",
+    "at": "2026-10-13T14:41:00+00:00",
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": "ok",
+    "warming": false
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_break": {
+    "mode": "shadow",
+    "text": "⚡ Break pushes: SHADOW — when an armed 🧠 plan trades over its trigger on the live bar it is recorded, not sent; today's are listed on /alerts. The A+ push still waits for the bar close. 📡 Live stream off on this server."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — the first time it is armed (every rule met, only the break missing) — one push per name and session, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:41 ET · bars through 10:40",
+    "bars_through_et": "10:40",
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:41",
+    "state": "idle",
+    "text": "last pass 10:41 ET · bars through 10:40"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-13",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": 40.0,
+    "best_symbol": "GGA",
+    "quiet": false,
+    "runners_100": 0,
+    "runners_80": 0,
+    "text": "0 runners ≥100% · 0 ≥80% · best GGA +40.0% — not quiet (his quiet line: best runner under 40%, S8 44:37)",
+    "trader_skip_text": null,
+    "trader_text": null
+   },
+   "sub": "divergence",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 6,
+     "emoji": "📋",
+     "key": "all_strategies",
+     "label": "All strategies",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market",
+     "title": null
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook",
+     "title": null
+    },
+    {
+     "count": 2,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential",
+     "title": "🧠 Potential = a setup read still forming — the setup's own rules decide forming vs partial — with its quiet sideways part begun (“building”) or complete (“trigger armed”), and the reclaim of the highs not yet printed. The base must hold at least one sideways bar — a run up alone is not a potential (Cheetah default, not his). Counted per symbol, not per setup."
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record",
+     "title": null
+    }
+   ],
+   "tab": "gajjala",
+   "tf": "5m",
+   "tiles": []
+  },
   "horizontal_fade": {
    "awaiting": [],
    "broker_flags": {
@@ -12249,6 +13434,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -13386,6 +14578,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -13747,6 +14946,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -16271,6 +17477,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -16589,6 +17802,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -16899,6 +18119,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {
@@ -18316,6 +19543,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -18642,6 +19876,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -18939,6 +20180,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {

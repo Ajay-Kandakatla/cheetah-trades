@@ -24,6 +24,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
 }));
 
 import GajjalaBoard from './GajjalaBoard';
+import { GG_SUBS } from '../lib/gajjala';
 
 /* tsc-safe source read (the GajjalaBoard.potential.test precedent): no node types in the app tsconfig. */
 async function readSource(rel: string): Promise<string> {
@@ -127,13 +128,14 @@ describe('GajjalaBoard — ℹ️ served counts legend (2026-10-18)', () => {
   });
 
   // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub (FIRST); the served strip has 11 buttons.
-  it('the 🧠 sub button carries the served title; NEGATIVE: no title on the other ten', async () => {
+  // WIDENED 2026-11-18 — 🧨 Divergence is the TWELFTH sub (after 🎾): the count is GG_SUBS.length (the regenerated strip).
+  it('the 🧠 sub button carries the served title; NEGATIVE: no title on the other subs', async () => {
     const board = withLegend('potential');
     stubFetch(() => clone(board));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);
     const btns = screen.getAllByRole('tab').filter((b) => b.getAttribute('data-testid')?.startsWith('gg-sub-'));
-    expect(btns).toHaveLength(11);
+    expect(btns).toHaveLength(GG_SUBS.length);
     for (const b of btns) {
       if (b.getAttribute('data-testid') === 'gg-sub-potential') expect(b).toHaveAttribute('title', POT_TITLE);
       else expect(b.hasAttribute('title')).toBe(false);

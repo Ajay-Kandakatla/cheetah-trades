@@ -114,6 +114,18 @@ wording only; every other entry is the BOARD golden alone):
   live/sent/1/0/1 (the payload the live sender was handed) and at the shadow claim's $setOnInsert/would_push (writes/29);
   body / items / tag / kind byte-equal. sha1 6093b1ab… -> 7d857dc9…. BOARD byte-identical (the board serves no compose
   title) (docs/gajjala/aplus_push_title_watch_2026_11_17.md).
+  2026-11-18 — Ajay "Do we still capture divergence alerts? Can you add a tab for in in Gajjals 5 min please" / "yes
+  should do a track recird fir the divergence aftger EMA 9 Cross over bullish" (🧨 Divergence sub, SPEC REV 2 §4 WP-B):
+  BOARD only, by `-k test_gg5_board_is_byte_identical` (WRITES byte-identical, sha1 7d857dc9… — the pass hook is
+  Deps-gated and make_deps passes none; the 1-minute golden byte-identical — GG1's strip omits 🧨). BOARD 13487 -> 14351
+  leaves: 864 ADDED, 440 CHANGED, 0 removed, every one under `subs` or the new board: ("divergence", "🧨", "Divergence")
+  inserted at subs/6 on every board (count 0 — no record on the fixture store), so the old subs/6..10 shift to 7..11 (the
+  440 changed leaves are that shift, key / emoji / label / count / title) and subs/11 is new; plus each mode's new
+  `divergence` board (its `divergence` block = the empty shape: n_today 0, no tile, no chartless, the 🏁 fold with 0
+  rows; `tiles` []). Dropping `subs` and the new board, the old and new files are IDENTICAL (checked by script). Same
+  check on the FE fixtures by their own `-k golden` recipes, `subs` ONLY (the 🧨 entry at index 6): on_open 2261 -> 2276
+  (+15, 60 shifted), potential 3884 -> 3894 (+10, 44 shifted), track_record 2877 -> 2892 (+15, 57 shifted)
+  (docs/gajjala/divergence_sub_2026_11_18.md).
 """
 from __future__ import annotations
 
@@ -303,7 +315,7 @@ def test_gg5_board_is_byte_identical(monkeypatch):
     _check(BOARD, text)
     doc = json.loads(text)
     for mode in MODES:
-        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 11           # WIDENED 2026-11-13 — 📋 first
+        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 12           # WIDENED 2026-11-13 — 📋 first; 2026-11-18 — 🧨 after 🎾
         for k, b in doc[mode].items():
             assert b["tab"] == "gajjala", k
             assert "variant" not in b, k                                          # NEGATIVE: GG5 serves no variant block

@@ -48,6 +48,14 @@ by design: `load_intraday` never caches today and fetches a cold past day (daytr
 tonight's session is `deferred_today`, and a row is loaded only when BOTH its symbol-days (the session + the market
 day before, the EMA warm-up) are already in `intraday_cache` (a cache READ first, `audited_exits.is_warm`) — a cold
 row is `deferred_cold`, never fetched (HIS CALL #21). Zero provider calls on that step.
+
+🧨 Divergence record (2026-11-18 — Ajay "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish"):
+`main` then runs `divergence.grade_divergence` AFTER GGA, in its OWN fence, under `gajjala_divergence` — GRADE FIRST
+(every listing whose horizon ended, by the 11-16 study's X3 exit + tx.net_pct costs), then the full-day RE-DETECT of each
+session not yet marked in gajjala_state "divergence_redetect" (newest first; authoritative over the pass's live alert —
+a moved bar keeps the pass's as `live_alert`), then the grade of what the re-detect inserted or moved from the frames in
+hand. Loader calls capped at DIVERGENCE_GRADE_MAX_LOADS. A failure lands under `gajjala_divergence.error` — never in GG5's
+`errors`, never in the exit code. STEPS unchanged; the crontab line unchanged.
 """
 from __future__ import annotations
 
@@ -348,6 +356,8 @@ def main(argv=None) -> int:
     if "grade" in steps:                                         # 🚩 1-minute page (2026-10-27): after GG5, fenced
         out["gajjala_1m"] = grade_1m(datetime.now(timezone.utc))
         out["gajjala_audited"] = grade_audited(datetime.now(timezone.utc))   # 🧪 2026-11-01: after GG5 + GG1, fenced
+        from . import divergence as DV
+        out["gajjala_divergence"] = DV.grade_divergence(datetime.now(timezone.utc))   # 🧨 2026-11-18: after GGA, fenced — never in errors / the exit code
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

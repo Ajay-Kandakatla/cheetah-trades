@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_TABLE_SUB, GG_VARIANT_LABEL,
+  GG_DEFAULT_SUB, GG_DIVERGENCE_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_TABLE_SUB,
+  GG_VARIANT_LABEL,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   playbookItem, riskText, variantText, watchParts,
   GG_SCAN_PATH, ggScanAdvanced, ggScanPlan, type GgBoard,
@@ -108,9 +109,18 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
   // BUILD_SPEC9 §3.11).
   // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub, FIRST (Ajay "Call all strategies"; spec §3.1/§3.5);
   // the other ten keep their order, 🏁 Track record still last.
-  it('eleven subs: 📋 All strategies FIRST, then DECISIONS order, 🧠 Potential tenth, 🏁 Track record last, labels his', () => {
+  // WIDENED 2026-11-18 — 🧨 Divergence is the TWELFTH sub, right after 🎾 Reversal Squeeze (Ajay "Can you add a tab for in
+  // in Gajjals 5 min please"; spec diverg2 §3.8); the other eleven keep their order, 🏁 Track record still last.
+  it('twelve subs: 📋 All strategies FIRST, then DECISIONS order, 🧨 Divergence after 🎾, 🏁 Track record last, labels his', () => {
     expect(GG_SUBS.map((s) => s.key)).toEqual(['all_strategies', 'bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp',
-      'reversal_squeeze', 'premarket', 'postmarket', 'playbook', 'potential', 'track_record']);
+      'reversal_squeeze', 'divergence', 'premarket', 'postmarket', 'playbook', 'potential', 'track_record']);
+    expect(GG_DIVERGENCE_SUB).toBe('divergence');
+    expect(GG_SUBS.findIndex((s) => s.key === GG_DIVERGENCE_SUB))
+      .toBe(GG_SUBS.findIndex((s) => s.key === 'reversal_squeeze') + 1);
+    expect(parseGgSub('divergence')).toBe('divergence');
+    expect(parseGgSub(' Divergence ')).toBe('divergence');
+    // NEGATIVE: near misses are not the 🧨 sub — the default
+    for (const raw of ['divergences', 'diverg', 'divergency', 'ema_cross']) expect(parseGgSub(raw)).toBe(GG_DEFAULT_SUB);
     expect(GG_TABLE_SUB).toBe('all_strategies');
     expect(GG_SUBS[0].key).toBe(GG_TABLE_SUB);
     expect(parseGgSub('all_strategies')).toBe('all_strategies');
@@ -119,7 +129,7 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
     expect(parseGgSub('all_strategy')).toBe(GG_DEFAULT_SUB);
     expect(GG_SUBS.map((s) => `${s.emoji} ${s.label}`).join(' · ')).toBe(
       '\u{1F4CB} All strategies · \u{1F6A9} Bull Flag · \u{1F48B} EMA Kiss & Fly · ➖ Horizontal Fade · \u{1F300} Intraday VCP · '
-      + '\u{1F3BE} Reversal Squeeze · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential'
+      + '\u{1F3BE} Reversal Squeeze · \u{1F9E8} Divergence · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential'
       + ' · \u{1F3C1} Track record');
     expect(parseGgSub('potential')).toBe('potential');
     expect(parseGgSub(' Potential ')).toBe('potential');

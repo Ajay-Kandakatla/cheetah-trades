@@ -406,3 +406,16 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
    Stale = muted; the served word "stale" is the marker. */
 .gg-all-table td.gg-all-si { white-space: nowrap; overflow-wrap: normal; }
 .gg-all-table td.gg-all-si-stale { color: var(--ink-subtle, #94a3b8); }
+
+/* 🧨 2026-11-18 — the Divergence panel above the cards and its 🏁 fold below them (divergence spec §3.8). Ajay: "yes should do
+   a track recird fir the divergence aftger EMA 9 Cross over bullish". Every line is a served string: it wraps inside the
+   board (the 📱 430 px rule — min-width:0 + overflow-wrap:anywhere), never widens the page; the 🏁 tables scroll sideways
+   inside .gg-tr-scroll like every 🏁. */
+.gg-dv { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 0.8rem; }
+.gg-dv-title { margin: 0; font-size: 0.95rem; min-width: 0; overflow-wrap: anywhere; }
+.gg-dv-ask { margin: 0; padding-left: 0.6rem; border-left: 2px solid var(--hairline, rgba(26, 26, 26, 0.12)); font-style: italic; }
+.gg-dv-line { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.gg-dv-rule summary, .gg-dv-tr-summary { cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
+.gg-dv-tr-summary { font-weight: 600; font-size: 0.9rem; }
+.gg-dv-spans { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
+.gg-dv-day { margin: 0.3rem 0 0; font-size: 0.82rem; }

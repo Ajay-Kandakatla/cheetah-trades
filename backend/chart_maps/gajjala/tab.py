@@ -1866,6 +1866,8 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
         return d, "default"
     if s == GC.TABLE_SUB and not table_on(v):                      # 📋 GG5 + (2026-11-16) the 1-minute page; 🧪 fails open
         return GC.DEFAULT_SUB, "default"
+    if s == GC.DIVERGENCE_SUB and not V.is_gg5(V.of(v)):            # 🧨 2026-11-18 — GG5 only; 1-minute / 🧪 fail open
+        return GC.DEFAULT_SUB, "default"
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
     sym = (focus or "").strip().upper()
@@ -2688,10 +2690,15 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     for key, e, label in GC.SUBS:
         if key == GC.TABLE_SUB and not table_on(v):   # 📋 GG5 + the 1-minute page (2026-11-16); the 🧪 strip never shows it
             continue
+        if key in GC.GG5_ONLY_SUBS and key != GC.TABLE_SUB and not gg5:   # 🧨 2026-11-18 — the GG5 strip only
+            continue
         if key == GC.TABLE_SUB:                 # 📋 every card on the five setup subs (n_tiles — no tile built for it)
             n = sum(n_tiles.get(s, 0) for s in GC.SETUPS)
         elif key == GC.LEDGER_SUB:              # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
             n = _soft("track record count", _ledger_count, st, session, v, default=None)
+        elif key == GC.DIVERGENCE_SUB:          # 🧨 2026-11-18 — today's records (None on a read fault)
+            from chart_maps.gajjala import divergence_tab as DVT
+            n = _soft("divergence count", DVT.count_today, st, session, default=None)
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
                  else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
@@ -2815,6 +2822,15 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         from chart_maps.gajjala import playbook as PB
         out["playbook"] = PB.playbook()
         out["empty_note"] = None
+    elif sub_k == GC.DIVERGENCE_SUB:                # 🧨 2026-11-18 — GG5 only (resolve_sub fails open elsewhere); display + record
+        from chart_maps.gajjala import divergence_tab as DVT
+        blk = _soft("divergence", DVT.block, st, session, now, span=span if isinstance(span, str) else "",
+                    is_today=is_today, in_window=in_window, reads_by=reads_by, scan_row=_row, sess=sess,
+                    halts_by=halts_by, listed=listed, pass_at=pass_at, flags=order_flags,
+                    broker_text_of=lambda s: broker_text_for(s, flags), v=v, default=None)
+        out["divergence"] = blk
+        out["tiles"] = broker_bottom((blk or {}).pop("_tiles", [])[:lim], order_flags)
+        out["empty_note"] = None if blk else DVT.FAULT_TEXT
     elif sub_k == GC.LEDGER_SUB:
         LG = _ledger()
         span_s = span if isinstance(span, str) else ""

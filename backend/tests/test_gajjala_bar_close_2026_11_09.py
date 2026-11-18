@@ -486,9 +486,14 @@ def test_the_cron_path_keeps_its_deps(monkeypatch):
     RUN.main([])
     # WIDENED 2026-11-15 (choppy spec §3.5): the cron Deps also carry the 🌫️ day read
     # WIDENED 2026-11-15 (🔀 Ajay "can you add an alert in horizonal fade when that happens?"): and the ➖ cross push
+    # WIDENED 2026-11-18 (🧨 divergence spec §3.4): and the divergence record's pass step
     from chart_maps.gajjala import alerts as AL
+    from chart_maps.gajjala import divergence as DV
     assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
-                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross)
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross,
+                                              divergence=DV.run_step)
+    assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross)   # NEGATIVE
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)
     assert RUN._cron_deps() == rp.calls[0][1]["deps"]                    # ONE definition for both paths
 

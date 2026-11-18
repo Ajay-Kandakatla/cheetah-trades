@@ -311,7 +311,7 @@ def test_T9_other_pages_fail_open_and_never_list_it(variant):
     out = board(store(t1_docs()), variant=variant)
     assert out["sub"] == GC.DEFAULT_SUB and out["sub_resolved_from"] == "default"
     assert "table" not in out and GC.TABLE_SUB not in [s["key"] for s in out["subs"]]
-    assert len(out["subs"]) == len(GC.SUBS) - 1
+    assert len(out["subs"]) == len(GC.SUBS) - len(GC.GG5_ONLY_SUBS)                # WIDENED 2026-11-18 — 📋 and 🧨 GG5 only
     for sub in (BF, GC.POTENTIAL_SUB):
         assert GC.TABLE_SUB not in [s["key"] for s in board(store(t1_docs()), sub, variant=variant)["subs"]]
 

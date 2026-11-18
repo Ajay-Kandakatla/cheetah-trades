@@ -99,7 +99,7 @@ import type { GgTapePayload } from '../components/GgEntryTape';
 import type { DayRead } from './dayRead';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = 'all_strategies' | GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
+export type GgSub = 'all_strategies' | GgSetup | 'divergence' | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
 export type GgTf = '1m' | '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -138,6 +138,9 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
   { key: 'horizontal_fade', emoji: '➖', label: 'Horizontal Fade' },
   { key: 'intraday_vcp', emoji: '\u{1F300}', label: 'Intraday VCP' },
   { key: 'reversal_squeeze', emoji: '\u{1F3BE}', label: 'Reversal Squeeze' },
+  /* 🧨 2026-11-18 Ajay "Can you add a tab for in in Gajjals 5 min please" — the Divergence record sub, right after 🎾
+   * (== constants.SUBS, GG5 only; the 1-min / 🧪 / 🥇 fallback strips filter it off — GajjalaBoard). */
+  { key: 'divergence', emoji: '\u{1F9E8}', label: 'Divergence' },
   { key: 'premarket', emoji: '☀️', label: 'Premarket' },
   { key: 'postmarket', emoji: '\u{1F319}', label: 'Post-market' },
   { key: 'playbook', emoji: '\u{1F4D3}', label: 'Playbook' },
@@ -147,6 +150,8 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
 const SUB_KEYS = new Set<string>(GG_SUBS.map((s) => s.key));
 /** 📋 the All strategies table sub (== backend constants.TABLE_SUB = SUBS[0][0]) — the ONE FE spelling. */
 export const GG_TABLE_SUB: GgSub = 'all_strategies';
+/** 🧨 the Divergence record sub (== backend constants.DIVERGENCE_SUB, 2026-11-18) — the ONE FE spelling. GG5 only. */
+export const GG_DIVERGENCE_SUB: GgSub = 'divergence';
 
 /** The five setup subs (== backend constants.SETUPS, test-pinned) — the only
  *  subs that carry a 🧠 strip (☀️ / 🌙 / 📓 / 🧠 never do, BUILD_SPEC4 §3.9 (c)). */
@@ -712,6 +717,33 @@ export function ggTrRowClass(r: Pick<GgTrRow, 'bucket' | 'dup_of'> | null | unde
   return ggTrIsDup(r) ? `${base} gg-tr-row-dup` : base;
 }
 
+/* ---- 🧨 Divergence record (2026-11-18, divergence spec §3.7 / §3.8). Ajay: "yes should do a track recird fir the divergence
+ * aftger EMA 9 Cross over bullish". Every word and number is SERVED by divergence_tab.py; the FE types none. A RECORD,
+ * never a signal: no alert, no gate, no trade. UNMEASURED. ---- */
+/** One served in-sample line: `text` is printed verbatim; the numbers beside it are served for the record only. */
+export type GgDivergenceIsLine = { text: string; [k: string]: unknown };
+/** A listing with no stored chart (or whose card could not be built) — served as a plain line above the cards. */
+export type GgDivergenceChartless = { symbol: string; at_text?: string | null; state_label?: string | null; href?: string | null };
+/** 🏁 the Divergence fold — the 🏁 shape on the GgTr* pieces, with its own two count lines (RTH / after hours) and the
+ *  OOS words: `oos_progress_text` while the read is sealed, `oos_counts_text` after — whichever is served, printed as
+ *  handed. Rows carry their grade cells (entry / exit / gross / net) as served GgTrCells. */
+export type GgDivergenceTrack = Omit<GgTrackRecord, 'counts_text'> & {
+  counts_text?: { rth?: string | null; ah?: string | null } | null;
+  oos_progress_text?: string | null; oos_counts_text?: string | null; is_text?: string | null;
+};
+export type GgDivergenceBlock = {
+  title?: string | null; ask_text?: string | null; rule_label?: string | null; rule_text?: string | null;
+  honesty?: string | null;
+  is_line?: { rth?: GgDivergenceIsLine | null; ah?: GgDivergenceIsLine | null } | null;
+  oos_text?: string | null; oos_sessions?: string[] | null; oos_spec_sha256?: string | null; oos_done_n?: number | null;
+  oos_sealed?: boolean | null; oos_seal_et?: string | null;
+  cohort_text?: string | null; window_text?: string | null;
+  n_today?: number | null; n_open?: number | null; n_exited?: number | null;
+  empty_text?: string | null; order_note?: string | null;
+  chartless?: GgDivergenceChartless[] | null; faults_text?: string | null;
+  track_record?: GgDivergenceTrack | null; track_record_fault_text?: string | null;
+};
+
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;
 /** `tf` = the frame this card actually drew (tab.tile_tf / the empty-frame fallback) — it can differ from the
@@ -866,6 +898,9 @@ export type GgBoard = {
   enterable?: GgEnterable | null;
   /** 🏁 the Track record — the track_record sub only; absent on another sub and on an older API. */
   track_record?: GgTrackRecord | null;
+  /** 🧨 2026-11-18: the Divergence block (divergence_tab.block) — the GG5 divergence sub only; null when the record could
+   *  not be read (the served `empty_note` says so), absent elsewhere and on an older API. */
+  divergence?: GgDivergenceBlock | null;
   /** 🚫 the owner's list block (tab.broker_block) — the primary owner only; null for anyone else, absent on an older API. */
   broker_flags?: GgBrokerFlags | null;
   /** 🚫 the served graveyard tag line (present iff graveyard_text) — owner only; null when no graveyard name is listed. */

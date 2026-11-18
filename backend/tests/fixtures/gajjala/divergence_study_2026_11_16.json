@@ -1,0 +1,150 @@
+{
+ "_source": "eod-audits/research/2026-11-16_explosive_divergence (python -I copy, 2026-11-18) — the study's REGISTERED pick R1|60|G+V2|X3",
+ "cells": {
+  "ah": {
+   "exit_mix": {
+    "close": 15,
+    "downcross": 17
+   },
+   "lt1_trades": 16,
+   "mark_exit_share": 46.9,
+   "mean_gross": -4.6903,
+   "mean_net_ci": {
+    "dates": 16,
+    "hi": -3.1323,
+    "lo": -15.6032,
+    "mean": -8.9283,
+    "n": 32
+   },
+   "median_net": -8.7334,
+   "np": 0,
+   "trades": 32,
+   "win_pct": 21.9,
+   "word": "LOST MONEY"
+  },
+  "rth": {
+   "exit_mix": {
+    "close": 18,
+    "downcross": 38
+   },
+   "lt1_trades": 28,
+   "mark_exit_share": 32.1,
+   "mean_gross": 0.7572,
+   "mean_net_ci": {
+    "dates": 21,
+    "hi": 1.0578,
+    "lo": -6.7296,
+    "mean": -3.0929,
+    "n": 56
+   },
+   "median_net": -6.4072,
+   "np": 0,
+   "trades": 56,
+   "win_pct": 26.8,
+   "word": "NOT SHOWN"
+  },
+  "rth_minus_B": {
+   "hi": 8.8953,
+   "lo": -1.7965,
+   "mean": 3.2757,
+   "nb": 35,
+   "p": 0.2207
+  },
+  "rth_words": {
+   "filter": "FILTER HELPED",
+   "money": "NOT SHOWN",
+   "tags": [
+    "(would not survive Holm)"
+   ],
+   "vs_listed": "NOT SHOWN"
+  }
+ },
+ "design_sha256": "c5a1f2eb7091bb586febf8767f5e553805f27036d3431aeddc8d3c8495224d3f",
+ "oos_spec": {
+  "level_q60": 0.5552257708108612,
+  "seal_line": "Not read now: a fresh dump of the 11-14 shape after 2026-11-30 20:00 ET (network step = the main session's).",
+  "sessions": [
+   "2026-11-17",
+   "2026-11-18",
+   "2026-11-19",
+   "2026-11-20",
+   "2026-11-23",
+   "2026-11-24",
+   "2026-11-25",
+   "2026-11-30"
+  ],
+  "window_rth": [
+   "09:35",
+   "15:55"
+  ]
+ },
+ "oos_spec_sha256": "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90",
+ "pick": {
+  "exit": "X3",
+  "filter": "G+V2",
+  "level": 0.555226,
+  "measure": "R1",
+  "q": 60
+ },
+ "pins": {
+  "constants": {
+   "ASK_DAY": "2026-11-16",
+   "ATR_PERIOD": 14,
+   "CHOP_BARS": 12,
+   "CHOP_MIN_BARS": 6,
+   "CHOP_Q": 33.333333,
+   "EARLY_HM": "10:40",
+   "EMA_FAST": 9,
+   "EMA_SLOW": 21,
+   "HOLM_ALPHA": 0.05,
+   "K11_MIN_SESSION_VOLUME": 1000000,
+   "LEVEL_PCTS": [
+    60,
+    75,
+    90,
+    95
+   ],
+   "MINBARS": 30,
+   "MIN_ALERTS": 30,
+   "MIN_COVERAGE": 0.9,
+   "MIN_REF_BARS": 60,
+   "OOS_SESSIONS": [
+    "2026-11-17",
+    "2026-11-18",
+    "2026-11-19",
+    "2026-11-20",
+    "2026-11-23",
+    "2026-11-24",
+    "2026-11-25",
+    "2026-11-30"
+   ],
+   "PICK_MEASURES": [
+    "R1"
+   ],
+   "PRIOR_SESSIONS": 3,
+   "THIN_AH": 10,
+   "TOP_PCT": 0.5,
+   "V1_PCT": 75,
+   "V2_HOUR_BARS": 12,
+   "V2_MIN_HOUR_BARS": 6,
+   "V2_RUN": 3,
+   "WINDOWS": {
+    "AH": [
+     "16:05",
+     "19:55"
+    ],
+    "RTH": [
+     "09:35",
+     "15:55"
+    ]
+   }
+  },
+  "costs": {
+   "COST_BPS": 0.001,
+   "SLIP_USD": 0.01,
+   "model": "per side, prereg 11-14 line 534"
+  },
+  "sessions": 24
+ },
+ "results_sha256": "4b8159beced96f765d7ea15181957e68f384e13c1d785d17786e268edd393ddb"
+}

@@ -277,6 +277,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -2392,6 +2399,13 @@
     },
     {
      "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
+     "title": null
+    },
+    {
+     "count": 0,
      "emoji": "☀️",
      "key": "premarket",
      "label": "Premarket",
@@ -2690,6 +2704,13 @@
      "emoji": "🎾",
      "key": "reversal_squeeze",
      "label": "Reversal Squeeze",
+     "title": null
+    },
+    {
+     "count": 0,
+     "emoji": "🧨",
+     "key": "divergence",
+     "label": "Divergence",
      "title": null
     },
     {

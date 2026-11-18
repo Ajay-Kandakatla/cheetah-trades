@@ -272,7 +272,8 @@ def test_NEGATIVE_the_1_minute_pass_stores_no_prior_tail():
 
 
 PRIOR_RX = re.compile(r"\b(?:bars|curves|vol_avg)\d*_prior\b|\btile_prior_payload\b|\bRS_TILE_PRIOR_")
-PRIOR_ALLOWED = {"bars.py", "run.py", "tab.py", "squeeze_marks.py", "constants.py"}
+# WIDENED 2026-11-18 (🧨 divergence spec §3.3): divergence.from_tile reads bars5_prior / curves5_prior for the backfill
+PRIOR_ALLOWED = {"bars.py", "run.py", "tab.py", "squeeze_marks.py", "constants.py", "divergence.py"}
 
 
 def _readers(texts: dict) -> set:

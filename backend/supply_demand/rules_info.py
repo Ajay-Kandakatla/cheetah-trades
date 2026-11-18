@@ -1332,6 +1332,27 @@ def _gg_audited_clause() -> str:
     return " " + clause if isinstance(clause, str) and clause else ""
 
 
+def _gg_divergence_clause() -> str:
+    """🧨 2026-11-18 (Ajay "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") — the
+    section note's ONE row on the 🧨 Divergence sub (record only): every number a GC.DIVERGENCE_* / EMA constant read at
+    call time, never typed here (the study's 0.555… level is never printed — its constant is the full float). The note,
+    not a pick / stop / alert line: those lists are pinned (8 picks, ≤ 6 stops, the alerts = the A+ line + the 🧠
+    engine's own). " " + the clause, or "" when the constants cannot be read (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import constants as GC
+        from chart_maps.gajjala import tab as GTAB
+        tf5, _tf15 = GTAB.TFS                               # the 5-minute frame word, read off the tab (no literal)
+        clause = ("🧨 Divergence (record only): listed at the first closed %s-min bar with the %d EMA ≥ the study's "
+                  "%dth-percentile gap over the %d EMA in %d-bar ATRs, volume rising %d bars; graded by the study's "
+                  "exit; no push, no gate."
+                  % (tf5.rstrip("m"), GC.EMA_FAST, GC.DIVERGENCE_LEVEL_PCT, GC.EMA_SLOW,
+                     GC.DIVERGENCE_ATR_PERIOD, GC.DIVERGENCE_V2_RUN))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala divergence clause unavailable: %s", exc)
+        return ""
+    return " " + clause
+
+
 def _gg_bottom_word() -> str:
     """🚫 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the ONE served
     word, tab.BROKER_BOTTOM_TEXT, never retyped (lazy: tab imports this package's engines)."""
@@ -1493,6 +1514,7 @@ def _gajjala_section() -> dict:
                  + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_watch_auto_clause()                 # 🤖 2026-11-17 — the watch's auto section (🧠 potentials)
+                 + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

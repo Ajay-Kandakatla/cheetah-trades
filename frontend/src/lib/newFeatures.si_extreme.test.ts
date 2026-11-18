@@ -1,3 +1,4 @@
+// WIDENED 🧨 gajjala-divergence-sub-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 /* 🩳 the EXTREME short-interest note ✨ (2026-11-18). Ajay: "When there are extreme cases of short interest make a not for them
  * on reversal squeeze like percentage of short interest on the tickers card and also on watch list". */
 import { describe, expect, it } from 'vitest';
@@ -10,7 +11,7 @@ describe('✨ the 🩳 EXTREME short-interest note entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
   it('is FIRST, listed once, dated, routed to the 🎾 Reversal Squeeze sub', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
+    expect(NEW_FEATURES[1].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=reversal_squeeze');

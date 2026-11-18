@@ -37,6 +37,7 @@ vi.mock('../hooks/useBounceRoom', () => ({
 }));
 
 import GajjalaBoard from './GajjalaBoard';
+import { GG_SUBS } from '../lib/gajjala';
 
 /* tsc-safe source / fixture reads (the lib/gajjala.test precedent): the app's tsconfig carries no node
  * types, so `node:fs` is imported dynamically; paths are relative to frontend/ (vitest's cwd). */
@@ -98,18 +99,20 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
   // WIDENED 2026-10-16 — 🏁 Track record is the TENTH sub, LAST (Ajay "keep a new tab", BUILD_SPEC9 §3.11).
   // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub, FIRST (Ajay "Call all strategies"); 🧠 Potential is
   // btns[9] and keeps its served text; the eight between keep their served order.
-  it('11 sub buttons on the golden payload — 📋 All strategies FIRST, 🧠 Potential tenth, 🏁 Track record LAST, the other 8 in their served order', async () => {
+  // WIDENED 2026-11-18 — 🧨 Divergence is the TWELFTH sub (after 🎾): the count is GG_SUBS.length and 🧠 Potential's index
+  // is read off the served strip (second to last); the subs between 📋 and 🧠 are GG_SUBS' own, in order.
+  it('GG_SUBS.length sub buttons on the golden payload — 📋 All strategies FIRST, 🧠 Potential second to last, 🏁 Track record LAST, the others in their served order', async () => {
     stubFetch(from(GOLD, 'potential'));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);
     const btns = screen.getAllByRole('tab').filter((b) => b.getAttribute('data-testid')?.startsWith('gg-sub-'));
-    expect(btns).toHaveLength(11);
+    expect(btns).toHaveLength(GG_SUBS.length);
     expect(btns.map((b) => b.getAttribute('data-testid'))).toEqual(GOLD.potential.subs.map((s: any) => `gg-sub-${s.key}`));
     expect(btns[0].getAttribute('data-testid')).toBe('gg-sub-all_strategies');
-    expect(GOLD.potential.subs.map((s: any) => s.key).slice(1, 9)).toEqual(
-      ['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp', 'reversal_squeeze', 'premarket', 'postmarket', 'playbook']);
-    const pot = btns[9];
-    const servedPot = GOLD.potential.subs[9];
+    const potAt = GG_SUBS.length - 2;
+    expect(GOLD.potential.subs.map((s: any) => s.key).slice(1, potAt)).toEqual(GG_SUBS.slice(1, potAt).map((s) => s.key));
+    const pot = btns[potAt];
+    const servedPot = GOLD.potential.subs[potAt];
     expect(servedPot.key).toBe('potential');
     expect(typeof servedPot.count).toBe('number');
     expect(pot.textContent).toBe(`${servedPot.emoji} ${servedPot.label} · ${servedPot.count}`);
