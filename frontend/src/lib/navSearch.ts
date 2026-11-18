@@ -145,6 +145,12 @@ export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=catalysts&sub=medical', label: 'Chart Maps ▸ Catalysts ▸ 🧬 Medical', keywords: ['medical', 'fda', 'fda approval', 'crl', 'pdufa', 'phase 3', 'topline', 'clinical trial', 'clinical hold', 'breakthrough therapy', 'biotech', 'mrna', 'esmo', 'asco'] },
   // 🚩 Gajjala's (2026-10-21): the tab, its ten subs and the 🚩 lane — see GAJJALA_ENTRIES above.
   ...GAJJALA_ENTRIES,
+  // 👀 Watch + 🎬 Replays (2026-11-18) — Ajay: "Can you put replays tab next to the Gajjala's please I cant find it in search
+  // either". Both tabs are owner-only on the page; a non-owner following the row lands on the first tab (the page's own rule).
+  { parent: 'chart-maps', to: '/chart-maps?tab=gajjala_watch', label: "Chart Maps ▸ 👀 Gajjala's Watch",
+    keywords: ['watch', 'gajjala watch', "gajjala's watch", 'watch list', 'watchlist', 'gg', 'one minute', '1 minute', 'dashboard'] },
+  { parent: 'chart-maps', to: '/chart-maps?tab=replays', label: 'Chart Maps ▸ 🎬 Replays',
+    keywords: ['replays', 'replay', 'videos', 'video', 'winners', 'losers', 'recordings', 'movies', 'gajjala', 'gg', 'eod'] },
   { parent: 'sepa',       to: '/sepa?tab=supply',            label: 'SEPA ▸ Supply / Demand',    keywords: ['zones', 'supply', 'demand', 'in demand', 'levels'] },
   { parent: 'notifications', to: '/notifications',           label: 'Notifications ▸ push settings', keywords: ['push settings', 'mute', 'kinds', 'devices', 'quiet hours'] },
   { parent: 'trading',    to: '/trading',                    label: 'Trading ▸ Auto-Pilot journal', keywords: ['journal', 'auto-pilot', 'autopilot', 'paper trades', 'execution race'] },

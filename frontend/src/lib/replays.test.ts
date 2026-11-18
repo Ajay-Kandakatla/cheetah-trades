@@ -83,9 +83,11 @@ describe('🎬 rpSelectDates [C8]', () => {
 });
 
 describe('🎬 the Chart Maps registry', () => {
-  it('replays once, right after long_term; long_term still right after growth; DEFAULT_TAB unchanged', () => {
+  it('replays once, right after gajjala_watch (his 2026-11-18 slot); long_term still right after growth; DEFAULT_TAB unchanged', () => {
     expect(CM_TABS.filter((t) => t === 'replays')).toHaveLength(1);
-    expect(CM_TABS.indexOf('replays')).toBe(CM_TABS.indexOf('long_term') + 1);
+    // RE-PINNED 2026-11-18 — Ajay: "Can you put replays tab next to the Gajjala's please I cant find it in search either"
+    expect(CM_TABS.indexOf('replays')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    expect(CM_TABS.indexOf('replays')).not.toBe(CM_TABS.indexOf('long_term') + 1);   // NEGATIVE: the old slot is gone
     expect(CM_TABS.indexOf('long_term')).toBe(CM_TABS.indexOf('growth') + 1);
     expect(DEFAULT_TAB).toBe('zones');
   });

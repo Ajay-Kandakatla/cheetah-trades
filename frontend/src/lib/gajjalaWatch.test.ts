@@ -123,7 +123,9 @@ describe('👀 tab registry', () => {
   it('sits once, right after gajjala_1m and right before luk; not a tile board; exempt from ⚡ with his reason', () => {
     expect(CM_TABS.filter((t) => t === 'gajjala_watch')).toHaveLength(1);
     expect(CM_TABS.indexOf('gajjala_watch')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
-    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    // RE-PINNED 2026-11-18 — 🎬 replays between 👀 gajjala_watch and 🥇 luk (Ajay: "Can you put replays tab next to the Gajjala's please")
+    expect(CM_TABS.indexOf('replays')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('replays') + 1);
     expect(parseTab('gajjala_watch')).toBe('gajjala_watch');
     expect(isBoardTab('gajjala_watch')).toBe(false);
     expect(BURST_EXEMPT.gajjala_watch).toBe('your own tickers in your order — never ranked');

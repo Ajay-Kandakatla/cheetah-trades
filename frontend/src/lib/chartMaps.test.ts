@@ -808,6 +808,8 @@ describe('the Earnings Flow tab', () => {
        // WIDENED 2026-11-15 — 👀 gajjala_watch right after 🚩 gajjala_1m, before
        // 🥇 luk (gajjala-watch spec §7 #9, his call).
        'gajjala_watch',
+       // RE-PINNED 2026-11-18 — 🎬 replays right after 👀 gajjala_watch (Ajay: "Can you put replays tab next to the Gajjala's please").
+       'replays',
        // WIDENED 2026-11-01 — 🥇 luk right after 🚩 gajjala_1m, before 🕯️
        // doji_sweep (luk spec §7 #1, his call).
        'luk',
@@ -828,7 +830,7 @@ describe('the Earnings Flow tab', () => {
        // WIDENED 2026-11-12 — 📅 long_term IMMEDIATELY after 🚀 growth (long-term
        // spec §3.13 / §7 #12, his call).
        // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call).
-       'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'replays', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+       'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -944,7 +946,7 @@ describe('the Support Levels tab', () => {
     // WIDENED 2026-11-12: `long_term` is the twentieth — its own GET /chart-maps/long-term read (long-term spec §3.13).
     // WIDENED 2026-11-15: `gajjala_watch` is the twenty-first — its own owner-only GET /chart-maps/gajjala-watch read (gajjala-watch spec §3.8).
     // WIDENED 2026-11-17 — 🎬 replays right after 📅 long_term (replays spec §7 #2, his call): `replays` is the twenty-second — its own owner-only GET /chart-maps/replays read.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'gajjala_watch', 'luk', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'replays', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'gajjala_audited', 'gajjala_1m', 'gajjala_watch', 'replays', 'luk', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'long_term', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -2624,7 +2626,9 @@ describe("🚩 Gajjala's tab registry", () => {
     // WIDENED 2026-11-01 — 🥇 luk right after 🚩 gajjala_1m, before 🕯️ doji_sweep (luk spec §3.13)
     // WIDENED 2026-11-15 — 👀 gajjala_watch between 🚩 gajjala_1m and 🥇 luk (gajjala-watch spec §3.8)
     expect(CM_TABS.indexOf('gajjala_watch')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
-    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    // RE-PINNED 2026-11-18 — 🎬 replays between 👀 gajjala_watch and 🥇 luk (Ajay: "Can you put replays tab next to the Gajjala's please")
+    expect(CM_TABS.indexOf('replays')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('replays') + 1);
     expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
@@ -3128,7 +3132,9 @@ describe('🕯️ Doji Sweep tab registry (2026-10-16)', () => {
     // WIDENED 2026-11-01 — 🥇 luk sits between gajjala_1m and 🕯️ doji_sweep (luk spec §3.13)
     // WIDENED 2026-11-15 — 👀 gajjala_watch sits between gajjala_1m and 🥇 luk (gajjala-watch spec §3.8)
     expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('luk') + 1);
-    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    // RE-PINNED 2026-11-18 — 🎬 replays between 👀 gajjala_watch and 🥇 luk (Ajay: "Can you put replays tab next to the Gajjala's please")
+    expect(CM_TABS.indexOf('replays')).toBe(CM_TABS.indexOf('gajjala_watch') + 1);
+    expect(CM_TABS.indexOf('luk')).toBe(CM_TABS.indexOf('replays') + 1);
     expect(CM_TABS.indexOf('gajjala_watch')).toBe(CM_TABS.indexOf('gajjala_1m') + 1);
     expect(CM_TABS.indexOf('gajjala_1m')).toBe(CM_TABS.indexOf('gajjala_audited') + 1);
     expect(CM_TABS.indexOf('gajjala_audited')).toBe(CM_TABS.indexOf('gajjala') + 1);

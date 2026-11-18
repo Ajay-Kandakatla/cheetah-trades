@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18, verbatim: "Can you put replays tab next to the Gajjala's please I cant find it in search either".
+  // lib/chartMaps CM_TABS: 'replays' moved right after 'gajjala_watch'; lib/navSearch: 🎬 Replays + 👀 Watch rows.
+  {
+    id: 'chart-maps-replays-slot-search-2026-11-18',
+    label: '🎬 Replays moved next to Gajjala’s — you said: “Can you put replays tab next to the Gajjala’s please I cant find it in search either”. The 🎬 Replays tab now sits right after 👀 Gajjala’s Watch, and typing “replays” or “videos” in search (⌘K) opens it; “gajjala watch” finds the Watch.',
+    addedAt: '2026-11-18',
+    route: '/chart-maps?tab=replays',
+  },
   // Ajay 2026-11-18, verbatim: "Do we still capture divergence alerts? Can you add a tab for in in Gajjals 5 min please" and
   // "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish Cuz I am missing A+ i can chase the
   // divergency atleast like in these cases I would caught a good chunk of returns". chart_maps/gajjala/divergence.py +

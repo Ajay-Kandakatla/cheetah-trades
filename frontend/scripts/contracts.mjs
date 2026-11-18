@@ -1352,8 +1352,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please") — FIRST → one of the first two.
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — first two → first three.
       // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first 3 → first 4.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 5).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish")
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 5 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 6).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search)
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 6 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
       else {
@@ -1472,8 +1472,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-1m-retired-2026-11-18';
       // WIDENED 2026-11-18 (🩳 gajjala-si-extreme-note-2026-11-18 FIRST) — FIRST → one of the first two.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 3).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish")
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first three NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 4).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search)
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first four NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}',\\s*label: '([^']+)',\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + addedAt + route) is missing`);
       else {
@@ -6247,8 +6247,8 @@ const CONTRACTS = [
         // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 — 🕯️ took the slot between 🚩 and 〰️.
         // 2026-10-27: 🚩 1-minute page inserted — gajjala_1m follows gajjala, doji_sweep follows gajjala_1m.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — the four-way chain gajjala → gajjala_audited → gajjala_1m → doji_sweep (→ ema_frames).
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted right after the 1-minute page — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep (→ ema_frames).
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'gajjala_watch' must follow 'gajjala_1m', 'luk' must follow 'gajjala_watch', 'doji_sweep' must follow 'luk' and 'ema_frames' must follow 'doji_sweep'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted right after the 1-minute page — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → replays → luk → doji_sweep (→ ema_frames).
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('replays') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('luk') !== tabs.indexOf('replays') + 1 /* RE-PINNED 2026-11-18: 🎬 replays between 👀 and 🥇 */ || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'gajjala_audited' must follow 'gajjala', 'gajjala_1m' must follow 'gajjala_audited', 'gajjala_watch' must follow 'gajjala_1m', 'replays' must follow 'gajjala_watch', 'luk' must follow 'replays', 'doji_sweep' must follow 'luk' and 'ema_frames' must follow 'doji_sweep'");
       }
       if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
       if (/\n  gajjala: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry gajjala (🎯 n/a, the 📉 / 🔻 precedent)');
@@ -8366,8 +8366,8 @@ const CONTRACTS = [
         if (tabs.filter((t) => t === 'doji_sweep').length !== 1) errs.push("CM_TABS lists 'doji_sweep' more than once");
         // 2026-10-27: 🚩 1-minute page inserted — doji_sweep follows gajjala_1m, gajjala_1m follows gajjala.
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m → doji_sweep.
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep.
-        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'luk', 'luk' right after 'gajjala_watch', 'gajjala_watch' right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — gajjala → gajjala_audited → gajjala_1m → gajjala_watch → replays → luk → doji_sweep.
+        if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1 || tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('replays') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('luk') !== tabs.indexOf('replays') + 1 /* RE-PINNED 2026-11-18: 🎬 replays between 👀 and 🥇 */ || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'luk', 'luk' right after 'replays' (itself right after 'gajjala_watch'), 'gajjala_watch' right after 'gajjala_1m', 'gajjala_1m' right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
         if (tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'ema_frames' must sit right after 'doji_sweep'");
       }
       if (/\n  doji_sweep: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry doji_sweep (🎯 n/a)');
@@ -13162,7 +13162,7 @@ const CONTRACTS = [
         // RE-PINNED 2026-11-01: 🧪 Gajjala · Audited inserted — gajjala → gajjala_audited → gajjala_1m.
         if (tabs.indexOf('gajjala_audited') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('gajjala_1m') !== tabs.indexOf('gajjala_audited') + 1) errs.push("CM_TABS: 'gajjala_1m' must sit right after 'gajjala_audited', and 'gajjala_audited' right after 'gajjala'");
         // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — luk right after gajjala_1m, doji_sweep right after luk.
-        if (tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('luk') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'gajjala_watch' must sit right after 'gajjala_1m', 'luk' right after 'gajjala_watch', and 'doji_sweep' right after 'luk'");
+        if (tabs.indexOf('gajjala_watch') !== tabs.indexOf('gajjala_1m') + 1 || tabs.indexOf('replays') !== tabs.indexOf('gajjala_watch') + 1 || tabs.indexOf('luk') !== tabs.indexOf('replays') + 1 /* RE-PINNED 2026-11-18: 🎬 replays between 👀 and 🥇 */ || tabs.indexOf('doji_sweep') !== tabs.indexOf('luk') + 1) errs.push("CM_TABS: 'gajjala_watch' must sit right after 'gajjala_1m', 'luk' right after 'replays' (itself right after 'gajjala_watch'), and 'doji_sweep' right after 'luk'");
       }
       if (!/&& t !== 'gajjala_1m'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_1m' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_1m'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_1m'");
@@ -14103,8 +14103,8 @@ const CONTRACTS = [
       else {
         if (tabs.filter((t) => t === 'gajjala_audited').length !== 1) errs.push("CM_TABS lists 'gajjala_audited' more than once");
         const at = (t) => tabs.indexOf(t);
-        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — the chain gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep.
-        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('gajjala_watch') !== at('gajjala_1m') + 1 || at('luk') !== at('gajjala_watch') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → gajjala_watch → luk → doji_sweep");
+        // RE-PINNED 2026-11-01: 🥇 Luk's tab inserted — the chain gajjala → gajjala_audited → gajjala_1m → gajjala_watch → replays → luk → doji_sweep.
+        if (at('gajjala_audited') !== at('gajjala') + 1 || at('gajjala_1m') !== at('gajjala_audited') + 1 || at('gajjala_watch') !== at('gajjala_1m') + 1 || at('replays') !== at('gajjala_watch') + 1 || at('luk') !== at('replays') + 1 /* RE-PINNED 2026-11-18: 🎬 replays between 👀 and 🥇 */ || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: the chain must read gajjala → gajjala_audited → gajjala_1m → gajjala_watch → replays → luk → doji_sweep");
       }
       if (!/&& t !== 'gajjala_audited'/.test(cm)) errs.push("isBoardTab must return false for 'gajjala_audited' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'gajjala_audited'/.test(cm)) errs.push("the CmTab union must carry 'gajjala_audited'");
@@ -14442,7 +14442,7 @@ const CONTRACTS = [
       else {
         if (tabs.filter((t) => t === 'luk').length !== 1) errs.push("CM_TABS lists 'luk' more than once");
         const at = (t) => tabs.indexOf(t);
-        if (at('gajjala_watch') !== at('gajjala_1m') + 1 || at('luk') !== at('gajjala_watch') + 1 || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'gajjala_watch' (itself right after 'gajjala_1m') and right before 'doji_sweep'");
+        if (at('gajjala_watch') !== at('gajjala_1m') + 1 || at('replays') !== at('gajjala_watch') + 1 || at('luk') !== at('replays') + 1 /* RE-PINNED 2026-11-18: 🎬 replays between 👀 and 🥇 */ || at('doji_sweep') !== at('luk') + 1) errs.push("CM_TABS: 'luk' must sit right after 'replays' (right after 'gajjala_watch') (itself right after 'gajjala_1m') and right before 'doji_sweep'");
       }
       if (!/&& t !== 'luk'/.test(cm)) errs.push("isBoardTab must return false for 'luk' — it has its own endpoint");
       if (!/\bCmTab = [^;]*'luk'/.test(cm)) errs.push("the CmTab union must carry 'luk'");
@@ -17425,7 +17425,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 26).includes(ZID))  /* WIDENED +1 2026-11-18 (🧨 divergence sub) · WIDENED +1 2026-11-18 (🩳 extreme SI note) · WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 27).includes(ZID))  /* WIDENED +1 2026-11-18 (🎬 replays slot + search) · WIDENED +1 2026-11-18 (🧨 divergence sub) · WIDENED +1 2026-11-18 (🩳 extreme SI note) · WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17572,7 +17572,10 @@ const CONTRACTS = [
       const tabs = parseCmTabs(src);
       if (!tabs) return ['CM_TABS declaration not found'];
       if (tabs.filter((t) => t === 'replays').length !== 1) errs.push("CM_TABS must list 'replays' exactly once");
-      if (tabs.indexOf('replays') !== tabs.indexOf('long_term') + 1) errs.push("'replays' must sit right after 'long_term' in CM_TABS (slot = HIS CALL #2)");
+      // RE-PINNED 2026-11-18 — his slot call: "Can you put replays tab next to the Gajjala's please I cant find it in search either".
+      if (tabs.indexOf('replays') !== tabs.indexOf('gajjala_watch') + 1) errs.push("'replays' must sit right after 'gajjala_watch' in CM_TABS (his 2026-11-18 slot)");
+      { const nav = read('src/lib/navSearch.ts');
+        if (!nav.includes("to: '/chart-maps?tab=replays'")) errs.push("navSearch must carry the 🎬 Replays row (he could not find it in search, 2026-11-18)"); }
       if (tabs.indexOf('long_term') !== tabs.indexOf('growth') + 1) errs.push("'long_term' must still sit right after 'growth' in CM_TABS");
       // 2. non-board; NO ENTERABLE_KIND key (the long_term / gajjala_watch precedent — the map is a cast)
       const ib = /export function isBoardTab\(t: CmTab\): boolean \{([\s\S]*?)\n\}/.exec(src);
@@ -17654,7 +17657,7 @@ const CONTRACTS = [
       const ids = [...arr.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — FIRST → one of the first two.
       // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first two → first three.
-      if (!ids.slice(0, 4).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first four NEW_FEATURES (found ${ids.slice(0, 4).join(', ') || 'none'})`);
+      if (!ids.slice(0, 5).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first five NEW_FEATURES (found ${ids.slice(0, 5).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}',\\s*\\n\\s*label: "([^"]+)",\\s*\\n\\s*addedAt: '2026-11-17',\\s*\\n\\s*route: '/chart-maps\\?tab=replays',`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must carry its label, addedAt '2026-11-17' and route '/chart-maps?tab=replays'`);

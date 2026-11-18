@@ -160,6 +160,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // (pages/ChartMaps filters it for a loaded non-owner). Label and slot are his
   // call (gajjala-watch spec §7 #9).
   'gajjala_watch',
+  // 🎬 Replays (Ajay 2026-11-17: "Can you store the videos in to the app
+  // please"). MOVED 2026-11-18 from after 📅 Long Term to IMMEDIATELY after
+  // 👀 Gajjala's Watch, the end of the Gajjala group — Ajay: "Can you put
+  // replays tab next to the Gajjala's please I cant find it in search either".
+  // Owner only (ChartMaps.tsx hides it beside 👀 Watch for a loaded non-owner).
+  'replays',
   // 🥇 Luk's (Ajay 2026-11-01: "look at other winners of US stocks champion
   // ship and pic the next best one like Gajjala. Implement their strategy
   // please if they have online resources." … "I need something like Gajjlala
@@ -203,12 +209,6 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // re-cut moves it on the evidence. Label and slot are his call (long-term
   // spec §7 #12).
   'long_term',
-  // 🎬 Replays (Ajay 2026-11-17: "Can you store the videos in to the app
-  // please"). IMMEDIATELY after 📅 Long Term — TAB ORDER IS EARNED;
-  // tabUsageKey counts it from the first open and the next re-cut moves it on
-  // the evidence. Owner only (ChartMaps.tsx hides it beside 👀 Watch for a
-  // loaded non-owner). Label and slot are his call (replays spec §7 #2).
-  'replays',
   // 🆕 IPOs ≤2y (Ajay 2026-09-19: "IPO of hot sector theme of stocks and
   // then add them as a tab in Chart maps"). A tile board off the chart-maps
   // dispatcher, beside the growth board it was asked for next to; no usage

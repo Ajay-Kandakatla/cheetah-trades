@@ -109,3 +109,7 @@ Ajay 2026-11-18, verbatim: "Also on the videos categorize winners and losers as 
 - `constants.EXCLUDED_PAGES = ("gajjala_1m",)`: the 🚩 1-minute page retired 2026-11-18, so its reels (counted `skipped_page`, never `no_sidecar`) and its 🎾 tracker rows are never listed or served. They stay on disk; an empty tuple brings them back.
 - 11-17 on the real folder after the change: winners CENN, OGEN (Monday after-hours rings) · losers PAVS, TTEC, CRDF · 🎾 8 potentials (5-min) · 10 one-minute reels skipped · tracker 12 rows.
 - The nightly task passes `--pages gajjala`, so no new 1-minute reels are rendered.
+
+## 2026-11-18 — slot + search
+
+Ajay: "Can you put replays tab next to the Gajjala's please I cant find it in search either". The tab moved from after 📅 Long Term to right after 👀 Gajjala's Watch (`CM_TABS`), and ⌘K search gained 🎬 Replays ("replays", "videos") and 👀 Gajjala's Watch rows (`navSearch.EXTRA_ENTRIES`). Both tabs stay owner-only on the page.

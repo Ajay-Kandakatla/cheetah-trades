@@ -472,3 +472,16 @@ describe("🚩 Gajjala's tab + every sub in ⌘K (2026-10-21)", () => {
     }
   });
 });
+
+describe('🎬 Replays + 👀 Watch in ⌘K (2026-11-18 — Ajay: "I cant find it in search either")', () => {
+  it('"replays" and "videos" find the 🎬 Replays tab first; "watch list" finds 👀 Gajjala\'s Watch', () => {
+    expect(searchNav(index, 'replays')[0].to).toBe('/chart-maps?tab=replays');
+    expect(searchNav(index, 'videos')[0].to).toBe('/chart-maps?tab=replays');
+    expect(searchNav(index, 'gajjala watch').map((e) => e.to)).toContain('/chart-maps?tab=gajjala_watch');
+  });
+  it('NEGATIVE: both rows ride on chart-maps — a menu without Chart Maps never lists them', () => {
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(without.find((e) => e.to === '/chart-maps?tab=replays')).toBeUndefined();
+    expect(without.find((e) => e.to === '/chart-maps?tab=gajjala_watch')).toBeUndefined();
+  });
+});
