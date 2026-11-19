@@ -68,7 +68,7 @@ import { EMA_BOLD } from '../lib/chartMaps';
 import {
   GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
   ggwClampPage, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
-  ggwPickGrid, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
+  ggwActivateNew, ggwNewNames, readGgwSeen, saveGgwSeen, ggwPickGrid, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
@@ -147,6 +147,15 @@ export default function GajjalaWatchBoard() {
   const headRef = useRef<HTMLDivElement>(null);
   /* The pick (his toggled names still on the list) and its grid; no pick → the layout's own grid. */
   const listNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows.map((r) => r.symbol) : [];
+  /* 🆕 2026-11-19: a name added since this browser last looked joins the pick (first) — it is never left inactive. */
+  const listKey = listNow.join(',');
+  useEffect(() => {
+    if (!listKey) return;
+    const list = listKey.split(',');
+    const seen = readGgwSeen();
+    if (ggwNewNames(list, seen).length) setPick((cur) => ggwActivateNew(cur, list, seen));
+    saveGgwSeen(list);
+  }, [listKey]);
   const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
   const usePick = picked.length > 0;
   const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];

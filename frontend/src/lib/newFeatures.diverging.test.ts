@@ -1,3 +1,4 @@
+// WIDENED watch-new-names-active-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🩳 gajjala-si-tier-words-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 /* 🌱 the Diverging sub ✨ (2026-11-18). Ajay: "For the divergence thing create a separate tab that are potentially diverging
  * with uptrend and volume breakout." */
@@ -10,7 +11,7 @@ const SAID = 'For the divergence thing create a separate tab that are potentiall
 describe('✨ the 🌱 Diverging sub entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 🌱 sub of the 5-min tab', () => {
-    expect(NEW_FEATURES[1].id).toBe(ID);
+    expect(NEW_FEATURES[2].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala&sub=diverging');

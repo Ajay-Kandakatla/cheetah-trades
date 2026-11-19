@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-19, verbatim: "Add things to my auto watch list please and make them active I see not active on my page.
+  // Becuz they are in query params". A saved / linked `show=` pick hid every name added after it; lib/gajjalaWatch.ts
+  // ggwActivateNew merges a name new since this browser last looked into the pick, first. Display only.
+  {
+    id: 'gajjala-watch-new-names-active-2026-11-19',
+    label: '👀 New Watch names are active — you said: “Add things to my auto watch list please and make them active I see not active on my page. Becuz they are in query params”. A name added after your link’s show= pick (or this browser’s pick) used to sit there hidden; now it joins the pick, first, the next time the board loads. A name you left out on purpose stays out. Display only — no rule, no push, no gate changed. UNMEASURED. Not advice.',
+    addedAt: '2026-11-19',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-18, verbatim: "Yes please and may be add better terminilogy like Moderate with a percentage relative to
   // float." (his yes to "only call 🩳 EXTREME when it's ≥ 20% of float AND ≥ 10% of all shares"). short_interest/read.py
   // serves `tier` + `float_check` on every ok read; the FE prints the served chip verbatim. Docs

@@ -1,3 +1,4 @@
+// WIDENED watch-new-names-active-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 /* 🩳 the SI tier words ✨ (2026-11-18). Ajay: "Yes please and may be add better terminilogy like Moderate with a percentage
  * relative to float." */
 import { describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ const SAID = 'Yes please and may be add better terminilogy like Moderate with a 
 describe('✨ the 🩳 SI tier words entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
+    expect(NEW_FEATURES[1].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

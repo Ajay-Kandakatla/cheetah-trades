@@ -1,3 +1,4 @@
+// WIDENED watch-new-names-active-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🩳 gajjala-si-tier-words-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🌱 gajjala-diverging-sub-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 🏷 chart-maps-gajjala-watch-tags-row-2026-11-18: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
@@ -19,9 +20,9 @@ describe('✨ the ⏹ 1-minute page retired entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
   it('is FIRST, listed once, dated 2026-11-18, routed to the retired page’s 🏁', () => {
-    expect(NEW_FEATURES[8].id).toBe(ID);
-    expect(NEW_FEATURES[9].id).toBe('chart-maps-replays-tab-2026-11-17');   // 2026-11-18 rebase: the 🎬 Replays ✨ landed on main first
-    expect(NEW_FEATURES[10].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');
+    expect(NEW_FEATURES[9].id).toBe(ID);
+    expect(NEW_FEATURES[10].id).toBe('chart-maps-replays-tab-2026-11-17');   // 2026-11-18 rebase: the 🎬 Replays ✨ landed on main first
+    expect(NEW_FEATURES[11].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-18');
@@ -47,6 +48,6 @@ describe('✨ the ⏹ 1-minute page retired entry (2026-11-18)', () => {
 
   it('NEGATIVE: the 🎯 A+ push ✨ is not replaced — still listed once, two after this entry', () => {
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17').length).toBe(1);
-    expect(NEW_FEATURES.findIndex((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17')).toBe(10);   // WIDENED 2026-11-18: 🩳 SI tier words + 🌱 diverging + 🏷 tags + 👀 Watch 18 + 👀 card grid + 🎬 slot + 🧨 divergence + 🩳 SI note first, 🎬 Replays between
+    expect(NEW_FEATURES.findIndex((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17')).toBe(11);   // WIDENED 2026-11-19 (👀 new Watch names active first) · was 10, 2026-11-18: 🩳 SI tier words + 🌱 diverging + 🏷 tags + 👀 Watch 18 + 👀 card grid + 🎬 slot + 🧨 divergence + 🩳 SI note first, 🎬 Replays between
   });
 });

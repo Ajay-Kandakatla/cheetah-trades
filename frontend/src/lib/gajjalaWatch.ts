@@ -164,6 +164,31 @@ export function saveGgwPick(p: ReadonlyArray<string> | null): void {
     else window.localStorage.removeItem(GGW_PICK_KEY);
   } catch { /* private window: the pick lasts this visit */ }
 }
+/** 🆕 2026-11-19 — Ajay: "Add things to my auto watch list please and make them active I see not active on my page. Because
+ *  they are in query params". A saved/linked pick (`show=`) hides every name it does not list, so a name added after the
+ *  pick was made sat there inactive. `ggw.seen` = the list this browser last saw; a name on the list now that was not
+ *  there then is NEW and joins the pick, first. No pick (the pages) → nothing to merge; no seen list yet (a browser from
+ *  before this build, or a shared link opened cold) → nothing is new; the first visit only records it. Returns the pick unchanged when nothing is new. */
+export const GGW_SEEN_KEY = 'ggw.seen';
+export function readGgwSeen(): string[] | null {
+  try { return parseGgwPick(window.localStorage.getItem(GGW_SEEN_KEY)); } catch { return null; }
+}
+export function saveGgwSeen(list: ReadonlyArray<string>): void {
+  try {
+    if (list.length) window.localStorage.setItem(GGW_SEEN_KEY, list.join(','));
+    else window.localStorage.removeItem(GGW_SEEN_KEY);
+  } catch { /* private window: the next visit records it again */ }
+}
+export function ggwNewNames(list: ReadonlyArray<string>, seen: ReadonlyArray<string> | null): string[] {
+  if (!seen) return [];
+  return list.filter((s) => !seen.includes(s));
+}
+export function ggwActivateNew(pick: ReadonlyArray<string> | null, list: ReadonlyArray<string>,
+                               seen: ReadonlyArray<string> | null): string[] | null {
+  if (!pick || !pick.length) return pick ? [...pick] : null;
+  const fresh = ggwNewNames(list, seen).filter((s) => !pick.includes(s));
+  return fresh.length ? [...fresh, ...pick] : [...pick];
+}
 /** The view's params on top of `prev` (every other param — tab, focus — kept): per always; show only with a pick; page
  *  only past the first page and only without a pick. */
 export function ggwViewParams(prev: URLSearchParams, v: { layout: number; pick: ReadonlyArray<string> | null; page: number }): URLSearchParams {

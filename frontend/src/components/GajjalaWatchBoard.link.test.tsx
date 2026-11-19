@@ -8,7 +8,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fixture from './__fixtures__/gajjala_watch_board_2026_11_15.json';
 import GajjalaWatchBoard from './GajjalaWatchBoard';
-import { GGW_PICK_KEY, GGW_LAYOUT_KEY, ggwViewParams, parseGgwPage, parseGgwPick } from '../lib/gajjalaWatch';
+import { GGW_PICK_KEY, GGW_LAYOUT_KEY, GGW_SEEN_KEY, ggwViewParams, parseGgwPage, parseGgwPick } from '../lib/gajjalaWatch';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 function memStorage(): Storage {
@@ -105,5 +105,23 @@ describe('the board', () => {
       removeItem: () => { throw new Error('x'); } });
     const c = await mount(`/chart-maps?tab=gajjala_watch&per=1&show=${SYMS[1]}`);
     expect(shown(c)).toEqual([SYMS[1]]);
+  });
+  it('🆕 a name added since this browser last looked joins the link pick, first — never left inactive', async () => {
+    window.localStorage.setItem(GGW_SEEN_KEY, SYMS.slice(0, 3).join(','));
+    const c = await mount(`/chart-maps?tab=gajjala_watch&per=1&show=${SYMS[0]}`);
+    const fresh = SYMS.slice(3);
+    expect(shown(c)).toEqual(SYMS.filter((s) => s === SYMS[0] || fresh.includes(s)));
+    expect(q().get('show')).toBe([...fresh, SYMS[0]].join(','));
+    expect(window.localStorage.getItem(GGW_SEEN_KEY)).toBe(SYMS.join(','));
+  });
+  it('NEGATIVE: a name he already saw and left out of the pick stays out; a cold link adds nothing', async () => {
+    window.localStorage.setItem(GGW_SEEN_KEY, SYMS.join(','));
+    const c = await mount(`/chart-maps?tab=gajjala_watch&per=1&show=${SYMS[1]}`);
+    expect(shown(c)).toEqual([SYMS[1]]);
+    cleanup();
+    window.localStorage.removeItem(GGW_SEEN_KEY);
+    const d = await mount(`/chart-maps?tab=gajjala_watch&per=1&show=${SYMS[1]}`);
+    expect(shown(d)).toEqual([SYMS[1]]);
+    expect(window.localStorage.getItem(GGW_SEEN_KEY)).toBe(SYMS.join(','));
   });
 });
