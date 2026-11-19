@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-19, verbatim: "When ever I push something to watch it make it active by default and also on top" ·
+  // "When I add a new ticket they are gettinf added in to que but not active  charts are not loading I amhaving to click
+  // on the chips again" · "The X buttons are not working". Owner list rows newest-added first (server `added` times),
+  // a new name joins the view and is outlined once, read at add time, ✕ never blocked by another write. Doc
+  // docs/gajjala/watch_newest_active_2026_11_19.md.
+  {
+    id: 'gajjala-watch-newest-first-charts-2026-11-19',
+    label: '👀 New Watch names come first, active, with charts — you said: “When ever I push something to watch it make it active by default and also on top” and “When I add a new ticket they are gettinf added in to que but not active charts are not loading I amhaving to click on the chips again”. Your own names now list newest-added first. A name you add joins your view, is outlined once and scrolled into view, and its first read starts when you add it instead of waiting for the next minute; until it lands the tile says so in plain words and fills in by itself. The ✕ no longer waits on another add. 🤖 auto names do not join your view by themselves. When the watch is full an add still replaces the name on your watch the longest. Display only — no rule, gate or push changed. UNMEASURED. Not advice.',
+    addedAt: '2026-11-19',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-19, verbatim: "Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't add them to
   // watch list". Watch only: gajjala_watch/auto.py never seats a name on his one 🚫 list; every Watch tile gets a one-way
   // 🚫 button (flags it, then takes it off the Watch). The other Gajjala surfaces still only tag. Doc
