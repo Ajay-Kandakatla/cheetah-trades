@@ -1352,8 +1352,8 @@ const CONTRACTS = [
       // WIDENED +1 (2026-11-17: 🎬 chart-maps-replays-tab-2026-11-17 FIRST — Ajay: "Can you store the videos in to the app please") — FIRST → one of the first two.
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — first two → first three.
       // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first 3 → first 4.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 14).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search) // WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) // WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) // WIDENED +1 2026-11-18 (🏷 Watch tags row) // WIDENED +1 2026-11-18 (🌱 diverging sub) // WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 // WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 // WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 // WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 14 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 15).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search) // WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) // WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) // WIDENED +1 2026-11-18 (🏷 Watch tags row) // WIDENED +1 2026-11-18 (🌱 diverging sub) // WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 // WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 // WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 // WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19 // WIDENED +1 🏆 chart-maps-replays-past-winners-2026-11-18
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be in the first 15 NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}'[\\s\\S]*?label: '([^']+)'[\\s\\S]*?route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + route) is missing`);
       else {
@@ -1472,8 +1472,8 @@ const CONTRACTS = [
       const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
       const ID = 'chart-maps-gajjala-1m-retired-2026-11-18';
       // WIDENED 2026-11-18 (🩳 gajjala-si-extreme-note-2026-11-18 FIRST) — FIRST → one of the first two.
-      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 12).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search) // WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) // WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) // WIDENED +1 2026-11-18 (🏷 Watch tags row) // WIDENED +1 2026-11-18 (🌱 diverging sub) // WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 // WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 // WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 // WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19
-      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first twelve NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
+      const firstIds = [...arr.matchAll(/\bid: '([^']+)'/g)].slice(0, 13).map((m) => m[1]);   // WIDENED +1 2026-11-18 (🧨 gajjala-divergence-sub-2026-11-18 FIRST — Ajay: "yes should do a track recird fir the divergence aftger EMA 9 Cross over bullish") // WIDENED +1 2026-11-18 (🎬 replays slot + search) // WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) // WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) // WIDENED +1 2026-11-18 (🏷 Watch tags row) // WIDENED +1 2026-11-18 (🌱 diverging sub) // WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 // WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 // WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 // WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19 // WIDENED +1 🏆 chart-maps-replays-past-winners-2026-11-18
+      if (!firstIds.includes(ID)) errs.push(`the ✨ ${ID} must be one of the first thirteen NEW_FEATURES entries (found ${firstIds.join(', ') || 'none'})`);
       const lab = new RegExp(`id: '${ID}',\\s*label: '([^']+)',\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
       if (!lab) errs.push(`the ✨ ${ID} entry (label + addedAt + route) is missing`);
       else {
@@ -17425,7 +17425,7 @@ const CONTRACTS = [
         // WIDENED +1 (2026-11-16: 📋 chart-maps-gajjala-1m-all-table-2026-11-16 FIRST — Ajay: "build and all strategies in Gallajas one min too") — slice(0, 10) → slice(0, 11).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-thinner-ema-2026-11-16 FIRST — Ajay: "reduce thick ness and make the bars lil more transparent") — slice(0, 11) → slice(0, 12).
         // WIDENED +1 (2026-11-16: 👀 chart-maps-gajjala-watch-toggle-tickers-2026-11-16 FIRST — Ajay: "make These toggleable and 1 at a time") — slice(0, 12) → slice(0, 13).
-        if (!allIds.slice(0, 35).includes(ZID))  /* WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19 · WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 · WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 · WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 · WIDENED +1 2026-11-18 (🌱 diverging sub) · WIDENED +1 2026-11-18 (🏷 Watch tags row) · WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) · WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) · WIDENED +1 2026-11-18 (🎬 replays slot + search) · WIDENED +1 2026-11-18 (🧨 divergence sub) · WIDENED +1 2026-11-18 (🩳 extreme SI note) · WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
+        if (!allIds.slice(0, 36).includes(ZID))  /* WIDENED +1 🏆 chart-maps-replays-past-winners-2026-11-18 · WIDENED +1 👀 gajjala-watch-newest-first-charts-2026-11-19 · WIDENED +1 🚫 gajjala-watch-not-eligible-2026-11-19 · WIDENED +1 🆕 gajjala-watch-new-names-active-2026-11-19 · WIDENED +1 🩳 gajjala-si-tier-words-2026-11-18 · WIDENED +1 2026-11-18 (🌱 diverging sub) · WIDENED +1 2026-11-18 (🏷 Watch tags row) · WIDENED +1 2026-11-18 (👀 Watch 18 + replace oldest) · WIDENED +1 2026-11-18 (👀 card grid in the Watch layout) · WIDENED +1 2026-11-18 (🎬 replays slot + search) · WIDENED +1 2026-11-18 (🧨 divergence sub) · WIDENED +1 2026-11-18 (🩳 extreme SI note) · WIDENED +1 2026-11-18 (⏹ 1-minute page retired — Ajay: "This is good info stop 1 min tab it was a good experiment") · WIDENED +1 2026-11-17 (🎬 Replays tab — Ajay: "Can you store the videos in to the app please") · WIDENED +1 2026-11-17 (🎯 A+ push → 👀 Watch — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") · WIDENED +1 2026-11-17 (🎯 watch A+ tag) · WIDENED +1 2026-11-17 (🤖 watch auto potentials) · WIDENED +1 2026-11-16 (🩳 all-table SI) · WIDENED +1 2026-11-16 (⚡ watch live) · WIDENED +1 2026-11-16 (🔗 watch view in link), +1 (👀 bigger clearer) · WIDENED +1 2026-11-17 (⤢ card three charts — Ajay: "when I click on a card from any of the Gajjala … open the 3 chart extension") · WIDENED +1 2026-11-17 (📺 video view — Ajay: "the graphs in the videos are so clear like I can easily identify the trend") */ errs.push(`the 🎯 Enterable (zones) ✨ '${ZID}' must be in the first 15 of NEW_FEATURES (found ${allIds.slice(0, 16).join(', ') || 'none'})`);
         if (allIds.filter((x) => x === ZID).length !== 1) errs.push(`the ✨ '${ZID}' must be listed exactly once`);
         const zm = new RegExp(`\\{\\s*id: '${ZID}'[^}]*\\}`).exec(nf);
         const ze = zm ? zm[0] : '';
@@ -17598,7 +17598,7 @@ const CONTRACTS = [
       if (!api) errs.push('backend/chart_maps/replays/api.py is missing');
       else {
         const routes = [...api.matchAll(/@router\.(?:get|api_route)\(([^\n]*)\)\s*\nasync def \w+\(([^\n]*)\):/g)];
-        if (routes.length !== 2) errs.push(`replays/api.py must declare exactly two routes (found ${routes.length})`);
+        if (routes.length !== 4) errs.push(`replays/api.py must declare exactly four routes (found ${routes.length})`);   // RE-PINNED 2026-11-19 🏆 (two day routes + the two winners routes)
         for (const r of routes) if (!/email: str = Depends\(require_primary_admin\)/.test(r[2])) errs.push(`replays/api.py route ${r[1].trim()} must take Depends(require_primary_admin)`);
         if (!/^from ollama_chat\.api import require_primary_admin$/m.test(api)) errs.push('replays/api.py must import the ONE gate (ollama_chat.api.require_primary_admin)');
         if (!/return FileResponse\([^\n]*headers=C\.VIDEO_HEADERS\)$/m.test(api)) errs.push('replays/api.py FileResponse must carry headers=C.VIDEO_HEADERS');
@@ -17657,7 +17657,7 @@ const CONTRACTS = [
       const ids = [...arr.matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
       // WIDENED +1 (2026-11-18: ⏹ chart-maps-gajjala-1m-retired-2026-11-18 FIRST — Ajay: "This is good info stop 1 min tab it was a good experiment") — FIRST → one of the first two.
       // WIDENED +1 (2026-11-18: 🩳 gajjala-si-extreme-note-2026-11-18 FIRST — Ajay: "When there are extreme cases of short interest make a not for them") — first two → first three.
-      if (!ids.slice(0, 13).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first thirteen NEW_FEATURES (found ${ids.slice(0, 13).join(', ') || 'none'})`);
+      if (!ids.slice(0, 14).includes(ID)) errs.push(`the 🎬 Replays ✨ '${ID}' must be one of the first fourteen NEW_FEATURES (found ${ids.slice(0, 14).join(', ') || 'none'})`);
       if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
       const lab = new RegExp(`id: '${ID}',\\s*\\n\\s*label: "([^"]+)",\\s*\\n\\s*addedAt: '2026-11-17',\\s*\\n\\s*route: '/chart-maps\\?tab=replays',`).exec(nf);
       if (!lab) errs.push(`the ✨ '${ID}' must carry its label, addedAt '2026-11-17' and route '/chart-maps?tab=replays'`);
@@ -17737,6 +17737,30 @@ const CONTRACTS = [
         if (!/siTier\(read\)/.test(read(f)) || !/data-si-tier=\{/.test(read(f))) errs.push(`${f} must carry data-si-tier from siTier(read)`);
       if (!read('src/lib/newFeatures.ts').includes('Yes please and may be add better terminilogy like Moderate with a percentage relative to float.')) errs.push('the ✨ entry must quote him verbatim');
       for (const f of ['src/lib/shortInterest.tier_guard.test.ts', 'src/lib/newFeatures.si_tier.test.ts', '../backend/tests/test_si_tier_2026_11_18.py'])
+        { try { read(f); } catch { errs.push(`${f} must exist`); } }
+      return errs;
+    },
+  },
+  {
+    name: '🏆 Past winners (2026-11-18)',
+    file: 'src/lib/replays.ts',
+    // Ajay 2026-11-18: "can you work on todays videos and also..  Winners in general from the past". Two more owner-only
+    // routes; the section composes its words from constants; one lazy player per tap; descriptive, UNMEASURED.
+    checks: (src) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { return ''; } };
+      if (!/rpWinnerSrc/.test(src) || !/startsWith\(`\$\{RP_WINNERS_PATH\}\/video\/`\)/.test(src)) errs.push('lib/replays.ts rpWinnerSrc must accept only ${RP_WINNERS_PATH}/video/');
+      const api = quiet('../backend/chart_maps/replays/api.py') || '';
+      const fr = (api.match(/return FileResponse\(/g) || []).length;
+      const frh = (api.match(/return FileResponse\([^\n]*headers=C\.VIDEO_HEADERS\)/g) || []).length;
+      if (fr !== 2 || frh !== fr) errs.push(`replays/api.py: every FileResponse must carry headers=C.VIDEO_HEADERS (found ${frh} of ${fr}, want 2)`);
+      const comp = quiet('src/components/ReplaysPastWinners.tsx') || '';
+      for (const bad of ['autoPlay', 'muted', 'poster=', 'download']) if (new RegExp(`<video[^>]*${bad}`).test(comp)) errs.push(`ReplaysPastWinners.tsx <video> must not carry ${bad}`);
+      if (/04:00-20:00/.test(comp)) errs.push('ReplaysPastWinners.tsx must not type the window literal');
+      const store = quiet('../backend/chart_maps/replays/store.py') || '';
+      if (/["']gain_pct["']/.test((store.match(/def winner_card[\s\S]*?(?=\ndef )/) || [''])[0])) errs.push('winner_card must never read gain_pct (the close key is close_gain_pct)');
+      if (!read('src/lib/newFeatures.ts').includes('can you work on todays videos and also..  Winners in general from the past')) errs.push('the ✨ entry must quote him verbatim');
+      for (const f of ['src/lib/replays.winners.test.ts', 'src/components/ReplaysPastWinners.test.tsx', 'src/components/ReplaysPastWinners.phone.test.tsx', 'src/lib/newFeatures.past_winners.test.ts', '../backend/tests/test_replays_winners_2026_11_18.py', '../docs/chart_maps/replays_past_winners_2026_11_18.md'])
         { try { read(f); } catch { errs.push(`${f} must exist`); } }
       return errs;
     },

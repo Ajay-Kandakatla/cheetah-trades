@@ -1,3 +1,4 @@
+// WIDENED past-winners-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED watch-newest-first-charts-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED watch-not-eligible-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 /* 👀 the new-Watch-names-active ✨ (2026-11-19). Ajay: "Add things to my auto watch list please and make them active I see
@@ -11,7 +12,7 @@ const SAID = 'Add things to my auto watch list please and make them active I see
 describe('✨ the new Watch names active entry (2026-11-19)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[2].id).toBe(ID);
+    expect(NEW_FEATURES[3].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-19');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

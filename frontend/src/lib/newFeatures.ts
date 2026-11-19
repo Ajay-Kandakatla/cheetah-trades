@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
+  // research/2026-11-18_past_winners (finder) + eod-audits/replays/replay_winners.py (45x, 04:00–20:00 ET reels) +
+  // chart_maps/replays winners routes. Descriptive, UNMEASURED. Doc docs/chart_maps/replays_past_winners_2026_11_18.md.
+  {
+    id: 'chart-maps-replays-past-winners-2026-11-18',
+    label: '🏆 Past winners on 🎬 Replays — you said: “can you work on todays videos and also..  Winners in general from the past”. At the bottom of the 🎬 Replays tab, 🏆 Past winners lists every stock in the market whose high doubled its prior close in one session since June (1M+ volume, $0.10–$100 — Gajjala’s scanner floors), today’s top 5 movers even under +100%, and the 15 multi-day runners — each a 4 AM–8 PM video at 45x, newest first, rung by us or not. Gains are quoted on the close; ⚠ marks a high more than 2× the close (a spike print?). Owner only. Hand-picked winners: descriptive, UNMEASURED, not a signal.',
+    addedAt: '2026-11-19',
+    route: '/chart-maps?tab=replays&winners=1',
+  },
   // Ajay 2026-11-19, verbatim: "When ever I push something to watch it make it active by default and also on top" ·
   // "When I add a new ticket they are gettinf added in to que but not active  charts are not loading I amhaving to click
   // on the chips again" · "The X buttons are not working". Owner list rows newest-added first (server `added` times),
