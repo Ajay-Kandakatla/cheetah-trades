@@ -58,6 +58,9 @@ describe('(a) the Watch board draws the SAME pick + pager DOM', () => {
       expect(screen.getByTestId(`ggw-pager-x-${s}`).getAttribute('title')).toBe(`${(fixture as any).remove_label} ${s}`);
     }
     fireEvent.click(screen.getByTestId('ggw-pager-x-OMH'));
+    // RE-PINNED 2026-11-19 (was: the DELETE went out synchronously in the click). Ajay: "The X buttons are not working" —
+    // writes now run through a queue that cannot die (`then(task, task)`), so the request leaves one microtask later.
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const del = calls.filter((c) => c.method === 'DELETE');
     expect(del).toHaveLength(1);
     expect(del[0].url.endsWith(ggwSymbolPath('OMH'))).toBe(true);

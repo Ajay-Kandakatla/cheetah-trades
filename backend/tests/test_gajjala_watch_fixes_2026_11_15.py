@@ -254,7 +254,9 @@ def test_the_write_is_conditional_on_the_list_read():
             return super().update_one(q, upd, upsert=upsert)
     db = _db(list_coll=_Spy(_doc(["OMH"])))
     ST.add("NVDA", by="owner", db=db)
-    assert seen == [({"_id": C.LIST_DOC_ID, "symbols": ["OMH"]}, False)]
+    # RE-PINNED 2026-11-19 — Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active": the filter also holds the stored
+    # `added` value exactly as read ($exists False on a doc without one). EXACT — never loosen to a subset check.
+    assert seen == [({"_id": C.LIST_DOC_ID, "symbols": ["OMH"], "added": {"$exists": False}}, False)]
 
 
 # ── 4. freshness on the clock AFTER the fetch ──────────────────────────────────────────────────────────────────────

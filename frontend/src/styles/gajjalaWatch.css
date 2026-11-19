@@ -200,3 +200,10 @@
 .ggw-broker-mark[aria-pressed="true"] { opacity: 1; }
 .ggw-broker-mark:disabled { opacity: 0.5; cursor: default; }
 .ggw-broker-mark[aria-pressed="true"]:disabled { opacity: 0.6; }
+/* ⏳ 2026-11-19 (watchnew2 §3.5) — a pending tile prints its served words in the BODY (GgwPendingPanel), not a big
+ * empty dark box (Ajay: "charts are not loading I amhaving to click on the chips again"). Wraps at 430 px. */
+.ggw-pending { display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 12px; text-align: center; min-width: 0; }
+.ggw-pending-text { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-pending { flex: 1 1 0; min-height: 0; }
+}

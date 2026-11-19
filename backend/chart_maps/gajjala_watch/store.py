@@ -37,6 +37,17 @@ ago, whatever it is doing."; told "A+ names are never removed, and you'll see a 
   * the replaced name is NOT blocked: he can ➕ it back at once (`add` keeps no block list). Nothing is written to the 🤖
     auto doc — only his × (api DELETE → auto.dismiss) blocks an auto re-add today, so the 🤖 engine may seat a replaced
     name by its own rules. The served `replaced` sentence names it; the "🤖 removed today" strip lists auto removals only.
+
+⬆️ Newest added first (2026-11-19 — Ajay, verbatim: "When I add a new ticket they are gettinf added in to que but not
+active" · "charts are not loading I amhaving to click on the chips again"; earlier: "When ever I push something to watch it
+make it active by default and also on top"):
+  * the doc gains `added: {FOLD: UTC}` — when he last ➕'d each name. `add` stamps the name IN THE SAME compare-and-set as
+    `symbols` (the filter now also holds the `added` value read, exactly as stored); `remove` / a replace prune the gone
+    name's time. Keys are `colls.fold` only (no dot — BRK.B would nest).
+  * a ➕ of a name already listed (`already`) now WRITES: it refreshes that name's time and never touches `symbols` (the
+    ➕/➖ card list and the cap order stay his first-add order). A failing write there still answers `already` — a listed
+    name is never `error`.
+  * the board (payload.py) serves his rows NEWEST ADDED FIRST from this map; `symbols` stays the stored order.
 """
 from __future__ import annotations
 
@@ -89,7 +100,9 @@ def aplus_names(names: list) -> set:
 
 
 def _oldest_not_aplus(cur: list) -> tuple:
-    """(the oldest name of `cur` that is not 🎯 A+ | None, an older A+ name was passed over). RAISES on an A+ fault."""
+    """(the oldest name of `cur` that is not 🎯 A+ | None, an older A+ name was passed over). RAISES on an A+ fault.
+    LIST order = the FIRST add; a ➕ again (already) moves the name to the top of the board but never resets this age
+    (HIS CALL #2, 2026-11-19)."""
     aps = aplus_names(cur)
     for i, s in enumerate(cur):
         if s not in aps:
@@ -102,14 +115,36 @@ def _read_doc(coll):
     return coll.find_one({"_id": C.LIST_DOC_ID})
 
 
-def _cas(coll, doc, symbols: list, by) -> bool:
-    """Write `symbols` ONLY IF the stored list is still `doc`'s (compare-and-set, one atomic update). False = another
-    write landed in between (the caller re-reads). A failing write RAISES."""
-    fields = {"symbols": list(symbols), "updated_at": datetime.now(timezone.utc),
-              "by": by if isinstance(by, str) else None}
+def _now_utc() -> datetime:
+    """The write clock (`added` stamps, `updated_at`). Tests replace it."""
+    return datetime.now(timezone.utc)
+
+
+def _stamped(added: dict, keep: list, sym: Optional[str], now) -> dict:
+    """⬆️ 2026-11-19 — {fold(s): t} for the names of `keep` that hold a valid time in `added` (`colls.added_of` — the
+    times of names no longer listed are pruned) + fold(sym) → `now` when `sym`."""
+    out = {}
+    for s in keep:
+        k = CO.fold(s)
+        if k and k in added:
+            out[k] = added[k]
+    if sym:
+        out[CO.fold(sym)] = now
+    return out
+
+
+def _cas(coll, doc, symbols: Optional[list], by, *, added: dict) -> bool:
+    """Write ONLY IF the stored list is still `doc`'s (compare-and-set, one atomic update): the filter holds the stored
+    `symbols` AND the stored `added` value exactly as read (or `$exists: False` when the doc had none). `$set` = the
+    whole `added` map, `updated_at`, `by` + `symbols` ONLY when `symbols` is not None (a ➕ again writes the time only).
+    False = another write landed in between (the caller re-reads). A failing write RAISES."""
+    fields = {"added": dict(added), "updated_at": _now_utc(), "by": by if isinstance(by, str) else None}
+    if symbols is not None:
+        fields["symbols"] = list(symbols)
     if isinstance(doc, dict):
-        flt = {"_id": C.LIST_DOC_ID, "symbols": doc["symbols"]} if "symbols" in doc else \
-              {"_id": C.LIST_DOC_ID, "symbols": {"$exists": False}}
+        flt = {"_id": C.LIST_DOC_ID,
+               "symbols": doc["symbols"] if "symbols" in doc else {"$exists": False},
+               "added": doc["added"] if "added" in doc else {"$exists": False}}
         res = coll.update_one(flt, {"$set": fields}, upsert=False)
         return bool(getattr(res, "matched_count", 0))
     from pymongo.errors import DuplicateKeyError
@@ -126,7 +161,8 @@ def _has(cur: list, sym: str) -> bool:
 
 
 def add(symbol, *, by, db=None) -> dict:
-    """Append `symbol` at the END of the list. -> {state, symbols, symbol, text}. Never raises."""
+    """Append `symbol` at the END of the list and stamp its add time (⬆️ 2026-11-19: a name already listed gets its time
+    refreshed, `symbols` untouched). -> {state, symbols, symbol, text}. Never raises."""
     sym = normalize(symbol)
     if sym is None:
         return _answer("bad_symbol", CO.owner_symbols(db), None)
@@ -134,11 +170,22 @@ def add(symbol, *, by, db=None) -> dict:
         cs = CO.colls(db)
         if cs is None:
             return _answer("error", [], sym)
+        last_already = None
         for _ in range(_CAS_TRIES):
             doc = _read_doc(cs["list"])
             cur = _symbols_of(doc)
+            added = CO.added_of(doc)
+            now = _now_utc()
             if _has(cur, sym):
-                return _answer("already", cur, sym)
+                last_already = cur
+                try:
+                    if _cas(cs["list"], doc, None, by, added=_stamped(added, cur, sym, now)):
+                        return _answer("already", cur, sym)
+                except Exception as exc:                       # noqa: BLE001 — a listed name is never `error`
+                    log.warning("gajjala_watch: add %s (already listed) — the add time was not saved: %s", sym, exc)
+                    return _answer("already", cur, sym)
+                continue
+            last_already = None
             if len(cur) >= C.MAX_SYMBOLS:
                 try:
                     old, past = _oldest_not_aplus(cur)
@@ -148,12 +195,15 @@ def add(symbol, *, by, db=None) -> dict:
                 if old is None:                                # every name is 🎯 A+ → nothing makes room
                     return _answer("full", cur, sym)
                 new = [s for s in cur if s != old] + [sym]
-                if _cas(cs["list"], doc, new, by):
+                if _cas(cs["list"], doc, new, by, added=_stamped(added, new, sym, now)):
                     return _answer("replaced", new, sym, replaced=old, past_aplus=past)
                 continue
             new = cur + [sym]
-            if _cas(cs["list"], doc, new, by):
+            if _cas(cs["list"], doc, new, by, added=_stamped(added, new, sym, now)):
                 return _answer("added", new, sym)
+        if last_already is not None:
+            log.warning("gajjala_watch: add %s (already listed) lost the compare-and-set %d times", sym, _CAS_TRIES)
+            return _answer("already", last_already, sym)
         log.warning("gajjala_watch: add %s lost the compare-and-set %d times", sym, _CAS_TRIES)
         return _answer("error", [], sym)
     except Exception as exc:                                   # noqa: BLE001
@@ -178,7 +228,7 @@ def remove(symbol, *, by, db=None) -> dict:
                 return _answer("absent", cur, sym)
             k = CO.fold(sym)
             new = [s for s in cur if CO.fold(s) != k]
-            if _cas(cs["list"], doc, new, by):
+            if _cas(cs["list"], doc, new, by, added=_stamped(CO.added_of(doc), new, None, None)):
                 return _answer("removed", new, sym)
         log.warning("gajjala_watch: remove %s lost the compare-and-set %d times", sym, _CAS_TRIES)
         return _answer("error", [], sym)

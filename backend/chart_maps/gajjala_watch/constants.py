@@ -67,6 +67,8 @@ AUTO_NOT_ELIGIBLE_REMOVES = True          # HIS CALL #2 (spec watchfid) — a se
 AUTO_NOT_ELIGIBLE_REMOVES_APLUS = False   # HIS CALL #3 — False keeps his 11-17 call: an A+ seat leaves only on his ×
 ARGV_LOOP = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--loop")    # = ops/docker_watchdog CRON_DETACHED_CHILD_ARGS entry
 ARGV_BUILD = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--build")  # the API's add-time child; builds every pending name
+# 2026-11-19: the in-window add-time child — only names with no tile doc, or added after their tile doc's last write
+ARGV_BUILD_NEW = ARGV_BUILD + ("--new-only",)
 PROC_NAME_LOOP, PROC_NAME_BUILD = "gajjala-watch-loop", "gajjala-watch-build"
 
 

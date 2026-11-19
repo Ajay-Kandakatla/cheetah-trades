@@ -56,7 +56,8 @@ def test_full_add_replaces_the_oldest_and_appends_at_the_end(aplus):
     assert out["state"] == "replaced" and out["replaced"] == NAMES[0] and out["symbol"] == "ZZZ"
     assert out["symbols"] == NAMES[1:] + ["ZZZ"] == _stored(db)
     assert len(_stored(db)) == C.MAX_SYMBOLS and db[C.COLL_LIST].writes == 1          # ONE write: drop + append
-    assert out["text"] == f"ZZZ added — your watch was full, so {NAMES[0]} (the oldest you added) made room"
+    # RE-PINNED 2026-11-19 — words only — a ➕ again now puts a name first (HIS CALL #2). Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
+    assert out["text"] == f"ZZZ added — your watch was full, so {NAMES[0]} (on your watch the longest) made room"
 
 
 def test_an_aplus_oldest_is_passed_over_the_next_oldest_goes(aplus):
@@ -65,8 +66,9 @@ def test_an_aplus_oldest_is_passed_over_the_next_oldest_goes(aplus):
     out = ST.add("ZZZ", by="owner", db=db)
     assert out["state"] == "replaced" and out["replaced"] == NAMES[2]
     assert _stored(db) == NAMES[:2] + NAMES[3:] + ["ZZZ"]                     # both A+ stay, in place
-    assert out["text"] == (f"ZZZ added — your watch was full, so {NAMES[2]} (the oldest you added that is not 🎯 A+) "
-                           "made room")
+    # RE-PINNED 2026-11-19 — words only — a ➕ again now puts a name first (HIS CALL #2). Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
+    assert out["text"] == (f"ZZZ added — your watch was full, so {NAMES[2]} (on your watch the longest that is not "
+                           "🎯 A+) made room")
 
 
 def test_a_later_aplus_does_not_change_which_oldest_goes(aplus):
@@ -102,7 +104,8 @@ def test_NEGATIVE_below_the_cap_is_a_plain_add_nothing_removed(aplus):
 def test_NEGATIVE_already_on_a_full_list_removes_nothing(aplus):
     db = _db(NAMES)
     out = ST.add(NAMES[5].lower(), by="owner", db=db)
-    assert out["state"] == "already" and _stored(db) == NAMES and db[C.COLL_LIST].writes == 0
+    # RE-PINNED 2026-11-19 (writes 0 → 1: the add time only, never `symbols`) — Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
+    assert out["state"] == "already" and _stored(db) == NAMES and db[C.COLL_LIST].writes == 1
     assert aplus["reads"] == 0
 
 
@@ -162,15 +165,18 @@ def test_replaced_is_appended_last_with_words_and_no_typed_digits():
     assert ST.STATES_ADD == ("added", "already", "full", "bad_symbol", "error", "replaced")
     for t in (PL.STORE_TEXT["replaced"], PL.REPLACED_PAST_APLUS_TEXT, PL.FULL_REPLACES_TEXT):
         assert not re.search(r"[0-9]", re.sub(r"\{[^}]*\}", "", t))
+    # RE-PINNED 2026-11-19 — words only — a ➕ again now puts a name first (HIS CALL #2). Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
     assert PL.store_text("replaced", "OMH", old=None) == \
-        f"OMH added — your watch was full, so {PL.STORE_NO_SYMBOL} (the oldest you added) made room"
+        f"OMH added — your watch was full, so {PL.STORE_NO_SYMBOL} (on your watch the longest) made room"
     assert PL.store_text("added", "OMH", old="X") == PL.store_text("added", "OMH")      # other states ignore `old`
 
 
 def test_the_card_list_serves_the_replace_hint_never_the_refusal():
     out = PL.list_payload(NAMES)
     assert out["full"] is True and out["full_text"] == PL.full_hint()
-    assert out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the oldest you added (never a 🎯 A+)"
+    # RE-PINNED 2026-11-19 — words only — a ➕ again now puts a name first (HIS CALL #2). Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
+    assert out["full_text"] == (f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the one on your watch the "
+                                "longest (never a 🎯 A+)")
     assert "full_blocked" not in out                                        # the card list reads no A+ (unknown)
 
 

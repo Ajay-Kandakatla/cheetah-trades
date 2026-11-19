@@ -6,14 +6,18 @@ watch at any given time on this tashboard" · "Any chart I view make sure you ar
 behaviour and also the right side with gaps to see where it might go".
 
 READS STORED DOCS ONLY — never a bar fetch, never a snapshot (the minute loop / the build child write the tile docs):
-  * the list (`colls.owner_symbols(strict=True)`, one find_one — unreadable → `error`, never an empty watch);
+  * the list (`colls.owner_doc(strict=True)`, one find_one — unreadable → `error`, never an empty watch; its `symbols`
+    AND its `added` times, 2026-11-19);
   * the tile docs of the listed names (ONE `find({_id: {$in: names}})`; an unlisted `only` name is never read);
   * the loop state doc (ONE find_one `_id = C.STATE_LATEST_ID`);
   * today's pushed claims (ONE `find({date: session, state: "cross_pushed"})`).
   * 🎯 (2026-11-17, spec ggwaplus): the Gajjala boards' reads of the served names — ONE projected find per read
     store (GG5, GG1) + the 🧪 board's own overlay call (`aplus_section`); display only, never a fetch.
 
-Rows follow HIS list order — the server never reorders. A doc with `frames` is `ok` (stale + the status sentence when
+Rows: HIS names NEWEST ADDED FIRST (the list doc's `added`, 2026-11-19 — Ajay, verbatim: "When I add a new ticket they
+are gettinf added in to que but not active"; earlier "When ever I push something to watch it make it active by default and
+also on top"); a name with no time follows in his list order; then the 🤖 rows in the STORED entry order (never
+re-sorted). Every row serves `added_at` (ISO UTC or null); a pending row serves `late_text`. A doc with `frames` is `ok` (stale + the status sentence when
 its last read was not `loaded`: the last good charts stay, C1.2); a doc without frames serves its status; no doc =
 `pending`. The `held` chip of a frame is served only when it names that frame's latest drawn UP cross (C4.4). The rule
 sentences (`info`) are served ONCE, never per chart (C4.6). Every word below is a constant; every number in a word is a
@@ -23,8 +27,8 @@ sentences (`info`) are served ONCE, never per chart (C4.6). Every word below is 
 need portentials from Gajjals's 1 min and regular and also Audited potentials with good volume to Watchlist on an
 interval.. Remove as they are not progressing"): ONE more stored read — the auto doc (`auto.read_doc`, `_id =
 C.AUTO_DOC_ID` in the list collection; a read fault → `auto.state "unreadable"` + his rows intact, never `error`, never
-an empty board). Rows = HIS rows, then the auto rows in the STORED entry order (the add order — the server never
-re-sorts them at serve); a fold-duplicate of his name is his. An auto doc of another session serves no auto row.
+an empty board). Rows = HIS rows (newest added first, 2026-11-19), then the auto rows in the STORED entry order (the add
+order — the server never re-sorts them at serve); a fold-duplicate of his name is his. An auto doc of another session serves no auto row.
 `symbols` / `full` stay HIS list (the ➕ cap is his). Each row carries `auto` (None for his names); the board carries
 `auto` (cap, count, the newest `C.AUTO_REMOVED_SHOWN` removals newest first with `text_full`, `removed_total`).
 `auto` is imported LAZILY through sys.modules (`importlib`), so a missing / raising engine never breaks the board.
@@ -67,10 +71,20 @@ FULL_TEXT = "Your watch holds {max} tickers — remove one to add another"   # 2
 # 🔁 2026-11-18 — Ajay, verbatim: "For watch list when I add new ones remove the ones that are not active in the watch
 # list"; asked what "not active" means, he picked "Oldest added" — "Remove the one you added longest ago, whatever it is
 # doing." At the cap an add REPLACES the oldest name he added that is not 🎯 A+ (store.add → "replaced").
-FULL_REPLACES_TEXT = "Your watch holds {max} — adding one replaces the oldest you added (never a 🎯 A+)"
-REPLACED_TEXT = "{sym} added — your watch was full, so {old} (the oldest you added) made room"
-REPLACED_PAST_APLUS_TEXT = "{sym} added — your watch was full, so {old} (the oldest you added that is not 🎯 A+) made room"
-PENDING_TEXT = {True: "⏳ first read at the next minute", False: "⏳ reading {sym}'s last session"}
+# 2026-11-19: was 'the oldest you added' — a ➕ again now puts a name FIRST, so 'oldest you added' would name the top tile
+# (HIS CALL #2). The cap ORDER is unchanged (list order = the first add).
+FULL_REPLACES_TEXT = "Your watch holds {max} — adding one replaces the one on your watch the longest (never a 🎯 A+)"
+REPLACED_TEXT = "{sym} added — your watch was full, so {old} (on your watch the longest) made room"
+REPLACED_PAST_APLUS_TEXT = ("{sym} added — your watch was full, so {old} (on your watch the longest that is not 🎯 A+) "
+                            "made room")
+# 2026-11-19 (Ajay, verbatim: "charts are not loading I amhaving to click on the chips again"): the in-window pending words
+# carry NO time number (unmeasured) and no {sym} (a pin compares the constant unformatted).
+PENDING_TEXT = {True: "⏳ reading now — this tile fills in by itself when the read lands",
+                False: "⏳ reading {sym}'s last session"}
+# 2026-11-19: a row still pending past the board's pending-poll cap — served on EVERY pending row as `late_text` (the FE
+# prints it after `pending_wait_max_sec`); {sec} = GC.GG1M_CADENCE_SEC at call time.
+PENDING_LATE_TEXT = {True: "⏳ still reading — not read yet; this tile checks again every {sec} s",
+                     False: "⏳ still reading {sym}'s last session — this tile checks again every {sec} s"}
 NO_PRINTS_TEXT = {True: "No prints yet today for {sym} — the chart starts at its first print",
                   False: "No prints for {sym} on {session}"}
 NO_BARS_TEXT = "No minute bars for {sym} on {session} or the session before — check the ticker"
@@ -459,11 +473,17 @@ def _rang(claims: list, now: datetime) -> list:
     return out
 
 
+def late_text(sym: str, in_window) -> str:
+    """2026-11-19 — a pending row's "still reading" words (PENDING_LATE_TEXT, {sec} = GC.GG1M_CADENCE_SEC)."""
+    return PENDING_LATE_TEXT[bool(in_window)].format(sym=sym, sec=GC.GG1M_CADENCE_SEC)
+
+
 def row(sym: str, doc, *, session: str, is_today: bool, in_window: bool, now: datetime, claims: list) -> dict:
     out = {"symbol": sym, "state": "pending", "text": None, "from_session": None, "as_of_et": None, "stale": False,
-           "frames": [], "rang": _rang(claims, now)}
+           "frames": [], "rang": _rang(claims, now), "late_text": None}
     if not isinstance(doc, dict):
         out["text"] = PENDING_TEXT[bool(in_window)].format(sym=sym)
+        out["late_text"] = late_text(sym, in_window)
         return out
     status = doc.get("status")
     fr = doc.get("frames") if isinstance(doc.get("frames"), dict) else {}
@@ -478,6 +498,7 @@ def row(sym: str, doc, *, session: str, is_today: bool, in_window: bool, now: da
         return out
     if status in (None, "loaded"):
         out["text"] = PENDING_TEXT[bool(in_window)].format(sym=sym)
+        out["late_text"] = late_text(sym, in_window)
         return out
     state = status if status in ROW_STATES else "failed"
     out.update(state=state, text=status_text(state, sym, has_frames=False, **kw))
@@ -680,21 +701,23 @@ def auto_board(state: str, entries: list, removed: list, *, in_window: bool, now
 
 
 def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: datetime, state_doc=None) -> tuple:
-    """({SYM: row auto block} in the STORED order, the board's `auto` block). Any failure composing the words → the
-    auto names are left out and the block says `unreadable` (None when even that cannot be composed) — his rows and
-    the board always answer. `state_doc` = the loop state doc (🎯 `skipped_text`, 2026-11-17)."""
+    """({SYM: row auto block} in the STORED order, the board's `auto` block, {SYM: the entry's `added_at` as ISO UTC or
+    None} — 2026-11-19). Any failure composing the words → the auto names are left out and the block says `unreadable`
+    (None when even that cannot be composed) — his rows and the board always answer. `state_doc` = the loop state doc
+    (🎯 `skipped_text`, 2026-11-17)."""
     try:
         state, entries, removed = auto_read(cs, symbols, siso)
         blocks = {e["symbol"]: auto_row_block(e, now) for e in entries}
+        at_by = {e["symbol"]: CO.added_iso(e.get("added_at")) for e in entries}
         return blocks, auto_board(state, entries, removed, in_window=in_window, now=now, state_doc=state_doc,
-                                  siso=siso)
+                                  siso=siso), at_by
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: auto section failed: %s", exc)
     try:
-        return {}, auto_board(AUTO_STATES[1], [], [], in_window=in_window, now=now, siso=siso)
+        return {}, auto_board(AUTO_STATES[1], [], [], in_window=in_window, now=now, siso=siso), {}
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: auto block unavailable: %s", exc)
-        return {}, None
+        return {}, None, {}
 
 
 # ── 🎯 A+ tag (2026-11-17, spec ggwaplus) ───────────────────────────────────────────────────────────────────────────
@@ -860,9 +883,11 @@ def _build(now: datetime, db, only) -> dict:
     if cs is None:
         return error_payload(LIST_UNREADABLE_WHY)
     try:
-        symbols = CO.owner_symbols(db, strict=True)
+        ldoc = CO.owner_doc(db, strict=True)                   # 2026-11-19: ONE read — `symbols` AND `added`
     except Exception:                                          # noqa: BLE001 — logged by the reader
         return error_payload(LIST_UNREADABLE_WHY)
+    symbols = CO.symbols_of(ldoc)
+    added = CO.added_of(ldoc)
     # 🎯 2026-11-17 (spec ggwaplus2): the loop state doc is read FIRST (one read, the same handle) — the auto block's
     # `skipped_text` comes from its `auto.aplus_skipped`.
     state_doc = None
@@ -871,8 +896,10 @@ def _build(now: datetime, db, only) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: state doc unreadable: %s", exc)
     # 🤖 2026-11-17: the auto doc (one more stored read); his names first, then the auto names in the STORED order.
-    auto_by, auto_out = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now, state_doc=state_doc)
-    every = list(symbols) + list(auto_by)
+    auto_by, auto_out, at_by = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now,
+                                            state_doc=state_doc)
+    # ⬆️ 2026-11-19: HIS names newest added first (undated after, in his order), then the 🤖 names in the stored order.
+    every = CO.newest_first(symbols, added) + list(auto_by)
     if only is None:
         names = every
     else:
@@ -898,6 +925,8 @@ def _build(now: datetime, db, only) -> dict:
         r["auto"] = auto_by.get(r["symbol"])
         r["aplus"] = aplus_by.get(r["symbol"])
         r["tags"] = tags_by.get(r["symbol"])                   # None = not carded on today's 🚩 board — never invented
+        r["added_at"] = (at_by.get(r["symbol"]) if r["auto"] is not None           # ⬆️ 2026-11-19 — ISO UTC or None
+                         else CO.added_iso(added.get(CO.fold(r["symbol"]))))
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
     # 🔁 2026-11-18: at the cap ➕ replaces the oldest he added that is not 🎯 A+; only when EVERY one of his names is A+
     # (by THIS board's own tag read — the full board only, never a pending poll) is the add refused → `full_blocked`.
@@ -915,4 +944,5 @@ def _build(now: datetime, db, only) -> dict:
     if any(r["state"] == "pending" for r in rows):
         out["pending_poll_sec"] = GC.ON_DEMAND_POLL_SEC
         out["pending_wait_max_sec"] = GC.ON_DEMAND_WAIT_MAX_SEC
+        out["pending_late_poll_sec"] = GC.GG1M_CADENCE_SEC       # 2026-11-19: the poll after the cap (FE: out of window)
     return out

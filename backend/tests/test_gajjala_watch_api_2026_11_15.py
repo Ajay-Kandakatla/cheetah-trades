@@ -269,10 +269,13 @@ def test_owner_post_adds_and_spawns_the_build_child_once(wired, db):
     assert [(a, n) for a, n, _p in wired.spawns] == [(tuple(C.ARGV_BUILD), C.PROC_NAME_BUILD)]
 
 
-def test_NEGATIVE_no_spawn_when_the_loop_reads_soon(wired, monkeypatch):
+# RE-PINNED 2026-11-19 (Ajay, relayed: "When I add a new ticket they are gettinf added in to que but not active / charts
+# are not loading I amhaving to click on the chips again"): in window the add no longer waits for the minute loop — it
+# spawns the single-flight child with --new-only (was: no spawn when the loop reads soon).
+def test_in_window_the_add_spawns_the_new_only_child(wired, monkeypatch):
     monkeypatch.setattr(CO, "loop_reads_soon", lambda now: True)
     assert wired.post(C.API_PATH + "/symbols/AMD", headers={"X-User-Email": OWNER}).json()["state"] == "added"
-    assert wired.spawns == []
+    assert [(a, n) for a, n, _p in wired.spawns] == [(tuple(C.ARGV_BUILD_NEW), C.PROC_NAME_BUILD)]
 
 
 def test_NEGATIVE_single_flight_while_the_child_is_alive_then_spawns_again(wired):
@@ -563,7 +566,9 @@ def test_head_words_and_legend():
     assert out["title"] == "👀 Gajjala's Watch — your tickers on 1-, 3- and 5-minute bars from 04:00 ET"
     # RE-PINNED 2026-11-18 (Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added"): at the cap ➕ replaces, so the served
     # full_text is the replace hint; the old refusal words serve only when every name is 🎯 A+ (full_blocked).
-    assert out["full"] is True and out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the oldest you added (never a 🎯 A+)"
+    # RE-PINNED 2026-11-19 (Ajay, relayed: "When I add a new ticket they are gettinf added in to que but not active"): words
+    # only — a ➕ again now puts a name first, so the cap words say "on your watch the longest" (HIS CALL #2).
+    assert out["full"] is True and out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the one on your watch the longest (never a 🎯 A+)"
     assert out["full_blocked"] is False
     assert out["max_symbols"] == C.MAX_SYMBOLS
     assert out["legend"] == [{"tone": "ema9", "label": f"{GC.EMA_FAST} EMA"}, {"tone": "ema21", "label": f"{GC.EMA_SLOW} EMA"}]

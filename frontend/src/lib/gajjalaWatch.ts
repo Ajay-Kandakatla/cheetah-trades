@@ -165,7 +165,7 @@ export function saveGgwPick(p: ReadonlyArray<string> | null): void {
     else window.localStorage.removeItem(GGW_PICK_KEY);
   } catch { /* private window: the pick lasts this visit */ }
 }
-/** 🆕 2026-11-19 — Ajay: "Add things to my auto watch list please and make them active I see not active on my page. Because
+/** 🆕 2026-11-19 — Ajay: "Add things to my auto watch list please and make them active I see not active on my page. Becuz
  *  they are in query params". A saved/linked pick (`show=`) hides every name it does not list, so a name added after the
  *  pick was made sat there inactive. `ggw.seen` = the list this browser last saw; a name on the list now that was not
  *  there then is NEW and joins the pick, first. No pick (the pages) → nothing to merge; no seen list yet (a browser from
@@ -186,9 +186,116 @@ export function ggwNewNames(list: ReadonlyArray<string>, seen: ReadonlyArray<str
 }
 export function ggwActivateNew(pick: ReadonlyArray<string> | null, list: ReadonlyArray<string>,
                                seen: ReadonlyArray<string> | null): string[] | null {
+  return ggwJoinPick(pick, list, ggwNewNames(list, seen));
+}
+/** 🆕 2026-11-19 (watch-newest spec §3.3) — Ajay: "When I add a new ticket they are gettinf added in to que but not active
+ *  … charts are not loading I amhaving to click on the chips again". `ggw.pickAt` = when HE last changed the view (a
+ *  ticker toggle, a page move, a per-screen pick, ← →, a full-screen step) — never written on mount, by an activation
+ *  pass, a box add or `?focus=`. A row of his (or a 🎯 A+) the server says was added AFTER it is new and joins his pick. */
+export const GGW_PICK_AT_KEY = 'ggw.pickAt';
+/** MINE — HIS CALL #1 (2026-11-19): a browser with no ggw.pickAt yet treats rows added in the last 24 h as new. */
+export const GGW_NEW_FALLBACK_HOURS = 24;   // MINE — HIS CALL #1 (2026-11-19)
+export function readGgwPickAt(): number | null {
+  try {
+    const v = window.localStorage.getItem(GGW_PICK_AT_KEY);
+    if (typeof v !== 'string' || !/^\d+$/.test(v)) return null;
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  } catch { return null; }
+}
+export function saveGgwPickAt(ms: number): void {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0) return;
+  try { window.localStorage.setItem(GGW_PICK_AT_KEY, String(Math.round(ms))); } catch { /* private window */ }
+}
+/** The served add time of a row in ms (null when absent / junk). */
+export function ggwAddedMs(row: { added_at?: string | null }): number | null {
+  const v = row?.added_at;
+  if (typeof v !== 'string') return null;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? t : null;
+}
+/** A row that may join his pick: HIS own name, or a 🎯 A+ (the A+ block, or an auto seat whose served reason is A+). An
+ *  ordinary 🤖 potential never joins (HIS CALL #3 — up to 18 tiles × 3 live charts). */
+export function ggwJoinable(row: GgwRow): boolean {
+  return row.auto == null || row.aplus != null || row.auto?.why === 'aplus';
+}
+/** The joinable rows that are NEW to this view: added after `pickAt` (strictly; no pickAt → the last
+ *  GGW_NEW_FALLBACK_HOURS), or not in this browser's `seen` list. Row order. */
+export function ggwFreshNames(rows: ReadonlyArray<GgwRow>, o: { seen: ReadonlyArray<string> | null;
+  pickAt: number | null; nowMs: number }): string[] {
+  const since = o.pickAt ?? (o.nowMs - GGW_NEW_FALLBACK_HOURS * 3600_000);
+  const out: string[] = [];
+  for (const r of rows) {
+    if (!ggwJoinable(r)) continue;
+    const at = ggwAddedMs(r);
+    const byTime = at != null && at > since;
+    const bySeen = o.seen != null && !o.seen.includes(r.symbol);
+    if ((byTime || bySeen) && !out.includes(r.symbol)) out.push(r.symbol);
+  }
+  return out;
+}
+/** The first of HIS rows this browser has not shown yet (a card ➕ from another tab) — the only name a page open outlines.
+ *  No seen list (a cold browser) → null. */
+export function ggwUnseenOwn(rows: ReadonlyArray<GgwRow>, seen: ReadonlyArray<string> | null): string | null {
+  if (!seen) return null;
+  const r = rows.find((x) => x.auto == null && !seen.includes(x.symbol));
+  return r ? r.symbol : null;
+}
+/** `fresh` names joined to the FRONT of a pick (each once, only names on the list). No pick, or a pick with no name on
+ *  the list (the pages are showing) → an unchanged copy — it never collapses to the new names. */
+export function ggwJoinPick(pick: ReadonlyArray<string> | null, list: ReadonlyArray<string>,
+                            fresh: ReadonlyArray<string>): string[] | null {
   if (!pick || !pick.length) return pick ? [...pick] : null;
-  const fresh = ggwNewNames(list, seen).filter((s) => !pick.includes(s));
-  return fresh.length ? [...fresh, ...pick] : [...pick];
+  if (!pick.some((s) => list.includes(s))) return [...pick];
+  const add: string[] = [];
+  for (const s of fresh) if (list.includes(s) && !pick.includes(s) && !add.includes(s)) add.push(s);
+  return add.length ? [...add, ...pick] : [...pick];
+}
+/** The rows' identity for the activation / anchor passes: symbol, add time and the join bit — a 🤖 potential turning
+ *  🎯 A+ in place changes it; text / frames never do. */
+export function ggwRowsKey(rows: ReadonlyArray<GgwRow>): string {
+  return rows.map((r) => `${r.symbol}@${r.added_at ?? ''}@${ggwJoinable(r) ? 1 : 0}|`).join('');
+}
+/** The board without these names (rows and his symbols); the SAME object when none of them is on it. */
+export function ggwWithout(b: GgwBoard, gone: ReadonlyArray<string>): GgwBoard {
+  if (!gone.length) return b;
+  const g = new Set(gone);
+  if (!b.rows.some((r) => g.has(r.symbol)) && !b.symbols.some((s) => g.has(s))) return b;
+  return { ...b, rows: b.rows.filter((r) => !g.has(r.symbol)), symbols: b.symbols.filter((s) => !g.has(s)) };
+}
+/** A removed name leaves the pick; the last one leaving → null (the pages). */
+export function ggwDropFromPick(pick: ReadonlyArray<string> | null, sym: string): string[] | null {
+  if (!pick) return null;
+  const next = pick.filter((s) => s !== sym);
+  return next.length ? next : null;
+}
+/** The pending poll's next step. `due` = waited < max s, polled every `poll` s; `late` = waited ≥ max s (always returned,
+ *  so the served "still reading" words show in and out of window). After the cap the late names are polled every
+ *  `latePoll` s ONLY when `refresh` is 0 (out of window — in window the minute re-GET already re-reads them). No
+ *  `latePoll` (an older server) → the poll stops at the cap exactly as before. */
+export function ggwPendingPlan(pend: ReadonlyArray<string>, since: ReadonlyMap<string, number>, nowMs: number,
+  o: { poll: number | null; max: number | null; latePoll: number | null; refresh: number | null }):
+  { names: string[]; delaySec: number; late: string[] } {
+  const poll = o.poll ?? 0;
+  const max = o.max ?? 0;
+  const latePoll = o.latePoll ?? 0;
+  const due: string[] = [];
+  const late: string[] = [];
+  if (max > 0) {
+    for (const s of pend) {
+      const waited = nowMs - (since.get(s) ?? nowMs);
+      if (waited < max * 1000) due.push(s); else late.push(s);
+    }
+  }
+  if (due.length && poll > 0) return { names: due, delaySec: poll, late };
+  if (late.length && latePoll > 0 && !((o.refresh ?? 0) > 0)) return { names: late, delaySec: latePoll, late };
+  return { names: [], delaySec: 0, late };
+}
+/** The page that keeps the anchor (the first name shown) on screen; null when it left the list. */
+export function ggwAnchorPage(list: ReadonlyArray<string>, anchor: string | null, size: number): number | null {
+  if (!anchor) return null;
+  const i = list.indexOf(anchor);
+  return i < 0 ? null : ggwPageOf(i, size);
 }
 /** The view's params on top of `prev` (every other param — tab, focus — kept): per always; show only with a pick; page
  *  only past the first page and only without a pick. */
@@ -306,6 +413,11 @@ export type GgwRow = {
   tags?: GgwRowTags | null;
   /** 🚫 2026-11-19 (spec watchfid): the served broker word for ANY row (carded or not); null = not on his list. */
   broker_text?: string | null;
+  /** 🆕 2026-11-19: when the name was added (ISO UTC, served; null on a name from before 11-19 and on an older server).
+   *  Optional for the same reason as `auto` — parseGgw always sets it. */
+  added_at?: string | null;
+  /** 🆕 2026-11-19: the served "still reading" words of a pending row, shown after the pending cap (null otherwise). */
+  late_text?: string | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -332,6 +444,8 @@ export type GgwBoard = {
   state: 'ok'; title: string; session: string | null; is_today: boolean; in_window: boolean;
   refresh_sec: number; next_window_sec: number | null;
   pending_poll_sec: number | null; pending_wait_max_sec: number | null;
+  /** 🆕 2026-11-19: the poll after the pending cap, out of window only (served while a row is pending; null else). */
+  pending_late_poll_sec: number | null;
   max_symbols: number | null; symbols: string[]; full: boolean; full_text: string | null;
   /** 🔁 2026-11-18: true ONLY when every one of his names is 🎯 A+ (nothing can make room) — the add box is then
    *  disabled and `full_text` is the served refusal, shown as a visible line. At the cap otherwise ➕ replaces. */
@@ -521,6 +635,8 @@ function parseRow(v: unknown): GgwRow | null {
     aplus: parseRowAplus(v.aplus),
     tags: parseRowTags(v.tags),
     broker_text: str(v.broker_text),
+    added_at: str(v.added_at) != null && Number.isFinite(Date.parse(v.added_at)) ? v.added_at : null,
+    late_text: str(v.late_text),
   };
 }
 
@@ -554,6 +670,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     next_window_sec: num(raw.next_window_sec),
     pending_poll_sec: num(raw.pending_poll_sec),
     pending_wait_max_sec: num(raw.pending_wait_max_sec),
+    pending_late_poll_sec: num(raw.pending_late_poll_sec),
     max_symbols: num(raw.max_symbols),
     symbols: strs(raw.symbols),
     full: raw.full === true,

@@ -9,6 +9,8 @@ stays, Signal Lab's silent drop is not copied); removing an absent name is `abse
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from chart_maps.gajjala_watch import colls as CO
@@ -69,11 +71,24 @@ def test_add_appends_at_the_end_in_his_order():
     assert doc["by"] == "owner" and doc["updated_at"] is not None
 
 
-def test_add_is_idempotent_already():
+def test_add_is_idempotent_already(monkeypatch):
+    # RE-PINNED 2026-11-19 (writes 0 → 1). Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active":
+    # a ➕ again refreshes ONLY that name's add time (it goes first on the board); `symbols` is never written.
+    clock = datetime(2026, 11, 19, 15, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(ST, "_now_utc", lambda: clock)
+    seen = []
     db = _db(["OMH"])
+    orig = db[C.COLL_LIST].update_one
+
+    def spy(q, upd, upsert=False):
+        seen.append(upd)
+        return orig(q, upd, upsert=upsert)
+    db[C.COLL_LIST].update_one = spy
     out = ST.add(" omh", by="owner", db=db)
     assert out["state"] == "already" and out["symbols"] == ["OMH"] and _stored(db) == ["OMH"]
-    assert db[C.COLL_LIST].writes == 0
+    assert db[C.COLL_LIST].writes == 1
+    assert db[C.COLL_LIST].docs[C.LIST_DOC_ID]["added"] == {"OMH": clock}
+    assert len(seen) == 1 and "symbols" not in seen[0]["$set"]
 
 
 def test_add_at_the_cap_replaces_the_oldest(monkeypatch):

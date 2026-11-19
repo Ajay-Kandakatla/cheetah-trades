@@ -25,6 +25,14 @@ BUILD CHILD (`--build`, [C2.5]): the API spawns it when a name is added and the 
 it builds every listed name with no tile doc / another session / not loaded, re-reading the list until nothing is left
 (each name tried once). Never the cross push, never a state doc, no lease. UNMEASURED — nothing here trades.
 
+C2.5 SUPERSEDED 2026-11-19 (Ajay, relayed verbatim: "When I add a new ticket they are gettinf added in to que but not
+active / charts are not loading I amhaving to click on the chips again"): IN the window the API now spawns the same child
+with `--new-only` (C.ARGV_BUILD_NEW) instead of waiting for the minute loop. `--new-only` reads ONLY a listed name with
+no tile doc, or whose add time (the list doc's `added`, CO.added_of) is LATER than its tile doc's last write `at`
+(`_new_only_todo`). Cost: 1–2 Massive minute calls per added name: today (forced, bars.py:287) + the prior day when the
+1-minute cache misses (bars.py:283 — a brand-new name always misses); single-flight. Out of the window the plain
+`--build` child is unchanged (its path never reads `added`).
+
 🤖 AUTO (2026-11-17, spec ggwauto §3.3 — Ajay: "I need portentials from Gajjals's 1 min and regular and also Audited
 potentials with good volume to Watchlist on an interval.. Remove as they are not progressing"). Each iteration, under the
 SAME lease and before the frame build, `auto.step` keeps the auto doc (adds / removals, zero fetches); the frames, the
@@ -272,10 +280,36 @@ def loop(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None
 
 
 # ── the add-time build child ──────────────────────────────────────────────────────────────────────────────────────
-def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None) -> dict:
+def _new_only_todo(syms: list, docs: dict, added: dict, tried: set) -> list:
+    """--new-only (2026-11-19): a listed name not yet tried with NO tile doc, or with an add time (the list doc's
+    `added`, CO.added_of) LATER than its tile doc's last write `at` (CO.stamp_utc; an unreadable `at` counts as never
+    written). An undated name with a doc, or a doc written at/after the add (a loaded, no_prints, failed or
+    over_budget write alike), is never fetched. List order."""
+    out: list = []
+    for s in syms:
+        if s in tried:
+            continue
+        if s not in docs:
+            out.append(s)
+            continue
+        t_add = added.get(CO.fold(s)) if isinstance(added, dict) else None
+        if t_add is None:
+            continue                                            # undated (listed before 2026-11-19) → the minute loop
+        t_doc = CO.stamp_utc(docs[s].get("at") if isinstance(docs[s], dict) else None)
+        if t_doc is None or t_add > t_doc:
+            out.append(s)
+    return out
+
+
+def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None,
+                  new_only: bool = False) -> dict:
     """[C2.5] Build every LISTED name whose tile is missing, from another session, or not loaded — the session of
     `now` (a closed day / before 04:00 → the last market session). Re-reads the list after each round (a name added
-    meanwhile is picked up); each name is tried once per child. No cross push, no state doc, no lease."""
+    meanwhile is picked up); each name is tried once per child. No cross push, no state doc, no lease.
+    `new_only` (2026-11-19, the in-window add-time child `--new-only`): only `_new_only_todo` names — no tile doc, or
+    added after the tile doc's last write. Cost: 1–2 Massive minute calls per added name: today (forced, bars.py:287) +
+    the prior day when the 1-minute cache misses (bars.py:283 — a brand-new name always misses); single-flight. The
+    default path never reads `added`."""
     deps = deps or Deps()
     now = RUN._utc(now) if now is not None else RUN._utc(deps.wall())
     if not CO.enabled():                                        # off → no minute fetch from the build child either
@@ -287,16 +321,26 @@ def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
     tried: set = set()
     out: dict = {"session": iso, "built": [], "rounds": 0}
     while True:
-        syms = CO.owner_symbols(db)
+        if new_only:
+            ldoc = CO.owner_doc(db)
+            syms = CO.symbols_of(ldoc)
+            added = CO.added_of(ldoc)
+            proj = {"session": 1, "status": 1, "at": 1}
+        else:
+            syms = CO.owner_symbols(db)
+            added, proj = {}, {"session": 1, "status": 1}
         docs: dict = {}
         if tiles is not None and syms:
             try:
-                docs = {d["_id"]: d for d in tiles.find({"_id": {"$in": list(syms)}}, {"session": 1, "status": 1})
+                docs = {d["_id"]: d for d in tiles.find({"_id": {"$in": list(syms)}}, proj)
                         if isinstance(d, dict)}
             except Exception as exc:                            # noqa: BLE001
                 log.warning("gajjala watch build: tile read failed: %s", type(exc).__name__)
-        todo = [s for s in syms if s not in tried
-                and (s not in docs or docs[s].get("session") != iso or docs[s].get("status") != "loaded")]
+        if new_only:
+            todo = _new_only_todo(syms, docs, added, tried)
+        else:
+            todo = [s for s in syms if s not in tried
+                    and (s not in docs or docs[s].get("session") != iso or docs[s].get("status") != "loaded")]
         if not todo:
             break
         out["rounds"] += 1
@@ -321,6 +365,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="chart_maps.gajjala_watch.loop", description=__doc__.split("\n")[0])
     ap.add_argument("--loop", action="store_true", help="the slot's iterations (run.main spawns this, detached)")
     ap.add_argument("--build", action="store_true", help="build every pending listed name (the API spawns this)")
+    ap.add_argument("--new-only", action="store_true",
+                    help="with --build: only names with no tile doc or added after its last write (2026-11-19)")
     ap.add_argument("--dry-run", action="store_true", help="one iteration; record every write and send; touch nothing")
     ap.add_argument("--json", action="store_true", help="print the summary as JSON")
     ap.add_argument("--now", help="ISO clock to replay (a naive stamp is ET) — --dry-run only")
@@ -343,7 +389,7 @@ def main(argv=None) -> int:
         if not CO.enabled():
             log.info("gajjala watch: off (%s) — no build", C.ENV_ENABLED)
             return 0
-        out = build_pending(now)
+        out = build_pending(now, new_only=args.new_only)
     else:
         if not CO.enabled():
             log.info("gajjala watch: off (%s) — nothing to do", C.ENV_ENABLED)

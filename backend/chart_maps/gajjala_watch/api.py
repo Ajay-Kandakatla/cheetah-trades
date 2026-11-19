@@ -13,6 +13,12 @@ add remove tickers from the dashboard."
     handler). `store.add`; on `added` / `replaced` (🔁 2026-11-18) ONLY, only when the watch is on, and only when the minute loop will NOT read the
     name within about a minute (`colls.loop_reads_soon` False), one `--build` child is requested — single-flight (C2.5): at most ONE alive in this
     container; an alive child re-reads the list before it exits, so a second add while it runs spawns nothing.
+    C2.5 SUPERSEDED 2026-11-19 (Ajay, relayed verbatim: "When I add a new ticket they are gettinf added in to que but not
+    active / charts are not loading I amhaving to click on the chips again"): IN the window (`loop_reads_soon` True) the
+    add now spawns the same single-flight child with `--new-only` (C.ARGV_BUILD_NEW) — only names with no tile doc, or
+    added after their tile doc's last write — instead of waiting for the minute loop. Cost: 1–2 Massive minute calls per
+    added name: today (forced, bars.py:287) + the prior day when the 1-minute cache misses (bars.py:283 — a brand-new
+    name always misses); single-flight. Out of the window: the plain `--build` child, unchanged.
   * `DELETE /chart-maps/gajjala-watch/symbols/{symbol}` — the same gate; `store.remove`, then ALWAYS `auto.dismiss`
     (🤖 2026-11-17, spec ggwauto §3.5): the × on an auto name removes it until tomorrow, and a × on his own name also
     blocks an auto re-add today (HIS CALL #6). His list answered `absent` and the auto list `dismissed` → the auto
@@ -95,15 +101,17 @@ def _body(now: datetime, only: Optional[list]) -> tuple:
     return body, gzip.compress(body, compresslevel=6)
 
 
-def _request_build() -> str:
+def _request_build(new_only: bool = False) -> str:
     """[C2.5] Single-flight `--build` child (the on_demand._STATE shape): alive → "running"; else spawn → "spawned";
-    a raising spawn logs one line → "error". Never raises."""
+    a raising spawn logs one line → "error". Never raises. `new_only` (2026-11-19, in window) → C.ARGV_BUILD_NEW:
+    1–2 Massive minute calls per added name: today (forced, bars.py:287) + the prior day when the 1-minute cache misses
+    (bars.py:283 — a brand-new name always misses); single-flight."""
     from chart_maps.gajjala import on_demand as OD
     with _LOCK:
         if OD._alive(_BUILD["proc"]):
             return "running"
         try:
-            _BUILD["proc"] = OD._spawn(list(C.ARGV_BUILD), C.PROC_NAME_BUILD)
+            _BUILD["proc"] = OD._spawn(list(C.ARGV_BUILD_NEW if new_only else C.ARGV_BUILD), C.PROC_NAME_BUILD)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: build child not spawned: %s", exc)
             return "error"
@@ -145,8 +153,8 @@ async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_ad
     out = await asyncio.to_thread(_broker_note, out)                  # 🚫 2026-11-19 — the word, never a block
     if out.get("state") in ("added", "replaced"):            # 🔁 2026-11-18: a replace adds a name too
         try:
-            if CO.enabled() and not CO.loop_reads_soon(datetime.now(ET)):     # off → no build child
-                _request_build()
+            if CO.enabled():                                    # off → no build child
+                _request_build(new_only=bool(CO.loop_reads_soon(datetime.now(ET))))   # 2026-11-19: in window too
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: build request failed: %s", exc)
     return out
