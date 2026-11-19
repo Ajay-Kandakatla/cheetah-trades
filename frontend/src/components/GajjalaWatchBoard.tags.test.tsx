@@ -331,9 +331,16 @@ describe('🏷️ source guards', () => {
     }
     /* the scoped stages copies are here (the Watch chunk does not load gajjala.css) — and the Watch never imports it */
     expect(rule(css, '.ggw-tags .gg-stages')).toMatch(/flex-wrap:\s*wrap/);
-    for (const f of ['src/components/GajjalaWatchTags.tsx', 'src/components/GajjalaWatchTile.tsx', 'src/components/GajjalaWatchBoard.tsx']) {
+    for (const f of ['src/components/GajjalaWatchTags.tsx', 'src/components/GajjalaWatchTile.tsx', 'src/components/GajjalaWatchBoard.tsx',
+                     'src/components/GgwBrokerMark.tsx']) {   // 2026-11-19 (spec watchfid): + the 🚫 mark
       expect(await readSource(f), f).not.toMatch(/styles\/gajjala\.css/);
     }
     expect(css).not.toMatch(/\.ggw-tags[^{]*\.ggw-chip/);
+  });
+  /* 🚫 2026-11-19 (spec watchfid) [C3]: the Watch's broker mark has its OWN scoped look here — no unscoped 🚩 copy */
+  it('CSS: the 🚫 mark is scoped (.ggw-broker-mark dims to 0.35) — NEGATIVE: no .gg-broker-toggle in the Watch sheet', async () => {
+    const css = await readSource('src/styles/gajjalaWatch.css');
+    expect(rule(css, '.ggw-broker-mark')).toMatch(/opacity:\s*0\.35/);
+    expect(css).not.toMatch(/\.gg-broker-toggle/);
   });
 });

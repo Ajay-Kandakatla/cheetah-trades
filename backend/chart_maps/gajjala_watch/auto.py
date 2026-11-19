@@ -93,6 +93,7 @@ from chart_maps.gajjala import potential as PT
 from chart_maps.gajjala import run as RUN
 from chart_maps.gajjala import scanner as SC
 from chart_maps.gajjala import store as ST
+from chart_maps.gajjala import tab as GT                  # 🚫 2026-11-19 (spec watchfid [C7]): the served word; no cycle
 from chart_maps.gajjala import variant as V
 
 from . import colls as CO
@@ -103,11 +104,13 @@ log = logging.getLogger("chart_maps.gajjala_watch.auto")
 
 REASONS = ("not_progressing", "dropped", "dismissed", "on_your_list",      # the stored removal reasons — APPEND only:
            "made_room",                                                   # "dropped" = old docs only (12:55 accumulate)
-           "made_room_aplus")                                             # 🎯 2026-11-17 (spec ggwaplus2) — an A+ seat
+           "made_room_aplus",                                             # 🎯 2026-11-17 (spec ggwaplus2) — an A+ seat
+           "not_eligible")                                                # 🚫 2026-11-19 (spec watchfid) — on his broker list
 STEP_REASONS = ("list_unreadable", "boards_unreadable", "closed", "write_failed")
 STATES_DISMISS = ("dismissed", "absent", "error")
 SKIPPED_KEYS = ("volume_unknown", "under_floor", "full",                 # "full" appended 2026-11-17 12:55
-                "failed")                                                  # "failed" appended (Amendment A4) — APPEND only
+                "failed",                                                  # "failed" appended (Amendment A4) — APPEND only
+                "not_eligible")                                            # 🚫 2026-11-19 (spec watchfid) — on his broker list
 _TRACKER_FIELDS = {"symbol": 1, "setup": 1, "date": 1, "first_seen": 1, "first_kind": 1, "last.at": 1,
                    "last.state": 1, "last.session_volume": 1}             # the ONE projected tracker find per store
 _FAR = datetime.max.replace(tzinfo=timezone.utc)
@@ -171,6 +174,37 @@ def _default_stores() -> dict:
 def _words():
     from . import payload as PL                                  # lazy: payload reads this module lazily too
     return PL
+
+
+# ── 🚫 his broker list (2026-11-19, spec watchfid) ──────────────────────────────────────────────────────────────────
+def broker_gate(stores) -> tuple:
+    """🚫 (frozenset of folded symbols, fault) — THE list (gajjala.store.broker_flags over the GG5 store), read ONCE per
+    step. Ajay 2026-11-19, verbatim: "Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't add
+    them to watch list". The switch off → (frozenset(), False). A read fault or a raise → (frozenset(), True): the seed
+    is ignored on a fault (it is empty by HIS rule) and the caller fails OPEN (only today's own removals stay out).
+    Never raises."""
+    if not C.AUTO_SKIP_NOT_ELIGIBLE:
+        return frozenset(), False
+    try:
+        syms, fault = ST.broker_flags((stores or {}).get(V.GG5.key))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch 🤖: broker list unreadable: %s", type(exc).__name__)
+        return frozenset(), True
+    if fault:
+        return frozenset(), True
+    return frozenset(CO.fold(s) for s in syms if isinstance(s, str)), False
+
+
+def broker_words() -> Optional[str]:
+    """🚫 THE one phrase on the Watch exception (the ℹ️ auto clause, the ℹ️ 🚫 line, the 🤖 hover hint), from the
+    constants at CALL time; None when the switch is off. No digit, never the broker's name."""
+    if not C.AUTO_SKIP_NOT_ELIGIBLE:
+        return None
+    s = f"a name on your {GT.BROKER_FLAG_ICON} list never takes a 🤖 auto seat"
+    if C.AUTO_NOT_ELIGIBLE_REMOVES:
+        s += (", and a seated one leaves at the next minute, an A+ seat too" if C.AUTO_NOT_ELIGIBLE_REMOVES_APLUS
+              else ", and a seated potential leaves at the next minute (an A+ seat stays until your ×)")
+    return s
 
 
 def _rec(sym, now, reason, *, state=None, source=None, text=None) -> dict:
@@ -611,6 +645,16 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
     entries, removed, dismissed = _lists(doc, iso)
     mk = {CO.fold(m) for m in manual or [] if isinstance(m, str)}
     dk = {CO.fold(s) for s in dismissed}
+    bk, bfault = broker_gate(stores)                           # 🚫 2026-11-19 (spec watchfid): ONE list read per step
+    ne_seen = {CO.fold(r.get("symbol")) for r in removed
+               if isinstance(r, dict) and r.get("reason") == REASONS[6] and isinstance(r.get("symbol"), str)}
+    refuse_k = ne_seen if bfault else bk                       # [C8] a fault minute: today's own 🚫 removals stay out
+    ne: list = []                                              # house spellings, fold-deduped, first-refusal order
+
+    def refuse(sym) -> None:
+        if CO.fold(sym) not in {CO.fold(x) for x in ne}:
+            ne.append(CO.house(sym))
+
     tdocs = {k: _tracker_docs(stores.get(k), iso) for k in read_sources()}          # ONE find per store
     shared = shared_sets(session, store=stores.get(V.GG5.key), tracker_docs=tdocs.get(V.GG5.key))
     rdocs = {k: _read_docs(stores.get(k), iso) for k in read_sources()}             # ONE read find per store
@@ -622,6 +666,8 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             k = CO.fold(e["symbol"])
             if k in mk or k in dk or k not in aps:
                 continue                                       # no hit → an A+ entry keeps its LAST block
+            if k in bk and not _is_aplus(e):
+                continue                                       # 🚫 a flagged potential is never promoted in place [C9]
             _s, ap, srcs = aps[k]
             e.update(aplus=dict(ap), sources=list(srcs), setup=ap.get("setup"))
             if not _is_aplus(e):                               # a 🧠 potential that became A+ — promoted in place
@@ -637,6 +683,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             continue
         if k in dk:
             continue                                           # recorded by dismiss
+        if k in bk and C.AUTO_NOT_ELIGIBLE_REMOVES and (C.AUTO_NOT_ELIGIBLE_REMOVES_APLUS or not _is_aplus(e)):
+            gone_now.append(_rec(sym, now, REASONS[6], text=GT.BROKER_FLAG_TEXT))     # 🚫 his list (spec watchfid)
+            continue
         if _is_aplus(e) and C.AUTO_APLUS_STAYS:                # 🎯 an A+ seat stays all session (HIS CALL #2)
             kept.append(e)
             continue
@@ -678,6 +727,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             k = CO.fold(sym)
             if k in mk or k in dk or k in have:
                 continue
+            if k in refuse_k:                                  # 🚫 never seated; not "aplus_skipped" (no free seat)
+                refuse(sym)
+                continue
             if not C.AUTO_APLUS_STAYS and k in out_today:      # the alternative of HIS CALL #2: a removal sticks today
                 continue
             if len(entries) + len(added) >= C.AUTO_MAX_SYMBOLS:
@@ -712,6 +764,9 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
             k = CO.fold(sym)
             if k in mk or k in dk or k in have or (tracker_only and k in out_today):
                 continue
+            if k in refuse_k:                                  # 🚫 before the volume floor — counted once, here
+                refuse(sym)
+                continue
             if not good_volume(cand):
                 skipped[SKIPPED_KEYS[0] if PT._num(cand.get("volume")) is None else SKIPPED_KEYS[1]] += 1
                 continue
@@ -745,13 +800,15 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
                           "volume": cand["volume"], "volume_source": cand["volume_source"],
                           "float_shares": cand["float_shares"], "added_at": now, "added_et": PT._hhmm(now),
                           "dropped_since": since})
+        skipped[SKIPPED_KEYS[4]] = len(ne)
         entries = entries + added
     removed += gone_now
     res = {"symbols": [e["symbol"] for e in entries], "added": [e["symbol"] for e in added],
            "removed": [{k: r.get(k) for k in ("symbol", "reason", "state", "text")} for r in gone_now],
            "leaving": [e["symbol"] for e in entries if _utc(e.get("dropped_since"))],
            "n": len(entries), "cap": C.AUTO_MAX_SYMBOLS, "skipped": skipped, "reason": reason,
-           "removed_total": len(removed), "aplus_skipped": aplus_skipped}
+           "removed_total": len(removed), "aplus_skipped": aplus_skipped,
+           "not_eligible": ne, "broker_fault": bool(bfault)}
     res["changed"] = _changed(doc, iso, entries, removed, dismissed)
     return res, {"session": iso, "entries": entries, "removed": removed, "dismissed": dismissed}
 
@@ -769,7 +826,7 @@ def step(now, session, *, db=None, manual: list, dry: bool = False, stores: Opti
         if doc is None:
             return {"symbols": [], "added": [], "removed": [], "leaving": [], "n": 0, "cap": C.AUTO_MAX_SYMBOLS,
                     "skipped": {k: 0 for k in SKIPPED_KEYS}, "reason": STEP_REASONS[0], "changed": False,
-                    "aplus_skipped": []}
+                    "aplus_skipped": [], "not_eligible": [], "broker_fault": False}
         res, new = _compute(doc, now, session, manual, stores, in_window)
         if dry:
             res["writes"] = new
@@ -892,11 +949,12 @@ def rules_line() -> str:
             f"ahead of the potentials (at {C.AUTO_MAX_SYMBOLS} it displaces the oldest name whose potential lapsed, "
             f"then the oldest-added potential, never another A+ or your own name) and stays all session — {gone} "
             f"never removes it"
+            + (f"; {bw}" if (bw := broker_words()) else "")
             + f"; your own names are never touched; {push}. UNMEASURED.")
 
 
 __all__ = ["REASONS", "STEP_REASONS", "STATES_DISMISS", "SKIPPED_KEYS", "read_doc", "entries_of", "current_symbols",
            "shared_sets", "volume_of", "read_sources", "sources", "potential_sets", "good_volume", "merge", "tracker_sets", "arrivals", "progress",
-           "aplus_sets", "aplus_arrivals",
+           "aplus_sets", "aplus_arrivals", "broker_gate", "broker_words",
            "step", "dismiss",
            "hold_crosses", "push_mode", "rules_line"]

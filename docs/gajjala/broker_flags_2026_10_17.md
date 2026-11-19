@@ -297,3 +297,10 @@ Resolved by the main session or shipped at the planner's default (BUILD_SPEC12 �
   if he says it clutters (Rule #5).
 - **Q8 /alerts prints nothing for `broker_flagged`** (DEFAULT, an informational pass count) vs a "🚫 N on your list" chip.
 - **Q9 Untagged**: the situational strip's best runner and the push item line (BUILD_SPEC12 R8, DEFAULT) vs tagged too.
+
+## Addendum 2026-11-19 — 👀 Watch
+
+2026-11-19 — on 👀 Watch only, by his word ("Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't
+add them to watch list"), the 🤖 auto section never seats a name on this list (a seated 🧠 potential leaves at the next
+minute; a 🎯 A+ seat stays until his ×), and every Watch tile has a one-way 🚫 button that adds the name here and takes it
+off the Watch. Every other surface still tags — see docs/gajjala/watch_not_in_fidelity_2026_11_19.md.

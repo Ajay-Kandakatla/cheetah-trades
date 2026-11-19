@@ -252,7 +252,9 @@ def test_C2_NEGATIVE_a_gg1_only_potential_without_any_number_is_refused_and_coun
     res = run(db, stores(gg1=[rdoc("LGHL")]))
     # PIN MOVED 2026-11-17 12:55 (spec ggwauto2 §2): SKIPPED_KEYS gained "full" (appended) — the count dict carries it.
     # PIN MOVED 2026-11-17 (Amendment A4): and "failed" (appended) — a ↩️ / ✖️ backlog name is counted, never added.
-    assert res["added"] == [] and res["skipped"] == {"volume_unknown": 1, "under_floor": 0, "full": 0, "failed": 0}
+    # PIN MOVED 2026-11-19 (spec watchfid): SKIPPED_KEYS gained "not_eligible" (appended) — the count dict carries it.
+    assert res["added"] == [] and res["skipped"] == {"volume_unknown": 1, "under_floor": 0, "full": 0, "failed": 0,
+                                                     "not_eligible": 0}
 
 
 def test_C2_NEGATIVE_an_unreadable_tracker_set_is_scan_only_and_never_raises():
@@ -941,7 +943,8 @@ def test_ACC_a_session_change_still_clears_and_yesterdays_trackers_are_not_read(
 
 def test_ACC_words_and_keys():
     # PIN MOVED 2026-11-17 (Amendment A4): "failed" appended after "full" — never reordered.
-    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed")
+    # PIN MOVED 2026-11-19 (spec watchfid): "not_eligible" appended after "failed" (appended).
+    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed", "not_eligible")
     assert A.REASONS[:4] == ("not_progressing", "dropped", "dismissed", "on_your_list")         # never reordered
     W = A._words()
     assert set(re.findall(r"\{(\w+)", W.AUTO_MADE_ROOM_TEXT)) == {"new", "since_et"}

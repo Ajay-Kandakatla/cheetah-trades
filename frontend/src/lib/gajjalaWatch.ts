@@ -15,6 +15,7 @@
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
 import type { CmAxis, CmEmaBlink, CmTile } from './chartMaps';
 import { ggRunBasesLine, type GgStages } from './gajjala';
+import { parseGgwBroker, type GgwBroker } from './ggwBroker';   // 🚫 2026-11-19 (spec watchfid)
 
 /** The tab id (== backend chart_maps/gajjala_watch/constants.TAB). */
 export const GGW_TAB = 'gajjala_watch';
@@ -303,6 +304,8 @@ export type GgwRow = {
   /** 🏷️ 2026-11-18: null when the name is not carded on today's 🚩 board (optional for the same reason as `auto` —
    *  parseGgw always sets it). */
   tags?: GgwRowTags | null;
+  /** 🚫 2026-11-19 (spec watchfid): the served broker word for ANY row (carded or not); null = not on his list. */
+  broker_text?: string | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -337,6 +340,8 @@ export type GgwBoard = {
   pass: GgwPass | null; info: GgwInfo | null; legend: GgwLegend[]; rows: GgwRow[];
   /** 🤖 the auto section's head (absent / junk → null — an older server serves none; the board then renders as before). */
   auto: GgwAuto | null;
+  /** 🚫 2026-11-19 (spec watchfid): the served broker block (owner only; absent / junk → null — no button). */
+  broker?: GgwBroker | null;
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
 /** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
@@ -515,6 +520,7 @@ function parseRow(v: unknown): GgwRow | null {
     auto: parseRowAuto(v.auto),
     aplus: parseRowAplus(v.aplus),
     tags: parseRowTags(v.tags),
+    broker_text: str(v.broker_text),
   };
 }
 
@@ -564,6 +570,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
       .map((l: any) => ({ tone: l.tone, label: l.label })),
     rows: raw.rows.map(parseRow).filter((r: GgwRow | null): r is GgwRow => !!r),
     auto: parseAuto(raw.auto),
+    broker: parseGgwBroker(raw.broker),
   };
 }
 

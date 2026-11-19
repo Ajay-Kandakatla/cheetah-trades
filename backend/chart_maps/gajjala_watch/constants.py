@@ -60,6 +60,11 @@ AUTO_TAG = "🤖"
 AUTO_APLUS_WHY = "aplus"        # the entry's `why` (absent = a 🧠 potential entry; old docs carry none)
 AUTO_APLUS_EVICTS = True        # HIS CALL #1 — an A+ name takes a seat ahead of potentials (lapsed first, then oldest-added); False = free seats only
 AUTO_APLUS_STAYS = True         # HIS CALL #2 — ↩️/✖️ never remove an A+ name (the 🎯 chip says "A+, then stopped"); only his ×
+# 🚫 his broker list on the Watch (2026-11-19, spec watchfid — Ajay, verbatim: "Add a button to say not in fidelity, AZI and
+# CHSN are not in fidelity don't add them to watch list"). auto.broker_gate reads THE list (gajjala.store.broker_flags). UNMEASURED.
+AUTO_SKIP_NOT_ELIGIBLE = True             # his word 2026-11-19 — a name on his 🚫 list never takes a NEW 🤖 / 🎯 seat
+AUTO_NOT_ELIGIBLE_REMOVES = True          # HIS CALL #2 (spec watchfid) — a seated 🧠 potential that joins his list leaves next minute
+AUTO_NOT_ELIGIBLE_REMOVES_APLUS = False   # HIS CALL #3 — False keeps his 11-17 call: an A+ seat leaves only on his ×
 ARGV_LOOP = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--loop")    # = ops/docker_watchdog CRON_DETACHED_CHILD_ARGS entry
 ARGV_BUILD = (sys.executable, "-m", "chart_maps.gajjala_watch.loop", "--build")  # the API's add-time child; builds every pending name
 PROC_NAME_LOOP, PROC_NAME_BUILD = "gajjala-watch-loop", "gajjala-watch-build"

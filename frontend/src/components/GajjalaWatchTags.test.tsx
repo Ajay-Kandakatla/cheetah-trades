@@ -352,6 +352,64 @@ describe('🏷️ GgwTagsRow', { timeout: 20000 }, () => {
   });
 });
 
+/* 🚫 2026-11-19 (spec watchfid §3.3, WP-C test 7): the row's own served broker word — ONE chip per row. */
+describe('🚫 the broker chip from the row word', { timeout: 20000 }, () => {
+  beforeEach(() => { siMode = 'ok'; _resetShortInterestCache(); _resetBounceRoomCache(); _resetGrowthTagsCache(); });
+  afterEach(() => {
+    cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks();
+    _resetShortInterestCache(); _resetBounceRoomCache(); _resetGrowthTagsCache();
+  });
+  const ROW_WORD = '🚫 served row broker word';
+
+  it('an UNCARDED row with row.broker_text → exactly one ggw-broker chip, right after the 🩳 chip', async () => {
+    routedFetch();
+    const c = mountRow({ ...rowOf('OMH'), broker_text: ROW_WORD });
+    await settle();
+    await waitFor(() => expect(c.querySelector('.cm-badge-growth')).not.toBeNull());
+    const r = rowEl(c, 'OMH')!;
+    const chips = r.querySelectorAll('[data-testid="ggw-broker-OMH"]');
+    expect(chips).toHaveLength(1);
+    expect(chips[0].textContent).toBe(ROW_WORD);
+    expect(chips[0].className).toBe('cm-badge cm-badge-muted gg-broker ggw-broker');
+    expect(Array.from(r.children).map((e) => e.getAttribute('data-testid') ?? e.className))
+      .toEqual(['cm-badge cm-badge-growth', 'si-chip', 'ggw-broker-OMH']);
+  });
+  it('an uncarded row with ONLY the broker word still draws the row (the guard counts it)', async () => {
+    routedFetch({ tags: {} });
+    const c = mountRow({ ...rowOf('NREC'), broker_text: ROW_WORD });
+    await settle();
+    expect(Array.from(rowEl(c, 'NREC')!.children).map((e) => e.getAttribute('data-testid'))).toEqual(['ggw-broker-NREC']);
+  });
+  it('a CARDED row with both words → exactly ONE chip (the row word), at the card position — NEGATIVE: never two', async () => {
+    routedFetch();
+    const c = mountRow({ ...rowOf('OMH', TAGS), broker_text: ROW_WORD }, ROOM, STUDY);
+    await settle();
+    await waitFor(() => expect(c.querySelector('.cm-badge-growth')).not.toBeNull());
+    const r = rowEl(c, 'OMH')!;
+    expect(r.querySelectorAll('.ggw-broker')).toHaveLength(1);
+    expect(r.querySelector('[data-testid="ggw-broker-OMH"]')!.textContent).toBe(ROW_WORD);
+    const kinds = Array.from(r.children).map((e) => e.getAttribute('data-testid') ?? e.className);
+    expect(kinds.indexOf('ggw-broker-OMH')).toBe(kinds.indexOf('ggw-promo-OMH') + 1);
+  });
+  it('a carded row of an older server (no row word) keeps the card word — the 11-18 order unchanged', async () => {
+    routedFetch();
+    const c = mountRow(rowOf('OMH', TAGS), ROOM, STUDY);
+    await settle();
+    const r = rowEl(c, 'OMH')!;
+    expect(r.querySelectorAll('.ggw-broker')).toHaveLength(1);
+    expect(r.querySelector('[data-testid="ggw-broker-OMH"]')!.textContent).toBe(TAGS.broker_text);
+  });
+  it('NEGATIVE: an uncarded row with no word (null / blank) → no broker chip', async () => {
+    routedFetch();
+    for (const w of [null, '  ']) {
+      const c = mountRow({ ...rowOf('OMH'), broker_text: w });
+      await settle();
+      expect(c.querySelector('.ggw-broker')).toBeNull();
+      cleanup();
+    }
+  });
+});
+
 /* ── source guard [C3b] ── */
 async function readSource(rel: string): Promise<string> {
   const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));

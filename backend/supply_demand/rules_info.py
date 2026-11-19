@@ -1290,6 +1290,20 @@ def _gg_watch_auto_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_broker_clause() -> str:
+    """🚫 2026-11-19 (spec watchfid, Ajay "Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't add
+    them to watch list") — the 🚫 stops line's ONE Watch-exception clause, built by
+    chart_maps.gajjala_watch.auto.broker_words() (the switches read at call time — never typed here): " On 👀 Gajjala's
+    Watch, by your word, " + the phrase + ".", or "" when the module cannot load, the phrase raises or is None."""
+    try:
+        from chart_maps.gajjala_watch import auto as GWA
+        w = GWA.broker_words()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch broker clause unavailable: %s", exc)
+        return ""
+    return " On 👀 Gajjala's Watch, by your word, " + w + "." if isinstance(w, str) and w else ""
+
+
 def _gg_one_minute_clause() -> str:
     """🚩 2026-10-27 (Ajay "Can you create a new page, I would like you to do the same logic of Gajjalas but on 1 min
     candles please."; BUILD_SPEC27 §3.7) — the section note's ONE clause on the one-minute page, built from
@@ -1515,9 +1529,9 @@ def _gajjala_section() -> dict:
             % GC.RED_CLOSES_WAIT,
             # 🚫 2026-10-17 (DECISIONS12 D6, BUILD_SPEC12 §3.8): his own broker list — a TAG, never a filter
             "🚫 Not eligible at %s — your own list of names %s would not let you buy online; a tag only — nothing "
-            "is hidden, the pushes still ring and carry the tag. %s By your word, %s (still listed, "
+            "is hidden, the pushes still ring and carry the tag.%s %s By your word, %s (still listed, "
             "still tagged)."
-            % (GC.BROKER_NAME, GC.BROKER_NAME,
+            % (GC.BROKER_NAME, GC.BROKER_NAME, _gg_watch_broker_clause(),      # 🚫 2026-11-19 the 👀 Watch exception
                ("Seeded with %s." % ", ".join(GC.BROKER_FLAG_SEED)) if GC.BROKER_FLAG_SEED else "Nothing is seeded.",
                _gg_bottom_word()),
             # 🔴 2026-10-21 (BUILD_SPEC20 D6, Ajay: "If something is Potential add min on min for pricing …")

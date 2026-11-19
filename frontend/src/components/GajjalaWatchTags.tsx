@@ -26,6 +26,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { GgTraderChip, servedChip } from './GgTraderChip';
 import { GgStages } from './GgStages';
+import { ggwBrokerText } from '../lib/ggwBroker';
 
 /** What the board hands each Watch tile: this name's room row (null when none) and the served study verdict. */
 export type GgwTagsCtx = { room?: RoomRow | null; study?: ExplosiveStudy | null };
@@ -61,22 +62,24 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
   const ex = t ? explosiveChipText(room?.explosive, study) : null;
   const en = t ? enterableChipText(room?.enterable) : null;
   const trader = t && (served(t.trader_text) || served(t.promo_text));
-  const broker = t && served(t.broker_text);
+  /* 🚫 2026-11-19 (spec watchfid): the row's own served word (any row, carded or not), else the CARDED tags' word — ONE chip. */
+  const brokerText = ggwBrokerText({ broker_text: row.broker_text, tags: t });
   const float = t && served(t.float?.text) ? t.float : null;
   const stages = t && stagesPrint(t);
   const setups = t && !stages ? t.setups.filter((s) => served(s.label)) : [];
-  if (!growth && !siText && !ex && !en && !trader && !broker && !float && !stages && !setups.length) return null;
+  if (!growth && !siText && !ex && !en && !trader && !brokerText && !float && !stages && !setups.length) return null;
   return (
     <div className="ggw-tags" data-testid={`ggw-tags-${sym}`}>
       <GrowthChip symbol={sym} />
       {siText ? <ShortInterestChip symbol={sym} /> : null}
+      {!t ? servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`) : null}
       {t ? (
         <>
           <ExplosiveChip read={room?.explosive} study={study} />
           <EnterableChip read={room?.enterable} />
           <GgTraderChip text={t.trader_text} testid={`ggw-trader-${sym}`}
                         promoText={t.promo_text} promoTestid={`ggw-promo-${sym}`} />
-          {servedChip(t.broker_text, 'gg-broker ggw-broker', `ggw-broker-${sym}`)}
+          {servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`)}
           {float ? <span className="cm-badge cm-badge-muted ggw-float" data-testid={`ggw-float-${sym}`}>{float.text}</span> : null}
           {stages ? <GgStages stages={t.stages} sym={sym} /> : null}
           {setups.map((s) => (

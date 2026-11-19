@@ -150,7 +150,7 @@ export function Frame({ f, phone, fit, style, live }: {
 }
 
 export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote,
-  stack, extra, tags }: {
+  stack, extra, tags, actions }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
@@ -176,6 +176,9 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   /** 🏷️ 2026-11-18: the Watch's tags row above the head (the Watch only; the 🚩 / 🧪 card grid and GgCardView never
    *  pass it → their DOM is byte-identical). */
   tags?: GgwTagsCtx;
+  /** 🚫 2026-11-19 (spec watchfid): Watch-only action buttons, FIRST in the action group (before ⤢, away from ✕); never in
+   *  the ⤢ view. Absent → today's DOM (the 🚩 / 🧪 grid, GgCardView and GgwStretch never pass it). */
+  actions?: ReactNode;
 }) {
   const { top, pair } = ggwSplitFrames(row.frames);
   const stacked = !onUnstretch && !!stack;
@@ -221,6 +224,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
           <span key={`${r.frame}-${r.at_et}-${i}`} className="ggw-chip ggw-rang" data-testid="ggw-rang">{r.text}</span>
         ))}
         <span className="ggw-actions">
+          {actions && !onUnstretch ? actions : null}
           {onStretch ? (
             <button type="button" className="ggw-btn ggw-stretch-btn" title={ggwStretchTitle(row.symbol)}
                     aria-label={ggwStretchTitle(row.symbol)} data-testid={`ggw-stretch-btn-${row.symbol}`}

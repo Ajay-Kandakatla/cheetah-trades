@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-19, verbatim: "Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't add them to
+  // watch list". Watch only: gajjala_watch/auto.py never seats a name on his one 🚫 list; every Watch tile gets a one-way
+  // 🚫 button (flags it, then takes it off the Watch). The other Gajjala surfaces still only tag. Doc
+  // docs/gajjala/watch_not_in_fidelity_2026_11_19.md.
+  {
+    id: 'gajjala-watch-not-eligible-2026-11-19',
+    label: '🚫 Watch: not in Fidelity — you said: “Add a button to say not in fidelity, AZI and CHSN are not in fidelity don’t add them to watch list”. Every Watch tile has a 🚫 button: one tap flags the name and takes it off the Watch. The 🤖 auto section never seats a flagged name (AZI and CHSN are on your list already); a flagged 🧠 potential that is already seated leaves at the next minute, an A+ seat stays until your ✕. Names you type yourself still go through. The other Gajjala boards and pushes only tag these names, as before. Display only — no rule, gate or push changed. UNMEASURED. Not advice.',
+    addedAt: '2026-11-19',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-19, verbatim: "Add things to my auto watch list please and make them active I see not active on my page.
   // Becuz they are in query params". A saved / linked `show=` pick hid every name added after it; lib/gajjalaWatch.ts
   // ggwActivateNew merges a name new since this browser last looked into the pick, first. Display only.

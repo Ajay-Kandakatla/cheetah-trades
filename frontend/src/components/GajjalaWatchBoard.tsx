@@ -83,6 +83,7 @@ import { useGgwTags } from './GajjalaWatchTags';
  * pure move) so the 🚩 / 🧪 card grid draws the SAME controls. */
 import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
 import { loadGgwList } from '../lib/ggWatchList';
+import { GgwBrokerButton, GgwBrokerHead, useGgwBrokerMark } from './GgwBrokerMark';   // 🚫 2026-11-19 (spec watchfid)
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
@@ -350,6 +351,8 @@ export default function GajjalaWatchBoard() {
         loadAllRef.current();
       });
   };
+  /* 🚫 2026-11-19 (spec watchfid): the tile's one-way mark — POST his 🚫 list, then the same DELETE as ✕; one re-GET. */
+  const mark = useGgwBrokerMark((text) => { setMsg(text); loadAllRef.current(); });
 
   const onAdd = (e: FormEvent) => {
     e.preventDefault();
@@ -422,6 +425,7 @@ export default function GajjalaWatchBoard() {
         {p.auto?.skipped_text ? (
           <span className="ggw-line ggw-warn" data-testid="ggw-auto-skipped">{p.auto.skipped_text}</span>
         ) : null}
+        <GgwBrokerHead block={p.broker ?? null} err={mark.err} />
         {p.auto?.state === 'unreadable' && p.auto.text ? (
           <span className="ggw-line ggw-warn" data-testid="ggw-auto-unreadable">{p.auto.text}</span>
         ) : null}
@@ -479,7 +483,8 @@ export default function GajjalaWatchBoard() {
           {p.rows.map((r, i) => (
             <Tile key={r.symbol} row={r} phone={phone} fit={fit} removeLabel={p.remove_label} busy={busy}
                   focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote tags={tagsOf(r)} />
+                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote tags={tagsOf(r)}
+                  actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />} />
           ))}
         </div>
       ) : (

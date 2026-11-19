@@ -142,6 +142,7 @@ async def gajjala_watch_symbols(email: Optional[str] = Depends(maybe_current_use
 @router.post(C.API_SYMBOL_PATH)
 async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_admin)):
     out = await asyncio.to_thread(ST.add, symbol, by=email)
+    out = await asyncio.to_thread(_broker_note, out)                  # 🚫 2026-11-19 — the word, never a block
     if out.get("state") in ("added", "replaced"):            # 🔁 2026-11-18: a replace adds a name too
         try:
             if CO.enabled() and not CO.loop_reads_soon(datetime.now(ET)):     # off → no build child
@@ -149,6 +150,16 @@ async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_ad
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: build request failed: %s", exc)
     return out
+
+
+def _broker_note(out) -> Any:
+    """🚫 2026-11-19 (spec watchfid): `broker.add_note` (imported lazily through sys.modules) — his add of a listed name
+    still lands; its answer carries the word. Any failure → the store's answer unchanged."""
+    try:
+        return importlib.import_module(PL.BROKER_MODULE).add_note(out)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: broker add note failed: %s", type(exc).__name__)
+        return out
 
 
 def _dismiss(symbol, by) -> Any:

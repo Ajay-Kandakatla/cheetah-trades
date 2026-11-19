@@ -116,11 +116,14 @@ def ent(db, sym):
 # ── constants / words ────────────────────────────────────────────────────────────────────────────────────────────
 def test_constants_and_append_only_tuples():
     assert C.AUTO_APLUS_WHY == "aplus" and C.AUTO_APLUS_EVICTS is True and C.AUTO_APLUS_STAYS is True
-    assert A.REASONS[4:] == ("made_room", "made_room_aplus")
-    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed")              # UNCHANGED
+    # PIN MOVED 2026-11-19 (spec watchfid): REASONS += "not_eligible" (appended)
+    assert A.REASONS[4:] == ("made_room", "made_room_aplus", "not_eligible")
+    # PIN MOVED 2026-11-19 (spec watchfid): SKIPPED_KEYS += "not_eligible" (appended)
+    assert A.SKIPPED_KEYS == ("volume_unknown", "under_floor", "full", "failed", "not_eligible")
     assert C.AUTO_VOLUME_SOURCES == ("scan", "tracker")                                       # [C1] no third source
-    assert L.AUTO_OUT_KEYS[-1] == "aplus_skipped" and L.AUTO_OUT_KEYS[:-1] == (
-        "n", "cap", "added", "removed", "leaving", "skipped", "reason")
+    # PIN MOVED 2026-11-19 (spec watchfid): AUTO_OUT_KEYS += "not_eligible", "broker_fault" (appended)
+    assert L.AUTO_OUT_KEYS[-2:] == ("not_eligible", "broker_fault") and L.AUTO_OUT_KEYS[:-2] == (
+        "n", "cap", "added", "removed", "leaving", "skipped", "reason", "aplus_skipped")
     assert PL.AUTO_WHY_WORDS == {"aplus": C.AUTO_APLUS_WHY, "potential": "potential"}
     assert not hasattr(C, "AUTO_APLUS_READD") and "read" not in PL.AUTO_VOL_TEXT
     assert A._READ_FIELDS == {"symbol": 1, "setups": 1, "ctx": 1, "updated_at": 1}

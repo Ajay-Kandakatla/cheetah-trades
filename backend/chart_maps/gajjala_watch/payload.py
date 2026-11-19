@@ -154,6 +154,7 @@ AUTO_APLUS_REMOVE_TITLE = "Remove {sym} (auto A+ — not added again today)"
 AUTO_WHY_WORDS = {"aplus": C.AUTO_APLUS_WHY, "potential": "potential"}               # the served `why` values
 AUTO_MODULE = "chart_maps.gajjala_watch.auto"
 TAGS_MODULE = "chart_maps.gajjala_watch.tags"                                         # 🏷️ 2026-11-18 (spec wtags)
+BROKER_MODULE = "chart_maps.gajjala_watch.broker"                                     # 🚫 2026-11-19 (spec watchfid)
 
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
 DOC_STATUSES = ("loaded", "no_prints", "no_bars", "failed", "over_budget")      # build.status_of (WP-B)
@@ -265,6 +266,19 @@ def _tags_section(names: list, session, is_today: bool) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: tags section unavailable: %s", type(exc).__name__)
         return {}
+
+
+def _broker_section(out, state_doc, siso) -> None:
+    """🚫 2026-11-19 (spec watchfid) — `broker.apply` (imported lazily through sys.modules): every row's `broker_text`, the
+    board's `broker` block, the 🤖 hint's sentence. Any failure → every row None, `broker` None (the board answers)."""
+    try:
+        importlib.import_module(BROKER_MODULE).apply(out, state_doc=state_doc, siso=siso)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: broker section unavailable: %s", type(exc).__name__)
+        for r in out.get("rows") or []:
+            if isinstance(r, dict):
+                r["broker_text"] = None
+        out["broker"] = None
 
 
 def info() -> dict:
@@ -897,6 +911,7 @@ def _build(now: datetime, db, only) -> dict:
            "pass": pass_block(state_doc, now, bool(in_window)),
            "info": info(), "legend": legend(), "rows": rows,
            "auto": auto_out}
+    _broker_section(out, state_doc, siso)   # 🚫 2026-11-19
     if any(r["state"] == "pending" for r in rows):
         out["pending_poll_sec"] = GC.ON_DEMAND_POLL_SEC
         out["pending_wait_max_sec"] = GC.ON_DEMAND_WAIT_MAX_SEC

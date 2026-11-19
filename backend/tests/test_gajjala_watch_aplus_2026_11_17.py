@@ -332,6 +332,7 @@ def test_row_keys_are_the_old_keys_plus_aplus(monkeypatch):
     db = _db(["OMH"])
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH")
     rows, _ = _rows(db=db)
+    # PIN MOVED 2026-11-19 (spec watchfid): + "broker_text"
     assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
-                                "auto", "aplus", "tags"}                  # 🏷️ 2026-11-18 (spec wtags): + "tags"
+                                "auto", "aplus", "tags", "broker_text"}   # 🏷️ 2026-11-18 (spec wtags): + "tags"
     assert C.AUTO_SOURCES == (V.GG5.key, V.GG1.key, V.GGA.key) and GC.SETUPS

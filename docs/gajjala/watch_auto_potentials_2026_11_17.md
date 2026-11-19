@@ -320,3 +320,11 @@ appears on his row the moment it becomes A+; it is never an auto entry while it 
 Tests: `backend/tests/test_gajjala_watch_auto_aplus_2026_11_17.py`, the served key-set pins in
 `test_gajjala_watch_auto_served_2026_11_17.py` (dated), `frontend/src/lib/gajjalaWatch.test.ts`,
 `frontend/src/components/GajjalaWatchBoard.aplusAuto.test.tsx`. UNMEASURED — display / selection only.
+
+## Addendum 2026-11-19 — 🚫 his broker list
+
+2026-11-19 — on 👀 Watch only, by his word, the 🤖 auto section never seats a name on his 🚫 list
+(`gajjala.store.broker_flags`): no new 🧠 or 🎯 seat, a flagged potential is never promoted in place, a seated 🧠 potential
+on the list leaves at the next minute (reason `not_eligible`), a 🎯 A+ seat stays until his × (HIS CALL #3). The hover hint
+gains `auto.broker_words()` before its final "UNMEASURED."; the board's `broker` block serves the names kept off. Every
+other surface still tags — see docs/gajjala/watch_not_in_fidelity_2026_11_19.md.

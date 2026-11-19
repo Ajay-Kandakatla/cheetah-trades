@@ -708,8 +708,12 @@ def test_the_rules_line_and_the_note():
     from supply_demand import rules_info as RI
     sec = RI._gajjala_section()
     line = next(s for s in sec["stops"] if s.startswith("🚫 "))        # by prefix: later lines were appended after it
+    # PIN MOVED 2026-11-19 (spec watchfid): + the 👀 Watch clause (auto.broker_words)
     assert line == ("🚫 Not eligible at Fidelity — your own list of names Fidelity would not let you buy "
                                 "online; a tag only — nothing is hidden, the pushes still ring and carry the tag. "
+                                "On 👀 Gajjala's Watch, by your word, a name on your 🚫 list never takes a 🤖 auto "
+                                "seat, and a seated potential leaves at the next minute (an A+ seat stays until "
+                                "your ×). "
                                 "Nothing is seeded. By your word, your 🚫 names sit at the bottom of "
                                 "every card board (still listed, still tagged).")
     assert GT.BROKER_BOTTOM_TEXT in line                                 # built from the served word, never retyped

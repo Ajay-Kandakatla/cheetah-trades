@@ -69,7 +69,8 @@ LEASE_HELD = "lease held"
 LOOP_REASONS = ("no time left in the slot", "after the extended close", "slot passed (host sleep)", "off")
 NO_TICKERS = "no tickers"
 AUTO_OUT_KEYS = ("n", "cap", "added", "removed", "leaving", "skipped", "reason",     # the state doc's `auto` block
-                 "aplus_skipped")                                                  # 🎯 2026-11-17 (spec ggwaplus2) — APPEND only
+                 "aplus_skipped",                                                  # 🎯 2026-11-17 (spec ggwaplus2) — APPEND only
+                 "not_eligible", "broker_fault")                                   # 🚫 2026-11-19 (spec watchfid) — APPEND only
 
 
 def _default_load():

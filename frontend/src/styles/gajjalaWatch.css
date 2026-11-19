@@ -194,3 +194,9 @@
   .ggw-grid--stretch.ggw-grid--fit .ggw-tags, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages { flex-wrap: wrap; overflow: visible; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-tags > *, .ggw-grid--stretch.ggw-grid--fit .ggw-tags .gg-stages > * { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+
+/* 🚫 2026-11-19 (spec watchfid): the Watch's one-way broker mark — dim until the served word says the name is on his list */
+.ggw-broker-mark { opacity: 0.35; }
+.ggw-broker-mark[aria-pressed="true"] { opacity: 1; }
+.ggw-broker-mark:disabled { opacity: 0.5; cursor: default; }
+.ggw-broker-mark[aria-pressed="true"]:disabled { opacity: 0.6; }
