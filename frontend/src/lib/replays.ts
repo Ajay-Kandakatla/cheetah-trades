@@ -85,3 +85,51 @@ export function rpSelectDates(dates: string[], date: string | null): { value: st
   if (typeof date === 'string' && date && !dates.includes(date)) out.unshift({ value: date, disabled: true });
   return out;
 }
+
+// ── 🏆 Past winners (2026-11-18, pastwinners spec §3.6, WP-APP) ─────────────────────────────────────────────────────
+// Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
+// A collapsed section at the bottom of 🎬 Replays: ONE lazy GET (GET /chart-maps/replays/winners) only when opened
+// (`?winners=1`), its own owner-only video route. Every word is SERVED except the section title (the section is
+// collapsed before anything is fetched) — contract-pinned equal to backend constants.WINNERS_TITLE. Descriptive,
+// UNMEASURED, not a signal.
+
+/** The 🏆 listing route (== backend chart_maps/replays/constants.WINNERS_API_PATH). */
+export const RP_WINNERS_PATH = `${RP_PATH}/winners`;
+/** The URL param that opens the 🏆 section (`winners=1`). */
+export const RP_WINNERS_PARAM = 'winners';
+/** The ONE FE word of the section: its collapsed title (== backend constants.WINNERS_TITLE, contract-pinned). */
+export const RP_WINNERS_TITLE = '🏆 Past winners';
+
+export type RpWinner = {
+  file: string; sub: string; src: string; symbol: string; kind?: string; kind_text?: string;
+  date?: string; label_date?: string; days?: string[]; days_text?: string;
+  close_gain_pct?: number | null; gain_text?: string; high_pct?: number | null; high_text?: string | null;
+  spike_print?: boolean; spike_text?: string | null; pick_text?: string | null;
+  speed?: number | null; speed_text?: string; minutes?: number | null; length_text?: string;
+};
+export type RpWinnerGroup = { date: string; label: string; videos: RpWinner[] };
+export type RpWinnersCounts = {
+  videos?: number; single_day?: number; multi_day?: number; skipped_window?: number; skipped_bad?: number;
+  no_sidecar?: number;
+};
+export type RpWinnersPayload = {
+  state: RpState | string; title?: string; tab?: string; text?: string | null; note?: string; window?: string;
+  window_note?: string; summary_text?: string | null; counts?: RpWinnersCounts; groups?: RpWinnerGroup[];
+};
+
+/** The `<video>` src for a served 🏆 card: API + the served `src`, ONLY when it is on the 🏆 video route. Anything
+ *  else → '' and no `<video>` is rendered for it. */
+export function rpWinnerSrc(v: { src?: unknown } | null | undefined): string {
+  const src = v ? v.src : undefined;
+  if (typeof src !== 'string' || !src.startsWith(`${RP_WINNERS_PATH}/video/`)) return '';
+  return `${API}${src}`;
+}
+
+/** The next URL params when the 🏆 section opens / closes: a COPY of `prev` with `winners=1` set (open) or deleted
+ *  (closed). Every other param — `tab`, `date` — rides along untouched. Pure. */
+export function rpWinnersParams(prev: URLSearchParams, open: boolean): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  if (open) next.set(RP_WINNERS_PARAM, '1');
+  else next.delete(RP_WINNERS_PARAM);
+  return next;
+}

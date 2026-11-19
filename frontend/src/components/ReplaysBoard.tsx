@@ -19,6 +19,8 @@
  * Written exemptions the contracts read (replays spec §7 #5 / #7):
  *   No house chips on this tab — the cards are videos, not ticker rows (replays spec §7 #7).
  *   ⚡ / 🧨 toggles: the served group order orders this board — nothing here ranks (replays spec §7 #5).
+ * 2026-11-18: the 🏆 section (ReplaysPastWinners) mounts AFTER `.rp-board` in every state — it owns its own lazy GET
+ * (only when opened), so this board's ONE GET and its `.rp-board` text are unchanged.
  * UNMEASURED — a replay is for his eyes, not a signal. */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -28,6 +30,7 @@ import {
   type RpGroup, type RpPayload, type RpPotential, type RpRs, type RpVideo,
 } from '../lib/replays';
 import { TickerLink } from './TickerLink';
+import ReplaysPastWinners from './ReplaysPastWinners';
 import '../styles/replays.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: RpPayload };
@@ -132,9 +135,14 @@ export default function ReplaysBoard() {
     return () => { alive = false; };
   }, [date]);
 
-  if (load.phase === 'loading') return <div className="rp-board" data-state="loading" />;
+  if (load.phase === 'loading') return <><div className="rp-board" data-state="loading" /><ReplaysPastWinners /></>;
   if (load.phase === 'failed') {
-    return <div className="rp-board" data-state="failed"><p className="rp-line" data-testid="rp-failed">{FETCH_FAILED}</p></div>;
+    return (
+      <>
+        <div className="rp-board" data-state="failed"><p className="rp-line" data-testid="rp-failed">{FETCH_FAILED}</p></div>
+        <ReplaysPastWinners />
+      </>
+    );
   }
   const p = load.p;
   const dates = rpDates(p.dates);
@@ -144,6 +152,7 @@ export default function ReplaysBoard() {
   const rs = (p.state === 'ready' || p.state === 'empty') && p.rs && typeof p.rs === 'object' ? p.rs : null;
 
   return (
+    <>
     <div className="rp-board" data-state={p.state}>
       <Line text={p.title} className="rp-title" testId="rp-title" />
       {options.length ? (
@@ -170,5 +179,7 @@ export default function ReplaysBoard() {
         </>
       )}
     </div>
+    <ReplaysPastWinners />
+    </>
   );
 }

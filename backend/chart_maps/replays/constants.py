@@ -59,3 +59,29 @@ VIDEO_HEADERS = {"Content-Encoding": "identity",           # GZipMiddleware trap
                  "Accept-Ranges": "bytes"}
 LISTING_HEADERS = {"Cache-Control": "no-store"}
 CARD_ERRORS = (TypeError, ValueError, IndexError, KeyError, AttributeError)   # one bad sidecar → skipped_bad, never a 500
+
+# ── 🏆 Past winners (spec pastwinners §3.5, WP-APP, 2026-11-18) ───────────────────────────────────────────────────────
+# Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
+# Two more folders under videos/ (already inside the :ro bind): `winners/` (market-wide single-day winner reels, one
+# session 04:00-20:00 ET at 45x) and `multiday/` (the 15 multi-day runner reels). The KIND comes from the FOLDER, never
+# from sidecar text; every served word is composed here from these constants + sidecar NUMBERS (no sidecar free text).
+# Hand-picked winners (survivorship): descriptive, UNMEASURED, not a signal.
+WINNERS_API_PATH = API_PATH + "/winners"
+WINNERS_VIDEO_PATH = WINNERS_API_PATH + "/video/{sub}/{name}"
+WINNER_SUBS = (("winners", "single_day", "single-day"), ("multiday", "multi_day", "multi-day"))   # folder, kind, chip
+WINNER_SUB_KEYS = tuple(s for s, _k, _t in WINNER_SUBS)
+MULTI_WINDOW_PREFIX = FULL_DAY_WINDOW + " x "              # replay_multiday.py:413 "04:00-20:00 ET x N sessions (...)"
+NON_SIDECAR_JSON = ("jobs.json", "runners.json", "winners.json")
+WINNERS_TITLE = "🏆 Past winners"                            # MINE — == FE RP_WINNERS_TITLE (contract-pinned)
+WINNERS_NOTE = (f"Market-wide stocks whose high reached +{GC.SA_BIG_RUNNER_PCT:g}% or more over the prior close in one "
+                f"session (volume {GC.SCAN_MIN_VOLUME:,}+, prior close ${GC.SCAN_MIN_PRICE:g}–${GC.SCAN_MAX_PRICE:g}), "
+                "rung by us or not, plus the multi-day runners. Hand-picked winners (survivorship): descriptive, "
+                "UNMEASURED, not a signal. Gains are quoted on the close.")
+WINNERS_WINDOW_NOTE = f"Only replays that run {FULL_DAY_WINDOW} (every session) are listed."
+WINNERS_EMPTY_TEXT = "No past-winner replays yet."
+GAIN_WORDS = {"single_day": "on the close", "multi_day": "best close vs the day before"}
+HIGH_WORDS = {"single_day": "high", "multi_day": "run high"}
+SPIKE_WORDS = "⚠ high more than {x:g}× the close — a spike print?"         # x = the sidecar's spike_x
+TODAY_TOP_WORDS = "top {n} mover of its day (high under +{pct:g}%)"         # pct = GC.SA_BIG_RUNNER_PCT
+FORCED_WORDS = "your example — not a +{pct:g}% run"
+WINNER_PICKS = ("plus100", "today_top")                     # the finder's two `pick` values (spec §3.1 select)

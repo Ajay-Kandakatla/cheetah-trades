@@ -23,8 +23,10 @@ from __future__ import annotations
 
 import csv
 import json
+import math as _math
 import os
 import threading
+from datetime import date as _date
 from pathlib import Path
 from typing import Optional
 
@@ -319,6 +321,210 @@ def resolve_video(day: str, name: str, root=None) -> Optional[Path]:
         return None
     p = r / C.VIDEOS_SUB / day / name
     base = os.path.realpath(r / C.VIDEOS_SUB) + os.sep
+    real = os.path.realpath(p)
+    if not real.startswith(base) or not os.path.isfile(real):
+        return None
+    return p
+
+
+# ── 🏆 Past winners (spec pastwinners §3.5, WP-APP, 2026-11-18) ───────────────────────────────────────────────────────
+# Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
+# `videos/winners/` (single-day winner reels) and `videos/multiday/` (multi-day runner reels) — NON-recursive (the
+# multiday `phone/` copies are never listed). The accept rule is `_parse_day`'s with `winner_window_ok` deciding the
+# window; the kind comes from the FOLDER (C.WINNER_SUBS), never from sidecar text. The card is composed from constants +
+# sidecar NUMBERS only: `gain_pct` (HIGH-based in the multiday sidecars), `label`, `ask`, `why`, `category`, `forced`
+# TEXT are never served. Descriptive, UNMEASURED, not a signal. The day listing above is untouched (a golden pins it).
+_WIN_CACHE: dict = {}          # (root str, sub) -> (key, listing)
+_SUB_KIND = {s: (k, t) for s, k, t in C.WINNER_SUBS}
+
+
+def winner_window_ok(sub: str, window) -> bool:
+    kind = _SUB_KIND.get(sub, (None, None))[0]
+    if kind == "single_day":
+        return window == C.FULL_DAY_WINDOW
+    if kind == "multi_day":
+        return isinstance(window, str) and window.startswith(C.MULTI_WINDOW_PREFIX)
+    return False
+
+
+def _signed_pct(x) -> str:
+    return f"{x:+.0f}%".replace("-", "−")
+
+
+def _finite(x) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and _math.isfinite(x)
+
+
+def _day_str(x) -> str:
+    if not is_date(x):
+        raise ValueError("not a YYYY-MM-DD day")
+    return x
+
+
+def winner_card(side: dict, sub: str) -> dict:
+    """The served 🏆 card. Raises one of CARD_ERRORS on a malformed sidecar (the caller counts it skipped_bad)."""
+    kind, kind_text = _SUB_KIND[sub]
+    file = side["file"]
+    symbol = side["symbol"]
+    if not isinstance(symbol, str) or not symbol:
+        raise ValueError("symbol must be a non-empty str")
+    day = _day_str(side["day"])
+    days = side["days"]
+    if not isinstance(days, list) or not days:
+        raise ValueError("days must be a non-empty list")
+    days = [_day_str(d) for d in days]
+    speed, minutes = side["speed"], side["minutes"]
+    if not _finite(speed) or not _finite(minutes):
+        raise TypeError("speed / minutes must be finite numbers")
+    cg = side["close_gain_pct"]
+    if not _finite(cg):
+        raise TypeError("close_gain_pct must be a finite number")
+    spike = side["spike_print"]
+    if not isinstance(spike, bool):
+        raise TypeError("spike_print must be a bool")
+    spike_text = None
+    if spike:
+        sx = side.get("spike_x")
+        if not _finite(sx) or sx <= 0:
+            raise ValueError("spike_x must be a finite number > 0 when spike_print is true")
+        spike_text = C.SPIKE_WORDS.format(x=sx)
+    pick_text = None
+    if kind == "single_day":
+        pick = side.get("pick")
+        if pick not in C.WINNER_PICKS:
+            raise ValueError("pick must be one of WINNER_PICKS")
+        if pick == "today_top":
+            n = side.get("today_n")
+            if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+                raise ValueError("today_n must be a positive int on a today_top reel")
+            pick_text = C.TODAY_TOP_WORDS.format(n=n, pct=C.GC.SA_BIG_RUNNER_PCT)
+    else:
+        forced = side.get("forced")
+        if forced is True or (isinstance(forced, str) and forced.strip()):
+            pick_text = C.FORCED_WORDS.format(pct=C.GC.SA_BIG_RUNNER_PCT)
+    hp = side.get("high_pct")
+    high_pct = hp if _finite(hp) else None
+    d0 = _date.fromisoformat(day)
+    days_text = day if kind == "single_day" else f"{days[0]} → {days[-1]} · {len(days)} sessions"
+    return {
+        "file": file, "sub": sub, "src": f"{C.WINNERS_API_PATH}/video/{sub}/{file}",
+        "symbol": symbol, "kind": kind, "kind_text": kind_text,
+        "date": day, "label_date": f"{d0:%a %Y-%m-%d}",
+        "days": days, "days_text": days_text,
+        "close_gain_pct": cg, "gain_text": f"{_signed_pct(cg)} {C.GAIN_WORDS[kind]}",
+        "high_pct": high_pct,
+        "high_text": f"{_signed_pct(high_pct)} {C.HIGH_WORDS[kind]}" if high_pct is not None else None,
+        "spike_print": spike, "spike_text": spike_text, "pick_text": pick_text,
+        "speed": speed, "speed_text": f"{speed:g}x",
+        "minutes": minutes, "length_text": f"{minutes:.0f} min",
+    }
+
+
+def _empty_win_counts() -> dict:
+    return {"videos": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0}
+
+
+def _parse_winner_sub(d: Path, sub: str, names) -> dict:
+    present = set(names)
+    counts = _empty_win_counts()
+    videos, files, window_skipped = [], set(), set()
+    for name in sorted(names):
+        if not name.endswith(".json") or name in C.NON_SIDECAR_JSON:
+            continue
+        try:
+            body = _read_sidecar(d / name)
+        except (OSError, ValueError, UnicodeDecodeError):
+            counts["skipped_bad"] += 1
+            continue
+        if not isinstance(body, dict):
+            counts["skipped_bad"] += 1
+            continue
+        if not winner_window_ok(sub, body.get("window")):
+            counts["skipped_window"] += 1
+            wf = body.get("file")
+            if _is_file_name(wf) and wf == name[: -len(".json")] + ".mp4":
+                window_skipped.add(wf)
+            continue
+        f = body.get("file")
+        if not _is_file_name(f) or f != name[: -len(".json")] + ".mp4" or f not in present:
+            counts["skipped_bad"] += 1
+            continue
+        try:
+            card = winner_card(body, sub)
+        except C.CARD_ERRORS:
+            counts["skipped_bad"] += 1
+            continue
+        videos.append(card)
+        files.add(f)
+    counts["no_sidecar"] = sum(1 for n in names if n.endswith(".mp4") and n not in files and n not in window_skipped)
+    counts["videos"] = len(videos)
+    return {"sub": sub, "videos": videos, "files": frozenset(files), "counts": counts}
+
+
+def _empty_sub(sub) -> dict:
+    return {"sub": sub, "videos": [], "files": frozenset(), "counts": _empty_win_counts()}
+
+
+def read_winner_sub(sub: str, root=None) -> dict:
+    if sub not in C.WINNER_SUB_KEYS:
+        return _empty_sub(sub)
+    r = root_dir(root)
+    ck = (str(r), sub)
+    d = r / C.VIDEOS_SUB / sub
+    key, names = _scan(d)
+    with _LOCK:
+        if key is None:
+            _WIN_CACHE.pop(ck, None)
+            return _empty_sub(sub)
+        hit = _WIN_CACHE.get(ck)
+        if hit is not None and hit[0] == key:
+            return hit[1]
+    listing = _parse_winner_sub(d, sub, names)
+    with _LOCK:
+        _WIN_CACHE[ck] = (key, listing)
+    return listing
+
+
+def winners_payload(root=None) -> dict:
+    r = root_dir(root)
+    counts = {"videos": 0, "single_day": 0, "multi_day": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0}
+    base = {"title": C.WINNERS_TITLE, "tab": C.TAB, "note": C.WINNERS_NOTE, "window": C.FULL_DAY_WINDOW,
+            "window_note": C.WINNERS_WINDOW_NOTE}
+    if not (r / C.VIDEOS_SUB).is_dir():
+        return _scrub({**base, "state": "no_folder", "text": C.NO_FOLDER_TEXT, "summary_text": None,
+                       "counts": counts, "groups": []})
+    videos = []
+    for sub, kind, _t in C.WINNER_SUBS:
+        lst = read_winner_sub(sub, r)
+        videos.extend(lst["videos"])
+        counts[kind] += len(lst["videos"])
+        for k in ("skipped_window", "skipped_bad", "no_sidecar"):
+            counts[k] += lst["counts"][k]
+    counts["videos"] = len(videos)
+    summary = f"{counts['videos']} videos · {counts['single_day']} single-day · {counts['multi_day']} multi-day"
+    if not videos:
+        return _scrub({**base, "state": "empty", "text": C.WINNERS_EMPTY_TEXT, "summary_text": summary,
+                       "counts": counts, "groups": []})
+    by_day: dict = {}
+    for v in videos:
+        by_day.setdefault(v["date"], []).append(v)
+    groups = []
+    for day in sorted(by_day, reverse=True):
+        vids = sorted(by_day[day], key=lambda v: (_num_desc(v["close_gain_pct"]), v["symbol"], v["sub"], v["file"]))
+        groups.append({"date": day, "label": vids[0]["label_date"], "videos": vids})
+    return _scrub({**base, "state": "ready", "text": None, "summary_text": summary, "counts": counts,
+                   "groups": groups})
+
+
+def resolve_winner_video(sub: str, name: str, root=None) -> Optional[Path]:
+    """The listed 🏆 file's path, or None (→ 404). Only a listed name, only inside root/videos/<sub>."""
+    if not isinstance(sub, str) or sub not in C.WINNER_SUB_KEYS or not _is_file_name(name):
+        return None
+    r = root_dir(root)
+    if name not in read_winner_sub(sub, r)["files"]:
+        return None
+    p = r / C.VIDEOS_SUB / sub / name
+    base = os.path.realpath(r / C.VIDEOS_SUB / sub) + os.sep
     real = os.path.realpath(p)
     if not real.startswith(base) or not os.path.isfile(real):
         return None

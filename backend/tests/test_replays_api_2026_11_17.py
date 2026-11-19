@@ -160,7 +160,8 @@ def test_NEGATIVE_the_admin_email_is_never_typed_in_the_package():
         assert PRIMARY_ADMIN_EMAIL not in src, p
         assert "ajaykandakatla" not in src, p
     api_src = (PKG / "api.py").read_text(encoding="utf-8")
-    assert api_src.count("Depends(require_primary_admin)") == 2
+    # RE-PINNED 2026-11-18 🏆: 2 → 4 (the two 🏆 Past winners routes /winners + /winners/video/{sub}/{name}, each owner-only).
+    assert api_src.count("Depends(require_primary_admin)") == 4
     assert "headers=C.VIDEO_HEADERS" in api_src
 
 

@@ -45,3 +45,22 @@ async def replay_video(day: str, name: str, email: str = Depends(require_primary
     if path is None:
         raise HTTPException(status_code=404, detail="Not Found")
     return FileResponse(str(path), media_type="video/mp4", headers=C.VIDEO_HEADERS)
+
+
+# ── 🏆 Past winners (spec pastwinners §3.5, WP-APP, 2026-11-18) ───────────────────────────────────────────────────────
+# Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
+# Two more owner-only routes, the same gate (a dependency, resolved before the path), the same Range engine + headers.
+# `GET /chart-maps/replays/winners` → `store.winners_payload` (no-store); `GET|HEAD …/winners/video/{sub}/{name}` →
+# the bytes of a LISTED mp4 under videos/<sub>/ (sub ∈ C.WINNER_SUB_KEYS exactly). The day routes above are unchanged.
+@router.get(C.WINNERS_API_PATH)
+async def replay_winners(email: str = Depends(require_primary_admin)):
+    body = await asyncio.to_thread(ST.winners_payload)
+    return JSONResponse(body, headers=C.LISTING_HEADERS)
+
+
+@router.api_route(C.WINNERS_VIDEO_PATH, methods=["GET", "HEAD"])
+async def replay_winner_video(sub: str, name: str, email: str = Depends(require_primary_admin)):
+    path = await asyncio.to_thread(ST.resolve_winner_video, sub, name)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Not Found")
+    return FileResponse(str(path), media_type="video/mp4", headers=C.VIDEO_HEADERS)
