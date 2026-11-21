@@ -34,6 +34,7 @@ log = logging.getLogger("sepa.volume_movers")
 
 # Float / shares-outstanding change rarely — refresh at most weekly.
 _SHARES_TTL_SEC = 7 * 24 * 3600
+SHARES_COLL = "shares_cache"           # 2026-11-21 (👀 Watch float): the collection name, one spelling app-wide
 
 
 def _shares_coll():
@@ -42,7 +43,7 @@ def _shares_coll():
         url = os.getenv("MONGO_URL", "mongodb://localhost:27017")
         client = MongoClient(url, serverSelectionTimeoutMS=2000)
         client.admin.command("ping")
-        return client[os.getenv("MONGO_DB", "cheetah")].shares_cache
+        return client[os.getenv("MONGO_DB", "cheetah")][SHARES_COLL]
     except Exception:
         return None
 
@@ -118,7 +119,7 @@ def _dated(vals: dict, as_of) -> dict:
     return dict(vals, as_of=as_of)
 
 
-def shares_status(symbol: str, *, fetch: bool = True):
+def shares_status(symbol: str, *, fetch: bool = True, coll=None):
     """-> (vals | None, status). The cache read + fetch behind `shares_for`, with
     the reason spelled out (2026-10-13):
 
@@ -134,11 +135,13 @@ def shares_status(symbol: str, *, fetch: bool = True):
 
     Served `vals` carry the row's `as_of` (epoch s; the fetch time on
     "fetched") so a caller can age them; `shares_for` drops that key.
+
+    `coll` (2026-11-21, 👀 Watch float): a caller's long-lived handle; None → today's `_shares_coll()`.
     """
     sym = (symbol or "").upper().strip()
     if not sym:
         return None, "missing"
-    coll = _shares_coll()
+    coll = _shares_coll() if coll is None else coll
     now = int(time.time())
     doc = None
     if coll is not None:

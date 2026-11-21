@@ -11,9 +11,10 @@
  *
  * The room / band reads come from ONE board-level POST (useGgwTags below) for the carded names only — never per tile,
  * never for an off-board name (HIS CALL #3). Nothing prints → null (a tag-less tile's DOM is today's exactly).
- * Display only — nothing rings, orders or sorts. UNMEASURED. */
+ * Display only — nothing rings, orders or sorts. UNMEASURED.
+ * 🔢 2026-11-21 (spec watchfloat) — Ajay: "can you add the current float value also to the tickers on the watch list." */
 import { useCallback, useMemo } from 'react';
-import type { GgwRow } from '../lib/gajjalaWatch';
+import { ggwFloat, type GgwRow } from '../lib/gajjalaWatch';
 import { useBounceRoom as useRoomRead } from '../hooks/useBounceRoom';
 import { explosiveChipText, type BounceRoomRow as RoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
 import { enterableChipText } from '../lib/enterable';
@@ -64,15 +65,26 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
   const trader = t && (served(t.trader_text) || served(t.promo_text));
   /* 🚫 2026-11-19 (spec watchfid): the row's own served word (any row, carded or not), else the CARDED tags' word — ONE chip. */
   const brokerText = ggwBrokerText({ broker_text: row.broker_text, tags: t });
-  const float = t && served(t.float?.text) ? t.float : null;
+  /* 🔢 2026-11-21 (spec watchfloat): the row's own served float (any row, carded or not), else the CARDED tags' float — ONE chip. */
+  const fl = ggwFloat({ float: row.float, tags: t });
+  const floatChip = fl ? (
+    <>
+      <span className="cm-badge cm-badge-muted ggw-float" data-testid={`ggw-float-${sym}`}
+            title={fl.title ?? undefined}>{fl.text}</span>
+      {served(fl.suspect_text)
+        ? <span className="cm-badge cm-badge-warn ggw-float-suspect" data-testid={`ggw-float-suspect-${sym}`}>{fl.suspect_text}</span>
+        : null}
+    </>
+  ) : null;
   const stages = t && stagesPrint(t);
   const setups = t && !stages ? t.setups.filter((s) => served(s.label)) : [];
-  if (!growth && !siText && !ex && !en && !trader && !brokerText && !float && !stages && !setups.length) return null;
+  if (!growth && !siText && !ex && !en && !trader && !brokerText && !fl && !stages && !setups.length) return null;
   return (
     <div className="ggw-tags" data-testid={`ggw-tags-${sym}`}>
       <GrowthChip symbol={sym} />
       {siText ? <ShortInterestChip symbol={sym} /> : null}
       {!t ? servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`) : null}
+      {!t ? floatChip : null}
       {t ? (
         <>
           <ExplosiveChip read={room?.explosive} study={study} />
@@ -80,7 +92,7 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
           <GgTraderChip text={t.trader_text} testid={`ggw-trader-${sym}`}
                         promoText={t.promo_text} promoTestid={`ggw-promo-${sym}`} />
           {servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`)}
-          {float ? <span className="cm-badge cm-badge-muted ggw-float" data-testid={`ggw-float-${sym}`}>{float.text}</span> : null}
+          {floatChip}
           {stages ? <GgStages stages={t.stages} sym={sym} /> : null}
           {setups.map((s) => (
             <span key={s.setup} className="cm-badge cm-badge-muted ggw-setup" data-testid={`ggw-setup-${sym}-${s.setup}`}

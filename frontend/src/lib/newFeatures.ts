@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-21, verbatim: "can you add the current float value also to the tickers on the watch list." Every
+  // 👀 Watch tile gets one float chip (his names, 🤖 auto names, 🎯 A+ names) from the cached float — no network on a
+  // page load. A float is NOT real-time: the hover says how old it is. Display only, UNMEASURED. Doc
+  // docs/gajjala/watch_float_2026_11_21.md.
+  {
+    id: 'gajjala-watch-float-2026-11-21',
+    label: '👀 Float on every Watch ticker — you said: “can you add the current float value also to the tickers on the watch list.” Each tile now prints its float beside the other tags (Float 3.1M, or shares out when Yahoo has no float). It is the cached figure, kept up to 7 days, not a live number — hover the chip for how old it is. A name whose cached float has expired prints nothing until the next refresh. Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-21',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-18 ~21:45 ET, verbatim: "can you work on todays videos and also..  Winners in general from the past".
   // research/2026-11-18_past_winners (finder) + eod-audits/replays/replay_winners.py (45x, 04:00–20:00 ET reels) +
   // chart_maps/replays winners routes. Descriptive, UNMEASURED. Doc docs/chart_maps/replays_past_winners_2026_11_18.md.

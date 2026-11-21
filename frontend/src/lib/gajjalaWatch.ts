@@ -399,6 +399,11 @@ export type GgwRowTags = {
   on_board: true; setups: GgwTagSetup[]; stages: GgStages | null; float: GgwTagFloat | null;
   broker_text: string | null; trader_text: string | null; promo_text: string | null;
 };
+/** 🔢 2026-11-21 (spec watchfloat §3.5) — Ajay: "can you add the current float value also to the tickers on the watch
+ *  list." The row's own served float (backend gajjala_watch/float_read.py) on EVERY row, carded or not: the card tags'
+ *  five keys plus the served hover `title`, the served `suspect_text` and where it was read (`read_from`). Every word
+ *  served; display only, UNMEASURED. */
+export type GgwRowFloat = GgwTagFloat & { suspect_text: string | null; title: string | null; read_from: string | null };
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
@@ -418,6 +423,9 @@ export type GgwRow = {
   added_at?: string | null;
   /** 🆕 2026-11-19: the served "still reading" words of a pending row, shown after the pending cap (null otherwise). */
   late_text?: string | null;
+  /** 🔢 2026-11-21 (spec watchfloat): the served float of ANY row (null = no float read on file — never invented).
+   *  Optional for the same reason as `auto` — parseGgw always sets it. */
+  float?: GgwRowFloat | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -592,6 +600,27 @@ export function parseRowTags(v: unknown): GgwRowTags | null {
   };
 }
 
+/** 🔢 A row's float block (2026-11-21, spec watchfloat — the parseRowTags float rule): an object with a served `text`,
+ *  else null (junk never draws a chip). `shares` through num() (NaN → null, the chip is KEPT); `suspect` true ONLY for
+ *  `=== true`; the three newer strings through str(). */
+export function parseRowFloat(v: unknown): GgwRowFloat | null {
+  if (!isObj(v) || !str(v.text)) return null;
+  return {
+    text: v.text as string, shares: num(v.shares), src: str(v.src), as_of: str(v.as_of), suspect: v.suspect === true,
+    suspect_text: str(v.suspect_text), title: str(v.title), read_from: str(v.read_from),
+  };
+}
+
+/** 🔢 The ONE float a Watch row prints (the ggwBrokerText precedent): the row's own served float first, else the 🚩 card
+ *  tags' float (an older server serves only that one — no hover, no suspect line, no read_from); blank → null. */
+export function ggwFloat(row: { float?: GgwRowFloat | null; tags?: { float: GgwTagFloat | null } | null }): GgwRowFloat | null {
+  const own = row?.float;
+  if (own && str(own.text)) return own;
+  const t = row?.tags?.float;
+  if (t && str(t.text)) return { ...t, suspect_text: null, title: null, read_from: null };
+  return null;
+}
+
 /** 🤖 The board's auto block: an object with a served `state`, else null. A removal without `text_full` is dropped. */
 function parseAuto(v: unknown): GgwAuto | null {
   if (!isObj(v) || !str(v.state)) return null;
@@ -637,6 +666,7 @@ function parseRow(v: unknown): GgwRow | null {
     broker_text: str(v.broker_text),
     added_at: str(v.added_at) != null && Number.isFinite(Date.parse(v.added_at)) ? v.added_at : null,
     late_text: str(v.late_text),
+    float: parseRowFloat(v.float),
   };
 }
 

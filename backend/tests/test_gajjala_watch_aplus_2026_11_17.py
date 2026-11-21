@@ -333,8 +333,9 @@ def test_row_keys_are_the_old_keys_plus_aplus(monkeypatch):
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH")
     rows, _ = _rows(db=db)
     # PIN MOVED 2026-11-19 (spec watchfid): + "broker_text"
+    # PIN MOVED 2026-11-21 (spec watchfloat): + "float"
     assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
                                 "auto", "aplus", "tags", "broker_text",   # 🏷️ 2026-11-18 (spec wtags): + "tags"
-                                "added_at", "late_text"}
+                                "added_at", "late_text", "float"}
     # RE-PINNED 2026-11-19 (+ "added_at", "late_text") — Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
     assert C.AUTO_SOURCES == (V.GG5.key, V.GG1.key, V.GGA.key) and GC.SETUPS

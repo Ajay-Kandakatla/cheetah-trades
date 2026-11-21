@@ -13,6 +13,9 @@ READS STORED DOCS ONLY — never a bar fetch, never a snapshot (the minute loop 
   * today's pushed claims (ONE `find({date: session, state: "cross_pushed"})`).
   * 🎯 (2026-11-17, spec ggwaplus): the Gajjala boards' reads of the served names — ONE projected find per read
     store (GG5, GG1) + the 🧪 board's own overlay call (`aplus_section`); display only, never a fetch.
+  * 🔢 (2026-11-21, spec watchfloat): the float of the served names (`float_read.section`) — the 🏷️ tags chip of a
+    carded name, else the 7-day `shares_cache` row (one engine read per name on the store's long-lived handle), else
+    ONE projected `_id $in` find on the 🚩 pass's `gajjala_daily` memo; never a network call, never a new client.
 
 Rows: HIS names NEWEST ADDED FIRST (the list doc's `added`, 2026-11-19 — Ajay, verbatim: "When I add a new ticket they
 are gettinf added in to que but not active"; earlier "When ever I push something to watch it make it active by default and
@@ -36,6 +39,14 @@ order — the server never re-sorts them at serve); a fold-duplicate of his name
 🏷️ (2026-11-18, spec wtags WP-A): the 🚩 card's own tags for a name carded on today's GG5 board — tags.section, stored
 docs by symbol, _build's own clock. Every row carries `tags` (None = not carded on today's 🚩 board, or the read
 faulted — never an invented tag). Imported lazily (`importlib`), any fault → {} (the board answers). Display only.
+
+🔢 (2026-11-21, spec watchfloat — Ajay, verbatim: "can you add the current float value also to the tickers on the watch
+list."): every row carries `float` — `float_read.section` with `_build`'s own session / now and the tags block above:
+the carded name's 🏷️ chip (`read_from "pass"`), else the 7-day `shares_cache` row (`"cache"`, through
+`sepa.volume_movers.shares_status(fetch off, coll=the store's handle)` — no new Mongo client), else the 🚩 pass's daily
+memo (`"memo"`), else None (no float read on file — never invented). Each chip serves a `title` ("not realtime" + the
+source + the read time). Imported lazily (`importlib`), any fault → every row None (the board answers). Display only,
+UNMEASURED, not a signal.
 """
 from __future__ import annotations
 
@@ -169,6 +180,7 @@ AUTO_WHY_WORDS = {"aplus": C.AUTO_APLUS_WHY, "potential": "potential"}          
 AUTO_MODULE = "chart_maps.gajjala_watch.auto"
 TAGS_MODULE = "chart_maps.gajjala_watch.tags"                                         # 🏷️ 2026-11-18 (spec wtags)
 BROKER_MODULE = "chart_maps.gajjala_watch.broker"                                     # 🚫 2026-11-19 (spec watchfid)
+FLOAT_MODULE = "chart_maps.gajjala_watch.float_read"                                  # 🔢 2026-11-21 (spec watchfloat)
 
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
 DOC_STATUSES = ("loaded", "no_prints", "no_bars", "failed", "over_budget")      # build.status_of (WP-B)
@@ -279,6 +291,18 @@ def _tags_section(names: list, session, is_today: bool) -> dict:
         return out if isinstance(out, dict) else {}
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: tags section unavailable: %s", type(exc).__name__)
+        return {}
+
+
+def _float_section(names: list, session, now: datetime, tags_by: dict) -> dict:
+    """🔢 2026-11-21 (spec watchfloat) — {SYM: float block} from `float_read.section` (imported lazily through
+    sys.modules, the tags pattern) with `_build`'s own session / now and the tags block; a non-dict or any failure → {}
+    (every row serves None, the board still answers)."""
+    try:
+        out = importlib.import_module(FLOAT_MODULE).section(names, session, now, tags_by)
+        return out if isinstance(out, dict) else {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: float section unavailable: %s", type(exc).__name__)
         return {}
 
 
@@ -921,10 +945,12 @@ def _build(now: datetime, db, only) -> dict:
             for s in names]
     aplus_by = aplus_section(names, siso)                    # 🎯 2026-11-17 (spec ggwaplus) — display only
     tags_by = _tags_section(names, session, is_today)        # 🏷️ 2026-11-18 — display only; _build's own clock (C5)
+    float_by = _float_section(names, session, now, tags_by)  # 🔢 2026-11-21 — display only; never a network call
     for r in rows:
         r["auto"] = auto_by.get(r["symbol"])
         r["aplus"] = aplus_by.get(r["symbol"])
         r["tags"] = tags_by.get(r["symbol"])                   # None = not carded on today's 🚩 board — never invented
+        r["float"] = float_by.get(r["symbol"])                 # None = no float read on file — never invented
         r["added_at"] = (at_by.get(r["symbol"]) if r["auto"] is not None           # ⬆️ 2026-11-19 — ISO UTC or None
                          else CO.added_iso(added.get(CO.fold(r["symbol"]))))
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
