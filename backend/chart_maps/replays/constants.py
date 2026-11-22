@@ -85,3 +85,63 @@ SPIKE_WORDS = "⚠ high more than {x:g}× the close — a spike print?"         
 TODAY_TOP_WORDS = "top {n} mover of its day (high under +{pct:g}%)"         # pct = GC.SA_BIG_RUNNER_PCT
 FORCED_WORDS = "your example — not a +{pct:g}% run"
 WINNER_PICKS = ("plus100", "today_top")                     # the finder's two `pick` values (spec §3.1 select)
+
+# ── 🏆 past-winner tag (2026-11-22) ─────────────────────────────────────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "MEDS was a part winner that went up after hours.. Please actually add a past winner tag in
+# our new ones looks for past winnings please if found again.." A day-folder card (and a 🏆 card) whose symbol has an
+# accepted 🏆 reel that ENDED strictly before the card's own session carries a served `past_winner` list (newest first,
+# at most PAST_WIN_MAX) + `past_winner_count`. No look-ahead: a multi-day run counts only from its LAST session. A tag,
+# not a gate: no push, no rank, no filter. Descriptive, UNMEASURED.
+PAST_WIN_MAX = 3                                             # "at most 3" — the ask's number (spec), not a rule
+PAST_WIN_DAY_WORDS = "🏆 past winner"                        # the day-folder chip: "🏆 past winner 09-16 +275%"
+PAST_WIN_BEFORE_WORDS = "🏆 won before"                      # on a 🏆 card: an EARLIER win of the same symbol
+PAST_WIN_MORE_WORDS = "+{n} more"                            # n = past_winner_count − the entries served
+
+# ── 🏆 setup + timing on the single-day winners (2026-11-22) ────────────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "can you categorize past winners like some are kiss and fly based and some might be VCP
+# based some might be horizontal faded.. Do we have those metrics? also reversal squeeze is mainly what I look for." →
+# "yes please" (group / filter the 🏆 list by setup, 🎾 first). On the first-hour runners: "dont't remove but add a tag
+# but sort by EOD and Intraday ones on the top". The LABELLER (eod-audits/research/2026-11-22_winner_setup_labels/
+# label_winners.py + the time-of-day study) writes `setups` + `timing` into each single-day sidecar; the server only
+# READS them (one engine — no setup or bucket is computed here). An unknown key / class / bucket → treated as absent and
+# counted in `skipped_label`. A LABEL — descriptive, UNMEASURED; no gate, no push, no rank of setups.
+WIN_SETUP_ORDER = ("reversal_squeeze", "intraday_vcp", "kiss_fly", "bull_flag", "horizontal_fade")   # the ask's order (🎾 first)
+WIN_SETUP_NONE = "none"                                      # a labelled reel with no Gajjala primary (float-gated / none / no peak)
+WIN_SETUP_WORDS = {**{k: SETUP_TEXT[k] for k in WIN_SETUP_ORDER},   # the 🚩 SUBS words (emoji + label), never retyped
+                   WIN_SETUP_NONE: "no Gajjala setup"}
+WIN_SETUP_FILTER_KEYS = WIN_SETUP_ORDER + (WIN_SETUP_NONE,)  # the filter row after 'All'
+WIN_SETUP_ALL = "all"
+WIN_SETUP_ALL_WORDS = "All"
+# The labeller's classes (label_winners.CLASSES). A class WITH a primary setup vs one WITHOUT — a label that mixes them
+# (e.g. a 🎾 primary on a "🎾 float-gated" reel) is malformed: absent + skipped_label. 🎾 float-gated is NEVER a 🎾 count.
+WIN_CLASSES_WITH_SETUP = ("A+ before peak", "armed only", "after the peak")
+WIN_CLASSES_NO_SETUP = ("🎾 float-gated", "none", "no peak")
+# 2026-11-22 review fix (b): the label's peak is the 09:30–20:00 PEAK MINUTE, not the card's "+X% high" chip (that one is
+# the 09:30–16:00 day bar and differs on 63 cards) — so every label word says "peak", never "high".
+WIN_CLASS_WORDS = {"A+ before peak": "🎯 A+ before the peak", "armed only": "armed before the peak, no A+",
+                   "after the peak": "read only after the peak", "🎾 float-gated": "🎾 float-gated — not a 🎾 label",
+                   "none": None, "no peak": "no 09:30–20:00 peak"}   # "none" → the setup words already say it
+WIN_STOPPED_WORDS = "⛔ stopped before the peak"
+# 2026-11-22 review fix (a): a reel whose labeller `chips` (every setup armed / A+ that day) carry 🎾 beside another
+# primary also passes the 🎾 filter (16 reels on 11-22). Only 🎾 — the ask's "reversal squeeze is mainly what I look for".
+# A no-setup class (🎾 float-gated / none / no peak) must carry NO chip, so a float-gated reel never counts as 🎾.
+WIN_CHIP_MATCH = ("reversal_squeeze",)
+WIN_CHIP_WORDS = "also {words}"                              # a secondary chip: "also 🎾 Reversal Squeeze" — MINE
+# timing buckets of the 09:30–20:00 peak minute, written by the labeller (eod-audits/research/2026-11-22_winner_time_of_day)
+WIN_TIMING_ORDER = ("eod", "intraday", "first_hour")         # his "sort by EOD and Intraday ones on the top"; unknown LAST
+WIN_TIMING_WORDS = {"eod": "🌙 end of day", "intraday": "☀️ intraday", "first_hour": "🌅 first hour"}
+WIN_TIMING_TEXT = "{words} (peak {t})"                       # t = the labeller's peak minute HH:MM (ET)
+# == label_winners.TIMING_BUCKETS (lower bound inclusive, upper exclusive; a test pins equality with the labeller's
+# source). Review fix (c): a served bucket that disagrees with its own peak minute is a bad label (skipped_label).
+WIN_TIMING_BUCKETS = (("first_hour", "09:30", "10:30"), ("intraday", "10:30", "15:00"), ("eod", "15:00", "20:00"))
+HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$", re.ASCII)
+
+# ── 🏆 one row per stock (2026-11-22) ───────────────────────────────────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "Just AKAN can you please bring its past winner session to like from MAY multiday when ever
+# a stock has multiday group it in the same role for past winners please." · "CLRO another example add all the videos
+# may be click them together". The 🏆 block is ONE ROW PER SYMBOL holding every accepted reel of that symbol (single-day
+# and multi-day). A win is counted by the past-winner index's one-per-run rule (a multi-day run absorbs the single-day
+# reels on its days). Rows order: the newest single-day reel's timing (eod → intraday → first_hour → unknown), then the
+# newest win desc, then the best close gain desc, then the symbol. Words only — no gate, no rank of setups.
+WIN_ROW_WINS_WORDS = ("{n} win", "{n} wins")                 # singular, plural — MINE
+WIN_ROW_NEWEST_WORDS = "newest {d}"                          # d = "Thu 2026-11-12" — MINE

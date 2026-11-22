@@ -26,7 +26,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import {
-  FETCH_FAILED, RP_DATE_PARAM, RP_PATH, rpDateParams, rpDates, rpList, rpSelectDates, rpText, rpVideoSrc,
+  FETCH_FAILED, RP_DATE_PARAM, RP_PATH, rpDateParams, rpDates, rpList, rpPastWinChips, rpSelectDates, rpText, rpVideoSrc,
   type RpGroup, type RpPayload, type RpPotential, type RpRs, type RpVideo,
 } from '../lib/replays';
 import { TickerLink } from './TickerLink';
@@ -60,6 +60,7 @@ function Card({ v }: { v: RpVideo }) {
   const src = rpVideoSrc(v);
   const chips = [v.setup_text, v.page_text, v.grade, v.speed_text, v.length_text].map(rpText).filter((s) => s.length > 0);
   const ringDay = v.carried === true ? rpText(v.ring_day) : '';
+  const past = rpPastWinChips(v);
   return (
     <article className="rp-card" data-testid={`rp-card-${rpText(v.file)}`}>
       <div className="rp-head">
@@ -67,6 +68,8 @@ function Card({ v }: { v: RpVideo }) {
         <div className="rp-chips">
           {chips.map((c, i) => <span key={`${i}-${c}`} className="rp-chip">{c}</span>)}
           {ringDay ? <span className="rp-chip" data-testid="rp-ring-day">{ringDay}</span> : null}
+          {past.wins.map((c, i) => <span key={`pw${i}-${c}`} className="rp-chip rp-pastwin" data-testid="rp-pastwin">{c}</span>)}
+          {past.more ? <span className="rp-chip rp-pastwin" data-testid="rp-pastwin-more">{past.more}</span> : null}
         </div>
       </div>
       {src ? <video className="rp-video" controls preload="metadata" playsInline src={src} /> : null}

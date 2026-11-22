@@ -76,3 +76,121 @@ rows wrap, `min-width: 0` on every flex child (430 px).
 4. Spike flag = high > 2 × that day's close (it also flags real fades).
 5. Placement: bottom of 🎬 Replays, collapsed, text rows, one video at a time, no paging.
 6. The 10 phone copies in `videos/multiday/phone/` are not listed.
+
+## 2026-11-22 — 🏆 past-winner tag on the cards
+
+Ajay 2026-11-22, verbatim: **"MEDS was a part winner that went up after hours.. Please actually add a past winner tag in
+our new ones looks for past winnings please if found again.."** (MEDS: 🏆 single-day 09-15 +87% and 09-16 +275% on the
+close; multi-day run 09-14 → 09-16.)
+
+- **ONE pure index** — `store.past_winner_index(cards)` over the ACCEPTED 🏆 cards from `read_winner_sub` (the same accept
+  rule; malformed / window-skipped / mp4-less sidecars, `jobs.json` / `winners.json` / `runners.json` and the
+  `multiday/phone/` copies never feed it). symbol (exact, upper-case as served) → `{day, kind, close_gain_pct, file, sub}`
+  newest first. The headline number is `close_gain_pct`; the legacy HIGH-based `gain_pct` is never read.
+- **No look-ahead.** A win's `day` is the session it ENDED (single-day: its day; multi-day: the run's LAST session). A
+  day-folder card is tagged only by wins that ended strictly before the folder's session; a 🏆 card only by wins that
+  ended strictly before its own FIRST session ("won before"). Same day or later → never.
+- **Served fields** (only when there is at least one such win — no key otherwise): `past_winner` (at most
+  `PAST_WIN_MAX` = 3, each with a served `text`, e.g. "🏆 past winner 09-16 +275%", a multi-day entry adds "multi-day";
+  on a 🏆 card "🏆 won before 09-15 +87%"), `past_winner_count`, `past_winner_more_text` ("+N more" or null).
+- **Cache:** the index is cached per root by the identity of the two cached sub listings (it rebuilds only when a
+  winners / multiday folder key moves); the cached day listing and winner listings are never mutated (the tag is added
+  to copies at serve time).
+- **Frontend:** `rpPastWinChips` (lib/replays.ts) → served chips on the day card (`.rp-chips`) and the 🏆 row
+  (`.rpw-chips`), class `.rp-pastwin` (min-width 0, wrapping, 430 px). **Text only** — the 🏆 section has no
+  open-a-reel-by-file URL, so the chip does not link.
+- The 11-18 day-listing GOLDEN was re-pinned: byte-identical with the `past_winner*` keys stripped; only the cards whose
+  symbol won before carry them.
+- A tag, not a gate: no push, no rank, no filter, nothing on 🚩 Gajjala's tab. Descriptive, UNMEASURED.
+- **Review fixes (2026-11-22, same day):** ONE entry per run — a single-day win whose day sits inside a LISTED
+  multi-day run's days (same symbol) is that run's move, so only the run is listed (MEDS 09-15 / 09-16 inside 09-14 →
+  09-16, RETO 09-15, GP 11-12 inside 11-11 → 11-17); the same reel twice lists once; `past_winner_count` and "+N more"
+  count runs. A run that has not ended before the card's session is not listed and absorbs nothing. Order: newest first
+  by the run's last day, a same-day tie by the higher close gain. Dates `MM-DD`, `YYYY-MM-DD` when the win is from
+  another calendar year than the card's day. The renderer's frame tag (`eod-audits/replays/replay_video.py`
+  `past_wins`) applies the same accept rule, the same one-per-run rule, order and dates, and `close_gain_pct` (never
+  the HIGH-based `gain_pct`).
+- Tests: `backend/tests/test_replays_past_winner_tag_2026_11_22.py` (43); `frontend/src/lib/replays.pastwin.test.ts`,
+  `frontend/src/components/ReplaysPastWinTag.test.tsx`.
+
+## 2026-11-22 — 🏆 by setup (🎾 first) and by time of the peak
+
+Ajay 2026-11-22, verbatim: **"can you categorize past winners like some are kiss and fly based and some might be VCP
+based some might be horizontal faded.. Do we have those metrics? also reversal squeeze is mainly what I look for."** →
+**"yes please"** (group / filter the 🏆 list by setup, 🎾 first). On the first-hour runners (peak 09:30–10:30, "drop
+right after first hours it very volatile"): **"dont't remove but add a tag but sort by EOD and Intraday ones on the
+top"**.
+
+- **Source = the labeller, read only.** Each single-day sidecar carries two optional keys written by
+  `eod-audits/research/2026-11-22_winner_setup_labels/label_winners.py` (`setups`: primary, class, chips,
+  stopped_before_peak, …) and the time-of-day study (`timing`: bucket `eod` 15:00–20:00 / `intraday` 10:30–15:00 /
+  `first_hour` 09:30–10:30 of the 09:30–20:00 peak minute ET, `null` when no 09:30–20:00 bars). The server computes no
+  setup and no bucket (one engine). Multi-day reels carry no label (the labeller writes none; a stray key is ignored).
+- **Defensive parse** (`store._setup_fields` / `_timing_fields`): an unknown primary, an unknown class, a primary on a
+  no-setup class (e.g. 🎾 on "🎾 float-gated") or a setup class without a primary, a chip that is not a house setup, a
+  chip on a no-setup class, a non-bool `stopped_before_peak` (NaN included), `stopped_before_peak: true` with no primary,
+  an unknown bucket, a bucket without an `HH:MM` peak, or a bucket that disagrees with its own peak minute
+  (`C.WIN_TIMING_BUCKETS` == the labeller's `TIMING_BUCKETS`, lower bound in, upper out; a test pins equality with
+  `label_winners.py`) → that label is served ABSENT and counted in `counts.skipped_label` (one per bad label). The card is never dropped, never a 500,
+  never NaN. A missing key, or a labelled `bucket: null`, is absent but NOT counted.
+- **Served per card:** `setup` (the primary key, `"none"` for a labelled reel with no Gajjala primary — 🎾
+  float-gated / none / no peak — or `null` when unlabelled), `setup_text` (the 🚩 `GC.SUBS` words, never retyped:
+  "🎾 Reversal Squeeze", "🌀 Intraday VCP", "💋 EMA Kiss & Fly", "🚩 Bull Flag", "➖ Horizontal Fade"; "no Gajjala
+  setup"), `setup_class` + `setup_class_text` (`WIN_CLASS_WORDS`; null for "none" — the setup words already say it),
+  `setup_chips`, `setup_chips_text` (the OTHER setups armed / A+ that day, "also 🎾 Reversal Squeeze"),
+  `stopped_before_peak` + `stopped_text` ("⛔ stopped before the peak", only when true), `timing` + `timing_text`
+  ("🌙 end of day (peak 16:02)", "☀️ intraday (peak 11:00)", "🌅 first hour (peak 09:41)").
+- **🎾 float-gated is never a 🎾 count** — the labeller serves it with `primary: null`; it files under "no Gajjala
+  setup" and its class words say "not a 🎾 label".
+- **Order:** superseded the same day by one row per stock (below) — the timing order now orders the ROWS.
+- **Filter row:** served `setups` = `[All, 🎾, 🌀, 💋, 🚩, ➖, no Gajjala setup]` with counts of ROWS (below). The FE
+  disables a 0-count chip and remembers the pick in `localStorage` (`rp_winners_setup`, try/catch; a key the server no
+  longer serves, or serves with count 0 → All). 📱 430 px: `.rpw-filter` wraps, `.rpw-fchip` min-width 0 + wrapping text.
+- **Judgement calls (MINE, flagged):** the setup words are the existing `GC.SUBS` words (the house rule "setup words
+  never retyped", pinned by `test_NEGATIVE_setup_words_are_never_retyped_in_constants`) rather than the spec's
+  sentence-case spellings; the class words and the "also …" chip words are mine.
+- **Review fixes (same day):** (a) the 🎾 filter also passes a reel whose `setup_chips` hold `reversal_squeeze` beside
+  another primary (16 reels; `C.WIN_CHIP_MATCH` — 🎾 only); a float-gated reel carries no chip, so never a 🎾 count.
+  (b) every label word says "peak", never "high": the card's "+X% high" chip is the 09:30–16:00 day bar and differs from
+  the 09:30–20:00 peak minute on 63 cards. (c) the parser rejects `stopped_before_peak: true` with no primary and a
+  bucket that disagrees with its `peak_t` (measured on the host folder 2026-11-22: 0 such labels). (d) a remembered
+  filter pick the server serves with count 0 falls back to All.
+- A LABEL, descriptive, UNMEASURED: no gate, no push, no rank of setups, no win rate.
+- Tests: `backend/tests/test_replays_winners_setup_timing_2026_11_22.py`; `frontend/src/lib/replays.setup.test.ts`,
+  `frontend/src/components/ReplaysPastWinnersSetup.test.tsx`, `frontend/src/lib/newFeatures.replays_winners_setup_timing.test.ts`,
+  `frontend/src/lib/newFeatures.replays_past_winner_tag.test.ts`. The 11-18 listing pin
+  (`test_both_kinds_listed_groups_date_desc_close_gain_desc`) and card pin were re-pinned for the new order / keys.
+
+## 2026-11-22 — 🏆 one row per stock (multi-day runs grouped with the single days)
+
+Ajay 2026-11-22, verbatim: **"Just AKAN can you please bring its past winner session to like from MAY multiday when ever
+a stock has multiday group it in the same role for past winners please."** then **"CLRO another example add all the
+videos may be click them together"**.
+
+- **Payload:** `groups` is gone; the 🏆 listing serves `rows` (`store.winner_rows`), ONE per symbol (exact match — two
+  symbols never merge), each holding every accepted reel of that symbol, single-day AND multi-day, newest first by the
+  reel's last session (a same-day tie: the multi-day run first, then close gain desc).
+- **Row fields (server words):** `key` (`sym-<SYM>`), `symbol`, `wins` + `wins_text` ("1 win" / "3 wins"), `newest_date`
+  + `newest_text` ("newest Fri 2026-10-23"), `setup` + `setup_text` (the first key in the ask's order — 🎾 first — that
+  any reel passes), `timing` + `timing_text` (the NEWEST single-day reel's), `best_close_gain_pct`, `filter_keys` (the
+  setup keys at least one reel passes, ask order), `videos`.
+- **Wins = the past-winner index's one-per-run rule** (`past_winner_index` + `_one_per_run`, one engine): a multi-day
+  run counts once and absorbs the single-day reels whose day falls on its days; a separate single day before or after
+  the run is another win. `newest_date` = the newest win's last session.
+- **Row order (server):** the newest single-day reel's timing `eod` → `intraday` → `first_hour` → unknown (a row with
+  only multi-day reels is unknown — the labeller writes no multi-day timing, and a stray key stays ignored), then
+  `newest_date` desc, then the best close gain desc, then the symbol.
+- **Filter on ROWS:** a row shows when any reel passes (its served `filter_keys`); counts = rows; 'All' = every row.
+- **Frontend:** each row is a collapsed header button (served chips only); a tap lists its reels (the card with its
+  player, setup / class / also / ⛔ / timing chips; a multi-day reel shows its session span). Still ONE `<video>` in the
+  whole section. `?winners=1&sym=AKAN` opens that row expanded (that row only; a tap still toggles it). 📱 430 px:
+  `.rpw-stock` / `.rpw-reels` min-width 0 + max-width 100%; `.rpw-stock-head` wraps; the symbol and chips wrap their text.
+- **Real data (host folder, read-only, 2026-11-22 ~02:00 ET):** 317 reels (301 single-day, 16 multi-day) → 227 rows;
+  filter rows (before AKAN's run landed) All 227 · 🎾 84 · 🌀 34 · 💋 11 · 🚩 15 · ➖ 0 · none 131; `skipped_label` 0.
+  CLRO = 1 row, 3 reels (10-23, 07-07, 07-02), 3 wins, 🎾, 🌅 first hour (peak 10:13). AKAN = the FIRST row, 3 reels
+  (11-18, 11-13, the multi-day 2026-04-21 → 2026-05-01 · 9 sessions run), 3 wins, 🌀, 🌙 end of day (peak 15:23).
+- Descriptive, UNMEASURED: no gate, no push, no rank of setups, no win rate.
+- Tests: `backend/tests/test_replays_winners_setup_timing_2026_11_22.py` (rows section),
+  `backend/tests/test_replays_winners_2026_11_18.py` (re-pinned for `rows`), `frontend/src/components/ReplaysPastWinnersSetup.test.tsx`,
+  `frontend/src/components/ReplaysPastWinners.test.tsx` + `ReplaysPastWinTag.test.tsx` (re-pinned for `rows`),
+  `frontend/src/lib/replays.setup.test.ts`.

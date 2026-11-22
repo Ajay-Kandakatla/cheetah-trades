@@ -43,3 +43,28 @@
 .rpw-play { flex: 0 0 auto; min-width: 2rem; font-size: 0.85rem; padding: 0.1rem 0.5rem; border-radius: 6px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); background: transparent; color: inherit; cursor: pointer; }
 
 @media (max-width: 640px) { .rpw-chip { font-size: .7rem; } }
+
+/* 🏆 past-winner tag (2026-11-22) — a served chip on a day card / 🏆 row whose symbol won before. Text only. 📱 430 px:
+   it rides the wrapping chip rows above and itself carries min-width 0 + wrapping text. */
+.rp-pastwin { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; border-color: var(--warn, #d97706); font-weight: 600; }
+
+/* 🏆 setup filter + setup / timing chips (2026-11-22). 📱 430 px: the filter row wraps, every chip carries min-width 0
+   and wraps its served words, so the row never pushes the page sideways. */
+.rpw-filter { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; max-width: 100%; }
+.rpw-fchip { min-width: 0; max-width: 100%; font-size: 0.78rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); background: transparent; color: inherit; cursor: pointer; white-space: normal; overflow-wrap: anywhere; }
+.rpw-fchip[aria-pressed="true"] { font-weight: 600; border-color: var(--accent, #2563eb); }
+.rpw-fchip:disabled { opacity: 0.45; cursor: default; }
+.rpw-fcount { color: var(--ink-subtle, #94a3b8); }
+.rpw-setup { font-weight: 600; }
+.rpw-stopped { border-color: var(--danger, #dc2626); }
+.rpw-timing { border-style: dashed; }
+
+/* 🏆 one row per stock (2026-11-22, Ajay: "CLRO another example add all the videos may be click them together"). The
+   header is a full-width button of served chips; its reels list under it when tapped. 📱 430 px: the header wraps, every
+   flex child carries min-width 0, the symbol and the chips wrap their text, so a long served word never pushes the page. */
+.rpw-stock { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.25rem; border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); }
+.rpw-stock-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; max-width: 100%; width: 100%; padding: 0.35rem 0.5rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; white-space: normal; overflow-wrap: anywhere; }
+.rpw-stock-head[aria-expanded="true"] { font-weight: 600; }
+.rpw-stock-sym { min-width: 0; font-weight: 700; white-space: normal; overflow-wrap: anywhere; }
+.rpw-reels { min-width: 0; max-width: 100%; display: flex; flex-direction: column; gap: 0.2rem; padding-left: 0.6rem; }
+.rpw-also { border-style: dotted; }

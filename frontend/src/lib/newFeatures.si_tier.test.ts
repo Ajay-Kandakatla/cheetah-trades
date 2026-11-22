@@ -1,3 +1,4 @@
+// WIDENED 2026-11-22 (🏆 setup + timing ✨ FIRST, 🏆 past-winner tag ✨ SECOND): two new ✨ entries sit on top, every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-21 (👀 Watch float first): a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED past-winners-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED watch-newest-first-charts-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
@@ -14,7 +15,7 @@ const SAID = 'Yes please and may be add better terminilogy like Moderate with a 
 describe('✨ the 🩳 SI tier words entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[5].id).toBe(ID);
+    expect(NEW_FEATURES[7].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

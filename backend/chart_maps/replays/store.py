@@ -309,6 +309,7 @@ def payload(day: Optional[str] = None, root=None) -> dict:
         vids = [v for v in listing["videos"] if v["group"] == key]
         if vids:
             groups.append({"key": key, "label": label, "videos": _order(key, vids)})
+    groups = _tag_day_groups(groups, date, r)                # 🏆 past-winner tag (2026-11-22): additive key only
     return _scrub({**common, "state": "ready", "groups": groups})
 
 
@@ -361,8 +362,81 @@ def _day_str(x) -> str:
     return x
 
 
-def winner_card(side: dict, sub: str) -> dict:
-    """The served 🏆 card. Raises one of CARD_ERRORS on a malformed sidecar (the caller counts it skipped_bad)."""
+_NO_SETUP = {"setup": None, "setup_text": None, "setup_class": None, "setup_class_text": None, "setup_chips": [],
+             "setup_chips_text": [], "stopped_before_peak": False, "stopped_text": None}
+_NO_TIMING = {"timing": None, "timing_text": None}
+
+
+def _setup_fields(lab) -> tuple:
+    """The labeller's `setups` dict → (served fields, bad). Absent (None / missing) → no label, not bad. Anything the
+    house does not know (a setup key, a class, a primary/class mix, a non-bool flag) → no label, bad=1 (skipped_label)."""
+    if lab is None:
+        return _NO_SETUP, 0
+    if not isinstance(lab, dict):
+        return _NO_SETUP, 1
+    prim, cls, chips, stopped = lab.get("primary"), lab.get("class"), lab.get("chips", []), lab.get("stopped_before_peak", False)
+    if prim is not None and prim not in C.WIN_SETUP_ORDER:
+        return _NO_SETUP, 1
+    if not isinstance(cls, str) or cls not in C.WIN_CLASS_WORDS:
+        return _NO_SETUP, 1
+    if (prim is None) != (cls in C.WIN_CLASSES_NO_SETUP):     # a 🎾 primary on a float-gated reel never counts as 🎾
+        return _NO_SETUP, 1
+    if not isinstance(chips, list) or not all(isinstance(c, str) and c in C.WIN_SETUP_ORDER for c in chips):
+        return _NO_SETUP, 1
+    if prim is None and chips:                                # a no-setup class carries no chip (never a 🎾 count)
+        return _NO_SETUP, 1
+    if not isinstance(stopped, bool):
+        return _NO_SETUP, 1
+    if prim is None and stopped:                              # review fix (c): no read → nothing to be stopped
+        return _NO_SETUP, 1
+    key = prim if prim is not None else C.WIN_SETUP_NONE
+    served_chips = [c for c in C.WIN_SETUP_ORDER if c in chips]
+    return {"setup": key, "setup_text": C.WIN_SETUP_WORDS[key], "setup_class": cls,
+            "setup_class_text": C.WIN_CLASS_WORDS[cls], "setup_chips": served_chips,
+            "setup_chips_text": [C.WIN_CHIP_WORDS.format(words=C.WIN_SETUP_WORDS[c]) for c in served_chips if c != prim],
+            "stopped_before_peak": stopped, "stopped_text": C.WIN_STOPPED_WORDS if stopped else None}, 0
+
+
+def bucket_of(peak_t) -> Optional[str]:
+    """The labeller's bucket rule (C.WIN_TIMING_BUCKETS == label_winners.TIMING_BUCKETS): lower bound inclusive, upper
+    exclusive; None outside 09:30–20:00. Used only to CHECK a served bucket — the server never assigns one."""
+    for name, lo, hi in C.WIN_TIMING_BUCKETS:
+        if lo <= peak_t < hi:
+            return name
+    return None
+
+
+def _timing_fields(lab) -> tuple:
+    """The labeller's `timing` dict → (served fields, bad). Absent, or a labelled `bucket: null` (no 09:30–20:00 bars) →
+    no timing (sorted LAST), not bad. An unknown bucket or a bucket without an HH:MM peak minute → no timing, bad=1."""
+    if lab is None:
+        return _NO_TIMING, 0
+    if not isinstance(lab, dict):
+        return _NO_TIMING, 1
+    b, t = lab.get("bucket"), lab.get("peak_t")
+    if b is None:
+        return _NO_TIMING, 0
+    if not isinstance(b, str) or b not in C.WIN_TIMING_WORDS or not isinstance(t, str) or not C.HHMM_RE.fullmatch(t):
+        return _NO_TIMING, 1
+    if bucket_of(t) != b:                                     # review fix (c): the bucket must agree with its peak minute
+        return _NO_TIMING, 1
+    return {"timing": b, "timing_text": C.WIN_TIMING_TEXT.format(words=C.WIN_TIMING_WORDS[b], t=t)}, 0
+
+
+def winner_labels(side: dict, kind: str) -> tuple:
+    """(served setup + timing fields, n bad labels). Single-day reels only (the labeller writes no multi-day label)."""
+    if kind != "single_day":
+        s, t, bad = _NO_SETUP, _NO_TIMING, 0
+    else:
+        s, bs = _setup_fields(side.get("setups"))
+        t, bt = _timing_fields(side.get("timing"))
+        bad = bs + bt
+    return {**s, "setup_chips": list(s["setup_chips"]), "setup_chips_text": list(s["setup_chips_text"]), **t}, bad
+
+
+def winner_card(side: dict, sub: str, tally: Optional[dict] = None) -> dict:
+    """The served 🏆 card. Raises one of CARD_ERRORS on a malformed sidecar (the caller counts it skipped_bad). A bad
+    setup / timing LABEL never drops the card: it is served unlabelled and counted in `tally["skipped_label"]`."""
     kind, kind_text = _SUB_KIND[sub]
     file = side["file"]
     symbol = side["symbol"]
@@ -406,6 +480,9 @@ def winner_card(side: dict, sub: str) -> dict:
     high_pct = hp if _finite(hp) else None
     d0 = _date.fromisoformat(day)
     days_text = day if kind == "single_day" else f"{days[0]} → {days[-1]} · {len(days)} sessions"
+    labels, bad = winner_labels(side, kind)
+    if tally is not None:
+        tally["skipped_label"] = tally.get("skipped_label", 0) + bad
     return {
         "file": file, "sub": sub, "src": f"{C.WINNERS_API_PATH}/video/{sub}/{file}",
         "symbol": symbol, "kind": kind, "kind_text": kind_text,
@@ -417,11 +494,12 @@ def winner_card(side: dict, sub: str) -> dict:
         "spike_print": spike, "spike_text": spike_text, "pick_text": pick_text,
         "speed": speed, "speed_text": f"{speed:g}x",
         "minutes": minutes, "length_text": f"{minutes:.0f} min",
+        **labels,
     }
 
 
 def _empty_win_counts() -> dict:
-    return {"videos": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0}
+    return {"videos": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0, "skipped_label": 0}
 
 
 def _parse_winner_sub(d: Path, sub: str, names) -> dict:
@@ -449,11 +527,13 @@ def _parse_winner_sub(d: Path, sub: str, names) -> dict:
         if not _is_file_name(f) or f != name[: -len(".json")] + ".mp4" or f not in present:
             counts["skipped_bad"] += 1
             continue
+        tally = {"skipped_label": 0}
         try:
-            card = winner_card(body, sub)
+            card = winner_card(body, sub, tally)
         except C.CARD_ERRORS:
             counts["skipped_bad"] += 1
             continue
+        counts["skipped_label"] += tally["skipped_label"]
         videos.append(card)
         files.add(f)
     counts["no_sidecar"] = sum(1 for n in names if n.endswith(".mp4") and n not in files and n not in window_skipped)
@@ -487,33 +567,205 @@ def read_winner_sub(sub: str, root=None) -> dict:
 
 def winners_payload(root=None) -> dict:
     r = root_dir(root)
-    counts = {"videos": 0, "single_day": 0, "multi_day": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0}
+    counts = {"videos": 0, "single_day": 0, "multi_day": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0,
+              "skipped_label": 0}
     base = {"title": C.WINNERS_TITLE, "tab": C.TAB, "note": C.WINNERS_NOTE, "window": C.FULL_DAY_WINDOW,
             "window_note": C.WINNERS_WINDOW_NOTE}
     if not (r / C.VIDEOS_SUB).is_dir():
         return _scrub({**base, "state": "no_folder", "text": C.NO_FOLDER_TEXT, "summary_text": None,
-                       "counts": counts, "groups": []})
+                       "counts": counts, "setups": setup_filter([]), "rows": []})
     videos = []
     for sub, kind, _t in C.WINNER_SUBS:
         lst = read_winner_sub(sub, r)
         videos.extend(lst["videos"])
         counts[kind] += len(lst["videos"])
-        for k in ("skipped_window", "skipped_bad", "no_sidecar"):
+        for k in ("skipped_window", "skipped_bad", "no_sidecar", "skipped_label"):
             counts[k] += lst["counts"][k]
     counts["videos"] = len(videos)
     summary = f"{counts['videos']} videos · {counts['single_day']} single-day · {counts['multi_day']} multi-day"
     if not videos:
         return _scrub({**base, "state": "empty", "text": C.WINNERS_EMPTY_TEXT, "summary_text": summary,
-                       "counts": counts, "groups": []})
-    by_day: dict = {}
+                       "counts": counts, "setups": setup_filter([]), "rows": []})
+    idx = past_winner_index(videos)                         # 🏆 "won before" (2026-11-22): EARLIER wins, same symbol
+    tagged = []
     for v in videos:
-        by_day.setdefault(v["date"], []).append(v)
-    groups = []
-    for day in sorted(by_day, reverse=True):
-        vids = sorted(by_day[day], key=lambda v: (_num_desc(v["close_gain_pct"]), v["symbol"], v["sub"], v["file"]))
-        groups.append({"date": day, "label": vids[0]["label_date"], "videos": vids})
+        tag = past_wins_before(idx, v["symbol"], v["days"][0], C.PAST_WIN_BEFORE_WORDS)
+        tagged.append({**v, **tag} if tag else v)
+    rows = winner_rows(tagged, idx)
     return _scrub({**base, "state": "ready", "text": None, "summary_text": summary, "counts": counts,
-                   "groups": groups})
+                   "setups": setup_filter(rows), "rows": rows})
+
+
+def _timing_rank(t) -> int:
+    return C.WIN_TIMING_ORDER.index(t) if t in C.WIN_TIMING_ORDER else len(C.WIN_TIMING_ORDER)
+
+
+def _date_desc(day: str) -> int:
+    return -_date.fromisoformat(day).toordinal()
+
+
+def card_filter_keys(v) -> set:
+    """The setup filter keys a served card passes: its served `setup` (a primary, or "none") plus a 🎾 SECONDARY chip
+    (C.WIN_CHIP_MATCH, review fix (a)). An unlabelled card or a multi-day reel passes none (only 'All')."""
+    keys = set()
+    if v.get("setup") in C.WIN_SETUP_FILTER_KEYS:
+        keys.add(v["setup"])
+    keys.update(c for c in (v.get("setup_chips") or ()) if c in C.WIN_CHIP_MATCH)
+    return keys
+
+
+def _reel_order(v) -> tuple:
+    """Inside a row: newest first by the reel's LAST session; a same-day tie → the multi-day run first, then the higher
+    close gain, then sub / file."""
+    return (_date_desc(v["days"][-1]), 0 if v["kind"] == "multi_day" else 1, _num_desc(v["close_gain_pct"]),
+            v["sub"], v["file"])
+
+
+def winner_rows(cards: list, index: Optional[dict] = None) -> list:
+    """2026-11-22 (Ajay: "when ever a stock has multiday group it in the same role for past winners" · "CLRO another
+    example add all the videos may be click them together"): ONE row per symbol (exact) holding every accepted reel of
+    that symbol, newest first. `wins` = the past-winner index's one-per-run count (a multi-day run absorbs the single-day
+    reels on its days; a later separate single day is another win). Row order: the newest single-day reel's timing
+    (eod → intraday → first_hour → unknown; a row with no single-day reel → unknown — the labeller writes no multi-day
+    timing), then the newest win's day desc, then the best close gain desc, then the symbol. Pure; the FE never reorders."""
+    idx = index if index is not None else past_winner_index(cards)
+    by_sym: dict = {}
+    for v in cards:
+        by_sym.setdefault(v["symbol"], []).append(v)
+    rows = []
+    for sym, vids in by_sym.items():
+        vids = sorted(vids, key=_reel_order)
+        wins = _one_per_run(idx.get(sym, []))
+        singles = [v for v in vids if v["kind"] == "single_day"]
+        newest_single = min(singles, key=lambda v: (_date_desc(v["date"]), _num_desc(v["close_gain_pct"]), v["file"]),
+                            default=None)
+        timing = newest_single.get("timing") if newest_single else None
+        timing_text = newest_single.get("timing_text") if newest_single else None
+        keys = set().union(*(card_filter_keys(v) for v in vids))
+        filter_keys = [k for k in C.WIN_SETUP_FILTER_KEYS if k in keys]
+        best = filter_keys[0] if filter_keys else None
+        newest = wins[0]["day"] if wins else vids[0]["days"][-1]
+        best_cg = max((v["close_gain_pct"] for v in vids if _finite(v["close_gain_pct"])), default=None)
+        n = len(wins)
+        rows.append({
+            "key": f"sym-{sym}", "symbol": sym,
+            "wins": n, "wins_text": C.WIN_ROW_WINS_WORDS[0 if n == 1 else 1].format(n=n),
+            "newest_date": newest, "newest_text": C.WIN_ROW_NEWEST_WORDS.format(d=f"{_date.fromisoformat(newest):%a %Y-%m-%d}"),
+            "setup": best, "setup_text": C.WIN_SETUP_WORDS[best] if best else None,
+            "timing": timing if timing in C.WIN_TIMING_ORDER else None,
+            "timing_text": timing_text if timing in C.WIN_TIMING_ORDER else None,
+            "best_close_gain_pct": best_cg, "filter_keys": filter_keys, "videos": vids,
+        })
+    rows.sort(key=lambda r: (_timing_rank(r["timing"]), _date_desc(r["newest_date"]),
+                             _num_desc(r["best_close_gain_pct"]), r["symbol"]))
+    return rows
+
+
+def setup_filter(rows: list) -> list:
+    """The served 🏆 filter row over the ROWS (2026-11-22): 'All' (every row), then 🎾 first and the ask's setup order,
+    then 'no Gajjala setup'. A count = the rows with at least one reel passing that key (`filter_keys`) — a 🎾 float-gated
+    reel is a 'none' and carries no chip, so it never makes a 🎾 count."""
+    out = [{"key": C.WIN_SETUP_ALL, "label": C.WIN_SETUP_ALL_WORDS, "count": len(rows)}]
+    for k in C.WIN_SETUP_FILTER_KEYS:
+        out.append({"key": k, "label": C.WIN_SETUP_WORDS[k],
+                    "count": sum(1 for r in rows if k in (r.get("filter_keys") or ()))})
+    return out
+
+
+# ── 🏆 past-winner tag (2026-11-22) ─────────────────────────────────────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "MEDS was a part winner that went up after hours.. Please actually add a past winner tag in
+# our new ones looks for past winnings please if found again.." ONE pure index over the ACCEPTED 🏆 cards (the
+# `read_winner_sub` listings — the same accept rule, no second reader): symbol (exact) → wins, newest first. A win's
+# `day` is the session it ENDED (single-day: its day; multi-day: the run's last session), so a card is tagged only by a
+# win that was complete before its own session — never the same day, never later. Cached by the identity of the two
+# cached sub listings (they change only when a folder key moves). A tag only: no gate, no push, no rank.
+_PW_CACHE: dict = {}           # root str -> (tuple of sub listings, index)
+
+
+_PW_SERVED = ("day", "kind", "close_gain_pct", "file", "sub")     # the served entry keys (`days` stays internal)
+
+
+def _pw_order(w) -> tuple:
+    """Newest first by the run's LAST day; a same-day tie by the higher close gain (2026-11-22 fix #3; the renderer's
+    replay_video.past_wins sorts by the same key)."""
+    return (w["day"], w["close_gain_pct"], w["kind"], w["file"])
+
+
+def past_winner_index(cards) -> dict:
+    """Pure: accepted 🏆 cards → {symbol: [{day, kind, close_gain_pct, file, sub, days}, …] newest first}."""
+    out: dict = {}
+    for v in cards:
+        out.setdefault(v["symbol"], []).append({"day": v["days"][-1], "kind": v["kind"],
+                                                "close_gain_pct": v["close_gain_pct"], "file": v["file"],
+                                                "sub": v["sub"], "days": tuple(v["days"])})
+    for wins in out.values():
+        wins.sort(key=_pw_order, reverse=True)
+    return out
+
+
+def _one_per_run(wins: list) -> list:
+    """2026-11-22 fix #2: one entry per run. A single-day win whose day falls inside a LISTED multi-day run's days (same
+    symbol — `wins` is one symbol's list) is that run's move, so only the run is listed; the same reel twice (same kind,
+    same days) is listed once. `wins` is already filtered to the card's past and sorted newest first."""
+    covered = {d for w in wins if w["kind"] == "multi_day" for d in w["days"]}
+    seen, out = set(), []
+    for w in wins:
+        key = (w["kind"], w["days"])
+        if (w["kind"] == "single_day" and w["day"] in covered) or key in seen:
+            continue
+        seen.add(key)
+        out.append(w)
+    return out
+
+
+def _pw_date(win_day: str, card_day: str) -> str:
+    """MM-DD, or YYYY-MM-DD when the win is from another calendar year than the card's day (2026-11-22 fix #3)."""
+    return win_day[5:] if win_day[:4] == card_day[:4] else win_day
+
+
+def _past_index(r: Path) -> dict:
+    lists = tuple(read_winner_sub(sub, r) for sub in C.WINNER_SUB_KEYS)
+    ck = str(r)
+    with _LOCK:
+        hit = _PW_CACHE.get(ck)
+        if hit is not None and len(hit[0]) == len(lists) and all(a is b for a, b in zip(hit[0], lists)):
+            return hit[1]
+    idx = past_winner_index([v for lst in lists for v in lst["videos"]])
+    with _LOCK:
+        _PW_CACHE[ck] = (lists, idx)
+    return idx
+
+
+def past_wins_before(index: dict, symbol, day, words: str) -> Optional[dict]:
+    """The served tag fields for a card of `symbol` on session `day`: only wins that ENDED strictly before `day`, one
+    entry per run (`_one_per_run`; the count counts runs). None when there is none (the card then carries no tag key)."""
+    if not isinstance(symbol, str) or not is_date(day):
+        return None
+    wins = _one_per_run([w for w in index.get(symbol, ()) if w["day"] < day])
+    if not wins:
+        return None
+    shown = []
+    for w in wins[: C.PAST_WIN_MAX]:
+        kind_word = "" if w["kind"] == "single_day" else f" {_SUB_KIND[w['sub']][1]}"
+        shown.append({**{k: w[k] for k in _PW_SERVED},
+                      "text": f"{words} {_pw_date(w['day'], day)} {_signed_pct(w['close_gain_pct'])}{kind_word}"})
+    more = len(wins) - len(shown)
+    return {"past_winner": shown, "past_winner_count": len(wins),
+            "past_winner_more_text": C.PAST_WIN_MORE_WORDS.format(n=more) if more > 0 else None}
+
+
+def _tag_day_groups(groups: list, day, r: Path) -> list:
+    idx = _past_index(r)
+    if not idx:
+        return groups
+    out = []
+    for g in groups:
+        vids = []
+        for v in g["videos"]:
+            tag = past_wins_before(idx, v.get("symbol"), day, C.PAST_WIN_DAY_WORDS)
+            vids.append({**v, **tag} if tag else v)
+        out.append({**g, "videos": vids})
+    return out
 
 
 def resolve_winner_video(sub: str, name: str, root=None) -> Optional[Path]:

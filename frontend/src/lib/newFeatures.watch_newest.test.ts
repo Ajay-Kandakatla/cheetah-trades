@@ -1,3 +1,4 @@
+// WIDENED 2026-11-22 (🏆 setup + timing ✨ FIRST, 🏆 past-winner tag ✨ SECOND): two new ✨ entries sit on top, every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-21 (👀 Watch float first): a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED past-winners-2026-11-19: a new ✨ entry sits FIRST, every NEW_FEATURES[n] pin here moved +1.
 /* 👀 the Watch newest-first / charts ✨ (2026-11-19). Ajay: "When ever I push something to watch it make it active by
@@ -12,7 +13,7 @@ const SAID_2 = 'When I add a new ticket they are gettinf added in to que but not
 describe('✨ the Watch newest-first entry (2026-11-19)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[2].id).toBe(ID);
+    expect(NEW_FEATURES[4].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-19');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

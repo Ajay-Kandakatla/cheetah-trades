@@ -153,7 +153,8 @@ def _wv(sub, name):
 
 
 def _cards(p):
-    return [v for g in p["groups"] for v in g["videos"]]
+    """Every served card: the day listing's `groups`, or (2026-11-22) the 🏆 listing's one-row-per-stock `rows`."""
+    return [v for g in (p.get("rows") or p.get("groups") or []) for v in g["videos"]]
 
 
 def _strings(o):
@@ -211,10 +212,20 @@ def test_GOLDEN_the_day_listing_is_byte_identical_with_the_winner_folders(tmp_pa
     add_winner_folders(r)
     os.utime(r / C.VIDEOS_SUB / DAY)                              # force a re-scan of the day folder too
     ST._DAY_CACHE.clear()
-    assert json.dumps(ST.payload(DAY, r), sort_keys=True) == before
+    # RE-PINNED 2026-11-22 (🏆 past-winner tag, Ajay: "Please actually add a past winner tag in our new ones"): a day
+    # card whose symbol has an EARLIER 🏆 win now carries the additive past_winner* keys. With those keys stripped the
+    # day listing is still byte-identical; only GP (11-12 single + the 11-11→11-13 run) and PAVS (06-09) carry them.
+    def _strip(p):
+        for g in p.get("groups", []):
+            g["videos"] = [{k: v for k, v in c.items() if not k.startswith("past_winner")} for c in g["videos"]]
+        return p
+    after = ST.payload(DAY, r)
+    assert sorted(v["symbol"] for v in _cards(after) if "past_winner" in v) == ["GP", "PAVS"]
+    assert json.dumps(_strip(after), sort_keys=True) == before
     assert ST.dates(r) == before_dates == [DAY]
-    assert c.get(C.API_PATH, params={"date": DAY}, headers=OWN).content == http_before
-    assert json.dumps(ST.payload(None, r), sort_keys=True) == before
+    assert json.dumps(_strip(_strict(c.get(C.API_PATH, params={"date": DAY}, headers=OWN).content)),
+                      sort_keys=True) == json.dumps(_strict(http_before), sort_keys=True)
+    assert json.dumps(_strip(ST.payload(None, r)), sort_keys=True) == before
 
 
 # ── listing ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -223,14 +234,19 @@ def test_both_kinds_listed_groups_date_desc_close_gain_desc(root):
     assert p["state"] == "ready" and p["text"] is None
     assert p["title"] == C.WINNERS_TITLE and p["tab"] == C.TAB and p["note"] == C.WINNERS_NOTE
     assert p["window"] == C.FULL_DAY_WINDOW and p["window_note"] == C.WINNERS_WINDOW_NOTE
-    assert [g["date"] for g in p["groups"]] == ["2026-11-18", "2026-11-12", "2026-11-11", "2026-08-19", "2026-06-09"]
-    assert [g["label"] for g in p["groups"]] == ["Wed 2026-11-18", "Thu 2026-11-12", "Wed 2026-11-11",
-                                                 "Wed 2026-08-19", "Tue 2026-06-09"]
-    g12 = p["groups"][1]
-    assert [(v["symbol"], v["sub"]) for v in g12["videos"]] == [("AAA", "winners"), ("GP", "winners"),
-                                                                ("GP", "multiday")]
+    # RE-PINNED 2026-11-22 (Ajay: "when ever a stock has multiday group it in the same role for past winners" · "CLRO
+    # another example add all the videos may be click them together"): ONE row per stock. No fixture carries a timing
+    # label → every row is 'unknown' timing, so the order is the newest win desc, then the best close gain desc. GP's
+    # 11-12 single day sits inside its 11-11 → 11-13 run: one row, two reels, ONE win (newest 11-13).
+    assert "groups" not in p
+    assert [r["symbol"] for r in p["rows"]] == ["ZZZ", "GP", "NXXT", "AAA", "BTCT", "PAVS"]
+    assert [r["newest_date"] for r in p["rows"]] == ["2026-11-18", "2026-11-13", "2026-11-12", "2026-11-12",
+                                                     "2026-08-24", "2026-06-09"]
+    gp = p["rows"][1]
+    assert [(v["sub"], v["date"]) for v in gp["videos"]] == [("multiday", "2026-11-12"), ("winners", "2026-11-12")]
+    assert gp["wins"] == 1 and gp["wins_text"] == "1 win" and gp["newest_text"] == "newest Fri 2026-11-13"
     assert p["counts"] == {"videos": 7, "single_day": 4, "multi_day": 3, "skipped_window": 0, "skipped_bad": 0,
-                           "no_sidecar": 0}
+                           "no_sidecar": 0, "skipped_label": 0}
     assert p["summary_text"] == "7 videos · 4 single-day · 3 multi-day"
     _strict(json.dumps(p, allow_nan=True))
 
@@ -244,7 +260,11 @@ def test_card_fields_single_and_multi(root):
                   "days": ["2026-11-12"], "days_text": "2026-11-12", "close_gain_pct": 120.0,
                   "gain_text": "+120% on the close", "high_pct": 180.0, "high_text": "+180% high",
                   "spike_print": False, "spike_text": None, "pick_text": None, "speed": 45.0, "speed_text": "45x",
-                  "minutes": 21.4, "length_text": "21 min"}
+                  "minutes": 21.4, "length_text": "21 min",
+                  # RE-PINNED 2026-11-22: the setup + timing keys (no label in this sidecar → all empty)
+                  "setup": None, "setup_text": None, "setup_class": None, "setup_class_text": None,
+                  "setup_chips": [], "setup_chips_text": [], "stopped_before_peak": False, "stopped_text": None,
+                  "timing": None, "timing_text": None}
     bt = by[("multiday", "BTCT")]
     assert bt["kind"] == "multi_day" and bt["kind_text"] == "multi-day"
     assert bt["days_text"] == "2026-08-18 → 2026-08-24 · 5 sessions"
@@ -319,11 +339,11 @@ def test_NEGATIVE_every_served_string_is_free_of_the_b_word_and_edge(root):
 
 def test_empty_and_no_folder_shapes(tmp_path):
     p = ST.winners_payload(tmp_path / "missing")
-    assert p["state"] == "no_folder" and p["text"] == C.NO_FOLDER_TEXT and p["groups"] == []
+    assert p["state"] == "no_folder" and p["text"] == C.NO_FOLDER_TEXT and p["rows"] == []
     r = tmp_path / "r"
     (r / C.VIDEOS_SUB).mkdir(parents=True)
     e = ST.winners_payload(r)
-    assert e["state"] == "empty" and e["text"] == C.WINNERS_EMPTY_TEXT and e["groups"] == []
+    assert e["state"] == "empty" and e["text"] == C.WINNERS_EMPTY_TEXT and e["rows"] == []
     assert e["summary_text"] == "0 videos · 0 single-day · 0 multi-day"
     write_side(r / C.VIDEOS_SUB / DAY, pavs_loser())               # a day reel never counts as a past winner
     assert ST.winners_payload(r)["state"] == "empty"

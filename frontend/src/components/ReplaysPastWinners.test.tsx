@@ -1,6 +1,8 @@
 /* 🏆 Past winners section (2026-11-18, pastwinners spec §3.6, WP-APP). Ajay 2026-11-18, verbatim: "can you work on
  * todays videos and also..  Winners in general from the past". The section prints the served payload verbatim (a
- * hand fixture in the backend winners_payload shape). NEGATIVES throughout. */
+ * hand fixture in the backend winners_payload shape). NEGATIVES throughout. RE-PINNED 2026-11-22 (Ajay: "CLRO another
+ * example add all the videos may be click them together"): the payload serves one row per stock (`rows`); these tests
+ * open every row first, then check the reels exactly as before. */
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -23,8 +25,8 @@ const WIN: any = {
   window: 'served window', window_note: 'Only replays that run the served window (every session) are listed.',
   summary_text: '4 videos · 3 single-day · 1 multi-day',
   counts: { videos: 4, single_day: 3, multi_day: 1, skipped_window: 0, skipped_bad: 0, no_sidecar: 0 },
-  groups: [
-    { date: '2026-11-12', label: 'Thu 2026-11-12', videos: [
+  rows: [
+    { key: 'sym-GP', symbol: 'GP', wins: 1, wins_text: '1 win', newest_text: 'newest Fri 2026-11-13', videos: [
       card({ file: '2026-11-12_GP_45x.mp4', sub: 'winners', src: '/chart-maps/replays/winners/video/winners/2026-11-12_GP_45x.mp4',
         symbol: 'GP', date: '2026-11-12', days: ['2026-11-12'], days_text: '2026-11-12', close_gain_pct: 120,
         gain_text: '+120% on the close', high_text: '+180% high' }),
@@ -34,18 +36,20 @@ const WIN: any = {
         close_gain_pct: 90, gain_text: '+90% best close vs the day before', high_text: '+150% run high',
         pick_text: 'your example — not a +100% run', minutes: 64.0, length_text: '64 min' }),
     ] },
-    { date: '2026-06-09', label: 'Tue 2026-06-09', videos: [
+    { key: 'sym-PAVS', symbol: 'PAVS', wins: 1, wins_text: '1 win', newest_text: 'newest Tue 2026-06-09', videos: [
       card({ file: '2026-06-09_PAVS_45x.mp4', sub: 'winners', src: '/chart-maps/replays/winners/video/winners/2026-06-09_PAVS_45x.mp4',
         symbol: 'PAVS', date: '2026-06-09', days: ['2026-06-09'], days_text: '2026-06-09', close_gain_pct: 8,
         gain_text: '+8% on the close', high_text: '+2738% high', spike_print: true,
         spike_text: '⚠ high more than 2× the close — a spike print?' }),
+    ] },
+    { key: 'sym-DN', symbol: 'DN', wins: 1, wins_text: '1 win', newest_text: 'newest Tue 2026-06-09', videos: [
       card({ file: '2026-06-09_DN_45x.mp4', sub: 'winners', src: '/chart-maps/replays/winners/video/winners/2026-06-09_DN_45x.mp4',
         symbol: 'DN', date: '2026-06-09', days: ['2026-06-09'], days_text: '2026-06-09', close_gain_pct: -12,
         gain_text: '−12% on the close', high_text: null, high_pct: null }),
     ] },
   ],
 };
-const allRows = (p: any): any[] => p.groups.flatMap((g: any) => g.videos);
+const allRows = (p: any): any[] => p.rows.flatMap((g: any) => g.videos);
 
 type Answer = { ok?: boolean; status?: number; body?: unknown; reject?: boolean };
 function stub(route: (url: string) => Answer) {
@@ -73,6 +77,9 @@ async function mountOpen(win: Answer, entry = '/chart-maps?tab=replays&winners=1
   const f = stub((url) => (isWin(url) ? win : { body: DAY_READY }));
   const r = render(<MemoryRouter initialEntries={[entry]}><ReplaysPastWinners /><Where /></MemoryRouter>);
   await waitFor(() => expect(r.getByTestId('rpw-section').getAttribute('data-state')).not.toBe('loading'));
+  for (const b of Array.from(r.container.querySelectorAll('[data-testid^="rpw-stock-toggle-"]'))) {
+    await act(async () => { fireEvent.click(b); });                       // open every stock row
+  }
   return { ...r, f };
 }
 async function readSource(rel: string): Promise<string> {
@@ -137,13 +144,13 @@ describe('🏆 lazy fetch', () => {
 });
 
 describe('🏆 ready — every word is served', () => {
-  it('note, window note, summary, group labels, one row per served card in served order', async () => {
+  it('note, window note, summary, one stock header per served row, one reel row per served card in served order', async () => {
     const { getByTestId, container } = await mountOpen({ body: WIN });
     expect(getByTestId('rpw-note').textContent).toBe(WIN.note);
     expect(getByTestId('rpw-window-note').textContent).toBe(WIN.window_note);
     expect(getByTestId('rpw-summary').textContent).toBe(WIN.summary_text);
-    expect(Array.from(container.querySelectorAll('.rpw-group > h3')).map((h) => h.textContent))
-      .toEqual(WIN.groups.map((g: any) => g.label));
+    expect(Array.from(container.querySelectorAll('.rpw-stock-head')).map((h) => h.textContent))
+      .toEqual(WIN.rows.map((g: any) => `${g.symbol}${g.wins_text}${g.newest_text}`));
     const rows = Array.from(container.querySelectorAll('.rpw-row')).map((r) => r.getAttribute('data-testid'));
     expect(rows).toEqual(allRows(WIN).map((v) => `rpw-row-${v.sub}-${v.file}`));
   });
@@ -161,18 +168,18 @@ describe('🏆 ready — every word is served', () => {
   });
   it('the spike chip only when spike_print === true; NEGATIVE: a served spike_text with spike_print false/"true" prints nothing', async () => {
     const body = clone(WIN);
-    body.groups[0].videos[0].spike_text = 'SPIKE-SHOULD-NOT-SHOW';
-    body.groups[0].videos[1].spike_text = 'SPIKE-STRING-TRUE';
-    body.groups[0].videos[1].spike_print = 'true';
+    body.rows[0].videos[0].spike_text = 'SPIKE-SHOULD-NOT-SHOW';
+    body.rows[0].videos[1].spike_text = 'SPIKE-STRING-TRUE';
+    body.rows[0].videos[1].spike_print = 'true';
     const { container, getAllByTestId } = await mountOpen({ body });
     expect(getAllByTestId('rpw-spike')).toHaveLength(1);
-    expect(getAllByTestId('rpw-spike')[0].textContent).toBe(WIN.groups[1].videos[0].spike_text);
+    expect(getAllByTestId('rpw-spike')[0].textContent).toBe(WIN.rows[1].videos[0].spike_text);
     expect(container.textContent).not.toContain('SPIKE-SHOULD-NOT-SHOW');
     expect(container.textContent).not.toContain('SPIKE-STRING-TRUE');
   });
   it('NEGATIVE: non-string chips are dropped and NaN / numbers print nothing', async () => {
     const body = clone(WIN);
-    const v = body.groups[0].videos[0];
+    const v = body.rows[0].videos[0];
     v.gain_text = 42; v.high_text = { x: 1 }; v.pick_text = ['a']; v.days_text = null; v.speed_text = NaN;
     const { getByTestId } = await mountOpen({ body });
     const chips = Array.from(getByTestId(`rpw-row-${v.sub}-${v.file}`).querySelectorAll('.rpw-chip')).map((c) => c.textContent);
@@ -207,10 +214,10 @@ describe('🏆 ready — every word is served', () => {
   });
   it('NEGATIVE: a served src off the 🏆 route → no ▶ and no <video> for that row', async () => {
     const body = clone(WIN);
-    body.groups[0].videos[0].src = '/chart-maps/replays/video/2026-11-17/x.mp4';
-    body.groups[0].videos[1].src = 'https://elsewhere.example/x.mp4';
+    body.rows[0].videos[0].src = '/chart-maps/replays/video/2026-11-17/x.mp4';
+    body.rows[0].videos[1].src = 'https://elsewhere.example/x.mp4';
     const { container, getByTestId } = await mountOpen({ body });
-    for (const v of body.groups[0].videos) {
+    for (const v of body.rows[0].videos) {
       expect(getByTestId(`rpw-row-${v.sub}-${v.file}`).querySelector('button[aria-label="play"]')).toBeNull();
     }
     expect(container.querySelectorAll('button[aria-label="play"]')).toHaveLength(2);
@@ -221,7 +228,7 @@ describe('🏆 ready — every word is served', () => {
 describe('🏆 empty and no_folder', () => {
   it('print the served text; NEGATIVE: no rows, no note, no video', async () => {
     for (const state of ['empty', 'no_folder']) {
-      const body = { ...clone(WIN), state, text: `served ${state} text`, groups: clone(WIN.groups) };
+      const body = { ...clone(WIN), state, text: `served ${state} text`, rows: clone(WIN.rows) };
       const r = await mountOpen({ body });
       expect(r.getByTestId('rpw-text').textContent).toBe(`served ${state} text`);
       expect(r.container.querySelector('.rpw-row')).toBeNull();

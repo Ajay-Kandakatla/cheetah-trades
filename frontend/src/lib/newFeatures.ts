@@ -22,6 +22,28 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-22, verbatim: "can you categorize past winners like some are kiss and fly based and some might be VCP
+  // based some might be horizontal faded.. also reversal squeeze is mainly what I look for." + "yes please" (the tab) +
+  // "dont't remove but add a tag but sort by EOD and Intraday ones on the top" + "CLRO another example add all the videos may be
+  // click them together" (one row per stock). Labels = the house detectors replayed on
+  // each reel's 1-min bars (eod-audits/research/2026-11-22_winner_setup_labels), served from the sidecar `setups` /
+  // `timing` keys. Display + order only; no gate. UNMEASURED.
+  {
+    id: 'chart-maps-replays-winners-setup-timing-2026-11-22',
+    label: '🏆 Past winners by stock, by setup and by time of day — you said: “can you categorize past winners like some are kiss and fly based and some might be VCP based some might be horizontal faded.. Do we have those metrics? also reversal squeeze is mainly what I look for.”, “dont\'t remove but add a tag but sort by EOD and Intraday ones on the top” “Just AKAN can you please bring its past winner session to like from MAY multiday when ever a stock has multiday group it in the same role for past winners please.” and “CLRO another example add all the videos may be click them together”. Each stock is now ONE row: tap it to open all its winner videos together, multi-day runs included (AKAN’s April–May run is one of them). Every single-day video carries the Gajjala setup our own scanner rules read that day (🎾 first, then 🌀 💋 🚩 ➖, or none), whether it reached A+ before the day’s peak, was armed only, or came after it, a ⛔ when it was stopped before the peak, and a time tag for when the peak printed (🌙 end of day, ☀️ intraday, 🌅 first hour). Filter by setup — 🎾 also finds videos where 🎾 fired beside another setup. End-of-day and intraday winners sort on top, first-hour runners below them. A replay of our rules, not what rang live. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=replays&winners=1',
+  },
+  // Ajay 2026-11-22, verbatim: "MEDS was a part winner that went up after hours.. Please actually add a past winner tag
+  // in our new ones looks for past winnings please if found again..". chart_maps/replays past_winner_index reads the
+  // 🏆 sidecars the tab already accepts; a day card or 🏆 row is tagged only with wins that ENDED before its day; one
+  // run counts once. Display only, UNMEASURED. Doc docs/chart_maps/replays_past_winners_2026_11_18.md (11-22 section).
+  {
+    id: 'chart-maps-replays-past-winner-tag-2026-11-22',
+    label: '🏆 Past-winner tag on 🎬 Replays — you said: “MEDS was a part winner that went up after hours.. Please actually add a past winner tag in our new ones looks for past winnings please if found again..”. A day video whose stock already won before now carries a chip like “🏆 past winner 09-16 +275%” (newest 3, then +N more); a 🏆 Past winners row shows the stock’s earlier wins as “won before”. Only wins that finished before that day count, and one multi-day run counts once. New nightly videos print PAST WINNER in the title row. Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=replays',
+  },
   // Ajay 2026-11-21, verbatim: "can you add the current float value also to the tickers on the watch list." Every
   // 👀 Watch tile gets one float chip (his names, 🤖 auto names, 🎯 A+ names) from the cached float — no network on a
   // page load. A float is NOT real-time: the hover says how old it is. Display only, UNMEASURED. Doc
