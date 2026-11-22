@@ -181,6 +181,7 @@ AUTO_MODULE = "chart_maps.gajjala_watch.auto"
 TAGS_MODULE = "chart_maps.gajjala_watch.tags"                                         # 🏷️ 2026-11-18 (spec wtags)
 BROKER_MODULE = "chart_maps.gajjala_watch.broker"                                     # 🚫 2026-11-19 (spec watchfid)
 FLOAT_MODULE = "chart_maps.gajjala_watch.float_read"                                  # 🔢 2026-11-21 (spec watchfloat)
+SECTIONS_MODULE = "chart_maps.gajjala_watch.sections"                                 # 🗂 2026-11-22 (spec watch_org)
 
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
 DOC_STATUSES = ("loaded", "no_prints", "no_bars", "failed", "over_budget")      # build.status_of (WP-B)
@@ -317,6 +318,25 @@ def _broker_section(out, state_doc, siso) -> None:
             if isinstance(r, dict):
                 r["broker_text"] = None
         out["broker"] = None
+
+
+def _sections(rows: list, raw: dict, added: dict, session) -> tuple:
+    """🗂 2026-11-22 (spec watch_org §3.3) — `sections.apply` (imported lazily through sys.modules, the tags pattern):
+    (rows in section order with `org`, `sections`). Any failure → (the rows unchanged, every `org` None; None) and ONE
+    log line — the board answers."""
+    try:
+        sess = session if isinstance(session, date) else date.fromisoformat(str(session)[:10])
+        out = importlib.import_module(SECTIONS_MODULE).apply(
+            rows, entries=raw.get("entries") or {}, removed=raw.get("removed") or [], his_added=added, session=sess)
+        new_rows, sections = out
+        if not isinstance(new_rows, list) or len(new_rows) != len(rows):
+            raise ValueError("rows changed")
+        return new_rows, sections
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: sections unavailable: %s", type(exc).__name__)
+        for r in rows:
+            r["org"] = None
+        return rows, None
 
 
 def info() -> dict:
@@ -724,13 +744,19 @@ def auto_board(state: str, entries: list, removed: list, *, in_window: bool, now
             "skipped_text": auto_skipped_text(state, state_doc, siso)}
 
 
-def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: datetime, state_doc=None) -> tuple:
+def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: datetime, state_doc=None,
+                 raw_out: Optional[dict] = None) -> tuple:
     """({SYM: row auto block} in the STORED order, the board's `auto` block, {SYM: the entry's `added_at` as ISO UTC or
     None} — 2026-11-19). Any failure composing the words → the auto names are left out and the block says `unreadable`
     (None when even that cannot be composed) — his rows and the board always answer. `state_doc` = the loop state doc
-    (🎯 `skipped_text`, 2026-11-17)."""
+    (🎯 `skipped_text`, 2026-11-17). 🗂 2026-11-22 (spec watch_org): `raw_out`, when a dict, is filled from the SAME
+    `auto_read` with {"entries": {SYM: raw entry}, "removed": [...]} — the sections' only auto input; the tuple is
+    unchanged."""
     try:
         state, entries, removed = auto_read(cs, symbols, siso)
+        if isinstance(raw_out, dict):
+            raw_out["entries"] = {e["symbol"]: e for e in entries}
+            raw_out["removed"] = list(removed)
         blocks = {e["symbol"]: auto_row_block(e, now) for e in entries}
         at_by = {e["symbol"]: CO.added_iso(e.get("added_at")) for e in entries}
         return blocks, auto_board(state, entries, removed, in_window=in_window, now=now, state_doc=state_doc,
@@ -920,8 +946,9 @@ def _build(now: datetime, db, only) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala_watch: state doc unreadable: %s", exc)
     # 🤖 2026-11-17: the auto doc (one more stored read); his names first, then the auto names in the STORED order.
+    raw: dict = {}                                           # 🗂 2026-11-22: the sections' auto input (same read)
     auto_by, auto_out, at_by = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now,
-                                            state_doc=state_doc)
+                                            state_doc=state_doc, raw_out=raw)
     # ⬆️ 2026-11-19: HIS names newest added first (undated after, in his order), then the 🤖 names in the stored order.
     every = CO.newest_first(symbols, added) + list(auto_by)
     if only is None:
@@ -953,6 +980,15 @@ def _build(now: datetime, db, only) -> dict:
         r["float"] = float_by.get(r["symbol"])                 # None = no float read on file — never invented
         r["added_at"] = (at_by.get(r["symbol"]) if r["auto"] is not None           # ⬆️ 2026-11-19 — ISO UTC or None
                          else CO.added_iso(added.get(CO.fold(r["symbol"]))))
+    # 🗂 2026-11-22 (spec watch_org): his order — 👤 your names → 🎯 A+ → 🤖 added today; every row's `org`. The `only`
+    # pending poll reads nothing new and serves `org` None [C11]. OFF → no `org` / `sections` keys, the 11-21 order.
+    sections = None
+    if C.SECTIONS_ON:
+        if only is None:
+            rows, sections = _sections(rows, raw, added, session)
+        else:
+            for r in rows:
+                r["org"] = None
     full = len(symbols) >= C.MAX_SYMBOLS                     # HIS cap only — auto names never fill his ➕ (2026-11-17)
     # 🔁 2026-11-18: at the cap ➕ replaces the oldest he added that is not 🎯 A+; only when EVERY one of his names is A+
     # (by THIS board's own tag read — the full board only, never a pending poll) is the add refused → `full_blocked`.
@@ -966,6 +1002,8 @@ def _build(now: datetime, db, only) -> dict:
            "pass": pass_block(state_doc, now, bool(in_window)),
            "info": info(), "legend": legend(), "rows": rows,
            "auto": auto_out}
+    if C.SECTIONS_ON:
+        out["sections"] = sections                           # 🗂 2026-11-22 — None on the poll / a fault
     _broker_section(out, state_doc, siso)   # 🚫 2026-11-19
     if any(r["state"] == "pending" for r in rows):
         out["pending_poll_sec"] = GC.ON_DEMAND_POLL_SEC

@@ -73,7 +73,19 @@
  * or a failed request brings the name back. A write that never answers holds the queue (no abort time — HIS CALL #12).
  * Loads are sequenced: a stale full GET or pending poll never overwrites a newer board. Out of window a pending name
  * past the cap is re-read every served `pending_late_poll_sec` and prints the served `late_text`; in window the minute
- * re-GET re-reads it. UNMEASURED — display only. */
+ * re-GET re-reads it. UNMEASURED — display only.
+ *
+ * 🗂 2026-11-22 (spec watch_org rev 4 §3.5, WP-FE-WATCH) — Ajay: "I need gajjalas watch tab little more organized. With
+ * less info, I want to know previous day winner auto additions vs intraday may be a time stamp. or something figure out
+ * a better way to organize that info for me.." and "Manual ones I add them need to be on top then auto intraday..".
+ * ORG MODE only when the server serves sections (lib ggwSectionsOn — an older server or SECTIONS_ON = False → the board
+ * above, byte for byte). The server groups and orders the rows and writes every word; this board holds NO section key
+ * list — it draws whatever sections are served, in served order (a later served key needs no change here). In org mode:
+ * compact tiles (served setup chip, the ONE time line, the ⋯ drawer); the pager carries the served section labels
+ * inline; on the PHONE each served section gets a collapsible header (remembered in this browser, `ggw.collapsed`; desktop
+ * keeps the fitted pages, no headers); a push link (?focus=), a box add, the first-load outline and a pager tap into a
+ * FOLDED section open it first, then scroll once [C5]; the 🤖 title line and the EMA legend move into ℹ️ (with every
+ * served section hint — the phone has no hover). Layout only: nothing rings, adds, caps or evicts differently. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -85,6 +97,8 @@ import {
   ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwRowsKey, ggwUnseenOwn, ggwWithout,
   readGgwPickAt, saveGgwPickAt, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
+  GGW_SECTION_GLYPH, ggwGroupStarts, ggwRevealGroup, ggwSectionsOn, ggwToggleCollapsed, readGgwCollapsed,
+  saveGgwCollapsed,
   type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
@@ -178,6 +192,17 @@ export default function GajjalaWatchBoard() {
   /* The pick (his toggled names still on the list) and its grid; no pick → the layout's own grid. */
   const rowsNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.rows : null;
   const listNow = rowsNow ? rowsNow.map((r) => r.symbol) : [];
+  /* 🗂 2026-11-22 — org mode (served sections) and the PHONE's folded sections (served keys, remembered here). */
+  const orgNow = load.phase === 'loaded' && load.p.state === 'ok' && ggwSectionsOn(load.p);
+  const [collapsed, setCollapsed] = useState<ReadonlyArray<string>>(() => readGgwCollapsed());
+  useEffect(() => { saveGgwCollapsed(collapsed); }, [collapsed]);
+  const foldOn = useRef(false);
+  foldOn.current = orgNow && phone;
+  /* [C5] a focus / box add / first-load outline / pager tap into a FOLDED phone section opens it first (the scroll waits
+   * for the tile to be shown — the effect below checks `hidden`). Off the phone or outside org mode: nothing. */
+  const reveal = (rows: ReadonlyArray<GgwRow>, sym: string) => {
+    if (foldOn.current) setCollapsed((c) => ggwRevealGroup(c, rows, sym));
+  };
   /* 🆕 2026-11-19: a name of his (or a 🎯 A+) new to this view joins the pick (first) — never left inactive. Keyed on
    * symbol + add time + the join bit, so a 🤖 potential turning 🎯 A+ in place joins at THAT load. */
   const rowsKey = rowsNow ? ggwRowsKey(rowsNow) : '';
@@ -193,6 +218,7 @@ export default function GajjalaWatchBoard() {
       const s = focus ? null : ggwUnseenOwn(rowsNow, seen);
       if (s) {
         setOutlined(s);
+        reveal(rowsNow, s);
         pendingFocus.current = s;
         const eff = !!pick && pick.some((x) => list.includes(x));
         if (!eff && Number.isFinite(size)) setPage(ggwPageOf(list.indexOf(s), size as number));
@@ -336,8 +362,9 @@ export default function GajjalaWatchBoard() {
     if (Number.isFinite(size)) setPage(ggwPageOf(at, size as number));
     setPick(null);
     setOutlined(focus);
+    reveal(load.p.rows, focus);
     pendingFocus.current = focus;
-  }, [focus, load, size]);
+  }, [focus, load, size]); // eslint-disable-line react-hooks/exhaustive-deps
   /* 🆕 2026-11-19 — a name HE added from the box (added / already / replaced): joined to his pick (forced — the clocks may
    * differ), or in the pages view its page is shown; outlined and scrolled to once. The pick is never cleared. */
   useEffect(() => {
@@ -354,6 +381,7 @@ export default function GajjalaWatchBoard() {
     if (pick && pick.some((x) => list.includes(x))) setPick((cur) => ggwJoinPick(cur, list, [s]));
     else if (Number.isFinite(size)) setPage(ggwPageOf(idx, size as number));
     setOutlined(s);
+    reveal(rows, s);
     pendingFocus.current = s;
     justAdded.current = null;
   }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -516,12 +544,50 @@ export default function GajjalaWatchBoard() {
   /* 2026-11-16 — a ticker button toggles that name; the names on screen now are the base. */
   /* 🆕 past the pending cap a pending tile prints the served "still reading" words */
   const lateRow = (r: GgwRow): GgwRow => (late.has(r.symbol) && r.late_text ? { ...r, text: r.late_text } : r);
+  /* 🗂 2026-11-22 — org mode: served sections only (no key list here). Phone headers + folds; desktop none. */
+  const org = ggwSectionsOn(p);
+  const starts = org ? ggwGroupStarts(p.rows, p.sections) : [];
+  const headAt = org && phone ? new Map(starts.map((g) => [g.at, g.section] as const)) : null;
+  const folded = (r: GgwRow): boolean => org && phone && !!r.org?.group && collapsed.includes(r.org.group);
+  const shown = (r: GgwRow, i: number): boolean => onPage(i) && !folded(r);
   const toggle = (sym: string) => {
     const list = p.rows.map((r) => r.symbol);
     markView();
+    /* 🗂 [C5] a pager tap on a name in a FOLDED phone section opens that section first and scrolls to the name once
+     * (it never turns the name off); a name hidden by his pick too is then toggled on as before. */
+    const at = list.indexOf(sym);
+    if (at >= 0 && folded(p.rows[at])) {
+      reveal(p.rows, sym);
+      if (onPage(at)) { pendingFocus.current = sym; return; }
+    }
     setPick(ggwToggleShown(list, list.filter((_s, i) => onPage(i)), sym));
     boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   };
+  const legend = p.legend.length ? (
+    <span className="ggw-legend">
+      {p.legend.map((l) => {
+        const c = (EMA_BOLD as Record<string, { color: string; width: number }>)[l.tone];
+        return (
+          <span key={l.tone} className="ggw-legend-item" data-tone={l.tone}>
+            <i className="ggw-swatch" style={c ? { background: c.color, height: c.width } : undefined} />
+            {l.label}
+          </span>
+        );
+      })}
+    </span>
+  ) : null;
+  const autoTitle = p.auto?.title ? (
+    <span className="ggw-line ggw-auto-title" data-testid="ggw-auto-title" title={p.auto.hint ?? undefined}>
+      {p.auto.title}
+    </span>
+  ) : null;
+  const orgInfo = org && (!!autoTitle || !!legend || (p.sections ?? []).some((s) => !!s.hint));
+  const tileOf = (r: GgwRow, i: number) => (
+    <Tile key={r.symbol} row={lateRow(r)} phone={phone} fit={fit} removeLabel={p.remove_label} busy={false}
+          focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
+          offPage={!shown(r, i)} live={liveOf(r, shown(r, i))} siNote tags={tagsOf(r)} compact={org}
+          actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />} />
+  );
   return (
     <div className="ggw-board" data-testid="ggw-board" ref={boardRef}>
       <div className="ggw-head" ref={headRef}>
@@ -547,11 +613,7 @@ export default function GajjalaWatchBoard() {
         ) : null}
         {/* 🤖 the served auto head: title (hover = the served hint), the unreadable word, the empty word, and the
             collapsed strip of this session's removals (each line = the served text_full, verbatim). */}
-        {p.auto?.title ? (
-          <span className="ggw-line ggw-auto-title" data-testid="ggw-auto-title" title={p.auto.hint ?? undefined}>
-            {p.auto.title}
-          </span>
-        ) : null}
+        {org ? null : autoTitle}
         {/* 🎯 2026-11-17 (spec ggwaplus2): the served line naming the A+ names the last minute could not seat. */}
         {p.auto?.skipped_text ? (
           <span className="ggw-line ggw-warn" data-testid="ggw-auto-skipped">{p.auto.skipped_text}</span>
@@ -576,54 +638,61 @@ export default function GajjalaWatchBoard() {
         ) : null}
         {refreshFailed ? <span className="ggw-line ggw-warn">{`⚠️ ${GGW_FETCH_FAILED}`}</span> : null}
         {feedWord ? <span className="ggw-line ggw-warn" data-testid="ggw-feed-word">{feedWord}</span> : null}
-        {p.legend.length ? (
-          <span className="ggw-legend">
-            {p.legend.map((l) => {
-              const c = (EMA_BOLD as Record<string, { color: string; width: number }>)[l.tone];
-              return (
-                <span key={l.tone} className="ggw-legend-item" data-tone={l.tone}>
-                  <i className="ggw-swatch" style={c ? { background: c.color, height: c.width } : undefined} />
-                  {l.label}
-                </span>
-              );
-            })}
-          </span>
-        ) : null}
+        {org ? null : legend}
         {p.rows.length && !phone ? (
           <GgwLayoutPick layout={layout} onPick={setLayout} />
         ) : null}
-        {p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text) ? (
+        {orgInfo || (p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text)) ? (
           <details className="ggw-info">
             <summary aria-label="info">{'ℹ️'}</summary>
-            {p.info.honesty ? <p className="ggw-line">{p.info.honesty}</p> : null}
-            {p.info.uptrend_rule ? <p className="ggw-line">{p.info.uptrend_rule}</p> : null}
-            {p.info.push_text ? <p className="ggw-line">{p.info.push_text}</p> : null}
-            {p.info.auto_text ? <p className="ggw-line" data-testid="ggw-info-auto">{p.info.auto_text}</p> : null}
+            {/* 🗂 org mode: the 🤖 title (+ its served hint — no hover on a phone), the legend, every served section hint */}
+            {org ? autoTitle : null}
+            {org && p.auto?.title && p.auto.hint ? <p className="ggw-line" data-testid="ggw-info-auto-hint">{p.auto.hint}</p> : null}
+            {org ? legend : null}
+            {org ? (p.sections ?? []).map((s) => (s.hint ? (
+              <p key={`hint-${s.key}`} className="ggw-line" data-testid={`ggw-info-section-${s.key}`}>{s.hint}</p>
+            ) : null)) : null}
+            {p.info?.honesty ? <p className="ggw-line">{p.info.honesty}</p> : null}
+            {p.info?.uptrend_rule ? <p className="ggw-line">{p.info.uptrend_rule}</p> : null}
+            {p.info?.push_text ? <p className="ggw-line">{p.info.push_text}</p> : null}
+            {p.info?.auto_text ? <p className="ggw-line" data-testid="ggw-info-auto">{p.info.auto_text}</p> : null}
           </details>
         ) : null}
       </div>
       {p.rows.length > 1 ? (
         <GgwPager rows={p.rows} onPage={onPage} paged={paged} cur={cur} pages={pages} usePick={usePick} busy={false}
                   removeLabel={p.remove_label} onToggle={toggle} onPrev={() => goPage(Math.max(0, cur - 1))}
-                  onNext={() => goPage(Math.min(pages - 1, cur + 1))} onRemove={(s) => write('DELETE', s)} />
+                  onNext={() => goPage(Math.min(pages - 1, cur + 1))} onRemove={(s) => write('DELETE', s)}
+                  groups={org ? starts : undefined} />
       ) : null}
       {p.rows.length ? (
         <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}`}
              ref={gridRef} data-layout={layout} data-pick={usePick ? picked.length : undefined}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
-          {p.rows.map((r, i) => (
-            <Tile key={r.symbol} row={lateRow(r)} phone={phone} fit={fit} removeLabel={p.remove_label} busy={false}
-                  focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-                  offPage={!onPage(i)} live={liveOf(r, onPage(i))} siNote tags={tagsOf(r)}
-                  actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />} />
-          ))}
+          {p.rows.map((r, i) => {
+            const sec = headAt ? headAt.get(i) ?? null : null;
+            if (!sec) return tileOf(r, i);
+            const isFolded = collapsed.includes(sec.key);
+            return [
+              <h3 key={`sec-${sec.key}`} className={`ggw-section${isFolded ? ' ggw-section--folded' : ''}`}
+                  data-testid={`ggw-section-${sec.key}`}>
+                <button type="button" className="ggw-section-btn" aria-expanded={!isFolded} title={sec.hint ?? undefined}
+                        data-testid={`ggw-section-btn-${sec.key}`}
+                        onClick={() => setCollapsed((c) => ggwToggleCollapsed(c, sec.key))}>
+                  {`${isFolded ? GGW_SECTION_GLYPH.closed : GGW_SECTION_GLYPH.open} ${sec.text}`}
+                </button>
+              </h3>,
+              tileOf(r, i),
+            ];
+          })}
         </div>
       ) : (
         p.empty_text ? <p className="ggw-line ggw-empty" data-testid="ggw-empty">{p.empty_text}</p> : null
       )}
       {stretchRow ? (
         <GgwStretch row={lateRow(stretchRow)} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
-                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)} />
+                 onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)}
+                 compact={org} />
       ) : null}
     </div>
   );

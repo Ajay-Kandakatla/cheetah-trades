@@ -389,6 +389,37 @@ def test_board_rows_newest_first_then_undated_then_auto_in_stored_order(board):
     assert _syms(poll) == ["TSLA", "AMD", "OMH", "ZZT"]                         # the pending poll keeps the order
 
 
+def _org_autos():
+    a1 = dict(_entry("ZZT"), added_at=datetime(2026, 11, 13, 14, 0))                  # 09:00 ET — the oldest
+    a2 = dict(_entry("MMM"), added_at=datetime(2026, 11, 13, 15, 0))                  # 10:00 ET
+    a3 = dict(_entry("AAA"), added_at=datetime(2026, 11, 13, 14, 30), why=C.AUTO_APLUS_WHY,
+              aplus_at=datetime(2026, 11, 13, 15, 10))                                 # 🎯 seat
+    return [a1, a2, a3]
+
+
+def test_board_rows_OFF_twin_sections_off_keeps_the_stored_auto_order(board, monkeypatch):
+    """PIN MOVED 2026-11-22 (spec watch_org rev 4) — OFF twin of the order pin: C.SECTIONS_ON False → his names newest
+    first, then the 🤖 rows in the STORED order (the 🎯 seat NOT lifted), no `org` / `sections` keys."""
+    monkeypatch.setattr(C, "SECTIONS_ON", False)
+    out = PL.build(FRI_IN, db=_db(["OMH", "NVDA"], {"OMH": T0, "NVDA": T0 + timedelta(minutes=2)},
+                                  entries=_org_autos()))
+    assert _syms(out) == ["NVDA", "OMH", "ZZT", "MMM", "AAA"]
+    assert "sections" not in out and all("org" not in r for r in out["rows"])
+
+
+def test_board_rows_ON_sections_order_yours_then_aplus_then_auto_newest_first(board):
+    """PIN MOVED 2026-11-22 (spec watch_org rev 4): 👤 his names (newest added first, unchanged) → 🎯 A+ → 🤖 added today
+    newest first."""
+    out = PL.build(FRI_IN, db=_db(["OMH", "NVDA"], {"OMH": T0, "NVDA": T0 + timedelta(minutes=2)},
+                                  entries=_org_autos()))
+    assert _syms(out) == ["NVDA", "OMH", "AAA", "MMM", "ZZT"]
+    assert [s["key"] for s in out["sections"]] == ["yours", "aplus", "auto"]
+    poll = PL.build(FRI_IN, db=_db(["OMH", "NVDA"], {"OMH": T0, "NVDA": T0 + timedelta(minutes=2)},
+                                   entries=_org_autos()), only=["OMH", "ZZT", "AAA"])
+    assert _syms(poll) == ["OMH", "ZZT", "AAA"] and poll["sections"] is None          # the poll: stored order, no read
+    assert all(r["org"] is None for r in poll["rows"])
+
+
 @pytest.mark.parametrize("bad", ["missing", None, "2026-11-13T15:05", 5, float("nan")])
 def test_NEGATIVE_an_auto_entry_with_no_or_junk_time_serves_null(board, bad):
     e = _entry("ZZT")

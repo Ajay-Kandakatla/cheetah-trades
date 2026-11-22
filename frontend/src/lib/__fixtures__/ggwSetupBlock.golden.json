@@ -1,0 +1,8 @@
+{
+  "setup": "reversal_squeeze",
+  "label": "🎾 Reversal Squeeze",
+  "state_label": "armed",
+  "source": "board",
+  "text": "🎾 Reversal Squeeze",
+  "title": "armed"
+}

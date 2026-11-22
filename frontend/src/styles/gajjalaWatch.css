@@ -207,3 +207,51 @@
 @media (min-width: 641px) {
   .ggw-grid--fit .ggw-pending { flex: 1 1 0; min-height: 0; }
 }
+
+/* 🗂 2026-11-22 (spec watch_org rev 4 §3.5) — Ajay: "I need gajjalas watch tab little more organized. With less info …"
+ * and "Manual ones I add them need to be on top then auto intraday..". ORG MODE only (served sections): the compact
+ * tile (served setup chip, ONE time line, the ⋯ drawer), the pager's inline section labels, the phone's collapsible
+ * section headers. 430 px: every new row wraps and carries min-width 0; every [hidden] rule has its display twin. */
+.ggw-tile.ggw-tile--compact { position: relative; }
+.ggw-chip.ggw-setup-chip { color: var(--accent, #c2ef50); }
+.ggw-prov { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.4rem; margin: 3px 0 1px; min-width: 0; max-width: 100%; }
+.ggw-prov > .ggw-chip { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.ggw-when { color: var(--ink, #e7e7e7); }
+.ggw-when[data-bucket="premarket"] { color: #ffd479; }
+.ggw-when[data-bucket="after_hours"] { color: #a9b8ff; }
+.ggw-ran { color: var(--accent, #c2ef50); }
+.ggw-past { color: var(--warn, #e8a33d); }
+.ggw-drawer-btn[aria-expanded="true"] { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+.ggw-drawer {
+  display: flex; flex-direction: column; gap: 4px; margin: 5px 0 3px; padding: 6px 8px; min-width: 0; max-width: 100%;
+  border: 1px dashed var(--rule, #2a2f3a); border-radius: 8px; background: rgba(13, 17, 23, 0.6);
+}
+.ggw-drawer[hidden] { display: none; }
+.ggw-drawer-row { display: flex; flex-wrap: wrap; gap: 0.25rem 0.45rem; min-width: 0; max-width: 100%; }
+.ggw-drawer .ggw-tags { margin: 0; }
+/* the pager's inline section labels (no times, no 🤖 tag — the dashed outline says 🤖) */
+.ggw-pager-group {
+  font-size: 0.72rem; color: var(--text-muted, #8595ad); padding: 0 2px 0 8px; margin-left: 2px;
+  border-left: 1px solid var(--rule, #2a2f3a); white-space: normal; overflow-wrap: anywhere; min-width: 0;
+}
+.ggw-pager-group.ggw-pager-group--first { border-left: 0; padding-left: 2px; margin-left: 0; }
+/* 📱 phone section headers: full grid width, a fold button each */
+.ggw-section { grid-column: 1 / -1; margin: 4px 0 -4px; font-size: 0.82rem; font-weight: 600; min-width: 0; }
+.ggw-section-btn {
+  background: none; border: 0; color: var(--ink, #e7e7e7); font: inherit; padding: 2px 0; cursor: pointer;
+  text-align: left; white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%;
+}
+.ggw-section.ggw-section--folded .ggw-section-btn { color: var(--text-muted, #8595ad); }
+/* desktop: the drawer opens OVER the fitted tile's charts (the charts keep their height); the time line is one line */
+@media (min-width: 641px) {
+  .ggw-tile--compact .ggw-drawer {
+    position: absolute; left: 8px; right: 8px; top: 34px; z-index: 2; max-height: 70%; overflow: auto;
+    background: rgb(13, 17, 23); border-style: solid; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  }
+  .ggw-tile--compact .ggw-drawer[hidden] { display: none; }
+  .ggw-grid--fit .ggw-prov { flex: none; flex-wrap: nowrap; overflow: hidden; }
+  .ggw-grid--fit .ggw-prov > * { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ggw-grid--stretch .ggw-tile--compact .ggw-drawer { position: static; max-height: none; box-shadow: none; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-prov { flex-wrap: wrap; overflow: visible; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-prov > * { white-space: normal; overflow: visible; text-overflow: clip; }
+}

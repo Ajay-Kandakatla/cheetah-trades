@@ -104,6 +104,7 @@ import UndervalueViewNote from '../components/UndervalueViewNote';
 import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/undervalueView';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
+import GgRunnersStrip from '../components/GgRunnersStrip';
 import IndexZones from '../components/IndexZones';
 import OverlayLegend from '../components/OverlayLegend';
 import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
@@ -228,6 +229,9 @@ export function ChartMaps() {
   const tab = (rawTab === 'catalysts' && !canCatalysts) || (rawTab === 'gajjala_watch' && !canWatch)
     || (rawTab === 'replays' && !canWatch)
     ? parseTab(null) : rawTab;
+  /* 📅 runners strip (2026-11-22): 🔥 hides on 🚩 for the owner (and while /auth/me loads); the strip needs a LOADED owner. */
+  const hideHot = tab === 'gajjala' && (meLoading || !!me?.is_primary_admin);
+  const showRunners = tab === 'gajjala' && !meLoading && !!me?.is_primary_admin;
   /* 📌 Pinned tab strip + "lands where he was" (Ajay 2026-09-28: "Pin the tab
    * I am in, as I navigate back and fort lost where I am"). lib/cmPinnedTab.ts
    * owns the rules; docs/chart_maps/pinned_tab_strip_2026_09_28.md. */
@@ -1153,7 +1157,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* Where money flowed in the last month — above the tabs so every
         * board is read against the same rotation backdrop (Ajay 2026-08-31:
         * "make sure this scan you did today to be on top of the chart maps"). */}
-      <HotSectors />
+      {/* 📅 On 🚩, for the primary owner, the 🔥 slot carries last session's runners instead (Ajay 2026-11-22: "remove
+        * hot sectors mess from Gajjalas top view I need a new thing there.. use that space between the parent tab of
+        * Gajjala and watch tab to be for previous day runners but remove them if they don't run the current day").
+        * 🔥 is never unmounted (spec D7): a classless `hidden` wrapper keeps its one /rotation/hot fetch and its fold
+        * across tab trips. Hidden on 🚩 while /auth/me loads too; a loaded non-owner sees 🔥 and no strip. */}
+      <div hidden={hideHot} data-testid="cm-hot-wrap"><HotSectors /></div>
+      {showRunners && <GgRunnersStrip />}
 
       {/* ✨ Names that arrived on 🚀 Explosive Growth (Ajay 2026-10-12: "special
         * emphasis wiht a tag or something in the chart map pages top"). One

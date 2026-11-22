@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import Optional
 
 log = logging.getLogger("chart_maps.gajjala_watch.tags")
 
@@ -43,30 +44,34 @@ def _store():
     return ST.default()
 
 
-def _find_reads(st, ids: list) -> dict:
+def _find_reads(st, ids: list, *, fields: dict = TAGS_READ_FIELDS) -> dict:
     """{SYM: read doc} — ONE projected find on the reads collection. RAISES on no handle / a fault (the caller serves
-    nothing — an unknown read is never "not carded")."""
+    nothing — an unknown read is never "not carded"). `fields` (keyword, spec watch_org): the projection —
+    the default is the tags block's own, byte for byte; 📅 runners.py hands its own (`C.RUNNERS_READ_FIELDS`)."""
     from chart_maps.gajjala import store as ST
     c = st.coll(ST.READS) if st is not None else None
     if c is None:
         raise LookupError("no reads handle")
     want = set(ids)
     out: dict = {}
-    for d in c.find({"_id": {"$in": list(ids)}}, TAGS_READ_FIELDS):
+    for d in c.find({"_id": {"$in": list(ids)}}, fields):
         if isinstance(d, dict) and d.get("_id") in want and isinstance(d.get("symbol"), str):
             out[d["symbol"].upper()] = d
     return out
 
 
-def _find_scan(st, days_iso: list, names: list) -> list:
+def _find_scan(st, days_iso: list, names: Optional[list], *, fields: dict = SCAN_TAG_FIELDS) -> list:
     """The carded names' scan docs of the window — ONE projected find; a held doc is dropped (store.scan_docs' rule).
-    RAISES on no handle / a fault."""
+    RAISES on no handle / a fault. Keywords (spec watch_org, 📅 runners.py): `names` None drops the symbol
+    clause (every non-held doc of the days); `fields` = the projection. The defaults = the tags query byte for byte."""
     from chart_maps.gajjala import store as ST
     c = st.coll(ST.SCAN) if st is not None else None
     if c is None:
         raise LookupError("no scan handle")
-    q = {"date": {"$in": list(days_iso)}, "symbol": {"$in": list(names)}}
-    return [d for d in c.find(q, SCAN_TAG_FIELDS) if isinstance(d, dict) and not d.get("held")]
+    q = {"date": {"$in": list(days_iso)}}
+    if names is not None:
+        q["symbol"] = {"$in": list(names)}
+    return [d for d in c.find(q, fields) if isinstance(d, dict) and not d.get("held")]
 
 
 def carded_setups(doc) -> list:

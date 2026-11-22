@@ -334,8 +334,22 @@ def test_row_keys_are_the_old_keys_plus_aplus(monkeypatch):
     rows, _ = _rows(db=db)
     # PIN MOVED 2026-11-19 (spec watchfid): + "broker_text"
     # PIN MOVED 2026-11-21 (spec watchfloat): + "float"
+    # PIN MOVED 2026-11-22 (spec watch_org rev 4): + "org" while C.SECTIONS_ON (the OFF twin below keeps the old set)
     assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
                                 "auto", "aplus", "tags", "broker_text",   # 🏷️ 2026-11-18 (spec wtags): + "tags"
-                                "added_at", "late_text", "float"}
+                                "added_at", "late_text", "float", "org"}
     # RE-PINNED 2026-11-19 (+ "added_at", "late_text") — Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
     assert C.AUTO_SOURCES == (V.GG5.key, V.GG1.key, V.GGA.key) and GC.SETUPS
+
+
+def test_row_keys_OFF_twin_sections_off_keeps_the_11_21_keys(monkeypatch):
+    """PIN MOVED 2026-11-22 (spec watch_org rev 4) — OFF twin: C.SECTIONS_ON False → no `org` key on a row, no `sections`
+    key on the board."""
+    monkeypatch.setattr(C, "SECTIONS_ON", False)
+    _set(monkeypatch, Boards())
+    db = _db(["OMH"])
+    db[C.COLL_TILES].docs["OMH"] = _doc("OMH")
+    rows, out = _rows(db=db)
+    assert "sections" not in out
+    assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
+                                "auto", "aplus", "tags", "broker_text", "added_at", "late_text", "float"}

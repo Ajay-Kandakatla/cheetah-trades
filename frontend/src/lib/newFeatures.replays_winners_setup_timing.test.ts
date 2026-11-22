@@ -1,3 +1,4 @@
+// WIDENED 2026-11-22 (👀 Watch sections + 📅 runners ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 /* 🏆 the setup + timing + one-row-per-stock ✨ (2026-11-22). Ajay: "can you categorize past winners like some are kiss
  * and fly based and some might be VCP based some might be horizontal faded.. Do we have those metrics? also reversal
  * squeeze is mainly what I look for." → "yes please"; "dont't remove but add a tag but sort by EOD and Intraday ones on
@@ -14,7 +15,7 @@ const SAID_AKAN = 'Just AKAN can you please bring its past winner session to lik
 describe('✨ the 🏆 setup + timing entry (2026-11-22)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the open 🏆 section', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
+    expect(NEW_FEATURES[1].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-22');
     expect(f.route).toBe('/chart-maps?tab=replays&winners=1');

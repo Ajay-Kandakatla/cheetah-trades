@@ -1,0 +1,76 @@
+/* 📅 Previous day runners strip (2026-11-22, spec watch_org rev 4 §3.6). Phone target = his 430 px: every chip row
+ * wraps and every flex child may shrink (min-width: 0); the phone's folded line never wraps — it clips. */
+.ggr-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px;
+  margin: 4px 0 6px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+  border-radius: 8px;
+  font-size: 13px;
+}
+.ggr-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.ggr-count { opacity: 0.8; overflow-wrap: anywhere; min-width: 0; }
+.ggr-hint { display: inline; }
+.ggr-hint > summary { display: inline; cursor: pointer; list-style: none; }
+.ggr-hint[open] { display: block; flex-basis: 100%; font-size: 12px; opacity: 0.85; }
+.ggr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  min-width: 0;
+}
+.ggr-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 5px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--chip-bg, rgba(127, 127, 127, 0.12));
+}
+.ggr-chip.is-broker { opacity: 0.55; }
+.ggr-run { font-weight: 600; }
+.ggr-timing, .ggr-float, .ggr-past, .ggr-broker { font-size: 12px; opacity: 0.9; }
+.ggr-more {
+  font: inherit;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.ggr-removed > summary { cursor: pointer; font-size: 12px; opacity: 0.8; }
+.ggr-removed ul { margin: 2px 0 0; padding-left: 16px; font-size: 12px; opacity: 0.8; }
+/* 📱 the phone's folded view: ONE line, clipped, never a horizontal page scroll */
+.ggr-line {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ggr-line > * { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ggr-line > .ggr-more { flex: 0 0 auto; margin-left: auto; }
+/* review 11-22: the minis (the point of the fold) never shrink; the title and the count give up their room first */
+.ggr-line > .ggr-mini { flex: 0 0 auto; }
+.ggr-line > .ggr-title, .ggr-line > .ggr-count { flex: 0 100 auto; }
+.ggr-mini { font-size: 12px; }
+@media (max-width: 640px) {
+  .ggr-strip { padding: 4px 6px; font-size: 12px; }
+}

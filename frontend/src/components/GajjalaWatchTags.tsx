@@ -54,20 +54,15 @@ export function useGgwTags(rows: ReadonlyArray<GgwRow> | null): (r: GgwRow) => G
   );
 }
 
-export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow | null; study?: ExplosiveStudy | null }) {
+/** 🔢 The ONE float chip of a Watch row (+ its served suspect line) — defined ONCE (the float contract counts its testid).
+ *  2026-11-22 (spec watch_org §3.5): exported so the compact tile head draws the SAME chip; the tags row then omits it. */
+/* 🔢 2026-11-21 (spec watchfloat): the row's own served float (any row, carded or not), else the CARDED tags' float — ONE read. */
+const rowFloat = (row: GgwRow) => ggwFloat({ float: row.float, tags: row.tags?.on_board ? row.tags : null });
+
+export function GgwFloatChip({ row }: { row: GgwRow }) {
   const sym = row.symbol;
-  const growth = growthChip(useGrowthTags(), sym);
-  const { read } = useShortInterest(sym);
-  const siText = siExtreme(read) ? null : siChip(read);
-  const t = row.tags?.on_board ? row.tags : null;
-  const ex = t ? explosiveChipText(room?.explosive, study) : null;
-  const en = t ? enterableChipText(room?.enterable) : null;
-  const trader = t && (served(t.trader_text) || served(t.promo_text));
-  /* 🚫 2026-11-19 (spec watchfid): the row's own served word (any row, carded or not), else the CARDED tags' word — ONE chip. */
-  const brokerText = ggwBrokerText({ broker_text: row.broker_text, tags: t });
-  /* 🔢 2026-11-21 (spec watchfloat): the row's own served float (any row, carded or not), else the CARDED tags' float — ONE chip. */
-  const fl = ggwFloat({ float: row.float, tags: t });
-  const floatChip = fl ? (
+  const fl = rowFloat(row);
+  return fl ? (
     <>
       <span className="cm-badge cm-badge-muted ggw-float" data-testid={`ggw-float-${sym}`}
             title={fl.title ?? undefined}>{fl.text}</span>
@@ -76,6 +71,34 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
         : null}
     </>
   ) : null;
+}
+
+/** 🚫 The ONE broker chip of a Watch row — 2026-11-22: exported so the compact tile head draws the SAME chip. */
+export function GgwBrokerChip({ row }: { row: GgwRow }) {
+  const t = row.tags?.on_board ? row.tags : null;
+  /* 🚫 2026-11-19 (spec watchfid): the row's own served word (any row, carded or not), else the CARDED tags' word — ONE chip. */
+  const brokerText = ggwBrokerText({ broker_text: row.broker_text, tags: t });
+  return servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${row.symbol}`);
+}
+
+export function GgwTagsRow({ row, room, study, omitFloat, omitBroker }: {
+  row: GgwRow; room?: RoomRow | null; study?: ExplosiveStudy | null;
+  /** 🗂 2026-11-22: the compact tile prints the float / 🚫 chip in its head — the row then omits it (one chip per tile).
+   *  Absent → today's row exactly. */
+  omitFloat?: boolean; omitBroker?: boolean;
+}) {
+  const sym = row.symbol;
+  const growth = growthChip(useGrowthTags(), sym);
+  const { read } = useShortInterest(sym);
+  const siText = siExtreme(read) ? null : siChip(read);
+  const t = row.tags?.on_board ? row.tags : null;
+  const ex = t ? explosiveChipText(room?.explosive, study) : null;
+  const en = t ? enterableChipText(room?.enterable) : null;
+  const trader = t && (served(t.trader_text) || served(t.promo_text));
+  const brokerText = omitBroker ? null : ggwBrokerText({ broker_text: row.broker_text, tags: t });
+  const fl = omitFloat ? null : rowFloat(row);
+  const floatChip = fl ? <GgwFloatChip row={row} /> : null;
+  const brokerChip = brokerText ? <GgwBrokerChip row={row} /> : null;
   const stages = t && stagesPrint(t);
   const setups = t && !stages ? t.setups.filter((s) => served(s.label)) : [];
   if (!growth && !siText && !ex && !en && !trader && !brokerText && !fl && !stages && !setups.length) return null;
@@ -83,7 +106,7 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
     <div className="ggw-tags" data-testid={`ggw-tags-${sym}`}>
       <GrowthChip symbol={sym} />
       {siText ? <ShortInterestChip symbol={sym} /> : null}
-      {!t ? servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`) : null}
+      {!t ? brokerChip : null}
       {!t ? floatChip : null}
       {t ? (
         <>
@@ -91,7 +114,7 @@ export function GgwTagsRow({ row, room, study }: { row: GgwRow; room?: RoomRow |
           <EnterableChip read={room?.enterable} />
           <GgTraderChip text={t.trader_text} testid={`ggw-trader-${sym}`}
                         promoText={t.promo_text} promoTestid={`ggw-promo-${sym}`} />
-          {servedChip(brokerText, 'gg-broker ggw-broker', `ggw-broker-${sym}`)}
+          {brokerChip}
           {floatChip}
           {stages ? <GgStages stages={t.stages} sym={sym} /> : null}
           {setups.map((s) => (

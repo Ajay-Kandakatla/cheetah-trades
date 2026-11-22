@@ -41,16 +41,27 @@
  * 🏷️ 2026-11-18 (spec wtags §3.4, WP-B) — Ajay: "Also add Short Interest tag and other tags on top of stock ticker
  * information for me to read, like here". `tags` on Tile / GgwStretch (the Watch passes it; the 🚩 / 🧪 card grid and
  * GgCardView never do → their DOM is byte-identical) mounts GgwTagsRow (its own module, GajjalaWatchTags.tsx) as the
- * FIRST child of the tile, above the head. This file mounts no house chip itself. */
+ * FIRST child of the tile, above the head. This file mounts no house chip itself.
+ *
+ * 🗂 2026-11-22 (spec watch_org rev 4 §3.5, WP-FE-WATCH) — Ajay: "I need gajjalas watch tab little more organized. With
+ * less info …" and "Manual ones I add them need to be on top then auto intraday..". Two opt-in props on Tile, one on
+ * GgwStretch — the Watch passes them ONLY when the server serves sections; the 🚩 / 🧪 card grid and GgCardView never do,
+ * so their DOM (and the card_watch_off snapshot) is byte-identical:
+ *   - `compact` → head = SYM · 🎯 · the served setup chip · float · 🚫 · 🩳 EXTREME · row text · from_session · as-of
+ *     ONLY when stale · 🔔 rang · ⋯ ⤢ ↗ ✕; then the ONE served time line (GgwProvLine); then the ⋯ drawer (GgwDrawer —
+ *     the tags row, the 🤖 chip, every served title, the non-stale as-of); then the charts. Each testid once per tile.
+ *   - `drawerOpen` → the drawer starts open (the ⤢ view).
+ * `usePhone` keeps its export and signature (the 📅 runners strip imports it). */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  GGW_FIT_GROW, GGW_LIVE_EMA_TIP, GGW_PAGER, GGW_PHONE_MQ, GGW_STRETCH, ggwChartHeight, ggwFitViewBoxH,
+  GGW_DRAWER, GGW_FIT_GROW, GGW_LIVE_EMA_TIP, GGW_PAGER, GGW_PHONE_MQ, GGW_STRETCH, ggwChartHeight, ggwFitViewBoxH,
   ggwFitViewW, ggwSplitFrames, ggwStretchFrames, ggwStretchTitle, type GgwFrame, type GgwRow,
 } from '../lib/gajjalaWatch';
 import { ggwLiveFrame, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
 import { GgSiExtremeNote } from './GgSiExtremeNote';
-import { GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
+import { GgwBrokerChip, GgwFloatChip, GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
+import { GgwDrawer, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
 import { GgwPendingPanel, ggwPendingPanelShown } from './GajjalaWatchPending';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
@@ -151,7 +162,7 @@ export function Frame({ f, phone, fit, style, live }: {
 }
 
 export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote,
-  stack, extra, tags, actions }: {
+  stack, extra, tags, actions, compact, drawerOpen }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
@@ -180,7 +191,12 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   /** 🚫 2026-11-19 (spec watchfid): Watch-only action buttons, FIRST in the action group (before ⤢, away from ✕); never in
    *  the ⤢ view. Absent → today's DOM (the 🚩 / 🧪 grid, GgCardView and GgwStretch never pass it). */
   actions?: ReactNode;
+  /** 🗂 2026-11-22: the organised tile (the Watch in org mode only); absent → today's DOM exactly. */
+  compact?: boolean;
+  /** 🗂 2026-11-22: a compact tile's ⋯ drawer starts open (the ⤢ view); absent → closed. */
+  drawerOpen?: boolean;
 }) {
+  const [open, setOpen] = useState<boolean>(!!drawerOpen);
   const { top, pair } = ggwSplitFrames(row.frames);
   const stacked = !onUnstretch && !!stack;
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
@@ -189,10 +205,11 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
     ? [row.auto.added_text, row.auto.volume_text, row.auto.leaving_text].filter(Boolean).join(' · ') || undefined
     : undefined;
   return (
-    <section className={`ggw-tile${focused ? ' ggw-tile-focus' : ''}`} id={onUnstretch ? undefined : `ggw-${row.symbol}`}
+    <section className={`ggw-tile${compact ? ' ggw-tile--compact' : ''}${focused ? ' ggw-tile-focus' : ''}`}
+             id={onUnstretch ? undefined : `ggw-${row.symbol}`}
              data-testid={onUnstretch ? `ggw-stretch-tile-${row.symbol}` : `ggw-tile-${row.symbol}`} data-state={row.state}
              hidden={offPage || undefined}>
-      {tags ? <GgwTagsRow row={row} room={tags.room} study={tags.study} /> : null}
+      {tags && !compact ? <GgwTagsRow row={row} room={tags.room} study={tags.study} /> : null}
       <div className="ggw-tile-head">
         <b className="ggw-sym">{row.symbol}</b>
         {extra ?? null}
@@ -202,9 +219,13 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
             {row.aplus.text}
           </span>
         ) : null}
+        {/* 🗂 2026-11-22 compact head: the served setup chip, then the float and 🚫 chips (the drawer's tags row omits them). */}
+        {compact ? <GgwSetupChip row={row} /> : null}
+        {compact ? <GgwFloatChip row={row} /> : null}
+        {compact ? <GgwBrokerChip row={row} /> : null}
         {/* 🤖 the served auto chip (watch-auto 2026-11-17) — its text verbatim; hover = the served added / volume /
-            leaving words. A row without `auto` (his, a 🚩 card) draws nothing here. */}
-        {row.auto ? (
+            leaving words. A row without `auto` (his, a 🚩 card) draws nothing here. Compact: behind ⋯. */}
+        {row.auto && !compact ? (
           <span className="ggw-chip ggw-auto" data-testid="ggw-auto" title={autoTitle}>{row.auto.text}</span>
         ) : null}
         {/* 🩳 the served EXTREME short-interest note (sinote 2026-11-18) — the served short form verbatim; nothing when
@@ -217,7 +238,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
           </span>
         ) : null}
         {row.from_session ? <span className="ggw-chip ggw-from" data-testid="ggw-from">{row.from_session}</span> : null}
-        {row.as_of_et ? (
+        {row.as_of_et && (!compact || row.stale) ? (
           <span className={`ggw-chip ggw-asof${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-asof">
             {row.stale ? '⚠️ ' : ''}{row.as_of_et}
           </span>
@@ -227,6 +248,15 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         ))}
         <span className="ggw-actions">
           {actions && !onUnstretch ? actions : null}
+          {compact ? (
+            <button type="button" className="ggw-btn ggw-drawer-btn" aria-expanded={open}
+                    aria-controls={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`}
+                    title={open ? GGW_DRAWER.closeTitle : GGW_DRAWER.openTitle}
+                    aria-label={`${open ? GGW_DRAWER.closeTitle : GGW_DRAWER.openTitle} ${row.symbol}`}
+                    data-testid={`ggw-drawer-btn-${row.symbol}`} onClick={() => setOpen((o) => !o)}>
+              {GGW_DRAWER.glyph}
+            </button>
+          ) : null}
           {onStretch ? (
             <button type="button" className="ggw-btn ggw-stretch-btn" title={ggwStretchTitle(row.symbol)}
                     aria-label={ggwStretchTitle(row.symbol)} data-testid={`ggw-stretch-btn-${row.symbol}`}
@@ -263,6 +293,8 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
           ) : null}
         </span>
       </div>
+      {compact ? <GgwProvLine row={row} /> : null}
+      {compact ? <GgwDrawer row={row} open={open} tags={tags} domId={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`} /> : null}
       {(onUnstretch || stacked) && row.frames.length ? (
         <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}`}
              data-testid={stacked ? 'ggw-stack-charts' : 'ggw-stretch-charts'}>
@@ -292,7 +324,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
 /** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
  *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
  *  the board's own rows, so the minute GET keeps moving its bars. */
-export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags }: {
+export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags, compact }: {
   row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
   live?: GgwLiveSym;
   /** The frame order, top to bottom (absent → GGW_STRETCH_ORDER). */
@@ -303,6 +335,8 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
   siNote?: boolean;
   /** 🏷️ 2026-11-18: forwarded to the Tile (the Watch passes it; a 🚩 card does not). */
   tags?: GgwTagsCtx;
+  /** 🗂 2026-11-22: the organised tile, its ⋯ drawer OPEN (the Watch in org mode only; absent → today's view). */
+  compact?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -325,6 +359,7 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
       <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
         <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
               onRemove={() => {}} onUnstretch={onClose} live={live} order={order} siNote={siNote} tags={tags}
+              {...(compact ? { compact: true, drawerOpen: true } : {})}
               onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
       </div>
     </div>,

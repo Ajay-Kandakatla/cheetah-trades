@@ -79,3 +79,76 @@ def live_audience() -> frozenset:
     (the cron child's import graph is unchanged). Broadcasting to the household instead = HIS CALL #2."""
     from ollama_chat.api import PRIMARY_ADMIN_EMAIL
     return frozenset({PRIMARY_ADMIN_EMAIL.strip().lower()})
+
+# ── 🗂 sections · 📅 ran last session · 📅 previous-day runners strip (2026-11-22, spec watch_org rev 4) ── Ajay 2026-11-22:
+# "Manual ones I add them need to be on top then auto intraday.. every month I want previous say winners sorted and  remove
+# hot sectors mess from Gajjalas top view I need a new thing there.. use that space between the parent tab of Gajjala and
+# watch tab to be for previous day runners but remove them if they don’t run the current day". LAYOUT + served labels + a
+# display strip: no gate, push, cap, eviction or add rule reads any of this. Descriptive, UNMEASURED. "every month" is read
+# as "every morning" (the strip refreshes every session) — nothing monthly is built.
+SECTIONS_ON = True                                   # MINE — HIS CALL #9: False = the 11-21 payload byte for byte
+SECTION_KEYS = ("yours", "aplus", "auto")            # his 11-22 order (👤 first, then the 🤖 names) [D3: autoadd_spec APPENDS "ran"]
+SECTION_ORDER = SECTION_KEYS
+RAN_MIN_PCT = 40.0                                   # HIS answer 11-22 "+40% vs prior close" (11-21 "around 40 to 100%")
+RAN_PCT_ROUND = 4                                    # = the scanner's change_pct rounding — EVERY compare (+40 and +25) at this [D5]
+PCT_SHOW_PLACES = 1                                  # a % printed beside its bar is FLOORED to this, never rounded across it [D5]
+BAR_PRE, BAR_AH = "pre", "ah"                        # bars5 `s` values; absent = regular (bars.py / support.py)
+BAR_MIN = 5                                          # bars5 are 5-minute, RIGHT-labelled (bars.py:4-5); a test pins = the frame
+RUNNERS_STRIP_ON = True                              # MINE — HIS CALL #9
+RUNNERS_LEAVE_PCT = GC.SCAN_MIN_CHANGE_PCT           # GG S8 19:51 "at least minimum 25% change" — "runs today" (HIS CALL #3)
+RUNNERS_STALE_SEC = 2 * GC.PASS_CADENCE_SEC          # MINE — HIS CALL #3 [D6]: a today read older than two passes judges nothing
+RUNNERS_FOLD_AT = 8                                  # MINE — HIS CALL #5 (desktop; the rest behind "+n more")
+RUNNERS_FOLD_AT_PHONE = 3                            # MINE — HIS CALL #5 [D7]: the phone's folded line = count + top 3 (SYM + gain)
+RUNNERS_PAST_WORDS = "🏆"                             # the strip's short prefix handed to replays.past_wins_before
+RUNNERS_SCAN_FIELDS = {"symbol": 1, "date": 1, "held": 1, "last.prev_close": 1, "last.day_c": 1, "last.tape_session": 1}
+RUNNERS_READ_FIELDS = {"symbol": 1, "date": 1, "at": 1, "tile.bars5": 1, "ctx.float": 1}   # `at` = the pass stamp [D6]
+API_RUNNERS_PATH = API_PATH + "/runners"             # == FE GG_RUNNERS_PATH (contract)
+SCAN_SESSION_AFTER = "afterhours"                    # `last.tape_session` once the day bar is frozen (scanner.py:189-190)
+ORG_NOTE = "descriptive — UNMEASURED; a label, never a gate, push, cap or add rule"
+# words — every one MINE (HIS CALL #7); `{open}` / `{end}` / `{cut}` / `{stale_min}` are BUILT at format time
+# (runners.clock_words: daytrading.data ET_RTH_OPEN / ET_AFTERHOURS_CLOSE, potential._mute_end_hhmm, RUNNERS_STALE_SEC)
+SECTION_WORDS = {"yours": "👤 Your names", "aplus": "🎯 A+", "auto": "🤖 Added today"}
+SECTION_TEXT = "{title} · {n}"
+SECTION_HINTS = {
+    "yours": "Names you added, newest first. Names added before 11-19 carry no time.",
+    "aplus": ("🤖 added these because a Gajjala board read them A+ this session (or promoted a 🧠 potential when it went "
+              "A+). They stay all session, a stop included. Your own A+ names stay in 👤 with their 🎯 chip."),
+    "auto": ("🤖 adds this session, newest first — each tile says when it was added. 📅 on a tile = it ran last session "
+             "({date}); a label, not why it was added."),
+}
+WHEN_TEXT = {"premarket": "{verb} premarket {at}", "intraday": "{verb} {at}", "after_hours": "{verb} after hours {at}"}
+WHEN_VERBS = ("added", "re-added")
+WHEN_TITLE = "{verb} {date} {at} ET by 🤖 — {where}"
+WHEN_WHERE = {"premarket": "before the open", "intraday": "during the regular session", "after_hours": "after the close"}
+WHEN_READD_TITLE = " · removed earlier this session at {rm_at} ET, then added again"
+WHEN_HIS_TEXT = "👤 added {at}"                      # today
+WHEN_HIS_DAY_TEXT = "👤 added {md}"                  # an earlier day, MM-DD
+WHEN_HIS_UNDATED = "👤 yours"
+RAN_TEXT = "📅 ran {day} {pct} ({timing} peak)"      # pct f"{x:+.0f}%" — safe: counts ⇒ run_pct ≥ 40 ⇒ prints ≥ +40
+RAN_TEXT_NO_TIMING = "📅 ran {day} {pct}"            # a replays fault (no 🎬 bucket) — the chip prints without the parenthesis
+RAN_TITLE = ("{date} on Gajjala's scanner: {open}–{end} high {high} = {pct} vs the prior close {pc}, in the 5-minute bar "
+             "from {at} ET; premarket high {pm}. 📅 = +{bar:g}% or more printed {open}–{end} ET with the day's peak not "
+             "premarket (your 11-21 rule).")                         # {pct} / {pm} via runners.pct_show (floored)
+RAN_PM_PEAK_TITLE = ("{date}: the day's peak was premarket ({pm}), above the {open}–{end} high ({pct}) — not counted "
+                     "(your 11-21 rule: “pumped pre market and got dumped pre market” is not a winner).")
+RAN_UNDER_TITLE = "{date}: {open}–{end} high {pct} vs the prior close — under +{bar:g}%."   # 39.96 prints +39.9%
+RAN_NONE = "none premarket"
+RUNNERS_TITLE = "📅 Previous day runners — {day} {md}"
+RUNNERS_COUNT_ALL = "{n}"
+RUNNERS_COUNT_CUT = "{k} running today of {n}"       # k = today_state "running" ONLY [D4]
+RUNNERS_COUNT_NOT_READ = " · {u} not read yet"       # appended when u > 0 [D4]
+RUNNERS_STALE_TEXT = " · today's read is from {at} ET — nothing removed"     # appended when stale [D6]
+RUNNERS_HINT = ("Ran {day}: a {open}–{end} high of +{bar:g}% or more vs the prior close on Gajjala's scanner, the day's "
+                "peak not premarket (your 11-21 rule). Biggest gain first; 🚫 names last, never dropped. From {cut} ET a "
+                "name leaves while today's high since {open} ET is under +{leave:g}% vs its {day} close (GG's scanner "
+                "floor) and comes back when it gets there — never on a read older than {stale_min} minutes. "
+                "Descriptive — UNMEASURED.")
+RUNNERS_REMOVED_TEXT = "{n} not running today (under +{leave:g}% since {open} ET)"
+RUNNERS_TODAY_TEXT = "today {pct} since {open}"     # pct via pct_show (floored) — the chip's title line only, after the cut
+RUNNERS_NOT_READ_TEXT = "today not read yet — kept"
+RUNNERS_EMPTY_TEXT = "No name on Gajjala's scanner {day} reached +{bar:g}% {open}–{end} with its peak after the open."
+RUNNERS_ERROR_TEXT = "Last session's runners could not be read — Gajjala's scanner store did not answer."
+RUNNERS_MORE_TEXT = "+{n} more"
+RUNNERS_LESS_TEXT = "show less"
+RUNNERS_STATES = ("ok", "empty", "error", "off", "owner_only")
+TODAY_STATES = ("running", "not_running", "not_read")

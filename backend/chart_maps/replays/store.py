@@ -399,7 +399,8 @@ def _setup_fields(lab) -> tuple:
 
 def bucket_of(peak_t) -> Optional[str]:
     """The labeller's bucket rule (C.WIN_TIMING_BUCKETS == label_winners.TIMING_BUCKETS): lower bound inclusive, upper
-    exclusive; None outside 09:30–20:00. Used only to CHECK a served bucket — the server never assigns one."""
+    exclusive; None outside 09:30–20:00. Here it CHECKS a served bucket; 👀 Watch's 📅 read (gajjala_watch.runners,
+    2026-11-22) ASSIGNS one with it — the peak bar's start — so both surfaces share this one rule."""
     for name, lo, hi in C.WIN_TIMING_BUCKETS:
         if lo <= peak_t < hi:
             return name

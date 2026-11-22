@@ -469,3 +469,18 @@ def test_served_strings_never_carry_the_b_word():
     words = list(_strings(blk))
     assert words and not [s for s in words if B_WORD.search(s)]
     assert not B_WORD.search("".join(_string_constants(SRC.read_text())))
+
+
+def test_finder_keywords_default_to_the_tags_projection_byte_for_byte():
+    """PIN 2026-11-22 (spec watch_org rev 4): `_find_scan` / `_find_reads` gained keyword-only `fields` (and `names=None`
+    drops the symbol clause) for 📅 runners.py — the defaults ARE this block's own projection, so the tags query is
+    unchanged."""
+    import inspect
+    ps, pr = inspect.signature(TG._find_scan).parameters, inspect.signature(TG._find_reads).parameters
+    assert ps["fields"].default is TG.SCAN_TAG_FIELDS and pr["fields"].default is TG.TAGS_READ_FIELDS
+    assert ps["fields"].kind is inspect.Parameter.KEYWORD_ONLY and pr["fields"].kind is inspect.Parameter.KEYWORD_ONLY
+    w = World(scan=[_scan("OMH")], reads=[_read("OMH", {"kiss_fly": _r("aplus")})])
+    TG._find_scan(w.st, [SESSION], ["OMH"])
+    TG._find_reads(w.st, [ST.key(SESSION, "OMH")])
+    assert w.c[ST.SCAN].finds == [({"date": {"$in": [SESSION]}, "symbol": {"$in": ["OMH"]}}, TG.SCAN_TAG_FIELDS)]
+    assert w.c[ST.READS].finds == [({"_id": {"$in": [ST.key(SESSION, "OMH")]}}, TG.TAGS_READ_FIELDS)]

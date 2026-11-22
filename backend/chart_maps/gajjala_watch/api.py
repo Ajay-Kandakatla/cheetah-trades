@@ -37,6 +37,12 @@ add remove tickers from the dashboard."
     SAME fallbacks as `chart_maps.api._stream_interest` (the feed's own word when the hub gives none; hub missing /
     raising → `on: false`). No Mongo read, no snapshot, nothing written — the prices arrive as `gajjala.update`.
 
+  * `GET    /chart-maps/gajjala-watch/runners` (📅 2026-11-22, spec watch_org §3.4 — Ajay: "use that space between the
+    parent tab of Gajjala and watch tab to be for previous day runners but remove them if they don’t run the current
+    day") — PRIMARY OWNER ONLY through `_is_owner` (anyone else, or a direct call with the Depends OBJECT, gets exactly
+    `owner_only_payload()` and nothing is read). `runners.strip(now)` built, scrubbed and JSON-encoded inside ONE
+    `asyncio.to_thread`; never raises (state `error` + the served sentence). Display only.
+
 The admin email never appears in an answer. UNMEASURED — a cross is information, not an entry.
 """
 from __future__ import annotations
@@ -101,6 +107,19 @@ def _body(now: datetime, only: Optional[list]) -> tuple:
     return body, gzip.compress(body, compresslevel=6)
 
 
+def _runners_body(now: datetime) -> bytes:
+    """📅 2026-11-22 — the owner's strip as JSON bytes, called ONLY inside asyncio.to_thread. Never raises: a fault
+    anywhere → {state: "error", text: C.RUNNERS_ERROR_TEXT}."""
+    from growth.api import _scrub
+    try:
+        from . import runners as RN
+        out = RN.strip(now)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: runners strip failed: %s", type(exc).__name__)
+        out = {"state": "error", "text": C.RUNNERS_ERROR_TEXT}
+    return JSONResponse(_scrub(out)).body
+
+
 def _request_build(new_only: bool = False) -> str:
     """[C2.5] Single-flight `--build` child (the on_demand._STATE shape): alive → "running"; else spawn → "spawned";
     a raising spawn logs one line → "error". Never raises. `new_only` (2026-11-19, in window) → C.ARGV_BUILD_NEW:
@@ -131,6 +150,16 @@ async def gajjala_watch(request: Request = None, email: Optional[str] = Depends(
     if "gzip" in accept.lower():
         return Response(content=gz, media_type="application/json",
                         headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
+    return Response(content=body, media_type="application/json")
+
+
+@router.get(C.API_RUNNERS_PATH)
+async def gajjala_watch_runners(email: Optional[str] = Depends(maybe_current_user)):
+    """📅 the owner's previous-day runners strip. A direct call (container smoke test) receives the Depends OBJECT and is
+    served as a non-owner — nothing read."""
+    if not _is_owner(email):
+        return PL.owner_only_payload()
+    body = await asyncio.to_thread(_runners_body, datetime.now(ET))
     return Response(content=body, media_type="application/json")
 
 

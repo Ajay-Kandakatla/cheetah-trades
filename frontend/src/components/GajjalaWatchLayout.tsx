@@ -9,11 +9,13 @@
  *   - `testidPrefix` on GgwLayoutPick / GgwPager renames every data-testid (absent → the Watch's `ggw-layout` /
  *     `ggw-pager` testids exactly); classes, titles, labels and order never change;
  *   - `onRemove` on GgwPager is optional: ABSENT → no × button at all (a 🚩 card cannot be removed from a board).
+ *   - `groups` on GgwPager (🗂 2026-11-22, spec watch_org §3.5 — Ajay: "Manual ones I add them need to be on top then
+ *     auto intraday.."): the served section words inline at the first item of each section, items `[🎯?, SYM]`.
  * The FE composes no word about a stock here: the pager titles are the GGW_PAGER control words, the × title is the
  * served remove_title / remove_label, the rest are structural glyphs. docs/gajjala/watch_layout_shared_2026_11_18.md. */
 import { useEffect, useState, type RefObject } from 'react';
 import {
-  GGW_LAYOUT_ORDER, GGW_PAGER, ggwFitRowHeight, type GgwLayout, type GgwRowAplus, type GgwRowAuto,
+  GGW_LAYOUT_ORDER, GGW_PAGER, ggwFitRowHeight, type GgwLayout, type GgwRowAplus, type GgwRowAuto, type GgwSection,
 } from '../lib/gajjalaWatch';
 
 /** The fitted grid row height (px) above the phone break, or null (phone / no layout yet / jsdom). */
@@ -67,6 +69,7 @@ export function GgwLayoutPick({ layout, onPick, testidPrefix = 'ggw-layout' }: {
 /** ◀ the tickers (each a toggle, × = remove when `onRemove` is given) ▶ and the "page / pages" stamp. */
 export function GgwPager({
   rows, onPage, paged, cur, pages, usePick, busy, removeLabel, onToggle, onPrev, onNext, onRemove, testidPrefix = 'ggw-pager',
+  groups,
 }: {
   rows: ReadonlyArray<{ symbol: string; aplus?: GgwRowAplus | null; auto?: GgwRowAuto | null }>;
   /** Is row i on screen now (the page, or his toggled pick). */
@@ -77,7 +80,12 @@ export function GgwPager({
   onRemove?: (sym: string) => void;
   /** Renames the testids (`{prefix}`, `-prev`, `-next`, `-{sym}`, `-x-{sym}`, `-at`); absent → `ggw-pager` exactly. */
   testidPrefix?: string;
+  /** 🗂 2026-11-22 (spec watch_org §3.5): the served section labels, drawn INLINE before the row index they start at
+   *  (lib ggwGroupStarts); the items then read `[🎯?, SYM]` (the dashed outline already says 🤖). ABSENT → today's
+   *  pager exactly (the 🚩 / 🧪 card grid never passes it). */
+  groups?: ReadonlyArray<{ at: number; section: GgwSection }>;
 }) {
+  const startAt = groups ? new Map(groups.map((g) => [g.at, g.section] as const)) : null;
   return (
     <nav className="ggw-pager" aria-label="Move the view" data-testid={testidPrefix}>
       <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.prevTitle} aria-label={GGW_PAGER.prevTitle}
@@ -88,7 +96,9 @@ export function GgwPager({
       {rows.map((r, i) => {
         /* 🤖 an auto name: the dashed item, the served tag before SYM, the served × title. */
         const rm = r.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${r.symbol}` : r.symbol);
-        return (
+        const sec = startAt ? startAt.get(i) ?? null : null;
+        const label = startAt ? [r.aplus?.tag, r.symbol] : [r.aplus?.tag, r.auto?.tag, r.symbol];
+        const item = (
           <span key={r.symbol} className={`ggw-pager-item${r.auto ? ' ggw-pager-item--auto' : ''}${onPage(i) ? ' is-on' : ''}`}>
             {/* 🎯 a name a Gajjala board reads A+ this session: the served tag first + the --aplus outline. */}
             <button type="button"
@@ -96,7 +106,7 @@ export function GgwPager({
                     aria-pressed={onPage(i)} data-testid={`${testidPrefix}-${r.symbol}`}
                     title={r.aplus?.title ?? undefined}
                     onClick={() => onToggle(r.symbol)}>
-              {[r.aplus?.tag, r.auto?.tag, r.symbol].filter(Boolean).join(' ')}
+              {label.filter(Boolean).join(' ')}
             </button>
             {onRemove ? (
               <button type="button" className="ggw-btn ggw-pager-x" title={rm} aria-label={rm} disabled={busy}
@@ -106,6 +116,12 @@ export function GgwPager({
             ) : null}
           </span>
         );
+        if (!sec) return item;
+        return [
+          <span key={`grp-${sec.key}`} className={`ggw-pager-group${i === 0 ? ' ggw-pager-group--first' : ''}`}
+                data-testid={`${testidPrefix}-group-${sec.key}`} title={sec.hint ?? undefined}>{sec.text}</span>,
+          item,
+        ];
       })}
       <button type="button" className="ggw-btn ggw-pager-btn" title={GGW_PAGER.nextTitle} aria-label={GGW_PAGER.nextTitle}
               data-testid={`${testidPrefix}-next`} disabled={!paged || (!usePick && cur >= pages - 1)}

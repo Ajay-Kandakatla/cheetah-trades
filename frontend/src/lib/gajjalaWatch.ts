@@ -404,6 +404,31 @@ export type GgwRowTags = {
  *  five keys plus the served hover `title`, the served `suspect_text` and where it was read (`read_from`). Every word
  *  served; display only, UNMEASURED. */
 export type GgwRowFloat = GgwTagFloat & { suspect_text: string | null; title: string | null; read_from: string | null };
+/** 🗂 2026-11-22 (spec watch_org rev 4 §3.3 / §3.5) — Ajay: "Manual ones I add them need to be on top then auto
+ *  intraday..". The row's served organisation block (backend gajjala_watch/sections.py → row `org`). `group` = the
+ *  served section key this row sits in (session-stable); every other block is a dict or null. Every word is SERVED —
+ *  the FE prints `text` / `title` verbatim and composes none. Descriptive, UNMEASURED. */
+export type GgwWhen = {
+  bucket: string | null; verb: string | null; at_et: string | null; date: string | null; text: string; title: string | null;
+};
+/** The served setup chip (🎾 picked first by the server). */
+export type GgwSetupTag = { text: string; title: string | null };
+/** 📅 the served "ran last session" read (backend runners.ran_of). `text` = the chip — ONLY when it counts; `title` is
+ *  served either way (the premarket-peak and under-the-bar lines live there, printed in the ⋯ drawer). */
+export type GgwRan = {
+  date: string | null; day: string | null; prev_close: number | null; high: number | null; run_pct: number | null;
+  peak_et: string | null; timing: string | null; timing_text: string | null; pm_high_pct: number | null;
+  premarket_peak: boolean; counts: boolean; reg_close: number | null; text: string | null; title: string | null;
+};
+/** 🏆 the served past-winner block, normalised: `text` = the chip, `items` = every served win's words (the drawer),
+ *  `more` = the served "+N more", `title` = the served hover (null → the items). */
+export type GgwPastWinner = { text: string; items: string[]; more: string | null; title: string | null };
+export type GgwOrg = {
+  group: string; when: GgwWhen | null; setup: GgwSetupTag | null; ran: GgwRan | null; past_winner: GgwPastWinner | null;
+};
+/** One served section, in served order: `key` = any non-blank served key (the FE holds NO key list — a later served
+ *  key renders without an FE change), `text` = the header words, `hint` = its served explanation. */
+export type GgwSection = { key: string; title: string | null; text: string; hint: string | null; n: number | null; symbols: string[] };
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
@@ -426,6 +451,9 @@ export type GgwRow = {
   /** 🔢 2026-11-21 (spec watchfloat): the served float of ANY row (null = no float read on file — never invented).
    *  Optional for the same reason as `auto` — parseGgw always sets it. */
   float?: GgwRowFloat | null;
+  /** 🗂 2026-11-22: the served organisation block. The key is set ONLY when served (an older server's rows stay
+   *  byte-equal); null = served but junk / the `only` poll (no chip, no group). */
+  org?: GgwOrg | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -464,6 +492,8 @@ export type GgwBoard = {
   auto: GgwAuto | null;
   /** 🚫 2026-11-19 (spec watchfid): the served broker block (owner only; absent / junk → null — no button). */
   broker?: GgwBroker | null;
+  /** 🗂 2026-11-22: the served sections in served order. The key is set ONLY when served; null / [] → the flat board. */
+  sections?: GgwSection[] | null;
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
 /** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
@@ -645,6 +675,74 @@ function parseAuto(v: unknown): GgwAuto | null {
   };
 }
 
+/** 🗂 2026-11-22 — the served time line block: an object with a served `text`, else null (junk never draws a chip). */
+function parseWhen(v: unknown): GgwWhen | null {
+  if (!isObj(v) || !str(v.text)) return null;
+  return { bucket: str(v.bucket), verb: str(v.verb), at_et: str(v.at_et), date: str(v.date), text: v.text, title: str(v.title) };
+}
+
+/** 🗂 the served setup chip: an object with a served `text`, else null. */
+function parseSetupTag(v: unknown): GgwSetupTag | null {
+  if (!isObj(v) || !str(v.text)) return null;
+  return { text: v.text, title: str(v.title) };
+}
+
+/** 📅 the served ran block: kept when it serves a chip `text` or a drawer `title`; every number through num() (NaN /
+ *  inf → null); `counts` / `premarket_peak` true ONLY for `=== true`. Neither text nor title → null. */
+export function parseRan(v: unknown): GgwRan | null {
+  if (!isObj(v)) return null;
+  const text = str(v.text);
+  const title = str(v.title);
+  if (!text && !title) return null;
+  return {
+    date: str(v.date), day: str(v.day), prev_close: num(v.prev_close), high: num(v.high), run_pct: num(v.run_pct),
+    peak_et: str(v.peak_et), timing: str(v.timing), timing_text: str(v.timing_text), pm_high_pct: num(v.pm_high_pct),
+    premarket_peak: v.premarket_peak === true, counts: v.counts === true, reg_close: num(v.reg_close), text, title,
+  };
+}
+
+/** 🏆 the served past-winner block, either the replays shape (`past_winner: [{text}]`, `past_winner_more_text`) or a
+ *  served `{text, title, items}`. The chip = the served `text`, else the first served win's words; none → null. */
+export function parsePastWinner(v: unknown): GgwPastWinner | null {
+  if (!isObj(v)) return null;
+  const list = Array.isArray(v.past_winner) ? v.past_winner : Array.isArray(v.items) ? v.items : [];
+  const items = list
+    .map((w: unknown) => (typeof w === 'string' ? str(w) : isObj(w) ? str(w.text) : null))
+    .filter((s: string | null): s is string => !!s);
+  const text = str(v.text) ?? items[0] ?? null;
+  if (!text) return null;
+  return { text, items, more: str(v.past_winner_more_text) ?? str(v.more_text), title: str(v.title) };
+}
+
+/** 🗂 A row's served org block: an object with a non-blank string `group`, else null. Each inner block through its own
+ *  parser (junk → null: no chip). */
+export function parseRowOrg(v: unknown): GgwOrg | null {
+  if (!isObj(v) || !str(v.group)) return null;
+  return {
+    group: (v.group as string).trim(),
+    when: parseWhen(v.when), setup: parseSetupTag(v.setup), ran: parseRan(v.ran), past_winner: parsePastWinner(v.past_winner),
+  };
+}
+
+/** 🗂 The served sections, in SERVED order: ANY non-blank string key is kept (no key list here — the server owns the
+ *  keys and their order); a section without served header words, a blank / non-string key or a repeated key is
+ *  dropped. Not a list → null. */
+export function parseSections(v: unknown): GgwSection[] | null {
+  if (!Array.isArray(v)) return null;
+  const out: GgwSection[] = [];
+  for (const s of v) {
+    if (!isObj(s) || !str(s.key)) continue;
+    const key = (s.key as string).trim();
+    const text = str(s.text) ?? str(s.title);
+    if (!text || out.some((x) => x.key === key)) continue;
+    const n = num(s.n);
+    out.push({
+      key, title: str(s.title), text, hint: str(s.hint), n: n != null && n >= 0 ? n : null, symbols: strs(s.symbols),
+    });
+  }
+  return out;
+}
+
 function parseRow(v: unknown): GgwRow | null {
   if (!isObj(v) || !str(v.symbol)) return null;
   const symbol = v.symbol as string;
@@ -667,6 +765,7 @@ function parseRow(v: unknown): GgwRow | null {
     added_at: str(v.added_at) != null && Number.isFinite(Date.parse(v.added_at)) ? v.added_at : null,
     late_text: str(v.late_text),
     float: parseRowFloat(v.float),
+    ...('org' in v ? { org: parseRowOrg(v.org) } : {}),
   };
 }
 
@@ -718,6 +817,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     rows: raw.rows.map(parseRow).filter((r: GgwRow | null): r is GgwRow => !!r),
     auto: parseAuto(raw.auto),
     broker: parseGgwBroker(raw.broker),
+    ...('sections' in raw ? { sections: parseSections(raw.sections) } : {}),
   };
 }
 
@@ -736,7 +836,82 @@ export function ggwPendingSymbols(b: GgwBoard): string[] {
  *  reorders; a partial answer is never a reason to re-cut the list). */
 export function ggwMergeRows(b: GgwBoard, partial: GgwBoard): GgwBoard {
   const by = new Map(partial.rows.map((r) => [r.symbol, r] as const));
-  return { ...b, rows: b.rows.map((r) => by.get(r.symbol) ?? r) };
+  /* 🗂 2026-11-22 [C6]: the `only` poll serves `org: null` — the board row keeps ITS org (its group never changes on a
+   * partial answer, so no second header). A board row without the key (an older server) merges exactly as before. */
+  return {
+    ...b,
+    rows: b.rows.map((r) => {
+      const n = by.get(r.symbol);
+      if (!n) return r;
+      return 'org' in r ? { ...n, org: r.org } : n;
+    }),
+  };
+}
+
+// ── 🗂 sections (2026-11-22, spec watch_org rev 4 §3.5) ─────────────────────────────────────────────────────────────
+/* Ajay 2026-11-22: "Manual ones I add them need to be on top then auto intraday..". The server groups and orders the
+ * rows and writes every word (sections.py); the FE holds NO section key list — it prints whatever sections are served,
+ * in served order. Layout only: nothing here gates, pushes, caps or sorts. */
+
+/** Org mode = the server served at least one section. An older server (no key) or `SECTIONS_ON = False` → the flat board. */
+export function ggwSectionsOn(b: { sections?: GgwSection[] | null } | null | undefined): boolean {
+  return !!b && Array.isArray(b.sections) && b.sections.length > 0;
+}
+
+/** The section headers: one per served key at the FIRST row index carrying it ([C6] — `[a, a, b, a]` → headers at 0 and
+ *  2, never a second `a`). A row group with no served section draws no header. Row order. */
+export function ggwGroupStarts(rows: ReadonlyArray<{ org?: GgwOrg | null }>,
+                               sections: ReadonlyArray<GgwSection> | null | undefined): Array<{ at: number; section: GgwSection }> {
+  const by = new Map((sections ?? []).map((s) => [s.key, s] as const));
+  const seen = new Set<string>();
+  const out: Array<{ at: number; section: GgwSection }> = [];
+  rows.forEach((r, i) => {
+    const g = r?.org?.group;
+    if (!g || seen.has(g)) return;
+    seen.add(g);
+    const s = by.get(g);
+    if (s) out.push({ at: i, section: s });
+  });
+  return out;
+}
+
+/** ⋯ the per-tile drawer control (structural glyph + control words; no word about a stock). */
+export const GGW_DRAWER = { glyph: '⋯', openTitle: 'Show details', closeTitle: 'Hide details' } as const;
+/** ▾ / ▸ a phone section header's fold glyphs (structural). */
+export const GGW_SECTION_GLYPH = { open: '▾', closed: '▸' } as const;
+
+/** 📱 The phone's folded sections (a per-viewer convenience): a JSON list of served section keys. Junk / blocked → [] (all
+ *  open). */
+export const GGW_COLLAPSED_KEY = 'ggw.collapsed';
+const SECTION_KEY_RE = /^[A-Za-z0-9_-]{1,40}$/;
+export function parseGgwCollapsed(v: unknown): string[] {
+  if (typeof v !== 'string') return [];
+  let a: unknown;
+  try { a = JSON.parse(v); } catch { return []; }
+  if (!Array.isArray(a)) return [];
+  const out: string[] = [];
+  for (const k of a) if (typeof k === 'string' && SECTION_KEY_RE.test(k) && !out.includes(k)) out.push(k);
+  return out;
+}
+export function readGgwCollapsed(): string[] {
+  try { return parseGgwCollapsed(window.localStorage.getItem(GGW_COLLAPSED_KEY)); } catch { return []; }
+}
+export function saveGgwCollapsed(keys: ReadonlyArray<string>): void {
+  try {
+    if (keys.length) window.localStorage.setItem(GGW_COLLAPSED_KEY, JSON.stringify(keys));
+    else window.localStorage.removeItem(GGW_COLLAPSED_KEY);
+  } catch { /* private window: the fold lasts this visit */ }
+}
+/** Fold / unfold one served section key (a new list; the key added or removed). */
+export function ggwToggleCollapsed(keys: ReadonlyArray<string>, key: string): string[] {
+  return keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key];
+}
+/** [C5] A push link / ➕ / first-load outline / pager tap into a FOLDED section opens that section first: the list without
+ *  `sym`'s group. The SAME array when nothing changes (the name is not listed, has no group, or its group is open). */
+export function ggwRevealGroup(keys: ReadonlyArray<string>, rows: ReadonlyArray<{ symbol: string; org?: GgwOrg | null }>,
+                               sym: string): ReadonlyArray<string> {
+  const g = rows.find((r) => r.symbol === sym)?.org?.group;
+  return g && keys.includes(g) ? keys.filter((k) => k !== g) : keys;
 }
 
 /** The 1-min frame on top, then the rest in served order (3-min, 5-min). */

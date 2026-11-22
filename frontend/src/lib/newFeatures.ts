@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-22, verbatim: "I need gajjalas watch tab little more organized. With less info, I want to know previous
+  // day winner auto additions vs intraday may be a time stamp." + his answers: "Manual ones I add them need to be on top
+  // then auto intraday.. every month I want previous say winners sorted and  remove hot sectors mess from Gajjalas top
+  // view I need a new thing there.. use that space between the parent tab of Gajjala and watch tab to be for previous
+  // day runners but remove them if they don't run the current day". chart_maps/gajjala_watch/{runners,sections}.py +
+  // GET /chart-maps/gajjala-watch/runners; the strip takes the 🔥 slot on 🚩 (owner only; 🔥 hidden, never unmounted).
+  // Display + order only — nothing adds, removes, rings or caps differently. UNMEASURED. Doc
+  // docs/gajjala/watch_sections_2026_11_22.md.
+  {
+    id: 'gajjala-watch-sections-runners-2026-11-22',
+    label: '👀 Watch organized + 📅 Previous day runners — you said: “I need gajjalas watch tab little more organized. With less info, I want to know previous day winner auto additions vs intraday may be a time stamp.” and “Manual ones I add them need to be on top then auto intraday.. remove hot sectors mess from Gajjalas top view I need a new thing there.. use that space between the parent tab of Gajjala and watch tab to be for previous day runners but remove them if they don’t run the current day”. The Watch now has three sections: 👤 Your names on top, then 🎯 A+, then 🤖 Added today (newest first). Each tile shows one time line (“added 10:42”, “added premarket 07:12”), a 📅 chip when the name ran last session (+40% or more on its prior close, the peak not premarket, with when the peak printed), and 🏆 if it won before; the rest of the tags sit behind ⋯. On 🚩 Gajjala’s tab the 🔥 hot sectors strip is gone and 📅 Previous day runners takes its place: last session’s runners, biggest gain first, each with ➕ Watch. From 09:45 a name that has not reached +25% today drops off (it comes back if it gets there). Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-22, verbatim: "can you categorize past winners like some are kiss and fly based and some might be VCP
   // based some might be horizontal faded.. also reversal squeeze is mainly what I look for." + "yes please" (the tab) +
   // "dont't remove but add a tag but sort by EOD and Intraday ones on the top" + "CLRO another example add all the videos may be
