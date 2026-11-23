@@ -264,7 +264,9 @@ def test_card_fields_single_and_multi(root):
                   # RE-PINNED 2026-11-22: the setup + timing keys (no label in this sidecar → all empty)
                   "setup": None, "setup_text": None, "setup_class": None, "setup_class_text": None,
                   "setup_chips": [], "setup_chips_text": [], "stopped_before_peak": False, "stopped_text": None,
-                  "timing": None, "timing_text": None}
+                  "timing": None, "timing_text": None,
+                  # RE-PINNED 2026-11-22 (🏆 jump): no labelled peak in this sidecar → no second, the none words
+                  "seek_s": None, "seek_text": C.SEEK_NONE_WORDS}
     bt = by[("multiday", "BTCT")]
     assert bt["kind"] == "multi_day" and bt["kind_text"] == "multi-day"
     assert bt["days_text"] == "2026-08-18 → 2026-08-24 · 5 sessions"

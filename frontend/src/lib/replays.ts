@@ -70,7 +70,8 @@ export function rpDates(x: unknown): string[] {
 
 /** The 🏆 past-winner chips of a served card: each served entry's served `text` (non-strings / blanks dropped), then the
  *  served `past_winner_more_text` ("+N more") when it is a non-empty string. No served list → [] (no chip, no noise).
- *  The FE composes no word — text only (the 🏆 section has no open-a-reel-by-file URL to link to). Pure. */
+ *  The FE composes no word. Since 2026-11-22 the day-card chips LINK to their reel through `rpPastWinItems` /
+ *  `rpJumpParams` (below); this helper still feeds "+N more" and the 🏆 row chips (which stay text). Pure. */
 export function rpPastWinChips(v: RpPastWinFields | null | undefined): { wins: string[]; more: string } {
   const list = v && Array.isArray(v.past_winner) ? v.past_winner : [];
   const wins = list.map((w) => rpText(w && typeof w === 'object' ? w.text : undefined)).filter((s) => s.length > 0);
@@ -87,9 +88,11 @@ export function rpVideoSrc(v: { src?: unknown } | null | undefined): string {
 }
 
 /** The next URL params when the session date changes: a COPY of `prev` with `date` set (or deleted on null / '').
- *  Every other param — `tab`, a future `focus` — rides along untouched (replays spec C7). Pure. */
+ *  Every other param — `tab`, a future `focus`, the 🏆 `reel` (a mounted video is not reloaded) — rides along untouched,
+ *  except `card` (2026-11-22, pwjump C9): the origin mark names a card of the session being left. Pure. */
 export function rpDateParams(prev: URLSearchParams, date: string | null): URLSearchParams {
   const next = new URLSearchParams(prev);
+  next.delete(RP_CARD_PARAM);
   if (date) next.set(RP_DATE_PARAM, date);
   else next.delete(RP_DATE_PARAM);
   return next;
@@ -126,6 +129,7 @@ export type RpWinner = {
   close_gain_pct?: number | null; gain_text?: string; high_pct?: number | null; high_text?: string | null;
   spike_print?: boolean; spike_text?: string | null; pick_text?: string | null;
   speed?: number | null; speed_text?: string; minutes?: number | null; length_text?: string;
+  seek_s?: number | null; seek_text?: string | null;
 } & RpPastWinFields & RpWinnerLabelFields;
 /** 🏆 setup + timing (2026-11-22) — Ajay: "can you categorize past winners like some are kiss and fly based and some
  *  might be VCP based some might be horizontal faded.. Do we have those metrics? also reversal squeeze is mainly what I
@@ -153,7 +157,7 @@ export type RpSetupOption = { key: string; label: string; count: number };
 export type RpWinnersPayload = {
   state: RpState | string; title?: string; tab?: string; text?: string | null; note?: string; window?: string;
   window_note?: string; summary_text?: string | null; counts?: RpWinnersCounts; rows?: RpWinnerRow[];
-  setups?: RpSetupOption[];
+  setups?: RpSetupOption[]; jump_missing_text?: string | null;
 };
 
 /** The 'show every card' filter key (== backend constants.WIN_SETUP_ALL). Its label is SERVED. */
@@ -233,4 +237,132 @@ export function rpWinnersParams(prev: URLSearchParams, open: boolean): URLSearch
   if (open) next.set(RP_WINNERS_PARAM, '1');
   else next.delete(RP_WINNERS_PARAM);
   return next;
+}
+
+// ── 🏆 chip → jump to that win's replay at its peak (2026-11-22, pwjump spec §3.3) ──────────────────────────────────
+// Ajay 2026-11-22, verbatim: "New feature when I click on this past winner tag take me to that video so change the date
+// and focus me on that video at that. time" · "past winner 11-18 +57%". Navigation only: no gate, no push, no rank, no
+// label. A day-card 🏆 chip links to `?…[&date=<win day>]&winners=1&sym=<SYM>&reel=<sub>/<file>`; the 🏆 section opens
+// that ONE reel, scrolls to it and opens it at the reel's SERVED second (backend store.seek_seconds — no clock arithmetic
+// here). The origin history entry is marked `card=<served date>/<file>` (and loses any `reel`) so Back lands on the card.
+// UNMEASURED.
+
+/** The URL param naming the ONE 🏆 reel a jump opens: `${sub}/${file}`. */
+export const RP_REEL_PARAM = 'reel';
+/** The URL param marking the day card a jump started from: `${served date}/${file}`. */
+export const RP_CARD_PARAM = 'card';
+/** The 🏆 reel folders (== backend constants.WINNER_SUB_KEYS, test-pinned). */
+export const RP_WINNER_SUBS = ['winners', 'multiday'] as const;
+/** A served reel file name (== backend constants.FILE_RE, test-pinned): no '/', no leading dot, .mp4. */
+export const RP_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.mp4$/;
+export type RpJumpTarget = { symbol: string; day: string; sub: string; file: string; reel: string };
+
+const RP_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** `${sub}/${file}` when `sub` is a 🏆 folder and `file` a served reel name; anything else → ''. Pure. */
+export function rpReelKey(sub: unknown, file: unknown): string {
+  if (typeof sub !== 'string' || !(RP_WINNER_SUBS as readonly string[]).includes(sub)) return '';
+  if (typeof file !== 'string' || !RP_FILE_RE.test(file)) return '';
+  return `${sub}/${file}`;
+}
+
+/** The day-card 🏆 chips with their jump target, in served order. An entry with no non-empty string `text` is dropped
+ *  (the rpPastWinChips rule). `target` is non-null only when the card's symbol is a non-empty string, the entry's `day`
+ *  is YYYY-MM-DD and its `sub` / `file` name a 🏆 reel. Pure. */
+export function rpPastWinItems(v: (RpPastWinFields & { symbol?: unknown }) | null | undefined):
+  { text: string; target: RpJumpTarget | null }[] {
+  const list = v && Array.isArray(v.past_winner) ? v.past_winner : [];
+  const symbol = v && typeof v.symbol === 'string' && v.symbol.trim().length > 0 ? v.symbol : '';
+  const out: { text: string; target: RpJumpTarget | null }[] = [];
+  for (const w of list) {
+    const e = w && typeof w === 'object' ? w : null;
+    const text = rpText(e ? e.text : undefined);
+    if (!text) continue;
+    const reel = e ? rpReelKey(e.sub, e.file) : '';
+    const day = e && typeof e.day === 'string' && RP_DAY_RE.test(e.day) ? e.day : '';
+    out.push({ text, target: symbol && day && reel && e
+      ? { symbol, day, sub: e.sub as string, file: e.file as string, reel } : null });
+  }
+  return out;
+}
+
+/** The jump URL: a COPY of `prev` with winners=1, sym, reel set and `card` deleted; `date` = the win's day ONLY when
+ *  the server lists that session (otherwise `date` is left exactly as it was). Every other param rides along. Pure. */
+export function rpJumpParams(prev: URLSearchParams, t: RpJumpTarget, dates: string[]): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  next.set(RP_WINNERS_PARAM, '1');
+  next.set(RP_WINNERS_SYM_PARAM, t.symbol);
+  next.set(RP_REEL_PARAM, t.reel);
+  next.delete(RP_CARD_PARAM);
+  if (dates.includes(t.day)) next.set(RP_DATE_PARAM, t.day);
+  return next;
+}
+
+/** `${date}/${file}` of a day card; '' when either is not a non-empty string. Pure. */
+export function rpCardKey(date: unknown, file: unknown): string {
+  return typeof date === 'string' && date && typeof file === 'string' && file ? `${date}/${file}` : '';
+}
+
+/** The origin entry of a jump: a COPY of `prev` with card=rpCardKey(date, file) AND `reel` deleted (pwjump C2 — the
+ *  origin is the card, never a reel). An empty key → the copy unchanged (reel kept). Pure. */
+export function rpOriginParams(prev: URLSearchParams, date: string | null, file: string): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  const key = rpCardKey(date, file);
+  if (!key) return next;
+  next.set(RP_CARD_PARAM, key);
+  next.delete(RP_REEL_PARAM);
+  return next;
+}
+
+/** The `card` param, or ''. Pure. */
+export function rpCardParam(params: URLSearchParams): string {
+  return params.get(RP_CARD_PARAM) || '';
+}
+
+/** The `reel` param when it is exactly `${sub}/${file}` (one '/', a 🏆 folder, a served reel name); else ''. Pure. */
+export function rpJumpReel(params: URLSearchParams): string {
+  const r = params.get(RP_REEL_PARAM) || '';
+  const parts = r.split('/');
+  if (parts.length !== 2) return '';
+  return rpReelKey(parts[0], parts[1]) === r ? r : '';
+}
+
+/** The identity of ONE jump (pwjump C1): '' when there is no reel; else `${reel}|${n}` — a new reel OR a new click on
+ *  the same chip (n = the board's click count) gives a new key. Pure. */
+export function rpJumpKey(reel: string, n: number): string {
+  return reel ? `${reel}|${n}` : '';
+}
+
+/** The jump's reel: ONLY inside the row whose served symbol, trimmed + upper-cased (the rpWinnersSym normal form), is
+ *  `sym`; ONLY the video whose rpReelKey(sub, file) is `reel` and whose rpWinnerSrc is non-empty. Anything else → null —
+ *  never another row, never another reel. Pure. */
+export function rpFindReel(rows: unknown, sym: string, reel: string): { row: RpWinnerRow; video: RpWinner } | null {
+  const want = typeof sym === 'string' ? sym.trim().toUpperCase() : '';
+  if (!want || !reel || !Array.isArray(rows)) return null;
+  for (const row of rows) {
+    if (!row || typeof row !== 'object' || typeof row.symbol !== 'string') continue;
+    if (row.symbol.trim().toUpperCase() !== want || !Array.isArray(row.videos)) continue;
+    for (const video of row.videos) {
+      if (video && typeof video === 'object' && rpReelKey(video.sub, video.file) === reel && rpWinnerSrc(video) !== '') {
+        return { row: row as RpWinnerRow, video: video as RpWinner };
+      }
+    }
+  }
+  return null;
+}
+
+/** The served seek second when it is a finite number > 0; anything else → null (the video opens at the start). Pure. */
+export function rpSeekSeconds(v: { seek_s?: unknown } | null | undefined): number | null {
+  const s = v ? v.seek_s : undefined;
+  return typeof s === 'number' && Number.isFinite(s) && s > 0 ? s : null;
+}
+
+/** The src with a media fragment `#t=<served second>` (iOS ignores currentTime before metadata); no second → src. */
+export function rpSeekSrc(src: string, seek: number | null): string {
+  return src && seek != null ? `${src}#t=${seek}` : src;
+}
+
+/** A plain left click (no ⌘ / ctrl / shift / alt, button 0) — anything else is left to the browser (new tab). Pure. */
+export function rpPlainClick(e: { button?: number; metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean }): boolean {
+  return (e.button ?? 0) === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 }

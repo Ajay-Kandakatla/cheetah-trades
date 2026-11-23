@@ -266,6 +266,7 @@ describe('🏆 source guards', () => {
   });
   it('the board mounts the section in every state', async () => {
     const src = await readSource('src/components/ReplaysBoard.tsx');
-    expect((src.match(/<ReplaysPastWinners \/>/g) || []).length).toBe(3);
+    // RE-PINNED 2026-11-22 (pwjump spec §3.5): both props always written out, so one regex pins all three mounts.
+    expect((src.match(/<ReplaysPastWinners boardReady=\{(?:true|false)\} jumpN=\{jumpN\} \/>/g) || []).length).toBe(3);
   });
 });

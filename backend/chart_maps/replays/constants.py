@@ -145,3 +145,17 @@ HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$", re.ASCII)
 # newest win desc, then the best close gain desc, then the symbol. Words only — no gate, no rank of setups.
 WIN_ROW_WINS_WORDS = ("{n} win", "{n} wins")                 # singular, plural — MINE
 WIN_ROW_NEWEST_WORDS = "newest {d}"                          # d = "Thu 2026-11-12" — MINE
+
+# ── 🏆 chip → jump to that win's replay at its peak (2026-11-22) ───────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "New feature when I click on this past winner tag take me to that video so change the date
+# and focus me on that video at that. time". Navigation only: no gate, no push, no rank, no label change. UNMEASURED.
+WINDOW_T0, WINDOW_T1 = FULL_DAY_WINDOW[:5], FULL_DAY_WINDOW[6:11]      # "04:00", "20:00" — never retyped
+SEEK_SESSION_SEC = ((int(WINDOW_T1[:2]) * 60 + int(WINDOW_T1[3:])) - (int(WINDOW_T0[:2]) * 60 + int(WINDOW_T0[3:]))) * 60   # 57600
+SEEK_HOLD_SEC = 3.0                # == eod-audits/replays/replay_gif.py HOLD_MS / 1000 — the END hold of every reel (a test pins the source)
+SEEK_EPS = 1e-6                    # float-compare tolerance in SECONDS — arithmetic hygiene, no market meaning. The renderer adds the
+                                   # frame offset to an epoch ≈ 1.8e9 (one float step there = 2.4e-7 s), so an offset within 1e-6 s
+                                   # of a minute start IS that minute start. MINE.
+SEEK_WORDS = "⏩ opens at the peak minute, {t} ET"                       # t = the labeller's peak minute HH:MM — MINE
+SEEK_NONE_WORDS = "no peak time on this replay — it opens at the start"  # MINE
+JUMP_MISSING_WORDS = "That replay is no longer listed."                  # MINE
+assert HHMM_RE.fullmatch(WINDOW_T0) and HHMM_RE.fullmatch(WINDOW_T1)

@@ -27,16 +27,24 @@
  * newest win, best setup, timing of the newest single-day reel). Tapping it lists the row's reels (the card above, still
  * ONE video at a time across the whole section). `?winners=1&sym=AKAN` opens that ONE row expanded. The filter keeps the
  * rows whose served `filter_keys` hold the pick; a remembered pick the server serves with 0 → All.
+ * 2026-11-22 — the jump from a day card (pwjump spec §3.6; his words verbatim in lib/replays.ts and the ✨). The URL's
+ * `reel` (`<sub>/<file>`) names ONE reel inside the `sym` row: on each jump (the reel + the board's click count) that row
+ * opens, the reel becomes the one mounted video, its row is outlined and scrolled to once the board has settled, and the
+ * video opens at the reel's SERVED second (`seek_s`, computed by the server; the media fragment plus a metadata fallback;
+ * a repeat jump puts the mounted video back at it). Paused: the app never presses play. The served `seek_text` prints
+ * under it. A saved filter that would hide the row shows All for the visit (the saved pick is kept). A reel that is not
+ * listed prints the served `jump_missing_text`, scrolled to; a failed GET scrolls to FETCH_FAILED.
  * Hand-picked winners: descriptive, UNMEASURED, not a signal. */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import {
-  FETCH_FAILED, RP_SETUP_ALL, RP_WINNERS_PARAM, RP_WINNERS_PATH, RP_WINNERS_TITLE, rpFilterWinnerRows,
-  rpPastWinChips, rpPickedFilter, rpReadSetupFilter, rpSetupOptions, rpText, rpWinnerLabelChips, rpWinnerSrc,
-  rpWinnersParams, rpWinnersSym, rpWriteSetupFilter,
+  FETCH_FAILED, RP_SETUP_ALL, RP_WINNERS_PARAM, RP_WINNERS_PATH, RP_WINNERS_TITLE, rpFilterWinnerRows, rpFindReel,
+  rpJumpKey, rpJumpReel, rpPastWinChips, rpPickedFilter, rpReadSetupFilter, rpRowMatches, rpSeekSeconds, rpSeekSrc,
+  rpSetupOptions, rpText, rpWinnerLabelChips, rpWinnerSrc, rpWinnersParams, rpWinnersSym, rpWriteSetupFilter,
   type RpSetupOption, type RpWinner, type RpWinnerRow, type RpWinnersPayload,
 } from '../lib/replays';
+import { useRpFocus } from '../hooks/useRpFocus';
 import { TickerLink } from './TickerLink';
 import '../styles/replays.css';
 
@@ -51,15 +59,39 @@ function Line({ text, className, testId }: { text: unknown; className: string; t
 
 const rowKey = (v: RpWinner): string => `${rpText(v.sub)}/${rpText(v.file)}`;
 
-function Row({ v, playing, onPlay }: { v: RpWinner; playing: boolean; onPlay: () => void }) {
+/* The jump's focus for ONE reel row: the jump key, the served second and the served words. */
+type Focus = { key: string; jump: string; seek: number | null; text: string };
+
+function Row({ v, playing, onPlay, focusKey = '', seek = null, seekText = '', ready = true }: {
+  v: RpWinner; playing: boolean; onPlay: () => void; focusKey?: string; seek?: number | null; seekText?: string;
+  ready?: boolean;
+}) {
   const src = rpWinnerSrc(v);
+  const ref = useRpFocus<HTMLDivElement>(focusKey, ready);
+  const vref = useRef<HTMLVideoElement>(null);
+  /* A REPEAT jump puts the mounted video back at the served second. On a first landing the video mounts a render after
+   * the row, so the media fragment / onMeta do the seek. Never play(), never pause(). */
+  useEffect(() => {
+    if (focusKey && seek != null && vref.current) {
+      try { vref.current.currentTime = seek; } catch { /* not seekable yet: the fragment and onMeta still apply */ }
+    }
+  }, [focusKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* iOS ignores currentTime before metadata: once it is in, put the video at the served second (when it is not there). */
+  const onMeta = (e: SyntheticEvent<HTMLVideoElement>) => {
+    const el = e.currentTarget;
+    if (seek != null && Math.abs(el.currentTime - seek) > 0.5) el.currentTime = seek;
+  };
+  const shown = playing && !!src;
   const before = [v.kind_text, v.gain_text, v.high_text].map(rpText).filter((s) => s.length > 0);
   const after = [v.pick_text, v.days_text, v.speed_text, v.length_text].map(rpText).filter((s) => s.length > 0);
   const spike = v.spike_print === true ? rpText(v.spike_text) : '';
   const past = rpPastWinChips(v);
   const lab = rpWinnerLabelChips(v);
   return (
-    <div className="rpw-row" data-testid={`rpw-row-${rpText(v.sub)}-${rpText(v.file)}`}>
+    <div
+      ref={ref} className={focusKey ? 'rpw-row rpw-focus' : 'rpw-row'} tabIndex={focusKey ? -1 : undefined}
+      data-testid={`rpw-row-${rpText(v.sub)}-${rpText(v.file)}`}
+    >
       <div className="rpw-head">
         {rpText(v.symbol) ? <TickerLink ticker={v.symbol} showWatchlist={false} /> : null}
         <div className="rpw-chips">
@@ -78,7 +110,8 @@ function Row({ v, playing, onPlay }: { v: RpWinner; playing: boolean; onPlay: ()
           <button type="button" className="rpw-play" aria-label="play" aria-pressed={playing} onClick={onPlay}>▶</button>
         ) : null}
       </div>
-      {playing && src ? <video className="rp-video" controls preload="metadata" playsInline src={src} /> : null}
+      {shown ? <video ref={vref} className="rp-video" controls preload="metadata" playsInline src={rpSeekSrc(src, seek)} onLoadedMetadata={onMeta} /> : null}
+      {shown && focusKey && seekText ? <p className="rp-line rpw-seek" data-testid="rpw-seek">{seekText}</p> : null}
     </div>
   );
 }
@@ -104,8 +137,9 @@ function SetupFilter({ opts, picked, onPick }: { opts: RpSetupOption[]; picked: 
 
 /* One stock: a header button (served words only) that opens / closes its reels. The served row order and the served
  * reel order inside it are kept. */
-function StockRow({ r, open, onToggle, playing, onPlay }: {
+function StockRow({ r, open, onToggle, playing, onPlay, focus, ready }: {
   r: RpWinnerRow; open: boolean; onToggle: () => void; playing: string | null; onPlay: (k: string) => void;
+  focus: Focus | null; ready: boolean;
 }) {
   const sym = rpText(r.symbol);
   const videos = Array.isArray(r.videos) ? r.videos : [];
@@ -124,7 +158,13 @@ function StockRow({ r, open, onToggle, playing, onPlay }: {
         <div className="rpw-reels" data-testid={`rpw-reels-${sym}`}>
           {videos.map((v, i) => {
             const k = rowKey(v);
-            return <Row key={`${k}-${i}`} v={v} playing={playing === k} onPlay={() => onPlay(k)} />;
+            const f = focus && focus.key === k ? focus : null;
+            return (
+              <Row
+                key={`${k}-${i}`} v={v} playing={playing === k} onPlay={() => onPlay(k)}
+                focusKey={f ? f.jump : ''} seek={f ? f.seek : null} seekText={f ? f.text : ''} ready={ready}
+              />
+            );
           })}
         </div>
       ) : null}
@@ -132,7 +172,7 @@ function StockRow({ r, open, onToggle, playing, onPlay }: {
   );
 }
 
-export default function ReplaysPastWinners() {
+export default function ReplaysPastWinners({ boardReady = true, jumpN = 0 }: { boardReady?: boolean; jumpN?: number }) {
   const [params, setParams] = useSearchParams();
   const open = params.get(RP_WINNERS_PARAM) === '1';
   const [load, setLoad] = useState<Load>({ phase: 'idle' });
@@ -144,6 +184,14 @@ export default function ReplaysPastWinners() {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const isOpen = (sym: string) => (sym in toggled ? toggled[sym] : sym === urlSym && sym.length > 0);
   const toggle = (sym: string) => setToggled((prev) => ({ ...prev, [sym]: !isOpen(sym) }));
+  /* The jump (pwjump): the URL's `reel` + the board's click count = ONE jump; the reel only inside the `sym` row. */
+  const reel = rpJumpReel(params);
+  const jumpKey = rpJumpKey(reel, jumpN);
+  const hit = useMemo(() => (open && load.phase === 'loaded' && load.p.state === 'ready'
+    ? rpFindReel(load.p.rows, urlSym, reel) : null), [open, load, urlSym, reel]);
+  const hitKey = hit ? rowKey(hit.video) : '';
+  const opts = load.phase === 'loaded' ? rpSetupOptions(load.p.setups) : [];
+  const applied = rpPickedFilter(opts, picked);          // a remembered key the server no longer serves, or serves with 0 → All
 
   /* ONE GET each time the section opens; nothing while it is closed; no polling. */
   useEffect(() => {
@@ -161,31 +209,55 @@ export default function ReplaysPastWinners() {
     return () => { alive = false; };
   }, [open]);
 
+  /* ONE jump effect: open the HIT's row (by its served symbol — a row closed by hand reopens), make its reel the one
+   * mounted video, and show All in STATE only when the saved filter would hide it (the saved pick is not overwritten). */
+  useEffect(() => {
+    if (!jumpKey) return;
+    if (!hit) { setToggled({}); return; }
+    setToggled({ [rpText(hit.row.symbol)]: true });
+    setPlaying(hitKey);
+    if (!rpRowMatches(hit.row, applied)) setPicked(RP_SETUP_ALL);
+  }, [jumpKey, hitKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const jumpMiss = open && reel !== '' && (load.phase === 'failed' || (load.phase === 'loaded' && hit === null));
+  const noteRef = useRpFocus<HTMLParagraphElement>(jumpMiss ? jumpKey : '', boardReady);
+  const focus: Focus | null = hit ? {
+    key: hitKey, jump: jumpKey, seek: rpSeekSeconds(hit.video), text: rpText(hit.video.seek_text),
+  } : null;
+
   let body: ReactNode = null;
   if (open && load.phase === 'failed') {
-    body = <p className="rp-line" data-testid="rpw-failed">{FETCH_FAILED}</p>;
+    body = (
+      <p
+        ref={jumpMiss ? noteRef : undefined} tabIndex={jumpMiss ? -1 : undefined}
+        className={jumpMiss ? 'rp-line rpw-jump-note' : 'rp-line'} data-testid="rpw-failed"
+      >{FETCH_FAILED}</p>
+    );
   } else if (open && load.phase === 'loaded') {
     const p = load.p;
-    const opts = rpSetupOptions(p.setups);
-    const key = rpPickedFilter(opts, picked);          // a remembered key the server no longer serves, or serves with 0 → All
-    const rows = p.state === 'ready' ? rpFilterWinnerRows(p.rows, key) : [];
+    const rows = p.state === 'ready' ? rpFilterWinnerRows(p.rows, applied) : [];
+    const missText = rpText(p.jump_missing_text);
+    const miss = jumpMiss && missText ? (
+      <p ref={noteRef} tabIndex={-1} className="rp-line rpw-jump-missing rpw-jump-note" data-testid="rpw-jump-missing">{missText}</p>
+    ) : null;
     body = p.state === 'ready' ? (
       <>
+        {miss}
         <Line text={p.note} className="rp-line rp-muted" testId="rpw-note" />
         <Line text={p.window_note} className="rp-line rp-muted" testId="rpw-window-note" />
         <Line text={p.summary_text} className="rp-line" testId="rpw-summary" />
-        <SetupFilter opts={opts} picked={key} onPick={pick} />
+        <SetupFilter opts={opts} picked={applied} onPick={pick} />
         {rows.map((r, i) => {
           const sym = rpText(r.symbol);
           return (
             <StockRow
               key={`${rpText(r.key) || sym}-${i}`} r={r} open={isOpen(sym)} onToggle={() => toggle(sym)}
-              playing={playing} onPlay={(k) => setPlaying(k)}
+              playing={playing} onPlay={(k) => setPlaying(k)} focus={focus} ready={boardReady}
             />
           );
         })}
       </>
-    ) : <Line text={p.text} className="rp-line" testId="rpw-text" />;
+    ) : <>{miss}<Line text={p.text} className="rp-line" testId="rpw-text" /></>;
   }
 
   return (

@@ -97,8 +97,9 @@ close; multi-day run 09-14 → 09-16.)
   winners / multiday folder key moves); the cached day listing and winner listings are never mutated (the tag is added
   to copies at serve time).
 - **Frontend:** `rpPastWinChips` (lib/replays.ts) → served chips on the day card (`.rp-chips`) and the 🏆 row
-  (`.rpw-chips`), class `.rp-pastwin` (min-width 0, wrapping, 430 px). **Text only** — the 🏆 section has no
-  open-a-reel-by-file URL, so the chip does not link.
+  (`.rpw-chips`), class `.rp-pastwin` (min-width 0, wrapping, 430 px). **Since 2026-11-22 the day-card chip is a
+  link** to that win's reel in the 🏆 section (`?winners=1&sym=<SYM>&reel=<sub>/<file>`, opened at the served peak
+  minute; see `replays_past_winner_jump_2026_11_22.md`). "+N more" and the "🏆 won before" chips on a 🏆 row stay text.
 - The 11-18 day-listing GOLDEN was re-pinned: byte-identical with the `past_winner*` keys stripped; only the cards whose
   symbol won before carry them.
 - A tag, not a gate: no push, no rank, no filter, nothing on 🚩 Gajjala's tab. Descriptive, UNMEASURED.

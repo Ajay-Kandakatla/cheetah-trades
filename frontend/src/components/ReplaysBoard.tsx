@@ -21,19 +21,32 @@
  *   ⚡ / 🧨 toggles: the served group order orders this board — nothing here ranks (replays spec §7 #5).
  * 2026-11-18: the 🏆 section (ReplaysPastWinners) mounts AFTER `.rp-board` in every state — it owns its own lazy GET
  * (only when opened), so this board's ONE GET and its `.rp-board` text are unchanged.
+ * 2026-11-22 (pwjump spec §3.5): a 🏆 chip on a card is a link (its words are served; its URL is built by rpJumpParams
+ * in lib/replays.ts — the FE composes a URL, never a word). A plain click first marks this history entry with the card
+ * (rpOriginParams: `card` set, any `reel` dropped) so Back lands on that card, outlined and scrolled to (useRpFocus);
+ * the click count `jumpN` goes to the 🏆 section so the same chip tapped again focuses its reel again. A ⌘ / middle
+ * click is left to the browser (a new tab) and marks nothing. A chip with no reel to name stays plain text, as does
+ * "+N more". The board counts as settled only once its payload is for the URL's session (a stale payload of the
+ * session being left reads as loading), so the 🏆 section never scrolls under a board about to empty.
  * UNMEASURED — a replay is for his eyes, not a signal. */
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import {
-  FETCH_FAILED, RP_DATE_PARAM, RP_PATH, rpDateParams, rpDates, rpList, rpPastWinChips, rpSelectDates, rpText, rpVideoSrc,
+  FETCH_FAILED, RP_DATE_PARAM, RP_PATH, rpCardKey, rpCardParam, rpDateParams, rpDates, rpJumpParams, rpList,
+  rpOriginParams, rpPastWinChips, rpPastWinItems, rpPlainClick, rpSelectDates, rpText, rpVideoSrc,
   type RpGroup, type RpPayload, type RpPotential, type RpRs, type RpVideo,
 } from '../lib/replays';
+import { useRpFocus } from '../hooks/useRpFocus';
 import { TickerLink } from './TickerLink';
 import ReplaysPastWinners from './ReplaysPastWinners';
 import '../styles/replays.css';
 
-type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: RpPayload };
+/* `d` = the URL session the answer was fetched for (null = the default session). */
+type Load = { phase: 'loading' } | { phase: 'failed'; d: string | null } | { phase: 'loaded'; p: RpPayload; d: string | null };
+
+/* What a card needs for its 🏆 chip links and the origin focus. `served` = the PAYLOAD date (never the URL param). */
+type Ctx = { params: URLSearchParams; served: string | null; dates: string[]; mark: (file: string) => void; card: string };
 
 const STATES = new Set(['no_folder', 'empty', 'ready']);
 
@@ -56,19 +69,31 @@ function PlanLine({ potential }: { potential: RpPotential | null | undefined }) 
   return parts.length ? <p className="rp-plan" data-testid="rp-plan">{parts.join(' · ')}</p> : null;
 }
 
-function Card({ v }: { v: RpVideo }) {
+function Card({ v, ctx }: { v: RpVideo; ctx: Ctx }) {
   const src = rpVideoSrc(v);
   const chips = [v.setup_text, v.page_text, v.grade, v.speed_text, v.length_text].map(rpText).filter((s) => s.length > 0);
   const ringDay = v.carried === true ? rpText(v.ring_day) : '';
+  const items = rpPastWinItems(v);
   const past = rpPastWinChips(v);
+  const focused = ctx.card !== '' && ctx.card === rpCardKey(ctx.served, v.file);
+  const ref = useRpFocus<HTMLElement>(focused ? ctx.card : '', true);
   return (
-    <article className="rp-card" data-testid={`rp-card-${rpText(v.file)}`}>
+    <article
+      ref={ref} className={focused ? 'rp-card rp-focus' : 'rp-card'} tabIndex={focused ? -1 : undefined}
+      data-testid={`rp-card-${rpText(v.file)}`}
+    >
       <div className="rp-head">
         {rpText(v.symbol) ? <TickerLink ticker={v.symbol} showWatchlist={false} /> : null}
         <div className="rp-chips">
           {chips.map((c, i) => <span key={`${i}-${c}`} className="rp-chip">{c}</span>)}
           {ringDay ? <span className="rp-chip" data-testid="rp-ring-day">{ringDay}</span> : null}
-          {past.wins.map((c, i) => <span key={`pw${i}-${c}`} className="rp-chip rp-pastwin" data-testid="rp-pastwin">{c}</span>)}
+          {items.map((it, i) => (it.target ? (
+            <Link
+              key={`pw${i}-${it.text}`} className="rp-chip rp-pastwin rp-pastwin-link" data-testid="rp-pastwin"
+              to={{ search: `?${rpJumpParams(ctx.params, it.target, ctx.dates)}` }}
+              onClick={(e) => { if (rpPlainClick(e)) ctx.mark(rpText(v.file)); }}
+            >{it.text}</Link>
+          ) : <span key={`pw${i}-${it.text}`} className="rp-chip rp-pastwin" data-testid="rp-pastwin">{it.text}</span>))}
           {past.more ? <span className="rp-chip rp-pastwin" data-testid="rp-pastwin-more">{past.more}</span> : null}
         </div>
       </div>
@@ -80,13 +105,13 @@ function Card({ v }: { v: RpVideo }) {
   );
 }
 
-function Group({ g }: { g: RpGroup }) {
+function Group({ g, ctx }: { g: RpGroup; ctx: Ctx }) {
   const videos = Array.isArray(g.videos) ? g.videos : [];
   return (
     <section className="rp-group" data-testid={`rp-group-${rpText(g.key)}`}>
       <h2 className="rp-h">{rpText(g.label)}</h2>
       <div className="cm-grid rp-grid">
-        {videos.map((v, i) => <Card key={`${rpText(v.file)}-${i}`} v={v} />)}
+        {videos.map((v, i) => <Card key={`${rpText(v.file)}-${i}`} v={v} ctx={ctx} />)}
       </div>
     </section>
   );
@@ -121,6 +146,7 @@ export default function ReplaysBoard() {
   const [params, setParams] = useSearchParams();
   const date = params.get(RP_DATE_PARAM);
   const [load, setLoad] = useState<Load>({ phase: 'loading' });
+  const [jumpN, setJumpN] = useState(0);                 // 🏆 chip clicks: the same chip tapped again is a new jump
 
   /* ONE GET on mount and on every session change; no polling (the folder grows once a night). */
   useEffect(() => {
@@ -132,18 +158,20 @@ export default function ReplaysBoard() {
       .then((j) => {
         if (!alive) return;
         const ok = j && typeof j === 'object' && typeof j.state === 'string' && STATES.has(j.state);
-        setLoad(ok ? { phase: 'loaded', p: j as RpPayload } : { phase: 'failed' });
+        setLoad(ok ? { phase: 'loaded', p: j as RpPayload, d: date } : { phase: 'failed', d: date });
       })
-      .catch(() => { if (alive) setLoad({ phase: 'failed' }); });
+      .catch(() => { if (alive) setLoad({ phase: 'failed', d: date }); });
     return () => { alive = false; };
   }, [date]);
 
-  if (load.phase === 'loading') return <><div className="rp-board" data-state="loading" /><ReplaysPastWinners /></>;
+  if (load.phase === 'loading' || load.d !== date) {
+    return <><div className="rp-board" data-state="loading" /><ReplaysPastWinners boardReady={false} jumpN={jumpN} /></>;
+  }
   if (load.phase === 'failed') {
     return (
       <>
         <div className="rp-board" data-state="failed"><p className="rp-line" data-testid="rp-failed">{FETCH_FAILED}</p></div>
-        <ReplaysPastWinners />
+        <ReplaysPastWinners boardReady={true} jumpN={jumpN} />
       </>
     );
   }
@@ -153,6 +181,12 @@ export default function ReplaysBoard() {
   const options = rpSelectDates(dates, served);
   const groups = p.state === 'ready' && Array.isArray(p.groups) ? p.groups : [];
   const rs = (p.state === 'ready' || p.state === 'empty') && p.rs && typeof p.rs === 'object' ? p.rs : null;
+  /* A plain chip click: count it, then mark THIS entry with the card (and drop any reel) — Link's own push follows. */
+  const mark = (file: string) => {
+    setJumpN((n) => n + 1);
+    setParams((prev) => rpOriginParams(prev, served, file), { replace: true });
+  };
+  const ctx: Ctx = { params, served, dates, mark, card: rpCardParam(params) };
 
   return (
     <>
@@ -172,7 +206,7 @@ export default function ReplaysBoard() {
       {p.state === 'ready' ? (
         <>
           <Line text={p.window_note} className="rp-line rp-muted" testId="rp-window-note" />
-          {groups.map((g, i) => <Group key={`${rpText(g.key)}-${i}`} g={g} />)}
+          {groups.map((g, i) => <Group key={`${rpText(g.key)}-${i}`} g={g} ctx={ctx} />)}
           {rs ? <RsBlock rs={rs} /> : null}
         </>
       ) : (
@@ -182,7 +216,7 @@ export default function ReplaysBoard() {
         </>
       )}
     </div>
-    <ReplaysPastWinners />
+    <ReplaysPastWinners boardReady={true} jumpN={jumpN} />
     </>
   );
 }

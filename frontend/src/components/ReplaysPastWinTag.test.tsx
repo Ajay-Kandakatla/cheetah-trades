@@ -1,7 +1,9 @@
 /* 🏆 past-winner tag on 🎬 Replays cards (2026-11-22). Ajay, verbatim: "MEDS was a part winner that went up after
  * hours.. Please actually add a past winner tag in our new ones looks for past winnings please if found again..".
- * The day card and the 🏆 row print the served chip text (text only — no reel-by-file URL exists). NEGATIVES: no served
- * list → no chip; "+N more" only when served; the phone sheet wraps the chip. */
+ * The day card and the 🏆 row print the served chip text. RE-PINNED 2026-11-22 (pwjump — Ajay: "New feature when I click
+ * on this past winner tag take me to that video"): on a day card each chip naming a reel is now a LINK (<a>) to it; "+N
+ * more" and the 🏆 row chips stay text. NEGATIVES: no served list → no chip; "+N more" only when served; the phone sheet
+ * wraps the chip. */
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -59,7 +61,7 @@ function rule(src: string, sel: string): string | null {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('🏆 tag on the day cards', () => {
-  it('a tagged card prints each served chip, then "+N more"; text only (no link, no button)', async () => {
+  it('a tagged card prints each served chip, then "+N more"; each chip is a link inside .rp-chips, "+N more" stays a span', async () => {
     stub(() => dayWithTags());
     const r = render(<MemoryRouter initialEntries={['/chart-maps?tab=replays']}><ReplaysBoard /></MemoryRouter>);
     await waitFor(() => expect(r.container.querySelector('.rp-board[data-state="ready"]')).not.toBeNull());
@@ -67,11 +69,15 @@ describe('🏆 tag on the day cards', () => {
     expect(Array.from(gp.querySelectorAll('[data-testid="rp-pastwin"]')).map((e) => e.textContent)).toEqual([
       '🏆 past winner 09-16 +601% multi-day', '🏆 past winner 09-16 +275%', '🏆 past winner 09-15 +87%']);
     expect(gp.querySelector('[data-testid="rp-pastwin-more"]')!.textContent).toBe('+2 more');
-    for (const chip of Array.from(gp.querySelectorAll('.rp-pastwin'))) {
-      expect(chip.tagName).toBe('SPAN');
+    for (const chip of Array.from(gp.querySelectorAll('[data-testid="rp-pastwin"]'))) {
+      expect(chip.tagName).toBe('A');
+      expect(chip.getAttribute('href')).toContain('reel=winners%2F');
       expect(chip.closest('.rp-chips')).not.toBeNull();
       expect(chip.querySelector('a, button')).toBeNull();
     }
+    const more = gp.querySelector('[data-testid="rp-pastwin-more"]')!;
+    expect(more.tagName).toBe('SPAN');
+    expect(more.querySelector('a, button')).toBeNull();
   });
   it('NEGATIVE: one win with a null more text → one chip, no "+N more"', async () => {
     stub(() => dayWithTags());

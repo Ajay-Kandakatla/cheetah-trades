@@ -435,6 +435,88 @@ def winner_labels(side: dict, kind: str) -> tuple:
     return {**s, "setup_chips": list(s["setup_chips"]), "setup_chips_text": list(s["setup_chips_text"]), **t}, bad
 
 
+# ── 🏆 chip → jump to that win's replay at its peak (2026-11-22) ───────────────────────────────────────────────────
+# Ajay 2026-11-22, verbatim: "New feature when I click on this past winner tag take me to that video so change the date
+# and focus me on that video at that. time". The clock → video-second mapping is the renderer's own schedule
+# (eod-audits/replays/replay_multiday.py Plan.times + render): frame j shows clock 04:00 + (j + 1) * speed / fps, a
+# minute is drawn once the frame clock is PAST its start (bisect_left), the only extra frames are the END hold. Served
+# second = the MIDDLE of the first frame inside the labelled peak minute. Bounded arithmetic only (never a `while`);
+# every arithmetic raise is caught here (C.CARD_ERRORS is not widened). Navigation only — UNMEASURED.
+def _is_int(x) -> bool:
+    return isinstance(x, int) and not isinstance(x, bool)
+
+
+def _seek_step(speed, fps) -> Optional[float]:
+    """Clock seconds per frame (speed / fps), or None: speed finite > 0, fps an int > 0 (bool refused), the step finite > 0.
+    May raise OverflowError on an absurd int — callers catch ArithmeticError."""
+    if not _finite(speed) or speed <= 0 or not _is_int(fps) or fps <= 0:
+        return None
+    step = speed / fps
+    if not _finite(step) or step <= 0:
+        return None
+    return step
+
+
+def session_frames(speed, fps) -> Optional[int]:
+    """Frames of ONE 04:00→20:00 session in the renderer's schedule (replay_multiday.Plan.times): n = int(S // step),
+    +1 (the frame at t1) only when n * step < S - C.SEEK_EPS. None on any bad input. NEVER raises."""
+    try:
+        step = _seek_step(speed, fps)
+        if step is None:
+            return None
+        n = int(C.SEEK_SESSION_SEC // step)
+        return n + (1 if n * step < C.SEEK_SESSION_SEC - C.SEEK_EPS else 0)
+    except (ArithmeticError,) + C.CARD_ERRORS:
+        return None
+
+
+def _seek_frame(c, step) -> Optional[int]:
+    """The FIRST frame whose clock (n + 1) * step is PAST second c of the session — the renderer's own rule
+    (bisect_left: a minute is drawn once the frame clock is past its start). None when the bracket cannot be proved."""
+    n = int(c // step)                                   # float floor-division can sit one frame early (36x / 10 fps: 09:30 → 5499, not 5500)
+    for _ in range(2):
+        if (n + 1) * step <= c + C.SEEK_EPS:
+            n += 1
+    for _ in range(2):
+        if n > 0 and n * step > c + C.SEEK_EPS:
+            n -= 1
+    return n if n * step <= c + C.SEEK_EPS < (n + 1) * step else None
+
+
+def _hhmm_min(t: str) -> int:
+    return int(t[:2]) * 60 + int(t[3:])
+
+
+def seek_seconds(side: dict, kind: str) -> Optional[float]:
+    """Clock → video second of the reel's labelled PEAK MINUTE, or None. Never a guessed time. NEVER raises."""
+    try:
+        if kind != "single_day":
+            return None
+        if _timing_fields(side.get("timing"))[0]["timing"] is None:
+            return None
+        if side.get("window") != C.FULL_DAY_WINDOW:
+            return None
+        speed, fps, frames, days = side.get("speed"), side.get("fps"), side.get("frames"), side.get("days")
+        step = _seek_step(speed, fps)
+        if step is None or not _is_int(frames) or frames <= 0 or not isinstance(days, list) or len(days) != 1:
+            return None
+        per = session_frames(speed, fps)
+        if per is None:
+            return None
+        hold = max(1, int(round(C.SEEK_HOLD_SEC * fps)))
+        if frames != per + hold:
+            return None
+        c = (_hhmm_min(side["timing"]["peak_t"]) - _hhmm_min(C.WINDOW_T0)) * 60
+        if not 0 <= c < C.SEEK_SESSION_SEC:
+            return None
+        n = _seek_frame(c, step)
+        if n is None or n >= per:
+            return None
+        return round((n + 0.5) / fps, 3)
+    except (ArithmeticError,) + C.CARD_ERRORS:
+        return None
+
+
 def winner_card(side: dict, sub: str, tally: Optional[dict] = None) -> dict:
     """The served 🏆 card. Raises one of CARD_ERRORS on a malformed sidecar (the caller counts it skipped_bad). A bad
     setup / timing LABEL never drops the card: it is served unlabelled and counted in `tally["skipped_label"]`."""
@@ -484,6 +566,7 @@ def winner_card(side: dict, sub: str, tally: Optional[dict] = None) -> dict:
     labels, bad = winner_labels(side, kind)
     if tally is not None:
         tally["skipped_label"] = tally.get("skipped_label", 0) + bad
+    seek = seek_seconds(side, kind)                         # 🏆 jump (2026-11-22): the peak minute's video second, or None
     return {
         "file": file, "sub": sub, "src": f"{C.WINNERS_API_PATH}/video/{sub}/{file}",
         "symbol": symbol, "kind": kind, "kind_text": kind_text,
@@ -496,6 +579,8 @@ def winner_card(side: dict, sub: str, tally: Optional[dict] = None) -> dict:
         "speed": speed, "speed_text": f"{speed:g}x",
         "minutes": minutes, "length_text": f"{minutes:.0f} min",
         **labels,
+        "seek_s": seek,
+        "seek_text": C.SEEK_WORDS.format(t=side["timing"]["peak_t"]) if seek is not None else C.SEEK_NONE_WORDS,
     }
 
 
@@ -571,7 +656,7 @@ def winners_payload(root=None) -> dict:
     counts = {"videos": 0, "single_day": 0, "multi_day": 0, "skipped_window": 0, "skipped_bad": 0, "no_sidecar": 0,
               "skipped_label": 0}
     base = {"title": C.WINNERS_TITLE, "tab": C.TAB, "note": C.WINNERS_NOTE, "window": C.FULL_DAY_WINDOW,
-            "window_note": C.WINNERS_WINDOW_NOTE}
+            "window_note": C.WINNERS_WINDOW_NOTE, "jump_missing_text": C.JUMP_MISSING_WORDS}   # 🏆 jump (2026-11-22)
     if not (r / C.VIDEOS_SUB).is_dir():
         return _scrub({**base, "state": "no_folder", "text": C.NO_FOLDER_TEXT, "summary_text": None,
                        "counts": counts, "setups": setup_filter([]), "rows": []})
