@@ -1,0 +1,16 @@
+Symbol|Security Name|Market Category|Reg SHO Threshold Flag|Filler|Filler
+BMNZ|Defiance Daily Target 2X Short BMNR ETF|NYSE Arca|Y||
+EMSF|Matthews Emerging Markets Sustainable Future Active ETF|NYSE Arca|Y||
+ERY|Direxion Daily Energy Bear 2X Shares|NYSE Arca|Y||
+IRE|Defiance Daily Target 2X Long IREN ETF|NYSE Arca|Y||
+KOLD|ProShares UltraShort Bloomberg Natural Gas|NYSE Arca|Y||
+KORU|Direxion Daily MSCI South Korea Bull 3X ETF|NYSE Arca|Y||
+LLYX|Defiance Daily Target 2x Long LLY ETF|NYSE Arca|Y||
+MKTN|Federated Hermes MDT Market Neutral ETF|NYSE Arca|Y||
+MUZ|Defiance Daily Target 2X Short MU ETF|NYSE Arca|Y||
+POMG|PRIMECAP Odyssey Discovery ETF|NYSE Arca|Y||
+RIOX|Defiance Daily Target 2X Long RIOT ETF|NYSE Arca|Y||
+SALI|Schroders US Autocallable Ladder Income ETF|NYSE Arca|Y||
+UGLD|DIREXION DAILY GOLD BULL 2X ETF|NYSE Arca|Y||
+WINC|William Blair Emerging Income ETF|NYSE Arca|Y||
+20261110220201

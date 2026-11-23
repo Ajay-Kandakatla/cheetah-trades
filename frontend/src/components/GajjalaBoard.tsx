@@ -190,6 +190,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { GgTraderChip } from './GgTraderChip';
 import { GgShortInterestLabel } from './GgShortInterestLabel';
+import { GgHardToBorrowChip, GgHardToBorrowFault, GgHardToBorrowLabel } from './GgHardToBorrow';
 import { GgStages } from './GgStages';
 import { GgBreakoutLine, GgBreakoutWord } from './GgBreakoutLine';
 import { RulesInfo } from './RulesInfo';
@@ -777,8 +778,12 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
          * cards. An older API never serves the sub (it answers bull_flag and the URL adopts it); a served null table →
          * the served empty_note only. */
         board ? (
+          <>
+          {/* 🔒 2026-11-22: the same served fault line above the 📋 table (mounted here, never inside GgAllTable). */}
+          <GgHardToBorrowFault testid="gg-htb-fault" />
           <GgAllTable block={board.table ?? null} emptyNote={board.empty_note ?? null} answer={cardLive.answer}
                       search={location.search} back={backTarget} />
+          </>
         ) : null
       ) : activeSub === 'track_record' ? (
         <>
@@ -885,6 +890,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           ) : null}
           {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
           {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}
+          {/* 🔒 2026-11-22: the served fault line when a stock threshold list could not be read; nothing otherwise. */}
+          <GgHardToBorrowFault testid="gg-htb-fault" />
           <GgCardGridFrame cw={cw} loading={loading} symbols={shownSymbolsDrawn}>
             {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
@@ -902,6 +909,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     {/* 🎾 2026-11-08 [C7]: on a Reversal Squeeze card the SI prints ONCE, as the bold label under the plan
                         (GgShortInterestLabel) — the muted chip is skipped here on that setup only; every other row unchanged. */}
                     {t.gajjala?.setup !== 'reversal_squeeze' ? <>{' '}<ShortInterestChip symbol={t.symbol} /></> : null}
+                    {/* 🔒 2026-11-22: the served Hard to borrow chip beside the 🩳 chip (a 🎾 card prints it as the label). */}
+                    {t.gajjala?.setup !== 'reversal_squeeze' ? <GgHardToBorrowChip symbol={t.symbol} testid={`gg-htb-${t.symbol}`} lead /> : null}
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
                     <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`}
@@ -1184,6 +1193,8 @@ function CardExtras({ read, board, sub, sym, live }: {
       <GgRunBasesLine bases={read.run_bases} sym={sym} />
       {/* 🎾 2026-11-08: the SERVED short-interest chip text as a label on a Reversal Squeeze card (all three tabs). */}
       {read.setup === 'reversal_squeeze' ? <GgShortInterestLabel symbol={sym} testid={`gg-si-label-${sym}`} /> : null}
+      {/* 🔒 2026-11-22: the served Hard to borrow label right under the 🩳 line on a Reversal Squeeze card. */}
+      {read.setup === 'reversal_squeeze' ? <GgHardToBorrowLabel symbol={sym} testid={`gg-htb-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
       {live ? <div className="cm-note gg-line gg-live" data-testid={`gg-live-${sym}`}>{live}</div> : null}
       {read.criteria?.length ? (

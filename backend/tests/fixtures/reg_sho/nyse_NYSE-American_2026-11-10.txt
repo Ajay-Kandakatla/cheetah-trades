@@ -1,0 +1,4 @@
+Symbol|Security Name|Market Category|Reg SHO Threshold Flag|Filler|Filler
+DXF|Eason Technology Limited American Depositary Shares (each representing sixty-thousand (60,000) Ordinary Shares)|NYSE American|Y||
+OPTT|Ocean Power Technologies, Inc.|NYSE American|Y||
+20261110220201

@@ -1,3 +1,4 @@
+// WIDENED 2026-11-22 (🔒 Hard to borrow ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 /* 👀 Watch sections + 📅 Previous day runners ✨ (2026-11-22). Ajay: "I need gajjalas watch tab little more organized.
  * With less info, I want to know previous day winner auto additions vs intraday may be a time stamp." */
 import { describe, expect, it } from 'vitest';
@@ -11,8 +12,8 @@ const STRIP = 'use that space between the parent tab of Gajjala and watch tab to
 describe('✨ the 👀 Watch sections + 📅 runners entry (2026-11-22)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to 🚩 Gajjala', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
+    expect(NEW_FEATURES[1].id).toBe(ID);
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-22');
     expect(f.route).toBe('/chart-maps?tab=gajjala');

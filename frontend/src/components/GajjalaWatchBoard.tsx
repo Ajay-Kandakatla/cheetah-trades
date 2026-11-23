@@ -108,6 +108,7 @@ import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
 import { GgwStretch, Tile, usePhone } from './GajjalaWatchTile';
 /* 🏷️ 2026-11-18 (spec wtags §3.5): the tags row's board-level read — ONE request for the names carded on today's 🚩 board. */
 import { useGgwTags } from './GajjalaWatchTags';
+import { GgHardToBorrowFault } from './GgHardToBorrow';
 /* 2026-11-18 (cardview WP-A): the per-screen pick, the pager and the fitted-row hook live in GajjalaWatchLayout.tsx (a
  * pure move) so the 🚩 / 🧪 card grid draws the SAME controls. */
 import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
@@ -637,6 +638,8 @@ export default function GajjalaWatchBoard() {
           <span className="ggw-line ggw-warn ggw-served-error" data-testid="ggw-served-error">{`⚠️ ${servedErr}`}</span>
         ) : null}
         {refreshFailed ? <span className="ggw-line ggw-warn">{`⚠️ ${GGW_FETCH_FAILED}`}</span> : null}
+        {/* 🔒 2026-11-22: the served Hard to borrow fault line (a stock threshold list could not be read); nothing otherwise. */}
+        <GgHardToBorrowFault testid="ggw-htb-fault" className="ggw-line ggw-warn" inline />
         {feedWord ? <span className="ggw-line ggw-warn" data-testid="ggw-feed-word">{feedWord}</span> : null}
         {org ? null : legend}
         {p.rows.length && !phone ? (

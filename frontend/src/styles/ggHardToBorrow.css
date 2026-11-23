@@ -1,0 +1,10 @@
+/* 🔒 Hard to borrow tag (2026-11-22, spec htb §3.3). The default look is NEUTRAL: the chip keeps the colour of the badge
+ * class it rides and the 🎾 label takes the plain 🩳 label's weight — it never borrows the 🩳 EXTREME alarm look.
+ * Phone: the chip wraps inside its card (430 px); the 📋 cell keeps its one-line rule; the fitted Watch tile ellipsises. */
+.gg-htb { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.gg-htb-label { font-weight: 600; }
+.gg-htb-stale { color: var(--ink-subtle, #94a3b8); }
+.gg-all-table td.gg-all-si .gg-htb { display: block; white-space: nowrap; }
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-chip.gg-htb { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-22, verbatim: "Can you do something for me for reversal squeezes can you also tell me if something is
+  // under when it's on our list.. i want to check if people are finding it hard to get stocks like AkAN now has that
+  // issue.. add a tag to stocks tickers like short interest, name the tag " hard to borrow" threshold security".
+  // backend/short_interest/reg_sho.py + GET /short-interest/reg-sho (Nasdaq, NYSE, NYSE American, NYSE Arca, Cboe BZX
+  // threshold lists, cached in Mongo). Display only: never a gate, sort, filter, push or lane input. UNMEASURED. Doc
+  // docs/gajjala/hard_to_borrow_reg_sho_2026_11_22.md.
+  {
+    id: 'gajjala-hard-to-borrow-reg-sho-2026-11-22',
+    label: '🔒 Hard to borrow tag — you said: “Can you do something for me for reversal squeezes can you also tell me if something is under when it’s on our list.. i want to check if people are finding it hard to get stocks like AkAN now has that issue.. add a tag to stocks tickers like short interest, name the tag " hard to borrow" threshold security”. A name on the exchanges’ daily Reg SHO threshold list (Nasdaq, NYSE, NYSE American, NYSE Arca, Cboe) now carries 🔒 Hard to borrow · threshold security next to its 🩳 short interest on 🚩 Gajjala’s cards, the 📋 table and the 👀 Watch; on a 🎾 Reversal Squeeze card it names the exchange and the list date. The list means 5 straight settlement days of failed deliveries (10,000+ shares and 0.5%+ of the company) — it is not your broker’s borrow rate, and it runs about a week behind. If a list could not be read, a line says so; a missing list never reads as “not on it”. Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-22, verbatim: "I need gajjalas watch tab little more organized. With less info, I want to know previous
   // day winner auto additions vs intraday may be a time stamp." + his answers: "Manual ones I add them need to be on top
   // then auto intraday.. every month I want previous say winners sorted and  remove hot sectors mess from Gajjalas top

@@ -166,7 +166,11 @@ async function mountBoard(phone: boolean, rect: Rect | null, board: () => any = 
   vi.stubGlobal('matchMedia', (q: string) => ({
     matches: phone && q === GGW_PHONE_MQ, media: q, addEventListener: () => {}, removeEventListener: () => {},
   }));
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => board() })));
+  /* 2026-11-22 (hard to borrow): the head's reg-sho GET is not a Watch read — it never calls board(), so the
+   * answer counters below count Watch reads only. */
+  vi.stubGlobal('fetch', vi.fn(async (url: any) => (String(url).includes('/short-interest/reg-sho')
+    ? { ok: true, json: async () => ({}) }
+    : { ok: true, json: async () => board() })));
   stubLayout(rect);
   const r = render(<MemoryRouter><GajjalaWatchBoard /></MemoryRouter>);
   await act(async () => { await vi.advanceTimersByTimeAsync(0); });

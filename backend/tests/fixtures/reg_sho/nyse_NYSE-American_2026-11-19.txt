@@ -1,0 +1,4 @@
+Symbol|Security Name|Market Category|Reg SHO Threshold Flag|Filler|Filler
+OPTT|Ocean Power Technologies, Inc.|NYSE American|Y||
+POAS|Phaos Technology Holdings (Cayman) Limited|NYSE American|Y||
+20261119220201

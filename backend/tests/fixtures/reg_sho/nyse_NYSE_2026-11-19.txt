@@ -1,0 +1,3 @@
+Symbol|Security Name|Market Category|Reg SHO Threshold Flag|Filler|Filler
+HAWK|HawkEye 360, Inc.|NYSE|Y||
+20261119220201

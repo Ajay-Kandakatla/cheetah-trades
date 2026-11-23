@@ -9,6 +9,10 @@ Endpoints:
   GET /short/{symbol}/history?days=30
       Last `days` records (default 30). Used by sparkline trend rendering.
 
+  GET /short-interest/reg-sho?check=A,B   (2026-11-22)
+      🔒 Hard to borrow — the exchanges' Reg SHO threshold lists, ONE whole
+      read via `short_interest.reg_sho.payload` (Mongo only; never a 500).
+
   GET /short-interest/map?symbols=A,B,C   (2026-10-03)
       🩳 Short INTEREST (bi-monthly FINRA settlement) for up to
       `read.MAP_MAX_SYMBOLS` names — the ONE bulk read behind the chip on
@@ -77,6 +81,22 @@ async def short_interest_read_map(
     syms = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
     items = await asyncio.to_thread(SR.si_map, syms)
     return {"items": items, "n": len(items), "max_symbols": SR.MAP_MAX_SYMBOLS}
+
+
+@router.get("/short-interest/reg-sho")
+async def reg_sho_threshold(check: str = Query("", description="comma-separated tickers: on / off / unknown")):
+    """🔒 Hard to borrow (2026-11-22): the whole Reg SHO threshold read, built by
+    `short_interest.reg_sho.payload` from Mongo only (a due list is refreshed by
+    the engine's single background worker, never inline). Never answers 500: a
+    read that raises serves `reg_sho.fault_payload()` — a served line that says
+    the tags could not be read."""
+    from short_interest import reg_sho as RS
+    syms = [s.strip() for s in (check or "").split(",") if s.strip()]
+    try:
+        return await asyncio.to_thread(RS.payload, check=syms or None)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: the read failed: %s", type(exc).__name__)
+        return RS.fault_payload()
 
 
 @router.get("/short/{symbol}/history")

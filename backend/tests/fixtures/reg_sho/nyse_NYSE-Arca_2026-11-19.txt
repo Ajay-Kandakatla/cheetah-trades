@@ -1,0 +1,24 @@
+Symbol|Security Name|Market Category|Reg SHO Threshold Flag|Filler|Filler
+BBC|Virtus Biotech Clinical Trials ETF|NYSE Arca|Y||
+BMNZ|Defiance Daily Target 2X Short BMNR ETF|NYSE Arca|Y||
+BTCU|DIREXION DAILY BITCOIN BULL 2X ETF|NYSE Arca|Y||
+DXD|ProShares UltraShort Dow 30|NYSE Arca|Y||
+ERY|Direxion Daily Energy Bear 2X Shares|NYSE Arca|Y||
+GMNY|Goldman Sachs Dynamic New York Municipal Income ETF|NYSE Arca|Y||
+IRE|Defiance Daily Target 2X Long IREN ETF|NYSE Arca|Y||
+KOLD|ProShares UltraShort Bloomberg Natural Gas|NYSE Arca|Y||
+KORU|Direxion Daily MSCI South Korea Bull 3X ETF|NYSE Arca|Y||
+LLYX|Defiance Daily Target 2x Long LLY ETF|NYSE Arca|Y||
+MINO|PIMCO Municipal Income Opportunities Active ETF|NYSE Arca|Y||
+MKTN|Federated Hermes MDT Market Neutral ETF|NYSE Arca|Y||
+MUZ|Defiance Daily Target 2X Short MU ETF|NYSE Arca|Y||
+NUMI|Nuveen Municipal Income ETF|NYSE Arca|Y||
+NVDB|ProShares Ultra NVDA|NYSE Arca|Y||
+POMG|PRIMECAP Odyssey Discovery ETF|NYSE Arca|Y||
+RIOX|Defiance Daily Target 2X Long RIOT ETF|NYSE Arca|Y||
+SALI|Schroders US Autocallable Ladder Income ETF|NYSE Arca|Y||
+TZA|Direxion Daily Small Cap Bear 3x ETF|NYSE Arca|Y||
+UGLD|DIREXION DAILY GOLD BULL 2X ETF|NYSE Arca|Y||
+USSG|Xtrackers MSCI USA Selection Equity ETF|NYSE Arca|Y||
+VEXC|Vanguard Emerging Markets Ex-China ETF|NYSE Arca|Y||
+20261119220201

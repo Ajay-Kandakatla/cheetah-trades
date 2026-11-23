@@ -1,0 +1,59 @@
+Symbol|CompanyName
+AAOX|Tradr 2X Long AAOI Daily ETF
+AMPU|Defiance Daily Target 2X Long AMPX ETF
+APLX|Tradr 2X Long APLD Daily ETF
+ARKY|ARK Active Autocallable Income ETF
+ASTG|Leverage Shares 2X Long ASTS Daily ETF
+ASTX|Tradr 2X Long ASTS Daily ETF
+ASTY|Defiance Daily Target 2X Long ASTS ETF
+AXTX|Tradr 2X Long AXTI Daily ETF
+BEX|Tradr 2X Long BE Daily ETF
+BMNU|T-REX 2X Long BMNR Daily Target ETF
+BTCZ|T-Rex 2X Inverse Bitcoin Daily Target ETF
+CBRX|Tradr 2X Long CBRS Daily ETF
+CIFU|T-REX 2X Long CIFR Daily Target ETF
+CLSX|Tradr 2X Long CLSK Daily ETF
+COHH|Leverage Shares 2X Long COHR Daily ETF
+COHX|Tradr 2X Long COHR Daily ETF
+CRCD|T-REX 2X Inverse CRCL Daily Target ETF
+DDTN|Innovator Equity Dual Directional 10 Buffer ETF - November
+DRAL|Defiance Daily Target 2X Long DRAM ETF
+FLAO|AllianzIM U.S. Equity 6 Month Floor5 Apr/Oct ETF
+GFSG|Leverage Shares 2X Long GFS Daily ETF
+GMEU|T-REX 2X Long GME Daily Target ETF
+INFH|Defiance Daily Target 2X Long INFQ ETF
+IREX|Tradr 2X Long IREN Daily ETF
+IREZ|Tradr 2X Short IREN Daily ETF
+KEEX|Defiance Daily Target 2x Long KEEL ETF
+LITX|Tradr 2X Long LITE Daily ETF
+LITZ|Tradr 2X Short LITE Daily ETF
+LUNL|Defiance Daily Target 2X Long LUNR ETF
+MSTU|T-Rex 2X Long MSTR Daily Target ETF
+MSTZ|T-Rex 2X Inverse MSTR Daily Target ETF
+NEBX|Tradr 2X Long NBIS Daily ETF
+NVDQ|T-Rex 2X Inverse NVIDIA Daily Target ETF 
+ONDL|Defiance Daily Target 2X Long ONDS ETF
+OUSL|Defiance Daily Target 2X Long OUST ETF
+PLU|Defiance Daily Target 2x Long PL ETF
+POEL|Defiance Daily Target 2X Long POET ETF
+RAM|Roundhill T-REX 2X Long DRAM Daily Target ETF
+RAML|Leverage Shares 2X Long Memory Daily ETF
+SK|Corgi SK hynix 2x Daily ETF
+SKHX|Leverage Shares 2X Long SK Hynix Daily ETF
+SNDC|Corgi SNDK 2x Daily ETF
+SNDG|Leverage Shares 2X Long SNDK Daily ETF
+SNDU|T-REX 2X Long SNDK Daily Target ETF
+SNK|GraniteShares 2x Short SpaceX Daily ETF
+SPCH|Leverage Shares 2X Long SPCX Daily ETF
+SPCQ|Defiance Daily Target 2X Short SPCX ETF
+SPCU|Defiance Daily Target 2X Long SPCX ETF
+SSPC|Leverage Shares 2X Short SPCX Daily ETF
+TRSY|Xtrackers US 0-1 Year Treasury ETF
+UMAL|Defiance Daily Target 2X Long UMAC ETF
+USAX|Tradr 2X Long USAR Daily ETF
+UVIX|2x Long VIX Futures ETF 
+UVXY|ProShares Ultra VIX Short-Term Futures ETF
+VELL|Defiance Daily Target 2X Long VELO ETF
+VIXY|ProShares VIX Short-Term Futures ETF
+WYFL|Defiance Daily Target 2X Long WYFI ETF
+20261119030421

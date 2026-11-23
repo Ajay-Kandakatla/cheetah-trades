@@ -75,8 +75,19 @@ def _never_touch_a_real_database():
                 "stand-in instead — see tests/test_demand_history.py.")
         pymongo.MongoClient = _refuse
 
+    # 🔒 2026-11-22 — the Reg SHO engine's ONE outside-call seam ASSIGNED to a refuser for the whole session (never
+    # setdefault): a payload / kick_refresh with no `http=` must never reach nasdaqtrader / nyse / cboe. Tests that
+    # want an outside answer pass their own `http=` fake. Restored on teardown.
+    import short_interest.reg_sho as RS
+    prior_rs_http = RS._http
+
+    def _refuse_http(*a, **k):
+        raise RuntimeError("reg_sho outside calls are disabled during tests (tests/conftest.py)")
+    RS._http = _refuse_http
+
     yield
 
+    RS._http = prior_rs_http
     if real is not None:
         pymongo.MongoClient = real
     for k, v in prior.items():

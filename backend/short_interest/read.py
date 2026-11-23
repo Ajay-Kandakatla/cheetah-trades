@@ -810,7 +810,7 @@ def si_map(symbols, db=None, today=None) -> dict:
 
 # ───────────────────────────────────────────── ℹ️ rules section
 def rules_section() -> dict:
-    return {
+    sec = {
         "title": "Short interest — FINRA's count of open short positions (display only)",
         "emoji": GLYPH,
         "picks": [
@@ -851,3 +851,12 @@ def rules_section() -> dict:
         "alerts": ["Pushes nothing, gates nothing, sorts nothing and enters no lane."],
         "note": "A data label, not a rule or a signal. Not financial advice.",
     }
+    # 🔒 2026-11-22 — the Hard to borrow (Reg SHO threshold) tag's pick, APPENDED LAST so the EXTREME pick stays
+    # at index 2. It makes this section 8 picks = the house cap (tests/test_rules_info.py:37); the next 🩳 line
+    # must fold into an existing pick. Lazy: reg_sho imports this module.
+    try:
+        from short_interest import reg_sho as RS
+        sec["picks"].append(RS.rules_pick())
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest.read: reg_sho pick skipped: %s", type(exc).__name__)
+    return sec
