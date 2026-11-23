@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-22, verbatim: "New feature when I click on this past winner tag take me to that video so change the date
+  // and focus me on that video at that. time" + "past winner 11-18 +57%" (a VWAV 11-20 card). backend/chart_maps/replays
+  // store.seek_seconds (the renderer's frame clock) + the 🏆 chip links. Navigation only. UNMEASURED. Doc
+  // docs/chart_maps/replays_past_winner_jump_2026_11_22.md.
+  {
+    id: 'chart-maps-replays-past-winner-jump-2026-11-22',
+    label: '🏆 Past-winner tag opens the video — you said: “New feature when I click on this past winner tag take me to that video so change the date and focus me on that video at that. time”. Tap a 🏆 past winner chip on a 🎬 Replays card (e.g. 🏆 past winner 11-18 +57% on VWAV) and the page moves to that win, opens its 🏆 Past winners row, outlines it, and opens the video paused at the minute of the day’s high (VWAV: 15:54 ET). Back returns you to the card. A video that is no longer listed says so; a multi-day video opens at its start. Navigation only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=replays',
+  },
   // Ajay 2026-11-22, verbatim: "What is short borrow fee? Is that a real time value I saw AKAN has a high short borrow
   // fee" → my offer of a borrow fee + shares-available line from Interactive Brokers' file → "yes i need that please".
   // backend/short_interest/borrow.py + GET /short-interest/borrow?symbols= (IBKR's public shortable file over FTP,

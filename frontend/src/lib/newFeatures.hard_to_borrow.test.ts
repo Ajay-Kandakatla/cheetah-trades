@@ -1,3 +1,4 @@
+// WIDENED 2026-11-22 (🏆 past-winner jump ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-22 (💸 Borrow fee ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 /* 🔒 Hard to borrow ✨ (2026-11-22). Ajay: "Can you do something for me for reversal squeezes can you also tell me if
  * something is under when it's on our list.. add a tag to stocks tickers like short interest, name the tag " hard to
@@ -11,8 +12,8 @@ const ASK = 'Can you do something for me for reversal squeezes can you also tell
 describe('✨ the 🔒 Hard to borrow entry (2026-11-22)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to 🚩 Gajjala', () => {
-    expect(NEW_FEATURES[1].id).toBe(ID);
-    expect(NEW_FEATURES[2].id).toBe('gajjala-watch-sections-runners-2026-11-22');
+    expect(NEW_FEATURES[2].id).toBe(ID);
+    expect(NEW_FEATURES[3].id).toBe('gajjala-watch-sections-runners-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-22');
     expect(f.route).toBe('/chart-maps?tab=gajjala');
