@@ -367,7 +367,10 @@ export type GgwRunBases = { text: string; title: string };
 /** 👀 LIVE (2026-11-16): the served axis plus the three keys the live candle buckets on — `start_epoch` = the session's
  *  04:00 ET epoch the server's slots are measured from, `frame_min` = the frame's minutes, `from_et` = "04:00". Absent
  *  on an older stored doc → null (that frame then carries no live bar; the axis itself is kept as before). */
-export type GgwAxis = CmAxis & { start_epoch: number | null; frame_min: number | null; from_et: string | null };
+export type GgwAxis = CmAxis & { start_epoch: number | null; frame_min: number | null; from_et: string | null;
+  /** 🎾 2026-11-23 (rswatch §3.5): today's slot 0 on the served axis — the prior tail sits in `lead` slots ahead of
+   *  04:00 (`start_epoch` / `from_et` unchanged). Kept ONLY for a served integer > 0; absent = 0. */
+  lead?: number };
 /** 👀 LIVE: the frame's served UNROUNDED 9 / 21 EMA at its last stored bar (backend build.tile `ema_tail`) — the seed of
  *  the forming bar's tip (GGW_LIVE_EMA_TIP, HIS CALL #1). */
 export type GgwEmaTail = { ema9: number; ema21: number };
@@ -566,11 +569,13 @@ function parseAxis(v: unknown): GgwAxis | null {
     : [];
   const se = num(v.start_epoch);
   const fm = num(v.frame_min);
+  const ld = num(v.lead);
   return {
     slots, x: v.x.slice(), shade, ticks,
     start_epoch: se != null && se > 0 ? se : null,
     frame_min: fm != null && Number.isInteger(fm) && fm > 0 ? fm : null,
     from_et: typeof v.from_et === 'string' && AXIS_FROM_RE.test(v.from_et) ? v.from_et : null,
+    ...(ld != null && Number.isInteger(ld) && ld > 0 ? { lead: ld } : {}),
   };
 }
 

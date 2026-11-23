@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🎾 Reversal Squeeze Watch tile ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🔌 Watch connections ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 /* 👀 Watch 1 / 5 / 15 · 📈 VWAP · 📐 daily zones ✨ (2026-11-23). Ajay: "can you add vwap and supply demand zone in the
  * daily time frame on the watch list please" … "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15
@@ -13,8 +14,8 @@ const AGAIN = 'Add vwap and supply demand too';
 describe('✨ the 👀 Watch 1 / 5 / 15 · 📈 VWAP · 📐 daily zones entry (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch; the 🏆 past-winner jump entry follows', () => {
-    expect(NEW_FEATURES[1].id).toBe(ID);
-    expect(NEW_FEATURES[2].id).toBe('chart-maps-replays-past-winner-jump-2026-11-22');
+    expect(NEW_FEATURES[2].id).toBe(ID);
+    expect(NEW_FEATURES[3].id).toBe('chart-maps-replays-past-winner-jump-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-23');

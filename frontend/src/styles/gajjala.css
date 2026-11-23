@@ -442,3 +442,15 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] { flex: none; }
   .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] > .ggw-chartbox { flex: none; min-height: auto; overflow: visible; }
 }
+/* 🎾 2026-11-23 — the 🎾 card drawn as the 👀 Watch tile (rswatch spec §3.9). Ajay: "In the reversal squeeze can you make
+   the charts same as in watch list please". A NEW block after the 11-18 one (that block is untouched): the split charts
+   (1-min on top, the 5- / 15-min pair below) grow the row instead of being squeezed under a long card's text; the same
+   floor constant as the stacked tile (--ggc-frame-min = GGC_FRAME_MIN_PX). ≤ 640 px: no rule here — the Watch's own
+   phone rules apply (the pair goes to one column). */
+@media (min-width: 641px) {
+  .gg-cardgrid.ggw-grid--fit .ggw-charts:not(.ggw-charts--stack) { flex: 1 1 auto; min-height: min-content; }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts:not(.ggw-charts--stack) > .ggw-frame:not([data-empty]),
+  .gg-cardgrid.ggw-grid--fit .ggw-charts:not(.ggw-charts--stack) > .ggw-frame-pair { min-height: var(--ggc-frame-min); }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts:not(.ggw-charts--stack) > .ggw-frame[data-empty] { flex-basis: auto; flex-shrink: 0; min-height: min-content; }
+  .gg-cardgrid.ggw-grid--fit .ggw-charts:not(.ggw-charts--stack) > .ggw-frame[data-empty] > .ggw-chartbox { flex: none; min-height: auto; overflow: visible; }
+}

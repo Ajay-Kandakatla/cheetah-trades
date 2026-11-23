@@ -11,11 +11,15 @@
  *    a board) and the Watch grid [C7];
  *  - GgCardTile — the Watch's `Tile`, frames stacked 15 / 5 / 1 (GGC_STRETCH_ORDER), the card's overlay via cw.rowOf,
  *    the card's SEPA page link + ➕ Watch in the head, ⤢ → the board's existing GgCardView.
+ *  - 🎾 2026-11-23 (rswatch §3.8 [C2]; Ajay: "In the reversal squeeze can you make the charts same as in watch list
+ *    please"): a row built from a payload that ECHOED the squeeze card (ggcRowSplit) passes no `stack` → the Tile's own
+ *    split branch (1-min on top, 5- / 15-min side by side). Every other row — another setup, a 🎾 card on an api without
+ *    the echo, a loading / failed / served-error row — stacks exactly as before. The tile reads the ROW, never the card.
  * Every sentence about a stock is served; the FE types only the control words of lib/gajjalaCardView.
  * DISPLAY ONLY, UNMEASURED — nothing here rings, gates, sizes, orders or trades. */
 import type { CSSProperties, ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GGC_FRAME_MIN_PX, GGC_STRETCH_ORDER, GGC_WATCH_LABEL, GGC_WATCH_TITLE } from '../lib/gajjalaCardView';
+import { GGC_FRAME_MIN_PX, GGC_STRETCH_ORDER, GGC_WATCH_LABEL, GGC_WATCH_TITLE, ggcRowSplit } from '../lib/gajjalaCardView';
 import { ggHref, type GgTile } from '../lib/gajjala';
 import { SEPA_LINK_LABEL, sepaLinkTestId, sepaLinkTitle } from '../lib/cardLinks';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
@@ -69,6 +73,8 @@ export function GgCardGridFrame({ cw, loading, symbols, children }: {
 /** One card's Watch tile: the Watch's own Tile, stacked 15m / 5m / 1m, the card's overlays via rowOf, ⤢ → GgCardView. */
 export function GgCardTile({ card, cw, onStretch }: { card: GgTile; cw: GgCardWatch; onStretch: (sym: string) => void }) {
   const row = cw.rowOf(card);
+  /* 🎾 [C2] the ROW says it came from a squeeze payload — never the card alone */
+  const split = ggcRowSplit(row);
   const location = useLocation();
   /* the board's back-to-tab glue (GajjalaBoard / PatternChart: sanitizeSourceQuery → /chart-maps?…) */
   const carryQ = sanitizeSourceQuery(location.search);
@@ -87,7 +93,8 @@ export function GgCardTile({ card, cw, onStretch }: { card: GgTile; cw: GgCardWa
     </>
   );
   return (
-    <Tile row={row} phone={cw.phone} fit={cw.fit} removeLabel={null} focused={false} busy={false} stack
-          order={GGC_STRETCH_ORDER} extra={extra} onStretch={onStretch} live={cw.liveOf(card.symbol)} />
+    <Tile row={row} phone={cw.phone} fit={cw.fit} removeLabel={null} focused={false} busy={false}
+          {...(split ? {} : { stack: true, order: GGC_STRETCH_ORDER })}
+          extra={extra} onStretch={onStretch} live={cw.liveOf(card.symbol)} />
   );
 }

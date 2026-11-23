@@ -30,6 +30,18 @@ export const NEW_FEATURES: NewFeature[] = [
   // client on the Massive account) is NOT fixed here = HIS CALL. UNMEASURED. Docs docs/gajjala/watch_live_tail_stale_
   // 2026_11_23.md, watch_refetch_on_return_2026_11_23.md, watch_rest_retry_breaker_2026_11_23.md,
   // minute_fetch_connections_2026_11_23.md.
+  // Ajay 2026-11-23 ~16:45 ET, verbatim: "In the reversal squeeze can you make the charts same as in watch list please".
+  // Question-card answers: today he sees "Three charts stacked 15 / 5 / 1"; keep trigger / stop lines, GG's squeeze marks,
+  // yesterday's afternoon tail, card text. ONE optional `?card=squeeze` on the card frames GET (card_frames.py CARD_SQUEEZE;
+  // gajjala_watch/build.lead_axis); FE gajjalaCardView ggcRowSplit (echo-gated) / useGgCardWatch / GgCardGrid / ggwLive lead.
+  // Every other setup's card, ⤢ and the small card unchanged. Display only. Docs docs/gajjala/squeeze_watch_tile_2026_11_23.md,
+  // docs/gajjala/card_frames_squeeze_card_2026_11_23.md.
+  {
+    id: 'chart-maps-gajjala-squeeze-watch-tile-2026-11-23',
+    label: '🎾 Reversal Squeeze charts like the 👀 Watch — you said: “In the reversal squeeze can you make the charts same as in watch list please”. With the 👀 Watch layout on, a 🎾 card now draws the 1-min chart on top and the 5-min and 15-min side by side under it, with the 9/21 EMA cross marks and the K5 chip on every chart. Kept, as you ticked: the BUY / STOP lines, GG\'s squeeze marks on the 5-min, yesterday\'s 15:00–20:00 tail ahead of today on the 5-min, and the card text under the charts. Every other setup\'s cards, ⤢ full screen and the small card are unchanged. Display only — nothing rings, sorts or trades differently. UNMEASURED. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala&sub=reversal_squeeze',
+  },
   {
     id: 'gajjala-watch-connections-2026-11-23',
     label: '🔌 Watch price connections — you said: “Can you clean up some connection I am seeing delays price update for AKAN on the watch chart..”. On the 👀 Watch: one failed minute read no longer freezes the live candle (the ⚠️ line still says the read failed); coming back to the tab reloads the charts at once when they are a minute or more old; after one bad read the Watch asks again the next minute instead of sitting a minute out; and each 1-minute fetch reuses an open connection to the data provider. The biggest cause of the lag is NOT fixed by this: the live price feed gets kicked off by a second connection on the same data account (about every 2 minutes today) and is blind for 30 s each time — that one is your call. UNMEASURED. Not advice.',

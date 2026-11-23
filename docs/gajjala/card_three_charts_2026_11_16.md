@@ -114,3 +114,5 @@ landed board read; the 1-min frame on a tile is the same served frame (the Watch
 else the retired words — shrunk to their height on the board tile only). `NO_FRAMES` moved to
 `lib/gajjalaCardView.GGC_NO_FRAMES` (one definition, GgCardView reuses it). A toggle (`👀 Watch layout`, per device) brings
 the small cards back. Details: `docs/gajjala/card_grid_watch_layout_2026_11_18.md`.
+
+**2026-11-23 — 🎾 `?card=squeeze`.** An optional `card` param on this GET (asked only by a 🎾 card in the Watch layout) serves the Watch order, the 9/21 cross markers + K5 on every frame and the 5-min prior tail on a lead axis; without it this payload is byte-identical. Details: `docs/gajjala/card_frames_squeeze_card_2026_11_23.md`.

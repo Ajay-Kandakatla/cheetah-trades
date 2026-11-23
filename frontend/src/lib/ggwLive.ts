@@ -24,6 +24,9 @@ export type GgwLiveMap = Record<string, GgwLiveSym>;
 export type GgwFrameMeta = {
   tf: string; start_epoch: number; frame_min: number; slots: number; last_bucket: number; day: string; from_et: string;
   shade: GgwAxis['shade'];
+  /** 🎾 2026-11-23 (rswatch §3.5 [C1]): today's slot 0 on the served axis; absent = 0; `slots` / `last_bucket` are
+   *  already net of it (ONE convention: live buckets are always on today's grid). */
+  lead?: number;
 };
 
 const fin = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -38,9 +41,12 @@ export function ggwFrameMeta(f: GgwFrame): GgwFrameMeta | null {
   const last = bars[bars.length - 1];
   const lastBucket = ax.x[ax.x.length - 1];
   if (!last || typeof last.t !== 'string' || !DAY_RE.test(last.t) || !fin(lastBucket)) return null;
+  /* 🎾 2026-11-23 (rswatch §3.5 [C1]): the ONLY place a served lead is taken off — the meta is today's grid. */
+  const L = typeof ax.lead === 'number' && Number.isInteger(ax.lead) && ax.lead > 0 ? ax.lead : 0;
+  if (L && lastBucket < L) return null;
   return {
-    tf: f.tf, start_epoch: ax.start_epoch, frame_min: ax.frame_min, slots: ax.slots, last_bucket: lastBucket,
-    day: last.t.slice(0, 10), from_et: ax.from_et, shade: ax.shade,
+    tf: f.tf, start_epoch: ax.start_epoch, frame_min: ax.frame_min, slots: ax.slots - L, last_bucket: lastBucket - L,
+    day: last.t.slice(0, 10), from_et: ax.from_et, shade: ax.shade, ...(L ? { lead: L } : {}),
   };
 }
 
@@ -164,8 +170,9 @@ export function ggwLiveFrame(f: GgwFrame, bars: GgwLiveBar[] | undefined, opts?:
   const keep = bars.filter((b) => b.bucket > meta.last_bucket && b.bucket < meta.slots);
   if (!keep.length) return f;
   const n = keep.length;
+  const L = meta.lead ?? 0;   // 🎾 2026-11-23 [C1]: the ONLY place the lead is put back (served shade + served x)
   const added: CmBar[] = keep.map((b) => {
-    const s = ggwShadeOf(meta.shade, b.bucket);
+    const s = ggwShadeOf(meta.shade, b.bucket + L);
     return { t: ggwBarStamp(meta.day, meta.from_et, b.bucket, meta.frame_min), o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, ...(s ? { s } : {}) };
   });
   const nulls = (): null[] => new Array(n).fill(null);
@@ -181,7 +188,7 @@ export function ggwLiveFrame(f: GgwFrame, bars: GgwLiveBar[] | undefined, opts?:
   if (Array.isArray(t0.curves)) tile.curves = t0.curves.map((c) => ({ ...c, values: [...(c.values || []), ...tail(c)] }));
   const va = (t0 as CmTile & { vol_avg?: VolAvg | null }).vol_avg;
   if (va && typeof va === 'object' && Array.isArray(va.values)) tile.vol_avg = { ...va, values: [...va.values, ...nulls()] };
-  return { ...f, tile, axis: { ...f.axis, x: [...f.axis.x, ...keep.map((b) => b.bucket)] } };
+  return { ...f, tile, axis: { ...f.axis, x: [...f.axis.x, ...keep.map((b) => b.bucket + L)] } };
 }
 
 /** 📈 2026-11-23 (vwapzones spec §3.9 [O2][C8]) — the forming 5- / 15-min candle built from the row's OWN 1-min chart.
@@ -214,13 +221,16 @@ export function ggwSeedLive(f: GgwFrame, own: GgwLiveBar[] | undefined, f1: GgwF
   const bars1 = f1.tile.bars;
   const x1 = f1.axis?.x ?? [];
   const n1 = Math.min(bars1.length, x1.length);
+  const L1 = m1.lead ?? 0;   // 🎾 2026-11-23 [C1]: f1's stored slots are SERVED (led) slots; its tail seeds nothing
   for (let i = 0; i < n1; i += 1) {
     const s = x1[i];
     const bar = bars1[i];
     if (!fin(s) || !bar || ![bar.o, bar.h, bar.l, bar.c].every(fin)) continue;
-    push(Math.floor(s / k), {
+    const r = s - L1;
+    if (L1 && r < 0) continue;
+    push(Math.floor(r / k), {
       o: bar.o, h: bar.h, l: bar.l, c: bar.c, v: fin(bar.v) && bar.v > 0 ? bar.v : 0,
-      as_of: m1.start_epoch + (s + 1) * m1.frame_min * 60,
+      as_of: m1.start_epoch + (r + 1) * m1.frame_min * 60,
     });
   }
   for (const b of past1) push(Math.floor(b.bucket / k), { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, as_of: b.as_of });

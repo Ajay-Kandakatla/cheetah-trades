@@ -46,6 +46,18 @@ bars (a stamp the Watch tile lacks → None there; no Watch tile and no on-deman
 the GET never waits on → `ctx` bands on every frame with bars + the payload's `levels` line. A stores tuple of 2–4
 elements never reads daily bars; a 5th element (a callable (sym, now) → frame) is the daily loader, run inline. Any fault
 → no curve, no bands, `levels` None — the view still answers. Display only. UNMEASURED.
+
+🎾 2026-11-23 (spec rswatch §3.1-§3.2, Ajay: "In the reversal squeeze can you make the charts same as in watch list
+please") — ONE optional query param `?card=squeeze` (CARD_PARAM / CARD_SQUEEZE), asked only by a 🎾 card in the card
+grid's Watch layout. Under it the payload adds: the echo `card: "squeeze"` (state ok only — the FE draws the Watch
+arrangement ONLY from a payload that carries it); the frames in the Watch's served order (WATCH_ORDER, read off the
+Watch's FRAMES); on every frame with bars the 9 / 21 cross markers + cross block (`tab.ema_cross_block` +
+`tab._on_bars`, the Watch tile's own lines) and the K5 chip (the Watch's reader `BLD.k5` over the frame's stored
+curves — "K5 —" until enough of today's bars closed); and the 5-minute frame as the prior session's stored tail +
+today (`tab._tile_frame(…, wide=True)`) on ONE lead axis (`BLD.lead_axis`: the tail in `lead` slots ahead of 04:00,
+today's 04:00 grid unchanged). Blink, ema tail, stamps, stale and source stay TODAY's. A stored tail that cannot be
+laid is dropped with ONE debug line (TAIL_DROP_LOG); by-design cases (no tail, no bars today) stay silent. No new
+read, no fetch, no write. Absent / junk param → the payload above, byte-identical. Display only. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -59,6 +71,7 @@ import pandas as pd
 
 from chart_maps import ema_blink as EB
 from chart_maps.gajjala import bars as B
+from chart_maps.gajjala import constants as GC
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import variant as V
@@ -82,6 +95,16 @@ SOURCE_WATCH, SOURCE_ON_DEMAND = "watch", "on_demand"         # a frame's `sourc
 BAD_SYMBOL_TEXT = "Not a ticker"
 VWAP_MODULE = "chart_maps.gajjala_watch.vwap"                  # 📈 2026-11-23 — imported LAZILY (a fault → no curve)
 OV_KEY = "_ov"                                                 # the private overlay key of a Watch / on-demand frame
+
+# 🎾 2026-11-23 (spec rswatch §3.2) — the 🎾 card's Watch-tile payload
+CARD_PARAM = "card"                                   # the route's query param (== FE GGC_CARD_PARAM)
+CARD_SQUEEZE = "squeeze"                              # == FE GGC_CARD_SQUEEZE (a source-read test pins both)
+CARDS = (CARD_SQUEEZE,)
+TAIL_TF = V.GG5.primary                               # the ONE frame the GG5 pass stores a prior tail for
+WATCH_ORDER = tuple(tf for tf, _rule in WC.FRAMES)    # the Watch's served order, never typed
+TAIL_DROP_LOG = "card_frames tail dropped %s %s: %s"  # sym, tf, reason — DEBUG; the EOD audit greps it (tab.CARD_AXIS_DROP_LOG's pattern)
+TAIL_DROP_NOT_END = "today's bars are not the end of the stored frame"
+TAIL_DROP_FAULT = "fault"
 
 
 def frame_minutes(tf: str) -> int:
@@ -327,11 +350,99 @@ def _empty_text(tf: str, sym: str) -> str:
     return EMPTY_TEXT.format(minutes=frame_minutes(tf), sym=sym)
 
 
-def _frame_block(sym: str, tf: str, fr: dict, src, src_v, kind, session, end, now, in_window: bool) -> dict:
+def card_of(card) -> Optional[str]:
+    """`card` when it is one of CARDS, else None (absent / junk → today's payload)."""
+    return card if isinstance(card, str) and card in CARDS else None
+
+
+class _Curves:
+    """The stored 9 / 21 EMA values of ONE served frame as the `F` the Watch's K5 reader takes (ema9, ema21, len)."""
+
+    def __init__(self, ema9: list, ema21: list):
+        self.ema9 = list(ema9)
+        self.ema21 = list(ema21)
+
+    def __len__(self) -> int:
+        return len(self.ema9)
+
+
+def uptrend_of(curves) -> dict:
+    """{"ok", "short"} — K5 at the LAST served bar through the Watch's own reader `BLD.k5` (the K5 engine; its slope
+    constant is read there at call time) over the frame's stored curves (tones of B.EMA_TONES); short =
+    BLD.UPTREND_SHORT[ok]. A missing / empty / ragged curve, or too few bars → ok None."""
+    ok = None
+    try:
+        by = {c.get("tone"): c.get("values") for c in (curves or []) if isinstance(c, dict)}
+        (fast, _fl, _fp), (slow, _sl, _sp) = B.EMA_TONES
+        e9, e21 = by.get(fast), by.get(slow)
+        if isinstance(e9, list) and isinstance(e21, list) and e9 and len(e9) == len(e21):
+            f = _Curves(e9, e21)
+            got = BLD.k5(f, len(f) - 1)
+            ok = None if got is None else bool(got)
+    except Exception as exc:                                   # noqa: BLE001 — a chip never breaks the frame
+        log.debug("card_frames: K5 unavailable: %s", type(exc).__name__)
+        ok = None
+    return {"ok": ok, "short": BLD.UPTREND_SHORT[ok]}
+
+
+def cross_marks(tf: str, bars: list, curves: list) -> tuple:
+    """(markers, block) of one served frame — the Watch tile's own lines: GT.ema_cross_block({"tf","bars","curves"});
+    the popped `_marks` become markers = GT._on_bars([{"date": m["t"], "kind": GT.EMA_CROSS_MARK[m["dir"]], "label":
+    m["text"], "price": m["ema"]} …], bars); block = the rest (no `_` key), or None. No cross → ([], None). Never
+    raises (a fault → ([], None))."""
+    try:
+        blk = GT.ema_cross_block({"tf": tf, "bars": bars, "curves": curves})
+        if not blk:
+            return [], None
+        marks = blk.pop("_marks", None) or []
+        markers = GT._on_bars([{"date": m["t"], "kind": GT.EMA_CROSS_MARK[m["dir"]], "label": m["text"],
+                                "price": m["ema"]} for m in marks], bars)
+        rest = {k: v for k, v in blk.items() if not str(k).startswith("_")}
+        return markers, (rest or None)
+    except Exception as exc:                                   # noqa: BLE001 — markers never break the frame
+        log.debug("card_frames: crosses %s unavailable: %s", tf, type(exc).__name__)
+        return [], None
+
+
+def _with_tail(sym: str, fr: dict, doc, tf: str, src_v, ax) -> Optional[tuple]:
+    """(bars, curves, vol_avg, axis) of the 5-minute frame with the prior session's tail ahead of today, or None.
+    SILENT None (by design, no log): tf != TAIL_TF; `doc` is not a dict; `ax` is not a dict; today's frame has no bars;
+    the wide frame (GT._tile_frame(doc, tf, src_v, wide=True)) holds no bar ahead of today's (k <= 0).
+    LOGGED None — ONE `log.debug(TAIL_DROP_LOG, sym, tf, reason)`, a stored tail that could NOT be laid: today's bars
+    are not the end of the wide frame → TAIL_DROP_NOT_END; the Watch's BLD.lead_axis answering (None, reason) → that
+    reason verbatim; any exception → TAIL_DROP_FAULT + the exception's class name. The frame is then today's."""
+    if tf != TAIL_TF or not isinstance(doc, dict) or not isinstance(ax, dict):
+        return None
+    today = list(fr.get("bars") or []) if isinstance(fr, dict) else []
+    if not today:
+        return None
+    try:
+        wide = GT._tile_frame(doc, tf, src_v, wide=True)
+        bars = list(wide.get("bars") or [])
+        k = len(bars) - len(today)
+        if k <= 0:
+            return None
+        if bars[k:] != today:
+            log.debug(TAIL_DROP_LOG, sym, tf, TAIL_DROP_NOT_END)
+            return None
+        lead, why = BLD.lead_axis(ax, bars[:k], frame_minutes(tf), from_et=GC.RS_TILE_PRIOR_FROM_ET,
+                                  to_et=GC.RS_TILE_PRIOR_TO_ET)
+        if lead is None:
+            log.debug(TAIL_DROP_LOG, sym, tf, why)
+            return None
+        vol = wide.get("vol_avg") if isinstance(wide.get("vol_avg"), dict) else None
+        return bars, list(wide.get("curves") or []), vol, lead
+    except Exception as exc:                                   # noqa: BLE001 — fail open: today's frame is served
+        log.debug(TAIL_DROP_LOG, sym, tf, f"{TAIL_DROP_FAULT} {type(exc).__name__}")
+        return None
+
+
+def _frame_block(sym: str, tf: str, fr: dict, src, src_v, kind, session, end, now, in_window: bool,
+                 card=None) -> dict:
     bars = list(fr.get("bars") or [])
     curves = list(fr.get("curves") or [])
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
-    return {"tf": tf, "label": frame_words(tf),
+    block = {"tf": tf, "label": frame_words(tf),
             "tile": {"symbol": sym, "href": "", "bars": bars, "curves": curves, "markers": [], "lines": [],
                      "bands": [], "stats": [], "why": "", "vol_avg": vol_avg},
             "axis": BLD.axis(session, frame_minutes(tf), bars, end) if bars else None,
@@ -342,9 +453,19 @@ def _frame_block(sym: str, tf: str, fr: dict, src, src_v, kind, session, end, no
             "stale": frame_stale(src.get("at"), now, in_window, src_v) if src else False,
             "source": _source(kind, src) if bars else None,
             "empty_text": None if bars else _empty_text(tf, sym)}
+    if card == CARD_SQUEEZE and bars:                          # 🎾 2026-11-23 — the Watch tile's caption + the tail
+        markers, blk = cross_marks(tf, bars, curves)
+        block["tile"]["markers"] = markers
+        block["ema_cross"] = blk
+        block["uptrend"] = uptrend_of(curves)
+        tail = _with_tail(sym, fr, src, tf, src_v, block["axis"])
+        if tail is not None:
+            block["tile"]["bars"], block["tile"]["curves"], block["tile"]["vol_avg"], block["axis"] = tail
+    return block
 
 
-def _build(symbol, now, stores) -> dict:
+def _build(symbol, now, stores, card=None) -> dict:
+    card = card_of(card)
     sym = ST.broker_symbol(symbol)
     if sym is None:
         return {"state": "bad_symbol", "reason": BAD_SYMBOL_TEXT}
@@ -383,7 +504,7 @@ def _build(symbol, now, stores) -> dict:
 
     every_bar = [b for _tf, fr, _s, _v, _k in picked for b in (fr.get("bars") or [])]
     end = BLD.axis_end(session, every_bar)                     # [C2] the ONE end over ALL three frames' bars
-    frames = [_frame_block(sym, tf, fr, src, src_v, kind, session, end, now, in_window)
+    frames = [_frame_block(sym, tf, fr, src, src_v, kind, session, end, now, in_window, card=card)
               for tf, fr, src, src_v, kind in picked]
     levels = None
     if _overlays_on():
@@ -395,18 +516,24 @@ def _build(symbol, now, stores) -> dict:
     by = {f["tf"]: f for f in frames}
     head = by["15m"] if g5 is not None else by["1m"]           # the CARD's own doc (GG5 lists the name); GG1-only → GG1
     has_bars = any(f["tile"]["bars"] for f in frames)
-    return {"state": "ok", "symbol": sym, "session": session.isoformat(), "is_today": bool(is_today),
-            "in_window": bool(in_window), "as_of_et": head["as_of_et"], "stale": bool(head["stale"]),
-            "text": None if has_bars else NO_FRAMES_TEXT.format(sym=sym), "frames": frames, "levels": levels}
+    if card == CARD_SQUEEZE:                                   # 🎾 2026-11-23 — the Watch's served order
+        frames.sort(key=lambda f: WATCH_ORDER.index(f["tf"]))
+    out = {"state": "ok", "symbol": sym, "session": session.isoformat(), "is_today": bool(is_today),
+           "in_window": bool(in_window), "as_of_et": head["as_of_et"], "stale": bool(head["stale"]),
+           "text": None if has_bars else NO_FRAMES_TEXT.format(sym=sym), "frames": frames, "levels": levels}
+    if card == CARD_SQUEEZE:
+        out["card"] = CARD_SQUEEZE                             # the echo — the FE's ONLY licence to draw the split
+    return out
 
 
-def build(symbol: str, now=None, *, stores=None) -> dict:
+def build(symbol: str, now=None, *, stores=None, card=None) -> dict:
     """The view's answer for one symbol. Never raises: any fault → {"state": "error", "reason": <exception name>}.
     `stores` = (GG5 store, GG1 store[, Watch tiles coll[, on-demand 1m builder]]) for tests; None → the real ones (two
     find_one reads, plus one of the Watch's tile when the 1m frame has no GG1 bars, plus — 📈 2026-11-18 — ONE
-    on-demand minute fetch for this symbol when that tile is absent too; nothing is written)."""
+    on-demand minute fetch for this symbol when that tile is absent too; nothing is written). 🎾 2026-11-23: `card` =
+    the route's optional param — CARD_SQUEEZE → the 🎾 Watch-tile payload; anything else → the payload above."""
     try:
-        return _build(symbol, now, stores)
+        return _build(symbol, now, stores, card)
     except Exception as exc:                                   # noqa: BLE001 — the view serves the fault, never a 500
         log.warning("card_frames: build failed: %s", type(exc).__name__)
         return {"state": "error", "reason": type(exc).__name__}

@@ -71,6 +71,7 @@ spans two dates and gets **no axis**: it keeps one slot per bar, its tail and it
   and one slot per bar while a tail is stored. The 🎾 sub he reads most does **not** get the axis or the taller chart.
 - A 🎾 card whose doc stored NO tail (today-only frame; 3 of 141 on 11-16) does get the axis, but still keeps 190 (HIS CALL #4).
 - The toggle title and the ✨ entry both name this exception ("Reversal Squeeze").
+2026-11-23 — the 🎾 card drawn as the 👀 Watch tile DOES get a two-session clock axis (`axis.lead`, see squeeze_watch_tile_2026_11_23.md); the small card (Watch layout off) still gets none.
 
 ## The stale "now" line off-hours
 
@@ -133,6 +134,7 @@ no NaN / undefined / Infinity in any svg attribute) is part of the verification 
 3. **📺 height 283 / 🎾 wide 190** (spec default #7). Confirm after seeing it live; a different number is one constant.
 4. **A 🎾 card with no stored tail gets the clock axis** (3 of 141 docs on 11-16). Or never an axis on a 🎾 read? A 🎾 card
    WITH its tail (138 of 141) never gets one; a two-session clock axis is not built.
+   2026-11-23 — the 🎾 card drawn as the 👀 Watch tile DOES get a two-session clock axis (`axis.lead`, see squeeze_watch_tile_2026_11_23.md); the small card (Watch layout off) still gets none.
 5. **1-minute page:** 📺 and the axis there need the 192-bar cap (`GG1M_TILE_BARS_MAX`) lifted to up to 960 bars, about 5×
    the payload. Not built.
 6. **Remembered per device** (localStorage, like 💋 and `ggw.layout`), not in the link. A `?look=` param is not built.

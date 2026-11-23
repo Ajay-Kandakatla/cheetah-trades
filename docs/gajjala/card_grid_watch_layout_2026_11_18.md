@@ -147,6 +147,7 @@ choice (scroll again after the fit, or `block: 'start'` under the Watch layout) 
 2. The per-screen pick is its OWN key (`ggc.layout`, default 2) — sharing the Watch's `ggw.layout` = his word.
 3. Tile stack order 15m / 5m / 1m (the ⤢ order); the Watch's 1m-on-top split is NOT used.
 4. 🎾 cards: not full-row under the Watch layout; the tile shows the stored 15 / 5 / 1 frames (no prior-session tail).
+   2026-11-23 — calls #3 and #4 are REVERSED for 🎾 cards only, by his word ("In the reversal squeeze can you make the charts same as in watch list please"): a 🎾 tile now draws the Watch split (1-min on top, 5-min + 15-min side by side) with the prior-session tail on the 5-min; still one cell, not full row. See squeeze_watch_tile_2026_11_23.md.
 5. The PatternChart card chrome NOT on the tile: the entry ladder, stats, the outer chips row of the svg.
 6. Page / pick are session state; the mode and the pick-size are per device.
 7. Phone = 1 per screen with the pager.

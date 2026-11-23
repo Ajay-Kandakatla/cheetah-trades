@@ -137,6 +137,96 @@ def axis(session, frame_min: int, bars, end: dtime) -> dict:
             "shade": shade, "ticks": ticks, "start_epoch": start.timestamp(), "frame_min": fm}
 
 
+# 🎾 2026-11-23 (spec rswatch §3.3; Ajay: "In the reversal squeeze can you make the charts same as in watch list please")
+# — the reason words `lead_axis` answers with; the card view (gajjala.card_frames) logs them. The Watch never calls it.
+LEAD_DROP_NO_AXIS = "no axis"
+LEAD_DROP_NO_PRIOR = "no prior bar"
+LEAD_DROP_JUNK_BAR = "junk prior bar"
+LEAD_DROP_TWO_DATES = "prior bars span two dates"
+LEAD_DROP_NOT_BEFORE = "prior day not before today"
+LEAD_DROP_EMPTY = "empty lead"
+LEAD_DROP_SLOT = "prior slot outside the lead"
+LEAD_DROP_ORDER = "prior slots not increasing"
+LEAD_DROP_JUNK_X = "junk today slot"
+
+
+def _is_int(x) -> bool:
+    return isinstance(x, int) and not isinstance(x, bool)
+
+
+def _axis_ok(ax) -> bool:
+    """`ax` reads as an `axis(...)` answer: int `slots`, numeric `start_epoch`, a list `x`, shade spans and ticks with
+    int slots. Anything else is no axis to lead."""
+    if not isinstance(ax, dict) or not _is_int(ax.get("slots")) or not isinstance(ax.get("x"), list):
+        return False
+    se = ax.get("start_epoch")
+    if not isinstance(se, (int, float)) or isinstance(se, bool):
+        return False
+    shade, ticks = ax.get("shade"), ax.get("ticks")
+    if not isinstance(shade, list) or not isinstance(ticks, list):
+        return False
+    if not all(isinstance(s, dict) and _is_int(s.get("from_slot")) and _is_int(s.get("to_slot")) for s in shade):
+        return False
+    return all(isinstance(t, dict) and _is_int(t.get("slot")) for t in ticks)
+
+
+def lead_axis(ax: dict, prior_bars, frame_min: int, *, from_et: dtime, to_et: dtime) -> tuple:
+    """🎾 2026-11-23 — (axis, None) or (None, reason): `ax` (this module's `axis(...)` of TODAY's bars) with the prior
+    session's tail laid in `lead` slots AHEAD of today's 04:00. `lead` = the prior day's [from_et, min(its extended
+    close, to_et)) in `frame_min` slots (alerts._closes — half days shorter); a prior bar's slot = (its close −
+    frame_min − from_et) / frame_min, the rule `axis` uses; `slots` + lead, today's `x` / `shade` / `ticks` shifted by
+    lead; the prior day after its regular close shaded SHADE_AH; ONE tick at slot 0 = the prior day ("Nov 20").
+    `start_epoch`, `frame_min`, `from_et`, `to_et` stay today's 04:00 grid (a live print buckets as before). The
+    checks run in the LEAD_DROP_* order and the first that fails names the reason; never raises on junk input, never
+    a partial axis. Display only."""
+    try:
+        if not _axis_ok(ax):
+            return None, LEAD_DROP_NO_AXIS
+        fm = max(1, int(frame_min))
+        if not isinstance(prior_bars, list) or not prior_bars:
+            return None, LEAD_DROP_NO_PRIOR
+        closes = []
+        for b in prior_bars:
+            c = AL.bar_close_et(b.get("t")) if isinstance(b, dict) else None
+            if c is None:
+                return None, LEAD_DROP_JUNK_BAR
+            closes.append(c)
+        days = {c.date() for c in closes}
+        if len(days) != 1:
+            return None, LEAD_DROP_TWO_DATES
+        day = days.pop()
+        rth, ext = AL._closes(day)
+        start, stop = _at(day, from_et), _at(day, min(ext, to_et))
+        if stop.timestamp() > float(ax["start_epoch"]):
+            return None, LEAD_DROP_NOT_BEFORE
+
+        def slot(t: datetime) -> int:
+            return int((t - start).total_seconds() // 60) // fm
+
+        lead = slot(stop)
+        if lead <= 0:
+            return None, LEAD_DROP_EMPTY
+        px = [slot(c - timedelta(minutes=fm)) for c in closes]
+        if any(s < 0 or s >= lead for s in px):
+            return None, LEAD_DROP_SLOT
+        if any(b <= a for a, b in zip(px, px[1:])):
+            return None, LEAD_DROP_ORDER
+        if not all(_is_int(x) for x in ax["x"]):
+            return None, LEAD_DROP_JUNK_X
+        shade = []
+        close_at = _at(day, rth)
+        if close_at < stop:
+            shade.append({"from_slot": max(0, slot(close_at)), "to_slot": lead, "kind": SHADE_AH})
+        shade += [{**s, "from_slot": s["from_slot"] + lead, "to_slot": s["to_slot"] + lead} for s in ax["shade"]]
+        ticks = [{"slot": 0, "label": f"{day:%b} {day.day}"}] + [{**t, "slot": t["slot"] + lead} for t in ax["ticks"]]
+        out = dict(ax)
+        out.update({"slots": ax["slots"] + lead, "x": px + [x + lead for x in ax["x"]], "shade": shade,
+                    "ticks": ticks, "lead": lead})
+        return out, None
+    except Exception:                                           # noqa: BLE001 — junk never raises, never a partial axis
+        return None, LEAD_DROP_NO_AXIS
+
+
 # ── one chart, one tile ───────────────────────────────────────────────────────────────────────────────────────────
 def k5(F, k) -> Optional[bool]:
     """detectors.uptrend (K5) at bar k of a Frame; None when there is no such bar."""
@@ -288,4 +378,7 @@ def seen(tiles_coll, syms) -> dict:
 
 
 __all__ = ["session_of", "frames", "status_of", "axis_end", "axis", "tile", "tile_update", "write", "seen", "k5",
-           "run_bases_keys", "vwap_keys", "name_vwap", "uptrend_rule", "UPTREND_SHORT", "STATUSES"]
+           "run_bases_keys", "vwap_keys", "name_vwap", "uptrend_rule", "UPTREND_SHORT", "STATUSES",
+           "lead_axis", "LEAD_DROP_NO_AXIS", "LEAD_DROP_NO_PRIOR", "LEAD_DROP_JUNK_BAR",
+           "LEAD_DROP_TWO_DATES", "LEAD_DROP_NOT_BEFORE", "LEAD_DROP_EMPTY", "LEAD_DROP_SLOT", "LEAD_DROP_ORDER",
+           "LEAD_DROP_JUNK_X"]

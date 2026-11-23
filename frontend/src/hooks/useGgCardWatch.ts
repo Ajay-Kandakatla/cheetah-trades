@@ -16,6 +16,11 @@
  *  - `?focus=`: the page holding the focused card is derived in render with no ref write (StrictMode-safe), then
  *    committed by an effect — the card is SHOWN in the very commit the board's once-only scroll runs in [C3].
  *
+ *  - 🎾 2026-11-23 (rswatch §3.7 [C2]; Ajay: "In the reversal squeeze can you make the charts same as in watch list
+ *    please"): a 🎾 card asks `?card=squeeze`; every load carries the ask it was GOT with (`ask`, absent for the plain GET),
+ *    a card never draws a load asked for the other shape (the loading row instead) and a failed re-read keeps only a
+ *    load of the SAME ask. The split itself is the served echo's call (lib/gajjalaCardView.ggcRow).
+ *
  * DISPLAY ONLY, UNMEASURED — nothing here rings, gates, sizes, orders or trades. */
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { API } from '../lib/apiBase';
@@ -28,16 +33,19 @@ import {
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
 import {
-  GGC_FETCH_FAILED, GGC_NO_FRAMES, GGC_WATCH_VKEYS, ggcPath, ggcRow, ggcShown, loadGgcWatch, parseGgc, readGgcLayout,
-  saveGgcLayout, saveGgcWatch, type GgcPayload,
+  GGC_FETCH_FAILED, GGC_NO_FRAMES, GGC_WATCH_VKEYS, ggcCardParam, ggcIsSqueeze, ggcPath, ggcRow, ggcShown, loadGgcWatch,
+  parseGgc, readGgcLayout, saveGgcLayout, saveGgcWatch, type GgcPayload,
 } from '../lib/gajjalaCardView';
 import { usePhone } from '../components/GajjalaWatchTile';
 import { useGgwFitRows } from '../components/GajjalaWatchLayout';
 
 export type GgcLoad =
-  | { seq: number; kind: 'ok'; p: GgcPayload }
-  | { seq: number; kind: 'error'; reason: string | null }
-  | { seq: number; kind: 'failed' };
+  | { seq: number; kind: 'ok'; p: GgcPayload; ask?: string }
+  | { seq: number; kind: 'error'; reason: string | null; ask?: string }
+  | { seq: number; kind: 'failed'; ask?: string };
+/* 🎾 [C2] `ask` = the card param of the GET that produced this load. The key is ABSENT for the plain GET, so a plain load is
+ * today's object. */
+const askOf = (ld: GgcLoad | undefined): string => ld?.ask ?? '';
 
 export type GgCardWatch = {
   /** The stored mode on an allowed board (the toggle's aria-pressed). */
@@ -173,39 +181,52 @@ export function useGgCardWatch(a: {
   const [loads, setLoads] = useState<Record<string, GgcLoad>>({});
   const [live, setLive] = useState<GgwLiveMap>({});
   const done = useRef(new Map<string, number>());
+  /* 🎾 [C2] the ask each name was last GOT with — a card whose setup flips inside one boardSeq is asked again, once */
+  const asked = useRef(new Map<string, string>());
   const inflight = useRef(new Map<string, Inflight>());
   const reqSeq = useRef(0);
-  /* a bar-less card (☀️ / 🌙 mover) keeps its Link and draws no tile → it is never asked for frames */
-  const barredKey = tiles.filter((t) => t.bars?.length).map((t) => t.symbol).join(',');
-  const shownKey = active ? (barredKey ? barredKey.split(',') : []).filter((s) => shownSet.has(s)).join(',') : '';
+  /* a bar-less card (☀️ / 🌙 mover) keeps its Link and draws no tile → it is never asked for frames. 🎾 [C2]: an entry is
+   * `SYM` (the plain GET) or `SYM?squeeze` (a 🎾 card) — a board with no 🎾 card is today's string character for character */
+  const shownKey = active
+    ? tiles.filter((t) => t.bars?.length && shownSet.has(t.symbol))
+        .map((t) => { const c = ggcCardParam(t); return c ? `${t.symbol}?${c}` : t.symbol; }).join(',')
+    : '';
 
   useEffect(() => {
     if (!active) {
       /* [C5] OFF / the 🏁 / 📋 sub / an empty list: nothing in flight, nothing held */
       done.current.clear();
+      asked.current.clear();
       setLoads((prev) => (Object.keys(prev).length ? {} : prev));
       setLive((prev) => (Object.keys(prev).length ? {} : prev));
       return;
     }
     const want = shownKey ? shownKey.split(',') : [];
-    for (const sym of want) {
-      if (done.current.get(sym) === boardSeq) continue;
+    for (const entry of want) {
+      const q = entry.indexOf('?');
+      const sym = q < 0 ? entry : entry.slice(0, q);
+      const ask = q < 0 ? '' : entry.slice(q + 1);
+      if (done.current.get(sym) === boardSeq && (asked.current.get(sym) ?? '') === ask) continue;
       inflight.current.get(sym)?.ctrl?.abort();
       const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
       const my = ++reqSeq.current;
       const seqAt = boardSeq;
       done.current.set(sym, seqAt);
+      asked.current.set(sym, ask);
       inflight.current.set(sym, { ctrl, my, seqAt });
       const mine = () => inflight.current.get(sym)?.my === my;
-      const keepOk = () => setLoads((prev) => (prev[sym]?.kind === 'ok' ? prev : { ...prev, [sym]: { seq: seqAt, kind: 'failed' } }));
-      fetch(`${API}${ggcPath(sym)}`, { credentials: 'include', cache: 'no-store', signal: ctrl?.signal })
+      const tag = ask ? { ask } : {};
+      /* a failed RE-read keeps an ok load of the SAME ask only; a failed first read of this shape prints the sentence */
+      const keepOk = () => setLoads((prev) => (prev[sym]?.kind === 'ok' && askOf(prev[sym]) === ask
+        ? prev : { ...prev, [sym]: { seq: seqAt, kind: 'failed', ...tag } }));
+      fetch(`${API}${ggcPath(sym, ask || undefined)}`, { credentials: 'include', cache: 'no-store', signal: ctrl?.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((j: unknown) => {
           if (!mine()) return;
           inflight.current.delete(sym);
           const p = parseGgc(j);
-          if (p && p.state === 'ok') setLoads((prev) => ({ ...prev, [sym]: { seq: seqAt, kind: 'ok', p } }));
-          else if (p && p.state === 'error') setLoads((prev) => ({ ...prev, [sym]: { seq: seqAt, kind: 'error', reason: p.reason } }));
+          if (p && p.state === 'ok') setLoads((prev) => ({ ...prev, [sym]: { seq: seqAt, kind: 'ok', p, ...tag } }));
+          else if (p && p.state === 'error') setLoads((prev) => ({ ...prev, [sym]: { seq: seqAt, kind: 'error', reason: p.reason, ...tag } }));
           else keepOk();
         })
         .catch(() => {
@@ -229,6 +250,7 @@ export function useGgCardWatch(a: {
   useEffect(() => {
     const listed = new Set(symbols);
     for (const s of Array.from(done.current.keys())) if (!listed.has(s)) done.current.delete(s);
+    for (const s of Array.from(asked.current.keys())) if (!listed.has(s)) asked.current.delete(s);
     setLoads((prev) => {
       const gone = Object.keys(prev).filter((s) => !listed.has(s));
       if (!gone.length) return prev;
@@ -243,11 +265,13 @@ export function useGgCardWatch(a: {
   const rowCache = useRef(new Map<string, RowCache>());
   const rowOf = (card: GgTile): GgwRow => {
     const sym = card.symbol;
-    const ld = loads[sym];
+    /* 🎾 [C2] a load asked for another shape is not this card's load → the loading row until ITS shape lands */
+    const held = loads[sym];
+    const ld = held && askOf(held) === (ggcCardParam(card) ?? '') ? held : undefined;
     const hit = rowCache.current.get(sym);
     if (hit && hit.card === card && hit.load === ld && hit.look === look) return hit.row;
     let row: GgwRow;
-    if (ld && ld.kind === 'ok') row = ggcRow(card, ld.p, look, { plan: false });
+    if (ld && ld.kind === 'ok') row = ggcRow(card, ld.p, look, ggcIsSqueeze(card) ? { plan: false, squeeze: true } : { plan: false });
     else if (ld && ld.kind === 'error') row = { symbol: sym, state: 'error', text: ld.reason ?? GGC_FETCH_FAILED, ...GGC_NO_FRAMES };
     else if (ld && ld.kind === 'failed') row = { symbol: sym, state: 'error', text: GGC_FETCH_FAILED, ...GGC_NO_FRAMES };
     else row = { symbol: sym, state: 'loading', text: null, ...GGC_NO_FRAMES };
