@@ -54,6 +54,17 @@ slot's iterations; `--build` [C1] loops `build_pending` → `_levels(first=built
 `no_prints` / `failed` name is fetched once per child) and ENDS on the list re-read (the child's LAST act — a name added
 while the zones were read is built by the same child). `build_pending` also rebuilds a listed doc that lacks a tf of
 C.FRAMES (an old 1m/3m/5m doc → 15m); `--new-only` does not. Display only, UNMEASURED.
+
+🔌 2026-11-23 (spec ggconn rev 2 §3.4, WP-3 — Ajay: "Can you clean up some connection I am seeing delays price update for
+AKAN on the watch chart.." · "I would like us to focus on connections of Gajjala more for the rest of the tabs."). The
+minute loader reads with the Watch's OWN breaker (rest.load_day, C.REST_OWN_BREAKER_ON), a new closed one for every read
+(`REST.open_read()` on this thread, before the frame build) — a trip costs the rest of that read, never the next minute;
+`dry_deps` and every other caller keep the module breaker. A per-session counter doc `rest:{session}` (C.COLL_STATE)
+counts iterations, names and failed name-minutes on every iteration that ran (never on --dry-run); the `latest` state doc
+gains no key. The re-read of a minute's `failed` names is BUILT and OFF (C.REST_REREAD_ON = HIS CALL) — order when on:
+push → tiles → pause → re-read → push → tiles, one fenced block after today's tile write; a re-read keeps the iteration's
+own `now` (the frame cut) and judges freshness on the clock after it. `build_pending` gets none of it. `main` installs
+the log key scrub (observability.logsetup.install_redaction). UNMEASURED.
 """
 from __future__ import annotations
 
@@ -79,6 +90,7 @@ from . import build as BLD
 from . import colls as CO
 from . import constants as C
 from . import cross_alerts as XA
+from . import rest as REST
 
 log = logging.getLogger("chart_maps.gajjala_watch.loop")
 
@@ -92,7 +104,7 @@ AUTO_OUT_KEYS = ("n", "cap", "added", "removed", "leaving", "skipped", "reason",
 
 
 def _default_load():
-    return R1._memo_prev(RUN._load_day)
+    return R1._memo_prev(REST.load_day if C.REST_OWN_BREAKER_ON else RUN._load_day)
 
 
 @dataclass
@@ -188,6 +200,7 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         stats: dict = {}
         budget = GC.GG1M_MINUTE_BUDGET_SEC if budget_sec is None else budget_sec
         w0 = RUN._utc(deps.wall())
+        REST.open_read()                                        # 🔌 2026-11-23 — a new closed own breaker (never raises)
         F = BLD.frames(syms, session, now, load_day=deps.load_day, budget_sec=budget, stats=stats,
                        per_name=per_name)
         # fix 2026-11-15: freshness is judged on the clock AFTER the fetch — `now` plus the wall time the fetch took
@@ -221,12 +234,72 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
             out["writes"] = updates
         else:
             BLD.write(tiles, updates)
-        out.update(ran=True, session=session.isoformat(), n_read=len(F), bars=stats, alerts=counts,
+        # 🔌 2026-11-23 (spec ggconn §3.4 [C3]) — everything new sits in THIS one fence, after the cross push and every
+        # tile write. The re-read (C.REST_REREAD_ON, built OFF = HIS CALL) keeps the iteration's own `now`; `now_x2`
+        # is the clock AFTER the re-read. `counts` (alerts) is never rewritten — the re-read's counts go under rest.alerts.
+        n_read, rest_out = len(F), None
+        try:
+            failed = REST.failed_names(per_name, syms)
+            if failed:
+                plan = REST.retry_plan(failed, budget_sec=budget,
+                                       elapsed_sec=(RUN._utc(deps.wall()) - w0).total_seconds())
+                rest_out = REST.summary(len(failed), plan)
+                if plan.names:
+                    deps.sleep(plan.wait)
+                    REST.open_read()
+                    pn2: dict = {}
+                    st2: dict = {}
+                    F2 = BLD.frames(list(plan.names), session, now, load_day=deps.load_day, budget_sec=plan.left,
+                                    stats=st2, per_name=pn2)            # the SAME `now` — never deps.wall()
+                    changed = REST.merge(per_name, stats, pn2, st2, plan.names)
+                    rest_out["recovered"] = len(F2)
+                    now_x2 = now + max(timedelta(0), RUN._utc(deps.wall()) - w0)   # the clock AFTER the re-read
+                    if F2:
+                        try:
+                            c2 = XA.run({s: f for s, f in F2.items() if auto_live or CO.fold(s) not in ak}, now_x2,
+                                        session, coll=(cs["alerts"] if cs else None), send=deps.send,
+                                        owner=deps.owner, dry=dry, seen=seen, held=held)
+                        except Exception as exc:                # noqa: BLE001
+                            log.warning("gajjala watch: cross push (re-read) failed: %s", type(exc).__name__)
+                            c2 = {"error": 1}
+                        if auto_syms and not auto_live:
+                            try:
+                                c2[C.AUTO_HELD_REASON] = AUTO.hold_crosses(
+                                    {s: f for s, f in F2.items() if CO.fold(s) in ak}, now_x2, session, held)
+                            except Exception as exc:            # noqa: BLE001
+                                log.warning("gajjala watch 🤖: auto hold (re-read) failed: %s", type(exc).__name__)
+                        rest_out["alerts"] = c2
+                        rest_out["pushed"] = int(c2.get(XA.PUSHED) or 0)
+                    part = []
+                    for sym in changed:                         # loaded, or failed → no_bars
+                        try:
+                            u = BLD.tile_update(sym, F2.get(sym), session, now, BLD.status_of(per_name.get(sym, {})),
+                                                held.get(sym, {}))
+                        except Exception as exc:                # noqa: BLE001 — the first pass's `failed` write stands
+                            log.warning("gajjala watch: tile %s (re-read) failed: %s", sym, type(exc).__name__)
+                            continue
+                        part.append(u)
+                        updates[syms.index(sym)] = u            # --dry-run's `writes` stays one per name
+                    if part and not dry:
+                        BLD.write(tiles, part)
+                    n_read += len(F2)
+        except Exception as exc:                                # noqa: BLE001 — the minute keeps its tiles and state doc
+            log.warning("gajjala watch: REST re-read failed: %s", type(exc).__name__)
+            rest_out = dict(rest_out or {}, error=type(exc).__name__)
+        out.update(ran=True, session=session.isoformat(), n_read=n_read, bars=stats, alerts=counts,
                    wall_s=round(time.monotonic() - t0, 3))
+        if rest_out is not None:
+            out["rest"] = rest_out
         if not dry:
             _state(cs, C.STATE_LATEST_ID, {"at": now, "session": session.isoformat(), "n_names": len(syms),
-                                           "n_read": len(F), "bars": stats, "alerts": counts,
+                                           "n_read": n_read, "bars": stats, "alerts": counts,
                                            "wall_s": out["wall_s"], "reason": None, "auto": auto_out})
+            REST.count(cs["state"] if cs else None, session, now, n_names=len(syms), rest=rest_out)
+        if rest_out is not None:
+            log.info("gajjala watch: REST — %d failed, %d re-read after %.1f s, %d recovered, %d rang (%s)",
+                     int(rest_out.get("failed") or 0), int(rest_out.get("retried") or 0),
+                     float(rest_out.get("wait_s") or 0.0), int(rest_out.get("recovered") or 0),
+                     int(rest_out.get("pushed") or 0), rest_out.get("error") or rest_out.get("skip"))
         return out
     finally:
         if lst is not None and claim is not None:
@@ -439,6 +512,11 @@ def main(argv=None) -> int:
     ap.add_argument("--symbols", help="comma list REPLACING the owner list for this run — --dry-run only")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    try:                                                        # 🔌 2026-11-23 — the key scrub on every log line
+        from observability.logsetup import install_redaction
+        install_redaction()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch: log redaction unavailable: %s", type(exc).__name__)
     if args.now and not args.dry_run:
         log.warning("gajjala watch: a --now replay writes the real store unless --dry-run; refusing")
         return 2

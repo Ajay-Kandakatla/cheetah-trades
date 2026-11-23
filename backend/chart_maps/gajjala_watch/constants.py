@@ -169,3 +169,11 @@ RUNNERS_MORE_TEXT = "+{n} more"
 RUNNERS_LESS_TEXT = "show less"
 RUNNERS_STATES = ("ok", "empty", "error", "off", "owner_only")
 TODAY_STATES = ("running", "not_running", "not_read")
+# 🔌 REST resilience (2026-11-23, spec ggconn rev 2 §3.4, WP-3 — Ajay, verbatim: "Can you clean up some connection I am
+# seeing delays price update for AKAN on the watch chart.." · "I would like us to focus on connections of Gajjala more for
+# the rest of the tabs."). Transport only: no rule, gate, threshold or ring condition reads any of this. UNMEASURED.
+REST_OWN_BREAKER_ON = True       # the Watch loader's OWN breaker, a new closed one before every read; False = the module breaker as before
+REST_REREAD_ON = False           # HIS CALL (spec ggconn §7 C) — one re-read of a minute's failed names. Built, OFF until his word
+REST_RETRY_PAUSE_SEC = 2.0       # MINE (read only when REST_REREAD_ON) — = the minute fetch's own 429 pause (daytrading/data.py `time.sleep(2)`)
+REST_COUNT_ID_PREFIX = "rest:"   # the per-session counter doc `rest:{session}` in COLL_STATE
+REST_SKIPS = ("off", "no_time")  # why a failed minute was not re-read

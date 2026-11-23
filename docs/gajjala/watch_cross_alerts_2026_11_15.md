@@ -96,6 +96,14 @@ timeout (6 s) or the open breaker, an over-budget name, a held lease, or host sl
 on the tile. It is never sent late. Accepting the bar before the latest while it is still fresh (≤ 90 s) is HIS CALL
 #20, and it would loosen the latest-bar gate.
 
+**2026-11-23 (spec ggconn WP-3, `watch_rest_retry_breaker_2026_11_23.md`).** The Watch's minute loader now has its OWN
+breaker, rebuilt closed before every read (`REST_OWN_BREAKER_ON = True`): a timeout trip no longer blanks the NEXT minute
+too, so a cross on that next minute can ring (before, it was lost with the whole minute). A per-session counter doc
+`rest:{session}` counts failed name-minutes (`scripts/gajjala_watch_rest_count.py`, read-only). One re-read of a
+minute's failed names is built and OFF (`REST_REREAD_ON = False`, HIS CALL): when on, it could ring the cross that this
+section calls lost — same rule, its own minute, up to 41 s (ceiling 60 s) after the normal time — and the sentence
+"never sent late" then needs his reading of "late". Nothing here changes while it is off; HIS CALL #20 untouched.
+
 ## The latch consequence (HIS CALL #4, word for word)
 
 "With no trend filter and once a session, the FIRST 1-min up cross after 09:45 uses that ticker's one ring for the day —
