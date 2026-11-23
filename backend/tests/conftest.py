@@ -85,8 +85,19 @@ def _never_touch_a_real_database():
         raise RuntimeError("reg_sho outside calls are disabled during tests (tests/conftest.py)")
     RS._http = _refuse_http
 
+    # 💸 2026-11-22 — the IBKR borrow engine's ONE outside-call seam ASSIGNED to a refuser for the whole session the
+    # same way: a payload / kick_refresh with no `ftp=` must never open an FTP session to Interactive Brokers. Tests
+    # that want an outside answer pass their own `ftp=` fake. Restored on teardown.
+    import short_interest.borrow as BR
+    prior_br_ftp = BR._ftp
+
+    def _refuse_ftp(*a, **k):
+        raise RuntimeError("IBKR borrow FTP sessions are disabled during tests (tests/conftest.py)")
+    BR._ftp = _refuse_ftp
+
     yield
 
+    BR._ftp = prior_br_ftp
     RS._http = prior_rs_http
     if real is not None:
         pymongo.MongoClient = real

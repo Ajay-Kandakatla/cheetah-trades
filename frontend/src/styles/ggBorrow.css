@@ -1,0 +1,7 @@
+/* 💸 Borrow read (2026-11-22, spec borrow §3.3). NEUTRAL look: the chip keeps the colour of the badge class it rides, the
+ * 🎾 label takes the plain 🩳 / 🔒 label weight, a stale read is muted. No tier colour by value, ever.
+ * Phone: the chip wraps inside its card (430 px); the 📋 cell keeps its one-line rule. Not on the 👀 Watch (his call). */
+.gg-brw { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.gg-brw-label { font-weight: 600; }
+.gg-brw-stale { color: var(--ink-subtle, #94a3b8); }
+.gg-all-table td.gg-all-si .gg-brw { display: block; white-space: nowrap; }

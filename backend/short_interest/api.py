@@ -13,6 +13,13 @@ Endpoints:
       🔒 Hard to borrow — the exchanges' Reg SHO threshold lists, ONE whole
       read via `short_interest.reg_sho.payload` (Mongo only; never a 500).
 
+  GET /short-interest/borrow?symbols=A,B,C   (2026-11-22)
+      💸 Borrow — Interactive Brokers' public shortable-shares file, served
+      for up to `borrow.MAP_MAX_SYMBOLS` names via `short_interest.borrow.payload`
+      (Mongo only; a due file is fetched by the engine's single background
+      worker, never inline; never a 500 — a raising read serves
+      `borrow.fault_payload(symbols)`, the same shape as "Mongo down").
+
   GET /short-interest/map?symbols=A,B,C   (2026-10-03)
       🩳 Short INTEREST (bi-monthly FINRA settlement) for up to
       `read.MAP_MAX_SYMBOLS` names — the ONE bulk read behind the chip on
@@ -97,6 +104,20 @@ async def reg_sho_threshold(check: str = Query("", description="comma-separated 
     except Exception as exc:                                   # noqa: BLE001
         log.warning("reg_sho: the read failed: %s", type(exc).__name__)
         return RS.fault_payload()
+
+
+@router.get("/short-interest/borrow")
+async def ibkr_borrow(symbols: str = Query("", description="comma-separated tickers; first 200 read")):
+    """💸 Borrow (2026-11-22): IBKR's borrow fee + shares available for a batch of names, built by
+    `short_interest.borrow.payload` from Mongo only. Never answers 500: a read that raises serves
+    `borrow.fault_payload(syms)` — the unread block for each asked name, the same shape as "Mongo down"."""
+    from short_interest import borrow as BR
+    syms = [s.strip() for s in (symbols or "").split(",") if s.strip()]
+    try:
+        return await asyncio.to_thread(BR.payload, syms)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("borrow: the read failed: %s", type(exc).__name__)
+        return BR.fault_payload(syms)
 
 
 @router.get("/short/{symbol}/history")

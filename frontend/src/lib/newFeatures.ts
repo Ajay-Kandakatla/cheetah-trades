@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-22, verbatim: "What is short borrow fee? Is that a real time value I saw AKAN has a high short borrow
+  // fee" → my offer of a borrow fee + shares-available line from Interactive Brokers' file → "yes i need that please".
+  // backend/short_interest/borrow.py + GET /short-interest/borrow?symbols= (IBKR's public shortable file over FTP,
+  // ftp2, refreshed at most every 15 min, cached in Mongo). Display only: never a gate, sort, filter, push or lane input.
+  // UNMEASURED. Doc docs/gajjala/borrow_fee_ibkr_2026_11_22.md.
+  {
+    id: 'gajjala-borrow-fee-ibkr-2026-11-22',
+    label: '💸 Borrow fee — you asked: “What is short borrow fee? Is that a real time value I saw AKAN has a high short borrow fee” and then “yes i need that please”. Next to 🔒 on 🚩 Gajjala’s cards and the 📋 table, a name now shows its Interactive Brokers borrow fee and the shares IBKR has to lend, e.g. 💸 Borrow 196% · 100K avail (the 📋 table shows 💸 196%). Hover for the yearly rate, about what it costs a day, and when IBKR stamped the file. The file is re-read at most every 15 minutes and always says how old it is. On a 🎾 Reversal Squeeze card a name IBKR does not list (AKAN today) says so — not being in the file is not a number. One broker’s indicative rate: your broker sets its own fee when you borrow. Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-22',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-22, verbatim: "Can you do something for me for reversal squeezes can you also tell me if something is
   // under when it's on our list.. i want to check if people are finding it hard to get stocks like AkAN now has that
   // issue.. add a tag to stocks tickers like short interest, name the tag " hard to borrow" threshold security".
