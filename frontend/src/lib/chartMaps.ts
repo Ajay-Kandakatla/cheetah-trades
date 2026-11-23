@@ -502,7 +502,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // backend chart_maps/gajjala_watch/constants.TAB_LABEL (contracts). Owner only. UNMEASURED.
   gajjala_watch: {
     label: "\u{1F440} Gajjala's Watch",
-    blurb: '\u{1F440} Your own tickers on 1-, 3- and 5-minute charts with a bold 9 and 21 EMA, every 9 / 21 cross marked. Ajay 2026-11-15: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add remove tickers from the dashboard. When I add a ticker I need 1 min 3 min and 5 min charts... Not the SEPA and I need clear distinction or may be a brighter and thicker 21 EMA and 9 EMA, from the videos I notice that when ever 9 EMA crosses over 21 EMA on uptrend is where the bullish momentum started I need alerts on these from 1 min to I can be ready... I think the cross over is slow but once it picks up its very rapid.." Shown to the account owner only. UNMEASURED \u2014 a cross is information, not an entry. Not advice.',
+    blurb: '\u{1F440} Your own tickers on 1-, 5- and 15-minute charts with a bold 9 and 21 EMA, every 9 / 21 cross marked. Ajay 2026-11-15: "I need dashboard to add tickers to Gajjalas watch dashboard. I wanna be able to remove and add remove tickers from the dashboard. When I add a ticker I need 1 min 3 min and 5 min charts... Not the SEPA and I need clear distinction or may be a brighter and thicker 21 EMA and 9 EMA, from the videos I notice that when ever 9 EMA crosses over 21 EMA on uptrend is where the bullish momentum started I need alerts on these from 1 min to I can be ready... I think the cross over is slow but once it picks up its very rapid.." Shown to the account owner only. UNMEASURED \u2014 a cross is information, not an entry. Not advice.',
   },
   luk: {
     label: '\u{1F947} Luk\'s',
@@ -759,6 +759,12 @@ export type CmBand = {
    *  Absent on supply and on any unpadded band. Never computed here. */
   pad_lo?: number | null;
   pad_pct?: number | null;
+  /** 📐 A CONTEXT band (👀 Watch daily zones, 2026-11-23): drawn where it falls, never a reason to move anything —
+   *  barDomain never stretches to it, a zero-width one inside the domain is kept as one dashed line (clipBands), no
+   *  off-chart edge marker, and its `<title>` / hover chip print the served `label` verbatim. Absent → as before. */
+  ctx?: boolean;
+  /** 📐 The band's right-axis word (served, e.g. "demand"); drawn as a quiet gutter label only on a drawn `ctx` band. */
+  gutter?: string;
 };
 // The last four are the 2026-09-12 study overlays. They were missing from
 // this union, so `toneColor` and `TONE_PRIORITY` had no case for them and
@@ -787,7 +793,10 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
   // price is through a member of that line now, or closed through it today
   // (supply_demand/key_levels.chart_lines). Tone-owned, never prefix-owned, so
   // the ICT tab's `key low X` (tone neutral) is not claimed by the checkbox.
-  | 'key' | 'key_broken';
+  | 'key' | 'key_broken'
+  // 📈📐 👀 Watch (2026-11-23, Ajay: "Add vwap and supply demand too"): the served VWAP curve, and the quiet gutter
+  // words of the daily zones (ctx board bands). Display only.
+  | 'vwap' | 'zone_demand' | 'zone_supply';
 /** `quiet` (2026-09-14): the backend flags BOS / swept / ORB lines it wants
  *  drawn but not fought over — the label yields to the plan labels under
  *  pressure (priority 0) while the line itself still draws. The flag was sent
@@ -2703,7 +2712,11 @@ export function barDomain(
       hi = Math.max(hi, v);
     }
   };
-  for (const b of bands) { stretch(b.lo); stretch(b.hi); }
+  for (const b of bands) {
+    // 📐 A context band (2026-11-23) never moves the price scale — it is drawn only where it falls.
+    if (b.ctx) continue;
+    stretch(b.lo); stretch(b.hi);
+  }
   for (const l of lines) stretch(l.price);
   // A curve is drawn across the whole tile, so a channel that runs wider than
   // the candles would be CLIPPED at the top or bottom of the plot without
@@ -2761,6 +2774,10 @@ export function boldNowLines(lines: CmLine[] | undefined, bars: ReadonlyArray<{ 
  *  are drawn at EMA_LINE_W on the ordinary charts (was 1.1); the 👀 bold charts went 2 → 3 px, then back to 2 (2026-11-16). */
 export const EMA_LINE_W = 2;
 
+/** 📈 The 👀 Watch VWAP line's width under `emaStyle="bold"` (2026-11-23): thin, solid, non-scaling — drawn over the
+ *  candles and under the two bold EMAs. MINE (layout) — HIS CALL #8 to move. */
+export const VWAP_LINE_W = 1.25;
+
 /** 👀 A served time axis (Gajjala's Watch, chart_maps/gajjala_watch/build.axis): `slots` minute-grid slots from 04:00
  *  ET to the close, `x[i]` = the slot of served bar i, `shade` = pre-market / after-hours slot spans [from, to), `ticks`
  *  = hourly labels. Display only — the server computes every slot. */
@@ -2801,7 +2818,12 @@ export function clipBands(bands: CmBand[], d: Domain): CmBand[] {
     if (!Number.isFinite(b.lo) || !Number.isFinite(b.hi)) continue;
     const lo = Math.max(Math.min(b.lo, b.hi), d.lo);
     const hi = Math.min(Math.max(b.lo, b.hi), d.hi);
-    if (hi <= lo) continue;                    // entirely outside the view
+    if (hi <= lo) {
+      // 📐 [C3] a zero-width CONTEXT band (a sub-$1 daily zone rounded to the cent) inside the view is kept — drawn as
+      // one dashed line. Every other `hi <= lo` is dropped as before.
+      if (b.ctx && b.lo === b.hi && b.lo >= d.lo && b.lo <= d.hi) out.push({ ...b });
+      continue;                                // entirely outside the view
+    }
     out.push({ ...b, lo, hi });
   }
   return out;
@@ -2831,6 +2853,8 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   // 🔑 Key levels (2026-09-25) sit at 1 with the MAs: a key label yields to
   // BUY / STOP / TARGET under pressure; the fuchsia LINE still draws.
   key: 1, key_broken: 1,
+  // 📈📐 👀 Watch VWAP + daily zone words (2026-11-23) yield like the MAs.
+  vwap: 1, zone_demand: 1, zone_supply: 1,
 };
 
 /** The bands `clipBands` DROPPED — the ones entirely outside the drawn
@@ -2898,7 +2922,9 @@ export function curveLabels(curves: CmCurve[] = []): CmLine[] {
     for (let i = vals.length - 1; i >= 0; i -= 1) {
       const v = vals[i];
       if (v != null && Number.isFinite(v)) {
-        out.push({ price: v, tone: c.tone, label: `${c.label} ${v.toFixed(2)}` });
+        // 📈 VWAP (2026-11-23) prints through the ONE price formatter (3 dp under $1); every other tone as before.
+        const txt = c.tone === 'vwap' ? (pxText(v) ?? v.toFixed(2)) : v.toFixed(2);
+        out.push({ price: v, tone: c.tone, label: `${c.label} ${txt}` });
         break;
       }
     }
@@ -3214,6 +3240,11 @@ export function toneColor(tone: CmLineTone): string {
   // brigh color"), the same token its checkbox swatch shows. Broken or not,
   // one colour — the dash is what says "through it".
   if (tone === 'key' || tone === 'key_broken') return 'var(--cm-key, #d946ef)';
+  // 📈📐 👀 Watch (2026-11-23): VWAP in the info blue (never on a chart with `ownstop` / `fvg_demand` — HIS CALL #8);
+  // the daily zone words in the board bands' own green / red.
+  if (tone === 'vwap') return 'var(--info, #38bdf8)';
+  if (tone === 'zone_demand') return 'var(--positive, #22c55e)';
+  if (tone === 'zone_supply') return 'var(--negative, #ef4444)';
   return 'var(--text-muted, #94a3b8)';
 }
 

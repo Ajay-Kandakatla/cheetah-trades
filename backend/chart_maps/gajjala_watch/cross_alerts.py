@@ -17,7 +17,7 @@ A+ push window (`alerts.window_reason`) · GG's session-volume floor (GC.K11_MIN
 dry · no alert store (never a claim-less send) · the insert-only claim (`demand_alerts.claim_key`, BEFORE the send;
 `GGW:` ids in `gajjala_watch_alerts` only) · the send (owner-scoped, C.PUSH_KIND = the 🧠 kind) → `alerts._settle`.
 
-A down cross never rings (it is drawn). 3- and 5-minute crosses are drawn only. Every body ends UNMEASURED; never "buy".
+A down cross never rings (it is drawn). 5- and 15-minute crosses are drawn only (2026-11-23: was 3- and 5-). Every body ends UNMEASURED; never "buy".
 """
 from __future__ import annotations
 

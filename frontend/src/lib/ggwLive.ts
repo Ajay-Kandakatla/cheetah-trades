@@ -181,3 +181,55 @@ export function ggwLiveFrame(f: GgwFrame, bars: GgwLiveBar[] | undefined, opts?:
   if (va && typeof va === 'object' && Array.isArray(va.values)) tile.vol_avg = { ...va, values: [...va.values, ...nulls()] };
   return { ...f, tile, axis: { ...f.axis, x: [...f.axis.x, ...keep.map((b) => b.bucket)] } };
 }
+
+/** 📈 2026-11-23 (vwapzones spec §3.9 [O2][C8]) — the forming 5- / 15-min candle built from the row's OWN 1-min chart.
+ *  BUILT, OFF: the tile folds it ONLY when lib/gajjalaWatch.GGW_SEED_FORMING is on (HIS CALL #13); off, the forming candle
+ *  is main's (`own` — the prints seen since the fold began).
+ *  Rule: `f1` = the row's 1-min frame with live keys on the SAME `start_epoch` as `f` (and not served stale); k =
+ *  f.frame_min / f1.frame_min an integer > 1; at least ONE live 1-min bar PAST the stored 1-min bars (bucket > f1's last
+ *  stored bucket and < f1's slots — ggwLiveFrame's own render-time filter, so a minute the server now stores is counted
+ *  ONCE, from the store [C8]). Then for every bucket b of `f` past its last stored bucket and inside its slots: the stored
+ *  1-min bars with floor(slot / k) == b, then those live 1-min bars with floor(bucket / k) == b → o first, h max, l min,
+ *  c last, v sum, as_of the last live stamp (a stored-only bucket: its last minute's close on the served grid). A bucket of
+ *  `own` the seed does not cover is kept as it is. Anything else → `own` unchanged (no live print → no forming candle). */
+export function ggwSeedLive(f: GgwFrame, own: GgwLiveBar[] | undefined, f1: GgwFrame | null | undefined,
+                            live1: GgwLiveBar[] | undefined): GgwLiveBar[] | undefined {
+  if (!f || !f1 || f1 === f || f1.stale === true || !Array.isArray(live1) || !live1.length) return own;
+  const m = ggwFrameMeta(f);
+  const m1 = ggwFrameMeta(f1);
+  if (!m || !m1 || m.start_epoch !== m1.start_epoch) return own;
+  const k = m.frame_min / m1.frame_min;
+  if (!Number.isInteger(k) || k <= 1) return own;
+  const past1 = live1.filter((b) => b && fin(b.bucket) && b.bucket > m1.last_bucket && b.bucket < m1.slots);
+  if (!past1.length) return own;
+  type Part = { o: number; h: number; l: number; c: number; v: number; as_of: number | null };
+  const parts = new Map<number, Part[]>();
+  const push = (b: number, p: Part) => {
+    if (!(b > m.last_bucket && b < m.slots)) return;
+    const arr = parts.get(b);
+    if (arr) arr.push(p); else parts.set(b, [p]);
+  };
+  const bars1 = f1.tile.bars;
+  const x1 = f1.axis?.x ?? [];
+  const n1 = Math.min(bars1.length, x1.length);
+  for (let i = 0; i < n1; i += 1) {
+    const s = x1[i];
+    const bar = bars1[i];
+    if (!fin(s) || !bar || ![bar.o, bar.h, bar.l, bar.c].every(fin)) continue;
+    push(Math.floor(s / k), {
+      o: bar.o, h: bar.h, l: bar.l, c: bar.c, v: fin(bar.v) && bar.v > 0 ? bar.v : 0,
+      as_of: m1.start_epoch + (s + 1) * m1.frame_min * 60,
+    });
+  }
+  for (const b of past1) push(Math.floor(b.bucket / k), { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, as_of: b.as_of });
+  if (!parts.size) return own;
+  const seeded = new Map<number, GgwLiveBar>();
+  for (const [b, ps] of parts) {
+    seeded.set(b, {
+      bucket: b, o: ps[0].o, h: Math.max(...ps.map((p) => p.h)), l: Math.min(...ps.map((p) => p.l)),
+      c: ps[ps.length - 1].c, v: ps.reduce((a, p) => a + p.v, 0), as_of: ps[ps.length - 1].as_of ?? 0,
+    });
+  }
+  for (const b of own || []) if (b && !seeded.has(b.bucket)) seeded.set(b.bucket, b);
+  return [...seeded.values()].sort((a, b) => a.bucket - b.bucket);
+}

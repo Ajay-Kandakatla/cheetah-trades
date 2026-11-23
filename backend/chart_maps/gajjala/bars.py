@@ -35,7 +35,9 @@ RULES = {"5m": "5min", "15m": "15min"}
 # 2026-10-27 (BUILD_SPEC27 §3.3): every frame label any variant builds → its pandas rule; RULES above stays GG5's pair
 RULE_OF = {"1m": "1min", "5m": "5min", "15m": "15min"}
 # 2026-11-15 (Ajay "When I add a ticker I need 1 min 3 min and 5 min charts"): the 3-minute frame, display + the owner's
-# watch only — no variant builds it, alerts.FRAME_MINUTES is NOT given it (a 3-minute frame never rings)
+# watch only — no variant builds it, alerts.FRAME_MINUTES is NOT given it (a 3-minute frame never rings).
+# 2026-11-23 (Ajay "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board"): the watch builds
+# 1m / 5m / 15m now — NOTHING builds "3m"; the rule stays so an old reader / test of it still resolves.
 RULE_OF["3m"] = "3min"
 EMA_TONES = (("ema9", "9 EMA", GC.EMA_FAST), ("ema21", "21 EMA", GC.EMA_SLOW))
 

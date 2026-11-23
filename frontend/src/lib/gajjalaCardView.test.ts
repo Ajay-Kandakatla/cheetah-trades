@@ -37,10 +37,12 @@ describe('🚩 the routes and the order', () => {
     expect(ggcPath('A/B')).toBe('/chart-maps/gajjala/frames/A%2FB');
     expect(GGC_FETCH_FAILED).toBe('Could not load the three charts.');
   });
-  it('NEGATIVE: ggwStretchFrames(frames) is still the Watch 5m / 3m / 1m — no 15m inserted', () => {
-    expect(GGW_STRETCH_ORDER).toEqual(['5m', '3m', '1m']);
-    expect(ggwStretchFrames([f('1m'), f('3m'), f('5m')]).map((x) => x.tf)).toEqual(['5m', '3m', '1m']);
-    expect(ggwStretchFrames([f('1m'), f('15m'), f('5m')]).map((x) => x.tf)).toEqual(['5m', '1m', '15m']);
+  // 2026-11-23 (vwapzones §3.9): the Watch's own order is now the card's 15 / 5 / 1 — equal, and no 3m in either.
+  it('ggwStretchFrames(frames) is the Watch 15m / 5m / 1m == GGC_STRETCH_ORDER; NEGATIVE: no 3m named', () => {
+    expect(GGW_STRETCH_ORDER).toEqual(['15m', '5m', '1m']);
+    expect([...GGW_STRETCH_ORDER]).toEqual([...GGC_STRETCH_ORDER]);
+    expect(GGW_STRETCH_ORDER as ReadonlyArray<string>).not.toContain('3m');
+    expect(ggwStretchFrames([f('1m'), f('15m'), f('5m')]).map((x) => x.tf)).toEqual(['15m', '5m', '1m']);
   });
   it('ggwStretchFrames(frames, GGC_STRETCH_ORDER) = 15m / 5m / 1m; NEGATIVE: the order names no 3m', () => {
     expect(GGC_STRETCH_ORDER).toEqual(['15m', '5m', '1m']);

@@ -271,7 +271,7 @@ def test_an_iteration_on_real_frames_rings_and_writes_the_tile(monkeypatch):
     tile = db[C.COLL_TILES].docs["OMH"]
     assert tile["status"] == "loaded" and tile["seen_bar_t"] == stamp(S, 10, 6)
     assert tile["held"]["1m"] == {"bar_t": stamp(S, 10, 6), "reason": "pushed"}
-    assert list(tile["frames"]) == ["1m", "3m", "5m"]
+    assert list(tile["frames"]) == ["1m", "5m", "15m"]                              # RE-PINNED 2026-11-23 (3m → 15m)
     assert list(db[C.COLL_ALERTS].docs) == ["GGW:2026-11-13|OMH|1m"]
 
 
@@ -291,7 +291,10 @@ def test_a_failed_read_keeps_the_last_good_charts(monkeypatch):
 # ── the build child [C2.5] ───────────────────────────────────────────────────────────────────────────────────────
 def test_the_build_child_builds_every_pending_listed_name_only(monkeypatch):
     db = fake_db(symbols=["OMH", "AMD", "NVDA", "TSLA"],
-                 tiles=[{"_id": "AMD", "session": S.isoformat(), "status": "loaded"},       # done → never fetched
+                 # FIXTURE 2026-11-23: a loaded doc holds every tf of C.FRAMES (build_pending now rebuilds a doc
+                 # lacking one — an old 1m/3m/5m doc has no 15m); the assertions are unchanged
+                 tiles=[{"_id": "AMD", "session": S.isoformat(), "status": "loaded",
+                         "frames": {tf: {"tf": tf} for tf, _r in C.FRAMES}},                    # done → never fetched
                         {"_id": "NVDA", "session": PREV.isoformat(), "status": "loaded"},   # another session
                         {"_id": "TSLA", "session": S.isoformat(), "status": "failed"},      # not loaded
                         {"_id": "ZZZZ", "session": PREV.isoformat(), "status": "failed"}])  # not listed

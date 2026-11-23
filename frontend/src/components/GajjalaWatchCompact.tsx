@@ -13,7 +13,11 @@
  *                    tags row (without the float / 🚫 chips the head already prints), the 🤖 chip and its served lines,
  *                    the served A+ / when / 📅 titles (a phone has no hover — the premarket-peak and under-the-bar
  *                    lines live here even when there is no 📅 chip), every 🏆 win, and the non-stale as-of stamp.
- * Every visible string is SERVED; this file types no word about a stock and no section key. Descriptive, UNMEASURED. */
+ * Every visible string is SERVED; this file types no word about a stock and no section key. Descriptive, UNMEASURED.
+ *
+ * 📐 2026-11-23 (vwapzones spec §3.9) — Ajay: "can you add vwap and supply demand zone in the daily time frame on the
+ * watch list please". GgwLevelsLine = the row's served daily-zones line (text verbatim, hover = the served title); the
+ * plain Tile mounts it under the head, GgwDrawer mounts it here on a compact tile (once per tile either way). */
 import type { GgwRow } from '../lib/gajjalaWatch';
 import { GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
 
@@ -25,6 +29,16 @@ export function GgwSetupChip({ row }: { row: GgwRow }) {
     <span className="ggw-chip ggw-setup-chip" data-testid={`ggw-setup-chip-${row.symbol}`} title={s.title ?? undefined}>
       {s.text}
     </span>
+  );
+}
+
+/** 📐 The row's served daily-zones line (row.levels — ok / retry / none / pending, every word served). No text → nothing. */
+export function GgwLevelsLine({ row }: { row: GgwRow }) {
+  const lv = row.levels;
+  if (!lv || !lv.text) return null;
+  return (
+    <p className="ggw-line ggw-levels" data-testid={`ggw-levels-${row.symbol}`} data-state={lv.state}
+       title={lv.title ?? undefined}>{lv.text}</p>
   );
 }
 
@@ -81,6 +95,7 @@ export function GgwDrawer({ row, open, tags, domId }: { row: GgwRow; open: boole
       {past ? [...(past.items.length ? past.items : [past.text]), ...(past.more ? [past.more] : [])].map((t, i) => (
         <p key={`p${i}`} className="ggw-line" data-testid="ggw-past-line">{t}</p>
       )) : null}
+      <GgwLevelsLine row={row} />
       {row.as_of_et && !row.stale ? (
         <div className="ggw-drawer-row">
           <span className="ggw-chip ggw-asof" data-testid="ggw-asof">{row.as_of_et}</span>

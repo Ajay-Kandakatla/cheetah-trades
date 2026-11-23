@@ -14,11 +14,28 @@ API_PATH = "/chart-maps/gajjala-watch"
 API_SYMBOL_PATH = API_PATH + "/symbols/{symbol}"
 API_LIST_PATH = API_PATH + "/symbols"                     # ➕/➖ card button: the owner's names only (2026-11-15)
 API_LIVE_PATH = API_PATH + "/live"                       # 👀 LIVE (2026-11-16): the owner registers the board's live interest (== FE GGW_LIVE_PATH)
-FRAMES = (("1m", "1min"), ("3m", "3min"), ("5m", "5min"))   # his words "1 min 3 min and 5 min charts" — order = draw order
-FRAME_WORDS = {"1m": "1-min", "3m": "3-min", "5m": "5-min"}
+# 2026-11-23 (Ajay, verbatim: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board"): was
+# 1 / 3 / 5 since 11-15 ("1 min 3 min and 5 min charts") — order = served order (1m on top, the 5m + 15m pair)
+FRAMES = (("1m", "1min"), ("5m", "5min"), ("15m", "15min"))
+FRAME_WORDS = {"1m": "1-min", "5m": "5-min", "15m": "15-min"}
 AXIS_FRAME = "1m"                                      # the frame whose bars set the tile's axis end (C1.7)
 MAX_SYMBOLS = GC.GG_WATCH_N                            # HIS CALL 2026-11-18 "18 (Recommended)": GG "watches 18 stocks simultaneously" (was 12 = MINE, = signal_lab)
-PUSH_FRAMES = ("1m",)                                  # his words "I need alerts on these from 1 min" — 3m / 5m = HIS CALL #2
+PUSH_FRAMES = ("1m",)                                  # his words "I need alerts on these from 1 min" — 5m / 15m = HIS CALL #2
+# 📈 VWAP + 📐 daily zones (2026-11-23, spec vwapzones rev 2 — Ajay, verbatim: "can you add vwap and supply demand zone in
+# the daily time frame on the watch list please" · "Add vwap and supply demand too"). DISPLAY ONLY — nothing gates, sorts,
+# rings or caps on any of this. UNMEASURED.
+VWAP_ON = True                      # his word (asked twice)
+VWAP_SESSIONS = ("rth",)            # HIS CALL #1 (BLOCKING) — one of vwap.SESSION_SETS; ("rth",) = vwap_session's own default argument
+VWAP_TONE, VWAP_LABEL = "vwap", "VWAP"
+VWAP_DP = 6                         # = bars._masked_ema's rounding
+ZONES_ON = True                     # his word
+ZONES_PER_SIDE = None               # None = price_zones.MAX_ZONES_PER_SIDE read BY NAME at call time; an int = HIS CALL #3
+ZONES_MAX_NEW = GC.DAILY_MAX_NEW_PER_PASS   # daily reads per 5-minute slot, retries included (the 🎾 chip's cap)
+ZONES_PERIOD = "2y"                 # = zone_store.warm's loader period (zone_store.py:312) = index_zones.py:803 — a source-read test pins both [C5]
+ZONE_KINDS = ("demand", "supply")   # == price_zones band kinds
+ZONE_BAND_KIND = {"demand": "board_demand", "supply": "board_supply"}   # the SERVED CmBand kind = the house look of the board's bands [C9]
+LEVELS_STATES = ("ok", "none", "retry", "pending")
+LEVELS_MODULE = "chart_maps.gajjala_watch.levels"   # imported LAZILY by payload.py and loop.py (loop.py does not import payload)
 PUSH_MODES = GC.FADE_CROSS_PUSH_MODES                  # ("off", "live")
 PUSH_MODE = "live"                                     # his words "I need alerts on these"
 PUSH_KIND = GC.FADE_CROSS_PUSH_KIND                    # HIS CALL #7 — the 🧠 kind (gajjala_potential); no new OWNER_KEEP_SET kind

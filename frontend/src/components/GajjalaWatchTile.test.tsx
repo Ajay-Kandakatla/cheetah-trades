@@ -50,11 +50,12 @@ describe('GgwStretch with an order (the 🚩 card view)', () => {
     expect(layer.getAttribute('data-kind')).toBe('card');
     expect(layer.parentElement).toBe(document.body);
   });
-  it('NEGATIVE: without an order the same frames fall back to the Watch order (5m first; 15m unnamed → last)', () => {
+  // 2026-11-23 (vwapzones §3.9): the Watch order is now 15 / 5 / 1 — the card's — so the fallback draws the same order.
+  it('NEGATIVE: without an order the same frames fall back to the Watch order (15m / 5m / 1m since 2026-11-23); no card root', () => {
     render(<MemoryRouter><GgwStretch row={cardRow()} phone removeLabel={null} onClose={() => {}} onStep={null} /></MemoryRouter>);
     const tfs = Array.from(screen.getByTestId('ggw-stretch').querySelectorAll('[data-testid="ggw-stretch-charts"] > figure'))
       .map((f) => f.getAttribute('data-tf'));
-    expect(tfs).toEqual(['5m', '1m', '15m']);
+    expect(tfs).toEqual(['15m', '5m', '1m']);
     expect(screen.getByTestId('ggw-stretch').className).toBe('ggw-stretch');
     expect(screen.getByTestId('ggw-stretch').hasAttribute('data-kind')).toBe(false);
   });
@@ -165,7 +166,7 @@ describe('👀 the Watch keeps its exact view (pure move)', () => {
     expect(document.querySelector('[data-testid^="ggw-frame-asof-"]')).toBeNull();
     expect(document.querySelector('.ggw-frame-empty')).toBeNull();
     const tfs = Array.from(layer.querySelectorAll('[data-testid="ggw-stretch-charts"] > figure')).map((f) => f.getAttribute('data-tf'));
-    expect(tfs).toEqual(['5m', '3m', '1m']);
+    expect(tfs).toEqual(['5m', '1m', '3m']);   // 2026-11-23: order 15/5/1 over this older 1m/3m/5m payload — the 3m follows
   });
 });
 

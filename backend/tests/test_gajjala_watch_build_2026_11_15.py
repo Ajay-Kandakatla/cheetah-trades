@@ -134,24 +134,26 @@ def test_frames_for_without_the_new_keywords_is_byte_equal_and_stats_unchanged(v
     assert sorted(a) == sorted(b) == ["OMH"]
 
 
-def test_rules_build_the_three_watch_frames_primary_1m_slow_5m():
+# RE-PINNED 2026-11-23 (Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board"): the
+# watch's frames are 1m / 5m / 15m — primary 1m, slow 15m; the 3m pins below now pin the 15m frame.
+def test_rules_build_the_three_watch_frames_primary_1m_slow_15m():
     fr = watch_frames()
-    assert list(fr.by) == ["1m", "3m", "5m"] and fr.primary == "1m" and fr.slow == "5m"
-    assert [fr.frame(tf).frame for tf in ("1m", "3m", "5m")] == ["1m", "3m", "5m"]
+    assert list(fr.by) == ["1m", "5m", "15m"] and fr.primary == "1m" and fr.slow == "15m"
+    assert [fr.frame(tf).frame for tf in ("1m", "5m", "15m")] == ["1m", "5m", "15m"]
     st = {}
     out = B.frames_for(["OMH"], S, NOW, load_day=loader(), workers=1, stats=st, rules=C.FRAMES)
-    assert list(out["OMH"].by) == ["1m", "3m", "5m"] and st["loaded"] == 1
+    assert list(out["OMH"].by) == ["1m", "5m", "15m"] and st["loaded"] == 1
 
 
-def test_3m_ohlcv_is_the_hand_aggregation_of_its_minutes():
+def test_15m_ohlcv_is_the_hand_aggregation_of_its_minutes():
     p, t = fixture_raws()
-    F = watch_frames().frame("3m")
+    F = watch_frames().frame("15m")
     et = t.copy()
     et.index = et.index.tz_localize("UTC").tz_convert(ET)
-    for hh, mm in ((9, 33), (9, 36), (9, 39)):
+    for hh, mm in ((9, 45), (10, 0), (10, 15)):
         lab = pd.Timestamp(datetime(S.year, S.month, S.day, hh, mm), tz=ET)
-        mins = et[(et.index >= lab - pd.Timedelta("3min")) & (et.index < lab)]
-        assert len(mins) == 3
+        mins = et[(et.index >= lab - pd.Timedelta("15min")) & (et.index < lab)]
+        assert len(mins) == 15
         k = F.t.index(stamp(S, hh, mm))
         assert F.o[k] == pytest.approx(float(mins["open"].iloc[0]))
         assert F.h[k] == pytest.approx(float(mins["high"].max()))
@@ -160,22 +162,23 @@ def test_3m_ohlcv_is_the_hand_aggregation_of_its_minutes():
         assert F.v[k] == pytest.approx(float(mins["volume"].sum()))
 
 
-def test_NEGATIVE_the_still_printing_3m_bucket_is_absent():
-    F = watch_frames(now=at(S, 9, 40, 10)).frame("3m")
-    assert stamp(S, 9, 39) in F.t and F.t[-1] == stamp(S, 9, 39)
-    assert stamp(S, 9, 42) not in F.t
+def test_NEGATIVE_the_still_printing_15m_bucket_is_absent():
+    F = watch_frames(now=at(S, 9, 40, 10)).frame("15m")
+    assert F.frame == "15m" and stamp(S, 9, 30) in F.t and F.t[-1] == stamp(S, 9, 30)
+    assert stamp(S, 9, 45) not in F.t
 
 
 @pytest.mark.parametrize("d,prev", [(S, PREV), (date(2026, 7, 14), date(2026, 7, 13))])   # EST and EDT
-def test_NEGATIVE_no_3m_bucket_straddles_0930_or_the_close(d, prev):
+def test_NEGATIVE_no_15m_bucket_straddles_0930_or_the_close(d, prev):
     fr = B.build_frames("OMH", d, at(d, 19, 0), raw_day(prev), raw_day(d, end=(18, 0)), rules=C.FRAMES)
-    F = fr.frame("3m")
+    F = fr.frame("15m")
+    assert F.frame == "15m"
     for i in F.today:
         lab = datetime.strptime(F.t[i], "%Y-%m-%d %H:%M").replace(tzinfo=ET)
-        start = lab - pd.Timedelta("3min")
+        start = lab - pd.Timedelta("15min")
         for edge in (at(d, 9, 30), at(d, 16, 0)):
             assert not (start < edge < lab), F.t[i]
-    assert stamp(d, 9, 30) in F.t and stamp(d, 9, 33) in F.t and stamp(d, 16, 0) in F.t
+    assert stamp(d, 9, 30) in F.t and stamp(d, 9, 45) in F.t and stamp(d, 16, 0) in F.t
 
 
 def test_per_name_reports_no_prints_vs_no_bars_and_loaded():
@@ -227,15 +230,15 @@ def frames_of(upd) -> dict:
 def test_tile_bars_start_at_04_and_the_axis_maps_the_close_stamp():
     fr = watch_frames()
     fs = frames_of(BLD.tile_update("OMH", fr, S, NOW, "loaded"))
-    assert list(fs) == ["1m", "3m", "5m"]
-    assert [fs[tf]["bars"][0]["t"] for tf in fs] == [stamp(S, 4, 1), stamp(S, 4, 3), stamp(S, 4, 5)]
+    assert list(fs) == ["1m", "5m", "15m"]                                       # RE-PINNED 2026-11-23
+    assert [fs[tf]["bars"][0]["t"] for tf in fs] == [stamp(S, 4, 1), stamp(S, 4, 5), stamp(S, 4, 15)]
     one = fs["1m"]
     k = [b["t"] for b in one["bars"]].index(stamp(S, 9, 31))
     assert one["axis"]["x"][k] == 330 and one["axis"]["x"][0] == 0
     assert one["axis"]["from_et"] == "04:00" and one["axis"]["to_et"] == "16:00"
-    assert one["axis"]["slots"] == 720 and fs["3m"]["axis"]["slots"] == 240 and fs["5m"]["axis"]["slots"] == 144
+    assert one["axis"]["slots"] == 720 and fs["5m"]["axis"]["slots"] == 144 and fs["15m"]["axis"]["slots"] == 48
     assert one["axis"]["shade"] == [{"from_slot": 0, "to_slot": 330, "kind": "pre"}]
-    assert fs["3m"]["axis"]["shade"][0]["to_slot"] == 110 and fs["5m"]["axis"]["shade"][0]["to_slot"] == 66
+    assert fs["5m"]["axis"]["shade"][0]["to_slot"] == 66 and fs["15m"]["axis"]["shade"][0]["to_slot"] == 22
     assert one["axis"]["ticks"][0] == {"slot": 0, "label": "04:00"} and one["axis"]["ticks"][-1]["label"] == "16:00"
     assert len(one["axis"]["x"]) == len(one["bars"]) and one["axis"]["x"][-1] < one["axis"]["slots"]   # space to the close
     assert one["label"] == "1-min" and one["as_of_bar_t"] == stamp(S, 10, 39)
@@ -253,10 +256,10 @@ def test_axis_ends_at_the_half_day_close_and_the_extended_close_once_a_bar_print
 
 
 def test_C1_7_one_axis_end_per_tile_from_the_1m_frame():
-    now = at(S, 16, 1, 45)                                      # 1m 16:01 closed; no 3m / 5m bar past 16:00 yet
+    now = at(S, 16, 1, 45)                                      # 1m 16:01 closed; no 5m / 15m bar past 16:00 yet
     fr = B.build_frames("OMH", S, now, raw_day(PREV), raw_day(S, end=(16, 2)), rules=C.FRAMES)
     assert fr.frame("1m").t[-1] == stamp(S, 16, 1)
-    assert fr.frame("3m").t[-1] <= stamp(S, 16, 0) and fr.frame("5m").t[-1] <= stamp(S, 16, 0)
+    assert fr.frame("15m").t[-1] <= stamp(S, 16, 0) and fr.frame("5m").t[-1] <= stamp(S, 16, 0)
     fs = frames_of(BLD.tile_update("OMH", fr, S, now, "loaded"))
     assert [fs[tf]["axis"]["to_et"] for tf in fs] == ["20:00", "20:00", "20:00"]
     sh = fs["1m"]["axis"]["shade"]

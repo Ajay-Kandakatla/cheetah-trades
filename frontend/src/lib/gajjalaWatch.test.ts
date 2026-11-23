@@ -94,8 +94,9 @@ describe('👀 pending rows, merge, frame split', () => {
 });
 
 describe('👀 look (HIS CALL #10)', () => {
-  it('chart heights: 1-min 120, 3-/5-min 180 (viewBox units); phone 190', () => {
-    expect(GGW_CHART_H).toEqual({ '1m': 120, '3m': 180, '5m': 180 });
+  // 2026-11-23 (vwapzones §3.9 — Ajay: "Can you remove 3 mins just add 15 mins instead"): the 15-min chart takes the 3-min height.
+  it('chart heights: 1-min 120, 5-/15-min 180 (viewBox units); phone 190', () => {
+    expect(GGW_CHART_H).toEqual({ '1m': 120, '5m': 180, '15m': 180 });
     expect(GGW_CHART_H_PHONE).toBe(190);
     expect(ggwChartHeight('1m', false)).toBe(120);
     expect(ggwChartHeight('5m', false)).toBe(180);

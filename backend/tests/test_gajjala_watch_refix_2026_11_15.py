@@ -99,6 +99,7 @@ def test_NEGATIVE_the_build_cli_off_runs_nothing(monkeypatch):
 def test_the_build_cli_on_builds(monkeypatch):
     called = []
     monkeypatch.setattr(L, "build_pending", lambda *a, **k: called.append(1) or {})
+    monkeypatch.setattr(L, "_levels", lambda *a, **k: 0)        # 📐 2026-11-23 [C1]: nothing read → still ONE call
     assert L.main(["--build"]) == 0 and called == [1]
 
 

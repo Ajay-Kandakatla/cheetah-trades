@@ -12,8 +12,8 @@
  * served reason only. Otherwise: the head (served title · the add box · the served pass line · the 9 / 21 legend · one
  * collapsed ℹ️ with the served honesty, K5 rule and push sentence — printed ONCE) and a 3-column grid of tiles,
  * newest added first, as served (the server orders; this board never re-sorts). Each tile: SYM, the served row text / session stamp / as-of, the 🔔 rang chips,
- * one Yahoo ↗, ✕ (DELETE, no confirm); the replay's dark panel with the 1-min chart full width on top and the 3-min +
- * 5-min side by side below — PatternChart chartOnly (no SEPA link), emaStyle bold, the served 04:00 axis.
+ * one Yahoo ↗, ✕ (DELETE, no confirm); the replay's dark panel with the 1-min chart full width on top and the 5-min +
+ * 15-min side by side below (3-min + 5-min until 2026-11-23) — PatternChart chartOnly (no SEPA link), emaStyle bold, the served 04:00 axis.
  *
  * 2026-11-16, Ajay: "I need bigger may be 2 on each screen side by side its not clear and give me a strech button to
  * see full chart" — a "2 · 4 · 9 per screen" pick in the head (2 = two tiles side by side filling one screen, the
@@ -85,13 +85,19 @@
  * inline; on the PHONE each served section gets a collapsible header (remembered in this browser, `ggw.collapsed`; desktop
  * keeps the fitted pages, no headers); a push link (?focus=), a box add, the first-load outline and a pager tap into a
  * FOLDED section open it first, then scroll once [C5]; the 🤖 title line and the EMA legend move into ℹ️ (with every
- * served section hint — the phone has no hover). Layout only: nothing rings, adds, caps or evicts differently. */
+ * served section hint — the phone has no hover). Layout only: nothing rings, adds, caps or evicts differently.
+ *
+ * 📈📐 2026-11-23 (vwapzones spec §3.9, WP fe-watch) — Ajay: "can you add vwap and supply demand zone in the daily time
+ * frame on the watch list please" · "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board" ·
+ * "Add vwap and supply demand too". The served frames are 1m / 5m / 15m (the tile draws them); the legend's swatches come
+ * from lib ggwLegendSwatch (9 / 21 EMA, the VWAP line, the daily zones as a dashed outline — the look the chart draws),
+ * each entry's served `title` is its hover, and ℹ️ prints the served `info.vwap_text` / `info.zones_text` (a phone has no
+ * hover). Display only — nothing gates, sorts or rings on either. UNMEASURED. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
-import { EMA_BOLD } from '../lib/chartMaps';
 import {
-  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
+  GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwLegendSwatch, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
   ggwClampPage, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
   readGgwSeen, saveGgwSeen, ggwPickGrid,
   ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwPrunePick, ggwLivePick, ggwAddedMs, ggwRowsKey, ggwUnseenOwn, ggwWithout,
@@ -579,10 +585,10 @@ export default function GajjalaWatchBoard() {
   const legend = p.legend.length ? (
     <span className="ggw-legend">
       {p.legend.map((l) => {
-        const c = (EMA_BOLD as Record<string, { color: string; width: number }>)[l.tone];
+        const sw = ggwLegendSwatch(l.tone);
         return (
-          <span key={l.tone} className="ggw-legend-item" data-tone={l.tone}>
-            <i className="ggw-swatch" style={c ? { background: c.color, height: c.width } : undefined} />
+          <span key={l.tone} className="ggw-legend-item" data-tone={l.tone} title={l.title ?? undefined}>
+            <i className={sw.cls} style={sw.style} />
             {l.label}
           </span>
         );
@@ -657,7 +663,8 @@ export default function GajjalaWatchBoard() {
         {p.rows.length && !phone ? (
           <GgwLayoutPick layout={layout} onPick={setLayout} />
         ) : null}
-        {orgInfo || (p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text)) ? (
+        {orgInfo || (p.info && (p.info.honesty || p.info.uptrend_rule || p.info.push_text || p.info.auto_text
+          || p.info.vwap_text || p.info.zones_text)) ? (
           <details className="ggw-info">
             <summary aria-label="info">{'ℹ️'}</summary>
             {/* 🗂 org mode: the 🤖 title (+ its served hint — no hover on a phone), the legend, every served section hint */}
@@ -671,6 +678,9 @@ export default function GajjalaWatchBoard() {
             {p.info?.uptrend_rule ? <p className="ggw-line">{p.info.uptrend_rule}</p> : null}
             {p.info?.push_text ? <p className="ggw-line">{p.info.push_text}</p> : null}
             {p.info?.auto_text ? <p className="ggw-line" data-testid="ggw-info-auto">{p.info.auto_text}</p> : null}
+            {/* 📈📐 2026-11-23: the served VWAP / daily-zones sentences (the legend hover's words — a phone has no hover). */}
+            {p.info?.vwap_text ? <p className="ggw-line" data-testid="ggw-info-vwap">{p.info.vwap_text}</p> : null}
+            {p.info?.zones_text ? <p className="ggw-line" data-testid="ggw-info-zones">{p.info.zones_text}</p> : null}
           </details>
         ) : null}
       </div>

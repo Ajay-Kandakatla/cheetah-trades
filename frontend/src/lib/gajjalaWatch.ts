@@ -13,7 +13,8 @@
  * the chart heights. Every word and every number the board prints is SERVED — nothing here types a rule, a threshold
  * or a sentence about a stock. The ONE FE sentence is GGW_FETCH_FAILED (the request itself failed — there is no payload
  * to serve a reason). UNMEASURED: a 9 / 21 cross is information, not an entry. */
-import type { CmAxis, CmEmaBlink, CmTile } from './chartMaps';
+import type { CSSProperties } from 'react';
+import { EMA_BOLD, toneColor, VWAP_LINE_W, type CmAxis, type CmEmaBlink, type CmLineTone, type CmTile } from './chartMaps';
 import { ggRunBasesLine, type GgStages } from './gajjala';
 import { parseGgwBroker, type GgwBroker } from './ggwBroker';   // 🚫 2026-11-19 (spec watchfid)
 
@@ -31,6 +32,10 @@ export function ggwSymbolPath(sym: string): string {
 export const GGW_LIVE_PATH = `${GGW_PATH}/live`;
 /** The 9 / 21 EMA tip on the forming live bar. */
 export const GGW_LIVE_EMA_TIP = true;   // HIS CALL #1 answered 2026-11-16 "live live.. per sec change" (docs/gajjala/watch_live_2026_11_16.md) — the 9/21 tip on the forming bar
+/** 📈 2026-11-23 (vwapzones spec §3.9 [O2]): the forming 5- / 15-min candle built from the row's OWN 1-min chart (the stored
+ *  1-min bars of the bucket + the live 1-min bars past them — lib/ggwLive.ggwSeedLive). false = main's forming candle (only
+ *  the prints seen since the page opened). BUILT, OFF — HIS CALL #13 (docs/gajjala/watch_vwap_zones_frontend_2026_11_23.md). */
+export const GGW_SEED_FORMING = false;   // HIS CALL #13 (2026-11-23) — false = main's forming candle
 export function ggwRowsPath(syms: ReadonlyArray<string>): string {
   return `${GGW_PATH}?symbols=${encodeURIComponent(syms.join(','))}`;
 }
@@ -50,23 +55,24 @@ export const GGW_PANEL = {
   down: 'rgb(235, 72, 72)',
 } as const;
 
-/** Chart heights in viewBox units (PatternChart W = 620) — MINE, HIS CALL #10. The first arithmetic (≈ 236 px above
+/** Chart heights in viewBox units (PatternChart W = 620) — MINE, HIS CALL #10. 2026-11-23 (Ajay: "Can you remove 3 mins just
+ *  add 15 mins instead.. So 1 min, 5 and 15 accross board"): the 15-min chart takes the height the 3-min one had. The first arithmetic (≈ 236 px above
  *  the grid → three rows fit) was WRONG: measured 357 px above and 56 below, the fixed-height 3×3 overflowed at both
  *  2560×1440 and 1920×1080. Above the phone break these are now the starting height and the SHARE of a fitted tile
  *  (GGW_FIT_GROW); the rows are sized from the viewport (ggwFitRowHeight; docs/gajjala/watch_frontend_2026_11_15.md). */
-export const GGW_CHART_H = { '1m': 120, '3m': 180, '5m': 180 } as const;
+export const GGW_CHART_H = { '1m': 120, '5m': 180, '15m': 180 } as const;
 /** 👀 3 rows on one screen (2026-11-15 fix #3; Ajay: "I have a 27 inch monitor I wanna fit 3x3 tikers on watch at any
  *  given time"). Above the phone break the grid rows are sized from the viewport: row = (innerHeight − what the board
  *  holds above the grid (2026-11-16: measured from the BOARD's top, no longer the page's) − (rows − 1) row gaps) / rows,
  *  never under GGW_FIT_ROW_MIN_PX. The charts then
- *  flex to fill the row, the 1-min and the 3-/5-min pair sharing the height in the SAME proportion GGW_CHART_H gives
- *  them at any width (the pair is half the width, so its share is GGW_CHART_H['3m'] / 2). */
+ *  flex to fill the row, the 1-min and the 5-/15-min pair sharing the height in the SAME proportion GGW_CHART_H gives
+ *  them at any width (the pair is half the width, so its share is GGW_CHART_H of the 5-min / 2). */
 export const GGW_FIT_ROWS = 3;
 /** The tile floor for a short desktop window — MINE (layout, not a rule): below it the page scrolls instead of the
  *  charts shrinking further. 1920×1080 measures ≈ 213 px a row, so it still fits there. HIS CALL to move. */
 export const GGW_FIT_ROW_MIN_PX = 200;
-/** The flex shares of the 1-min chart and the 3-/5-min pair inside a fitted tile (derived from GGW_CHART_H). */
-export const GGW_FIT_GROW = { top: GGW_CHART_H['1m'], pair: GGW_CHART_H['3m'] / 2 } as const;
+/** The flex shares of the 1-min chart and the 5-/15-min pair inside a fitted tile (derived from GGW_CHART_H). */
+export const GGW_FIT_GROW = { top: GGW_CHART_H['1m'], pair: GGW_CHART_H['5m'] / 2 } as const;
 /** One fitted grid row in CSS px, or null when there is nothing to fit (no viewport / junk numbers). */
 export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap: number },
                                 rows: number = GGW_FIT_ROWS): number | null {
@@ -470,6 +476,9 @@ export type GgwRow = {
   /** 🗂 2026-11-22: the served organisation block. The key is set ONLY when served (an older server's rows stay
    *  byte-equal); null = served but junk / the `only` poll (no chip, no group). */
   org?: GgwOrg | null;
+  /** 📐 2026-11-23: the served daily-zones line. The key is set ONLY when served (an older server's rows stay byte-equal);
+   *  null = served but junk / none (no line). */
+  levels?: GgwLevels | null;
 };
 /** 🤖 One removal of THIS session, newest first — `text_full` is printed verbatim (the FE composes nothing). */
 export type GgwAutoRemoved = {
@@ -490,8 +499,17 @@ export type GgwInfo = {
   push_mode: string | null; push_frames: string[];
   /** 🤖 the auto section's ℹ️ clause (backend auto.rules_line, served once); null on an older server. */
   auto_text: string | null;
+  /** 📈📐 2026-11-23 (vwapzones §3.4): the served VWAP / daily-zones sentences (backend vwap.rules_line /
+   *  levels.rules_line — the legend hover's words, printed in ℹ️ because a phone has no hover); null when off / older. */
+  vwap_text: string | null;
+  zones_text: string | null;
 };
-export type GgwLegend = { tone: 'ema9' | 'ema21' | string; label: string };
+/** One served legend entry. `title` (2026-11-23) = its served hover sentence; the key is set ONLY when served. */
+export type GgwLegend = { tone: 'ema9' | 'ema21' | 'vwap' | 'zone_demand' | 'zone_supply' | string; label: string; title?: string | null };
+/** 📐 2026-11-23 (vwapzones §3.6 / §3.10): a row's served daily-zones line — `state` ∈ ok / none / retry / pending (the
+ *  server's words for each, never composed here), `text` printed verbatim, `title` its hover, `as_of` the last daily
+ *  bar the zones were read through. The bands themselves ride in each frame's `tile.bands` (`ctx: true`). */
+export type GgwLevels = { state: string; text: string | null; title: string | null; as_of: string | null };
 export type GgwBoard = {
   state: 'ok'; title: string; session: string | null; is_today: boolean; in_window: boolean;
   refresh_sec: number; next_window_sec: number | null;
@@ -730,6 +748,13 @@ export function parsePastWinner(v: unknown): GgwPastWinner | null {
   return { text, items, more: str(v.past_winner_more_text) ?? str(v.more_text), title: str(v.title) };
 }
 
+/** 📐 A row's (or a 🚩 card payload's) served daily-zones block: an object with a served `state`, else null (junk never
+ *  draws a line). The three strings through str(). */
+export function parseRowLevels(v: unknown): GgwLevels | null {
+  if (!isObj(v) || !str(v.state)) return null;
+  return { state: (v.state as string).trim(), text: str(v.text), title: str(v.title), as_of: str(v.as_of) };
+}
+
 /** 🗂 A row's served org block: an object with a non-blank string `group`, else null. Each inner block through its own
  *  parser (junk → null: no chip). */
 export function parseRowOrg(v: unknown): GgwOrg | null {
@@ -782,6 +807,7 @@ function parseRow(v: unknown): GgwRow | null {
     late_text: str(v.late_text),
     float: parseRowFloat(v.float),
     ...('org' in v ? { org: parseRowOrg(v.org) } : {}),
+    ...('levels' in v ? { levels: parseRowLevels(v.levels) } : {}),
   };
 }
 
@@ -804,6 +830,8 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     honesty: str(raw.info.honesty), push_text: str(raw.info.push_text), uptrend_rule: str(raw.info.uptrend_rule),
     push_mode: str(raw.info.push_mode), push_frames: strs(raw.info.push_frames),
     auto_text: str(raw.info.auto_text),
+    vwap_text: str(raw.info.vwap_text),
+    zones_text: str(raw.info.zones_text),
   } : null;
   return {
     state: 'ok',
@@ -829,7 +857,7 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     info,
     legend: (Array.isArray(raw.legend) ? raw.legend : [])
       .filter((l: unknown) => isObj(l) && str(l.tone) && str(l.label))
-      .map((l: any) => ({ tone: l.tone, label: l.label })),
+      .map((l: any) => ({ tone: l.tone, label: l.label, ...('title' in l ? { title: str(l.title) } : {}) })),
     rows: raw.rows.map(parseRow).filter((r: GgwRow | null): r is GgwRow => !!r),
     auto: parseAuto(raw.auto),
     broker: parseGgwBroker(raw.broker),
@@ -930,17 +958,18 @@ export function ggwRevealGroup(keys: ReadonlyArray<string>, rows: ReadonlyArray<
   return g && keys.includes(g) ? keys.filter((k) => k !== g) : keys;
 }
 
-/** The 1-min frame on top, then the rest in served order (3-min, 5-min). */
+/** The 1-min frame on top, then the rest in served order (5-min, 15-min since 2026-11-23; an older payload's own order). */
 export function ggwSplitFrames(frames: ReadonlyArray<GgwFrame>): { top: GgwFrame | null; pair: GgwFrame[] } {
   const top = frames.find((f) => f.tf === '1m') ?? null;
   return { top, pair: frames.filter((f) => f !== top) };
 }
 
 /** ⤢ The full-screen order, top to bottom (Ajay 2026-11-16: "I wanna see all 3 of one stock for stretch like 5, 3 and
- *  1"): 5-min, 3-min, 1-min, each full width and the same height; a frame not named here follows in served order.
- *  2026-11-16 (ggcard3): `order` = another surface's order (the 🚩 card view's lib/gajjalaCardView.GGC_STRETCH_ORDER);
- *  absent → this Watch order, unchanged. */
-export const GGW_STRETCH_ORDER = ['5m', '3m', '1m'] as const;
+ *  1"): big → small, each full width and the same height; a frame not named here follows in served order.
+ *  2026-11-23 (Ajay: "So 1 min, 5 and 15 accross board"): 15-min, 5-min, 1-min — the 🚩 card view's order
+ *  (lib/gajjalaCardView.GGC_STRETCH_ORDER; a test pins equality). HIS CALL #6 (he listed 1 / 5 / 15).
+ *  2026-11-16 (ggcard3): `order` = another surface's order; absent → this Watch order. */
+export const GGW_STRETCH_ORDER = ['15m', '5m', '1m'] as const;
 export function ggwStretchFrames(frames: ReadonlyArray<GgwFrame>,
                                  order: ReadonlyArray<string> = GGW_STRETCH_ORDER): GgwFrame[] {
   const rank = (f: GgwFrame) => {
@@ -953,5 +982,19 @@ export function ggwStretchFrames(frames: ReadonlyArray<GgwFrame>,
 /** The chart height for one frame (viewBox units). */
 export function ggwChartHeight(tf: string, phone: boolean): number {
   if (phone) return GGW_CHART_H_PHONE;
-  return (GGW_CHART_H as Record<string, number>)[tf] ?? GGW_CHART_H['3m'];
+  return (GGW_CHART_H as Record<string, number>)[tf] ?? GGW_CHART_H['5m'];
+}
+
+/** 📈📐 2026-11-23 (vwapzones §3.9 [C9]): one legend entry's swatch — the look the chart draws for that tone: the bold 9 / 21
+ *  EMA (lib/chartMaps EMA_BOLD), the VWAP line (toneColor('vwap') at VWAP_LINE_W), the daily zones as a DASHED OUTLINE box in
+ *  the tone's colour (the board-band look — never a fill). Any other tone → the plain swatch (no style), as before. */
+export const GGW_ZONE_TONES: ReadonlyArray<string> = ['zone_demand', 'zone_supply'];
+export function ggwLegendSwatch(tone: string): { cls: string; style: CSSProperties | undefined } {
+  const ema = (EMA_BOLD as Record<string, { color: string; width: number }>)[tone];
+  if (ema) return { cls: 'ggw-swatch', style: { background: ema.color, height: ema.width } };
+  if (tone === 'vwap') return { cls: 'ggw-swatch', style: { background: toneColor('vwap'), height: VWAP_LINE_W } };
+  if (GGW_ZONE_TONES.includes(tone)) {
+    return { cls: 'ggw-swatch ggw-swatch--zone', style: { borderColor: toneColor(tone as CmLineTone) } };
+  }
+  return { cls: 'ggw-swatch', style: undefined };
 }

@@ -59,7 +59,7 @@ OWNER = "owner@example.com"
 OTHER = "doug@example.com"
 HUB_WORD = "STUB-HUB-WORD"
 FEED_WORD = "STUB-FEED-WORD"
-CROSS_ALERTS_SHA = "ca705ea312cc2a9b1a996487beaabcbd631a929fe684693707a60793ea6eb63c"
+CROSS_ALERTS_SHA = "fba9fcebca6d43224b84b85bba52cdaa0b790129cc7bb6f1308b440a6fb6b3e8"   # RE-PINNED 2026-11-23 (docstring word only)
 OLD_AXIS_KEYS = ("from_et", "to_et", "slots", "x", "shade", "ticks")
 OLD_FRAME_KEYS = {"tf", "label", "tile", "axis", "ema_cross", "uptrend", "held", "ema_blink"}
 TILE_KEYS = {"symbol", "href", "bars", "curves", "markers", "lines", "bands", "stats", "why", "vol_avg"}
@@ -320,7 +320,7 @@ def test_axis_start_epoch_and_frame_min(name, session, fs):
     for tf, _rule in C.FRAMES:
         ax = fs[tf]["axis"]
         assert ax["start_epoch"] == want and isinstance(ax["start_epoch"], float)
-        assert ax["frame_min"] == {"1m": 1, "3m": 3, "5m": 5}[tf] == BLD._frame_min(tf)
+        assert ax["frame_min"] == {"1m": 1, "5m": 5, "15m": 15}[tf] == BLD._frame_min(tf)   # RE-PINNED 2026-11-23
         assert set(ax) == set(OLD_AXIS_KEYS) | {"start_epoch", "frame_min"}
 
 
@@ -344,8 +344,8 @@ def test_property_every_served_bar_buckets_to_its_slot_on_the_served_grid(name, 
 
 
 def test_boundary_bucketing_at_every_k():
-    ax = CASES[0][2]["3m"]["axis"]
-    for k in (0, 1, 110, 111, ax["slots"] - 1):
+    ax = CASES[0][2]["15m"]["axis"]                              # RE-PINNED 2026-11-23: 3m → 15m (pre shade ends at 22)
+    for k in (0, 1, 21, 22, ax["slots"] - 1):
         edge = ax["start_epoch"] + k * ax["frame_min"] * 60
         assert _bucket(edge, ax) == k and _bucket(edge - 0.001, ax) == k - 1
 
@@ -555,6 +555,9 @@ def test_NEGATIVE_check_catches_a_one_ulp_ema_change_and_a_wrong_count(tmp_path)
 
 # ── source guards ─────────────────────────────────────────────────────────────────────────────────────────────────
 def test_source_guard_cross_alerts_is_byte_untouched():
+    # RE-PINNED 2026-11-23 (spec vwapzones §3.5): the module DOCSTRING line "3- and 5-minute crosses are drawn only" →
+    # "5- and 15-minute"; NO code change — the docstring-stripped AST is pinned equal to main's in
+    # test_gajjala_watch_frames_1_5_15_2026_11_23.py
     assert hashlib.sha256((PKG / "cross_alerts.py").read_bytes()).hexdigest() == CROSS_ALERTS_SHA
 
 

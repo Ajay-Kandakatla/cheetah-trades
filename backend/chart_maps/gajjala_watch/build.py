@@ -4,7 +4,8 @@ Ajay, verbatim (2026-11-15): "When I add a ticker I need 1 min 3 min and 5 min c
 distinction or may be a brighter and thicker 21 EMA and 9 EMA" · "Any chart I view make sure you are showing me from 4 AM
 for historical behaviour and also the right side with gaps to see where it might go".
 
-The house engine only: the closed 1/3/5-minute frames are `chart_maps.gajjala.bars.frames_for(rules=C.FRAMES)` (the
+The house engine only: the closed 1/5/15-minute frames (1/3/5 until 2026-11-23 — Ajay: "Can you remove 3 mins just add 15
+mins instead.. So 1 min, 5 and 15 accross board") are `chart_maps.gajjala.bars.frames_for(rules=C.FRAMES)` (the
 house resampler, the settle rule, the masked 9 / 21 EMA), the tile is `bars.tile_payload`, the crosses are the card's
 `tab.ema_cross_block` over the ONE engine (`ema_cross`), K5 is `detectors.uptrend`. Nothing here is a gate or a
 threshold; the axis is display only (04:00 ET → the regular close, or the extended close once a 1-minute bar printed
@@ -34,6 +35,7 @@ from daytrading.data import ET_PREMARKET_OPEN, ET_RTH_OPEN
 from orderflow import signals as EMA
 
 from . import constants as C
+from . import vwap as VW
 
 log = logging.getLogger("chart_maps.gajjala_watch.build")
 
@@ -143,10 +145,12 @@ def k5(F, k) -> Optional[bool]:
     return DT.uptrend(F, k)
 
 
-def tile(frames_obj, tf: str, end: dtime) -> dict:
+def tile(frames_obj, tf: str, end: dtime, *, vw=None) -> dict:
     """One chart of a tile: today's closed bars of `tf` from 04:00 (bars.tile_payload, every bar), the 9 / 21 EMA
     curves, the served volume average, the cross markers + block (tab.ema_cross_block — the ➖ card's two lines), K5 at
-    the latest bar and the 04:00 axis with the tile's shared `end`."""
+    the latest bar and the 04:00 axis with the tile's shared `end`. 📈 2026-11-23: `vw` (the name's minute VWAP,
+    `vwap.minute_vwap`) adds ONE optional key `vwap` LAST — the stored `curves` stay the two EMAs; without `vw` the
+    tile is byte-identical to before."""
     p = B.tile_payload(frames_obj, tf, max_bars=None)
     blk = GT.ema_cross_block({"tf": tf, "bars": p["bars"], "curves": p["curves"]})
     markers = []
@@ -161,7 +165,42 @@ def tile(frames_obj, tf: str, end: dtime) -> dict:
            "as_of_bar_t": F.t[-1] if F.t else None}
     out.update(run_bases_keys(F, tf, p["bars"]))
     out.update(ema_tail_keys(F))
+    if vw is not None:
+        out.update(vwap_keys(F, tf, vw))
     return out
+
+
+def vwap_keys(F, tf: str, vw) -> dict:
+    """📈 2026-11-23 (spec vwapzones §3.3): {"vwap": {"values": [float | None × today's bars]}} — the minute VWAP after
+    the last 1-minute bar inside each of today's buckets (`vwap.frame_values`, rounded to C.VWAP_DP), aligned to the
+    served bars; only when at least one value is finite, else {}. Fenced: any fault → {} + one debug line."""
+    try:
+        if F is None or vw is None or not len(F.today):
+            return {}
+        labels = F.df.index[F.today.start:F.today.stop]
+        vals = VW.frame_values(vw, labels, dict(C.FRAMES)[tf], dp=C.VWAP_DP)
+        if not any(v is not None for v in vals):
+            return {}
+        return {"vwap": {"values": vals}}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("gajjala watch: vwap %s failed: %s", tf, exc)
+        return {}
+
+
+def name_vwap(fr, session):
+    """📈 2026-11-23: the name's minute VWAP ONCE per build (`vwap.minute_vwap` over today's raw rows of the sessions
+    `vwap.sessions()` names) with the session's REGULAR close as the half-day cut — `alerts._closes`, the function
+    `axis_end` / `axis` already read [C2]. None when VWAP is off, C.VWAP_SESSIONS is junk, or anything faults."""
+    try:
+        sets = VW.sessions() if C.VWAP_ON else None
+        if not sets or fr is None:
+            return None
+        rth = AL._closes(_day(session))[0]
+        cut = pd.Timestamp(_at(session, rth)).tz_convert("UTC").tz_localize(None)
+        return VW.minute_vwap(getattr(fr, "raw", None), _iso(session), sessions=sets, rth_close=cut)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("gajjala watch: minute vwap failed: %s", exc)
+        return None
 
 
 def ema_tail_keys(F) -> dict:
@@ -207,8 +246,9 @@ def tile_update(sym: str, fr, session, now, status: str, held: Optional[dict] = 
     if status == "loaded" and fr is not None:
         F1 = fr.frame(C.AXIS_FRAME)
         end = axis_end(session, [F1.t[i] for i in F1.today])
+        vw = name_vwap(fr, session)                             # 📈 2026-11-23 — once per name, every frame reads it
         sets.update({"session": _iso(session), "loaded_at": at,
-                     "frames": {tf: tile(fr, tf, end) for tf, _rule in C.FRAMES},
+                     "frames": {tf: tile(fr, tf, end, vw=vw) for tf, _rule in C.FRAMES},
                      "seen_bar_t": F1.t[-1] if F1.t else None})
     elif status == "loaded":
         sets["status"] = "failed"
@@ -248,4 +288,4 @@ def seen(tiles_coll, syms) -> dict:
 
 
 __all__ = ["session_of", "frames", "status_of", "axis_end", "axis", "tile", "tile_update", "write", "seen", "k5",
-           "run_bases_keys", "uptrend_rule", "UPTREND_SHORT", "STATUSES"]
+           "run_bases_keys", "vwap_keys", "name_vwap", "uptrend_rule", "UPTREND_SHORT", "STATUSES"]

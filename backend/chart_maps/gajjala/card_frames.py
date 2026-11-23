@@ -36,9 +36,20 @@ Watch seat). Only the real path (`stores=None`) or a test's 4th `stores` element
 A fetch fault / no bar → the served empty words above (fail open; 15m / 5m untouched). Every frame now serves
 `source` = {"kind": gajjala | gajjala_1m | watch | on_demand, "at": ISO ET or None} (None with no bars); the stamp of
 an on-demand frame is its build time, never stale. No board load calls this — only the ⤢ view's GET.
+
+📈📐 2026-11-23 (spec vwapzones §3.7, Ajay: "Add vwap and supply demand too") — the Watch's VWAP + daily zones on the
+three frames. The ONE Watch `find_one` of a GET (`_watch_1m`) also projects every other Watch frame's bar stamps + its
+stored `vwap` and the tile's `levels` (built from the Watch's FRAMES, never typed); the frame it returns carries ONE
+private key `_ov` that is never served. VWAP: `vwap.align` by bar stamp → a `vwap` curve on every served frame with
+bars (a stamp the Watch tile lacks → None there; no Watch tile and no on-demand build → no curve). Zones:
+`levels.for_card` — a stored Watch `levels` of this session, else (real path only) a single-flight queued daily read that
+the GET never waits on → `ctx` bands on every frame with bars + the payload's `levels` line. A stores tuple of 2–4
+elements never reads daily bars; a 5th element (a callable (sym, now) → frame) is the daily loader, run inline. Any fault
+→ no curve, no bands, `levels` None — the view still answers. Display only. UNMEASURED.
 """
 from __future__ import annotations
 
+import importlib
 import logging
 import math
 from datetime import timedelta
@@ -53,6 +64,8 @@ from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import variant as V
 from chart_maps.gajjala_watch import build as BLD
 from chart_maps.gajjala_watch import colls as WCOLLS
+from chart_maps.gajjala_watch import constants as WC
+from chart_maps.gajjala_watch import levels as LV
 from chart_maps.gajjala_watch import payload as PL
 
 log = logging.getLogger("chart_maps.gajjala.card_frames")
@@ -67,6 +80,8 @@ EMPTY_TEXT = "No {minutes}-minute bars stored for {sym} this session yet — a p
 NO_FRAMES_TEXT = "No bars stored for {sym} this session yet"
 SOURCE_WATCH, SOURCE_ON_DEMAND = "watch", "on_demand"         # a frame's `source.kind` beyond the variant keys
 BAD_SYMBOL_TEXT = "Not a ticker"
+VWAP_MODULE = "chart_maps.gajjala_watch.vwap"                  # 📈 2026-11-23 — imported LAZILY (a fault → no curve)
+OV_KEY = "_ov"                                                 # the private overlay key of a Watch / on-demand frame
 
 
 def frame_minutes(tf: str) -> int:
@@ -136,18 +151,69 @@ def _tile_1m(frames) -> Optional[dict]:
             "vol_avg": va if isinstance(va, dict) else None}
 
 
+def _vw():
+    """📈 2026-11-23: the Watch's VWAP wrapper module, imported lazily; absent / a fault → None (no curve)."""
+    try:
+        return importlib.import_module(VWAP_MODULE)
+    except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
+        log.debug("card_frames: vwap module unavailable: %s", type(exc).__name__)
+        return None
+
+
+def _overlays_on() -> bool:
+    """📈📐 2026-11-23: `WC.VWAP_ON or WC.ZONES_ON`, read at call time; any fault → False."""
+    try:
+        return bool(WC.VWAP_ON or WC.ZONES_ON)
+    except Exception:                                          # noqa: BLE001
+        return False
+
+
+def _watch_projection() -> dict:
+    """The ONE Watch find_one's projection: the 1m frame whole + every other Watch frame's bar stamps and stored
+    `vwap` (from the Watch's own FRAMES — never typed) + the tile's `levels`."""
+    proj = {"session": 1, "at": 1, "loaded_at": 1, "frames.1m": 1, "levels": 1}
+    for tf, _rule in WC.FRAMES:
+        if tf != "1m":
+            proj[f"frames.{tf}.bars.t"] = 1
+            proj[f"frames.{tf}.vwap"] = 1
+    return proj
+
+
+def _ov_of(frames, levels, session) -> dict:
+    """The private overlay key: {"vwap": {tf: {bar t: value}} by stamp, "levels": the tile's stored levels or None,
+    "session": the tile's session}. A missing VWAP module / frame → that part empty."""
+    frames = frames if isinstance(frames, dict) else {}
+    VW = _vw()
+    vw: dict = {}
+    if VW is not None:
+        for tf, f in frames.items():
+            if isinstance(f, dict):
+                try:
+                    by = VW.by_stamp(f)
+                except Exception:                              # noqa: BLE001
+                    by = {}
+                if by:
+                    vw[tf] = by
+    return {"vwap": vw, "levels": levels if isinstance(levels, dict) else None, "session": session}
+
+
 def _watch_1m(tiles_coll, sym: str, session) -> tuple:
     """(frame, source) of the 👀 Watch's stored 1m tile for `sym` — ONE find_one; only a doc of the SAME session with
-    non-empty 1m bars counts. source = {"at": the tile's loaded_at, else its at}. No coll / a fault → (None, None)."""
+    non-empty 1m bars counts. source = {"at": the tile's loaded_at, else its at}. No coll / a fault → (None, None).
+    📈📐 2026-11-23: the frame carries the private `_ov` (VWAP by stamp of every Watch frame + the tile's `levels`)."""
     if tiles_coll is None:
         return None, None
     try:
-        doc = tiles_coll.find_one({"_id": sym}, {"session": 1, "at": 1, "loaded_at": 1, "frames.1m": 1})
+        doc = tiles_coll.find_one({"_id": sym}, _watch_projection())
         if not isinstance(doc, dict) or doc.get("session") != session.isoformat():
             return None, None
         fr = _tile_1m(doc.get("frames"))
         if fr is None:
             return None, None
+        try:
+            fr[OV_KEY] = _ov_of(doc.get("frames"), doc.get("levels"), doc.get("session"))
+        except Exception as exc:                               # noqa: BLE001 — overlays only; the frame stays
+            log.debug("card_frames: watch overlays of %s unavailable: %s", sym, type(exc).__name__)
         at = doc.get("loaded_at") if doc.get("loaded_at") is not None else doc.get("at")
         return fr, {"at": at}
     except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
@@ -171,6 +237,10 @@ def _on_demand_1m(sym: str, session, now, *, load_day=None) -> tuple:
         out = _tile_1m(sets.get("frames"))
         if out is None:
             return None, None
+        try:
+            out[OV_KEY] = _ov_of(sets.get("frames"), None, sets.get("session"))
+        except Exception as exc:                               # noqa: BLE001 — overlays only; the frame stays
+            log.debug("card_frames: on-demand overlays of %s unavailable: %s", sym, type(exc).__name__)
         return out, {"at": sets.get("loaded_at")}
     except Exception as exc:                                   # noqa: BLE001 — the view never breaks on it
         log.debug("card_frames: on-demand 1m of %s unavailable: %s", sym, type(exc).__name__)
@@ -185,6 +255,58 @@ def _fetcher(stores):
         return _on_demand_1m
     st = tuple(stores)
     return st[3] if len(st) >= 4 and callable(st[3]) else None
+
+
+def _daily(stores) -> tuple:
+    """(daily loader, inline runner) of this call: the real path (`stores=None`) → (`levels.default_loader`, None = the
+    single-flight queue); a test's 5th `stores` element (a callable (sym, now) → frame) → it, run inline; a 2–4 element
+    tuple → (None, None): never reads daily bars."""
+    if stores is None:
+        return LV.default_loader, None
+    st = tuple(stores)
+    if len(st) >= 5 and callable(st[4]):
+        fn = st[4]
+        return (lambda s, *, now: fn(s, now)), (lambda job: job())
+    return None, None
+
+
+def _last_close(bars) -> Optional[float]:
+    for b in reversed(bars or []):
+        v = b.get("c") if isinstance(b, dict) else None
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v):
+            return float(v)
+    return None
+
+
+def _add_overlays(sym: str, session, now, frames: list, ov, stores) -> Optional[dict]:
+    """📈📐 2026-11-23: the VWAP curve + the zone bands on every served frame with bars; → the payload's `levels`
+    ({state, text, title, as_of}) or None. Fenced by the caller."""
+    ov = ov if isinstance(ov, dict) else {}
+    with_bars = [f for f in frames if f["tile"]["bars"]]
+    VW = _vw() if WC.VWAP_ON else None
+    if VW is not None and VW.sessions() is not None:
+        by_tf = ov.get("vwap") if isinstance(ov.get("vwap"), dict) else {}
+        for f in with_bars:
+            vals = VW.align(by_tf.get(f["tf"]) or {}, f["tile"]["bars"])
+            if vals is not None:
+                f["tile"]["curves"] = list(f["tile"]["curves"]) + [
+                    {"tone": WC.VWAP_TONE, "label": WC.VWAP_LABEL, "values": vals}]
+    if not WC.ZONES_ON:
+        return None
+    by = {f["tf"]: f for f in frames}
+    price = None
+    for tf in ["1m"] + [t for t, _r in FRAMES if t != "1m"]:
+        price = _last_close(by[tf]["tile"]["bars"]) if tf in by else None
+        if price is not None:
+            break
+    loader, run = _daily(stores)
+    blk = LV.for_card(sym, session, now, price=price, levels=ov.get("levels"), tile_session=ov.get("session"),
+                      loader=loader, run=run)
+    if not isinstance(blk, dict):
+        return None
+    for f in with_bars:
+        f["tile"]["bands"] = list(f["tile"]["bands"]) + [dict(b) for b in blk.get("bands") or []]
+    return LV.row_levels(blk)
 
 
 def _source(kind, src) -> Optional[dict]:
@@ -235,7 +357,7 @@ def _build(symbol, now, stores) -> dict:
     g5 = g5 if isinstance(g5, dict) else None
     g1 = g1 if isinstance(g1, dict) else None
 
-    picked = []
+    picked, ov, asked = [], None, False
     for tf, _rule in FRAMES:
         src_v = SOURCE[tf]
         src = g5 if src_v is V.GG5 else g1
@@ -245,24 +367,37 @@ def _build(symbol, now, stores) -> dict:
         kind = src_v.key
         if tf == "1m" and not fr.get("bars"):                  # 2026-11-18: no GG1 bars → the Watch's 1m tile
             wfr, wsrc = _watch_1m(wt, sym, session)
+            asked = True
             if wfr is not None:
                 fr, src, src_v, kind = wfr, wsrc, V.GG1, SOURCE_WATCH
+                ov = wfr.get(OV_KEY)
             elif fetch is not None:                            # 📈 neither → built on demand (ONE name, ONE fetch)
                 ofr, osrc = fetch(sym, session, now)
                 if ofr is not None:
                     fr, src, src_v, kind = ofr, osrc, V.GG1, SOURCE_ON_DEMAND
+                    ov = ofr.get(OV_KEY)
         picked.append((tf, fr, src, src_v, kind))
+    if not asked and _overlays_on():                           # 📈📐 a GG1 doc won the 1m frame → the Watch tile for `_ov` only
+        wfr, _wsrc = _watch_1m(wt, sym, session)
+        ov = wfr.get(OV_KEY) if wfr is not None else None
 
     every_bar = [b for _tf, fr, _s, _v, _k in picked for b in (fr.get("bars") or [])]
     end = BLD.axis_end(session, every_bar)                     # [C2] the ONE end over ALL three frames' bars
     frames = [_frame_block(sym, tf, fr, src, src_v, kind, session, end, now, in_window)
               for tf, fr, src, src_v, kind in picked]
+    levels = None
+    if _overlays_on():
+        try:
+            levels = _add_overlays(sym, session, now, frames, ov, stores)
+        except Exception as exc:                               # noqa: BLE001 — the view still answers
+            log.debug("card_frames: overlays of %s unavailable: %s", sym, type(exc).__name__)
+            levels = None
     by = {f["tf"]: f for f in frames}
     head = by["15m"] if g5 is not None else by["1m"]           # the CARD's own doc (GG5 lists the name); GG1-only → GG1
     has_bars = any(f["tile"]["bars"] for f in frames)
     return {"state": "ok", "symbol": sym, "session": session.isoformat(), "is_today": bool(is_today),
             "in_window": bool(in_window), "as_of_et": head["as_of_et"], "stale": bool(head["stale"]),
-            "text": None if has_bars else NO_FRAMES_TEXT.format(sym=sym), "frames": frames}
+            "text": None if has_bars else NO_FRAMES_TEXT.format(sym=sym), "frames": frames, "levels": levels}
 
 
 def build(symbol: str, now=None, *, stores=None) -> dict:

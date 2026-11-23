@@ -32,6 +32,7 @@ from chart_maps.gajjala_watch import colls as CO
 from chart_maps.gajjala_watch import constants as C
 from chart_maps.gajjala_watch import payload as PL
 from chart_maps.gajjala_watch import store as ST
+from chart_maps.gajjala_watch import vwap as VW
 from tests.test_gajjala_store import FakeColl
 
 ET = ZoneInfo("America/New_York")
@@ -43,6 +44,8 @@ SESSION = "2026-11-13"
 RULE_STUB = "STUB-UPTREND-RULE"
 PUSH_STUB = "STUB-PUSH-TEXT"
 AUTO_STUB = "STUB-AUTO-TEXT"                                 # 🤖 2026-11-17 (spec ggwauto WP-B): the auto engine's sentence
+ZONES_STUB = "STUB-ZONES-TEXT"                               # 📐 2026-11-23 (spec vwapzones): the levels module's sentence
+ZONES_LEGEND = [{"tone": "zone_demand", "label": "STUB demand", "title": ZONES_STUB}]
 
 
 def _strict(txt):
@@ -120,6 +123,11 @@ def stubs(monkeypatch):
     monkeypatch.setitem(sys.modules, "chart_maps.gajjala_watch.auto",
                         types.SimpleNamespace(read_doc=lambda cs: {}, rules_line=lambda: AUTO_STUB,
                                               dismiss=lambda symbol, by=None: {"state": "absent"}))
+    # 📐 2026-11-23 (spec vwapzones): the levels module as a stub too — no zones block (its own tests live in
+    # test_gajjala_watch_levels_2026_11_23.py / test_gajjala_watch_frames_1_5_15_2026_11_23.py).
+    monkeypatch.setitem(sys.modules, C.LEVELS_MODULE,
+                        types.SimpleNamespace(section=lambda *a, **k: {}, legend=lambda: list(ZONES_LEGEND),
+                                              rules_line=lambda: ZONES_STUB))
 
 
 @pytest.fixture()
@@ -454,7 +462,7 @@ def test_held_served_only_for_the_latest_up_cross():
     assert rows[0]["frames"][0]["held"] == {"text": f"🔕 held — first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes"}
     assert rows[1]["frames"][0]["held"] is None                                        # NEG: stale bar_t
     assert rows[2]["frames"][0]["held"] is None                                        # NEG: it rang
-    assert all(f["held"] is None for f in rows[0]["frames"][1:])                        # no held on 3m / 5m
+    assert all(f["held"] is None for f in rows[0]["frames"][1:])                        # no held on 5m / 15m
 
 
 def test_NEGATIVE_held_on_a_down_cross_bar_is_not_served():
@@ -535,8 +543,11 @@ def test_info_holds_the_rule_sentences_once():
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH", ups=(f"{SESSION} 09:35",))
     out = PL.build(FRI_IN, db=db)
     # PIN MOVED 2026-11-17 (spec ggwauto §3.4): + `auto_text` — the 🤖 auto rule sentence, served once like the others.
+    # PIN MOVED 2026-11-23 (spec vwapzones §3.4): + `vwap_text` (vwap.rules_line) and `zones_text` (the levels module's
+    # rules_line, lazy — stubbed here).
     assert out["info"] == {"honesty": PL.honesty(), "push_text": PUSH_STUB, "uptrend_rule": RULE_STUB,
-                           "push_mode": C.PUSH_MODE, "push_frames": list(C.PUSH_FRAMES), "auto_text": AUTO_STUB}
+                           "push_mode": C.PUSH_MODE, "push_frames": list(C.PUSH_FRAMES), "auto_text": AUTO_STUB,
+                           "vwap_text": VW.rules_line(), "zones_text": ZONES_STUB}
     txt = json.dumps(out, default=str)
     assert txt.count(RULE_STUB) == 1 and txt.count(PUSH_STUB) == 1 and txt.count(AUTO_STUB) == 1
 
@@ -564,7 +575,8 @@ def test_NEGATIVE_a_missing_wp_b_sentence_is_none_and_the_board_still_answers(mo
 def test_head_words_and_legend():
     db = _db([f"A{chr(65 + i)}" for i in range(C.MAX_SYMBOLS)])
     out = PL.build(FRI_IN, db=db)
-    assert out["title"] == "👀 Gajjala's Watch — your tickers on 1-, 3- and 5-minute bars from 04:00 ET"
+    # RE-PINNED 2026-11-23 (Ajay: "So 1 min, 5 and 15 accross board")
+    assert out["title"] == "👀 Gajjala's Watch — your tickers on 1-, 5- and 15-minute bars from 04:00 ET"
     # RE-PINNED 2026-11-18 (Ajay 2026-11-18: "For watch list when I add new ones remove the ones that are not active in the watch list" — "Oldest added"): at the cap ➕ replaces, so the served
     # full_text is the replace hint; the old refusal words serve only when every name is 🎯 A+ (full_blocked).
     # RE-PINNED 2026-11-19 (Ajay, relayed: "When I add a new ticket they are gettinf added in to que but not active"): words
@@ -572,7 +584,10 @@ def test_head_words_and_legend():
     assert out["full"] is True and out["full_text"] == f"Your watch holds {C.MAX_SYMBOLS} — adding one replaces the one on your watch the longest (never a 🎯 A+)"
     assert out["full_blocked"] is False
     assert out["max_symbols"] == C.MAX_SYMBOLS
-    assert out["legend"] == [{"tone": "ema9", "label": f"{GC.EMA_FAST} EMA"}, {"tone": "ema21", "label": f"{GC.EMA_SLOW} EMA"}]
+    # PIN MOVED 2026-11-23 (spec vwapzones §3.4): the two EMA entries byte-equal, then 📈 VWAP, then the zones module's
+    # entries (stubbed here).
+    assert out["legend"][:2] == [{"tone": "ema9", "label": f"{GC.EMA_FAST} EMA"}, {"tone": "ema21", "label": f"{GC.EMA_SLOW} EMA"}]
+    assert out["legend"][2:] == [{"tone": C.VWAP_TONE, "label": VW.legend_label(), "title": VW.rules_line()}] + ZONES_LEGEND
     assert out["info"]["honesty"].startswith(f"A {GC.EMA_FAST}-over-{GC.EMA_SLOW} cross is information, not an entry.")
     assert PL.build(FRI_IN, db=_db(["OMH"]))["full"] is False
 

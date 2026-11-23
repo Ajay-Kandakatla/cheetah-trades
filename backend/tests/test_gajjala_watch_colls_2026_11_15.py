@@ -46,7 +46,7 @@ def test_push_numbers_are_imported_not_retyped():
 
 
 def test_frames_and_caps():
-    assert [tf for tf, _ in C.FRAMES] == ["1m", "3m", "5m"]
+    assert [tf for tf, _ in C.FRAMES] == ["1m", "5m", "15m"]                     # RE-PINNED 2026-11-23 (3m → 15m)
     assert set(C.FRAME_WORDS) == {tf for tf, _ in C.FRAMES}
     assert C.AXIS_FRAME == C.FRAMES[0][0]
     assert set(C.PUSH_FRAMES) <= set(C.FRAME_WORDS)

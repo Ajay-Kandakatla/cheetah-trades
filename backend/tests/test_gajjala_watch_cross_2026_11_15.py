@@ -65,10 +65,11 @@ class SF:
         return len(self.t)
 
 
-def frames_stub(F1, F3=None, F5=None, vol=2_000_000):
+def frames_stub(F1, F15=None, F5=None, vol=2_000_000):
+    # RE-PINNED 2026-11-23 (frames 1 / 5 / 15): the second slot is the 15-min frame (was 3m)
     by = {"1m": F1}
-    if F3 is not None:
-        by["3m"] = F3
+    if F15 is not None:
+        by["15m"] = F15
     if F5 is not None:
         by["5m"] = F5
     return SimpleNamespace(by=by, frame=lambda tf: by.get(tf, F1), vol=vol, session=S.isoformat())
@@ -163,19 +164,26 @@ def test_NEGATIVE_a_down_cross_never_sends():
     assert send.calls == [] and c["cross"] == 0 and coll.docs == {}
 
 
-def test_NEGATIVE_3m_and_5m_crosses_are_drawn_only():
+def test_NEGATIVE_5m_and_15m_crosses_are_drawn_only():
+    # RE-PINNED 2026-11-23: 3m → 15m — "15m" IS on alerts.FRAME_MINUTES, so C.PUSH_FRAMES ("1m",) alone keeps it silent
     coll, held = FakeColl(), {}
     flat1 = SF(up_at(10, 6).t, [3] * 4, [2] * 4)
-    F3 = SF([m(9, 57), m(10, 0), m(10, 3), m(10, 6)], [1, 1, 1, 3], [2] * 4, frame="3m")
+    F15 = SF([m(9, 15), m(9, 30), m(9, 45), m(10, 0)], [1, 1, 1, 3], [2] * 4, frame="15m")
     F5 = SF([m(9, 50), m(9, 55), m(10, 0), m(10, 5)], [1, 1, 1, 3], [2] * 4, frame="5m")
-    c, send = go(coll, frames={"OMH": frames_stub(flat1, F3, F5)}, now=at(S, 10, 6, 30), held=held)
+    c, send = go(coll, frames={"OMH": frames_stub(flat1, F15, F5)}, now=at(S, 10, 6, 30), held=held)
     assert c["not_push_frame"] == 2 and c["cross"] == 2 and send.calls == [] and coll.docs == {} and held == {}
 
 
 def test_NEGATIVE_a_push_frame_missing_from_the_alerts_clock_fails_closed(monkeypatch):
+    # RE-PINNED 2026-11-23: every tf of C.FRAMES (1m / 5m / 15m) is on alerts.FRAME_MINUTES, so the fail-closed fence is
+    # exercised by handing the watch a frame the alerts clock does not know ("3m") and naming it a push frame
+    monkeypatch.setattr(C, "FRAMES", C.FRAMES + (("3m", "3min"),))
     monkeypatch.setattr(C, "PUSH_FRAMES", ("1m", "3m"))
+    assert "3m" not in AL.FRAME_MINUTES
     F3 = SF([m(10, 0), m(10, 3), m(10, 6)], [1, 1, 3], [2] * 3, frame="3m")
-    c, send = go(FakeColl(), frames={"OMH": frames_stub(SF(up_at(10, 6).t, [3] * 4, [2] * 4), F3)})
+    stub = frames_stub(SF(up_at(10, 6).t, [3] * 4, [2] * 4))
+    stub.by["3m"] = F3
+    c, send = go(FakeColl(), frames={"OMH": stub})
     assert c["not_push_frame"] == 1 and send.calls == []
 
 
@@ -314,14 +322,17 @@ def real_cross(vol=5000.0):
                           raw_day(S, end=(10, 7), price=price, volume=vol), rules=C.FRAMES)
 
 
-def test_real_frames_ring_the_1m_cross_and_hold_the_3m_one():
+def test_real_frames_ring_the_1m_cross_and_nothing_else():
+    # RE-PINNED 2026-11-23 (frames 1 / 5 / 15): was "…and hold the 3m one" (the 3m 10:06 cross). No 5m / 15m bar has
+    # closed past the 10:05 jump at 10:06:30 → nothing drawn-only here; the 15-min drawn-only case on REAL frames is
+    # pinned in test_gajjala_watch_frames_1_5_15_2026_11_23.py.
     fr = real_cross()
     F1 = fr.frame("1m")
     x = EX.latest_up_cross(XA.watch_crosses(F1), S)
     assert x["ts"] == m(10, 6) == F1.t[-1]
     coll = FakeColl()
     c, send = go(coll, frames={"OMH": fr}, now=at(S, 10, 6, 30))
-    assert c["pushed"] == 1 and c["not_push_frame"] == 1 and len(send.calls) == 1      # the 3m 10:06 cross: drawn only
+    assert c["pushed"] == 1 and c["not_push_frame"] == 0 and len(send.calls) == 1
     k5 = DT.uptrend(F1, x["i"])
     assert coll.docs[key()]["uptrend_cross"] is k5
     assert f"K5 uptrend at the cross: 1-min {XA.MARK[k5]}" in send.calls[0][1]["body"]
@@ -448,7 +459,9 @@ def test_rules_line_carries_the_latch_consequence_and_the_fade_double():
     assert "can ring a second 🔀 from the Fade's 15- or 5-min frame" in line
     assert "never sent late" in line and "UNMEASURED" in line and "mode live" in line
     assert "{:,}".format(GC.K11_MIN_SESSION_VOLUME) in line and "09:45" in line
-    assert "1-, 3- and 5-min charts" in line and "3- and 5-min crosses are marked only" in line
+    # RE-PINNED 2026-11-23 (Ajay: "So 1 min, 5 and 15 accross board") — built from C.FRAMES, never typed
+    assert "1-, 5- and 15-min charts" in line and "5- and 15-min crosses are marked only" in line
+    assert "3-" not in line
 
 
 def test_rules_line_follows_the_constants(monkeypatch):
@@ -496,11 +509,13 @@ def test_the_count_script_uses_the_charts_crosses_and_counts_window_latch_and_bu
     assert "not an edge" in out["note"]
 
 
-def test_NEGATIVE_the_count_script_window_never_adds_3m_to_the_push_clock():
+def test_NEGATIVE_the_count_script_window_judges_the_15m_bar_on_the_1m_clock():
+    # RE-PINNED 2026-11-23 (frames 1 / 5 / 15): the 15-min bar is judged by its START as the 1-minute bar (never on a
+    # clock of its own)
     from scripts import gajjala_watch_cross_count as CNT
-    assert CNT._window({"ts": m(9, 33)}, S, "3m") == "suppressed_first15"         # the 09:30–09:33 bar
-    assert CNT._window({"ts": m(9, 30)}, S, "3m") == "suppressed_premarket"       # 09:27–09:30
-    assert CNT._window({"ts": m(9, 48)}, S, "3m") is None                         # starts 09:45
+    assert CNT._window({"ts": m(9, 45)}, S, "15m") == "suppressed_first15"        # the 09:30–09:45 bar
+    assert CNT._window({"ts": m(9, 30)}, S, "15m") == "suppressed_premarket"      # 09:15–09:30
+    assert CNT._window({"ts": m(10, 0)}, S, "15m") is None                        # starts 09:45
     assert "3m" not in AL.FRAME_MINUTES
     assert CNT._sessions(3, S) == [date(2026, 11, 11), PREV, S]
     assert CNT._sessions(1, date(2026, 11, 15)) == [S]                            # a Sunday end → Friday

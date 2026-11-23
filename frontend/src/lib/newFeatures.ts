@@ -22,6 +22,21 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23 ~00:45–00:55 ET, verbatim and in order: "can you add vwap and supply demand zone in the daily time
+  // frame on the watch list please" · "I think we have 15 mins too" · "on the watch list I think we switch to 15 when
+  // candles are available for full chart" · "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross
+  // board" · "Add vwap and supply demand too". chart_maps/gajjala_watch/{constants,vwap,levels,build,payload,loop}.py +
+  // gajjala/card_frames.py; FE gajjalaWatch / gajjalaCardView / PatternChart (ctx bands, .pc-vwap). VWAP = the house
+  // daytrading.indicators.vwap_session over the sessions named by C.VWAP_SESSIONS (default regular session = HIS CALL #1);
+  // zones = zone_store.build_doc (the ONE S&D engine, board geometry, closed daily bars). Display only: never a gate,
+  // sort, cap, push or lane input; PUSH_FRAMES stays 1-min. UNMEASURED. Docs docs/gajjala/watch_frames_vwap_2026_11_23.md,
+  // docs/gajjala/watch_daily_zones_2026_11_23.md, docs/gajjala/watch_vwap_zones_frontend_2026_11_23.md.
+  {
+    id: 'gajjala-watch-frames-vwap-daily-zones-2026-11-23',
+    label: '👀 Watch: 1 / 5 / 15-min · 📈 VWAP · 📐 daily supply & demand zones — you said: “can you add vwap and supply demand zone in the daily time frame on the watch list please”, “Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board” and “Add vwap and supply demand too”. Each Watch tile now shows the 1-min chart on top and the 5-min + 15-min pair below; the 3-min chart is gone, and ⤢ shows 15 / 5 / 1 like the 🚩 card view. A 15-min chart with no closed bar yet says so in words. A thin blue VWAP line runs over the candles, under the 9 / 21 EMA, counting the regular session from 09:30 (premarket not counted) and ending at the last closed bar. The daily supply and demand zones from the Supply & Demand engine (closed daily bars, the board’s zones) draw as dashed green / red outlines where they cross the chart; a zone never moves the price scale, and one line names the zone the price is inside, the next one below and the next one above. A high or low from the last few sessions is not a zone yet, so yesterday’s high is usually not drawn. The 🚩 card view and the card tiles draw the same line and zones. Display only. UNMEASURED. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-22, verbatim: "New feature when I click on this past winner tag take me to that video so change the date
   // and focus me on that video at that. time" + "past winner 11-18 +57%" (a VWAV 11-20 card). backend/chart_maps/replays
   // store.seek_seconds (the renderer's frame clock) + the 🏆 chip links. Navigation only. UNMEASURED. Doc

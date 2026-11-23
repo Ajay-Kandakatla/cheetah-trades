@@ -10,17 +10,19 @@
  * the route, the order, the parser and the overlay of the OPEN card's plan (lines, bands, markers, plan line) onto the
  * served frames. The ONE FE sentence is GGC_FETCH_FAILED (the request itself failed — there is no payload to serve one).
  * UNMEASURED — a chart view is information, not an entry. */
+import type { CmBand } from './chartMaps';
 import type { GgTile } from './gajjala';
 import {
-  GGW_LAYOUT_DEFAULT, ggwClampPage, ggwPageOf, parseFrame, parseGgwLayout, type GgwFrame, type GgwLayout, type GgwRow,
+  GGW_LAYOUT_DEFAULT, ggwClampPage, ggwPageOf, parseFrame, parseGgwLayout, parseRowLevels, type GgwFrame, type GgwLayout,
+  type GgwLevels, type GgwRow,
 } from './gajjalaWatch';
 import { videoLayers } from './videoLook';
 
 /** The frames route base (== backend card_frames.API_BASE — a backend source-read test pins equality). */
 export const GGC_PATH = '/chart-maps/gajjala/frames';
 export const ggcPath = (sym: string): string => `${GGC_PATH}/${encodeURIComponent(sym.trim())}`;
-/** His frames 1 / 5 / 15, stacked big → small top to bottom (the Watch's convention — HIS CALL #1). The 👀 Watch keeps
- *  its own GGW_STRETCH_ORDER (5 / 3 / 1). */
+/** His frames 1 / 5 / 15, stacked big → small top to bottom (the Watch's convention — HIS CALL #1). Since 2026-11-23 the
+ *  👀 Watch's own GGW_STRETCH_ORDER is the same 15 / 5 / 1 (Ajay: "So 1 min, 5 and 15 accross board"; a test pins equality). */
 export const GGC_STRETCH_ORDER = ['15m', '5m', '1m'] as const;
 /** The ONE FE sentence (the GET itself failed — no payload to serve a reason). */
 export const GGC_FETCH_FAILED = 'Could not load the three charts.';
@@ -28,6 +30,9 @@ export const GGC_FETCH_FAILED = 'Could not load the three charts.';
 export type GgcPayload = {
   state: 'ok'; symbol: string; session: string | null; is_today: boolean; in_window: boolean;
   as_of_et: string | null; stale: boolean; text: string | null; frames: GgwFrame[];
+  /** 📐 2026-11-23 (vwapzones §3.7): the served daily-zones line (lib/gajjalaWatch.parseRowLevels). The key is set ONLY when
+   *  served — a payload without it parses byte-identical to before. */
+  levels?: GgwLevels | null;
 };
 export type GgcError = { state: 'error'; reason: string | null };
 
@@ -50,7 +55,13 @@ export function parseGgc(raw: unknown): GgcPayload | GgcError | null {
     stale: raw.stale === true,
     text: str(raw.text),
     frames: raw.frames.map((f: unknown) => parseFrame(f, symbol)).filter((f: GgwFrame | null): f is GgwFrame => !!f),
+    ...('levels' in raw ? { levels: parseRowLevels(raw.levels) } : {}),
   };
+}
+
+/** 📐 2026-11-23: a SERVED context band (the daily zones — `ctx: true`): drawn where it falls, never the card's overlay. */
+export function ggcIsCtx(b: unknown): b is CmBand {
+  return !!b && typeof b === 'object' && (b as { ctx?: unknown }).ctx === true;
 }
 
 /** The card's plan on the served frames: `lines` + `bands` of the card on EVERY frame (prices, frame-free); `markers`
@@ -61,7 +72,11 @@ export function parseGgc(raw: unknown): GgcPayload | GgcError | null {
  *  absent → the card's own `lines` / `bands` / `markers` references, byte-identical to before.
  *  👀 2026-11-18 (card grid in the Watch layout, spec cardview §3.1): `opts` absent → byte-identical to the 11-17 row (the ⤢
  *  view passes none). `opts.plan === false` → the head text is the served `text` ONLY (the no-bars words): on the board
- *  tile the plan prints once, in the card's own CardExtras below. */
+ *  tile the plan prints once, in the card's own CardExtras below.
+ *  📐 2026-11-23 (vwapzones §3.9): the frame's SERVED `ctx` bands (the daily zones) are KEPT under both looks, drawn first
+ *  (the card's own bands on top): `videoLayers` strips only the CARD's overlay. No served `ctx` band → the card's `bands`
+ *  reference exactly as before. A served `levels` reaches the row (key set only when served). The 15 / 5 / 1 order is
+ *  GGC_STRETCH_ORDER (unchanged). */
 export function ggcRow(card: GgTile, p: GgcPayload, look?: 'video', opts?: { plan?: boolean }): GgwRow {
   const src = look === 'video' ? videoLayers(card) : card;
   const lines = Array.isArray(src.lines) ? src.lines : [];
@@ -74,11 +89,18 @@ export function ggcRow(card: GgTile, p: GgcPayload, look?: 'video', opts?: { pla
     from_session: p.is_today ? null : p.session,
     as_of_et: p.as_of_et,
     stale: p.stale,
-    frames: p.frames.map((f) => ({
-      ...f,
-      tile: { ...f.tile, lines, bands, markers: card.tf != null && f.tf === card.tf ? markers : [] },
-    })),
+    frames: p.frames.map((f) => {
+      const ctx = Array.isArray(f.tile.bands) ? f.tile.bands.filter(ggcIsCtx) : [];
+      return {
+        ...f,
+        tile: {
+          ...f.tile, lines, bands: ctx.length ? [...ctx, ...bands] : bands,
+          markers: card.tf != null && f.tf === card.tf ? markers : [],
+        },
+      };
+    }),
     rang: [],
+    ...(p.levels !== undefined ? { levels: p.levels } : {}),
   };
 }
 

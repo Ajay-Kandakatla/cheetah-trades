@@ -104,6 +104,7 @@ describe('👀 chart heights by width', () => {
   it('NEGATIVE: > 640 px keeps the 3×3 heights (120 / 180 / 180)', async () => {
     const c = await run(false);
     const vbs = Array.from(c.querySelectorAll('[data-testid="ggw-tile-OMH"] svg')).map((s) => s.getAttribute('viewBox'));
-    expect(vbs).toEqual([`0 0 620 ${GGW_CHART_H['1m']}`, `0 0 620 ${GGW_CHART_H['3m']}`, `0 0 620 ${GGW_CHART_H['5m']}`]);
+    // 2026-11-23: this older 1m/3m/5m payload's 3-min frame falls back to the 5-min height (ggwChartHeight).
+    expect(vbs).toEqual([`0 0 620 ${GGW_CHART_H['1m']}`, `0 0 620 ${GGW_CHART_H['5m']}`, `0 0 620 ${GGW_CHART_H['5m']}`]);
   });
 });

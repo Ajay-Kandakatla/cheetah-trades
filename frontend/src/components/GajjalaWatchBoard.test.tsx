@@ -87,7 +87,7 @@ describe('👀 tiles', () => {
       expect(Array.from(pair.querySelectorAll('.ggw-frame')).map((f) => f.getAttribute('data-tf'))).toEqual(['3m', '5m']);
       const vb = (tf: string) => charts.querySelector(`.ggw-frame[data-tf="${tf}"] svg`)!.getAttribute('viewBox');
       expect(vb('1m')).toBe(`0 0 620 ${GGW_CHART_H['1m']}`);
-      expect(vb('3m')).toBe(`0 0 620 ${GGW_CHART_H['3m']}`);
+      expect(vb('3m')).toBe(`0 0 620 ${GGW_CHART_H['5m']}`);   // 2026-11-23: an older payload's 3-min frame → the 5-min height
       expect(vb('5m')).toBe(`0 0 620 ${GGW_CHART_H['5m']}`);
       // the bold 9 / 21 and the diamonds on every chart that has crosses
       expect(charts.querySelectorAll('polyline.pc-ema-bold-ema9')).toHaveLength(3);

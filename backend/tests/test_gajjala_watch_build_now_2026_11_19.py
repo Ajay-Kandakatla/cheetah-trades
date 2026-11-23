@@ -290,16 +290,18 @@ def test_NEGATIVE_an_unreadable_owner_doc_reads_nothing(monkeypatch):
 def _record_build(monkeypatch):
     got = []
     monkeypatch.setattr(L, "build_pending", lambda now=None, **k: got.append(k) or {"built": []})
+    monkeypatch.setattr(L, "_levels", lambda *a, **k: 0)        # 📐 2026-11-23 [C1]: the zones read, stubbed (nothing read)
     return got
 
 
 def test_cli_build_new_only_passes_new_only(monkeypatch):
+    # RE-PINNED 2026-11-23 [C1] (spec vwapzones §3.5): the recorded kwargs gain the child's ONE shared `tried` set
     got = _record_build(monkeypatch)
-    assert L.main(["--build", "--new-only"]) == 0 and got == [{"new_only": True}]
+    assert L.main(["--build", "--new-only"]) == 0 and got == [{"new_only": True, "tried": set()}]
     got.clear()
-    assert L.main(["--build"]) == 0 and got == [{"new_only": False}]
+    assert L.main(["--build"]) == 0 and got == [{"new_only": False, "tried": set()}]
     got.clear()
-    assert L.main(list(C.ARGV_BUILD_NEW[3:])) == 0 and got == [{"new_only": True}]   # the API's own argv
+    assert L.main(list(C.ARGV_BUILD_NEW[3:])) == 0 and got == [{"new_only": True, "tried": set()}]   # the API's own argv
 
 
 @pytest.mark.parametrize("argv", [["--build", "--symbols", "OMH"], ["--build", "--new-only", "--symbols", "OMH"],

@@ -118,11 +118,15 @@ def test_NEGATIVE_card_frames_imports_only_the_watch_readers_never_its_switch_or
     # ⏹ 2026-11-18 (spec ret1m2 §3.13, watch WP): the 🚩 1-minute page retired by his word ("But keep the one min
     # chart in the watch list I still want them") — the card's 1m frame falls back to the 👀 Watch's stored 1m tile,
     # read through gajjala_watch.colls (WCOLLS) with ONE find_one. Re-pinned from [build, payload]; colls joins as a
-    # READER only (pinned below: one `WCOLLS.colls()` call, nothing else off it). constants / loop / switch stay banned.
+    # READER only (pinned below: one `WCOLLS.colls()` call, nothing else off it). loop / switch stay banned.
+    # 📐 2026-11-23 (watch frames/VWAP/zones): constants (FRAMES / VWAP_ON / ZONES_ON / VWAP_TONE / VWAP_LABEL only)
+    # and levels (default_loader / for_card / row_levels only) join as READERS — pinned field-for-field in
+    # test_gajjala_card_frames_overlays_2026_11_23.py.
     assert mods == ["chart_maps.gajjala_watch.build", "chart_maps.gajjala_watch.colls",
+                    "chart_maps.gajjala_watch.constants", "chart_maps.gajjala_watch.levels",
                     "chart_maps.gajjala_watch.payload"]
     src = (GG_DIR / "card_frames.py").read_text(encoding="utf-8")
-    for banned in ("gajjala_watch import constants", "gajjala_watch import loop", "WCO.", "_popen", "spawn"):
+    for banned in ("gajjala_watch import loop", "WCO.", "_popen", "spawn"):
         assert banned not in src
     wcolls = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute)
               and isinstance(n.value, ast.Name) and n.value.id == "WCOLLS"]

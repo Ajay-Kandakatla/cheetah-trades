@@ -574,7 +574,7 @@ def test_tab_counts_luk_and_the_owner_watch(no_override):
                         watch_db=db)
     assert out["tabs"]["luk"]["n"] == 1 and out["tabs"]["luk"]["top"]["symbol"] == "LK"
     w = out["tabs"]["gajjala_watch"]
-    assert w["n"] == 1 and w["tier"] == "near" and w["frame"] == "1m/3m/5m"
+    assert w["n"] == 1 and w["tier"] == "near" and w["frame"] == "1m/5m/15m"         # RE-PINNED 2026-11-23 (C.FRAMES)
     _q, proj = db[WC.COLL_TILES].calls[0]
     assert proj["frames.1m.bars.t"] == 1 and "frames.1m.bars" not in proj
     # NEGATIVE: a non-owner never reads the watch (the collection is not touched)

@@ -15,10 +15,10 @@ import { Fragment, memo, useCallback, useEffect, useId, useMemo, useRef, useStat
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W, VWAP_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
-  type CmAxis, type CmBadge, type CmCurve, type CmMarker, type CmStat, type CmTile,
+  type CmAxis, type CmBadge, type CmBand, type CmCurve, type CmLine, type CmMarker, type CmStat, type CmTile,
 } from '../lib/chartMaps';
 import {
   cardLadder, FOLD_GROUPS, FOLD_LABEL, planLineKey, type FoldItem, type OuterChip,
@@ -127,6 +127,19 @@ const BAND_NAME: Record<string, string> = {
   gg_entry: 'Entry zone',
 };
 
+/** 📐 [C6] (2026-11-23) The ONE text of a band — its `<title>` AND the hover chip. A `ctx` band with a served `label`
+ *  prints the label VERBATIM (it already names its range in the house formatter; no second, clipped, 2-dp range);
+ *  every other band prints exactly what it printed before. */
+export function bandText(b: CmBand): string {
+  if (b.ctx && typeof b.label === 'string' && b.label) return b.label;
+  return `${b.label || BAND_NAME[b.kind] || b.kind} ` + `${b.lo.toFixed(2)}–${b.hi.toFixed(2)}`;
+}
+
+/** 📐 The quiet gutter tone of a drawn `ctx` band, by kind; null = no gutter word for that kind. */
+const ctxGutterTone = (kind: string): 'zone_demand' | 'zone_supply' | null =>
+  kind === 'board_demand' || kind === 'demand' ? 'zone_demand'
+    : kind === 'board_supply' || kind === 'supply' ? 'zone_supply' : null;
+
 export const PatternChart = memo(function PatternChart(
   { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look }: {
     tile: CmTile; height?: number;
@@ -231,10 +244,18 @@ export const PatternChart = memo(function PatternChart(
    * the ones the served note points at by name, and a reader who cannot find
    * the dashed band is being invited to read the solid intraday ones as the
    * board's (2026-09-23). Every other overlay speaks for itself. */
+  /* 📐 [C9] A context band (👀 Watch daily zones) never prints an edge marker — the served line names the next zone. */
   const offBoard = offDomainBands(layers.bands || [], domain)
-    .filter((o) => isOutline(String(o.band.kind)));
+    .filter((o) => isOutline(String(o.band.kind)) && !o.band.ctx);
+  /* 📐 One QUIET gutter word per DRAWN context band (at its clipped mid); no extra line is drawn. None → []. */
+  const ctxGutters: CmLine[] = [];
+  for (const b of bands) {
+    if (!b.ctx || typeof b.gutter !== 'string' || !b.gutter) continue;
+    const tone = ctxGutterTone(String(b.kind));
+    if (tone) ctxGutters.push({ price: (b.lo + b.hi) / 2, label: b.gutter, tone, quiet: true });
+  }
   const labels = boldEmaLabels(lineLabels(
-    [...(lines || []), ...curveLabels(layers.curves)], domain, H, PAD_Y, LABEL_FS), layers.curves, ema);
+    [...(lines || []), ...curveLabels(layers.curves), ...ctxGutters], domain, H, PAD_Y, LABEL_FS), layers.curves, ema);
   const axis = priceTicks(domain, H, PAD_Y);
   // The gutter is sized from the labels it has to hold. Ajay 2026-08-19 sent a
   // META tile reading "overhead 553" and "support 527." — a fixed 62 units
@@ -278,7 +299,7 @@ export const PatternChart = memo(function PatternChart(
     }
   }
   const bold = ema === 'bold';
-  const isBoldCurve = (c: CmCurve) => bold && (c.tone === 'ema9' || c.tone === 'ema21');
+  const isBoldCurve = (c: CmCurve) => bold && (c.tone === 'ema9' || c.tone === 'ema21' || c.tone === 'vwap');
   const isCross = (m: CmMarker) => m.kind === 'ema_cross_up' || m.kind === 'ema_cross_dn';
   /** A curve's drawn runs — split on nulls (a gap is never joined through). */
   const curveSegs = (c: CmCurve): string[] => {
@@ -516,10 +537,7 @@ export const PatternChart = memo(function PatternChart(
                       strokeWidth={outline ? (on ? 1.6 : 1.2) : 0}
                       strokeDasharray={outline ? '5,3' : undefined}
                       opacity={outline ? (on ? 1 : 0.85) : (on ? 0.26 : 0.13)}>
-                  <title>
-                    {`${b.label || BAND_NAME[b.kind] || b.kind} `
-                     + `${b.lo.toFixed(2)}–${b.hi.toFixed(2)}`}
-                  </title>
+                  <title>{bandText(b)}</title>
                 </rect>
                 {!outline && (
                   <line x1={0} y1={yTop} x2={plotW} y2={yTop}
@@ -925,6 +943,17 @@ export const PatternChart = memo(function PatternChart(
           {/* 👀 BOLD 9 / 21 EMA (Gajjala's Watch, 2026-11-15; Ajay: "a brighter and thicker 21 EMA and 9 EMA"): the
               replay's look — drawn OVER the candles, the 21 first and the 9 on top, 2 px at any tile size; then the
               9 / 21 cross diamonds last, so a cross is never hidden under the lines. Only under emaStyle="bold". */}
+          {/* 📈 VWAP (👀 Watch, 2026-11-23; Ajay: "Add vwap and supply demand too"): under bold, thin and solid OVER the
+              candles and UNDER the two bold EMAs; split on nulls (the line ends at the last closed bar). Not bold →
+              the ordinary curve pass above. */}
+          {bold ? (layers.curves || [])
+            .map((c, ci) => ({ c, ci }))
+            .filter(({ c }) => c.tone === 'vwap')
+            .flatMap(({ c, ci }) => curveSegs(c).map((pts, si) => (
+              <polyline key={`cvw-${ci}-${si}`} className="pc-vwap" data-tone="vwap" points={pts} fill="none"
+                        stroke={toneColor('vwap')} strokeWidth={VWAP_LINE_W}
+                        vectorEffect="non-scaling-stroke" />
+            ))) : null}
           {bold ? (
             <g className="pc-ema-bold">
               {(['ema21', 'ema9'] as const).flatMap((tone) => (layers.curves || [])
@@ -1012,8 +1041,7 @@ export const PatternChart = memo(function PatternChart(
               {hBand ? (
                 <text x={4} y={PAD_Y + 9} fontSize="9"
                       fill={BAND_FILL[hBand.kind] || 'var(--text-muted, #94a3b8)'}>
-                  {`${hBand.label || BAND_NAME[hBand.kind] || hBand.kind} `
-                   + `${hBand.lo.toFixed(2)}–${hBand.hi.toFixed(2)}`}
+                  {bandText(hBand)}
                 </text>
               ) : null}
 

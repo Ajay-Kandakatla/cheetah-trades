@@ -1305,6 +1305,28 @@ def _gg_watch_runners_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_overlays_clause() -> str:
+    """📈📐 2026-11-23 (spec vwapzones §3.6b — Ajay "can you add vwap and supply demand zone in the daily time frame on
+    the watch list please" / "Add vwap and supply demand too") — the section note's clause on the Watch's VWAP line and
+    daily supply & demand zones (display only), built by chart_maps.gajjala_watch.vwap.rules_line() and
+    chart_maps.gajjala_watch.levels.rules_line() (every number a constant read at call time — never typed here). Each
+    half in its OWN try: a broken or absent module drops only its half; the panel never breaks on it."""
+    out = ""
+    try:
+        from chart_maps.gajjala_watch import vwap as GWV
+        line = GWV.rules_line()
+        out += " " + line if isinstance(line, str) and line else ""
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch vwap clause unavailable: %s", exc)
+    try:
+        from chart_maps.gajjala_watch import levels as GWL
+        line = GWL.rules_line()
+        out += " " + line if isinstance(line, str) and line else ""
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch zones clause unavailable: %s", exc)
+    return out
+
+
 def _gg_watch_broker_clause() -> str:
     """🚫 2026-11-19 (spec watchfid, Ajay "Add a button to say not in fidelity, AZI and CHSN are not in fidelity don't add
     them to watch list") — the 🚫 stops line's ONE Watch-exception clause, built by
@@ -1568,6 +1590,7 @@ def _gajjala_section() -> dict:
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_watch_auto_clause()                 # 🤖 2026-11-17 — the watch's auto section (🧠 potentials)
                  + _gg_watch_runners_clause()              # 📅 2026-11-22 — previous-day runners + the Watch sections
+                 + _gg_watch_overlays_clause()             # 📈📐 2026-11-23 — the Watch's VWAP + daily zones (display only)
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)

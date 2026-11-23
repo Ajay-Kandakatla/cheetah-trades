@@ -335,9 +335,10 @@ def test_row_keys_are_the_old_keys_plus_aplus(monkeypatch):
     # PIN MOVED 2026-11-19 (spec watchfid): + "broker_text"
     # PIN MOVED 2026-11-21 (spec watchfloat): + "float"
     # PIN MOVED 2026-11-22 (spec watch_org rev 4): + "org" while C.SECTIONS_ON (the OFF twin below keeps the old set)
+    # PIN MOVED 2026-11-23 (spec vwapzones §3.4): + "levels" on every row (a block, or None without one)
     assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
                                 "auto", "aplus", "tags", "broker_text",   # 🏷️ 2026-11-18 (spec wtags): + "tags"
-                                "added_at", "late_text", "float", "org"}
+                                "added_at", "late_text", "float", "org", "levels"}
     # RE-PINNED 2026-11-19 (+ "added_at", "late_text") — Ajay 2026-11-19: "When I add a new ticket they are gettinf added in to que but not active"
     assert C.AUTO_SOURCES == (V.GG5.key, V.GG1.key, V.GGA.key) and GC.SETUPS
 
@@ -351,5 +352,7 @@ def test_row_keys_OFF_twin_sections_off_keeps_the_11_21_keys(monkeypatch):
     db[C.COLL_TILES].docs["OMH"] = _doc("OMH")
     rows, out = _rows(db=db)
     assert "sections" not in out
+    # PIN MOVED 2026-11-23 (spec vwapzones §3.4): + "levels" on every row (a block, or None without one); still no "org"
     assert set(rows["OMH"]) == {"symbol", "state", "text", "from_session", "as_of_et", "stale", "frames", "rang",
-                                "auto", "aplus", "tags", "broker_text", "added_at", "late_text", "float"}
+                                "auto", "aplus", "tags", "broker_text", "added_at", "late_text", "float", "levels"}
+    assert "org" not in rows["OMH"]

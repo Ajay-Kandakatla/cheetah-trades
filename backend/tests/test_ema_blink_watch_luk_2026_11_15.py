@@ -47,7 +47,8 @@ def _curves(pair):
 
 def _watch_doc(sym="OMH"):
     d = _doc(sym)
-    for tf, pair in (("1m", CROSS_UP), ("3m", CLOSING), ("5m", WIDENING)):
+    # RE-PINNED 2026-11-23 (frames 1 / 5 / 15): the closing-in pair moves from the retired 3m to the 15m frame
+    for tf, pair in (("1m", CROSS_UP), ("15m", CLOSING), ("5m", WIDENING)):
         d["frames"][tf]["curves"] = _curves(pair)
     return d
 
@@ -61,10 +62,10 @@ def test_watch_frames_serve_ema_blink_per_frame_from_the_stored_curves_three_sta
     assert r["state"] == "ok"
     by = {f["tf"]: f for f in r["frames"]}
     assert [f["tf"] for f in r["frames"]] == [tf for tf, _r in C.FRAMES]
-    one, three, five = by["1m"]["ema_blink"], by["3m"]["ema_blink"], by["5m"]["ema_blink"]
+    one, three, five = by["1m"]["ema_blink"], by["15m"]["ema_blink"], by["5m"]["ema_blink"]
     assert (one["state"], one["tier"], one["blink"], one["tf"]) == ("crossed_up", "fresh", True, "1m")
     assert one["bars_since_cross"] == 0 and one["closeness"] == 0 and one["cross_t"] == doc["frames"]["1m"]["bars"][-1]["t"]
-    assert (three["state"], three["tier"], three["blink"], three["tf"]) == ("closing_in", "near", True, "3m")
+    assert (three["state"], three["tier"], three["blink"], three["tf"]) == ("closing_in", "near", True, "15m")
     assert three["bars_to_cross"] == 3 == three["closeness"]
     assert (five["state"], five["tier"], five["blink"], five["tf"]) == ("none", None, False, "5m")
     for tf, f in by.items():                                            # THE engine, the frame's own stored series
@@ -79,7 +80,7 @@ def test_NEGATIVE_a_frame_without_curves_serves_None_and_the_row_stays_ok():
     db = _db(["OMH"])
     doc = _watch_doc()
     del doc["frames"]["1m"]["curves"]
-    doc["frames"]["3m"]["curves"] = []
+    doc["frames"]["15m"]["curves"] = []
     doc["frames"]["5m"]["curves"] = "junk"
     db[C.COLL_TILES].docs["OMH"] = doc
     r = PL.build(FRI_IN, db=db)["rows"][0]
@@ -140,7 +141,8 @@ def test_owner_get_carries_the_blocks_through_the_route_scrub(monkeypatch):
     db = _db(["OMH"])
     db[C.COLL_TILES].docs["OMH"] = _watch_doc()
     body = _strict(_client(monkeypatch, db).get(C.API_PATH, headers={"X-User-Email": OWNER}).text)
-    assert [f["ema_blink"]["state"] for f in body["rows"][0]["frames"]] == ["crossed_up", "closing_in", "none"]
+    # RE-PINNED 2026-11-23: served order 1m / 5m / 15m (the closing-in pair sits on 15m now)
+    assert [f["ema_blink"]["state"] for f in body["rows"][0]["frames"]] == ["crossed_up", "none", "closing_in"]
 
 
 # ── (c) 🥇 Luk ─────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -113,7 +113,9 @@ def _empty_gg1_store(s5):
 # ── THE HARD KEEP ────────────────────────────────────────────────────────────────────────────────────────────────
 def test_HARD_KEEP_the_watch_tile_still_serves_1_minute_bars_and_emas_with_the_switch_off(monkeypatch):
     _off()
-    assert C.FRAMES == (("1m", "1min"), ("3m", "3min"), ("5m", "5min")) and C.AXIS_FRAME == "1m"
+    # RE-PINNED 2026-11-23 (Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board"):
+    # the 1-minute chart he kept stays first; 3m → 15m.
+    assert C.FRAMES == (("1m", "1min"), ("5m", "5min"), ("15m", "15min")) and C.AXIS_FRAME == "1m"
     assert C.PUSH_FRAMES == ("1m",)
     F = BLD.frames(["OMH"], S, NOW, load_day=loader())
     assert "OMH" in F
@@ -126,14 +128,14 @@ def test_HARD_KEEP_the_watch_tile_still_serves_1_minute_bars_and_emas_with_the_s
     tones = {c["tone"] for c in t["curves"]}
     assert {"ema9", "ema21"} <= tones
     assert set(t["ema_tail"]) == {"ema9", "ema21"}
-    # the served board: his row carries the 1m / 3m / 5m charts from the stored tile doc
+    # the served board: his row carries the 1m / 5m / 15m charts from the stored tile doc (RE-PINNED 2026-11-23)
     db = loop_db(symbols=["OMH"])
     flt, upd = BLD.tile_update("OMH", fo, S, NOW, "loaded")
     BLD.write(db[C.COLL_TILES], [(flt, upd)])
     row = PL.build(NOW, db=db)["rows"][0]
     by = {f["tf"]: f for f in row["frames"]}
-    assert row["state"] == "ok" and list(by) == ["1m", "3m", "5m"]
-    assert by["1m"]["tile"]["bars"] and by["3m"]["tile"]["bars"] and by["5m"]["tile"]["bars"]
+    assert row["state"] == "ok" and list(by) == ["1m", "5m", "15m"]
+    assert by["1m"]["tile"]["bars"] and by["5m"]["tile"]["bars"] and by["15m"]["tile"]["bars"]
     assert {c["tone"] for c in by["1m"]["tile"]["curves"]} >= {"ema9", "ema21"}
     # NEGATIVE: the retired GG1 pass reads NOTHING — a raising loader is never called, no store is built
     calls = []
@@ -155,7 +157,7 @@ def test_HARD_KEEP_the_watch_loop_iteration_runs_with_the_switch_off(monkeypatch
     assert out["alerts"]["pushed"] == 1                                       # the 9 / 21 cross still rings his name
     tile = db[C.COLL_TILES].docs["OMH"]
     assert tile["status"] == "loaded" and tile["session"] == ISO and tile["seen_bar_t"] == stamp(S, 10, 6)
-    assert list(tile["frames"]) == ["1m", "3m", "5m"] and tile["frames"]["1m"]["bars"]
+    assert list(tile["frames"]) == ["1m", "5m", "15m"] and tile["frames"]["1m"]["bars"]   # RE-PINNED 2026-11-23
     lease = db[C.COLL_STATE].docs[ST.LEASE_ID]
     assert lease["status"] == "done"                                         # claimed and released
     assert L.lease_store(FakeColl())._lease_nums() == (GC.GG1M_LEASE_SEC, GC.GG1M_LEASE_MIN_GAP_SEC)
@@ -173,7 +175,14 @@ def test_HARD_KEEP_the_card_frame_1m_view_draws_from_the_watch_tile_written_by_t
     f15, f5, f1 = out["frames"]
     assert out["state"] == "ok" and f1["tf"] == "1m"
     assert f1["tile"]["bars"] == wt.docs["OMH"]["frames"]["1m"]["bars"] and f1["tile"]["bars"]
-    assert f1["tile"]["curves"] == wt.docs["OMH"]["frames"]["1m"]["curves"]
+    # re-pinned 2026-11-23 (spec vwapzones §3.7; was `curves == stored curves`): the two stored EMAs byte-equal, then
+    # the Watch's VWAP curve aligned by stamp from the SAME stored frame (none when the frame carries no VWAP value)
+    from chart_maps.gajjala_watch import vwap as VW
+    stored_1m = wt.docs["OMH"]["frames"]["1m"]
+    assert f1["tile"]["curves"][:2] == stored_1m["curves"] and len(stored_1m["curves"]) == 2
+    vw = VW.align(VW.by_stamp(stored_1m), stored_1m["bars"])
+    assert f1["tile"]["curves"][2:] == ([] if vw is None else [{"tone": "vwap", "label": "VWAP", "values": vw}])
+    assert all(c["tone"] != "vwap" for c in stored_1m["curves"])            # NEGATIVE: the stored doc never carries the curve
     assert f1["empty_text"] is None and f1["stale"] is False and f1["as_of_et"] == "10:06"
     assert f15["tile"]["bars"] and f5["tile"]["bars"]                         # the 15m / 5m charts from GG5's doc
     # NEGATIVE: a name the loop did not write → the retired words naming the symbol, never a chart

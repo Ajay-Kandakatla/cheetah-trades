@@ -6,7 +6,8 @@
  * "Actually instead of 3 mins make it 15 mins timeframe".
  *
  * Additions, every one opt-in (the Watch passes none of them, so its DOM is byte-identical):
- *   - `order` on GgwStretch / Tile → ggwStretchFrames(row.frames, order) (default GGW_STRETCH_ORDER, the Watch's 5/3/1);
+ *   - `order` on GgwStretch / Tile → ggwStretchFrames(row.frames, order) (default GGW_STRETCH_ORDER, the Watch's 15/5/1
+ *     since 2026-11-23);
  *   - `kind` on GgwStretch → `ggw-stretch--${kind}` + data-kind on the root (absent → today's root exactly);
  *   - a frame with no bars and a SERVED `empty_text` prints those words in place of the chart (caption still printed);
  *   - a frame with a SERVED `as_of_et` prints its own stamp chip in the caption (`⚠️ ` on a served `stale`, the head
@@ -51,18 +52,27 @@
  *     ONLY when stale · 🔔 rang · ⋯ ⤢ ↗ ✕; then the ONE served time line (GgwProvLine); then the ⋯ drawer (GgwDrawer —
  *     the tags row, the 🤖 chip, every served title, the non-stale as-of); then the charts. Each testid once per tile.
  *   - `drawerOpen` → the drawer starts open (the ⤢ view).
- * `usePhone` keeps its export and signature (the 📅 runners strip imports it). */
+ * `usePhone` keeps its export and signature (the 📅 runners strip imports it).
+ *
+ * 📈📐 2026-11-23 (vwapzones spec §3.9, WP fe-watch) — Ajay: "can you add vwap and supply demand zone in the daily time
+ * frame on the watch list please" · "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board" ·
+ * "Add vwap and supply demand too". The frames are SERVED 1m / 5m / 15m (1-min on top, the 5-/15-min pair below; ⤢ 15/5/1);
+ * the VWAP curve and the dashed daily-zone bands ride in each frame's served tile (PatternChart draws them). This file adds:
+ *   - GgwLevelsLine — the row's served daily-zones line (text verbatim, hover = the served title): under the head on a
+ *     plain tile, inside the ⋯ drawer on a compact one (GajjalaWatchCompact mounts it there). No served text → nothing.
+ *   - `seed` on Frame — the forming 5- / 15-min candle from the row's own 1-min chart (lib/ggwLive.ggwSeedLive), folded
+ *     ONLY when GGW_SEED_FORMING is on (BUILT, OFF — HIS CALL #13); off, the forming candle is main's exactly. */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  GGW_DRAWER, GGW_FIT_GROW, GGW_LIVE_EMA_TIP, GGW_PAGER, GGW_PHONE_MQ, GGW_STRETCH, ggwChartHeight, ggwFitViewBoxH,
+  GGW_DRAWER, GGW_FIT_GROW, GGW_LIVE_EMA_TIP, GGW_PAGER, GGW_PHONE_MQ, GGW_SEED_FORMING, GGW_STRETCH, ggwChartHeight, ggwFitViewBoxH,
   ggwFitViewW, ggwSplitFrames, ggwStretchFrames, ggwStretchTitle, type GgwFrame, type GgwRow,
 } from '../lib/gajjalaWatch';
-import { ggwLiveFrame, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
+import { ggwLiveFrame, ggwSeedLive, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
 import { GgSiExtremeNote } from './GgSiExtremeNote';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
 import { GgwBrokerChip, GgwFloatChip, GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
-import { GgwDrawer, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
+import { GgwDrawer, GgwLevelsLine, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
 import { GgwPendingPanel, ggwPendingPanelShown } from './GajjalaWatchPending';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
@@ -108,16 +118,24 @@ function useFitBox(box: RefObject<HTMLDivElement>, fit: boolean): { w: number; h
   return h;
 }
 
-export function Frame({ f, phone, fit, style, live }: {
+export function Frame({ f, phone, fit, style, live, seed }: {
   f: GgwFrame; phone: boolean; fit: boolean; style?: CSSProperties;
   /** This frame's forming bars (lib/ggwLive), or undefined → the stored frame exactly as served. */
   live?: GgwLiveBar[];
+  /** 📈 2026-11-23: the row's 1-min frame + its live 1-min bars — folded by ggwSeedLive ONLY when GGW_SEED_FORMING is on. */
+  seed?: { f1: GgwFrame | null; live1?: GgwLiveBar[] };
 }) {
   const box = useRef<HTMLDivElement>(null);
   const fitH = useFitBox(box, fit);
   const blink = emaBlinkLine(f.ema_blink);
+  const hasSeed = !!seed;
+  const f1 = seed?.f1 ?? null;
+  const live1 = seed?.live1;
+  /* 📈 [O2] OFF (the shipped value) → `live` itself, so the forming candle is main's byte for byte. */
+  const bars = useMemo(() => (GGW_SEED_FORMING && hasSeed ? ggwSeedLive(f, live, f1, live1) : live),
+    [f, live, f1, live1, hasSeed]);
   /* The SAME frame object when nothing is live, so PatternChart's memo skips the redraw. */
-  const shown = useMemo(() => ggwLiveFrame(f, live, { emaTip: GGW_LIVE_EMA_TIP }), [f, live]);
+  const shown = useMemo(() => ggwLiveFrame(f, bars, { emaTip: GGW_LIVE_EMA_TIP }), [f, bars]);
   /* 2026-11-16 (ggcard3): no stored bars and SERVED words → the words in place of an empty chart. */
   const empty = f.tile.bars.length === 0 && f.empty_text ? f.empty_text : null;
   return (
@@ -178,7 +196,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   /** In the full-screen view: ◀ ▶ step to the previous / next stock of HIS list. */
   onPrev?: () => void;
   onNext?: () => void;
-  /** The full-screen frame order (absent → GGW_STRETCH_ORDER, the Watch's 5 / 3 / 1). */
+  /** The full-screen frame order (absent → GGW_STRETCH_ORDER, the Watch's 15 / 5 / 1). */
   order?: ReadonlyArray<string>;
   /** 🩳 2026-11-18: mount the served EXTREME short-interest note in the head (the Watch only; absent → today's DOM). */
   siNote?: boolean;
@@ -199,6 +217,10 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
 }) {
   const [open, setOpen] = useState<boolean>(!!drawerOpen);
   const { top, pair } = ggwSplitFrames(row.frames);
+  /* 📈 2026-11-23: every non-1m frame gets the row's 1-min frame + its live bars as `seed` when `live` is given (folded only
+   * when GGW_SEED_FORMING is on — Frame). The 1-min frame itself never seeds. */
+  const f1 = row.frames.find((x) => x.tf === '1m') ?? null;
+  const seedOf = (f: GgwFrame) => (live && f !== f1 ? { f1, live1: live.by[f1?.tf ?? ''] } : undefined);
   const stacked = !onUnstretch && !!stack;
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
   const rm = row.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol);
@@ -297,6 +319,8 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         </span>
       </div>
       {compact ? <GgwProvLine row={row} /> : null}
+      {/* 📐 2026-11-23: the served daily-zones line — under the head here; inside the ⋯ drawer on a compact tile. */}
+      {compact ? null : <GgwLevelsLine row={row} />}
       {compact ? <GgwDrawer row={row} open={open} tags={tags} domId={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`} /> : null}
       {(onUnstretch || stacked) && row.frames.length ? (
         <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}`}
@@ -304,7 +328,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
           {ggwStretchFrames(row.frames, order).map((f) => (
             <Frame key={f.tf} f={f} phone={phone} fit={fit}
                    style={fit ? { flexGrow: stacked && f.tile.bars.length === 0 && f.empty_text ? 0 : 1 } : undefined}
-                   live={live?.by[f.tf]} />
+                   live={live?.by[f.tf]} seed={seedOf(f)} />
           ))}
         </div>
       ) : top || pair.length ? (
@@ -315,7 +339,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
           ) : null}
           {pair.length ? (
             <div className="ggw-frame-pair" style={fit ? { flexGrow: GGW_FIT_GROW.pair } : undefined}>
-              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} />)}
+              {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} seed={seedOf(f)} />)}
             </div>
           ) : null}
         </div>

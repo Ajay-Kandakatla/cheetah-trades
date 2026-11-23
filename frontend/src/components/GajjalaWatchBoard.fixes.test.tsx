@@ -135,8 +135,9 @@ describe('#3 the fitted row arithmetic (measured by Playwright, mocked API)', ()
     expect(ggwFitRowHeight({ vh: NaN, top: 0, below: 0, gap: 0 })).toBeNull();
     expect(GGW_FIT_ROWS).toBe(3);
   });
+  // 2026-11-23 (vwapzones §3.9): the pair is 5-/15-min now — its share is the 5-min height / 2 (same 180 → same 90).
   it('the chart shares come from GGW_CHART_H (1-min : pair = 120 : 180 / 2)', () => {
-    expect(GGW_FIT_GROW).toEqual({ top: GGW_CHART_H['1m'], pair: GGW_CHART_H['3m'] / 2 });
+    expect(GGW_FIT_GROW).toEqual({ top: GGW_CHART_H['1m'], pair: GGW_CHART_H['5m'] / 2 });
   });
   it('the viewBox height fills the box; NEGATIVE: an unmeasured box → null (the GGW_CHART_H height is kept)', () => {
     expect(PATTERN_CHART_VIEW_W).toBe(620);
@@ -210,7 +211,8 @@ describe('#3 the board fits its rows to the viewport above the phone break', () 
     const c = await mountBoard(false, null);
     const grid = c.querySelector('.ggw-grid') as HTMLElement;
     expect(grid.classList.contains('ggw-grid--fit')).toBe(false);
-    expect(vbs(c)).toEqual([`0 0 620 ${GGW_CHART_H['1m']}`, `0 0 620 ${GGW_CHART_H['3m']}`, `0 0 620 ${GGW_CHART_H['5m']}`]);
+    // 2026-11-23: this older 1m/3m/5m payload's 3-min frame falls back to the 5-min height (ggwChartHeight).
+    expect(vbs(c)).toEqual([`0 0 620 ${GGW_CHART_H['1m']}`, `0 0 620 ${GGW_CHART_H['5m']}`, `0 0 620 ${GGW_CHART_H['5m']}`]);
     expect((c.querySelector('[data-testid="ggw-frame-OMH-1m"]') as HTMLElement).getAttribute('style')).toBeNull();
   });
 });

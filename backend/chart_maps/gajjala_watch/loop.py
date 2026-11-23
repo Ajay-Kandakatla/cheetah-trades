@@ -18,7 +18,7 @@ collection (`gajjala_watch_state`, `_id` "lease"): claimed and released once per
 minute (`skipped`), never ends the loop.
 
 ITERATION. owner list (empty → no lease, no fetch) → lease → session → the last good read's stamps (`seen`) → the
-closed 1/3/5-minute frames (budget = min(GG1M_MINUTE_BUDGET_SEC, the time left in the slot)) → the cross push
+closed 1/5/15-minute frames (budget = min(GG1M_MINUTE_BUDGET_SEC, the time left in the slot)) → the cross push
 (cross_alerts.run — BEFORE the tile writes, fenced) → one tile doc per listed name → the state doc "latest" → release.
 
 BUILD CHILD (`--build`, [C2.5]): the API spawns it when a name is added and the loop will not read within the minute;
@@ -45,10 +45,20 @@ over the frames it was GIVEN — `alerts.names` = his names (manual + auto only 
 `alerts.suppressed_auto` (present only when auto names were read) = the held count; `n_names` = manual + auto; `auto.n`
 = the auto count. Never rewritten after the run. `--dry-run --symbols` (the stub) skips the auto step entirely;
 `--dry-run` without it runs `auto.step(dry=True)` → `auto.writes` = the would-be doc, nothing written.
+
+📈📐 2026-11-23 (spec vwapzones rev 2 §3.5 — Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15
+accross board" · "Add vwap and supply demand too"). Frames 1 / 5 / 15 (C.FRAMES); the VWAP is computed inside the tile
+build (after the cross push — nothing here can delay a ring). The daily zones NEVER run inside `run_iteration` (a slow
+daily read would end the slot, Z7): `--loop` starts the levels module's daemon thread (`_levels(thread=True)`) before the
+slot's iterations; `--build` [C1] loops `build_pending` → `_levels(first=built)` with ONE shared `tried` set (a
+`no_prints` / `failed` name is fetched once per child) and ENDS on the list re-read (the child's LAST act — a name added
+while the zones were read is built by the same child). `build_pending` also rebuilds a listed doc that lacks a tf of
+C.FRAMES (an old 1m/3m/5m doc → 15m); `--new-only` does not. Display only, UNMEASURED.
 """
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import logging
 import sys
@@ -120,7 +130,7 @@ def _state(cs: Optional[dict], _id: str, fields: dict) -> None:
 # ── one iteration ─────────────────────────────────────────────────────────────────────────────────────────────────
 def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None, dry: bool = False,
                   symbols: Optional[list] = None, budget_sec: Optional[float] = None) -> dict:
-    """One minute: the owner's tickers (+ 🤖 the auto step's names, 2026-11-17) → closed 1/3/5-minute frames → the cross
+    """One minute: the owner's tickers (+ 🤖 the auto step's names, 2026-11-17) → closed 1/5/15-minute frames → the cross
     push (his names' frames only while the auto mode is off) → the tile docs → the state doc.
     `symbols` (the --dry-run --symbols stub) REPLACES the owner list for this call and skips the auto step. `dry`: nothing written, nothing
     sent, no lease (the writes are returned in `writes`)."""
@@ -302,14 +312,17 @@ def _new_only_todo(syms: list, docs: dict, added: dict, tried: set) -> list:
 
 
 def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Deps] = None,
-                  new_only: bool = False) -> dict:
+                  new_only: bool = False, tried: Optional[set] = None) -> dict:
     """[C2.5] Build every LISTED name whose tile is missing, from another session, or not loaded — the session of
     `now` (a closed day / before 04:00 → the last market session). Re-reads the list after each round (a name added
     meanwhile is picked up); each name is tried once per child. No cross push, no state doc, no lease.
     `new_only` (2026-11-19, the in-window add-time child `--new-only`): only `_new_only_todo` names — no tile doc, or
     added after the tile doc's last write. Cost: 1–2 Massive minute calls per added name: today (forced, bars.py:287) +
     the prior day when the 1-minute cache misses (bars.py:283 — a brand-new name always misses); single-flight. The
-    default path never reads `added`."""
+    default path never reads `added`.
+    2026-11-23 [C1]: `tried` = the CALLER's set, shared across calls (main's `--build` loop) and filled in place — a
+    name is tried once per child however many rounds run; None = a fresh set (byte-identical to before). The default
+    path also rebuilds a listed doc lacking ANY tf of C.FRAMES (an old 1m/3m/5m doc has no 15m); `--new-only` never."""
     deps = deps or Deps()
     now = RUN._utc(now) if now is not None else RUN._utc(deps.wall())
     if not CO.enabled():                                        # off → no minute fetch from the build child either
@@ -318,7 +331,7 @@ def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
     iso = session.isoformat()
     cs = CO.colls(db)
     tiles = cs["tiles"] if cs else None
-    tried: set = set()
+    tried = tried if tried is not None else set()
     out: dict = {"session": iso, "built": [], "rounds": 0}
     while True:
         if new_only:
@@ -329,6 +342,7 @@ def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         else:
             syms = CO.owner_symbols(db)
             added, proj = {}, {"session": 1, "status": 1}
+            proj.update({f"frames.{tf}.tf": 1 for tf, _r in C.FRAMES})        # 2026-11-23: a doc lacking a tf → todo
         docs: dict = {}
         if tiles is not None and syms:
             try:
@@ -340,7 +354,8 @@ def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
             todo = _new_only_todo(syms, docs, added, tried)
         else:
             todo = [s for s in syms if s not in tried
-                    and (s not in docs or docs[s].get("session") != iso or docs[s].get("status") != "loaded")]
+                    and (s not in docs or docs[s].get("session") != iso or docs[s].get("status") != "loaded"
+                         or _lacks_frame(docs[s]))]
         if not todo:
             break
         out["rounds"] += 1
@@ -357,6 +372,57 @@ def build_pending(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         BLD.write(tiles, updates)
         tried |= set(todo)
         out["built"] += todo
+    return out
+
+
+def _lacks_frame(doc) -> bool:
+    """2026-11-23: a tile doc that does not hold EVERY tf of C.FRAMES (an old 1m/3m/5m doc has no 15m)."""
+    fr = doc.get("frames") if isinstance(doc, dict) else None
+    return not isinstance(fr, dict) or any(not isinstance(fr.get(tf), dict) for tf, _r in C.FRAMES)
+
+
+# ── 📐 the daily zones hook (2026-11-23, spec vwapzones §3.5) ─────────────────────────────────────────────────────────
+def _levels(now: Optional[datetime], *, thread: bool = False, first: Optional[list] = None, rest: bool = True) -> int:
+    """The levels module (C.LEVELS_MODULE, imported LAZILY — loop.py never imports payload): `thread` → `.spawn(now)`
+    (the daemon thread of the `--loop` child) → 0; else the number of daily reads `.warm(now, first=, rest=)` made
+    (0 = it waited on nothing). 0 when C.ZONES_ON is off, on no store, and on ANY fault (one log line, nothing else
+    changes). Never called on `--dry-run`."""
+    if not C.ZONES_ON:
+        return 0
+    try:
+        mod = importlib.import_module(C.LEVELS_MODULE)
+        if thread:
+            mod.spawn(now)
+            return 0
+        res = mod.warm(now, first=list(first or []), rest=bool(rest))
+        read = res.get("read") if isinstance(res, dict) else None
+        return len(read) if isinstance(read, (list, tuple)) else 0
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch: daily zones unavailable: %s", type(exc).__name__)
+        return 0
+
+
+def build_all(now: Optional[datetime] = None, *, new_only: bool = False) -> dict:
+    """[C1] The `--build` child: `build_pending` → `_levels(first=built)` rounds with ONE shared `tried`, ending when a
+    round built nothing AND read nothing — so the list re-read (`build_pending`) is the child's LAST act and a name added
+    while the zones were read is built by this child. `rest` (round 0 only, never `--new-only`) also reads listed names
+    still lacking this session's zones, inside the levels module's cap. Nothing to build and nothing to read → ONE
+    `build_pending` call, as before."""
+    tried: set = set()
+    built_all: list = []
+    rounds = 0
+    out: dict = {}
+    while True:
+        out = build_pending(now, new_only=new_only, tried=tried)
+        built = list(out.get("built") or [])
+        built_all += built
+        rest = rounds == 0 and not new_only
+        # nothing built and no rest pass → the zones read would read nothing: skipped, so the list re-read stays LAST
+        n = _levels(now, first=built, rest=rest) if (built or rest) else 0
+        rounds += 1
+        if not built and not n:
+            break
+    out["built"] = built_all
     return out
 
 
@@ -389,7 +455,7 @@ def main(argv=None) -> int:
         if not CO.enabled():
             log.info("gajjala watch: off (%s) — no build", C.ENV_ENABLED)
             return 0
-        out = build_pending(now, new_only=args.new_only)
+        out = build_all(now, new_only=args.new_only)          # [C1] 2026-11-23 — the list re-read stays the LAST act
     else:
         if not CO.enabled():
             log.info("gajjala watch: off (%s) — nothing to do", C.ENV_ENABLED)
@@ -398,7 +464,11 @@ def main(argv=None) -> int:
             log.info("gajjala watch: outside %s–%s ET on a market day — nothing to do", GC.PASS_OPEN_ET,
                      GC.PASS_CLOSE_ET)
             return 0
-        out = loop(now) if args.loop else run_iteration(now)
+        if args.loop:
+            _levels(now, thread=True)                           # 📐 2026-11-23 — off the minute path (a daemon thread)
+            out = loop(now)
+        else:
+            out = run_iteration(now)
     if args.json:
         print(json.dumps(out, default=str))
     elif not args.loop:
@@ -407,7 +477,7 @@ def main(argv=None) -> int:
     return 0
 
 
-__all__ = ["Deps", "dry_deps", "lease_store", "run_iteration", "loop", "build_pending", "main", "LEASE_HELD",
+__all__ = ["Deps", "dry_deps", "lease_store", "run_iteration", "loop", "build_pending", "build_all", "main", "LEASE_HELD",
            "LOOP_REASONS", "NO_TICKERS"]
 
 

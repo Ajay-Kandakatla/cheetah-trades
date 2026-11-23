@@ -125,13 +125,24 @@ def test_on_demand_builds_the_1m_frame_when_gg1_and_the_watch_are_both_empty():
     exp, loaded_at = _expected_1m(Loader())
     assert out["state"] == "ok" and f1["tf"] == "1m"
     assert f1["tile"]["bars"] == exp["bars"] and f1["tile"]["bars"]
-    assert f1["tile"]["curves"] == exp["curves"] and f1["tile"]["vol_avg"] == exp["vol_avg"]
+    # re-pinned 2026-11-23 (spec vwapzones §3.7; was `curves == exp["curves"]`): the two EMAs byte-equal, then the
+    # Watch's VWAP curve aligned by stamp from the SAME built update (none when the update carries no VWAP value)
+    from chart_maps.gajjala_watch import vwap as VW
+    assert f1["tile"]["curves"][:2] == exp["curves"] and f1["tile"]["vol_avg"] == exp["vol_avg"]
+    vw = VW.align(VW.by_stamp(exp), exp["bars"])
+    assert f1["tile"]["curves"][2:] == ([] if vw is None else [{"tone": "vwap", "label": "VWAP", "values": vw}])
     assert f1["empty_text"] is None and f1["stale"] is False and f1["as_of_et"] == "15:30"
     assert f1["source"] == {"kind": CF.SOURCE_ON_DEMAND, "at": PL._to_et(loaded_at).isoformat()}
     assert f1["axis"] is not None and f1["ema_tail"] is not None
     assert f1["tile"]["bars"][-1]["t"] == f"{SESSION} 15:29"                       # closed bars only (settle rule)
     for i in (0, 1):                                                                # 15m / 5m byte-identical
-        assert out["frames"][i]["tile"] == ref["frames"][i]["tile"]
+        # re-pinned 2026-11-23 (spec vwapzones §3.7; was `tile == ref tile`): byte-identical but for the VWAP curve the
+        # built update's 15m / 5m frames carry, aligned by stamp onto GG5's bars (the 1m frame's rule above)
+        t_out, t_ref = dict(out["frames"][i]["tile"]), ref["frames"][i]["tile"]
+        cur = t_out.pop("curves")
+        extra = cur[len(t_ref["curves"]):]
+        assert cur[:len(t_ref["curves"])] == t_ref["curves"] and {**t_out, "curves": t_ref["curves"]} == t_ref
+        assert all(c["tone"] == "vwap" for c in extra) and len(extra) <= 1
         assert out["frames"][i]["source"] == ref["frames"][i]["source"] == {
             "kind": V.GG5.key, "at": PL._to_et(g5["at"]).isoformat()}
     assert out["as_of_et"] == ref["as_of_et"] and out["text"] is None              # the head = the GG5 card's doc

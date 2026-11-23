@@ -64,11 +64,13 @@ describe('the per-screen pick (lib)', () => {
     expect(readGgwLayout()).toBe(GGW_LAYOUT_DEFAULT);
     expect(() => saveGgwLayout(4)).not.toThrow();
   });
-  it('the full-screen order is 5-min, 3-min, 1-min; NEGATIVE: an unnamed frame follows in served order, never dropped', () => {
+  // 2026-11-23 (vwapzones §3.9 — Ajay: "So 1 min, 5 and 15 accross board"): 15-min, 5-min, 1-min (the card view's order).
+  it('the full-screen order is 15-min, 5-min, 1-min; NEGATIVE: an unnamed frame follows in served order, never dropped', () => {
     const f = (tf: string) => ({ tf } as unknown as GgwFrame);
-    expect(GGW_STRETCH_ORDER).toEqual(['5m', '3m', '1m']);
-    expect(ggwStretchFrames([f('1m'), f('3m'), f('5m')]).map((x) => x.tf)).toEqual(['5m', '3m', '1m']);
-    expect(ggwStretchFrames([f('15m'), f('1m'), f('2m'), f('5m')]).map((x) => x.tf)).toEqual(['5m', '1m', '15m', '2m']);
+    expect(GGW_STRETCH_ORDER).toEqual(['15m', '5m', '1m']);
+    expect(ggwStretchFrames([f('1m'), f('5m'), f('15m')]).map((x) => x.tf)).toEqual(['15m', '5m', '1m']);
+    expect(ggwStretchFrames([f('15m'), f('1m'), f('2m'), f('5m')]).map((x) => x.tf)).toEqual(['15m', '5m', '1m', '2m']);
+    expect(ggwStretchFrames([f('1m'), f('3m'), f('5m')]).map((x) => x.tf)).toEqual(['5m', '1m', '3m']);   // an older payload
     expect(ggwStretchFrames([])).toEqual([]);
   });
 });

@@ -1,5 +1,7 @@
 """👀 Gajjala's Watch — the owner's GET payload and every served word (spec §3.7, WP-A, 2026-11-15).
 
+Ajay 2026-11-23, verbatim: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross board" · "Add
+vwap and supply demand too" (frames 1 / 5 / 15, the 📈 VWAP curve, the 📐 daily zones — display only, UNMEASURED).
 Ajay 2026-11-15, verbatim: "When I add a ticker I need 1 min 3 min and 5 min charts... Not the SEPA and I need clear
 distinction or may be a brighter and thicker 21 EMA and 9 EMA" · "I have a 27 inch monitor I wanna fit 3x3 tikers on
 watch at any given time on this tashboard" · "Any chart I view make sure you are showing me from 4 AM for historical
@@ -61,6 +63,7 @@ from chart_maps.gajjala import constants as GC
 
 from . import colls as CO
 from . import constants as C
+from . import vwap as VW
 
 EMA_TAIL_KEYS = ("ema9", "ema21")                        # = build.ema_tail_keys / bars.EMA_TONES tones (👀 LIVE 2026-11-16)
 log = logging.getLogger("chart_maps.gajjala_watch.payload")
@@ -183,6 +186,15 @@ BROKER_MODULE = "chart_maps.gajjala_watch.broker"                               
 FLOAT_MODULE = "chart_maps.gajjala_watch.float_read"                                  # 🔢 2026-11-21 (spec watchfloat)
 SECTIONS_MODULE = "chart_maps.gajjala_watch.sections"                                 # 🗂 2026-11-22 (spec watch_org)
 
+# 📈📐 2026-11-23 (spec vwapzones rev 2 §3.4 — Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15
+# accross board" · "Add vwap and supply demand too"): a frame missing from a stored doc (an old 1m/3m/5m doc has no 15m)
+# or with no closed bar yet serves WORDS, never a blank box. The VWAP words are vwap.legend_label() / vwap.rules_line();
+# the zones words live in the levels module (C.LEVELS_MODULE, imported lazily) — neither is retyped here.
+FRAME_PENDING_TEXT = {True: "⏳ {frame} chart: reading now — it fills in by itself",
+                      False: "⏳ {frame} chart: not built yet — it fills at the next read ({open} ET on the next session)"}
+FRAME_NO_BARS_TEXT = "No closed {frame} bar yet today — the first one appears when its {minutes} minutes close"
+LEVELS_KEYS = ("state", "text", "title", "as_of")                               # the row's served `levels` block
+
 ROW_STATES = ("ok", "pending", "no_prints", "no_bars", "failed", "over_budget")
 DOC_STATUSES = ("loaded", "no_prints", "no_bars", "failed", "over_budget")      # build.status_of (WP-B)
 PUSHED_STATE = "cross_pushed"                                                    # = alerts.FADE_CROSS_STATES[1] (test pins)
@@ -196,7 +208,7 @@ def _frame_minutes() -> list:
 
 
 def _minutes_words() -> str:
-    """"1-, 3- and 5" from C.FRAMES (the rules' minutes), never typed."""
+    """"1-, 5- and 15" from C.FRAMES (the rules' minutes), never typed."""
     mins = [str(m) for m in _frame_minutes()]
     return (", ".join(m + "-" for m in mins[:-1]) + " and " + mins[-1]) if len(mins) > 1 else "".join(mins)
 
@@ -267,9 +279,31 @@ def push_mode() -> str:
     return m if isinstance(m, str) and m in C.PUSH_MODES else C.PUSH_MODES[0]
 
 
+def _vwap_on() -> bool:
+    return bool(C.VWAP_ON) and VW.sessions() is not None
+
+
+def _levels_legend() -> list:
+    """📐 2026-11-23: the levels module's legend entries (lazy through sys.modules); a fault / junk → []."""
+    if not C.ZONES_ON:
+        return []
+    try:
+        got = importlib.import_module(C.LEVELS_MODULE).legend()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: zones legend unavailable: %s", type(exc).__name__)
+        return []
+    return [e for e in (got if isinstance(got, (list, tuple)) else [])
+            if isinstance(e, dict) and isinstance(e.get("tone"), str) and isinstance(e.get("label"), str)]
+
+
 def legend() -> list:
+    """The two EMA entries (byte-identical since 11-15), then 📈 VWAP {tone, label, title} when it is on, then the 📐
+    daily-zone entries of the levels module when C.ZONES_ON (2026-11-23)."""
     from chart_maps.gajjala import bars as B
-    return [{"tone": tone, "label": LEGEND_TEXT.format(period=period)} for tone, _l, period in B.EMA_TONES]
+    out = [{"tone": tone, "label": LEGEND_TEXT.format(period=period)} for tone, _l, period in B.EMA_TONES]
+    if _vwap_on():
+        out.append({"tone": C.VWAP_TONE, "label": VW.legend_label(), "title": VW.rules_line()})
+    return out + _levels_legend()
 
 
 def _lazy_call(module: str, fn: str) -> Optional[str]:
@@ -344,7 +378,9 @@ def info() -> dict:
             "push_text": _lazy_call("chart_maps.gajjala_watch.cross_alerts", "rules_line"),
             "uptrend_rule": _lazy_call("chart_maps.gajjala_watch.build", "uptrend_rule"),
             "push_mode": push_mode(), "push_frames": list(C.PUSH_FRAMES),
-            "auto_text": _lazy_call(AUTO_MODULE, "rules_line")}                 # 🤖 2026-11-17 — served once
+            "auto_text": _lazy_call(AUTO_MODULE, "rules_line"),                 # 🤖 2026-11-17 — served once
+            "vwap_text": VW.rules_line() or None,                               # 📈 2026-11-23 — served once
+            "zones_text": (_lazy_call(C.LEVELS_MODULE, "rules_line") or None) if C.ZONES_ON else None}   # 📐
 
 
 # ── clocks ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -429,13 +465,42 @@ def _list(v) -> list:
     return list(v) if isinstance(v, (list, tuple)) else []
 
 
+def _frame_words(tf: str) -> str:
+    return C.FRAME_WORDS.get(tf, tf)
+
+
+def _rule_minutes(tf: str) -> int:
+    import pandas as pd
+    return int(pd.Timedelta(dict(C.FRAMES)[tf]).total_seconds() // 60)
+
+
+def vwap_curve(t: dict, n_bars: int) -> list:
+    """📈 2026-11-23: [{"tone": C.VWAP_TONE, "label": C.VWAP_LABEL, "values": […]}] from the stored `vwap` of the frame
+    (cleaned — a stored NaN is served as None) when VWAP is on and the values line up with the bars; else []."""
+    if not _vwap_on():
+        return []
+    vals = VW.curve_values(t, n_bars)
+    return [{"tone": C.VWAP_TONE, "label": C.VWAP_LABEL, "values": vals}] if isinstance(vals, list) else []
+
+
+def frame_pending(sym: str, tf: str, in_window) -> dict:
+    """📐📈 2026-11-23: a frame of C.FRAMES the stored doc does not hold yet (an old 1m/3m/5m doc has no 15m) — the
+    served words in place of a blank box; every chart key present and empty."""
+    return {"tf": tf, "label": _frame_words(tf),
+            "tile": {"symbol": sym, "href": "", "bars": [], "curves": [], "markers": [], "lines": [], "bands": [],
+                     "stats": [], "why": "", "vol_avg": None},
+            "axis": None, "ema_cross": None, "uptrend": None, "held": None, "ema_blink": None, "ema_tail": None,
+            "empty_text": FRAME_PENDING_TEXT[bool(in_window)].format(frame=_frame_words(tf), open=GC.PASS_OPEN_ET)}
+
+
 def frame_block(sym: str, tf: str, t: dict, held_doc) -> dict:
     blk = t.get("ema_cross") if isinstance(t.get("ema_cross"), dict) else None
     if blk is not None:
         blk = {k: v for k, v in blk.items() if not str(k).startswith("_")}       # `_marks` never served
     up = t.get("uptrend") if isinstance(t.get("uptrend"), dict) else {}
+    bars = _list(t.get("bars"))
     out = {"tf": tf, "label": t.get("label") or C.FRAME_WORDS.get(tf, tf),
-           "tile": {"symbol": sym, "href": "", "bars": _list(t.get("bars")), "curves": _list(t.get("curves")),
+           "tile": {"symbol": sym, "href": "", "bars": bars, "curves": _list(t.get("curves")) + vwap_curve(t, len(bars)),
                     "markers": _list(t.get("markers")), "lines": [], "bands": [], "stats": [], "why": "",
                     "vol_avg": t.get("vol_avg") if isinstance(t.get("vol_avg"), dict) else None},
            "axis": t.get("axis") if isinstance(t.get("axis"), dict) else None,
@@ -445,6 +510,8 @@ def frame_block(sym: str, tf: str, t: dict, held_doc) -> dict:
            "ema_blink": _ema_blink(tf, t),
            "ema_tail": _ema_tail(t)}
     out.update(_run_bases(tf, t))
+    if not bars:                                                # 2026-11-23: words, never a blank box
+        out["empty_text"] = FRAME_NO_BARS_TEXT.format(frame=_frame_words(tf), minutes=_rule_minutes(tf))
     return out
 
 
@@ -531,7 +598,11 @@ def row(sym: str, doc, *, session: str, is_today: bool, in_window: bool, now: da
         return out
     status = doc.get("status")
     fr = doc.get("frames") if isinstance(doc.get("frames"), dict) else {}
-    frames = [frame_block(sym, tf, fr[tf], doc.get("held")) for tf, _r in C.FRAMES if isinstance(fr.get(tf), dict)]
+    # 2026-11-23: one block per C.FRAMES tf in order once ANY of them is stored — a missing tf (an old 1m/3m/5m doc has
+    # no 15m) serves its placeholder words; a stored tf outside C.FRAMES ("3m") is never served.
+    frames = ([frame_block(sym, tf, fr[tf], doc.get("held")) if isinstance(fr.get(tf), dict)
+               else frame_pending(sym, tf, in_window) for tf, _r in C.FRAMES]
+              if any(isinstance(fr.get(tf), dict) for tf, _r in C.FRAMES) else [])
     kw = dict(doc=doc, session=session, is_today=is_today, now=now)
     if frames:
         dsess = doc.get("session")
@@ -901,6 +972,36 @@ def aplus_section(names: list, siso: str, *, stores: Optional[dict] = None) -> d
         return {}
 
 
+# ── 📐 daily zones (2026-11-23, spec vwapzones §3.4 / §3.6) ──────────────────────────────────────────────────────────
+def _levels_section(names: list, tiles: dict, siso: str, now: datetime, in_window) -> dict:
+    """{SYM: levels block} from the levels module's `section` (imported LAZILY through sys.modules — C.LEVELS_MODULE)
+    over the tile docs `_build` already read (no other read); off, a non-dict or any fault → {} + ONE log line."""
+    if not C.ZONES_ON or not names:
+        return {}
+    try:
+        out = importlib.import_module(C.LEVELS_MODULE).section(names, tiles, siso, now, bool(in_window))
+        return out if isinstance(out, dict) else {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: zones section unavailable: %s", type(exc).__name__)
+        return {}
+
+
+def _apply_levels(r: dict, blk) -> None:
+    """The row's `levels` {state, text, title, as_of} (None without a block); the block's `bands` go into
+    `tile.bands` of every frame that has bars (a placeholder frame draws nothing)."""
+    if not isinstance(blk, dict):
+        r["levels"] = None
+        return
+    r["levels"] = {k: blk.get(k) for k in LEVELS_KEYS}
+    bands = [b for b in _list(blk.get("bands")) if isinstance(b, dict)]
+    if not bands:
+        return
+    for f in r.get("frames") or []:
+        tile = f.get("tile") if isinstance(f, dict) else None
+        if isinstance(tile, dict) and tile.get("bars"):
+            tile["bands"] = [dict(b) for b in bands]
+
+
 # ── the payload ──────────────────────────────────────────────────────────────────────────────────────────────────
 def _session_of(now: datetime) -> tuple:
     from chart_maps.gajjala import tab
@@ -973,7 +1074,9 @@ def _build(now: datetime, db, only) -> dict:
     aplus_by = aplus_section(names, siso)                    # 🎯 2026-11-17 (spec ggwaplus) — display only
     tags_by = _tags_section(names, session, is_today)        # 🏷️ 2026-11-18 — display only; _build's own clock (C5)
     float_by = _float_section(names, session, now, tags_by)  # 🔢 2026-11-21 — display only; never a network call
+    levels_by = _levels_section(names, tiles, siso, now, in_window)   # 📐 2026-11-23 — display only; stored docs only
     for r in rows:
+        _apply_levels(r, levels_by.get(r["symbol"]))
         r["auto"] = auto_by.get(r["symbol"])
         r["aplus"] = aplus_by.get(r["symbol"])
         r["tags"] = tags_by.get(r["symbol"])                   # None = not carded on today's 🚩 board — never invented

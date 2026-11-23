@@ -255,3 +255,17 @@
   .ggw-grid--stretch.ggw-grid--fit .ggw-prov { flex-wrap: wrap; overflow: visible; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-prov > * { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+
+/* 📈📐 2026-11-23 (vwapzones spec §3.9) — Ajay: "can you add vwap and supply demand zone in the daily time frame on the
+ * watch list please" · "Add vwap and supply demand too". The row's served daily-zones line wraps (never overflows at
+ * 430 px); in a fitted tile it is ONE line (the 11-16 GP rule — the charts keep their height; the full words are on hover
+ * and in ⤢). The legend's zone swatch is a DASHED OUTLINE box in the tone's colour (the board-band look the chart draws —
+ * never a fill); its colour comes from lib ggwLegendSwatch (border-color). */
+.ggw-levels { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; margin: 2px 0 1px; }
+.ggw-swatch.ggw-swatch--zone {
+  height: 0.62rem; background: transparent; border: 1px dashed var(--text-muted, #8595ad); border-radius: 1px; box-sizing: border-box;
+}
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-levels { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ggw-grid--stretch.ggw-grid--fit .ggw-levels { white-space: normal; overflow: visible; text-overflow: clip; }
+}
