@@ -851,6 +851,13 @@ def rules_section() -> dict:
         "alerts": ["Pushes nothing, gates nothing, sorts nothing and enters no lane."],
         "note": "A data label, not a rule or a signal. Not financial advice.",
     }
+    # 💸 2026-11-22 — the IBKR borrow sentence FOLDS into the short-volume pick (index 6): the section is at the
+    # 8-pick cap once the 🔒 pick below appends. Lazy: borrow imports this module. A failure leaves the pick as it was.
+    try:
+        from short_interest import borrow as BR
+        sec["picks"][-1] = sec["picks"][-1] + " " + BR.rules_pick()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest.read: borrow sentence skipped: %s", type(exc).__name__)
     # 🔒 2026-11-22 — the Hard to borrow (Reg SHO threshold) tag's pick, APPENDED LAST so the EXTREME pick stays
     # at index 2. It makes this section 8 picks = the house cap (tests/test_rules_info.py:37); the next 🩳 line
     # must fold into an existing pick. Lazy: reg_sho imports this module.

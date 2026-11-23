@@ -33,6 +33,7 @@ import type { CardLiveAnswer } from '../lib/cardLive';
 import { withSource } from '../lib/navSource';
 import { GgWatchButton } from './GgWatchButton';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
+import { GgBorrowChip } from './GgBorrow';
 
 export const GG_ALL_SORT_KEY = 'gg-all-sort';
 function readSort(): string | null {
@@ -139,6 +140,7 @@ function cellOf(key: string, row: GgTableRow, answer: CardLiveAnswer | null | un
           {str(row.si_text)}
           {/* 🔒 2026-11-22: the served Hard to borrow tag (short form) inside the 🩳 cell — the cell exists only on an si head. */}
           <GgHardToBorrowChip symbol={row.symbol} testid={`gg-all-htb-${rid(row)}`} form="short" />
+          <GgBorrowChip symbol={row.symbol} testid={`gg-all-brw-${rid(row)}`} form="short" />
         </td>
       );
     default:

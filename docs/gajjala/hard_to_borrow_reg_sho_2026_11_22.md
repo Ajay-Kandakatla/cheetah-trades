@@ -236,6 +236,7 @@ state : {_id: "state|<source>", kind: "state", source, attempt_at, attempt_for, 
 | 👀 Watch tile head (his rows and 🤖 auto rows) | a chip beside the 🩳 EXTREME slot | `short` |
 | 📋 All strategies table | inside the 🩳 cell, after the SI text | `short` |
 | above the card grid, above the 📋 table, 👀 Watch head | the fault line, only when a stock list cannot be read | served text |
+| directly after the 🔒 on Gajjala cards and in the 📋 table (NOT the 👀 Watch) | the 💸 Borrow read (IBKR fee + shares available) — its own engine and doc: `docs/gajjala/borrow_fee_ibkr_2026_11_22.md` | 💸 `label` / `chip` / `short` |
 
 One tag per card / tile / row. The tag is independent of the 🩳 read: a listed name with no SI record still shows it.
 Nothing draws — no wrapper, no space — when the name is not on a list. The look is neutral: it does not borrow the
@@ -305,8 +306,10 @@ point-in-time study is possible later — only on his word.
    with ` · stale` and its date, with no cut-off; a list more than 2 business days behind reads stale / failed; one
    error waits 5 min quietly and 2 errors in a row raise the line; an empty list is believed after a second read
    30 min later.
-6. **Real borrow data.** The threshold list is a fails-to-deliver list, not borrow availability or a fee. A true
-   borrow read needs a broker feed and a key — not built; the source is his to name.
+6. **Real borrow data.** The threshold list is a fails-to-deliver list, not borrow availability or a fee.
+   **Answered 11-22, built as 💸** — his word "yes i need that please": Interactive Brokers' public shortable-shares
+   file (no key), one broker's indicative fee and shares available, drawn beside this tag. See
+   `docs/gajjala/borrow_fee_ibkr_2026_11_22.md`.
 7. **Sources.** Nasdaq, NYSE, NYSE American, NYSE Arca, Cboe BZX. Default: the two fund lists are read and tag a fund
    on his Watch, but never raise the line. Dropping them, or letting them raise it, is his. FINRA's OTC list and the
    other NYSE venues: not read.
