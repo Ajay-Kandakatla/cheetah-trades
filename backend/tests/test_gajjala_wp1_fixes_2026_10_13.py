@@ -180,13 +180,12 @@ def test_NEGATIVE_a_failed_prev_day_does_not_leak_into_the_next_name():
 
 
 def test_fetch_flags_the_429_cap_and_the_open_breaker_but_not_an_empty_200(monkeypatch):
-    import requests
-    monkeypatch.setattr(requests, "get", lambda *a, **k: _R(429))
+    monkeypatch.setattr(D, "_http_get", lambda *a, **k: _R(429))
     assert D._fetch_massive_minute("AAA", Y, Y) is None and D.last_fetch_failed() is True
-    monkeypatch.setattr(requests, "get", lambda *a, **k: _R(200, {"results": []}))
+    monkeypatch.setattr(D, "_http_get", lambda *a, **k: _R(200, {"results": []}))
     assert D._fetch_massive_minute("AAA", Y, Y) is None and D.last_fetch_failed() is False
     D._CB["open_until"] = D.time.time() + 60
-    monkeypatch.setattr(requests, "get", lambda *a, **k: pytest.fail("breaker open: no call"))
+    monkeypatch.setattr(D, "_http_get", lambda *a, **k: pytest.fail("breaker open: no call"))
     assert D._fetch_massive_minute("AAA", Y, Y) is None and D.last_fetch_failed() is True
 
 

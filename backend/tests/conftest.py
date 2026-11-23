@@ -95,8 +95,26 @@ def _never_touch_a_real_database():
         raise RuntimeError("IBKR borrow FTP sessions are disabled during tests (tests/conftest.py)")
     BR._ftp = _refuse_ftp
 
+    # 🔌 2026-11-23 — the Massive minute fetch's ONE outside-call seam (`daytrading.data._http_get`, spec ggconn §3.3 /
+    # critique C4) ASSIGNED to a refuser for the whole session the same way. A test that needs the fetch does
+    # `monkeypatch.setattr(D, "_http_get", your_fake)` (function scope wins; the refuser is back afterwards). Restored
+    # on teardown.
+    import daytrading.data as DD
+    prior_dd_http = DD._http_get
+
+    class MinuteFetchRefused(BaseException):
+        """BaseException ON PURPOSE: the fetch wraps its GET in `except Exception` (daytrading/data.py) — an Exception
+        here would be logged as a provider failure, return None and count on the breaker."""
+
+    def _refuse_minute(*a, **k):
+        raise MinuteFetchRefused("daytrading.data minute fetches are disabled during tests (tests/conftest.py) — "
+                                 "monkeypatch.setattr(D, '_http_get', your_fake)")
+    _refuse_minute.__wrapped__ = prior_dd_http          # a test of the seam itself reads the real function here
+    DD._http_get = _refuse_minute
+
     yield
 
+    DD._http_get = prior_dd_http
     BR._ftp = prior_br_ftp
     RS._http = prior_rs_http
     if real is not None:

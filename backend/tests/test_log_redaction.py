@@ -251,3 +251,48 @@ def test_the_backfill_CLI_installs_redaction_because_it_has_no_app_startup():
     import inspect
     from sepa import qoq
     assert "install_redaction" in inspect.getsource(qoq._main)
+
+
+# ---------------------------------------------------------------------------
+# 🔌 2026-11-23 (spec ggconn §3.3) — the minute fetch scrubs its own lines
+# ---------------------------------------------------------------------------
+def test_the_minute_fetch_scrubs_its_own_exception_and_its_non_200_body(monkeypatch):
+    """The cron children (gajjala/run.py, run_1m.py, the 👀 Watch build child) install no RedactFilter, so
+    `daytrading.data` must scrub the key itself: the exception line AND the non-200 body line (`r.text[:200]` was
+    logged raw before 2026-11-23). A plain handler, NO filter."""
+    import io
+    from datetime import date
+    from daytrading import data as D
+
+    class _Resp:
+        status_code = 401
+        text = "unauthorized: /v2/aggs/ticker/AAA?apiKey=SUPERSECRETKEYVALUE123"
+
+        def json(self):
+            return {}
+
+    seq = [RuntimeError(LEAKY), _Resp()]
+
+    def get(url, **kw):
+        x = seq.pop(0)
+        if isinstance(x, Exception):
+            raise x
+        return x
+    monkeypatch.setattr(D, "stocks_key", lambda: "SUPERSECRETKEYVALUE123")
+    monkeypatch.setattr(D, "_http_get", get)
+    prior = dict(D._CB)
+    D._CB.update(fails=0, open_until=0.0)
+    buf = io.StringIO()
+    h = logging.StreamHandler(buf)
+    lg = logging.getLogger("daytrading.data")
+    lg.addHandler(h)
+    try:
+        assert D._fetch_massive_minute("AAA", date(2026, 11, 20), date(2026, 11, 20)) is None
+        assert D._fetch_massive_minute("AAA", date(2026, 11, 20), date(2026, 11, 20)) is None
+    finally:
+        lg.removeHandler(h)
+        D._CB.update(prior)
+        D.clear_fetch_failed()
+    out = buf.getvalue()
+    assert "SUPERSECRETKEYVALUE123" not in out
+    assert out.count("apiKey=<redacted>") == 2 and "HTTP 401" in out

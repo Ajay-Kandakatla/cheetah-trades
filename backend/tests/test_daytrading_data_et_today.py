@@ -89,13 +89,12 @@ def test_NEGATIVE_utc_date_would_have_cached_the_live_session(monkeypatch):
 
 
 def test_NEGATIVE_persistent_429_returns_none_after_cb_trip_after(monkeypatch):
-    import requests
     calls = []
 
     def _get(url, params=None, timeout=None):
         calls.append(url)
         return _R(429)
-    monkeypatch.setattr(requests, "get", _get)
+    monkeypatch.setattr(D, "_http_get", _get)
     out = D._fetch_massive_minute("AAA", date(2026, 10, 12), date(2026, 10, 12))
     assert out is None
     assert len(calls) == D._CB_TRIP_AFTER
@@ -103,9 +102,8 @@ def test_NEGATIVE_persistent_429_returns_none_after_cb_trip_after(monkeypatch):
 
 
 def test_a_single_429_then_200_still_returns_the_bars(monkeypatch):
-    import requests
     seq = [_R(429), _R(200, _bars_payload())]
-    monkeypatch.setattr(requests, "get", lambda url, params=None, timeout=None: seq.pop(0))
+    monkeypatch.setattr(D, "_http_get", lambda url, params=None, timeout=None: seq.pop(0))
     out = D._fetch_massive_minute("AAA", date(2026, 11, 20), date(2026, 11, 20))
     assert out is not None and len(out) == 1
     assert D._CB["fails"] == 0
@@ -113,11 +111,10 @@ def test_a_single_429_then_200_still_returns_the_bars(monkeypatch):
 
 def test_NEGATIVE_429s_on_different_pages_do_not_accumulate(monkeypatch):
     """The cap counts CONSECUTIVE 429s: two pages each answering 429 x (cap-1) then 200 still finish."""
-    import requests
     page2 = dict(_bars_payload(), next_url=None)
     page1 = dict(_bars_payload(), next_url="https://api.massive.com/next")
     n = D._CB_TRIP_AFTER - 1
     seq = [_R(429)] * n + [_R(200, page1)] + [_R(429)] * n + [_R(200, page2)]
-    monkeypatch.setattr(requests, "get", lambda url, params=None, timeout=None: seq.pop(0))
+    monkeypatch.setattr(D, "_http_get", lambda url, params=None, timeout=None: seq.pop(0))
     out = D._fetch_massive_minute("AAA", date(2026, 11, 20), date(2026, 11, 20))
     assert out is not None and not seq

@@ -44,9 +44,19 @@ _CB_COOLDOWN_SEC = 60.0
 _FETCH_TIMEOUT_SEC = 6          # was 20 — fail fast; Massive answers in <1s when healthy
 
 
-def _cb_is_open(now: float) -> bool:
-    """True while the breaker is tripped — skip the network call entirely."""
-    return now < _CB["open_until"]
+def new_breaker() -> dict:
+    """A caller's OWN breaker: the module's trip rule (_CB_TRIP_AFTER) and cooldown (_CB_COOLDOWN_SEC), its own state.
+
+    🔌 2026-11-23 (spec ggconn §3.3, WP-4): the 👀 Watch loader hands one of these to `load_intraday(cb=)` so a trip on
+    its reads never closes the module breaker `_CB` every other caller shares (and the reverse). A new dict each
+    call — never `_CB`."""
+    return {"fails": 0, "open_until": 0.0}
+
+
+def _cb_is_open(now: float, cb: Optional[dict] = None) -> bool:
+    """True while the breaker is tripped — skip the network call entirely. `cb` None = the module breaker `_CB`."""
+    b = _CB if cb is None else cb
+    return now < b["open_until"]
 
 
 # Did THIS thread's last `_fetch_massive_minute` fail at the provider (no key, breaker open, raised, the 429 cap,
@@ -69,29 +79,70 @@ def _provider_failed():
     return None
 
 
-def _cb_record(ok: bool, now: float) -> None:
-    """Reset on success; trip after `_CB_TRIP_AFTER` consecutive failures."""
+def _cb_record(ok: bool, now: float, cb: Optional[dict] = None) -> None:
+    """Reset on success; trip after `_CB_TRIP_AFTER` consecutive failures. `cb` None = the module breaker `_CB`."""
+    b = _CB if cb is None else cb
     if ok:
-        _CB["fails"] = 0
-        _CB["open_until"] = 0.0
+        b["fails"] = 0
+        b["open_until"] = 0.0
     else:
-        _CB["fails"] += 1
-        if _CB["fails"] >= _CB_TRIP_AFTER:
-            _CB["open_until"] = now + _CB_COOLDOWN_SEC
+        b["fails"] += 1
+        if b["fails"] >= _CB_TRIP_AFTER:
+            b["open_until"] = now + _CB_COOLDOWN_SEC
+
+
+def _http_get(url, **kw):
+    """The minute fetch's ONE outside call: the calling thread's recycled keep-alive session
+    (sepa.prices._http — http_hygiene tool 3). tests/conftest.py assigns a refuser here for the whole session.
+
+    🔌 2026-11-23 (spec ggconn §3.3): was a bare `requests.get` — a new TCP + TLS handshake per call (measured in the
+    api container 12:3x ET: 843 / 825 ms per call bare vs 299 / 302 ms pooled, 10 names in sequence)."""
+    from sepa import prices
+    return prices._http().get(url, **kw)
+
+
+# ONE Mongo client per process (🔌 2026-11-23, spec ggconn §3.3). It was a new `MongoClient` + `create_index` on every
+# prior-day cache read / write, never closed (a leak, not a speed item: 2.2 ms each, measured). Cached only after
+# `create_index` succeeded, keyed by the pid (a forked child builds its own); a failure caches nothing and the next
+# call tries again — the old behaviour. `_reset_mongo()` for tests.
+_MONGO = {"pid": None, "coll": None}
+_MONGO_LOCK = threading.Lock()
+
+
+def _reset_mongo() -> None:
+    """Forget the cached collection (tests)."""
+    with _MONGO_LOCK:
+        _MONGO["pid"] = None
+        _MONGO["coll"] = None
 
 
 def _get_mongo_coll():
-    try:
-        from pymongo import MongoClient, ASCENDING
-        url = os.getenv("MONGO_URL", "mongodb://mongo:27017")
-        db = os.getenv("MONGO_DB", "cheetah")
-        client = MongoClient(url, serverSelectionTimeoutMS=2000)
-        coll = client[db]["intraday_cache"]
-        coll.create_index([("symbol", ASCENDING), ("date", ASCENDING)], unique=True)
+    coll = _MONGO["coll"]
+    if coll is not None and _MONGO["pid"] == os.getpid():
         return coll
-    except Exception as exc:
-        log.warning("mongo unavailable: %s", exc)
-        return None
+    with _MONGO_LOCK:
+        coll = _MONGO["coll"]
+        if coll is not None and _MONGO["pid"] == os.getpid():
+            return coll
+        client = None
+        try:
+            from pymongo import MongoClient, ASCENDING
+            url = os.getenv("MONGO_URL", "mongodb://mongo:27017")
+            db = os.getenv("MONGO_DB", "cheetah")
+            client = MongoClient(url, serverSelectionTimeoutMS=2000)
+            coll = client[db]["intraday_cache"]
+            coll.create_index([("symbol", ASCENDING), ("date", ASCENDING)], unique=True)
+        except Exception as exc:
+            if client is not None:
+                try:
+                    client.close()
+                except Exception as close_exc:
+                    log.debug("mongo client close failed: %s", type(close_exc).__name__)
+            log.warning("mongo unavailable: %s", exc)
+            return None
+        _MONGO["pid"] = os.getpid()
+        _MONGO["coll"] = coll
+        return coll
 
 
 def _classify_session(ts_utc: pd.Timestamp) -> str:
@@ -107,15 +158,18 @@ def _classify_session(ts_utc: pd.Timestamp) -> str:
     return "closed"
 
 
-def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Optional[pd.DataFrame]:
-    """Fetch 1-minute bars from Massive for a date range, inclusive."""
-    import requests
+def _fetch_massive_minute(symbol: str, from_date: date, to_date: date,
+                          cb: Optional[dict] = None) -> Optional[pd.DataFrame]:
+    """Fetch 1-minute bars from Massive for a date range, inclusive.
+
+    `cb` (2026-11-23): a caller's own breaker from `new_breaker()`; None = the module breaker `_CB`, as before. Every
+    GET goes through `_http_get` (the recycled keep-alive session)."""
     _LAST_FETCH.failed = False
     key = stocks_key()
     if not key:
         log.error("MASSIVE_API_KEY missing — cannot fetch intraday bars")
         return _provider_failed()
-    if _cb_is_open(time.time()):
+    if _cb_is_open(time.time(), cb):
         log.debug("massive intraday: circuit open, skipping fetch for %s", symbol)
         return _provider_failed()
     url = f"{BASE_URL}/v2/aggs/ticker/{symbol.upper()}/range/1/minute/{from_date}/{to_date}"
@@ -126,11 +180,11 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
     n_429 = 0                       # consecutive 429s on the current page
     while next_url:
         try:
-            r = requests.get(next_url, params=next_params, timeout=_FETCH_TIMEOUT_SEC)
+            r = _http_get(next_url, params=next_params, timeout=_FETCH_TIMEOUT_SEC)
         except Exception as exc:
             from sepa.prices import _scrub_key
             log.warning("massive intraday fetch failed for %s: %s", symbol, _scrub_key(exc))
-            _cb_record(False, time.time())
+            _cb_record(False, time.time(), cb)
             return _provider_failed()
         if r.status_code == 429:
             # Capped (2026-10-13): the bare `continue` retried forever, so a
@@ -141,14 +195,15 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
             n_429 += 1
             if n_429 >= _CB_TRIP_AFTER:
                 log.warning("massive intraday %s -> HTTP 429 x%d, giving up", symbol, n_429)
-                _cb_record(False, time.time())
+                _cb_record(False, time.time(), cb)
                 return _provider_failed()
             time.sleep(2)
             continue
         n_429 = 0
         if r.status_code != 200:
-            log.warning("massive intraday %s -> HTTP %s: %s", symbol, r.status_code, r.text[:200])
-            _cb_record(False, time.time())
+            from sepa.prices import _scrub_key
+            log.warning("massive intraday %s -> HTTP %s: %s", symbol, r.status_code, _scrub_key(r.text[:200]))
+            _cb_record(False, time.time(), cb)
             return _provider_failed()
         body = r.json() or {}
         rows.extend(body.get("results") or [])
@@ -164,7 +219,7 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
         else:
             next_url = None
 
-    _cb_record(True, time.time())     # provider responded 200 — reset the breaker
+    _cb_record(True, time.time(), cb)     # provider responded 200 — reset the breaker
 
     if not rows:
         return None
@@ -226,11 +281,15 @@ def _today_et() -> date:
 
 def load_intraday(symbol: str, day: date, force: bool = False,
                   include_premarket: bool = True,
-                  include_afterhours: bool = False) -> Optional[pd.DataFrame]:
+                  include_afterhours: bool = False,
+                  cb: Optional[dict] = None) -> Optional[pd.DataFrame]:
     """Load 1-min bars for a single trading day. Returns None if no bars.
 
     Cache rule: completed days are cached forever. Today's bars are always
     re-fetched (force=True is implied for `day == today`).
+
+    `cb` (2026-11-23): a caller's own breaker (`new_breaker()`), handed to the fetch as `cb=cb`. None = the module
+    breaker, and the fetch is then called with exactly three positional arguments, as before.
     """
     # The ET session date (2026-10-13). `utcnow().date()` rolled to "tomorrow"
     # at 20:00 EDT / 19:00 EST, so a 19:00–20:00 EST fetch of the live session
@@ -243,7 +302,8 @@ def load_intraday(symbol: str, day: date, force: bool = False,
         if cached is not None and not cached.empty:
             return _filter_sessions(cached, include_premarket, include_afterhours)
 
-    df = _fetch_massive_minute(symbol, day, day)
+    df = (_fetch_massive_minute(symbol, day, day) if cb is None
+          else _fetch_massive_minute(symbol, day, day, cb=cb))
     if df is None or df.empty:
         return None
 

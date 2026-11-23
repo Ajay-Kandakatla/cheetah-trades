@@ -18,7 +18,8 @@ THE THREE TOOLS:
      connection after its transfer.
   3. ``sepa.prices._http()``: a recycled per-thread ``requests.Session`` whose
      idle sessions are closed by us after 20 s (and busy ones every 10 min),
-     keeping the measured keep-alive gain for the 15 s pollers.
+     keeping the measured keep-alive gain for the 15 s pollers. Also
+     ``daytrading.data._fetch_massive_minute`` since 2026-11-23 (its ``_http_get`` seam).
 """
 from __future__ import annotations
 
