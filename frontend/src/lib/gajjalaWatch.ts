@@ -251,6 +251,22 @@ export function ggwJoinPick(pick: ReadonlyArray<string> | null, list: ReadonlyAr
   for (const s of fresh) if (list.includes(s) && !pick.includes(s) && !add.includes(s)) add.push(s);
   return add.length ? [...add, ...pick] : [...pick];
 }
+/** 🐛 2026-11-22 — Ajay: "There is a bug, I added WETO as new one to watch list everything got de activated from watch
+ *  list". A saved pick (`ggw.pick` / `show=`) whose names had all left the list sat inert; adding one of them back
+ *  switched it on and hid every other tile. Each full load now keeps only the pick's names still in `keep` (the list +
+ *  the names a × is still hiding), in pick order; none left (or no pick) → null (the pages). */
+export function ggwPrunePick(pick: ReadonlyArray<string> | null, keep: ReadonlyArray<string>): string[] | null {
+  if (!pick) return null;
+  const next = pick.filter((s) => keep.includes(s));
+  return next.length ? next : null;
+}
+/** 🐛 2026-11-22 review residual — a (pruned) pick whose names were ALL added after this browser last set the view
+ *  (`after`) cannot be a pick he made of them: it is a dead pick revived by an add elsewhere (a card ➕, another device)
+ *  → null (the pages). Any other name in it → the pick unchanged. */
+export function ggwLivePick(pick: ReadonlyArray<string> | null, after: ReadonlyArray<string>): string[] | null {
+  if (!pick || !pick.length) return null;
+  return pick.some((s) => !after.includes(s)) ? [...pick] : null;
+}
 /** The rows' identity for the activation / anchor passes: symbol, add time and the join bit — a 🤖 potential turning
  *  🎯 A+ in place changes it; text / frames never do. */
 export function ggwRowsKey(rows: ReadonlyArray<GgwRow>): string {

@@ -94,7 +94,7 @@ import {
   GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
   ggwClampPage, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
   readGgwSeen, saveGgwSeen, ggwPickGrid,
-  ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwRowsKey, ggwUnseenOwn, ggwWithout,
+  ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwPrunePick, ggwLivePick, ggwAddedMs, ggwRowsKey, ggwUnseenOwn, ggwWithout,
   readGgwPickAt, saveGgwPickAt, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   GGW_SECTION_GLYPH, ggwGroupStarts, ggwRevealGroup, ggwSectionsOn, ggwToggleCollapsed, readGgwCollapsed,
@@ -212,7 +212,19 @@ export default function GajjalaWatchBoard() {
     const list = rowsNow.map((r) => r.symbol);
     const seen = readGgwSeen();
     const fresh = ggwFreshNames(rowsNow, { seen, pickAt: readGgwPickAt(), nowMs: Date.now() });
-    if (fresh.length) setPick((cur) => ggwJoinPick(cur, list, fresh));
+    /* 🐛 2026-11-22 (WETO): a pick only ever holds listed names (or one a × is still hiding) — a dead pick turns into the
+     * pages at the load where it died, so a name served again joins ONLY by the fresh rule above. */
+    const keep = [...list, ...Array.from(removing.current.keys())];
+    /* review residual: a pick whose ONLY listed names were added AFTER this browser last set the view (`ggw.pickAt`) —
+     * a card ➕ / another device re-adding a name of a dead pick before this browser reopened the Watch — cannot be his
+     * pick of them → the pages. No pickAt on this browser (a shared show= link, a cold browser) → the pick is honoured. */
+    const pickAtMs = readGgwPickAt();
+    const after = pickAtMs == null ? [] : rowsNow
+      .filter((r) => { const t = ggwAddedMs(r); return t != null && t > pickAtMs; }).map((r) => r.symbol);
+    setPick((cur) => {
+      const next = ggwJoinPick(ggwLivePick(ggwPrunePick(cur, keep), after), list, fresh);
+      return (next ?? []).join(',') === (cur ?? []).join(',') ? cur : next;
+    });
     if (firstOk.current) {
       firstOk.current = false;
       /* the first load only: a name of his this browser has NOT shown yet (a card ➕) — never one new by time alone */
