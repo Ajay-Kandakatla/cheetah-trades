@@ -22,7 +22,8 @@
  *
  * Cadence (spec C4.5 / C2.4 / C2.7): one setTimeout chain re-GETs the board at the served refresh_sec while the page is
  * visible; out of window, ONE re-GET at the served next_window_sec; while a row is pending, the pending names only
- * (?symbols=) every pending_poll_sec up to pending_wait_max_sec; one full re-GET after an add or a remove.
+ * (?symbols=) every pending_poll_sec up to pending_wait_max_sec; one full re-GET after an add or a remove; back to the
+ * tab with the last full GET at least one refresh_sec old → one GET at once (lib/ggwReturn).
  *
  * LIVE (2026-11-16, watch-live spec §3.5, WP-D) — Ajay: "Can you make the watch list charts live please" ·
  * "Realtime updates.. Like the 1 min chart I need it to be live live.. per sec change" · "Also on the Watch list I need
@@ -33,7 +34,8 @@
  * forming candles per (symbol, frame) on the SERVER's own 04:00 grid (the axis' start_epoch / frame_min) →
  * lib/ggwLive.ggwLiveFrame splices them AFTER the stored bars at render time: the last candle moves, its volume column
  * grows at the bottom, the dashed `now` line follows. DISPLAY ONLY — every cross read, blinker, 🔔 and push stays on
- * the CLOSED stored bars; the next GET wins; a stale row stops its live tail (ggwRowLive); the batches reach the owner's
+ * the CLOSED stored bars; the next GET wins; a Watch row whose last minute read failed keeps its live tail (its bars are
+ * today's); a prior-session row carries none (ggwRowLive); the batches reach the owner's
  * tabs only (events audience). The 9 / 21 tips follow the forming close (GGW_LIVE_EMA_TIP, HIS CALL
  * #1 answered 11-16). An off-page tile gets no live bars (its charts never re-render on a batch). The served feed word prints in the
  * head only when the feed is degraded. docs/gajjala/watch_live_2026_11_16.md.
@@ -109,6 +111,7 @@ import {
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
 import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
+import { ggwReturnRefetch } from '../lib/ggwReturn';
 /* 2026-11-16 (ggcard3 WP-A): the tile, its frames and the ⤢ full-screen view live in GajjalaWatchTile.tsx (a pure move)
  * so the 🚩 cards open the SAME view. */
 import { GgwStretch, Tile, usePhone } from './GajjalaWatchTile';
@@ -187,6 +190,7 @@ export default function GajjalaWatchBoard() {
   /* 🆕 2026-11-19 — load sequencing, the optimistic ×, the write queue, the box add, the first load, the pages anchor. */
   const [late, setLate] = useState<Set<string>>(() => new Set());
   const loadSeq = useRef(0);
+  const fullAt = useRef(0);
   const applied = useRef(0);
   const removing = useRef<Map<string, number | null>>(new Map());
   const writeQ = useRef<Promise<void>>(Promise.resolve());
@@ -253,7 +257,7 @@ export default function GajjalaWatchBoard() {
   const fit = rowH != null;
 
   /* the live tail: forming bars per (symbol, frame), folded from the raw batches against the metas of the rows that
-   * may carry live bars (ggwRowLive — ok, today's, not stale). Owner + in window only: a non-owner never reaches an ok
+   * may carry live bars (ggwRowLive — ok and today's; a failed minute read keeps the tail since 2026-11-23). Owner + in window only: a non-owner never reaches an ok
    * board, and out of window refresh_sec is 0. */
   const [live, setLive] = useState<GgwLiveMap>({});
   const metas = useMemo<Record<string, GgwFrameMeta[]>>(
@@ -325,6 +329,7 @@ export default function GajjalaWatchBoard() {
 
   const loadAll = useCallback(() => {
     const my = ++loadSeq.current;
+    fullAt.current = Date.now();
     getJson(GGW_PATH)
       .then((raw) => {
         if (!alive.current || my !== loadSeq.current) return;          // a newer load owns the chain
@@ -371,6 +376,19 @@ export default function GajjalaWatchBoard() {
     loadAll();
     return () => { alive.current = false; clearMain(); clearPend(); };
   }, [loadAll]);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onVisible = () => {
+      if (!alive.current) return;
+      const b = board.current;
+      if (!ggwReturnRefetch({ hidden: document.hidden, refreshSec: b ? b.refresh_sec : 0,
+        lastIssuedMs: fullAt.current, nowMs: Date.now() })) return;
+      clearMain();
+      loadAllRef.current();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ?focus=SYM (a push deep link): scroll that tile into view and outline it, once. */
   useEffect(() => {
