@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23 ~12:00 ET, verbatim: "Can you clean up some connection I am seeing delays price update for AKAN on
+  // the watch chart.." + "I would like us to focus on connections of Gajjala more for the rest of the tabs." Spec ggconn
+  // WP-1..WP-4: FE gajjalaWatch.ggwRowLive (stale_keeps_live) + ggwReturn.ggwReturnRefetch; BE gajjala_watch/rest.py
+  // (own breaker ON, re-read OFF = HIS CALL), daytrading/data.py keep-alive minute fetch + one Mongo client. Transport /
+  // display only: no gate, rule, threshold, socket cooldown or switch changed. The main delay (socket kicked by a second
+  // client on the Massive account) is NOT fixed here = HIS CALL. UNMEASURED. Docs docs/gajjala/watch_live_tail_stale_
+  // 2026_11_23.md, watch_refetch_on_return_2026_11_23.md, watch_rest_retry_breaker_2026_11_23.md,
+  // minute_fetch_connections_2026_11_23.md.
+  {
+    id: 'gajjala-watch-connections-2026-11-23',
+    label: '🔌 Watch price connections — you said: “Can you clean up some connection I am seeing delays price update for AKAN on the watch chart..”. On the 👀 Watch: one failed minute read no longer freezes the live candle (the ⚠️ line still says the read failed); coming back to the tab reloads the charts at once when they are a minute or more old; after one bad read the Watch asks again the next minute instead of sitting a minute out; and each 1-minute fetch reuses an open connection to the data provider. The biggest cause of the lag is NOT fixed by this: the live price feed gets kicked off by a second connection on the same data account (about every 2 minutes today) and is blind for 30 s each time — that one is your call. UNMEASURED. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-23 ~00:45–00:55 ET, verbatim and in order: "can you add vwap and supply demand zone in the daily time
   // frame on the watch list please" · "I think we have 15 mins too" · "on the watch list I think we switch to 15 when
   // candles are available for full chart" · "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15 accross
