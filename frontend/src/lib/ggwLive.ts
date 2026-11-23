@@ -9,7 +9,8 @@
  * frame) on the SERVER's own 04:00 grid (the served axis' `start_epoch` / `frame_min` — the FE does no clock math of its
  * own), and ggwLiveFrame splices them AFTER the stored bars at render time. DISPLAY ONLY: every cross read, blinker, 🔔
  * and push stays on the CLOSED stored bars; the next GET wins (a live bucket the server now holds is dropped). Only rows
- * ggwRowLive passes carry live bars. Composes no word, types no threshold. */
+ * ggwRowLive passes carry live bars: since 2026-11-23 a stale Watch row keeps its live tail; a prior-session row and a
+ * card-view stale row carry none. Composes no word, types no threshold. */
 import { EMA_FAST, EMA_SLOW } from './ema';
 import type { CmBar, CmCurve, CmTile } from './chartMaps';
 import type { GgQuotesEvent } from './cardLive';
@@ -43,8 +44,9 @@ export function ggwFrameMeta(f: GgwFrame): GgwFrameMeta | null {
   };
 }
 
-/** symbol → its frames' live grids, ONLY for rows ggwRowLive passes (a stale / prior-session / not-ok row has none, so
- *  a batch for it changes nothing and its old live bars are pruned). A row with no live-capable frame is absent. */
+/** symbol → its frames' live grids, ONLY for rows ggwRowLive passes. 2026-11-23: a stale Watch row keeps its live tail;
+ *  a prior-session row, a not-ok row and a card-view stale row carry none (a batch for it changes nothing and its old
+ *  live bars are pruned). A row with no live-capable frame is absent. */
 export function ggwFrameMetas(rows: ReadonlyArray<GgwRow>): Record<string, GgwFrameMeta[]> {
   const out: Record<string, GgwFrameMeta[]> = {};
   for (const r of rows || []) {

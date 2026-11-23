@@ -108,15 +108,19 @@ describe('👀 ggwFrameMeta / ggwFrameMetas (C2: only ggwRowLive rows)', () => {
     expect(ggwFrameMeta({ ...f, axis: { ...f.axis!, from_et: null } })).toBeNull();
     expect(ggwFrameMeta({ ...f, tile: { ...f.tile, bars: [] } })).toBeNull();
   });
-  it('metas: an ok fresh row gets all three frames; stale (NVDA), pending, no_prints rows get none', () => {
+  /* 2026-11-23 (re-pinned, spec ggconn WP-1): a stale Watch row (NVDA) keeps its live tail — parseRow sets
+   * stale_keeps_live; pending / no_prints rows still get none. */
+  it('metas: ok rows get all three frames — fresh OMH and stale NVDA; pending, no_prints rows get none', () => {
     const ms = ggwFrameMetas(board().rows);
-    expect(Object.keys(ms)).toEqual(['OMH']);
-    expect(ms.OMH.map((m) => m.tf)).toEqual(['1m', '3m', '5m']);
-  });
-  it('NEGATIVE: a prior-session row contributes none; the same NVDA un-staled contributes all three', () => {
-    expect(ggwFrameMetas(board((r) => { r.rows[0].from_session = '2026-11-12'; }).rows)).toEqual({});
-    const ms = ggwFrameMetas(board((r) => { r.rows[3].stale = false; }).rows);
     expect(Object.keys(ms)).toEqual(['OMH', 'NVDA']);
+    expect(ms.OMH.map((m) => m.tf)).toEqual(['1m', '3m', '5m']);
+    expect(ms.NVDA.map((m) => m.tf)).toEqual(['1m', '3m', '5m']);
+  });
+  it('NEGATIVE: a prior-session row contributes none; the same stale NVDA without the flag (a card-view row) none', () => {
+    expect(Object.keys(ggwFrameMetas(board((r) => { r.rows[0].from_session = '2026-11-12'; }).rows))).toEqual(['NVDA']);
+    expect(Object.keys(ggwFrameMetas(board((r) => { r.rows[3].from_session = '2026-11-12'; }).rows))).toEqual(['OMH']);
+    const rows = board().rows.map((r) => (r.symbol === 'NVDA' ? { ...r, stale_keeps_live: undefined } : r));
+    expect(Object.keys(ggwFrameMetas(rows))).toEqual(['OMH']);
   });
   it('NEGATIVE: an older payload → no metas at all; a frame without start_epoch is left out of its row', () => {
     expect(ggwFrameMetas((parseGgw(clone(fixture)) as GgwBoard).rows)).toEqual({});
@@ -186,7 +190,10 @@ describe('👀 ggwApplyBatch — the fold (spec §3.4 rules 1–5)', () => {
     expect(ggwApplyBatch(prev, evt({ OMH: q }, 'gajjala_1m'), ms)).toBe(prev);
     expect(ggwApplyBatch(prev, { kind: 'pass', variant: GGW_TAB, pass_id: 'p', finished_at_epoch: 1 } as any, ms)).toBe(prev);
     expect(ggwApplyBatch(prev, evt({ ZZZ: q }), ms)).toBe(prev);
-    expect(ggwApplyBatch(prev, evt({ NVDA: q }), ms)).toBe(prev);   // NVDA is stale (C2)
+    // 2026-11-23 (re-pinned): NVDA is stale but a Watch row keeps its live tail; the same row WITHOUT the flag does not.
+    expect(ggwApplyBatch(prev, evt({ NVDA: q }), ms)).not.toBe(prev);
+    const dark = ggwFrameMetas(board().rows.map((r) => (r.symbol === 'NVDA' ? { ...r, stale_keeps_live: undefined } : r)));
+    expect(ggwApplyBatch(prev, evt({ NVDA: q }), dark)).toBe(prev);
     expect(ggwApplyBatch(prev, evt({ AMD: q }), ms)).toBe(prev);    // pending
   });
 

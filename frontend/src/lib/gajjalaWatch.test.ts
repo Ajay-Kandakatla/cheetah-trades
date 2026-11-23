@@ -249,7 +249,9 @@ describe('👀 LIVE — ggwRowLive, the ONE rule (C2)', () => {
     for (const state of ['pending', 'failed', 'no_prints', 'no_bars', 'over_budget', 'OK', '']) {
       expect(ggwRowLive(row({ state })), state).toBe(false);
     }
-    expect(ggwRowLive(ok().rows[3])).toBe(false);          // NVDA is stale in the fixture
+    // 2026-11-23 (re-pinned): NVDA is stale in the fixture but a parsed Watch row carries stale_keeps_live → live.
+    expect(ggwRowLive(ok().rows[3])).toBe(true);
+    expect(ggwRowLive({ ...ok().rows[3], stale_keeps_live: undefined })).toBe(false);   // the same row without the flag
     expect(ggwRowLive(ok().rows[1])).toBe(false);          // AMD is pending
   });
 });

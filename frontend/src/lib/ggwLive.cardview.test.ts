@@ -74,8 +74,12 @@ describe('🚩 ggwFrameMetas — a frame served stale carries no live bar (C3)',
     expect(m.OMH.by['5m']).toHaveLength(1);
     expect(m.OMH.by['15m']).toHaveLength(1);
   });
-  it('NEGATIVE: the row rule still wins — a row served stale carries no metas at all', () => {
-    const row = { ...omh({ card: true }), stale: true };
+  /* 2026-11-23 (re-pinned, spec ggconn WP-1): omh() is built by parseGgw, which sets the Watch-only stale_keeps_live;
+   * a card row (ggcRow) never carries it — strip it so this row is the card view's. */
+  it('NEGATIVE: the row rule still wins — a card row served stale carries no metas', () => {
+    const { stale_keeps_live: _watchOnly, ...card } = omh({ card: true });
+    const row: GgwRow = { ...card, stale: true };
+    expect('stale_keeps_live' in row).toBe(false);
     expect(ggwFrameMetas([row])).toEqual({});
   });
 });

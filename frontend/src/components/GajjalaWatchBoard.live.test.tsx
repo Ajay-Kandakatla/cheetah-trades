@@ -7,7 +7,8 @@
  * a routed stub; the bus (lib/eventBus) is a hand-driven `subscribe` emitting `gajjala.update` payloads shaped like
  * backend chart_maps/gajjala/live_events.py. Every word is a stand-in for a served one. NEGATIVES: a print inside the
  * served 3-min bucket adds nothing there; the same / an older batch, another variant, an unknown symbol → unchanged; a
- * junk size → no column; a stale row → nothing moves and it goes dark; the next GET wins; owner_only → no POST, no
+ * junk size → no column; a stale TODAY row keeps its live tail (2026-11-23), a prior-session row → nothing moves, a
+ * stale row with no batch (the feed blind) → nothing moves; the next GET wins; owner_only → no POST, no
  * subscription; the 9 / 21 lines, blinkers, held and rang chips never move; a frame with no volume draws no pane; an
  * off-page tile never re-renders on a batch. */
 import { act, fireEvent, render } from '@testing-library/react';
@@ -309,16 +310,26 @@ describe('👀 LIVE — the forming candle and its volume column', () => {
   });
 });
 
+/* 2026-11-23 (re-pinned, spec ggconn WP-1): a ⚠️ stale Watch row of TODAY keeps its live tail through a failed minute
+ * read (its stored bars are today's). The tail is fed by the socket ONLY — with no batch (the feed blind) nothing moves. */
 describe('👀 LIVE — stale rows and the next GET', () => {
-  it('[C2] NEGATIVE: a stale row → a batch changes nothing in its svgs and the ⚠️ stays', async () => {
+  const nvdaTile = (root: ParentNode) => root.querySelector('[data-testid="ggw-tile-NVDA"]')!;
+  const servedStale = () => (liveBoard().rows.find((r: any) => r.symbol === 'NVDA') as any).text as string;
+  it('a stale TODAY row + a batch → one more candle on each frame, now moves; the ⚠️ chip and the served sentence stay', async () => {
     const { container } = await mount();
     const all = () => ['1m', '3m', '5m'].map((tf) => snap(svgOf(container, 'NVDA', tf)));
     const before = all();
     await emit(batch({ NVDA: q(170.5, at(400, 30)) }));
-    expect(all()).toEqual(before);
-    expect(container.querySelector('[data-testid="ggw-tile-NVDA"] [data-testid="ggw-asof"]')!.textContent!.startsWith('⚠️')).toBe(true);
+    const after = all();
+    for (let i = 0; i < 3; i += 1) {
+      expect(after[i].c).toBe(before[i].c + 1);
+      expect(after[i].now).toBe('now 170.50');
+      expect(before[i].now).not.toBe('now 170.50');
+    }
+    expect(nvdaTile(container).querySelector('[data-testid="ggw-asof"]')!.textContent!.startsWith('⚠️')).toBe(true);
+    expect(nvdaTile(container).querySelector('[data-testid="ggw-row-text"]')!.textContent).toBe(servedStale());
   });
-  it('[C2] a GET that turns a live row stale → its live tail disappears (stored bars only)', async () => {
+  it('a GET that turns a live row stale → the tail STAYS and the next batch still moves it', async () => {
     const { container } = await mount();
     const stored = snap(svgOf(container, 'OMH', '1m'));
     await emit(batch({ OMH: q(4.37, at(388, 30)) }));
@@ -326,9 +337,32 @@ describe('👀 LIVE — stale rows and the next GET', () => {
     boardNow = () => liveBoard((b) => { b.rows[0].stale = true; b.rows[0].text = 'served stale sentence'; });
     await advance(60_100);
     expect(fullGets()).toHaveLength(2);
-    expect(snap(svgOf(container, 'OMH', '1m'))).toEqual(stored);
+    const kept = snap(svgOf(container, 'OMH', '1m'));
+    expect(kept.c).toBe(stored.c + 1);
+    expect(kept.now).toBe('now 4.37');
     await emit(batch({ OMH: q(4.5, at(388, 50)) }));
-    expect(snap(svgOf(container, 'OMH', '1m'))).toEqual(stored);
+    expect(nowLabel(svgOf(container, 'OMH', '1m'))).toBe('now 4.50');
+    await emit(batch({ OMH: q(4.6, at(389, 10)) }));
+    expect(candles(svgOf(container, 'OMH', '1m'))).toHaveLength(stored.c + 2);
+    expect(container.querySelector('[data-testid="ggw-tile-OMH"] [data-testid="ggw-row-text"]')!.textContent).toBe('served stale sentence');
+  });
+  it('NEGATIVE: the same stale row from a prior session (from_session set) → a batch moves nothing', async () => {
+    boardNow = () => liveBoard((b) => { b.rows.find((r: any) => r.symbol === 'NVDA').from_session = '2026-11-12'; });
+    const { container } = await mount();
+    const all = () => ['1m', '3m', '5m'].map((tf) => snap(svgOf(container, 'NVDA', tf)));
+    const before = all();
+    await emit(batch({ NVDA: q(170.5, at(400, 30)) }));
+    expect(all()).toEqual(before);
+  });
+  it('NEGATIVE: a stale row and NO batch (the feed blind) → its candles do not move, across the next GET too', async () => {
+    const { container } = await mount();
+    const all = () => ['1m', '3m', '5m'].map((tf) => snap(svgOf(container, 'NVDA', tf)));
+    const before = all();
+    await advance(30_000);
+    expect(all()).toEqual(before);
+    await advance(30_100);
+    expect(fullGets()).toHaveLength(2);
+    expect(all()).toEqual(before);
   });
   it('the server wins: the next GET serving the live bucket (v 123) → data-vol 123 and exactly one bar in that slot', async () => {
     const { container } = await mount();

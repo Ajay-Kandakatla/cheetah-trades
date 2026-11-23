@@ -454,6 +454,11 @@ export type GgwSection = { key: string; title: string | null; text: string; hint
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
+  /** 👀 2026-11-23 — set (true) ONLY by parseRow, i.e. on a row of the Watch payload. There `stale` means the last minute
+   *  read failed or ran out of budget and the stored bars are still this session's, so the live tail survives it. A
+   *  🚩 / 🧪 card-view row (lib/gajjalaCardView.ggcRow) never carries it: its `stale` is the house verdict on an old
+   *  source doc and that row stays dark. */
+  stale_keeps_live?: boolean;
   frames: GgwFrame[]; rang: GgwRang[];
   /** 🤖 null on HIS rows (and on every row of an older server). Optional ONLY so the 🚩 card view's own row builders
    *  (lib/gajjalaCardView.ggcRow, GgCardView) stay valid — parseGgw always sets it. */
@@ -794,6 +799,7 @@ function parseRow(v: unknown): GgwRow | null {
     from_session: str(v.from_session),
     as_of_et: str(v.as_of_et),
     stale: v.stale === true,
+    stale_keeps_live: true,
     frames: (Array.isArray(v.frames) ? v.frames : []).map((f: unknown) => parseFrame(f, symbol))
       .filter((f: GgwFrame | null): f is GgwFrame => !!f),
     rang: (Array.isArray(v.rang) ? v.rang : [])
@@ -811,11 +817,14 @@ function parseRow(v: unknown): GgwRow | null {
   };
 }
 
-/** 👀 LIVE (2026-11-16) — the ONE rule for "this row may carry live bars": a served `ok` row of TODAY's session whose
- *  last server read did not fail. A stale row (its frames are the last GOOD ones) and a prior-session row carry none —
- *  they show their stored bars only. Used by ggwLive.ggwFrameMetas and the board's Tile. */
+/** 👀 LIVE (2026-11-16) — the ONE rule for "this row may carry live bars": a served `ok` row of TODAY's session
+ *  (`from_session` null) that is either not stale, or stale AND carries `stale_keeps_live === true`. 2026-11-23: a
+ *  Watch row (parseRow sets the flag) whose last minute read failed or ran out of budget keeps its live tail — its
+ *  stored bars are still this session's. A prior-session row, a not-ok row and a stale row WITHOUT the flag (the 🚩 /
+ *  🧪 card view's ggcRow: an old source doc) carry none — they show their stored bars only. Used by
+ *  ggwLive.ggwFrameMetas, the board's Tile and the card view. */
 export function ggwRowLive(row: GgwRow): boolean {
-  return row.state === 'ok' && row.from_session == null && !row.stale;
+  return row.state === 'ok' && row.from_session == null && (!row.stale || row.stale_keeps_live === true);
 }
 
 /** The served payload, or null for junk. `owner_only` / `error` → exactly {state, reason, title} (nothing else is

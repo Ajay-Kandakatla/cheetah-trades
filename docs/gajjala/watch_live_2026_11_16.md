@@ -68,6 +68,13 @@ tile. A ⚠️ stale row (its server read failed; its frames are the last GOOD o
 stored bars only: a batch for them changes nothing, and a row that turns stale on a GET loses the live tail it already
 had at the next render. Drawing live candles on a stale row anyway = HIS CALL #10.
 
+> **2026-11-23 — changed (spec ggconn WP-1, [watch_live_tail_stale_2026_11_23.md](watch_live_tail_stale_2026_11_23.md)).**
+> The text above is kept as the 11-16 record. Now: `ggwRowLive(row)` = `state === 'ok' && from_session == null &&
+> (!stale || stale_keeps_live === true)`. `stale_keeps_live` is set ONLY by `parseRow` (a row of the Watch payload), so
+> a ⚠️ stale Watch row of TODAY keeps its live candle through a failed minute read; a prior-session row, a not-ok row
+> and the 🚩 / 🧪 card view's stale row (`ggcRow` — an old source doc) still carry none. The live tail still stops
+> whenever the socket is blind (28.8 % of 11-23's window by 12:16 ET) — it is fed by the socket only.
+
 ## Honest limits
 
 - **The live column counts only the prints the ONE socket saw.** A second Massive client on the key kicks it; until it
@@ -142,6 +149,10 @@ whose bars all carry `v = 0`.
 9. **Renewal cadence** = `CARD_LIVE_MS` 30 s against the 60 s TTL. Confirm.
 10. **A ⚠️ stale row goes dark** (and its drawn tail disappears). Keep drawing live candles on a stale row anyway = his
     call.
+    *2026-11-23: answered on his 11-23 words ("I am seeing delays price update for AKAN on the watch chart") — a stale
+    Watch row of today now KEEPS its live candle (spec ggconn WP-1,
+    [watch_live_tail_stale_2026_11_23.md](watch_live_tail_stale_2026_11_23.md)). His confirm is still owed; reverting is
+    the one `stale_keeps_live: true` line in `parseRow`. The 🚩 / 🧪 card ⤢ view is unchanged (dark on a stale card).*
 11. **The live column is structurally low** (one socket that a second client kicks; crosses out) — the measured blind
     fraction is in the linked doc. Show it as asked (default, no marker), tint / label a forming column that spans a
     blind window, or stop here.
