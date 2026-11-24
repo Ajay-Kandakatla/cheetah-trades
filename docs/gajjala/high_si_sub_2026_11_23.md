@@ -174,3 +174,18 @@ date" = the 🔒 tag's day-13 close-out date, `docs/gajjala/reg_sho_closeout_day
   yesterday — the note says "still counting or reached on the latest list", never "upcoming".
 - Display order only: no listing, gate, push or rule change. Tests:
   `backend/tests/test_gajjala_high_si_closeout_sort_2026_11_24.py` (19, incl. NEGATIVES; 3 mutations go red).
+
+## 2026-11-24 — 🎾 tag on 🩳 cards (GG's own setup, graded by his rules)
+
+Ajay: "If the SI tab stocks have reversal squeeze action add the tag on the ticker to for the tennis ball actions Run them
+against Gajjals other rules to show A+.. I wonder if we do this the other way around to move them to Reversal squeeze by
+default but lets not do that".
+
+- `high_si.squeeze_read(read_doc)` reads the name's STORED 🎾 read (`setups.reversal_squeeze`) — the same read the 🎾
+  card shows, graded by every GG rule in the pass. Only a state that would carry a 🎾 card (`tab.TILE_STATES`: A+,
+  triggered, forming, partial, stopped) tags the card. No new grading.
+- Pill: `… · float at or under 10,000,000 · 🎾 Reversal Squeeze A+` (or forming / forming · ready / triggered / partial /
+  stopped). Row `squeeze` (✓ A+ / triggered, — forming, ✗ partial / stopped) with `tab.state_label` words; a
+  `triggered` read never claims A+ here — whether an alert rang is the 🎾 card's to say (formulas audit D10).
+- Not done, by his word: no name moves into 🎾 by default. The 🩳 order and membership and the 🎾 sub are unchanged.
+- Tests: `backend/tests/test_gajjala_high_si_squeeze_tag_2026_11_24.py` (15, incl. NEGATIVES; 3 mutations go red).

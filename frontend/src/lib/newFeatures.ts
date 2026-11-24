@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "If the SI tab stocks have reversal squeeze action add the tag on the ticker to for the tennis
+  // ball actions Run them against Gajjals other rules to show A+.. I wonder if we do this the other way around to move them
+  // to Reversal squeeze by default but lets not do that". BE chart_maps/gajjala/high_si.squeeze_read / squeeze_row (reads
+  // the stored 🎾 read; no new grading). Docs docs/gajjala/high_si_sub_2026_11_23.md (2026-11-24 🎾 section).
+  {
+    id: 'gajjala-high-si-squeeze-tag-2026-11-24',
+    label: "🎾 Reversal Squeeze tag on 🩳 High SI cards — you said: “If the SI tab stocks have reversal squeeze action add the tag on the ticker to for the tennis ball actions Run them against Gajjals other rules to show A+”. A 🩳 card whose name also has a 🎾 Reversal Squeeze read now says so on its main chip — “🎾 Reversal Squeeze A+” (or forming, triggered, partial, stopped) — graded by Gajjala's own 🎾 rules, the same read as the 🎾 card, with a ✓/✗ row in his words. Nothing moves between tabs, as you said. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-24, verbatim: "Please sort the short interest tab based on that if this date is available put that ticker
   // higher up" (the 🔒 day-13 close-out date). BE chart_maps/gajjala/high_si.closeout_order (stable; 🚫 still last).
   // Docs docs/gajjala/high_si_sub_2026_11_23.md (2026-11-24 section).

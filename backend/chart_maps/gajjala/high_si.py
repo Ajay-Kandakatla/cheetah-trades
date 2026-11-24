@@ -115,6 +115,48 @@ def _pct(x) -> str:
     return DASH if v is None else SR._pct_tier(v)
 
 
+# 🎾 2026-11-24 — Ajay: "If the SI tab stocks have reversal squeeze action add the tag on the ticker to for the tennis
+# ball actions Run them against Gajjals other rules to show A+.. I wonder if we do this the other way around to move them
+# to Reversal squeeze by default but lets not do that". The tag READS the name's own stored 🎾 read (the same read the
+# 🎾 card shows, graded by every GG rule in the pass) — no new grading, no move between subs, no order change.
+SQUEEZE_SETUP = "reversal_squeeze"
+SQUEEZE_TAG = "🎾 Reversal Squeeze"
+SQUEEZE_WORDS = {"aplus": "A+", "triggered": "triggered", "forming": "forming", "partial": "partial",
+                 "stopped": "stopped"}
+SQUEEZE_NEED = "GG's 🎾 Reversal Squeeze rules — the same read as the 🎾 card (display only)"
+
+
+def squeeze_read(read_doc) -> Optional[dict]:
+    """The name's stored 🎾 read when it would carry a 🎾 card (state in tab.TILE_STATES), else None. Never raises."""
+    from chart_maps.gajjala import tab as GT
+    try:
+        r = ((read_doc or {}).get("setups") or {}).get(SQUEEZE_SETUP)
+        if isinstance(r, dict) and r.get("state") in GT.TILE_STATES and r.get("state") in SQUEEZE_WORDS:
+            return r
+    except AttributeError:
+        return None
+    return None
+
+
+def squeeze_word(r: dict) -> str:
+    w = SQUEEZE_WORDS[r["state"]]
+    return w + (" · ready" if r["state"] == "forming" and r.get("ready") is True else "")
+
+
+def squeeze_row(r: dict) -> dict:
+    """The ✓/✗ row: the 🎾 card's own pill words. A `triggered` read never claims A+ here (formulas audit D10: whether
+    an alert rang is the 🎾 card's to say)."""
+    from chart_maps.gajjala import tab as GT
+    st = r["state"]
+    if st == "triggered":
+        value = "triggered — broke on the %s bar · whether an alert rang: see the 🎾 card · %s" % (
+            GT._hhmm(r.get("entry_bar_t")) or DASH, GT.UNMEASURED)
+    else:
+        value = GT.state_label(r)
+    ok = True if st in ("aplus", "triggered") else (None if st == "forming" else False)
+    return {"key": "squeeze", "label": SQUEEZE_TAG, "value": value, "need": SQUEEZE_NEED, "ok": ok}
+
+
 def tier_chip(read: dict) -> str:
     """The card's 🩳 chip words WITH the % in them (Ajay 2026-11-23: "Why is high more than extreme? can you actually put
     a percentage directly here?"). The % is the short-interest record's own % of float (the one the house tier is read
@@ -645,17 +687,22 @@ def card(read_doc: dict, row: dict, *, tf: str, scan_row: dict, sess: dict, halt
         *[cross_row(frames[f], f) for f in GC.HIGH_SI_CROSS_FRAMES],
         volume_row(r.get("session_volume")),
     ]
+    sq = squeeze_read(read_doc)
+    if sq is not None:
+        criteria.append(squeeze_row(sq))
     if rang:
         criteria.append({"key": "rang", "label": "🔔 rang today",
                          "value": " · ".join("%s %s ET" % (WC.FRAME_WORDS.get(f, f), _hhmm(bt) or DASH)
                                              for f, bt in rang),
                          "need": "", "ok": True})
     g = {"setup": GC.HIGH_SI_SUB, "state": STATE,
-         "state_label": "%s · float at or under %s" % (tier_chip(r), _cap_text()),
+         "state_label": "%s · float at or under %s%s" % (tier_chip(r), _cap_text(),
+                                                         " · %s %s" % (SQUEEZE_TAG, squeeze_word(sq)) if sq else ""),
          "criteria": criteria, "missed": [], "unjudged": [], "plan_text": None, "chips": chips,
          "listed": GT._listed_block(listed_info),
          "high_si": {"tier": r.get("tier"), "float_check": r.get("float_check"), "si_chip": r.get("si_chip"),
-                     "carried": r.get("carried"), "add_text": r.get("add_text")}}
+                     "carried": r.get("carried"), "add_text": r.get("add_text"),
+                     "squeeze": ({"state": sq["state"], "word": squeeze_word(sq)} if sq else None)}}
     vol_avg = fr.get("vol_avg") if isinstance(fr.get("vol_avg"), dict) else None
     out = {"symbol": sym, "name": read_doc.get("name"), "href": GT.chart_href(sym, fr["tf"], vv), "tf": fr["tf"],
            "bars": fr["bars"], "vol_avg": vol_avg, "bands": [], "lines": [], "markers": markers, "stats": stats,

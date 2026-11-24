@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🎾 tag on 🩳 cards ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 close-out date sorts first ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🔒 Reg SHO close-out day ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 % in the High SI chip ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -11,9 +12,9 @@ describe('✨ 📈 VWAP all hours + 📺 TV ↗ (2026-11-23)', () => {
   const v = NEW_FEATURES.find((x) => x.id === 'gajjala-watch-vwap-all-hours-2026-11-23')!;
   const t = NEW_FEATURES.find((x) => x.id === 'chart-maps-tv-link-2026-11-23')!;
   it('sit right under the 🕯 candles entry, listed once each, dated; the 🟩 glass entry follows', () => {
-    expect(NEW_FEATURES[5].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
-    expect(NEW_FEATURES[6].id).toBe('chart-maps-tv-link-2026-11-23');
-    expect(NEW_FEATURES[7].id).toBe('gajjala-watch-zones-glass-2026-11-23');
+    expect(NEW_FEATURES[6].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
+    expect(NEW_FEATURES[7].id).toBe('chart-maps-tv-link-2026-11-23');
+    expect(NEW_FEATURES[8].id).toBe('gajjala-watch-zones-glass-2026-11-23');
     for (const f of [v, t]) { expect(NEW_FEATURES.filter((x) => x.id === f.id).length).toBe(1); expect(f.addedAt).toBe('2026-11-23'); }
   });
   it('quote him verbatim and say what changed', () => {

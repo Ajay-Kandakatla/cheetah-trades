@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🎾 tag on 🩳 cards ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 close-out date sorts first ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🔒 Reg SHO close-out day ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 % in the High SI chip ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -38,7 +39,7 @@ const f = NEW_FEATURES.find((x) => x.id === ID);
 
 describe('✨ the 🎬 Replays tab entry (2026-11-17)', () => {
   it('is FIRST, listed once, dated 2026-11-17, routed to ?tab=replays', () => {
-    expect(NEW_FEATURES[30].id).toBe(ID);   // WIDENED 2026-11-18 — the ⏹ 1-minute page retired ✨ now sits FIRST
+    expect(NEW_FEATURES[31].id).toBe(ID);   // WIDENED 2026-11-18 — the ⏹ 1-minute page retired ✨ now sits FIRST
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f?.addedAt).toBe('2026-11-17');
     expect(f?.route).toBe('/chart-maps?tab=replays');
@@ -73,7 +74,7 @@ describe('✨ the 🎬 Replays tab entry (2026-11-17)', () => {
   });
 
   it('NEGATIVE: the 🎯 A+ push ✨ is not replaced — right after this entry, listed once; ids stay unique', () => {
-    expect(NEW_FEATURES[31].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');   // WIDENED 2026-11-18 (⏹ retired ✨ FIRST)
+    expect(NEW_FEATURES[32].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');   // WIDENED 2026-11-18 (⏹ retired ✨ FIRST)
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17').length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
   });
