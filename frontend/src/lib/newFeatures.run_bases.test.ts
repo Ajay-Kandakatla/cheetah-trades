@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🔒 Reg SHO close-out day ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 % in the High SI chip ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 High SI sub + 9/21 EMA cross alerts ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +1 2026-11-23 (🕯 1-min candles ✨ FIRST): every NEW_FEATURES[n] pin here moved +1.
@@ -62,8 +63,8 @@ describe('✨ the 📶 run-bases entry (2026-11-15)', () => {
 
   it('is FIRST, listed once, dated and routed to 🚩 Gajjala', () => {
     // WIDENED +1 (2026-11-17: 🎯 chart-maps-gajjala-watch-aplus-push-2026-11-17 FIRST — Ajay: "Push new Apluses immediately in to watch list and an alert for me please Missed AKAN and GP") — every NEW_FEATURES[n] pin below → [n+1].
-    expect(NEW_FEATURES[46].id).toBe(ID);
-    expect(NEW_FEATURES[47].id).toBe('chart-maps-gajjala-watch-2026-11-15');
+    expect(NEW_FEATURES[47].id).toBe(ID);
+    expect(NEW_FEATURES[48].id).toBe('chart-maps-gajjala-watch-2026-11-15');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-15');

@@ -1092,12 +1092,23 @@ def test_the_pick_moves_with_the_rule_days(monkeypatch):
 
 
 # ═════════════════════════════════════════════ display only
+# WIDENED 2026-11-24 (main session): the 🩳 High SI sub (main 2026-11-23) prints the SAME 🔒 tag on its cards and in its
+# push text — a display read with payload(kick=False). Those two files are the ONLY allowed readers; they never kick the
+# worker and never gate on it (they never import reg_sho_runs).
+DISPLAY_READERS = {"chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py"}
+
+
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
-    hits = []
+    hits, readers = [], []
     for sub in ("chart_maps", "push", "trading"):
         for f in (BACKEND / sub).rglob("*.py"):
             txt = f.read_text(errors="ignore")
             if "reg_sho" in txt or "reg_sho_runs" in txt:
-                hits.append(str(f))
+                rel = f.relative_to(BACKEND).as_posix()
+                (readers if rel in DISPLAY_READERS else hits).append(rel)
     assert hits == []
+    for rel in readers:
+        txt = (BACKEND / rel).read_text(errors="ignore")
+        assert "reg_sho_runs" not in txt and "kick_refresh" not in txt and "backfill_history" not in txt
+        assert "payload(kick=False" in txt
     assert "reg_sho" not in (BACKEND / "crontab").read_text()

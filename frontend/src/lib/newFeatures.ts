@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23 ~23:30 ET, verbatim: "I need to know when it would like to Potentially squeeze.." + "Add a tag with date
+  // in it..". BE short_interest/reg_sho_runs.py (settlement-day run, day 13 = REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, Rule
+  // 203(b)(3); Rule 204 + SEC staff FAQ 6.1/6.5/6.7 checked by eye 2026-11-23) + reg_sho.py (per-date history backfill
+  // in the ONE worker). Display only. Docs docs/gajjala/reg_sho_closeout_day_2026_11_24.md.
+  {
+    id: 'gajjala-reg-sho-close-out-day-2026-11-24',
+    label: "🔒 Close-out day on the Hard to borrow tag — you said: “I need to know when it would like to Potentially squeeze..” · “Add a tag with date in it..”. The 🔒 tag now counts how many settlement days in a row a name has been on its exchange’s Reg SHO threshold list and prints the date of day 13, e.g. 🔒 close-out Fri 11/27 · day 9 of 13. After day 13, SEC Rule 203(b)(3) makes a clearing firm buy shares to close out a failed delivery it carried on every one of those days; that buying may come from day 11. Rule 204 already requires a fail to be closed out 1 to 3 settlement days after settlement, so the SEC staff say fails generally do not last 13 days — the date is a backstop, and it can be one settlement day later depending on how the days are counted. Failed deliveries only, not every short position; a name can stay listed past the date. Bank holidays (Columbus Day, Veterans Day) are not settlement days. When a day’s list was not read the tag says “day count unknown”. A rule date — it says nothing about price. Display only. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-23 night, verbatim, on three 🩳 cards (a 49.2% High beside a 26.8% EXTREME): "Why is high more than
   // extreme? can you actually put a percentage directly here?". BE chart_maps/gajjala/high_si.tier_chip (words only; the
   // record's % of float, else the card's; "(float unconfirmed)" when the house holds the name at High for that reason).

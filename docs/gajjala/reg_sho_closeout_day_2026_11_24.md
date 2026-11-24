@@ -462,3 +462,5 @@ under its 🩳 line; another card the dated chip; the 👀 Watch tile and the �
 Tests: `backend/tests/test_reg_sho_closeout_day_2026_11_24.py` (calendar, runs, backfill, holes, words, NEGATIVES),
 `backend/tests/test_reg_sho_threshold_2026_11_22.py` (the moved AKAN pins and golden),
 `frontend/src/components/GgHardToBorrow.closeout.test.tsx` (the six worked items through the real component).
+
+**MEASURED 2026-11-23 23:09 ET (worktree, in-memory store, real sources):** refresh_due 5 GETs (4.6 s); backfill round 1 = 40 GETs / 24 found / 0 confirmed / 0 holes (41.0 s), round 2 the same (42.3 s); 85 GETs, all 200 (Nasdaq 17, NYSE 51, Cboe 17); no 2026-11-11 URL asked; 12 zero-row NYSE main-market days (10-30 → 11-17) each still owe one confirm GET → a full backfill is about 150 GETs plus confirms. After two rounds SMTK reads `day 17+ · close-out day passed · still on` (the run is a floor until 10-26/10-27 are read in round 3). Card chip: 2 lines on a 430 px card; 📋 🩳 cell 154 → 203–242 px inside its own scroll.
