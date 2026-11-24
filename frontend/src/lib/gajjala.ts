@@ -776,7 +776,24 @@ export type GgHighSiBlock = {
   shown_text?: string | null; excluded_text?: string | null; disagree_text?: string | null;
   no_tier_text?: string | null; n?: number | null; n_read?: number | null; faults_text?: string | null;
   empty_text?: string | null; chartless?: GgHighSiChartless[] | null;
+  /** ⛔ 2026-11-24 (spec ssrlist §3.4): the names newly under SSR in the session shown — served by high_si.ssr_new_block;
+   *  absent on an older API (no section). */
+  ssr_new?: GgSsrNewBlock | null;
 };
+/** ⛔ one row of the new-SSR list — every piece served and printed as handed (no number formatted here). */
+export type GgSsrNewRow = { symbol?: string | null; href?: string | null; at_text?: string | null; drop_text?: string | null;
+  source_text?: string | null; mark_text?: string | null; si_text?: string | null };
+/** ⛔ one served fold of the new-SSR list, in the served order; `count` is never printed (the summary carries it). */
+export type GgSsrNewGroup = { key?: string | null; summary?: string | null; count?: number | null; open?: boolean | null;
+  rows?: GgSsrNewRow[] | null };
+/** ⛔ the new-SSR block (high_si.ssr_new_block, 2026-11-24). `tier_note` + `n_untiered` [C2]: the count of names with no
+ *  current short interest % of float on file — `n` and `n_untiered` are never printed. Display only. UNMEASURED. */
+export type GgSsrNewBlock = { title?: string | null; counts_text?: string | null; tier_note?: string | null;
+  window_text?: string | null; asof_text?: string | null; status_text?: string | null; partial_text?: string | null;
+  si_note?: string | null; list_note?: string | null; faults_text?: string | null; fault_text?: string | null;
+  empty_text?: string | null; order_note?: string | null; rule_label?: string | null; rule_text?: string | null;
+  note_text?: string | null; withheld_text?: string | null; n?: number | null; n_untiered?: number | null;
+  groups?: GgSsrNewGroup[] | null };
 /** 🩳 a listed name that drew no card (2026-11-23 refix): the served `text` ("🩳 SYM listed · chart not stored", the ONE
  *  line that names the ticker) is printed; the served `state_label` carries the tier only and is the fallback. */
 export type GgHighSiChartless = GgDivergenceChartless & { text?: string | null };

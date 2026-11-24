@@ -115,6 +115,50 @@ COMPUTED_TEXT_FINAL = "computed read for %s · complete (last 5-minute scan %s E
 COMPUTED_TEXT_LIVE = "computed read for %s · last 5-minute scan %s ET"
 COMPUTED_TEXT_STALE = "computed read for %s · the 5-minute scan has not read the market since %s ET"
 COMPUTED_TEXT_NONE = "computed read for %s not run yet"
+
+# ───────────────────────────────────────────── the names NEW on one trigger day (2026-11-24 ssrlist §3.2)
+# Ajay 2026-11-24: "What are the SSR stocks today" · "Can you add it to short interest tab" · "The new ones".
+# Keys FROZEN (the 🩳 High SI block reads them); the words are MINE (HIS CALL 11).
+NEW_KIND = "ssr_new_triggers"
+NEW_STATUSES = ("ok", "not_read", "pre_open", "not_latest", "out_of_play", "failed")
+NEW_KEYS = ("kind", "status", "day", "day_words", "prior_day", "is_today", "market_day_today", "title", "rows", "n",
+            "n_official", "n_computed", "n_retriggered", "sources_text", "retriggered_text", "withheld",
+            "withheld_text", "faults", "faults_text", "through", "off_from", "half_day", "window_text", "computed",
+            "sources", "corp_checked", "asof_text", "status_text", "partial_text", "empty_text", "fault_text",
+            "note_text", "rule_text")                       # rev 2: + prior_day [C1], + corp_checked [C4]
+NEW_ROW_KEYS = ("symbol", "source", "exchange", "time_basis", "at_et", "at_text", "drop_pct", "drop_text",
+                "source_text", "retriggered", "mark_text")
+NEW_WITHHELD = ("corp_action", "computed_only", "bars_disagree")   # computed_only: DEFENSIVE, cannot occur in production (§6.17)
+NEW_TITLE_TODAY = "%s %s — new today (%s)"                    # GLYPH, TAG, _day_words(D)
+NEW_TITLE_SESSION = "%s %s — new on %s, the last session"
+NEW_TITLE_BARE = "%s %s — new names"                          # the day could not be read
+NEW_CLOSED_TODAY = " · the market is closed today"
+NEW_DAY_UNREAD = "that day"                                   # the day words when the asked day could not be read (the `_why_text` fallback word)
+NEW_WINDOW_TEXT = "Each is in force through %s, after-hours included; off from %s."   # + HALF_DAY_TEXT when half_day
+NEW_AT_PLAIN = "%s ET"                                        # minute_bar "09:42" · exchange "09:45:36"
+NEW_AT_SEEN = "by %s ET"                                      # first_seen — the 5-minute scan's first sight
+NEW_SRC_COMPUTED = "computed"                                 # a test pins COMPUTED_TAIL.endswith(NEW_SRC_COMPUTED)
+NEW_RETRIGGER_MARK = "also triggered %s"                      # _day_words(prev_market_day(D)) — ALWAYS the prior market day [C1]
+NEW_SOURCES_TEXT = "%d on an exchange list · %d computed here"
+NEW_RETRIGGERED_TEXT = "%d were already restricted and triggered again"
+NEW_FAULTS_TEXT = "%d name(s) could not be read this time — the rest of the list stands"
+NEW_PRE_OPEN_TEXT = "No name can be new on %s yet — only regular-hours trades start it, and regular hours open at %s ET."
+NEW_NOT_LATEST_TEXT = "This list covers the newest trigger day only (%s)."
+NEW_OUT_OF_PLAY_TEXT = "What started on %s has run out — nothing from that day is in force."
+NEW_EMPTY_TEXT = "No name has newly triggered it on %s (%s)."                 # day words, computed text
+NEW_PARTIAL_TEXT = "This list may be missing names: %s."                       # computed text
+NEW_CORP_UNREAD_TEXT = "%s A name whose only drop is a dividend or a split may be listed by mistake."   # CORP_UNREAD_NOTE.strip() [C4]
+NEW_NOT_READ_TEXT = "%s %s — the names new on %s are not read yet: %s. A missing list does not mean no name triggered."
+NEW_FAULT_TEXT = "%s %s — the names new on %s could not be read. A missing list does not mean no name triggered."
+NEW_WITHHELD_TEXT = "Left off this list: %s."                                  # parts joined "; "
+NEW_WITHHELD_PART = "%s — %s"                                                  # names joined ", " · _why_text(why, ev)
+NEW_NOTE_TEXT = ("A plain time is the first regular-hours minute at or under the %d%% line (a name on the Gajjala "
+                 "cards) or the exchange's own time; “by” is the 5-minute scan that first saw the drop. The %% is "
+                 "the low at that read against the prior close — not the drop now. “%s” = this app's own read of "
+                 "that line, with no exchange list read here carrying the name yet. The exchanges publish a day's "
+                 "names after the close, some only the next morning, so most names stay “%s”, and a name is not "
+                 "taken off this list for being missing from an exchange list. “also triggered” = already under "
+                 "it from the trading day before; the new drop extends it a day.")     # rev 2 [C3b]: no "comes off" promise
 # the closing sentence of every title is RS.NOT_A_SIGNAL, by name
 
 _SPACES = re.compile(r" {2,}")
@@ -996,6 +1040,242 @@ def fault_payload(symbols=None) -> dict:
         computed = {"ok": False, "last_pass_et": None, "final": False, "text": None}
         return _envelope("failed", {}, {}, {}, [], now_et, [], [], computed, FAULT_UNREADABLE % (GLYPH, TAG),
                          False, None)
+
+
+# ───────────────────────────────────────────── the names NEW on one trigger day (2026-11-24 ssrlist §3.2)
+def _new_note() -> str:
+    return (NEW_NOTE_TEXT % (SSR_TRIGGER_DROP_PCT, NEW_SRC_COMPUTED, NEW_SRC_COMPUTED) + " "
+            + HONESTY_NOTE % SSR_TRIGGER_DROP_PCT + " " + RS.NOT_A_SIGNAL)
+
+
+def _new_rule() -> str:
+    return (RULE_TEXT % (SSR_RULE, SSR_TRIGGER_DROP_PCT, SSR_TRIGGER_DROP_PCT)).strip()
+
+
+def _new_title(D, now_et, market_day_today) -> str:
+    if D is None:
+        return NEW_TITLE_BARE % (GLYPH, TAG)
+    if D == now_et.date():
+        return NEW_TITLE_TODAY % (GLYPH, TAG, _day_words(D))
+    return NEW_TITLE_SESSION % (GLYPH, TAG, _day_words(D)) + ("" if market_day_today else NEW_CLOSED_TODAY)
+
+
+def _new_base(D, now_et) -> dict:
+    """Every NEW_KEYS key with its not-evaluated value (None / [] / the unread computed row)."""
+    out = {k: None for k in NEW_KEYS}
+    out.update({"kind": NEW_KIND, "day": D.isoformat() if D is not None else None,
+                "day_words": _day_words(D) if D is not None else None, "rows": [],
+                "computed": {"ok": False, "last_pass_et": None, "final": False, "text": None}, "sources": [],
+                "note_text": _new_note(), "rule_text": _new_rule(), "title": NEW_TITLE_BARE % (GLYPH, TAG)})
+    try:
+        from catalysts.medical.reaction import is_market_day
+        mkt = bool(is_market_day(now_et.date()))
+        out["market_day_today"] = mkt
+        out["is_today"] = (D == now_et.date()) if D is not None else None
+        out["title"] = _new_title(D, now_et, mkt)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("ssr: new-names title unread: %s", type(exc).__name__)
+    return out
+
+
+def _new_failed(D, now_et) -> dict:
+    """The `failed` shape — never raises."""
+    try:
+        now_et = now_et if isinstance(now_et, datetime) else RS._to_et(None)
+        out = _new_base(D, now_et)
+    except Exception:                                          # noqa: BLE001
+        out = {k: None for k in NEW_KEYS}
+        out.update({"kind": NEW_KIND, "rows": [], "sources": [], "title": NEW_TITLE_BARE % (GLYPH, TAG),
+                    "computed": {"ok": False, "last_pass_et": None, "final": False, "text": None}})
+    out["status"] = "failed"
+    out["rows"] = []
+    out["empty_text"] = None
+    out["fault_text"] = NEW_FAULT_TEXT % (GLYPH, TAG, out.get("day_words") or NEW_DAY_UNREAD)
+    return out
+
+
+def _finite(x) -> Optional[float]:
+    """A finite float, else None (never NaN / inf / a bool / a string)."""
+    if isinstance(x, bool):
+        return None
+    try:
+        f = float(x)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _new_row(sym: str, it: dict, P: date) -> dict:
+    basis = it.get("time_basis")
+    at = it.get("triggered_at_et")
+    at = at if isinstance(at, str) and at else None
+    at_text = None
+    if at is not None:
+        at_text = (NEW_AT_SEEN % at) if basis == "first_seen" else (NEW_AT_PLAIN % at)
+    pct = _finite(it.get("drop_pct"))
+    official = it.get("source") == "official"
+    retrig = bool(it.get("retriggered"))
+    return {"symbol": sym, "source": it.get("source"), "exchange": it.get("exchange"), "time_basis": basis,
+            "at_et": at, "at_text": at_text, "drop_pct": pct, "drop_text": _pct_words(pct) if pct is not None else None,
+            "source_text": (LABEL_SRC_OFFICIAL % it.get("exchange")) if official else NEW_SRC_COMPUTED,
+            "retriggered": retrig, "mark_text": (NEW_RETRIGGER_MARK % _day_words(P)) if retrig else None}
+
+
+def new_triggers(day, db=_DEFAULT, now=None, *, lists=None, corp=None) -> dict:
+    """The names whose restriction STARTED on `day`, resolved by the rules `payload` uses (`_day_eval` + `_on_block`,
+    no second computation of the line). Mongo reads only, never kicks, never writes, never raises (→ the `failed`
+    shape). `in_play(now)` decides the STATUS only; the evidence is read over [day, prev_market_day(day)] with the
+    lists as of the day's own files, so a row and its mark never change with the clock [C1]."""
+    D = None
+    now_et = None
+    try:
+        now_et = RS._to_et(now)
+        D = _as_date(day)
+        if D is None:
+            return _new_failed(None, now_et)
+        lists = _resolve_lists(lists)
+        corp = _resolve_corp(corp)
+        if db is _DEFAULT:
+            db = SIC._get_db()
+        if db is None:
+            return _new_failed(D, now_et)
+        return _new_triggers(D, db, now_et, lists, corp)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("ssr: the new-names read failed: %s", type(exc).__name__)
+        return _new_failed(D, now_et)
+
+
+def _new_triggers(D, db, now_et, lists, corp) -> dict:
+    from catalysts.medical.reaction import prev_market_day
+    out = _new_base(D, now_et)
+    out["status"] = "ok"
+
+    # 2. STATUS ONLY — `days` is used for nothing else
+    days = in_play(now_et)
+    if D not in days:
+        if D >= now_et.date() and now_et < _rth_open_dt(D):
+            out["status"] = "pre_open"
+            out["status_text"] = NEW_PRE_OPEN_TEXT % (_day_words(D), _rth_open_dt(D).strftime("%H:%M"))
+        else:
+            out["status"] = "out_of_play"
+            out["status_text"] = NEW_OUT_OF_PLAY_TEXT % _day_words(D)
+        return out
+    if D != days[0]:
+        out["status"] = "not_latest"
+        out["status_text"] = NEW_NOT_LATEST_TEXT % _day_words(days[0])
+        return out
+
+    # 3. [C1] the prior market day, explicitly; the lists as of the list day's OWN files
+    P = prev_market_day(D)
+    iso, piso = D.isoformat(), P.isoformat()
+    eval_days = [D, P]                                         # D first — `_computed_view` reads ctx.days[0]
+    list_now = now_et if now_et.date() <= D else datetime.combine(D, datetime.max.time(), tzinfo=_ET)
+    coll = db[lists.SSR_COLL]
+    loaded = lists.load(coll, list_now)
+    corp_loaded = None
+    if corp is not None:
+        try:
+            corp_loaded = corp.load(coll, eval_days)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("ssr: corporate actions unread: %s", type(exc).__name__)
+            corp_loaded = None
+    ctx = _Ctx(lists, loaded, corp, corp_loaded, coll, eval_days, now_et)
+
+    # 4. ONE find — the `_trig_docs` map shape; str symbols only
+    trigs = {}
+    for d in coll.find({"kind": "trig", "date": {"$in": [iso, piso]}}):
+        s = d.get("symbol") if isinstance(d, dict) else None
+        if isinstance(s, str) and s:
+            trigs[(d.get("date"), s)] = d
+
+    # 5. candidates — one name, one row
+    seen, cands = set(), []
+
+    def add(s):
+        sp = _spellings(s)
+        if not sp or any(k in seen for k in sp):
+            return
+        seen.update(sp)
+        cands.append(s)
+
+    for dt, s in sorted(trigs):
+        if dt == iso:
+            add(s)
+    for s in lists.symbols_on(loaded, D) or []:
+        if isinstance(s, str) and s:
+            add(s)
+
+    # 6–7. each name in its OWN try
+    rows, faults = [], []
+    withheld = {r: [] for r in NEW_WITHHELD}
+    for s in cands:
+        try:
+            ev = _day_eval(ctx, s, D, trigs)
+            if ev["on"]:
+                it = _on_block(s, [ev, _day_eval(ctx, s, P, trigs)], ctx)
+                if it.get("triggered_on") != iso:
+                    faults.append(s)
+                    continue
+                rows.append(_new_row(s, it, P))
+                continue
+            doc = next((trigs[(iso, k)] for k in _spellings(s) if (iso, k) in trigs), None)
+            if doc is None:                                    # a list name its own rows do not carry: unread, never "none"
+                faults.append(s)
+                continue
+            why = "bars_disagree" if doc.get("void") else ("computed_only" if ev["overruled"] else "corp_action")
+            withheld[why].append(s)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("ssr: one new name unread: %s", type(exc).__name__)
+            faults.append(s)
+
+    # 8. rows, the computed row, the sources, the as-of line
+    rows.sort(key=lambda r: r["symbol"])
+    computed = _computed_view(ctx)
+    sources = list(lists.source_views(loaded, list_now) or [])
+    if corp is not None and corp_loaded is not None:
+        try:
+            sources.append(corp.source_view(corp_loaded, [D], now_et))
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("ssr: corporate-action source row failed: %s", type(exc).__name__)
+    sources = [x for x in sources if isinstance(x, dict)]
+    corp_checked = ctx.actions.get(iso) is not None            # [C4]
+    texts = ([computed.get("text")] + [x.get("text") for x in sources if x.get("key") != "corp_actions"]
+             + [x.get("text") for x in sources if x.get("key") == "corp_actions"])
+    asof = "; ".join(t for t in texts if isinstance(t, str) and t)
+
+    n_off = sum(1 for r in rows if r["source"] == "official")
+    n_comp = sum(1 for r in rows if r["source"] == "computed")
+    n_re = sum(1 for r in rows if r["retriggered"])
+    dw = _day_words(D)
+    w = window(D)
+    wt = NEW_WINDOW_TEXT % (_day_words(w["through"]), _day_words(w["off_from"]))
+    if w["half_day"]:
+        wt += HALF_DAY_TEXT % (_day_words(w["through"]), w["rth_close"].strftime("%H:%M"))
+    wparts = [NEW_WITHHELD_PART % (", ".join(withheld[r]), _why_text(r, {"T": D})) for r in NEW_WITHHELD
+              if withheld[r]]
+    out.update({"prior_day": piso, "corp_checked": corp_checked, "rows": rows, "n": len(rows), "n_official": n_off,
+                "n_computed": n_comp, "n_retriggered": n_re,
+                "sources_text": (NEW_SOURCES_TEXT % (n_off, n_comp)) if rows else None,
+                "retriggered_text": (NEW_RETRIGGERED_TEXT % n_re) if n_re else None,
+                "withheld": withheld, "withheld_text": (NEW_WITHHELD_TEXT % "; ".join(wparts)) if wparts else None,
+                "faults": faults, "faults_text": (NEW_FAULTS_TEXT % len(faults)) if faults else None,
+                "through": w["through"].isoformat(), "off_from": w["off_from"].isoformat(),
+                "half_day": bool(w["half_day"]), "window_text": wt, "computed": computed, "sources": sources,
+                "asof_text": asof or None})
+
+    # 9. the honesty table, then the dividend / split sentence [C4]
+    if not rows and not computed["ok"]:
+        out["status"] = "not_read"
+        out["fault_text"] = NEW_NOT_READ_TEXT % (GLYPH, TAG, dw, asof)
+    elif not rows and not faults:                              # a faulted name is never "no name"
+        out["empty_text"] = NEW_EMPTY_TEXT % (dw, computed["text"])
+    parts = []
+    if rows and not computed["ok"]:
+        parts.append(NEW_PARTIAL_TEXT % computed["text"])
+    if n_comp > 0 and not corp_checked:
+        parts.append(NEW_CORP_UNREAD_TEXT % CORP_UNREAD_NOTE.strip())
+    out["partial_text"] = " ".join(parts) or None
+    return out
 
 
 def _and_list(names: list) -> str:

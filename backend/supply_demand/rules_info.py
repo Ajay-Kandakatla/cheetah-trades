@@ -1453,6 +1453,22 @@ def _gg_high_si_clause() -> str:
     return " " + clause
 
 
+def _gg_high_si_ssr_new_clause() -> str:
+    """⛔ 2026-11-24 (Ajay "What are the SSR stocks today" · "Can you add it to short interest tab" · "The new ones";
+    SPEC ssrlist §4 main-session [C7a]) — the section note's ONE row on the ⛔ new-SSR list of the 🩳 High SI sub: the
+    sentence is high_si.ssr_new_rules_line() (the tier words read at call time there, never retyped here). Right after
+    the 🩳 clause, before the 🧾 line. " " + the sentence, or "" on any exception (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import high_si as HS
+        line = HS.ssr_new_rules_line()
+        if not isinstance(line, str) or not line.strip():
+            return ""
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala high si ssr new clause unavailable: %s", exc)
+        return ""
+    return " " + line
+
+
 # 🧾 2026-11-23 — the check kinds of accountability.CHECK_META in words (a label, not a rule).
 _GG_JOURNAL_KIND_WORDS = {"hard": "a GG rule", "soft": "a warning", "info": "information only"}
 
@@ -1680,6 +1696,7 @@ def _gajjala_section() -> dict:
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)
                  + _gg_high_si_clause()                    # 🩳 2026-11-23 — the 🩳 High SI sub (display; push LIVE 2026-11-23)
+                 + _gg_high_si_ssr_new_clause()            # ⛔ 2026-11-24 — the new-SSR list on the 🩳 sub (display only)
                  + _gg_journal_clause()                    # 🧾 2026-11-23 — your journal checks (GG) (words only)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)

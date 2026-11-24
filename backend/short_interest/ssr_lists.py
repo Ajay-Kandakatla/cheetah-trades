@@ -432,6 +432,29 @@ def rows_for(loaded: dict, sym) -> list:
     return out
 
 
+def symbols_on(loaded: dict, T) -> list:
+    """Every stored list symbol (norm spelling) with a row whose trigger date is T, sorted — the ONE enumerator by
+    trigger date (`rows_for` looks up by symbol; 2026-11-24 ssrlist §3.1). Reads `loaded["index"]` only: no Mongo, no
+    outside call. An unread / empty load, or an unreadable T → []."""
+    if isinstance(T, datetime):
+        T = T.date()
+    iso = T.isoformat() if isinstance(T, date) else ""
+    if not iso or not isinstance(loaded, dict):
+        return []
+    index = loaded.get("index") or {}
+    if not isinstance(index, dict):
+        return []
+    out = set()
+    for sym, rows in index.items():
+        if not isinstance(sym, str) or not sym:
+            continue
+        for r in rows or ():
+            if isinstance(r, dict) and str(r.get("trigger_date")) == iso:
+                out.add(sym)
+                break
+    return sorted(out)
+
+
 def complete_for(loaded: dict, T: date) -> bool:
     """EVERY source holds a complete record of trigger day T: nasdaq ONLY via file(next_market_day(T)) (any
     edition) — file(T)'s 16:30 edition never completes T [C4]; nyse via file(T)."""

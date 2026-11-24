@@ -15,6 +15,7 @@
  * undefined / number / empty string prints nothing). */
 import { Link } from 'react-router-dom';
 import { ggHref, type GgHighSiBlock } from '../lib/gajjala';
+import { GgSsrNewSection } from './GgSsrNew';
 import '../styles/gajjala.css';
 
 /** The board's servedText guard (GajjalaBoard keeps its trailing export line fixed — copied, as GgDiverging does): a served
@@ -66,6 +67,7 @@ export function GgHighSiPanel({ block }: { block: GgHighSiBlock | null | undefin
         );
       })}
       {servedText(block.faults_text) ? <p className="gg-dv-line cm-note" data-testid="gg-hs-faults">{block.faults_text}</p> : null}
+      <GgSsrNewSection block={block.ssr_new} />
       {folded ? (
         <details className="gg-dv-rule" data-testid="gg-hs-rule">
           <summary>{servedText(block.rule_label) ? block.rule_label : 'ⓘ'}</summary>

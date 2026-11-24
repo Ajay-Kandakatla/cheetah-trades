@@ -739,12 +739,195 @@ def _cards(rows: list, *, tf: str, scan_row: Callable, sess: dict, halts_by: dic
     return tiles, chartless, faults
 
 
+# ── ⛔ SSR "new today" list (2026-11-24, SPEC ssrlist §3.3, WP be-block) ──────────────────────────────────────────
+# Ajay 2026-11-24: "What are the SSR stocks today" · "Can you add it to short interest tab" · "The new ones". The names
+# whose short-sale restriction STARTED in the session shown, resolved by the ⛔ SSR tag's ONE engine
+# (short_interest.ssr.new_triggers, lazy import in _ssr_read only), split into four folds by the tab's own two facts —
+# on GG's 🚩 list (`listed`), High / EXTREME house tier (SR.si_tier via si_blocks). Display only: no push, no gate, no
+# order change of the 🩳 cards, no lane. A display reader: this section never asks the lists to refresh. UNMEASURED.
+SSR_NEW_KEY = "ssr_new"
+SSR_NEW_KIND = "ssr_new_triggers"                 # == ssr.NEW_KIND (pinned by the integration test)
+SSR_NEW_GROUPS = ("list_high", "list_other", "high", "rest")
+SSR_NEW_MIXED = ("list_other", "rest")            # the folds that can hold a name with no tier [C2]
+SSR_NEW_OPEN = ()                                 # HIS CALL 2 — the folds printed open
+SSR_NEW_NAMED = ("list_high",)                    # the folds whose line names their tickers
+SSR_NEW_BLOCK_KEYS = ("title", "counts_text", "tier_note", "window_text", "asof_text", "status_text", "partial_text",
+                      "si_note", "list_note", "faults_text", "fault_text", "empty_text", "order_note", "rule_label",
+                      "rule_text", "note_text", "withheld_text", "n", "n_untiered", "groups")
+SSR_NEW_GROUP_KEYS = ("key", "summary", "count", "open", "rows")
+SSR_NEW_ROW_KEYS = ("symbol", "href", "at_text", "drop_text", "source_text", "mark_text", "si_text")
+SSR_NEW_COPIED = ("title", "window_text", "asof_text", "status_text", "partial_text", "faults_text", "fault_text",
+                  "rule_text", "note_text", "withheld_text")          # the engine's own served texts, copied as is
+
+SSR_NEW_FAULT = ("⛔ The list of names newly under SSR could not be built this time — the next re-read tries again. A "
+                 "missing list does not mean no name triggered.")
+SSR_NEW_SI_UNREAD = ("Short interest could not be read this time — the names are not split or ordered by it, and a "
+                     "missing 🩳 does not mean a name has none.")
+SSR_NEW_LIST_UNREAD = "His list is empty or could not be read this time — the names are not split by it."
+SSR_NEW_RULE_LABEL = "ⓘ how this list is read"
+SSR_NEW_TIER_NOTE = ("{U} of the {n} names are not tiered — no current short interest % of float on file — so the {hi} "
+                     "/ {ex} counts are a floor, and a name under “not tiered” may still be heavily shorted.")
+SSR_NEW_UNTIERED_TAIL = " ({u} not tiered)"
+SSR_NEW_ORDER_NOTE = ("Inside each fold: {ex} first, then {hi}, then the lower tiers, then the names not tiered; inside "
+                      "each, the highest short interest % of float first; a name with no % of float goes last, A to Z.")
+SSR_NEW_SUMMARY = {
+    "list_high": "🚩 on his list · {hi} or {ex} short interest — {k}: {tickers}",
+    "list_other": "🚩 on his list · short interest under {hi} or not tiered — {k}",
+    "high": "🩳 {hi} or {ex} short interest · not on his list — {k}",
+    "rest": "every other name — {k}",
+}
+SSR_NEW_SUMMARY_LIST_SI_UNREAD = "🚩 on his list — {k}"
+SSR_NEW_SUMMARY_HIGH_LIST_UNREAD = "🩳 {hi} or {ex} short interest — {k}"
+SSR_NEW_COUNTS = ("{n} names · {on_list} on his 🚩 list ({list_high} with {hi} or {ex} short interest) · {high} more "
+                  "with {hi} or {ex} short interest · {rest} others")
+SSR_NEW_COUNTS_SI_UNREAD = "{n} names · {on_list} on his 🚩 list · {rest} others"
+SSR_NEW_COUNTS_LIST_UNREAD = "{n} names · {high} with {hi} or {ex} short interest · {rest} others"
+SSR_NEW_COUNTS_BARE = "{n} names"
+SSR_NEW_RULES_LINE = ("⛔ New SSR names on the 🩳 High SI sub: every name whose short-sale restriction started in the "
+                      "session shown, read by the ⛔ SSR tag's own rules, in four folds — on his 🚩 list with {hi} or "
+                      "{ex} short interest, on his list otherwise, {hi} or {ex} off his list, every other name. A name "
+                      "with no current short interest % of float on file is counted as not tiered. A list only: it "
+                      "pushes nothing, gates nothing, sorts no 🩳 card and enters no lane. UNMEASURED.")
+
+
+def _ssr_read(session, now):
+    """The engine's answer for the session shown — the ONE import of the ⛔ SSR engine in this module."""
+    from short_interest import ssr as SSR
+    return SSR.new_triggers(session, now=now)
+
+
+def _ssr_s(x) -> Optional[str]:
+    return x if isinstance(x, str) and x.strip() else None
+
+
+def ssr_si_text(b) -> Optional[str]:
+    """The house 🩳 chip AS IS whenever the block carries one — any basis (float, shares out, a share count) [C2]."""
+    return _ssr_s(b.get("chip")) if isinstance(b, dict) else None
+
+
+def ssr_tiered(b) -> bool:
+    """True when the house read gave the name a tier word (SR.si_tier: float basis AND an ok read)."""
+    return isinstance(b, dict) and b.get("tier") in SR.TIER_ORDER
+
+
+def ssr_new_rank(b) -> tuple:
+    """Inside a fold: EXTREME, High, Moderate, Low, then no tier; inside each the highest % of float; no % last."""
+    t = -SR.TIER_ORDER.index(b.get("tier")) if ssr_tiered(b) else 1
+    p = _f(b.get("pct_of_float")) if isinstance(b, dict) else None
+    return (t, 0, -p) if p is not None else (t, 1, 0)
+
+
+def ssr_new_fault() -> dict:
+    out = {k: None for k in SSR_NEW_BLOCK_KEYS}
+    out["fault_text"] = SSR_NEW_FAULT
+    out["groups"] = []
+    return out
+
+
+def ssr_new_rules_line() -> str:
+    """The ℹ️ sentence for the new list — the tier words read at call time [C7a]."""
+    return SSR_NEW_RULES_LINE.format(hi=_w(SR.TIER_HIGH), ex=_w(SR.TIER_EXTREME))
+
+
+def ssr_new_block(listed, *, session, now, tf, v=None, ssr_read: Optional[Callable] = None,
+                  si_read: Optional[Callable] = None) -> dict:
+    """The ⛔ new-today section (served as high_si.ssr_new). Copies the engine's texts, splits its rows into the four
+    SSR_NEW_GROUPS folds and orders each by ssr_new_rank. Unknown is never a yes. Never raises (→ ssr_new_fault())."""
+    try:
+        ans = (ssr_read or _ssr_read)(session, now)
+        if not isinstance(ans, dict) or ans.get("kind") != SSR_NEW_KIND:
+            return ssr_new_fault()
+        hi, ex = _w(SR.TIER_HIGH), _w(SR.TIER_EXTREME)
+        out = {k: None for k in SSR_NEW_BLOCK_KEYS}
+        for k in SSR_NEW_COPIED:
+            out[k] = _ssr_s(ans.get(k))
+        out["rule_label"] = SSR_NEW_RULE_LABEL
+        out["groups"] = []
+        if ans.get("status") != "ok" or out["fault_text"] is not None:
+            return out
+        raw = ans.get("rows")
+        rows = [(r["symbol"].strip(), r) for r in (raw if isinstance(raw, list) else [])
+                if isinstance(r, dict) and _ssr_s(r.get("symbol"))]
+        n = len(rows)
+        out["n"] = n
+        if not rows:
+            out["empty_text"] = _ssr_s(ans.get("empty_text"))
+            out["n_untiered"] = 0
+            return out
+        from chart_maps.gajjala import store as ST
+        from chart_maps.gajjala import tab as GT
+        syms = [s for s, _r in rows]
+        try:
+            blocks = si_read(syms) if si_read is not None else si_blocks(syms, today=GT._et(now).date())
+        except Exception as exc:                                    # noqa: BLE001 — the list stands, said so
+            log.warning("gajjala high si: ssr new si read failed: %s", type(exc).__name__)
+            blocks = None
+        si_ok = isinstance(blocks, dict)
+        list_ok = isinstance(listed, dict) and bool(listed)
+        on_keys = {ST.broker_fold(k) for k in listed} - {""} if list_ok else set()
+        by: dict = {g: [] for g in SSR_NEW_GROUPS}
+        untiered = {g: 0 for g in SSR_NEW_GROUPS}
+        for sym, r in rows:
+            b = blocks.get(sym.upper()) if si_ok else None
+            b = b if isinstance(b, dict) else None
+            high = si_ok and ssr_tiered(b) and b.get("tier") in TIERS
+            if list_ok and ST.broker_fold(sym) in on_keys:
+                g = "list_high" if high else "list_other"
+            else:
+                g = "high" if high else "rest"
+            if si_ok and not ssr_tiered(b):
+                untiered[g] += 1
+            try:
+                href = GT.chart_href(sym, tf, v)
+            except Exception:                                       # noqa: BLE001 — a row never needs its link
+                href = None
+            row = {"symbol": sym, "href": href, "at_text": _ssr_s(r.get("at_text")),
+                   "drop_text": _ssr_s(r.get("drop_text")), "source_text": _ssr_s(r.get("source_text")),
+                   "mark_text": _ssr_s(r.get("mark_text")), "si_text": ssr_si_text(b) if si_ok else None}
+            by[g].append((ssr_new_rank(b) + (sym,), row))
+        for g in SSR_NEW_GROUPS:
+            items = [row for _k, row in sorted(by[g], key=lambda x: x[0])]
+            if not items:
+                continue
+            k = len(items)
+            if g == "list_other" and not si_ok:
+                summary = SSR_NEW_SUMMARY_LIST_SI_UNREAD.format(k=k)
+            elif g == "high" and not list_ok:
+                summary = SSR_NEW_SUMMARY_HIGH_LIST_UNREAD.format(hi=hi, ex=ex, k=k)
+            else:
+                summary = SSR_NEW_SUMMARY[g].format(hi=hi, ex=ex, k=k, tickers=" ".join(r["symbol"] for r in items))
+            if g in SSR_NEW_MIXED and si_ok and untiered[g] > 0:
+                summary += SSR_NEW_UNTIERED_TAIL.format(u=untiered[g])
+            out["groups"].append({"key": g, "summary": summary, "count": k, "open": g in SSR_NEW_OPEN,
+                                  "rows": items})
+        c = {g: len(by[g]) for g in SSR_NEW_GROUPS}
+        fmt = dict(n=n, hi=hi, ex=ex, on_list=c["list_high"] + c["list_other"], list_high=c["list_high"],
+                   high=c["high"], rest=c["rest"])
+        tmpl = (SSR_NEW_COUNTS if si_ok and list_ok else SSR_NEW_COUNTS_SI_UNREAD if list_ok
+                else SSR_NEW_COUNTS_LIST_UNREAD if si_ok else SSR_NEW_COUNTS_BARE)
+        parts = [tmpl.format(**fmt)] + [t for t in (_ssr_s(ans.get("sources_text")),
+                                                     _ssr_s(ans.get("retriggered_text"))) if t]
+        out["counts_text"] = " · ".join(parts)
+        total = sum(untiered.values())
+        out["n_untiered"] = total if si_ok else None
+        out["tier_note"] = SSR_NEW_TIER_NOTE.format(U=total, n=n, hi=hi, ex=ex) if si_ok and total > 0 else None
+        out["si_note"] = None if si_ok else SSR_NEW_SI_UNREAD
+        out["list_note"] = None if list_ok else SSR_NEW_LIST_UNREAD
+        out["order_note"] = SSR_NEW_ORDER_NOTE.format(hi=hi, ex=ex) if si_ok else None
+        return out
+    except Exception as exc:                                        # noqa: BLE001 — the 🩳 sub never goes down for it
+        log.warning("gajjala high si: ssr new list failed: %s", type(exc).__name__)
+        return ssr_new_fault()
+
+
 # ── the served block ────────────────────────────────────────────────────────────────────────────────────────────
 def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, in_window: bool, tf: str, lim: int,
           scan_row: Callable, sess: dict, halts_by: dict, listed: dict, pass_at, flags, v, st=None,
-          sho_read: Optional[Callable] = None) -> Optional[dict]:
+          sho_read: Optional[Callable] = None, ssr_read: Optional[Callable] = None,
+          ssr_si_read: Optional[Callable] = None) -> Optional[dict]:
     """The 🩳 sub's served block (+ `_tiles`, popped by tab.build). None ONLY when the evaluation faulted (`ev` None →
-    tab serves FAULT_TEXT). `lim` is used for `shown_text` only (tab.build makes the cut; `flags` = its broker order)."""
+    tab serves FAULT_TEXT). `lim` is used for `shown_text` only (tab.build makes the cut; `flags` = its broker order).
+    `ssr_new` = the ⛔ new-today section (ssr_new_block), fenced on its own — it never moves a card or a text above."""
     if ev is None:
         return None
     rows = list(ev.get("rows") or [])
@@ -782,6 +965,12 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
     out["chartless"] = chartless
     out["faults"] = faults
     out["faults_text"] = FAULTS_TEXT.format(n=len(faults)) if faults else None
+    try:
+        out[SSR_NEW_KEY] = ssr_new_block(listed, session=session, now=now, tf=tf, v=v, ssr_read=ssr_read,
+                                         si_read=ssr_si_read)
+    except Exception as exc:                                        # noqa: BLE001 — the cards stand
+        log.warning("gajjala high si: ssr new section failed: %s", type(exc).__name__)
+        out[SSR_NEW_KEY] = ssr_new_fault()
     out["_tiles"] = tiles
     return out
 
@@ -791,4 +980,9 @@ __all__ = ["TIERS", "STATE", "REASONS", "NOT_ADVICE", "ASK_TEXT", "RULE_LABEL", 
            "SHOWN_TEXT", "FAULT_TEXT", "FAULTS_TEXT", "CHARTLESS_TEXT", "push_mode", "si_blocks", "float_shares",
            "card_pct", "classify", "evaluate", "title", "rule_text", "push_text", "honesty", "cohort_text",
            "counts_text", "adds_text", "asof_text", "floats_text", "sho_text", "excluded_text", "disagree_text",
-           "no_tier_text", "empty_today", "empty_session", "volume_row", "cross_row", "rang_today", "card", "block"]
+           "no_tier_text", "empty_today", "empty_session", "volume_row", "cross_row", "rang_today", "card", "block",
+           "SSR_NEW_KEY", "SSR_NEW_KIND", "SSR_NEW_GROUPS", "SSR_NEW_MIXED", "SSR_NEW_OPEN", "SSR_NEW_NAMED",
+           "SSR_NEW_BLOCK_KEYS", "SSR_NEW_GROUP_KEYS", "SSR_NEW_ROW_KEYS", "SSR_NEW_FAULT", "SSR_NEW_SI_UNREAD",
+           "SSR_NEW_LIST_UNREAD", "SSR_NEW_RULE_LABEL", "SSR_NEW_TIER_NOTE", "SSR_NEW_UNTIERED_TAIL",
+           "SSR_NEW_ORDER_NOTE", "SSR_NEW_RULES_LINE", "ssr_si_text", "ssr_tiered", "ssr_new_rank", "ssr_new_fault",
+           "ssr_new_rules_line", "ssr_new_block"]
