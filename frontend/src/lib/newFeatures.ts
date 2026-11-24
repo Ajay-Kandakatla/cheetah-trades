@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "Hide all of this nouce besides the scan button and log trade button no explantions on the
+  // landing pages anymor" · "Add all of this too" · "Collapse all of this too". FE only: lib/ggFold.ts + GgFold.tsx (one
+  // closed-by-default fold per header and per sub, remembered per browser). Docs docs/gajjala/landing_declutter_2026_11_24.md.
+  {
+    id: 'gajjala-landing-declutter-2026-11-24',
+    label: "🧹 A clean 🚩 page — you said: “Hide all of this nouce besides the scan button and log trade button no explantions on the landing pages anymor” · “Add all of this too” · “Collapse all of this too”. Above the cards you now see only 🔄 scan now and 🧾 log trade. Every explanation — the rules, the Enterable filter, the runner and algo888 lines, the scan status, the Fidelity list, the Day read, the phone-alert boxes and the 🩳 High SI text with its ⛔ SSR list — sits behind one small ⓘ, closed until you open it; it remembers your choice. A real problem (a failed scan, stale data, a fault) still shows. Nothing was deleted and no alert, filter or rule changed.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-24, verbatim: "Yeah please" + "Make sure we are looking for Dilution.." + "Also split related events and
   // filing so we flag them in the right way". BE short_interest/share_basis.py (SEC cover counts + filings, Massive splits,
   // the float track; background worker kicked by /short-interest/map) + short_interest/basis_math.py (the PURE verdict) +
