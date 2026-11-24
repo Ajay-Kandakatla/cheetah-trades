@@ -149,14 +149,15 @@ def test_subs_title_is_the_potential_text_on_the_brain_sub_only():
     pot = legend_by()["potential"]["text"]
     for sub in ("bull_flag", GC.POTENTIAL_SUB, "premarket"):
         subs = build(sub, st)["subs"]
-        assert len(subs) == len(GC.SUBS) == 13                               # WIDENED 2026-11-13 — 📋 All strategies first
+        assert len(subs) == len(GC.SUBS) == 14                               # WIDENED 2026-11-13 — 📋 All strategies first
+        # WIDENED 2026-11-23 — 🩳 High SI after 🌱 (GG5 only; docs/gajjala/high_si_sub_2026_11_23.md)
         # WIDENED 2026-11-18 — 🧨 Divergence after 🎾 (GG5 only; docs/gajjala/divergence_sub_2026_11_18.md)
         # WIDENED 2026-11-18 — 🌱 Diverging after 🧨 (GG5 only; docs/gajjala/diverging_sub_2026_11_18.md)
         titled = [s["key"] for s in subs if s["title"] is not None]
         assert titled == [GC.POTENTIAL_SUB]
         assert next(s for s in subs if s["key"] == GC.POTENTIAL_SUB)["title"] == pot
         others = [s for s in subs if s["key"] != GC.POTENTIAL_SUB]
-        assert len(others) == 12 and all(s["title"] is None for s in others)  # NEGATIVE: None on the other twelve (WIDENED 2026-11-18 — 🌱 Diverging after 🧨)
+        assert len(others) == 13 and all(s["title"] is None for s in others)  # NEGATIVE: None on the other thirteen (WIDENED 2026-11-18 — 🌱 Diverging after 🧨; WIDENED 2026-11-23 — 🩳 High SI after 🌱)
         assert all("title" in s for s in subs)
 
 

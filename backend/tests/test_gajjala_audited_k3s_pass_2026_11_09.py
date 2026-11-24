@@ -362,7 +362,8 @@ def test_the_push_mode_and_the_keep_set_never_move(monkeypatch):
     _step(gga_store(), {SYM: {SQ: r}}, {SYM: fr}, floats={SYM: FLOAT}, sv={SYM: FLOOR})
     assert GC.GAJJALA_AUDITED_PUSH_MODE == before == "shadow"
     # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
-    assert len(subs.OWNER_KEEP_SET) == 8 and "gajjala_audited_setup" not in subs.OWNER_KEEP_SET
+    # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
+    assert len(subs.OWNER_KEEP_SET) == 9 and "gajjala_audited_setup" not in subs.OWNER_KEEP_SET
 
 
 def test_claimed_before_is_unjudged_and_the_marker_says_so(monkeypatch):

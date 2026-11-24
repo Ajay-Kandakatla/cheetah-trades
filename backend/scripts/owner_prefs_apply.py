@@ -40,6 +40,13 @@ re-run after the api deploy, before cron. The dry-run shows `long_term
 None→True` or `False→True` on each of his devices — both are the expected diff.
 The code is unchanged: ON / OFF are still derived from subs.
 
+2026-11-23 (Ajay: "And also add alerts for these talks when they are crossing
+EMA, 9 EMA over 21 EMA."): `gajjala_si_cross` (the 🩳 High SI sub's 9 / 21 EMA
+cross push) joined OWNER_KEEP_SET (NINE kinds) — re-run after the api deploy,
+before cron. The dry-run shows `gajjala_si_cross None→True` or `False→True` on
+each of his devices — both are the expected diff. The code is unchanged: ON /
+OFF are still derived from subs.
+
 NOT A GATE AND NOT A RULE. It flips per-device preference flags — which KINDS
 may reach him. What any kind requires to fire is untouched, and every muted
 kind's cron keeps running (the PREF kills an alert, not the cron).

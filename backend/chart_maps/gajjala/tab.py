@@ -1231,6 +1231,13 @@ def _bars_to_go(read: dict) -> Optional[int]:
     return max(0, need - have)
 
 
+def vol_float_slot(volume, float_shares) -> tuple:
+    """(volume DESC unknown last, float ASC unknown last) — the ONE sort slot of every Gajjala card board (🩳 2026-11-23:
+    order_key and high_si.evaluate both call it, so the 🩳 sub sorts exactly as every other card sub)."""
+    vol = _f(volume)
+    return (-vol if vol is not None else float("inf"), float(float_shares) if float_shares else float("inf"))
+
+
 def order_key(t: dict) -> tuple:
     """BUILD_SPEC §3.4.1 ordering keys: state rank; A+/triggered/stopped newest entry first; ready forming nearest
     its trigger; forming by bars to go; partial by fewest misses, then biggest change; final tie the symbol.
@@ -1258,11 +1265,8 @@ def order_key(t: dict) -> tuple:
     g = t.get("gajjala") or {}
     key = _state_key(g, t.get("symbol") or "")
     has_fl = g.get("setup") in GC.FLOAT_SORT_SETUPS and "_float_shares" in g     # 2026-11-09: every setup sub
-    fl = g.get("_float_shares")
-    fkey = float(fl) if fl else float("inf")
     has_vol = g.get("setup") in GC.VOLUME_SORT_SETUPS and "_volume" in g        # 2026-11-09 ~10:25 ET: volume FIRST (his word)
-    vol = _f(g.get("_volume"))
-    vkey = -vol if vol is not None else float("inf")                             # highest on top, unknown last
+    vkey, fkey = vol_float_slot(g.get("_volume"), g.get("_float_shares"))       # 🩳 2026-11-23 — the ONE slot helper
     sk = ((vkey,) if has_vol else ()) + ((fkey,) if has_fl else ())             # the sort slot: volume, then float
     sk = _kf_slot(g) + sk                                                        # 💋 2026-11-11: rel volume + 9 EMA distance first
     if g.get("setup") == "horizontal_fade" and "_ema_gap_pct" in g:
@@ -1866,7 +1870,7 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
         return d, "default"
     if s == GC.TABLE_SUB and not table_on(v):                      # 📋 GG5 + (2026-11-16) the 1-minute page; 🧪 fails open
         return GC.DEFAULT_SUB, "default"
-    if s in GC.GG5_ONLY_SUBS and s != GC.TABLE_SUB and not V.is_gg5(V.of(v)):   # 🧨 / 🌱 2026-11-18 — GG5 only; 1-minute / 🧪 fail open
+    if s in GC.GG5_ONLY_SUBS and s != GC.TABLE_SUB and not V.is_gg5(V.of(v)):   # 🧨 / 🌱 2026-11-18 (+ 🩳 2026-11-23) — GG5 only; 1-minute / 🧪 fail open
         return GC.DEFAULT_SUB, "default"
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
@@ -2689,6 +2693,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     from chart_maps.gajjala import diverging_tab as DGT              # 🌱 2026-11-18 — ONE evaluation per build (chip + block)
     dvg = (_soft("diverging read", DGT.evaluate, reads_by, scan_row=_row, session=session, v=v, default=None)
            if gg5 else None)
+    from chart_maps.gajjala import high_si as HS                   # 🩳 2026-11-23 — ONE evaluation per build (chip + block)
+    hsi = (_soft("high si read", HS.evaluate, reads_by, scan_row=_row, session=session, now=now, v=v, listed=listed,
+                 default=None) if gg5 else None)
     subs = []
     for key, e, label in GC.SUBS:
         if key == GC.TABLE_SUB and not table_on(v):   # 📋 GG5 + the 1-minute page (2026-11-16); the 🧪 strip never shows it
@@ -2704,6 +2711,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
             n = _soft("divergence count", DVT.count_today, st, session, default=None)
         elif key == GC.DIVERGING_SUB:           # 🌱 2026-11-18 — names diverging on their latest stored bar (None on a fault)
             n = None if dvg is None else len(dvg["rows"])
+        elif key == GC.HIGH_SI_SUB:             # 🩳 2026-11-23 — names listed by the High SI rule (None on a fault)
+            n = None if hsi is None else len(hsi["rows"])
         else:
             n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
                  else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
@@ -2843,6 +2852,13 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["diverging"] = blk
         out["tiles"] = broker_bottom((blk or {}).pop("_tiles", [])[:lim], order_flags)
         out["empty_note"] = None if blk else DGT.FAULT_TEXT
+    elif sub_k == GC.HIGH_SI_SUB:                   # 🩳 2026-11-23 — GG5 only (resolve_sub fails open elsewhere); display only
+        blk = _soft("high si", HS.block, hsi, session=session, now=now, is_today=is_today, in_window=in_window,
+                    tf=tf_k, lim=lim, scan_row=_row, sess=sess, halts_by=halts_by, listed=listed, pass_at=pass_at,
+                    flags=order_flags, v=v, st=st, default=None)
+        out["high_si"] = blk
+        out["tiles"] = broker_bottom((blk or {}).pop("_tiles", [])[:lim], order_flags)
+        out["empty_note"] = None if blk else HS.FAULT_TEXT
     elif sub_k == GC.LEDGER_SUB:
         LG = _ledger()
         span_s = span if isinstance(span, str) else ""
@@ -2888,4 +2904,4 @@ __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT"
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
            "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
            "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT", "ema_blink_of", "is_blink_sort", "blink_sorted",
-           "blink_board", "BLINK_SORT_DEFAULT"]
+           "blink_board", "BLINK_SORT_DEFAULT", "vol_float_slot"]

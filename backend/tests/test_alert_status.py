@@ -179,6 +179,8 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                                 "gajjala_audited_setup",
                                 # WIDENED 2026-11-01: 🥇 Luk's pass-health row (Ajay "pic the next best one like Gajjala … Implement their strategy") — NINETEEN: LIVE since 2026-11-01 by his call (Ajay: 'Lets make it live. also alerts too.') — a push kind AND the pass-health row
                                 "luk_setup",
+                                # WIDENED 2026-11-23: 🩳 gajjala_si_cross (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — TWENTY: the High SI cross push's pass doc riding the 🚩 pass
+                                "gajjala_si_cross",
                                 "tape_burst_highbeta", "tape_burst_chartmaps",
                                 "tape_control",   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — FOURTEEN: rides trade-flash-watch, its own pass doc
                                 "earnings_reaction", "board_arrival:bonde",
@@ -329,13 +331,16 @@ def test_cadence_sec_matches_the_crontab():
                               # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — the audit overlay rides the 🚩 line: no crontab line of its own
                               "gajjala_audited_setup": seconds(minute_field("chart_maps.gajjala.run")),
                               # WIDENED 2026-11-01: 🥇 Luk's pass-health row (Ajay "pic the next best one like Gajjala … Implement their strategy") — LIVE since 2026-11-01 by his call (Ajay: 'Lets make it live. also alerts too.') — a push kind AND the pass-health row — Luk's child is spawned by the 🚩 pass: no crontab line of its own
-                              "luk_setup": seconds(minute_field("chart_maps.gajjala.run"))}
+                              "luk_setup": seconds(minute_field("chart_maps.gajjala.run")),
+                              # WIDENED 2026-11-23: 🩳 gajjala_si_cross (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — rides the 🚩 line: no crontab line of its own
+                              "gajjala_si_cross": seconds(minute_field("chart_maps.gajjala.run"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
                               "gajjala_audited_setup": 300,   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — rides the 🚩 line, recorded in shadow, never sent
                               "luk_setup": 300,   # WIDENED 2026-11-01: 🥇 Luk's pass-health row (Ajay "pic the next best one like Gajjala … Implement their strategy") — LIVE since 2026-11-01 by his call (Ajay: 'Lets make it live. also alerts too.') — a push kind AND the pass-health row
+                              "gajjala_si_cross": 300,   # WIDENED 2026-11-23: 🩳 gajjala_si_cross (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — rides the 🚩 line
                               "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert not [ln for ln in lines if "audited" in ln and not ln.lstrip().startswith("#")], \
@@ -426,6 +431,7 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
                                    "tape_burst_highbeta", "tape_burst_chartmaps",
                                    "gajjala_audited_setup",   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — an INTRADAY pass-health row riding the 🚩 line
                                    "luk_setup",   # WIDENED 2026-11-01: 🥇 Luk's pass-health row (Ajay "pic the next best one like Gajjala … Implement their strategy") — LIVE since 2026-11-01 by his call (Ajay: 'Lets make it live. also alerts too.') — a push kind AND the pass-health row — an INTRADAY pass-health row spawned by the 🚩 pass
+                                   "gajjala_si_cross",   # WIDENED 2026-11-23: 🩳 gajjala_si_cross (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — an INTRADAY pass riding the 🚩 line
                                    "gajjala_1m_setup", "gajjala_1m_potential",   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                                    "tape_control"}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
@@ -434,6 +440,7 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
                               "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
                               "gajjala_audited_setup": 300,   # WIDENED 2026-11-01: 🧪 Gajjala · Audited inserted (Ajay "create a new tab for Gajjals when you modifiy with audit of End of day.. Gajjals-Audited") — rides the 🚩 line, recorded in shadow, never sent
                               "luk_setup": 300,   # WIDENED 2026-11-01: 🥇 Luk's pass-health row (Ajay "pic the next best one like Gajjala … Implement their strategy") — LIVE since 2026-11-01 by his call (Ajay: 'Lets make it live. also alerts too.') — a push kind AND the pass-health row
+                              "gajjala_si_cross": 300,   # WIDENED 2026-11-23: 🩳 gajjala_si_cross (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — rides the 🚩 line
                               "gajjala_1m_setup": 60, "gajjala_1m_potential": 60,   # WIDENED 2026-10-27: 🚩 1-minute page inserted (BUILD_SPEC27 §3.7 — Ajay "do the same logic of Gajjalas but on 1 min candles"; both kinds recorded in shadow, never sent)
                               "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
 

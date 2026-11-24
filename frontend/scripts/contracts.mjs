@@ -1332,7 +1332,8 @@ const CONTRACTS = [
       const sk = /const STICKY_KINDS = \[([^\]]*)\]/.exec(sw);
       if (!sk) errs.push('sw.js lost const STICKY_KINDS');
       else for (const k of ['gajjala_setup', 'gajjala_1m_setup']) if (!sk[1].includes(`'${k}'`)) errs.push(`sw.js STICKY_KINDS must carry '${k}' (ggwaplus2)`);
-      if (sk && /'(gajjala_potential|gajjala_1m_potential|luk_setup|long_term)'/.test(sk[1])) errs.push('sw.js STICKY_KINDS: only the two 🚩 A+ kinds join — never a 🧠 / Luk / long_term kind');
+      // WIDENED 2026-11-23 — 🩳 gajjala_si_cross joins the never-sticky list (spec highsi §7 HIS CALL #18: sticky = A+ only).
+      if (sk && /'(gajjala_potential|gajjala_1m_potential|luk_setup|long_term|gajjala_si_cross)'/.test(sk[1])) errs.push('sw.js STICKY_KINDS: only the two 🚩 A+ kinds join — never a 🧠 / Luk / long_term / 🩳 kind');
       if (!/requireInteraction:\s*STICKY_KINDS\.indexOf\(payload\.kind\) >= 0/.test(sw)) errs.push('sw.js: requireInteraction must read STICKY_KINDS');
       const lp = read('../backend/chart_maps/gajjala_watch/loop.py');
       const ok = /^AUTO_OUT_KEYS = \(([\s\S]*?)\)\s*(?:#[^\n]*)?\n/m.exec(lp);
@@ -13499,12 +13500,13 @@ const CONTRACTS = [
       // live (2026-11-01)" pins the seventh kind's registry; this block still pins the 10-29 six are all in it.
       // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's
       // zones …" / "Weekly and if something gets dropped let me know …"). The name SEVEN is kept; it holds eight.
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone"). The name SEVEN is kept; it holds nine.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       // 1. the keep-set — exactly the seven
       const subs = tryRead('../backend/push/subs.py', 'subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the eight: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the nine: ${SEVEN.join(', ')}`);
       // 2. the 1-minute push mode — live, tagged his
       const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
       const ml = /^GAJJALA_1M_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
@@ -14047,7 +14049,7 @@ const CONTRACTS = [
       if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
       // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
       if (/gajjala_audited/.test(subs)) errs.push('push/subs.py names gajjala_audited — the audited tab has NO push kind (HIS CALL #1)');
-      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly eight (🥇 luk_setup joined 2026-11-01; 📅 long_term 2026-11-12; 🧪 never)');
+      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly nine (🥇 luk_setup joined 2026-11-01; 📅 long_term 2026-11-12; 🩳 gajjala_si_cross 2026-11-23; 🧪 never)');
       const cron = tryRead('../backend/crontab', 'crontab');
       if (cron && /audited/.test(cron)) errs.push('backend/crontab names the audit — the overlay rides the 🚩 line; the host crontab is never edited by a deploy');
       // the registry + the frozen sources [C1]
@@ -14660,7 +14662,8 @@ const CONTRACTS = [
       const HIS = 'Lets make it live. also alerts too.';
       // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
       // — the 8th kind is long_term; this block still pins luk_setup is in it with his dated comment.
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone"). The name SEVEN is kept; it holds nine.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       /** the source of a top-level python NAME = … assignment, up to the next top-level statement. */
       const pyBlock = (py, n) => {
@@ -14681,7 +14684,7 @@ const CONTRACTS = [
       // 1. the keep-set — exactly the seven; default_prefs False for everyone else.
       const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the eight: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the nine: ${SEVEN.join(', ')}`);
       const ksAt = subs.search(/^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{/m);
       const ksBody = ksAt < 0 ? '' : subs.slice(ksAt, subs.indexOf('})', ksAt));
       if (!ksBody.includes(HIS.split(' also')[0]) || !/"luk_setup",/.test(ksBody)) errs.push('OWNER_KEEP_SET must carry "luk_setup" under its own dated comment quoting him (inside the braces, the pattern of every kind)');
@@ -15662,7 +15665,8 @@ const CONTRACTS = [
       if (subs) {
         const ks = keepSet(subs);
         // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
-        if (ks.length !== 8) errs.push(`OWNER_KEEP_SET must stay exactly eight (found ${ks.length})`);
+        // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone")
+        if (ks.length !== 9) errs.push(`OWNER_KEEP_SET must stay exactly nine (found ${ks.length})`);
         if (ks.some((k) => /audited|k3s/i.test(k))) errs.push('OWNER_KEEP_SET carries an audited / K3S kind — 🧪 never pushes');
         if (/k3s/i.test(subs)) errs.push('push/subs.py names K3S — the admit has no push kind');
       }
@@ -15936,7 +15940,8 @@ const CONTRACTS = [
       if (subs) {
         const ks = keepSet(subs);
         // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
-        if (ks.length !== 8) errs.push(`OWNER_KEEP_SET must stay exactly eight (found ${ks.length})`);
+        // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone")
+        if (ks.length !== 9) errs.push(`OWNER_KEEP_SET must stay exactly nine (found ${ks.length})`);
         if (ks.some((k) => /stream|latency|live_feed|bar_close|gajjala_update/i.test(k))) errs.push('OWNER_KEEP_SET carries a GG LIVE kind — the live build adds no push kind');
       }
 
@@ -16088,7 +16093,8 @@ const CONTRACTS = [
         if (!/key\[:1\] \+ sk \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then the sort slot sk (volume, then float ascending), then today\'s key');
         if (!/\(0,\) \+ sk \+ key/.test(ok)) errs.push('tab.order_key: "global" = the sort slot above the state rank');
         if (!/\(\(fkey,\) if has_fl else \(\)\)/.test(ok)) errs.push('tab.order_key: the float key must still sit in the sort slot (sk) — his 2026-10-18 call is the key after the volume');
-        if (!/float\("inf"\)/.test(ok)) errs.push('tab.order_key: an unknown float must sort LAST (float("inf"))');
+        // RE-PINNED 2026-11-23 (🩳 spec highsi §3.3.1): the float key's value lives in tab.vol_float_slot (order_key calls it).
+        if (!/float\(float_shares\) if float_shares else float\("inf"\)/.test(pyFn(tab, 'vol_float_slot') || '')) errs.push('tab.vol_float_slot: an unknown float must sort LAST (float("inf")), the float ascending');
       }
       const stile = pyFn(tab, 'setup_tile') || '';
       if (!/if setup in GC\.FLOAT_SORT_SETUPS:/.test(stile)) errs.push('tab.setup_tile must stash _float_shares for every setup in GC.FLOAT_SORT_SETUPS (the float chip\'s own read, no new fetch)');
@@ -16149,7 +16155,11 @@ const CONTRACTS = [
       if (!ok) errs.push('tab.py lost def order_key(');
       else {
         if (!/g\.get\("setup"\) in GC\.VOLUME_SORT_SETUPS and "_volume" in g/.test(ok)) errs.push('tab.order_key must take the volume key for every setup in GC.VOLUME_SORT_SETUPS whose card carries _volume');
-        if (!/vkey = -vol if vol is not None else float\("inf"\)/.test(ok)) errs.push('tab.order_key: the volume key is -volume (highest on top), an unknown volume LAST (float("inf"))');
+        // RE-PINNED 2026-11-23 (🩳 High SI sub, spec highsi §3.3.1): the slot values moved into tab.vol_float_slot, the ONE
+        // helper order_key and high_si.evaluate both call — same values, so every exact-tuple pin on order_key holds.
+        if (!/vkey, fkey = vol_float_slot\(g\.get\("_volume"\), g\.get\("_float_shares"\)\)/.test(ok)) errs.push('tab.order_key must take (vkey, fkey) from vol_float_slot(g.get("_volume"), g.get("_float_shares")) — the ONE slot helper');
+        const vfs = pyFn(tab, 'vol_float_slot') || '';
+        if (!/-vol if vol is not None else float\("inf"\)/.test(vfs)) errs.push('tab.vol_float_slot: the volume key is -volume (highest on top), an unknown volume LAST (float("inf"))');
         if (!/sk = \(\(vkey,\) if has_vol else \(\)\) \+ \(\(fkey,\) if has_fl else \(\)\)/.test(ok)) errs.push('tab.order_key: the sort slot sk must be (volume, then float) — volume BEFORE the float (his 2026-11-09 word over his 2026-10-18 word); since 2026-11-11 💋 alone takes tab._kf_slot (relative volume, 9 EMA distance) AHEAD of it');
         if (!/ft = sk/.test(ok) || !/\(_PRE_BREAK_RANK, gkey\) \+ ft \+ key/.test(ok)) errs.push('tab.order_key: ➖ pre_break must rank by the EMA gap FIRST and take the slot (volume, float) right after it');
         if (!/key\[:1\] \+ sk \+ key\[1:\]/.test(ok)) errs.push('tab.order_key: "within_state" = state rank, then the slot, then today\'s key');
@@ -17890,6 +17900,160 @@ const CONTRACTS = [
       for (const k of ['ONE_MIN_CANDLE_UP', 'ONE_MIN_CANDLE_DN', 'ONE_MIN_EXT_OPACITY', 'ONE_MIN_CANDLE_GAP_PX']) if (!new RegExp(`export const ${k}\\b`).test(cm)) errs.push(`chartMaps.ts must export ${k}`);
       if (!/function oneMinBodyWidth\(/.test(cm)) errs.push('chartMaps.ts must keep oneMinBodyWidth (device-px sizing)');
       if (!read('src/lib/newFeatures.ts').includes('On the 1 mins chart make the bard lil more bright please.')) errs.push('the 🕯 ✨ entry must quote him verbatim');
+      return errs;
+    },
+  },
+  {
+    name: '🩳 High SI sub + 9/21 EMA cross push (2026-11-23)',
+    file: '../backend/chart_maps/gajjala/constants.py',
+    // Ajay 2026-11-23 (voice-typed): "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and
+    // low floats similar to what we've done in Divergent tab under Gazilla? And also add alerts for these talks when they
+    // are crossing EMA, 9 EMA over 21 EMA." + "New tab like divergence*". Question card: High / EXTREME SI + float <=
+    // K8_MAX_FLOAT, 🔒 SHO a tag · "5 mins and 15 mins" · "Live to my phone". Spec highsi §3.10 (ship shape S2; gate V0
+    // checked against the session transcript by the main session). The mode and the nine registries move TOGETHER: a
+    // "live" mode with a missing registry, or a registry with an "off" mode, fails here. UNMEASURED.
+    checks: (gc) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const K = 'gajjala_si_cross';
+      const HIS1 = "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats similar to what we've done in Divergent tab under Gazilla?";
+      const HIS2 = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
+      const ID = 'gajjala-high-si-sub-2026-11-23';
+
+      // 1. the sub — right after 🌱, GG5 only (GG_SUBS == SUBS is pinned by its own block)
+      if (!/\("diverging", "🌱", "Diverging"\),\s*\("high_si", "🩳", "High SI"\)/.test(gc)) errs.push('constants.SUBS must carry ("high_si", "🩳", "High SI") right after ("diverging", "🌱", "Diverging")');
+      if (!/^HIGH_SI_SUB = "high_si"/m.test(gc)) errs.push('constants.HIGH_SI_SUB must be "high_si"');
+      if (!/^GG5_ONLY_SUBS = \([^)\n]*\bHIGH_SI_SUB\b[^)\n]*\)/m.test(gc)) errs.push('constants.GG5_ONLY_SUBS must name HIGH_SI_SUB (the 1-min / 🧪 pages fail open off it)');
+
+      // 2. the membership rule — derived cap, house tiers, the two-float rule [C1]
+      if (!/^HIGH_SI_MAX_FLOAT = K8_MAX_FLOAT\b/m.test(gc)) errs.push('constants.HIGH_SI_MAX_FLOAT must be K8_MAX_FLOAT (derived, no digit)');
+      const hs = quiet('../backend/chart_maps/gajjala/high_si.py');
+      const hsCode = pyCode(hs).replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, '""');
+      const lits = [...hsCode.matchAll(/(?<![\w.])(\d[\d_]*(?:\.\d+)?)(?![\w.])/g)].map((m) => m[1]);
+      const bad = lits.filter((n) => n.includes('_') || (n.includes('.') && n !== '100.0') || (!n.includes('.') && (Number(n) >= 1000 || n === '10' || n === '20')));
+      if (bad.length) errs.push(`high_si.py types a tier / cap / floor literal (${[...new Set(bad)].join(', ')}) — read the house constants by name`);
+      if (!/^TIERS = \(SR\.TIER_HIGH, SR\.TIER_EXTREME\)/m.test(hs)) errs.push('high_si.TIERS must be (SR.TIER_HIGH, SR.TIER_EXTREME)');
+      const cl = pyCode(pyFn(hs, 'classify') || '');
+      if (!cl) errs.push('high_si.py lost def classify(');
+      else {
+        if (!/"floats_disagree"/.test(cl) || !/"si_float_over"/.test(cl)) errs.push('high_si.classify must name both "floats_disagree" and "si_float_over" (the two-float rule cannot be dropped silently)');
+        if (!/SR\.tier_of\(/.test(cl)) errs.push('high_si.classify must call SR.tier_of (the ONE ladder on the card\'s float)');
+      }
+
+      // 3. source guards — no second EMA engine, no fetch, no broadcast, never the lane
+      const hx = quiet('../backend/chart_maps/gajjala/high_si_cross.py');
+      for (const [rel, src] of [['high_si.py', hs], ['high_si_cross.py', hx]]) {
+        const code = pyCode(src);
+        for (const [re, what] of [[/\.ewm\(/, '.ewm('], [/signals\.ema\(/, 'signals.ema('], [/_masked_ema\(/, '_masked_ema('],
+          [/\bema9\b|\bema21\b/, 'an ema9 / ema21 comparison'], [/send_to_all/, 'send_to_all'], [/\brequests\b/, 'requests'],
+          [/websocket/i, 'a websocket'], [/frames_for\(/, 'frames_for('], [/^\s*(?:from|import)\s+trading\b/m, 'a trading import']]) {
+          if (re.test(code)) errs.push(`${rel} carries ${what} — the cross engine is ema_cross, the frames the pass's own`);
+        }
+      }
+      if (/load_day/.test(pyCode(hx))) errs.push('high_si_cross.py carries load_day — it reads the pass\'s frames only');
+
+      // 4. the mode and the registries move together [C13]
+      const ml = /^HIGH_SI_CROSS_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
+      const mode = ml ? ml[1] : null;
+      if (!ml) errs.push('constants.py lost HIGH_SI_CROSS_PUSH_MODE = "…"  # comment');
+      else if (mode !== 'live') errs.push(`constants.HIGH_SI_CROSS_PUSH_MODE must be "live" (ship shape S2 — his answer #3; found "${mode}")`);
+      else if (!/his answer #3/.test(ml[2])) errs.push('the live HIGH_SI_CROSS_PUSH_MODE line must say "his answer #3" in its comment');
+      if (!/^HIGH_SI_CROSS_PUSH_KIND = "gajjala_si_cross"/m.test(gc)) errs.push('constants.HIGH_SI_CROSS_PUSH_KIND must be "gajjala_si_cross"');
+      if (!/^HIGH_SI_CROSS_PUSH_MODES = FADE_CROSS_PUSH_MODES\b/m.test(gc)) errs.push('constants.HIGH_SI_CROSS_PUSH_MODES must be FADE_CROSS_PUSH_MODES (derived)');
+      const subs = quiet('../backend/push/subs.py');
+      const hooks = quiet('../backend/push/hooks.py');
+      const gate = quiet('../backend/market_hours/gate.py');
+      const ast = quiet('../backend/supply_demand/alert_status.py');
+      const ak = quiet('src/lib/alertKinds.ts');
+      const prefs = quiet('src/hooks/useNotificationPrefs.ts');
+      const notif = quiet('src/pages/Notifications.tsx');
+      const alerts = quiet('src/pages/Alerts.tsx');
+      const ks = keepSet(subs);
+      const dpAt = subs.indexOf('\ndef default_prefs(');
+      const dpEnd = dpAt < 0 ? -1 : subs.indexOf('\ndef ', dpAt + 1);
+      const dp = dpAt < 0 ? '' : subs.slice(dpAt, dpEnd < 0 ? undefined : dpEnd).replace(/#[^\n]*/g, '');
+      const hk = pyFn(hooks, 'notify_gajjala_si_cross') || '';
+      const market = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
+      const passKinds = (/^PASS_KINDS = \(([\s\S]*?)\n(?=\S)/m.exec(ast) || [])[1] || '';
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      const ggs = (/export const GGS_PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const passesBlock = (/const PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const chips = (/KIND_CHIPS: string\[\] = \[([^\]]*)\]/.exec(alerts) || [])[1] || '';
+      const REG = {
+        'push/subs.OWNER_KEEP_SET': ks.includes(K),
+        'push/subs.default_prefs (False)': new RegExp(`"${K}":\\s*False`).test(dp),
+        'push/hooks.notify_gajjala_si_cross → send_to_user': !!hk && /send_to_user\(/.test(hk) && new RegExp(`kind="${K}"`).test(hk),
+        'market_hours/gate.MARKET_ALERT_KINDS': market.includes(K),
+        'supply_demand/alert_status.PASS_KINDS': /^GAJJALA_SI_CROSS_KIND = "gajjala_si_cross"/m.test(ast) && /\bGAJJALA_SI_CROSS_KIND\b/.test(passKinds),
+        'lib/alertKinds.ts': new RegExp(`^\\s*${K}:\\s*\\{[^}]*emoji: '🩳'`, 'm').test(ak),
+        'hooks/useNotificationPrefs.ts': new RegExp(`\\b${K}\\?: boolean`).test(prefs),
+        'Notifications row': new RegExp(`key: '${K}'`).test(notif),
+        'Notifications Essentials preset (true)': new RegExp(`\\b${K}: true\\b`).test(ess),
+        'Alerts.tsx GGS_PASSES': new RegExp(`key: '${K}'`).test(ggs),
+        'Alerts.tsx KIND_CHIPS': chips.includes(`'${K}'`),
+      };
+      const missing = Object.entries(REG).filter(([, v]) => !v).map(([k]) => k);
+      const present = Object.entries(REG).filter(([, v]) => v).map(([k]) => k);
+      if (mode === 'live' && missing.length) errs.push(`HIGH_SI_CROSS_PUSH_MODE is "live" but ${K} is missing from: ${missing.join(' · ')}`);
+      if (mode === 'off' && present.length) errs.push(`HIGH_SI_CROSS_PUSH_MODE is "off" but ${K} is registered in: ${present.join(' · ')} — S1 registers nothing`);
+      if (ks.length !== (mode === 'live' ? 9 : 8)) errs.push(`OWNER_KEEP_SET must be exactly ${mode === 'live' ? 'NINE' : 'EIGHT'} kinds (found ${ks.length})`);
+      if ((hooks.match(/^def notify_gajjala_si_cross\(/gm) || []).length > 1) errs.push('push/hooks.py must define notify_gajjala_si_cross exactly once');
+      if (/send_to_all/.test(pyCode(hk))) errs.push('push/hooks.notify_gajjala_si_cross must never send_to_all — owner devices only');
+      if (chips.includes(`'${K}'`) && chips.indexOf(`'${K}'`) !== chips.indexOf("'gajjala_potential'") + "'gajjala_potential', ".length) errs.push(`Alerts.tsx KIND_CHIPS: '${K}' must sit right after 'gajjala_potential'`);
+      if (new RegExp(`'${K}'`).test(passesBlock)) errs.push(`Alerts.tsx PASSES must NOT carry ${K} — its own strip, outside the header count`);
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(quiet('../backend/push/recent.py')) || [])[1] || '';
+      if (new RegExp(`["']${K}["']`).test(itemBlock.replace(/#[^\n]*/g, ''))) errs.push(`push/recent.ITEM_URL_BY_KIND must NOT carry ${K} — the row links the stored url (no items)`);
+      const sk = (/const STICKY_KINDS = \[([^\]]*)\]/.exec(quiet('public/sw.js')) || [])[1] || '';
+      if (sk.includes(`'${K}'`)) errs.push(`sw.js STICKY_KINDS must NOT carry ${K} — sticky = the A+ only (HIS CALL #18)`);
+      const live = /export const GAJJALA_SI_CROSS_LIVE_SINCE = '(\d{4}-\d{2}-\d{2})';/.exec(ak);
+      if (!live) errs.push('lib/alertKinds.ts must export GAJJALA_SI_CROSS_LIVE_SINCE = \'YYYY-MM-DD\' (the ONE typed live date)');
+      else for (const [rel, src] of [['Notifications.tsx', notif], ['Alerts.tsx', alerts]]) if (src.includes(live[1])) errs.push(`${rel} types the live date ${live[1]} — read GAJJALA_SI_CROSS_LIVE_SINCE`);
+
+      // 5. the push body words + the candle-START mute [C4]; no b-word anywhere he reads
+      const cp = pyFn(hx, 'compose') || '';
+      if (!/AL\.FADE_CROSS_TAIL/.test(cp) || !/HS\.NOT_ADVICE/.test(cp)) errs.push('high_si_cross.compose must end the body with AL.FADE_CROSS_TAIL and HS.NOT_ADVICE');
+      if (!/^FADE_CROSS_TAIL = "[^"]*UNMEASURED[^"]*"/m.test(quiet('../backend/chart_maps/gajjala/alerts.py'))) errs.push('alerts.FADE_CROSS_TAIL must say UNMEASURED');
+      if (!/^NOT_ADVICE = "Not advice\."/m.test(hs)) errs.push('high_si.NOT_ADVICE must be "Not advice."');
+      if (!/AL\.window_reason\(/.test(pyCode(hx)) || !/"suppressed_first15"/.test(pyCode(hx))) errs.push('high_si_cross must mute by the candle START — AL.window_reason(…) == "suppressed_first15"');
+      const panel = quiet('src/components/GgHighSi.tsx');
+      const nf = quiet('src/lib/newFeatures.ts');
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
+      for (const [rel, src] of [['high_si.py', pyCode(hs)], ['high_si_cross.py', pyCode(hx)], ['GgHighSi.tsx', panel], ['the 🩳 ✨ label', lab ? lab[1] : '']]) {
+        if (/bounc/i.test(src)) errs.push(`${rel} says the b-word — reversal, never bounce`);
+      }
+
+      // 6. the board: GG5-only fallback strip, the panel on the 🩳 sub only, no digit typed in the panel
+      const board = quiet('src/components/GajjalaBoard.tsx');
+      if (!/\.filter\(\(s\) => vkey === 'gajjala' \|\| s\.key !== GG_HIGH_SI_SUB\)/.test(board)) errs.push('GajjalaBoard: the pre-board strip must drop 🩳 off every page but gajjala (chained filter on GG_HIGH_SI_SUB)');
+      if (!/activeSub === GG_HIGH_SI_SUB \? <GgHighSiPanel block=\{board\.high_si \?\? null\} \/> : null/.test(board)) errs.push('GajjalaBoard must draw <GgHighSiPanel> on the 🩳 sub only');
+      const pcode = panel.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*/gm, '').replace(/\bn === 0\b/g, '').replace(/<\/?h3\b/g, '');
+      if (/\d/.test(pcode)) errs.push('GgHighSi.tsx types a digit — every number is served');
+
+      // 7. the ✨ — FIRST, dated, routed, his words verbatim; docs + tests exist
+      const firstId = (/\bid: '([^']+)'/.exec(nf.slice(nf.indexOf('export const NEW_FEATURES'))) || [])[1];
+      if (firstId !== ID) errs.push(`the 🩳 ✨ '${ID}' must be NEW_FEATURES[0] (found ${firstId})`);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route) is missing`);
+      else {
+        if (lab[2] !== '2026-11-23') errs.push(`the 🩳 ✨ addedAt must be 2026-11-23 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala&sub=high_si') errs.push(`the 🩳 ✨ route must be /chart-maps?tab=gajjala&sub=high_si (found ${lab[3]})`);
+        if (!lab[1].includes(HIS1) || !lab[1].includes(HIS2)) errs.push('the 🩳 ✨ label must quote both of his sentences verbatim');
+        if (!lab[1].includes('UNMEASURED') || !lab[1].includes('Not advice.')) errs.push('the 🩳 ✨ label must say UNMEASURED and Not advice.');
+      }
+      for (const f of ['../docs/gajjala/high_si_sub_2026_11_23.md', '../docs/gajjala/high_si_cross_alerts_2026_11_23.md',
+        '../docs/gajjala/high_si_frontend_2026_11_23.md', '../docs/gajjala/high_si_cross_frontend_2026_11_23.md',
+        '../backend/tests/test_gajjala_high_si_2026_11_23.py', '../backend/tests/test_gajjala_high_si_cross_2026_11_23.py',
+        '../backend/tests/test_gajjala_si_cross_kind_2026_11_23.py', 'src/components/GgHighSi.test.tsx',
+        'src/components/GajjalaBoard.high_si.test.tsx', 'src/pages/Alerts.si_cross.test.tsx', 'src/pages/Notifications.si_cross.test.tsx']) {
+        if (!exists(f)) errs.push(`${f} must exist`);
+      }
       return errs;
     },
   },

@@ -107,6 +107,7 @@ const GG_SUB_WORDS: Record<string, string[]> = {
   intraday_vcp:     ['vcp', 'contraction', 'contractions', 'tightening', 'coil'],
   reversal_squeeze: ['squeeze', 'reversal', 'tennis ball', 'short squeeze', 'low float', 'lowest float'],
   diverging:        ['diverging', 'fresh cross', 'widening', 'pre divergence', 'volume spike', 'bar spike'],
+  high_si:          ['high si', 'short interest', 'shorts', 'low float', 'reg sho', 'threshold', 'hard to borrow', 'ema cross'],
   premarket:        ['pre-market', 'pre market', 'gappers', 'scanner', 'morning movers'],
   postmarket:       ['post market', 'after hours', 'afterhours', 'extended hours'],
   playbook:         ['rules', 'his rules', 'k rules', 'verified rules', 'checklist', 'how he trades'],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GG_DEFAULT_SUB, GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_TABLE_SUB,
+  GG_DEFAULT_SUB, GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_HIGH_SI_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SPAN_PARAM, GG_SUBS, GG_TABLE_SUB,
   GG_VARIANT_LABEL,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   playbookItem, riskText, variantText, watchParts,
@@ -113,9 +113,20 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
   // in Gajjals 5 min please"; spec diverg2 §3.8); the other eleven keep their order, 🏁 Track record still last.
   // WIDENED 2026-11-18 — 🌱 Diverging is the THIRTEENTH sub, right after 🧨 Divergence (Ajay "For the divergence thing
   // create a separate tab that are potentially diverging with uptrend and volume breakout."; spec dvpot §3.8).
-  it('thirteen subs: 📋 All strategies FIRST, then DECISIONS order, 🧨 Divergence after 🎾, 🌱 Diverging after 🧨, 🏁 Track record last, labels his', () => {
+  // WIDENED 2026-11-23 — 🩳 High SI is the FOURTEENTH sub, right after 🌱 Diverging (Ajay "Can you create a tab similarly
+  // like Divergent with high charging tested, SHO tag, and low floats …"; spec highsi §3.8); the others keep their order.
+  it('fourteen subs: 📋 All strategies FIRST, then DECISIONS order, 🧨 Divergence after 🎾, 🌱 Diverging after 🧨, 🩳 High SI after 🌱, 🏁 Track record last, labels his', () => {
     expect(GG_SUBS.map((s) => s.key)).toEqual(['all_strategies', 'bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp',
-      'reversal_squeeze', 'divergence', 'diverging', 'premarket', 'postmarket', 'playbook', 'potential', 'track_record']);
+      'reversal_squeeze', 'divergence', 'diverging', 'high_si', 'premarket', 'postmarket', 'playbook', 'potential', 'track_record']);
+    expect(GG_SUBS).toHaveLength(14);
+    expect(GG_HIGH_SI_SUB).toBe('high_si');
+    expect(GG_SUBS.findIndex((s) => s.key === GG_HIGH_SI_SUB))
+      .toBe(GG_SUBS.findIndex((s) => s.key === GG_DIVERGING_SUB) + 1);
+    expect(GG_SUBS.find((s) => s.key === GG_HIGH_SI_SUB)).toEqual({ key: 'high_si', emoji: '\u{1FA73}', label: 'High SI' });
+    expect(parseGgSub('high_si')).toBe('high_si');
+    expect(parseGgSub(' High_SI ')).toBe('high_si');
+    // NEGATIVE: near misses are not the 🩳 sub — the default (never 🌱 / 🧨)
+    for (const raw of ['high-si', 'highsi', 'high_si_', 'short_interest', 'high si', 'si']) expect(parseGgSub(raw), raw).toBe(GG_DEFAULT_SUB);
     expect(GG_DIVERGENCE_SUB).toBe('divergence');
     expect(GG_SUBS.findIndex((s) => s.key === GG_DIVERGENCE_SUB))
       .toBe(GG_SUBS.findIndex((s) => s.key === 'reversal_squeeze') + 1);
@@ -138,7 +149,7 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
     expect(parseGgSub('all_strategy')).toBe(GG_DEFAULT_SUB);
     expect(GG_SUBS.map((s) => `${s.emoji} ${s.label}`).join(' · ')).toBe(
       '\u{1F4CB} All strategies · \u{1F6A9} Bull Flag · \u{1F48B} EMA Kiss & Fly · ➖ Horizontal Fade · \u{1F300} Intraday VCP · '
-      + '\u{1F3BE} Reversal Squeeze · \u{1F9E8} Divergence · \u{1F331} Diverging · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential'
+      + '\u{1F3BE} Reversal Squeeze · \u{1F9E8} Divergence · \u{1F331} Diverging · \u{1FA73} High SI · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential'
       + ' · \u{1F3C1} Track record');
     expect(parseGgSub('potential')).toBe('potential');
     expect(parseGgSub(' Potential ')).toBe('potential');

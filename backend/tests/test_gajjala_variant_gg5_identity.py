@@ -314,13 +314,21 @@ def test_gg5_board_is_byte_identical(monkeypatch):
     584 leaves ADDED (464 = each mode's new `diverging` board — count 0 on this fixture day, `bars_text` served since
     the two stored tiles end on different bars; 120 = the 🌱 chip in every other board's `subs`), 480 CHANGED (the
     `subs` entries from index 7 on shift one slot), 0 removed. Dropping every `subs` and every `<mode>/diverging`, the
-    old and new files are IDENTICAL — no tile byte moved. WRITES byte-identical (sha1 7d857dc9…, no regen)."""
+    old and new files are IDENTICAL — no tile byte moved. WRITES byte-identical (sha1 7d857dc9…, no regen).
+    REGENERATED 2026-11-23 (🩳 High SI after 🌱, docs/gajjala/high_si_sub_2026_11_23.md, SPEC highsi §4 WP be-sub; Ajay
+    "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats similar to what
+    we've done in Divergent tab under Gazilla?"): BOARD 14935 -> 15507 leaves, 572 ADDED, 546 CHANGED, 0 removed — 840
+    under `subs` (the 🩳 chip inserted at subs/8 on every board, count None: the hermetic build has no Mongo handle, so the
+    ONE short-interest read faults; the old subs/8.. shift one slot) and 278 = each mode's new `high_si` board (its
+    `high_si` block None, `tiles` [], empty_note = high_si.FAULT_TEXT). Dropping every `subs` and every `<mode>/high_si`,
+    the old and new files are IDENTICAL (checked by script). WRITES byte-identical (sha1 7d857dc9…, no regen). The mode
+    flip (HIGH_SI_CROSS_PUSH_MODE) moves NO leaf here: the hermetic 🩳 block is the fault shape (no title / push_text)."""
     stores, _t = writes_text(monkeypatch)
     text = board_text(stores)
     _check(BOARD, text)
     doc = json.loads(text)
     for mode in MODES:
-        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 13           # WIDENED 2026-11-13 — 📋 first; 2026-11-18 — 🧨 after 🎾; WIDENED 2026-11-18 — 🌱 Diverging after 🧨
+        assert set(doc[mode]) == set(SUB_KEYS) and len(SUB_KEYS) == 14           # WIDENED 2026-11-13 — 📋 first; 2026-11-18 — 🧨 after 🎾; WIDENED 2026-11-18 — 🌱 Diverging after 🧨; WIDENED 2026-11-23 — 🩳 High SI after 🌱
         for k, b in doc[mode].items():
             assert b["tab"] == "gajjala", k
             assert "variant" not in b, k                                          # NEGATIVE: GG5 serves no variant block
@@ -335,3 +343,14 @@ def test_gg5_board_is_byte_identical(monkeypatch):
         assert table["si_fault_text"] == TBL.SI_FAULT_TEXT, mode
         assert table["si_head_title"] == TBL.SI_HEAD_TITLE, mode
         assert table["heads"][-1] == {"key": "si", "label": "Short interest"}, mode
+    # NEGATIVE 2026-11-23 (🩳 High SI): no SI handle in the hermetic build → the 🩳 board is the fault shape, the chip
+    # prints no number, and no other board carries a `high_si` key
+    from chart_maps.gajjala import high_si as HS
+    for mode in MODES:
+        hb = doc[mode][GC.HIGH_SI_SUB]
+        assert hb["high_si"] is None and hb["tiles"] == [] and hb["empty_note"] == HS.FAULT_TEXT, mode
+        for k, b in doc[mode].items():
+            chip = next(s for s in b["subs"] if s["key"] == GC.HIGH_SI_SUB)
+            assert chip["count"] is None and chip["emoji"] == "🩳", (mode, k)
+            if k != GC.HIGH_SI_SUB:
+                assert "high_si" not in b, (mode, k)

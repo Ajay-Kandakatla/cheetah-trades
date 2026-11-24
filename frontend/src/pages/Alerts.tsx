@@ -46,7 +46,8 @@ import { AlertItems, splitAtSymbol, type AlertItem } from '../components/AlertIt
 import { API } from '../lib/apiBase';
 import { useAlertHistory, foldedCount, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
-  ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay, todayEtKey,
+  GAJJALA_SI_CROSS_LIVE_SINCE, ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay,
+  todayEtKey,
 } from '../lib/alertKinds';
 import { RulesInfo } from '../components/RulesInfo';
 import { EnterableChip } from '../components/EnterableChip';
@@ -223,6 +224,16 @@ export const GGA_PASSES: { key: string; label: string; fallbackCadenceSec: numbe
  * The label carries no mode word (the 1-minute rule above); renaming it = HIS CALL #9. */
 export const LUK_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'luk_setup', label: '🥇 Luk\'s pass', fallbackCadenceSec: 300 },
+];
+
+/* 🩳 The High SI 9/21 EMA cross pass (2026-11-23, high-SI spec §3.9). Ajay 2026-11-23: "And also add alerts for these
+ * talks when they are crossing EMA, 9 EMA over 21 EMA." The step rides the 🚩 5-minute pass (backend
+ * chart_maps/gajjala/high_si_cross.run_step; cadence 300) and rings his phone since GAJJALA_SI_CROSS_LIVE_SINCE (the ONE
+ * typed date, lib/alertKinds). Its OWN strip right after the 🥇 Luk block and before the 🧪 strip — the Luk precedent:
+ * never in PASSES (the header count is HIS CALL #16), never in GG1M_PASSES / LUK_PASSES / GGA_PASSES / TAPE_PASSES.
+ * Its counters print with ggSiCrossChipText; the not-listed reasons (floats_disagree among them) stay in the hover. */
+export const GGS_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+  { key: 'gajjala_si_cross', label: '🩳 High SI 9/21 EMA crosses', fallbackCadenceSec: 300 },
 ];
 
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
@@ -507,6 +518,32 @@ export const GAJJALA_POTENTIAL_KEYS = ['tracked_today', 'new', 'armed', 'buildin
                                        'closed_day', 'stale_tape', 'joined', 'claimed_before',
                                        'no_target', 'failed', 'graveyard', 'trader_held', 'promo_held',
                                        'building_held', 'name_held'];
+/* 🩳 gajjala_si_cross counters (backend high_si_cross.COUNT_KEYS, 2026-11-23, high-SI spec §3.9) → words. LIVE: no word
+ * here says shadow. `pushed` rides the headline ("pushes delivered", HEADLINE_POTENTIAL). `muted` is the candle-START
+ * rule [C4] — a candle that started in his first minutes after the open — and types no digit. `late` also counts a
+ * cross held on its own bar and no longer the latest candle on a later pass [C11]: "older crosses", never "found late".
+ * Every other counter (names, no_si, stale, no_tier, not_high, floats_disagree, float_unknown, float_over,
+ * si_float_over, dry) stays in the hover "Also counted". */
+export function ggSiCrossChipText(key: string, n: number): string | null {
+  switch (key) {
+    case 'listed':         return `🩳 ${n} names listed`;
+    case 'cross':          return `${n} up crosses seen`;
+    case 'muted':          return `${n} held: the candle started in his first minutes after the open`;
+    case 'outside_hours':  return `${n} held: outside the push hours`;
+    case 'closed_day':     return `${n} held: market closed`;
+    case 'under_floor':    return `${n} held: under GG's session floor`;
+    case 'late':           return `${n} older crosses — not the latest candle, never sent late`;
+    case 'claimed_before': return `${n} already rang for this cross`;
+    case 'off':            return `${n} held: the push is switched off`;
+    case 'si_unread':      return 'short interest could not be read — nothing rang';
+    case 'no_store':       return `${n} held: store error`;
+    case 'no_target':      return `${n} no device took it (toggle off, quiet hours or none registered)`;
+    case 'failed':         return `${n} send failed`;
+    default: return null;
+  }
+}
+export const GAJJALA_SI_CROSS_KEYS = ['listed', 'cross', 'muted', 'outside_hours', 'closed_day', 'under_floor', 'late',
+                                      'claimed_before', 'off', 'si_unread', 'no_store', 'no_target', 'failed'];
 /* Every `held` reason of backend potential.HELD_WORDS (RULE_HELD + STORE_HELD)
  * plus D9's `joined_midsession` → the 🧠 list row's status word. A reason this
  * page does not know still prints, as "held: <its words>" — never dropped. */
@@ -628,7 +665,8 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'tape_control', 'overnight_movers', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+/* 2026-11-23 (high-SI spec §3.9): + 🩳 gajjala_si_cross right after 🧠 gajjala_potential (its label from alertKinds). */
+export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'gajjala_si_cross', 'tape_control', 'overnight_movers', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;
@@ -821,8 +859,10 @@ function PassStrip({ pass, meta, status, gate, today }: {
    * potential.COUNT_KEYS), so they print them the way the 5-minute rows do; the per-item lists stay 5-minute only
    * (alert_status serves shadow_items / potential_items on those two passes alone). */
   const ggp = meta.key === 'gajjala_potential' || meta.key === 'gajjala_1m_potential';
+  /* 🩳 2026-11-23 (high-SI spec §3.9): `pushed` = a send that reached a device → the 🧠 headline; its own chip words. */
+  const ggs = meta.key === 'gajjala_si_cross';
   // 🎚️ no counter chip on its row: every counter rides the hover "Also counted".
-  const headlineDefs: { key: string; label: string; title?: string }[] = tc ? [] : tape ? HEADLINE_TAPE : ggp ? HEADLINE_POTENTIAL : HEADLINE;
+  const headlineDefs: { key: string; label: string; title?: string }[] = tc ? [] : tape ? HEADLINE_TAPE : (ggp || ggs) ? HEADLINE_POTENTIAL : HEADLINE;
   const headline = headlineDefs
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
@@ -830,7 +870,8 @@ function PassStrip({ pass, meta, status, gate, today }: {
   /* 2026-11-01 (luk-live spec §3.7): 🥇 luk_setup reads the same COUNT_KEYS (Luk's gate imports GA's) → the 🚩 A+ words. */
   const gg = meta.key === 'gajjala_setup' || meta.key === 'gajjala_1m_setup' || meta.key === 'gajjala_audited_setup'
     || meta.key === 'luk_setup';
-  const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
+  const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : ggs ? GAJJALA_SI_CROSS_KEYS
+    : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
     .filter(([, n]) => n > 0);
@@ -855,7 +896,7 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {meta.key === 'gajjala_potential' && day === today && typeof pass?.brk_summary === 'string' && pass.brk_summary.trim()
         ? <span className="mono" style={BRK_CHIP} data-testid="gg-pot-brk-summary">{pass.brk_summary}</span> : null}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text, pass?.promo_held_text) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n, pass?.trader_held_text, pass?.promo_held_text) : ggs ? ggSiCrossChipText(k, n) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
@@ -1237,6 +1278,13 @@ export function AlertsPage() {
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · rings your phone since 2026-11-01 · not counted in the header</div>
         <div data-testid="luk-passes">
           {LUK_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
+        </div>
+        {/* ── 🩳 the High SI 9/21 EMA cross pass (2026-11-23) — own strip, outside the header count; right after 🥇 Luk, before the 🧪 strip; the date is GAJJALA_SI_CROSS_LIVE_SINCE ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="ggs-passes-head">{`🩳 High SI cross pass · rings your phone since ${GAJJALA_SI_CROSS_LIVE_SINCE} · not counted in the header`}</div>
+        <div data-testid="ggs-passes">
+          {GGS_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>

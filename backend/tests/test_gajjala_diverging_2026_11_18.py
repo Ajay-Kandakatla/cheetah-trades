@@ -343,7 +343,7 @@ def test_constants_carry_his_words():
                         ("DIVERGING_EMA21_RISE_BARS", "MINE")):
         line = next(ln for ln in src.splitlines() if ln.startswith(name + " ="))
         assert words in line, name
-    assert GC.GG5_ONLY_SUBS == (GC.TABLE_SUB, GC.DIVERGENCE_SUB, GC.DIVERGING_SUB)
+    assert GC.GG5_ONLY_SUBS == (GC.TABLE_SUB, GC.DIVERGENCE_SUB, GC.DIVERGING_SUB, GC.HIGH_SI_SUB)   # WIDENED 2026-11-23 — 🩳 High SI after 🌱
 
 
 def test_no_local_window_dict():
@@ -450,7 +450,7 @@ def test_NEGATIVE_other_pages_fail_open_and_omit_the_chip(variant):
     if variant is V.GGA:
         assert len(keys) == len(GC.SUBS) - len(GC.GG5_ONLY_SUBS)
     else:                                                               # the 1-minute page keeps 📋
-        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 2
+        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 3   # WIDENED 2026-11-23 — 🩳 High SI after 🌱 (🧨 + 🌱 + 🩳 omitted)
 
 
 def test_order_is_volume_desc_then_gap():

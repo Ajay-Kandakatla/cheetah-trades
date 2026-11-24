@@ -150,7 +150,7 @@ def test_the_strip_has_twelve_chips_with_the_divergence_count():
     st = store([rec("AAA"), rec("BBB", bar_t="10:25")], [read_doc("AAA"), read_doc("BBB")])
     out = board(st, GC.DEFAULT_SUB)
     keys = [s["key"] for s in out["subs"]]
-    assert len(keys) == 13 == len(GC.SUBS)                             # WIDENED 2026-11-18 — 🌱 Diverging after 🧨
+    assert len(keys) == 14 == len(GC.SUBS)                             # WIDENED 2026-11-18 — 🌱 Diverging after 🧨; WIDENED 2026-11-23 — 🩳 High SI after 🌱
     assert keys[6] == DV and keys[-2] == GC.POTENTIAL_SUB and keys[-1] == GC.LEDGER_SUB
     chip = out["subs"][6]
     assert (chip["emoji"], chip["label"], chip["count"]) == ("🧨", "Divergence", 2)
@@ -181,7 +181,9 @@ def test_NEGATIVE_other_pages_fail_open_and_omit_the_chip(variant):
         assert GC.TABLE_SUB not in keys and len(keys) == len(GC.SUBS) - len(GC.GG5_ONLY_SUBS)
     else:                                                               # the 1-minute page keeps 📋 (2026-11-16)
         # WIDENED 2026-11-18 — 🌱 Diverging after 🧨: the 1-minute page omits both GG5-only read subs (🧨 + 🌱)
-        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 2 and GC.DIVERGING_SUB not in keys
+        # WIDENED 2026-11-23 — 🩳 High SI after 🌱: the 1-minute page omits all three GG5-only read subs (🧨 + 🌱 + 🩳)
+        assert keys[0] == GC.TABLE_SUB and len(keys) == len(GC.SUBS) - 3 and GC.DIVERGING_SUB not in keys
+        assert GC.HIGH_SI_SUB not in keys
 
 
 def test_NEGATIVE_resolve_sub_fails_open_off_gg5_only():

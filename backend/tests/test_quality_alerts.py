@@ -147,7 +147,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
                    # WIDENED 2026-11-01: 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too.") — OFF in default_prefs, ON for the owner through OWNER_KEEP_SET
                    "luk_setup",
                    # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …") — OFF in default_prefs, ON for the owner through OWNER_KEEP_SET
-                   "long_term"}, \
+                   "long_term",
+                   # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — OFF in default_prefs, ON for the owner through OWNER_KEEP_SET
+                   "gajjala_si_cross"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 
@@ -166,7 +168,8 @@ def test_NEGATIVE_the_keep_set_itself_did_not_move():
         # WIDENED 2026-11-01: six → seven — 🥇 luk_setup (Ajay 2026-11-01: "Lets make it live. also alerts too."; LIVE, owner keep-set)
         # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
         "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential", "luk_setup",
-        "long_term", "position_alert", "ops_alert",
+        # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
+        "long_term", "gajjala_si_cross", "position_alert", "ops_alert",
     })
 
 

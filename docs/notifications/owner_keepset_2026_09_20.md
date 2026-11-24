@@ -1,5 +1,44 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-23 — 🩳 gajjala_si_cross joins: NINE since 2026-11-23
+
+> "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."
+
+Ajay, 2026-11-23 (voice-typed — "talks" = stocks). His question-card answer: a NEW kind, in his keep-set. From this
+day `OWNER_KEEP_SET` in `backend/push/subs.py` holds NINE kinds: the eight of 2026-11-12 (below, kept as history) plus
+one row:
+
+| kind | why it stays |
+| --- | --- |
+| `gajjala_si_cross` 🩳 | a name on 🚩 Gajjala's 🩳 High SI sub whose 9 EMA crosses OVER its 21 EMA on a closed 5-min or 15-min candle, once per name, chart and cross (`chart_maps/gajjala/high_si_cross.py`, a step of the 🚩 5-minute pass). The push code ships OFF (`GC.HIGH_SI_CROSS_PUSH_MODE`); the main session flips it after gate V0 |
+
+Registered in the one push stack: `push/subs.py` (dated comment INSIDE the braces, head "NINE since 2026-11-23" added
+with the SEVEN / EIGHT sentences kept verbatim, `default_prefs()["gajjala_si_cross"] = False`), `push/hooks.py`
+`notify_gajjala_si_cross` → `sender.send_to_user` (owner-scoped, keyword-only), `market_hours/gate.py`
+`MARKET_ALERT_KINDS` (silent on weekends / NYSE holidays), `supply_demand/alert_status.py` (`GAJJALA_SI_CROSS_KIND`,
+`PASS_KINDS`, cadence = `gajjala_setup`'s, served by `/alerts/status`). `push/recent.py` is NOT touched (the payload
+carries no `items`; `ITEM_KINDS` stays 18). No gate moved.
+
+Runbook order (it matters — `_backfill` stamps the new key False on his phones at the api start; a cross that rings
+before the prefs step settles `no_target` and that cross is spent):
+
+```bash
+./deploy-cheetah-main.sh api
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+./deploy-cheetah-main.sh cron frontend
+```
+
+The dry run shows `gajjala_si_cross None→True` (a device the api has not touched since the deploy) or `False→True` (one
+`_backfill` already stamped) on each of his devices; the second dry run shows no change. Pins widened eight → NINE
+(each marked `WIDENED 2026-11-23`): `test_push_owner_keepset.py`, `test_new_alert_kinds.py`, `test_quality_alerts.py`,
+`test_luk_push_kind_2026_11_01.py`, `test_luk_live_pushes_2026_11_01.py`, `test_long_term_push_kind_2026_11_12.py`,
+`test_gajjala_only_pushes_2026_10_29.py`, `test_growth_earnings_cron.py`, `test_gajjala_break_watch_2026_11_11.py`,
+`test_gajjala_audited_pass.py`, `test_gajjala_audited_k3s_pass_2026_11_09.py`, `test_alert_status_luk.py`,
+`test_alert_status.py`, `test_price_alert_unpause_2026_09_21.py`. New: `test_gajjala_si_cross_kind_2026_11_23.py`.
+UNMEASURED.
+
 ## 2026-11-18 — the two 1-minute kinds stay in the set; the switch stops their sends
 
 Ajay, 2026-11-18: "This is good info stop 1 min tab it was a good experiment". The 🚩 1-minute page is retired by

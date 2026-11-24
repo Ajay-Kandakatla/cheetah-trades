@@ -1120,16 +1120,43 @@ def test_NEGATIVE_a_failing_pick_is_skipped_not_raised(monkeypatch):
 
 
 # ═════════════════════════════════════════════ display only
+REG_SHO_READERS_2026_11_23 = ("chart_maps/gajjala/high_si.py", "chart_maps/gajjala/high_si_cross.py")
+
+
 def test_NEGATIVE_display_only_nothing_in_the_trading_paths_reads_it():
+    # 🩳 2026-11-23 (spec highsi §3.2 / §3.5, OWNER'S CALL — it reverses this file's display-only pin): the 🩳 High
+    # short interest sub's counts line (high_si.sho_text) and the 🩳 cross push body (high_si_cross._sho_items) carry
+    # the 🔒 tag. Widened from []; exactly these two modules, read-only (payload(kick=False)), nothing else may join.
     hits = []
     for sub in ("chart_maps", "push", "trading"):
         for f in (BACKEND / sub).rglob("*.py"):
-            if "reg_sho" in f.read_text(errors="ignore"):
-                hits.append(str(f))
-    assert hits == []
+            if "__pycache__" not in f.parts and "reg_sho" in f.read_text(errors="ignore"):
+                hits.append(f.relative_to(BACKEND).as_posix())
+    assert sorted(hits) == sorted(REG_SHO_READERS_2026_11_23)
     assert "reg_sho" not in (BACKEND / "crontab").read_text()
     ua = RS.HTTP_HEADERS["User-Agent"]
     assert "cheetah" not in ua.lower() and "@" not in ua
+
+
+def test_NEGATIVE_the_two_2026_11_23_readers_only_read_the_stored_payload_never_kick_or_refresh():
+    import ast
+    for rel in REG_SHO_READERS_2026_11_23:
+        src = (BACKEND / rel).read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        top = [n for n in tree.body if isinstance(n, (ast.Import, ast.ImportFrom))]
+        assert not [n for n in top if "reg_sho" in ast.dump(n)], rel                 # lazy only (tab import cycle)
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                 and isinstance(n.func.value, ast.Name) and n.func.value.id in ("RS", "reg_sho")]
+        assert calls, rel                                                           # the matcher can fail
+        for c in calls:
+            assert c.func.attr == "payload", (rel, c.func.attr)
+            kw = {k.arg: k.value for k in c.keywords}
+            assert isinstance(kw.get("kick"), ast.Constant) and kw["kick"].value is False, rel
+        for banned in ("refresh(", "kick=True", "_fetch", "spawn", "_popen"):
+            assert banned not in src, (rel, banned)
+    probe = "from short_interest import reg_sho\nreg_sho.payload(kick=True)\n"
+    c = next(n for n in ast.walk(ast.parse(probe)) if isinstance(n, ast.Call))
+    assert c.keywords[0].value.value is True                                        # the kick check can go red
 
 
 def test_si_map_route_answers_the_same_three_keys(monkeypatch):

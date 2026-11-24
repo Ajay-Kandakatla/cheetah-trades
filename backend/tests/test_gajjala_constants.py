@@ -59,11 +59,15 @@ def test_subs_and_setups():
     # divergence aftger EMA 9 Cross over bullish"); 🧠 / 🏁 keep the last two slots
     # WIDENED 2026-11-18 — 🌱 Diverging after 🧨 (index 7; Ajay "For the divergence thing create a separate tab that are
     # potentially diverging with uptrend and volume breakout."); GG5 only
+    # WIDENED 2026-11-23 — 🩳 High SI after 🌱 (index 8; Ajay "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and
+    # low floats similar to what we've done in Divergent tab under Gazilla?"); GG5 only
     assert tuple(k for k, _e, _l in GC.SUBS) == (GC.TABLE_SUB,) + GC.SETUPS + (GC.DIVERGENCE_SUB, GC.DIVERGING_SUB,
+                                                                             GC.HIGH_SI_SUB,
                                                                              "premarket", "postmarket", "playbook",
                                                                              "potential", "track_record")
     assert GC.SUBS[6] == ("divergence", "🧨", "Divergence") and GC.DIVERGENCE_SUB not in GC.SETUPS
     assert GC.SUBS[7] == ("diverging", "🌱", "Diverging") and GC.DIVERGING_SUB not in GC.SETUPS
+    assert GC.SUBS[8] == ("high_si", "🩳", "High SI") and GC.HIGH_SI_SUB not in GC.SETUPS   # WIDENED 2026-11-23 — 🩳 High SI after 🌱
     assert GC.SUBS[-1] == ("track_record", "🏁", "Track record") and GC.LEDGER_SUB == GC.SUBS[-1][0]
     assert GC.SUBS[-2] == ("potential", "🧠", "Potential") and GC.POTENTIAL_SUB == GC.SUBS[-2][0]
     assert GC.DEFAULT_SUB in GC.SETUPS
@@ -713,7 +717,7 @@ def test_subs_source_matches_the_contracts_regex_twelve_times():   # WIDENED 202
     m = _SUBS_BLOCK.search(src)
     assert m, "SUBS literal lost its contracts shape"
     py = [t for t in _SUBS_TRIPLE.findall(m.group(1))]
-    assert py == [tuple(x) for x in GC.SUBS] and len(py) == 13      # WIDENED 2026-11-18 — 🌱 Diverging after 🧨 is the 13th
+    assert py == [tuple(x) for x in GC.SUBS] and len(py) == 14      # WIDENED 2026-11-18 — 🌱 Diverging after 🧨 is the 13th; WIDENED 2026-11-23 — 🩳 High SI after 🌱 is the 14th
     # NEGATIVE: the shapes the contract cannot parse are caught by the same regexes
     bad_name = 'SUBS = ((TABLE_SUB, "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"))\n'
     assert [t[0] for t in _SUBS_TRIPLE.findall(_SUBS_BLOCK.search(bad_name).group(1))] == ["bull_flag"]

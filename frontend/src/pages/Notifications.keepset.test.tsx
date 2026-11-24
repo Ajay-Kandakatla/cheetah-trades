@@ -59,9 +59,10 @@ const RETIRED = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_educ
    🧬 med_catalyst, 2026-09-29) left it that day; 💼 position_alert stays (his 2026-09-09 answer), 🩺 ops_alert stays.
    WIDENED 2026-11-01 (luk-live spec §3.7): SEVEN — + 🥇 luk_setup, Ajay 2026-11-01: "Lets make it live. also alerts
    too." (six 2026-10-29 … 2026-11-01).
-   WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …"). */
+   WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …").
+   WIDENED 2026-11-23 (high-SI spec §3.9): eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."). */
 const KEEP_SET = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential',
-  'luk_setup', 'long_term', 'position_alert', 'ops_alert'];
+  'luk_setup', 'long_term', 'gajjala_si_cross', 'position_alert', 'ops_alert'];
 /* The kinds the preset turns on, sorted — the mirror check below compares THIS to the eight. */
 const onKeys = (pref: Record<string, unknown>) => Object.entries(pref).filter(([, v]) => v === true).map(([k]) => k).sort();
 async function readSource(rel: string): Promise<string> {
@@ -147,10 +148,11 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     }
   });
 
-  it('the Essentials preset is the eight on (exactly) and the retired four absent', () => {
+  it('the Essentials preset is the nine on (exactly) and the retired four absent', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     /* WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …") */
-    expect(KEEP_SET).toHaveLength(8);
+    /* WIDENED 2026-11-23 (high-SI spec §3.9): eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") */
+    expect(KEEP_SET).toHaveLength(9);
     for (const k of KEEP_SET) expect((ess.pref as any)[k]).toBe(true);
     expect(onKeys(ess.pref as any)).toEqual([...KEEP_SET].sort());
     // NEGATIVE: what left on 2026-10-29 is muted
@@ -194,7 +196,7 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     /* RE-PINNED 2026-11-18 (retire-1m spec §3.10): the two 🚩 1-min kinds stay IN the keep-set (ON) but the page is
        RETIRED (Ajay: "This is good info stop 1 min tab it was a good experiment") — their detail leads RETIRED and
        still carries the keep-set fact "ON FOR YOUR PHONE — LIVE SINCE 2026-10-29". Every other keep-set kind leads ON. */
-    for (const k of ['gajjala_setup', 'gajjala_potential', 'luk_setup', 'long_term']) {
+    for (const k of ['gajjala_setup', 'gajjala_potential', 'luk_setup', 'long_term', 'gajjala_si_cross']) {
       expect(CATEGORIES.find((c) => c.key === k)!.detail.startsWith('ON FOR YOUR PHONE'), k).toBe(true);
     }
     for (const k of ['gajjala_1m_setup', 'gajjala_1m_potential']) {

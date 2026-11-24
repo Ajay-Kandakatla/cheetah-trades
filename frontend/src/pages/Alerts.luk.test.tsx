@@ -99,7 +99,9 @@ describe("/alerts — the 🥇 Luk's pass row (2026-11-01)", () => {
     expect((await screen.findByTestId(`pass-${KEY}`)).textContent).toContain('no pass yet today');
   });
 
-  it('sits right AFTER the 🚩 gg1m-passes block and BEFORE the 🧪 gga-passes-head eyebrow (gg1m → luk → gga)', async () => {
+  /* RE-PINNED 2026-11-23 (high-SI spec §3.9): the 🩳 High SI cross strip sits between 🥇 Luk and 🧪 (gg1m → luk → ggs →
+   * gga); Luk's block is still right after the 1-minute block and still before the 🧪 strip. */
+  it('sits right AFTER the 🚩 gg1m-passes block and BEFORE the 🧪 gga-passes-head eyebrow (gg1m → luk → ggs → gga)', async () => {
     stubFetch(status(true));
     draw();
     const block = await screen.findByTestId('luk-passes');
@@ -108,7 +110,8 @@ describe("/alerts — the 🥇 Luk's pass row (2026-11-01)", () => {
     const ggaHead = screen.getByTestId('gga-passes-head');
     const gga = screen.getByTestId('gga-passes');
     expect(gg1m.nextElementSibling).toBe(head);
-    expect(block.nextElementSibling).toBe(ggaHead);
+    expect(block.nextElementSibling).toBe(screen.getByTestId('ggs-passes-head'));
+    expect(screen.getByTestId('ggs-passes').nextElementSibling).toBe(ggaHead);
     expect(ggaHead.nextElementSibling).toBe(gga);
     expect(gg1m.compareDocumentPosition(block) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(block.compareDocumentPosition(gga) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

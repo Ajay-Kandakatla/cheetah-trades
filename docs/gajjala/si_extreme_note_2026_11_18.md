@@ -118,6 +118,7 @@ AKAN's Yahoo float is stale after a dilution (StockAnalysis: float 2.39M, shares
 - **Where the words print:** the chip (every Chart Maps tab, ticker page, 🎾 card label, 👀 tags row, 📋 `si_text`), a short `Tier: …` sentence in the hover (only the word's own range — the hover never names EXTREME for a Low / Moderate / High read), a `Float check: …` sentence when there is a float to check, and two ticker-panel rows: **Tier** (sentence + the full ladder) and **Float check**. The full ladder also prints in ℹ️ Rules → 🩳 (pick 2, rewritten).
 - Served keys: `tier` (`low` / `moderate` / `high` / `extreme` / null) and `float_check` (`confirmed` / `unconfirmed` / `unchecked` / null), right after `float_suspect` in `_BLOCK_KEYS`. The 📋 all-table gets the words through `si_text` only — `SI_KEYS` is still 4 keys, so the gg5 golden does not move.
 - Nothing sorts, gates or pushes on it; `_float_suspect` is byte-identical (context.py's Float-suspect chip and the cradle study import it). Display only. **UNMEASURED.**
+- **AMENDED 2026-11-23** — one exception: the 🩳 High SI sub on 🚩 Gajjala's (`chart_maps/gajjala/high_si.py`) lists names by `tier`, and its 9/21 EMA cross push (when live) rings only for listed names. Every other surface stays display only (docs/gajjala/high_si_sub_2026_11_23.md).
 
 ### Served forms
 

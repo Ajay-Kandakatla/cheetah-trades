@@ -415,6 +415,20 @@ describe("🚩 Gajjala's tab + every sub in ⌘K (2026-10-21)", () => {
     }
   });
 
+  /* 🩳 2026-11-23 (high SI spec §3.8, WP fe-sub) — Ajay: "Can you create a tab similarly like Divergent with high charging
+     tested, SHO tag, and low floats …" [voice typing: "high charging tested" = high short interest]. The row is generated
+     from GG_SUBS like every other sub; only its extra words are typed. */
+  it('🩳 "short interest", "high si", "reg sho" and "hard to borrow" find the High SI sub row', () => {
+    const hs = GG_SUBS.find((s) => s.key === 'high_si')!;
+    expect(hs, 'GG_SUBS carries high_si').toBeTruthy();
+    expect(GAJJALA_ENTRIES.filter((e) => e.to === subTo(hs.key))).toHaveLength(1);
+    for (const q of ['short interest', 'high si', 'High SI', 'reg sho', 'hard to borrow', 'ema cross']) {
+      expect(tos(searchNav(index, q, 20)), q).toContain(subTo(hs.key));
+    }
+    // NEGATIVE: the 🩳 words do not move an unrelated query onto the sub
+    for (const q of ['whatsapp', 'track record', 'potential']) expect(tos(searchNav(index, q, 1)), q).not.toContain(subTo(hs.key));
+  });
+
   it('the tab answers to his name, GG and his universe words', () => {
     for (const q of ['goverdhan', 'gg', 'small caps', 'small cap', 'five minute', 'a plus', 'setups']) {
       expect(tos(searchNav(index, q, 20)), q).toContain(GG_TAB_TO);

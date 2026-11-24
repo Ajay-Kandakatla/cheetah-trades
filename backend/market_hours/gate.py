@@ -133,6 +133,9 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # 📅 long_term (long_term_list/zone_watch.py + push.py, 2026-11-12) — a live print against closed-bar zones / the
     # closed weekly read, so a MARKET kind: silent on weekends and NYSE holidays.
     "long_term",
+    # 🩳 gajjala_si_cross (chart_maps/gajjala/high_si_cross.py, 2026-11-23) — read off the 🚩 pass's live 5- / 15-minute
+    # bars, so a MARKET kind: silent on weekends and NYSE holidays. Its hour window lives in potential.window_reason.
+    "gajjala_si_cross",
     # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
     # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
     # (the cli's market-day gate already skips the pass; this drops at the

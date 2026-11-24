@@ -37,8 +37,9 @@ ET = ZoneInfo("America/New_York")
 DAY = "2026-11-03"                                   # a Tuesday, a market day
 QUOTE = "Lets make it live. also alerts too."
 # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
-EIGHT = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                   "luk_setup", "long_term", "position_alert", "ops_alert"})
+# WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
+NINE = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                  "luk_setup", "long_term", "gajjala_si_cross", "position_alert", "ops_alert"})
 OWNER = "owner-local-part" + chr(64) + "example.com"
 OTHER = "someone-else" + chr(64) + "example.com"
 
@@ -109,8 +110,8 @@ def test_the_shipped_mode_is_live_and_the_one_reader_says_so():
 
 
 def test_the_keep_set_is_eight_and_the_prefs_script_derives_it():
-    assert subs.OWNER_KEEP_SET == EIGHT
-    assert S.on_kinds() == sorted(EIGHT) and "luk_setup" in S.on_kinds()
+    assert subs.OWNER_KEEP_SET == NINE
+    assert S.on_kinds() == sorted(NINE) and "luk_setup" in S.on_kinds()
     assert "luk_setup" not in S.off_kinds()
     assert subs.owner_prefs()["luk_setup"] is True
     assert subs.default_prefs()["luk_setup"] is False                   # NEGATIVE: never ON for another user

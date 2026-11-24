@@ -489,9 +489,16 @@ def test_the_cron_path_keeps_its_deps(monkeypatch):
     # WIDENED 2026-11-18 (🧨 divergence spec §3.4): and the divergence record's pass step
     from chart_maps.gajjala import alerts as AL
     from chart_maps.gajjala import divergence as DV
+    # WIDENED 2026-11-23 (🩳 Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."):
+    # and the 🩳 High SI cross push + its /alerts row writer (built OFF — the step runs, the mode holds every send)
+    from chart_maps.gajjala import high_si_cross as HSX
     assert rp.calls[0][1]["deps"] == RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross,
-                                              divergence=DV.run_step)
+                                              divergence=DV.run_step, high_si_cross=HSX.run_step,
+                                              record_high_si_status=RUN._record_high_si_status)
+    assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
+                                              day_read=DR.run_step, fade_cross=AL.run_fade_cross,
+                                              divergence=DV.run_step)                              # NEGATIVE
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags,
                                               day_read=DR.run_step, fade_cross=AL.run_fade_cross)   # NEGATIVE
     assert rp.calls[0][1]["deps"] != RUN.Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags)

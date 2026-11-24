@@ -185,6 +185,12 @@ def _record_audited_status(counts: dict, now: datetime, reason: Optional[str] = 
     return AS.record_pass(AS.GAJJALA_AUDITED_KIND, counts, now, reason=reason)
 
 
+def _record_high_si_status(counts: dict, now: datetime, reason: Optional[str] = None) -> bool:
+    """🩳 2026-11-23 — the High SI cross push's /alerts row (its kind string from constants)."""
+    from supply_demand import alert_status as AS
+    return AS.record_pass(GC.HIGH_SI_CROSS_PUSH_KIND, counts, now, reason=reason)
+
+
 @dataclass
 class Deps:
     snapshot: Callable = _snapshot                 # () -> (rows, meta)
@@ -230,6 +236,12 @@ class Deps:
     # divergence record, divergence.run_step's signature (st, frames, now, session) -> dict. None = the step does not run
     # (tests, replays, dry runs, the open); the cron path passes divergence.run_step. Never a key of out, never a gate.
     divergence: Optional[Callable] = None
+    # 🩳 2026-11-23 (Ajay "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."): the 🩳
+    # High SI sub's 9 / 21 EMA cross push, high_si_cross.run_step's signature, and its /alerts row writer. None = the
+    # step does not run and nothing is written (tests, replays, dry runs, the on-open pass); the cron path passes both.
+    # Never a key of out, never out["errors"], never a gate. Built OFF (GC.HIGH_SI_CROSS_PUSH_MODE).
+    high_si_cross: Optional[Callable] = None
+    record_high_si_status: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -683,6 +695,20 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                 log.info("gajjala pass: 🧨 divergence %s", dv)
             except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
                 log.exception("gajjala pass: the 🧨 divergence record failed")
+        if deps.high_si_cross is not None and not push_dry:    # 🩳 2026-11-23 — the High SI 9/21 cross push (never an open)
+            hs_counts, hs_reason = {}, None
+            try:
+                hs_counts = deps.high_si_cross(st, frames, now, session, floats=floats, volume=sv,
+                                               owner=deps.owner) or {}
+                log.info("gajjala pass: 🩳 high SI cross %s", {k: n for k, n in hs_counts.items() if n})
+            except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
+                log.exception("gajjala pass: the 🩳 high SI cross push failed")
+                hs_reason = "pass error: high SI cross"
+            if deps.record_high_si_status is not None:
+                try:
+                    deps.record_high_si_status(dict(hs_counts), now, hs_reason)
+                except Exception as exc:                        # noqa: BLE001
+                    log.warning("gajjala pass: /alerts 🩳 row failed: %s", exc)
         if deps.day_read is not None and not dry:              # 🌫️ 2026-11-15 — ONE read per pass; information only
             try:
                 if on_demand:
@@ -876,9 +902,12 @@ def _cron_deps() -> Deps:
     from . import day_read as DR                                # 🌫️ 2026-11-15 — lazy: the day read's engine wrapper
     from . import alerts as AL                                  # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross push
     from . import divergence as DV                              # 🧨 2026-11-18 — the divergence record's pass step
+    from . import high_si_cross as HSX                          # 🩳 2026-11-23 — the High SI 9 / 21 EMA cross push (built OFF)
     d = Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags, day_read=DR.run_step)
     d.fade_cross = AL.run_fade_cross
     d.divergence = DV.run_step
+    d.high_si_cross = HSX.run_step
+    d.record_high_si_status = _record_high_si_status
     return d
 
 

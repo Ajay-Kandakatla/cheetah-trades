@@ -13,6 +13,10 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useAlertSettings } from '../hooks/useAlertSettings';
 import { InstallToHomeScreen, clearInstallDismissal, isIPhone } from '../components/InstallToHomeScreen';
 import { PushHistoryPanel } from '../components/PushHistoryPanel';
+import { GAJJALA_SI_CROSS_LIVE_SINCE } from '../lib/alertKinds';
+
+/* 🩳 his words for the High SI EMA cross push, verbatim (2026-11-23) — the row and the Essentials preset both quote it. */
+const SI_CROSS_ASK = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
 
 /* ── Category catalogue — keys match backend default_prefs() ─────────── */
 type CategoryDef = {
@@ -240,6 +244,16 @@ export const CATEGORIES: CategoryDef[] = [
     detail: 'ON FOR YOUR PHONE — LIVE SINCE 2026-11-12, your calls: "add an alert list when stocks reach Pankaj\'s zones" and "Weekly and if something gets dropped let me know"; everyone else starts off. Mute it here. '
       + 'WHAT FIRES: a name on your 📅 Long Term 🧭 list reaching one of Pankaj\'s zones on a live print — once per name, zone and session, only when its prior session\'s close sat outside that zone; and the weekly 📅 Long Term digest, once a week, only when a saved name dropped (Stage 2 → 3 or 4, a sales drop) or a 🌱 name started moving. One toggle mutes both. '
       + 'UNMEASURED — Pankaj\'s zones and your saved list, not a buy signal. Not a recommendation.' },
+  /* 🩳 High SI EMA cross (2026-11-23, high-SI spec §3.9). Ajay 2026-11-23: "And also add alerts for these talks when
+     they are crossing EMA, 9 EMA over 21 EMA." (backend chart_maps/gajjala/high_si_cross.py; constants
+     HIGH_SI_CROSS_PUSH_MODE "live"). False in push/subs.default_prefs (everyone else starts off), in OWNER_KEEP_SET
+     (on for his devices). The live date is NOT typed here — it is lib/alertKinds.GAJJALA_SI_CROSS_LIVE_SINCE [C12]. No
+     number typed beyond the EMA names and the frame names (no threshold digit). UNMEASURED. */
+  { key: 'gajjala_si_cross', label: 'High SI EMA cross', emoji: '🩳', group: 'trading',
+    detail: `ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_SI_CROSS_LIVE_SINCE}, your call: "${SI_CROSS_ASK}"; everyone else starts off. Mute it here. `
+      + 'WHAT FIRES: a name on 🚩 Gajjala’s 🩳 High SI sub — his list’s names with short interest High or EXTREME and a low float on both float reads — whose 9 EMA crosses above its 21 EMA on a CLOSED 5-minute or 15-minute candle, once per name, chart and cross, listed on /alerts. '
+      + 'Never on a closed day, never on a candle that started in his first minutes after the open. '
+      + 'UNMEASURED — information, not an entry. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -573,13 +587,17 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // live. also alerts too."
     // 2026-11-12 (pkzone spec §3.8): + 📅 long_term — the keep-set is EIGHT kinds; Ajay 2026-11-12: "add an alert
     // list when stocks reach Pankaj's zones" / "Weekly and if something gets dropped let me know".
+    // 2026-11-23 (high-SI spec §3.9): + 🩳 gajjala_si_cross — the keep-set is NINE kinds; Ajay 2026-11-23: "And also add
+    // alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." (live date = GAJJALA_SI_CROSS_LIVE_SINCE).
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too.") — plus 📅 Long Term since 2026-11-12 (your calls: "add an alert list when stocks reach Pankaj\'s zones" · "Weekly and if something gets dropped let me know"). Everything else muted.',
+    detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too.") — plus 📅 Long Term since 2026-11-12 (your calls: "add an alert list when stocks reach Pankaj\'s zones" · "Weekly and if something gets dropped let me know")'
+      + ` — plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${SI_CROSS_ASK}"). Everything else muted.`,
     pref: {
       gajjala_setup: true, gajjala_potential: true,
       gajjala_1m_setup: true, gajjala_1m_potential: true,
       luk_setup: true,
       long_term: true,
+      gajjala_si_cross: true,
       position_alert: true, ops_alert: true,
       hot_pullback_alert: false, pattern_alert: false,
       demand_alert: false,

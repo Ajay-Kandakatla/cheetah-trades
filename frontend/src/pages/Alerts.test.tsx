@@ -2085,7 +2085,9 @@ describe('🎚️ tape_control row (2026-10-16)', () => {
   });
 
   it('the kind chip sits right after 🧠 gajjala_potential and narrows the feed to kinds=tape_control', async () => {
-    expect(KIND_CHIPS.indexOf('tape_control')).toBe(KIND_CHIPS.indexOf('gajjala_potential') + 1);
+    /* RE-PINNED 2026-11-23 (high-SI spec §3.9): 🩳 gajjala_si_cross sits right after 🧠 gajjala_potential, so 🎚️ is +2. */
+    expect(KIND_CHIPS.indexOf('tape_control')).toBe(KIND_CHIPS.indexOf('gajjala_potential') + 2);
+    expect(KIND_CHIPS.indexOf('gajjala_si_cross')).toBe(KIND_CHIPS.indexOf('gajjala_potential') + 1);
     expect(KIND_CHIPS.indexOf('gajjala_potential')).toBe(KIND_CHIPS.indexOf('tape_burst_chartmaps') + 1);
     expect(KIND_CHIPS.filter((k) => k === 'tape_control')).toHaveLength(1);
     const fn = stubFetch({ rows: [] }, withTc(tcPass('2026-09-05T10:57:40-04:00')));

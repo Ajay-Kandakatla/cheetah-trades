@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import hand from './__fixtures__/gajjala_board_2026_10_13.json';
-import { GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_SUBS, GG_TABLE_SUB } from '../lib/gajjala';
+import { GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_HIGH_SI_SUB, GG_SUBS, GG_TABLE_SUB } from '../lib/gajjala';
 import { GGC_PATH } from '../lib/gajjalaCardView';
 
 /* 🌱 the Diverging sub on 🚩 Gajjala's 5-min board (2026-11-18, diverging spec §3.9 / §4 WP-B). Ajay: "For the divergence
@@ -64,11 +64,12 @@ const CRITERIA = [
 const DG_CHIP = { key: GG_DIVERGING_SUB, emoji: '\u{1F331}', label: 'Diverging', count: 1, title: null };
 const DV_CHIP = { key: GG_DIVERGENCE_SUB, emoji: '\u{1F9E8}', label: 'Divergence', count: 0, title: null };
 
-/** The served 13-chip strip: 📋 first, 🧨 after 🎾, 🌱 after 🧨, 🧠 / 🏁 last. */
+/** The served 14-chip strip: 📋 first, 🧨 after 🎾, 🌱 after 🧨, 🩳 after 🌱, 🧠 / 🏁 last. */
 function strip(b: any): any[] {
   const subs = b.subs.map((s: any) => ({ ...s, title: null }));
   const at = subs.findIndex((s: any) => s.key === 'reversal_squeeze') + 1;
-  subs.splice(at, 0, DV_CHIP, DG_CHIP);
+  // WIDENED 2026-11-23 — 🩳 High SI after 🌱 (high SI spec §4 WP fe-sub): the served strip keeps GG_SUBS.length.
+  subs.splice(at, 0, DV_CHIP, DG_CHIP, { key: GG_HIGH_SI_SUB, emoji: '\u{1FA73}', label: 'High SI', count: 0, title: null });
   return [{ key: GG_TABLE_SUB, emoji: '\u{1F4CB}', label: 'All strategies', count: 0, title: null }, ...subs,
     { key: 'potential', emoji: '\u{1F9E0}', label: 'Potential', count: 0, title: null },
     { key: 'track_record', emoji: '\u{1F3C1}', label: 'Track record', count: 0, title: null }];
@@ -275,7 +276,9 @@ describe('🌱 the pre-board fallback strip (GG5 only)', () => {
     expect(ids[0]).toBe(`gg-sub-${GG_TABLE_SUB}`);
     expect(ids).not.toContain(`gg-sub-${GG_DIVERGING_SUB}`);
     expect(ids).not.toContain(`gg-sub-${GG_DIVERGENCE_SUB}`);
-    expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB).map((s) => `gg-sub-${s.key}`));
+    // WIDENED 2026-11-23 — 🩳 High SI after 🌱: 🩳 is GG5 only too.
+    expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB && s.key !== GG_HIGH_SI_SUB)
+      .map((s) => `gg-sub-${s.key}`));
   });
 
   for (const v of ['gajjala_audited', 'luk'] as const) {
@@ -284,8 +287,9 @@ describe('🌱 the pre-board fallback strip (GG5 only)', () => {
       render(<MemoryRouter initialEntries={['/chart-maps?tab=gajjala']}><GajjalaBoard variant={v} /></MemoryRouter>);
       const ids = subBtns().map((b) => b.getAttribute('data-testid'));
       expect(ids).not.toContain(`gg-sub-${GG_DIVERGING_SUB}`);
-      expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_TABLE_SUB && s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB)
-        .map((s) => `gg-sub-${s.key}`));
+      // WIDENED 2026-11-23 — 🩳 High SI after 🌱: the 🧪 / 🥇 strips also omit 🩳.
+      expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_TABLE_SUB && s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB
+        && s.key !== GG_HIGH_SI_SUB).map((s) => `gg-sub-${s.key}`));
     });
   }
 });

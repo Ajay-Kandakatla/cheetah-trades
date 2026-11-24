@@ -458,7 +458,8 @@ def test_subs_carry_divergence_right_after_reversal_squeeze():
     assert keys.index("divergence") == keys.index("reversal_squeeze") + 1 == 6
     assert GC.SUBS[-1] == ("track_record", "🏁", "Track record") and GC.SUBS[-2][0] == "potential"
     assert GC.SUBS[0][0] == GC.TABLE_SUB == "all_strategies"
-    assert GC.GG5_ONLY_SUBS == (GC.TABLE_SUB, GC.DIVERGENCE_SUB, GC.DIVERGING_SUB)   # WIDENED 2026-11-18 — 🌱 Diverging after 🧨
+    assert GC.GG5_ONLY_SUBS == (GC.TABLE_SUB, GC.DIVERGENCE_SUB, GC.DIVERGING_SUB,    # WIDENED 2026-11-18 — 🌱 Diverging after 🧨
+                                GC.HIGH_SI_SUB)                                      # WIDENED 2026-11-23 — 🩳 High SI after 🌱
     assert len(keys) == len(set(keys))
 
 

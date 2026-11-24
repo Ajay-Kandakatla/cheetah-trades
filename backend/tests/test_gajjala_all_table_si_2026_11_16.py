@@ -28,6 +28,7 @@ import pytest
 
 from chart_maps.gajjala import all_table as TBL
 from chart_maps.gajjala import constants as GC
+from chart_maps.gajjala import high_si as HS
 from chart_maps.gajjala import tab as GT
 from chart_maps.gajjala import variant as V
 from short_interest import client as SIC
@@ -90,6 +91,18 @@ def counting_map(monkeypatch, ret=None):
         calls.append({"symbols": list(symbols), "db": db, "today": today})
         return {} if ret is None else ret
     monkeypatch.setattr(SR, "si_map", fake)
+    return calls
+
+
+def counting_hs(monkeypatch):
+    """🩳 2026-11-23 (spec highsi §3.3, risk 14): the 🩳 sub's ONE evaluation per GG5 build makes ONE more short-interest
+    read through high_si.si_blocks (the strip count) — counted apart, so the table branch keeps its ONE read pin."""
+    calls = []
+
+    def fake(symbols, *, today):
+        calls.append({"symbols": list(symbols), "today": today})
+        return {}
+    monkeypatch.setattr(HS, "si_blocks", fake)
     return calls
 
 
@@ -194,23 +207,45 @@ def test_S5c_the_third_basis_shares_short_count(monkeypatch):
 
 # ── S6 ONE bulk read per build ───────────────────────────────────────────────────────────────────────────────────
 def test_S6_one_bulk_read_per_table_build_and_none_elsewhere(monkeypatch):
+    # 🩳 2026-11-23 (spec highsi, OWNER'S CALL — reverses "no other sub reads"): every GG5 build now also makes the 🩳
+    # strip count's ONE read (high_si.si_blocks, counted in `hs`). The table branch keeps exactly ONE; nothing else joins.
     with_db(monkeypatch)
+    hs = counting_hs(monkeypatch)
     calls = counting_map(monkeypatch)
     t = table(store(t1_docs()))
-    assert len(calls) == 1
+    assert len(calls) == 1 and len(hs) == 1                                         # table ONE + the 🩳 strip ONE
+    assert hs[0]["today"] == TODAY
     c = calls[0]
     assert c["today"] == TODAY and c["db"] is STUB_DB
     assert c["symbols"] == sorted({r["symbol"].upper() for r in t["rows"]})
     assert len(c["symbols"]) <= SR.MAP_MAX_SYMBOLS and GC.TILE_LIMIT_MAX <= SR.MAP_MAX_SYMBOLS
     calls.clear()
+    hs.clear()
     assert board(store(t1_docs()), variant=V.GG1)["table"]["rows"]
-    assert len(calls) == 1                                                          # the 1-minute table: one
+    assert len(calls) == 1 and hs == []                                             # the 1-minute table: one; no 🩳
     calls.clear()
     board(store(t1_docs()), BF)
     board(store(t1_docs()), GC.POTENTIAL_SUB)
-    assert calls == []                                                              # NEGATIVE: no other sub reads
+    assert calls == []                                                              # NEGATIVE: no other sub's table reads
+    assert len(hs) == 2                                                             # the 🩳 strip: ONE per GG5 build
+    hs.clear()
     board(store(t1_docs()), variant=V.GGA)
-    assert calls == []                                                              # NEGATIVE: 🧪 never
+    assert calls == [] and hs == []                                                 # NEGATIVE: 🧪 never
+
+
+def test_S6_unsplit_a_gg5_table_build_makes_exactly_two_reads_and_a_card_sub_one(monkeypatch):
+    # 🩳 2026-11-23: the real total through SR.si_map, no high_si stub — table ONE + 🩳 strip ONE; a card sub ONE.
+    with_db(monkeypatch)
+    calls = counting_map(monkeypatch)
+    table(store(t1_docs()))
+    assert len(calls) == 2
+    calls.clear()
+    board(store(t1_docs()), BF)
+    assert len(calls) == 1
+    calls.clear()
+    board(store(t1_docs()), variant=V.GG1)
+    board(store(t1_docs()), variant=V.GGA)
+    assert len(calls) == 1                                                          # NEGATIVE: 1-minute table only
 
 
 @pytest.mark.parametrize("now,want", [
@@ -220,10 +255,11 @@ def test_S6_one_bulk_read_per_table_build_and_none_elsewhere(monkeypatch):
 ], ids=["naive_utc", "aware_same_instant", "after_et_midnight"])
 def test_S6b_NEGATIVE_today_is_the_et_date_of_the_build_clock(monkeypatch, now, want):
     with_db(monkeypatch)
+    hs = counting_hs(monkeypatch)                                                   # 🩳 2026-11-23 — counted apart
     calls = counting_map(monkeypatch)
     t = board(store(t1_docs()), now=now)["table"]
-    assert t["rows"] and len(calls) == 1
-    assert calls[0]["today"] == want
+    assert t["rows"] and len(calls) == 1 and len(hs) == 1
+    assert calls[0]["today"] == want and hs[0]["today"] == want
 
 
 # ── S7 faults ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -244,12 +280,14 @@ def test_S7_NEGATIVE_a_raising_read_keeps_every_row(monkeypatch):
 def test_S7b_NEGATIVE_no_handle_is_the_fault_and_never_reads(monkeypatch):
     monkeypatch.setattr(SIC, "_db", None)
     assert SIC._get_db() is None                                                    # the un-stubbed hermetic state
-    calls = counting_map(monkeypatch)
+    calls = counting_map(monkeypatch)                                               # the REAL high_si.si_blocks: no
+    # 🩳 2026-11-23 handle → it returns None before si_map too, so `calls` stays [] for BOTH readers here.
     t = table(store(t1_docs()))
     assert calls == []
     assert all(r[k] is None for r in t["rows"] for k in TBL.SI_KEYS)
     assert t["si_fault_text"] == TBL.SI_FAULT_TEXT
     with_db(monkeypatch)
+    counting_hs(monkeypatch)                                                        # 🩳 2026-11-23 — counted apart
     ok = table(store(t1_docs()))
     assert len(calls) == 1 and ok["si_fault_text"] is None                          # the check can pass
     assert core(t) == core(ok) and rows_of(t) == rows_of(ok)
@@ -257,6 +295,7 @@ def test_S7b_NEGATIVE_no_handle_is_the_fault_and_never_reads(monkeypatch):
 
 def test_S7c_NEGATIVE_reachable_but_empty_is_not_a_fault(monkeypatch):
     with_db(monkeypatch)
+    counting_hs(monkeypatch)                                                        # 🩳 2026-11-23 — counted apart
     seen = with_docs(monkeypatch, {})
     t = table(store(t1_docs()))
     assert len(seen) == 1 and seen[0][1] is STUB_DB                                 # the handle passed through, ONE read
@@ -322,7 +361,11 @@ def _src(rel):
 
 def test_S10_no_rule_gate_or_alert_reads_short_interest():
     gj = BACKEND / "chart_maps" / "gajjala"
-    others = [p for p in sorted(gj.glob("*.py")) if p.name not in ("all_table.py", "tab.py", "context.py")]
+    # 🩳 2026-11-23 (spec highsi §3.2 / §3.5, OWNER'S CALL — the tier is now a list and push input): high_si.py (the
+    # 🩳 sub's ONE read) and high_si_cross.py (the 🩳 cross push, reads only via high_si.si_blocks) join the allowlist;
+    # pinned by test_S10_high_si_modules_read_short_interest_only_through_the_one_reader. Nothing else may join.
+    others = [p for p in sorted(gj.glob("*.py"))
+              if p.name not in ("all_table.py", "tab.py", "context.py", "high_si.py", "high_si_cross.py")]
     others += [BACKEND / "trading" / n for n in ("gajjala_entry.py", "gajjala_stream.py", "gajjala_untraded.py")]
     others += [BACKEND / "push" / "hooks.py"]
     assert len(others) > 10
@@ -332,6 +375,28 @@ def test_S10_no_rule_gate_or_alert_reads_short_interest():
     ctx = _src("chart_maps/gajjala/context.py")
     assert "_float_suspect" in ctx                                                  # its float chain import stays
     assert not [w for w in ("si_map", "si_block", "si_text", "si_read", "pct_of_float") if w in ctx]
+
+
+def test_S10_high_si_modules_read_short_interest_only_through_the_one_reader():
+    # 🩳 2026-11-23: high_si.py calls SR.si_map ONCE, inside si_blocks; high_si_cross.py never imports short_interest.read
+    # and never calls si_map — it reads through HS.si_blocks only (its reg_sho read is pinned in test_reg_sho_*).
+    hs = _src("chart_maps/gajjala/high_si.py")
+    assert hs.count("SR.si_map(") == 1
+    body = inspect.getsource(HS.si_blocks)
+    assert "SR.si_map(" in body and "SR.SIC._get_db()" in body
+    tree = ast.parse(hs)
+    sr_calls = {n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and isinstance(n.func.value, ast.Name) and n.func.value.id == "SR"}
+    assert "si_map" in sr_calls and not sr_calls & {"si_block", "si_text", "refresh", "warm"}
+    hx = _src("chart_maps/gajjala/high_si_cross.py")
+    assert "si_map" not in hx and "short_interest import read" not in hx and "short_interest.read" not in hx
+    assert hx.count("HS.si_blocks(") == 1
+    tree = ast.parse(hx)
+    mods = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)}
+    assert not [m for m in mods if m.startswith("short_interest") and m != "short_interest"]
+    froms = {a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module == "short_interest"
+             for a in n.names}
+    assert froms == {"reg_sho"}
 
 
 def test_S10_tab_reads_short_interest_only_in_the_table_branch():

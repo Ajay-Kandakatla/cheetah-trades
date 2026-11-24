@@ -74,7 +74,37 @@ def test_only_gajjala_run_py_names_the_watch():
     # 🎯 2026-11-17 (spec ggwaplus2 §3.5, WP-2): alerts.py imports gajjala_watch.constants (WC.TAB) so the A+ push url
     # lands on the 👀 Watch tab — Ajay "an alert for me please Missed AKAN and GP". Compose-only; constants ONLY (pinned
     # by the NEGATIVE below). Widened to include alerts.py; nothing else may join.
-    assert hits == ["alerts.py", "card_frames.py", "live_events.py", "run.py", "tab.py"]
+    # 🩳 2026-11-23 (spec highsi §3.2 / §3.5): high_si.py reads gajjala_watch.constants (FRAME_WORDS — the card's frame
+    # words) and high_si_cross.py reads constants (FRAME_WORDS) + cross_alerts.watch_crosses (the ONE cross engine).
+    # Pinned by the NEGATIVE below. Widened to include both; nothing else may join.
+    assert hits == ["alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py", "live_events.py", "run.py",
+                    "tab.py"]
+
+
+def _watch_imports_and_wc_reads(name):
+    tree = ast.parse((GG_DIR / name).read_text(encoding="utf-8"))
+    mods = sorted({f"{n.module}.{a.name}" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)
+                   and (n.module or "").startswith("chart_maps.gajjala_watch") for a in n.names}
+                  | {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names
+                     if a.name.startswith("chart_maps.gajjala_watch")})
+    reads = sorted({n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+                    and isinstance(n.value, ast.Name) and n.value.id == "WC"})
+    return mods, reads
+
+
+@pytest.mark.parametrize("name,want_mods", [
+    ("high_si.py", ["chart_maps.gajjala_watch.constants"]),
+    ("high_si_cross.py", ["chart_maps.gajjala_watch.constants", "chart_maps.gajjala_watch.cross_alerts.watch_crosses"]),
+])
+def test_NEGATIVE_high_si_modules_name_the_watch_only_for_frame_words_and_the_cross_engine(name, want_mods):
+    # 🩳 2026-11-23 (spec highsi): never the Watch's switch, store, loop, API payload or build.
+    mods, reads = _watch_imports_and_wc_reads(name)
+    assert mods == want_mods
+    assert reads == ["FRAME_WORDS"]
+    src = (GG_DIR / name).read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import loop", "gajjala_watch import build",
+                   "gajjala_watch import payload", "_popen", "spawn_child", "spawn_loop", "WCO."):
+        assert banned not in src, banned
 
 
 def test_NEGATIVE_alerts_imports_only_the_watch_constants_never_its_switch_store_or_loop():

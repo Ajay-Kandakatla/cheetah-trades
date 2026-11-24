@@ -39,6 +39,10 @@ or None), built by `extreme_block` from SIC.SI_HIGH_PCT by name on the served
 % of float. Display only; UNMEASURED — the 2026-11-17 SI × cradle study
 (eod-audits/research/2026-11-17_si_cradle_squeeze/report.md) was too small to
 call either way. Doc: docs/gajjala/si_extreme_note_2026_11_18.md.
+AMENDED 2026-11-23 — one exception: the 🩳 High SI sub on 🚩 Gajjala's
+(chart_maps/gajjala/high_si.py) lists names by `tier`, and its 9/21 EMA
+cross push (when live) rings only for listed names. Every other surface
+stays display only.
 
 🩳 TIER WORDS + FLOAT CONFIRMATION (2026-11-18, later — Ajay, verbatim)
   "Yes please and may be add better terminilogy like Moderate with a percentage
@@ -57,6 +61,10 @@ word. No tier word on a stale read, a shares-outstanding-only read or a 0 %;
 the float check still runs on a stale read. Every % print goes through
 `_pct_tier` (2-dp only where 1-dp would round up across a cut). Display only;
 nothing sorts, gates or pushes on it. UNMEASURED.
+AMENDED 2026-11-23 — one exception: the 🩳 High SI sub on 🚩 Gajjala's
+(chart_maps/gajjala/high_si.py) lists names by `tier`, and its 9/21 EMA
+cross push (when live) rings only for listed names. Every other surface
+stays display only.
 """
 from __future__ import annotations
 
@@ -322,6 +330,8 @@ def _no_record_block(sym: str, doc: dict) -> dict:
 # SI record at the last warm — the card's Float chip reads today's shares_cache row and can differ.
 # Display only; UNMEASURED (the 2026-11-17 SI × cradle study, eod-audits/research/2026-11-17_si_cradle_squeeze/report.md,
 # was too small to call either way). Never a push, gate, sort or lane input. A failure here never costs the chip.
+# AMENDED 2026-11-23 — one exception: the 🩳 High SI sub on 🚩 Gajjala's (chart_maps/gajjala/high_si.py) lists names
+# by `tier`, and its 9/21 EMA cross push (when live) rings only for listed names. Every other surface stays display only.
 EXTREME_WORD = "EXTREME"
 EXTREME_BASIS = "si_doc_float"
 EXTREME_SHORT = "%s SI %s %s float"                                # GLYPH, EXTREME_WORD, _pct_tier(pct_of_float) — the 👀 tile form
@@ -341,6 +351,8 @@ EXTREME_CONFIRM_NOTE = ("That is at or above the %g%% of shares outstanding that
 # an unconfirmed or unchecked float stops at High on the same % of float ladder (monotone in short interest). No word
 # on a stale read, a shares-outstanding-only read, a zero % or an out-of-order ladder (an env mistake never prints a
 # wrong word). Display only — never a push, gate, sort or lane input. UNMEASURED.
+# AMENDED 2026-11-23 — one exception: the 🩳 High SI sub on 🚩 Gajjala's (chart_maps/gajjala/high_si.py) lists names
+# by `tier`, and its 9/21 EMA cross push (when live) rings only for listed names. Every other surface stays display only.
 TIER_LOW, TIER_MODERATE, TIER_HIGH, TIER_EXTREME = "low", "moderate", "high", "extreme"
 TIER_ORDER = (TIER_LOW, TIER_MODERATE, TIER_HIGH, TIER_EXTREME)          # rank = TIER_ORDER.index(t)
 TIER_WORDS = {TIER_LOW: "Low", TIER_MODERATE: "Moderate", TIER_HIGH: "High", TIER_EXTREME: EXTREME_WORD}

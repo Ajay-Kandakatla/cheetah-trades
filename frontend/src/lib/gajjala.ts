@@ -99,7 +99,7 @@ import type { GgTapePayload } from '../components/GgEntryTape';
 import type { DayRead } from './dayRead';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = 'all_strategies' | GgSetup | 'divergence' | 'diverging' | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
+export type GgSub = 'all_strategies' | GgSetup | 'divergence' | 'diverging' | 'high_si' | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
 export type GgTf = '1m' | '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -145,6 +145,11 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
    * breakout." — the forming read sub, right after 🧨 (== constants.SUBS, GG5 only; the 1-min / 🧪 / 🥇 fallback strips
    * filter it off — GajjalaBoard). */
   { key: 'diverging', emoji: '\u{1F331}', label: 'Diverging' },
+  /* 🩳 2026-11-23 Ajay "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats
+   * similar to what we've done in Divergent tab under Gazilla?" [voice typing: "high charging tested" = high short interest,
+   * "Gazilla" = Gajjala] — the High SI sub, right after 🌱 (== constants.SUBS, GG5 only; the 1-min / 🧪 / 🥇 fallback strips
+   * filter it off — GajjalaBoard). */
+  { key: 'high_si', emoji: '\u{1FA73}', label: 'High SI' },
   { key: 'premarket', emoji: '☀️', label: 'Premarket' },
   { key: 'postmarket', emoji: '\u{1F319}', label: 'Post-market' },
   { key: 'playbook', emoji: '\u{1F4D3}', label: 'Playbook' },
@@ -158,6 +163,8 @@ export const GG_TABLE_SUB: GgSub = 'all_strategies';
 export const GG_DIVERGENCE_SUB: GgSub = 'divergence';
 /** 🌱 the Diverging forming-read sub (== backend constants.DIVERGING_SUB, 2026-11-18) — the ONE FE spelling. GG5 only. */
 export const GG_DIVERGING_SUB: GgSub = 'diverging';
+/** 🩳 the High SI sub (== backend constants.HIGH_SI_SUB, 2026-11-23) — the ONE FE spelling. GG5 only. */
+export const GG_HIGH_SI_SUB: GgSub = 'high_si';
 
 /** The five setup subs (== backend constants.SETUPS, test-pinned) — the only
  *  subs that carry a 🧠 strip (☀️ / 🌙 / 📓 / 🧠 never do, BUILD_SPEC4 §3.9 (c)). */
@@ -759,6 +766,20 @@ export type GgDivergingBlock = {
   n?: number | null; n_read?: number | null; faults_text?: string | null; empty_text?: string | null;
   chartless?: GgDivergenceChartless[] | null;
 };
+/** 🩳 the High SI panel (high_si.block, 2026-11-23) — his scanner's names with short interest High / EXTREME on BOTH float
+ *  reads and a float at or under the 🎾 cap. Every line is served and printed as handed (the push sentence too — the panel
+ *  knows nothing of the push mode). The listed names come as ordinary served tiles (the house card path). UNMEASURED. */
+export type GgHighSiBlock = {
+  title?: string | null; ask_text?: string | null; rule_label?: string | null; rule_text?: string | null;
+  honesty?: string | null; cohort_text?: string | null; counts_text?: string | null; adds_text?: string | null;
+  asof_text?: string | null; sho_text?: string | null; push_text?: string | null; order_note?: string | null;
+  shown_text?: string | null; excluded_text?: string | null; disagree_text?: string | null;
+  no_tier_text?: string | null; n?: number | null; n_read?: number | null; faults_text?: string | null;
+  empty_text?: string | null; chartless?: GgHighSiChartless[] | null;
+};
+/** 🩳 a listed name that drew no card (2026-11-23 refix): the served `text` ("🩳 SYM listed · chart not stored", the ONE
+ *  line that names the ticker) is printed; the served `state_label` carries the tier only and is the fallback. */
+export type GgHighSiChartless = GgDivergenceChartless & { text?: string | null };
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;
@@ -920,6 +941,9 @@ export type GgBoard = {
   /** 🌱 2026-11-18: the Diverging block (diverging_tab.block) — the GG5 diverging sub only; null when the read could not be
    *  made (the served `empty_note` says so), absent elsewhere and on an older API. */
   diverging?: GgDivergingBlock | null;
+  /** 🩳 2026-11-23: the High SI block (high_si.block) — the GG5 high_si sub only; null when the short-interest read could
+   *  not be made (the served `empty_note` says so), absent elsewhere and on an older API. */
+  high_si?: GgHighSiBlock | null;
   /** 🚫 the owner's list block (tab.broker_block) — the primary owner only; null for anyone else, absent on an older API. */
   broker_flags?: GgBrokerFlags | null;
   /** 🚫 the served graveyard tag line (present iff graveyard_text) — owner only; null when no graveyard name is listed. */

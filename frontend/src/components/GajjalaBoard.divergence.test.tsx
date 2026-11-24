@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import hand from './__fixtures__/gajjala_board_2026_10_13.json';
-import { GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_SUBS, GG_TABLE_SUB } from '../lib/gajjala';
+import { GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_HIGH_SI_SUB, GG_SUBS, GG_TABLE_SUB } from '../lib/gajjala';
 
 /* 🧨 the Divergence sub on 🚩 Gajjala's 5-min board (2026-11-18, divergence spec §3.8 / WP-C). Ajay: "Do we still capture
  * divergence alerts? Can you add a tab for in in Gajjals 5 min please" · "yes should do a track recird fir the divergence
@@ -71,7 +71,9 @@ function dvBoard(over: Record<string, unknown> = {}): any {
   const subs = b.subs.map((s: any) => ({ ...s, title: null }));
   const at = subs.findIndex((s: any) => s.key === 'reversal_squeeze') + 1;
   // WIDENED 2026-11-18 — 🌱 Diverging after 🧨 (diverging spec §4 WP-B): the hand-built strip keeps GG_SUBS.length.
-  subs.splice(at, 0, DV_CHIP, { key: GG_DIVERGING_SUB, emoji: '\u{1F331}', label: 'Diverging', count: 0, title: null });
+  // WIDENED 2026-11-23 — 🩳 High SI after 🌱 (high SI spec §4 WP fe-sub): the hand-built strip keeps GG_SUBS.length.
+  subs.splice(at, 0, DV_CHIP, { key: GG_DIVERGING_SUB, emoji: '\u{1F331}', label: 'Diverging', count: 0, title: null },
+    { key: GG_HIGH_SI_SUB, emoji: '\u{1FA73}', label: 'High SI', count: 0, title: null });
   b.subs = [{ key: GG_TABLE_SUB, emoji: '\u{1F4CB}', label: 'All strategies', count: 0, title: null }, ...subs,
     { key: 'potential', emoji: '\u{1F9E0}', label: 'Potential', count: 0, title: null },
     { key: 'track_record', emoji: '\u{1F3C1}', label: 'Track record', count: 0, title: null }];
@@ -229,7 +231,9 @@ describe('🧨 [C6] the pre-board fallback strip', () => {
     expect(ids).not.toContain(`gg-sub-${GG_DIVERGENCE_SUB}`);
     // WIDENED 2026-11-18 — 🌱 Diverging is GG5 only too: the 1-min page omits 🧨 AND 🌱.
     expect(ids).not.toContain(`gg-sub-${GG_DIVERGING_SUB}`);
-    expect(ids).toHaveLength(GG_SUBS.length - 2);
+    // WIDENED 2026-11-23 — 🩳 High SI after 🌱: 🩳 High SI is GG5 only too — the 1-min page omits 🧨, 🌱 AND 🩳.
+    expect(ids).not.toContain(`gg-sub-${GG_HIGH_SI_SUB}`);
+    expect(ids).toHaveLength(GG_SUBS.length - 3);
   });
 
   for (const v of ['gajjala_audited', 'luk'] as const) {
@@ -240,8 +244,9 @@ describe('🧨 [C6] the pre-board fallback strip', () => {
       expect(ids).not.toContain(`gg-sub-${GG_TABLE_SUB}`);
       expect(ids).not.toContain(`gg-sub-${GG_DIVERGENCE_SUB}`);
       // WIDENED 2026-11-18 — 🌱 Diverging is GG5 only: the 🧪 / 🥇 strips also omit it.
-      expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_TABLE_SUB && s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB)
-        .map((s) => `gg-sub-${s.key}`));
+      // WIDENED 2026-11-23 — 🩳 High SI after 🌱: the 🧪 / 🥇 strips also omit 🩳.
+      expect(ids).toEqual(GG_SUBS.filter((s) => s.key !== GG_TABLE_SUB && s.key !== GG_DIVERGENCE_SUB && s.key !== GG_DIVERGING_SUB
+        && s.key !== GG_HIGH_SI_SUB).map((s) => `gg-sub-${s.key}`));
     });
   }
 });

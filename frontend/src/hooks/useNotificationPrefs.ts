@@ -96,6 +96,11 @@ export type NotificationPrefs = {
      let me know" (backend long_term_list/constants.ZONE_PUSH_MODE / DIGEST_PUSH_MODE "live"). ONE toggle for both the
      🧭 zone reach and the weekly digest; False in default_prefs, in the owner keep-set since 2026-11-12. UNMEASURED. */
   long_term?: boolean;
+  /* 🩳 High SI EMA cross (2026-11-23, backend chart_maps/gajjala/high_si_cross.py) — Ajay 2026-11-23: "And also add
+     alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." A 🚩 Gajjala's 🩳 High SI name's 9 EMA
+     crossing above its 21 EMA on a CLOSED 5- or 15-minute candle. LIVE since lib/alertKinds.GAJJALA_SI_CROSS_LIVE_SINCE
+     by his call; False in default_prefs, in the owner keep-set. UNMEASURED. */
+  gajjala_si_cross?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
      range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
      notification specific for High Beta stocks from the reselinet

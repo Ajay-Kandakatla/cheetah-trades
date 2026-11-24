@@ -285,10 +285,12 @@ KF_EMA_SORTS = ("rvol_first", "ema_first")   # MINE — the two 💋 orders KF_E
 # comment on its closing line — frontend/scripts/contracts.mjs parses it with a regex (GG_SUBS == SUBS, in order).
 # 🧨 2026-11-18: ("divergence", "🧨", "Divergence") right after 🎾 (HIS CALL #4 of docs/gajjala/divergence_sub_2026_11_18.md), GG5 only.
 # 🌱 2026-11-18: ("diverging", "🌱", "Diverging") right after 🧨 (HIS CALL #1/#2 of docs/gajjala/diverging_sub_2026_11_18.md), GG5 only.
+# 🩳 2026-11-23: ("high_si", "🩳", "High SI") right after 🌱 (HIS CALL #1/#2 of docs/gajjala/high_si_sub_2026_11_23.md), GG5 only.
 SUBS = (("all_strategies", "📋", "All strategies"), ("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("divergence", "🧨", "Divergence"),
         ("diverging", "🌱", "Diverging"),
+        ("high_si", "🩳", "High SI"),
         ("premarket", "☀️", "Premarket"), ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
         ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
 TABLE_SUB = SUBS[0][0]                   # "all_strategies" — read off the literal, never a second spelling (2026-11-13)
@@ -312,7 +314,8 @@ BROKER_SYMBOL_MAX_LEN = 10               # TRANSPORT — MINE (DECISIONS12 D5: t
 # tests/fixtures/gajjala/divergence_study_2026_11_16.json. The engine is divergence.py (one module, three callers).
 DIVERGENCE_SUB = "divergence"
 DIVERGING_SUB = "diverging"              # 🌱 2026-11-18 — the forming read (its block sits right after the 🧨 block below)
-GG5_ONLY_SUBS = (TABLE_SUB, DIVERGENCE_SUB, DIVERGING_SUB)   # derived — the subs only the 5-min page shows (tab.resolve_sub fails open off them on 🧪 / 1-min)
+HIGH_SI_SUB = "high_si"                  # 🩳 2026-11-23 — the High SI sub (its block sits after the 🌱 block below)
+GG5_ONLY_SUBS = (TABLE_SUB, DIVERGENCE_SUB, DIVERGING_SUB, HIGH_SI_SUB)   # derived — the subs only the 5-min page shows (tab.resolve_sub fails open off them on 🧪 / 1-min)
 DIVERGENCE_OOS_SPEC_SHA256 = "9da1ab8e1b79aac2c1a69ab21088c988baf7aade38987b33a1a759a1bbe8ed90"   # S/OOS_SPEC.md
 DIVERGENCE_DESIGN_SHA256 = "c5a1f2eb7091bb586febf8767f5e553805f27036d3431aeddc8d3c8495224d3f"     # S/design.md
 DIVERGENCE_R1_LEVEL = 0.5552257708108612          # spec default — OOS_SPEC "level q60 … the IS number, never re-estimated"
@@ -360,6 +363,28 @@ DIVERGING_WIDEN_BARS = 2                 # Ajay 2026-11-18 pick (1): "has widene
 DIVERGING_BAR_VOL_MULT = 2.0             # Ajay 2026-11-18 pick (2): "at least 2× its last 20 bars' average"
 DIVERGING_BAR_VOL_LOOKBACK = 20          # Ajay 2026-11-18 pick (2): "its last 20 bars' average"
 DIVERGING_EMA21_RISE_BARS = 1            # Cheetah default (MINE, not GG — HIS CALL #4): "rising 21 EMA" = above its value on the previous closed bar (the frame's own unit); K5_SLOPE_BARS (3) is the alternative
+
+# 🩳 High SI (Ajay 2026-11-23, voice-typed, verbatim: "Can you create a tab similarly like Divergent with high charging
+# tested, SHO tag, and low floats similar to what we've done in Divergent tab under Gazilla? And also add alerts for these
+# talks when they are crossing EMA, 9 EMA over 21 EMA. I would like to see this. So this should be dedicated to all the
+# high charging tests, but also when you add something to watch list, it's easily available to you. But maintain same
+# Gajjala rules under 100 stock and all the other filters that you have. Look at Divergent, most of it should be available
+# for you." · "New tab like divergence*") [voice typing: "high charging tested" = high short interest, "Gazilla" =
+# Gajjala, "talks" = stocks]. His question-card answers (docs/gajjala/high_si_sub_2026_11_23.md):
+#  #1 membership = his scanner's names (rules unchanged) with short interest High or EXTREME by the HOUSE tier
+#     (the 🩳 chip's house tier word) AND float <= K8_MAX_FLOAT; the 🔒 Reg SHO tag is a TAG; unknown tier = not listed.
+#  #2 a NEW sub on the 🚩 5-min page right after 🌱, the same card grid, chips, ➕ Watch and house order.
+#  #3 a 9 EMA cross OVER the 21 EMA on the 5-min and the 15-min chart, closed bar only, a NEW push kind.
+# DISPLAY on the GET (chart_maps/gajjala/high_si.py); the push (chart_maps/gajjala/high_si_cross.py) was built OFF; LIVE since 2026-11-23 (gate V0, his "Live to my phone").
+# No tier literal lives here: high_si.TIERS reads the house tier constants by name. UNMEASURED.
+HIGH_SI_MAX_FLOAT = K8_MAX_FLOAT             # derived — his answer #1 "float <= K8_MAX_FLOAT"; never a second number
+HIGH_SI_CROSS_PUSH_KIND = "gajjala_si_cross" # his answer #3 — a NEW push kind (the ninth OWNER_KEEP_SET kind, ship shape S2)
+HIGH_SI_CROSS_PUSH_MODES = FADE_CROSS_PUSH_MODES   # derived — ("off", "live")
+HIGH_SI_CROSS_PUSH_MODE = "live"             # his answer #3 (question card 2026-11-23) — confirmed against the transcript by the main session
+HIGH_SI_CROSS_FRAMES = ("5m", "15m")         # his answer #3 "5 mins and 15 mins" — each frame rings on its own cross
+HIGH_SI_CROSS_LATCHES = ("session", "cross") # = the 👀 Watch's LATCHES (test pins equality)
+HIGH_SI_CROSS_LATCH = "cross"                # his answer #3 "ONE push per name per frame per cross"
+HIGH_SI_CROSS_CLAIM_PREFIX = "GGS"           # never "GG" (the 🏁 reads those), never "GGX" (➖ fade) / "GGW" (👀 watch)
 
 # 📌 trader names (2026-10-27, Ajay "Add them to Gajjals, they are pretty good")
 TRADER_TAG = "📌"                        # Cheetah default (MINE, not GG — the 📌 traders board's emoji)

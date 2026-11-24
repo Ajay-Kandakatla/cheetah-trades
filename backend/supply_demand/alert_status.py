@@ -168,9 +168,15 @@ GAJJALA_AUDITED_KIND = "gajjala_audited_setup"
 # it ran. The kind string is typed here, equal to
 # chart_maps.luk.constants.LUK_KIND: this file stays a module-level leaf.
 LUK_KIND = "luk_setup"
+# 🩳 2026-11-23 — the 🩳 High SI sub's 9 / 21 EMA cross push (chart_maps/gajjala/high_si_cross.py). Ajay: "And also
+# add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." It rides the 🚩 pass (run.run_pass calls
+# high_si_cross.run_step — no crontab line of its own) and records its own pass doc. Typed, not imported: this file
+# stays a module-level leaf (tests/test_gajjala_si_cross_kind_2026_11_23.py pins it equal to
+# chart_maps.gajjala.constants.HIGH_SI_CROSS_PUSH_KIND).
+GAJJALA_SI_CROSS_KIND = "gajjala_si_cross"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
               GAJJALA_KIND, GAJJALA_POTENTIAL_KIND, GAJJALA_1M_KIND, GAJJALA_1M_POTENTIAL_KIND,
-              GAJJALA_AUDITED_KIND, LUK_KIND) + TAPE_KINDS + (
+              GAJJALA_AUDITED_KIND, LUK_KIND, GAJJALA_SI_CROSS_KIND) + TAPE_KINDS + (
                   TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
@@ -206,6 +212,8 @@ CADENCE_SEC[GAJJALA_AUDITED_KIND] = CADENCE_SEC[GAJJALA_KIND]
 # 🥇 Luk's pass is spawned by the 🚩 line's pass (one child per tick) → DERIVED,
 # never typed: its cadence IS gajjala_setup's.
 CADENCE_SEC[LUK_KIND] = CADENCE_SEC[GAJJALA_KIND]
+# 🩳 the High SI cross push rides the 🚩 line (run.run_pass calls high_si_cross.run_step) → DERIVED, never typed.
+CADENCE_SEC[GAJJALA_SI_CROSS_KIND] = CADENCE_SEC[GAJJALA_KIND]
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
@@ -824,6 +832,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     passes[GAJJALA_AUDITED_KIND] = _with_cadence(GAJJALA_AUDITED_KIND,      # 🧪 2026-11-01 — the audit overlay
                                                  read_pass(GAJJALA_AUDITED_KIND, pass_coll))
     passes[LUK_KIND] = _with_cadence(LUK_KIND, read_pass(LUK_KIND, pass_coll))   # 🥇 2026-11-01 — LIVE (his call)
+    passes[GAJJALA_SI_CROSS_KIND] = _with_cadence(GAJJALA_SI_CROSS_KIND,    # 🩳 2026-11-23 — the High SI cross push
+                                                  read_pass(GAJJALA_SI_CROSS_KIND, pass_coll))
     tw = _gajjala_trader_held_text(passes[GAJJALA_POTENTIAL_KIND].get("counts"))
     if tw:                                          # 📌 2026-10-27 critic F2: the chip's served words, only when counted
         passes[GAJJALA_POTENTIAL_KIND]["trader_held_text"] = tw
@@ -850,7 +860,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
 
 
 __all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND",
-           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "LUK_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+           "GAJJALA_1M_KIND", "GAJJALA_1M_POTENTIAL_KIND", "GAJJALA_AUDITED_KIND", "LUK_KIND", "GAJJALA_SI_CROSS_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "OVERNIGHT_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials", "BRK_STATES",

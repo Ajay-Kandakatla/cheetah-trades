@@ -107,6 +107,12 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // when it rang). Off in default_prefs, in the owner keep-set since 2026-11-12. The label carries no mode word: a
   // row's own push state says sent or not. UNMEASURED — Pankaj's zones and his saved list, not a buy signal.
   long_term:            { emoji: '📅', label: 'Long Term',               group: 'trading' },
+  // 🩳 High SI EMA cross (2026-11-23, high-SI spec §3.9, backend chart_maps/gajjala/high_si_cross.py) — Ajay
+  // 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." A name on 🚩
+  // Gajjala's 🩳 High SI sub whose 9 EMA crosses above its 21 EMA on a CLOSED 5- or 15-minute candle. LIVE since
+  // GAJJALA_SI_CROSS_LIVE_SINCE (below) by his call; off in default_prefs, in the owner keep-set. The label carries no
+  // mode word: a row's own push state says sent or not. Not sticky (sw.js STICKY_KINDS is A+ only). UNMEASURED.
+  gajjala_si_cross:     { emoji: '🩳', label: 'High SI EMA cross',       group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },
@@ -187,6 +193,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   product_launch:      { emoji: '🚀', label: 'Product launch',          group: 'system' },
   generic:             { emoji: '📣', label: 'Notification',            group: 'system' },
 };
+
+/** 🩳 The day the High SI EMA cross push (`gajjala_si_cross`) started ringing his phone (2026-11-23, high-SI spec
+ *  §3.9 [C12]). The ONE typed live date in the frontend: the /notifications row, the Essentials preset and the
+ *  /alerts eyebrow interpolate it. The main session edits this one constant if the deploy day moves. */
+export const GAJJALA_SI_CROSS_LIVE_SINCE = '2026-11-24';
 
 /** The three S/D zone kinds that page the phone through alert_gates.py
  *  (room ≥ 5% to the first band overhead, print ≤ 1% above the demand band).

@@ -24,8 +24,9 @@ from scripts import owner_prefs_apply as S
 KIND = "long_term"
 Q_ZONES = "add an alert list when stocks reach Pankaj's zones"
 Q_WEEKLY = "Weekly and if something gets dropped let me know"
-EIGHT = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                   "luk_setup", "long_term", "position_alert", "ops_alert"})
+# WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
+NINE = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                  "luk_setup", "long_term", "gajjala_si_cross", "position_alert", "ops_alert"})
 OWNER = "owner-local-part" + chr(64) + "example.com"
 OTHER = "someone-else" + chr(64) + "example.com"
 ET = timezone(timedelta(hours=-5))
@@ -48,7 +49,7 @@ def _flat(text: str) -> str:
 # ── the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────────
 def test_long_term_is_in_the_keep_set_and_the_keep_set_is_eight():
     assert KIND in subs.OWNER_KEEP_SET
-    assert subs.OWNER_KEEP_SET == EIGHT
+    assert subs.OWNER_KEEP_SET == NINE
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
@@ -71,9 +72,9 @@ def test_the_dated_comment_with_both_quotes_sits_inside_the_braces():
     assert "The keep-set is EIGHT from this day" in flat
     # the comment sits right above the kind, after luk_setup
     assert body.index('"luk_setup"') < body.index(Q_WEEKLY.split(" and")[0]) < body.index('"long_term"')
-    # stripping `#…` (contracts keepSet()) leaves exactly the eight names
+    # stripping `#…` (contracts keepSet()) leaves exactly the NINE names (WIDENED 2026-11-23: eight → NINE)
     names = set(re.findall(r'"([a-z0-9_]+)"', re.sub(r"#[^\n]*", "", body)))
-    assert names == set(EIGHT)
+    assert names == set(NINE)
 
 
 def test_the_head_carries_eight_and_still_seven_and_the_10_29_words():
@@ -175,6 +176,7 @@ def test_NEGATIVE_recent_is_untouched_no_items_url_for_long_term():
 
 
 def test_NEGATIVE_a_ninth_kind_breaks_the_eight_pin(monkeypatch):
+    # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — a TENTH kind now breaks the NINE pin
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     try:
         test_long_term_is_in_the_keep_set_and_the_keep_set_is_eight()

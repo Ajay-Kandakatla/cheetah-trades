@@ -1428,6 +1428,31 @@ def _gg_diverging_clause() -> str:
     return " " + clause
 
 
+def _gg_high_si_clause() -> str:
+    """🩳 2026-11-23 (Ajay "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low
+    floats similar to what we've done in Divergent tab under Gazilla?" — voice typing: "high charging tested" = high
+    short interest, "Gazilla" = Gajjala) — the section note's ONE row on the 🩳 High SI sub: the tier words read off
+    short_interest.read.TIER_WORDS, the cap off GC.HIGH_SI_MAX_FLOAT, the push line = high_si.push_text() (the 🔕
+    sentence while the push is off — the same function, never a second sentence). " " + the clause, or "" on any
+    exception (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import constants as GC
+        from chart_maps.gajjala import high_si as HS
+        from short_interest import read as SR
+        hi, ex = SR.TIER_WORDS[SR.TIER_HIGH], SR.TIER_WORDS[SR.TIER_EXTREME]
+        live = HS._live()                                   # THE mode read (high_si.push_mode, fail closed)
+        rings = (" — and the names its %d / %d EMA cross push rings for —" % (GC.EMA_FAST, GC.EMA_SLOW)) if live else ""
+        clause = ("🩳 High SI: a name on his list is listed when its short interest reads %s or %s on the house ladder "
+                  "and its float is at or under %s shares, on BOTH float reads (the float stored with the "
+                  "short-interest record and the card's Float chip must agree — a name they disagree on is counted, "
+                  "never listed); the 🩳 tier picks this list%s while every other 🩳 surface stays display only. %s"
+                  % (hi, ex, f"{int(GC.HIGH_SI_MAX_FLOAT):,}", rings, HS.push_text()))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala high si clause unavailable: %s", exc)
+        return ""
+    return " " + clause
+
+
 def _gg_bottom_word() -> str:
     """🚫 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the ONE served
     word, tab.BROKER_BOTTOM_TEXT, never retyped (lazy: tab imports this package's engines)."""
@@ -1593,6 +1618,7 @@ def _gajjala_section() -> dict:
                  + _gg_watch_overlays_clause()             # 📈📐 2026-11-23 — the Watch's VWAP + daily zones (display only)
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)
+                 + _gg_high_si_clause()                    # 🩳 2026-11-23 — the 🩳 High SI sub (display; push LIVE 2026-11-23)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

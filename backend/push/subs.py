@@ -326,7 +326,9 @@ def _backfill(db):
 # starts with EXACTLY six kinds (2026-10-29 … 2026-11-01; SEVEN since 2026-11-01
 # — 🥇 luk_setup, Ajay: "Lets make it live. also alerts too."; EIGHT since
 # 2026-11-12 — 📅 long_term, Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …"
-# and "Weekly and if something gets dropped let me know …") (owner_prefs() /
+# and "Weekly and if something gets dropped let me know …"; NINE since
+# 2026-11-23 — 🩳 gajjala_si_cross, Ajay 2026-11-23: "And also add alerts for
+# these talks when they are crossing EMA, 9 EMA over 21 EMA.") (owner_prefs() /
 # prefs_for() derive from this set; everyone else keeps default_prefs(),
 # unchanged); his already-registered devices are flipped by
 # scripts/owner_prefs_apply.py (a data write):
@@ -382,6 +384,11 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # tabs in general" / "Weekly and if something gets dropped let me know …"). ONE kind: a 🧭 zone reach (once per
     # name, zone and session) + the weekly digest (only when it rang). The keep-set is EIGHT from this day. A MARKET kind.
     "long_term",
+    # 🩳 gajjala_si_cross (chart_maps/gajjala/high_si_cross.py, 2026-11-23) — LIVE from day one by his call (Ajay
+    # 2026-11-23, voice-typed: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."
+    # — "talks" = stocks; his answer: the 5-min and the 15-min chart). The 🩳 High SI sub's names only, a 9 EMA cross
+    # OVER the 21 EMA on a closed bar. The keep-set is NINE from this day. A MARKET kind. UNMEASURED.
+    "gajjala_si_cross",
     # 🔴 position_alert — stop / supply reached on stocks he actually owns
     # (kept 2026-09-09 and again 2026-10-29).
     "position_alert",
@@ -624,6 +631,12 @@ def default_prefs() -> dict:
         # dropped let me know …"). It must still be here: a kind missing from default_prefs targets ZERO devices and
         # renders no toggle. A MARKET kind. UNMEASURED.
         "long_term": False,
+        # 🩳 gajjala_si_cross (chart_maps/gajjala/high_si_cross.py, 2026-11-23): a 🩳 High SI sub name's 9 EMA cross
+        # OVER the 21 EMA on a closed 5-min or 15-min bar. False for everyone else; ON for HIS devices through
+        # OWNER_KEEP_SET + scripts/owner_prefs_apply.py (Ajay 2026-11-23: "And also add alerts for these talks when
+        # they are crossing EMA, 9 EMA over 21 EMA."). It must still be here: a kind missing from default_prefs
+        # targets ZERO devices and renders no toggle. A MARKET kind. UNMEASURED. AMENDMENTS10 F1.
+        "gajjala_si_cross": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

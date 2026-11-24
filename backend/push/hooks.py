@@ -305,6 +305,16 @@ def notify_long_term(*, owner: str, payload: dict) -> dict:
     return sender.send_to_user(owner, payload, kind="long_term")
 
 
+def notify_gajjala_si_cross(*, owner: str, payload: dict) -> dict:
+    """🩳 gajjala_si_cross — a 🩳 High SI sub name's 9 EMA cross OVER the 21 EMA on a closed 5-min or 15-min bar
+    (chart_maps/gajjala/high_si_cross.py, a step of the 🚩 5-minute pass, 2026-11-23). Ajay 2026-11-23: "And also add
+    alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." Owner-scoped (send_to_user, never
+    send_to_all), so the closed-day drop, quiet hours and the /notifications toggle all apply at the sender. Called only
+    when GC.HIGH_SI_CROSS_PUSH_MODE is "live". ON for his devices through OWNER_KEEP_SET. UNMEASURED — information
+    only, not an entry; never a trade."""
+    return sender.send_to_user(owner, payload, kind="gajjala_si_cross")
+
+
 def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
     """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
     over night scan for all the stocks they are all growing over night". Owner-
