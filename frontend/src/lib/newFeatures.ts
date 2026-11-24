@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "Yeah please" + "Make sure we are looking for Dilution.." + "Also split related events and
+  // filing so we flag them in the right way". BE short_interest/share_basis.py (SEC cover counts + filings, Massive splits,
+  // the float track; background worker kicked by /short-interest/map) + short_interest/basis_math.py (the PURE verdict) +
+  // read.si_block(basis=) + chart_maps/gajjala/high_si.basis_text; FE siFlags / siBasisPending + the follow-up re-ask in
+  // useShortInterest. Docs docs/short_interest/float_dilution_split_2026_11_24.md, float_dilution_split_frontend_2026_11_24.md. Display only.
+  {
+    id: 'gajjala-si-float-dilution-split-2026-11-24',
+    label: "🩳 Short interest checks the float for dilution and splits — you said: “Yeah please” · “Make sure we are looking for Dilution..” · “Also split related events and filing so we flag them in the right way”. The short-interest % now checks the float it divides by against the share count the company filed with the SEC, the splits on file and Yahoo's own later share count. When the float on file is older than a split, or more shares were added since than the float held, the % of float is not shown: the chip falls back to % of shares outstanding with that count's date, the name carries no tier word, and it leaves the 🩳 High SI list (named under the counts if it was High or EXTREME on the old float). Plain marks ride on the chip, the hover and the EXTREME note: ⚠️ float stale, ✂️ split (or split due), 📄 a dilution filing (registration, prospectus or an unregistered sale), ❔ when a check could not run. A change vs the prior settlement that crosses a split is split-adjusted and says so. A check that fails never brings a stale float back. Where to draw the dilution line is your call; the built value is provisional. The 🩳 9/21 cross push follows the list, so a name that leaves it stops ringing; no gate was loosened and nothing trades. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-24, verbatim: "What are the SSR stocks today" -> "Can you add it to short interest tab" -> "The new ones".
   // BE short_interest/ssr.new_triggers (the ONE SSR engine) + chart_maps/gajjala/high_si.ssr_new_block (served as
   // high_si.ssr_new); FE GgSsrNew. Docs docs/gajjala/high_si_ssr_new_2026_11_24.md, docs/gajjala/ssr_new_triggers_engine_2026_11_24.md. Display only.
