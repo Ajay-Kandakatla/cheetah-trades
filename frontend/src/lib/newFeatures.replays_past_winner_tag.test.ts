@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🧾 accountability v1 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⛔ SSR tag ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🎾 tag on 🩳 cards ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🩳 close-out date sorts first ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -24,8 +25,8 @@ const SAID = 'MEDS was a part winner that went up after hours.. Please actually 
 describe('✨ the 🏆 past-winner tag entry (2026-11-22)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is SECOND (right under the setup + timing ✨), listed once, dated, routed to 🎬 Replays', () => {
-    expect(NEW_FEATURES[17].id).toBe(ID);
-    expect(NEW_FEATURES[16].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
+    expect(NEW_FEATURES[18].id).toBe(ID);
+    expect(NEW_FEATURES[17].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-22');
     expect(f.route).toBe('/chart-maps?tab=replays');

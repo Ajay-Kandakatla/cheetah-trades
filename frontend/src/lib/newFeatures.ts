@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "I think I am going outside Gajjalas now.. Please create a rule to warn me to not over trade
+  // and hold me accountable if I am missing out any gajjalas rules" + "All of this is to help me augment gajjals rules and
+  // build confidence is my goal so make sure I am going to far our and seeking something that is not useful". Question card:
+  // "Build it (Recommended)" · "Before trade #3 (Recommended)" · "Fidelity". BE chart_maps/gajjala/accountability*.py
+  // (owner_trade_log), FE MyDayLine / MyTradeSheet. Docs docs/gajjala/accountability_2026_11_23.md. Display only.
+  {
+    id: 'gajjala-my-trades-2026-11-24',
+    label: "🧾 Your trades vs Gajjala's rules — you said: “I think I am going outside Gajjalas now.. Please create a rule to warn me to not over trade and hold me accountable if I am missing out any gajjalas rules” · “All of this is to help me augment gajjals rules and build confidence is my goal”. On 🚩 Gajjala's tab, tap 🧾 log trade when you take one (GG's own habit: he journals every trade at entry). Each trade is checked against his rules — an app 🎯 A+ rang first, not in the first 15 minutes, a stop typed, how far past the trigger you paid, half size after a loss, no quick re-entry after a stop-out — and a line under Day read warns you before trade #3 (#2 on a quiet day). GG sets no daily cap — that number is your pick; the line prints both of his quotes. Words and records only: nothing trades, blocks or pings your phone. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-23, verbatim: "No shorting at the bid (SEC short-sale restriction) Can we check or this for other stocks
   // too?" + 2026-11-24 "ship ssr too" / "SSR is informational". BE short_interest/ssr.py (Rule 201: 17 CFR 242.201 + the
   // SEC Rule 201 FAQ), ssr_lists.py (official Nasdaq + NYSE lists), ssr_corp.py (dividend / split days), the pass step in
