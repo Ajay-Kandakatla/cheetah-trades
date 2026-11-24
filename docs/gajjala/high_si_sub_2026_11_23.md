@@ -189,3 +189,32 @@ default but lets not do that".
   `triggered` read never claims A+ here — whether an alert rang is the 🎾 card's to say (formulas audit D10).
 - Not done, by his word: no name moves into 🎾 by default. The 🩳 order and membership and the 🎾 sub are unchanged.
 - Tests: `backend/tests/test_gajjala_high_si_squeeze_tag_2026_11_24.py` (15, incl. NEGATIVES; 3 mutations go red).
+
+## 2026-11-24 — a refused float (stale / across a split) is counted apart and named
+
+Ajay: "Make sure we are looking for Dilution.." · "Also split related events and filing so we flag them in the right way"
+(SPEC sidilute §3.6, WP be-highsi; the check itself: `docs/short_interest/float_dilution_split_2026_11_24.md`).
+
+- The house read (`short_interest.read.si_block`) now refuses a float on the short-interest record that is stale (more
+  shares since it was read) or sits across a split from the short-interest count: the block has no tier and carries
+  `basis.float_refused`. `classify` is NOT changed — such a name is `no_tier`; `REASONS` and the push's `COUNT_KEYS` are
+  untouched, so the 🔔 cross push never rings for it.
+- `evaluate`: a not-listed `no_tier` name with `basis.float_refused` → `ev["refused"] += 1`, never in `no_tier_low`
+  (it does have a float — a refused one). It goes into `ev["basis"]` (`symbol`, the block's served `chip`, `tier_word`)
+  only when `SR.tier_of(basis.float_pct_on_file)` is High or EXTREME — it WAS on the list's ladder on the float on file
+  (SMTK 79.05 % → named; KITT 3.7 %, SMX 6.0 % → counted, not named).
+- `counts_text`: with refused names the no-tier segment reads `{k} with no tier word ({m} with a float that is stale or
+  across a split; the rest with no usable float on the short-interest record[; j of them with a card float at or under
+  the cap])`. When every no-tier name is refused, the `; the rest with no usable float…` clause is left out
+  (`3 with no tier word (3 with a float that is stale or across a split)`) — "the rest" never stands for zero names.
+  With none, every word is byte-identical to before; the numbers still sum to `n_read − n`.
+- New served key `basis_text` (None when nobody is named): `⚠️ High or EXTREME on the float on file, but that float is
+  stale or across a split — not tiered, so not listed: SMTK — <its served 🩳 chip>`.
+- `tier_chip`: a listed name's card pill appends the block's flag shorts (`basis.flags[].short`, well-formed strings
+  only) — JZ → `🩳 27.2% short interest · EXTREME · ✂️ split due 12/24 · float at or under 10,000,000`. No flags →
+  the old pill exactly. A flags-only block (📄, ✂️ due) stays listed and is never named.
+- `rule_text` gains one sentence (tier words read from `SR` at call time).
+- Display only: no gate, cut, order or push change. UNMEASURED.
+- Tests: `backend/tests/test_gajjala_high_si_basis_2026_11_24.py` (53, incl. NEGATIVES: Low / Moderate on file not named,
+  no refused name → words byte-identical, flags-only stays listed, junk `basis` / `flags` / `float_pct_on_file` /
+  `float_refused` never raise and add nothing, `classify` unchanged with any `basis`; 3 mutations go red).

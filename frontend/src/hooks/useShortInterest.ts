@@ -12,22 +12,38 @@
  * a failed request is cached as null with `failed: true` and back-dates its entries so a later mount retries after
  * SI_RETRY_MS without hammering. Never a per-symbol provider fetch: the
  * endpoint reads one Mongo cache, and this hook reads the endpoint.
+ *
+ * 🩳 FOLLOW-UP RE-ASK (2026-11-24, spec sidilute §3.7 [C5]). Ajay: "Make sure we are looking for Dilution.." · "Also split
+ * related events and filing so we flag them in the right way". The map route kicks a background share-count check and marks
+ * each name still queued or running with `basis.pending === true` + `retry_after_sec`. A module-level follow-up map and ONE
+ * timer re-ask those names: the k-th re-ask of a symbol after siFollowupClamp(served delay × 2^(k-1)) (SI_FOLLOWUP_MIN_MS ..
+ * SI_FOLLOWUP_MAX_MS), at most SI_FOLLOWUP_MAX in a row; a non-pending answer clears the symbol; due symbols go out together
+ * in chunks of SI_CHUNK; with no mounted listener when the timer fires nothing is asked and the map clears. A failed
+ * follow-up keeps the last read (the catch below) and ends that symbol's series. An older API (no `basis`) → no timer.
  */
 import { useEffect, useState } from 'react';
 import { API } from '../lib/apiBase';
-import { parseSiMap, type ShortInterestRead } from '../lib/shortInterest';
+import { parseSiMap, siBasisPending, siFollowupClamp, type ShortInterestRead } from '../lib/shortInterest';
+
+export { SI_FOLLOWUP_MIN_MS, SI_FOLLOWUP_MAX_MS } from '../lib/shortInterest';
 
 export const SI_FLUSH_MS = 60;
 /** Must equal backend short_interest/read.py MAP_MAX_SYMBOLS (contract). */
 export const SI_CHUNK = 200;
 export const SI_TTL_MS = 600000;
 export const SI_RETRY_MS = 60000;
+/** At most this many follow-up re-asks of one symbol in a row (20 + 40 + 80 + 120 + 120 + 120 s at a 20 s served delay). */
+export const SI_FOLLOWUP_MAX = 6;
 
 const cache = new Map<string, { at: number; read: ShortInterestRead | null; failed?: boolean }>();
 const inflight = new Set<string>();
 const pending = new Set<string>();
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 const listeners = new Set<() => void>();
+/** symbol → re-asks made in a row (`k`) and when the next is due (`due` null = none scheduled: awaiting an answer, or capped). */
+const followup = new Map<string, { k: number; due: number | null }>();
+let followTimer: ReturnType<typeof setTimeout> | null = null;
+let gen = 0;
 
 function notifyAll() {
   listeners.forEach((fn) => fn());
@@ -40,9 +56,50 @@ export function _resetShortInterestCache(): void {
   pending.clear();
   if (flushTimer != null) clearTimeout(flushTimer);
   flushTimer = null;
+  gen += 1;
+  followup.clear();
+  if (followTimer != null) clearTimeout(followTimer);
+  followTimer = null;
+}
+
+/** (Re)arm the ONE follow-up timer at the earliest due re-ask; none due → no timer. */
+function armFollowup() {
+  if (followTimer != null) clearTimeout(followTimer);
+  followTimer = null;
+  let next = Infinity;
+  followup.forEach((f) => { if (f.due != null && f.due < next) next = f.due; });
+  if (next === Infinity) return;
+  const mine = gen;
+  followTimer = setTimeout(() => {
+    followTimer = null;
+    if (mine !== gen) return;
+    if (listeners.size === 0) { followup.clear(); return; }
+    const now = Date.now();
+    const want: string[] = [];
+    followup.forEach((f, s) => {
+      if (f.due == null || f.due > now) return;
+      f.due = null;                       // awaiting this answer (an in-flight read's own answer schedules the next)
+      if (!inflight.has(s)) want.push(s);
+    });
+    for (let i = 0; i < want.length; i += SI_CHUNK) fetchChunk(want.slice(i, i + SI_CHUNK));
+    armFollowup();
+  }, Math.max(0, next - Date.now()));
+}
+
+/** After a chunk answers: a pending name gets its next re-ask (doubling, clamped, capped); any other answer clears it. */
+function noteFollowups(symbols: string[], got: Record<string, ShortInterestRead>, now: number) {
+  for (const s of symbols) {
+    const delay = siBasisPending(got[s] ?? null);
+    if (delay == null) { followup.delete(s); continue; }
+    const k = followup.get(s)?.k ?? 0;
+    if (k >= SI_FOLLOWUP_MAX) { followup.set(s, { k, due: null }); continue; }
+    followup.set(s, { k: k + 1, due: now + siFollowupClamp(delay * 2 ** k) });
+  }
+  armFollowup();
 }
 
 function fetchChunk(symbols: string[]) {
+  const mine = gen;
   symbols.forEach((s) => inflight.add(s));
   // Promise.resolve().then: a stub fetch that THROWS synchronously becomes a
   // rejection here, never an uncaught error inside the flush timer.
@@ -53,6 +110,7 @@ function fetchChunk(symbols: string[]) {
       const now = Date.now();
       const got = parseSiMap(j);
       for (const s of symbols) cache.set(s, { at: now, read: got[s] ?? null });
+      if (mine === gen) noteFollowups(symbols, got, now);
     })
     .catch(() => {
       // Fail quiet — the chip renders nothing. Back-date so a later mount
@@ -63,6 +121,8 @@ function fetchChunk(symbols: string[]) {
         const hit = cache.get(s);
         if (!hit) cache.set(s, { at, read: null, failed: true });
         else cache.set(s, { ...hit, at: Math.max(hit.at, at) });
+        // A failed follow-up ends that symbol's series (the last read stays) — never a retry loop.
+        if (mine === gen) followup.delete(s);
       }
     })
     .finally(() => {

@@ -65,6 +65,17 @@ AMENDED 2026-11-23 — one exception: the 🩳 High SI sub on 🚩 Gajjala's
 (chart_maps/gajjala/high_si.py) lists names by `tier`, and its 9/21 EMA
 cross push (when live) rings only for listed names. Every other surface
 stays display only.
+
+🩳 % OF FLOAT — DILUTION, SPLITS, FILINGS (2026-11-24, Ajay, verbatim, in order)
+  "Yeah please" · "Make sure we are looking for Dilution.." ·
+  "Also split related events and filing so we flag them in the right way"
+`si_map` joins each name's share-basis doc (short_interest.share_basis, Mongo
+only) and `si_block(.., basis=)` runs `basis_math.verdict`: a float that is
+stale (FLOAT_STALE_WHEN) or across a split is not shown, the % falls back to
+shares outstanding on the newest dated count, and plain flags (⚠️ ✂️ 📄 ❔)
+are appended to the chip / title / rows / EXTREME note; the change vs the
+prior settlement is split-adjusted. No basis doc → byte-identical to before,
+no `basis` key. Display only; UNMEASURED.
 """
 from __future__ import annotations
 
@@ -75,6 +86,7 @@ from datetime import date, datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Optional
 
+from short_interest import basis_math as BM
 from short_interest import client as SIC
 
 log = logging.getLogger("short_interest.read")
@@ -93,6 +105,9 @@ SOURCE_SI = "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-inter
 FLOAT_SOURCE = "yfinance floatShares (shares_cache)"
 SHARES_SOURCE = "yfinance sharesOutstanding (shares_cache)"
 LEGACY_SHARES_SOURCE = "Massive reference shares outstanding (legacy per-name warm)"
+# 🩳 2026-11-24 — the dated count that replaces a refused float's pairing (short_interest.basis_math.verdict).
+SEC_SHARES_SOURCE = "SEC %s cover page (dei:EntityCommonStockSharesOutstanding)"
+YAHOO_LIVE_SHARES_SOURCE = "yfinance sharesOutstanding (shares_cache, current row)"
 
 SOURCES = [
     {"label": "FINRA Rule 4560 (short-interest reporting)",
@@ -369,6 +384,9 @@ TIER_HELD_TEXT = "%s — %s of the float, held below %s until the float is confi
 TIER_STALE_TEXT = "not given on a stale read."
 TIER_NO_FLOAT_TEXT = "not given — the tier words count the % of float, and no usable float is on file."  # NOT %-formatted
 TIER_ZERO_TEXT = "not given — too few shares short to read as a share of the float."
+# 🩳 2026-11-24 — a float the share-basis verdict refused (basis_math): checked BEFORE TIER_NO_FLOAT_TEXT.
+TIER_FLOAT_STALE_TEXT = "not tiered — float stale."
+TIER_SPLIT_TEXT = "not tiered — the float and the short-interest count sit on different sides of a split."
 # Float-check sentences — only when float_check is set; the title prints "Float check: " + it, the row prints it.
 FLOAT_CONFIRMED_TEXT = ("confirmed — %s of shares outstanding is short, at least the %g%% of shares outstanding "
                         "that EXTREME also needs.")                    # _pct_tier(ps), SIC.SI_EXTREME_MIN_PCT_SHARES_OUT
@@ -457,6 +475,11 @@ def _tier_sentence(b: Optional[dict]) -> Optional[str]:
         return None
     if b.get("status") == "stale":
         return TIER_STALE_TEXT
+    fr = _refused(b)
+    if fr == BM.REFUSE_DILUTED:
+        return TIER_FLOAT_STALE_TEXT
+    if fr in (BM.REFUSE_SPLIT, BM.REFUSE_SPLIT_SAME_DAY):
+        return TIER_SPLIT_TEXT
     if b.get("headline_basis") != "float":
         return TIER_NO_FLOAT_TEXT
     pf = _num(b.get("pct_of_float"))
@@ -500,7 +523,7 @@ def extreme_block(b: Optional[dict]) -> Optional[dict]:
     if b.get("tier") != TIER_EXTREME:                # 2026-11-18 later: ok + float + CONFIRMED, else no note
         return None
     return {"text": chip_text(b),
-            "short": EXTREME_SHORT % (GLYPH, EXTREME_WORD, _pct_tier(pf)),
+            "short": EXTREME_SHORT % (GLYPH, EXTREME_WORD, _pct_tier(pf)) + "".join(" · " + s for s in _flag_shorts(b)),
             "title": extreme_title(b, pf),
             "basis": EXTREME_BASIS}
 
@@ -518,14 +541,21 @@ def extreme_title(b: dict, pf: float) -> str:
     fl = b.get("float_shares")
     seg.append(EXTREME_FLOAT_BASIS_NOTE % (format(fl, ",") if isinstance(fl, int) else "n/a",
                                            b.get("float_source") or "n/a", b.get("float_asof") or "n/a"))
+    seg.extend(_flag_texts(b))                       # 🩳 2026-11-24 [C6] — the share-basis flags, before the study note
     seg.append(EXTREME_STUDY_NOTE)
     seg.append(_NOT_A_FORECAST)
     seg.append("Not advice.")
     return " ".join(seg)
 
 
-def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict]:
-    """The served block for one cached doc. PURE — no I/O, never fetches."""
+def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[dict] = None) -> Optional[dict]:
+    """The served block for one cached doc. PURE — no I/O, never fetches.
+
+    🩳 2026-11-24 `basis` = the name's share-basis doc (short_interest.share_basis, spec sidilute §3.1) or None.
+    None → the block is byte-identical to before and carries NO `basis` key. A doc → `basis_math.verdict` may refuse
+    the float (no % of float, no tier), swap in a newer dated count for % of shares outstanding, rebase the change
+    across a split, and append plain flags to the chip / title / rows / EXTREME note; the block gains ONE key,
+    `basis`. A raising verdict serves the block as before plus `basis.status "failed"` and its ❔ flag."""
     if not isinstance(doc, dict):
         return None
     sym = str(doc.get("symbol") or doc.get("_id") or "").strip().upper()
@@ -569,7 +599,7 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
     dtc = _nonneg(doc.get("days_to_cover"))
 
     fr = freshness(s, today)
-    basis = "float" if pf is not None else ("shares_out" if ps is not None else None)
+    basis_hl = "float" if pf is not None else ("shares_out" if ps is not None else None)
 
     b = _empty_block(sym)
     b.update({
@@ -590,7 +620,7 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
         "shares_asof": shares_asof,
         "shares_source": shares_source,
         "pct_of_shares_out": ps,
-        "headline_basis": basis,
+        "headline_basis": basis_hl,
         "float_suspect": suspect,
         "stale": fr["stale"],
         "stale_reason": fr["stale_reason"],
@@ -599,20 +629,105 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
         "source": str(doc.get("source") or SOURCE_SI),
         "fetched_at": _iso_utc(doc.get("fetched_at")),
     })
+    v = None
+    if isinstance(basis, dict):
+        try:
+            v = BM.verdict(doc, basis, _today(today))
+            if v is not None:
+                _apply_verdict(b, v)
+        except Exception as exc:                               # noqa: BLE001 — [C11] never costs the chip, never hides
+            log.warning("short_interest.read: share-basis verdict %s failed: %s", sym, type(exc).__name__)
+            v = None
+            b.update({"pct_of_float": pf, "shares_outstanding": so, "shares_asof": shares_asof,
+                      "shares_source": shares_source, "pct_of_shares_out": ps, "si_change_pct": chg,
+                      "headline_basis": basis_hl})
+            b["basis"] = {"status": "failed", "flags": [BM.failed_flag()]}
     try:
         b["tier"], b["float_check"] = si_tier(b)
     except Exception as exc:                                   # noqa: BLE001 — a tier failure never costs the chip
         log.warning("short_interest.read: tier %s failed: %s", b.get("symbol"), type(exc).__name__)
         b["tier"], b["float_check"] = None, None
     b["chip"] = chip_text(b)
-    b["title"] = title_text(b)
-    b["rows"] = rows_for(b)
+    b["title"] = title_text(b, v)
+    b["rows"] = rows_for(b, v)
     try:
         b["extreme"] = extreme_block(b)
     except Exception as exc:                                   # noqa: BLE001 — the note never costs the chip
         log.warning("short_interest.read: extreme note %s failed: %s", b.get("symbol"), type(exc).__name__)
         b["extreme"] = None
     return b
+
+
+# 🩳 2026-11-24 — the ONE served key a checked name gains (spec sidilute §3.4). Absent on an unchecked name.
+BASIS_KEYS = ("status", "checked_at", "float_refused", "refused_reasons", "float_pct_on_file", "growth", "fell",
+              "change", "splits", "filings", "flags", "sources")
+
+
+def _apply_verdict(b: dict, v: dict) -> None:
+    """Fold one `basis_math.verdict` into the block (before the tier, chip, title and rows are built)."""
+    if v.get("float_refused"):
+        b["pct_of_float"] = None
+    c = v.get("count")
+    if v.get("count_changed") and isinstance(c, dict) and _pos_int(c.get("shares")):
+        b["shares_outstanding"] = _pos_int(c["shares"])
+        b["shares_asof"] = _iso_date(c.get("as_of"))
+        if c.get("source") == "sec":
+            b["shares_source"] = SEC_SHARES_SOURCE % (c.get("form") or "filing")
+        elif c.get("source") == "yahoo":
+            b["shares_source"] = YAHOO_LIVE_SHARES_SOURCE
+        b["pct_of_shares_out"] = _num(v.get("pct_of_shares_out"))
+    if v.get("no_pct"):
+        b["pct_of_shares_out"] = None
+    ch = v.get("change")
+    if isinstance(ch, dict):
+        b["si_change_pct"] = _num(ch.get("pct"))
+    b["headline_basis"] = ("float" if b.get("pct_of_float") is not None
+                           else ("shares_out" if b.get("pct_of_shares_out") is not None else None))
+    b["basis"] = {k: v.get(k) for k in BASIS_KEYS}
+
+
+def _basis(b) -> dict:
+    x = (b or {}).get("basis") if isinstance(b, dict) else None
+    return x if isinstance(x, dict) else {}
+
+
+def _refused(b) -> Optional[str]:
+    fr = _basis(b).get("float_refused")
+    return fr if isinstance(fr, str) and fr else None
+
+
+def _flags(b) -> list:
+    fl = _basis(b).get("flags")
+    return [f for f in (fl if isinstance(fl, list) else [])
+            if isinstance(f, dict) and isinstance(f.get("short"), str) and f["short"]]
+
+
+def _flag_shorts(b) -> list:
+    return [f["short"] for f in _flags(b)]
+
+
+def _flag_texts(b) -> list:
+    return [f["text"] for f in _flags(b) if isinstance(f.get("text"), str) and f["text"]]
+
+
+def _refusal_line(b: dict, v: Optional[dict]) -> Optional[str]:
+    """`not shown — …; the float on file (…) would read …` for a refused float, else None."""
+    fr = _refused(b)
+    if not fr:
+        return None
+    why = (v or {}).get("float_line")
+    if not isinstance(why, str) or not why:
+        want = BM.FLAG_FLOAT_STALE if fr == BM.REFUSE_DILUTED else BM.FLAG_SPLIT
+        why = next((f.get("text") for f in _flags(b) if f.get("key") == want and isinstance(f.get("text"), str)), fr)
+    why = why.split(" ", 1)[1] if why[:1] in (BM.EMOJI_WARN[:1], BM.EMOJI_SPLIT[:1]) and " " in why else why
+    fl, pof = b.get("float_shares"), _num(_basis(b).get("float_pct_on_file"))
+    s = "not shown — %s" % why
+    if isinstance(fl, int):
+        s += "; the float on file (%s, %s, as of %s)" % (format(fl, ","), b.get("float_source") or "n/a",
+                                                          b.get("float_asof") or "n/a")
+        if pof is not None:
+            s += " would read %.2f%%" % pof
+    return s
 
 
 FLOAT_EXCEEDS_SHARES = "float_exceeds_shares_out"
@@ -676,6 +791,7 @@ def chip_text(b: Optional[dict]) -> Optional[str]:
     parts.append(_md(b["settlement_date"]))
     if b.get("stale"):
         parts.append("stale")
+    parts.extend(_flag_shorts(b))                    # 🩳 2026-11-24 — the share-basis flags, LAST
     return " · ".join(parts)
 
 
@@ -683,6 +799,14 @@ def _change_phrase(b: dict, *, with_prev_count: bool) -> str:
     prev = b.get("prev_settlement_date")
     if not prev:
         return "no prior settlement on file"
+    ch = _basis(b).get("change")
+    if isinstance(ch, dict) and isinstance(ch.get("words"), str):        # 🩳 2026-11-24 [C2] — across a split
+        if ch.get("same_day") or _num(ch.get("pct")) is None:
+            head = "no %% vs %s" % prev
+            if with_prev_count and b.get("prev_si_shares") is not None:
+                head += " (%s then)" % format(b["prev_si_shares"], ",")
+            return "%s — %s" % (head, ch["words"])
+        return "%+.1f%% vs %s, split-adjusted — %s" % (_num(ch.get("pct")), prev, ch["words"])
     chg = b.get("si_change_pct")
     head = ("%+.1f%% vs %s" % (chg, prev)) if chg is not None else ("prior settlement %s" % prev)
     if with_prev_count and b.get("prev_si_shares") is not None:
@@ -690,19 +814,22 @@ def _change_phrase(b: dict, *, with_prev_count: bool) -> str:
     return head
 
 
-def title_text(b: dict) -> str:
+def title_text(b: dict, v: Optional[dict] = None) -> str:
     if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
         return (b or {}).get("title") or "Short interest: not read."
     seg = ["%s Short interest — FINRA settlement %s (published ~%s)."
            % (GLYPH, b["settlement_date"], b["published_on"])]
     seg.append("%s shares short (%s)." % (format(b["si_shares"], ","),
                                           _change_phrase(b, with_prev_count=False)))
+    refusal = _refusal_line(b, v)
     if b.get("pct_of_float") is not None:
         s = "%s of float — float %s, %s" % (_pct_tier(b["pct_of_float"]),
                                            _human_shares(b["float_shares"]), b["float_source"])
         if b.get("float_asof"):
             s += ", as of %s" % b["float_asof"]
         seg.append(s + ".")
+    elif refusal:
+        seg.append("%% of float: %s." % refusal)
     else:
         seg.append("% of float: not read (no float on file).")
     if b.get("pct_of_shares_out") is not None:
@@ -733,22 +860,44 @@ def title_text(b: dict) -> str:
         seg.append("STALE — %s." % b["stale_reason"])
     if _conflict(b):
         seg.append(_conflict_sentence(b))
+    seg.extend(_basis_sentences(b, v))               # 🩳 2026-11-24 — notes, flag texts, the share-count check
     seg.append(_NOT_A_FORECAST)
     seg.append("Source: %s. Not advice." % b["source"])
     return " ".join(seg)
 
 
-def rows_for(b: dict) -> list:
+def _basis_sentences(b: dict, v: Optional[dict]) -> list:
+    out = []
+    if isinstance(v, dict):
+        out += [x for x in (v.get("title_lines") or []) if isinstance(x, str) and x]
+    out += [t if t.endswith(".") else t + "." for t in _flag_texts(b)]
+    if isinstance(v, dict) and isinstance(v.get("check_text"), str) and v["check_text"]:
+        out.append("Share-count check: " + v["check_text"])
+    return out
+
+
+def _basis_rows(b: dict, v: Optional[dict]) -> list:
+    if isinstance(v, dict):
+        return [r for r in (v.get("rows") or [])
+                if isinstance(r, dict) and isinstance(r.get("k"), str) and isinstance(r.get("v"), str)]
+    return [{"k": "Share-count check", "v": t} for t in _flag_texts(b)]
+
+
+def rows_for(b: dict, v: Optional[dict] = None) -> list:
     if not b or b.get("status") == "no_record" or b.get("si_shares") is None:
         return list((b or {}).get("rows") or [])
+    verdict = v
     rows = [{"k": "Settlement", "v": "%s (FINRA; published ~%s)"
              % (b["settlement_date"], b["published_on"])}]
     rows.append({"k": "Shares short", "v": "%s · %s" % (
         format(b["si_shares"], ","), _change_phrase(b, with_prev_count=True))})
+    refusal = _refusal_line(b, verdict)
     if b.get("pct_of_float") is not None:
         v = "%s — float %s (%s" % (_pct_tier(b["pct_of_float"]), format(b["float_shares"], ","),
                                    b["float_source"])
         v += (", as of %s)" % b["float_asof"]) if b.get("float_asof") else ")"
+    elif refusal:
+        v = refusal
     else:
         v = "not read — no float on file"
     rows.append({"k": "% of float", "v": v})
@@ -786,6 +935,7 @@ def rows_for(b: dict) -> list:
     rows.append({"k": "Source", "v": b["source"]})
     if _conflict(b):
         rows.append({"k": "⚠ Counts disagree", "v": _conflict_sentence(b)})
+    rows.extend(_basis_rows(b, verdict))             # 🩳 2026-11-24 — notes, flags, the share-count check
     return rows
 
 
@@ -803,6 +953,8 @@ def si_map(symbols, db=None, today=None) -> dict:
     if not syms:
         return {}
     docs = SIC.short_interest_map(syms, db=db) or {}
+    # 🩳 2026-11-24 — the share-basis docs (ONE `$in` read through share_basis.load; {} on any failure).
+    bdocs = _basis_docs([s for s in syms if s in docs], db) if docs else {}
     out: dict = {}
     for sym in syms:
         doc = docs.get(sym)
@@ -811,13 +963,28 @@ def si_map(symbols, db=None, today=None) -> dict:
         d = dict(doc)
         d.setdefault("symbol", sym)
         try:
-            blk = si_block(d, today)
+            blk = si_block(d, today, basis=bdocs.get(sym))
         except Exception as exc:                               # noqa: BLE001
             log.warning("short_interest.read: block %s failed: %s", sym, type(exc).__name__)
             blk = None
         if blk is not None:
             out[sym] = blk
     return out
+
+
+def _basis_docs(syms, db=None) -> dict:
+    """{SYM: share-basis doc} — the seam to short_interest.share_basis.load (lazy). Never fetches; {} on ANY failure."""
+    if not syms:
+        return {}
+    try:
+        from short_interest import share_basis as SB
+        got = SB.load(list(syms), db=db)
+    except Exception as exc:                                   # noqa: BLE001 — a missing basis is an unchecked name
+        log.warning("short_interest.read: share-basis load failed: %s", type(exc).__name__)
+        return {}
+    if not isinstance(got, dict):
+        return {}
+    return {str(k).upper(): v for k, v in got.items() if isinstance(v, dict)}
 
 
 # ───────────────────────────────────────────── ℹ️ rules section
@@ -863,6 +1030,12 @@ def rules_section() -> dict:
         "alerts": ["Pushes nothing, gates nothing, sorts nothing and enters no lane."],
         "note": "A data label, not a rule or a signal. Not financial advice.",
     }
+    # 🩳 2026-11-24 — the float-dilution / split sentence FOLDS onto the END of the '% of float = ' pick (index 1): the
+    # section is at its 8-pick cap. Built from basis_math constants by name. A failure leaves the pick as it was.
+    try:
+        sec["picks"][1] = sec["picks"][1] + " " + BM.rules_sentence()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest.read: basis sentence skipped: %s", type(exc).__name__)
     # 💸 2026-11-22 — the IBKR borrow sentence FOLDS into the short-volume pick (index 6): the section is at the
     # 8-pick cap once the 🔒 pick below appends. Lazy: borrow imports this module. A failure leaves the pick as it was.
     try:

@@ -34,6 +34,10 @@ Endpoints:
       every Chart Maps tab and the ticker page. ONE `$in` read of the
       `short_interest_latest` cache via `short_interest.read.si_map`, off the
       event loop; never a provider call. A name with no cached doc is absent.
+      2026-11-24: each ok / stale name is handed to `share_basis.kick` (the
+      single background worker; dilution, splits, filings) and a queued or
+      in-flight name carries `basis.pending` + `basis.retry_after_sec`. The
+      answer keeps exactly `{items, n, max_symbols}`.
 
 The short-VOLUME paths go through `short_interest.client`, which manages the
 1-day Mongo cache. `/short/{symbol}/interest` is the older live per-name read
@@ -95,7 +99,45 @@ async def short_interest_read_map(
     from short_interest import read as SR
     syms = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
     items = await asyncio.to_thread(SR.si_map, syms)
+    # 🩳 2026-11-24 [C5] — kick the share-basis worker for the read names (ok / stale only; a no_record block is
+    # never kicked, no kick on an empty list) and mark each queued / in-flight name `basis.pending` so the page re-asks.
+    kick = [s for s, b in items.items() if isinstance(b, dict) and b.get("status") in ("ok", "stale")]
+    if kick:
+        try:
+            pend = await asyncio.to_thread(_kick_basis, kick)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("share_basis: the kick failed: %s", type(exc).__name__)
+            pend = []
+        if pend:
+            retry = _retry_after_sec()
+            for sym in pend:
+                if sym in items:
+                    items[sym] = {**items[sym], "basis": {**(items[sym].get("basis") or {"status": "pending"}),
+                                                          "pending": True, "retry_after_sec": retry}}
     return {"items": items, "n": len(items), "max_symbols": SR.MAP_MAX_SYMBOLS}
+
+
+def _kick_basis(symbols) -> list:
+    """The seam to short_interest.share_basis.kick (lazy): the asked names that are queued or in flight. Never raises."""
+    if not symbols:
+        return []
+    try:
+        from short_interest import share_basis as SB
+        res = SB.kick(list(symbols))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("share_basis: kick unavailable: %s", type(exc).__name__)
+        return []
+    pend = res.get("pending") if isinstance(res, dict) else None
+    return [str(s).upper() for s in (pend if isinstance(pend, list) else []) if isinstance(s, str) and s]
+
+
+def _retry_after_sec():
+    """share_basis.SB_RETRY_AFTER_SEC by name (lazy); None when the module cannot load."""
+    try:
+        from short_interest import share_basis as SB
+        return SB.SB_RETRY_AFTER_SEC
+    except Exception:                                          # noqa: BLE001
+        return None
 
 
 @router.get("/short-interest/reg-sho")

@@ -71,6 +71,17 @@ FAULT_TEXT = ("🩳 The short-interest read could not be made this time — the 
 FAULTS_TEXT = "{n} name(s) could not be read this time — the rest of the board stands"
 CHARTLESS_TEXT = "🩳 {sym} listed · chart not stored"
 NO_CROSS_TEXT = "no cross on today's stored bars"
+# 2026-11-24 (SPEC sidilute §3.6, WP be-highsi) — Ajay: "Make sure we are looking for Dilution.." · "Also split related
+# events and filing so we flag them in the right way". The house read (short_interest.read.si_block) refuses a float that
+# is stale (more shares since it was read) or sits across a split from the short-interest count: that block carries
+# basis.float_refused and no tier, so classify gives it `no_tier` (REASONS and the push's COUNT_KEYS unchanged). Here the
+# words split it out of "no usable float", and a name that WAS High / EXTREME on the float on file is named.
+BASIS_TEXT = ("⚠️ %s or %s on the float on file, but that float is stale or across a split — not tiered, so not "
+              "listed: %s")
+NO_TIER_REFUSED_HEAD = "{k} with no tier word ({m} with a float that is stale or across a split"
+# printed only when at least one no-tier name is NOT refused — "the rest" never stands for zero names
+NO_TIER_REFUSED_REST = "; the rest with no usable float on the short-interest record"
+NO_TIER_REFUSED_WORDS = NO_TIER_REFUSED_HEAD + NO_TIER_REFUSED_REST
 
 
 # ── small helpers ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -157,19 +168,46 @@ def squeeze_row(r: dict) -> dict:
     return {"key": "squeeze", "label": SQUEEZE_TAG, "value": value, "need": SQUEEZE_NEED, "ok": ok}
 
 
+def _s(x) -> Optional[str]:
+    return x if isinstance(x, str) and x.strip() else None
+
+
+def basis_of(si_block) -> Optional[dict]:
+    """The block's served share-basis check (`basis`, read.py §3.4) when it is a dict, else None. Never raises."""
+    b = si_block.get("basis") if isinstance(si_block, dict) else None
+    return b if isinstance(b, dict) else None
+
+
+def float_refused(si_block) -> Optional[str]:
+    """basis.float_refused when it is a non-empty string (the house read refused the float on file), else None."""
+    return _s((basis_of(si_block) or {}).get("float_refused"))
+
+
+def si_flags(si_block) -> list:
+    """The flag `short` words the house read served on this block (basis.flags[].short) — well-formed strings only, in
+    the served order. Junk (not a list, a flag that is not a dict, no / empty / non-string short) adds nothing."""
+    flags = (basis_of(si_block) or {}).get("flags")
+    if not isinstance(flags, list):
+        return []
+    return [f["short"] for f in flags if isinstance(f, dict) and _s(f.get("short"))]
+
+
 def tier_chip(read: dict) -> str:
     """The card's 🩳 chip words WITH the % in them (Ajay 2026-11-23: "Why is high more than extreme? can you actually put
     a percentage directly here?"). The % is the short-interest record's own % of float (the one the house tier is read
     on), else this card's float %; no number → no %, never "None" / "nan". A name the house holds at High because its
     float is unconfirmed says so in the chip (SR.FLOAT_UNCONFIRMED_WORD) — that is why a High can carry a bigger % than
-    an EXTREME. Words only: no tier, gate or listing changes here."""
+    an EXTREME. Then ` · ` + each served share-basis flag short (`si_flags`, 2026-11-24 [C6]); none → the old words
+    exactly. Words only: no tier, gate or listing changes here."""
     read = read if isinstance(read, dict) else {}
     p = _f(read.get("pct_record"))
     if p is None:
         p = _f(read.get("pct_card"))
     pct = "" if p is None else _pct(p) + " "
     unc = " (%s)" % SR.FLOAT_UNCONFIRMED_WORD if read.get("float_check") == SR.FLOAT_UNCONFIRMED else ""
-    return "🩳 %sshort interest · %s%s" % (pct, read.get("tier_word") or DASH, unc)
+    fl = read.get("si_flags")
+    tail = "".join(" · " + f for f in fl if _s(f)) if isinstance(fl, list) else ""
+    return "🩳 %sshort interest · %s%s%s" % (pct, read.get("tier_word") or DASH, unc, tail)
 
 
 def _hhmm(t) -> Optional[str]:
@@ -295,7 +333,7 @@ def _add_text(doc: dict) -> Optional[str]:
 
 def _empty_ev() -> dict:
     return {"rows": [], "counts": {r: 0 for r in REASONS}, "over": [], "disagree": [], "no_tier_low": [], "n_read": 0,
-            "faults": [], "unconfirmed": 0, "carried": 0, "adds": [], "settlement": None}
+            "faults": [], "unconfirmed": 0, "carried": 0, "adds": [], "settlement": None, "refused": 0, "basis": []}
 
 
 def evaluate(reads_by: dict, *, scan_row: Callable, session: date, now: datetime, v=None,
@@ -341,6 +379,12 @@ def evaluate(reads_by: dict, *, scan_row: Callable, session: date, now: datetime
                                            "pct_record": _f(b.get("pct_of_float")),
                                            "si_float_shares": c["si_float_shares"], "pct_card": c["pct_card"],
                                            "float_shares": c["float_shares"]})
+                elif reason == "no_tier" and float_refused(b) is not None:
+                    ev["refused"] += 1                              # [C7] never "no usable float"
+                    on_file = SR.tier_of(_f(basis_of(b).get("float_pct_on_file")))
+                    if on_file in TIERS:                            # it WAS High / EXTREME on the float on file
+                        ev["basis"].append({"symbol": s, "chip": _s(b.get("chip")),
+                                            "tier_word": SR.TIER_WORDS.get(on_file)})
                 elif reason == "no_tier" and c["float_shares"] is not None and c["float_shares"] <= _cap():
                     ev["no_tier_low"].append(s)
                 continue
@@ -354,7 +398,7 @@ def evaluate(reads_by: dict, *, scan_row: Callable, session: date, now: datetime
                     "float_text": (GT._float_chip(fr) or {}).get("text"), "floats_text": floats_text(fr, b),
                     "session_volume": row_.get("volume"),
                     "carried": (lrow.get("last_qualified") != s_iso) if isinstance(lrow, dict) else None,
-                    "add_text": _add_text(doc)}
+                    "add_text": _add_text(doc), "si_flags": si_flags(b)}
             rows.append({"symbol": s, "read": read, "read_doc": doc})
         except Exception as exc:                                    # noqa: BLE001 — one name never takes the sub down
             log.warning("gajjala high si: read %s failed: %s", s, type(exc).__name__)
@@ -363,6 +407,7 @@ def evaluate(reads_by: dict, *, scan_row: Callable, session: date, now: datetime
     for k in ("over", "disagree"):
         ev[k].sort(key=lambda d: d["symbol"])
     ev["no_tier_low"].sort()
+    ev["basis"].sort(key=lambda d: d["symbol"])
     ev["rows"] = rows
     ev["unconfirmed"] = sum(1 for r in rows if r["read"]["float_check"] == SR.FLOAT_UNCONFIRMED)
     ev["carried"] = sum(1 for r in rows if r["read"]["carried"] is True)
@@ -387,9 +432,12 @@ def rule_text() -> str:
             "the record's float, at or over the %s cut on the card's float, and both floats at or under the cap; a name "
             "the two reads disagree on is counted and named below, never listed. The tier word is the 🩳 chip's own: a "
             "stale read, a read with no usable float and a name with no FINRA record carry no word, so that name is "
-            "not listed and is counted. The 🔒 Reg SHO threshold tag is a tag when the name is on an exchange list, "
+            "not listed and is counted. A float on the short-interest record that is stale (more shares since it was "
+            "read) or sits across a split from the short-interest count carries no tier word either, so that name is "
+            "not listed; it is counted apart from the names with no usable float, and named above when it was %s or "
+            "%s on that float. The 🔒 Reg SHO threshold tag is a tag when the name is on an exchange list, "
             "never a condition. Read off the stored short-interest record and this tab's stored bars; nothing is "
-            "fetched." % (hi, ex, SR._ladder(), _cap_text(), hi, ex, hi))
+            "fetched." % (hi, ex, SR._ladder(), _cap_text(), hi, ex, hi, hi, ex))
 
 
 def _latch_words() -> str:
@@ -452,6 +500,15 @@ def counts_text(ev: dict) -> str:
     lo, mo = _w(SR.TIER_LOW), _w(SR.TIER_MODERATE)
     cap = _cap_text()
     j = len(ev.get("no_tier_low") or [])
+    try:
+        m = int(ev.get("refused") or 0)
+    except (TypeError, ValueError):
+        m = 0
+    k_nt = int(c.get("no_tier") or 0)
+    if m > 0:
+        no_tier_head = (NO_TIER_REFUSED_HEAD + (NO_TIER_REFUSED_REST if k_nt > m else "")).replace("{m}", str(m))
+    else:
+        no_tier_head = "{k} with no tier word (no usable float on the short-interest record"
     words = {
         "float_over": "{k} %s / %s with a card float over %s" % (hi, ex, cap),
         "si_float_over": "{k} %s / %s with a short-interest-record float over %s" % (hi, ex, cap),
@@ -459,7 +516,7 @@ def counts_text(ev: dict) -> str:
         "float_unknown": "{k} %s / %s with an unknown float" % (hi, ex),
         "not_high": "{k} %s or %s" % (lo, mo),
         "stale": "{k} on a stale read",
-        "no_tier": ("{k} with no tier word (no usable float on the short-interest record"
+        "no_tier": (no_tier_head
                     + ("; %d of them with a card float at or under the cap" % j if j else "") + ")"),
         "no_si": "{k} with no short-interest record",
     }
@@ -596,6 +653,16 @@ def no_tier_text(ev: dict) -> Optional[str]:
         return None
     return ("Short interest on file but no tier word (no usable float on the short-interest record), card float at or "
             "under %s: %s — the tier is never worked out on the card's float here." % (_cap_text(), " · ".join(names)))
+
+
+def basis_text(ev: dict) -> Optional[str]:
+    """[C7] The names the house read refused a float for that were High / EXTREME on that float on file — `SYM — <the
+    block's served 🩳 chip>`. None when there is none."""
+    names = [d for d in ((ev or {}).get("basis") or []) if isinstance(d, dict) and _s(d.get("symbol"))]
+    if not names:
+        return None
+    return BASIS_TEXT % (_w(SR.TIER_HIGH), _w(SR.TIER_EXTREME),
+                         " · ".join("%s — %s" % (d["symbol"], _s(d.get("chip")) or DASH) for d in names))
 
 
 def empty_today() -> str:
@@ -957,7 +1024,7 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
            "sho_text": sho_text(rows, now=now, sho_read=_sho_once), "push_text": push_text(), "order_note": order_note,
            "shown_text": SHOWN_TEXT.format(lim=lim, n=n) if isinstance(lim, int) and n > lim else None,
            "excluded_text": excluded_text(ev), "disagree_text": disagree_text(ev), "no_tier_text": no_tier_text(ev),
-           "n": n, "n_read": int(ev.get("n_read") or 0),
+           "basis_text": basis_text(ev), "n": n, "n_read": int(ev.get("n_read") or 0),
            "empty_text": None if rows else (empty_today() if is_today else empty_session(label))}
     tiles, chartless, card_faults = _cards(rows, tf=tf, scan_row=scan_row, sess=sess, halts_by=halts_by, listed=listed,
                                            pass_at=pass_at, v=v, rang=rang)
@@ -980,7 +1047,9 @@ __all__ = ["TIERS", "STATE", "REASONS", "NOT_ADVICE", "ASK_TEXT", "RULE_LABEL", 
            "SHOWN_TEXT", "FAULT_TEXT", "FAULTS_TEXT", "CHARTLESS_TEXT", "push_mode", "si_blocks", "float_shares",
            "card_pct", "classify", "evaluate", "title", "rule_text", "push_text", "honesty", "cohort_text",
            "counts_text", "adds_text", "asof_text", "floats_text", "sho_text", "excluded_text", "disagree_text",
-           "no_tier_text", "empty_today", "empty_session", "volume_row", "cross_row", "rang_today", "card", "block",
+           "no_tier_text", "BASIS_TEXT", "NO_TIER_REFUSED_WORDS", "NO_TIER_REFUSED_HEAD",
+           "NO_TIER_REFUSED_REST", "basis_of", "float_refused", "si_flags",
+           "basis_text", "empty_today", "empty_session", "volume_row", "cross_row", "rang_today", "card", "block",
            "SSR_NEW_KEY", "SSR_NEW_KIND", "SSR_NEW_GROUPS", "SSR_NEW_MIXED", "SSR_NEW_OPEN", "SSR_NEW_NAMED",
            "SSR_NEW_BLOCK_KEYS", "SSR_NEW_GROUP_KEYS", "SSR_NEW_ROW_KEYS", "SSR_NEW_FAULT", "SSR_NEW_SI_UNREAD",
            "SSR_NEW_LIST_UNREAD", "SSR_NEW_RULE_LABEL", "SSR_NEW_TIER_NOTE", "SSR_NEW_UNTIERED_TAIL",

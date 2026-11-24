@@ -49,6 +49,9 @@ export function GgHighSiPanel({ block }: { block: GgHighSiBlock | null | undefin
         <blockquote className="gg-dv-ask gg-muted" data-testid="gg-hs-ask">{block.ask_text}</blockquote>
       ) : null}
       <Line v={block.counts_text} testid="gg-hs-counts" />
+      {/* 🩳 2026-11-24 (spec sidilute §3.6 / §3.7 [C7]): the served line naming the names that were High / EXTREME on the
+       * float on file but are not tiered (that float is stale or across a split) — printed as served, right after the counts. */}
+      <Line v={block.basis_text} testid="gg-hs-basis" />
       <Line v={block.adds_text} testid="gg-hs-adds" />
       <Line v={block.asof_text} testid="gg-hs-asof" />
       <Line v={block.sho_text} testid="gg-hs-sho" />

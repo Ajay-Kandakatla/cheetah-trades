@@ -237,6 +237,8 @@ describe('💸 board — NEGATIVES', () => {
       await settle();
       await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId(`gg-htb-${BF}`);
       await screen.findByTestId(`gg-htb-label-${SQ}`);
+      await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId('si-chip');
+      await screen.findByTestId(`gg-si-label-${SQ}`);
       const bfA = screen.getByTestId(`gg-tile-${BF}`).innerHTML;
       const sqA = screen.getByTestId(`gg-tile-${SQ}`).innerHTML;
       expect(a.container.querySelector('.gg-brw, .gg-brw-label')).toBeNull();
@@ -249,6 +251,8 @@ describe('💸 board — NEGATIVES', () => {
       await settle();
       await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId(`gg-htb-${BF}`);
       await screen.findByTestId(`gg-htb-label-${SQ}`);
+      await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId('si-chip');
+      await screen.findByTestId(`gg-si-label-${SQ}`);
       expect(screen.getByTestId(`gg-tile-${BF}`).innerHTML).toBe(bfA);
       expect(screen.getByTestId(`gg-tile-${SQ}`).innerHTML).toBe(sqA);
       expect(b.container.querySelector('.gg-brw, .gg-brw-label')).toBeNull();

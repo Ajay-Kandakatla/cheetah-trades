@@ -779,6 +779,9 @@ export type GgHighSiBlock = {
   /** ⛔ 2026-11-24 (spec ssrlist §3.4): the names newly under SSR in the session shown — served by high_si.ssr_new_block;
    *  absent on an older API (no section). */
   ssr_new?: GgSsrNewBlock | null;
+  /** 🩳 2026-11-24 (spec sidilute §3.6): the served line naming the names High / EXTREME on the float on file whose float is
+   *  stale or across a split (not tiered, so not listed); null when none, absent on an older API. */
+  basis_text?: string | null;
 };
 /** ⛔ one row of the new-SSR list — every piece served and printed as handed (no number formatted here). */
 export type GgSsrNewRow = { symbol?: string | null; href?: string | null; at_text?: string | null; drop_text?: string | null;

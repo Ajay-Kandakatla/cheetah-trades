@@ -63,7 +63,71 @@ export type ShortInterestRead = {
   /** 🩳 float check key (2026-11-18, later) — the served float confirmation, or null when there is nothing to check.
    *  Its words are already inside `chip` / `title` / `rows`. Absent on an older API → null. */
   float_check?: string | null;
+  /** 🩳 share-count check (2026-11-24, spec sidilute §3.4 / §3.5) — present only on a checked name; absent on an older
+   *  API and on an unchecked name → treated as null. Its flags' words are already inside `chip` / `title` / `rows` /
+   *  `extreme`; the FE reads only `pending` + `retry_after_sec` (the follow-up re-ask) through the guards below. */
+  basis?: SiBasis | null;
 };
+
+/** 🩳 one served share-count flag (backend short_interest/basis_math.py) — every word served. */
+export type SiFlag = { key: string; emoji: string; short: string; text: string };
+
+/** 🩳 the served `basis` block (2026-11-24). Ajay: "Make sure we are looking for Dilution.." · "Also split related
+ *  events and filing so we flag them in the right way". `pending` / `retry_after_sec` are overlaid by the map route
+ *  while the background check is queued or running. Every other key is passed through untouched. */
+export type SiBasis = {
+  status?: string | null;
+  pending?: boolean | null;
+  retry_after_sec?: number | null;
+  checked_at?: string | null;
+  float_refused?: string | null;
+  refused_reasons?: string[] | null;
+  flags?: SiFlag[] | null;
+  [k: string]: unknown;
+};
+
+/** The follow-up re-ask bounds (spec sidilute §3.7, engineering numbers — HIS CALL #14). A served delay is clamped into
+ *  [MIN, MAX]; a junk delay (NaN, negative, a string, absent) reads MIN — never a tight loop. */
+export const SI_FOLLOWUP_MIN_MS = 5000;
+export const SI_FOLLOWUP_MAX_MS = 120000;
+
+/** Clamp a delay in ms into [SI_FOLLOWUP_MIN_MS, SI_FOLLOWUP_MAX_MS]; a non-finite or non-positive value reads MIN. */
+export function siFollowupClamp(ms: unknown): number {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0) return SI_FOLLOWUP_MIN_MS;
+  return Math.min(SI_FOLLOWUP_MAX_MS, Math.max(SI_FOLLOWUP_MIN_MS, ms));
+}
+
+function basisOf(read: ShortInterestRead | null | undefined): Record<string, unknown> | null {
+  if (!read || typeof read !== 'object') return null;
+  const b = (read as { basis?: unknown }).basis;
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return null;
+  return b as Record<string, unknown>;
+}
+
+/** The served "check still running" mark: `basis.pending === true` (strictly — a string / 1 / null is not pending) →
+ *  the served delay in ms, clamped (junk `retry_after_sec` → SI_FOLLOWUP_MIN_MS); anything else → null. */
+export function siBasisPending(read: ShortInterestRead | null | undefined): number | null {
+  const b = basisOf(read);
+  if (!b || b.pending !== true) return null;
+  const sec = b.retry_after_sec;
+  return siFollowupClamp(typeof sec === 'number' ? sec * 1000 : NaN);
+}
+
+/** The served flags, well-formed entries only (four strings, a non-empty key and short) — `[]` for anything else. */
+export function siFlags(read: ShortInterestRead | null | undefined): SiFlag[] {
+  const b = basisOf(read);
+  if (!b || !Array.isArray(b.flags)) return [];
+  const out: SiFlag[] = [];
+  for (const f of b.flags as unknown[]) {
+    if (!f || typeof f !== 'object' || Array.isArray(f)) continue;
+    const r = f as Record<string, unknown>;
+    if (typeof r.key !== 'string' || !r.key.trim()) continue;
+    if (typeof r.short !== 'string' || !r.short.trim()) continue;
+    if (typeof r.emoji !== 'string' || typeof r.text !== 'string') continue;
+    out.push({ key: r.key, emoji: r.emoji, short: r.short, text: r.text });
+  }
+  return out;
+}
 
 /** 🩳 EXTREME note (2026-11-18) — the served block built by read.extreme_block; null when the name is not extreme.
  *  Ajay 2026-11-18: "When there are extreme cases of short interest make a not for them on reversal squeeze like

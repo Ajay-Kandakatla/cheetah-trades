@@ -1,0 +1,1916 @@
+{
+ "about": "REAL captured inputs for the share-basis check (spec sidilute rev 2, probe-docs, C10). si_record = the short_interest_latest fields; yahoo_now = the shares_cache row; ref = Massive /v3/reference/tickers; splits = Massive /v3/reference/splits; sec = data.sec.gov companyconcept dei:EntityCommonStockSharesOutstanding (covers) + submissions filings.recent (filings). No synthetic SEC answer is in this file.",
+ "today": "2026-11-24",
+ "captures": {
+  "basis_inputs.json": "2026-11-24T18:18:54Z (file write time; planner probe 11-24 13:30 ET)",
+  "sec_inputs.json": "2026-11-24T18:22:27Z (file write time)",
+  "clro_inputs.json": "2026-11-24T19:05:50Z"
+ },
+ "names": {
+  "SMTK": {
+   "label": "acceptance case: 4.7x more shares than the count paired with the float, 1-for-5 reverse split 11/23, S-4 11/13",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [
+    "prev_settlement_date / prev_short_interest / si_change_pct: spec 1.5, short_interest_latest measured 11-24",
+    "split 2026-08-21 50->1: spec 1.5, Massive /v3/reference/splits measured 11-24 (the capture read only since 10-30)"
+   ],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 432313,
+    "float_shares": 546875,
+    "float_asof": "2026-11-02",
+    "shares_outstanding": 1035799,
+    "shares_asof": "2026-11-02",
+    "pct_of_float": 79.05,
+    "pct_of_shares": 41.74,
+    "v": 2,
+    "days_to_cover": 1.0,
+    "prev_settlement_date": "2026-10-15",
+    "prev_short_interest": 99473,
+    "si_change_pct": 334.6
+   },
+   "yahoo_now": {
+    "float_shares": 546875,
+    "shares_outstanding": 4859369,
+    "as_of": "2026-11-18"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001817760",
+    "type": "CS",
+    "weighted_shares_outstanding": 971873,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": [
+     {
+      "execution_date": "2026-08-21",
+      "split_from": 50,
+      "split_to": 1
+     },
+     {
+      "execution_date": "2026-11-23",
+      "split_from": 5,
+      "split_to": 1
+     }
+    ]
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-08-11",
+      "shares": 4544490,
+      "form": "10-Q",
+      "filed": "2025-08-12"
+     },
+     {
+      "as_of": "2025-11-11",
+      "shares": 6134963,
+      "form": "10-Q",
+      "filed": "2025-11-13"
+     },
+     {
+      "as_of": "2026-04-01",
+      "shares": 21202911,
+      "form": "10-K",
+      "filed": "2026-04-08"
+     },
+     {
+      "as_of": "2026-05-18",
+      "shares": 21446213,
+      "form": "10-Q",
+      "filed": "2026-05-20"
+     },
+     {
+      "as_of": "2026-08-12",
+      "shares": 28263733,
+      "form": "10-Q",
+      "filed": "2026-08-14"
+     },
+     {
+      "as_of": "2026-11-11",
+      "shares": 4859369,
+      "form": "10-Q",
+      "filed": "2026-11-13"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-23",
+      "form": "8-K",
+      "items": "5.03,9.01"
+     },
+     {
+      "filed": "2026-11-19",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-19",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-19",
+      "form": "3",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-19",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "S-4",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-09-21",
+      "form": "8-K",
+      "items": "5.02"
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "S-3",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "S-1",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-14",
+      "form": "8-K",
+      "items": "3.01"
+     },
+     {
+      "filed": "2026-09-04",
+      "form": "8-K",
+      "items": "5.02"
+     },
+     {
+      "filed": "2026-08-21",
+      "form": "8-K",
+      "items": "5.03,9.01"
+     },
+     {
+      "filed": "2026-08-19",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "SCHEDULE 13G/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-03",
+      "form": "8-K",
+      "items": "1.01,7.01,9.01"
+     }
+    ],
+    "entity": "SmartKem, Inc."
+   }
+  },
+  "LABT": {
+   "label": "more shares added than the float held (SEC 10-Q cover 11/13)",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 152917,
+    "float_shares": 847661,
+    "float_asof": "2026-11-09",
+    "shares_outstanding": 2369688,
+    "shares_asof": "2026-11-09",
+    "pct_of_float": 18.04,
+    "pct_of_shares": 6.45,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 3201536,
+    "shares_outstanding": 8950088,
+    "as_of": "2026-11-18"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0002079272",
+    "type": "CS",
+    "weighted_shares_outstanding": 8950088,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2026-03-31",
+      "shares": 6995469,
+      "form": "10-Q",
+      "filed": "2026-05-22"
+     },
+     {
+      "as_of": "2026-08-03",
+      "shares": 2369688,
+      "form": "10-Q",
+      "filed": "2026-08-14"
+     },
+     {
+      "as_of": "2026-11-13",
+      "shares": 8950088,
+      "form": "10-Q",
+      "filed": "2026-11-16"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-16",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "8-K",
+      "items": "3.01,9.01"
+     },
+     {
+      "filed": "2026-11-10",
+      "form": "8-K",
+      "items": "1.01,7.01,9.01"
+     },
+     {
+      "filed": "2026-09-29",
+      "form": "8-K",
+      "items": "5.07"
+     },
+     {
+      "filed": "2026-09-24",
+      "form": "EFFECT",
+      "items": ",,"
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "S-1",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-24",
+      "form": "DRS",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-17",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-10",
+      "form": "DEFA14A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-10",
+      "form": "DEF 14A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-06",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     }
+    ],
+    "entity": "Lakewood-Amedex Biotherapeutics Inc."
+   }
+  },
+  "KITT": {
+   "label": "float read before the 9/25 1-for-6 split, and 2.1x more shares since",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 203890,
+    "float_shares": 5527831,
+    "float_asof": "2026-09-03",
+    "shares_outstanding": 7471960,
+    "shares_asof": "2026-09-03",
+    "pct_of_float": 3.69,
+    "pct_of_shares": 2.73,
+    "v": 2,
+    "days_to_cover": 3.58
+   },
+   "yahoo_now": {
+    "float_shares": 1612787,
+    "shares_outstanding": 2643176,
+    "as_of": "2026-11-23"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001849820",
+    "type": "CS",
+    "weighted_shares_outstanding": 2643176,
+    "share_class_shares_outstanding": 2643176
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-09-03",
+    "rows": [
+     {
+      "execution_date": "2026-09-25",
+      "split_from": 6,
+      "split_to": 1
+     }
+    ]
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-11-13",
+      "shares": 13710615,
+      "form": "10-Q",
+      "filed": "2025-11-14"
+     },
+     {
+      "as_of": "2026-04-14",
+      "shares": 34877145,
+      "form": "10-K",
+      "filed": "2026-04-15"
+     },
+     {
+      "as_of": "2026-04-14",
+      "shares": 34877145,
+      "form": "10-K/A",
+      "filed": "2026-04-21"
+     },
+     {
+      "as_of": "2026-05-12",
+      "shares": 5002925,
+      "form": "10-Q",
+      "filed": "2026-05-14"
+     },
+     {
+      "as_of": "2026-08-12",
+      "shares": 7471960,
+      "form": "10-Q",
+      "filed": "2026-08-12"
+     },
+     {
+      "as_of": "2026-11-16",
+      "shares": 2643176,
+      "form": "10-Q",
+      "filed": "2026-11-16"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-16",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-12",
+      "form": "S-1",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-02",
+      "form": "8-K",
+      "items": "1.01,2.03,9.01"
+     },
+     {
+      "filed": "2026-10-02",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-10-01",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-01",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-09-29",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-09-25",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-09-23",
+      "form": "8-K",
+      "items": "3.03,5.03,8.01,9.01"
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "8-K",
+      "items": "1.01,2.03,9.01"
+     },
+     {
+      "filed": "2026-09-11",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-13",
+      "form": "8-K",
+      "items": "1.01,2.03,9.01"
+     },
+     {
+      "filed": "2026-08-12",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-07",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     }
+    ],
+    "entity": "Nauticus Robotics, Inc."
+   }
+  },
+  "SMX": {
+   "label": "float read on the 11/9 1-for-2.8 split day; Yahoo carried it across",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 47715,
+    "float_shares": 791704,
+    "float_asof": "2026-11-09",
+    "shares_outstanding": 892857,
+    "shares_asof": "2026-11-09",
+    "pct_of_float": 6.03,
+    "pct_of_shares": 5.34,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 282748,
+    "shares_outstanding": 897717,
+    "as_of": "2026-11-24"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001940674",
+    "type": "CS",
+    "weighted_shares_outstanding": 897717,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": [
+     {
+      "execution_date": "2026-11-09",
+      "split_from": 2.8,
+      "split_to": 1
+     }
+    ]
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-12-31",
+      "shares": 1795943,
+      "form": "20-F",
+      "filed": "2026-03-20"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-23",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-23",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-20",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-12",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-10",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-03",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-08",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-05",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "EFFECT",
+      "items": ",,"
+     }
+    ],
+    "entity": "SMX (Security Matters) Public Ltd Co"
+   }
+  },
+  "WETO": {
+   "label": "20-F filer, covers older than the anchor",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 241900,
+    "float_shares": 186729,
+    "float_asof": "2026-11-02",
+    "shares_outstanding": 1077801,
+    "shares_asof": "2026-11-02",
+    "pct_of_float": 129.55,
+    "pct_of_shares": 22.44,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 14735015,
+    "shares_outstanding": 14897999,
+    "as_of": "2026-11-20"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001941158",
+    "type": "CS",
+    "weighted_shares_outstanding": 14897999,
+    "share_class_shares_outstanding": 1077801
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-06-30",
+      "shares": 22000000,
+      "form": "20-F",
+      "filed": "2025-10-30"
+     },
+     {
+      "as_of": "2026-06-30",
+      "shares": 821300,
+      "form": "20-F",
+      "filed": "2026-11-05"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-19",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-05",
+      "form": "20-F",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-29",
+      "form": "NT 20-F",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-27",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-22",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-01",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-26",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-26",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-25",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-24",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-24",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-12",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-10",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-03",
+      "form": "6-K",
+      "items": ""
+     }
+    ],
+    "entity": "Wetour Robotics Ltd"
+   }
+  },
+  "JELD": {
+   "label": "share count ticked up x1.0001 - nothing refused under the built mode",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 8033885,
+    "float_shares": 80352436,
+    "float_asof": "2026-11-04",
+    "shares_outstanding": 86763382,
+    "shares_asof": "2026-11-04",
+    "pct_of_float": 10.0,
+    "pct_of_shares": 9.26,
+    "v": 2,
+    "days_to_cover": 8.56
+   },
+   "yahoo_now": {
+    "float_shares": 80095874,
+    "shares_outstanding": 86774941,
+    "as_of": "2026-11-23"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001674335",
+    "type": "CS",
+    "weighted_shares_outstanding": 86774941,
+    "share_class_shares_outstanding": 86774941
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-08-01",
+      "shares": 85403189,
+      "form": "10-Q",
+      "filed": "2025-08-06"
+     },
+     {
+      "as_of": "2025-10-31",
+      "shares": 85429710,
+      "form": "10-Q",
+      "filed": "2025-11-06"
+     },
+     {
+      "as_of": "2026-02-18",
+      "shares": 86105591,
+      "form": "10-K",
+      "filed": "2026-02-23"
+     },
+     {
+      "as_of": "2026-05-01",
+      "shares": 86151321,
+      "form": "10-Q",
+      "filed": "2026-05-05"
+     },
+     {
+      "as_of": "2026-07-31",
+      "shares": 86763382,
+      "form": "10-Q",
+      "filed": "2026-08-04"
+     },
+     {
+      "as_of": "2026-10-30",
+      "shares": 86774941,
+      "form": "10-Q",
+      "filed": "2026-11-04"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-23",
+      "form": "8-K",
+      "items": "1.01,2.03,9.01"
+     },
+     {
+      "filed": "2026-11-12",
+      "form": "8-K",
+      "items": "7.01,9.01"
+     },
+     {
+      "filed": "2026-11-06",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-06",
+      "form": "SCHEDULE 13G/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-03",
+      "form": "8-K",
+      "items": "2.02,7.01,9.01"
+     },
+     {
+      "filed": "2026-11-02",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-02",
+      "form": "144",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-29",
+      "form": "8-K",
+      "items": "7.01,9.01"
+     },
+     {
+      "filed": "2026-10-19",
+      "form": "8-K",
+      "items": "5.02,7.01,9.01"
+     },
+     {
+      "filed": "2026-10-19",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-29",
+      "form": "8-K",
+      "items": "1.01,7.01,9.01"
+     },
+     {
+      "filed": "2026-08-05",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-03",
+      "form": "8-K",
+      "items": "2.02,7.01,9.01"
+     }
+    ],
+    "entity": "JELD-WEN Holding, Inc."
+   }
+  },
+  "MEDS": {
+   "label": "refused only under any_increase / tier_moves",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 371417,
+    "float_shares": 1455606,
+    "float_asof": "2026-11-05",
+    "shares_outstanding": 5182529,
+    "shares_asof": "2026-11-05",
+    "pct_of_float": 25.52,
+    "pct_of_shares": 7.17,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 1455606,
+    "shares_outstanding": 5724857,
+    "as_of": "2026-11-20"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0002030763",
+    "type": "CS",
+    "weighted_shares_outstanding": 5724857,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-11-19",
+      "shares": 89729281,
+      "form": "10-Q",
+      "filed": "2025-11-19"
+     },
+     {
+      "as_of": "2026-03-06",
+      "shares": 104871987,
+      "form": "10-K",
+      "filed": "2026-03-20"
+     },
+     {
+      "as_of": "2026-03-06",
+      "shares": 104871987,
+      "form": "10-K/A",
+      "filed": "2026-04-24"
+     },
+     {
+      "as_of": "2026-05-19",
+      "shares": 125671251,
+      "form": "10-Q",
+      "filed": "2026-05-19"
+     },
+     {
+      "as_of": "2026-08-17",
+      "shares": 3061919,
+      "form": "10-Q",
+      "filed": "2026-08-17"
+     },
+     {
+      "as_of": "2026-11-13",
+      "shares": 5724857,
+      "form": "10-Q",
+      "filed": "2026-11-13"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-20",
+      "form": "8-K",
+      "items": "8.01"
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "PRE 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "8-K",
+      "items": "2.02,9.01"
+     },
+     {
+      "filed": "2026-11-10",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-10",
+      "form": "S-1/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-09",
+      "form": "DEF 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-05",
+      "form": "8-K",
+      "items": "1.02,7.01,9.01"
+     },
+     {
+      "filed": "2026-10-26",
+      "form": "8-K",
+      "items": "1.01,7.01,9.01"
+     },
+     {
+      "filed": "2026-10-20",
+      "form": "8-K",
+      "items": "7.01,8.01,9.01"
+     },
+     {
+      "filed": "2026-10-16",
+      "form": "8-K",
+      "items": "1.01,3.01,3.02"
+     },
+     {
+      "filed": "2026-10-13",
+      "form": "8-K",
+      "items": "8.01"
+     },
+     {
+      "filed": "2026-10-09",
+      "form": "PRE 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-09",
+      "form": "S-1/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-17",
+      "form": "8-K",
+      "items": "8.01"
+     },
+     {
+      "filed": "2026-09-16",
+      "form": "8-K",
+      "items": "1.01,2.03,3.02,7.01,9.01"
+     },
+     {
+      "filed": "2026-08-31",
+      "form": "PRE 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-18",
+      "form": "8-K",
+      "items": "2.02,9.01"
+     },
+     {
+      "filed": "2026-08-17",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "8-K",
+      "items": "8.01,9.01"
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "NT 10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-07",
+      "form": "S-1",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     }
+    ],
+    "entity": "DataMeds AI, Inc."
+   }
+  },
+  "JZ": {
+   "label": "ADR, split due",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 382451,
+    "float_shares": 1403950,
+    "float_asof": "2026-11-09",
+    "shares_outstanding": 2377874,
+    "shares_asof": "2026-11-09",
+    "pct_of_float": 27.24,
+    "pct_of_shares": 16.08,
+    "v": 2,
+    "days_to_cover": 1.71
+   },
+   "yahoo_now": {
+    "float_shares": 1403950,
+    "shares_outstanding": 2377874,
+    "as_of": "2026-11-24"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001852440",
+    "type": "ADRC",
+    "weighted_shares_outstanding": 2408313,
+    "share_class_shares_outstanding": 1711207
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": [
+     {
+      "execution_date": "2026-12-24",
+      "split_from": 15,
+      "split_to": 1
+     }
+    ]
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2022-12-31",
+      "shares": 121110000,
+      "form": "20-F",
+      "filed": "2023-09-28"
+     },
+     {
+      "as_of": "2023-12-31",
+      "shares": 121110000,
+      "form": "20-F",
+      "filed": "2024-04-09"
+     },
+     {
+      "as_of": "2023-12-31",
+      "shares": 121110000,
+      "form": "20-F/A",
+      "filed": "2024-08-23"
+     },
+     {
+      "as_of": "2024-12-31",
+      "shares": 169110000,
+      "form": "20-F",
+      "filed": "2025-04-30"
+     },
+     {
+      "as_of": "2025-12-31",
+      "shares": 517110000,
+      "form": "20-F",
+      "filed": "2026-04-13"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-12",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-01",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-28",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "6-K",
+      "items": ""
+     }
+    ],
+    "entity": "Jianzhi Education Technology Group Co Ltd"
+   }
+  },
+  "INLF": {
+   "label": "20-F filer, no newer count, 424B5 after the float (EXTREME on file)",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 1469097,
+    "float_shares": 876064,
+    "float_asof": "2026-11-05",
+    "shares_outstanding": 1046390,
+    "shares_asof": "2026-11-05",
+    "pct_of_float": 167.69,
+    "pct_of_shares": 140.4,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 876064,
+    "shares_outstanding": 1046390,
+    "as_of": "2026-11-19"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001991592",
+    "type": "CS",
+    "weighted_shares_outstanding": 1090298,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2024-12-31",
+      "shares": 12500000,
+      "form": "20-F",
+      "filed": "2025-04-28"
+     },
+     {
+      "as_of": "2025-12-31",
+      "shares": 6400000,
+      "form": "20-F",
+      "filed": "2026-03-06"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-20",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-19",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-18",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "EFFECT",
+      "items": ",,"
+     },
+     {
+      "filed": "2026-11-12",
+      "form": "POS AM",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-06",
+      "form": "6-K/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-22",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-20",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-28",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-25",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-24",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-17",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-09",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-21",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-21",
+      "form": "SCHEDULE 13G",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "6-K",
+      "items": ""
+     }
+    ],
+    "entity": "INLIF Ltd"
+   }
+  },
+  "BENF": {
+   "label": "no cover fact (404)",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 359965,
+    "float_shares": 3944455,
+    "float_asof": "2026-11-10",
+    "shares_outstanding": 15458833,
+    "shares_asof": "2026-11-10",
+    "pct_of_float": 9.13,
+    "pct_of_shares": 2.33,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 3944455,
+    "shares_outstanding": 19146748,
+    "as_of": "2026-11-24"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0001775734",
+    "type": "CS",
+    "weighted_shares_outstanding": 19176656,
+    "share_class_shares_outstanding": 24699725
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-10-30",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 404,
+    "covers": [],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-24",
+      "form": "8-K",
+      "items": "7.01,8.01,9.01"
+     },
+     {
+      "filed": "2026-11-23",
+      "form": "3",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-16",
+      "form": "8-K",
+      "items": "2.02,9.01"
+     },
+     {
+      "filed": "2026-11-12",
+      "form": "8-K",
+      "items": "3.01"
+     },
+     {
+      "filed": "2026-11-04",
+      "form": "8-K",
+      "items": "5.07"
+     },
+     {
+      "filed": "2026-10-29",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-28",
+      "form": "8-K",
+      "items": "7.01,8.01,9.01"
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-21",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-19",
+      "form": "DEF 14A",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-14",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-10-07",
+      "form": "PRE 14A",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-05",
+      "form": "SCHEDULE 13G/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-23",
+      "form": "8-K",
+      "items": "7.01,9.01"
+     },
+     {
+      "filed": "2026-09-22",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-22",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-22",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-22",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-18",
+      "form": "8-K",
+      "items": "7.01,9.01"
+     },
+     {
+      "filed": "2026-09-17",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-17",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-17",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-16",
+      "form": "8-K",
+      "items": "3.02"
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "8-K",
+      "items": "2.02,9.01"
+     },
+     {
+      "filed": "2026-08-11",
+      "form": "8-K",
+      "items": "2.03,9.01"
+     },
+     {
+      "filed": "2026-08-07",
+      "form": "S-8",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-07",
+      "form": "424B3",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-05",
+      "form": "EFFECT",
+      "items": ",,"
+     }
+    ],
+    "entity": "Beneficient"
+   }
+  },
+  "NXAT": {
+   "label": "count fell, no split row",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T18:18:54Z",
+    "sec": "2026-11-24T18:22:27Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 21473,
+    "float_shares": 1353790,
+    "float_asof": "2026-09-10",
+    "shares_outstanding": 68476338,
+    "shares_asof": "2026-09-10",
+    "pct_of_float": 1.59,
+    "pct_of_shares": 0.03,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 1353790,
+    "shares_outstanding": 3236567,
+    "as_of": "2026-11-20"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0002000756",
+    "type": "CS",
+    "weighted_shares_outstanding": 3236567,
+    "share_class_shares_outstanding": null
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-09-10",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-12-31",
+      "shares": 64221193,
+      "form": "20-F",
+      "filed": "2026-05-15"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-23",
+      "form": "6-K/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-13",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-05",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-01",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-11",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-09-11",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-20",
+      "form": "424B5",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-19",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "SCHEDULE 13G/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-04",
+      "form": "6-K",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-03",
+      "form": "424B5",
+      "items": ""
+     }
+    ],
+    "entity": "Nexus Advanced Technologies Inc."
+   }
+  },
+  "CLRO": {
+   "label": "EXTREME on file, no newer dated count, S-1/A 11/24 + 8-K Item 3.02 11/17",
+   "captured_at": {
+    "si_yahoo_ref_splits": "2026-11-24T19:05:50Z",
+    "sec": "2026-11-24T19:05:50Z"
+   },
+   "notes": [],
+   "si_record": {
+    "settlement_date": "2026-10-30",
+    "short_interest": 391224,
+    "prev_settlement_date": "2026-10-15",
+    "prev_short_interest": 290226,
+    "si_change_pct": 34.8,
+    "float_shares": 888130,
+    "float_asof": "2026-11-10",
+    "shares_outstanding": 2675412,
+    "shares_asof": "2026-11-10",
+    "pct_of_float": 44.05,
+    "pct_of_shares": 14.62,
+    "v": 2,
+    "days_to_cover": 1.0
+   },
+   "yahoo_now": {
+    "float_shares": 888130,
+    "shares_outstanding": 2675412,
+    "as_of": "2026-11-17"
+   },
+   "ref": {
+    "http": 200,
+    "cik": "0000840715",
+    "type": "CS",
+    "weighted_shares_outstanding": 3675411,
+    "share_class_shares_outstanding": 2675412
+   },
+   "splits": {
+    "http": 200,
+    "captured_since": "2026-06-01",
+    "rows": []
+   },
+   "sec": {
+    "concept_http": 200,
+    "covers": [
+     {
+      "as_of": "2025-03-27",
+      "shares": 25992995,
+      "form": "10-K/A",
+      "filed": "2025-04-25"
+     },
+     {
+      "as_of": "2025-05-15",
+      "shares": 25992995,
+      "form": "10-Q",
+      "filed": "2025-05-15"
+     },
+     {
+      "as_of": "2025-08-14",
+      "shares": 1734249,
+      "form": "10-Q",
+      "filed": "2025-08-14"
+     },
+     {
+      "as_of": "2025-11-13",
+      "shares": 1734250,
+      "form": "10-Q",
+      "filed": "2025-11-14"
+     },
+     {
+      "as_of": "2026-03-31",
+      "shares": 2675412,
+      "form": "10-K",
+      "filed": "2026-03-31"
+     },
+     {
+      "as_of": "2026-05-15",
+      "shares": 2675412,
+      "form": "10-Q",
+      "filed": "2026-05-15"
+     },
+     {
+      "as_of": "2026-08-14",
+      "shares": 2675412,
+      "form": "10-Q",
+      "filed": "2026-08-14"
+     },
+     {
+      "as_of": "2026-11-10",
+      "shares": 2675412,
+      "form": "10-Q",
+      "filed": "2026-11-10"
+     }
+    ],
+    "sub_http": 200,
+    "filings": [
+     {
+      "filed": "2026-11-24",
+      "form": "S-1/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "SCHEDULE 13D/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-17",
+      "form": "8-K",
+      "items": "1.01,3.02,7.01,9.01"
+     },
+     {
+      "filed": "2026-11-10",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-11-06",
+      "form": "SCHEDULE 13D/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-10-15",
+      "form": "8-K",
+      "items": "1.01,2.03,9.01"
+     },
+     {
+      "filed": "2026-10-13",
+      "form": "8-K",
+      "items": "3.01,9.01"
+     },
+     {
+      "filed": "2026-09-04",
+      "form": "S-1/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-28",
+      "form": "DEF 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-26",
+      "form": "8-K",
+      "items": "5.07,9.01"
+     },
+     {
+      "filed": "2026-08-14",
+      "form": "10-Q",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-11",
+      "form": "8-K",
+      "items": "1.01,9.01"
+     },
+     {
+      "filed": "2026-08-11",
+      "form": "PRE 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-11",
+      "form": "DEF 14C",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-10",
+      "form": "S-1",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-06",
+      "form": "4",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-06",
+      "form": "SCHEDULE 13D/A",
+      "items": ""
+     },
+     {
+      "filed": "2026-08-05",
+      "form": "8-K",
+      "items": "1.01,5.02,5.07,9.01"
+     }
+    ],
+    "entity": "CLEARONE INC"
+   }
+  }
+ }
+}

@@ -112,8 +112,20 @@ def _never_touch_a_real_database():
     _refuse_minute.__wrapped__ = prior_dd_http          # a test of the seam itself reads the real function here
     DD._http_get = _refuse_minute
 
+    # 🩳 2026-11-24 — the share-basis worker's ONE SEC outside-call seam (`short_interest.share_basis._http`, spec
+    # sidilute §4 main-session) ASSIGNED to a refuser for the whole session, the reg_sho pattern above: a
+    # refresh_symbol / kick with no `http=` must never reach data.sec.gov. Tests that want an SEC answer pass their own
+    # `http=` fake or monkeypatch `SB._http`. Restored on teardown.
+    import short_interest.share_basis as SBAS
+    prior_sb_http = SBAS._http
+
+    def _refuse_sec(*a, **k):
+        raise RuntimeError("share_basis SEC calls are disabled during tests (tests/conftest.py)")
+    SBAS._http = _refuse_sec
+
     yield
 
+    SBAS._http = prior_sb_http
     DD._http_get = prior_dd_http
     BR._ftp = prior_br_ftp
     RS._http = prior_rs_http
