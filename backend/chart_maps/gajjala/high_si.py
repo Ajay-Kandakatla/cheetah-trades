@@ -52,8 +52,17 @@ ASK_TEXT = ("Ajay 2026-11-23: “Can you create a tab similarly like Divergent w
             "tested” = high short interest, “Gazilla” = Gajjala, “talks” = stocks]")
 RULE_LABEL = "ⓘ what gets listed"
 PUSH_OFF_TEXT = "🔕 No phone alert rings from this list — the {fast} / {slow} EMA cross push is switched off."
-ORDER_NOTE = ("🩳 today's volume first, then the lowest float (his word for every Gajjala card) · a name with no stored "
+ORDER_NOTE = ("🩳 a name whose 🔒 Reg SHO close-out date is still counting or was reached on the latest list first, the "
+              "nearest date first (his word 2026-11-24) · "
+              "then today's volume, then the lowest float (his word for every Gajjala card) · a name with no stored "
               "volume today goes last")
+ORDER_SHO_UNREAD = " · the Reg SHO lists could not be read this time, so no close-out date moved a name"
+ORDER_SHO_PARTIAL = " · not every Reg SHO list was read this time, so a name on an unread list was not moved"
+# Ajay 2026-11-24: "Please sort the short interest tab based on that if this date is available put that ticker higher
+# up" — "that date" = the 🔒 tag's day-13 close-out date (the Reg SHO run block, item["run"]["day13"]). Only a date still AHEAD (run
+# state counting) or today's (reached) lifts a name; a passed date, a stale list, an unknown day count or no tag → the
+# house order. 🚫 his names still go last (tab.broker_bottom runs after). Display order only — no gate, push or listing.
+CLOSEOUT_UPCOMING_STATES = ("counting", "reached")
 SHOWN_TEXT = "Showing the first {lim} of {n} listed names — every name is counted above."
 EMPTY_SESSION = ("No name on his list had short interest {high} or {extreme} with a float at or under {cap} at the last "
                  "read of the {label} session.")
@@ -464,6 +473,34 @@ def _sho_payload(now):
     return RS.payload(kick=False, now=now)
 
 
+def closeout_date(item) -> Optional[str]:
+    """The 🔒 tag's day-13 date (ISO) when it is upcoming or today — else None. Never raises."""
+    try:
+        if not isinstance(item, dict) or item.get("state") != "on" or item.get("stale") is True:
+            return None
+        run = item.get("run")
+        if not isinstance(run, dict) or run.get("state") not in CLOSEOUT_UPCOMING_STATES:
+            return None
+        d = run.get("day13")
+        if not isinstance(d, str):
+            return None
+        date.fromisoformat(d)
+        return d
+    except (TypeError, ValueError):
+        return None
+
+
+def closeout_order(rows: list, items) -> list:
+    """Rows with an upcoming close-out date first (nearest first), the rest after — a STABLE sort, so the house order
+    (volume → float) holds inside each date and among the undated. `items` = the Reg SHO payload's items (may be {})."""
+    items = items if isinstance(items, dict) else {}
+
+    def key(r):
+        d = closeout_date(items.get(str((r or {}).get("symbol") or "").upper()))
+        return (0, d) if d else (1, "")
+    return sorted(list(rows), key=key)
+
+
 def sho_text(rows: list, *, now, sho_read: Optional[Callable] = None) -> Optional[str]:
     """🔒 how many listed names sit on a Reg SHO threshold list — a TAG. Reads payload["complete"]: an unread exchange
     list is named and "None …" prints only when every list was read. None when no row or the read raises."""
@@ -665,12 +702,29 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
         return None
     rows = list(ev.get("rows") or [])
     n = len(rows)
+    try:                                                            # the Reg SHO payload read ONCE (tag + order)
+        sho_pay, sho_err = (sho_read or _sho_payload)(now), None
+    except Exception as exc:                                        # noqa: BLE001 — the house order then, said so
+        sho_pay, sho_err = None, exc
+
+    def _sho_once(_now):
+        if sho_err is not None:
+            raise sho_err
+        return sho_pay
+    sho_items = (sho_pay or {}).get("items") if isinstance(sho_pay, dict) else None
+    rows = closeout_order(rows, sho_items)
+    if not isinstance(sho_items, dict):
+        order_note = ORDER_NOTE + ORDER_SHO_UNREAD
+    elif sho_pay.get("complete") is not True:
+        order_note = ORDER_NOTE + ORDER_SHO_PARTIAL
+    else:
+        order_note = ORDER_NOTE
     rang = rang_today(st, session)
     label = (sess or {}).get("label") or (session.isoformat() if isinstance(session, (date, datetime)) else str(session))
     out = {"title": title(), "ask_text": ASK_TEXT, "rule_label": RULE_LABEL, "rule_text": rule_text(),
            "honesty": honesty(), "cohort_text": cohort_text(), "counts_text": counts_text(ev),
            "adds_text": adds_text(ev), "asof_text": asof_text(ev),
-           "sho_text": sho_text(rows, now=now, sho_read=sho_read), "push_text": push_text(), "order_note": ORDER_NOTE,
+           "sho_text": sho_text(rows, now=now, sho_read=_sho_once), "push_text": push_text(), "order_note": order_note,
            "shown_text": SHOWN_TEXT.format(lim=lim, n=n) if isinstance(lim, int) and n > lim else None,
            "excluded_text": excluded_text(ev), "disagree_text": disagree_text(ev), "no_tier_text": no_tier_text(ev),
            "n": n, "n_read": int(ev.get("n_read") or 0),
@@ -686,6 +740,7 @@ def block(ev: Optional[dict], *, session: date, now: datetime, is_today: bool, i
 
 
 __all__ = ["TIERS", "STATE", "REASONS", "NOT_ADVICE", "ASK_TEXT", "RULE_LABEL", "PUSH_OFF_TEXT", "ORDER_NOTE",
+           "ORDER_SHO_UNREAD", "ORDER_SHO_PARTIAL", "CLOSEOUT_UPCOMING_STATES", "closeout_date", "closeout_order",
            "SHOWN_TEXT", "FAULT_TEXT", "FAULTS_TEXT", "CHARTLESS_TEXT", "push_mode", "si_blocks", "float_shares",
            "card_pct", "classify", "evaluate", "title", "rule_text", "push_text", "honesty", "cohort_text",
            "counts_text", "adds_text", "asof_text", "floats_text", "sho_text", "excluded_text", "disagree_text",

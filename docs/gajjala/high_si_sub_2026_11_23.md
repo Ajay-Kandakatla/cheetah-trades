@@ -157,3 +157,20 @@ percentage directly here?"
   the card's float %; no number → no %. The chartless line carries the same words (never the ticker).
 - No tier, listing, order, gate or push changes. Tests: `backend/tests/test_gajjala_high_si_pct_chip_2026_11_23.py`
   (incl. NEGATIVES: no number → no %, never "None"/"nan"; a confirmed float never says "unconfirmed").
+
+## 2026-11-24 — an upcoming Reg SHO close-out date sorts first
+
+Ajay: "Please sort the short interest tab based on that if this date is available put that ticker higher up" ("that
+date" = the 🔒 tag's day-13 close-out date, `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`).
+
+- `high_si.closeout_order(rows, items)`: a STABLE sort in `block`. A row whose 🔒 item is `state "on"`, not stale, with run
+  state in `CLOSEOUT_UPCOMING_STATES = ("counting", "reached")` and an ISO `day13` sits first, the nearest date first.
+  Inside one date and among the undated the house order (volume → float) holds. `tab.broker_bottom` still runs after, so
+  🚫 his names stay last even with a date. The cut at `limit` runs after the sort, so a dated name is never cut first.
+- No lift: a passed date (`passed`, `passed_open`), `unknown`, a stale list, no tag, a junk date.
+- The Reg SHO payload is read ONCE per build (`payload(kick=False)`), shared by `sho_text` and the order. A raising read →
+  the house order and `order_note = ORDER_NOTE + ORDER_SHO_UNREAD` (said, never silent); a read with `complete` not True →
+  `ORDER_SHO_PARTIAL` (names on an unread list were not moved). A `reached` date is the latest list's day 13, which can be
+  yesterday — the note says "still counting or reached on the latest list", never "upcoming".
+- Display order only: no listing, gate, push or rule change. Tests:
+  `backend/tests/test_gajjala_high_si_closeout_sort_2026_11_24.py` (19, incl. NEGATIVES; 3 mutations go red).

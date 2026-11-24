@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "Please sort the short interest tab based on that if this date is available put that ticker
+  // higher up" (the 🔒 day-13 close-out date). BE chart_maps/gajjala/high_si.closeout_order (stable; 🚫 still last).
+  // Docs docs/gajjala/high_si_sub_2026_11_23.md (2026-11-24 section).
+  {
+    id: 'gajjala-high-si-closeout-sort-2026-11-24',
+    label: "🩳 Close-out date sorts first on High SI — you said: “Please sort the short interest tab based on that if this date is available put that ticker higher up”. A 🩳 card whose 🔒 Reg SHO close-out date is still counting, or was just reached, now sits at the top, the nearest date first; the rest keep today's volume, then the lowest float. A passed date does not lift a name, and your 🚫 names stay last. The date is a rule backstop, not a price call. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-23 ~23:30 ET, verbatim: "I need to know when it would like to Potentially squeeze.." + "Add a tag with date
   // in it..". BE short_interest/reg_sho_runs.py (settlement-day run, day 13 = REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, Rule
   // 203(b)(3); Rule 204 + SEC staff FAQ 6.1/6.5/6.7 checked by eye 2026-11-23) + reg_sho.py (per-date history backfill
