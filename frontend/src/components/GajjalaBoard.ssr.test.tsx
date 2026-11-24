@@ -234,6 +234,7 @@ describe('⛔ board — NEGATIVES', () => {
       const chipA = await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId(`gg-ssr-${BF}`);
       const labelA = await screen.findByTestId(`gg-ssr-label-${SQ}`);
       await screen.findByTestId(`gg-brw-label-${SQ}`);
+      await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId('si-chip');   // 2026-11-24 verify: wait for every async chip before the byte capture
       const orderA = Array.from(a.container.querySelectorAll('[data-testid^="gg-tile-"]')).map((n) => n.getAttribute('data-testid'));
       const headA = screen.getByTestId(`gg-chips-${BF}`).innerHTML.replace(` ${chipA.outerHTML}`, '');
       const sqA = screen.getByTestId(`gg-tile-${SQ}`).innerHTML.replace(labelA.outerHTML, '');
@@ -245,6 +246,7 @@ describe('⛔ board — NEGATIVES', () => {
       await settle();
       await screen.findByTestId(`gg-brw-label-${SQ}`);
       await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId(`gg-brw-${BF}`);
+      await within(screen.getByTestId(`gg-chips-${BF}`)).findByTestId('si-chip');
       const orderB = Array.from(b.container.querySelectorAll('[data-testid^="gg-tile-"]')).map((n) => n.getAttribute('data-testid'));
       expect(orderB).toEqual(orderA);
       expect(screen.getByTestId(`gg-chips-${BF}`).innerHTML).toBe(headA);

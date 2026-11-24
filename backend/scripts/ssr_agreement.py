@@ -145,7 +145,7 @@ def main(argv) -> int:
     print("|---|---|---|---|---|")
     print("| %d | %d | %d | %d | %d |" % (len(offic), len(live_names), len(both), len(off_only), len(comp_only)))
     print()
-    print("names match on ANY spelling (BIII.WS = BIII-WS = BIII WS); computed counts names, not docs (%d live docs)"
+    print("names match across separators (BIII.WS = BIII-WS = BIII WS) — NOT preferreds (list AHT PRD vs snapshot AHTPD: counted a miss on both sides); computed counts names, not docs (%d live docs)"
           % len(live))
     print("computed by basis: %s" % (", ".join("%s %d" % (k, v) for k, v in sorted(by_basis.items(), key=str)) or "—"))
     print("recall    (official names the computed read caught): %s" % wilson(len(both), len(offic)))

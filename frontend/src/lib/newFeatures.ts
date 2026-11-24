@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23, verbatim: "No shorting at the bid (SEC short-sale restriction) Can we check or this for other stocks
+  // too?" + 2026-11-24 "ship ssr too" / "SSR is informational". BE short_interest/ssr.py (Rule 201: 17 CFR 242.201 + the
+  // SEC Rule 201 FAQ), ssr_lists.py (official Nasdaq + NYSE lists), ssr_corp.py (dividend / split days), the pass step in
+  // chart_maps/gajjala/run.py (records only). FE GgSsr.tsx. Docs docs/short_interest/ssr_*_2026_11_24.md,
+  // docs/gajjala/ssr_pass_step_2026_11_24.md. Display only.
+  {
+    id: 'gajjala-ssr-tag-2026-11-24',
+    label: "⛔ SSR tag — you asked: “No shorting at the bid (SEC short-sale restriction) Can we check or this for other stocks too?”. Any stock under the SEC short-sale restriction now wears ⛔ SSR · no shorting at the bid · thru Tue 11/24 on 🚩 / 🧪 Gajjala’s cards, as a line on a 🎾 Reversal Squeeze card, and in short form on the 👀 Watch. Hover for when it triggered and how long it lasts. It reads the Nasdaq and NYSE exchange lists; until those lists are complete it is worked out from our own bars, says “computed”, and comes off if the exchanges do not confirm it. No computed tag on a dividend or split day. A short seller must price above the best bid; holders can still sell at the bid. A label only — it changes no alert, sort or trade. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-24, verbatim: "If the SI tab stocks have reversal squeeze action add the tag on the ticker to for the tennis
   // ball actions Run them against Gajjals other rules to show A+.. I wonder if we do this the other way around to move them
   // to Reversal squeeze by default but lets not do that". BE chart_maps/gajjala/high_si.squeeze_read / squeeze_row (reads

@@ -371,10 +371,37 @@ def test_S10_no_rule_gate_or_alert_reads_short_interest():
     assert len(others) > 10
     for p in others:
         s = p.read_text(encoding="utf-8")
+        if p.name == "run.py":
+            s = _run_py_minus_ssr_import(s)
         assert not [w for w in SI_WORDS if w in s], p.name
     ctx = _src("chart_maps/gajjala/context.py")
     assert "_float_suspect" in ctx                                                  # its float chain import stays
     assert not [w for w in ("si_map", "si_block", "si_text", "si_read", "pct_of_float") if w in ctx]
+
+
+# ⛔ 2026-11-24 (Ajay "ship ssr too" + "SSR is informational"): run.py wires the SSR read's pass step — it RECORDS the
+# Rule 201 restriction for the ⛔ tag (display only; never a rule, gate or alert). Exactly ONE line may name the
+# package: the fenced import inside _cron_deps. A second mention anywhere still trips S10.
+SSR_IMPORT_LINE = "        from short_interest import ssr as SSR"
+
+
+def _run_py_minus_ssr_import(src: str) -> str:
+    lines = src.split("\n")
+    assert lines.count(SSR_IMPORT_LINE) == 1, "run.py must import the SSR engine exactly once"
+    i = lines.index(SSR_IMPORT_LINE)
+    assert lines[i - 1].strip().startswith("try:"), "the SSR import must sit inside its own try"
+    fn = max(k for k in range(i) if lines[k].startswith("def "))
+    assert lines[fn].startswith("def _cron_deps("), "the SSR import must live inside _cron_deps"
+    return "\n".join(lines[:i] + lines[i + 1:])
+
+
+def test_S10_NEGATIVE_a_second_short_interest_mention_in_run_py_still_trips():
+    src = _src("chart_maps/gajjala/run.py")
+    assert not [w for w in SI_WORDS if w in _run_py_minus_ssr_import(src)]
+    planted = src + "\nfrom short_interest import read as SR\n"
+    assert [w for w in SI_WORDS if w in _run_py_minus_ssr_import(planted)]
+    with pytest.raises(AssertionError):
+        _run_py_minus_ssr_import(src.replace(SSR_IMPORT_LINE, SSR_IMPORT_LINE + "\n" + SSR_IMPORT_LINE))
 
 
 def test_S10_high_si_modules_read_short_interest_only_through_the_one_reader():
