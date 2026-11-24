@@ -112,3 +112,34 @@ edit: the 1m cross push, the served 1m / 5m blocks, the 📶 5m block — byte-e
 7. The VWAP tip waits for the closed bar — or move it live from prints (another definition).
 15. The contracts "HARD KEEP" re-pinned to 1 / 5 / 15 (main session).
 16. The one-shot `--build` so the 15-min charts show before 04:00.
+
+## 2026-11-23 evening — 📈 VWAP over all hours (HIS CALL #1 answered)
+
+Ajay, verbatim (~21:30 ET): "Why is VWAP not showing up in AH?" · then, told it was regular-hours only and offered the
+full-day option: "Please extend them to all hours..".
+
+**The change:** `chart_maps/gajjala_watch/constants.py` `VWAP_SESSIONS = ("premarket", "rth", "afterhours")` —
+`vwap.SESSION_SETS[2]`, the third anchor already built. One constant; the 👀 Watch tiles (1 / 5 / 15) and the card frames
+(they read the same constant through `WC.VWAP_*`) both follow. No formula changed: the same engine
+(`daytrading.indicators.vwap_session`) over today's 1-minute rows.
+
+**What the number now means:** the volume-weighted average price of TODAY from the 04:00 ET premarket open
+(`daytrading.data.ET_PREMARKET_OPEN`) through the last closed bar, after-hours included (to 20:00 ET; 17:00 on a half
+day). Yesterday's bars — its after-hours included — never count; neither does a row the house tagger calls `closed`
+(before 04:00, from 20:00). **It differs from a broker's regular-hours VWAP all day** (Fidelity / thinkorswim default
+to 09:30 → 16:00), because premarket volume counts from 04:00; on a gapper with heavy premarket prints the gap is large.
+After the regular close the line keeps moving with every after-hours print.
+
+**Half day (2026-11-27):** the regular-close cut (`alerts._closes`, 13:00) only re-tags 13:00–16:59 rows as after-hours;
+under the whole-extended set they are counted, so the line runs to the last closed bar (17:00 close). The cut still
+stops the line at 13:00 if the constant goes back to `("rth",)`.
+
+**Served words** (filled from the constants, no digit typed): legend "VWAP (from 04:00 ET)"; ℹ️ / hover / rules panel
+"… the whole extended session, premarket and after-hours included from 04:00 ET … runs through after-hours …". The FE
+prints the served text only. FE fixture regenerated (`--write`): only the VWAP words + curve values moved.
+
+**Tests:** `backend/tests/test_gajjala_watch_vwap_all_hours_2026_11_23.py` (new — 04:00 → last closed bar on every frame,
+the hand sum, a heavy 04:00 print and a heavy 17:00 print move the line; NEGATIVES: yesterday's after-hours never
+counts, `closed` rows never count, under the rth set the same prints change nothing, junk constants draw nothing and
+never raise) · `backend/tests/test_gajjala_watch_vwap_2026_11_23.py` re-pinned (old-default tests now run under an
+explicit `("rth",)`; O1 pins `C.VWAP_SESSIONS == VW.SESSION_SETS[2]`). Display only: nothing gates, sorts or rings on it.

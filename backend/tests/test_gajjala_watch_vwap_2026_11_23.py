@@ -6,7 +6,9 @@ Ajay, verbatim (2026-11-23): "can you add vwap and supply demand zone in the dai
 Pins: THE engine (`daytrading.indicators.vwap_session`) — the wrapper only chooses the rows; the three anchors of ONE
 constant (HIS CALL #1); the half-day cut at the regular close [C2]; a frame value = the minute VWAP after the last
 1-minute bar of its bucket; never NaN. NEGATIVES: a junk `C.VWAP_SESSIONS` draws nothing and never raises; VWAP off
-computes nothing; premarket / after-hours bars carry None under the default; yesterday never reaches the engine.
+computes nothing; premarket / after-hours bars carry None under the rth set (the default until 2026-11-23 pm, when he
+said "Please extend them to all hours.." — tests/test_gajjala_watch_vwap_all_hours_2026_11_23.py); yesterday never
+reaches the engine.
 """
 from __future__ import annotations
 
@@ -119,7 +121,7 @@ def test_a_frame_value_is_the_minute_vwap_after_the_last_minute_of_its_bucket():
     raw = raw_day(S, seed=3.0)
     fr = frames(today=raw)
     fs = stored(fr)
-    mv = VW.minute_vwap(raw, SESSION, sessions=("rth",), rth_close=close_cut(S))
+    mv = VW.minute_vwap(raw, SESSION, sessions=C.VWAP_SESSIONS, rth_close=close_cut(S))   # 2026-11-23 pm: the default
     for tf, rule in C.FRAMES:
         assert len(fs[tf]["vwap"]["values"]) == len(fs[tf]["bars"])
         step = pd.Timedelta(rule)
@@ -133,7 +135,8 @@ def test_a_frame_value_is_the_minute_vwap_after_the_last_minute_of_its_bucket():
 
 
 @pytest.mark.parametrize("tf", [tf for tf, _r in C.FRAMES])
-def test_NEGATIVE_premarket_and_after_hours_bars_carry_none_under_the_default(tf):
+def test_NEGATIVE_premarket_and_after_hours_bars_carry_none_under_the_rth_set(tf, monkeypatch):
+    monkeypatch.setattr(C, "VWAP_SESSIONS", VW.SESSION_SETS[0])        # 2026-11-23 pm: no longer the default (all hours)
     fs = stored(frames())
     for t, v in _et_minutes(fs, tf):
         rth = (t.hour, t.minute) > (9, 30) and (t.hour, t.minute) <= (16, 0)
@@ -156,15 +159,16 @@ def test_NEGATIVE_no_volume_or_session_column_no_vwap_key(drop):
         assert all("vwap" not in fs[tf] for tf in fs)
 
 
-def test_NEGATIVE_no_bars_or_all_zero_volume_or_another_day_no_vwap():
+def test_NEGATIVE_no_bars_or_all_zero_volume_or_another_day_no_vwap(monkeypatch):
     assert VW.minute_vwap(None, SESSION) is None
     assert VW.minute_vwap(raw_day(S).iloc[:0], SESSION) is None
     assert VW.minute_vwap(raw_day(PREV), SESSION) is None                       # yesterday's rows only
     z = raw_day(S, end=(11, 0))
     z["volume"] = 0.0
     assert VW.minute_vwap(z, SESSION) is None
-    pre = raw_day(S, end=(9, 0))                                                 # premarket only, default anchor
+    pre = raw_day(S, end=(9, 0))                                                 # premarket only, the rth set
     assert VW.minute_vwap(pre, SESSION) is None
+    monkeypatch.setattr(C, "VWAP_SESSIONS", VW.SESSION_SETS[0])                 # 2026-11-23 pm: no longer the default
     fs = stored(frames(today=pre, now=at(S, 9, 0, 30)), now=at(S, 9, 0, 30))
     assert all("vwap" not in fs[tf] for tf in fs)
 
@@ -260,13 +264,15 @@ def test_curve_by_stamp_and_align():
 def test_legend_two_emas_byte_equal_then_vwap_with_its_sentence():
     lg = PL.legend()
     assert lg[:2] == [{"tone": "ema9", "label": f"{GC.EMA_FAST} EMA"}, {"tone": "ema21", "label": f"{GC.EMA_SLOW} EMA"}]
-    assert lg[2] == {"tone": C.VWAP_TONE, "label": "VWAP (from 09:30 ET)", "title": VW.rules_line()}
+    assert lg[2] == {"tone": C.VWAP_TONE, "label": "VWAP (from 04:00 ET)", "title": VW.rules_line()}   # all hours (11-23 pm)
+    assert lg[2]["label"] == VW.legend_label()
     assert PL.info()["vwap_text"] == VW.rules_line()
 
 
 # ── [C2] the half day ────────────────────────────────────────────────────────────────────────────────────────────
 @pytest.mark.parametrize("tf", [tf for tf, _r in C.FRAMES])
-def test_C2_on_the_half_day_every_frame_stops_at_the_1300_close(tf):
+def test_C2_on_the_half_day_every_frame_stops_at_the_1300_close_under_the_rth_set(tf, monkeypatch):
+    monkeypatch.setattr(C, "VWAP_SESSIONS", VW.SESSION_SETS[0])        # 2026-11-23 pm: no longer the default (all hours)
     assert AL._closes(HALF) == (datetime(2000, 1, 1, 13).time(), datetime(2000, 1, 1, 17).time())
     now = at(HALF, 16, 59, 50)
     fs = stored(frames(d=HALF, prev=HALF_PREV, now=now, end=(17, 0)), d=HALF, now=now)
@@ -278,7 +284,8 @@ def test_C2_on_the_half_day_every_frame_stops_at_the_1300_close(tf):
 
 
 @pytest.mark.parametrize("tf", [tf for tf, _r in C.FRAMES])
-def test_C2_the_same_raw_on_a_full_day_runs_to_the_1600_label(tf):
+def test_C2_the_same_raw_on_a_full_day_runs_to_the_1600_label_under_the_rth_set(tf, monkeypatch):
+    monkeypatch.setattr(C, "VWAP_SESSIONS", VW.SESSION_SETS[0])        # 2026-11-23 pm: no longer the default (all hours)
     fs = stored(frames(d=FULL, prev=FULL_PREV, now=at(FULL, 19, 59, 50)), d=FULL, now=at(FULL, 19, 59, 50))
     vals = dict((t.strftime("%H:%M"), v) for t, v in _et_minutes(fs, tf))
     assert vals["16:00"] is not None and vals["13:15"] is not None
@@ -294,7 +301,7 @@ def test_C2_NEGATIVE_without_the_cut_the_engine_runs_past_1300_the_cut_is_the_wr
     assert cut[cut.index >= after].notna().sum() == 0 and int(cut.notna().sum()) == 210
     both = cut.dropna().index
     assert np.allclose(cut[both].to_numpy(), nocut[both].to_numpy())
-    assert "stops at the regular close" in VW.rules_line()
+    assert "runs through after-hours" in VW.rules_line()                       # 2026-11-23 pm: the all-hours default
     aware = VW.minute_vwap(raw, HALF.isoformat(), rth_close=pd.Timestamp(datetime(2026, 11, 27, 13, 0), tz=ET))
     assert aware.equals(cut)                                                    # an aware close is converted
 
@@ -305,15 +312,19 @@ def test_C2_build_hands_the_wrapper_the_session_regular_close(monkeypatch):
     monkeypatch.setattr(VW, "minute_vwap", lambda *a, **k: got.append(k) or real(*a, **k))
     now = at(HALF, 16, 59, 50)
     stored(frames(d=HALF, prev=HALF_PREV, now=now, end=(17, 0)), d=HALF, now=now)
-    assert got[0]["rth_close"] == utc(HALF, 13, 0) and got[0]["sessions"] == ("rth",)
+    assert got[0]["rth_close"] == utc(HALF, 13, 0)
+    assert got[0]["sessions"] == C.VWAP_SESSIONS == VW.SESSION_SETS[2]          # 2026-11-23 pm: all hours
 
 
 # ── [O1] the three anchors of ONE constant ───────────────────────────────────────────────────────────────────────
 def test_O1_the_session_sets_and_the_default_is_the_engines_own_default():
     import inspect
     assert VW.SESSION_SETS == (("rth",), ("premarket", "rth"), ("premarket", "rth", "afterhours"))
-    assert C.VWAP_SESSIONS == ("rth",) == VW.SESSION_SETS[0]
-    assert (inspect.signature(vwap_session).parameters["session"].default,) == C.VWAP_SESSIONS
+    # 2026-11-23 pm — HIS CALL #1 answered, Ajay verbatim: "Please extend them to all hours..". Was ("rth",) = the
+    # engine's own default argument; that identity is no longer the intent — the whole extended set is.
+    assert C.VWAP_SESSIONS == ("premarket", "rth", "afterhours") == VW.SESSION_SETS[2]
+    assert VW.sessions() == VW.SESSION_SETS[2]
+    assert (inspect.signature(vwap_session).parameters["session"].default,) == VW.SESSION_SETS[0]   # the engine untouched
 
 
 def test_O1_premarket_and_rth_is_the_hand_sum_from_the_first_premarket_row_and_stops_at_the_close():

@@ -25,7 +25,11 @@ PUSH_FRAMES = ("1m",)                                  # his words "I need alert
 # the daily time frame on the watch list please" · "Add vwap and supply demand too"). DISPLAY ONLY — nothing gates, sorts,
 # rings or caps on any of this. UNMEASURED.
 VWAP_ON = True                      # his word (asked twice)
-VWAP_SESSIONS = ("rth",)            # HIS CALL #1 (BLOCKING) — one of vwap.SESSION_SETS; ("rth",) = vwap_session's own default argument
+# HIS CALL #1 answered 2026-11-23: all hours. Ajay, verbatim: "Why is VWAP not showing up in AH?" · then, told it was
+# regular-hours only and offered the full day: "Please extend them to all hours..". = vwap.SESSION_SETS[2] — 04:00 → 20:00
+# ET, today's rows only (was ("rth",) = vwap_session's own default argument, 2026-11-23 morning). Must stay one of
+# vwap.SESSION_SETS; anything else → VWAP off + one warning.
+VWAP_SESSIONS = ("premarket", "rth", "afterhours")
 VWAP_TONE, VWAP_LABEL = "vwap", "VWAP"
 VWAP_DP = 6                         # = bars._masked_ema's rounding
 ZONES_ON = True                     # his word
