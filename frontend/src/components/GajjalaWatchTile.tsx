@@ -71,6 +71,7 @@ import {
 import { ggwLiveFrame, ggwSeedLive, type GgwLiveBar, type GgwLiveSym } from '../lib/ggwLive';
 import { GgSiExtremeNote } from './GgSiExtremeNote';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
+import { GgSsrChip } from './GgSsr';
 import { GgwBrokerChip, GgwFloatChip, GgwTagsRow, type GgwTagsCtx } from './GajjalaWatchTags';
 import { GgwDrawer, GgwLevelsLine, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
 import { GgwPendingPanel, ggwPendingPanelShown } from './GajjalaWatchPending';
@@ -258,6 +259,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         {siNote ? <GgSiExtremeNote symbol={row.symbol} testid={`ggw-si-extreme-${row.symbol}`} /> : null}
         {/* 🔒 2026-11-22: the served Hard to borrow tag, short form (the Watch only, behind the same siNote prop). */}
         {siNote ? <GgHardToBorrowChip symbol={row.symbol} testid={`ggw-htb-${row.symbol}`} className="ggw-chip" form="short" /> : null}
+        {siNote ? <GgSsrChip symbol={row.symbol} testid={`ggw-ssr-${row.symbol}`} className="ggw-chip" form="short" /> : null}
         {/* ⏳ 2026-11-19 (watchnew2 §3.5): a pending row's words print in the BODY (GgwPendingPanel), never twice. */}
         {row.text && !ggwPendingPanelShown(row) ? (
           <span className={`ggw-line ggw-row-text${row.stale ? ' ggw-warn' : ''}`} data-testid="ggw-row-text">

@@ -878,4 +878,11 @@ def rules_section() -> dict:
         sec["picks"].append(RS.rules_pick())
     except Exception as exc:                                   # noqa: BLE001
         log.warning("short_interest.read: reg_sho pick skipped: %s", type(exc).__name__)
+    # ⛔ 2026-11-23 — the SSR (SEC Rule 201) tag's sentence goes to the `alerts` list, never a pick: the section is at
+    # its 8-pick cap and both end picks are pinned. Lazy: ssr imports this module. A failure leaves `alerts` as it was.
+    try:
+        from short_interest import ssr as SSR
+        sec["alerts"].append(SSR.rules_line())
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest.read: ssr line skipped: %s", type(exc).__name__)
     return sec

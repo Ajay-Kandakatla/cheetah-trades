@@ -746,7 +746,11 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            "long_term_list/zone_watch.py",
            # 🔔 its read-only probe (2026-11-12, WIDENED): times the key_levels import that
            # prev_session pays; never writes, never sends
-           "scripts/long_term_zone_probe.py"}
+           "scripts/long_term_zone_probe.py",
+           # 🚫 SSR read (2026-11-23, WIDENED): ssr.py reuses KL.close_confirm_at for the
+           # 16:05 / 13:05 closed-session clock of the uptick-rule day — display only,
+           # no level, chip or tile read, never on a push or lane path
+           "short_interest/ssr.py"}
 
 
 def test_import_guard_display_only():

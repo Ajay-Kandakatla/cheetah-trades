@@ -1,0 +1,170 @@
+{
+ "now": "2026-11-23T14:00:00-05:00",
+ "payload": {
+  "asked": 7,
+  "computed": {
+   "final": false,
+   "last_pass_et": "13:56",
+   "ok": true,
+   "text": "computed read for Mon 11/23 · last 5-minute scan 13:56 ET"
+  },
+  "fault_text": null,
+  "items": {
+   "AKAN": {
+    "chip": "⛔ SSR · no shorting at the bid · thru Tue 11/24 · computed",
+    "conflict": null,
+    "corp_checked": true,
+    "drop_pct": -13.0,
+    "exchange": null,
+    "half_day": false,
+    "label": "⛔ SSR on · no shorting at the bid · through Tue 11/24 · computed from the house's bars",
+    "off_from": "2026-11-25",
+    "prior_close": 4.23,
+    "retriggered": false,
+    "short": "⛔ SSR thru 11/24 · computed",
+    "source": "computed",
+    "state": "on",
+    "symbol": "AKAN",
+    "through": "2026-11-24",
+    "time_basis": "minute_bar",
+    "title": "⛔ SSR — AKAN is under the SEC short-sale restriction: a short sale must be priced above the best bid (no shorting at the bid). Holders can still sell at the bid. Triggered Mon 11/23 in the 09:30 ET minute at 3.68 vs the prior close 4.23 — computed here from the house's 1-minute bars; the exchange lists are not complete for that day yet — this tag comes off if they do not carry it. In force through Tue 11/24, after-hours included; off from Wed 11/25. The rule (SEC Rule 201 of Regulation SHO (17 CFR 242.201)): a drop of 10% or more from the prior day's close during regular hours starts it for the rest of that day and the next trading day; a new 10% drop on that next day extends it. The prior close is the data provider's daily close, which is not always the listing exchange's official close. The listing exchange decides; a tag marked computed is this app's own read of the 10% line. A data label, not a signal. UNMEASURED.",
+    "triggered_at_et": "09:30",
+    "triggered_on": "2026-11-23"
+   },
+   "GIPR": {
+    "chip": "⛔ SSR · no shorting at the bid · thru Mon 11/23",
+    "conflict": null,
+    "corp_checked": true,
+    "drop_pct": null,
+    "exchange": "Nasdaq",
+    "half_day": false,
+    "label": "⛔ SSR on · no shorting at the bid · through Mon 11/23 · Nasdaq list",
+    "off_from": "2026-11-24",
+    "prior_close": null,
+    "retriggered": false,
+    "short": "⛔ SSR thru 11/23",
+    "source": "official",
+    "state": "on",
+    "symbol": "GIPR",
+    "through": "2026-11-23",
+    "time_basis": "exchange",
+    "title": "⛔ SSR — GIPR is under the SEC short-sale restriction: a short sale must be priced above the best bid (no shorting at the bid). Holders can still sell at the bid. Triggered Fri 11/20 at 11:44:16 ET — Nasdaq short sale circuit breaker list, file stamped 11/20 16:30:31 ET. In force through Mon 11/23, after-hours included; off from Tue 11/24. The rule (SEC Rule 201 of Regulation SHO (17 CFR 242.201)): a drop of 10% or more from the prior day's close during regular hours starts it for the rest of that day and the next trading day; a new 10% drop on that next day extends it. The listing exchange decides; a tag marked computed is this app's own read of the 10% line. A data label, not a signal. UNMEASURED.",
+    "triggered_at_et": "11:44:16",
+    "triggered_on": "2026-11-20"
+   },
+   "GP": {
+    "chip": "⛔ SSR · no shorting at the bid · thru Tue 11/24 · computed",
+    "conflict": null,
+    "corp_checked": true,
+    "drop_pct": -11.0,
+    "exchange": null,
+    "half_day": false,
+    "label": "⛔ SSR on · no shorting at the bid · through Tue 11/24 · computed from the house's bars",
+    "off_from": "2026-11-25",
+    "prior_close": 2.81,
+    "retriggered": true,
+    "short": "⛔ SSR thru 11/24 · computed",
+    "source": "computed",
+    "state": "on",
+    "symbol": "GP",
+    "through": "2026-11-24",
+    "time_basis": "minute_bar",
+    "title": "⛔ SSR — GP is under the SEC short-sale restriction: a short sale must be priced above the best bid (no shorting at the bid). Holders can still sell at the bid. Triggered Mon 11/23 in the 13:43 ET minute at 2.50 vs the prior close 2.81 — computed here from the house's 1-minute bars; the exchange lists are not complete for that day yet — this tag comes off if they do not carry it. In force through Tue 11/24, after-hours included; off from Wed 11/25. Also triggered Fri 11/20 — the newer trigger extends it. The rule (SEC Rule 201 of Regulation SHO (17 CFR 242.201)): a drop of 10% or more from the prior day's close during regular hours starts it for the rest of that day and the next trading day; a new 10% drop on that next day extends it. The prior close is the data provider's daily close, which is not always the listing exchange's official close. The listing exchange decides; a tag marked computed is this app's own read of the 10% line. A data label, not a signal. UNMEASURED.",
+    "triggered_at_et": "13:43",
+    "triggered_on": "2026-11-23"
+   },
+   "PXED": {
+    "chip": null,
+    "label": "⛔ SSR not read",
+    "short": null,
+    "state": "unknown",
+    "symbol": "PXED",
+    "title": "⛔ SSR could not be checked for PXED: a dividend or a split took effect on Mon 11/23, so the prior close on file is not the exchange's. A missing tag does not mean the restriction is off. A data label, not a signal. UNMEASURED.",
+    "why": "corp_action"
+   },
+   "ZZNP": {
+    "chip": null,
+    "label": "⛔ SSR not read",
+    "short": null,
+    "state": "unknown",
+    "symbol": "ZZNP",
+    "title": "⛔ SSR could not be checked for ZZNP: no prior close on file. A missing tag does not mean the restriction is off. A data label, not a signal. UNMEASURED.",
+    "why": "no_prior_close"
+   }
+  },
+  "keep_sec": 300,
+  "kind": "ssr_rule_201",
+  "max_symbols": 200,
+  "n": 5,
+  "note": "The listing exchange decides; a tag marked computed is this app's own read of the 10% line.",
+  "refreshing": false,
+  "retry_after_sec": null,
+  "session": {
+   "in_play": [
+    "2026-11-23",
+    "2026-11-20"
+   ],
+   "now_et": "2026-11-23 14:00"
+  },
+  "sources": [
+   {
+    "as_of": "2026-11-23",
+    "edition_et": "04:15:15",
+    "error": null,
+    "exchange": "Nasdaq",
+    "final": false,
+    "key": "nasdaq",
+    "n": 1092,
+    "ok": true,
+    "status": "ok",
+    "text": "Nasdaq list (fake view)"
+   },
+   {
+    "as_of": "2026-11-20",
+    "edition_et": null,
+    "error": null,
+    "exchange": "NYSE Group",
+    "final": true,
+    "key": "nyse",
+    "n": 330,
+    "ok": true,
+    "status": "ok",
+    "text": "NYSE Group list (fake view)"
+   },
+   {
+    "as_of": "2026-11-23",
+    "error": null,
+    "exchange": null,
+    "key": "corp_actions",
+    "n": 2,
+    "ok": true,
+    "status": "ok",
+    "text": "dividends and splits (fake view)"
+   }
+  ],
+  "states": {
+   "AAPL": "off",
+   "AKAN": "on",
+   "GIPR": "on",
+   "GP": "on",
+   "PXED": "unknown",
+   "ZZCO": "unknown",
+   "ZZNP": "unknown"
+  },
+  "status": "ok",
+  "whys": {
+   "PXED": "corp_action",
+   "ZZCO": "computed_only",
+   "ZZNP": "no_prior_close"
+  }
+ },
+ "symbols": [
+  "AKAN",
+  "GP",
+  "GIPR",
+  "PXED",
+  "ZZNP",
+  "ZZCO",
+  "AAPL"
+ ]
+}

@@ -192,6 +192,7 @@ import { GgTraderChip } from './GgTraderChip';
 import { GgShortInterestLabel } from './GgShortInterestLabel';
 import { GgHardToBorrowChip, GgHardToBorrowFault, GgHardToBorrowLabel } from './GgHardToBorrow';
 import { GgBorrowChip, GgBorrowLabel } from './GgBorrow';
+import { GgSsrChip, GgSsrFault, GgSsrLabel } from './GgSsr';
 import { GgStages } from './GgStages';
 import { GgBreakoutLine, GgBreakoutWord } from './GgBreakoutLine';
 import { RulesInfo } from './RulesInfo';
@@ -898,6 +899,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}
           {/* 🔒 2026-11-22: the served fault line when a stock threshold list could not be read; nothing otherwise. */}
           <GgHardToBorrowFault testid="gg-htb-fault" />
+          <GgSsrFault testid="gg-ssr-fault" />
           <GgCardGridFrame cw={cw} loading={loading} symbols={shownSymbolsDrawn}>
             {liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
@@ -918,6 +920,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                     {/* 🔒 2026-11-22: the served Hard to borrow chip beside the 🩳 chip (a 🎾 card prints it as the label). */}
                     {t.gajjala?.setup !== 'reversal_squeeze' ? <GgHardToBorrowChip symbol={t.symbol} testid={`gg-htb-${t.symbol}`} lead /> : null}
                     {t.gajjala?.setup !== 'reversal_squeeze' ? <GgBorrowChip symbol={t.symbol} testid={`gg-brw-${t.symbol}`} lead /> : null}
+                    {t.gajjala?.setup !== 'reversal_squeeze' ? <GgSsrChip symbol={t.symbol} testid={`gg-ssr-${t.symbol}`} lead /> : null}
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
                     <GgTraderChip text={t.trader_text} testid={`gg-trader-tile-${t.symbol}`}
@@ -1203,6 +1206,7 @@ function CardExtras({ read, board, sub, sym, live }: {
       {/* 🔒 2026-11-22: the served Hard to borrow label right under the 🩳 line on a Reversal Squeeze card. */}
       {read.setup === 'reversal_squeeze' ? <GgHardToBorrowLabel symbol={sym} testid={`gg-htb-label-${sym}`} /> : null}
       {read.setup === 'reversal_squeeze' ? <GgBorrowLabel symbol={sym} testid={`gg-brw-label-${sym}`} /> : null}
+      {read.setup === 'reversal_squeeze' ? <GgSsrLabel symbol={sym} testid={`gg-ssr-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
       {live ? <div className="cm-note gg-line gg-live" data-testid={`gg-live-${sym}`}>{live}</div> : null}
       {read.criteria?.length ? (

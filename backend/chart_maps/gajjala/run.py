@@ -242,6 +242,11 @@ class Deps:
     # Never a key of out, never out["errors"], never a gate. Built OFF (GC.HIGH_SI_CROSS_PUSH_MODE).
     high_si_cross: Optional[Callable] = None
     record_high_si_status: Optional[Callable] = None
+    # ⛔ 2026-11-23 (Ajay "No shorting at the bid (SEC short-sale restriction) Can we check or this for other stocks
+    # too?"): the SSR read, the ⛔ engine's `record_pass` signature (rows, frames, now, session, *, followed=,
+    # good=) -> dict. None = the step does not run (tests, replays, dry runs, the open); the cron path passes it. Never
+    # a key of out, never a gate.
+    ssr: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -709,6 +714,12 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     deps.record_high_si_status(dict(hs_counts), now, hs_reason)
                 except Exception as exc:                        # noqa: BLE001
                     log.warning("gajjala pass: /alerts 🩳 row failed: %s", exc)
+        if deps.ssr is not None and not push_dry:              # ⛔ 2026-11-23 — the SSR read, its OWN try (never an open, never a dry run)
+            try:
+                sr = deps.ssr(rows, frames, now, session, followed=names, good=good)
+                log.info("gajjala pass: ⛔ ssr %s", sr)
+            except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
+                log.exception("gajjala pass: the ⛔ SSR read failed")
         if deps.day_read is not None and not dry:              # 🌫️ 2026-11-15 — ONE read per pass; information only
             try:
                 if on_demand:
@@ -893,8 +904,8 @@ def dry_deps() -> Deps:
 
 
 def _cron_deps() -> Deps:
-    """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags, the 🌫️ day read, the 🔀 fade cross (2026-11-15) and the 🧨
-    divergence record (2026-11-18) on, everything else the
+    """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags, the 🌫️ day read, the 🔀 fade cross (2026-11-15), the 🧨
+    divergence record (2026-11-18) and the ⛔ SSR read (2026-11-23, fenced import) on, everything else the
     defaults. ONE definition (GG LIVE spec §3.4, 2026-11-09): run.main's cron path and the ⏱ bar-close child in `on`
     mode (bar_close.wait_and_run) both call run_pass with it."""
     from . import trader_names as TN
@@ -908,6 +919,11 @@ def _cron_deps() -> Deps:
     d.divergence = DV.run_step
     d.high_si_cross = HSX.run_step
     d.record_high_si_status = _record_high_si_status
+    try:                                                        # ⛔ 2026-11-23 — the SSR read; a failed import leaves the step off
+        from short_interest import ssr as SSR
+        d.ssr = SSR.record_pass
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala pass: the ⛔ SSR step is not wired: %s", type(exc).__name__)
     return d
 
 

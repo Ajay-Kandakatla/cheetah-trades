@@ -20,6 +20,14 @@ Endpoints:
       worker, never inline; never a 500 — a raising read serves
       `borrow.fault_payload(symbols)`, the same shape as "Mongo down").
 
+  GET /short-interest/ssr?symbols=A,B,C   (2026-11-23)
+      ⛔ SSR — the SEC Rule 201 short-sale restriction for up to
+      `ssr.MAP_MAX_SYMBOLS` names via `short_interest.ssr.payload` (Mongo
+      only: the official Nasdaq / NYSE Group lists + the house's computed
+      read; a due list is fetched by the `ssr_lists` single background
+      worker, never inline; never a 500 — a raising read serves
+      `ssr.fault_payload(symbols)`, the same shape as "Mongo down").
+
   GET /short-interest/map?symbols=A,B,C   (2026-10-03)
       🩳 Short INTEREST (bi-monthly FINRA settlement) for up to
       `read.MAP_MAX_SYMBOLS` names — the ONE bulk read behind the chip on
@@ -118,6 +126,20 @@ async def ibkr_borrow(symbols: str = Query("", description="comma-separated tick
     except Exception as exc:                                   # noqa: BLE001
         log.warning("borrow: the read failed: %s", type(exc).__name__)
         return BR.fault_payload(syms)
+
+
+@router.get("/short-interest/ssr")
+async def ssr_rule_201(symbols: str = Query("", description="comma-separated tickers; first 200 read")):
+    """⛔ SSR (2026-11-23): the SEC Rule 201 short-sale restriction for a batch of names, built by
+    `short_interest.ssr.payload` from Mongo only. Never answers 500: a read that raises serves
+    `ssr.fault_payload(syms)` — every asked name unknown / unread, the same shape as "Mongo down"."""
+    from short_interest import ssr as SSR
+    syms = [s.strip() for s in (symbols or "").split(",") if s.strip()]
+    try:
+        return await asyncio.to_thread(SSR.payload, syms)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("ssr: the read failed: %s", type(exc).__name__)
+        return SSR.fault_payload(syms)
 
 
 @router.get("/short/{symbol}/history")

@@ -1,0 +1,8 @@
+/* ⛔ SSR tag — SEC Rule 201 (2026-11-23, spec ssr §3.10). NEUTRAL look: the chip keeps the colour of the badge class it
+ * rides and the 🎾 label takes the plain 🩳 / 🔒 / 💸 label weight. No alarm colour, no tier colour.
+ * Phone (430 px): the chip wraps inside its card; only the fitted 👀 Watch tile above 640 px keeps one line and ellipsises. */
+.gg-ssr { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.gg-ssr-label { font-weight: 600; }
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-chip.gg-ssr { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
