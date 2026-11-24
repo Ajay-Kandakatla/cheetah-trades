@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (⏰ time-window glow ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🧾 accountability v1 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⛔ SSR tag ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🎾 tag on 🩳 cards ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -26,7 +27,7 @@ const SAID = 'can you work on todays videos and also..  Winners in general from 
 describe('✨ the Past winners entry', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, routed to the 🎬 Replays winners', () => {
-    expect(NEW_FEATURES[20].id).toBe(ID);
+    expect(NEW_FEATURES[21].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.route).toBe('/chart-maps?tab=replays&winners=1');
   });

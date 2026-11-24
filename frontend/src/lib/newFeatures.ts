@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "We did some research yesterday about highest price action time 33% was after hours can you
+  // add a reminder of that somwhere for me like radiating when we enter those timings". Study eod-audits/research/
+  // 2026-11-22_winner_time_of_day (his 33% = the first-hour burst share). BE chart_maps/gajjala/time_windows.py + data/
+  // winner_time_of_day_2026_11_22.json + scripts/winner_time_of_day_2026_11_22.py; FE GgTimeWindow. Docs
+  // docs/gajjala/time_window_glow_2026_11_24.md. Display only.
+  {
+    id: 'gajjala-time-window-glow-2026-11-24',
+    label: "⏰ Winners' time windows glow on 🚩 — you said: “We did some research yesterday about highest price action time 33% was after hours can you add a reminder of that somwhere for me like radiating when we enter those timings”. The 🚩 Gajjala page now glows during the ⏰ Burst window (09:30–10:30 ET: about a third of low-float winners' biggest burst starts here — your 33% — inside it GG's no-trade first 15 minutes still holds) and the ⏰ Second wave (15:00–17:00 ET, the busiest hour for a winner's day high is 16:00–17:00). After hours as a whole holds about its fair share of day highs, and after-hours entries lost money in the 🧨 study — the glow is a reminder of when winners move, not a signal to enter. Numbers are read from the 11-22 study file. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala',
+  },
   // Ajay 2026-11-24, verbatim: "I think I am going outside Gajjalas now.. Please create a rule to warn me to not over trade
   // and hold me accountable if I am missing out any gajjalas rules" + "All of this is to help me augment gajjals rules and
   // build confidence is my goal so make sure I am going to far our and seeking something that is not useful". Question card:

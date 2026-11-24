@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (⏰ time-window glow ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🧾 accountability v1 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⛔ SSR tag ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🎾 tag on 🩳 cards ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -13,8 +14,8 @@ const ID = 'gajjala-1m-candles-bright-2026-11-23';
 describe('✨ 🕯 1-min candles (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated; the 📈 VWAP entry follows', () => {
-    expect(NEW_FEATURES[7].id).toBe(ID);
-    expect(NEW_FEATURES[8].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
+    expect(NEW_FEATURES[8].id).toBe(ID);
+    expect(NEW_FEATURES[9].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-23');
   });
