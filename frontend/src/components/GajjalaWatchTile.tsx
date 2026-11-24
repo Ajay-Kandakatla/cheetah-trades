@@ -147,6 +147,7 @@ export function Frame({ f, phone, fit, style, live, seed }: {
           <p className="ggw-line ggw-frame-empty" data-testid={`ggw-frame-empty-${f.tile.symbol}-${f.tf}`}>{empty}</p>
         ) : (
           <PatternChart tile={shown.tile} chartOnly emaStyle="bold" axis={shown.axis}
+                        candleLook={f.tf === '1m' ? '1m' : undefined}
                         viewW={fit && fitH ? fitH.w : undefined}
                         height={fit && fitH ? fitH.h : ggwChartHeight(f.tf, phone)} />
         )}

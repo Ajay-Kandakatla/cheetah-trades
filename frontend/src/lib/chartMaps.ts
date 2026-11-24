@@ -2755,6 +2755,38 @@ export const EMA_BOLD_CANDLE_BODY = 0.8;
 /** 👀 2026-11-16 (Ajay: "the Diamon shapes are too big make them small"): the 9 / 21 cross diamond's half-size under
  *  `emaStyle="bold"` (3.6 elsewhere). MINE (layout). */
 export const EMA_BOLD_DIAMOND_R = 2.4;
+/** 🕯 2026-11-23 (Ajay, a 👀 Watch tile, 1-min chart on top: "On the 1 mins chart make the bard lil more bright please." ·
+ *  "Make them more separted"; his answer: "The candles"). PatternChart `candleLook="1m"` only — the Watch / card-grid / ⤢
+ *  Frame passes it for a 1-minute frame and nothing else does, so every other chart is byte-identical.
+ *  An extended-hours 1-min candle's opacity (0.7 on every other chart). Look value, MINE — not a rule. */
+export const ONE_MIN_EXT_OPACITY = 0.85;
+/** 🕯 The 1-min candle colours: a touch brighter than the Watch panel's --positive rgb(38,186,104) / --negative
+ *  rgb(235,72,72). The 1-min frames always sit on the dark panel (.ggw-dark) in both page themes. Look values, MINE. */
+export const ONE_MIN_CANDLE_UP = 'rgb(46, 214, 120)';
+export const ONE_MIN_CANDLE_DN = 'rgb(255, 88, 88)';
+/** 🕯 The DEVICE-px gap kept between two neighbouring 1-min candle bodies. Look value, MINE. */
+export const ONE_MIN_CANDLE_GAP_PX = 1;
+/** 🕯 The 1-min wick width in DEVICE px (non-scaling stroke of ONE_MIN_WICK_PX / dpr css px). Look value, MINE. */
+export const ONE_MIN_WICK_PX = 1;
+/** 🕯 The screen's device px per css px (window.devicePixelRatio, 2 on his Retina Mac), read at render. Junk — not a
+ *  number, not finite, under 1, absent (SSR / jsdom) — → 1. */
+export function oneMinDpr(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 1 ? v : 1;
+}
+/** 🕯 A 1-min candle body's width, in viewBox units, sized in DEVICE px (verifier 2026-11-23: a Retina slot of ~1.1 css px
+ *  is 2.2 device px — room for a 1 device px body and a 1 device px gap that css px could not see). From the slot width
+ *  (viewBox units), the svg's css px per viewBox unit and the dpr (oneMinDpr): slotDev = slot × pxPerUnit × dpr; the body
+ *  is a WHOLE number of device px = max(1, floor(slotDev − ONE_MIN_CANDLE_GAP_PX)), so with crisp edges every body is the
+ *  same width and the gap is ≥ ONE_MIN_CANDLE_GAP_PX device px. A slot under 1 px body + the gap (2 device px) cannot
+ *  hold both → null: the caller draws the previous anti-aliased body (0.8 of the slot, EMA_BOLD_CANDLE_BODY) instead of
+ *  crisp 1 px bodies that paint over their neighbours. Junk / unmeasured px-per-unit → 1 css px per unit; junk dpr → 1. */
+export function oneMinBodyWidth(slotUnits: number, pxPerUnit: number | null | undefined, dpr?: unknown): number | null {
+  const k = typeof pxPerUnit === 'number' && Number.isFinite(pxPerUnit) && pxPerUnit > 0 ? pxPerUnit : 1;
+  const d = oneMinDpr(dpr);
+  const slotDev = Number.isFinite(slotUnits) && slotUnits > 0 ? slotUnits * k * d : 0;
+  if (slotDev < 1 + ONE_MIN_CANDLE_GAP_PX) return null;
+  return Math.max(1, Math.floor(slotDev - ONE_MIN_CANDLE_GAP_PX)) / (k * d);
+}
 /** 👀 2026-11-16 (Ajay: "Also cannot tell where the GP ticker is now"): under `emaStyle="bold"` a chart with no served
  *  'now' line gains one at its LAST bar's close — the house dashed now line + its "now 1.42" gutter label. A served
  *  'now' line wins (never two); no bars or a junk close → the lines untouched. Every other chart is untouched. */

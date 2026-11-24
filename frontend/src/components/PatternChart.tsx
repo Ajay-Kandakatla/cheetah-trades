@@ -11,11 +11,12 @@
  *
  * All geometry lives in lib/chartMaps.ts. This file only draws.
  */
-import { Fragment, memo, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W, VWAP_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
+  EMA_BOLD, EMA_BOLD_CANDLE_BODY, EMA_BOLD_CANDLE_OPACITY, EMA_BOLD_DIAMOND_R, EMA_LINE_W,
+  ONE_MIN_CANDLE_DN, ONE_MIN_CANDLE_UP, ONE_MIN_EXT_OPACITY, ONE_MIN_WICK_PX, oneMinBodyWidth, oneMinDpr, VWAP_LINE_W, boldNowLines, gutterWidth, hoverLines, lineLabels, markerIndex, nearestAxisBar, offDomainBands, priceAt,
   timeTicks,
   priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmAxis, type CmBadge, type CmBand, type CmCurve, type CmLine, type CmMarker, type CmStat, type CmTile,
@@ -149,7 +150,7 @@ const ctxGutterTone = (kind: string): 'zone_demand' | 'zone_supply' | null =>
     : kind === 'board_supply' || kind === 'supply' ? 'zone_supply' : null;
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look }: {
+  { tile, height = 190, viewW, study, bandStudy, burst, outerChips, expandAll, chartOnly, emaStyle, axis: timeAxis, onOpenView, look, candleLook }: {
     tile: CmTile; height?: number;
     /** 👀 The viewBox width (default PATTERN_CHART_VIEW_W). Gajjala's Watch passes its box's width / GGW_TEXT_SCALE so a
      *  full-width chart keeps its text and markers at their size (2026-11-16: "All the charts are shrinked too much"). */
@@ -193,6 +194,13 @@ export const PatternChart = memo(function PatternChart(
      *  candles / EMAs / BUY·STOP·now / A+ tag / volume. The ladder, head and chips read the full tile. Absent →
      *  byte-identical. (Ajay 2026-11-16: "the graphs in the videos are so clear like I can easily identify the trend".) */
     look?: 'video';
+    /** 🕯 2026-11-23 (Ajay: "On the 1 mins chart make the bard lil more bright please." · "Make them more separted"):
+     *  the 👀 Frame passes '1m' for a 1-minute frame ONLY. Candles at full opacity (no EMA_BOLD_CANDLE_OPACITY dim),
+     *  extended hours at ONE_MIN_EXT_OPACITY, the ONE_MIN_CANDLE_UP / DN colours, a 1 device px crisp wick and a crisp
+     *  body of a whole number of DEVICE px with ONE_MIN_CANDLE_GAP_PX between neighbours (oneMinBodyWidth); a slot under
+     *  2 device px keeps the previous anti-aliased body (0.8 of the slot) in the 1m colours. Hover, markers,
+     *  curves, zones and the volume pane are untouched. Absent → byte-identical. */
+    candleLook?: '1m';
   },
 ) {
   const location = useLocation();
@@ -229,6 +237,30 @@ export const PatternChart = memo(function PatternChart(
   }, [height, W]);
 
   const onLeave = useCallback(() => setHover(null), []);
+
+  /* 🕯 candleLook="1m": the svg's css px per viewBox unit (its rendered width / W — uniform, the box keeps the
+   * viewBox's aspect); × the dpr, a body can be sized in whole DEVICE px. Re-read after every render (a fitted Frame re-renders
+   * this chart on every box resize; the minute GET re-renders it too) and on a window resize — no ResizeObserver of its
+   * own, so the Frame's observer count is unchanged. Without the prop nothing is measured or stored. */
+  const oneMin = candleLook === '1m';
+  /* 🕯 device px per css px, read at render (SSR / jsdom safe; junk → 1). Only the 1m look reads it. */
+  const dpr = oneMin ? oneMinDpr(typeof window !== 'undefined' ? window.devicePixelRatio : undefined) : 1;
+  const [pxPerUnit, setPxPerUnit] = useState<number | null>(null);
+  const measureRef = useRef<() => void>(() => {});
+  measureRef.current = () => {
+    const el = svgRef.current;
+    if (!oneMin || !el) return;
+    const r = el.getBoundingClientRect();
+    const k = r.width > 0 ? r.width / W : null;
+    setPxPerUnit((p) => (p === k ? p : k));
+  };
+  useLayoutEffect(() => { measureRef.current(); });
+  useEffect(() => {
+    if (!oneMin || typeof window === 'undefined') return;
+    const h = () => measureRef.current();
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, [oneMin]);
 
   if (!bars.length) return null;
 
@@ -917,16 +949,38 @@ export const PatternChart = memo(function PatternChart(
           {bars.map((b, i) => {
             const x = sx(i);
             const up = b.c >= b.o;
-            const col = up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)';
             const yo = yFor(b.o, domain, H, PAD_Y);
             const yc = yFor(b.c, domain, H, PAD_Y);
+            /* the house body geometry (every non-1m chart, and the 1-min fallback below) */
+            const bodyX = x - (ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) / 2 : Math.max(bw * 0.32, 0.8));
+            const bodyW = ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) : Math.max(bw * 0.64, 1.4);
+            if (oneMin) {
+              /* 🕯 the 1-min look: full opacity (ext hours ONE_MIN_EXT_OPACITY), brighter colours, crisp 1 device px wick,
+               * a crisp whole-device-px body with a gap to its neighbours. A slot under 2 device px (w1 null) keeps the
+               * house anti-aliased body in the 1m colours. The hover dim stays the house 0.82. */
+              const c1 = up ? ONE_MIN_CANDLE_UP : ONE_MIN_CANDLE_DN;
+              const w1 = oneMinBodyWidth(bw, pxPerUnit, dpr);
+              return (
+                <g key={b.t} className="pc-candle-1m" opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? ONE_MIN_EXT_OPACITY : 1)}>
+                  <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
+                        x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
+                        stroke={c1} strokeWidth={ONE_MIN_WICK_PX / dpr} vectorEffect="non-scaling-stroke" shapeRendering="crispEdges" />
+                  {w1 != null
+                    ? <rect x={x - w1 / 2} y={Math.min(yo, yc)} width={w1}
+                            height={Math.max(Math.abs(yo - yc), 0.9)} fill={c1} shapeRendering="crispEdges" />
+                    : <rect x={bodyX} y={Math.min(yo, yc)} width={bodyW}
+                            height={Math.max(Math.abs(yo - yc), 0.9)} fill={c1} />}
+                </g>
+              );
+            }
+            const col = up ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)';
             return (
               <g key={b.t} opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? 0.7 : 1) * (bold ? EMA_BOLD_CANDLE_OPACITY : 1)}>
                 <line x1={x} y1={yFor(b.h, domain, H, PAD_Y)}
                       x2={x} y2={yFor(b.l, domain, H, PAD_Y)}
                       stroke={col} strokeWidth={0.9} />
-                <rect x={x - (ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) / 2 : Math.max(bw * 0.32, 0.8))} y={Math.min(yo, yc)}
-                      width={ta ? bw * (bold ? EMA_BOLD_CANDLE_BODY : 0.64) : Math.max(bw * 0.64, 1.4)}
+                <rect x={bodyX} y={Math.min(yo, yc)}
+                      width={bodyW}
                       height={Math.max(Math.abs(yo - yc), 0.9)} fill={col} />
               </g>
             );
