@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23, verbatim (voice-typed; "high charging tested" = high short interest, "Gazilla" = Gajjala, "talks" =
+  // stocks): "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats similar to
+  // what we've done in Divergent tab under Gazilla? And also add alerts for these talks when they are crossing EMA, 9 EMA
+  // over 21 EMA." + "New tab like divergence*". Question card: High / EXTREME SI + float <= K8_MAX_FLOAT, 🔒 SHO a tag;
+  // "5 mins and 15 mins"; "Live to my phone". BE chart_maps/gajjala/high_si.py (the 🩳 sub, both floats must agree) +
+  // high_si_cross.py (gajjala_si_cross, the NINTH owner keep-set kind, default False for everyone else). UNMEASURED.
+  // Docs docs/gajjala/high_si_sub_2026_11_23.md, high_si_cross_alerts_2026_11_23.md, high_si_frontend_2026_11_23.md,
+  // high_si_cross_frontend_2026_11_23.md.
+  {
+    id: 'gajjala-high-si-sub-2026-11-23',
+    label: "🩳 High SI on Gajjala's + 9/21 EMA cross alerts — you said: “Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats similar to what we've done in Divergent tab under Gazilla? And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.”. A new 🩳 High SI chip on 🚩 Gajjala's: his list's names with short interest High or EXTREME and a low float on both float reads, with the 🔒 Reg SHO tag and the ➕ Watch button, and a phone alert when the 9 EMA crosses above the 21 EMA on the 5-min or the 15-min chart. UNMEASURED. Not advice.",
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-23 ~12:00 ET, verbatim: "Can you clean up some connection I am seeing delays price update for AKAN on
   // the watch chart.." + "I would like us to focus on connections of Gajjala more for the rest of the tabs." Spec ggconn
   // WP-1..WP-4: FE gajjalaWatch.ggwRowLive (stale_keeps_live) + ggwReturn.ggwReturnRefetch; BE gajjala_watch/rest.py

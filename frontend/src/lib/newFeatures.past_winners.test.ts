@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🩳 High SI sub + 9/21 EMA cross alerts ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +1 2026-11-23 (🕯 1-min candles ✨ FIRST): every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -19,7 +20,7 @@ const SAID = 'can you work on todays videos and also..  Winners in general from 
 describe('✨ the Past winners entry', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, routed to the 🎬 Replays winners', () => {
-    expect(NEW_FEATURES[13].id).toBe(ID);
+    expect(NEW_FEATURES[14].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.route).toBe('/chart-maps?tab=replays&winners=1');
   });

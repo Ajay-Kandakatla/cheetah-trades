@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🩳 High SI sub + 9/21 EMA cross alerts ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +1 2026-11-23 (🕯 1-min candles ✨ FIRST): every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -19,8 +20,8 @@ const STRIP = 'use that space between the parent tab of Gajjala and watch tab to
 describe('✨ the 👀 Watch sections + 📅 runners entry (2026-11-22)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to 🚩 Gajjala', () => {
-    expect(NEW_FEATURES[9].id).toBe(ID);
-    expect(NEW_FEATURES[10].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
+    expect(NEW_FEATURES[10].id).toBe(ID);
+    expect(NEW_FEATURES[11].id).toBe('chart-maps-replays-winners-setup-timing-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-22');
     expect(f.route).toBe('/chart-maps?tab=gajjala');

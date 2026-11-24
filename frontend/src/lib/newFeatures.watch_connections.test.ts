@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🩳 High SI sub + 9/21 EMA cross alerts ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +1 2026-11-23 (🕯 1-min candles ✨ FIRST): every NEW_FEATURES[n] pin here moved +1.
 // WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -11,8 +12,8 @@ const ID = 'gajjala-watch-connections-2026-11-23';
 describe('✨ the 🔌 Watch connections entry (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('sits right under the 🟩 glass-zones entry, listed once, dated, routed to the 👀 Watch; the 👀 1/5/15 entry follows', () => {
-    expect(NEW_FEATURES[4].id).toBe(ID);
-    expect(NEW_FEATURES[5].id).toBe('gajjala-watch-frames-vwap-daily-zones-2026-11-23');
+    expect(NEW_FEATURES[5].id).toBe(ID);
+    expect(NEW_FEATURES[6].id).toBe('gajjala-watch-frames-vwap-daily-zones-2026-11-23');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-23');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');
