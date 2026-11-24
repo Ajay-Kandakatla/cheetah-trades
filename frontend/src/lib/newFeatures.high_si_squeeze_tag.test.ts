@@ -1,3 +1,4 @@
+// WIDENED 2026-11-24 (▶ Watch run-rules ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⏰ time-window glow ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🧾 accountability v1 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⛔ SSR tag ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -9,19 +10,19 @@ const ID = 'gajjala-high-si-squeeze-tag-2026-11-24';
 
 describe('✨ 🎾 tag on 🩳 cards', () => {
   it('is FIRST, listed once, dated, routed to the 🩳 sub; the 🩳 date-sort entry follows', () => {
-    expect(NEW_FEATURES[3].id).toBe(ID);
+    expect(NEW_FEATURES[4].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
-    expect(NEW_FEATURES[3].addedAt).toBe('2026-11-24');
-    expect(NEW_FEATURES[3].route).toBe('/chart-maps?tab=gajjala&sub=high_si');
-    expect(NEW_FEATURES[4].id).toBe('gajjala-high-si-closeout-sort-2026-11-24');
+    expect(NEW_FEATURES[4].addedAt).toBe('2026-11-24');
+    expect(NEW_FEATURES[4].route).toBe('/chart-maps?tab=gajjala&sub=high_si');
+    expect(NEW_FEATURES[5].id).toBe('gajjala-high-si-closeout-sort-2026-11-24');
   });
   it('quotes him and says nothing moves between tabs', () => {
-    const l = NEW_FEATURES[3].label;
+    const l = NEW_FEATURES[4].label;
     expect(l).toContain('Run them against Gajjals other rules to show A+');
     for (const w of ['🎾 Reversal Squeeze A+', 'the same read as the 🎾 card', 'Nothing moves between tabs', 'UNMEASURED', 'Not advice.']) expect(l).toContain(w);
   });
   it('NEGATIVE: never the b-word, never a forecast', () => {
-    const l = NEW_FEATURES[3].label.toLowerCase();
+    const l = NEW_FEATURES[4].label.toLowerCase();
     expect(l).not.toMatch(/\bbounc/);
     expect(l).not.toContain('forecast');
   });

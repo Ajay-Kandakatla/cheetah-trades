@@ -1,3 +1,4 @@
+// WIDENED 2026-11-24 (▶ Watch run-rules ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⏰ time-window glow ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🧾 accountability v1 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (⛔ SSR tag ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -32,7 +33,7 @@ const SAID = 'Yes please and may be add better terminilogy like Moderate with a 
 describe('✨ the 🩳 SI tier words entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[25].id).toBe(ID);
+    expect(NEW_FEATURES[26].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-18');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

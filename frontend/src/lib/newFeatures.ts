@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "On the Watch list I need a run button to run against Gajjalas rules of a stock to see for patterns of 5 patterns he has especially reversal squeeze.. so can check for patterns mid day when I can add a small slide in in the chart window for giving verbatim of passed rules and failed rules of that stock like you do in other tabs..". BE chart_maps/gajjala_watch/run_rules.py (POST
+  // /chart-maps/gajjala-watch/run/{symbol}: the pass's own frames_for -> detectors.read_all, read-only loader, 🎾 first);
+  // FE GgwRunRules + the shared GgCriteriaList. Docs docs/gajjala/watch_run_rules_2026_11_24.md. Display only.
+  {
+    id: 'gajjala-watch-run-rules-2026-11-24',
+    label: "▶ Run Gajjala's rules on a 👀 Watch name — you said: “On the Watch list I need a run button to run against Gajjalas rules of a stock to see for patterns of 5 patterns he has especially reversal squeeze.. so can check for patterns mid day when I can add a small slide in in the chart window for giving verbatim of passed rules and failed rules of that stock like you do in other tabs..”. Every 👀 Watch tile now has a ▶ Rules button. Tap it any time in the session: the app runs GG's five setups — 🎾 Reversal Squeeze first, then Bull Flag, Kiss & Fly, Horizontal Fade and VCP — on that one stock's latest closed 5-minute bar, with the same rules the 🚩 cards use, and a panel slides in inside the chart window with each setup's state and every rule row ✓ passed or ✗ failed in the cards' own words, stamped with the bar time it graded. Display only: it rings nothing, records nothing and changes no gate. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-24, verbatim: "We did some research yesterday about highest price action time 33% was after hours can you
   // add a reminder of that somwhere for me like radiating when we enter those timings". Study eod-audits/research/
   // 2026-11-22_winner_time_of_day (his 33% = the first-hour burst share). BE chart_maps/gajjala/time_windows.py + data/
