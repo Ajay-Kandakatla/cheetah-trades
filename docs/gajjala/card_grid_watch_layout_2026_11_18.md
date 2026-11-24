@@ -160,3 +160,9 @@ choice (scroll again after the fit, or `block: 'start'` under the Watch layout) 
 15. The retired-1m sentence prints on most board tiles (at its words' height) — a shorter served word or no 1m figure = his word.
 16. DEFAULT ON for every viewer (Doug, Chiranjeevi), not the owner only.
 17. The 🧪 tab draws GG5's stored frames (the overlay borrows GG5's reads).
+
+## REVERTED 2026-11-23 — default OFF
+
+Ajay ~19:20 ET, verbatim: "The problem with this view is I cannot see the height of the chart its compressed look throws away the move perspective" · "I needed the video view default in all the places of charts" · "Work on reverting and lmk".
+
+`GGC_WATCH_DEFAULT_ON = false`: with nothing saved, the 🚩 / 🧪 tabs draw the 📺 video-view cards again (one tall 5-min chart, docs/gajjala/video_view_2026_11_17.md). The 👀 Watch layout button stays; one tap turns it on and that choice is remembered per device (stored "1"). A device that already saved "1" keeps it until tapped off. The 👀 Watch tab itself is unchanged. Pinned in contracts.mjs (the 👀 card-grid block) and GajjalaBoard.card_watch.test.tsx (1). Display only.

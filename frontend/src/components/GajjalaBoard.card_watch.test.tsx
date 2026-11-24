@@ -1,3 +1,4 @@
+// REVERTED 2026-11-23 (👀 Watch layout default OFF — his "I cannot see the height of the chart"): the ON-mode cases here now seed 'gg-card-watch' = '1' explicitly.
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -198,7 +199,7 @@ beforeEach(() => {
     : sub === 'kiss_fly' ? kissBoard() : sub === 'bull_flag' ? sixBoard() : clone(HAND[sub] || HAND.bull_flag));
   vi.stubGlobal('fetch', fetchMock);
   vi.stubGlobal('EventSource', class {});
-  vi.stubGlobal('localStorage', mem());
+  vi.stubGlobal('localStorage', mem({ 'gg-card-watch': '1' }));
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -207,8 +208,8 @@ afterEach(() => {
   document.body.style.overflow = '';
 });
 
-describe('👀 (1) the DEFAULT is the Watch layout', () => {
-  it('no storage → the shell, the toggle pressed, the first 2 cards shown, the rest hidden; tiles = served order = pager order', async () => {
+describe('👀 (1) the Watch layout when ON, and the DEFAULT (OFF since 2026-11-23)', () => {
+  it('stored ON → the shell, the toggle pressed, the first 2 cards shown, the rest hidden; tiles = served order = pager order', async () => {
     const { container } = await mount();
     await waitFor(() => expect(screen.getByTestId('gg-cardwatch')).toBeTruthy());
     const t = screen.getByTestId('gg-card-watch');
@@ -225,11 +226,22 @@ describe('👀 (1) the DEFAULT is the Watch layout', () => {
     expect(card('PFAI').querySelector('.ggw-tile')?.previousElementSibling?.getAttribute('data-testid')).toBe('gg-chips-PFAI');
   });
 
-  it('NEGATIVE: a throwing storage → the same default (ON)', async () => {
+  it('REVERTED 2026-11-23: no storage → the 📺 small-card grid (OFF), the toggle not pressed, zero frames GETs', async () => {
+    vi.stubGlobal('localStorage', mem());
+    const { container } = await mount();
+    await waitFor(() => expect(container.querySelector('.cm-grid')).not.toBeNull());
+    expect(screen.queryByTestId('gg-cardwatch')).toBeNull();
+    expect(screen.getByTestId('gg-card-watch').getAttribute('aria-pressed')).toBe('false');
+    expect(container.querySelector('.cm-grid [class*="ggw-"]')).toBeNull();
+    expect(framesSyms()).toEqual([]);
+  });
+
+  it('NEGATIVE: a throwing storage → the same default (OFF), never the Watch layout', async () => {
     vi.stubGlobal('localStorage', blocked());
     const { container } = await mount();
-    await waitFor(() => expect(screen.getByTestId('gg-cardwatch')).toBeTruthy());
-    expect(shownCards(container)).toEqual(['PFAI', 'BKYI']);
+    await waitFor(() => expect(container.querySelector('.cm-grid')).not.toBeNull());
+    expect(screen.queryByTestId('gg-cardwatch')).toBeNull();
+    expect(framesSyms()).toEqual([]);
   });
 });
 
@@ -303,7 +315,7 @@ describe('👀 (4) the served words around the grid are the same ON vs OFF', () 
       await flush();
       expect(off.container.querySelector('.gg-board')!.textContent).toBe(a);
       off.unmount();
-      vi.stubGlobal('localStorage', mem());
+      vi.stubGlobal('localStorage', mem({ 'gg-card-watch': '1' }));
     }
     expect(framesSyms()).toHaveLength(0);
   });
@@ -466,7 +478,7 @@ describe('👀 (11)–(13) the 🎾 card, a bar-less card, the 💋 filter', () 
     })();
     const lineOff = screen.getByTestId('gg-kiss-filter-line').textContent;
     off.unmount();
-    vi.stubGlobal('localStorage', mem({ 'gg-kiss-filter': '1' }));
+    vi.stubGlobal('localStorage', mem({ 'gg-card-watch': '1', 'gg-kiss-filter': '1' }));
     const { container } = await mount({ sub: 'kiss_fly' });
     await waitFor(() => expect(screen.getByTestId('gg-cardwatch')).toBeTruthy());
     expect(screen.getByTestId('gg-kiss-filter-btn').getAttribute('aria-pressed')).toBe('true');

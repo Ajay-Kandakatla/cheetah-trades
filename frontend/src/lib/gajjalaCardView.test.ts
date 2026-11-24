@@ -263,14 +263,14 @@ const blockedStore = () => ({
   removeItem: () => undefined, clear: () => undefined,
 });
 
-describe('👀 loadGgcWatch / saveGgcWatch — default ON, strict "1"', () => {
+describe('👀 loadGgcWatch / saveGgcWatch — default OFF since 2026-11-23 (REVERTED), strict "1"', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
-  it('absent → ON (the default); "1" → ON; "0" → OFF', () => {
+  it('absent → OFF (the default since 2026-11-23); "1" → ON; "0" → OFF', () => {
     const st = memStore();
     vi.stubGlobal('localStorage', st);
     expect(GGC_WATCH_LS).toBe('gg-card-watch');
-    expect(GGC_WATCH_DEFAULT_ON).toBe(true);
-    expect(loadGgcWatch()).toBe(true);
+    expect(GGC_WATCH_DEFAULT_ON).toBe(false);
+    expect(loadGgcWatch()).toBe(false);
     st.setItem(GGC_WATCH_LS, '1');
     expect(loadGgcWatch()).toBe(true);
     st.setItem(GGC_WATCH_LS, '0');
@@ -294,12 +294,12 @@ describe('👀 loadGgcWatch / saveGgcWatch — default ON, strict "1"', () => {
     loadGgcWatch();
     expect([...st.touched]).toEqual(['gg-card-watch']);
   });
-  it('NEGATIVE: a throwing store → ON and a save never throws; no storage at all → ON', () => {
+  it('NEGATIVE: a throwing store → OFF (the default) and a save never throws; no storage at all → OFF', () => {
     vi.stubGlobal('localStorage', blockedStore());
-    expect(loadGgcWatch()).toBe(true);
+    expect(loadGgcWatch()).toBe(false);
     expect(() => saveGgcWatch(false)).not.toThrow();
     vi.stubGlobal('localStorage', undefined);
-    expect(loadGgcWatch()).toBe(true);
+    expect(loadGgcWatch()).toBe(false);
     expect(() => saveGgcWatch(true)).not.toThrow();
   });
 });

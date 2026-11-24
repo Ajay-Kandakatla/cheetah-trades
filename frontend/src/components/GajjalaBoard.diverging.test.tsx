@@ -1,3 +1,4 @@
+// REVERTED 2026-11-23 (👀 Watch layout default OFF — his "I cannot see the height of the chart"): the ON-mode cases here now seed 'gg-card-watch' = '1' explicitly.
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -125,7 +126,7 @@ beforeEach(() => {
   boardFor = () => dgBoard();
   vi.stubGlobal('fetch', fetchMock);
   vi.stubGlobal('EventSource', class { close() { /* no stream */ } addEventListener() { /* none */ } });
-  vi.stubGlobal('localStorage', mem());
+  vi.stubGlobal('localStorage', mem({ 'gg-card-watch': '1' }));
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 

@@ -109,10 +109,14 @@ export function ggcRow(card: GgTile, p: GgcPayload, look?: 'video', opts?: { pla
  * 🚩 / 🧪 card grid draws as the 👀 Watch does (big tiles, 2 per screen side by side, live 15 / 5 / 1-min stacked charts).
  * Display only — no rule, gate, ring, order or count changes. UNMEASURED. */
 
-/** The per-device mode. His word: default. Stored '1' = ON, '0' = OFF; absent or a blocked store = the default (ON); ANY
- *  other value = OFF (the 📺 GG_LOOK_LS rule). Per viewer, per device. Display only. */
+/** The per-device mode. Stored '1' = ON, '0' = OFF; absent or a blocked store = the default; ANY other value = OFF (the
+ *  📺 GG_LOOK_LS rule). Per viewer, per device. Display only.
+ *  REVERTED 2026-11-23 to default OFF — Ajay ~19:20 ET, verbatim: "The problem with this view is I cannot see the height of
+ *  the chart its compressed look throws away the move perspective" + "I needed the video view default in all the places
+ *  of charts" + "Work on reverting and lmk". OFF = the 📺 video-view cards (one tall 5-min chart) as before 11-18; the
+ *  👀 Watch layout stays one tap away. */
 export const GGC_WATCH_LS = 'gg-card-watch';
-export const GGC_WATCH_DEFAULT_ON = true;
+export const GGC_WATCH_DEFAULT_ON = false;
 export function loadGgcWatch(): boolean {
   try {
     const v = window.localStorage.getItem(GGC_WATCH_LS);

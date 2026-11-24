@@ -17713,6 +17713,8 @@ const CONTRACTS = [
       if (/function\s+(Frame|Tile|GgwStretch|GgwPager|GgwLayoutPick)\b/.test(src)) errs.push('GgCardGrid must not declare its own Frame / Tile / GgwStretch / GgwPager / GgwLayoutPick');
       const lib = read('src/lib/gajjalaCardView.ts');
       if (!lib.includes("export const GGC_WATCH_LS = 'gg-card-watch';")) errs.push("lib/gajjalaCardView must export GGC_WATCH_LS = 'gg-card-watch'");
+      // REVERTED 2026-11-23 — Ajay: "I cannot see the height of the chart its compressed look throws away the move perspective" + "Work on reverting and lmk": the 📺 video-view cards are the default again; the 👀 Watch layout is one tap away.
+      if (!lib.includes('export const GGC_WATCH_DEFAULT_ON = false;')) errs.push('GGC_WATCH_DEFAULT_ON must stay false (his 2026-11-23 revert: the 📺 video view is the card default)');
       if (!lib.includes("export const GGC_WATCH_VKEYS: ReadonlyArray<string> = ['gajjala', 'gajjala_audited'];")) errs.push('GGC_WATCH_VKEYS must be exactly the 🚩 5-min and 🧪 tabs (never the retired 1-min, never Luk)');
       for (const f of ['src/components/GgCardGrid.tsx', 'src/hooks/useGgCardWatch.ts', 'src/components/GajjalaWatchLayout.tsx', 'src/lib/gajjalaCardView.ts']) {
         const t = read(f);
