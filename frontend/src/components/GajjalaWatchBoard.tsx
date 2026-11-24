@@ -94,7 +94,14 @@
  * "Add vwap and supply demand too". The served frames are 1m / 5m / 15m (the tile draws them); the legend's swatches come
  * from lib ggwLegendSwatch (9 / 21 EMA, the VWAP line, the daily zones as a dashed outline — the look the chart draws),
  * each entry's served `title` is its hover, and ℹ️ prints the served `info.vwap_text` / `info.zones_text` (a phone has no
- * hover). Display only — nothing gates, sorts or rings on either. UNMEASURED. */
+ * hover). Display only — nothing gates, sorts or rings on either. UNMEASURED.
+ *
+ * ▶ 2026-11-24 (spec ggrun §3.5, WP fe-run) — Ajay: "On the Watch list I need a run button to run against Gajjalas rules
+ * of a stock to see for patterns of 5 patterns he has especially reversal squeeze.. so can check for patterns mid day
+ * when I can add a small slide in in the chart window for giving verbatim of passed rules and failed rules of that stock
+ * like you do in other tabs..". ONE hook (GgwRunRules.useGgwRun) next to the 🚫 one; every tile and the ⤢ view get the
+ * "▶ Rules" button and its slide-in panel through the Tile's `run` prop. A tap is ONE POST and NO board re-GET; the
+ * panel prints the served words verbatim. Display only — rings nothing, records nothing. UNMEASURED. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -123,6 +130,7 @@ import { GgHardToBorrowFault } from './GgHardToBorrow';
 import { GgwLayoutPick, GgwPager, useGgwFitRows } from './GajjalaWatchLayout';
 import { ggwFold, loadGgwList } from '../lib/ggWatchList';
 import { GgwBrokerButton, GgwBrokerHead, useGgwBrokerMark } from './GgwBrokerMark';   // 🚫 2026-11-19 (spec watchfid)
+import { GgwRunButton, GgwRunPanel, useGgwRun } from './GgwRunRules';   // ▶ 2026-11-24 (spec ggrun)
 import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
@@ -546,6 +554,8 @@ export default function GajjalaWatchBoard() {
   };
   /* 🚫 2026-11-19 (spec watchfid): the tile's one-way mark — POST his 🚫 list, then the same DELETE as ✕; one re-GET. */
   const mark = useGgwBrokerMark((text) => { setMsg(text); loadAllRef.current(); });
+  /* ▶ 2026-11-24 (spec ggrun): run Gajjala's rules on one name — ONE POST per tap, never the board's load chain. */
+  const runRules = useGgwRun();
 
   const onAdd = (e: FormEvent) => {
     e.preventDefault();
@@ -619,11 +629,20 @@ export default function GajjalaWatchBoard() {
     </span>
   ) : null;
   const orgInfo = org && (!!autoTitle || !!legend || (p.sections ?? []).some((s) => !!s.hint));
+  const runOf = (r: GgwRow) => {
+    const s = runRules.stateOf(r.symbol);
+    return {
+      button: <GgwRunButton sym={r.symbol} state={s} onRun={runRules.run} />,
+      panel: <GgwRunPanel sym={r.symbol} state={s} onClose={runRules.close} />,
+      open: s != null,
+    };
+  };
   const tileOf = (r: GgwRow, i: number) => (
     <Tile key={r.symbol} row={lateRow(r)} phone={phone} fit={fit} removeLabel={p.remove_label} busy={false}
           focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
           offPage={!shown(r, i)} live={liveOf(r, shown(r, i))} siNote tags={tagsOf(r)} compact={org}
-          actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />} />
+          actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />}
+          run={runOf(r)} />
   );
   return (
     <div className="ggw-board" data-testid="ggw-board" ref={boardRef}>
@@ -735,7 +754,7 @@ export default function GajjalaWatchBoard() {
       {stretchRow ? (
         <GgwStretch row={lateRow(stretchRow)} phone={phone} removeLabel={p.remove_label} onClose={closeStretch}
                  onStep={p.rows.length > 1 ? stepStretch : null} live={liveOf(stretchRow, true)} siNote tags={tagsOf(stretchRow)}
-                 compact={org} />
+                 compact={org} run={runOf(stretchRow)} />
       ) : null}
     </div>
   );

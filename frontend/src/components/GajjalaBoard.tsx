@@ -214,7 +214,7 @@ import { shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_BROKER_PATH, GG_CAT_PARAM, GG_KIND_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TABLE_SUB, GG_DIVERGENCE_SUB, GG_DIVERGING_SUB, GG_HIGH_SI_SUB, GG_TFS, GG_TF_ALL, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
-  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
+  changeText, chipText, ggCatDays, ggCatOn, ggHref, ggKindDays, ggKindOn, ggSortRows, ggTrRowClass, ggTrSort, gradeText, ggQuery, ggRefreshMs, ggTfs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, variantText, watchParts,
   ggKissFilterBlock, ggKissFilterLine, ggKissFilterSplit, loadGgKissFilter, saveGgKissFilter,
   GG_LOOK_VIDEO_LABEL, GG_LOOK_VIDEO_TITLE, GG_VIDEO_LOOK_VKEYS, loadGgLook, saveGgLook,
@@ -236,6 +236,7 @@ import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
 import { GgDivergingPanel } from './GgDiverging';
 import { GgHighSiPanel } from './GgHighSi';
 import { GgTimeWindow } from './GgTimeWindow';
+import { GgCriteriaList } from './GgCriteria';   // ▶ 2026-11-24 (spec ggrun): the ONE rule-row printer, shared with the 👀 Watch panel
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -1225,15 +1226,7 @@ function CardExtras({ read, board, sub, sym, live }: {
       {read.setup === 'reversal_squeeze' ? <GgSsrLabel symbol={sym} testid={`gg-ssr-label-${sym}`} /> : null}
       {/* 🔴 the SERVED live-vs-levels words (live_card.VS_TEXT), verbatim — absent → nothing. */}
       {live ? <div className="cm-note gg-line gg-live" data-testid={`gg-live-${sym}`}>{live}</div> : null}
-      {read.criteria?.length ? (
-        <ul className="gg-criteria" data-testid="gg-criteria">
-          {read.criteria.map((c) => (
-            <li key={c.key} className={c.ok === true ? 'gg-ok' : c.ok === false ? 'gg-miss' : 'gg-unjudged'}>
-              {criteriaText(c)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <GgCriteriaList criteria={read.criteria} />
       {shown.length ? (
         <div className="gg-chip-row" data-testid="gg-chip-row">
           {shown.map((s, i) => <span key={`${i}-${s}`} className="cm-badge cm-badge-muted">{s}</span>)}

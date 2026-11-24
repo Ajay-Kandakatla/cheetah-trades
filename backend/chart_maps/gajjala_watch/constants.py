@@ -181,3 +181,19 @@ REST_REREAD_ON = False           # HIS CALL (spec ggconn §7 C) — one re-read 
 REST_RETRY_PAUSE_SEC = 2.0       # MINE (read only when REST_REREAD_ON) — = the minute fetch's own 429 pause (daytrading/data.py `time.sleep(2)`)
 REST_COUNT_ID_PREFIX = "rest:"   # the per-session counter doc `rest:{session}` in COLL_STATE
 REST_SKIPS = ("off", "no_time")  # why a failed minute was not re-read
+# ▶ run Gajjala's rules on ONE Watch name (2026-11-24, spec ggrun rev 2 §3.3 — Ajay, verbatim: "On the Watch list I need
+# a run button to run against Gajjalas rules of a stock to see for patterns of 5 patterns he has especially reversal
+# squeeze.. so can check for patterns mid day when I can add a small slide in in the chart window for giving verbatim of
+# passed rules and failed rules of that stock like you do in other tabs.."). run_rules.py is the ONE engine. DISPLAY
+# ONLY — nothing gates, sorts, rings, adds or stores on any of this. UNMEASURED.
+API_RUN_PATH = API_PATH + "/run/{symbol}"          # == FE lib/ggwRun.ggwRunPath
+RUN_RULES_ON = True                                # MINE — the kill switch: False → every POST answers `off`, nothing fetched
+RUN_REUSE_SEC = GC.ON_DEMAND_REUSE_SEC             # MINE to reuse (HIS CALL 4): his K4 "a pass under 60 s old is not re-run";
+                                                   # a newly closable 5-min bar ends the reuse at once (run_rules.closable_t5)
+RUN_BUDGET_SEC = GC.ON_DEMAND_BUDGET_SEC           # TRANSPORT — the one name's bar budget AND the same-name lock wait (the on-open pass's)
+RUN_MODULE = "chart_maps.gajjala_watch.run_rules"  # imported LAZILY by api.py
+RUN_ANSWER_KEYS = ("state", "symbol", "title", "text", "as_of", "reused_text", "scanner", "float_text",
+                   "volume_text", "note", "setups")
+RUN_TITLE_TEXT = "▶ Gajjala's rules"                                                       # the bare title (no symbol)
+RUN_NOTE_TEXT = "Display only — this run rings nothing and records nothing. UNMEASURED."   # no claim about who rings
+RUN_ERROR_TEXT = "Gajjala's rules could not be run this time — tap ▶ again."               # api.py's import-fault fallback only

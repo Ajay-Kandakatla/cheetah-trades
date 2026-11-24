@@ -43,6 +43,12 @@ add remove tickers from the dashboard."
     `owner_only_payload()` and nothing is read). `runners.strip(now)` built, scrubbed and JSON-encoded inside ONE
     `asyncio.to_thread`; never raises (state `error` + the served sentence). Display only.
 
+  * `POST   /chart-maps/gajjala-watch/run/{symbol}` (▶ 2026-11-24, spec ggrun §3.4 — Ajay: "On the Watch list I need a
+    run button to run against Gajjalas rules of a stock") — `require_primary_admin` (404 for anyone else, before the
+    handler). `run_rules.run(symbol, now)` (imported LAZILY through C.RUN_MODULE), scrubbed and JSON-encoded inside ONE
+    `asyncio.to_thread`; HTTP 200 for every served state. An import / unexpected fault → state `error` with the string
+    title and note (C.RUN_TITLE_TEXT, C.RUN_ERROR_TEXT, C.RUN_NOTE_TEXT). Rings nothing, records nothing.
+
 The admin email never appears in an answer. UNMEASURED — a cross is information, not an entry.
 """
 from __future__ import annotations
@@ -120,6 +126,30 @@ def _runners_body(now: datetime) -> bytes:
     return JSONResponse(_scrub(out)).body
 
 
+def _run_fallback() -> dict:
+    out = {k: None for k in C.RUN_ANSWER_KEYS}
+    out.update(state="error", title=C.RUN_TITLE_TEXT, text=C.RUN_ERROR_TEXT, note=C.RUN_NOTE_TEXT, setups=[])
+    return out
+
+
+def _run_body(symbol: str, now: datetime) -> bytes:
+    """▶ 2026-11-24 — the run's answer as JSON bytes, called ONLY inside asyncio.to_thread. Never raises: an import /
+    unexpected fault → the fallback answer (state `error`, title and note always strings)."""
+    from growth.api import _scrub
+    try:
+        out = importlib.import_module(C.RUN_MODULE).run(symbol, now)
+        if not isinstance(out, dict):
+            raise TypeError("not an answer")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: run rules failed: %s", type(exc).__name__)
+        out = _run_fallback()
+    try:
+        return JSONResponse(_scrub(out)).body
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: run answer not encoded: %s", type(exc).__name__)
+        return JSONResponse(_scrub(_run_fallback())).body
+
+
 def _request_build(new_only: bool = False) -> str:
     """[C2.5] Single-flight `--build` child (the on_demand._STATE shape): alive → "running"; else spawn → "spawned";
     a raising spawn logs one line → "error". Never raises. `new_only` (2026-11-19, in window) → C.ARGV_BUILD_NEW:
@@ -187,6 +217,13 @@ async def gajjala_watch_add(symbol: str, email: str = Depends(require_primary_ad
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: build request failed: %s", exc)
     return out
+
+
+@router.post(C.API_RUN_PATH)
+async def gajjala_watch_run(symbol: str, email: str = Depends(require_primary_admin)):
+    """▶ the owner's run of Gajjala's rules on ONE Watch name (body built off the event loop)."""
+    body = await asyncio.to_thread(_run_body, symbol, datetime.now(ET))
+    return Response(content=body, media_type="application/json")
 
 
 def _broker_note(out) -> Any:

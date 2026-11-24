@@ -61,7 +61,14 @@
  *   - GgwLevelsLine — the row's served daily-zones line (text verbatim, hover = the served title): under the head on a
  *     plain tile, inside the ⋯ drawer on a compact one (GajjalaWatchCompact mounts it there). No served text → nothing.
  *   - `seed` on Frame — the forming 5- / 15-min candle from the row's own 1-min chart (lib/ggwLive.ggwSeedLive), folded
- *     ONLY when GGW_SEED_FORMING is on (BUILT, OFF — HIS CALL #13); off, the forming candle is main's exactly. */
+ *     ONLY when GGW_SEED_FORMING is on (BUILT, OFF — HIS CALL #13); off, the forming candle is main's exactly.
+ *
+ * ▶ 2026-11-24 (spec ggrun §3.5, WP fe-run) — Ajay: "On the Watch list I need a run button to run against Gajjalas rules
+ * of a stock to see for patterns of 5 patterns he has especially reversal squeeze.. so can check for patterns mid day
+ * when I can add a small slide in in the chart window …". ONE opt-in prop `run` on Tile and GgwStretch (the Watch passes
+ * it; GgCardGrid / GgCardView never do → their DOM is byte-identical): `run.button` rides the action group right after
+ * `actions` (board AND ⤢ view); while `run.open` the chart window gains `ggw-charts--run` and `run.panel` as its LAST
+ * child (a pending tile hosts it in `ggw-dark ggw-run-host` after its pending words). Closed → today's DOM exactly. */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -81,6 +88,9 @@ import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import { EmaBlinkDot } from './EmaBlink';
 import { emaBlinkLine } from '../lib/emaBlink';
 import '../styles/gajjalaWatch.css';
+
+/** ▶ 2026-11-24 (spec ggrun): the run slot a Tile / GgwStretch draws — the board builds it (GgwRunRules). */
+export type GgwRunSlot = { button: ReactNode; panel: ReactNode; open: boolean };
 
 function phoneNow(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -184,7 +194,7 @@ export function Frame({ f, phone, fit, style, live, seed }: {
 }
 
 export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, onStretch, onUnstretch, offPage, onPrev, onNext, live, order, siNote,
-  stack, extra, tags, actions, compact, drawerOpen }: {
+  stack, extra, tags, actions, compact, drawerOpen, run }: {
   row: GgwRow; phone: boolean; fit: boolean; removeLabel: string | null; focused: boolean; busy: boolean;
   /** This row's forming bars per frame — the caller passes them only when the tile is shown and ggwRowLive(row). */
   live?: GgwLiveSym;
@@ -217,6 +227,9 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   compact?: boolean;
   /** 🗂 2026-11-22: a compact tile's ⋯ drawer starts open (the ⤢ view); absent → closed. */
   drawerOpen?: boolean;
+  /** ▶ 2026-11-24 (spec ggrun): the Watch's run button + its slide-in panel (open → drawn in the chart window). Absent →
+   *  today's DOM (the 🚩 / 🧪 card grid and GgCardView never pass it). */
+  run?: GgwRunSlot;
 }) {
   const [open, setOpen] = useState<boolean>(!!drawerOpen);
   const { top, pair } = ggwSplitFrames(row.frames);
@@ -225,6 +238,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
   const f1 = row.frames.find((x) => x.tf === '1m') ?? null;
   const seedOf = (f: GgwFrame) => (live && f !== f1 ? { f1, live1: live.by[f1?.tf ?? ''] } : undefined);
   const stacked = !onUnstretch && !!stack;
+  const runOpen = !!run?.open;
   /* 🤖 2026-11-17: an auto-added row's × carries its served title (removed until tomorrow); his rows keep `rm`. */
   const rm = row.auto?.remove_title ?? (removeLabel ? `${removeLabel} ${row.symbol}` : row.symbol);
   const autoTitle = row.auto
@@ -277,6 +291,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
         ))}
         <span className="ggw-actions">
           {actions && !onUnstretch ? actions : null}
+          {run?.button ?? null}
           {compact ? (
             <button type="button" className="ggw-btn ggw-drawer-btn" aria-expanded={open}
                     aria-controls={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`}
@@ -334,16 +349,17 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
       {compact ? null : <GgwLevelsLine row={row} />}
       {compact ? <GgwDrawer row={row} open={open} tags={tags} domId={`ggw-drawer-${row.symbol}${onUnstretch ? '-x' : ''}`} /> : null}
       {(onUnstretch || stacked) && row.frames.length ? (
-        <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}`}
+        <div className={`ggw-dark ggw-charts ggw-charts--stretch${stacked ? ' ggw-charts--stack' : ''}${runOpen ? ' ggw-charts--run' : ''}`}
              data-testid={stacked ? 'ggw-stack-charts' : 'ggw-stretch-charts'}>
           {ggwStretchFrames(row.frames, order).map((f) => (
             <Frame key={f.tf} f={f} phone={phone} fit={fit}
                    style={fit ? { flexGrow: stacked && f.tile.bars.length === 0 && f.empty_text ? 0 : 1 } : undefined}
                    live={live?.by[f.tf]} seed={seedOf(f)} />
           ))}
+          {runOpen ? run!.panel : null}
         </div>
       ) : top || pair.length ? (
-        <div className="ggw-dark ggw-charts">
+        <div className={runOpen ? 'ggw-dark ggw-charts ggw-charts--run' : 'ggw-dark ggw-charts'}>
           {top ? (
             <Frame f={top} phone={phone} fit={fit} style={fit ? { flexGrow: GGW_FIT_GROW.top } : undefined}
                    live={live?.by[top.tf]} />
@@ -353,8 +369,14 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
               {pair.map((f) => <Frame key={f.tf} f={f} phone={phone} fit={fit} live={live?.by[f.tf]} seed={seedOf(f)} />)}
             </div>
           ) : null}
+          {runOpen ? run!.panel : null}
         </div>
-      ) : <GgwPendingPanel row={row} />}
+      ) : (
+        <>
+          <GgwPendingPanel row={row} />
+          {runOpen ? <div className="ggw-dark ggw-run-host">{run!.panel}</div> : null}
+        </>
+      )}
     </section>
   );
 }
@@ -362,7 +384,7 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
 /** ⤢ One tile over the whole window (portal on <body>, so no transformed ancestor clips the fixed layer). Esc, ⤡ or a
  *  click on the dark margin closes it; the page under it does not scroll while it is open. The tile re-renders from
  *  the board's own rows, so the minute GET keeps moving its bars. */
-export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags, compact }: {
+export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, order, kind, siNote, tags, compact, run }: {
   row: GgwRow; phone: boolean; removeLabel: string | null; onClose: () => void; onStep: ((d: -1 | 1) => void) | null;
   live?: GgwLiveSym;
   /** The frame order, top to bottom (absent → GGW_STRETCH_ORDER). */
@@ -375,6 +397,8 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
   tags?: GgwTagsCtx;
   /** 🗂 2026-11-22: the organised tile, its ⋯ drawer OPEN (the Watch in org mode only; absent → today's view). */
   compact?: boolean;
+  /** ▶ 2026-11-24: forwarded to the Tile (the Watch passes it; a 🚩 card does not). */
+  run?: GgwRunSlot;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -396,7 +420,7 @@ export function GgwStretch({ row, phone, removeLabel, onClose, onStep, live, ord
          data-testid="ggw-stretch" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`ggw-grid ggw-grid--stretch${phone ? '' : ' ggw-grid--fit'}`}>
         <Tile row={row} phone={phone} fit={!phone} removeLabel={removeLabel} focused={false} busy={false}
-              onRemove={() => {}} onUnstretch={onClose} live={live} order={order} siNote={siNote} tags={tags}
+              onRemove={() => {}} onUnstretch={onClose} live={live} order={order} siNote={siNote} tags={tags} run={run}
               {...(compact ? { compact: true, drawerOpen: true } : {})}
               onPrev={onStep ? () => onStep(-1) : undefined} onNext={onStep ? () => onStep(1) : undefined} />
       </div>

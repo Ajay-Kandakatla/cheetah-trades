@@ -1,0 +1,62 @@
+/* ▶ 2026-11-24 (spec ggrun §3.5) — the 👀 Watch tile's "▶ Rules" slide-in panel. Ajay: "…when I can add a small slide in
+ * in the chart window for giving verbatim of passed rules and failed rules of that stock like you do in other tabs..".
+ * The panel sits INSIDE the tile's chart window (.ggw-charts--run), slides in from the LEFT (the newest bars on the right
+ * stay visible — HIS CALL 7), 24rem wide, full width on the phone. z-index 1: UNDER the compact ⋯ drawer's 2
+ * (gajjalaWatch.css). The head is sticky so ✕ never scrolls away. A tile with no chart yet (pending) hosts it in its own
+ * dark box, which scrolls inside a fitted tile. The .gg-criteria / .gg-state rules are SCOPED COPIES of gajjala.css ON
+ * PURPOSE: the Watch chunk does not load gajjala.css. 430 px: every text child wraps and carries min-width 0. */
+.ggw-charts--run { position: relative; }
+.ggw-run {
+  position: absolute; top: 0; left: 0; bottom: 0; width: min(100%, 24rem); z-index: 1; overflow-y: auto;
+  min-width: 0; max-width: 100%; box-sizing: border-box; background: rgb(13, 17, 23);
+  border-right: 1px solid var(--rule); box-shadow: 8px 0 24px rgba(0, 0, 0, .55); padding: 0 10px 8px;
+  font-size: 0.78rem; color: var(--ink, rgb(225, 228, 232)); animation: ggw-run-in .18s ease-out;
+}
+.ggw-run-head {
+  position: sticky; top: 0; z-index: 1; background: rgb(13, 17, 23); padding: 8px 0 4px; display: flex;
+  gap: 0.4rem; align-items: flex-start; min-width: 0;
+}
+.ggw-run-title { flex: 1 1 auto; font-weight: 700; }
+.ggw-run-close { flex: none; }
+.ggw-run p, .ggw-run h4, .ggw-run b, .ggw-run span, .ggw-run li {
+  white-space: normal; overflow-wrap: anywhere; min-width: 0;
+}
+.ggw-run .ggw-line { margin: 2px 0; }
+.ggw-run-busy, .ggw-run-note, .ggw-run-reused, .ggw-run-asof { color: var(--text-muted, #8795a0); }
+.ggw-run-setup { margin: 8px 0 0; padding: 6px 0 0; border-top: 1px solid var(--rule, #262b34); min-width: 0; }
+.ggw-run-label { margin: 0 0 3px; font-size: 0.82rem; }
+.ggw-run-gate { margin-top: 3px; }
+.ggw-run-tags { display: flex; flex-wrap: wrap; gap: 0.2rem 0.35rem; }
+.ggw-run-tag { padding: 0.04rem 0.4rem; border: 1px dashed var(--rule, #262b34); border-radius: 999px; }
+.ggw-run-plan { font-variant-numeric: tabular-nums; }
+@keyframes ggw-run-in { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes ggw-run-pulse { 50% { opacity: 0.45; } }
+.ggw-run-btn[aria-busy="true"] { animation: ggw-run-pulse 1s ease-in-out infinite; }
+.ggw-run-btn[aria-expanded="true"] { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
+@media (prefers-reduced-motion: reduce) {
+  .ggw-run { animation: none; }
+  .ggw-run-btn[aria-busy="true"] { animation: none; }
+}
+@media (max-width: 640px) {
+  .ggw-run { width: 100%; border-right: 0; }
+}
+/* a tile with no chart yet: the panel flows in its own dark box under the pending words */
+.ggw-run-host { margin-top: 4px; min-width: 0; }
+.ggw-run-host .ggw-run { position: static; width: auto; animation: none; box-shadow: none; overflow-y: visible; }  /* the host scrolls, so the sticky ✕ stays put */
+@media (min-width: 641px) {
+  .ggw-grid--fit .ggw-run-host { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+}
+
+/* scoped copies of the 🚩 card's look (gajjala.css) — the same custom properties */
+.ggw-run .gg-state {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600;
+  border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.ggw-run .gg-state-aplus, .ggw-run .gg-state-triggered { color: var(--positive, #22c55e); border-color: var(--positive, #22c55e); }
+.ggw-run .gg-state-stopped { color: var(--negative, #ef4444); border-color: var(--negative, #ef4444); }
+.ggw-run .gg-state-partial { color: var(--ink-muted, #94a3b8); }
+.ggw-run .gg-criteria { list-style: none; margin: 4px 0 0; padding: 0; }
+.ggw-run .gg-criteria li { line-height: 1.35; overflow-wrap: anywhere; }
+.ggw-run .gg-criteria .gg-ok { color: var(--positive, #22c55e); }
+.ggw-run .gg-criteria .gg-miss { color: var(--negative, #ef4444); }
+.ggw-run .gg-criteria .gg-unjudged { color: var(--ink-subtle, #94a3b8); }
