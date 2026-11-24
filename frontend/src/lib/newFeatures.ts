@@ -36,6 +36,15 @@ export const NEW_FEATURES: NewFeature[] = [
   // Ajay 2026-11-23 ~21:30 ET, verbatim: "Why is VWAP not showing up in AH?" · "Please extend them to all hours..".
   // gajjala_watch/constants.py VWAP_SESSIONS = ("premarket", "rth", "afterhours") (vwap.SESSION_SETS[2]); the card frames read
   // the same constant. Today's bars only. Display only. Doc docs/gajjala/watch_frames_vwap_2026_11_23.md (2026-11-23 section).
+  // Ajay 2026-11-23 ~21:50 ET, verbatim: "On the 1 mins chart make the bard lil more bright please." · "Make them more
+  // separted" (question card: "The candles"). PatternChart candleLook="1m" (Watch tile Frame, tf === '1m' only): brighter
+  // full-opacity candles, device-px bodies with a 1-device-px gap where a slot has room. Doc docs/gajjala/one_min_candles_2026_11_23.md.
+  {
+    id: 'gajjala-1m-candles-bright-2026-11-23',
+    label: '🕯 Brighter, separated 1-min candles — you said: “On the 1 mins chart make the bard lil more bright please.” · “Make them more separted”. On every 1-minute chart (👀 Watch, the card grid, ⤢) the candles are now brighter, pre-market and after-hours ones much less dim, and where the chart is wide enough each 1-minute candle has a 1-pixel gap from the next. In a narrow tile there is not room for a gap between 960 minutes, so they stay touching there. 5-min, 15-min and daily charts are unchanged. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   {
     id: 'gajjala-watch-vwap-all-hours-2026-11-23',
     label: '📈 VWAP all hours — you asked: “Why is VWAP not showing up in AH?” · “Please extend them to all hours..”. On the 👀 Watch and the card charts the VWAP line now runs from 04:00 premarket through after-hours, today only. Because premarket and after-hours volume count, the number differs from a broker\'s regular-hours VWAP all day, not only after 16:00. Not advice.',

@@ -1,3 +1,4 @@
+// WIDENED +1 2026-11-23 (🕯 1-min candles ✨ FIRST): every NEW_FEATURES[n] pin here moved +1.
 /* 📈 VWAP all hours + 📺 TV ↗ ✨ (2026-11-23). */
 import { describe, expect, it } from 'vitest';
 import { NEW_FEATURES } from './newFeatures';
@@ -5,10 +6,10 @@ import { NEW_FEATURES } from './newFeatures';
 describe('✨ 📈 VWAP all hours + 📺 TV ↗ (2026-11-23)', () => {
   const v = NEW_FEATURES.find((x) => x.id === 'gajjala-watch-vwap-all-hours-2026-11-23')!;
   const t = NEW_FEATURES.find((x) => x.id === 'chart-maps-tv-link-2026-11-23')!;
-  it('are FIRST and SECOND, listed once each, dated; the 🟩 glass entry follows', () => {
-    expect(NEW_FEATURES[0].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
-    expect(NEW_FEATURES[1].id).toBe('chart-maps-tv-link-2026-11-23');
-    expect(NEW_FEATURES[2].id).toBe('gajjala-watch-zones-glass-2026-11-23');
+  it('sit right under the 🕯 candles entry, listed once each, dated; the 🟩 glass entry follows', () => {
+    expect(NEW_FEATURES[1].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
+    expect(NEW_FEATURES[2].id).toBe('chart-maps-tv-link-2026-11-23');
+    expect(NEW_FEATURES[3].id).toBe('gajjala-watch-zones-glass-2026-11-23');
     for (const f of [v, t]) { expect(NEW_FEATURES.filter((x) => x.id === f.id).length).toBe(1); expect(f.addedAt).toBe('2026-11-23'); }
   });
   it('quote him verbatim and say what changed', () => {
