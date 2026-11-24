@@ -54,15 +54,24 @@ const candleYs = (c: HTMLElement) => candles(c).map((g) => {
 /** main's band text, retyped here ONLY as the negative's reference. */
 const mainText = (b: CmBand, name: string) => `${b.label || name} ${b.lo.toFixed(2)}–${b.hi.toFixed(2)}`;
 
-describe('ctx board band — dashed outline where it falls, quiet gutter word', () => {
-  it('inside the range: the dashed OUTLINE rect (no fill) and its gutter word in the zone colour', () => {
+// 🟩 CHANGED 2026-11-23 (his "subtle green glassy" — was a dashed outline): a ctx band draws as GLASS.
+describe('ctx board band — glass where it falls, quiet gutter word', () => {
+  it('inside the range: the GLASS rect (gradient fill, no stroke, no dash), solid edges, and its gutter word in the zone colour', () => {
     const { container } = draw(tile({ bands: [IN] }));
     const g = container.querySelector('g[data-band-kind="board_demand"]')!;
     expect(g).toBeTruthy();
+    expect(g.getAttribute('data-band-look')).toBe('glass');
     const r = g.querySelector('rect')!;
-    expect(r.getAttribute('fill')).toBe('none');
-    expect(r.getAttribute('stroke')).toBe('var(--positive, #22c55e)');
-    expect(r.getAttribute('stroke-dasharray')).toBe('5,3');
+    expect(r.getAttribute('fill')).toMatch(/^url\(#pc-gge-[A-Za-z0-9_-]+-glass-board_demand\)$/);
+    expect(r.getAttribute('stroke')).toBe('none');
+    expect(r.getAttribute('stroke-dasharray')).toBeNull();
+    const edges = Array.from(g.querySelectorAll('line'));
+    expect(edges.length).toBe(2);
+    for (const e of edges) { expect(e.getAttribute('stroke')).toBe('var(--positive, #22c55e)'); expect(e.getAttribute('stroke-dasharray')).toBeNull(); }
+    const id = r.getAttribute('fill')!.slice(5, -1);
+    const grad = container.querySelector(`linearGradient[id="${id}"]`)!;
+    expect(grad).toBeTruthy();
+    expect(grad.querySelectorAll('stop').length).toBe(2);
     const word = Array.from(container.querySelectorAll('svg text')).find((n) => n.textContent === 'demand');
     expect(word).toBeTruthy();
     expect(word!.getAttribute('fill')).toBe(toneColor('zone_demand'));
@@ -72,7 +81,8 @@ describe('ctx board band — dashed outline where it falls, quiet gutter word', 
     const r = container.querySelector('g[data-band-kind="board_supply"] rect')!;
     expect(r).toBeTruthy();
     expect(r.getAttribute('height')).toBe('1');
-    expect(r.getAttribute('stroke-dasharray')).toBe('5,3');
+    expect(r.getAttribute('fill')).toMatch(/-glass-board_supply\)$/);   // 🟩 supply glass in ITS colour, never green
+    expect(r.getAttribute('stroke-dasharray')).toBeNull();
     const word = Array.from(container.querySelectorAll('svg text')).find((n) => n.textContent === 'supply');
     expect(word!.getAttribute('fill')).toBe(toneColor('zone_supply'));
   });
@@ -235,5 +245,22 @@ describe('NEGATIVE: a tile with neither renders as before', () => {
       .container.querySelector('svg')!.outerHTML;
     expect(b).toBe(a);
     expect(a).not.toContain('pc-vwap');
+  });
+});
+
+describe('🟩 2026-11-23 glass is for ctx daily zones ONLY', () => {
+  it('NEGATIVE: a board band WITHOUT ctx keeps the dashed outline, no glass, no gradient defs', () => {
+    const plain = { ...IN, ctx: undefined } as CmBand;
+    const { container } = draw(tile({ bands: [plain] }));
+    const g = container.querySelector('g[data-band-kind="board_demand"]')!;
+    expect(g.getAttribute('data-band-look')).toBeNull();
+    const r = g.querySelector('rect')!;
+    expect(r.getAttribute('fill')).toBe('none');
+    expect(r.getAttribute('stroke-dasharray')).toBe('5,3');
+    expect(container.querySelector('linearGradient[id*="-glass-"]')).toBeNull();
+  });
+  it('NEGATIVE: no bands → no glass defs', () => {
+    const { container } = draw(tile({ bands: [] }));
+    expect(container.querySelector('linearGradient[id*="-glass-"]')).toBeNull();
   });
 });

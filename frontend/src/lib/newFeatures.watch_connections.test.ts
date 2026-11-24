@@ -1,3 +1,4 @@
+// WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 /* 🔌 Watch price connections ✨ (2026-11-23). Ajay: "Can you clean up some connection I am seeing delays price update
  * for AKAN on the watch chart..". Spec ggconn WP-1..WP-4. */
 import { describe, expect, it } from 'vitest';
@@ -7,9 +8,9 @@ const ID = 'gajjala-watch-connections-2026-11-23';
 
 describe('✨ the 🔌 Watch connections entry (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
-  it('is FIRST, listed once, dated, routed to the 👀 Watch; the 👀 1/5/15 entry follows', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
-    expect(NEW_FEATURES[1].id).toBe('gajjala-watch-frames-vwap-daily-zones-2026-11-23');
+  it('sits right under the 🟩 glass-zones entry, listed once, dated, routed to the 👀 Watch; the 👀 1/5/15 entry follows', () => {
+    expect(NEW_FEATURES[1].id).toBe(ID);
+    expect(NEW_FEATURES[2].id).toBe('gajjala-watch-frames-vwap-daily-zones-2026-11-23');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-23');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

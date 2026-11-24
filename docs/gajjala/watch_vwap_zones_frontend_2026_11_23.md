@@ -62,3 +62,9 @@ else → main's candle. No live print → no forming candle (as today). His word
 #3 zones per kind · #4 zones never move the scale · #6 ⤢ order 15 / 5 / 1 (he listed 1 / 5 / 15) · #8 looks (dashed
 outline, VWAP blue) · #9 legend toggle (not built) · #13 the seeded forming candle (built, OFF) · #14 📺 card look shows
 VWAP + zones · #17 "across board" = the Watch + the card frames' charts.
+
+## 🟩 2026-11-23 — the zone bands are GLASS, not dashed
+
+Ajay, verbatim: "Also instead of these lines being dashed can you make then subtle green glassy like look please".
+
+`PatternChart` draws a `ctx` band of a board kind (the daily zones served by `gajjala_watch/levels.py` on the 👀 Watch frames and the card frames) as glass: a vertical gradient in the zone colour (`GLASS_TOP_OPACITY` 0.24 → `GLASS_BOTTOM_OPACITY` 0.06; demand green, supply red), a thin solid top edge (`GLASS_EDGE_TOP` 0.55) and a fainter bottom edge (`GLASS_EDGE_BOTTOM` 0.28), no dash, `data-band-look="glass"`. Gradient ids are per chart (`ggClipId`). A board band without `ctx` keeps its dashed outline. The legend swatch is a solid thin border with a 24% colour-mix fill. The opacities are look values (mine), not rules. Zone geometry, labels, hover text and the price scale are unchanged. Display only. Tests: `PatternChart.ctx_vwap_2026_11_23.test.tsx` (glass + NEGATIVES), `GajjalaWatchBoard.frames_vwap_zones_2026_11_23.test.tsx`; contracts.mjs 🟩 block.

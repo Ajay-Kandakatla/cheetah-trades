@@ -116,6 +116,13 @@ const lineDash = (tone: string): string | undefined =>
     : tone === 'key_broken' ? '3,3'
       : tone === 'ownstop' ? '2,3' : '5,4';
 
+/** 🟩 2026-11-23 the glass look of a `ctx` daily-zone band (his "subtle green glassy"): gradient stop opacities and the
+ *  two edge opacities. Look values, MINE — not a rule. */
+export const GLASS_TOP_OPACITY = 0.24;
+export const GLASS_BOTTOM_OPACITY = 0.06;
+export const GLASS_EDGE_TOP = 0.55;
+export const GLASS_EDGE_BOTTOM = 0.28;
+
 /** Board bands are outlines, never fills — one look, one meaning. */
 const isOutline = (kind: string) => kind === 'board_demand' || kind === 'board_supply';
 
@@ -523,12 +530,40 @@ export const PatternChart = memo(function PatternChart(
           {/* price bands (base / demand / supply). The <title> gives the same
               answer the crosshair does, for a pointer that just rests here and
               for a screen reader. */}
+          {/* 🟩 2026-11-23 — Ajay: "instead of these lines being dashed can you make then subtle green glassy like look
+              please". A `ctx` daily-zone band (the 👀 Watch / card frames) draws as GLASS: a soft vertical gradient in the
+              zone's own colour (demand green, supply red), a thin solid top edge and a fainter bottom edge, no dash. Every
+              other band (the board's own dashed outline included) is unchanged. Display only. */}
+          {bands.some((b) => b.ctx && isOutline(String(b.kind))) && (
+            <defs>
+              {['board_demand', 'board_supply'].map((k) => (
+                <linearGradient key={k} id={`${ggClipId}-glass-${k}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" style={{ stopColor: BAND_FILL[k], stopOpacity: GLASS_TOP_OPACITY }} />
+                  <stop offset="1" style={{ stopColor: BAND_FILL[k], stopOpacity: GLASS_BOTTOM_OPACITY }} />
+                </linearGradient>
+              ))}
+            </defs>
+          )}
           {bands.map((b, i) => {
             const yTop = yFor(b.hi, domain, H, PAD_Y);
             const yBot = yFor(b.lo, domain, H, PAD_Y);
             const on = hBand === b;
             const outline = isOutline(String(b.kind));
             const colour = BAND_FILL[b.kind] || 'var(--text-muted, #94a3b8)';
+            if (b.ctx && outline) {
+              return (
+                <g key={`band-${i}`} data-band-kind={b.kind} data-band-look="glass">
+                  <rect x={0} y={yTop} width={plotW} height={Math.max(yBot - yTop, 1)}
+                        fill={`url(#${ggClipId}-glass-${b.kind})`} stroke="none" opacity={on ? 1 : 0.85}>
+                    <title>{bandText(b)}</title>
+                  </rect>
+                  <line x1={0} y1={yTop} x2={plotW} y2={yTop} stroke={colour}
+                        strokeWidth={on ? 1.1 : 0.8} opacity={on ? 0.8 : GLASS_EDGE_TOP} />
+                  <line x1={0} y1={yBot} x2={plotW} y2={yBot} stroke={colour}
+                        strokeWidth={0.6} opacity={on ? 0.5 : GLASS_EDGE_BOTTOM} />
+                </g>
+              );
+            }
             return (
               <g key={`band-${i}`} data-band-kind={b.kind}>
                 <rect x={0} y={yTop} width={plotW} height={Math.max(yBot - yTop, 1)}

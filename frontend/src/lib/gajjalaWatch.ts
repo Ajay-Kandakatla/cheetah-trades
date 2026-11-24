@@ -1003,7 +1003,9 @@ export function ggwLegendSwatch(tone: string): { cls: string; style: CSSProperti
   if (ema) return { cls: 'ggw-swatch', style: { background: ema.color, height: ema.width } };
   if (tone === 'vwap') return { cls: 'ggw-swatch', style: { background: toneColor('vwap'), height: VWAP_LINE_W } };
   if (GGW_ZONE_TONES.includes(tone)) {
-    return { cls: 'ggw-swatch ggw-swatch--zone', style: { borderColor: toneColor(tone as CmLineTone) } };
+    const c = toneColor(tone as CmLineTone);
+    /* 🟩 2026-11-23 the glass swatch, matching the chart's glass zone band (solid edge + a soft fill in the tone). */
+    return { cls: 'ggw-swatch ggw-swatch--zone', style: { borderColor: c, background: `color-mix(in srgb, ${c} 24%, transparent)` } };
   }
   return { cls: 'ggw-swatch', style: undefined };
 }

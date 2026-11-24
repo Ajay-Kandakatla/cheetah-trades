@@ -188,7 +188,7 @@ describe('📈 constants: 1m / 5m / 15m, ⤢ 15 / 5 / 1, the seed OFF', () => {
       expect(await readSource(rel), rel).not.toMatch(/['"`]3m['"`]/);
     }
   });
-  it('CSS: .ggw-levels wraps (min-width 0 + overflow-wrap anywhere); the zone swatch is a dashed outline', async () => {
+  it('CSS: .ggw-levels wraps (min-width 0 + overflow-wrap anywhere); the zone swatch is the glass box (solid edge, 2026-11-23)', async () => {
     const css = await readSource('src/styles/gajjalaWatch.css');
     const m = css.match(/\n\.ggw-levels\s*\{([^}]*)\}/);
     expect(m).not.toBeNull();
@@ -196,7 +196,8 @@ describe('📈 constants: 1m / 5m / 15m, ⤢ 15 / 5 / 1, the seed OFF', () => {
     expect(m![1]).toMatch(/overflow-wrap:\s*anywhere/);
     expect(m![1]).not.toMatch(/white-space:\s*nowrap/);
     const z = css.match(/\.ggw-swatch\.ggw-swatch--zone\s*\{([^}]*)\}/);
-    expect(z![1]).toMatch(/border:\s*1px dashed/);
+    expect(z![1]).toMatch(/border:\s*1px solid/);   // 🟩 CHANGED 2026-11-23: the glass swatch (was dashed)
+    expect(z![1]).not.toMatch(/dashed/);
     expect(z![1]).toMatch(/background:\s*transparent/);
   });
 });
@@ -252,10 +253,12 @@ describe('📈📐 VWAP + daily zones on every frame with bars', () => {
       for (const z of inside) expect(titles, `${tf} ${z.label}`).toContain(z.label);
       expect(titles).not.toContain(f.tile.bands[2].label);
       expect(el.querySelector('g[data-band-kind$="-off"]')).toBeNull();
-      // the house board-band look: a dashed outline, never a fill
-      for (const r of Array.from(el.querySelectorAll('g[data-band-kind^="board_"] > rect'))) {
-        expect(r.getAttribute('fill')).toBe('none');
-        expect(r.getAttribute('stroke-dasharray')).toBeTruthy();
+      // 🟩 CHANGED 2026-11-23 (his "subtle green glassy"): the daily zone draws as GLASS — gradient fill, no dash
+      const zr = Array.from(el.querySelectorAll('g[data-band-kind^="board_"] > rect'));
+      expect(zr.length, tf).toBeGreaterThan(0);
+      for (const r of zr) {
+        expect(r.getAttribute('fill')).toMatch(/^url\(#.+-glass-board_(demand|supply)\)$/);
+        expect(r.getAttribute('stroke-dasharray')).toBeNull();
       }
     }
   });
@@ -309,7 +312,7 @@ describe('📐 the row\'s levels line — verbatim, once (in the ⋯ drawer when
 });
 
 describe('📈📐 legend swatches + titles, ℹ️ lines', () => {
-  it('EMA swatches unchanged; VWAP = the chart\'s blue at VWAP_LINE_W; zones = a dashed outline in the tone colour; titles served', async () => {
+  it('EMA swatches unchanged; VWAP = the chart\'s blue at VWAP_LINE_W; zones = the glass swatch in the tone colour; titles served', async () => {
     const { container } = await mount(() => board155());
     const item = (tone: string) => container.querySelector(`.ggw-legend-item[data-tone="${tone}"]`) as HTMLElement;
     const sw = (tone: string) => item(tone).querySelector('i') as HTMLElement;
@@ -323,7 +326,7 @@ describe('📈📐 legend swatches + titles, ℹ️ lines', () => {
     expect(item('vwap').getAttribute('title')).toBe(VWAP_TEXT);
     for (const tone of ['zone_demand', 'zone_supply'] as const) {
       expect(sw(tone).className).toBe('ggw-swatch ggw-swatch--zone');
-      expect(ggwLegendSwatch(tone).style).toEqual({ borderColor: toneColor(tone) });
+      expect(ggwLegendSwatch(tone).style).toEqual({ borderColor: toneColor(tone), background: `color-mix(in srgb, ${toneColor(tone)} 24%, transparent)` });   // 🟩 2026-11-23 glass
       expect(item(tone).getAttribute('title')).toBe(ZONES_TEXT);
     }
     expect(ggwLegendSwatch('mystery')).toEqual({ cls: 'ggw-swatch', style: undefined });

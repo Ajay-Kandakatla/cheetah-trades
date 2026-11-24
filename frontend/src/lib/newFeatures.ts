@@ -30,6 +30,15 @@ export const NEW_FEATURES: NewFeature[] = [
   // client on the Massive account) is NOT fixed here = HIS CALL. UNMEASURED. Docs docs/gajjala/watch_live_tail_stale_
   // 2026_11_23.md, watch_refetch_on_return_2026_11_23.md, watch_rest_retry_breaker_2026_11_23.md,
   // minute_fetch_connections_2026_11_23.md.
+  // Ajay 2026-11-23 ~20:00 ET, verbatim: "Also instead of these lines being dashed can you make then subtle green glassy like
+  // look please". PatternChart draws a `ctx` daily-zone band (👀 Watch + card frames) as glass: a soft gradient in the zone's
+  // colour + thin solid edges, no dash; the legend swatch matches. Every other band unchanged. Display only.
+  {
+    id: 'gajjala-watch-zones-glass-2026-11-23',
+    label: '🟩 Glassy zone bands — you said: “instead of these lines being dashed can you make then subtle green glassy like look please”. On the 👀 Watch charts the daily demand zones are now a soft see-through green band with a thin solid border instead of two dashed lines; supply zones get the same look in red. The zones themselves are unchanged. Display only. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   {
     id: 'gajjala-watch-connections-2026-11-23',
     label: '🔌 Watch price connections — you said: “Can you clean up some connection I am seeing delays price update for AKAN on the watch chart..”. On the 👀 Watch: one failed minute read no longer freezes the live candle (the ⚠️ line still says the read failed); coming back to the tab reloads the charts at once when they are a minute or more old; after one bad read the Watch asks again the next minute instead of sitting a minute out; and each 1-minute fetch reuses an open connection to the data provider. The biggest cause of the lag is NOT fixed by this: the live price feed gets kicked off by a second connection on the same data account (about every 2 minutes today) and is blind for 30 s each time — that one is your call. UNMEASURED. Not advice.',
