@@ -66,6 +66,8 @@ function openFold(el: HTMLElement) {
 afterEach(() => { vi.restoreAllMocks(); });
 
 describe('⛔ GgSsrNewSection', () => {
+  /* WIDENED 2026-11-24 (ggclean): ALWAYS VISIBLE = outside this section's own rule / row folds. On the 🚩 board the whole
+   * 🩳 panel (this section with it) sits inside the sub's closed ⓘ fold (GajjalaBoard) — the section itself is unchanged. */
   it('1. every served line verbatim in the §3.4 order (tier note right under the counts); the rule fold closed under the served label', () => {
     const { container } = render(<GgSsrNewSection block={clone(BLOCK)} />, wrap);
     const root = screen.getByTestId('gg-ssrn');

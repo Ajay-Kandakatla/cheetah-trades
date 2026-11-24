@@ -6,7 +6,10 @@
  * Drawn from the SERVED block only (high_si.block → ssr_new, built by high_si.ssr_new_block over ssr.new_triggers).
  * ALWAYS VISIBLE, in this order, each only when served as a non-empty string: the title, the counts line, the tier note,
  * the window, the as-of, the status, the partial note, the SI note, the list note, the faults line, the fault line, the
- * empty line. Then one <details> per served fold — its rows are MOUNTED ONLY WHILE THE FOLD IS OPEN (a closed fold of
+ * empty line.
+ * 2026-11-24: on the 🚩 board the whole panel sits inside the sub's closed ⓘ fold (GajjalaBoard); 'always visible'
+ * here means outside this panel's own rule fold.
+ * Then one <details> per served fold — its rows are MOUNTED ONLY WHILE THE FOLD IS OPEN (a closed fold of
  * several hundred names costs no DOM) — and last the ⓘ rule fold (drawn only under a served label).
  * A served fault line means NO fold and NO empty line, whatever else is served.
  * This file types no word and formats no number: it never sorts, filters (beyond the served-shape guard), counts or

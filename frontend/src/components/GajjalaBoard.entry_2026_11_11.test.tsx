@@ -194,6 +194,9 @@ describe('F3 — the 🔝 Focus header and divider', () => {
     await screen.findByTestId('gg-tile-F7');
     const head = screen.getByTestId('gg-focus-head');
     expect(head.textContent).toBe(FOCUS_TEXT);
+    // WIDENED 2026-11-24 (ggclean): the header folds on the sub's key (gg-sub-body-focus), hidden; the cards stay visible.
+    expect(head.closest('[data-testid="gg-sub-body-focus"]')).not.toBeNull();
+    expect(head).not.toBeVisible();
     const first = screen.getByTestId('gg-tile-F1');
     expect(head.compareDocumentPosition(first) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const dividers = screen.getAllByTestId('gg-focus-divider');
@@ -259,6 +262,9 @@ describe('F4 — the 🌅 Day-2 list on ☀️', () => {
     const block = await screen.findByTestId('gg-day2');
     expect(within(block).getByTestId('gg-day2-title').textContent).toBe(DAY2_TITLE);
     expect(within(block).getByTestId('gg-day2-note').textContent).toBe(DAY2_NOTE);
+    // WIDENED 2026-11-24 (ggclean): the note folds on the sub's key (gg-sub-body-day2); the title stays visible.
+    expect(within(block).getByTestId('gg-day2-note')).not.toBeVisible();
+    expect(within(block).getByTestId('gg-day2-title')).toBeVisible();
     for (const r of DAY2_ROWS) {
       const row = within(block).getByTestId(`gg-day2-row-${r.symbol}`);
       expect(row.className).toContain('gg-day2-row');
@@ -364,6 +370,9 @@ describe('F5 — the ⚡ break line and the 🧠 Track ⚡ word', () => {
     const line = await screen.findByTestId('gg-push-break');
     expect(line.textContent).toBe(BRK_STATUS);
     expect(screen.getByTestId('gg-push-potential').nextElementSibling).toBe(line);
+    // WIDENED 2026-11-24 (ggclean): both lines sit in the header fold's segment C, hidden by default.
+    expect(line.parentElement?.getAttribute('data-testid')).toBe('gg-head-body-c');
+    expect(line).not.toBeVisible();
   });
 
   it.each([undefined, null, { mode: 'shadow' }, { text: '' }, { text: 7 }])('NEGATIVE: push_break %j → no line', async (pb) => {

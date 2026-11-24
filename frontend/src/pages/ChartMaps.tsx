@@ -127,6 +127,7 @@ import { readMoreExpandPref, writeMoreExpandPref } from '../lib/cardLadder';
 import { BURST_PARAM, burstParam, isBurst, parseBurstParam, pinBurst } from '../lib/momentumBurst';
 import { HiddenCount } from '../components/HiddenCount';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { GgHeadPageContext } from '../components/GgFold';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { BAND_STRUCTURE_KIND_NA, BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
 import { StudyNote } from '../components/StudyNote';
@@ -1144,6 +1145,69 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const ictOwnerParams = useMemo(() => ictParams.filter((r) => !r.fromVideo), [ictParams]);
   const ictSrc = useMemo(() => ictSource(data?.source), [data?.source]);
 
+  /* 🧹 🚩 landing declutter (2026-11-24). Ajay: "Hide all of this nouce besides the scan button and log trade button
+   * no explantions on the landing pages anymor" — "Add all of this too" — "Collapse all of this too". The three page
+   * rows below (the WHY blurb, the house ℹ️ Rules pair, the 🎯 Enterable bar) are built ONCE here, text unchanged. On
+   * tab === 'gajjala' only they ride GgHeadPageContext into the board, which prints them first inside its closed ⓘ
+   * header fold (so the fold opens DOWNWARD under the two buttons he taps); every other tab renders them where and as
+   * it always did. Spec ggclean §3.4. */
+  const ggHeadTab = tab === 'gajjala';
+
+  /* The blurb FOLDS to its first sentence (Ajay 2026-09-20, on the Bonde
+   * tab's wall of text: "Collapse all of this info"). Same ▸ fold as every
+   * study verdict, remembered per tab. The ICT blurb names its source; the
+   * name is the link (Ajay: purely price action from his spec + Jesse
+   * Rogers' walkthrough) — split on the name so the copy stays one
+   * testable string in TAB_META. */
+  const blurbEl = (() => {
+    const { head, rest } = splitBlurb(TAB_META[tab].blurb);
+    const linkify = (s: string) => tab === 'ict'
+      ? s.split(ICT_SOURCE.label).flatMap((part, i, arr) =>
+          i < arr.length - 1
+            ? [part, <a key={`src-${i}`} href={ICT_SOURCE.url} target="_blank"
+                        rel="noreferrer noopener">{ICT_SOURCE.label}</a>]
+            : [part])
+      : s;
+    // A source name inside the headline could not be a link there — keep
+    // that one blurb whole rather than lose the link.
+    if (tab === 'ict' && head.includes(ICT_SOURCE.label)) {
+      return <p className="cm-blurb" data-testid="cm-blurb">{linkify(TAB_META.ict.blurb)}</p>;
+    }
+    return (
+      <StudyNote id={`blurb-${tab}`} className="cm-blurb" testId="cm-blurb" headline={head}>
+        {rest ? <p className="cm-blurb-rest">{linkify(rest)}</p> : null}
+      </StudyNote>
+    );
+  })();
+
+  /* 🧨 The explosive read rides every tab, so its rules do too
+   * (backend rules_info._explosive_section, built from the enforcing
+   * constants). */
+  const houseRulesEl = (
+    <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
+      <RulesInfo section="explosive" />
+      {/* 🩳 short interest rides every tab, so its explainer does too —
+        * once per tab, never per card (Rule #5). */}
+      <RulesInfo section="short_interest" />
+    </div>
+  );
+
+  /* 🎯 ENTERABLE — the filter he asked for, and the rules behind it.
+   * Every word of the verdict is built on the backend from the enforcing
+   * constants (the two standing push gates, the measured floor read, the
+   * two measured drags), so the section is served like the others. The
+   * checkbox is DISABLED rather than hidden on a tab whose rows are not
+   * demand reversals at all; a control that vanishes reads as a bug. */
+  const enterableBarEl = (
+    <div className="cm-rules cm-enterable-bar" style={{ margin: '0.2rem 0 0.6rem' }}>
+      <EnterableOnlyToggle checked={enterableOnly} onChange={setEnterableOnly}
+                           kind={enterableKind} unhideCount={unhide.size}
+                           naText={data?.enterable_study?.fallback_note
+                             || 'These rows are not demand reversals, so there is no enterable read to filter on.'} />
+      <RulesInfo section="enterable" />
+    </div>
+  );
+
   return (
     <div className={tab === 'gajjala_watch' ? 'cm-page cm-page--wide' : 'cm-page'} ref={pageRef}>
       <div className="cm-head">
@@ -1209,32 +1273,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         <span className="cm-tabs-fade cm-tabs-fade-r" aria-hidden="true">›</span>
       </div>
 
-      {/* The blurb FOLDS to its first sentence (Ajay 2026-09-20, on the Bonde
-        * tab's wall of text: "Collapse all of this info"). Same ▸ fold as every
-        * study verdict, remembered per tab. The ICT blurb names its source; the
-        * name is the link (Ajay: purely price action from his spec + Jesse
-        * Rogers' walkthrough) — split on the name so the copy stays one
-        * testable string in TAB_META. */}
-      {(() => {
-        const { head, rest } = splitBlurb(TAB_META[tab].blurb);
-        const linkify = (s: string) => tab === 'ict'
-          ? s.split(ICT_SOURCE.label).flatMap((part, i, arr) =>
-              i < arr.length - 1
-                ? [part, <a key={`src-${i}`} href={ICT_SOURCE.url} target="_blank"
-                            rel="noreferrer noopener">{ICT_SOURCE.label}</a>]
-                : [part])
-          : s;
-        // A source name inside the headline could not be a link there — keep
-        // that one blurb whole rather than lose the link.
-        if (tab === 'ict' && head.includes(ICT_SOURCE.label)) {
-          return <p className="cm-blurb" data-testid="cm-blurb">{linkify(TAB_META.ict.blurb)}</p>;
-        }
-        return (
-          <StudyNote id={`blurb-${tab}`} className="cm-blurb" testId="cm-blurb" headline={head}>
-            {rest ? <p className="cm-blurb-rest">{linkify(rest)}</p> : null}
-          </StudyNote>
-        );
-      })()}
+      {/* The blurb (built above as blurbEl) — on 🚩 it rides the board's ⓘ header fold instead (2026-11-24). */}
+      {ggHeadTab ? null : blurbEl}
 
       {/* 🧭 SPY · QQQ, PINNED to the Back in Demand tab (Ajay 2026-09-16:
         * "Can you create a SPY demand and supply zone please for me? and also
@@ -1330,29 +1370,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         </div>
       )}
 
-      {/* 🧨 The explosive read rides every tab, so its rules do too
-        * (backend rules_info._explosive_section, built from the enforcing
-        * constants). */}
-      <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
-        <RulesInfo section="explosive" />
-        {/* 🩳 short interest rides every tab, so its explainer does too —
-          * once per tab, never per card (Rule #5). */}
-        <RulesInfo section="short_interest" />
-      </div>
+      {/* 🧨 / 🩳 house Rules and the 🎯 Enterable bar (built above) — on 🚩 they ride the board's ⓘ header fold
+        * instead (2026-11-24); every other tab keeps them here. */}
+      {ggHeadTab ? null : houseRulesEl}
 
-      {/* 🎯 ENTERABLE — the filter he asked for, and the rules behind it.
-        * Every word of the verdict is built on the backend from the enforcing
-        * constants (the two standing push gates, the measured floor read, the
-        * two measured drags), so the section is served like the others. The
-        * checkbox is DISABLED rather than hidden on a tab whose rows are not
-        * demand reversals at all; a control that vanishes reads as a bug. */}
-      <div className="cm-rules cm-enterable-bar" style={{ margin: '0.2rem 0 0.6rem' }}>
-        <EnterableOnlyToggle checked={enterableOnly} onChange={setEnterableOnly}
-                             kind={enterableKind} unhideCount={unhide.size}
-                             naText={data?.enterable_study?.fallback_note
-                               || 'These rows are not demand reversals, so there is no enterable read to filter on.'} />
-        <RulesInfo section="enterable" />
-      </div>
+      {ggHeadTab ? null : enterableBarEl}
 
       {/* Quick Bounce (Ajay 2026-09-06): the study's own numbers under the
         * blurb — the list is read against its base rate and its persistence,
@@ -1594,6 +1616,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * checkbox and its own default. Standalone (/catalysts, /patterns,
         * /signal-lab) nothing wraps them, the default context is OFF and those
         * pages are unchanged — spec §7.8, his call. */}
+      {/* 🧹 On 🚩 only, the three page rows travel to the board's ⓘ header fold (2026-11-24); null on every other tab. */}
+      <GgHeadPageContext.Provider value={ggHeadTab ? <>{blurbEl}{houseRulesEl}{enterableBarEl}</> : null}>
       <EnterableFilterProvider enterableOnly={enterableOnly} kind={enterableKind}
                                setEnterableOnly={setEnterableOnly}
                                ignoreReasons={unhide} toggleReason={toggleReason}>
@@ -2352,6 +2376,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       </>
       )}
       </EnterableFilterProvider>
+      </GgHeadPageContext.Provider>
     </div>
   );
 }

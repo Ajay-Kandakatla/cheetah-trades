@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GgBoard, GgHighSiBlock } from '../lib/gajjala';
 
 /* 🩳 GgHighSiPanel (2026-11-23, high SI spec §3.8 / §4 WP fe-sub). Ajay: "Can you create a tab similarly like Divergent with
@@ -75,6 +75,8 @@ describe('🩳 GgHighSiPanel', () => {
     expect(panel.lastElementChild!.getAttribute('data-testid')).toBe('gg-hs-honesty');
   });
 
+  /* WIDENED 2026-11-24 (ggclean): "always visible" = outside this panel's own rule <details>. On the 🚩 board the whole
+   * panel now sits inside the sub's closed ⓘ fold (GajjalaBoard, GgFoldBody) — the standalone panel is unchanged. */
   it('the always-visible lines sit OUTSIDE the <details>; the rule, the cohort and the three name lists sit INSIDE it', () => {
     render(<GgHighSiPanel block={clone(HS_BLOCK)} />, wrap);
     const rule = screen.getByTestId('gg-hs-rule');
@@ -85,6 +87,7 @@ describe('🩳 GgHighSiPanel', () => {
     expect(inner).toEqual(FOLDED);
   });
 
+  // WIDENED 2026-11-24 (ggclean): ALWAYS visible here = outside the panel's own rule fold (the board's sub fold wraps it).
   it('gg-hs-adds is ALWAYS visible (outside the fold) and printed verbatim', () => {
     render(<GgHighSiPanel block={{ ...clone(HS_BLOCK), adds_text: 'served of the 3 listed here: 2 qualified today · 1 carried' }} />, wrap);
     const adds = screen.getByTestId('gg-hs-adds');
@@ -280,5 +283,166 @@ describe('🩳 GgHighSiPanel', () => {
     expect(code).not.toMatch(/gg-hs-[a-z-]+"[^>]*>[A-Za-z]/);
     // the panel knows nothing of the push mode
     expect(code).not.toMatch(/push_mode|PUSH_MODE|'live'|'off'/);
+  });
+});
+
+/* ---- 🧹 GgHighSiState (2026-11-24, ggclean spec §3.6 / WP panels). Ajay: "Collapse all of this too" (the 🩳 panel text).
+ * The state lines the board prints OUTSIDE the closed sub fold — empty / chartless / faults / the ⛔ SSR fault — drawn by
+ * the panel's own selector. NEGATIVES: fold open → nothing; no context → nothing; nothing served → no root; a null / junk
+ * block → nothing; NaN / number / "" → nothing; n > 0 or a chartless line → no empty line; an unsafe href → text. */
+import { GgHighSiState } from './GgHighSi';
+import { GgSubFoldContext } from './GgFold';
+import { resetGgFold, setGgFold } from '../lib/ggFold';
+
+/** A memory Storage (jsdom here serves no usable localStorage) — stubbed per test, unstubbed after. */
+function memStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    get length() { return m.size; }, clear: () => m.clear(), key: (i: number) => Array.from(m.keys())[i] ?? null,
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null), setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+  } as Storage;
+}
+const HS_KEY = 'sub:high_si';
+const inFold = (ui: any, key: string | null = HS_KEY) => render(
+  <MemoryRouter><GgSubFoldContext.Provider value={key}>{ui}</GgSubFoldContext.Provider></MemoryRouter>);
+const stateTids = (c: HTMLElement) => [...c.querySelectorAll('[data-testid^="gg-substate-"]')].map((e) => e.getAttribute('data-testid'));
+const stateTexts = (c: HTMLElement) => [...c.querySelectorAll('[data-testid^="gg-substate-"]')].map((e) => e.textContent);
+/** The same lines as the PANEL prints them (doc order: empty → chartless → faults → the ⛔ SSR fault). */
+const panelTexts = (c: HTMLElement) => [...c.querySelectorAll(
+  '[data-testid="gg-hs-empty"], [data-testid^="gg-hs-chartless-"], [data-testid="gg-hs-faults"], [data-testid="gg-ssrn-fault"]')]
+  .map((e) => e.textContent);
+const SSR_FAULTED = { title: 'served ssrn title', fault_text: 'served ssr fault', groups: [] };
+
+describe('🧹 GgHighSiState — the state lines outside the closed 🩳 fold', () => {
+  beforeEach(() => { vi.stubGlobal('localStorage', memStorage()); resetGgFold(); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('fold closed: empty → faults → the ⛔ SSR fault, verbatim, in the panel order, on the panels\' own classes', () => {
+    const b = { ...clone(HS_BLOCK), n: 0, faults_text: 'served faults', ssr_new: SSR_FAULTED };
+    const { container } = inFold(<GgHighSiState block={b} />);
+    expect(screen.getByTestId('gg-substate').className).toBe('gg-dv gg-substate');
+    expect(stateTids(container)).toEqual(['gg-substate-empty', 'gg-substate-faults', 'gg-substate-fault-ssr']);
+    expect(stateTexts(container)).toEqual(['served empty', 'served faults', 'served ssr fault']);
+    expect(screen.getByTestId('gg-substate-faults').className).toBe('gg-dv-line cm-note');
+    expect(screen.getByTestId('gg-substate-fault-ssr').className).toBe('gg-dv-line cm-note cm-note-err');
+    // nothing but the served lines — no typed word
+    expect(screen.getByTestId('gg-substate').textContent).toBe('served emptyserved faultsserved ssr fault');
+  });
+
+  it('fold closed: chartless lines print the served text (else the state_label) with a safe href as a link; NEGATIVE unsafe → text', () => {
+    const b = { ...clone(HS_BLOCK), n: 0, chartless: [
+      { symbol: 'AAA', state_label: 'served tier AAA', text: 'served AAA listed', href: '/sepa/AAA?tab=supply' },
+      { symbol: 'BBB', state_label: 'served fallback BBB', text: NaN, href: 'javascript:alert(1)' },
+      { symbol: 'DDD', state_label: null, text: 'served DDD listed', href: '//evil.example/x' },
+      { symbol: 'NUM', state_label: 7, text: 8, href: '/sepa/NUM' },
+      null, 7,
+    ] };
+    const { container } = inFold(<GgHighSiState block={b as any} />);
+    expect(stateTids(container)).toEqual(['gg-substate-chartless-AAA', 'gg-substate-chartless-BBB', 'gg-substate-chartless-DDD']);
+    expect(stateTexts(container)).toEqual(['served AAA listed', 'served fallback BBB', 'served DDD listed']);
+    expect(screen.getByTestId('gg-substate-chartless-AAA').querySelector('a')!.getAttribute('href')).toBe('/sepa/AAA?tab=supply');
+    expect(screen.getByTestId('gg-substate-chartless-BBB').querySelector('a')).toBeNull();
+    expect(screen.getByTestId('gg-substate-chartless-DDD').querySelector('a')).toBeNull();
+    // NEGATIVE: a chartless line served → no empty line (the panel's own rule)
+    expect(screen.queryByTestId('gg-substate-empty')).toBeNull();
+  });
+
+  it('equality: State prints exactly the strings the panel prints for the same block (several shapes)', () => {
+    const shapes: any[] = [
+      { ...clone(HS_BLOCK), n: 0, faults_text: 'served faults', ssr_new: SSR_FAULTED },
+      { ...clone(HS_BLOCK), n: 0, chartless: [{ symbol: 'Q', state_label: 'served q tier', text: 'served Q listed', href: '/sepa/Q' },
+        { symbol: 'R', state_label: 'served r tier', text: '  ', href: null }], faults_text: 'served faults' },
+      { ...clone(HS_BLOCK), n: 4, empty_text: 'served empty', faults_text: null, ssr_new: { fault_text: 'served ssr fault' } },
+      { ...clone(HS_BLOCK), n: 0, empty_text: NaN },
+    ];
+    for (const b of shapes) {
+      const p = render(<MemoryRouter><GgHighSiPanel block={clone(b)} /></MemoryRouter>);
+      const want = panelTexts(p.container);
+      const hrefs = [...p.container.querySelectorAll('[data-testid^="gg-hs-chartless-"] a')].map((a) => a.getAttribute('href'));
+      p.unmount();
+      const s = inFold(<GgHighSiState block={clone(b)} />);
+      expect(stateTexts(s.container)).toEqual(want);
+      expect([...s.container.querySelectorAll('[data-testid^="gg-substate-chartless-"] a')].map((a) => a.getAttribute('href')))
+        .toEqual(hrefs);
+      s.unmount();
+    }
+  });
+
+  it('NEGATIVE: fold OPEN → nothing (the panel shows the lines in place, never twice)', () => {
+    const b = { ...clone(HS_BLOCK), n: 0, faults_text: 'served faults', ssr_new: SSR_FAULTED };
+    setGgFold(HS_KEY, true);
+    const { container } = inFold(<GgHighSiState block={b} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: a stored open flag for the key → nothing; another sub\'s open flag → the lines still print', () => {
+    const b = { ...clone(HS_BLOCK), faults_text: 'served faults' };
+    localStorage.setItem('gg-fold:sub:bull_flag', '1');
+    const one = inFold(<GgHighSiState block={b} />);
+    expect(screen.getByTestId('gg-substate-faults').textContent).toBe('served faults');
+    one.unmount();
+    localStorage.setItem('gg-fold:sub:high_si', '1');
+    resetGgFold();
+    const { container } = inFold(<GgHighSiState block={b} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: no fold context (🧪 / 1-min / standalone) → nothing', () => {
+    const b = { ...clone(HS_BLOCK), n: 0, faults_text: 'served faults', ssr_new: SSR_FAULTED };
+    const { container } = inFold(<GgHighSiState block={b} />, null);
+    expect(container.innerHTML).toBe('');
+    const bare = render(<MemoryRouter><GgHighSiState block={b} /></MemoryRouter>);
+    expect(bare.container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: nothing served (n > 0, no chartless, no faults, no SSR fault) → no root', () => {
+    const { container } = inFold(<GgHighSiState block={{ ...clone(HS_BLOCK), ssr_new: { title: 'served', fault_text: null } }} />);
+    expect(screen.queryByTestId('gg-substate')).toBeNull();
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: a null / undefined / non-object block → nothing', () => {
+    for (const b of [null, undefined, 'served', 7, NaN, true] as any[]) {
+      const { container, unmount } = inFold(<GgHighSiState block={b} />);
+      expect(container.innerHTML, String(b)).toBe('');
+      unmount();
+    }
+  });
+
+  it('NEGATIVE: NaN / number / "" texts print nothing — never "NaN" or "undefined"', () => {
+    const b = { ...clone(HS_BLOCK), n: 0, empty_text: '', faults_text: NaN, ssr_new: { fault_text: 7 },
+      chartless: [{ symbol: 'X', state_label: NaN, text: '   ', href: '/sepa/X' }] };
+    const { container } = inFold(<GgHighSiState block={b as any} />);
+    expect(container.innerHTML).toBe('');
+    expect(container.textContent).not.toMatch(/NaN|undefined/);
+  });
+
+  it('NEGATIVE: n > 0 / n null / n "0" → no empty line; ssr_new not an object → no SSR line, no crash', () => {
+    for (const n of [3, null, undefined, NaN, '0']) {
+      const r = inFold(<GgHighSiState block={{ ...clone(HS_BLOCK), n: n as any, faults_text: 'served faults' }} />);
+      expect(screen.queryByTestId('gg-substate-empty'), String(n)).toBeNull();
+      expect(screen.getByTestId('gg-substate-faults')).toBeTruthy();
+      r.unmount();
+    }
+    for (const ssr of ['served', 7, null, []] as any[]) {
+      const r = inFold(<GgHighSiState block={{ ...clone(HS_BLOCK), faults_text: 'served faults', ssr_new: ssr }} />);
+      expect(screen.queryByTestId('gg-substate-fault-ssr')).toBeNull();
+      r.unmount();
+    }
+  });
+
+  it('source: ONE private selector shared by the panel and the State — the filter and `block.n === 0` each once; panel lines in place', async () => {
+    const src = await readSource('src/components/GgHighSi.tsx');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code.split('block.n === 0').length - 1).toBe(1);
+    expect(code.split('Array.isArray(block.chartless)').length - 1).toBe(1);
+    expect(code).toMatch(/\nfunction listed\(block: GgHighSiBlock\)/);
+    expect(code.match(/= listed\(block\);/g)).toHaveLength(2);
+    expect(code).toMatch(/export function GgHighSiState\(/);
+    expect(code).toMatch(/return <GgSubState lines=\{lines\} \/>;/);
+    // NEGATIVE: the State never prints a gg-hs testid (the panel's ids stay single on the page)
+    const state = code.slice(code.indexOf('export function GgHighSiState('), code.indexOf('export function GgHighSiPanel('));
+    expect(state).not.toMatch(/gg-hs/);
   });
 });

@@ -99,6 +99,11 @@ describe('F8 — the 📋 table sub on the board', () => {
     expect(gets()[0][0]).toContain(`sub=${GG_TABLE_SUB}`);
     expect(screen.getByTestId('gg-all')).toBeTruthy();
     expect(screen.getByTestId('gg-all-title').textContent).toBe('served table title');
+    // WIDENED 2026-11-24 (ggclean): the 📋 order text sits in the sub's closed ⓘ fold (gg-sub-body-table); the title stays visible.
+    const order = container.querySelector('[data-testid="gg-sub-body-table"] [data-testid="gg-all-order"]');
+    expect(order).not.toBeNull();
+    expect(order).not.toBeVisible();
+    expect(screen.getByTestId('gg-all-title')).toBeVisible();
     expect(container.querySelector('.cm-grid')).toBeNull();
     expect(container.querySelector('[data-testid^="gg-tile-"]')).toBeNull();
     expect(container.querySelector('[data-testid^="gg-tf-"]')).toBeNull();

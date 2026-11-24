@@ -1,0 +1,29 @@
+/* 🧹 ggFold (2026-11-24, ggclean spec §3.2) — the 🚩 landing's action row (🔄 scan now · 🧾 log trade · ⓘ), the small ⓘ
+   toggle and the fold body. Ajay 2026-11-24: "Hide all of this nouce besides the scan button and log trade button no
+   explantions on the landing pages anymor". House tokens only (--ink-subtle, --hairline, --ink); no new token. */
+
+/* the always-visible row: wraps whole on a 430 px phone, never pushes the page sideways */
+.gg-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
+.gg-actions .gg-rescan { margin-left: 0; flex: 0 0 auto; }
+
+/* ⓘ — small, muted, same height as .gg-rescan (0.84rem type, 0.3rem block padding, 1px border); transparent ground,
+   hairline border */
+.gg-fold-toggle {
+  font: inherit; font-size: 0.84rem; line-height: inherit; padding: 0.3rem 0.55rem; cursor: pointer;
+  color: var(--ink-subtle, #94a3b8); background: transparent;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+  flex: 0 0 auto;
+}
+.gg-fold-toggle:hover, .gg-fold-toggle:focus-visible { color: var(--ink, inherit); }
+.gg-fold-toggle[aria-expanded="true"] { color: var(--ink, inherit); }
+
+/* [fixed: C2] ⓘ at the row's right end: it never jumps when the 🧾 button arrives after its GET (MyDayLine.tsx:125) */
+.gg-actions > .gg-fold-toggle, .cm-phase > .gg-fold-toggle, .gg-all-head > .gg-fold-toggle { margin-left: auto; }
+
+/* the body: the text stays mounted; closed = the `hidden` attribute. This app has no global [hidden] rule, so the
+   display rule needs its twin — it wins by specificity (0,2,0 over 0,1,0); keep it right under the rule above. */
+.gg-fold-body { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; max-width: 100%; }
+.gg-fold-body[hidden] { display: none; }
+
+/* 📋 the all-strategies title row with its ⓘ */
+.gg-all-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; min-width: 0; }

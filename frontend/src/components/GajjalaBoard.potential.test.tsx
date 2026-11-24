@@ -343,7 +343,8 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
         expect(screen.queryByTestId(id), `${sub} ${id}`).toBeNull();
       }
       expect(container.querySelector('[class*="gg-pot-"], .gg-track, .gg-watch'), sub).toBeNull();
-      expect(screen.getAllByTestId(/^gg-sub-/)).toHaveLength(HAND[sub].subs.length);
+      /* WIDENED 2026-11-24 (ggclean): the sub's ⓘ fold (gg-sub-toggle / gg-sub-body*) shares the prefix — the sub BUTTONS only. */
+      expect(screen.getAllByTestId(/^gg-sub-(?!toggle$|body)/)).toHaveLength(HAND[sub].subs.length);
       unmount();
       vi.unstubAllGlobals();
     }
@@ -447,7 +448,7 @@ describe('GajjalaBoard — 🧠 Potential (live capture)', () => {
     stubFetch(from(LB, 'potential'));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);
-    const btns = screen.getAllByTestId(/^gg-sub-/);
+    const btns = screen.getAllByTestId(/^gg-sub-(?!toggle$|body)/);   // WIDENED 2026-11-24 (ggclean): the sub buttons, not the ⓘ fold
     expect(btns).toHaveLength(9);
     expect(btns[8].getAttribute('data-testid')).toBe('gg-sub-potential');
     expect(screen.getByTestId('gg-push-potential').textContent).toBe(LB.potential.push_potential.text);

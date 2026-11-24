@@ -285,6 +285,9 @@ describe('🚩 GG LIVE — the feed word in the footer only when degraded', () =
     expect(screen.getByTestId('gg-live-footer').parentElement?.getAttribute('data-testid')).toBe('gg-strip');
     const f = screen.getByTestId('gg-live-feed-word');
     expect(f.parentElement?.getAttribute('data-testid')).toBe('gg-strip');
+    // WIDENED 2026-11-24 (ggclean): the strip (footer + feed word) sits inside the header fold's segment A, hidden by default.
+    expect(f.closest('[data-testid="gg-head-body"]')).not.toBeNull();
+    expect(f).not.toBeVisible();
     expect(['0', '0px']).toContain(f.style.minWidth);
     expect(f.className.split(' ')).toContain('gg-line');
     const css = await readSource('src/styles/gajjala.css');

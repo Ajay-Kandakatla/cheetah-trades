@@ -116,6 +116,10 @@ describe('🧨 the divergence sub on the board', () => {
     expect(screen.getByTestId('gg-dv-is-rth').textContent).toBe('served IS rth');
     expect(within(tile).getByTestId(`chart-${dvBoard().tiles[0].symbol}`)).toBeTruthy();
     expect(panel.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // WIDENED 2026-11-24 (ggclean): the panel sits in the sub's closed ⓘ fold (gg-sub-body), still above the card; the card + 🏁 fold stay visible.
+    expect(panel.closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+    expect(panel).not.toBeVisible();
+    expect(tile).toBeVisible();
     expect(tile.compareDocumentPosition(fold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByTestId('gg-tr-net-W1').textContent).toBe('served net BBB');
     expect(screen.getByTestId('gg-dv-tr-oos-progress').textContent).toBe('served oos progress');

@@ -1,9 +1,11 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GgAllTable, ggAllPriceText } from './GgAllTable';
 import { GgEntryMiniTape, _resetGgLiteCache } from './GgEntryTape';
 import { withSource } from '../lib/navSource';
+import { GgSubFoldContext } from './GgFold';
+import { resetGgFold } from '../lib/ggFold';
 
 /* 📋 All strategies table (2026-11-13, spec §3.5 WP-B, F1–F7 + F9 + F10).
  *
@@ -448,5 +450,126 @@ describe('F10 — 📱 430 px: the table scrolls inside .gg-tr-scroll, no px wid
     expect(tr.querySelector('td.gg-all-sym')).not.toBeNull();
     expect(tr.querySelector('td.gg-all-cat')).not.toBeNull();
     for (const td of tr.querySelectorAll('td')) expect(td.getAttribute('style')).toBeNull();
+  });
+});
+
+/* ---- 🧹 the 📋 sub fold (2026-11-24, ggclean spec §3.6 / WP panels). Ajay: "Hide all of this nouce besides the scan
+ * button and log trade button no explantions on the landing pages anymor". Under a GgSubFoldContext key (the 🚩 board's
+ * 📋 sub) the served order text sits in the sub's closed fold body, MOUNTED and hidden; the ⓘ sits beside the title in
+ * gg-all-head. The title, the sort chips, the table, the more / fault / si-fault / honesty lines stay visible.
+ * NEGATIVES: no context (or a null key) → no toggle, no wrapper, the order line visible — today's DOM. */
+function foldStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    get length() { return m.size; }, clear: () => m.clear(), key: (i: number) => Array.from(m.keys())[i] ?? null,
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null), setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+  } as Storage;
+}
+const ALL_KEY = 'sub:all_strategies';
+const NEAR_SORTS = { default: 'gg', options: [{ key: 'gg', label: 'served gg sort' }, { key: 'near', label: 'served near sort' }],
+  near_text: 'served near line' };
+const foldMount = (b: any, key: string | null = ALL_KEY) => render(
+  <MemoryRouter initialEntries={['/chart-maps?tab=gajjala&sub=all_strategies']}>
+    <GgSubFoldContext.Provider value={key}><GgAllTable block={b} search={SEARCH} back={BACK} /></GgSubFoldContext.Provider>
+  </MemoryRouter>);
+const twoRows = () => [row(1, 1, 'A1', 'bull_flag', { near_rank: 2 }), row(2, 2, 'B2', 'kiss_fly', { near_rank: 1, in_watch: false })];
+
+describe('🧹 📋 sub fold — the order text folds under the sub key; everything else stays visible', () => {
+  beforeEach(() => { vi.stubGlobal('localStorage', foldStorage()); resetGgFold(); });
+
+  it('closed: gg-all-order is MOUNTED inside gg-sub-body-table and not visible; the ⓘ sits in gg-all-head beside the title', () => {
+    foldMount(block(twoRows(), { sorts: NEAR_SORTS, more_text: 'served more', fault_text: 'served fault',
+      si_fault_text: 'served si fault' }));
+    const body = screen.getByTestId('gg-sub-body-table');
+    const order = screen.getByTestId('gg-all-order');
+    expect(order.textContent).toBe('served order line');
+    expect(body.contains(order)).toBe(true);
+    expect(body.getAttribute('data-fold')).toBe(ALL_KEY);
+    expect(order).not.toBeVisible();
+    const head = screen.getByTestId('gg-all-head');
+    expect(head.className).toBe('gg-all-head');
+    const toggle = screen.getByTestId('gg-sub-toggle');
+    expect(head.contains(toggle)).toBe(true);
+    expect(head.contains(screen.getByTestId('gg-all-title'))).toBe(true);
+    expect(head.firstElementChild).toBe(screen.getByTestId('gg-all-title'));
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBe('gg-sub-body-table');
+    expect(body.id).toBe('gg-sub-body-table');
+    // the title, the sort chips, the table and the more / fault / si-fault / honesty lines stay visible while closed
+    for (const t of ['gg-all-title', 'gg-all-sorts', 'gg-all-table', 'gg-all-more', 'gg-all-fault', 'gg-all-si-fault',
+      'gg-all-honesty', 'gg-all-row-A1-bull_flag']) expect(screen.getByTestId(t), t).toBeVisible();
+    for (const t of ['gg-all-sorts', 'gg-all-table', 'gg-all-fault', 'gg-all-honesty']) {
+      expect(body.contains(screen.getByTestId(t)), t).toBe(false);
+    }
+  });
+
+  it('a click on the ⓘ shows the order text and remembers it (gg-fold:sub:all_strategies = "1"); a second click hides it', () => {
+    foldMount(block(twoRows()));
+    fireEvent.click(screen.getByTestId('gg-sub-toggle'));
+    expect(screen.getByTestId('gg-all-order')).toBeVisible();
+    expect(screen.getByTestId('gg-sub-toggle').getAttribute('aria-expanded')).toBe('true');
+    expect(localStorage.getItem('gg-fold:sub:all_strategies')).toBe('1');
+    fireEvent.click(screen.getByTestId('gg-sub-toggle'));
+    expect(screen.getByTestId('gg-all-order')).not.toBeVisible();
+    expect(localStorage.getItem('gg-fold:sub:all_strategies')).toBe('0');
+  });
+
+  it('the near-sort text swaps INSIDE the body (still folded); the sort chips work while closed', () => {
+    foldMount(block(twoRows(), { sorts: NEAR_SORTS }));
+    fireEvent.click(screen.getByTestId('gg-all-sort-near'));
+    const order = screen.getByTestId('gg-all-order');
+    expect(order.textContent).toBe('served near line');
+    expect(screen.getByTestId('gg-sub-body-table').contains(order)).toBe(true);
+    expect(order).not.toBeVisible();
+    expect(screen.getByTestId('gg-all-sort-near').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('NEGATIVE: another sub\'s stored open flag does not open the 📋 fold', () => {
+    localStorage.setItem('gg-fold:sub:bull_flag', '1');
+    localStorage.setItem('gg-fold:header', '1');
+    foldMount(block(twoRows()));
+    expect(screen.getByTestId('gg-all-order')).not.toBeVisible();
+  });
+
+  it('NEGATIVE: no context, or a null key → no toggle, no gg-all-head, no wrapper; the order line visible, a direct child of the section', () => {
+    for (const mountIt of [() => mount(block(twoRows())), () => foldMount(block(twoRows()), null)]) {
+      const { unmount } = mountIt();
+      expect(screen.queryByTestId('gg-sub-toggle')).toBeNull();
+      expect(screen.queryByTestId('gg-all-head')).toBeNull();
+      expect(screen.queryByTestId('gg-sub-body-table')).toBeNull();
+      const order = screen.getByTestId('gg-all-order');
+      expect(order).toBeVisible();
+      expect(order.parentElement).toBe(screen.getByTestId('gg-all'));
+      expect(screen.getByTestId('gg-all-title').parentElement).toBe(screen.getByTestId('gg-all'));
+      expect(screen.getByTestId('gg-all').querySelector('.gg-fold-body, .gg-fold-toggle')).toBeNull();
+      unmount();
+    }
+  });
+
+  it('NEGATIVE: no context → the section HTML equals the same mount under a null key (the DOM-identical path)', () => {
+    const a = mount(block(twoRows()));
+    const html = a.container.innerHTML;
+    a.unmount();
+    const b = foldMount(block(twoRows()), null);
+    expect(b.container.innerHTML).toBe(html);
+  });
+
+  it('NEGATIVE: no block → the served empty note only, no toggle, even under a fold key', () => {
+    render(<MemoryRouter><GgSubFoldContext.Provider value={ALL_KEY}>
+      <GgAllTable block={null} emptyNote="served empty note" search={SEARCH} back={BACK} />
+    </GgSubFoldContext.Provider></MemoryRouter>);
+    expect(screen.getByTestId('gg-empty').textContent).toBe('served empty note');
+    expect(screen.queryByTestId('gg-sub-toggle')).toBeNull();
+  });
+
+  it('source: one hook call before the early return; the fold pieces imported from ./GgFold, nothing from the board', async () => {
+    const src = await readSource('src/components/GgAllTable.tsx');
+    expect(src).toContain("import { GgFoldBody, GgFoldToggle, useGgSubFold } from './GgFold';");
+    const body = src.slice(src.indexOf('export function GgAllTable('));
+    expect(body.indexOf('useGgSubFold()')).toBeGreaterThan(0);
+    expect(body.indexOf('useGgSubFold()')).toBeLessThan(body.indexOf('return str(emptyNote)'));
+    expect(src.split('useGgSubFold()').length - 1).toBe(1);
+    expect(src).not.toMatch(BOARD_IMPORT);
   });
 });

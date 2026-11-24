@@ -177,6 +177,10 @@ describe('🩳 the high_si sub on the board', () => {
     const panel = screen.getByTestId('gg-hs');
     const tile = screen.getByTestId(`gg-tile-${A()}`);
     expect(panel.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // WIDENED 2026-11-24 (ggclean): the panel sits in the sub's closed ⓘ fold (gg-sub-body), still above the grid; the cards stay visible.
+    expect(panel.closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+    expect(panel).not.toBeVisible();
+    expect(tile).toBeVisible();
     expect(container.querySelector('.cm-grid')!.contains(tile)).toBe(true);
     expect(screen.getByTestId('gg-hs-title').textContent).toBe('served hs title');
     expect(screen.getByTestId('gg-hs-push').textContent).toBe('served push off sentence');

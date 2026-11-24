@@ -172,6 +172,10 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     await screen.findByTestId('gg-tile-AAA');
     expect(await screen.findByTestId('gg-scanning')).toHaveTextContent(started.text);
     expect(screen.getByTestId('gg-scanning')).toHaveAttribute('role', 'status');
+    // WIDENED 2026-11-24 (ggclean [C1]): the answer to the scan ON OPEN sits in the header fold's segment B, hidden; the 🔄 button still pulses.
+    expect(screen.getByTestId('gg-scanning').closest('[data-testid="gg-head-body-b"]')).not.toBeNull();
+    expect(screen.getByTestId('gg-scanning')).not.toBeVisible();
+    expect(screen.getByTestId('gg-rescan')).toHaveAttribute('data-scanning', 'true');
     // GETs returning the old pass.at with scan.state "scanning": the served scanning line, the old tiles stay.
     await waitFor(() => expect(screen.getByTestId('gg-scanning')).toHaveTextContent(W4), { timeout: 2000 });
     expect(screen.getByTestId('gg-tile-AAA')).toBeTruthy();
@@ -238,6 +242,9 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
       clicked = 1;
       fireEvent.click(btn);
       expect(await screen.findByTestId('gg-scanning')).toHaveTextContent(click.text);
+      // WIDENED 2026-11-24 (ggclean [C1]): the answer to HIS tap prints outside every fold body, visible.
+      expect(screen.getByTestId('gg-scanning').closest('.gg-fold-body')).toBeNull();
+      expect(screen.getByTestId('gg-scanning')).toBeVisible();
       await sleep(100);
       expect(screen.getByTestId('gg-scanning')).toBeTruthy();
       expect(screen.getByTestId('gg-tile-AAA')).toBeTruthy();
@@ -264,8 +271,12 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     expect(gets()).toHaveLength(1);
     // 2026-10-20: the on-open answer (reused for the pass on screen) prints its served line too; the click replaces it.
     expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
+    // WIDENED 2026-11-24 (ggclean [C1]): the on-open answer sits in the header fold's segment B (hidden); the tap's answer
+    // prints OUTSIDE every fold body — a NEW node, so the query waits for the tap's text instead of holding the old node.
+    expect(screen.getByTestId('gg-scan-reused').closest('[data-testid="gg-head-body-b"]')).not.toBeNull();
     fireEvent.click(btn);
-    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent(reused.text);
+    await waitFor(() => expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent(reused.text));
+    expect(screen.getByTestId('gg-scan-reused').closest('.gg-fold-body')).toBeNull();
     expect(screen.getByTestId('gg-scan-reused')).toHaveAttribute('role', 'status');
     expect(screen.getByTestId('gg-tile-AAA')).toBeTruthy();
     expect(screen.queryByTestId('gg-scanning')).toBeNull();
@@ -288,6 +299,9 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     await sleep(200);
     expect(gets()).toHaveLength(1);
     expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused W11 line');
+    // WIDENED 2026-11-24 (ggclean [C1]): the tap's answer, outside every fold body, visible.
+    expect(screen.getByTestId('gg-scan-reused').closest('.gg-fold-body')).toBeNull();
+    expect(screen.getByTestId('gg-scan-reused')).toBeVisible();
     expect(screen.queryByTestId('gg-scanning')).toBeNull();
     expect(screen.getByTestId('gg-rescan')).not.toBeDisabled();
   });
@@ -314,6 +328,8 @@ describe('GajjalaBoard — 🔄 scan on open', () => {
     await sleep(250);
     expect(gets()).toHaveLength(1);
     expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent('served reused line');
+    // WIDENED 2026-11-24 (ggclean [C1]): the answer to the scan ON OPEN, in segment B (mounted, hidden).
+    expect(screen.getByTestId('gg-scan-reused').closest('[data-testid="gg-head-body-b"]')).not.toBeNull();
   });
 
   /* Fix round 2 (2026-10-16): a GET slower than the served poll — a poll step never starts a GET over one in flight,
@@ -498,6 +514,10 @@ describe('GajjalaBoard — 🎯 the served A+ line', () => {
       expect(banner.textContent || '').not.toMatch(BANNED);
       expect(screen.getByTestId('gg-as-of').textContent).toBe(OPEN[sub].scan.as_of_text);
       expect(screen.getByTestId('gg-as-of').textContent || '').not.toMatch(BANNED);
+      // WIDENED 2026-11-24 (ggclean): the as-of stamp is in the header fold (segment A), hidden by default; the 🎯 line stays visible.
+      expect(screen.getByTestId('gg-as-of').closest('[data-testid="gg-head-body"]')).not.toBeNull();
+      expect(screen.getByTestId('gg-as-of')).not.toBeVisible();
+      expect(banner).toBeVisible();
     });
   }
 
@@ -509,6 +529,9 @@ describe('GajjalaBoard — 🎯 the served A+ line', () => {
       const banner = screen.getByTestId('gg-aplus');
       expect(banner.compareDocumentPosition(track) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(banner.compareDocumentPosition(screen.getByTestId('gg-counts')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      // WIDENED 2026-11-24 (ggclean): the tally sits in the sub's closed ⓘ fold (gg-sub-body), still after the 🎯 line.
+      expect(screen.getByTestId('gg-counts').closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+      expect(screen.getByTestId('gg-counts')).not.toBeVisible();
       for (const r of b.enterable.rows) {
         expect(within(banner).getByTestId(`gg-aplus-row-${r.symbol}-${r.setup}`).textContent).toBe(r.text);
       }
@@ -633,7 +656,9 @@ describe('GajjalaBoard — 🔄 scan now answers every tap (2026-10-20)', () => 
     await screen.findByTestId('gg-tile-AAA');
     const before = gets().length;
     fireEvent.click(btn);
-    expect(await screen.findByTestId('gg-scan-reused')).toHaveTextContent(line);
+    // WIDENED 2026-11-24 (ggclean [C1]): the tap's answer is a new node outside every fold body (the on-open one was folded).
+    await waitFor(() => expect(screen.getByTestId('gg-scan-reused')).toHaveTextContent(line));
+    expect(screen.getByTestId('gg-scan-reused').closest('.gg-fold-body')).toBeNull();
     expect(screen.getByTestId('gg-scan-reused')).toHaveAttribute('role', 'status');
     await sleep(150);
     expect(gets()).toHaveLength(before);

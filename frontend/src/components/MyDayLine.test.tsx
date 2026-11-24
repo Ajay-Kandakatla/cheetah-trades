@@ -206,7 +206,12 @@ describe('🧾 GajjalaBoard mount', () => {
     const line = await screen.findByTestId('my-day');
     expect(myGets()).toHaveLength(1);
     expect(myGets()[0].url).toContain(`?date=${today}`);
-    expect(before(screen.getByTestId('day-read'), line)).toBe(true);
+    /* WIDENED 2026-11-24 (ggclean §5.3): the `my-day` root now leads (the 🚩 action row holds the 🧾 button); the
+     * SENTENCE still sits under 🌫️ Day read, portaled into the header fold's segment B (hidden by default). */
+    expect(screen.getByTestId('gg-actions').contains(screen.getByTestId('my-day-open'))).toBe(true);
+    const sentence = await screen.findByTestId('my-day-line');
+    expect(before(screen.getByTestId('day-read'), sentence)).toBe(true);
+    expect(sentence.closest('[data-testid^="gg-head-body"]')).not.toBeNull();
     expect(before(line, container.querySelector('.gg-subs')!)).toBe(true);
     expect(screen.getByTestId('my-day-text').textContent).toBe('served day text');
   });

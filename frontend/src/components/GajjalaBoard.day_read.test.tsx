@@ -67,6 +67,12 @@ describe('GajjalaBoard 🌫️ day read mount', () => {
       expect(before(warm, dr)).toBe(true);
       expect(before(dr, subs)).toBe(true);
       expect(container.querySelectorAll('[data-testid="day-read"]')).toHaveLength(1);
+      // WIDENED 2026-11-24 (ggclean): on 🚩 the block sits in the header fold's segment B, hidden by default; on the 1-min page, in no body.
+      if (variant) expect(dr.closest('.gg-fold-body')).toBeNull();
+      else {
+        expect(dr.closest('[data-testid="gg-head-body-b"]')).not.toBeNull();
+        expect(dr).not.toBeVisible();
+      }
     });
 
     it(`${name}: NEGATIVE — a payload WITHOUT the key renders no day read`, async () => {
@@ -87,6 +93,10 @@ describe('GajjalaBoard 🌫️ day read mount', () => {
     b.pass = { ...b.pass, stale: true, stale_text: 'served stale' };
     await mount(b);
     expect(before(screen.getByTestId('gg-stale'), screen.getByTestId('day-read'))).toBe(true);
+    // WIDENED 2026-11-24 (ggclean): the stale note stays OUTSIDE the fold (a fault), the day read inside segment B.
+    expect(screen.getByTestId('gg-stale').closest('.gg-fold-body')).toBeNull();
+    expect(screen.getByTestId('gg-stale')).toBeVisible();
+    expect(screen.getByTestId('day-read').closest('[data-testid="gg-head-body-b"]')).not.toBeNull();
   });
 
   it('NEGATIVE: information only — the cards and their order are the same with and without the block', async () => {

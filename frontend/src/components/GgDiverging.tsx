@@ -11,6 +11,7 @@
  * undefined / number / empty string prints nothing). */
 import { Link } from 'react-router-dom';
 import { ggHref, type GgDivergingBlock } from '../lib/gajjala';
+import { GgSubState, type GgSubStateLine } from './GgFold';
 import '../styles/gajjala.css';
 
 /** The board's servedText guard (GajjalaBoard keeps its trailing export line fixed — copied, as GgDivergence does): a served
@@ -19,14 +20,37 @@ function servedText(v: unknown): v is string {
   return typeof v === 'string' && v.trim() !== '';
 }
 
+/** The ONE chartless filter + empty test, shared by the panel and GgDivergingState (2026-11-24, ggclean §3.6). */
+function listed(block: GgDivergingBlock) {
+  const chartless = (Array.isArray(block.chartless) ? block.chartless : [])
+    .filter((c) => !!c && typeof c === 'object' && servedText(c.state_label));
+  const showEmpty = block.n === 0 && !chartless.length && servedText(block.empty_text);
+  return { chartless, showEmpty };
+}
+
+/** 🌱 the state lines outside the closed sub fold (GgSubState, 2026-11-24 ggclean §3.6 — Ajay: "Collapse all of this
+ *  too"): empty → chartless → faults, in the panel's own order and under the panel's own rules (the shared `listed`).
+ *  It prints only while the sub's fold is closed. A null / absent block draws nothing. */
+export function GgDivergingState({ block }: { block: GgDivergingBlock | null | undefined }) {
+  if (!block || typeof block !== 'object') return null;
+  const { chartless, showEmpty } = listed(block);
+  const lines: GgSubStateLine[] = [];
+  if (showEmpty && servedText(block.empty_text)) lines.push({ kind: 'empty', key: 'empty', text: block.empty_text });
+  chartless.forEach((c, i) => {
+    if (servedText(c.state_label)) {
+      lines.push({ kind: 'chartless', key: servedText(c.symbol) ? c.symbol : String(i), text: c.state_label, href: c.href });
+    }
+  });
+  if (servedText(block.faults_text)) lines.push({ kind: 'faults', key: 'faults', text: block.faults_text });
+  return <GgSubState lines={lines} />;
+}
+
 /** 🌱 the panel above the cards. A null / absent block (an older API, or a read fault — the board's served empty note says
  *  so) draws nothing. */
 export function GgDivergingPanel({ block }: { block: GgDivergingBlock | null | undefined }) {
   if (!block || typeof block !== 'object') return null;
   const picks = (Array.isArray(block.pick_texts) ? block.pick_texts : []).filter(servedText);
-  const chartless = (Array.isArray(block.chartless) ? block.chartless : [])
-    .filter((c) => !!c && typeof c === 'object' && servedText(c.state_label));
-  const showEmpty = block.n === 0 && !chartless.length && servedText(block.empty_text);
+  const { chartless, showEmpty } = listed(block);
   return (
     <section className="gg-dv" data-testid="gg-dg">
       {servedText(block.title) ? <h3 className="gg-dv-title" data-testid="gg-dg-title">{block.title}</h3> : null}

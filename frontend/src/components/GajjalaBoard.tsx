@@ -174,8 +174,19 @@
  * 🧪 strip under the page honesty, the held section after the 🎯 A+ line, the 🏁 compare above the Track record — each
  * renders nothing when its served block is absent, so 🚩 Gajjala's and the 1-min page draw exactly as before. A held
  * tile prints its served state_label with the served state as its class (gg-state-aplus_held). Shadow. UNMEASURED.
+ *
+ * 🧹 Landing declutter (2026-11-24, spec ggclean §3.3 / §3.5). Ajay: "Hide all of this nouce besides the scan button
+ * and log trade button no explantions on the landing pages anymor" · "Add all of this too" · "Collapse all of this too".
+ * On 🚩 Gajjala's only (vkey === 'gajjala'): ONE action row (🔄 scan now · 🧾 log trade · ⓘ) stays on screen; everything
+ * else of the header — the page's WHY / Rules / Enterable rows (GgHeadPageContext), the strip, the 🚫 editor, 🌫️ Day
+ * read, the 🧾 sentence, the answer to the scan ON OPEN and the 📲 / 🧠 / ⚡ lines — sits in the closed `header` fold
+ * (three GgFoldBody segments, one key). Faults and the answer to HIS 🔄 tap stay outside (refused / an error / the
+ * partial-pass note are never folded; the origin is the scanOnOpen ref, the state keys are lib/ggFold's). Each card sub
+ * folds its own order / list notes, panel and tally under `sub:<sub>`, its ⓘ at the end of the controls row (the body
+ * opens UNDER that row — the new order, his call); the served state lines print outside while it is closed. The text
+ * stays mounted (hidden), nothing served is reworded. 🧪 Audited and the 1-minute page draw exactly as before.
  */
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
@@ -232,9 +243,11 @@ import { GgAuditedCompare } from './GgAuditedCompare';
 import { GgAllTable } from './GgAllTable';
 import { DayReadLine } from './DayReadLine';
 import { MyDayLine, myDayDate } from './MyDayLine';
-import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
-import { GgDivergingPanel } from './GgDiverging';
-import { GgHighSiPanel } from './GgHighSi';
+import { GgDivergencePanel, GgDivergenceState, GgDivergenceTrack } from './GgDivergence';
+import { GgDivergingPanel, GgDivergingState } from './GgDiverging';
+import { GgHighSiPanel, GgHighSiState } from './GgHighSi';
+import { GgFoldBody, GgFoldToggle, GgHeadPageContext, GgSubFoldContext } from './GgFold';
+import { GG_FOLD_HEADER, ggFoldScanAnswer, ggFoldSubKey, useGgFold } from '../lib/ggFold';
 import { GgTimeWindow } from './GgTimeWindow';
 import { GgCriteriaList } from './GgCriteria';   // ▶ 2026-11-24 (spec ggrun): the ONE rule-row printer, shared with the 👀 Watch panel
 import '../styles/gajjala.css';
@@ -365,6 +378,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const [posting, setPosting] = useState(false);
   const [scanErr, setScanErr] = useState<string | null>(null);
   const scanAsked = useRef(false);
+  /* 🧹 2026-11-24 [C1]: the POST the mount effect fires is tagged here and read ONCE (then cleared) at the start of
+   * startScan — a tap can never carry it (a tap while the mount POST is out is blocked by scanPosting). `scanFromOpen`:
+   * the answer on screen answers the page opening (a served state of lib/ggFold GG_FOLD_SCAN_ON_OPEN) → it folds. */
+  const scanOnOpen = useRef(false);
+  const [scanFromOpen, setScanFromOpen] = useState(false);
   const scanPosting = useRef(false);
   const scanTimer = useRef<number | null>(null);
   const scanUntil = useRef(0);
@@ -410,6 +428,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const stopScan = () => { clearScanTimer(); setScanning(false); };
   const startScan = async () => {
     if (scanning || scanPosting.current) return;
+    const viaOpen = scanOnOpen.current;
+    scanOnOpen.current = false;
     scanPosting.current = true;
     setPosting(true);
     let resp: GgScanResponse | null = null;
@@ -439,9 +459,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
     reusedWant.current = null;
     noteSeq.current = null;
     setReusedText(null);
+    setScanFromOpen(false);
     setScanErr(detail);
     if (failed || !resp || typeof resp !== 'object') { setScanResp(null); return; }
     setScanResp(resp);
+    setScanFromOpen(viaOpen && ggFoldScanAnswer(resp.state));
     const text = typeof resp.text === 'string' && resp.text.trim() ? resp.text : null;
     if (resp.state === 'reused' && typeof resp.latest_at === 'string' && resp.latest_at
         && boardRef.current?.pass?.at !== resp.latest_at) {
@@ -478,6 +500,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   useEffect(() => {
     if (!isOwner || scanAsked.current) return;
     scanAsked.current = true;
+    scanOnOpen.current = true;
     void startScan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwner]);
@@ -674,6 +697,67 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
     : !scanOpen && typeof scan?.as_of_text === 'string' && scan.as_of_text.trim() ? scan.as_of_text
     : scan?.rescan_title || undefined;
 
+  /* 🧹 2026-11-24 (spec ggclean §3.3): the header fold — 🚩 Gajjala's only; a null key draws no row, no toggle and no
+   * wrapper (GgFoldBody is a bare fragment), so 🧪 Audited and the 1-minute page keep today's DOM. */
+  const foldOn = vkey === 'gajjala';
+  const headKey = foldOn ? GG_FOLD_HEADER : null;
+  const head = useGgFold(headKey);
+  const headPage = useContext(GgHeadPageContext);
+  /* The 🧾 sentence's slot inside segment B (MyDayLine portals its text there; the button stays in the action row). */
+  const [myDaySlot, setMyDaySlot] = useState<HTMLElement | null>(null);
+  /* The 🔄 button, its literal unchanged — the strip's last child on the variants, the action row's first item on 🚩. */
+  const rescanEl = (
+    <>
+        {isOwner && scan?.rescan_label ? (
+          <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
+                  aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
+                  title={rescanTitle} onClick={() => void startScan()}>
+            {scan.rescan_label}
+          </button>
+        ) : null}
+    </>
+  );
+  /* [C1] The two served answer lines (scanning / reused-closed-waiting), byte-identical. They print in exactly ONE place:
+   * inside segment B when they answer the scan on open (🚩 only), else where they always printed. Refused / an error /
+   * the partial-pass note never move. */
+  const scanAnswerEl = (
+    <>
+      {scanning && scanningLine ? (
+        <div className="cm-note gg-scanning" role="status" data-testid="gg-scanning">{scanningLine}</div>
+      ) : null}
+      {!scanning && reusedText ? (
+        <div className="cm-note" role="status" data-testid="gg-scan-reused">{reusedText}</div>
+      ) : null}
+    </>
+  );
+  const autoFold = foldOn && scanFromOpen;
+  /* 🧹 §3.5: the sub's own fold — every 🚩 sub (📓 / 🏁 draw no toggle, so nothing folds there). */
+  const subKey = foldOn ? ggFoldSubKey(activeSub) : null;
+  const subNotes = (
+    <>
+      {typeof board?.order_note === 'string' && board.order_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
+      ) : null}
+      {typeof board?.list_note === 'string' && board.list_note.trim() ? (
+        <span className="gg-muted" data-testid="gg-list-note">{board.list_note}</span>
+      ) : null}
+    </>
+  );
+  const subPanels = board ? (
+    <>
+          {/* (3b) 🧨 2026-11-18: the served Divergence panel above the cards — the divergence sub only. */}
+          {activeSub === GG_DIVERGENCE_SUB ? <GgDivergencePanel block={board.divergence ?? null} /> : null}
+          {/* (3b) 🌱 2026-11-18: the served Diverging panel above the cards — the diverging sub only. */}
+          {activeSub === GG_DIVERGING_SUB ? <GgDivergingPanel block={board.diverging ?? null} /> : null}
+          {/* (3b) 🩳 2026-11-23: the served High SI panel above the cards — the high_si sub only (the bar-size toggle stays:
+              the cards draw the 5m or the 15m frame). */}
+          {activeSub === GG_HIGH_SI_SUB ? <GgHighSiPanel block={board.high_si ?? null} /> : null}
+          {/* (4) counts + graveyard + setups held by an unanswered number. */}
+          <CountsLine board={board} />
+    </>
+  ) : null;
+  const cardSub = !!board && activeSub !== 'playbook' && !onTable && activeSub !== 'track_record';
+
   return (
     <GgVariantContext.Provider value={vkey}>
     <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'} data-variant={vkey}
@@ -688,6 +772,18 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       ) : null}
       {/* (0b) 🧪 2026-11-01: the audited page's served strip (audited_tab.audited_block) — folded; absent elsewhere. */}
       <GgAuditedStrip block={board?.audited} />
+      {/* 🧹 2026-11-24 (ggclean §3.3): the action row — 🚩 only, always on screen: 🔄 · 🧾 · ⓘ (the 🧾 button is the
+          MyDayLine section's own, `display: contents`; its text portals into segment B). */}
+      {foldOn ? (
+        <div className="gg-actions" data-testid="gg-actions">
+          {rescanEl}
+          {brokerBlock ? <MyDayLine date={myDayDate(board?.session?.date ?? null)} priceOf={myPriceOf} textTo={myDaySlot} /> : null}
+          <GgFoldToggle k={headKey} testid="gg-head-toggle" controls="gg-head-body" />
+        </div>
+      ) : null}
+      {/* segment A: the page's header rows (🚩 only, GgHeadPageContext), the strip and the 🚫 editor. */}
+      <GgFoldBody k={headKey} id="gg-head-body" testid="gg-head-body">
+      {headPage}
       {/* (1) situational-awareness strip — his read of the day (S8 43:39). */}
       <div className="gg-strip" data-testid="gg-strip" role="status">
         {strip?.text ? <span className="gg-strip-text" data-testid="gg-strip-text">{strip.text}</span> : null}
@@ -706,18 +802,13 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         {inWindow && feedWord ? (
           <span className="gg-muted gg-line" style={{ minWidth: 0 }} data-testid="gg-live-feed-word">{feedWord}</span>
         ) : null}
-        {isOwner && scan?.rescan_label ? (
-          <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning || posting}
-                  aria-busy={posting ? 'true' : undefined} data-scanning={scanning ? 'true' : undefined}
-                  title={rescanTitle} onClick={() => void startScan()}>
-            {scan.rescan_label}
-          </button>
-        ) : null}
+        {foldOn ? null : rescanEl}
       </div>
       {brokerBlock && (brokerEditable || brokerFault) ? (
         <BrokerFlagsStrip block={brokerBlock} editable={brokerEditable} fault={brokerFault} busy={brokerBusy}
                           err={brokerErr} onWrite={brokerWrite} />
       ) : null}
+      </GgFoldBody>
       {pass?.stale ? (
         <div className="cm-note cm-note-err" data-testid="gg-stale">
           {pass.stale_text || `stale · last pass ${pass.as_of_et ?? '—'}`}
@@ -728,22 +819,33 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {pass.warming_text || 'warming · no pass this session yet'}
         </div>
       ) : null}
+      {/* segment B: 🌫️ Day read, the 🧾 sentence's slot, and [C1] the answer to the scan ON OPEN. */}
+      <GgFoldBody k={headKey} testid="gg-head-body-b">
       {/* 🌫️ 2026-11-15: the served day read (owner only, information only) — after stale/warming, before the scan lines. */}
       <DayReadLine block={board?.day_read ?? null} />
       {/* 🧾 2026-11-23: My trades vs GG (owner only, words only) — right under 🌫️ Day read, 🚩 5-minute page only; the gate
-          is the SERVED owner block `broker_flags` (never isOwner). Never on 🧪 Audited or the 1-minute page. */}
-      {vkey === 'gajjala' && brokerBlock ? <MyDayLine date={myDayDate(board?.session?.date ?? null)} priceOf={myPriceOf} /> : null}
-      {scanning && scanningLine ? (
-        <div className="cm-note gg-scanning" role="status" data-testid="gg-scanning">{scanningLine}</div>
-      ) : null}
-      {!scanning && reusedText ? (
-        <div className="cm-note" role="status" data-testid="gg-scan-reused">{reusedText}</div>
-      ) : null}
+          is the SERVED owner block `broker_flags` (never isOwner). Never on 🧪 Audited or the 1-minute page. 2026-11-24: on
+          🚩 the component mounts in the action row; its sentence lands in this slot (a portal). */}
+      {foldOn ? <div ref={setMyDaySlot} data-testid="gg-my-day-slot" /> : null}
+      {autoFold ? scanAnswerEl : null}
+      </GgFoldBody>
+      {/* the answer to HIS 🔄 tap (and every answer on the variants): visible, in place. */}
+      {autoFold ? null : scanAnswerEl}
       {scanResp?.state === 'refused' && scanResp.text ? (
         <div className="cm-note cm-note-err" data-testid="gg-scan-refused">{scanResp.text}</div>
       ) : null}
       {scanErr ? <div className="cm-note cm-note-err" role="status" data-testid="gg-scan-err">{scanErr}</div> : null}
       {scan?.note ? <div className="cm-note" data-testid="gg-scan-note">{scan.note}</div> : null}
+      {/* [C4] the 🚫 strip is folded: its served fault and a failed write's served detail print here — two nodes —
+          while the fold is closed (open, the strip shows them; never twice on screen). */}
+      {foldOn && !head.open && brokerBlock && brokerFault ? (
+        <div className="cm-note cm-note-err" data-testid="gg-head-broker-fault">{brokerFault}</div>
+      ) : null}
+      {foldOn && !head.open && brokerBlock && brokerErr ? (
+        <div className="cm-note cm-note-err" role="status" data-testid="gg-head-broker-err">{brokerErr}</div>
+      ) : null}
+      {/* segment C: the 📲 / 🧠 / ⚡ push lines. */}
+      <GgFoldBody k={headKey} testid="gg-head-body-c">
       {board?.push?.text ? <div className="cm-note" data-testid="gg-push">{board.push.text}</div> : null}
       {board?.push_potential?.text ? (
         <div className="cm-note gg-push-potential" data-testid="gg-push-potential">{board.push_potential.text}</div>
@@ -752,6 +854,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {typeof board?.push_break?.text === 'string' && board.push_break.text.trim() ? (
         <div className="cm-note gg-push-potential gg-push-break" data-testid="gg-push-break">{board.push_break.text}</div>
       ) : null}
+      </GgFoldBody>
 
       {/* (2) ⏳ his first 15 minutes (S8 14:41). */}
       {session?.first15 && session.first15_text ? (
@@ -780,15 +883,12 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {board?.enterable ? <AplusBanner block={board.enterable} /> : null}
       {/* (3c) 🧪 2026-11-01: A+ held by the audit — listed, never hidden (audited_tab.held_block); absent elsewhere. */}
       <GgAuditedHeld block={board?.held} />
+      {/* 🧹 2026-11-24 (ggclean §3.5): the sub's own fold key for everything below (null on the variants). */}
+      <GgSubFoldContext.Provider value={subKey}>
       {/* (3d) the served ordering word (tab.VOL/RS/HF/POT_ORDER_TEXT — every card sub since 2026-11-09) and the 🌀 "counted, not
           listed" line (tab.build list_note) — verbatim, no sort control; BELOW the 🎯 banner so the A+ line stays right under
-          the sub strip (2026-11-09). */}
-      {typeof board?.order_note === 'string' && board.order_note.trim() ? (
-        <span className="gg-muted" data-testid="gg-order-note">{board.order_note}</span>
-      ) : null}
-      {typeof board?.list_note === 'string' && board.list_note.trim() ? (
-        <span className="gg-muted" data-testid="gg-list-note">{board.list_note}</span>
-      ) : null}
+          the sub strip (2026-11-09). 🧹 2026-11-24: on a 🚩 card sub they move into the sub's fold body (subNotes). */}
+      {subKey && cardSub ? null : subNotes}
 
       {err ? <div className="cm-note cm-note-err" data-testid="gg-error">Gajjala board: {err}</div> : null}
 
@@ -825,15 +925,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
         </>
       ) : board ? (
         <>
-          {/* (3b) 🧨 2026-11-18: the served Divergence panel above the cards — the divergence sub only. */}
-          {activeSub === GG_DIVERGENCE_SUB ? <GgDivergencePanel block={board.divergence ?? null} /> : null}
-          {/* (3b) 🌱 2026-11-18: the served Diverging panel above the cards — the diverging sub only. */}
-          {activeSub === GG_DIVERGING_SUB ? <GgDivergingPanel block={board.diverging ?? null} /> : null}
-          {/* (3b) 🩳 2026-11-23: the served High SI panel above the cards — the high_si sub only (the bar-size toggle stays:
-              the cards draw the 5m or the 15m frame). */}
-          {activeSub === GG_HIGH_SI_SUB ? <GgHighSiPanel block={board.high_si ?? null} /> : null}
-          {/* (4) counts + graveyard + setups held by an unanswered number. */}
-          <CountsLine board={board} />
+          {/* (3b) / (4) the 🧨 / 🌱 / 🩳 panel + the counts — subPanels; on 🚩 they print in the fold body under the controls. */}
+          {subKey ? null : subPanels}
           {(board.awaiting || []).map((a) => (
             <div key={`${a.setup}-${a.his_call}`} className="cm-note" data-testid="gg-awaiting">{a.text}</div>
           ))}
@@ -864,7 +957,17 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
               </button>
             ) : null}
             {cw.allowed ? <GgCardWatchToggle on={cw.on} onToggle={cw.toggle} /> : null}
+            {/* 🧹 2026-11-24: the sub's ⓘ at the row's right end (the context key — nothing on the variants). */}
+            <GgFoldToggle testid="gg-sub-toggle" controls="gg-sub-body" />
           </div>
+          {/* 🧹 2026-11-24 [C3]: the sub's text opens UNDER the controls row (notes → panel → tally, the panel's own order). */}
+          {subKey ? <GgFoldBody id="gg-sub-body" testid="gg-sub-body">{subNotes}{subPanels}</GgFoldBody> : null}
+          {/* the served state lines (a name missing from the cards) — printed only while the fold is closed. */}
+          {subKey ? (<>
+            {activeSub === GG_DIVERGENCE_SUB ? <GgDivergenceState block={board.divergence ?? null} /> : null}
+            {activeSub === GG_DIVERGING_SUB ? <GgDivergingState block={board.diverging ?? null} /> : null}
+            {activeSub === GG_HIGH_SI_SUB ? <GgHighSiState block={board.high_si ?? null} /> : null}
+          </>) : null}
           {/* (5b) 🧠 this setup's own potentials — setup subs only; nothing on an older API. */}
           {isGgSetup(activeSub) && board.potential ? (
             <PotentialStrip strip={board.potential} onPick={(sym) => setParam(FOCUS_PARAM, sym)} />
@@ -913,7 +1016,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
             </div>
           ) : null}
           {/* 🔝 2026-11-11 (proposal #9): the served Focus header above the first card — display only. */}
-          {focusText ? <div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div> : null}
+          {focusText ? <GgFoldBody testid="gg-sub-body-focus"><div className="cm-note gg-focus-head" data-testid="gg-focus-head">{focusText}</div></GgFoldBody> : null}
           {/* 🔒 2026-11-22: the served fault line when a stock threshold list could not be read; nothing otherwise. */}
           <GgHardToBorrowFault testid="gg-htb-fault" />
           <GgSsrFault testid="gg-ssr-fault" />
@@ -1011,6 +1114,8 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {activeSub === 'potential' && board.watch ? <WatchLine watch={board.watch} /> : null}
         </>
       ) : null}
+      </GgSubFoldContext.Provider>
+
 
       {/* (7) the ℹ️ rules and the served UNMEASURED note. */}
       <div className="cm-rules">
@@ -1743,7 +1848,8 @@ function Day2Block({ block, search, back }: { block: GgDay2Block; search: string
   return (
     <section className="gg-day2" data-testid="gg-day2">
       {title ? <strong className="gg-day2-title" data-testid="gg-day2-title">{title}</strong> : null}
-      {note ? <div className="gg-muted gg-day2-note" data-testid="gg-day2-note">{note}</div> : null}
+      {/* 🧹 2026-11-24: the note folds with the sub (the context key; a bare fragment on the variants). */}
+      {note ? <GgFoldBody testid="gg-sub-body-day2"><div className="gg-muted gg-day2-note" data-testid="gg-day2-note">{note}</div></GgFoldBody> : null}
       {rows.length ? (
         <ul className="gg-day2-rows">
           {rows.map((r) => {

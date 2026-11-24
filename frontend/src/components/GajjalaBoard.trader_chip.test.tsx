@@ -188,6 +188,9 @@ describe('GajjalaBoard — 📌 the strip lines', () => {
     expect(before(text, line)).toBe(true);
     expect(before(line, skip)).toBe(true);
     expect(within(screen.getByTestId('gg-strip')).getByTestId('gg-strip-trader')).toBe(line);
+    // WIDENED 2026-11-24 (ggclean): present inside the header fold (segment A), hidden by default.
+    expect(line.closest('[data-testid="gg-head-body"]')).not.toBeNull();
+    expect(line).not.toBeVisible();
   });
 
   for (const [name, v] of [['null', null], ['empty', ''], ['whitespace', '   '], ['a number', 5]] as const) {

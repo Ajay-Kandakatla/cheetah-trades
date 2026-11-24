@@ -92,6 +92,9 @@ describe('GajjalaBoard — ℹ️ served counts legend (2026-10-18)', () => {
       await loaded(container);
       const line = screen.getByTestId('gg-counts');
       expect(line.textContent).toBe(todayLine(board.counts));
+      // WIDENED 2026-11-24 (ggclean): the tally sits in the sub's closed ⓘ fold (gg-sub-body), hidden by default.
+      expect(line.closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+      expect(line).not.toBeVisible();
       const spans = within(line).getAllByTestId(/^gg-count-/);
       const counted = TODAY_ORDER.filter(([k]) => typeof board.counts[k] === 'number').map(([k]) => k);
       expect(counted.length).toBeGreaterThan(0);
@@ -125,6 +128,7 @@ describe('GajjalaBoard — ℹ️ served counts legend (2026-10-18)', () => {
     expect(screen.queryByTestId('gg-count-track')).toBeNull();
     // right after the counts line
     expect(screen.getByTestId('gg-counts').nextElementSibling).toBe(det);
+    expect(det.closest('[data-testid="gg-sub-body"]')).not.toBeNull();   // WIDENED 2026-11-24 (ggclean): inside the sub's fold
   });
 
   // WIDENED 2026-11-13 — 📋 All strategies is the ELEVENTH sub (FIRST); the served strip has 11 buttons.

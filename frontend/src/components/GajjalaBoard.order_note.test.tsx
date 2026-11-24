@@ -40,6 +40,9 @@ describe('GajjalaBoard 🎾 order_note (served, printed verbatim)', () => {
     const el = screen.getByTestId('gg-order-note');
     expect(el.textContent).toBe(SERVED);
     expect(el.className).toContain('gg-muted');
+    // WIDENED 2026-11-24 (ggclean): present inside the sub's closed ⓘ fold (gg-sub-body), hidden by default.
+    expect(el.closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+    expect(el).not.toBeVisible();
     unmount();
   });
 

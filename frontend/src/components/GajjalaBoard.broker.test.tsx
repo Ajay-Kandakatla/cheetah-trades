@@ -124,6 +124,11 @@ describe('GajjalaBoard — 🚫 broker tag (owner strip)', () => {
     expect(within(strip).getByTestId('gg-broker-add').textContent).toBe(BLOCK().add_label);
     expect(within(strip).queryByTestId('gg-broker-fault')).toBeNull();
     expect(within(strip).queryByTestId('gg-broker-err')).toBeNull();
+    // WIDENED 2026-11-24 (ggclean): the 🚫 strip sits in the header fold's segment A, hidden by default; no fault → no outside line.
+    expect(strip.closest('[data-testid="gg-head-body"]')).not.toBeNull();
+    expect(strip).not.toBeVisible();
+    expect(screen.queryByTestId('gg-head-broker-fault')).toBeNull();
+    expect(screen.queryByTestId('gg-head-broker-err')).toBeNull();
     expect(brokers()).toHaveLength(0);
     expect(gets()).toHaveLength(1);
     // the golden tags nothing (his list is empty): no chip anywhere
@@ -217,6 +222,9 @@ describe('GajjalaBoard — 🚫 broker tag (owner strip)', () => {
     fireEvent.change(input, { target: { value: '1BAD' } });
     fireEvent.submit(input.closest('form')!);
     expect((await screen.findByTestId('gg-broker-err')).textContent).toBe('served bad-symbol line');
+    // WIDENED 2026-11-24 (ggclean) [C4]: the strip is folded, so the served detail ALSO prints outside, visible, once.
+    expect(screen.getByTestId('gg-head-broker-err').textContent).toBe('served bad-symbol line');
+    expect(screen.getByTestId('gg-head-broker-err')).toBeVisible();
     await sleep(60);
     expect(brokers()).toHaveLength(1);
     expect(gets()).toHaveLength(1);
@@ -281,6 +289,10 @@ describe('GajjalaBoard — 🚫 broker tag (owner strip)', () => {
     mount();
     const strip = await screen.findByTestId('gg-broker-strip');
     expect(within(strip).getByTestId('gg-broker-fault').textContent).toBe('served fault line');
+    // WIDENED 2026-11-24 (ggclean) [C4]: the served fault shows OUTSIDE the closed fold too (the strip is hidden).
+    expect(screen.getByTestId('gg-head-broker-fault').textContent).toBe('served fault line');
+    expect(screen.getByTestId('gg-head-broker-fault')).toBeVisible();
+    expect(strip).not.toBeVisible();
     expect(within(strip).getByTestId('gg-broker-text').textContent).toBe(BLOCK().text);
     expect(within(strip).getByTestId('gg-broker-sym-SEED').textContent).toBe('SEED');
     expect(within(strip).queryByTestId('gg-broker-del-SEED')).toBeNull();

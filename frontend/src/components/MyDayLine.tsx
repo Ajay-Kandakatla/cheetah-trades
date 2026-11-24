@@ -9,8 +9,17 @@
  * nothing. It prints the served `my_day` words verbatim (text, next_text, quiet_text, footer): the FE composes no count,
  * no quote and no rule. A served null `my_day` → no line (the 🧾 button stays: the GET said `ok`, so it is the owner).
  * WORDS ONLY: nothing here trades, blocks a broker, hides a card, sorts, filters or pushes.
+ *
+ * 🧹 2026-11-24 (ggclean §3.3) — Ajay: "Hide all of this nouce besides the scan button and log trade button no explantions
+ * on the landing pages anymor". One optional prop, `textTo`. Undefined (every older caller): today's markup, byte for byte.
+ * Defined ("bare", the 🚩 action row): the section is `display: contents` (no box) so the 🧾 button is a flex item of
+ * .gg-actions; the sentence block portals into `textTo` (the header fold's slot; nothing while it is null); the ⚠️
+ * next_text stays OUTSIDE the fold, right after the button, full width with `order: 1` — like the open sheet — so line
+ * one is always 🔄 · 🧾 · ⓘ. Same GET, same button, same sheet; no word added. The keyboard order (🧾 → ⚠️ / sheet → ⓘ)
+ * differs from the visual one; acceptable for a disclosure toggle.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { todayEtKey } from '../lib/alertKinds';
 import { API } from '../lib/apiBase';
 import { MY_TRADES_PATH, MyTradeSheet } from './MyTradeSheet';
@@ -104,7 +113,9 @@ export function myDayDate(sessionDate?: string | null, nowMs: number = Date.now(
 
 const WRAP = { minWidth: 0, overflowWrap: 'anywhere' as const };
 
-export function MyDayLine({ date, priceOf }: { date?: string | null; priceOf?: (sym: string) => number | null }) {
+export function MyDayLine({ date, priceOf, textTo }: {
+  date?: string | null; priceOf?: (sym: string) => number | null; textTo?: HTMLElement | null;
+}) {
   const [data, setData] = useState<MyTradesOk | null>(null);
   const [tick, setTick] = useState(0);
   const [open, setOpen] = useState(false);
@@ -124,6 +135,33 @@ export function MyDayLine({ date, priceOf }: { date?: string | null; priceOf?: (
 
   if (!data) return null;
   const md = data.my_day;
+  const bare = textTo !== undefined;
+  if (bare) {
+    const block = md ? (
+      <div className="cm-note" style={WRAP} data-testid="my-day-line">
+        <div style={WRAP} data-testid="my-day-text">{md.text}</div>
+        {md.quiet_text ? <div style={WRAP} data-testid="my-day-quiet">{md.quiet_text}</div> : null}
+        {md.footer ? <div className="gg-muted" style={WRAP} data-testid="my-day-footer">{md.footer}</div> : null}
+      </div>
+    ) : null;
+    return (
+      <section className="gg-my-day gg-my-day--bare" data-testid="my-day" style={{ display: 'contents' }}>
+        {block && textTo ? createPortal(block, textTo) : null}
+        <button type="button" className="gg-rescan" data-testid="my-day-open" aria-expanded={open ? 'true' : 'false'}
+                onClick={() => setOpen((o) => !o)}>
+          🧾 log trade
+        </button>
+        {md?.next_text ? (
+          <div style={{ ...WRAP, flexBasis: '100%', order: 1 }} data-testid="my-day-next">{md.next_text}</div>
+        ) : null}
+        {open ? (
+          <div style={{ ...WRAP, flexBasis: '100%', order: 1 }}>
+            <MyTradeSheet data={data} priceOf={priceOf} onChanged={reread} onClose={() => setOpen(false)} />
+          </div>
+        ) : null}
+      </section>
+    );
+  }
   return (
     <section className="cm-note gg-my-day" data-testid="my-day" style={{ ...WRAP, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
       {md ? (

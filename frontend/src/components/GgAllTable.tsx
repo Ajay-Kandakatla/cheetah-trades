@@ -22,7 +22,13 @@
  * 2026-11-16 — Ajay (screenshot of this table): "Add a short interest colume fo this table when available". The served
  * `si` head (label "Short interest", hover = the served si_head_title) prints the row's served si_text (the house 🩳 chip
  * verbatim) with the served si_title on hover; no record → an EMPTY cell (never 0, never a dash). The stale hook is a
- * class only — the served text carries the word. The served si_fault_text prints under the fault line. DISPLAY ONLY. */
+ * class only — the served text carries the word. The served si_fault_text prints under the fault line. DISPLAY ONLY.
+ *
+ * 2026-11-24 (ggclean spec §3.6) — Ajay: "Hide all of this nouce besides the scan button and log trade button no
+ * explantions on the landing pages anymor". Context-driven: under a GgSubFoldContext key (the 🚩 board's 📋 sub) the
+ * title row carries the sub's ⓘ toggle (gg-all-head) and the served order text sits in the sub's closed fold body
+ * (gg-sub-body-table, MOUNTED, hidden). The title, the sort chips, the table and the more / fault / si-fault / empty /
+ * honesty lines stay visible. No context (🧪 / 1-min / every standalone use) → today's DOM, unchanged. */
 import { Fragment, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { GgEntryMiniTape } from './GgEntryTape';
@@ -34,6 +40,7 @@ import { withSource } from '../lib/navSource';
 import { GgWatchButton } from './GgWatchButton';
 import { GgHardToBorrowChip } from './GgHardToBorrow';
 import { GgBorrowChip } from './GgBorrow';
+import { GgFoldBody, GgFoldToggle, useGgSubFold } from './GgFold';
 
 export const GG_ALL_SORT_KEY = 'gg-all-sort';
 function readSort(): string | null {
@@ -160,6 +167,7 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
   search: string; back: string;
 }) {
   const [picked, setPicked] = useState<string | null>(readSort);   // before any early return (rules of hooks)
+  const fold = useGgSubFold();                                      // before any early return (rules of hooks)
   /* An older API / a faulted build: no block → the served empty_note only. */
   if (!block || typeof block !== 'object') {
     return str(emptyNote) ? <div className="cm-note" data-testid="gg-empty">{emptyNote}</div> : null;
@@ -183,9 +191,15 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
   let lastWatch = -1;
   rows.forEach((r, i) => { if (r.in_watch === true) lastWatch = i; });
   const divideAt = !near && lastWatch >= 0 && lastWatch < rows.length - 1 ? lastWatch : -1;
+  const titleEl = str(block.title) ? <h3 className="gg-all-title" data-testid="gg-all-title">{block.title}</h3> : null;
   return (
     <section className="gg-all" data-testid="gg-all">
-      {str(block.title) ? <h3 className="gg-all-title" data-testid="gg-all-title">{block.title}</h3> : null}
+      {fold.on ? (
+        <div className="gg-all-head" data-testid="gg-all-head">
+          {titleEl}
+          <GgFoldToggle testid="gg-sub-toggle" controls="gg-sub-body-table" />
+        </div>
+      ) : titleEl}
       {opts.length > 1 && rows.length > 1 ? (
         <div className="gg-all-sorts" role="group" aria-label="Sort" data-testid="gg-all-sorts">
           {opts.map((o) => (
@@ -196,7 +210,9 @@ export function GgAllTable({ block, emptyNote, answer, search, back }: {
           ))}
         </div>
       ) : null}
-      {orderText ? <div className="gg-muted gg-all-order" data-testid="gg-all-order">{orderText}</div> : null}
+      <GgFoldBody id="gg-sub-body-table" testid="gg-sub-body-table">
+        {orderText ? <div className="gg-muted gg-all-order" data-testid="gg-all-order">{orderText}</div> : null}
+      </GgFoldBody>
       {rows.length && heads.length ? (
         <div className="gg-tr-scroll">
           <table className="gg-tr-table gg-all-table" data-testid="gg-all-table">

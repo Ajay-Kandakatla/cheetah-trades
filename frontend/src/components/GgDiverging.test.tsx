@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* 🌱 GgDivergingPanel (2026-11-18, diverging spec §3.9 / §4 WP-B). Ajay: "For the divergence thing create a separate tab
  * that are potentially diverging with uptrend and volume breakout." Every string below is a SENTINEL ("served …") — the
@@ -10,7 +10,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/usageTracker', () => ({ trackFeature: () => undefined }));
 
-import { GgDivergingPanel } from './GgDiverging';
+import { GgDivergingPanel, GgDivergingState } from './GgDiverging';
+import { GgSubFoldContext } from './GgFold';
+import { resetGgFold, setGgFold } from '../lib/ggFold';
+
 
 async function readSource(rel: string): Promise<string> {
   const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
@@ -154,5 +157,143 @@ describe('🌱 GgDivergingPanel', () => {
     expect(src).not.toMatch(/from '\.\/GajjalaBoard'/);
     expect(src).toMatch(/className="gg-dv"/);
     expect(src).not.toMatch(/gg-dg-[a-z]+"[^>]*>[A-Za-z]/);
+  });
+});
+
+/* ---- 🧹 GgDivergingState (2026-11-24, ggclean spec §3.6 / WP panels). Ajay: "Collapse all of this too". The state lines the
+ * board prints OUTSIDE the closed 🌱 sub fold — empty / chartless / faults — drawn by the panel's own selector.
+ * NEGATIVES: fold open → nothing; no context → nothing; nothing served → no root; a null / junk block → nothing;
+ * NaN / number / "" → nothing; n > 0 or a chartless line → no empty line; an unsafe href → text. */
+/** A memory Storage (jsdom here serves no usable localStorage) — stubbed per test, unstubbed after. */
+function memStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    get length() { return m.size; }, clear: () => m.clear(), key: (i: number) => Array.from(m.keys())[i] ?? null,
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null), setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+  } as Storage;
+}
+const ST_KEY = 'sub:diverging';
+const inFold = (ui: any, key: string | null = ST_KEY) => render(
+  <MemoryRouter><GgSubFoldContext.Provider value={key}>{ui}</GgSubFoldContext.Provider></MemoryRouter>);
+const stTids = (c: HTMLElement) => [...c.querySelectorAll('[data-testid^="gg-substate-"]')].map((e) => e.getAttribute('data-testid'));
+const stTexts = (c: HTMLElement) => [...c.querySelectorAll('[data-testid^="gg-substate-"]')].map((e) => e.textContent);
+const panelTexts = (c: HTMLElement) => [...c.querySelectorAll(
+  '[data-testid="gg-dg-empty"], [data-testid^="gg-dg-chartless-"], [data-testid="gg-dg-faults"]')].map((e) => e.textContent);
+const ST_BASE = () => ({ ...clone(DG_BLOCK), n: 0 });
+
+describe('🧹 GgDivergingState — the state lines outside the closed 🌱 fold', () => {
+  beforeEach(() => { vi.stubGlobal('localStorage', memStorage()); resetGgFold(); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('fold closed: empty → faults verbatim, on the panels\' own classes; no typed word', () => {
+    const { container } = inFold(<GgDivergingState block={{ ...ST_BASE(), faults_text: 'served faults' } as any} />);
+    expect(screen.getByTestId('gg-substate').className).toBe('gg-dv gg-substate');
+    expect(stTids(container)).toEqual(['gg-substate-empty', 'gg-substate-faults']);
+    expect(stTexts(container)).toEqual(['served empty', 'served faults']);
+    expect(screen.getByTestId('gg-substate-empty').className).toBe('gg-dv-line');
+    expect(screen.getByTestId('gg-substate-faults').className).toBe('gg-dv-line cm-note');
+    expect(screen.getByTestId('gg-substate').textContent).toBe('served emptyserved faults');
+  });
+
+  it('fold closed: chartless lines print the served state_label; a safe href → link; NEGATIVE unsafe → text, no empty line', () => {
+    const b = { ...ST_BASE(), faults_text: 'served faults', chartless: [
+      { symbol: 'AAA', state_label: 'served chartless AAA', href: '/chart-maps?tab=gajjala&focus=AAA' },
+      { symbol: 'BBB', state_label: 'served chartless BBB', href: 'javascript:alert(1)' },
+      { symbol: 'DDD', state_label: 'served chartless DDD', href: '//evil.example/x' },
+      { symbol: 'CCC', state_label: NaN, href: '/sepa/CCC' },
+      null, 7,
+    ] };
+    const { container } = inFold(<GgDivergingState block={b as any} />);
+    expect(stTids(container)).toEqual(['gg-substate-chartless-AAA', 'gg-substate-chartless-BBB', 'gg-substate-chartless-DDD',
+      'gg-substate-faults']);
+    expect(stTexts(container)).toEqual(['served chartless AAA', 'served chartless BBB', 'served chartless DDD', 'served faults']);
+    expect(screen.getByTestId('gg-substate-chartless-AAA').querySelector('a')!.getAttribute('href'))
+      .toBe('/chart-maps?tab=gajjala&focus=AAA');
+    expect(screen.getByTestId('gg-substate-chartless-BBB').querySelector('a')).toBeNull();
+    expect(screen.getByTestId('gg-substate-chartless-DDD').querySelector('a')).toBeNull();
+    expect(screen.queryByTestId('gg-substate-empty')).toBeNull();
+  });
+
+  it('equality: State prints exactly the strings the panel prints for the same block (several shapes)', () => {
+    const shapes: any[] = [
+      { ...ST_BASE(), faults_text: 'served faults' },
+      { ...ST_BASE(), chartless: [{ symbol: 'Q', state_label: 'served q', href: '/sepa/Q' }, { symbol: 'R', state_label: '', href: null }] },
+      { ...clone(DG_BLOCK), n: 2, faults_text: 'served faults' },
+      { ...ST_BASE(), empty_text: NaN },
+    ];
+    for (const b of shapes) {
+      const p = render(<MemoryRouter><GgDivergingPanel block={clone(b)} /></MemoryRouter>);
+      const want = panelTexts(p.container);
+      const hrefs = [...p.container.querySelectorAll('[data-testid^="gg-dg-chartless-"] a')].map((a) => a.getAttribute('href'));
+      p.unmount();
+      const s = inFold(<GgDivergingState block={clone(b)} />);
+      expect(stTexts(s.container)).toEqual(want);
+      expect([...s.container.querySelectorAll('[data-testid^="gg-substate-chartless-"] a')].map((a) => a.getAttribute('href')))
+        .toEqual(hrefs);
+      s.unmount();
+    }
+  });
+
+  it('NEGATIVE: fold OPEN (set, or stored "1") → nothing; another sub\'s open flag → the lines still print', () => {
+    const b = { ...ST_BASE(), faults_text: 'served faults' } as any;
+    localStorage.setItem('gg-fold:sub:bull_flag', '1');
+    const one = inFold(<GgDivergingState block={b} />);
+    expect(screen.getByTestId('gg-substate-faults').textContent).toBe('served faults');
+    one.unmount();
+    setGgFold(ST_KEY, true);
+    const two = inFold(<GgDivergingState block={b} />);
+    expect(two.container.innerHTML).toBe('');
+    two.unmount();
+    localStorage.setItem(`gg-fold:${ST_KEY}`, '1');
+    resetGgFold();
+    expect(inFold(<GgDivergingState block={b} />).container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: no fold context (🧪 / 1-min / standalone) → nothing', () => {
+    const b = { ...ST_BASE(), faults_text: 'served faults' } as any;
+    expect(inFold(<GgDivergingState block={b} />, null).container.innerHTML).toBe('');
+    expect(render(<MemoryRouter><GgDivergingState block={b} /></MemoryRouter>).container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: nothing served (n > 0, no chartless, no faults) → no root', () => {
+    const { container } = inFold(<GgDivergingState block={clone(DG_BLOCK)} />);
+    expect(screen.queryByTestId('gg-substate')).toBeNull();
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('NEGATIVE: a null / undefined / non-object block → nothing', () => {
+    for (const b of [null, undefined, 'served', 7, NaN, true] as any[]) {
+      const { container, unmount } = inFold(<GgDivergingState block={b} />);
+      expect(container.innerHTML, String(b)).toBe('');
+      unmount();
+    }
+  });
+
+  it('NEGATIVE: NaN / number / "" texts print nothing; n null / NaN / "0" → no empty line', () => {
+    const b = { ...ST_BASE(), empty_text: '', faults_text: NaN, chartless: [{ symbol: 'X', state_label: 5, href: '/sepa/X' }] };
+    const { container, unmount } = inFold(<GgDivergingState block={b as any} />);
+    expect(container.innerHTML).toBe('');
+    expect(container.textContent).not.toMatch(/NaN|undefined/);
+    unmount();
+    for (const n of [3, null, undefined, NaN, '0']) {
+      const r = inFold(<GgDivergingState block={{ ...clone(DG_BLOCK), n: n, faults_text: 'served faults' } as any} />);
+      expect(screen.queryByTestId('gg-substate-empty'), String(n)).toBeNull();
+      expect(screen.getByTestId('gg-substate-faults')).toBeTruthy();
+      r.unmount();
+    }
+  });
+
+  it('source: ONE private selector shared by the panel and the State — the chartless filter and the empty test each once', async () => {
+    const src = await readSource('src/components/GgDiverging.tsx');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code.split('block.n === 0').length - 1).toBe(1);
+    expect(code.split('Array.isArray(block.chartless)').length - 1).toBe(1);
+    expect(code).toMatch(/\nfunction listed\(block: GgDivergingBlock\)/);
+    expect(code.match(/= listed\(block\);/g)).toHaveLength(2);
+    expect(code).toMatch(/return <GgSubState lines=\{lines\} \/>;/);
+    const state = code.slice(code.indexOf('export function GgDivergingState('), code.indexOf('export function GgDivergingPanel('));
+    expect(state.length).toBeGreaterThan(0);
+    expect(state).not.toMatch(/gg-dg/);
   });
 });

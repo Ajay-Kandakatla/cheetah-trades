@@ -138,6 +138,9 @@ describe('🌱 the diverging sub on the board (the 👀 Watch layout is the defa
     const panel = screen.getByTestId('gg-dg');
     const grid = await screen.findByTestId('gg-cardgrid');
     expect(panel.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // WIDENED 2026-11-24 (ggclean): the panel sits in the sub's closed ⓘ fold (gg-sub-body), still above the grid.
+    expect(panel.closest('[data-testid="gg-sub-body"]')).not.toBeNull();
+    expect(panel).not.toBeVisible();
     expect(screen.getByTestId('gg-dg-title').textContent).toBe('served dg title');
     expect(screen.getByTestId('gg-dg-pick-1').textContent).toBe('served pick two');
     expect(screen.getByTestId('gg-dg-honesty').textContent).toBe('served honesty');
@@ -179,6 +182,7 @@ describe('🌱 the diverging sub on the board (the 👀 Watch layout is the defa
     expect(screen.queryByTestId('gg-cardgrid')).toBeNull();
     const grid = container.querySelector('.cm-grid')!;
     expect(screen.getByTestId('gg-dg').compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('gg-dg').closest('[data-testid="gg-sub-body"]')).not.toBeNull();   // WIDENED 2026-11-24 (ggclean)
     expect(within(tile).getAllByRole('listitem').filter((li) => li.className === 'gg-ok')).toHaveLength(5);
   });
 
