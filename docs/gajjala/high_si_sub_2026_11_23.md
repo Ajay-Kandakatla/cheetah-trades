@@ -143,3 +143,17 @@ scanner list do not list. 13. A stale read drops the name. 14. No bearish cross 
 16–18. /alerts strip placement, Notifications wording, not sticky (WP `fe-push`). 19. No-tier names (named in ⓘ, never
 tiered on the card's float). 20. Carried names and 📌 / 🎪 adds list (tagged, counted). 21. The two served "display
 only" strings in `short_interest/read.py` stay unchanged.
+
+## 2026-11-23 (night) — the % goes into the card chip
+
+Ajay, on three cards where a 49.2% High sat beside a 26.8% EXTREME: "Why is high more than extreme? can you actually put a
+percentage directly here?"
+
+- **Why:** EXTREME on the house ladder needs ≥ 20% of the float, ≥ 10% of shares outstanding **and a confirmed float**
+  (`short_interest/read.py`, 2026-11-18). A name whose float is unconfirmed is held at High whatever its % — so a High can
+  carry a bigger % than an EXTREME.
+- **Change (words only):** `high_si.tier_chip(read)` builds the chip: `🩳 49.2% short interest · High (float unconfirmed)
+  · float at or under 10,000,000`. The % is the short-interest record's own `pct_of_float` (what the tier is read on), else
+  the card's float %; no number → no %. The chartless line carries the same words (never the ticker).
+- No tier, listing, order, gate or push changes. Tests: `backend/tests/test_gajjala_high_si_pct_chip_2026_11_23.py`
+  (incl. NEGATIVES: no number → no %, never "None"/"nan"; a confirmed float never says "unconfirmed").

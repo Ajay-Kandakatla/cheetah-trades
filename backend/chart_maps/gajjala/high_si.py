@@ -106,6 +106,21 @@ def _pct(x) -> str:
     return DASH if v is None else SR._pct_tier(v)
 
 
+def tier_chip(read: dict) -> str:
+    """The card's 🩳 chip words WITH the % in them (Ajay 2026-11-23: "Why is high more than extreme? can you actually put
+    a percentage directly here?"). The % is the short-interest record's own % of float (the one the house tier is read
+    on), else this card's float %; no number → no %, never "None" / "nan". A name the house holds at High because its
+    float is unconfirmed says so in the chip (SR.FLOAT_UNCONFIRMED_WORD) — that is why a High can carry a bigger % than
+    an EXTREME. Words only: no tier, gate or listing changes here."""
+    read = read if isinstance(read, dict) else {}
+    p = _f(read.get("pct_record"))
+    if p is None:
+        p = _f(read.get("pct_card"))
+    pct = "" if p is None else _pct(p) + " "
+    unc = " (%s)" % SR.FLOAT_UNCONFIRMED_WORD if read.get("float_check") == SR.FLOAT_UNCONFIRMED else ""
+    return "🩳 %sshort interest · %s%s" % (pct, read.get("tier_word") or DASH, unc)
+
+
 def _hhmm(t) -> Optional[str]:
     from chart_maps.gajjala import tab as GT
     return GT._hhmm(t)
@@ -284,6 +299,7 @@ def evaluate(reads_by: dict, *, scan_row: Callable, session: date, now: datetime
                     "tier_sentence": SR._tier_sentence(b), "si_chip": b.get("chip"),
                     "settlement_date": b.get("settlement_date"), "float_shares": c["float_shares"],
                     "si_float_shares": c["si_float_shares"], "pct_card": c["pct_card"],
+                    "pct_record": _f(b.get("pct_of_float")),
                     "float_text": (GT._float_chip(fr) or {}).get("text"), "floats_text": floats_text(fr, b),
                     "session_volume": row_.get("volume"),
                     "carried": (lrow.get("last_qualified") != s_iso) if isinstance(lrow, dict) else None,
@@ -598,7 +614,7 @@ def card(read_doc: dict, row: dict, *, tf: str, scan_row: dict, sess: dict, halt
                                              for f, bt in rang),
                          "need": "", "ok": True})
     g = {"setup": GC.HIGH_SI_SUB, "state": STATE,
-         "state_label": "🩳 %s short interest · float at or under %s" % (r.get("tier_word") or DASH, _cap_text()),
+         "state_label": "%s · float at or under %s" % (tier_chip(r), _cap_text()),
          "criteria": criteria, "missed": [], "unjudged": [], "plan_text": None, "chips": chips,
          "listed": GT._listed_block(listed_info),
          "high_si": {"tier": r.get("tier"), "float_check": r.get("float_check"), "si_chip": r.get("si_chip"),
@@ -623,7 +639,7 @@ def _cards(rows: list, *, tf: str, scan_row: Callable, sess: dict, halts_by: dic
         line = {"symbol": sym, "at_text": None, "state_label": None, "href": None,
                 "text": CHARTLESS_TEXT.format(sym=sym or DASH)}
         try:
-            line["state_label"] = "🩳 %s short interest" % (row["read"].get("tier_word") or DASH)
+            line["state_label"] = tier_chip(row["read"])
             line["href"] = GT.chart_href(sym, tf, v) if sym else None
             t = card(row["read_doc"], row, tf=tf, scan_row=scan_row(sym), sess=sess,
                      halt_doc=(halts_by or {}).get(sym), listed_info=(listed or {}).get(sym), pass_at=pass_at, v=v,

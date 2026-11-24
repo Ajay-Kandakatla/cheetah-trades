@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-23 night, verbatim, on three 🩳 cards (a 49.2% High beside a 26.8% EXTREME): "Why is high more than
+  // extreme? can you actually put a percentage directly here?". BE chart_maps/gajjala/high_si.tier_chip (words only; the
+  // record's % of float, else the card's; "(float unconfirmed)" when the house holds the name at High for that reason).
+  // Docs docs/gajjala/high_si_sub_2026_11_23.md (2026-11-23 night section).
+  {
+    id: 'gajjala-high-si-pct-chip-2026-11-23',
+    label: "🩳 The % is in the High SI chip — you said: “Why is high more than extreme? can you actually put a percentage directly here?”. Each 🩳 card now reads like “🩳 49.2% short interest · High (float unconfirmed)”. A High can show a bigger % than an EXTREME when its float is not confirmed: EXTREME needs a confirmed float. Words only — nothing about which names list changed.",
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-23, verbatim (voice-typed; "high charging tested" = high short interest, "Gazilla" = Gajjala, "talks" =
   // stocks): "Can you create a tab similarly like Divergent with high charging tested, SHO tag, and low floats similar to
   // what we've done in Divergent tab under Gazilla? And also add alerts for these talks when they are crossing EMA, 9 EMA
