@@ -38,14 +38,22 @@ NASDAQ, NYSE, CBOE = RS.SOURCES
 FORBIDDEN = re.compile(r"fee|impossible|cannot be borrowed|no shares|squeeze|bounce|fake|predict|will (rise|fall|drop)",
                        re.I)
 
-AKAN_CHIP = "🔒 Hard to borrow · threshold security · 11/20"
-AKAN_SHORT = "🔒 Hard to borrow · 11/20"
-AKAN_LABEL = "🔒 Hard to borrow · Reg SHO threshold security · Nasdaq list for 11/20"
+# 2026-11-24: AKAN is day 1 of its run (the close-out day of spec regsho_tag §3.3)
+AKAN_CHIP = "🔒 Hard to borrow · threshold security · 11/20 · day 1 of 13 · close-out day Wed 12/9 if it stays on"
+AKAN_SHORT = "🔒 close-out Wed 12/9 · day 1 of 13"
+AKAN_LABEL = ("🔒 Hard to borrow · Reg SHO threshold security · Nasdaq list for 11/20 · day 1 of 13 · close-out day "
+              "Wed 12/9 if it stays on")
 AKAN_TITLE = ("🔒 Hard to borrow — AKAN is a Reg SHO threshold security on the Nasdaq list for 2026-11-20: fails to "
               "deliver of at least 10,000 shares and at least 0.5% of shares outstanding for 5 straight settlement "
               "days (SEC Regulation SHO Rule 203(c)(6)). The threshold list measures persistent fails to deliver, not "
               "a broker's borrow rate — a broker's own hard-to-borrow list can differ. A data label, not a signal. "
-              "UNMEASURED.")
+              "UNMEASURED. On the list 1 straight settlement day since 11/20. Day 13 = Wed 12/9 if it stays on (Thu "
+              "12/10 if counted from each list's next open). After day 13, Rule 203(b)(3) makes a clearing firm buy "
+              "shares to close out a fail to deliver it carried on every one of those days; the buying may come from "
+              "day 11 (Mon 12/7) and must start by the next open (SEC staff FAQ 6.5, 6.7). Rule 204 already requires a "
+              "fail in any stock to be closed out 1 to 3 settlement days after settlement, so fails generally do not "
+              "last 13 (SEC staff); for a Rule 144 sale the count is 35, not 13. Fails to deliver only, not every "
+              "short position. A rule date — it says nothing about price. Not advice.")
 
 
 # ═════════════════════════════════════════════ fakes
@@ -59,7 +67,14 @@ class StandIn:
 
     @staticmethod
     def _match(doc, flt):
-        return all(doc.get(k) == v for k, v in flt.items())
+        for k, v in flt.items():
+            if isinstance(v, dict):
+                assert set(v) == {"$gte"} and isinstance(v["$gte"], str), v
+                if not isinstance(doc.get(k), str) or doc.get(k) < v["$gte"]:
+                    return False
+            elif doc.get(k) != v:
+                return False
+        return True
 
     def find_one(self, flt, sort=None):
         assert sort == [("trade_date", -1)], sort
@@ -68,7 +83,12 @@ class StandIn:
         return copy.deepcopy(hits[0]) if hits else None
 
     def find(self, flt):
-        assert flt == {"kind": "state"}, flt
+        # 2026-11-24: the close-out day's history adds exactly two window-bounded filters
+        ok = flt == {"kind": "state"} or (
+            set(flt) == {"kind", "trade_date"} and flt["kind"] in ("list", "nolist")
+            and isinstance(flt["trade_date"], dict) and set(flt["trade_date"]) == {"$gte"}
+            and isinstance(flt["trade_date"]["$gte"], str))
+        assert ok, flt
         return [copy.deepcopy(d) for d in self.docs.values() if self._match(d, flt)]
 
     def replace_one(self, flt, doc, upsert=False):
@@ -213,6 +233,7 @@ def golden_round(answers=None, now=NOW):
 
 def build_golden_payload() -> dict:
     coll, _http, _ran = golden_round()
+    RS.backfill_history(coll, NOW, http=FakeHTTP(fixture_answers()))     # 2026-11-24: ONE history round
     return RS.payload(FakeDB(coll), NOW, kick=False)
 
 
@@ -230,6 +251,8 @@ def outside_calls(monkeypatch):
         raise RuntimeError("reg_sho outside calls are refused in this file")
     monkeypatch.setattr(RS, "_http", recorder)
     monkeypatch.setattr(RS, "_bg", {"running": False, "last_start": None, "thread": None})
+    monkeypatch.setattr(RS, "_pause", lambda s: None)
+    monkeypatch.setattr(RS, "_hist", {"blocked_until": None})
     yield calls
     t = RS._bg.get("thread")
     if t is not None:
@@ -1103,7 +1126,12 @@ def test_rules_pick_is_the_last_pick_and_the_section_is_at_the_cap():
     assert RS.rules_pick().startswith("🔒 Hard to borrow (the tag's name) = ")
     for w in ("Nasdaq, NYSE, NYSE American, NYSE Arca and Cboe BZX", "(Nasdaq, NYSE, NYSE American)",
               "10,000 shares", "0.5% of shares outstanding", "5 straight settlement days", RS.HONESTY_NOTE,
-              "UNMEASURED"):
+              "UNMEASURED",
+              # 2026-11-24: the close-out day folds into this pick (the section is at its cap)
+              "dates day 13", "SEC Regulation SHO Rule 203(b)(3)", "the buying may come from day 11",
+              "Rule 204 already requires", "for a Rule 144 sale the count is 35, not 13",
+              "Bank holidays (Columbus Day and Veterans Day) are not settlement days (Rule 203(c)(5))",
+              "one settlement day later", "A rule date — it says nothing about price."):
         assert w in RS.rules_pick(), w
 
 

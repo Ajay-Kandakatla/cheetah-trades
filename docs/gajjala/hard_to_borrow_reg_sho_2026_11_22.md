@@ -42,6 +42,12 @@ A tag from a list that could not be refreshed keeps drawing with its date and ` 
 word), and a greyed look. No served string says borrow fee, a borrow rate as a number, "cannot be borrowed",
 "impossible", a squeeze promise or a prediction — a test pins that.
 
+**2026-11-24 — the words grew.** The four strings above are the tag as built on 11-22. Since 11-24 each one also
+carries the run of consecutive settlement days on the list and the Rule 203(b)(3) close-out day (e.g. AKAN on the
+11/20 list: `🔒 close-out Wed 12/9 · day 1 of 13`), or ` · day count unknown` when a day's list was not read. The
+six states, the worked strings, what the date is and is not, and the history behind it live in
+`docs/gajjala/reg_sho_closeout_day_2026_11_24.md`. The test file pins the current strings.
+
 ## The three sources (five exchanges)
 
 All three are keyless public files. Every fact below was measured with single GETs on 2026-11-22 (Sunday), the
@@ -195,20 +201,36 @@ not tag ACON.
 ## The Mongo docs — never purged
 
 Collection `reg_sho_threshold` (new). The only operations used: `find_one` with a sort, `find({"kind": "state"})`,
-`replace_one(…, upsert=True)`, and one best-effort `create_index`. **No delete anywhere.**
+`replace_one(…, upsert=True)`, and one best-effort `create_index`. **No delete anywhere.** Since 2026-11-24 the
+history read adds exactly two more `find` filters, both bounded by the 30-settlement-day window:
+`find({"kind": "list", "trade_date": {"$gte": "<YYYY-MM-DD>"}})` and
+`find({"kind": "nolist", "trade_date": {"$gte": "<YYYY-MM-DD>"}})`.
 
 ```
-list  : {_id: "list|<mkt>|<YYYY-MM-DD>", kind: "list", source, market, exchange, trade_date, symbols: [...], n, skipped,
-         file_stamp, url, fetched_at, confirmed_at, revised_at}
-state : {_id: "state|<source>", kind: "state", source, attempt_at, attempt_for, result: "running" | "found" |
-         "missing_walked" | "error", error, errors, good_date, checked_at}
+list         : {_id: "list|<mkt>|<YYYY-MM-DD>", kind: "list", source, market, exchange, trade_date, symbols: [...], n,
+                skipped, file_stamp, url, fetched_at, confirmed_at, revised_at}
+               a backfilled one (2026-11-24) also carries "backfilled": true
+state        : {_id: "state|<source>", kind: "state", source, attempt_at, attempt_for, result: "running" | "found" |
+                "missing_walked" | "error", error, errors, good_date, checked_at}
+fetch hole   : {_id: "nolist|<source>|<YYYY-MM-DD>",         kind: "nolist", op: "fetch",   source, market: None,
+                trade_date, result: "missing" | "error", error, tries, asked_at}                       (2026-11-24)
+confirm hole : {_id: "nolist|confirm|<market>|<YYYY-MM-DD>", kind: "nolist", op: "confirm", source, market,
+                trade_date, result: "error", error, tries, asked_at}                                   (2026-11-24)
 ```
 
 - **Never purged — `fetched_at` is the point-in-time record a later study would need.** It is the FIRST write time
   and is never overwritten (a confirming re-read sets `confirmed_at` / `revised_at`, not `fetched_at`). About five
   small docs per trading day (~10 KB/day, ~2.5 MB/year).
-- The read loads only the newest list doc per market (five `find_one`) plus the three state docs; history costs the
-  read nothing.
+- **`backfilled: true` is NOT point-in-time.** A list doc written by the 11-24 history backfill has `fetched_at` =
+  the backfill time, days after its trade date. A later study must exclude those docs or treat them as hindsight.
+  The backfill never overwrites a held list doc.
+- The hole docs record a date whose list could not be read (a "no file" answer, an error, or a failed confirming
+  re-read), so the one retry rule can space the next ask. The rule, the cool-down and the breaker:
+  `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`.
+- **Corrected 2026-11-24:** the read no longer loads only the newest list. It loads the newest list doc per market
+  (five `find_one`) plus the three state docs, and — when any market holds a list — the list and hole docs of the
+  30-settlement-day window (the two `find` filters above, ≤ ~155 small docs), to count each name's run of days on
+  its list. The read still never fetches.
 - The state doc is written with `result: "running"` BEFORE the first outside call and overwritten in a `finally`, so
   a worker that dies mid-round still throttles the next one.
 
@@ -219,6 +241,8 @@ state : {_id: "state|<source>", kind: "state", source, attempt_at, attempt_for, 
   cannot start), with an in-process floor of `RS_KICK_MIN_SEC` between worker starts.
 - Calendar-aware: when the newest held list is already the expected one and nothing waits for a confirming re-read,
   the source is never due → **0 outside calls**. Attempts for one source are spaced by `RS_RETRY_MIN`.
+  (2026-11-24: the same worker then runs the paced history backfill and the due re-asks of open holes — see
+  `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`; once the window is read and no hole is due it adds 0 calls.)
 - While a refresh runs the payload says `refreshing: true` with `retry_after_sec` = `RS_RETRY_AFTER_SEC`; the
   frontend hook makes at most `RS_FOLLOWUP_MAX` follow-up GETs and keeps a still-`refreshing` answer only
   `RS_RETRY_MS`, not the full `RS_TTL_MS`.
@@ -277,6 +301,17 @@ ever disagree, the code wins. **MINE** = a number or word I chose; none is a tra
 | publish clocks | Nasdaq / NYSE 23:15 ET; Cboe next business day 03:30 ET | **MINE** (Nasdaq and Cboe from one `Last-Modified` each; NYSE typed) |
 | FE `RS_TTL_MS` / `RS_RETRY_MS` | 600000 / 60000 | **MINE** (the 🩳 hook's own values) |
 | FE `RS_FOLLOWUP_MAX` / `RS_FOLLOWUP_MIN_MS` / `RS_FOLLOWUP_MAX_MS` | 2 / 5000 / 120000 | **MINE** |
+| `RS_HIST_SETTLEMENT_DAYS` | 30 | **MINE** (2026-11-24) — settlement days of lists read behind the newest one, per market |
+| `RS_HIST_MAX_GETS` | 40 | **MINE** (2026-11-24) — outside calls after which a backfill round starts no further item |
+| `RS_HIST_BUDGET_SEC` | 45 | **MINE** (2026-11-24) — wall budget of one backfill round |
+| `RS_HIST_PAUSE_SEC` | 0.25 | **MINE** (2026-11-24) — pause between two backfill items |
+| `RS_HIST_MAX_TRIES` | 3 | **MINE** (2026-11-24) — asks of one hole at the short spacing |
+| `RS_HIST_REASK_MIN` | 1440 | **MINE** (2026-11-24) — minutes between asks of a `missing` hole, and of an `error` hole past the tries |
+| `RS_HIST_NOT_READ_MAX` | 10 | **MINE** (2026-11-24) — unread dates listed per market in the payload |
+| `HOLE_KIND` | `nolist` | **MINE** (2026-11-24) — doc kind of a recorded hole |
+
+The Rule 203(b)(3) / Rule 204 / Rule 144 constants of the close-out day live in `backend/short_interest/reg_sho_runs.py`;
+their table is in `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`.
 
 ## ℹ️ Rules
 
@@ -319,6 +354,9 @@ point-in-time study is possible later — only on his word.
 10. **Measurement.** UNMEASURED. A pre-registered study of threshold-list names × 🎾 outcomes only on his word.
 11. **ℹ️ home.** Default: pick 8 of the 🩳 section (now full). Its own ℹ️ section is his call.
 12. **Look.** Default: neutral — no amber, no heavy bold; the 🩳 EXTREME alarm look stays EXTREME's alone.
+13. **The close-out day on the tag (2026-11-24).** Its own HIS CALL list — a date at all, how day 1 is counted,
+    settlement vs trading days, which date, the phone chip, the word — is in
+    `docs/gajjala/reg_sho_closeout_day_2026_11_24.md`.
 
 ## How to check
 

@@ -24,6 +24,22 @@ single-flight daemon worker kicked from the read (the
 `supply_demand.bounce_room.queue_ondemand` shape), throttled and calendar
 aware — 0 outside calls when no newer list can exist.
 
+THE CLOSE-OUT DAY (2026-11-24, Ajay: "I need to know when it would like to Potentially squeeze.." · "Add a tag with
+date in it.."; see docs/gajjala/reg_sho_closeout_day_2026_11_24.md). The tag now also counts the name's current run of
+straight SETTLEMENT days on its list and prints the Rule 203(b)(3) close-out day of that run (`reg_sho_runs`, the pure
+math). The per-date history is READ now:
+  * the same single worker, right AFTER `refresh_due` (never inside it), backfills RS_HIST_SETTLEMENT_DAYS settlement
+    days of lists per market through the same fetch path (`backfill_history`), paced and bounded;
+  * a date with no file, or one that errored, gets a hole doc (`kind: "nolist"`, op fetch or confirm, `tries`,
+    `asked_at`); ONE retry rule (`_hole_due`): errors are re-asked, never final; a source with a fresh error sits
+    out RS_RETRY_MIN; one failing item per source per round; a Mongo write that raises trips an in-process breaker;
+  * a backfilled list doc carries `backfilled: true` — its `fetched_at` is the BACKFILL time, days after the trade
+    date, so it is NOT a point-in-time record;
+  * the read adds exactly two `find` filters, both bounded by the window:
+    {"kind": "list", "trade_date": {"$gte": …}} and {"kind": "nolist", "trade_date": {"$gte": …}};
+  * any failure in the history path serves `day count unknown` on the tag — never the fault payload.
+A rule date, not a price read. DISPLAY ONLY. UNMEASURED.
+
 TRAPS (measured 2026-11-22, see docs/gajjala/hard_to_borrow_reg_sho_2026_11_22.md):
   * Nasdaq "no file" is HTTP 302 to /Trader.aspx?id=http404 — never a 404, so
     requests always pass allow_redirects=False.
@@ -51,6 +67,7 @@ from zoneinfo import ZoneInfo
 
 from short_interest import client as SIC
 from short_interest import read as SR
+from short_interest import reg_sho_runs as RUNS
 
 log = logging.getLogger("short_interest.reg_sho")
 
@@ -86,6 +103,15 @@ RS_MAX_BYTES = 2_000_000
 RS_MAX_ROWS = 5000
 RS_MAX_SKIPPED_ROWS = 10         # [C4] more unreadable symbol cells than this = a malformed file
 HTTP_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; reg-sho-reader)"}   # no project name, no email
+# the close-out day's history (2026-11-24) — engineering constants, MINE, none is a trading threshold
+RS_HIST_SETTLEMENT_DAYS = 30     # settlement days of lists read behind (and including) the newest one, per market
+RS_HIST_MAX_GETS = 40            # outside calls after which a backfill round starts no further item
+RS_HIST_BUDGET_SEC = 45          # wall budget of one backfill round
+RS_HIST_PAUSE_SEC = 0.25         # pause between two backfill items
+RS_HIST_MAX_TRIES = 3            # asks of one hole at the short spacing; then an error goes daily, a missing is final
+RS_HIST_REASK_MIN = 1440         # minutes between two asks of a missing hole, and of an error hole past the tries
+RS_HIST_NOT_READ_MAX = 10        # unread dates listed per market in closeout.history.not_read
+HOLE_KIND = "nolist"             # doc kind of a recorded hole
 _ET = ZoneInfo("America/New_York")
 _DEFAULT = object()              # [C6] "resolve the house Mongo handle"; None now means ONLY "Mongo is down"
 _http = None                     # [C6] the ONE outside-call seam; None → requests.get (lazy import)
@@ -139,6 +165,48 @@ SRC_PENDING = "%s threshold list not read yet"
 FAULT_TEXT = "%s %s tags may be missing or out of date: %s."          # GLYPH, TAG_WORDS, faulting markets' texts "; "
 FAULT_UNREADABLE = "%s %s tags could not be read — a missing tag does not mean the name is off the list."   # [C1]
 
+# the close-out day (2026-11-24) — every number comes from a reg_sho_runs constant or the run block, never typed here
+CLOSEOUT_WORD = "close-out"                             # the rule's own word — HIS CALL #6
+RUN_DAY = "day %d of %d"                                # n, rule days
+RUN_DAY_PAST = "day %d"
+RUN_DAY_OPEN = "day %d+"
+IF_STAYS = "if it stays on"                             # on the chip AND the label: the phone has no hover
+RUN_TAIL = " · %s · %s day %s %s"                       # chip + label, counting: RUN_DAY, CLOSEOUT_WORD, date, IF_STAYS
+RUN_TAIL_REACHED = " · %s · %s day %s"                  # chip + label, reached: the date is this list's own date
+CHIP_RUN_PAST = " · %s · %s day passed %s · still on"   # RUN_DAY_PAST, CLOSEOUT_WORD, date
+CHIP_RUN_OPEN = " · %s · %s day passed · still on"      # RUN_DAY_OPEN, CLOSEOUT_WORD
+LABEL_RUN_PAST = " · %s · %s day passed %s · still on the list"
+LABEL_RUN_OPEN = " · %s · %s day passed · still on the list"
+RUN_UNKNOWN = " · day count unknown"                    # chip and label
+SHORT_RUN = "%s %s %s · %s"                             # GLYPH, CLOSEOUT_WORD, date, RUN_DAY — DATE FIRST (ellipsis-safe)
+SHORT_RUN_PAST = "%s %s passed %s · %s"                 # GLYPH, CLOSEOUT_WORD, date, RUN_DAY_PAST
+SHORT_RUN_OPEN = "%s %s passed · %s"                    # GLYPH, CLOSEOUT_WORD, RUN_DAY_OPEN
+LATE_ALT = " (%s if counted from each list's next open)"
+RULE_SENTENCE = ("After day %d, %s makes a clearing firm buy shares to close out a fail to deliver it carried on every "
+                 "one of those days")
+BUY_WINDOW = "; the buying may come from day %d (%s) and must start by the next open (%s)"
+RULE_204_SENTENCE = ("%s already requires a fail in any stock to be closed out %d to %d settlement days after "
+                     "settlement, so fails generally do not last %d (SEC staff); for a %s sale the count is %d, not %d.")
+TITLE_RUN = " On the list %d straight settlement %s since %s. Day %d = %s %s%s. %s%s."
+TITLE_RUN_REACHED = " On the list %d straight settlement days since %s. Day %d = %s, this list's date%s. %s%s."
+TITLE_RUN_PAST = (" On the list %d straight settlement days since %s. Day %d was %s%s; it is still on the list %d "
+                  "settlement %s later. %s. Staying listed means the total of fails is still over the level, not that "
+                  "any one fail is that old — a name leaves a list only after %d straight settlement days back under it.")
+TITLE_RUN_OPEN_WINDOW = (" On every list read for the last %d settlement days (back to %s), so day %d has passed; its "
+                         "date is not known. %s.")
+TITLE_RUN_OPEN_HOLE = (" On the list at least %d straight settlement days, so day %d has passed; its date is not known "
+                       "— the %s list for %s has not been read. %s.")
+TITLE_RUN_UNKNOWN = " Days on the list: not known — the %s list for %s has not been read."
+TITLE_RUN_UNKNOWN_BARE = " Days on the list: not known."
+FTD_ONLY = "Fails to deliver only, not every short position."
+NOT_A_PRICE_READ = "A rule date — it says nothing about price."
+NOT_ADVICE = "Not advice."
+PICK_RUN_TAIL = (" The tag also counts the straight settlement days a name has been on its list and dates day %d: "
+                 "after it, %s %s makes a clearing firm buy shares to close out a fail to deliver it carried on every "
+                 "one of those days (the buying may come from day %d). %s Bank holidays (%s) are not settlement days "
+                 "(%s). A list takes effect at the next open, so the date can be one settlement day later. %s")
+_DOW = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")   # never strftime("%a") (locale)
+
 _SYMBOL_CELL = re.compile(r"^[A-Z0-9][A-Z0-9 ./\-+$^=#]{0,14}$")
 _TRAILER = re.compile(r"^\d{14}$")
 _SEP_RUN = re.compile(r"[ ./\-]+")
@@ -151,6 +219,11 @@ class Malformed(ValueError):
 # ───────────────────────────────────────────── seams
 def _mono() -> float:
     return time.monotonic()
+
+
+def _pause(sec: float) -> None:
+    """The ONE pause seam of the backfill — called only BETWEEN two items."""
+    time.sleep(sec)
 
 
 def _resolve_http(http):
@@ -409,6 +482,45 @@ def _believed(doc: dict) -> bool:
     return int(doc.get("n") or 0) > 0 or bool(doc.get("confirmed_at"))
 
 
+def _write_found(coll, src: dict, d: date, got: dict, now_iso: str, *, backfilled: bool = False,
+                 skip=frozenset()) -> int:
+    """Write one list doc per market of a `found` answer for date d (a raising write propagates). Markets in `skip` —
+    those that already hold a doc for d — are not written, so their `fetched_at` stays the first write. Returns the
+    number of docs written."""
+    key = src["key"]
+    wrote = 0
+    for mkt, r in got["markets"].items():
+        if mkt in skip:
+            continue
+        n = len(r["symbols"])
+        doc = {"_id": "list|%s|%s" % (mkt, d.isoformat()), "kind": "list", "source": key,
+               "market": mkt, "exchange": _exchange(src, mkt), "trade_date": d.isoformat(),
+               "symbols": list(r["symbols"]), "n": n, "skipped": int(r["skipped"]),
+               "file_stamp": r["stamp"], "url": r["url"], "fetched_at": now_iso,
+               "confirmed_at": now_iso if n > 0 else None, "revised_at": None}
+        if backfilled:
+            doc["backfilled"] = True
+        coll.replace_one({"_id": doc["_id"]}, doc, upsert=True)
+        wrote += 1
+    return wrote
+
+
+def _confirm_zero_row(coll, src: dict, mkt: str, doc: dict, now_iso: str, *, http=None) -> str:
+    """[C2] The second read of a zero-row list. Returns "found" after it wrote the confirmation, else the fetch's error
+    (or result) word, having written nothing. A raising write propagates."""
+    td = _as_date(doc.get("trade_date"))
+    r = fetch_market(src, mkt, td, http=http)
+    if r["result"] != "found":
+        return r.get("error") or r["result"]
+    new = dict(doc)
+    new["confirmed_at"] = now_iso
+    if r["symbols"]:
+        new.update({"symbols": list(r["symbols"]), "n": len(r["symbols"]), "skipped": int(r["skipped"]),
+                    "file_stamp": r["stamp"], "revised_at": now_iso})
+    coll.replace_one({"_id": new["_id"]}, new, upsert=True)
+    return "found"
+
+
 # ───────────────────────────────────────────── refresh
 def refresh_source(src: dict, coll, now_et: datetime, *, http=None, deadline: Optional[float] = None) -> dict:
     """One source's refresh round. Returns the state doc it wrote (None when abandoned)."""
@@ -447,14 +559,7 @@ def refresh_source(src: dict, coll, now_et: datetime, *, http=None, deadline: Op
                 break
             got = fetch_source(src, d, http=http)
             if got["result"] == "found":
-                for mkt, r in got["markets"].items():
-                    n = len(r["symbols"])
-                    coll.replace_one({"_id": "list|%s|%s" % (mkt, d.isoformat())}, {
-                        "_id": "list|%s|%s" % (mkt, d.isoformat()), "kind": "list", "source": key,
-                        "market": mkt, "exchange": _exchange(src, mkt), "trade_date": d.isoformat(),
-                        "symbols": list(r["symbols"]), "n": n, "skipped": int(r["skipped"]),
-                        "file_stamp": r["stamp"], "url": r["url"], "fetched_at": now_iso,
-                        "confirmed_at": now_iso if n > 0 else None, "revised_at": None}, upsert=True)
+                _write_found(coll, src, d, got, now_iso)
                 held = d
                 break
             if got["result"] == "missing":
@@ -476,16 +581,7 @@ def refresh_source(src: dict, coll, now_et: datetime, *, http=None, deadline: Op
                 continue
             if deadline is not None and _mono() > deadline:
                 break
-            td = _as_date(doc.get("trade_date"))
-            r = fetch_market(src, mkt, td, http=http)
-            if r["result"] != "found":
-                continue
-            new = dict(doc)
-            new["confirmed_at"] = now_iso
-            if r["symbols"]:
-                new.update({"symbols": list(r["symbols"]), "n": len(r["symbols"]), "skipped": int(r["skipped"]),
-                            "file_stamp": r["stamp"], "revised_at": now_iso})
-            coll.replace_one({"_id": new["_id"]}, new, upsert=True)
+            _confirm_zero_row(coll, src, mkt, doc, now_iso, http=http)    # a failed re-read writes nothing
 
         newest = _held_date(src, {m: x for m, x in
                                   ((m, _newest_list(coll, m)) for m, _e, _f in source_markets(src)) if x})
@@ -576,6 +672,286 @@ def refresh_due(coll, now_et: Optional[datetime] = None, *, http=None) -> dict:
     return out
 
 
+# ───────────────────────────────────────────── the close-out day's history (2026-11-24)
+# In-process write-failure breaker [C2]: a Mongo write that raises stops the history for RS_RETRY_MIN.
+_hist = {"blocked_until": None}
+
+_OP_RANK = {"fetch": 0, "confirm": 1}
+
+
+def _hist_blocked() -> bool:
+    until = _hist.get("blocked_until")
+    return until is not None and _mono() < until
+
+
+def _empty_history() -> dict:
+    return {"days": {}, "members": {}, "docs": {}, "holes": {}}
+
+
+def _members_of(doc) -> Optional[frozenset]:
+    """A READ list's names, or None (unconfirmed zero-row, unreadable symbols, anything odd) [C4]."""
+    try:
+        if not isinstance(doc, dict) or not _believed(doc) or not isinstance(doc.get("symbols"), list):
+            return None
+        return frozenset(norm_symbol(s) for s in doc["symbols"])
+    except Exception:                                          # noqa: BLE001
+        return None
+
+
+def load_history(coll, loaded: dict) -> dict:
+    """The window of per-date list docs and hole docs behind each market's newest held list — two `find`s, NO read at
+    all when no market holds a list. members[mkt][iso] = the names of a READ list, else None (= not read)."""
+    out = _empty_history()
+    if coll is None:
+        return out
+    for _src, mkt, _ex, _f in all_markets():
+        held = (loaded.get("lists") or {}).get(mkt)
+        as_of = _as_date(held.get("trade_date")) if isinstance(held, dict) else None
+        if as_of is None:
+            continue
+        out["days"][mkt] = RUNS.settlement_days_back(as_of, RS_HIST_SETTLEMENT_DAYS)
+    if not out["days"]:
+        return out
+    since = min(ds[-1] for ds in out["days"].values()).isoformat()
+    for doc in coll.find({"kind": "list", "trade_date": {"$gte": since}}):
+        if isinstance(doc, dict) and doc.get("market") and doc.get("trade_date"):
+            out["docs"][(str(doc["market"]), str(doc["trade_date"]))] = doc
+    for doc in coll.find({"kind": HOLE_KIND, "trade_date": {"$gte": since}}):
+        if not isinstance(doc, dict) or not doc.get("trade_date"):
+            continue
+        iso = str(doc["trade_date"])
+        if doc.get("op") == "confirm" and doc.get("market"):
+            out["holes"][("confirm", str(doc["market"]), iso)] = doc
+        elif doc.get("op") == "fetch" and doc.get("source"):
+            out["holes"][("fetch", str(doc["source"]), iso)] = doc
+    for mkt, days in out["days"].items():
+        out["members"][mkt] = {d.isoformat(): _members_of(out["docs"].get((mkt, d.isoformat()))) for d in days}
+    return out
+
+
+def _hole_tries(hole) -> int:
+    t = hole.get("tries") if isinstance(hole, dict) else None
+    return t if isinstance(t, int) and not isinstance(t, bool) else 0
+
+
+def _hole_due(hole, now_et: datetime) -> bool:
+    """The ONE retry rule, fetch and confirm [C2, C3]. An `error` is never final: RS_HIST_MAX_TRIES asks RS_RETRY_MIN
+    apart, then one ask every RS_HIST_REASK_MIN. A `missing` is asked RS_HIST_REASK_MIN apart, then final."""
+    if not hole:
+        return True
+    age = _age_min(hole.get("asked_at"), _to_et(now_et))
+    if age is None:
+        return True
+    tries = _hole_tries(hole)
+    if hole.get("result") == "missing":
+        return tries < RS_HIST_MAX_TRIES and age >= RS_HIST_REASK_MIN
+    if tries < RS_HIST_MAX_TRIES:
+        return age >= RS_RETRY_MIN
+    return age >= RS_HIST_REASK_MIN
+
+
+def _hole_source(key: tuple) -> Optional[str]:
+    if key[0] == "fetch":
+        return key[1]
+    for src, mkt, _e, _f in all_markets():
+        if mkt == key[1]:
+            return src["key"]
+    return None
+
+
+def history_todo(loaded: dict, hist: dict, now_et: datetime) -> list:
+    """Pure. ("fetch", src, d) and ("confirm", src, mkt, d) items — never-asked before any re-ask, every fetch before
+    every confirm, newest date first, registry order inside a date. A source with a fresh `error` hole (fetch or
+    confirm, asked under RS_RETRY_MIN ago) contributes nothing."""
+    now_et = _to_et(now_et)
+    days = hist.get("days") or {}
+    docs = hist.get("docs") or {}
+    holes = hist.get("holes") or {}
+    lists = loaded.get("lists") or {}
+    cooling = set()
+    for key, hole in holes.items():
+        if not isinstance(hole, dict) or hole.get("result") == "missing":
+            continue
+        age = _age_min(hole.get("asked_at"), now_et)
+        if age is not None and age < RS_RETRY_MIN:
+            cooling.add(_hole_source(key))
+    ranked = []
+    for si, src in enumerate(SOURCES):
+        key = src["key"]
+        if key in cooling:
+            continue
+        mkts = [m for m, _e, _f in source_markets(src)]
+        union = sorted({d for m in mkts for d in days.get(m) or []}, reverse=True)
+        for d in union:
+            iso = d.isoformat()
+            if all((m, iso) in docs for m in mkts):
+                continue
+            hole = holes.get(("fetch", key, iso))
+            if _hole_due(hole, now_et):
+                ranked.append(((1 if hole else 0, _OP_RANK["fetch"], -d.toordinal(), si, 0), ("fetch", src, d)))
+        for mi, mkt in enumerate(mkts):
+            newest = (lists.get(mkt) or {}).get("trade_date")
+            for d in days.get(mkt) or []:
+                iso = d.isoformat()
+                doc = docs.get((mkt, iso))
+                if not doc or iso == newest or doc.get("confirmed_at"):
+                    continue
+                try:
+                    if int(doc.get("n") or 0) != 0:
+                        continue
+                except (TypeError, ValueError):
+                    continue
+                age = _age_min(doc.get("fetched_at"), now_et)
+                if age is None or age < RS_RETRY_MIN:
+                    continue
+                hole = holes.get(("confirm", mkt, iso))
+                if _hole_due(hole, now_et):
+                    ranked.append(((1 if hole else 0, _OP_RANK["confirm"], -d.toordinal(), si, mi),
+                                   ("confirm", src, mkt, d)))
+    ranked.sort(key=lambda kv: kv[0])
+    return [item for _k, item in ranked]
+
+
+def _write_hole(coll, op: str, src: dict, mkt: Optional[str], d: date, result: str, error, prev,
+                now_iso: str) -> None:
+    iso = d.isoformat()
+    hid = ("%s|%s|%s" % (HOLE_KIND, src["key"], iso) if op == "fetch"
+           else "%s|confirm|%s|%s" % (HOLE_KIND, mkt, iso))
+    coll.replace_one({"_id": hid}, {
+        "_id": hid, "kind": HOLE_KIND, "op": op, "source": src["key"], "market": mkt, "trade_date": iso,
+        "result": result, "error": error, "tries": _hole_tries(prev) + 1, "asked_at": now_iso}, upsert=True)
+
+
+def _trip_breaker(exc) -> None:
+    _hist["blocked_until"] = _mono() + RS_RETRY_MIN * 60
+    log.warning("reg_sho: history write failed, history paused %d min: %s", RS_RETRY_MIN, type(exc).__name__)
+
+
+def backfill_history(coll, now_et: Optional[datetime] = None, *, http=None) -> dict:
+    """One backfill round of the per-date history. {"calls", "found", "confirmed", "holes", "seconds"}. Never raises.
+    At most ONE failing item per source per round; stops starting items at RS_HIST_MAX_GETS calls or the
+    RS_HIST_BUDGET_SEC deadline; a raising Mongo write ends the round and trips the breaker."""
+    t0 = _mono()
+    out = {"calls": 0, "found": 0, "confirmed": 0, "holes": 0, "seconds": 0.0}
+    if coll is None or _hist_blocked():
+        return out
+    now_et = _to_et(now_et)
+    now_iso = _utc_iso(now_et)
+    calls = {"n": 0}
+    try:
+        base = _resolve_http(http)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: history has no http client: %s", type(exc).__name__)
+        return out
+
+    def counted(url, **kw):
+        calls["n"] += 1
+        return base(url, **kw)
+
+    try:
+        loaded = load(coll)
+        hist = load_history(coll, loaded)
+        todo = history_todo(loaded, hist, now_et)
+        deadline = t0 + RS_HIST_BUDGET_SEC
+        skip = set()
+        started = False
+        for item in todo:
+            op, src = item[0], item[1]
+            key = src["key"]
+            if key in skip:
+                continue
+            if calls["n"] >= RS_HIST_MAX_GETS or _mono() > deadline:
+                break
+            if started:
+                _pause(RS_HIST_PAUSE_SEC)
+            started = True
+            if op == "fetch":
+                d = item[2]
+                iso = d.isoformat()
+                got = fetch_source(src, d, http=counted)
+                prev = hist["holes"].get(("fetch", key, iso))
+                try:
+                    if got["result"] == "found":
+                        held = frozenset(m for m, _e, _f in source_markets(src) if (m, iso) in hist["docs"])
+                        _write_found(coll, src, d, got, now_iso, backfilled=True, skip=held)
+                        out["found"] += 1
+                    else:
+                        res = "missing" if got["result"] == "missing" else "error"
+                        _write_hole(coll, "fetch", src, None, d, res,
+                                    None if res == "missing" else (got.get("error") or "error"), prev, now_iso)
+                        out["holes"] += 1
+                        if res == "error":
+                            skip.add(key)
+                except Exception as exc:                       # noqa: BLE001
+                    _trip_breaker(exc)
+                    break
+            else:
+                mkt, d = item[2], item[3]
+                iso = d.isoformat()
+                prev = hist["holes"].get(("confirm", mkt, iso))
+                try:
+                    word = _confirm_zero_row(coll, src, mkt, hist["docs"][(mkt, iso)], now_iso, http=counted)
+                    if word == "found":
+                        out["confirmed"] += 1
+                    else:
+                        _write_hole(coll, "confirm", src, mkt, d, "error", word, prev, now_iso)
+                        out["holes"] += 1
+                        skip.add(key)
+                except Exception as exc:                       # noqa: BLE001
+                    _trip_breaker(exc)
+                    break
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: history round failed: %s", type(exc).__name__)
+    out["calls"] = calls["n"]
+    out["seconds"] = round(_mono() - t0, 3)
+    return out
+
+
+def _history_view(coll, loaded: dict, now_et: datetime) -> tuple:
+    """(hist, todo, ok) for the read — ONE guard [C4]: any exception → the empty history, no todo, ok False."""
+    if coll is None:
+        return _empty_history(), [], True
+    try:
+        hist = load_history(coll, loaded)
+        todo = [] if _hist_blocked() else history_todo(loaded, hist, now_et)
+        return hist, todo, True
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: history read failed, day counts unknown: %s", type(exc).__name__)
+        return _empty_history(), [], False
+
+
+def _run_block(norm: str, mkt: str, hist: dict) -> dict:
+    try:
+        days = (hist.get("days") or {}).get(mkt)
+        if not days:
+            return RUNS.unknown_block()
+        return RUNS.run_for(norm, days, (hist.get("members") or {}).get(mkt) or {})
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: run for %s failed: %s", norm, type(exc).__name__)
+        return RUNS.unknown_block()
+
+
+def _closeout_block(hist: dict, todo: list, ok: bool) -> dict:
+    out = {"rule": RUNS.REG_SHO_NAME + " " + RUNS.REG_SHO_CLOSEOUT_RULE,
+           "rule_days": RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, "first_buy_day": RUNS.first_buy_day(),
+           "ok": bool(ok), "history": None}
+    if not ok:
+        return out
+    try:
+        read, not_read = {}, {}
+        for mkt, days in (hist.get("days") or {}).items():
+            mem = (hist.get("members") or {}).get(mkt) or {}
+            isos = [d.isoformat() for d in days]
+            read[mkt] = sum(1 for i in isos if mem.get(i) is not None)
+            not_read[mkt] = [i for i in isos if mem.get(i) is None][:RS_HIST_NOT_READ_MAX]
+        out["history"] = {"window_days": RS_HIST_SETTLEMENT_DAYS, "read": read, "not_read": not_read,
+                          "pending": bool(todo)}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: closeout block failed: %s", type(exc).__name__)
+        out["ok"] = False
+    return out
+
+
 # One worker at a time (bounce_room.queue_ondemand shape) + a floor between starts [C7].
 _bg_lock = threading.Lock()
 _bg = {"running": False, "last_start": None, "thread": None}
@@ -584,6 +960,13 @@ _bg = {"running": False, "last_start": None, "thread": None}
 def _worker_running() -> bool:
     with _bg_lock:
         return bool(_bg["running"])
+
+
+def _floor_waiting() -> bool:
+    """A worker was started less than RS_KICK_MIN_SEC ago (the next kick will be refused until then)."""
+    with _bg_lock:
+        last = _bg["last_start"]
+    return last is not None and _mono() - last < RS_KICK_MIN_SEC
 
 
 def kick_refresh(coll, now_et: Optional[datetime] = None, *, http=None) -> bool:
@@ -599,9 +982,14 @@ def kick_refresh(coll, now_et: Optional[datetime] = None, *, http=None) -> bool:
 
     def run():
         try:
-            refresh_due(coll, now_et, http=http)
-        except Exception as exc:                               # pragma: no cover
-            log.warning("reg_sho: worker failed: %s", type(exc).__name__)
+            try:
+                refresh_due(coll, now_et, http=http)
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("reg_sho: worker failed: %s", type(exc).__name__)
+            try:                                               # AFTER refresh_due, never inside it
+                backfill_history(coll, now_et, http=http)
+            except Exception as exc:                           # noqa: BLE001
+                log.warning("reg_sho: history worker failed: %s", type(exc).__name__)
         finally:
             with _bg_lock:
                 _bg["running"] = False
@@ -673,18 +1061,91 @@ def state_for(sym, views: dict, loaded: dict) -> str:
     return "unknown"
 
 
-def tag_block(sym: str, mkt: str, exchange: str, as_of: str, stale: bool) -> dict:
+def _dow_md(iso: str) -> str:
+    """"Fri 11/27" — weekday from a fixed tuple, never strftime("%a") (locale)."""
+    d = _as_date(iso)
+    return "%s %s" % (_DOW[d.weekday()], SR._md(iso))
+
+
+def _days_word(n: int) -> str:
+    return "day" if n == 1 else "days"
+
+
+def _rule_sentence() -> str:
+    return RULE_SENTENCE % (RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, RUNS.REG_SHO_CLOSEOUT_RULE)
+
+
+def _rule_204_sentence() -> str:
+    rule = RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS
+    return RULE_204_SENTENCE % (RUNS.REG_SHO_204_RULE, RUNS.REG_SHO_204_SETTLEMENT_DAYS,
+                                RUNS.REG_SHO_204_LONG_MM_SETTLEMENT_DAYS, rule, RUNS.REG_SHO_144_RULE,
+                                RUNS.REG_SHO_144_SETTLEMENT_DAYS, rule)
+
+
+def _run_words(exchange: str, run: dict) -> tuple:
+    """(chip tail, short or None, label tail, title tail) for one run block — raises on a malformed block."""
+    rule = RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS
+    st = run["state"]
+    n = int(run["days"])
+    tails = " " + _rule_204_sentence() + " " + FTD_ONLY + " " + NOT_A_PRICE_READ + " " + NOT_ADVICE
+    if st in ("counting", "reached"):
+        rd = RUN_DAY % (n, rule)
+        d13 = _dow_md(run["day13"])
+        late = LATE_ALT % _dow_md(run["day13_late"])
+        bw = BUY_WINDOW % (RUNS.first_buy_day(), _dow_md(run["day11"]), RUNS.REG_SHO_STAFF_FAQ)
+        short = SHORT_RUN % (GLYPH, CLOSEOUT_WORD, d13, rd)
+        if st == "counting":
+            tail = RUN_TAIL % (rd, CLOSEOUT_WORD, d13, IF_STAYS)
+            title = TITLE_RUN % (n, _days_word(n), SR._md(run["start"]), rule, d13, IF_STAYS, late,
+                                 _rule_sentence(), bw)
+        else:
+            tail = RUN_TAIL_REACHED % (rd, CLOSEOUT_WORD, d13)
+            title = TITLE_RUN_REACHED % (n, SR._md(run["start"]), rule, d13, late, _rule_sentence(), bw)
+        return tail, short, tail, title + tails
+    if st == "passed":
+        rd = RUN_DAY_PAST % n
+        d13 = _dow_md(run["day13"])
+        late = LATE_ALT % _dow_md(run["day13_late"])
+        over = n - rule
+        title = TITLE_RUN_PAST % (n, SR._md(run["start"]), rule, d13, late, over, _days_word(over),
+                                  _rule_sentence(), REG_SHO_CONSEC_SETTLEMENT_DAYS)
+        return (CHIP_RUN_PAST % (rd, CLOSEOUT_WORD, d13), SHORT_RUN_PAST % (GLYPH, CLOSEOUT_WORD, d13, rd),
+                LABEL_RUN_PAST % (rd, CLOSEOUT_WORD, d13), title + tails)
+    if st == "passed_open":
+        rd = RUN_DAY_OPEN % n
+        if run.get("missing") is None:
+            title = TITLE_RUN_OPEN_WINDOW % (n, SR._md(run["window_from"]), rule, _rule_sentence())
+        else:
+            title = TITLE_RUN_OPEN_HOLE % (n, rule, exchange, SR._md(run["missing"]), _rule_sentence())
+        return (CHIP_RUN_OPEN % (rd, CLOSEOUT_WORD), SHORT_RUN_OPEN % (GLYPH, CLOSEOUT_WORD, rd),
+                LABEL_RUN_OPEN % (rd, CLOSEOUT_WORD), title + tails)
+    if st != "unknown":
+        raise ValueError("run state %r" % (st,))
+    title = (TITLE_RUN_UNKNOWN % (exchange, SR._md(run["missing"])) if run.get("missing")
+             else TITLE_RUN_UNKNOWN_BARE)
+    return RUN_UNKNOWN, None, RUN_UNKNOWN, title + " " + NOT_ADVICE
+
+
+def tag_block(sym: str, mkt: str, exchange: str, as_of: str, stale: bool, run: Optional[dict] = None) -> dict:
+    """The four served strings. `run=None` ≡ RUNS.unknown_block(); a run block whose words cannot be built reads
+    unknown [C4]. The stale tails stay LAST."""
     md = SR._md(as_of)
     tail = STALE_WORD if stale else ""
+    try:
+        words = _run_words(exchange, run if run is not None else RUNS.unknown_block())
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("reg_sho: run words for %s failed: %s", sym, type(exc).__name__)
+        words = _run_words(exchange, RUNS.unknown_block())
+    chip_tail, short, label_tail, title_tail = words
     title = TITLE_TEXT % (GLYPH, TAG_WORDS, sym, exchange, as_of, "{:,}".format(REG_SHO_MIN_FTD_SHARES),
                           REG_SHO_MIN_PCT_SHARES_OUT, REG_SHO_CONSEC_SETTLEMENT_DAYS, REG_SHO_RULE,
-                          HONESTY_NOTE, NOT_A_SIGNAL)
+                          HONESTY_NOTE, NOT_A_SIGNAL) + title_tail
     if stale:
         title += STALE_TITLE % md
     return {"state": "on", "symbol": sym, "market": mkt, "exchange": exchange, "as_of": as_of, "stale": bool(stale),
-            "chip": (CHIP_TEXT % (GLYPH, TAG_WORDS, md)) + tail,
-            "short": (SHORT_TEXT % (GLYPH, TAG_WORDS, md)) + tail,
-            "label": (LABEL_TEXT % (GLYPH, TAG_WORDS, exchange, md)) + tail,
+            "chip": (CHIP_TEXT % (GLYPH, TAG_WORDS, md)) + chip_tail + tail,
+            "short": (short if short is not None else SHORT_TEXT % (GLYPH, TAG_WORDS, md)) + tail,
+            "label": (LABEL_TEXT % (GLYPH, TAG_WORDS, exchange, md)) + label_tail + tail,
             "title": title}
 
 
@@ -715,13 +1176,17 @@ def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bo
         db = SIC._get_db()
     coll = db[RS_COLL] if db is not None else None
     loaded = load(coll) if coll is not None else {"lists": {}, "states": {}}
+    hist, todo, hist_ok = _history_view(coll, loaded, now_et)
 
-    refreshing = False
+    refreshing = False                                         # the latest lists — the fault line reads this one
+    hist_refreshing = False
     if coll is not None:
         started = False
-        if kick and any(is_due(src, loaded, now_et) for src in SOURCES):
+        if kick and (any(is_due(src, loaded, now_et) for src in SOURCES) or todo):
             started = kick_refresh(coll, now_et if now is not None else None, http=http)
         refreshing = bool(started or _worker_running())
+        # [C2] only while a worker can make progress: running, just started, or the floor will let the next one start
+        hist_refreshing = bool(kick and todo and (started or _worker_running() or _floor_waiting()))
 
     views = {}
     sources = []
@@ -739,7 +1204,9 @@ def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bo
             if not norm or norm in seen:
                 continue
             seen.add(norm)
-            blk = tag_block(norm, mkt, exchange, v["as_of"], v["stale"])
+            run = _run_block(norm, mkt, hist)
+            blk = tag_block(norm, mkt, exchange, v["as_of"], v["stale"], run=run)
+            blk["run"] = run
             for k in alias_keys(norm):
                 items.setdefault(k, blk)
 
@@ -756,8 +1223,9 @@ def payload(db=_DEFAULT, now: Optional[datetime] = None, *, check=None, kick: bo
         "sources": sources,
         "note": HONESTY_NOTE,
         "fault_text": (FAULT_TEXT % (GLYPH, TAG_WORDS, "; ".join(faulting))) if faulting else None,
-        "refreshing": refreshing,
-        "retry_after_sec": RS_RETRY_AFTER_SEC if refreshing else None,
+        "refreshing": bool(refreshing or hist_refreshing),
+        "retry_after_sec": (RS_RETRY_AFTER_SEC if refreshing else (RS_KICK_MIN_SEC if hist_refreshing else None)),
+        "closeout": _closeout_block(hist, todo, hist_ok),
     }
     if check is not None:
         res = {}
@@ -782,7 +1250,7 @@ def fault_payload(now: Optional[datetime] = None) -> dict:
                             "stale": False, "error": None, "text": SRC_PENDING % exchange})
     return {"kind": KIND, "as_of": None, "complete": False, "n": 0, "items": {}, "sources": sources,
             "note": HONESTY_NOTE, "fault_text": FAULT_UNREADABLE % (GLYPH, TAG_WORDS),
-            "refreshing": False, "retry_after_sec": None}
+            "refreshing": False, "retry_after_sec": None, "closeout": None}
 
 
 def _and_list(names: list) -> str:
@@ -800,4 +1268,7 @@ def rules_pick() -> str:
             "missing tag then does not mean 'not listed'. %s Tags Gajjala cards, 👀 Watch tiles and the 📋 All "
             "strategies table only; it gates, sorts and pushes nothing. UNMEASURED."
             % (GLYPH, TAG_WORDS, "{:,}".format(REG_SHO_MIN_FTD_SHARES), REG_SHO_MIN_PCT_SHARES_OUT,
-               REG_SHO_CONSEC_SETTLEMENT_DAYS, REG_SHO_RULE, _and_list(names), ", ".join(stock), HONESTY_NOTE))
+               REG_SHO_CONSEC_SETTLEMENT_DAYS, REG_SHO_RULE, _and_list(names), ", ".join(stock), HONESTY_NOTE)
+            + PICK_RUN_TAIL % (RUNS.REG_SHO_CLOSEOUT_SETTLEMENT_DAYS, RUNS.REG_SHO_NAME, RUNS.REG_SHO_CLOSEOUT_RULE,
+                               RUNS.first_buy_day(), _rule_204_sentence(), " and ".join(RUNS.BANK_HOLIDAYS_OPEN_MARKET),
+                               RUNS.REG_SHO_SETTLEMENT_DAY_RULE, NOT_A_PRICE_READ))
