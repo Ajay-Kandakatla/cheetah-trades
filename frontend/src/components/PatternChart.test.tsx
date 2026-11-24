@@ -335,8 +335,12 @@ describe('the Yahoo Finance link-out', () => {
     const open = vi.fn();
     vi.stubGlobal('open', open);
     draw(TILE);
-    expect(screen.queryByRole('button', { name: /TradingView/ })).toBeNull();
-    expect(screen.queryByText('TV ↗')).toBeNull();
+    // WIDENED 2026-11-23 — Ajay: "Also add traderview charts on charts please.. Yahoo has been hard to configure" (question
+    // card: "TV ↗ button only"). TV ↗ is BACK as its OWN button beside Yahoo ↗ (PatternChart.tvLink.test.tsx); the pin is
+    // now: exactly one TradingView button, and it is never the Yahoo button.
+    expect(screen.getAllByRole('button', { name: /TradingView/ })).toHaveLength(1);
+    expect(screen.getAllByText('TV ↗')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /IONQ on Yahoo Finance/ }).textContent).not.toContain('TV');
     fireEvent.click(screen.getByRole('button', { name: /IONQ on Yahoo Finance/ }));
     expect(String(open.mock.calls[0][0])).not.toContain('tradingview');
     expect(String(open.mock.calls[0][0])).not.toContain('interval');

@@ -1,3 +1,4 @@
+// WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🔌 Watch connections ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (👀 Watch 1/5/15 · 📈 VWAP · 📐 daily zones ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -16,7 +17,7 @@ const SAID = 'can you add the current float value also to the tickers on the wat
 describe('✨ the Watch float entry (2026-11-21)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch', () => {
-    expect(NEW_FEATURES[9].id).toBe(ID);
+    expect(NEW_FEATURES[11].id).toBe(ID);
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-21');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

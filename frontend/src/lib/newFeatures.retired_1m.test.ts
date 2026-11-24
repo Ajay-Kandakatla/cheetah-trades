@@ -1,3 +1,4 @@
+// WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 // WIDENED 2026-11-23 (🟩 glassy zone bands ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (🔌 Watch connections ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-23 (👀 Watch 1/5/15 · 📈 VWAP · 📐 daily zones ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -32,9 +33,9 @@ describe('✨ the ⏹ 1-minute page retired entry (2026-11-18)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
 
   it('is FIRST, listed once, dated 2026-11-18, routed to the retired page’s 🏁', () => {
-    expect(NEW_FEATURES[22].id).toBe(ID);
-    expect(NEW_FEATURES[23].id).toBe('chart-maps-replays-tab-2026-11-17');   // 2026-11-18 rebase: the 🎬 Replays ✨ landed on main first
-    expect(NEW_FEATURES[24].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');
+    expect(NEW_FEATURES[24].id).toBe(ID);
+    expect(NEW_FEATURES[25].id).toBe('chart-maps-replays-tab-2026-11-17');   // 2026-11-18 rebase: the 🎬 Replays ✨ landed on main first
+    expect(NEW_FEATURES[26].id).toBe('chart-maps-gajjala-watch-aplus-push-2026-11-17');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-18');
@@ -60,6 +61,6 @@ describe('✨ the ⏹ 1-minute page retired entry (2026-11-18)', () => {
 
   it('NEGATIVE: the 🎯 A+ push ✨ is not replaced — still listed once, two after this entry', () => {
     expect(NEW_FEATURES.filter((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17').length).toBe(1);
-    expect(NEW_FEATURES.findIndex((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17')).toBe(24);   // WIDENED 2026-11-23 (🟩 glass zones first) · was 23 · WIDENED 2026-11-23 (🔌 Watch connections first) · was 22 · WIDENED 2026-11-23 (👀 Watch 1/5/15 + VWAP + zones first) · was 21 · WIDENED 2026-11-22 (👀 Watch sections first) · was 17 · WIDENED 2026-11-22 (🏆 setup + timing, 🏆 past-winner tag first) · was 15 · WIDENED 2026-11-21 (👀 Watch float first) · was 14 · WIDENED 2026-11-19 (🏆 past winners first) · was 13 (👀 Watch newest-first first) · was 12 (🚫 Watch not-eligible first) · was 11 (👀 new Watch names active first) · was 10, 2026-11-18: 🩳 SI tier words + 🌱 diverging + 🏷 tags + 👀 Watch 18 + 👀 card grid + 🎬 slot + 🧨 divergence + 🩳 SI note first, 🎬 Replays between
+    expect(NEW_FEATURES.findIndex((x) => x.id === 'chart-maps-gajjala-watch-aplus-push-2026-11-17')).toBe(26);   // WIDENED +2 2026-11-23 (📈 VWAP + 📺 TV first) · was 24 · WIDENED 2026-11-23 (🟩 glass zones first) · was 23 · WIDENED 2026-11-23 (🔌 Watch connections first) · was 22 · WIDENED 2026-11-23 (👀 Watch 1/5/15 + VWAP + zones first) · was 21 · WIDENED 2026-11-22 (👀 Watch sections first) · was 17 · WIDENED 2026-11-22 (🏆 setup + timing, 🏆 past-winner tag first) · was 15 · WIDENED 2026-11-21 (👀 Watch float first) · was 14 · WIDENED 2026-11-19 (🏆 past winners first) · was 13 (👀 Watch newest-first first) · was 12 (🚫 Watch not-eligible first) · was 11 (👀 new Watch names active first) · was 10, 2026-11-18: 🩳 SI tier words + 🌱 diverging + 🏷 tags + 👀 Watch 18 + 👀 card grid + 🎬 slot + 🧨 divergence + 🩳 SI note first, 🎬 Replays between
   });
 });

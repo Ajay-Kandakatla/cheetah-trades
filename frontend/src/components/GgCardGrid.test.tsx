@@ -9,6 +9,7 @@ import {
 import type { GgTile } from '../lib/gajjala';
 import { GGW_LAYOUTS, GGW_PAGER, GGW_STRETCH, type GgwRow } from '../lib/gajjalaWatch';
 import { YAHOO_LABEL } from '../lib/yahooLink';
+import { TV_LABEL } from '../lib/tvChart';
 import { SEPA_LINK_LABEL, sepaLinkTestId } from '../lib/cardLinks';
 import type { GgCardWatch } from '../hooks/useGgCardWatch';
 
@@ -281,8 +282,10 @@ describe('👀 GgCardTile', () => {
     };
     walk(p);
     walk(card);
+    // WIDENED 2026-11-23 (+ TV_LABEL) — Ajay: "Also add traderview charts on charts please.." (question card: "TV ↗ button
+    // only"): the TV ↗ link-out label is a control word like Yahoo ↗.
     const control = new Set<string>([GGC_WATCH_LABEL, 'per screen', ...Object.values(GGW_PAGER), ...Object.values(GGW_STRETCH),
-      YAHOO_LABEL, SEPA_LINK_LABEL, '⚠️ ', '·', 'PFAI']);
+      TV_LABEL, YAHOO_LABEL, SEPA_LINK_LABEL, '⚠️ ', '·', 'PFAI']);
     const tile = screen.getByTestId('ggw-tile-PFAI');
     const tw = document.createTreeWalker(tile, NodeFilter.SHOW_TEXT);
     const bad: string[] = [];

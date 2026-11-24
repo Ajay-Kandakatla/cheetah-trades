@@ -29,3 +29,7 @@ link here"* / *"To external ones please"*.
 - `SupportLevels.test.tsx` — the head anchor's href, target, title; NEGATIVE no `TV ↗`.
 - `scripts/contracts.mjs` "🌐 Yahoo link-out (2026-11-09)" — the helper's base URL, label, dash rule, open call, the two
   call sites, `tvChart.ts` absent, no `tvTf=` caller, the ✨ FIRST with both sentences.
+
+---
+
+**2026-11-23 — TradingView is back BESIDE Yahoo.** Ajay: *"Also add traderview charts on charts please.. Yahoo has been hard to configure"* (question card: *"TV ↗ button only"*). `TV ↗` now sits right before this `Yahoo ↗` on every tile, the 👀 Watch head / ⤢ view and the Support tab head; Yahoo ↗ is unchanged. See `docs/chart_maps/tv_link_2026_11_23.md`.

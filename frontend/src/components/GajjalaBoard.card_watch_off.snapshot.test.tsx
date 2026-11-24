@@ -11,7 +11,11 @@ import golden from './__fixtures__/gajjala_potential_golden_2026_10_15.json';
  * the grid drawn BEFORE the Watch layout was built. This file and its `.snap` were written and run on the UNMODIFIED board
  * (HEAD 3c0a2ade) before any product edit — the snapshot IS the pre-build DOM. The REAL board and the REAL PatternChart
  * (only the network chips are mocked — the videoLook harness); fixture CLONES only; the wall clock pinned. Display only:
- * nothing here sorts, gates, rings or trades. */
+ * nothing here sorts, gates, rings or trades.
+ *
+ * WIDENED 2026-11-23 — Ajay: "Also add traderview charts on charts please.. Yahoo has been hard to configure" (question
+ * card: "TV ↗ button only"). The `.snap` was regenerated ONCE: the only change is one `TV ↗` button (cm-tv, testid
+ * tv-link-SYM) right before every tile's Yahoo ↗ — 11 inserts, the rest byte-identical (checked by stripping them). */
 
 vi.mock('./GrowthChip', () => ({ GrowthChip: () => <span /> }));
 vi.mock('./ShortInterestChip', () => ({ ShortInterestChip: () => <span /> }));

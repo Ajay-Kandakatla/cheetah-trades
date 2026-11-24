@@ -37,6 +37,7 @@ import {
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
 import { yahooQuoteUrl, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
+import { tvChartUrl, tvLinkTestId, tvTitle, TV_LABEL } from '../lib/tvChart';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
 import { ShortInterestChip } from './ShortInterestChip';
@@ -445,6 +446,14 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               <span className="sl-recent">
                 {testedCount(supports)} of {supports.length} turned at more than once
               </span>
+              {/* Ajay 2026-11-23: "Also add traderview charts on charts please.. Yahoo has been hard to configure" —
+                * TV ↗ right BEFORE Yahoo ↗, his own TradingView chart on the frame this tab is showing (curTf). */}
+              <a className="cm-tv" href={tvChartUrl(data.symbol, curTf)}
+                 target="_blank" rel="noopener noreferrer"
+                 data-testid={tvLinkTestId(data.symbol)}
+                 title={tvTitle(data.symbol)}>
+                {TV_LABEL}
+              </a>
               {/* Ajay 2026-11-09: "Instead of traderview I need yahoo finance link here" / "To external ones please" —
                 * Yahoo's quote page; the frame is not carried (Yahoo has no interval parameter). */}
               <a className="cm-tv" href={yahooQuoteUrl(data.symbol)}

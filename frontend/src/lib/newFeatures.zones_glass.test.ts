@@ -1,3 +1,4 @@
+// WIDENED +2 2026-11-23 (📈 VWAP all hours + 📺 TV link ✨ FIRST): every NEW_FEATURES[n] pin here moved +2.
 /* 🟩 glassy zone bands ✨ (2026-11-23). Ajay: "instead of these lines being dashed can you make then subtle green glassy
  * like look please". */
 import { describe, expect, it } from 'vitest';
@@ -7,9 +8,9 @@ const ID = 'gajjala-watch-zones-glass-2026-11-23';
 
 describe('✨ the 🟩 glassy zone bands entry (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
-  it('is FIRST, listed once, dated, routed to the 👀 Watch; the 🔌 entry follows', () => {
-    expect(NEW_FEATURES[0].id).toBe(ID);
-    expect(NEW_FEATURES[1].id).toBe('gajjala-watch-connections-2026-11-23');
+  it('sits right under the 📈 VWAP + 📺 TV entries, listed once, dated, routed to the 👀 Watch; the 🔌 entry follows', () => {
+    expect(NEW_FEATURES[2].id).toBe(ID);
+    expect(NEW_FEATURES[3].id).toBe('gajjala-watch-connections-2026-11-23');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-23');
     expect(f.route).toBe('/chart-maps?tab=gajjala_watch');

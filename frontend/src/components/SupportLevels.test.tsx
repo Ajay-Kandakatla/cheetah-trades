@@ -187,9 +187,13 @@ describe('SupportLevels', () => {
     expect(a.getAttribute('href')).toBe('https://finance.yahoo.com/quote/DHI/');
     expect(a.getAttribute('target')).toBe('_blank');
     expect(a.getAttribute('title')).toBe('Open DHI on Yahoo Finance');
-    // NEGATIVE: the TradingView link-out is gone from the Support tab head
+    // NEGATIVE: the Yahoo anchor itself carries no tradingview (TV ↗ is its own button since 2026-11-23)
     expect(a.getAttribute('href')).not.toContain('tradingview');
-    expect(screen.queryByText('TV ↗')).toBeNull();
+    // WIDENED 2026-11-23 — Ajay: "Also add traderview charts on charts please.. Yahoo has been hard to configure" (question
+    // card: "TV ↗ button only"). TV ↗ is BACK as its OWN anchor right before Yahoo ↗ (SupportLevels.tvLink.test.tsx); the
+    // Yahoo anchor itself stays the quote page above.
+    expect(screen.getAllByText('TV ↗')).toHaveLength(1);
+    expect(screen.getByText('TV ↗')).not.toBe(a);
   });
 
   it('counts recency and evidence SEPARATELY — neither implies the other', async () => {

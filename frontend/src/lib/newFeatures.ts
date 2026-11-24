@@ -33,6 +33,24 @@ export const NEW_FEATURES: NewFeature[] = [
   // Ajay 2026-11-23 ~20:00 ET, verbatim: "Also instead of these lines being dashed can you make then subtle green glassy like
   // look please". PatternChart draws a `ctx` daily-zone band (👀 Watch + card frames) as glass: a soft gradient in the zone's
   // colour + thin solid edges, no dash; the legend swatch matches. Every other band unchanged. Display only.
+  // Ajay 2026-11-23 ~21:30 ET, verbatim: "Why is VWAP not showing up in AH?" · "Please extend them to all hours..".
+  // gajjala_watch/constants.py VWAP_SESSIONS = ("premarket", "rth", "afterhours") (vwap.SESSION_SETS[2]); the card frames read
+  // the same constant. Today's bars only. Display only. Doc docs/gajjala/watch_frames_vwap_2026_11_23.md (2026-11-23 section).
+  {
+    id: 'gajjala-watch-vwap-all-hours-2026-11-23',
+    label: '📈 VWAP all hours — you asked: “Why is VWAP not showing up in AH?” · “Please extend them to all hours..”. On the 👀 Watch and the card charts the VWAP line now runs from 04:00 premarket through after-hours, today only. Because premarket and after-hours volume count, the number differs from a broker\'s regular-hours VWAP all day, not only after 16:00. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
+  // Ajay 2026-11-23 ~21:40 ET, verbatim: "Also add traderview charts on charts please.. Yahoo has been hard to configure" ·
+  // question card "TV ↗ button only". lib/tvChart.ts (recreated from 70a625b9^); TV ↗ right before Yahoo ↗ on PatternChart,
+  // the 👀 Watch tile head (+ ⤢) and the Support head. Doc docs/chart_maps/tv_link_2026_11_23.md.
+  {
+    id: 'chart-maps-tv-link-2026-11-23',
+    label: '📺 TV ↗ beside Yahoo ↗ — you said: “Also add traderview charts on charts please.. Yahoo has been hard to configure”. Every chart tile, the 👀 Watch tile and the Support tab now have a TV ↗ button that opens that stock in your own TradingView (on a single chart, at that chart\'s timeframe). Your EMA / VWAP / 5-day setup lives in your TradingView layout; the free TradingView plan allows 2 indicators per chart. Yahoo ↗ is unchanged. Not advice.',
+    addedAt: '2026-11-23',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   {
     id: 'gajjala-watch-zones-glass-2026-11-23',
     label: '🟩 Glassy zone bands — you said: “instead of these lines being dashed can you make then subtle green glassy like look please”. On the 👀 Watch charts the daily demand zones are now a soft see-through green band with a thin solid border instead of two dashed lines; supply zones get the same look in red. The zones themselves are unchanged. Display only. Not advice.',

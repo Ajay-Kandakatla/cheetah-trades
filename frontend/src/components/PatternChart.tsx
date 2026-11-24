@@ -25,6 +25,7 @@ import {
 } from '../lib/cardLadder';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
+import { openTvChart, tvLinkTestId, tvTfFromHref, tvTitle, TV_LABEL } from '../lib/tvChart';
 import { openViewTestId, openViewTitle, SEPA_LINK_LABEL, sepaLinkTestId, sepaLinkTitle } from '../lib/cardLinks';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GgWatchButton } from './GgWatchButton';
@@ -1163,6 +1164,16 @@ export const PatternChart = memo(function PatternChart(
             {/* Ajay 2026-11-09 (the ↗ button on a 🚩 card): "Instead of traderview I need yahoo finance link here" /
               * "To external ones please" — the external link-out is Yahoo's quote page (lib/yahooLink); the chart's
               * timeframe is not carried (Yahoo has no interval parameter). */}
+            {/* Ajay 2026-11-23: "Also add traderview charts on charts please.. Yahoo has been hard to configure" — TV ↗
+              * right BEFORE Yahoo ↗ (lib/tvChart), his own TradingView chart; the interval is the frame the served
+              * tile.href carries (`&tf=`), none when it carries no known frame. */}
+            <button type="button" className="cm-tv"
+                    title={tvTitle(tile.symbol)}
+                    aria-label={tvTitle(tile.symbol)}
+                    data-testid={tvLinkTestId(tile.symbol)}
+                    onClick={(e) => openTvChart(e, tile.symbol, tvTfFromHref(tile.href))}>
+              {TV_LABEL}
+            </button>
             <button type="button" className="cm-tv"
                     title={yahooTitle(tile.symbol)}
                     aria-label={yahooTitle(tile.symbol)}

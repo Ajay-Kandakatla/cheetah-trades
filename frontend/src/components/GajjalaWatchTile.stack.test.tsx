@@ -12,6 +12,7 @@ import { GgwStretch, Tile } from './GajjalaWatchTile';
 import { GGC_STRETCH_ORDER } from '../lib/gajjalaCardView';
 import { GGW_PAGER, GGW_STRETCH, parseGgw, type GgwBoard, type GgwRow } from '../lib/gajjalaWatch';
 import { YAHOO_LABEL } from '../lib/yahooLink';
+import { TV_LABEL } from '../lib/tvChart';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 async function readSource(rel: string): Promise<string> {
@@ -165,7 +166,9 @@ describe('(f) the tile types no sentence of its own', () => {
   };
   walk(fixture);
   served.add(WORDS);
-  const GLYPHS = new Set<string>([GGW_STRETCH.open, YAHOO_LABEL, '✕', '⚠️', GGW_PAGER.prev, GGW_PAGER.next]);
+  // WIDENED 2026-11-23 (+ TV_LABEL) — Ajay: "Also add traderview charts on charts please.." (question card: "TV ↗ button
+  // only"): the TV ↗ link-out label is a structural control glyph like Yahoo ↗.
+  const GLYPHS = new Set<string>([GGW_STRETCH.open, TV_LABEL, YAHOO_LABEL, '✕', '⚠️', GGW_PAGER.prev, GGW_PAGER.next]);
   it('every visible text node outside the svg is served (or a structural glyph); split on " · " and a leading ⚠️', () => {
     const { container } = tile(emptyOneMin(), { stack: true, fit: true, order: GGC_STRETCH_ORDER, onStretch: () => {} });
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);

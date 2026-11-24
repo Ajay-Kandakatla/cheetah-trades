@@ -75,6 +75,7 @@ import { GgwBrokerChip, GgwFloatChip, GgwTagsRow, type GgwTagsCtx } from './Gajj
 import { GgwDrawer, GgwLevelsLine, GgwProvLine, GgwSetupChip } from './GajjalaWatchCompact';
 import { GgwPendingPanel, ggwPendingPanelShown } from './GajjalaWatchPending';
 import { openYahoo, yahooTitle, YAHOO_LABEL } from '../lib/yahooLink';
+import { openTvChart, tvLinkTestId, tvTitle, TV_LABEL } from '../lib/tvChart';
 import { PATTERN_CHART_VIEW_W, PatternChart } from './PatternChart';
 import { EmaBlinkDot } from './EmaBlink';
 import { emaBlinkLine } from '../lib/emaBlink';
@@ -289,6 +290,13 @@ export function Tile({ row, phone, fit, removeLabel, focused, onRemove, busy, on
               {GGW_STRETCH.open}
             </button>
           ) : null}
+          {/* Ajay 2026-11-23: "Also add traderview charts on charts please.." — TV ↗ right BEFORE Yahoo ↗. A 3-frame tile
+              has no single frame, so NO interval rides: his TradingView opens his last-used interval. */}
+          <button type="button" className="ggw-btn ggw-tv" title={tvTitle(row.symbol)}
+                  aria-label={tvTitle(row.symbol)} data-testid={tvLinkTestId(row.symbol)}
+                  onClick={(e) => openTvChart(e, row.symbol)}>
+            {TV_LABEL}
+          </button>
           <button type="button" className="ggw-btn ggw-yahoo" title={yahooTitle(row.symbol)}
                   aria-label={yahooTitle(row.symbol)} onClick={(e) => openYahoo(e, row.symbol)}>
             {YAHOO_LABEL}

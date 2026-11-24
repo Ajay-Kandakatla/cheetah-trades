@@ -98,9 +98,11 @@ describe('🚫 the mark on the 👀 Watch board', { timeout: 30000 }, () => {
       expect(markBtn(c, s)!.getAttribute('title')).toBe(BLOCK.title);
       expect(markBtn(c, s)!.textContent).toBe(BLOCK.toggle);
     }
-    /* the board order on a tile: 🚫 ⤢ ↗ ✕ */
+    /* the board order on a tile: 🚫 ⤢ TV ↗ Yahoo ↗ ✕
+     * WIDENED 2026-11-23 (+ ggw-tv before ggw-yahoo) — Ajay: "Also add traderview charts on charts please.. Yahoo has been
+     * hard to configure" (question card: "TV ↗ button only"). */
     const kids = Array.from(tile(c, 'AMD').querySelector('.ggw-actions')!.children).map((e) => e.className);
-    expect(kids).toEqual(['ggw-btn ggw-broker-mark', 'ggw-btn ggw-stretch-btn', 'ggw-btn ggw-yahoo', 'ggw-btn ggw-remove']);
+    expect(kids).toEqual(['ggw-btn ggw-broker-mark', 'ggw-btn ggw-stretch-btn', 'ggw-btn ggw-tv', 'ggw-btn ggw-yahoo', 'ggw-btn ggw-remove']);
   });
 
   it('click 🚫 on his row → POST his 🚫 list {symbol} → DELETE the Watch name → ONE full re-GET; the served answer prints', async () => {

@@ -13886,6 +13886,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .cm-tile-ident:empty { display: none; }
 .iz-chart .cm-rungs, .iz-chart .cm-more { display: none; }
 @media (max-width: 640px) {
+  /* 📺 2026-11-23: TV ↗ joined Yahoo ↗ — on a phone the action chips wrap (right-aligned) instead of squeezing the symbol. */
+  .cm-tile-actions { flex-wrap: wrap; justify-content: flex-end; flex-shrink: 1; min-width: 0; }
   .cm-rung, .cm-more-group { grid-template-columns: 2.9rem minmax(0, 1fr); }
   .cm-kv { grid-template-columns: max-content minmax(0, 1fr); }
   .cm-kv .cm-stat-wide > .cm-stat-v { grid-column: 2; }
