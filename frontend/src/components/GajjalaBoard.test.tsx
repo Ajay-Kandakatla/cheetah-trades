@@ -26,6 +26,7 @@ vi.mock('./PatternChart', () => ({
     );
   },
 }));
+vi.mock('./GgTimeWindow', () => ({ GgTimeWindow: () => null }));   // ⏰ 2026-11-24: fetches its own route — pinned in GgTimeWindow.test.tsx
 vi.mock('./GrowthChip', () => ({ GrowthChip: ({ symbol }: any) => <span data-testid={`growth-${symbol}`} /> }));
 vi.mock('./ShortInterestChip', () => ({ ShortInterestChip: ({ symbol }: any) => <span data-testid={`short-${symbol}`} /> }));
 vi.mock('./ExplosiveChip', () => ({ ExplosiveChip: () => <span data-testid="explosive" /> }));

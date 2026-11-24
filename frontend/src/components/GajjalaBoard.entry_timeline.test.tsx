@@ -31,6 +31,7 @@ const miniMounts: { id: string; width: unknown; hasOpen: boolean }[] = [];
 vi.mock('../hooks/useUser', () => ({ useCurrentUser: () => ({ user: userRet, loading: false }) }));
 vi.mock('../lib/usageTracker', () => ({ trackFeature: () => undefined }));
 vi.mock('./PatternChart', () => ({ PatternChart: (props: any) => <div data-testid={`chart-${props.tile.symbol}`} /> }));
+vi.mock('./GgTimeWindow', () => ({ GgTimeWindow: () => null }));   // ⏰ 2026-11-24: fetches its own route — pinned in GgTimeWindow.test.tsx
 vi.mock('./GrowthChip', () => ({ GrowthChip: ({ symbol }: any) => <span data-testid={`growth-${symbol}`} /> }));
 vi.mock('./ShortInterestChip', () => ({ ShortInterestChip: ({ symbol }: any) => <span data-testid={`short-${symbol}`} /> }));
 vi.mock('./ExplosiveChip', () => ({ ExplosiveChip: () => <span data-testid="explosive" /> }));

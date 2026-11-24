@@ -32,7 +32,8 @@ GG_ROUTES = {("/chart-maps/gajjala", "GET"), ("/chart-maps/gajjala/scan", "POST"
              ("/chart-maps/gajjala-audited", "GET"), ("/chart-maps/gajjala-audited/scan", "POST"),
              ("/chart-maps/gajjala-audited/entry-tape", "GET"), ("/chart-maps/gajjala/broker-flags", "GET"),
              ("/chart-maps/gajjala/broker-flags", "POST"), ("/chart-maps/gajjala/broker-flags/{symbol}", "DELETE"),
-             (CF.API_PATH, "GET")}   # 2026-11-16 spec ggcard3 §3.1: the card three-chart view GET (pin moved)
+             (CF.API_PATH, "GET"),   # 2026-11-16 spec ggcard3 §3.1: the card three-chart view GET (pin moved)
+             ("/chart-maps/gajjala/time-windows", "GET")}   # 2026-11-24 ⏰ the time-window glow GET (pin moved)
 
 
 class Rec:

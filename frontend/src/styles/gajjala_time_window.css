@@ -1,0 +1,25 @@
+/* ⏰ 2026-11-24 — the time-window reminder (GgTimeWindow). A soft radiating gold glow while inside a served window;
+ * prefers-reduced-motion → the same highlight, still. 📱 430 px: min-width 0 + max-width 100%, the long served strings
+ * wrap anywhere (the dayRead.css / gajjala.css .gg-first15 shape). Information only: no red/green (not a verdict). */
+.gg-tw {
+  min-width: 0; max-width: 100%; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 0.15rem;
+  font-size: 0.82rem; padding: 0.35rem 0.6rem; border-radius: 6px;
+  border: 1px solid var(--gold, #c9a227);
+  background: var(--gold-faint, rgba(184, 147, 90, 0.12));
+  box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.35);
+}
+.gg-tw-text { min-width: 0; white-space: normal; overflow-wrap: anywhere; font-weight: 600; }
+.gg-tw-src { min-width: 0; white-space: normal; overflow-wrap: anywhere; font-size: 0.72rem; color: var(--ink-subtle, #94a3b8); }
+.gg-tw-glow { animation: gg-tw-radiate 2.4s ease-in-out infinite; }
+.gg-tw-static { animation: none; box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.55); }
+
+@keyframes gg-tw-radiate {
+  0%   { box-shadow: 0 0 0 0 rgba(201, 162, 39, 0.55); }
+  60%  { box-shadow: 0 0 0 8px rgba(201, 162, 39, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(201, 162, 39, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-tw-glow { animation: none; box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.55); }
+}

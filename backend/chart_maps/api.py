@@ -679,6 +679,27 @@ async def chart_maps_gajjala_entry_tape(
     return await asyncio.to_thread(_run)
 
 
+@router.get("/chart-maps/gajjala/time-windows")
+async def chart_maps_gajjala_time_windows():
+    """⏰ (2026-11-24) — the two descriptive clock windows the 🚩 page glows in (gajjala.time_windows.build). Ajay:
+    "can you add a reminder of that somwhere for me like radiating when we enter those timings". Every number is read
+    from the shipped study file; display only — no gate, no push, no record, no trade. The board GET's audience (no
+    owner gate — the 🚩 page's own readers; nothing owner-only is served). A closed day → `closed: true`; a missing /
+    corrupt study file or any raise → 200 with the fault shape (`state: "fault"`, no windows), never a 500."""
+    from rotation.api import _scrub
+    from .gajjala import time_windows as TW
+
+    def _run():
+        try:
+            return TW.build()
+        except Exception as exc:                                # never a 500
+            log.warning("chart-maps/gajjala/time-windows failed: %s", type(exc).__name__)
+            from datetime import datetime
+            return TW.fault_payload(datetime.now(TW.ET).date().isoformat(), False, None)
+
+    return JSONResponse(_scrub(await asyncio.to_thread(_run)))
+
+
 @router.get(gajjala_card_frames.API_PATH)
 async def gajjala_card_frames_get(symbol: str):
     """🚩 Card → the three-chart view (spec ggcard3 §3.1, 2026-11-16; Ajay: "when I click on a card from any of the

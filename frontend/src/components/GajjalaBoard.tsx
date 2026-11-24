@@ -235,6 +235,7 @@ import { MyDayLine, myDayDate } from './MyDayLine';
 import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
 import { GgDivergingPanel } from './GgDiverging';
 import { GgHighSiPanel } from './GgHighSi';
+import { GgTimeWindow } from './GgTimeWindow';
 import '../styles/gajjala.css';
 
 const NO_TOGGLE_REASON = 'NO \u{1F9E8} ordering toggle — his setup state orders this board (A+ → forming → partial)';
@@ -755,6 +756,10 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {session?.first15 && session.first15_text ? (
         <div className="gg-first15" data-testid="gg-first15">{session.first15_text}</div>
       ) : null}
+
+      {/* (2b) ⏰ 2026-11-24: the served time-window reminder — glows only inside a window (nothing otherwise); 🚩 GG5 and
+          the 🧪 audited page only (never the 1-min page or Luk). */}
+      <GgTimeWindow enabled={vkey === 'gajjala' || vkey === 'gajjala_audited'} />
 
       {/* (3) the sub strip — the Catalysts markup. */}
       <div className="cat-tabs gg-subs" role="tablist" aria-label="Gajjala setups">
