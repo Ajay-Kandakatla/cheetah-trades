@@ -1453,6 +1453,67 @@ def _gg_high_si_clause() -> str:
     return " " + clause
 
 
+# 🧾 2026-11-23 — the check kinds of accountability.CHECK_META in words (a label, not a rule).
+_GG_JOURNAL_KIND_WORDS = {"hard": "a GG rule", "soft": "a warning", "info": "information only"}
+
+
+def _gg_journal_clause() -> str:
+    """🧾 2026-11-23 (spec accountability §4 WP-BE3 — Ajay "Please create a rule to warn me to not over trade and hold me
+    accountable if I am missing out any gajjalas rules") — the section note's ONE list "🧾 your journal checks (GG)":
+    A1–A11 and O2–O4, each with its rule words and quote ref read off accountability.CHECK_META / QUOTES (never
+    retyped), every number a constant read at call time (GC.MY_DAY_CAP / MY_DAY_CAP_QUIET / MY_REENTRY_MIN /
+    MY_REENTRY_BARS / RUN_BASE_FRAME / NO_TRADE_AFTER_OPEN_MIN, GLN.GG_LOSS_RISK_CUT, the daytrading session clock).
+    The MINE numbers say "MINE — HIS CALL #n". In the note, not a pick / stop / alert line: those lists are pinned and
+    the panel renders only those three plus the note. Before the one-minute clause (the 🧪 test pins the note's tail).
+    " " + the clause, or "" on any exception (the panel never breaks on it). Words only: nothing here gates or pushes."""
+    try:
+        from datetime import date as _date, datetime as _dt, timedelta as _td
+        from chart_maps.gajjala import accountability as AC
+        from chart_maps.gajjala import constants as GC
+        from daytrading import data as DTD
+        meta = AC.CHECK_META
+        open_ = _gg_hhmm(DTD.ET_RTH_OPEN)
+        quiet_end = _gg_hhmm((_dt.combine(_date.min, DTD.ET_RTH_OPEN)
+                              + _td(minutes=GC.NO_TRADE_AFTER_OPEN_MIN)).time())
+        frame_min = int(GC.RUN_BASE_FRAME.rstrip("m"))
+        extra = {
+            "A2": "a tap in %s–%s ET, his first %d minutes" % (open_, quiet_end, GC.NO_TRADE_AFTER_OPEN_MIN),
+            "A3": "a tap before %s or from the close (%s ET on a full day)" % (open_, _gg_hhmm(DTD.ET_RTH_CLOSE)),
+            "A4": "no stop, or a stop at or over your entry",
+            "A5": "printed, never a flag",
+            "A7": ("after a losing trade your next $ risk stays ≤ %g× that trade's $ risk (his cut), a win puts it back "
+                   "to full (the lane's engine — MINE — lane HIS CALL #18), no shares typed = not judged"
+                   % GLN.GG_LOSS_RISK_CUT),
+            "A8": ("a re-entry on the same name under %d min (%d bars of %d min, his “a couple of bars”) after an exit at "
+                   "or under your typed stop — MINE — HIS CALL #3" % (GC.MY_REENTRY_MIN, GC.MY_REENTRY_BARS, frame_min)),
+            "A9": "graded B with no reason typed",
+            "A10": "you tapped impulse",
+            "A11": "you tapped discipline broke",
+            "O2": ("warns before trade #%d of the day and flags it (#%d on a quiet strip day), an add or a voided tap is not counted "
+                   "— your line, MINE — HIS CALL #2 (GG gives no cap)" % (GC.MY_DAY_CAP, GC.MY_DAY_CAP_QUIET)),
+            "O4": "the strip's quiet read at your tap, silent before the first pass",
+        }
+        _six, week_q, _journal = AC.QUOTES
+        week = ("%s words only: your entries this week, nightly (%s %s · VR M4, a paraphrase)"
+                % (AC.WEEK_ID, week_q["source"], week_q["ts"]))
+        items = []
+        for cid, (kind, rule, ref) in meta.items():
+            more = extra.get(cid)
+            items.append("%s %s: %s%s (%s)" % (cid, _GG_JOURNAL_KIND_WORDS.get(kind, kind), rule,
+                                               " — " + more if more else "", ref))
+            if cid == "O2":
+                items.append(week)                              # O2, O3, O4 in order
+        if week not in items:
+            items.append(week)
+        clause = ("🧾 your journal checks (GG) — your 🧾 tap is graded against his rules when the page reads it; words "
+                  "only, never a gate, a push or a block on your broker; times are your taps, not fills; size, open "
+                  "positions and Plaid are not checked (HIS CALLs #8 / #7 / #11): " + "; ".join(items) + ".")
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala journal clause unavailable: %s", exc)
+        return ""
+    return " " + clause
+
+
 def _gg_bottom_word() -> str:
     """🚫 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the ONE served
     word, tab.BROKER_BOTTOM_TEXT, never retyped (lazy: tab imports this package's engines)."""
@@ -1619,6 +1680,7 @@ def _gajjala_section() -> dict:
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)
                  + _gg_diverging_clause()                  # 🌱 2026-11-18 — the 🌱 Diverging sub (forming read only)
                  + _gg_high_si_clause()                    # 🩳 2026-11-23 — the 🩳 High SI sub (display; push LIVE 2026-11-23)
+                 + _gg_journal_clause()                    # 🧾 2026-11-23 — your journal checks (GG) (words only)
                  + _gg_one_minute_clause()                 # 🚩 2026-10-27 — the one-minute page (BUILD_SPEC27 §3.7)
                  + _gg_audited_clause()                    # 🧪 2026-11-01 — the audited tab (BUILD_SPEC gg-audited §3.7)
                  + " UNMEASURED — no study here says these setups win. Not advice."),

@@ -382,7 +382,10 @@ for (const [name, BOARDS] of SOURCES) {
       expect(chartProps).toHaveLength(0);
       expect(roomCalls.length).toBeGreaterThan(0);
       for (const c of roomCalls) expect(c).toEqual([]);
-      expect(calls.every((c) => c.method === 'GET' && c.path.endsWith('/chart-maps/gajjala'))).toBe(true);
+      // 🧾 2026-11-23: the golden's served broker_flags also mounts the My trades line — ONE GET of its own, never a POST.
+      expect(calls.every((c) => c.method === 'GET' && (c.path.endsWith('/chart-maps/gajjala')
+        || c.path.endsWith('/chart-maps/gajjala/my-trades')))).toBe(true);
+      expect(calls.filter((c) => c.path.endsWith('/chart-maps/gajjala/my-trades')).length).toBeLessThanOrEqual(1);
       for (const id of ['gg-counts', 'gg-tf-5m', 'gg-tf-15m', 'gg-track', 'gg-playbook']) expect(screen.queryByTestId(id)).toBeNull();
     });
 
@@ -397,7 +400,9 @@ for (const [name, BOARDS] of SOURCES) {
         const ok = (c.method === 'GET' && c.path.endsWith('/chart-maps/gajjala'))
           || (c.method === 'POST' && c.path.endsWith('/chart-maps/gajjala/scan'))
           // 2026-11-09 ⏱ latency ledger: the owner's 🏁 also GETs its own admin-only block (one GET, never a POST).
-          || (c.method === 'GET' && c.path.endsWith('/trading/gajjala/latency'));
+          || (c.method === 'GET' && c.path.endsWith('/trading/gajjala/latency'))
+          // 2026-11-23 🧾 My trades line: the served broker_flags mounts it — one GET, never a POST.
+          || (c.method === 'GET' && c.path.endsWith('/chart-maps/gajjala/my-trades'));
         expect(ok, `${c.method} ${c.path}`).toBe(true);
       }
       expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);

@@ -464,6 +464,58 @@ RUN_BASE_RESTART = True                    # Ajay 2026-11-15 "Yes, restart" — 
 RUN_BASE_CLIMAX_N = 3                      # GG S8 40:54–41:18 "third base, this is a climax run … I was peeling off early" (E6)
 RUN_BASE_OUT_N = 4                         # GG S8 1:00:37 "fourth base, I came out of everything" (E6)
 
+# 🧾 My trades vs GG (2026-11-23) — Ajay, verbatim: "Do not remove the other tickers please. Keep them on the board
+# still.." · "I think I am going outside Gajjalas now.. Please create a rule to warn me to not over trade and hold me
+# accountable if I am missing out any gajjalas rules" · "All of this is to help me augment gajjals rules and build
+# confidence is my goal so make sure I am going to far our and seeking something that is not useful". His 🧾 tap is the
+# record (he trades in Fidelity; Plaid not built — HIS CALL #11). WORDS AND RECORDS ONLY: nothing here trades, blocks a
+# broker, hides a ticker, gates a scan or sends a push. GG gives no trades-per-day cap (playbook NOT_BUILT "A trades-per-day
+# cap.") — the two lines are MINE, his pick on the 2026-11-24 question card ("Before trade #3 (Recommended)"), never GG's.
+# The quotes inside the templates are GG's words pinned by tests/test_gajjala_accountability_2026_11_23.py to playbook.py,
+# accountability.QUOTES or verified_rules E1 (never a new quote). The engine is accountability.py. UNMEASURED.
+MY_DAY_CAP = 3                             # Cheetah default (MINE, not GG — HIS CALL #2; Ajay 2026-11-24 "Before trade #3 (Recommended)") ⚓ GG: no cap; playbook NOT_BUILT "A trades-per-day cap"
+MY_DAY_CAP_QUIET = 2                       # Cheetah default (MINE, not GG — HIS CALL #2; Ajay 2026-11-24: before #2 on a quiet strip day) ⚓
+MY_REENTRY_BARS = 2                        # Cheetah default (MINE, not GG — HIS CALL #3, its stated default) ⚓ GG S8 1:17:12 "a couple of bars" read as 2
+MY_REENTRY_MIN = MY_REENTRY_BARS * int(RUN_BASE_FRAME.rstrip("m"))   # derived ⚓ — MY_REENTRY_BARS × the frame's minutes (RUN_BASE_FRAME "5m", GG T1) = 10; no typed 5
+MY_DAY_TEXT = "🧾 today: {n} trades · {m} GG rule missed · {y} no app 🎯 A+ · size not checked"
+MY_DAY_NEXT_TEXT = ("⚠️ next trade = #{k} today — GG, last six months: \"one trade per day, two trades maximum\" "
+                    "(S9 1:28:10); good market: \"two, three, four trades per day\" (S8 49:48). Your line = {cap} (MINE).")
+MY_DAY_QUIET_TEXT = ("🌫️ quiet by GG's runner read — \"I take the day off\" (S8 15:32); your line today = {cap_quiet} "
+                     "(MINE).")
+MY_A1_TEXT = ("🟡 {SYM}: no app 🎯 A+ rang today — the app's detector, not GG's words; GG: \"I want the price and volume "
+              "to prove it\" (S9 1:03:33).")
+MY_A2_TEXT = ("🟠 {SYM}: tapped {hhmm} ET — GG: \"I don't take trades for the first 15 minutes after the market opens\" "
+              "(S8 14:41).")
+MY_A3_TEXT = "{SYM}: outside regular hours — GG: \"limit orders only … less size\" (S8 1:16:35)."
+MY_A4_TEXT = ("🟠 {SYM}: no stop under your entry — GG: \"most of my exits [stops] are below the low of the previous bar, "
+              "always\" (S8 32:27).")
+MY_A5_TEXT = "{SYM}: entry {r}R past the trigger — GG: \"No hard rule, will depend on the strength and candle size.\""
+MY_A7_TEXT = ("🟠 risk ${r} after a ${l} loss — GG: \"if $2,000 is the loss in one trade, next trade I cut to $1,000\" "
+              "(S8 46:47).")
+MY_A8_TEXT = "🟠 {SYM}: re-entry {m} min after your stop — GG: \"I need at least a couple of bars\" (S8 1:17:12)."
+MY_A9_TEXT = "{SYM}: graded B with no reason — GG journals \"why I'm taking a B\" (S8 15:57)."
+MY_A10_TEXT = "🟠 {SYM}: impulse trade — GG journals \"was I patient enough or an impulse trade\" (S8 15:57)."
+MY_A11_TEXT = "🟠 {SYM}: discipline broke — GG journals \"my discipline\" (S8 15:57)."
+MY_O2_TEXT = ("⚠️ {SYM}: trade #{k} today, your line = {cap} (MINE) — GG, last six months: \"one trade per day, two "
+              "trades maximum\" (S9 1:28:10); good market: \"two, three, four trades per day\" (S8 49:48).")
+MY_O3_TEXT = ("🧾 this week: {n} trades — GG: A+ setups \"one or two every week\" (S9 1:29:16); VR M4, a paraphrase and "
+              "not his words: about one a day in good markets.")
+MY_O4_TEXT = "🌫️ {SYM}: an entry on a quiet strip day — GG: \"I take the day off\" (S8 15:32)."
+MY_VERDICT_MISSED_TEXT = "🟠 {SYM}: GG rule missed — {ids}"
+MY_VERDICT_NO_APLUS_TEXT = ("🟡 {SYM}: GG rules kept · not an app 🎯 A+ — the app's detector, not GG's — your read of "
+                            "the setup")
+MY_VERDICT_APLUS_TEXT = "🟢 {SYM}: GG rules kept on an app 🎯 A+ · size not checked"
+MY_NONE_TEXT = "🧾 nothing logged today — GG journals every trade at entry (S8 15:57)."
+MY_YESTERDAY_TEXT = "🧾 yesterday: {n} trades · {m} GG rule missed ({ids}) · see the EOD report"
+MY_KEPT_TEXT = "🟢 {g} of {n} today: GG rules kept on an app 🎯 A+ · size not checked"
+MY_FOOTER_TEXT = "words only · the app never trades or blocks your broker · times = your taps, not fills"
+MY_DATA_TEXT = "🧾 times are YOUR tap times, not fill times."
+MY_EXIT_TEXT = "exit {px} at {hhmm} ET"
+MY_OPEN_TEXT = "open"
+MY_EXIT_NOT_LOGGED_TEXT = "exit not logged"
+MY_VOID_TEXT = "voided"
+MY_CLOSED_TEXT = "market closed {date} — nothing logged"
+
 # 🔀 blinker (2026-11-15) — Ajay, verbatim: "On All of the charts and also the tabs I need a new blinker to show me EMA
 # uptrends 9 crossing over 21 EMA please.." · WHERE "All Gajjala tabs" · FRAME "Each chart's own frame" · DURATION "Yes
 # and I need some sort of urgency or fast blink for the one are closer together than approaching with sort also aligned

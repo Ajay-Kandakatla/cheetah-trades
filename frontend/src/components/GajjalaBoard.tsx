@@ -231,6 +231,7 @@ import { GgAuditedHeld } from './GgAuditedHeld';
 import { GgAuditedCompare } from './GgAuditedCompare';
 import { GgAllTable } from './GgAllTable';
 import { DayReadLine } from './DayReadLine';
+import { MyDayLine, myDayDate } from './MyDayLine';
 import { GgDivergencePanel, GgDivergenceTrack } from './GgDivergence';
 import { GgDivergingPanel } from './GgDiverging';
 import { GgHighSiPanel } from './GgHighSi';
@@ -553,6 +554,13 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   const cardLive = useMemo(() => ({ footer: cardPoll.footer, answer: patchQuotes(cardPoll.answer, ggLive.quotesEvt) }),
     [cardPoll.answer, cardPoll.footer, ggLive.quotesEvt]);
   const patchedTiles = useMemo(() => patchTiles(tiles, cardLive.answer), [tiles, cardLive.answer]);
+  /* 🧾 2026-11-23: the last close of a card on screen — the journal sheet's entry PLACEHOLDER only (never posted). */
+  const myPriceOf = useCallback((sym: string): number | null => {
+    const t = patchedTiles.find((x) => String(x?.symbol || '').toUpperCase() === sym);
+    const bars = Array.isArray(t?.bars) ? t!.bars : [];
+    const c = bars.length ? bars[bars.length - 1]?.c : null;
+    return typeof c === 'number' && Number.isFinite(c) ? c : null;
+  }, [patchedTiles]);
   /* 💋 2026-11-11 (kiss rvol spec addendum; Ajay: "This filter is needed for EMA Kiss atleast"): the per-viewer toggle,
    * default OFF, remembered in localStorage (try/catch — a blocked store reads OFF). It shows only on the 💋 sub of a
    * board that SERVES `kiss_filter`; ON drops the cards served `kiss_now === false` from the drawing only — the room
@@ -720,6 +728,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       ) : null}
       {/* 🌫️ 2026-11-15: the served day read (owner only, information only) — after stale/warming, before the scan lines. */}
       <DayReadLine block={board?.day_read ?? null} />
+      {/* 🧾 2026-11-23: My trades vs GG (owner only, words only) — right under 🌫️ Day read, 🚩 5-minute page only; the gate
+          is the SERVED owner block `broker_flags` (never isOwner). Never on 🧪 Audited or the 1-minute page. */}
+      {vkey === 'gajjala' && brokerBlock ? <MyDayLine date={myDayDate(board?.session?.date ?? null)} priceOf={myPriceOf} /> : null}
       {scanning && scanningLine ? (
         <div className="cm-note gg-scanning" role="status" data-testid="gg-scanning">{scanningLine}</div>
       ) : null}

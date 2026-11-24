@@ -1045,6 +1045,31 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   (+`ellipses: []`); 1m and on_open unchanged. Doc `docs/gajjala/squeeze_chart_2026_11_08.md`
   (HIS CALLs #1–#15); contract "🎾 GG's marks on the Reversal Squeeze chart (2026-11-08)"; ✨
   `chart-maps-gajjala-squeeze-chart-2026-11-08`. No gate, rule, threshold, claim or push changed. UNMEASURED. Not advice.
+- **🧾 My trades vs GG — GG's journal + an over-trade warning (2026-11-23)** — Ajay, verbatim: "Do not remove the other
+  tickers please. Keep them on the board still.." / "I think I am going outside Gajjalas now.. Please create a rule to
+  warn me to not over trade and hold me accountable if I am missing out any gajjalas rules" / "All of this is to help me
+  augment gajjals rules and build confidence is my goal so make sure I am going to far our and seeking something that is
+  not useful". Words and records only: the app cannot see his trades (Alpaca = paper; Plaid = Fidelity, dates only,
+  T+1), so his tap on the 🧾 sheet (GG5 5-min tab, owner = primary admin only) is the record — times are TAP times, not
+  fills. Mongo `owner_trade_log` (one doc per tap, index `(owner, date)`; GG's R8 journal fields: grade A+/B, why-B,
+  patient/impulse, kept/broke, how he peeled off; entry typed, no prefill; stop typed or one tap on the alert's stop;
+  same-symbol re-tap = an add, never a new trade; void keeps the doc). `chart_maps/gajjala/accountability.py` (pure)
+  re-grades every trade at read time: A1 app 🎯 A+ (soft — the app's detector, not GG's), A2 first 15 min
+  (`NO_TRADE_AFTER_OPEN_MIN`), A3 outside RTH (soft), A4 no stop (`ledger.plan_of`), A5 R past the trigger (info only,
+  new `ledger.r_past`; GG E1 "No hard rule"), A7 loss cut (`GG_LOSS_RISK_CUT` via `gajjala_entry.risk_after`), A8
+  re-entry within `MY_REENTRY_MIN` of a stop-out, A9–A11 GG's journal fields, O2–O4 day / week / quiet words; verdict
+  🟠 GG rule missed · 🟡 kept, not an app 🎯 A+ · 🟢 kept on an app 🎯 A+ (always "size not checked"). Endpoints
+  `GET /chart-maps/gajjala/my-trades?date=` (non-owner = exactly `owner_only_payload()`; never writes), `POST …/my-trades`,
+  `POST …/{id}/exit`, `POST …/{id}/void` (non-owner POST 404 before the body is read; closed day 409). ONE served
+  `my_day` line under 🌫️ Day read warns BEFORE trade #`MY_DAY_CAP` (3; #`MY_DAY_CAP_QUIET` 2 on a quiet strip day) and
+  prints BOTH GG quotes ("one trade per day, two trades maximum" S9 1:28:10; "two, three, four trades per day" S8 49:48);
+  the line is MINE / his pick (HIS CALL #2, answered "Before trade #3"), never a cap. Served from its own GET, so
+  `tab.py` and the GG5 golden are untouched. ℹ️ list "🧾 your journal checks (GG)". The champions EOD report gains a
+  read-only "🧾 Your trades vs GG" section. The 📓 "Not built" row "A post-market journal … (your answer R2-8: not now)"
+  stays word-for-word pending HIS CALL #1 (editing it moves two goldens); the "A trades-per-day cap" row stays too.
+  Plaid reconcile NOT built (his answer "Fidelity"). The "Outside GG" list (🥇 Luk, 🩳 SI, 👀 1-min cross, VWAP, …) is
+  words in the doc only — every row and ticker KEPT (his first line). Never trades, blocks, hides, gates or pushes.
+  Doc `docs/gajjala/accountability_2026_11_23.md` (MINE list, Outside-GG list, HIS CALLs #1–#12). UNMEASURED. Not advice.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a

@@ -198,6 +198,19 @@ def plan_of(trigger, stop) -> tuple:
     return "ok", float(dt - ds)
 
 
+def r_past(trigger, stop, px) -> Optional[float]:
+    """🧾 2026-11-23 (accountability A5, information only): how many R `px` sits past the trigger — (px − trigger) / r
+    in exact decimals, r from plan_of. None when the plan is not "ok" or px is not a finite number > 0. Negative =
+    under the trigger. No threshold, no verdict; alerts.chase_text and the lane's bound are NOT refactored onto it."""
+    p = _num(px)
+    if p is None or p <= 0:
+        return None
+    plan, r = plan_of(trigger, stop)
+    if plan != PLANS[0] or not r:
+        return None
+    return float((_D(p) - _D(_num(trigger))) / _D(r))
+
+
 def rang_of(session, at_utc: Optional[datetime]) -> Optional[str]:
     """E1 chip: "pre" before 09:30 ET, "rth" to the regular close, "ah" at or after it (on the alert's date)."""
     from daytrading.data import ET_RTH_OPEN

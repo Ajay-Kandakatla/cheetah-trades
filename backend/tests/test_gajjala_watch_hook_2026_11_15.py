@@ -77,8 +77,24 @@ def test_only_gajjala_run_py_names_the_watch():
     # 🩳 2026-11-23 (spec highsi §3.2 / §3.5): high_si.py reads gajjala_watch.constants (FRAME_WORDS — the card's frame
     # words) and high_si_cross.py reads constants (FRAME_WORDS) + cross_alerts.watch_crosses (the ONE cross engine).
     # Pinned by the NEGATIVE below. Widened to include both; nothing else may join.
-    assert hits == ["alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py", "live_events.py", "run.py",
-                    "tab.py"]
+    # 🧾 2026-11-24 (spec accountability, WP-BE1 — verifier refix): accountability_api.py (My trades vs GG) reads the
+    # Watch's owner-only answer (payload.owner_only_payload — one shape for every owner-only Gajjala route) and its
+    # ticker normaliser (store.normalize). Pinned by the NEGATIVE below. Widened; nothing else may join (owner's note).
+    assert hits == ["accountability_api.py", "alerts.py", "card_frames.py", "high_si.py", "high_si_cross.py",
+                    "live_events.py", "run.py", "tab.py"]
+
+
+def test_NEGATIVE_accountability_api_names_the_watch_only_for_owner_only_payload_and_normalize():
+    # 🧾 2026-11-24: never the Watch's switch, loop, build, cross engine, colls or constants.
+    mods, reads = _watch_imports_and_wc_reads("accountability_api.py")
+    assert mods == ["chart_maps.gajjala_watch.payload.owner_only_payload",
+                    "chart_maps.gajjala_watch.store.normalize"]
+    assert reads == []
+    src = (GG_DIR / "accountability_api.py").read_text(encoding="utf-8")
+    for banned in ("gajjala_watch import colls", "gajjala_watch import loop", "gajjala_watch import build",
+                   "gajjala_watch import constants", "gajjala_watch.cross_alerts", "_popen", "spawn_child",
+                   "spawn_loop", "WCO."):
+        assert banned not in src, banned
 
 
 def _watch_imports_and_wc_reads(name):

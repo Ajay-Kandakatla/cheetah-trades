@@ -306,7 +306,10 @@ describe('GajjalaBoard — 🕰️ entries timeline (golden)', () => {
     fireEvent.click(mini);
     await waitFor(() => expect(screen.queryByTestId(`gg-tl-tape-${last.key}`)).toBeNull());
     // NEGATIVE: opening a tape fetched nothing on the board (the mock stands in for the lazy per-row GET)
-    expect(calls.every((c) => c.method === 'GET' && c.path.endsWith('/chart-maps/gajjala'))).toBe(true);
+    // 🧾 2026-11-23: the owner's served broker_flags also mounts the My trades line — ONE GET of its own, never a POST.
+    expect(calls.every((c) => c.method === 'GET' && (c.path.endsWith('/chart-maps/gajjala')
+      || c.path.endsWith('/chart-maps/gajjala/my-trades')))).toBe(true);
+    expect(calls.filter((c) => c.path.endsWith('/chart-maps/gajjala/my-trades')).length).toBeLessThanOrEqual(1);
   });
 
   it('4. a deep link paints the timeline first; a span click keeps the view; NEGATIVE a sub click drops it', async () => {

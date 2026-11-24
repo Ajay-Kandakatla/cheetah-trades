@@ -806,6 +806,8 @@ app.include_router(long_term_router)
 # 👀 Gajjala's Watch (2026-11-15), owner-only: his own tickers on 1/3/5-min charts + the 1-min 9/21 EMA cross push.
 from chart_maps.gajjala_watch.api import router as gajjala_watch_router  # noqa: E402
 app.include_router(gajjala_watch_router)
+from chart_maps.gajjala.accountability_api import router as gajjala_my_trades_router  # noqa: E402  🧾 My trades vs GG (2026-11-23), owner-only
+app.include_router(gajjala_my_trades_router)
 from chart_maps.replays.api import router as replays_router  # noqa: E402  🎬 Replays (2026-11-17), owner-only
 app.include_router(replays_router)
 
