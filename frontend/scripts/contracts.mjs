@@ -6962,8 +6962,10 @@ const CONTRACTS = [
       if (!/LOG_ONLY_KEYS/.test(sender)) errs.push('push/sender.py must strip LOG_ONLY_KEYS before a device sees the payload');
       // 2026-10-21: both paths send through the ONE chokepoint _fan_out (it stamps the delivery-receipt push_id on
       // the stripped device dict); the pin is now "the chokepoint strips, both paths use it".
-      const sends = (sender.match(/_send_one\(sub, device\)/g) || []).length;
-      const fans = (sender.match(/_fan_out\(targets, payload\)/g) || []).length;
+      // 2026-11-24: the kept kinds add the Web Push Urgency kwarg (push_urgency_2026_11_24.md) — the call text
+      // may now end in `, **kw)` / `, **({...}))`; the chokepoint rule is unchanged.
+      const sends = (sender.match(/_send_one\(sub, device(, \*\*kw)?\)/g) || []).length;
+      const fans = (sender.match(/_fan_out\(targets, payload(\)|, \*\*)/g) || []).length;
       if (sends !== 1 || fans !== 2) errs.push(`push/sender.py must send through _fan_out (one _send_one(sub, device), found ${sends}) from BOTH send_to_all and send_to_user (found ${fans}) — the unstripped payload would reach the phone`);
       const fan = sender.slice(sender.indexOf('def _fan_out('), sender.indexOf('def send_to_all('));
       if (!/device_payload\(payload\)/.test(fan)) errs.push('_fan_out must build the device dict from device_payload(payload)');

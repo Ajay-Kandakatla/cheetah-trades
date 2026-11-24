@@ -72,7 +72,7 @@ def wire(monkeypatch):
         seen["list"].append((filter_kind, user_email))
         return [d for d in devices if d["user_email"] == user_email and d["prefs"].get(filter_kind) is True]
 
-    def _fan(targets, payload):
+    def _fan(targets, payload, **_kw):        # 2026-11-24: luk_setup is a kept kind → urgency="high" kwarg
         seen["fan"].append((list(targets), payload))
         return {"sent": len(targets), "failed": 0, "total_targets": len(targets)}, "pid", []
 

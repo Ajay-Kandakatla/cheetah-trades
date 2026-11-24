@@ -153,7 +153,7 @@ def push_stack(monkeypatch):
     sent, recorded = [], []
     monkeypatch.setattr(gate, "should_drop_kind", lambda *a, **k: None)
     monkeypatch.setattr(subs, "list_subscriptions", lambda *a, **k: [dict(s) for s in _subs()[:3]])
-    monkeypatch.setattr(S, "_send_one", lambda sub, payload: sent.append(payload) or True)
+    monkeypatch.setattr(S, "_send_one", lambda sub, payload, **_kw: sent.append(payload) or True)
     monkeypatch.setattr(H, "record", lambda payload, **k: recorded.append((payload, k)))
     return sent, recorded
 
@@ -183,7 +183,7 @@ def test_sender_ids_differ_per_send_and_targets_record_acceptance(push_stack, mo
     S.send_to_user("a@x", p, kind="gajjala_setup")
     assert recorded[0][1]["push_id"] != recorded[1][1]["push_id"]
     # the second Mac rejects: ok False on its target, counts unchanged in meaning
-    monkeypatch.setattr(S, "_send_one", lambda sub, payload: sub["endpoint"] != EP_MAC2)
+    monkeypatch.setattr(S, "_send_one", lambda sub, payload, **_kw: sub["endpoint"] != EP_MAC2)
     out = S.send_to_user("a@x", p, kind="gajjala_setup")
     assert out == {"sent": 2, "failed": 1, "total_targets": 3}
     assert [t["ok"] for t in recorded[2][1]["targets"]] == [True, False, True]

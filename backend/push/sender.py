@@ -24,6 +24,23 @@ _vapid_obj_cache = None
 LOG_ONLY_KEYS = frozenset({"items"})   # logged to push_history, never sent to a device
 
 
+# Web Push `Urgency` (RFC 8030 §5.3) — 2026-11-24, Ajay: "also i am not getting the alerts on phone".
+# push_history 11-23: every 🚩 push was ACCEPTED for all 4 of his devices, yet his iPhone's delivery
+# receipts arrived in batches 10-33 minutes late (lags 601 s, 1,201 s, 1,996 s) and whole stretches
+# never arrived (14:11-15:14, 7 pushes in a row). The sender set no Urgency header, so every push went
+# as "normal", which Apple may hold back on a locked / low-power iPhone and coalesce on reconnect.
+# The kinds he KEEPS on his phone (push/subs.OWNER_KEEP_SET — derived, never retyped) go "high"; every
+# other kind is sent exactly as before (no header). A delivery-priority header only: no gate, no
+# pref, no kind, no count and no payload changes.
+URGENCY_HIGH = "high"
+URGENT_KINDS = subs.OWNER_KEEP_SET
+
+
+def urgency_for(kind: Optional[str]) -> Optional[str]:
+    """"high" for a kind he keeps on his phone; None (no header — the old behaviour) otherwise."""
+    return URGENCY_HIGH if kind in URGENT_KINDS else None
+
+
 def device_payload(payload: dict) -> dict:
     """The dict a DEVICE receives: `payload` minus LOG_ONLY_KEYS. A NEW dict when a
     key is stripped (the caller's dict, which history records, is never mutated);
@@ -53,7 +70,7 @@ def _vapid_obj():
         return None
 
 
-def _send_one(subscription: dict, payload: dict) -> bool:
+def _send_one(subscription: dict, payload: dict, urgency: Optional[str] = None) -> bool:
     try:
         from pywebpush import webpush
         v = _vapid_obj()
@@ -71,6 +88,7 @@ def _send_one(subscription: dict, payload: dict) -> bool:
             vapid_private_key=v,
             vapid_claims={"sub": CONTACT_EMAIL},
             ttl=3600,
+            headers=({"Urgency": urgency} if urgency else None),
         )
         return True
     except Exception as exc:
@@ -85,7 +103,7 @@ def _send_one(subscription: dict, payload: dict) -> bool:
         return False
 
 
-def _fan_out(targets: list, payload: dict) -> tuple:
+def _fan_out(targets: list, payload: dict, urgency: Optional[str] = None) -> tuple:
     """Send one payload to every target. Returns (result, push_id, targets_for_history).
 
     The DEVICE dict is a NEW dict every time: the caller's payload minus
@@ -99,7 +117,8 @@ def _fan_out(targets: list, payload: dict) -> tuple:
     push_id = receipts.new_push_id()
     device = dict(device_payload(payload))
     device["push_id"] = push_id
-    oks = [_send_one(sub, device) for sub in targets]
+    kw = {"urgency": urgency} if urgency else {}       # no kwarg at all for a normal push (old call shape)
+    oks = [_send_one(sub, device, **kw) for sub in targets]
     sent = sum(1 for ok in oks if ok)
     result = {"sent": sent, "failed": len(oks) - sent, "total_targets": len(targets)}
     return result, push_id, receipts.targets_of(targets, oks)
@@ -115,7 +134,8 @@ def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind)
-    result, push_id, target_rows = _fan_out(targets, payload)
+    u = urgency_for(kind)
+    result, push_id, target_rows = _fan_out(targets, payload, **({"urgency": u} if u else {}))
     log.info("push.sender: kind=%s sent=%d failed=%d", kind, result["sent"], result["failed"])
     # Persist the full untruncated payload to history so the user can
     # re-read it from /notifications even after the phone has cleared
@@ -141,7 +161,8 @@ def send_to_user(user_email: str, payload: dict, kind: Optional[str] = None) -> 
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind, user_email=user_email)
-    result, push_id, target_rows = _fan_out(targets, payload)
+    u = urgency_for(kind)
+    result, push_id, target_rows = _fan_out(targets, payload, **({"urgency": u} if u else {}))
     log.info("push.sender: user=%s kind=%s sent=%d failed=%d",
              user_email, kind, result["sent"], result["failed"])
     # Same history-record path as send_to_all, but scoped to this user
