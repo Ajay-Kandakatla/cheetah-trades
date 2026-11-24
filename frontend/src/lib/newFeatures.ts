@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24, verbatim: "What are the SSR stocks today" -> "Can you add it to short interest tab" -> "The new ones".
+  // BE short_interest/ssr.new_triggers (the ONE SSR engine) + chart_maps/gajjala/high_si.ssr_new_block (served as
+  // high_si.ssr_new); FE GgSsrNew. Docs docs/gajjala/high_si_ssr_new_2026_11_24.md, docs/gajjala/ssr_new_triggers_engine_2026_11_24.md. Display only.
+  {
+    id: 'gajjala-high-si-ssr-new-2026-11-24',
+    label: "⛔ New SSR today on 🩳 High SI — you asked: “What are the SSR stocks today” · “Can you add it to short interest tab” · “The new ones”. The 🩳 High SI tab now lists every stock that newly fell under the SEC short-sale restriction today (no shorting at the bid), in folds: names on GG's 🚩 list with High or EXTREME short interest first, then the rest of his list, then High / EXTREME names off his list, then every other name behind a count. Each row shows when it triggered, how far it fell from the prior close, its short interest % of float with that figure's date, and whether an exchange list confirms it or it is computed here from our own bars. A list that cannot be read says so — it never reads as “none”. A label only: it changes no alert, sort or trade. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala&sub=high_si',
+  },
   // Ajay 2026-11-24, verbatim: "On the Watch list I need a run button to run against Gajjalas rules of a stock to see for patterns of 5 patterns he has especially reversal squeeze.. so can check for patterns mid day when I can add a small slide in in the chart window for giving verbatim of passed rules and failed rules of that stock like you do in other tabs..". BE chart_maps/gajjala_watch/run_rules.py (POST
   // /chart-maps/gajjala-watch/run/{symbol}: the pass's own frames_for -> detectors.read_all, read-only loader, 🎾 first);
   // FE GgwRunRules + the shared GgCriteriaList. Docs docs/gajjala/watch_run_rules_2026_11_24.md. Display only.
