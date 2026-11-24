@@ -18,6 +18,13 @@ What it does (ZERO writes):
   4. Prints one line per name `SYM | old chip | new chip | refused | flags | sources`, a summary by
      `basis_math.FLOAT_STALE_WHEN` mode (all three, the same basis docs), the names whose tier changes, and the names
      whose change % was rebased across a split.
+  4b. 2026-11-24 later (Ajay: "Is GMEX float accurate?") — the NEWER-FLOAT section: each name whose basis doc holds a
+     Yahoo float dated later than the record's and different from it (`basis_math.newer_float`), with both floats and
+     dates, the % of float and tier BEFORE (the same basis doc with that Yahoo float removed and the track re-run on
+     the record — what the 11-24 check served) and NOW; the names entering / leaving 🩳 High / EXTREME; and, for every
+     name with a stored 🚩 Gajjala read this session, the 🩳 High SI list membership before / now
+     (`chart_maps.gajjala.high_si.classify` — the list the 9/21 cross push rings for); the flags each name gains and
+     LOSES (fix, same day: the dilution checks keep the replaced float's date, so the lost list must be empty).
   5. Writes `si_share_basis_probe.json` and `si_live_blocks.json` (the shared-fixture shape) for
      SI_LIVE_PAYLOAD=<path>/si_live_blocks.json npx vitest run src/components/ShortInterest.payload.test.tsx
 
@@ -228,9 +235,37 @@ def _clean(rec: dict, sym: str) -> dict:
     return d
 
 
+def without_newer_float(bdoc: dict, rec: dict, held_track) -> dict:
+    """The basis doc as the 11-24 check judged it: Yahoo's float removed (so `newer_float` finds none) and the track
+    re-run on the SI record from the HELD track — the shape `share_basis.refresh_symbol` stored before 11-24 later."""
+    from short_interest import basis_math as BM
+    d = copy.deepcopy(bdoc)
+    y = d.get("yahoo")
+    if isinstance(y, dict):
+        d["yahoo"] = dict(y, float_shares=None)
+    sp = d.get("splits") if isinstance(d.get("splits"), dict) else {}
+    rows = sp.get("rows") if sp.get("status") == "ok" else None
+    try:
+        d["float_track"] = BM.track_update(held_track, dict(rec), rows)
+    except Exception:                                          # noqa: BLE001 — keep what is held
+        d["float_track"] = held_track
+    return d
+
+
+def _listed(block, read_doc):
+    """(listed, reason) on the 🩳 High SI sub's ONE membership function, or None with no stored read."""
+    if not isinstance(read_doc, dict):
+        return None
+    from chart_maps.gajjala import high_si as HS
+    from chart_maps.gajjala import tab as GT
+    c = HS.classify(block, GT._float_read(read_doc, None))
+    return [bool(c.get("listed")), c.get("reason")]
+
+
 def run(symbols, *, db, now: datetime, today: date, seed: Optional[dict] = None,
-        refresh: Optional[Callable] = None) -> dict:
-    """The probe's body: no write, no print. Returns the out dict (`smtk_failures` empty = the check holds)."""
+        refresh: Optional[Callable] = None, reads: Optional[dict] = None) -> dict:
+    """The probe's body: no write, no print. Returns the out dict (`smtk_failures` empty = the check holds).
+    `reads` = {SYM: stored 🚩 Gajjala read doc} for the 🩳 High SI list membership before / now (optional)."""
     from short_interest import basis_math as BM
     from short_interest import client as C
     from short_interest import read as SR
@@ -245,8 +280,13 @@ def run(symbols, *, db, now: datetime, today: date, seed: Optional[dict] = None,
     tracks = seed_tracks(seed, syms, db) if seed else {}
     use_db = _OverlayDB(db, SB.SB_COLL, tracks) if tracks else db
     refresh = refresh or SB.refresh_symbol
+    try:
+        held_docs = SB.load(syms, use_db) or {}
+    except Exception:                                          # noqa: BLE001
+        held_docs = {}
+    hi = (SR.TIER_HIGH, SR.TIER_EXTREME)
 
-    lines, cases, per = [], [], {}
+    lines, cases, per, newer = [], [], {}, {}
     for sym in syms:
         rec = records.get(sym)
         if rec is None:
@@ -270,6 +310,21 @@ def run(symbols, *, db, now: datetime, today: date, seed: Optional[dict] = None,
             by_mode[m] = {"refused": _refused(bm), "tier": (bm or {}).get("tier"), "chip": (bm or {}).get("chip")}
         basis = (new or {}).get("basis") or {}
         per[sym] = {"old": old, "new": new, "basis_doc": bdoc, "by_mode": by_mode}
+        fu = basis.get("float_update")
+        if isinstance(fu, dict):
+            held_track = (held_docs.get(sym) or {}).get("float_track")
+            before = SR.si_block(copy.deepcopy(doc), today, basis=without_newer_float(bdoc, doc, held_track))
+            rd = (reads or {}).get(sym)
+            newer[sym] = {"float_before": [fu.get("replaced_shares"), fu.get("replaced_asof")],
+                          "float_now": [fu.get("shares"), fu.get("as_of")],
+                          "pct_before": (before or {}).get("pct_of_float"), "pct_now": (new or {}).get("pct_of_float"),
+                          "tier_before": (before or {}).get("tier"), "tier_now": (new or {}).get("tier"),
+                          "refused_before": _refused(before), "refused_now": _refused(new),
+                          "chip_before": (before or {}).get("chip"), "chip_now": (new or {}).get("chip"),
+                          "high_before": (before or {}).get("tier") in hi, "high_now": (new or {}).get("tier") in hi,
+                          "list_before": _listed(before, rd), "list_now": _listed(new, rd),
+                          "flags_gained": sorted(set(_flag_keys(new)) - set(_flag_keys(before))),
+                          "flags_lost": sorted(set(_flag_keys(before)) - set(_flag_keys(new)))}
         lines.append(" | ".join([sym, str((old or {}).get("chip")), str((new or {}).get("chip")),
                                  str(_refused(new)), ",".join(str(k) for k in _flag_keys(new)) or "-",
                                  json.dumps(basis.get("sources"), sort_keys=True, default=str)]))
@@ -294,8 +349,28 @@ def run(symbols, *, db, now: datetime, today: date, seed: Optional[dict] = None,
     return {"run_at": now.astimezone(timezone.utc).isoformat(timespec="seconds"), "today": today.isoformat(),
             "built_mode": BM.FLOAT_STALE_WHEN, "names_n": len(syms), "seeded": sorted(tracks),
             "lines": lines, "by_mode": modes, "tier_changes": tier_moves, "change_rebased": rebased,
+            "newer_float": newer,
+            "newer_float_tier_changes": {s: [n["tier_before"], n["tier_now"]] for s, n in newer.items()
+                                         if n["tier_before"] != n["tier_now"]},
+            "newer_float_high": {"entering": sorted(s for s, n in newer.items() if n["high_now"] and not n["high_before"]),
+                                 "leaving": sorted(s for s, n in newer.items() if n["high_before"] and not n["high_now"])},
+            "newer_float_list": {s: [n["list_before"], n["list_now"]] for s, n in newer.items()
+                                 if n["list_before"] is not None and n["list_before"] != n["list_now"]},
+            "newer_float_flags_lost": {s: n["flags_lost"] for s, n in newer.items() if n["flags_lost"]},
             "smtk_failures": smtk_check(smtk), "per_name": per,
             "payload": {"today": today.isoformat(), "cases": cases}}
+
+
+def session_reads(session: Optional[date] = None) -> dict:
+    """{SYM: the 🩳 sub's stored read doc} for the session ({} on any fault) — the High SI list's input."""
+    try:
+        from chart_maps.gajjala import store as GS
+        from chart_maps.gajjala import tab as GT
+        sess = session or GT.session_for()[0]
+        return {str(d.get("symbol")).upper(): d for d in GS.GajjalaStore().reads(sess) if d.get("symbol")}
+    except Exception as exc:                                   # noqa: BLE001
+        print("gajjala reads unavailable: %s" % type(exc).__name__, file=sys.stderr)
+        return {}
 
 
 def default_names(session: Optional[date] = None) -> list:
@@ -355,7 +430,7 @@ def main(argv=None) -> int:
     from chart_maps.gajjala import tab as GT
     today = GT._et(now).date()
 
-    out = run(syms, db=db, now=now, today=today, seed=seed)
+    out = run(syms, db=db, now=now, today=today, seed=seed, reads=session_reads())
     out["attempted_writes"] = len(ATTEMPTED)
     out["attempted_write_methods"] = dict(collections.Counter(ATTEMPTED))
     payload = out.pop("payload")
@@ -374,6 +449,19 @@ def main(argv=None) -> int:
         print(_scrub("mode %-20s refused %3d: %s" % (m, s["refused_n"], " ".join(s["refused"])), key))
     print(_scrub("tier changes: %s" % json.dumps(out["tier_changes"], ensure_ascii=False), key))
     print(_scrub("change rebased across a split: %s" % json.dumps(out["change_rebased"], ensure_ascii=False), key))
+    print("\nnewer Yahoo float (basis_math.newer_float): %d name(s)" % len(out["newer_float"]))
+    for s, n in out["newer_float"].items():
+        print(_scrub("%s | float %s (%s) -> %s (%s) | %% of float %s -> %s | tier %s -> %s | refused %s -> %s | "
+                     "High SI list %s -> %s | %s" % (
+                         s, n["float_before"][0], n["float_before"][1], n["float_now"][0], n["float_now"][1],
+                         n["pct_before"], n["pct_now"], n["tier_before"], n["tier_now"], n["refused_before"],
+                         n["refused_now"], n["list_before"], n["list_now"], n["chip_now"]), key))
+    print(_scrub("newer-float tier changes: %s" % json.dumps(out["newer_float_tier_changes"], ensure_ascii=False), key))
+    print(_scrub("newer-float High/EXTREME entering: %s · leaving: %s" % (
+        " ".join(out["newer_float_high"]["entering"]) or "-", " ".join(out["newer_float_high"]["leaving"]) or "-"), key))
+    print(_scrub("newer-float High SI list changes: %s" % json.dumps(out["newer_float_list"], ensure_ascii=False), key))
+    print(_scrub("newer-float flags LOST (must be empty): %s" % json.dumps(out["newer_float_flags_lost"],
+                                                                           ensure_ascii=False), key))
     print("attempted writes: %d" % out["attempted_writes"])
     if out["smtk_failures"]:
         print(_scrub("SMTK STRUCTURAL CHECK FAILED: %s" % "; ".join(out["smtk_failures"]), key))

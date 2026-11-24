@@ -51,7 +51,7 @@ One constant, `basis_math.FLOAT_STALE_WHEN`. KITT and SMX are split refusals and
 
 Shares added ÷ float on file, ranked: LABT 7.76 · SMTK 6.99 · BENF 0.94 · ZNB 0.72 · GPUS 0.67 · STIM 0.55 · MEDS 0.37 … JELD 0.0001.
 
-What moves under the built mode (spec §7 #2):
+What moves under the built mode (spec §7 #2) — **results before the newer-float rule** (the "2026-11-24 later" section; the current results on the same fixture are in the second table):
 
 | Name | Before | After | Why |
 |---|---|---|---|
@@ -63,6 +63,19 @@ What moves under the built mode (spec §7 #2):
 | NXAT | 1.6% float | unchanged · `❔ shares fell 21×` | 68,476,338 → 3,236,567 with no split row |
 | CLRO | EXTREME 44.0% float | unchanged · `📄 S-1/A 11/24 +1` | no newer dated count (Massive's undated 3,675,411 is not used) |
 | JZ | EXTREME 27.2% float | unchanged · `✂️ split due 12/24` | ADR — cover not compared |
+
+**Current results, with the newer-float rule** (same frozen fixture, `added_exceeds_float`, run 2026-11-24 on this branch):
+
+| Name | Chip now | Refused | What changed vs the table above |
+|---|---|---|---|
+| SMTK | `8.9% shs out · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13` | diluted | nothing (no newer Yahoo float) |
+| LABT | `1.7% shs out · ⚠️ float updated · ⚠️ float stale` | diluted | gains `⚠️ float updated` (3,201,536 Yahoo 11/18 replaced 847,661 11/9); still refused from the replaced float's date |
+| KITT | `7.7% shs out · ⚠️ float updated · ⚠️ float stale · ✂️ split 9/25 · 📄 S-1 11/12` | diluted only | the newer float (11/23) is on the count's side of the 9/25 split, so the split refusal goes; the dilution since 9/3 still refuses it |
+| SMX | `47.7K sh · ⚠️ float updated · ✂️ split 11/9 · 📄 424B3 11/23 +2` | split | the newer float (11/24) is after the 11/9 split, short interest before it; no count on the settlement's side, so no % at all |
+| WETO | `Low 1.6% float · ⚠️ float updated · ⚠️ shares up 14×` | — | Yahoo's newer float (14,735,015 on 14,897,999) heads; HIS CALL 2 below |
+| NXAT | `Low 1.6% float · ❔ shares fell 21×` | — | unchanged |
+| CLRO | `EXTREME 44.0% float · 📄 S-1/A 11/24 +1` | — | unchanged |
+| JZ | `EXTREME 27.2% float · ✂️ split due 12/24` | — | unchanged |
 
 The SMTK chip on the frozen fixture (`backend/tests/fixtures/si_share_basis_2026_11_24.json`):
 `🩳 SI 8.9% shs out · 1.0d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13`.
@@ -158,3 +171,65 @@ docker exec -i -w /app cheetah-market-app-cron-1 python -m short_interest.share_
 - `backend/tests/test_si_basis_math_2026_11_24.py`, `backend/tests/test_si_basis_read_2026_11_24.py` — the verdict, the words, the block, the route.
 - `backend/tests/test_si_basis_integration_2026_11_24.py` — the real modules over the captured fixture with fake HTTP and an in-memory Mongo: the §7 #2 moves, every SEC call failing on the first pass, a good pass then every call failing, no CIK, an ETF, an ADR, and no host other than `data.sec.gov` / `api.massive.com`.
 - `backend/tests/test_gajjala_high_si_basis_2026_11_24.py` — the 🩳 sub.
+
+## 2026-11-24 later — a newer dated float is the one divided by ("Is GMEX float accurate?")
+
+Ajay, verbatim: "Is GMEX float accurate?"
+
+**Not as served.** GMEX's short-interest record divides FINRA's 12,722 shares short (10-30) by Yahoo's float of 20,235 read 11-02 and served `🩳 SI High 62.9% float · float unconfirmed`. Its own share-basis doc already held Yahoo's 11-19 read: float **361,428** on the same 752,439 shares outstanding — **3.5% of float, on Yahoo's newer read, not confirmed by a filing** (both numbers are Yahoo reads; the float moved 17.9× with shares outstanding unchanged, and no SEC filing confirms either). 1.69% of shares out.
+
+**The rule (`basis_math.newer_float`, called by the read-time verdict only):** when the basis doc's Yahoo float (the `shares_cache` row it read) is dated LATER than the record's `float_asof` and differs from it, that newer float is used for exactly two things:
+
+1. **The division** — the % of float (and the "would read N%" on a SPLIT-refused float; a dilution refusal's is on the replaced float — refix 3 below) divides by it; its suspect check (`read._float_suspect`) pairs it with Yahoo's shares outstanding from the same row (the record's count when that row has none).
+2. **The split-side check** — whether that float and the short-interest count sit on the same side of a split (`split` / `split_same_day`), judged on the newer read's date.
+
+**Everything on the dilution side keeps the REPLACED float's own date and count** — the dilution-filing window (📄) starts at the record float's first-seen date, the share-growth check (⚠️ float stale / ⚠️ shares up) measures from the record's paired count and date, the refusal judges the replaced float, and the stored float track (`share_basis.refresh_symbol`) follows the SI record exactly as before. A newer float never moves any of these forward. Which path a name takes (float-headed vs shares-headed growth) is still decided on the replaced float, exactly as before.
+
+The served block carries the newer float, its date and the source `yfinance floatShares (shares_cache, current row)`, and the flag `⚠️ float updated — 361,428 (Yahoo 11/19) replaced 20,235 (11/2)` (first on the chip; row "Float updated"; the EXTREME note's float line names it). The served `basis` gains `float_update` {shares, as_of, source, paired_shares, replaced_shares, replaced_asof, suspect, pct} **only when a newer float was used** — with none, the block is byte-identical to before.
+
+- The older read never wins: a Yahoo read dated on or before the record's float date, an equal count, or a missing / undated / NaN / zero / negative Yahoo float leaves the record's float as before.
+- **[C1] Nothing is replaced unless the splits read is held** (`splits.status == "ok"`; held rows after a failed retry count). With no splits on file the record's float stands. HIS CALL below.
+
+**Why the fix (same day, verifier):** the first build moved the float's start date to the Yahoo read date, so any Yahoo float drift — SRTM moved +421 shares (552,120 → 552,541) — restarted the dilution window and the growth baseline at the Yahoo date. On main → that build, SRTM went from `0.9% shs out · ⚠️ float stale · 📄 424B3 11/6 +2` (shares 569,639 → 4,539,240, 7.97×) to `Moderate 7.2% float` with no ⚠️ and no 📄; AAOI, ALTG, ALXO, DCGO, SOAR and NUAI lost their 📄, LABT and OMH lost ⚠️ float stale, WETO lost ⚠️ shares up 14×.
+
+**Live, 11-24 16:17 ET (read-only, api container; this branch's `short_interest` loaded from a /tmp copy, main from /app, over EVERY stored basis doc — 66 names with an SI record; 🩳 list membership on the session's 107 stored reads):**
+
+- **Flags lost vs main: none.** 27 names carry a newer Yahoo float; each gains only `⚠️ float updated`. The other 39 are byte-identical to main.
+- Replay of the 12,446 captured `si_block` inputs: 12,419 byte-identical to main, 27 differ, all with a newer float; 0 differ without one.
+- Tier changes: GMEX High → Low (62.87% → 3.52%), GYGY High → Low (31.09% → 3.37%, keeps `📄 424B3 11/19 +12`), INV EXTREME → High (21.27% → 16.44%), BAK Moderate → Low (5.33% → 4.87%), WETO shares-headed → Low 1.64% (keeps `⚠️ shares up 14×`). Leaving High / EXTREME: GMEX, GYGY. Entering: none.
+- Still refused, flags kept: SRTM (`⚠️ float stale · ✂️ split 11/23 · 📄 424B3 11/6 +2`), LABT and OMH (`⚠️ float stale`).
+- **🩳 High SI list (and so the 9/21 cross push list): no name enters or leaves.** GMEX `floats_disagree` → `not_high`; WETO `no_tier` → `not_high`.
+
+The probe (`scripts/si_share_basis_probe.py`) prints a "newer Yahoo float" section per name — floats and dates, % of float, tier, refusal, 🩳 High SI list membership, flags gained and **flags LOST** before (Yahoo's float removed) and now — and a `newer-float flags LOST (must be empty)` line.
+
+### HIS CALL (newer float)
+
+1. **No splits on file → the record's float stands** ([C1]). The alternative ("never the older one", even with no splits read) would let a post-split Yahoo float divide a pre-split count unchecked.
+2. **WETO:** the replaced float (186,729) was suspect, so WETO stays on the shares-headed growth path: Yahoo's newer float (14,735,015, read with 14,897,999 shares on 11-20) now heads at Low 1.6% while `⚠️ shares up 14×` stays beside it — the 14× growth is not a refusal of the newer float. Refusing it instead would be a new rule.
+3. **A float newer than the short-interest count** (GMEX, GYGY, INV: SI counted 10-30, float read later) divides an older count by a later float; when the float grew from dilution in between, the % can read low. LABT-style cases stay refused because growth is still measured from the replaced float's date.
+4. **Any difference flags** (LVWR moved 79 shares and gains `⚠️ float updated`). A size cut would be a new threshold — his number, if wanted.
+
+Tests: `backend/tests/test_si_float_newer_2026_11_24.py` (GMEX fixture; every negative; the split rules on a newer read; the suspect pairing; SRTM / AAOI / ALTG / DCGO / SOAR / ALXO / LABT on their live 11-24 numbers with "same dilution side as the record float" pinned; the byte-identical no-update block), `backend/tests/test_si_float_newer_probe_2026_11_24.py` (the probe section over the captured fixture, flags lost = none, a planted lost flag is reported, the stored track follows the record). Pins in `test_si_basis_math` / `_read` / `_integration` for KITT (now refused `diluted` only — the newer float clears the split side), WETO, JELD and the `basis` key set.
+
+### 2026-11-24, later still — the verifier's second round (findings 1–6)
+
+1. **A newer Yahoo float that fails its own suspect check never replaces a good record float** (`basis_math.verdict`: a suspect newer float with a non-suspect record float is dropped, and the record float, its split check and its count stand). Before: record float 1,000,000 / 2,000,000 shares, Yahoo 2,100,000 on 2,050,000 → `15.0% shs out · ⚠️ float updated`, no tier, "no float on file"; now `EXTREME 30.0% float`, as on main. With a 1-for-10 split between: before, no refusal and 5.0% off the pre-split count; now refused `split` at 50.0% shs out, as on main. When the record float is suspect too, the newer float is still served with its suspect reason.
+2. **A good newer float with the record's share count across a split from the settlement:** the % of shares outstanding (and so the EXTREME float check) uses step 3's count choice (newest SEC cover or Yahoo count on the settlement's side), else the newer float's own Yahoo row count; none → no % of shares outstanding (float check "unchecked", held at High). Before: 66.7% of float read `High · float unconfirmed` off the pre-split 5.0%; now `EXTREME 66.7% float` on 200,000 post-split shares (50.0%).
+3. **The "not shown — float stale" line names the replaced float** (LABT: "the float on file (847,661, yfinance floatShares (shares_cache), as of 2026-11-09) would read 18.04%", was 3,201,536 as of 11-18 at 4.78%). A split refusal under a newer float still names the newer float — that is the one across the split. The served `float_pct_on_file` is unchanged (still the newer float's %).
+4. **🩳 High SI `floats_text`** under a newer float: "Float 361.4K on this card · 361.4K from Yahoo's newer read (11/19), replacing 20.2K on the short-interest record".
+5. The split wording under a newer float ("first seen", its own date — never "carried across it") is pinned.
+6. The fixture table above is marked "before the newer-float rule"; the current results are beside it.
+
+**Live re-probe, 11-24 (read-only, api container; this branch's `short_interest` from `/tmp/sinewer_fix3`, main from `/app`; 72 stored basis docs with an SI record, 107 stored reads):** flags lost vs main **none**; 42 names without a newer float byte-identical to main; 30 carry a newer float. Tier changes vs main: GMEX High → Low (62.87% → 3.52%), GYGY High → Low (31.09% → 3.37%), INV EXTREME → High (21.27% → 16.44%), BAK Moderate → Low (5.33% → 4.87%), WETO shares-headed → Low 1.64%. Leaving High/EXTREME: GMEX, GYGY; entering: none. 🩳 High SI list: no entries or exits (GMEX `floats_disagree` → `not_high`, WETO `no_tier` → `not_high`). Against the previous round, only the LABT / OMH / SRTM refusal lines changed (finding 3); no live name hits findings 1 or 2 today.
+
+Tests: `backend/tests/test_si_float_newer_fixes_2026_11_24.py` (cases a and b, newer ok, the row-count fallback and every negative, LABT's line, `floats_text`, the carried/first-seen wording); the GMEX suspect pin in `test_si_float_newer_2026_11_24.py` now expects the record float to stand.
+
+### 2026-11-24, later still — refix 3 (the verifier's third round)
+
+1. **A dilution refusal's on-file % is on the REPLACED float, exactly as on main** (`basis_math.verdict`: `float_pct_on_file` divides by the record float when the refusal is `diluted` and a newer float was used; a split refusal keeps the newer float's %, the one across the split). This supersedes round 2's "the served `float_pct_on_file` is unchanged". LABT: 18.04% (High) on 847,661, not 4.78% (Low) on Yahoo's 3,201,536 — so the "% of float: not shown" line and the 🩳 High SI panel's basis_text agree, and LABT stays named there as on main. The refusal line now reads this one number (no second computation in `read._refusal_line`).
+2. **No "would read N%" across a split:** on a dilution refusal under a newer float, when an executed split sits between the replaced float's date and the settlement, the line names the float and its date but gives no %. KITT shape (captured inputs, not live): "the float on file (5,527,831, …, as of 2026-09-03)" with no 3.69% — that % divides a short count from after the 9/25 1-for-6 by a float from before it. The served `float_pct_on_file` (3.69%, Low, as on main) is left as it is.
+3. One test pins the both-floats-suspect shape (Yahoo read after a split: not refused, the newer float is not divided by, so no split check runs on it).
+
+**Live re-probe, 11-24 16:49 ET (read-only, api container; this branch's `short_interest` from `/tmp/refix3_wt`, main from `/app`; 72 stored basis docs, 107 stored reads):** flags lost vs main **none**; 42 names without a newer float byte-identical to main; tiers as in round 2 (GMEX, GYGY leave High; INV EXTREME → High; BAK Moderate → Low; WETO → Low 1.64%; none enter). 🩳 High SI basis_text: **LABT, SMTK on main and on this branch**. The refusal rows of LABT, OMH and SRTM are now byte-identical to main; the 27 rows that differ are the non-refused names whose % of float uses the newer float.
+
+Tests: `backend/tests/test_si_float_newer_refix3_2026_11_24.py`; the KITT `float_pct_on_file` pins in `test_si_float_newer_2026_11_24.py` and `test_si_basis_math_2026_11_24.py` move from 12.64 to 3.69 (main's value).

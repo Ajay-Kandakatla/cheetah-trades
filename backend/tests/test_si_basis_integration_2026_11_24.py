@@ -41,6 +41,10 @@ KEY = "SYNTHKEYsibasis"
 ALLOWED_HOSTS = {"data.sec.gov", "api.massive.com"}
 SMTK_CHIP = "🩳 SI 8.9% shs out · 1.0d · 10/30 · ⚠️ float stale · ✂️ split 11/23 · 📄 S-4 11/13"
 MOVED = {"SMTK", "LABT", "KITT", "SMX"}                 # spec §7 #1 (C): the four that lose the % of float
+# 2026-11-24 later ("Is GMEX float accurate?") — the names whose captured Yahoo row holds a NEWER, different float than the
+# SI record: basis_math.newer_float makes it the one divided by (the splits read is held for all of them); the dilution
+# checks keep the replaced float's date and count, so LABT / KITT stay refused as diluted.
+FLOAT_UPDATED = {"LABT", "KITT", "WETO", "JELD", "SMX"}
 
 
 # ═════════════════════════════════════════════ the in-memory Mongo (every operation the three modules use)
@@ -288,13 +292,23 @@ def test_the_moves_under_the_built_mode(_harness):
     assert PR.smtk_check(sm) == []
     # LABT / KITT / SMX
     assert refused(new["LABT"]) == "diluted" and new["LABT"]["pct_of_shares_out"] == 1.71
-    assert refused(new["KITT"]) == "split" and "diluted" in new["KITT"]["basis"]["refused_reasons"]
+    # 2026-11-24 later — KITT's newer Yahoo float (11-23) is on the count's side of the 9/25 split, so the split
+    # refusal goes; the dilution since the REPLACED float's date (09-03) still refuses it (was: split + diluted)
+    assert refused(new["KITT"]) == "diluted" and new["KITT"]["basis"]["refused_reasons"] == ["diluted"]
     assert new["KITT"]["pct_of_shares_out"] == 7.71 and "2.1×" in new["KITT"]["title"]
-    assert refused(new["SMX"]) == "split_same_day" and new["SMX"]["pct_of_shares_out"] is None
-    # WETO — a 20-F filer whose covers are older than the anchor: Yahoo's later count is the evidence
+    assert refused(new["SMX"]) == "split" and new["SMX"]["pct_of_shares_out"] is None    # newer float post-split, SI pre
+    # 2026-11-24 later — every newer float carries the flag first; the dilution flags stay
+    assert {s for s, b in new.items() if "float_updated" in flags(b)} == FLOAT_UPDATED
+    for s in FLOAT_UPDATED:
+        assert flags(new[s])[0] == "float_updated" and "⚠️ float updated" in new[s]["chip"], s
+        assert new[s]["float_source"] == SR.YAHOO_LIVE_FLOAT_SOURCE, s
+    assert "float_stale" in flags(new["LABT"]) and "float_stale" in flags(new["KITT"])
+    assert "3,201,536 (Yahoo 11/18) replaced 847,661 (11/9)" in new["LABT"]["title"]
+    # WETO — the replaced float was suspect (shares-headed path): Yahoo's later count still raises ⚠️ shares up 14×;
+    # the newer float (14,735,015 on its own row's 14,897,999) is the one divided by
     we = new["WETO"]
-    assert refused(we) is None and we["pct_of_shares_out"] == 1.62 and "count_stale" in flags(we)
-    assert "⚠️ shares up 14×" in we["chip"] and not we["shares_source"].startswith("SEC")
+    assert refused(we) is None and we["pct_of_float"] == 1.64 and we["float_suspect"] is None
+    assert "count_stale" in flags(we) and "⚠️ shares up 14×" in we["chip"]
     # NXAT — the count fell 21× with no split row: a flag, never a refusal
     nx = new["NXAT"]
     assert nx["pct_of_float"] == old["NXAT"]["pct_of_float"] == 1.59 and nx["tier"] == old["NXAT"]["tier"]
@@ -304,8 +318,8 @@ def test_the_moves_under_the_built_mode(_harness):
     assert cl["pct_of_float"] == 44.05 and cl["tier"] == old["CLRO"]["tier"] and cl["extreme"] is not None
     assert cl["chip"] == old["CLRO"]["chip"] + " · 📄 S-1/A 11/24 +1"
     assert set(cl["extreme"]) == set(old["CLRO"]["extreme"])
-    # JELD — ×1.0001: nothing refused, no mark
-    assert new["JELD"]["chip"] == old["JELD"]["chip"] and flags(new["JELD"]) == []
+    # JELD — ×1.0001: nothing refused; the only mark is the newer float (10.03% either way)
+    assert new["JELD"]["chip"] == old["JELD"]["chip"] + " · ⚠️ float updated" and flags(new["JELD"]) == ["float_updated"]
     # JZ — an ADR: its SEC cover is never compared; the upcoming split is a mark only
     jz = new["JZ"]
     assert refused(jz) is None and jz["pct_of_float"] == old["JZ"]["pct_of_float"]

@@ -24,6 +24,11 @@ Rules that bind (spec sidilute REV 2):
     on file is a ❔ flag and never a denominator [C8].
   * An ADR's SEC cover counts ordinary shares: covers are compared only for SEC_COVER_SAME_UNIT_TYPES [P1].
   * Every rebase is tested for None before it is compared and rounded to whole shares first [C11].
+  * [2026-11-24 later, "Is GMEX float accurate?"] A Yahoo float dated LATER than the record's float_asof that differs
+    from it is the float the % divides by (`newer_float`), once the splits read is held [C1]; the older read never
+    wins; the ⚠️ float updated flag names both counts and dates. It is used ONLY for that division and for the
+    split-side check: the dilution-filing window, the share-growth check and the float track keep the REPLACED
+    float's own date and count (fix after the verifier's SRTM / AAOI / 8-K 3.02 finding).
 Display only; UNMEASURED. Nothing here gates, sorts, sizes or enters a lane.
 """
 from __future__ import annotations
@@ -72,8 +77,17 @@ SHORT_LAST_FAILED = EMOJI_CHECK + " last check failed"
 SHORT_DILUTION_UNCHECKED = EMOJI_CHECK + " dilution unchecked"
 TEXT_CHECK_FAILED = (EMOJI_CHECK + " share count check failed — the % shown uses the counts on the short-interest "
                      "record")
+# 🩳 2026-11-24 later — Ajay: "Is GMEX float accurate?" A NEWER dated Yahoo float (the basis doc's `yahoo` read of
+# shares_cache, dated later than the record's float_asof) that differs from the record's float is the one the % divides
+# by — no size cut (any difference, any later date). The older read never wins. Dilution keeps the replaced float's
+# date and count. See `newer_float` and `verdict`.
+FLAG_FLOAT_UPDATED = "float_updated"
+SOURCE_YAHOO = "yahoo"
+SHORT_FLOAT_UPDATED = EMOJI_WARN + " float updated"
+TEXT_FLOAT_UPDATED = SHORT_FLOAT_UPDATED + " — %s (Yahoo %s) replaced %s (%s)"   # new, its M/D, old, its M/D
 FLAG_ROW_LABEL = {FLAG_FLOAT_STALE: "Float stale", FLAG_COUNT_STALE: "Shares up", FLAG_SPLIT: "Split",
-                  FLAG_FILING: "Dilution filing", FLAG_COUNT_FELL: "Shares fell", FLAG_UNCHECKED: "Check"}
+                  FLAG_FILING: "Dilution filing", FLAG_COUNT_FELL: "Shares fell", FLAG_UNCHECKED: "Check",
+                  FLAG_FLOAT_UPDATED: "Float updated"}
 FLOAT_STALE_MODE_WORDS = {
     "any_increase": "any newer, larger share count than the one read with the float",
     "added_exceeds_float": "more shares added since the float was read than the float itself held",
@@ -344,6 +358,27 @@ def _norm_track(prev) -> Optional[dict]:
             "carried": _rows(prev.get("carried"))}
 
 
+def newer_float(si_record, basis_doc) -> Optional[dict]:
+    """[2026-11-24 later] The basis doc's Yahoo float when it is DATED LATER than the record's float and DIFFERS from it,
+    else None: {shares, as_of, source "yahoo", paired_shares (Yahoo's shares outstanding from the same row, or None),
+    replaced_shares, replaced_asof}. None (the record's float stands) on: no record float or no record float date (a
+    legacy record), no Yahoo float, a Yahoo float that is missing / NaN / zero / negative / bool, an undated Yahoo
+    read, a Yahoo read dated ON or BEFORE the record's float date, an equal count — or no held splits read [C1]:
+    nothing is replaced unless the splits are on file, since a split between the two reads is what the split rules
+    must judge (held rows count even after a failed try). PURE."""
+    if not isinstance(si_record, dict) or not isinstance(basis_doc, dict):
+        return None
+    F, Fa, _P, _Pa = _record_fields(si_record)
+    yh = basis_doc.get("yahoo")
+    if F is None or Fa is None or not isinstance(yh, dict) or _status(_sub(basis_doc, "splits")) != "ok":
+        return None
+    yf, ya = _pos_int(yh.get("float_shares")), _iso(yh.get("as_of"))
+    if yf is None or ya is None or ya <= Fa or yf == F:
+        return None
+    return {"shares": yf, "as_of": ya, "source": SOURCE_YAHOO, "paired_shares": _pos_int(yh.get("shares_outstanding")),
+            "replaced_shares": F, "replaced_asof": Fa}
+
+
 def track_update(prev, si_record, splits) -> Optional[dict]:
     """The float's track: when this value was first seen and which splits it was carried across. `splits` = the held
     split rows (future-dated included) or None when the splits were never read."""
@@ -456,6 +491,11 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         return None
     T = _iso(today) or SR._today(today).isoformat()
     F, Fa, P, Pa = _record_fields(rec)
+    # [2026-11-24 later, fix] a newer dated Yahoo float is used ONLY to divide by (`Fd`, suspect-checked against the
+    # count on its own Yahoo row) and for the split-side check (`split_basis`). The dilution-filing window, the
+    # share-growth check and the float track keep the REPLACED float's own date and count (F / Fa / P / Pa, the track).
+    upd = newer_float(rec, basis_doc)
+    Fd, Pf = (upd["shares"], upd["paired_shares"] or P) if upd else (F, P)
     prevS = _iso(rec.get("prev_settlement_date"))
     prev_si = _nonneg_int(rec.get("prev_short_interest")) if prevS else None
     frac = SR.SUSPECT_MAX_SHARES_OUT_FRACTION
@@ -473,6 +513,11 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         anchor = track["since"] if track else None
     else:
         basis_date = anchor = Pa
+    upd_suspect = SR._float_suspect(si, Fd, Pf) if upd else None
+    if upd and upd_suspect and is_float:            # a newer float that fails its own check never replaces a good one
+        upd, upd_suspect, Fd, Pf = None, None, F, P
+    div_float = (upd_suspect is None) if upd else is_float          # a float is divided by (split-side check runs)
+    split_basis = upd["as_of"] if upd else basis_date
 
     sec_ok = _status(sec) == "ok"
     all_covers = _covers(sec.get("covers")) if sec_ok else []
@@ -510,9 +555,9 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
 
     # ── step 1: float vs count across a split
     reasons, split_side = [], {}
-    if splits_ok and is_float and basis_date:
+    if splits_ok and div_float and split_basis:
         for r in rows:
-            a, b = side(basis_date, r["execution_date"]), side(S, r["execution_date"])
+            a, b = side(split_basis, r["execution_date"]), side(S, r["execution_date"])
             split_side[r["execution_date"]] = (a, b)
             if "same" in (a, b):
                 reasons.append(REFUSE_SPLIT_SAME_DAY)
@@ -555,7 +600,9 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
 
     # ── step 3: the count for % of shares outstanding
     count, count_changed, no_pct, pct_so = None, False, False, None
-    if splits_ok and (float_refused or not is_float):
+    # a newer float divided by while the record's count sits across a split from S: the count is chosen as below
+    p_cross = bool(upd and not float_refused and P and Pa and splits_ok and not same_side(Pa, S, executed))
+    if splits_ok and (float_refused or not is_float or p_cross):
         P_on_S = P if (P and Pa and same_side(Pa, S, executed)) else None
         cut = P_on_S * frac if P_on_S else None
         c_sec = c_y = None
@@ -571,6 +618,9 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             count = c_y
         elif P_on_S:
             count = {"shares": P_on_S, "as_of": Pa, "source": "record", "form": None}
+        if (count is None and p_cross and upd["paired_shares"]
+                and same_side(upd["as_of"], S, executed)):               # the newer float's own Yahoo row
+            count = {"shares": upd["paired_shares"], "as_of": upd["as_of"], "source": "yahoo", "form": None}
         if count:
             pct_so = round(si / count["shares"] * 100.0, 2)
             count_changed = (count["shares"] != P or count["as_of"] != Pa)
@@ -610,7 +660,8 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
     split_list = []
     floor = min(S, anchor) if anchor else S
     ex_flag = [r for r in reversed(executed) if r["execution_date"] > floor]
-    carried_dates = {r["execution_date"] for r in ((track or {}).get("carried") or [])}
+    carried_dates = set() if upd else {r["execution_date"] for r in ((track or {}).get("carried") or [])}
+    split_since = upd["as_of"] if upd else (track or {}).get("since")      # the date of the float divided by
 
     def _split_text(r, due: bool) -> str:
         E, w = r["execution_date"], split_words(r["split_from"], r["split_to"])
@@ -625,7 +676,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             return ("%s %s %s — the float on file dates from %s it (%s, %s) and short interest was counted %s it "
                     "(%s), so no %% of float is shown"
                     % (EMOJI_SPLIT, w, _md(E), "before" if a == "pre" else "after", how,
-                       _md((track or {}).get("since")), "before" if b == "pre" else "after", _md(S)))
+                       _md(split_since), "before" if b == "pre" else "after", _md(S)))
         if due:
             return "%s %s due %s" % (EMOJI_SPLIT, w, _md(E))
         if side(S, E) == "same":
@@ -722,6 +773,13 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
                           % (EMOJI_CHECK, cw or "split", _md((track or {}).get("since")))))
     if unchecked:
         flags.append(_flag(FLAG_UNCHECKED, EMOJI_CHECK, unchecked[0][0], " ".join(t for _s, t in unchecked)))
+    float_update = None
+    if upd:                                            # FIRST on the chip: the float the % is read against changed
+        flags.insert(0, _flag(FLAG_FLOAT_UPDATED, EMOJI_WARN, SHORT_FLOAT_UPDATED,
+                              TEXT_FLOAT_UPDATED % (format(upd["shares"], ","), _md(upd["as_of"]),
+                                                    format(upd["replaced_shares"], ","), _md(upd["replaced_asof"]))))
+        float_update = dict(upd, suspect=upd_suspect,
+                            pct=(round(si / Fd * 100.0, 2) if (upd_suspect is None and not float_refused) else None))
 
     # ── status + sources + the check sentence
     missing = any(_status(s) is None for _k, s in named)
@@ -738,7 +796,10 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
         tier_text = getattr(SR, "TIER_FLOAT_STALE_TEXT", None)
     elif float_refused:
         tier_text = getattr(SR, "TIER_SPLIT_TEXT", None)
-    fpof = round(si / F * 100.0, 2) if (float_refused and F) else None
+    # [2026-11-24 later, refix 3] a dilution refusal judges the REPLACED float (its date and count ran the check), so
+    # the "would read" % is on it — exactly as before the newer-float rule (LABT 18.04%, the line and the panel agree)
+    fpd = F if (float_refused == REFUSE_DILUTED and upd) else Fd
+    fpof = round(si / fpd * 100.0, 2) if (float_refused and fpd) else None
     return {"float_refused": float_refused, "refused_reasons": refused_reasons, "float_pct_on_file": fpof,
             "count": count, "count_changed": bool(count_changed), "pct_of_shares_out": pct_so, "no_pct": bool(no_pct),
             "growth": growth, "fell": fell, "change": change, "splits": split_list,
@@ -747,7 +808,7 @@ def verdict(si_record, basis_doc, today) -> Optional[dict]:
             "flags": flags, "status": "partial" if partial else "ok", "sources": sources,
             "checked_at": _ts_iso(doc.get("checked_at")), "tier_text": tier_text,
             "title_lines": title_lines, "rows": rows_out, "check_text": check, "float_line": float_line,
-            "track": track}
+            "track": track, "float_update": float_update}
 
 
 def _when(sub) -> str:
@@ -796,6 +857,8 @@ def rules_sentence() -> str:
             "SEC cover page or Yahoo's later count, with its date), carries no tier word, and says why — '%s', "
             "'%s', '%s' for a registration, prospectus or 8-K Item %s filing since the float was read, '%s' when a "
             "count fell with no split on file, '%s' when a check could not run. A change vs the prior settlement "
-            "across a split is split-adjusted."
+            "across a split is split-adjusted. A Yahoo float dated later than the one on the short-interest record "
+            "and different from it is the one divided by once the splits are on file, with '%s' naming both and their "
+            "dates; filings and share growth are still looked for from the older float's date."
             % (stale, SHORT_FLOAT_STALE, SHORT_SPLIT % "M/D", EMOJI_FILING, FILING_8K_DILUTION_ITEMS[0],
-               SHORT_COUNT_FELL % "N", SHORT_UNCHECKED))
+               SHORT_COUNT_FELL % "N", SHORT_UNCHECKED, SHORT_FLOAT_UPDATED))

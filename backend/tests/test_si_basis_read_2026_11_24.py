@@ -80,7 +80,7 @@ def test_SMTK_block():
     assert b["float_shares"] == 546875 and b["si_change_pct"] == 334.6 and b["prev_si_shares"] == 99473
     assert b["basis"]["float_refused"] == "diluted" and b["basis"]["float_pct_on_file"] == 79.05
     assert [f["key"] for f in b["basis"]["flags"]] == ["float_stale", "split", "filing"]
-    assert set(b["basis"]) == set(SR.BASIS_KEYS)
+    assert set(b["basis"]) == set(SR.BASIS_KEYS) - {"float_update"}       # 2026-11-24 later: served only when used
     assert list(b)[:len(SR._BLOCK_KEYS)] == list(SR._BLOCK_KEYS) and list(b)[-1] == "basis"
     for needle in ("4.7×", "8.6×", "86,463 of today's shares", "Tier: not tiered — float stale.",
                    "% of float: not shown — float stale — 4.7× more shares than when the float was read",
@@ -252,7 +252,11 @@ def test_JELD_x1_0001_nothing_refused_no_chip_flag():
     from tests.test_si_basis_math_2026_11_24 import _jeld
     rec, doc = _jeld()
     b, plain = _blk(rec, doc), SR.si_block(rec, TODAY)
-    assert b["chip"] == plain["chip"] and b["basis"]["float_refused"] is None and b["basis"]["flags"] == []
+    # 2026-11-24 later: the newer Yahoo float (11-23) reads 10.03% vs 10.00% — the same printed 10.0%; the only mark is
+    # ⚠️ float updated
+    assert b["chip"] == plain["chip"] + " · ⚠️ float updated" and b["basis"]["float_refused"] is None
+    assert [f["key"] for f in b["basis"]["flags"]] == ["float_updated"]
+    assert (plain["pct_of_float"], b["pct_of_float"]) == (10.0, 10.03)
 
 
 def test_WETO_shares_up_14x_on_the_newer_count():
@@ -262,9 +266,12 @@ def test_WETO_shares_up_14x_on_the_newer_count():
         {"as_of": "2026-06-30", "shares": 821300, "form": "20-F", "filed": "2026-11-05"}],
         yahoo={"float_shares": 14735015, "shares_outstanding": 14897999, "as_of": "2026-11-20"})
     b = _blk(rec, doc)
-    assert b["chip"] == "🩳 SI 1.6% shs out · 1.0d · 10/30 · ⚠️ shares up 14×"
+    # 2026-11-24 later: Yahoo's newer float (11-20) is the one divided by; the shares-up mark (growth since the
+    # replaced float's date) stays
+    assert b["chip"] == "🩳 SI Low 1.6% float · 1.0d · 10/30 · ⚠️ float updated · ⚠️ shares up 14×"
+    assert b["float_source"] == SR.YAHOO_LIVE_FLOAT_SOURCE and b["float_asof"] == "2026-11-20"
+    assert b["float_suspect"] is None and b["headline_basis"] == "float"
     assert b["shares_source"] == SR.YAHOO_LIVE_SHARES_SOURCE and b["shares_asof"] == "2026-11-20"
-    assert b["float_suspect"] == SR.SHORT_EXCEEDS_FLOAT and b["headline_basis"] == "shares_out"
 
 
 def test_NXAT_shares_fell_flag_head_unchanged():

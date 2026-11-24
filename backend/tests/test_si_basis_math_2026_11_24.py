@@ -315,6 +315,8 @@ def _jeld():
     return rec, doc
 
 
+# 2026-11-24 later: JELD's Yahoo row (11-23) holds a newer float; it is only divided by — the growth check keeps the
+# replaced float's date and count, so the modes judge JELD exactly as before
 @pytest.mark.parametrize("m,meds,jeld", [("any_increase", True, True), ("tier_moves", True, False),
                                          ("added_exceeds_float", False, False)])
 def test_verdict_modes_MEDS_and_JELD(mode, m, meds, jeld):
@@ -324,8 +326,9 @@ def test_verdict_modes_MEDS_and_JELD(mode, m, meds, jeld):
 
 
 def test_NEGATIVE_JELD_under_the_built_mode_has_no_flag():
-    v = BM.verdict(*_jeld(), TODAY)
-    assert v["float_refused"] is None and v["flags"] == [] and v["growth"]["ratio"] == 1.0
+    v = BM.verdict(*_jeld(), TODAY)                           # 2026-11-24 later: the newer Yahoo float is the only mark
+    assert v["float_refused"] is None and [f["key"] for f in v["flags"]] == ["float_updated"]
+    assert v["growth"]["ratio"] == 1.0
     assert v["count"] is None and v["count_changed"] is False
 
 
@@ -453,9 +456,15 @@ def test_KITT_refused_split_then_diluted():
                         {"form": "8-K", "filed": "2026-09-23", "items": "3.03,5.03,8.01,9.01"}],
                yahoo={"float_shares": 1612787, "shares_outstanding": 2643176, "as_of": "2026-11-23"})
     v = BM.verdict(rec, doc, TODAY)
-    assert v["refused_reasons"] == ["split", "diluted"] and v["pct_of_shares_out"] == 7.71
+    # 2026-11-24 later: Yahoo's 11-23 float (post-split, the 10-30 count's side) is the one divided by, so the split
+    # refusal goes; the dilution since the REPLACED float's 09-03 date still refuses it (the split + diluted result is
+    # pinned with the Yahoo float removed in test_si_float_newer_2026_11_24.py)
+    assert v["refused_reasons"] == ["diluted"] and v["pct_of_shares_out"] == 7.71
     assert v["growth"]["ratio"] == pytest.approx(2.122, abs=1e-3)
     assert "8-K Item 3.03/5.03 9/23" in " ".join(v["title_lines"])
+    assert v["float_update"]["replaced_shares"] == 5527831 and v["flags"][0]["key"] == "float_updated"
+    # refix 3: a dilution refusal's on-file % is on the REPLACED float, as on main (203,890 / 5,527,831)
+    assert v["float_update"]["pct"] is None and v["float_pct_on_file"] == 3.69
 
 
 def test_NXAT_count_fell_is_a_flag_never_a_refusal():
@@ -498,10 +507,13 @@ def test_WETO_shares_headed_count_up_14x():
                        {"as_of": "2026-06-30", "shares": 821300, "form": "20-F", "filed": "2026-11-05"}],
                yahoo={"float_shares": 14735015, "shares_outstanding": 14897999, "as_of": "2026-11-20"})
     v = BM.verdict(rec, doc, TODAY)
+    # 2026-11-24 later: Yahoo's 11-20 float 14,735,015 (with 14,897,999 shares on the same row) is the one divided by;
+    # the replaced 186,729 was suspect, so the growth check runs as before and the shares-up mark stays
     assert v["float_refused"] is None                          # float_suspect: shares-headed, never refused
-    assert [f["short"] for f in v["flags"]] == ["⚠️ shares up 14×"]
+    assert [f["short"] for f in v["flags"]] == ["⚠️ float updated", "⚠️ shares up 14×"]
     assert v["count"]["source"] == "yahoo" and v["pct_of_shares_out"] == 1.62
     assert v["growth"]["from_source"] == "record"              # the covers older than the anchor are never used
+    assert v["float_update"]["suspect"] is None and v["float_update"]["pct"] == 1.64
 
 
 def _jz(rtype):

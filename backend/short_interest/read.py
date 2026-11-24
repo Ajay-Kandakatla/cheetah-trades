@@ -76,6 +76,12 @@ shares outstanding on the newest dated count, and plain flags (⚠️ ✂️ �
 are appended to the chip / title / rows / EXTREME note; the change vs the
 prior settlement is split-adjusted. No basis doc → byte-identical to before,
 no `basis` key. Display only; UNMEASURED.
+2026-11-24 later, Ajay: "Is GMEX float accurate?" — a Yahoo float in the basis
+doc dated LATER than the record's float and different from it replaces the
+record's float as the one divided by once the splits read is held (float_shares / float_asof / float_source /
+pct_of_float), and "⚠️ float updated — NEW (Yahoo M/D) replaced OLD (M/D)" says so (basis_math.newer_float; the
+split-side check judges the newer float, the dilution checks keep the older float's date and count).
+`basis.float_update` is served only when there is one (no newer float → the block is byte-identical to before).
 """
 from __future__ import annotations
 
@@ -108,6 +114,8 @@ LEGACY_SHARES_SOURCE = "Massive reference shares outstanding (legacy per-name wa
 # 🩳 2026-11-24 — the dated count that replaces a refused float's pairing (short_interest.basis_math.verdict).
 SEC_SHARES_SOURCE = "SEC %s cover page (dei:EntityCommonStockSharesOutstanding)"
 YAHOO_LIVE_SHARES_SOURCE = "yfinance sharesOutstanding (shares_cache, current row)"
+# 🩳 2026-11-24 later ("Is GMEX float accurate?") — a newer dated Yahoo float that replaced the record's (basis_math.newer_float).
+YAHOO_LIVE_FLOAT_SOURCE = "yfinance floatShares (shares_cache, current row)"
 
 SOURCES = [
     {"label": "FINRA Rule 4560 (short-interest reporting)",
@@ -356,6 +364,9 @@ EXTREME_STUDY_NOTE = ("Display only — the 2026-11-17 SI × cradle study under 
                       "to call either way.")
 EXTREME_FLOAT_BASIS_NOTE = ("Float basis: the float stored with this short-interest record at the last warm (%s shares, "
                             "%s, as of %s) — the card's own Float chip reads today's shares_cache row and can differ.")
+# 2026-11-24 later — the basis read held a NEWER dated Yahoo float than the record's; it replaced the record's float.
+EXTREME_FLOAT_UPDATED_NOTE = ("Float basis: Yahoo's newer float (%s shares, %s, as of %s), which replaced the older "
+                              "float stored with this short-interest record.")
 EXTREME_CONFIRM_NOTE = ("That is at or above the %g%% of shares outstanding that confirms the float "
                         "(SI_EXTREME_MIN_PCT_SHARES_OUT).")
 
@@ -539,8 +550,10 @@ def extreme_title(b: dict, pf: float) -> str:
     if b.get("days_to_cover") is not None and b["days_to_cover"] > 0:
         seg.append("%s days to cover (the provider's window)." % _dtc1(b["days_to_cover"]))
     fl = b.get("float_shares")
-    seg.append(EXTREME_FLOAT_BASIS_NOTE % (format(fl, ",") if isinstance(fl, int) else "n/a",
-                                           b.get("float_source") or "n/a", b.get("float_asof") or "n/a"))
+    note = (EXTREME_FLOAT_UPDATED_NOTE if isinstance(_basis(b).get("float_update"), dict)
+            else EXTREME_FLOAT_BASIS_NOTE)
+    seg.append(note % (format(fl, ",") if isinstance(fl, int) else "n/a",
+                       b.get("float_source") or "n/a", b.get("float_asof") or "n/a"))
     seg.extend(_flag_texts(b))                       # 🩳 2026-11-24 [C6] — the share-basis flags, before the study note
     seg.append(EXTREME_STUDY_NOTE)
     seg.append(_NOT_A_FORECAST)
@@ -638,7 +651,9 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
         except Exception as exc:                               # noqa: BLE001 — [C11] never costs the chip, never hides
             log.warning("short_interest.read: share-basis verdict %s failed: %s", sym, type(exc).__name__)
             v = None
-            b.update({"pct_of_float": pf, "shares_outstanding": so, "shares_asof": shares_asof,
+            b.update({"float_shares": fl, "float_asof": float_asof, "float_source": float_source,
+                      "float_suspect": suspect,
+                      "pct_of_float": pf, "shares_outstanding": so, "shares_asof": shares_asof,
                       "shares_source": shares_source, "pct_of_shares_out": ps, "si_change_pct": chg,
                       "headline_basis": basis_hl})
             b["basis"] = {"status": "failed", "flags": [BM.failed_flag()]}
@@ -660,11 +675,18 @@ def si_block(doc: Optional[dict], today: Optional[date] = None, basis: Optional[
 
 # 🩳 2026-11-24 — the ONE served key a checked name gains (spec sidilute §3.4). Absent on an unchecked name.
 BASIS_KEYS = ("status", "checked_at", "float_refused", "refused_reasons", "float_pct_on_file", "growth", "fell",
-              "change", "splits", "filings", "flags", "sources")
+              "change", "splits", "filings", "flags", "sources", "float_update")
 
 
 def _apply_verdict(b: dict, v: dict) -> None:
     """Fold one `basis_math.verdict` into the block (before the tier, chip, title and rows are built)."""
+    fu = v.get("float_update")
+    if isinstance(fu, dict) and _pos_int(fu.get("shares")):       # 2026-11-24 later — the newer dated float heads
+        b["float_shares"] = _pos_int(fu["shares"])
+        b["float_asof"] = _iso_date(fu.get("as_of"))
+        b["float_source"] = YAHOO_LIVE_FLOAT_SOURCE
+        b["float_suspect"] = fu.get("suspect") if isinstance(fu.get("suspect"), str) else None
+        b["pct_of_float"] = _num(fu.get("pct"))
     if v.get("float_refused"):
         b["pct_of_float"] = None
     c = v.get("count")
@@ -683,7 +705,8 @@ def _apply_verdict(b: dict, v: dict) -> None:
         b["si_change_pct"] = _num(ch.get("pct"))
     b["headline_basis"] = ("float" if b.get("pct_of_float") is not None
                            else ("shares_out" if b.get("pct_of_shares_out") is not None else None))
-    b["basis"] = {k: v.get(k) for k in BASIS_KEYS}
+    b["basis"] = {k: v.get(k) for k in BASIS_KEYS
+                  if k != "float_update" or isinstance(v.get(k), dict)}   # absent unless a newer float was used
 
 
 def _basis(b) -> dict:
@@ -721,10 +744,23 @@ def _refusal_line(b: dict, v: Optional[dict]) -> Optional[str]:
         why = next((f.get("text") for f in _flags(b) if f.get("key") == want and isinstance(f.get("text"), str)), fr)
     why = why.split(" ", 1)[1] if why[:1] in (BM.EMOJI_WARN[:1], BM.EMOJI_SPLIT[:1]) and " " in why else why
     fl, pof = b.get("float_shares"), _num(_basis(b).get("float_pct_on_file"))
+    src, asof = b.get("float_source"), b.get("float_asof")
+    fu = _basis(b).get("float_update")
+    if fr == BM.REFUSE_DILUTED and isinstance(fu, dict) and _pos_int(fu.get("replaced_shares")):
+        # 2026-11-24 later — the stale float is the REPLACED one (its date and count run the dilution check), not
+        # Yahoo's newer read that heads the block
+        fl = _pos_int(fu["replaced_shares"])
+        src, asof = FLOAT_SOURCE, _iso_date(fu.get("replaced_asof"))
+        # `float_pct_on_file` is on this float already (basis_math, refix 3). An executed split between its date and
+        # the settlement makes that % a cross-split number (KITT: a 9/3 float vs a short count after the 9/25 1-for-6),
+        # so no "would read" is said then.
+        ex = [r for r in (_basis(b).get("splits") or []) if isinstance(r, dict) and r.get("when") == "executed"
+              and isinstance(r.get("execution_date"), str)]
+        if not BM.same_side(fu.get("replaced_asof"), b.get("settlement_date"), ex):
+            pof = None
     s = "not shown — %s" % why
     if isinstance(fl, int):
-        s += "; the float on file (%s, %s, as of %s)" % (format(fl, ","), b.get("float_source") or "n/a",
-                                                          b.get("float_asof") or "n/a")
+        s += "; the float on file (%s, %s, as of %s)" % (format(fl, ","), src or "n/a", asof or "n/a")
         if pof is not None:
             s += " would read %.2f%%" % pof
     return s

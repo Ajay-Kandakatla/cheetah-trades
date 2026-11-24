@@ -564,6 +564,13 @@ def floats_text(float_read, si_block) -> Optional[str]:
     if float_shares(float_read) is None or not isinstance(si_block, dict) or _pos(si_block.get("float_shares")) is None:
         return None
     ft = (GT._float_chip(float_read) or {}).get("text") or DASH
+    fu = (basis_of(si_block) or {}).get("float_update")
+    if isinstance(fu, dict) and _pos(fu.get("replaced_shares")) is not None:
+        # 2026-11-24 later — the block divides by Yahoo's newer float, not the short-interest record's
+        asof = si_block.get("float_asof") or fu.get("as_of")
+        return ("%s on this card · %s from Yahoo's newer read%s, replacing %s on the short-interest record"
+                % (ft, _compact(si_block.get("float_shares")), (" (%s)" % SR._md(asof)) if asof else "",
+                   _compact(fu.get("replaced_shares"))))
     return "%s on this card · %s on the short-interest record" % (ft, _compact(si_block.get("float_shares")))
 
 
