@@ -1,0 +1,5165 @@
+{
+ "state": "ok",
+ "title": "👀 Gajjala's Watch — your tickers on 1-, 5- and 15-minute bars from 04:00 ET",
+ "session": "2026-11-13",
+ "is_today": true,
+ "in_window": true,
+ "refresh_sec": 60,
+ "next_window_sec": null,
+ "max_symbols": 18,
+ "symbols": [
+  "HA",
+  "HB",
+  "HC",
+  "HD",
+  "HE",
+  "HF",
+  "HG",
+  "HH"
+ ],
+ "full": false,
+ "full_blocked": false,
+ "full_text": "Your watch holds 18 — adding one replaces the one on your watch the longest (never a 🎯 A+)",
+ "add_label": "Add",
+ "add_placeholder": "Ticker, e.g. OMH",
+ "remove_label": "Remove",
+ "empty_text": "Your watch is empty — add a ticker to see its 1-, 5- and 15-minute charts",
+ "pass": null,
+ "info": {
+  "honesty": "A 9-over-21 cross is information, not an entry. UNMEASURED: nothing has measured what follows a cross on these frames.",
+  "push_text": "P",
+  "uptrend_rule": "R",
+  "push_mode": "live",
+  "push_frames": [
+   "1m"
+  ],
+  "auto_text": "STUB-AUTO-RULES-LINE",
+  "vwap_text": "📈 VWAP on 👀 Gajjala's Watch: the volume-weighted average price of the whole extended session, premarket and after-hours included from 04:00 ET, built from closed 1-min bars (typical price × volume, the house VWAP engine). It restarts every session, runs through after-hours, and its last point is the last closed bar — the live candle does not move it. Display only: nothing gates, sorts or rings on it. UNMEASURED.",
+  "zones_text": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+ },
+ "legend": [
+  {
+   "tone": "ema9",
+   "label": "9 EMA"
+  },
+  {
+   "tone": "ema21",
+   "label": "21 EMA"
+  },
+  {
+   "tone": "vwap",
+   "label": "VWAP (from 04:00 ET)",
+   "title": "📈 VWAP on 👀 Gajjala's Watch: the volume-weighted average price of the whole extended session, premarket and after-hours included from 04:00 ET, built from closed 1-min bars (typical price × volume, the house VWAP engine). It restarts every session, runs through after-hours, and its last point is the last closed bar — the live candle does not move it. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  },
+  {
+   "tone": "zone_demand",
+   "label": "Daily demand zone (dashed)",
+   "title": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  },
+  {
+   "tone": "zone_supply",
+   "label": "Daily supply zone (dashed)",
+   "title": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  }
+ ],
+ "rows": [
+  {
+   "symbol": "HH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:07:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:07",
+     "date": "2026-11-13",
+     "text": "👤 added 08:07",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HG",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:06:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:06",
+     "date": "2026-11-13",
+     "text": "👤 added 08:06",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HF",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:05:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:05",
+     "date": "2026-11-13",
+     "text": "👤 added 08:05",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HE",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:04:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:04",
+     "date": "2026-11-13",
+     "text": "👤 added 08:04",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:03:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:03",
+     "date": "2026-11-13",
+     "text": "👤 added 08:03",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HC",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:02:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:02",
+     "date": "2026-11-13",
+     "text": "👤 added 08:02",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:01:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:01",
+     "date": "2026-11-13",
+     "text": "👤 added 08:01",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "HA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:00:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:00",
+     "date": "2026-11-13",
+     "text": "👤 added 08:00",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "PB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · —",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "07:01",
+    "added_text": "🎯 A+ (— —) · seated 07:01 ET",
+    "leaving_text": null,
+    "remove_title": "Remove PB (auto A+ — not added again today)",
+    "why": "aplus"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T12:01:00.000+00:00",
+   "org": {
+    "group": "aplus",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "07:01",
+     "date": "2026-11-13",
+     "text": "added premarket 07:01",
+     "title": "added 11-13 07:01 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "PA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · —",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "07:00",
+    "added_text": "🎯 A+ (— —) · seated 07:00 ET",
+    "leaving_text": null,
+    "remove_title": "Remove PA (auto A+ — not added again today)",
+    "why": "aplus"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T12:00:00.000+00:00",
+   "org": {
+    "group": "aplus",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "07:00",
+     "date": "2026-11-13",
+     "text": "added premarket 07:00",
+     "title": "added 11-13 07:00 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AJ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:09",
+    "added_text": "added 08:09 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AJ (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:09:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:09",
+     "date": "2026-11-13",
+     "text": "added premarket 08:09",
+     "title": "added 11-13 08:09 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AI",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:08",
+    "added_text": "added 08:08 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AI (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:08:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:08",
+     "date": "2026-11-13",
+     "text": "added premarket 08:08",
+     "title": "added 11-13 08:08 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:07",
+    "added_text": "added 08:07 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AH (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:07:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:07",
+     "date": "2026-11-13",
+     "text": "added premarket 08:07",
+     "title": "added 11-13 08:07 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AG",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:06",
+    "added_text": "added 08:06 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AG (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:06:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:06",
+     "date": "2026-11-13",
+     "text": "added premarket 08:06",
+     "title": "added 11-13 08:06 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AF",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:05",
+    "added_text": "added 08:05 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AF (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:05:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:05",
+     "date": "2026-11-13",
+     "text": "added premarket 08:05",
+     "title": "added 11-13 08:05 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AE",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:04",
+    "added_text": "added 08:04 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AE (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:04:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:04",
+     "date": "2026-11-13",
+     "text": "added premarket 08:04",
+     "title": "added 11-13 08:04 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:03",
+    "added_text": "added 08:03 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AD (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:03:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:03",
+     "date": "2026-11-13",
+     "text": "added premarket 08:03",
+     "title": "added 11-13 08:03 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AC",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:02",
+    "added_text": "added 08:02 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AC (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:02:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:02",
+     "date": "2026-11-13",
+     "text": "added premarket 08:02",
+     "title": "added 11-13 08:02 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:01",
+    "added_text": "added 08:01 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AB (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:01:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:01",
+     "date": "2026-11-13",
+     "text": "added premarket 08:01",
+     "title": "added 11-13 08:01 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "08:00",
+    "added_text": "added 08:00 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AA (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:00:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "08:00",
+     "date": "2026-11-13",
+     "text": "added premarket 08:00",
+     "title": "added 11-13 08:00 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCR",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:09",
+    "added_text": "first met 05:09 · last met 05:09",
+    "leaving_text": null,
+    "remove_title": "Remove RCR (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:09:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:09",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:09",
+     "title": "met all of Gajjala's rules first 11-13 05:09 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:09"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCQ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:08",
+    "added_text": "first met 05:08 · last met 05:08",
+    "leaving_text": null,
+    "remove_title": "Remove RCQ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:08:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:08",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:08",
+     "title": "met all of Gajjala's rules first 11-13 05:08 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:08"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCP",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:07",
+    "added_text": "first met 05:07 · last met 05:07",
+    "leaving_text": null,
+    "remove_title": "Remove RCP (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:07:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:07",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:07",
+     "title": "met all of Gajjala's rules first 11-13 05:07 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:07"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCO",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:06",
+    "added_text": "first met 05:06 · last met 05:06",
+    "leaving_text": null,
+    "remove_title": "Remove RCO (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:06:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:06",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:06",
+     "title": "met all of Gajjala's rules first 11-13 05:06 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:06"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCN",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:05",
+    "added_text": "first met 05:05 · last met 05:05",
+    "leaving_text": null,
+    "remove_title": "Remove RCN (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:05:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:05",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:05",
+     "title": "met all of Gajjala's rules first 11-13 05:05 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:05"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCM",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:04",
+    "added_text": "first met 05:04 · last met 05:04",
+    "leaving_text": null,
+    "remove_title": "Remove RCM (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:04:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:04",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:04",
+     "title": "met all of Gajjala's rules first 11-13 05:04 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:04"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCL",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:03",
+    "added_text": "first met 05:03 · last met 05:03",
+    "leaving_text": null,
+    "remove_title": "Remove RCL (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:03:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:03",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:03",
+     "title": "met all of Gajjala's rules first 11-13 05:03 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:03"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCK",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:02",
+    "added_text": "first met 05:02 · last met 05:02",
+    "leaving_text": null,
+    "remove_title": "Remove RCK (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:02:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:02",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:02",
+     "title": "met all of Gajjala's rules first 11-13 05:02 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:02"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCJ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:01",
+    "added_text": "first met 05:01 · last met 05:01",
+    "leaving_text": null,
+    "remove_title": "Remove RCJ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:01:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:01",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:01",
+     "title": "met all of Gajjala's rules first 11-13 05:01 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:01"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCI",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "05:00",
+    "added_text": "first met 05:00 · last met 05:00",
+    "leaving_text": null,
+    "remove_title": "Remove RCI (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T10:00:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "05:00",
+     "date": "2026-11-13",
+     "text": "✅ all rules 05:00",
+     "title": "met all of Gajjala's rules first 11-13 05:00 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 05:00"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:59",
+    "added_text": "first met 04:59 · last met 04:59",
+    "leaving_text": null,
+    "remove_title": "Remove RCH (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:59:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:59",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:59",
+     "title": "met all of Gajjala's rules first 11-13 04:59 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:59"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCG",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:58",
+    "added_text": "first met 04:58 · last met 04:58",
+    "leaving_text": null,
+    "remove_title": "Remove RCG (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:58:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:58",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:58",
+     "title": "met all of Gajjala's rules first 11-13 04:58 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:58"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCF",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:57",
+    "added_text": "first met 04:57 · last met 04:57",
+    "leaving_text": null,
+    "remove_title": "Remove RCF (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:57:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:57",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:57",
+     "title": "met all of Gajjala's rules first 11-13 04:57 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:57"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCE",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:56",
+    "added_text": "first met 04:56 · last met 04:56",
+    "leaving_text": null,
+    "remove_title": "Remove RCE (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:56:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:56",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:56",
+     "title": "met all of Gajjala's rules first 11-13 04:56 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:56"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:55",
+    "added_text": "first met 04:55 · last met 04:55",
+    "leaving_text": null,
+    "remove_title": "Remove RCD (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:55:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:55",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:55",
+     "title": "met all of Gajjala's rules first 11-13 04:55 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:55"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCC",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:54",
+    "added_text": "first met 04:54 · last met 04:54",
+    "leaving_text": null,
+    "remove_title": "Remove RCC (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:54:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:54",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:54",
+     "title": "met all of Gajjala's rules first 11-13 04:54 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:54"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:53",
+    "added_text": "first met 04:53 · last met 04:53",
+    "leaving_text": null,
+    "remove_title": "Remove RCB (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:53:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:53",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:53",
+     "title": "met all of Gajjala's rules first 11-13 04:53 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:53"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RCA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:52",
+    "added_text": "first met 04:52 · last met 04:52",
+    "leaving_text": null,
+    "remove_title": "Remove RCA (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:52:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:52",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:52",
+     "title": "met all of Gajjala's rules first 11-13 04:52 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:52"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBZ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:51",
+    "added_text": "first met 04:51 · last met 04:51",
+    "leaving_text": null,
+    "remove_title": "Remove RBZ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:51:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:51",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:51",
+     "title": "met all of Gajjala's rules first 11-13 04:51 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:51"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBY",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:50",
+    "added_text": "first met 04:50 · last met 04:50",
+    "leaving_text": null,
+    "remove_title": "Remove RBY (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:50:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:50",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:50",
+     "title": "met all of Gajjala's rules first 11-13 04:50 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:50"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBX",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:49",
+    "added_text": "first met 04:49 · last met 04:49",
+    "leaving_text": null,
+    "remove_title": "Remove RBX (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:49:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:49",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:49",
+     "title": "met all of Gajjala's rules first 11-13 04:49 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:49"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBW",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:48",
+    "added_text": "first met 04:48 · last met 04:48",
+    "leaving_text": null,
+    "remove_title": "Remove RBW (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:48:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:48",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:48",
+     "title": "met all of Gajjala's rules first 11-13 04:48 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:48"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBV",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:47",
+    "added_text": "first met 04:47 · last met 04:47",
+    "leaving_text": null,
+    "remove_title": "Remove RBV (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:47:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:47",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:47",
+     "title": "met all of Gajjala's rules first 11-13 04:47 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:47"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBU",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:46",
+    "added_text": "first met 04:46 · last met 04:46",
+    "leaving_text": null,
+    "remove_title": "Remove RBU (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:46:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:46",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:46",
+     "title": "met all of Gajjala's rules first 11-13 04:46 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:46"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBT",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:45",
+    "added_text": "first met 04:45 · last met 04:45",
+    "leaving_text": null,
+    "remove_title": "Remove RBT (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:45:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:45",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:45",
+     "title": "met all of Gajjala's rules first 11-13 04:45 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:45"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBS",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:44",
+    "added_text": "first met 04:44 · last met 04:44",
+    "leaving_text": null,
+    "remove_title": "Remove RBS (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:44:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:44",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:44",
+     "title": "met all of Gajjala's rules first 11-13 04:44 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:44"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBR",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:43",
+    "added_text": "first met 04:43 · last met 04:43",
+    "leaving_text": null,
+    "remove_title": "Remove RBR (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:43:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:43",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:43",
+     "title": "met all of Gajjala's rules first 11-13 04:43 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:43"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBQ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:42",
+    "added_text": "first met 04:42 · last met 04:42",
+    "leaving_text": null,
+    "remove_title": "Remove RBQ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:42:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:42",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:42",
+     "title": "met all of Gajjala's rules first 11-13 04:42 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:42"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBP",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:41",
+    "added_text": "first met 04:41 · last met 04:41",
+    "leaving_text": null,
+    "remove_title": "Remove RBP (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:41:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:41",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:41",
+     "title": "met all of Gajjala's rules first 11-13 04:41 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:41"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBO",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:40",
+    "added_text": "first met 04:40 · last met 04:40",
+    "leaving_text": null,
+    "remove_title": "Remove RBO (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:40:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:40",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:40",
+     "title": "met all of Gajjala's rules first 11-13 04:40 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:40"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBN",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:39",
+    "added_text": "first met 04:39 · last met 04:39",
+    "leaving_text": null,
+    "remove_title": "Remove RBN (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:39:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:39",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:39",
+     "title": "met all of Gajjala's rules first 11-13 04:39 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:39"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBM",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:38",
+    "added_text": "first met 04:38 · last met 04:38",
+    "leaving_text": null,
+    "remove_title": "Remove RBM (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:38:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:38",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:38",
+     "title": "met all of Gajjala's rules first 11-13 04:38 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:38"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBL",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:37",
+    "added_text": "first met 04:37 · last met 04:37",
+    "leaving_text": null,
+    "remove_title": "Remove RBL (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:37:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:37",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:37",
+     "title": "met all of Gajjala's rules first 11-13 04:37 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:37"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBK",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:36",
+    "added_text": "first met 04:36 · last met 04:36",
+    "leaving_text": null,
+    "remove_title": "Remove RBK (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:36:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:36",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:36",
+     "title": "met all of Gajjala's rules first 11-13 04:36 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:36"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBJ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:35",
+    "added_text": "first met 04:35 · last met 04:35",
+    "leaving_text": null,
+    "remove_title": "Remove RBJ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:35:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:35",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:35",
+     "title": "met all of Gajjala's rules first 11-13 04:35 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:35"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBI",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:34",
+    "added_text": "first met 04:34 · last met 04:34",
+    "leaving_text": null,
+    "remove_title": "Remove RBI (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:34:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:34",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:34",
+     "title": "met all of Gajjala's rules first 11-13 04:34 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:34"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:33",
+    "added_text": "first met 04:33 · last met 04:33",
+    "leaving_text": null,
+    "remove_title": "Remove RBH (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:33:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:33",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:33",
+     "title": "met all of Gajjala's rules first 11-13 04:33 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:33"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBG",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:32",
+    "added_text": "first met 04:32 · last met 04:32",
+    "leaving_text": null,
+    "remove_title": "Remove RBG (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:32:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:32",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:32",
+     "title": "met all of Gajjala's rules first 11-13 04:32 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:32"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBF",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:31",
+    "added_text": "first met 04:31 · last met 04:31",
+    "leaving_text": null,
+    "remove_title": "Remove RBF (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:31:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:31",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:31",
+     "title": "met all of Gajjala's rules first 11-13 04:31 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:31"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBE",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:30",
+    "added_text": "first met 04:30 · last met 04:30",
+    "leaving_text": null,
+    "remove_title": "Remove RBE (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:30:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:30",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:30",
+     "title": "met all of Gajjala's rules first 11-13 04:30 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:30"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:29",
+    "added_text": "first met 04:29 · last met 04:29",
+    "leaving_text": null,
+    "remove_title": "Remove RBD (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:29:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:29",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:29",
+     "title": "met all of Gajjala's rules first 11-13 04:29 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:29"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBC",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:28",
+    "added_text": "first met 04:28 · last met 04:28",
+    "leaving_text": null,
+    "remove_title": "Remove RBC (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:28:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:28",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:28",
+     "title": "met all of Gajjala's rules first 11-13 04:28 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:28"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:27",
+    "added_text": "first met 04:27 · last met 04:27",
+    "leaving_text": null,
+    "remove_title": "Remove RBB (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:27:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:27",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:27",
+     "title": "met all of Gajjala's rules first 11-13 04:27 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:27"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RBA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:26",
+    "added_text": "first met 04:26 · last met 04:26",
+    "leaving_text": null,
+    "remove_title": "Remove RBA (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:26:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:26",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:26",
+     "title": "met all of Gajjala's rules first 11-13 04:26 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:26"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAZ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:25",
+    "added_text": "first met 04:25 · last met 04:25",
+    "leaving_text": null,
+    "remove_title": "Remove RAZ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:25:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:25",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:25",
+     "title": "met all of Gajjala's rules first 11-13 04:25 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:25"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAY",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:24",
+    "added_text": "first met 04:24 · last met 04:24",
+    "leaving_text": null,
+    "remove_title": "Remove RAY (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:24:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:24",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:24",
+     "title": "met all of Gajjala's rules first 11-13 04:24 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:24"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAX",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:23",
+    "added_text": "first met 04:23 · last met 04:23",
+    "leaving_text": null,
+    "remove_title": "Remove RAX (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:23:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:23",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:23",
+     "title": "met all of Gajjala's rules first 11-13 04:23 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:23"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAW",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:22",
+    "added_text": "first met 04:22 · last met 04:22",
+    "leaving_text": null,
+    "remove_title": "Remove RAW (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:22:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:22",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:22",
+     "title": "met all of Gajjala's rules first 11-13 04:22 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:22"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAV",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:21",
+    "added_text": "first met 04:21 · last met 04:21",
+    "leaving_text": null,
+    "remove_title": "Remove RAV (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:21:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:21",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:21",
+     "title": "met all of Gajjala's rules first 11-13 04:21 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:21"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAU",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:20",
+    "added_text": "first met 04:20 · last met 04:20",
+    "leaving_text": null,
+    "remove_title": "Remove RAU (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:20:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:20",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:20",
+     "title": "met all of Gajjala's rules first 11-13 04:20 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:20"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAT",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:19",
+    "added_text": "first met 04:19 · last met 04:19",
+    "leaving_text": null,
+    "remove_title": "Remove RAT (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:19:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:19",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:19",
+     "title": "met all of Gajjala's rules first 11-13 04:19 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:19"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAS",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:18",
+    "added_text": "first met 04:18 · last met 04:18",
+    "leaving_text": null,
+    "remove_title": "Remove RAS (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:18:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:18",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:18",
+     "title": "met all of Gajjala's rules first 11-13 04:18 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:18"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAR",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:17",
+    "added_text": "first met 04:17 · last met 04:17",
+    "leaving_text": null,
+    "remove_title": "Remove RAR (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:17:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:17",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:17",
+     "title": "met all of Gajjala's rules first 11-13 04:17 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:17"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAQ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:16",
+    "added_text": "first met 04:16 · last met 04:16",
+    "leaving_text": null,
+    "remove_title": "Remove RAQ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:16:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:16",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:16",
+     "title": "met all of Gajjala's rules first 11-13 04:16 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:16"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAP",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:15",
+    "added_text": "first met 04:15 · last met 04:15",
+    "leaving_text": null,
+    "remove_title": "Remove RAP (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:15:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:15",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:15",
+     "title": "met all of Gajjala's rules first 11-13 04:15 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:15"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAO",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:14",
+    "added_text": "first met 04:14 · last met 04:14",
+    "leaving_text": null,
+    "remove_title": "Remove RAO (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:14:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:14",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:14",
+     "title": "met all of Gajjala's rules first 11-13 04:14 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:14"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAN",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:13",
+    "added_text": "first met 04:13 · last met 04:13",
+    "leaving_text": null,
+    "remove_title": "Remove RAN (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:13:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:13",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:13",
+     "title": "met all of Gajjala's rules first 11-13 04:13 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:13"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAM",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:12",
+    "added_text": "first met 04:12 · last met 04:12",
+    "leaving_text": null,
+    "remove_title": "Remove RAM (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:12:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:12",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:12",
+     "title": "met all of Gajjala's rules first 11-13 04:12 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:12"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAL",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:11",
+    "added_text": "first met 04:11 · last met 04:11",
+    "leaving_text": null,
+    "remove_title": "Remove RAL (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:11:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:11",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:11",
+     "title": "met all of Gajjala's rules first 11-13 04:11 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:11"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAK",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:10",
+    "added_text": "first met 04:10 · last met 04:10",
+    "leaving_text": null,
+    "remove_title": "Remove RAK (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:10:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:10",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:10",
+     "title": "met all of Gajjala's rules first 11-13 04:10 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:10"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAJ",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:09",
+    "added_text": "first met 04:09 · last met 04:09",
+    "leaving_text": null,
+    "remove_title": "Remove RAJ (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:09:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:09",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:09",
+     "title": "met all of Gajjala's rules first 11-13 04:09 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:09"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAI",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:08",
+    "added_text": "first met 04:08 · last met 04:08",
+    "leaving_text": null,
+    "remove_title": "Remove RAI (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:08:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:08",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:08",
+     "title": "met all of Gajjala's rules first 11-13 04:08 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:08"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:07",
+    "added_text": "first met 04:07 · last met 04:07",
+    "leaving_text": null,
+    "remove_title": "Remove RAH (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:07:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:07",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:07",
+     "title": "met all of Gajjala's rules first 11-13 04:07 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:07"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAG",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:06",
+    "added_text": "first met 04:06 · last met 04:06",
+    "leaving_text": null,
+    "remove_title": "Remove RAG (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:06:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:06",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:06",
+     "title": "met all of Gajjala's rules first 11-13 04:06 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:06"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAF",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:05",
+    "added_text": "first met 04:05 · last met 04:05",
+    "leaving_text": null,
+    "remove_title": "Remove RAF (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:05:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:05",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:05",
+     "title": "met all of Gajjala's rules first 11-13 04:05 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:05"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAE",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:04",
+    "added_text": "first met 04:04 · last met 04:04",
+    "leaving_text": null,
+    "remove_title": "Remove RAE (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:04:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:04",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:04",
+     "title": "met all of Gajjala's rules first 11-13 04:04 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:04"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:03",
+    "added_text": "first met 04:03 · last met 04:03",
+    "leaving_text": null,
+    "remove_title": "Remove RAD (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:03:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:03",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:03",
+     "title": "met all of Gajjala's rules first 11-13 04:03 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:03"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAC",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:02",
+    "added_text": "first met 04:02 · last met 04:02",
+    "leaving_text": null,
+    "remove_title": "Remove RAC (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:02:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:02",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:02",
+     "title": "met all of Gajjala's rules first 11-13 04:02 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:02"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAB",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:01",
+    "added_text": "first met 04:01 · last met 04:01",
+    "leaving_text": null,
+    "remove_title": "Remove RAB (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:01:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:01",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:01",
+     "title": "met all of Gajjala's rules first 11-13 04:01 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:01"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RAA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "04:00",
+    "added_text": "first met 04:00 · last met 04:00",
+    "leaving_text": null,
+    "remove_title": "Remove RAA (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T09:00:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "04:00",
+     "date": "2026-11-13",
+     "text": "✅ all rules 04:00",
+     "title": "met all of Gajjala's rules first 11-13 04:00 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 04:00"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  }
+ ],
+ "auto": {
+  "state": "ok",
+  "cap": 18,
+  "n": 12,
+  "symbols": [
+   "PA",
+   "PB",
+   "AA",
+   "AB",
+   "AC",
+   "AD",
+   "AE",
+   "AF",
+   "AG",
+   "AH",
+   "AI",
+   "AJ"
+  ],
+  "title": "🤖 12 of 18 auto from the Gajjala boards",
+  "hint": "Added once a minute in the pass window: every name that came into a 🧠 potential on the 🚩 5-min, 🚩 1-min and 🧪 boards at any time today with today's volume at or over 1,000,000 shares (GG's K11 floor — the scan row, else the pass's own stored number), up to 18. A current potential goes first; today's earlier ones follow newest first, into free seats only, and one that already read ↩️ back under or ✖️ stop printed is not added. A name stays all session; it leaves when every board reads ↩️ back under or ✖️ stop printed, or on your ×; ⏸ waiting above its trigger stays. At 18 the oldest name whose potential lapsed makes room for a current potential. The 🧪 tag means the 🧪 board shows this 🚩 5-min potential (it borrows them). A name that becomes 🎯 A+ on any of these boards today takes a seat at once, ahead of the potentials — at 18 it displaces the oldest name whose potential lapsed, then the oldest-added potential, never another A+ or your own name — and stays all session; ↩️ back under or ✖️ stop printed never remove it (the 🎯 A+ chip says so). Your own names are never touched. Auto names do not ring the 1-min cross. × removes a name until tomorrow. UNMEASURED.",
+  "empty_text": null,
+  "text": null,
+  "removed": [],
+  "removed_total": 0,
+  "removed_title": "🤖 removed today · 0",
+  "push_mode": "off",
+  "skipped_text": null
+ },
+ "sections": [
+  {
+   "key": "yours",
+   "title": "👤 Your names",
+   "text": "👤 Your names · 8",
+   "hint": "Names you added, newest first. Names added before 11-19 carry no time.",
+   "n": 8,
+   "symbols": [
+    "HH",
+    "HG",
+    "HF",
+    "HE",
+    "HD",
+    "HC",
+    "HB",
+    "HA"
+   ]
+  },
+  {
+   "key": "aplus",
+   "title": "🎯 A+",
+   "text": "🎯 A+ · 2",
+   "hint": "🤖 added these because a Gajjala board read them A+ this session (or promoted a 🧠 potential when it went A+). They stay all session, a stop included. Your own A+ names stay in 👤 with their 🎯 chip.",
+   "n": 2,
+   "symbols": [
+    "PB",
+    "PA"
+   ]
+  },
+  {
+   "key": "auto",
+   "title": "🤖 Added today",
+   "text": "🤖 Added today · 10",
+   "hint": "🤖 adds this session, newest first — each tile says when it was added. 📅 on a tile = it ran last session (11-12); a label, not why it was added.",
+   "n": 10,
+   "symbols": [
+    "AJ",
+    "AI",
+    "AH",
+    "AG",
+    "AF",
+    "AE",
+    "AD",
+    "AC",
+    "AB",
+    "AA"
+   ]
+  },
+  {
+   "key": "rules",
+   "title": "✅ All rules met",
+   "text": "✅ All rules met · 70",
+   "hint": "Every name that met all of Gajjala's rules on the 🚩 5-min, 🚩 1-min and 🧪 board (trigger armed — only the break missing — with the day's volume at or over 1,000,000) and every 🎯 A+, newest first. It stays until 5 sessions pass without it meeting them again, or your ×. This list never rings; the board's pushes are unchanged. UNMEASURED.",
+   "n": 70,
+   "symbols": [
+    "RCR",
+    "RCQ",
+    "RCP",
+    "RCO",
+    "RCN",
+    "RCM",
+    "RCL",
+    "RCK",
+    "RCJ",
+    "RCI",
+    "RCH",
+    "RCG",
+    "RCF",
+    "RCE",
+    "RCD",
+    "RCC",
+    "RCB",
+    "RCA",
+    "RBZ",
+    "RBY",
+    "RBX",
+    "RBW",
+    "RBV",
+    "RBU",
+    "RBT",
+    "RBS",
+    "RBR",
+    "RBQ",
+    "RBP",
+    "RBO",
+    "RBN",
+    "RBM",
+    "RBL",
+    "RBK",
+    "RBJ",
+    "RBI",
+    "RBH",
+    "RBG",
+    "RBF",
+    "RBE",
+    "RBD",
+    "RBC",
+    "RBB",
+    "RBA",
+    "RAZ",
+    "RAY",
+    "RAX",
+    "RAW",
+    "RAV",
+    "RAU",
+    "RAT",
+    "RAS",
+    "RAR",
+    "RAQ",
+    "RAP",
+    "RAO",
+    "RAN",
+    "RAM",
+    "RAL",
+    "RAK",
+    "RAJ",
+    "RAI",
+    "RAH",
+    "RAG",
+    "RAF",
+    "RAE",
+    "RAD",
+    "RAC",
+    "RAB",
+    "RAA"
+   ],
+   "folded_default": true
+  }
+ ],
+ "rules": {
+  "state": "ok",
+  "n": 70,
+  "keep_sessions": 5,
+  "text": null,
+  "not_seated_n": 0
+ },
+ "broker": null,
+ "pending_poll_sec": 5,
+ "pending_wait_max_sec": 90,
+ "pending_late_poll_sec": 60
+}

@@ -246,18 +246,19 @@ def current_symbols(cs, session_iso: str) -> list:
     return out
 
 
-def _cas(coll, doc: dict, fields: dict) -> bool:
+def _cas(coll, doc: dict, fields: dict, doc_id: str = C.AUTO_DOC_ID) -> bool:
     """ONE update_one: lands ONLY IF the stored doc is still `doc` (its `rev`; a missing doc: still missing). False =
-    another write landed in between. A failing write RAISES."""
+    another write landed in between. A failing write RAISES. `doc_id` (2026-11-24, spec watchall §3.4): the ✅ engine's
+    own doc (C.RULES_DOC_ID) uses the SAME compare-and-set; the default is the auto doc, as before."""
     rev = doc.get("rev") if isinstance(doc, dict) else None
     fields = dict(fields, rev=(rev if isinstance(rev, int) and not isinstance(rev, bool) else 0) + 1)
     if doc:
-        flt = {"_id": C.AUTO_DOC_ID, "rev": rev} if "rev" in doc else {"_id": C.AUTO_DOC_ID, "rev": {"$exists": False}}
+        flt = {"_id": doc_id, "rev": rev} if "rev" in doc else {"_id": doc_id, "rev": {"$exists": False}}
         res = coll.update_one(flt, {"$set": fields}, upsert=False)
         return bool(getattr(res, "matched_count", 0))
     from pymongo.errors import DuplicateKeyError
     try:
-        res = coll.update_one({"_id": C.AUTO_DOC_ID, "rev": {"$exists": False}}, {"$set": fields}, upsert=True)
+        res = coll.update_one({"_id": doc_id, "rev": {"$exists": False}}, {"$set": fields}, upsert=True)
     except DuplicateKeyError:
         return False
     return bool(getattr(res, "matched_count", 0)) or getattr(res, "upserted_id", None) is not None
@@ -395,14 +396,16 @@ def merge(sets) -> list:
 
 
 # ── came in to Potentials today (2026-11-17 12:55 accumulate) ─────────────────────────────────────────────────────
-def _tracker_docs(st, iso: str) -> Optional[list]:
+def _tracker_docs(st, iso: str, fields: dict = _TRACKER_FIELDS) -> Optional[list]:
     """ONE projected find of a store's 🧠 tracker (`ST.POTENTIALS`) for the session — the docs whose `_id` carries the
-    "<iso>|" prefix; None on a READ FAULT (no handle, or the find raised — unknown is never "none")."""
+    "<iso>|" prefix; None on a READ FAULT (no handle, or the find raised — unknown is never "none"). `fields`
+    (2026-11-24, spec watchall §3.4): the projection — `_TRACKER_FIELDS` by default, as before; the ✅ engine passes
+    C.RULES_TRACKER_FIELDS (it needs `state_path`)."""
     c = st.coll(ST.POTENTIALS) if st is not None else None
     if c is None:
         return None
     try:
-        docs = list(c.find({"date": iso}, _TRACKER_FIELDS))
+        docs = list(c.find({"date": iso}, fields))
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala watch 🤖: trackers unreadable: %s", type(exc).__name__)
         return None
@@ -808,7 +811,10 @@ def _compute(doc, now, session, manual, stores, in_window: bool) -> tuple:
            "leaving": [e["symbol"] for e in entries if _utc(e.get("dropped_since"))],
            "n": len(entries), "cap": C.AUTO_MAX_SYMBOLS, "skipped": skipped, "reason": reason,
            "removed_total": len(removed), "aplus_skipped": aplus_skipped,
-           "not_eligible": ne, "broker_fault": bool(bfault)}
+           "not_eligible": ne, "broker_fault": bool(bfault),
+           # ✅ 2026-11-24 (spec watchall §3.4 [C7]): every A+ name of this step — seated, skipped or already held —
+           # handed to allrules.step by the loop; [] when the A+ set is unknown or out of window
+           "aplus_now": [sym for sym, _ap, _srcs in aplus_arrivals(aps)] if aps is not None else []}
     res["changed"] = _changed(doc, iso, entries, removed, dismissed)
     return res, {"session": iso, "entries": entries, "removed": removed, "dismissed": dismissed}
 
@@ -826,7 +832,7 @@ def step(now, session, *, db=None, manual: list, dry: bool = False, stores: Opti
         if doc is None:
             return {"symbols": [], "added": [], "removed": [], "leaving": [], "n": 0, "cap": C.AUTO_MAX_SYMBOLS,
                     "skipped": {k: 0 for k in SKIPPED_KEYS}, "reason": STEP_REASONS[0], "changed": False,
-                    "aplus_skipped": [], "not_eligible": [], "broker_fault": False}
+                    "aplus_skipped": [], "not_eligible": [], "broker_fault": False, "aplus_now": []}
         res, new = _compute(doc, now, session, manual, stores, in_window)
         if dry:
             res["writes"] = new

@@ -168,3 +168,30 @@ Re-pinned:
 - newest (an OFF twin plus the ON order);
 - tags (finder defaults);
 - the api route list (+ GET runners).
+
+## 8. Payload — ✅ All rules met (2026-11-24, spec watchall rev 2 §3.5, WP be-payload)
+
+Ajay 2026-11-24, verbatim: "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep
+tracking them later".
+
+- A FOURTH section `rules` ("✅ All rules met"), served LAST: 👤 → 🎯 → 🤖 → ✅. `payload.rules_section` makes ONE read of the
+  ✅ doc (`allrules.read_doc` + `entries_in_window`, imported lazily) and serves the names after his and the 🤖 / 🎯 names.
+- One row per name: 👤 his > 🎯 A+ seat > 🤖 potential > ✅. A name that leaves 🤖 (↩️/✖️, made room, the 04:00 reset) is
+  then served in ✅. `rules.n` = the rows served in ✅.
+- A ✅ row's block sits under `row.auto` in the 🤖 shape with `why: "rules"`, the ✅ tag, "first met … · last met …" and
+  the ✅ × title, so the FE treats it as machine-added with no parse change. `org.when` = "✅ all rules HH:MM" today,
+  "✅ all rules MM-DD" on an earlier day, plus " · k sessions" when it met them in more than one. Inside ✅: newest-met
+  first (`last_met_at`), undated last.
+- The ✅ section block alone carries `folded_default: true` (`C.SECTIONS_FOLDED_DEFAULT`). Every other section is
+  byte-identical. The ✅ hint is filled with the board words, the K11 floor, `C.RULES_KEEP_SESSIONS` and the 🚫 count
+  of the loop's last step this session (`state.rules.not_eligible`).
+- The board key `rules` = {state ok|unreadable, n, keep_sessions, text (unreadable only), not_seated_n}. It is absent
+  while `C.RULES_ON` is False, and the payload is then the 11-24 one byte for byte. A read fault gives `unreadable`. The
+  other rows stay intact and the board is never `error`.
+- Every number goes through `potential._num` (a NaN / inf / bool volume serves no volume words). The tests dump with
+  `allow_nan=False`. The held chip on a ✅ row is `held_text(C.AUTO_HELD_REASON)` under whatever PUSH_MODE says. It is
+  tested with the push off and on.
+- Goldens (BE writes, FE reads): `frontend/src/lib/__fixtures__/ggwAllRules.golden.json` and
+  `ggwAllRules90.golden.json` (90 rows: 8 👤 + 2 🎯 + 10 🤖 + 70 ✅, so the live hub's refused tail past 80 is all ✅).
+  To regenerate them, run `GGW_GOLDEN_WRITE=1` with `tests/test_gajjala_watch_allrules_payload_2026_11_24.py`.
+- Display only. The list rings nothing. UNMEASURED.

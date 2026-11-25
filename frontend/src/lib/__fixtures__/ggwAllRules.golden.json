@@ -1,0 +1,544 @@
+{
+ "state": "ok",
+ "title": "👀 Gajjala's Watch — your tickers on 1-, 5- and 15-minute bars from 04:00 ET",
+ "session": "2026-11-13",
+ "is_today": true,
+ "in_window": true,
+ "refresh_sec": 60,
+ "next_window_sec": null,
+ "max_symbols": 18,
+ "symbols": [
+  "OMH",
+  "NVDA"
+ ],
+ "full": false,
+ "full_blocked": false,
+ "full_text": "Your watch holds 18 — adding one replaces the one on your watch the longest (never a 🎯 A+)",
+ "add_label": "Add",
+ "add_placeholder": "Ticker, e.g. OMH",
+ "remove_label": "Remove",
+ "empty_text": "Your watch is empty — add a ticker to see its 1-, 5- and 15-minute charts",
+ "pass": null,
+ "info": {
+  "honesty": "A 9-over-21 cross is information, not an entry. UNMEASURED: nothing has measured what follows a cross on these frames.",
+  "push_text": "P",
+  "uptrend_rule": "R",
+  "push_mode": "live",
+  "push_frames": [
+   "1m"
+  ],
+  "auto_text": "STUB-AUTO-RULES-LINE",
+  "vwap_text": "📈 VWAP on 👀 Gajjala's Watch: the volume-weighted average price of the whole extended session, premarket and after-hours included from 04:00 ET, built from closed 1-min bars (typical price × volume, the house VWAP engine). It restarts every session, runs through after-hours, and its last point is the last closed bar — the live candle does not move it. Display only: nothing gates, sorts or rings on it. UNMEASURED.",
+  "zones_text": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+ },
+ "legend": [
+  {
+   "tone": "ema9",
+   "label": "9 EMA"
+  },
+  {
+   "tone": "ema21",
+   "label": "21 EMA"
+  },
+  {
+   "tone": "vwap",
+   "label": "VWAP (from 04:00 ET)",
+   "title": "📈 VWAP on 👀 Gajjala's Watch: the volume-weighted average price of the whole extended session, premarket and after-hours included from 04:00 ET, built from closed 1-min bars (typical price × volume, the house VWAP engine). It restarts every session, runs through after-hours, and its last point is the last closed bar — the live candle does not move it. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  },
+  {
+   "tone": "zone_demand",
+   "label": "Daily demand zone (dashed)",
+   "title": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  },
+  {
+   "tone": "zone_supply",
+   "label": "Daily supply zone (dashed)",
+   "title": "📐 Daily zones on 👀 Gajjala's Watch: the Supply & Demand engine's daily supply and demand zones (closed daily bars, the board's geometry), the 4 nearest of each kind, drawn dashed where they cross the chart's price range; a zone never moves the price scale. A high or low made in the last 5 closed sessions is not a zone yet — the engine needs 5 later sessions to call it a swing, so yesterday's high is usually not drawn. A name with fewer than 120 daily bars gets none. Display only: nothing gates, sorts or rings on it. UNMEASURED."
+  }
+ ],
+ "rows": [
+  {
+   "symbol": "OMH",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T13:15:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "08:15",
+     "date": "2026-11-13",
+     "text": "👤 added 08:15",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "NVDA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": null,
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-11T15:00:00.000+00:00",
+   "org": {
+    "group": "yours",
+    "when": {
+     "bucket": null,
+     "verb": "added",
+     "at_et": "10:00",
+     "date": "2026-11-11",
+     "text": "👤 added 11-11",
+     "title": null
+    },
+    "setup": null,
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "AAA",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · —",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "09:00",
+    "added_text": "🎯 A+ (— —) · seated 09:00 ET",
+    "leaving_text": null,
+    "remove_title": "Remove AAA (auto A+ — not added again today)",
+    "why": "aplus"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T14:00:00.000+00:00",
+   "org": {
+    "group": "aplus",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "09:00",
+     "date": "2026-11-13",
+     "text": "added premarket 09:00",
+     "title": "added 11-13 09:00 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "MMM",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "10:42",
+    "added_text": "added 10:42 ET",
+    "leaving_text": null,
+    "remove_title": "Remove MMM (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T15:42:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "intraday",
+     "verb": "added",
+     "at_et": "10:42",
+     "date": "2026-11-13",
+     "text": "added 10:42",
+     "title": "added 11-13 10:42 ET by 🤖 — during the regular session"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "ZZT",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "🤖",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "🤖 auto · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly · building",
+    "volume_text": "vol 2.0M",
+    "volume_source": "scan",
+    "added_et": "07:12",
+    "added_text": "added 07:12 ET",
+    "leaving_text": null,
+    "remove_title": "Remove ZZT (auto — not added again today)",
+    "why": "potential"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T12:12:00.000+00:00",
+   "org": {
+    "group": "auto",
+    "when": {
+     "bucket": "premarket",
+     "verb": "added",
+     "at_et": "07:12",
+     "date": "2026-11-13",
+     "text": "added premarket 07:12",
+     "title": "added 11-13 07:12 ET by 🤖 — before the open"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RTW",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "2026-11-11 10:00",
+    "added_text": "first met 2026-11-11 10:00 · last met 11:05",
+    "leaving_text": null,
+    "remove_title": "Remove RTW (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-11T15:00:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "11:05",
+     "date": "2026-11-13",
+     "text": "✅ all rules 11:05 · 2 sessions",
+     "title": "met all of Gajjala's rules first 11-11 10:00 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 11:05"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "RON",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 💋 EMA Kiss & Fly",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "09:41",
+    "added_text": "first met 09:41 · last met 09:41",
+    "leaving_text": null,
+    "remove_title": "Remove RON (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-13T14:41:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "09:41",
+     "date": "2026-11-13",
+     "text": "✅ all rules 09:41",
+     "title": "met all of Gajjala's rules first 11-13 09:41 (trigger armed) — 💋 EMA Kiss & Fly; last met 11-13 09:41"
+    },
+    "setup": {
+     "setup": "kiss_fly",
+     "label": "💋 EMA Kiss & Fly",
+     "state_label": null,
+     "source": "entry",
+     "text": "💋 EMA Kiss & Fly",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  },
+  {
+   "symbol": "ROLD",
+   "state": "pending",
+   "text": "⏳ reading now — this tile fills in by itself when the read lands",
+   "from_session": null,
+   "as_of_et": null,
+   "stale": false,
+   "frames": [],
+   "rang": [],
+   "late_text": "⏳ still reading — not read yet; this tile checks again every 60 s",
+   "levels": null,
+   "auto": {
+    "tag": "✅",
+    "sources": [
+     "gajjala",
+     "gga"
+    ],
+    "source_words": [
+     "🚩 5-min",
+     "🧪"
+    ],
+    "text": "✅ all rules · 🚩 5-min · 🧪 · 🎾 Reversal Squeeze",
+    "volume_text": "vol 2.0M (pass number)",
+    "volume_source": "tracker",
+    "added_et": "2026-11-11 15:00",
+    "added_text": "first met 2026-11-11 15:00 · last met 2026-11-11 15:00",
+    "leaving_text": null,
+    "remove_title": "Remove ROLD (✅ all rules — not added again this session)",
+    "why": "rules"
+   },
+   "aplus": null,
+   "tags": null,
+   "float": null,
+   "added_at": "2026-11-11T20:00:00.000+00:00",
+   "org": {
+    "group": "rules",
+    "when": {
+     "bucket": null,
+     "verb": null,
+     "at_et": "15:00",
+     "date": "2026-11-11",
+     "text": "✅ all rules 11-11",
+     "title": "met all of Gajjala's rules first 11-11 15:00 (🎯 A+) — 🎾 Reversal Squeeze; last met 11-11 15:00"
+    },
+    "setup": {
+     "setup": "reversal_squeeze",
+     "label": "🎾 Reversal Squeeze",
+     "state_label": null,
+     "source": "entry",
+     "text": "🎾 Reversal Squeeze",
+     "title": null
+    },
+    "ran": null,
+    "past_winner": null
+   },
+   "broker_text": null
+  }
+ ],
+ "auto": {
+  "state": "ok",
+  "cap": 18,
+  "n": 3,
+  "symbols": [
+   "ZZT",
+   "MMM",
+   "AAA"
+  ],
+  "title": "🤖 3 of 18 auto from the Gajjala boards",
+  "hint": "Added once a minute in the pass window: every name that came into a 🧠 potential on the 🚩 5-min, 🚩 1-min and 🧪 boards at any time today with today's volume at or over 1,000,000 shares (GG's K11 floor — the scan row, else the pass's own stored number), up to 18. A current potential goes first; today's earlier ones follow newest first, into free seats only, and one that already read ↩️ back under or ✖️ stop printed is not added. A name stays all session; it leaves when every board reads ↩️ back under or ✖️ stop printed, or on your ×; ⏸ waiting above its trigger stays. At 18 the oldest name whose potential lapsed makes room for a current potential. The 🧪 tag means the 🧪 board shows this 🚩 5-min potential (it borrows them). A name that becomes 🎯 A+ on any of these boards today takes a seat at once, ahead of the potentials — at 18 it displaces the oldest name whose potential lapsed, then the oldest-added potential, never another A+ or your own name — and stays all session; ↩️ back under or ✖️ stop printed never remove it (the 🎯 A+ chip says so). Your own names are never touched. Auto names do not ring the 1-min cross. × removes a name until tomorrow. UNMEASURED.",
+  "empty_text": null,
+  "text": null,
+  "removed": [],
+  "removed_total": 0,
+  "removed_title": "🤖 removed today · 0",
+  "push_mode": "off",
+  "skipped_text": null
+ },
+ "sections": [
+  {
+   "key": "yours",
+   "title": "👤 Your names",
+   "text": "👤 Your names · 2",
+   "hint": "Names you added, newest first. Names added before 11-19 carry no time.",
+   "n": 2,
+   "symbols": [
+    "OMH",
+    "NVDA"
+   ]
+  },
+  {
+   "key": "aplus",
+   "title": "🎯 A+",
+   "text": "🎯 A+ · 1",
+   "hint": "🤖 added these because a Gajjala board read them A+ this session (or promoted a 🧠 potential when it went A+). They stay all session, a stop included. Your own A+ names stay in 👤 with their 🎯 chip.",
+   "n": 1,
+   "symbols": [
+    "AAA"
+   ]
+  },
+  {
+   "key": "auto",
+   "title": "🤖 Added today",
+   "text": "🤖 Added today · 2",
+   "hint": "🤖 adds this session, newest first — each tile says when it was added. 📅 on a tile = it ran last session (11-12); a label, not why it was added.",
+   "n": 2,
+   "symbols": [
+    "MMM",
+    "ZZT"
+   ]
+  },
+  {
+   "key": "rules",
+   "title": "✅ All rules met",
+   "text": "✅ All rules met · 3",
+   "hint": "Every name that met all of Gajjala's rules on the 🚩 5-min, 🚩 1-min and 🧪 board (trigger armed — only the break missing — with the day's volume at or over 1,000,000) and every 🎯 A+, newest first. It stays until 5 sessions pass without it meeting them again, or your ×. This list never rings; the board's pushes are unchanged. UNMEASURED. 1 more met them but are on your 🚫 list — not seated.",
+   "n": 3,
+   "symbols": [
+    "RTW",
+    "RON",
+    "ROLD"
+   ],
+   "folded_default": true
+  }
+ ],
+ "rules": {
+  "state": "ok",
+  "n": 3,
+  "keep_sessions": 5,
+  "text": null,
+  "not_seated_n": 1
+ },
+ "broker": null,
+ "pending_poll_sec": 5,
+ "pending_wait_max_sec": 90,
+ "pending_late_poll_sec": 60
+}

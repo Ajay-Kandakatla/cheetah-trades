@@ -18,6 +18,12 @@ Every row gets `org = {group, when, setup, ran, past_winner}`:
   * `past_winner` — 🎬's own 🏆 tag (replays.store.past_wins_before), wins that ended strictly before the session.
 Reads: ONE `runners.ran_for` (1 scan find + 1 reads find) and ONE cached 🏆 index; a fault in either → that field None
 on every row, the groups untouched. Display only — UNMEASURED.
+
+✅ 2026-11-24 (spec watchall rev 2 §3.5 — Ajay, verbatim: "Anytime stocks qualify all his rules should be auto added to
+the Watch list so I can keep tracking them later"): a FOURTH section "rules" served LAST (👤 → 🎯 → 🤖 → ✅). A row with no
+🤖 entry and a ✅ all-rules entry (the payload drops his names and 🤖 seats first — one row per name) groups "rules";
+inside, newest-met first (`last_met_at`). `when` = "✅ all rules HH:MM" today / "MM-DD" earlier, + " · k sessions". The
+section block alone carries `folded_default: True` (C.SECTIONS_FOLDED_DEFAULT). Display only — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -116,6 +122,42 @@ def when_block(entry: Optional[dict], his_at: Optional[datetime], session: date,
             "title": None}
 
 
+def _rules_kind_word(kind) -> str:
+    """✅ the entry's kind in words: "armed" → potential.KIND_LABEL's; "aplus" → the 🎯 section's own title words."""
+    from chart_maps.gajjala import potential as PT
+    if kind == C.RULES_KINDS[1]:
+        return C.SECTION_WORDS[C.SECTION_KEYS[1]]
+    w = PT.KIND_LABEL.get(kind) if isinstance(kind, str) else None
+    return w if isinstance(w, str) and w else "—"
+
+
+def _rules_setup_word(setup) -> str:
+    from chart_maps.gajjala import constants as GC
+    from chart_maps.gajjala import tab
+    return tab._setup_label(setup) if isinstance(setup, str) and setup in GC.SETUPS else "—"
+
+
+def rules_when_block(rule: dict, session: date) -> Optional[dict]:
+    """✅ 2026-11-24 (spec watchall §3.5) — {bucket, verb, at_et, date, text, title} of a ✅ entry from its LAST met time
+    (`last_met_at`, stored UTC): the session's own day → the ET clock, an earlier day → MM-DD; + " · k sessions" when it
+    met them in more than one session (`sessions`, distinct). None without a readable `last_met_at`."""
+    last = CO.stamp_utc(rule.get("last_met_at")) if isinstance(rule, dict) else None
+    if last is None:
+        return None
+    t = _et(last)
+    at = t.strftime("%H:%M")
+    text = (C.RULES_WHEN_TODAY.format(at=at) if t.date() == session
+            else C.RULES_WHEN_DAY.format(md=t.strftime("%m-%d")))
+    k = len({s for s in (rule.get("sessions") if isinstance(rule.get("sessions"), list) else []) if isinstance(s, str)})
+    if k > 1:
+        text += C.RULES_WHEN_MULTI.format(k=k)
+    first = CO.stamp_utc(rule.get("first_met_at"))
+    title = C.RULES_WHEN_TITLE.format(first=_et(first).strftime("%m-%d %H:%M") if first is not None else "—",
+                                      kind=_rules_kind_word(rule.get("kind")),
+                                      setup=_rules_setup_word(rule.get("setup")), last=t.strftime("%m-%d %H:%M"))
+    return {"bucket": None, "verb": None, "at_et": at, "date": t.date().isoformat(), "text": text, "title": title}
+
+
 def setup_block(row: dict, entry: Optional[dict]) -> Optional[dict]:
     """{setup, label, state_label, source, text, title} — the tile's ONE setup chip (`text` = the label the FE prints,
     `title` = the state words on hover): today's 🚩 card setups (row.tags.setups), else the
@@ -154,10 +196,11 @@ def past_block(idx, sym: str, session_iso: str) -> Optional[dict]:
     return dict(out, text=items[0] if items else None, title=" · ".join(items + ([more] if more else [])) or None)
 
 
-def group_of(entry: Optional[dict]) -> str:
-    """[D3] session-stable only: his name → "yours"; a 🎯 A+ seat → "aplus"; any other 🤖 entry → "auto"."""
+def group_of(entry: Optional[dict], rule: Optional[dict] = None) -> str:
+    """[D3] session-stable only: his name → "yours"; a 🎯 A+ seat → "aplus"; any other 🤖 entry → "auto"; ✅ 2026-11-24
+    (spec watchall §3.5): no 🤖 entry and a ✅ all-rules entry → "rules" (a 🤖 seat wins over ✅ — one row per name)."""
     if entry is None:
-        return C.SECTION_KEYS[0]
+        return C.SECTION_KEYS[3] if isinstance(rule, dict) else C.SECTION_KEYS[0]
     if isinstance(entry, dict) and entry.get("why") == C.AUTO_APLUS_WHY:
         return C.SECTION_KEYS[1]
     return C.SECTION_KEYS[2]
@@ -168,9 +211,12 @@ def _ts(v) -> Optional[float]:
     return t.timestamp() if t is not None else None
 
 
-def order(rows: list, groups: dict, entries: dict) -> list:
+def order(rows: list, groups: dict, entries: dict, rules: Optional[dict] = None) -> list:
     """Rows in SECTION_ORDER; inside: 👤 his order as served (newest added first); 🎯 newest A+ first (`aplus_at`, else
-    `added_at`); 🤖 newest added first; an undated 🤖 last; a tie keeps the served order."""
+    `added_at`); 🤖 newest added first; an undated 🤖 last; ✅ (2026-11-24) newest-met first (`last_met_at`), undated
+    last; a tie keeps the served order."""
+    rules = rules if isinstance(rules, dict) else {}
+
     def key(ix):
         i, r = ix
         sym = r["symbol"]
@@ -178,6 +224,9 @@ def order(rows: list, groups: dict, entries: dict) -> list:
         e = entries.get(sym) or {}
         if g == C.SECTION_KEYS[0]:
             inner = (0, 0.0)
+        elif g == C.SECTION_KEYS[3]:
+            t = _ts((rules.get(sym) or {}).get("last_met_at"))
+            inner = (0, -t) if t is not None else (1, 0.0)
         elif g == C.SECTION_KEYS[1]:
             t = _ts(e.get("aplus_at"))
             t = t if t is not None else _ts(e.get("added_at"))
@@ -189,8 +238,19 @@ def order(rows: list, groups: dict, entries: dict) -> list:
     return [r for _i, r in sorted(enumerate(rows), key=key)]
 
 
-def sections_block(rows: list, *, session: date) -> list:
-    """[{key, title, text, hint, n, symbols}] — the non-empty groups in SECTION_ORDER (rows already ordered)."""
+def rules_hint_fields(rules: Optional[dict]) -> dict:
+    """✅ 2026-11-24 — the ✅ hint's {} fields: `boards` (the payload's served board words), `floor` / `keep` from their
+    constants at call time, `not_seated` (the payload's served 🚫 sentence, "" when none)."""
+    rules = rules if isinstance(rules, dict) else {}
+    boards = rules.get("boards") if isinstance(rules.get("boards"), str) and rules.get("boards") else "—"
+    ns = rules.get("not_seated") if isinstance(rules.get("not_seated"), str) else ""
+    return {"boards": boards, "floor": int(C.RULES_MIN_VOLUME), "keep": C.RULES_KEEP_SESSIONS, "not_seated": ns}
+
+
+def sections_block(rows: list, *, session: date, rules: Optional[dict] = None) -> list:
+    """[{key, title, text, hint, n, symbols}] — the non-empty groups in SECTION_ORDER (rows already ordered). ✅
+    2026-11-24: the "rules" hint is filled by `rules_hint_fields`; `folded_default: True` ONLY on a key in
+    C.SECTIONS_FOLDED_DEFAULT (every other section byte-identical)."""
     from chart_maps.gajjala import tab
     prev = tab._prev_market_day(session)
     out = []
@@ -199,9 +259,14 @@ def sections_block(rows: list, *, session: date) -> list:
         if not syms:
             continue
         title = C.SECTION_WORDS[k]
-        out.append({"key": k, "title": title, "text": C.SECTION_TEXT.format(title=title, n=len(syms)),
-                    "hint": C.SECTION_HINTS[k].format(date=prev.strftime("%m-%d")), "n": len(syms),
-                    "symbols": syms})
+        fields = {"date": prev.strftime("%m-%d")}
+        if k == C.SECTION_KEYS[3]:
+            fields.update(rules_hint_fields(rules))
+        blk = {"key": k, "title": title, "text": C.SECTION_TEXT.format(title=title, n=len(syms)),
+               "hint": C.SECTION_HINTS[k].format(**fields), "n": len(syms), "symbols": syms}
+        if k in C.SECTIONS_FOLDED_DEFAULT:
+            blk["folded_default"] = True
+        out.append(blk)
     return out
 
 
@@ -226,13 +291,16 @@ def _past_idx():
         return None
 
 
-def apply(rows: list, *, entries: dict, removed: list, his_added: dict, session: date) -> tuple:
+def apply(rows: list, *, entries: dict, removed: list, his_added: dict, session: date,
+          rules: Optional[dict] = None) -> tuple:
     """(rows in section order, each with `org`; sections). A fault grouping / ordering → (rows unchanged, every `org`
-    None; None). The 📅 / 🏆 reads fail soft per field."""
+    None; None). The 📅 / 🏆 reads fail soft per field. ✅ 2026-11-24: `rules` = the payload's {"entries": {SYM: ✅
+    entry}, "boards", "not_seated"} (None = no ✅ section)."""
     try:
         entries = entries if isinstance(entries, dict) else {}
-        groups = {r["symbol"]: group_of(entries.get(r["symbol"])) for r in rows}
-        ordered = order(rows, groups, entries)
+        rents = rules.get("entries") if isinstance(rules, dict) and isinstance(rules.get("entries"), dict) else {}
+        groups = {r["symbol"]: group_of(entries.get(r["symbol"]), rents.get(r["symbol"])) for r in rows}
+        ordered = order(rows, groups, entries, rents)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala_watch: sections unavailable: %s", type(exc).__name__)
         for r in rows:
@@ -244,16 +312,19 @@ def apply(rows: list, *, entries: dict, removed: list, his_added: dict, session:
     for r in ordered:
         sym = r["symbol"]
         e = entries.get(sym)
+        rule = rents.get(sym) if groups[sym] == C.SECTION_KEYS[3] else None
         org = {"group": groups[sym], "when": None, "setup": None, "ran": None, "past_winner": None}
         try:
-            if e is not None:
+            if rule is not None:
+                org["when"] = rules_when_block(rule, session)
+            elif e is not None:
                 org["when"] = when_block(e, None, session, _removed_at(removed, sym, _entry_time(e, session)))
             else:
                 org["when"] = when_block(None, (his_added or {}).get(CO.fold(sym)), session)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: when word unavailable: %s", type(exc).__name__)
         try:
-            org["setup"] = setup_block(r, e)
+            org["setup"] = setup_block(r, e if rule is None else rule)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala_watch: setup chip unavailable: %s", type(exc).__name__)
         org["ran"] = ran_by.get(CO.fold(sym))
@@ -263,7 +334,7 @@ def apply(rows: list, *, entries: dict, removed: list, his_added: dict, session:
             log.warning("gajjala_watch: past winner unavailable: %s", type(exc).__name__)
         r["org"] = org
     try:
-        sections = sections_block(ordered, session=session)
+        sections = sections_block(ordered, session=session, rules=rules)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala_watch: section heads unavailable: %s", type(exc).__name__)
         sections = None

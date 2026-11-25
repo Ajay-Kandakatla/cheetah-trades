@@ -241,16 +241,58 @@ def _dismiss(symbol, by) -> Any:
     return importlib.import_module(PL.AUTO_MODULE).dismiss(symbol, by=by)
 
 
+def _rules_dismiss(symbol, by) -> Any:
+    """✅ `allrules.dismiss` (2026-11-24, spec watchall §3.4), imported LAZILY through sys.modules (PL.RULES_MODULE)."""
+    return importlib.import_module(PL.RULES_MODULE).dismiss(symbol, by=by)
+
+
+def _rules_error(symbol) -> Optional[dict]:
+    """✅ [C1] the `error` answer when the name is STILL served in the ✅ list (allrules.current_symbols of today's
+    session), else None — never "absent" / "dismissed" for a name he still sees. A fault → None. Never raises."""
+    try:
+        from . import build as BLD                              # lazy: the session clock (tab.session_for)
+        sym = ST.normalize(symbol)
+        if sym is None:
+            return None
+        served = importlib.import_module(PL.RULES_MODULE).current_symbols(CO.colls(None),
+                                                                           BLD.session_of(datetime.now(ET))[0])
+        if CO.fold(sym) not in {CO.fold(s) for s in served or [] if isinstance(s, str)}:
+            return None
+        return {"state": "error", "symbols": CO.owner_symbols(None), "symbol": sym, "text": PL.store_text("error", sym)}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala_watch: all-rules served check failed: %s", type(exc).__name__)
+        return None
+
+
 @router.delete(C.API_SYMBOL_PATH)
 async def gajjala_watch_remove(symbol: str, email: str = Depends(require_primary_admin)):
+    """His ×: store.remove, then ALWAYS 🤖 auto.dismiss, then (C.RULES_ON) ✅ allrules.dismiss. The answer: the store's
+    `removed` → the store's; ✅ `error` while the name is still served in ✅ → that error [C1]; else (store `absent`) the
+    🤖 `dismissed`, else the ✅ `dismissed`; else the store's."""
     out = await asyncio.to_thread(ST.remove, symbol, by=email)
     try:
         a = await asyncio.to_thread(_dismiss, symbol, email)
     except Exception as exc:                                    # noqa: BLE001 — the store's answer stands
         log.warning("gajjala_watch: auto dismiss failed: %s", exc)
         a = None
-    if isinstance(out, dict) and out.get("state") == "absent" and isinstance(a, dict) and a.get("state") == "dismissed":
+    r = None
+    if C.RULES_ON:
+        try:
+            r = await asyncio.to_thread(_rules_dismiss, symbol, email)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala_watch: all-rules dismiss failed: %s", type(exc).__name__)
+            r = {"state": "error"}
+    st = out.get("state") if isinstance(out, dict) else None
+    if st == "removed":
+        return out
+    if isinstance(r, dict) and r.get("state") == "error":
+        err = await asyncio.to_thread(_rules_error, symbol)
+        if err is not None:
+            return err
+    if st == "absent" and isinstance(a, dict) and a.get("state") == "dismissed":
         return a
+    if st == "absent" and isinstance(r, dict) and r.get("state") == "dismissed":
+        return r
     return out
 
 

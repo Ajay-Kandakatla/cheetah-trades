@@ -1304,6 +1304,20 @@ def _gg_watch_auto_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_watch_rules_clause() -> str:
+    """✅ 2026-11-24 (spec watchall §3.4 [C9] — Ajay "Anytime stocks qualify all his rules should be auto added to the
+    Watch list so I can keep tracking them later") — the section note's ONE clause on the Watch's ✅ all-rules list, built
+    by chart_maps.gajjala_watch.allrules.rules_line() (every number a constant read at call time — never typed here):
+    " " + the line, or "" when the module cannot load or the line raises (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala_watch import allrules as GWR
+        line = GWR.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala watch all-rules clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_watch_runners_clause() -> str:
     """📅 2026-11-22 (spec watch_org §3.7 — Ajay "use that space between the parent tab of Gajjala and watch tab to be for
     previous day runners but remove them if they don’t run the current day") — the section note's ONE clause on the 📅
@@ -1706,6 +1720,7 @@ def _gajjala_section() -> dict:
                  + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push
                  + _gg_watch_auto_clause()                 # 🤖 2026-11-17 — the watch's auto section (🧠 potentials)
+                 + _gg_watch_rules_clause()                # ✅ 2026-11-24 — the watch's all-rules list (kept across sessions)
                  + _gg_watch_runners_clause()              # 📅 2026-11-22 — previous-day runners + the Watch sections
                  + _gg_watch_overlays_clause()             # 📈📐 2026-11-23 — the Watch's VWAP + daily zones (display only)
                  + _gg_divergence_clause()                 # 🧨 2026-11-18 — the 🧨 Divergence sub (record only)

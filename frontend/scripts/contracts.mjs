@@ -18680,6 +18680,78 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '👀 All-rules names auto-seat on Watch (2026-11-24)',
+    file: '../backend/chart_maps/gajjala_watch/constants.py',
+    // Ajay 2026-11-24, verbatim: "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep
+    // tracking them later". Spec watchall rev 2 §3, §4 main-session. chart_maps/gajjala_watch/allrules.py seats every
+    // trigger-armed 🧠 card (GG's K11 floor) and every 🎯 A+ on 👀 Watch under ✅, kept C.RULES_KEEP_SESSIONS sessions.
+    // DISPLAY / TRACKING ONLY: the 🤖 mode (AUTO_PUSH_MODE) is not live, the ✅ mode is DERIVED "off" and NOT tied to it,
+    // the seating engine never sends, and the loop holds the ✅ crosses while that mode is off. Turning any of this on is
+    // HIS call (spec §7 #8) and re-pins this block in the same commit. UNMEASURED.
+    checks: (wc) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const HIS = 'Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep tracking them later';
+      const ID = 'gajjala-watch-all-rules-2026-11-24';
+      const code = pyCode(wc);
+
+      // 1. constants — the modes (display only), the keep window by NAME, the section order, folded on the phone
+      const am = /^AUTO_PUSH_MODE = "([^"]*)"/m.exec(code);
+      if (!am) errs.push('gajjala_watch/constants.py lost AUTO_PUSH_MODE = "…"');
+      else if (am[1] === 'live') errs.push('gajjala_watch/constants.AUTO_PUSH_MODE must NOT be "live" — the auto-seated names are display only (HIS CALL)');
+      if (!/^AUTO_PUSH_MODES = GC\.FADE_CROSS_PUSH_MODES\b/m.test(code)) errs.push('gajjala_watch/constants.AUTO_PUSH_MODES must be GC.FADE_CROSS_PUSH_MODES ("off", "live")');
+      if (!/^RULES_PUSH_MODE = AUTO_PUSH_MODES\[0\]\s*$/m.test(code)) errs.push('gajjala_watch/constants.RULES_PUSH_MODE must be AUTO_PUSH_MODES[0] ("off", derived) — never a typed "live", never AUTO_PUSH_MODE');
+      if (!/^RULES_KEEP_SESSIONS = GC\.LEDGER_SPAN_SESSIONS\s*$/m.test(code)) errs.push('gajjala_watch/constants.RULES_KEEP_SESSIONS must be GC.LEDGER_SPAN_SESSIONS by NAME — never a typed number');
+      if (!/^RULES_MIN_VOLUME = AUTO_MIN_VOLUME\s*$/m.test(code)) errs.push('gajjala_watch/constants.RULES_MIN_VOLUME must be AUTO_MIN_VOLUME (GG K11) by NAME');
+      if (!/^SECTION_KEYS = \("yours", "aplus", "auto", "rules"[,)]/m.test(code)) errs.push('gajjala_watch/constants.SECTION_KEYS must start ("yours", "aplus", "auto", "rules") — ✅ after 🤖');
+      if (!/^SECTIONS_FOLDED_DEFAULT = \("rules",\)/m.test(code)) errs.push('gajjala_watch/constants.SECTIONS_FOLDED_DEFAULT must be ("rules",) — ✅ folded on the phone');
+
+      // 2. the seating engine never sends — no push module, hook, sender or cross-alert run; its mode fails closed
+      const ar = pyCode(quiet('../backend/chart_maps/gajjala_watch/allrules.py'));
+      for (const [re, why] of [[/^\s*(?:from|import)\s+push\b/m, 'imports push'], [/\bhooks\b/, 'names push hooks'],
+        [/\bsend_to_(?:user|all)\b/, 'calls a sender'], [/\bnotify_\w+/, 'calls a notify_ hook'],
+        [/\bcross_alerts\b|\bXA\./, 'runs the cross push'], [/\bwebpush\b|\bpywebpush\b/i, 'sends web push']]) {
+        if (re.test(ar)) errs.push(`gajjala_watch/allrules.py ${why} — the ✅ seating is display / tracking only`);
+      }
+      if (!/^def push_mode\(\) -> str:[\s\S]*?m in C\.AUTO_PUSH_MODES else C\.AUTO_PUSH_MODES\[0\]/m.test(ar)) errs.push('allrules.push_mode() must fail closed to C.AUTO_PUSH_MODES[0] ("off")');
+
+      // 3. the loop holds ✅ crosses unless the ✅ mode is live — its OWN switch, never the 🤖 one
+      const lp = pyCode(quiet('../backend/chart_maps/gajjala_watch/loop.py'));
+      if (!/rules_live = RULES\.push_mode\(\) == C\.AUTO_PUSH_MODES\[1\]/.test(lp)) errs.push('loop.py must read rules_live = RULES.push_mode() == C.AUTO_PUSH_MODES[1]');
+      if (!/hold_k = \(set\(\) if auto_live else ak\) \| \(set\(\) if rules_live else rk\)/.test(lp)) errs.push('loop.py must hold hold_k = 🤖 folds unless auto_live ∪ ✅ folds unless rules_live');
+      if (!/F_push = \{s: f for s, f in F\.items\(\) if CO\.fold\(s\) not in hold_k\}/.test(lp)) errs.push('loop.py F_push must drop every hold_k frame (no ✅ name reaches the cross push while off)');
+      if (/rules_live = [^\n]*AUTO_PUSH_MODE\b(?!S)/.test(lp)) errs.push('loop.py rules_live must NOT read AUTO_PUSH_MODE — ✅ has its own switch');
+
+      // 4. the ✨ — his words in curly quotes, the keep count = GC.LEDGER_SPAN_SESSIONS, never rings, no b-word
+      const gc = quiet('../backend/chart_maps/gajjala/constants.py');
+      const span = (/^LEDGER_SPAN_SESSIONS = (\d+)/m.exec(gc) || [])[1];
+      const nf = quiet('src/lib/newFeatures.ts');
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route) is missing`);
+      else {
+        if (lab[2] !== '2026-11-24') errs.push(`the ✅ ✨ addedAt must be 2026-11-24 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala_watch') errs.push(`the ✅ ✨ route must be /chart-maps?tab=gajjala_watch (found ${lab[3]})`);
+        if (!lab[1].includes(`“${HIS}”`)) errs.push('the ✅ ✨ label must quote his ask verbatim in curly quotes');
+        if (!span) errs.push('gajjala/constants.py lost LEDGER_SPAN_SESSIONS = N');
+        else if (!lab[1].includes(`kept ${span} sessions`) || !lab[1].includes(`until ${span} sessions pass`)) errs.push(`the ✅ ✨ keep count must equal GC.LEDGER_SPAN_SESSIONS (${span})`);
+        for (const w of ['never rings', 'no rule, gate or push changed', 'UNMEASURED']) if (!lab[1].includes(w)) errs.push(`the ✅ ✨ label must say ${w}`);
+        if (/bounc/i.test(lab[1])) errs.push('the ✅ ✨ must never say bounce — reversal');
+      }
+      if ((nf.match(new RegExp(`id: '${ID}'`, 'g')) || []).length !== 1) errs.push(`the ✨ '${ID}' must appear exactly once`);
+
+      // 5. the engine, docs, goldens and tests ship together
+      for (const f of ['../backend/chart_maps/gajjala_watch/allrules.py', '../docs/gajjala/watch_all_rules_2026_11_24.md',
+        '../backend/tests/test_gajjala_watch_allrules_2026_11_24.py', '../backend/tests/test_gajjala_watch_allrules_payload_2026_11_24.py',
+        'src/lib/__fixtures__/ggwAllRules.golden.json', 'src/lib/__fixtures__/ggwAllRules90.golden.json',
+        'src/lib/gajjalaWatch.allrules.test.ts', 'src/components/GajjalaWatchBoard.allrules.test.tsx',
+        'src/lib/newFeatures.watch_all_rules.test.ts']) {
+        if (!exists(f)) errs.push(`${f} must exist`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -377,7 +377,10 @@ def test_C2_the_latest_state_doc_key_set_is_todays(monkeypatch):
     fake_frames(monkeypatch, [{"OMH": "failed"}])
     L.run_iteration(NOW, db=db, deps=L.Deps(load_day=lambda *a, **k: None))
     latest = db[C.COLL_STATE].docs[C.STATE_LATEST_ID]
-    assert set(latest) - {"_id"} == {"at", "session", "n_names", "n_read", "bars", "alerts", "wall_s", "reason", "auto"}
+    # RE-PINNED 2026-11-24 (spec watchall §3.4) — the state doc gains the ✅ all-rules step result under "rules"
+    assert set(latest) - {"_id"} == {"at", "session", "n_names", "n_read", "bars", "alerts", "wall_s", "reason", "auto",
+                                     "rules"}
+    assert set(latest["rules"]) == set(C.RULES_OUT_KEYS)
 
 
 def test_count_with_no_collection_does_nothing_and_never_raises():

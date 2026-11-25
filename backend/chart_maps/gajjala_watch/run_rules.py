@@ -146,17 +146,19 @@ def load_day(sym, day, force=False, include_premarket=True, include_afterhours=F
 
 def watch_names(db=None, now=None) -> list:
     """His names (strict: a fault RAISES) + today's 🤖 names (the auto engine, imported lazily — any fault → his names
-    only, ONE log line)."""
+    only, ONE log line) + (2026-11-24, spec watchall §3.4) the ✅ all-rules names LAST (the all-rules engine, imported
+    lazily — any fault → skipped, ONE log line; the same listing as levels._listed)."""
     names = list(CO.owner_symbols(db, strict=True))
-    try:
-        auto = importlib.import_module(PL.AUTO_MODULE).current_symbols(CO.colls(db), PL.session_iso(now))
-        keys = {CO.fold(s) for s in names}
-        for s in auto or []:
-            if isinstance(s, str) and s.strip() and CO.fold(s) not in keys:
-                keys.add(CO.fold(s))
-                names.append(s)
-    except Exception as exc:                                    # noqa: BLE001
-        log.warning("gajjala_watch run rules: auto names unavailable: %s", type(exc).__name__)
+    keys = {CO.fold(s) for s in names}
+    for module, what in ((PL.AUTO_MODULE, "auto"), (PL.RULES_MODULE, "all-rules")):
+        try:
+            more = importlib.import_module(module).current_symbols(CO.colls(db), PL.session_iso(now))
+            for s in more or []:
+                if isinstance(s, str) and s.strip() and CO.fold(s) not in keys:
+                    keys.add(CO.fold(s))
+                    names.append(s)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala_watch run rules: %s names unavailable: %s", what, type(exc).__name__)
     return names
 
 

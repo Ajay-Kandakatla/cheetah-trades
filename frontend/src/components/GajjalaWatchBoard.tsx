@@ -101,7 +101,16 @@
  * when I can add a small slide in in the chart window for giving verbatim of passed rules and failed rules of that stock
  * like you do in other tabs..". ONE hook (GgwRunRules.useGgwRun) next to the 🚫 one; every tile and the ⤢ view get the
  * "▶ Rules" button and its slide-in panel through the Tile's `run` prop. A tap is ONE POST and NO board re-GET; the
- * panel prints the served words verbatim. Display only — rings nothing, records nothing. UNMEASURED. */
+ * panel prints the served words verbatim. Display only — rings nothing, records nothing. UNMEASURED.
+ *
+ * ✅ 2026-11-24 (spec watch_all_rules §3.6, WP fe-watch) — Ajay: "Anytime stocks qualify all his rules should be auto
+ * added to the Watch list so I can keep tracking them later". The server serves a LAST section (✅ All rules met) marked
+ * `folded_default`: on the PHONE it is one folded header line under his intraday names until he taps it (his opens are
+ * remembered in `ggw.opened`; every other section keeps `ggw.collapsed`); a push link / pager tap / ?focus= / ➕ into it
+ * opens it first. The live interest posts ✅ rows LAST and, on the phone, none while ✅ is folded (his names always
+ * live). A served `rules.state "unreadable"` prints its served line once, outside ℹ️. Desktop unchanged (no headers; ✅
+ * tiles follow 🤖 in served order). A ✅ row is machine-added (`row.auto`, why "rules") — it never joins his pick.
+ * Display only — nothing rings, adds, caps or evicts differently. UNMEASURED. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
@@ -112,8 +121,9 @@ import {
   ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwPrunePick, ggwLivePick, ggwAddedMs, ggwRowsKey, ggwUnseenOwn, ggwWithout,
   readGgwPickAt, saveGgwPickAt, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
   parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
-  GGW_SECTION_GLYPH, ggwGroupStarts, ggwRevealGroup, ggwSectionsOn, ggwToggleCollapsed, readGgwCollapsed,
+  GGW_SECTION_GLYPH, ggwGroupStarts, ggwRevealGroup, ggwSectionsOn, readGgwCollapsed,
   saveGgwCollapsed,
+  ggwFoldedKeys, ggwLiveSkip, ggwRevealOpened, ggwRulesWarn, ggwToggleFold, readGgwOpened, saveGgwOpened,
   type GgwBoard, type GgwLayout, type GgwPayload, type GgwRow, type GgwWriteAnswer,
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
@@ -135,6 +145,7 @@ import '../styles/gajjalaWatch.css';
 
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
 const NO_SYMBOLS: string[] = [];
+const NO_SKIP: ReadonlySet<string> = new Set<string>();
 
 const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
@@ -215,12 +226,20 @@ export default function GajjalaWatchBoard() {
   const orgNow = load.phase === 'loaded' && load.p.state === 'ok' && ggwSectionsOn(load.p);
   const [collapsed, setCollapsed] = useState<ReadonlyArray<string>>(() => readGgwCollapsed());
   useEffect(() => { saveGgwCollapsed(collapsed); }, [collapsed]);
+  /* ✅ 2026-11-24 (spec watch_all_rules §3.6): the served DEFAULT-FOLDED sections (✅ All rules met) he opened here,
+   * remembered in `ggw.opened`; the folded set = collapsed ∪ (default-folded − opened). Phone + org mode only. */
+  const [opened, setOpened] = useState<ReadonlyArray<string>>(() => readGgwOpened());
+  useEffect(() => { saveGgwOpened(opened); }, [opened]);
+  const sectionsNow = load.phase === 'loaded' && load.p.state === 'ok' ? load.p.sections ?? null : null;
   const foldOn = useRef(false);
   foldOn.current = orgNow && phone;
   /* [C5] a focus / box add / first-load outline / pager tap into a FOLDED phone section opens it first (the scroll waits
-   * for the tile to be shown — the effect below checks `hidden`). Off the phone or outside org mode: nothing. */
+   * for the tile to be shown — the effect below checks `hidden`). Off the phone or outside org mode: nothing. ✅ a
+   * default-folded section opens through `opened` (ggwRevealOpened) — both run, each a no-op when it does not apply. */
   const reveal = (rows: ReadonlyArray<GgwRow>, sym: string) => {
-    if (foldOn.current) setCollapsed((c) => ggwRevealGroup(c, rows, sym));
+    if (!foldOn.current) return;
+    setCollapsed((c) => ggwRevealGroup(c, rows, sym));
+    setOpened((o) => ggwRevealOpened(o, sectionsNow, rows, sym));
   };
   /* 🆕 2026-11-19: a name of his (or a 🎯 A+) new to this view joins the pick (first) — never left inactive. Keyed on
    * symbol + add time + the join bit, so a 🤖 potential turning 🎯 A+ in place joins at THAT load. */
@@ -274,8 +293,10 @@ export default function GajjalaWatchBoard() {
   metasRef.current = metas;
   const onBatch = useCallback((evt: GgwBatch) => setLive((prev) => ggwApplyBatch(prev, evt, metasRef.current)), []);
   const liveOn = load.phase === 'loaded' && load.p.state === 'ok' && load.p.rows.length > 0 && load.p.refresh_sec > 0;
-  /* 🤖 2026-11-17: every row (his, then the auto names) — not `symbols` (his names only). */
-  const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? ggwLiveSymbols(load.p) : NO_SYMBOLS,
+  /* 🤖 2026-11-17: every row (his, then the auto names) — not `symbols` (his names only). ✅ 2026-11-24 [C4]: ✅ rows
+   * last; on the phone a default-folded section still folded posts nothing (his names are never skipped). */
+  const liveSkip = foldOn.current ? ggwLiveSkip(sectionsNow, collapsed, opened) : NO_SKIP;
+  const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? ggwLiveSymbols(load.p, liveSkip) : NO_SYMBOLS,
     liveOn, onBatch);
   const liveOf = (r: GgwRow, shown: boolean): GgwLiveSym | undefined => (shown && ggwRowLive(r) ? live[r.symbol] : undefined);
 
@@ -595,7 +616,15 @@ export default function GajjalaWatchBoard() {
   const org = ggwSectionsOn(p);
   const starts = org ? ggwGroupStarts(p.rows, p.sections) : [];
   const headAt = org && phone ? new Map(starts.map((g) => [g.at, g.section] as const)) : null;
-  const folded = (r: GgwRow): boolean => org && phone && !!r.org?.group && collapsed.includes(r.org.group);
+  const foldedKeys = org && phone ? ggwFoldedKeys(p.sections, collapsed, opened) : [];
+  const folded = (r: GgwRow): boolean => org && phone && !!r.org?.group && foldedKeys.includes(r.org.group);
+  const toggleSection = (key: string) => {
+    const next = ggwToggleFold(p.sections, { collapsed, opened }, key);
+    setCollapsed(next.collapsed);
+    setOpened(next.opened);
+  };
+  /* ✅ the one all-rules fault line (served words, state "unreadable" only) — OUTSIDE ℹ️ */
+  const rulesWarn = ggwRulesWarn(p);
   const shown = (r: GgwRow, i: number): boolean => onPage(i) && !folded(r);
   const toggle = (sym: string) => {
     const list = p.rows.map((r) => r.symbol);
@@ -678,6 +707,7 @@ export default function GajjalaWatchBoard() {
         {p.auto?.state === 'unreadable' && p.auto.text ? (
           <span className="ggw-line ggw-warn" data-testid="ggw-auto-unreadable">{p.auto.text}</span>
         ) : null}
+        {rulesWarn ? <span className="ggw-line ggw-warn" data-testid="ggw-rules-unreadable">{rulesWarn}</span> : null}
         {p.auto && p.auto.n === 0 && p.auto.empty_text ? (
           <span className="ggw-line ggw-auto-empty" data-testid="ggw-auto-empty">{p.auto.empty_text}</span>
         ) : null}
@@ -734,13 +764,13 @@ export default function GajjalaWatchBoard() {
           {p.rows.map((r, i) => {
             const sec = headAt ? headAt.get(i) ?? null : null;
             if (!sec) return tileOf(r, i);
-            const isFolded = collapsed.includes(sec.key);
+            const isFolded = foldedKeys.includes(sec.key);
             return [
               <h3 key={`sec-${sec.key}`} className={`ggw-section${isFolded ? ' ggw-section--folded' : ''}`}
                   data-testid={`ggw-section-${sec.key}`}>
                 <button type="button" className="ggw-section-btn" aria-expanded={!isFolded} title={sec.hint ?? undefined}
                         data-testid={`ggw-section-btn-${sec.key}`}
-                        onClick={() => setCollapsed((c) => ggwToggleCollapsed(c, sec.key))}>
+                        onClick={() => toggleSection(sec.key)}>
                   {`${isFolded ? GGW_SECTION_GLYPH.closed : GGW_SECTION_GLYPH.open} ${sec.text}`}
                 </button>
               </h3>,

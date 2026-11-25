@@ -65,6 +65,15 @@ gains no key. The re-read of a minute's `failed` names is BUILT and OFF (C.REST_
 push → tiles → pause → re-read → push → tiles, one fenced block after today's tile write; a re-read keeps the iteration's
 own `now` (the frame cut) and judges freshness on the clock after it. `build_pending` gets none of it. `main` installs
 the log key scrub (observability.logsetup.install_redaction). UNMEASURED.
+
+✅ 2026-11-24 (spec watchall rev 2 §3.4 — Ajay: "Anytime stocks qualify all his rules should be auto added to the Watch
+list so I can keep tracking them later"). Before `auto.step` the loop reads the 🤖 doc once (`auto_prior`, its own try —
+a fault → None); after it `allrules.step` keeps the ✅ doc (own try/except; given `auto_prior` and the step's
+`aplus_now`). The ✅ names join the frames LAST (`syms = manual + auto + rules`, fold-de-duplicated) so the minute budget
+falls on them first. [C3] Their crosses ring only while C.RULES_PUSH_MODE is "live" (built "off", NOT tied to
+C.AUTO_PUSH_MODE): `hold_k` = the 🤖 folds unless the auto mode is live ∪ the ✅ folds unless the rules mode is live;
+the cross push is given every frame outside `hold_k`, and `auto.hold_crosses` holds the `hold_k` frames
+`suppressed_auto` (both the first push and the REST re-read twin). The state doc gains `rules` (C.RULES_OUT_KEYS).
 """
 from __future__ import annotations
 
@@ -85,6 +94,7 @@ from chart_maps.gajjala import run_1m as R1
 from chart_maps.gajjala import store as ST
 from chart_maps.gajjala import variant as V
 
+from . import allrules as RULES
 from . import auto as AUTO
 from . import build as BLD
 from . import colls as CO
@@ -157,10 +167,12 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
     stub = symbols is not None
     manual = list(dict.fromkeys(s for s in (symbols if stub else CO.owner_symbols(db)) if s))
     mk = {CO.fold(s) for s in manual}
+    s0 = None if stub else BLD.session_of(now)[0]
     auto_known = ([] if stub else
-                  [s for s in AUTO.current_symbols(cs, BLD.session_of(now)[0].isoformat()) if CO.fold(s) not in mk])
-    out["n_names"] = len(manual) + len(auto_known)
-    if not manual and (stub or (not auto_known and not RUN.in_window(now))):
+                  [s for s in AUTO.current_symbols(cs, s0.isoformat()) if CO.fold(s) not in mk])
+    rules_known = [] if stub else _rules_known(cs, s0, mk | {CO.fold(s) for s in auto_known})     # ✅ 2026-11-24
+    out["n_names"] = len(manual) + len(auto_known) + len(rules_known)
+    if not manual and (stub or (not auto_known and not rules_known and not RUN.in_window(now))):
         out["reason"] = NO_TICKERS
         if not dry:
             _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS})
@@ -177,22 +189,41 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         session = BLD.session_of(now)[0]
         if stub:
             auto_res: dict = {"symbols": [], "reason": "stub"}
+            rules_res: dict = {"symbols": [], "reason": "stub"}
         else:
+            auto_prior = None                                   # ✅ [C1] the 🤖 doc BEFORE the step (his × record)
+            try:
+                auto_prior = AUTO.read_doc(cs)
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala watch ✅: auto doc read failed: %s", type(exc).__name__)
             auto_res = {"symbols": auto_known, "reason": "error"}
             try:
                 auto_res = AUTO.step(now, session, db=db, manual=manual, dry=dry)
             except Exception as exc:                            # noqa: BLE001 — the last entries stay served
                 log.warning("gajjala watch 🤖: auto step failed: %s", type(exc).__name__)
+            rules_res = {"symbols": rules_known, "reason": "error"}
+            try:
+                rules_res = RULES.step(now, session, db=db, manual=manual, dry=dry, auto_prior=auto_prior,
+                                       aplus=auto_res.get("aplus_now"))
+            except Exception as exc:                            # noqa: BLE001 — the last entries stay served
+                log.warning("gajjala watch ✅: rules step failed: %s", type(exc).__name__)
         auto_syms = [s for s in dict.fromkeys(auto_res.get("symbols") or []) if CO.fold(s) not in mk]
-        syms = manual + auto_syms
+        ak = {CO.fold(s) for s in auto_syms}
+        rules_syms = [s for s in dict.fromkeys(rules_res.get("symbols") or [])
+                      if CO.fold(s) not in mk and CO.fold(s) not in ak]
+        syms = manual + auto_syms + rules_syms                  # ✅ LAST — the minute budget falls on them first
         auto_out = {k: auto_res.get(k) for k in AUTO_OUT_KEYS}
         auto_out.update(n=len(auto_syms), cap=C.AUTO_MAX_SYMBOLS)
         out["auto"] = dict(auto_out, writes=auto_res["writes"]) if dry and "writes" in auto_res else auto_out
+        rules_out = {k: rules_res.get(k) for k in C.RULES_OUT_KEYS}
+        rules_out.update(n=len(rules_syms))
+        out["rules"] = dict(rules_out, writes=rules_res["writes"]) if dry and "writes" in rules_res else rules_out
         out["n_names"] = len(syms)
         if not syms:
             out["reason"] = NO_TICKERS
             if not dry:
-                _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS, "auto": auto_out})
+                _state(cs, C.STATE_LATEST_ID, {"at": now, "n_names": 0, "reason": NO_TICKERS, "auto": auto_out,
+                                               "rules": rules_out})
             return out
         tiles = cs["tiles"] if cs else None
         seen = BLD.seen(tiles, syms)
@@ -208,17 +239,19 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         now_x = now + max(timedelta(0), RUN._utc(deps.wall()) - w0)
         held: dict = {}
         auto_live = AUTO.push_mode() == C.AUTO_PUSH_MODES[1]
-        ak = {CO.fold(s) for s in auto_syms}
-        F_push = {s: f for s, f in F.items() if auto_live or CO.fold(s) not in ak}      # [C6] his names' frames only
+        rules_live = RULES.push_mode() == C.AUTO_PUSH_MODES[1]                          # ✅ [C3] its OWN switch
+        rk = {CO.fold(s) for s in rules_syms} - ak
+        hold_k = (set() if auto_live else ak) | (set() if rules_live else rk)
+        F_push = {s: f for s, f in F.items() if CO.fold(s) not in hold_k}            # [C6] his names' frames only
         try:
             counts = XA.run(F_push, now_x, session, coll=(cs["alerts"] if cs else None), send=deps.send,
                             owner=deps.owner, dry=dry, seen=seen, held=held)
         except Exception as exc:                                # noqa: BLE001
             log.warning("gajjala watch: cross push failed: %s", type(exc).__name__)
             counts = {"error": 1}
-        if auto_syms and not auto_live:
+        if hold_k:
             try:
-                counts[C.AUTO_HELD_REASON] = AUTO.hold_crosses({s: f for s, f in F.items() if CO.fold(s) in ak},
+                counts[C.AUTO_HELD_REASON] = AUTO.hold_crosses({s: f for s, f in F.items() if CO.fold(s) in hold_k},
                                                                now_x, session, held)
             except Exception as exc:                            # noqa: BLE001
                 log.warning("gajjala watch 🤖: auto hold failed: %s", type(exc).__name__)
@@ -256,16 +289,16 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
                     now_x2 = now + max(timedelta(0), RUN._utc(deps.wall()) - w0)   # the clock AFTER the re-read
                     if F2:
                         try:
-                            c2 = XA.run({s: f for s, f in F2.items() if auto_live or CO.fold(s) not in ak}, now_x2,
+                            c2 = XA.run({s: f for s, f in F2.items() if CO.fold(s) not in hold_k}, now_x2,
                                         session, coll=(cs["alerts"] if cs else None), send=deps.send,
                                         owner=deps.owner, dry=dry, seen=seen, held=held)
                         except Exception as exc:                # noqa: BLE001
                             log.warning("gajjala watch: cross push (re-read) failed: %s", type(exc).__name__)
                             c2 = {"error": 1}
-                        if auto_syms and not auto_live:
+                        if hold_k:
                             try:
                                 c2[C.AUTO_HELD_REASON] = AUTO.hold_crosses(
-                                    {s: f for s, f in F2.items() if CO.fold(s) in ak}, now_x2, session, held)
+                                    {s: f for s, f in F2.items() if CO.fold(s) in hold_k}, now_x2, session, held)
                             except Exception as exc:            # noqa: BLE001
                                 log.warning("gajjala watch 🤖: auto hold (re-read) failed: %s", type(exc).__name__)
                         rest_out["alerts"] = c2
@@ -293,7 +326,8 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
         if not dry:
             _state(cs, C.STATE_LATEST_ID, {"at": now, "session": session.isoformat(), "n_names": len(syms),
                                            "n_read": n_read, "bars": stats, "alerts": counts,
-                                           "wall_s": out["wall_s"], "reason": None, "auto": auto_out})
+                                           "wall_s": out["wall_s"], "reason": None, "auto": auto_out,
+                                           "rules": rules_out})
             REST.count(cs["state"] if cs else None, session, now, n_names=len(syms), rest=rest_out)
         if rest_out is not None:
             log.info("gajjala watch: REST — %d failed, %d re-read after %.1f s, %d recovered, %d rang (%s)",
@@ -307,6 +341,16 @@ def run_iteration(now: Optional[datetime] = None, *, db=None, deps: Optional[Dep
                 lst.release_lease(now, getattr(claim, "token", None))
             except Exception as exc:                            # noqa: BLE001
                 log.warning("gajjala watch: lease release failed: %s", type(exc).__name__)
+
+
+def _rules_known(cs, session, taken: set) -> list:
+    """✅ the names the rules doc serves now (allrules.current_symbols — [] on a fault), minus `taken` folds. Never
+    raises."""
+    try:
+        return [s for s in RULES.current_symbols(cs, session) if CO.fold(s) not in taken]
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala watch ✅: rules names unreadable: %s", type(exc).__name__)
+        return []
 
 
 # ── the slot's iterations (a DETACHED child of the 5-minute cron pass) ─────────────────────────────────────────────

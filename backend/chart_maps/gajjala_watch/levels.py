@@ -207,7 +207,8 @@ def near(bands, price, n=None) -> list:
 
 # ── warm: the daily reads, off the minute path ─────────────────────────────────────────────────────────────────────
 def _listed(cs, db, iso: str) -> list:
-    """The owner list + the 🤖 auto names of the session (fold-de-duplicated, his first) — the loop's own listing."""
+    """The owner list + the 🤖 auto names + (2026-11-24) the ✅ all-rules names of the session (fold-de-duplicated, his
+    first, ✅ last) — the loop's own listing."""
     names = [s for s in CO.owner_symbols(db) if s]
     keys = {CO.fold(s) for s in names}
     try:
@@ -218,6 +219,14 @@ def _listed(cs, db, iso: str) -> list:
                 names.append(s)
     except Exception as exc:                                   # noqa: BLE001
         log.warning("gajjala watch levels: auto names unreadable: %s", type(exc).__name__)
+    try:                                                       # ✅ 2026-11-24 (spec watchall §3.4) — the all-rules names, LAST
+        from chart_maps.gajjala_watch import allrules as RULES      # lazy, like the auto engine
+        for s in RULES.current_symbols(cs, iso):
+            if CO.fold(s) not in keys:
+                keys.add(CO.fold(s))
+                names.append(s)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala watch levels: all-rules names unreadable: %s", type(exc).__name__)
     return names
 
 

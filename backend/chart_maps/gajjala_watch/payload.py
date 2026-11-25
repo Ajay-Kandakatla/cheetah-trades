@@ -49,6 +49,13 @@ the carded name's 🏷️ chip (`read_from "pass"`), else the 7-day `shares_cach
 memo (`"memo"`), else None (no float read on file — never invented). Each chip serves a `title` ("not realtime" + the
 source + the read time). Imported lazily (`importlib`), any fault → every row None (the board answers). Display only,
 UNMEASURED, not a signal.
+
+✅ (2026-11-24, spec watchall rev 2 §3.5 — Ajay, verbatim: "Anytime stocks qualify all his rules should be auto added to
+the Watch list so I can keep tracking them later"): ONE more stored read — the ✅ doc (`allrules.read_doc` +
+`entries_in_window`, imported lazily through sys.modules). Its names are served LAST, one row per name: 👤 his > 🎯 / 🤖
+today's seat > ✅ (a name that leaves 🤖 is served in ✅). A ✅ row's block sits under `row["auto"]` in the 🤖 shape with
+`why` "rules"; the board carries `rules` {state, n, keep_sessions, text, not_seated_n} (absent while C.RULES_ON is False;
+a read fault → `unreadable`, the other rows intact, never `error`). Display only — the list rings nothing. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -185,6 +192,15 @@ TAGS_MODULE = "chart_maps.gajjala_watch.tags"                                   
 BROKER_MODULE = "chart_maps.gajjala_watch.broker"                                     # 🚫 2026-11-19 (spec watchfid)
 FLOAT_MODULE = "chart_maps.gajjala_watch.float_read"                                  # 🔢 2026-11-21 (spec watchfloat)
 SECTIONS_MODULE = "chart_maps.gajjala_watch.sections"                                 # 🗂 2026-11-22 (spec watch_org)
+# ✅ all rules met (2026-11-24, spec watchall rev 2 §3.5 — Ajay, verbatim: "Anytime stocks qualify all his rules should be
+# auto added to the Watch list so I can keep tracking them later"). Every word MINE (HIS CALL #11); every number a {} field.
+RULES_MODULE = "chart_maps.gajjala_watch.allrules"                                    # imported LAZILY (sys.modules)
+RULES_ROW_TEXT = "{tag} all rules · {sources} · {setup}"
+RULES_ADDED_TEXT = "first met {first} · last met {last}"
+RULES_REMOVE_TITLE = "Remove {sym} (✅ all rules — not added again this session)"
+RULES_UNREADABLE_TEXT = "✅ the all-rules list could not be read — showing the rest"
+RULES_STATES = ("ok", "unreadable", "off")
+RULES_WHY = "rules"                                   # the ✅ row's `auto.why` (== C.SECTION_KEYS[3]; the FE reads it)
 
 # 📈📐 2026-11-23 (spec vwapzones rev 2 §3.4 — Ajay: "Can you remove 3 mins just add 15 mins instead.. So 1 min, 5 and 15
 # accross board" · "Add vwap and supply demand too"): a frame missing from a stored doc (an old 1m/3m/5m doc has no 15m)
@@ -358,14 +374,16 @@ def _broker_section(out, state_doc, siso) -> None:
         out["broker"] = None
 
 
-def _sections(rows: list, raw: dict, added: dict, session) -> tuple:
+def _sections(rows: list, raw: dict, added: dict, session, rules: Optional[dict] = None) -> tuple:
     """🗂 2026-11-22 (spec watch_org §3.3) — `sections.apply` (imported lazily through sys.modules, the tags pattern):
     (rows in section order with `org`, `sections`). Any failure → (the rows unchanged, every `org` None; None) and ONE
-    log line — the board answers."""
+    log line — the board answers. ✅ 2026-11-24: `rules` (rules_section's raw) is passed ONLY when given."""
     try:
         sess = session if isinstance(session, date) else date.fromisoformat(str(session)[:10])
+        kw = {"rules": rules} if rules is not None else {}
         out = importlib.import_module(SECTIONS_MODULE).apply(
-            rows, entries=raw.get("entries") or {}, removed=raw.get("removed") or [], his_added=added, session=sess)
+            rows, entries=raw.get("entries") or {}, removed=raw.get("removed") or [], his_added=added, session=sess,
+            **kw)
         new_rows, sections = out
         if not isinstance(new_rows, list) or len(new_rows) != len(rows):
             raise ValueError("rows changed")
@@ -845,6 +863,115 @@ def auto_section(cs: dict, symbols: list, siso: str, *, in_window: bool, now: da
         return {}, None, {}
 
 
+# ── ✅ all rules met (2026-11-24, spec watchall rev 2 §3.5) ────────────────────────────────────────────────────────
+def _rules_mod():
+    """The ✅ engine, imported LAZILY through sys.modules (tests inject a stub there)."""
+    return importlib.import_module(RULES_MODULE)
+
+
+def _int_or_zero(v) -> int:
+    """A served count through potential._num — NaN / inf / junk / negative → 0."""
+    from chart_maps.gajjala import potential as PT
+    x = PT._num(v)
+    return int(x) if x is not None and x >= 0 else 0
+
+
+def rules_read(cs: dict, symbols: list, session) -> tuple:
+    """(state, ✅ entries in the window in STORED order) — the ONE ✅ doc read (`allrules.read_doc` +
+    `entries_in_window`). A fault / a missing engine → ("unreadable", []); a missing doc → ("ok", []). A fold-duplicate
+    of `symbols` (his names AND today's 🤖 / 🎯 seats — one row per name, the seat wins) is dropped. Never raises."""
+    try:
+        mod = _rules_mod()
+        doc = mod.read_doc(cs)
+        ents = None if doc is None else (mod.entries_in_window(doc, session) if doc else [])
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: all-rules doc unavailable: %s", type(exc).__name__)
+        ents = None
+    if not isinstance(ents, list):
+        return RULES_STATES[1], []
+    taken = {CO.fold(s) for s in symbols}
+    out, keys = [], set()
+    for e in ents:
+        sym = e.get("symbol") if isinstance(e, dict) else None
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        k = CO.fold(sym)
+        if k in taken or k in keys:
+            continue
+        keys.add(k)
+        out.append(dict(e, symbol=CO.house(sym)))
+    return RULES_STATES[0], out
+
+
+def rules_row_block(entry: dict, now: datetime) -> dict:
+    """The ✅ row's block, served under `row["auto"]` in the 🤖 shape (the FE treats it as machine-added, `why` "rules").
+    The volume goes through potential._num first (a stored NaN serves no volume words)."""
+    from chart_maps.gajjala import potential as PT
+    sym = entry.get("symbol") if isinstance(entry.get("symbol"), str) else ""
+    sources = [s for s in _list(entry.get("sources")) if isinstance(s, str) and s in C.AUTO_SOURCES]
+    source_words = [C.AUTO_SOURCE_WORDS[s] for s in sources if isinstance(C.AUTO_SOURCE_WORDS.get(s), str)]
+    vsrc = entry.get("volume_source")
+    added_et = _clock(entry.get("added_at"), now)
+    first, last = _clock(entry.get("first_met_at"), now), _clock(entry.get("last_met_at"), now)
+    return {"tag": C.RULES_TAG, "sources": sources, "source_words": source_words,
+            "text": RULES_ROW_TEXT.format(tag=C.RULES_TAG, sources=" · ".join(source_words) or AUTO_NO_WORD,
+                                          setup=_setup_word(entry.get("setup")) or AUTO_NO_WORD),
+            "volume_text": auto_volume_text(PT._num(entry.get("volume")), vsrc),
+            "volume_source": vsrc if isinstance(vsrc, str) and vsrc in AUTO_VOL_TEXT else None,
+            "added_et": added_et,
+            "added_text": (RULES_ADDED_TEXT.format(first=first or AUTO_NO_WORD, last=last or AUTO_NO_WORD)
+                           if (first or last) else None),
+            "leaving_text": None,
+            "remove_title": RULES_REMOVE_TITLE.format(sym=sym),
+            "why": RULES_WHY}
+
+
+def rules_not_seated(state_doc, siso: Optional[str]) -> int:
+    """The 🚫 count of the loop's LAST ✅ step of THIS session (state doc `rules.not_eligible` — a list of names or a
+    count); another session's / no state doc → 0."""
+    if not isinstance(state_doc, dict) or not siso or state_doc.get("session") != siso:
+        return 0
+    blk = state_doc.get("rules")
+    v = blk.get("not_eligible") if isinstance(blk, dict) else None
+    if isinstance(v, list):
+        return len({CO.fold(x) for x in v if isinstance(x, str) and x.strip()})
+    return _int_or_zero(v)
+
+
+def rules_board(state: str, n: int, not_seated_n: int) -> dict:
+    """The board's `rules` block — `text` only when unreadable; every number an int."""
+    return {"state": state, "n": _int_or_zero(n) if state == RULES_STATES[0] else 0,
+            "keep_sessions": _int_or_zero(C.RULES_KEEP_SESSIONS),
+            "text": RULES_UNREADABLE_TEXT if state == RULES_STATES[1] else None,
+            "not_seated_n": _int_or_zero(not_seated_n)}
+
+
+def rules_section(cs: dict, symbols: list, siso: str, session, now: datetime, *, state_doc=None) -> tuple:
+    """({SYM: ✅ row block} newest-met order as stored, the board's `rules` block, {SYM: `added_at` ISO UTC or None},
+    raw {"entries": {SYM: entry}, "boards", "not_seated"} for sections.apply). `symbols` = every name already served
+    (his + 🤖/🎯 seats) — dropped here. Any failure → no ✅ row and `state "unreadable"` (None when even that cannot be
+    composed); the other rows and the board always answer."""
+    try:
+        sess = session if isinstance(session, date) else date.fromisoformat(str(session)[:10])
+        if isinstance(sess, datetime):
+            sess = sess.date()
+        state, entries = rules_read(cs, symbols, sess)
+        ns = rules_not_seated(state_doc, siso)
+        blocks = {e["symbol"]: rules_row_block(e, now) for e in entries}
+        at_by = {e["symbol"]: CO.added_iso(e.get("added_at")) for e in entries}
+        raw = {"entries": {e["symbol"]: e for e in entries},
+               "boards": _and([C.AUTO_SOURCE_WORDS.get(k) for k in _active_sources()]),
+               "not_seated": C.RULES_NOT_SEATED.format(n=ns) if ns else ""}
+        return blocks, rules_board(state, len(entries), ns), at_by, raw
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: all-rules section failed: %s", type(exc).__name__)
+    try:
+        return {}, rules_board(RULES_STATES[1], 0, 0), {}, None
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("gajjala_watch: all-rules block unavailable: %s", type(exc).__name__)
+        return {}, None, {}, None
+
+
 # ── 🎯 A+ tag (2026-11-17, spec ggwaplus) ───────────────────────────────────────────────────────────────────────────
 # Ajay 2026-11-17 ~12:58 ET, verbatim: "Also add an A+ tag on watch list as they become A+". Every row (his AND 🤖) carries
 # `aplus` when ANY Gajjala board's stored read of that name THIS session has a setup in tab.MARKED_STATES. Display only:
@@ -1054,8 +1181,13 @@ def _build(now: datetime, db, only) -> dict:
     raw: dict = {}                                           # 🗂 2026-11-22: the sections' auto input (same read)
     auto_by, auto_out, at_by = auto_section(cs, symbols, siso, in_window=bool(in_window), now=now,
                                             state_doc=state_doc, raw_out=raw)
+    # ✅ 2026-11-24 (spec watchall §3.5): the all-rules names LAST — one row per name: 👤 his > 🎯 / 🤖 today's seat > ✅.
+    rules_by, rules_out, rules_at, rules_raw = {}, None, {}, None
+    if C.RULES_ON:
+        rules_by, rules_out, rules_at, rules_raw = rules_section(cs, list(symbols) + list(auto_by), siso, session, now,
+                                                                 state_doc=state_doc)
     # ⬆️ 2026-11-19: HIS names newest added first (undated after, in his order), then the 🤖 names in the stored order.
-    every = CO.newest_first(symbols, added) + list(auto_by)
+    every = CO.newest_first(symbols, added) + list(auto_by) + list(rules_by)
     if only is None:
         names = every
     else:
@@ -1082,17 +1214,21 @@ def _build(now: datetime, db, only) -> dict:
     for r in rows:
         _apply_levels(r, levels_by.get(r["symbol"]))
         r["auto"] = auto_by.get(r["symbol"])
+        is_rule = r["auto"] is None and r["symbol"] in rules_by
+        if is_rule:
+            r["auto"] = rules_by[r["symbol"]]                  # ✅ 2026-11-24 — the 🤖 shape, `why` "rules"
         r["aplus"] = aplus_by.get(r["symbol"])
         r["tags"] = tags_by.get(r["symbol"])                   # None = not carded on today's 🚩 board — never invented
         r["float"] = float_by.get(r["symbol"])                 # None = no float read on file — never invented
-        r["added_at"] = (at_by.get(r["symbol"]) if r["auto"] is not None           # ⬆️ 2026-11-19 — ISO UTC or None
+        r["added_at"] = (rules_at.get(r["symbol"]) if is_rule
+                         else at_by.get(r["symbol"]) if r["auto"] is not None      # ⬆️ 2026-11-19 — ISO UTC or None
                          else CO.added_iso(added.get(CO.fold(r["symbol"]))))
     # 🗂 2026-11-22 (spec watch_org): his order — 👤 your names → 🎯 A+ → 🤖 added today; every row's `org`. The `only`
     # pending poll reads nothing new and serves `org` None [C11]. OFF → no `org` / `sections` keys, the 11-21 order.
     sections = None
     if C.SECTIONS_ON:
         if only is None:
-            rows, sections = _sections(rows, raw, added, session)
+            rows, sections = _sections(rows, raw, added, session, rules_raw)
         else:
             for r in rows:
                 r["org"] = None
@@ -1111,6 +1247,8 @@ def _build(now: datetime, db, only) -> dict:
            "auto": auto_out}
     if C.SECTIONS_ON:
         out["sections"] = sections                           # 🗂 2026-11-22 — None on the poll / a fault
+    if C.RULES_ON:
+        out["rules"] = rules_out                             # ✅ 2026-11-24 — absent while C.RULES_ON is False
     _broker_section(out, state_doc, siso)   # 🚫 2026-11-19
     if any(r["state"] == "pending" for r in rows):
         out["pending_poll_sec"] = GC.ON_DEMAND_POLL_SEC

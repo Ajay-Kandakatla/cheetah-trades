@@ -108,7 +108,8 @@ def live_audience() -> frozenset:
 # display strip: no gate, push, cap, eviction or add rule reads any of this. Descriptive, UNMEASURED. "every month" is read
 # as "every morning" (the strip refreshes every session) — nothing monthly is built.
 SECTIONS_ON = True                                   # MINE — HIS CALL #9: False = the 11-21 payload byte for byte
-SECTION_KEYS = ("yours", "aplus", "auto")            # his 11-22 order (👤 first, then the 🤖 names) [D3: autoadd_spec APPENDS "ran"]
+SECTION_KEYS = ("yours", "aplus", "auto", "rules")   # his 11-22 order (👤 first, then the 🤖 names) [D3: autoadd_spec APPENDS "ran"]
+                                                     # ✅ "rules" appended LAST 2026-11-24 (spec watchall §3.1 — HIS CALL #5)
 SECTION_ORDER = SECTION_KEYS
 RAN_MIN_PCT = 40.0                                   # HIS answer 11-22 "+40% vs prior close" (11-21 "around 40 to 100%")
 RAN_PCT_ROUND = 4                                    # = the scanner's change_pct rounding — EVERY compare (+40 and +25) at this [D5]
@@ -128,7 +129,8 @@ SCAN_SESSION_AFTER = "afterhours"                    # `last.tape_session` once 
 ORG_NOTE = "descriptive — UNMEASURED; a label, never a gate, push, cap or add rule"
 # words — every one MINE (HIS CALL #7); `{open}` / `{end}` / `{cut}` / `{stale_min}` are BUILT at format time
 # (runners.clock_words: daytrading.data ET_RTH_OPEN / ET_AFTERHOURS_CLOSE, potential._mute_end_hhmm, RUNNERS_STALE_SEC)
-SECTION_WORDS = {"yours": "👤 Your names", "aplus": "🎯 A+", "auto": "🤖 Added today"}
+SECTION_WORDS = {"yours": "👤 Your names", "aplus": "🎯 A+", "auto": "🤖 Added today",
+                 "rules": "✅ All rules met"}        # ✅ 2026-11-24 (spec watchall) — MINE, HIS CALL #11
 SECTION_TEXT = "{title} · {n}"
 SECTION_HINTS = {
     "yours": "Names you added, newest first. Names added before 11-19 carry no time.",
@@ -136,6 +138,12 @@ SECTION_HINTS = {
               "A+). They stay all session, a stop included. Your own A+ names stay in 👤 with their 🎯 chip."),
     "auto": ("🤖 adds this session, newest first — each tile says when it was added. 📅 on a tile = it ran last session "
              "({date}); a label, not why it was added."),
+    # ✅ 2026-11-24 (spec watchall §3.1 [C9]) — MINE, HIS CALL #11. Formatted by sections.sections_block with boards=,
+    # floor= (C.RULES_MIN_VOLUME), keep= (C.RULES_KEEP_SESSIONS) and not_seated= (RULES_NOT_SEATED or "").
+    "rules": ("Every name that met all of Gajjala's rules on the {boards} board (trigger armed — only the break missing "
+              "— with the day's volume at or over {floor:,}) and every 🎯 A+, newest first. It stays until {keep} "
+              "sessions pass without it meeting them again, or your ×. This list never rings; the board's pushes are "
+              "unchanged. UNMEASURED.{not_seated}"),
 }
 WHEN_TEXT = {"premarket": "{verb} premarket {at}", "intraday": "{verb} {at}", "after_hours": "{verb} after hours {at}"}
 WHEN_VERBS = ("added", "re-added")
@@ -197,3 +205,27 @@ RUN_ANSWER_KEYS = ("state", "symbol", "title", "text", "as_of", "reused_text", "
 RUN_TITLE_TEXT = "▶ Gajjala's rules"                                                       # the bare title (no symbol)
 RUN_NOTE_TEXT = "Display only — this run rings nothing and records nothing. UNMEASURED."   # no claim about who rings
 RUN_ERROR_TEXT = "Gajjala's rules could not be run this time — tap ▶ again."               # api.py's import-fault fallback only
+# ── ✅ All rules met → 👀 Watch, kept across sessions (2026-11-24, spec watchall rev 2 §3.1) ── Ajay 2026-11-24, verbatim:
+# "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep tracking them later".
+# allrules.py is the ONE engine: a THIRD doc of COLL_LIST, uncapped, multi-session, never a push. Every number below is
+# the NAME of an existing constant or MINE with its HIS CALL number. Display / tracking only. UNMEASURED.
+RULES_ON = True                                   # MINE — kill switch: False → no step, no section, the 11-24 payload
+RULES_DOC_ID = "rules"                            # the THIRD doc of COLL_LIST (never "owner", never "auto")
+RULES_KEEP_SESSIONS = GC.LEDGER_SPAN_SESSIONS     # HIS CALL #1 — kept while met within the last N sessions, today included
+RULES_MIN_VOLUME = AUTO_MIN_VOLUME                # = GC.K11_MIN_SESSION_VOLUME — GG's K11 floor (HIS CALL #3)
+RULES_PUSH_MODE = AUTO_PUSH_MODES[0]              # "off" — HIS CALL #8; ✅ names never ring the 1-min cross; NOT tied to AUTO_PUSH_MODE
+RULES_KINDS = ("armed", "aplus")                  # "armed" == GC.POTENTIAL_KINDS[0] (a test pins); "aplus" = a 🎯 seat or A+ read
+RULES_TRACKER_FIELDS = {"symbol": 1, "setup": 1, "date": 1, "first_seen": 1, "state_path": 1, "last.at": 1,
+                        "last.session_volume": 1}  # the ONE projected 🧠 tracker find per store per session read
+RULES_REASONS = ("aged", "dismissed", "not_eligible")             # stored removal reasons — APPEND only
+RULES_STEP_REASONS = ("off", "closed", "list_unreadable", "boards_unreadable", "broker_unreadable",
+                      "auto_unreadable", "write_failed")
+RULES_SKIPPED_KEYS = ("yours", "dismissed", "not_eligible", "under_floor", "volume_unknown")
+RULES_OUT_KEYS = ("n", "added", "removed", "skipped", "reason", "not_eligible", "backfilled")   # the state doc's `rules` block
+RULES_TAG = "✅"
+SECTIONS_FOLDED_DEFAULT = ("rules",)              # MINE — HIS CALL #7: the phone shows these folded until he opens them
+RULES_WHEN_TODAY = "✅ all rules {at}"            # MINE — HIS CALL #11 (every word below too)
+RULES_WHEN_DAY = "✅ all rules {md}"
+RULES_WHEN_MULTI = " · {k} sessions"
+RULES_WHEN_TITLE = "met all of Gajjala's rules first {first} ({kind}) — {setup}; last met {last}"
+RULES_NOT_SEATED = " {n} more met them but are on your 🚫 list — not seated."

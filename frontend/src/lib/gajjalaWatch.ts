@@ -223,6 +223,9 @@ export function ggwAddedMs(row: { added_at?: string | null }): number | null {
 /** A row that may join his pick: HIS own name, or a 🎯 A+ (the A+ block, or an auto seat whose served reason is A+). An
  *  ordinary 🤖 potential never joins (HIS CALL #3 — up to 18 tiles × 3 live charts). */
 export function ggwJoinable(row: GgwRow): boolean {
+  /* ✅ 2026-11-24 (spec watch_all_rules §3.6): a ✅ All rules met row NEVER joins his pick — even one a board reads A+
+   * today (its `aplus` block served) — up to ~50 multi-day names. */
+  if (ggwIsRulesRow(row)) return false;
   return row.auto == null || row.aplus != null || row.auto?.why === 'aplus';
 }
 /** The joinable rows that are NEW to this view: added after `pickAt` (strictly; no pickAt → the last
@@ -450,7 +453,13 @@ export type GgwOrg = {
 };
 /** One served section, in served order: `key` = any non-blank served key (the FE holds NO key list — a later served
  *  key renders without an FE change), `text` = the header words, `hint` = its served explanation. */
-export type GgwSection = { key: string; title: string | null; text: string; hint: string | null; n: number | null; symbols: string[] };
+export type GgwSection = {
+  key: string; title: string | null; text: string; hint: string | null; n: number | null; symbols: string[];
+  /** ✅ 2026-11-24 (spec watch_all_rules §3.6): true ONLY when the server serves `folded_default: true` (backend
+   *  C.SECTIONS_FOLDED_DEFAULT — today the ✅ All rules met section): the PHONE shows it folded until he opens it
+   *  (`ggw.opened`). The key is set only when served true — junk ("yes", 1) and an older server leave it absent. */
+  folded_default?: boolean;
+};
 export type GgwRow = {
   symbol: string; state: GgwRowState | string; text: string | null;
   from_session: string | null; as_of_et: string | null; stale: boolean;
@@ -533,6 +542,14 @@ export type GgwBoard = {
   broker?: GgwBroker | null;
   /** 🗂 2026-11-22: the served sections in served order. The key is set ONLY when served; null / [] → the flat board. */
   sections?: GgwSection[] | null;
+  /** ✅ 2026-11-24 (spec watch_all_rules §3.5 / §3.6): the served all-rules head `{state, n, keep_sessions, text,
+   *  not_seated_n}`. The key is set ONLY when served (absent when the server's RULES_ON is False / an older server); null
+   *  = served but junk. `text` is the served fault line (state "unreadable" only) — printed verbatim, never composed. */
+  rules?: GgwRulesHead | null;
+};
+/** ✅ The served all-rules head (backend payload `rules`). Every word served; display only, UNMEASURED. */
+export type GgwRulesHead = {
+  state: string; n: number | null; keep_sessions: number | null; text: string | null; not_seated_n: number | null;
 };
 export type GgwOwnerOnly = { state: 'owner_only'; reason: string | null; title: string | null };
 /** The server's own failure answer (payload.error_payload): its reason is printed verbatim (served words only). */
@@ -784,6 +801,8 @@ export function parseSections(v: unknown): GgwSection[] | null {
     const n = num(s.n);
     out.push({
       key, title: str(s.title), text, hint: str(s.hint), n: n != null && n >= 0 ? n : null, symbols: strs(s.symbols),
+      /* ✅ 2026-11-24: ONLY a served boolean true — any other value (junk, absent) leaves the section open as before */
+      ...(s.folded_default === true ? { folded_default: true } : {}),
     });
   }
   return out;
@@ -871,13 +890,38 @@ export function parseGgw(raw: unknown): GgwPayload | null {
     auto: parseAuto(raw.auto),
     broker: parseGgwBroker(raw.broker),
     ...('sections' in raw ? { sections: parseSections(raw.sections) } : {}),
+    ...('rules' in raw ? { rules: parseRulesHead(raw.rules) } : {}),
   };
 }
 
+/** ✅ 2026-11-24: the served all-rules head — an object with a served `state`, else null (junk never draws a line). */
+export function parseRulesHead(v: unknown): GgwRulesHead | null {
+  if (!isObj(v) || !str(v.state)) return null;
+  const nn = (x: unknown): number | null => { const k = num(x); return k != null && k >= 0 ? k : null; };
+  return { state: v.state, n: nn(v.n), keep_sessions: nn(v.keep_sessions), text: str(v.text), not_seated_n: nn(v.not_seated_n) };
+}
+/** ✅ The board's one fault line OUTSIDE ℹ️: the served `rules.text` when the all-rules list could not be read; null else. */
+export function ggwRulesWarn(b: { rules?: GgwRulesHead | null } | null | undefined): string | null {
+  const r = b?.rules;
+  return r && r.state === 'unreadable' && r.text ? r.text : null;
+}
+
+/** ✅ 2026-11-24: the served marker of a ✅ All rules met row (payload serves it under `row.auto`, `why: "rules"`). */
+export const GGW_RULES_WHY = 'rules';
+export function ggwIsRulesRow(r: { auto?: GgwRowAuto | null }): boolean {
+  return r.auto?.why === GGW_RULES_WHY;
+}
+const NO_SKIP: ReadonlySet<string> = new Set<string>();
 /** 🤖 The live-interest list (2026-11-17): EVERY row's symbol in served order — his names, then the auto names — so an
- *  auto tile's charts move live like his (the board used to POST `symbols`, his names only). */
-export function ggwLiveSymbols(b: GgwBoard): string[] {
-  return b.rows.map((r) => r.symbol);
+ *  auto tile's charts move live like his (the board used to POST `symbols`, his names only).
+ *  ✅ 2026-11-24 (spec watch_all_rules §3.6 [C4]): the rows NOT in ✅ first (served order), THEN the ✅ rows — so past
+ *  the live hub's per-tab cap the refused tail is always ✅. A row whose served `org.group` is in `skip` is left out (the
+ *  phone passes the default-folded sections still folded → ✅ ticks only while open). HIS rows (`auto == null`) are
+ *  NEVER left out, whatever `skip` holds. No ✅ row and an empty skip → exactly the old list. */
+export function ggwLiveSymbols(b: GgwBoard, skip: ReadonlySet<string> = NO_SKIP): string[] {
+  const keep = (r: GgwRow) => r.auto == null || !r.org?.group || !skip.has(r.org.group);
+  const rows = b.rows.filter(keep);
+  return [...rows.filter((r) => !ggwIsRulesRow(r)), ...rows.filter(ggwIsRulesRow)].map((r) => r.symbol);
 }
 
 /** The rows still waiting for their first read (the pending poll asks for these only). */
@@ -965,6 +1009,68 @@ export function ggwRevealGroup(keys: ReadonlyArray<string>, rows: ReadonlyArray<
                                sym: string): ReadonlyArray<string> {
   const g = rows.find((r) => r.symbol === sym)?.org?.group;
   return g && keys.includes(g) ? keys.filter((k) => k !== g) : keys;
+}
+
+// ── ✅ default-folded sections (2026-11-24, spec watch_all_rules §3.6) ─────────────────────────────────────────────
+/* Ajay 2026-11-24: "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep tracking
+ * them later". The ✅ All rules met section can hold 20–50 names; on the PHONE the server marks it `folded_default` so
+ * it is ONE header line under his intraday names until he taps it. His taps on such a section are remembered in
+ * `ggw.opened` (the keys he OPENED); every other section keeps `ggw.collapsed` exactly as before. Layout only. */
+
+/** 📱 The default-folded sections he opened on this browser: a JSON list of served section keys (same parser as
+ *  `ggw.collapsed`). Junk / blocked → [] (every default-folded section folded). */
+export const GGW_OPENED_KEY = 'ggw.opened';
+export function parseGgwOpened(v: unknown): string[] {
+  return parseGgwCollapsed(v);
+}
+export function readGgwOpened(): string[] {
+  try { return parseGgwOpened(window.localStorage.getItem(GGW_OPENED_KEY)); } catch { return []; }
+}
+export function saveGgwOpened(keys: ReadonlyArray<string>): void {
+  try {
+    if (keys.length) window.localStorage.setItem(GGW_OPENED_KEY, JSON.stringify(keys));
+    else window.localStorage.removeItem(GGW_OPENED_KEY);
+  } catch { /* private window: the fold lasts this visit */ }
+}
+/** The served keys marked `folded_default: true`, in served order. */
+export function ggwDefaultFolded(sections: ReadonlyArray<GgwSection> | null | undefined): string[] {
+  return (sections ?? []).filter((s) => s.folded_default === true).map((s) => s.key);
+}
+/** The folded keys = `collapsed` ∪ (served default-folded keys − `opened`). No default-folded section served → a copy of
+ *  `collapsed` (the 11-22 behaviour). */
+export function ggwFoldedKeys(sections: ReadonlyArray<GgwSection> | null | undefined, collapsed: ReadonlyArray<string>,
+                              opened: ReadonlyArray<string>): string[] {
+  const out = [...collapsed];
+  for (const k of ggwDefaultFolded(sections)) if (!opened.includes(k) && !out.includes(k)) out.push(k);
+  return out;
+}
+/** One header tap. A default-folded key flips `opened` (folded → added to opened, and dropped from `collapsed` so it
+ *  really opens; open → dropped from opened); any other key flips `collapsed` exactly as ggwToggleCollapsed. */
+export function ggwToggleFold(sections: ReadonlyArray<GgwSection> | null | undefined,
+                              st: { collapsed: ReadonlyArray<string>; opened: ReadonlyArray<string> },
+                              key: string): { collapsed: string[]; opened: string[] } {
+  if (!ggwDefaultFolded(sections).includes(key)) {
+    return { collapsed: ggwToggleCollapsed(st.collapsed, key), opened: [...st.opened] };
+  }
+  const isFolded = ggwFoldedKeys(sections, st.collapsed, st.opened).includes(key);
+  return isFolded
+    ? { collapsed: st.collapsed.filter((k) => k !== key), opened: st.opened.includes(key) ? [...st.opened] : [...st.opened, key] }
+    : { collapsed: [...st.collapsed], opened: st.opened.filter((k) => k !== key) };
+}
+/** [C5] ggwRevealGroup's twin for a DEFAULT-FOLDED section (a push link / pager tap / ?focus= / ➕ into ✅): `opened` with
+ *  `sym`'s group added. The SAME array when nothing changes (not listed, no group, its group is not default-folded, or
+ *  already opened). The board runs BOTH on every reveal, so a default-folded section opens whichever list folds it. */
+export function ggwRevealOpened(opened: ReadonlyArray<string>, sections: ReadonlyArray<GgwSection> | null | undefined,
+                                rows: ReadonlyArray<{ symbol: string; org?: GgwOrg | null }>, sym: string): ReadonlyArray<string> {
+  const g = rows.find((r) => r.symbol === sym)?.org?.group;
+  return g && ggwDefaultFolded(sections).includes(g) && !opened.includes(g) ? [...opened, g] : opened;
+}
+/** 📱 The live `skip` set: the default-folded sections still folded (phone + org mode only — the board passes an empty
+ *  set elsewhere). A key the user folded himself (`collapsed`, e.g. 🤖) is NOT skipped — unchanged 11-22 behaviour. */
+export function ggwLiveSkip(sections: ReadonlyArray<GgwSection> | null | undefined, collapsed: ReadonlyArray<string>,
+                            opened: ReadonlyArray<string>): Set<string> {
+  const folded = ggwFoldedKeys(sections, collapsed, opened);
+  return new Set(ggwDefaultFolded(sections).filter((k) => folded.includes(k)));
 }
 
 /** The 1-min frame on top, then the rest in served order (5-min, 15-min since 2026-11-23; an older payload's own order). */

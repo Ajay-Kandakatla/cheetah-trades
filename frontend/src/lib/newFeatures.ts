@@ -1089,6 +1089,20 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-24, verbatim: "Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep
+  // tracking them later". Spec watchall rev 2 (§3, §4 main-session). BE chart_maps/gajjala_watch/allrules.py (the ✅ doc
+  // "rules" of COLL_LIST — trigger-armed 🧠 cards at GG's K11 volume floor + every 🎯 A+, kept while met within
+  // C.RULES_KEEP_SESSIONS = GC.LEDGER_SPAN_SESSIONS sessions); FE the ✅ section of GajjalaWatchBoard (folded on the phone).
+  // Display / tracking only: C.RULES_PUSH_MODE "off", C.AUTO_PUSH_MODE "off". UNMEASURED. Pinned by scripts/contracts.mjs
+  // ("👀 All-rules names auto-seat on Watch (2026-11-24)"). PLACED HERE, not FIRST, the 💧 entry's way (2026-11-24):
+  // NEW_FEATURES[0..100] are pinned by index in ~40 vitest files; past index 100 no pin moves. Docs
+  // docs/gajjala/watch_all_rules_2026_11_24.md.
+  {
+    id: 'gajjala-watch-all-rules-2026-11-24',
+    label: "✅ All rules met → 👀 Watch, kept 5 sessions — you said: “Anytime stocks qualify all his rules should be auto added to the Watch list so I can keep tracking them later”. Every name whose 🚩 card meets all of Gajjala's rules (trigger armed — only the break missing — with the day's volume at his floor) and every 🎯 A+ now joins 👀 Watch by itself, under ✅ All rules met, newest first. It stays until 5 sessions pass without it meeting them again, or your ×. On the phone it is one folded line until you open it. This list never rings; no rule, gate or push changed. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-24, verbatim: "Can you track something for me how many times have the stocks bumped right after volume
   // dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can you
   // send me notification of volume dried please.." Spec voldry (scratchpad voldry/spec.md §3, §4 main-session). BE
