@@ -19,6 +19,12 @@ Regen 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notificatio
 key against HEAD): 3832 -> 3836 leaves, 4 ADDED, 0 changed, 0 removed — `push_vol_dried` {mode "live", text "💧 Volume
 dried: none in the last 10 sessions · UNMEASURED"} on the two GG5 boards (no GGD record on the fixture store). Nothing
 else moved.
+
+Regen 2026-11-24 (🧠 from every tab — Ajay "I need a common place to see all the potnetials from all tabs" · "I mean all
+Gajjala's tabs"; docs/gajjala/potentials_all_tabs_2026_11_24.md, SPEC potall §4 WP be-potall step 5, in the hermetic
+container; diff verified key for key against HEAD): 3836 -> 3883 leaves, 47 ADDED, 0 changed, 0 removed — every one under
+boards/potential/all_potentials (pot_all.block: GGG 🚩 forming with no sideways bar + "listed · no 🧠 alert", BBB 💋
+"✅ broke 10:31" off its tracker A+ step; broker_text / trader_text on both rows). Nothing else moved.
 """
 from __future__ import annotations
 

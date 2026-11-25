@@ -126,6 +126,12 @@ wording only; every other entry is the BOARD golden alone):
   check on the FE fixtures by their own `-k golden` recipes, `subs` ONLY (the 🧨 entry at index 6): on_open 2261 -> 2276
   (+15, 60 shifted), potential 3884 -> 3894 (+10, 44 shifted), track_record 2877 -> 2892 (+15, 57 shifted)
   (docs/gajjala/divergence_sub_2026_11_18.md).
+  2026-11-24 — Ajay "I need a common place to see all the potnetials from all tabs" / "I mean all Gajjala's tabs" (🧠 from
+  every tab, SPEC potall REV 2 §4 WP be-potall step 5): BOARD only, by `-k test_gg5_board_is_byte_identical` in the
+  hermetic container (WRITES byte-identical — pot_all is build-only, nothing written). BOARD 15289 -> 15349 leaves, 60
+  ADDED, 0 changed, 0 removed, every one under <mode>/potential/all_potentials (30 per mode: one row, GGA 🚩 "✅ broke
+  10:41" off its tracker A+ step, carded → href; title / order_text / rule_text / live true / as_of_text / counts). No
+  other sub, tile, track or watch byte moved (docs/gajjala/potentials_all_tabs_2026_11_24.md).
 """
 from __future__ import annotations
 

@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24 ~22:00 ET, verbatim: "I need a common place to see all the potnetials from all tabs" · "I mean all
+  // Gajjala's tabs". Spec potall (scratchpad potall/spec.md §3, §4 main-session). BE chart_maps/gajjala/pot_all.py (block,
+  // served as all_potentials on the GG5 🧠 sub only; stages.steps is the ONE ✅ broke clock); FE GgPotAll.tsx under the 🧠
+  // cards, the rules in the 🧠 ⓘ fold. Display only: the 🧠 push path (potential.run_pass / alerts.run_pass) is untouched.
+  // Partial cards stay off (HIS CALL #1). UNMEASURED. Pinned by scripts/contracts.mjs ("🧠 from every tab (2026-11-24)").
+  // Docs docs/gajjala/potentials_all_tabs_2026_11_24.md, potentials_all_tabs_frontend_2026_11_24.md.
+  {
+    id: 'gajjala-potentials-all-tabs-2026-11-24',
+    label: "🧠 Every Gajjala tab's forming names in one place — you said: “I need a common place to see all the potnetials from all tabs” · “I mean all Gajjala's tabs”. Under the 🧠 cards you now get one line per name and setup that any 🚩 sub shows forming right now and the 🧠 cards do not — 🚩 Bull Flag, 💋 EMA Kiss & Fly, ➖ Horizontal Fade, 🌀 Intraday VCP, 🎾 Reversal Squeeze and 🌱 Diverging — in that tab's own words, with a tap through to its card. A name that reached 🎯 A+ today stays on the list with ✅ broke and the time it broke. “listed · no 🧠 alert” marks a line the 🧠 push does not ring for. Partial cards (a rule failed — most 🎾 names that stay on Reversal Squeeze failed the volume-dried rule) are not listed; that is your call. The rules sit behind the 🧠 ⓘ. Display only — no rule, gate, count or push changed. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/chart-maps?tab=gajjala&sub=potential',
+  },
   // Ajay 2026-11-24, verbatim: "Hide all of this nouce besides the scan button and log trade button no explantions on the
   // landing pages anymor" · "Add all of this too" · "Collapse all of this too". FE only: lib/ggFold.ts + GgFold.tsx (one
   // closed-by-default fold per header and per sub, remembered per browser). Docs docs/gajjala/landing_declutter_2026_11_24.md.

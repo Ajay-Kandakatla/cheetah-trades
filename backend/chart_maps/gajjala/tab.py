@@ -2024,7 +2024,7 @@ def _broker_tag(out: dict, flags) -> None:
                 r["broker_text"] = broker_text_for(r.get("symbol"), flags)
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
+    for k in ("potential", "enterable", "table", "all_potentials"):   # 📋 2026-11-13 — the table rows too; 🧠 2026-11-24 every tab
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -2058,7 +2058,7 @@ def _trader_tag(out: dict, tags) -> None:
                                     if isinstance(sym, str) and sym else None)
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
+    for k in ("potential", "enterable", "table", "all_potentials"):   # 📋 2026-11-13 — the table rows too; 🧠 2026-11-24 every tab
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -2088,7 +2088,7 @@ def _promo_tag(out: dict, ptags) -> None:
                     r["promo_text"] = hit.get("promo_text")
 
     tag(out.get("tiles"))
-    for k in ("potential", "enterable", "table"):                   # 📋 2026-11-13 — the table rows too
+    for k in ("potential", "enterable", "table", "all_potentials"):   # 📋 2026-11-13 — the table rows too; 🧠 2026-11-24 every tab
         if isinstance(out.get(k), dict):
             tag(out[k].get("rows"))
     tr = out.get("track")
@@ -2815,6 +2815,14 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
                              sess=sess, entries=entries, v=v, live=live_push) if pot_ok else None
         out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms, v)
+        if gg5:                                 # 🧠 2026-11-24 (Ajay "I mean all Gajjala's tabs") — GG5 only; display only
+            from chart_maps.gajjala import pot_all as PA
+            out["all_potentials"] = _soft(
+                "all potentials", PA.block, reads_by=reads_by, carded=carded,
+                covered=_soft("pot covered", PA.covered, out["tiles"], default=set()), trackers=trackers_today,
+                entries=entries, session_iso=session.isoformat(), dvg=dvg, hsi=hsi, scan_by=scan_by,
+                rang=lambda s, k: _rang(entries if live_push else None, session, s, k), flags=order_flags, sess=sess,
+                in_window=in_window, pass_info=out["pass"], pass_at=pass_at, pot_ok=pot_ok, v=v, default=None)
         out["empty_note"] = ("Nothing forming on his list right now — the next pass is at most "
                              f"{_mins(_cad(v))} away." if in_window else
                              f"Nothing was forming at the last pass ({sess['label']}).")

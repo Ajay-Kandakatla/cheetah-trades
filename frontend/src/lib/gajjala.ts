@@ -978,6 +978,10 @@ export type GgBoard = {
   /** 📋 2026-11-13: the All strategies table (backend chart_maps/gajjala/all_table.block) — the GG5 table sub only;
    *  null when the build faulted (the served `empty_note` says so), absent elsewhere and on an older API. */
   table?: GgTableBlock | null;
+  /** 🧠 2026-11-24 (potall spec §3.3): every Gajjala sub's forming names the 🧠 cards do not show + ✅ broke today
+   *  (backend chart_maps/gajjala/pot_all.block) — the GG5 🧠 sub only; null when the build faulted, absent elsewhere and
+   *  on an older API (today's DOM). Every word served; the FE types none. */
+  all_potentials?: GgPotAllBlock | null;
   /** 🌫️ 2026-11-15: the served day read (day_read.served_block) — the primary owner only; null for anyone else and on
    *  🧪 audited; absent on an older API. Information only; printed by DayReadLine, never read by any rule here. */
   day_read?: DayRead | null;
@@ -1029,6 +1033,31 @@ export type GgTableBlock = {
   /** 🩳 2026-11-16 — the served hover on the Short interest head, and the sentence served when no short-interest store
    *  was reachable this build (the column is blank, not zero); null when read. Absent on an older API. */
   si_head_title?: string | null; si_fault_text?: string | null;
+};
+
+/* ---- 🧠 from every tab (2026-11-24, potall spec §3.1 / §3.3). Ajay: "I need a common place to see all the potnetials
+ * from all tabs" · "I mean all Gajjala's tabs". Every word below is SERVED by pot_all.py (rows in SERVED order — the FE
+ * never sorts); `title` / `order_text` / `rule_text` / `as_of_text` print only inside the 🧠 ⓘ fold. Display only. ---- */
+export type GgPotAllRow = {
+  symbol: string; setup: string;
+  tier?: 'potential' | 'forming' | 'broke' | string | null;
+  state?: string | null; kind?: string | null;
+  emoji?: string | null; label?: string | null;
+  also?: { key: string; emoji?: string | null; label?: string | null }[] | null;
+  state_word?: string | null; state_label?: string | null;
+  broke_at?: string | null; broke_text?: string | null;
+  alert_text?: string | null; read_at_text?: string | null;
+  href?: string | null; text: string;
+  /** the house tag walks (tab.py) — 🚫 owner only, 📌 / 🎪 every viewer. */
+  broker_text?: string | null; trader_text?: string | null; promo?: boolean | null; promo_text?: string | null;
+};
+export type GgPotAllBlock = {
+  title?: string | null; order_text?: string | null; rule_text?: string | null;
+  live?: boolean | null; as_of_text?: string | null;
+  rows?: GgPotAllRow[] | null;
+  n?: number | null; more_n?: number | null; more_text?: string | null;
+  counts?: { potential?: number | null; forming?: number | null; broke?: number | null } | null;
+  faults_n?: number | null; fault_text?: string | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the

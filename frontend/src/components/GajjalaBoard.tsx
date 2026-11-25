@@ -200,6 +200,7 @@ import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { GgTraderChip } from './GgTraderChip';
+import { GgPotAll, GgPotAllNotes, ggPotAllRows } from './GgPotAll';
 import { GgShortInterestLabel } from './GgShortInterestLabel';
 import { GgHardToBorrowChip, GgHardToBorrowFault, GgHardToBorrowLabel } from './GgHardToBorrow';
 import { GgBorrowChip, GgBorrowLabel } from './GgBorrow';
@@ -752,6 +753,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {/* (3b) 🩳 2026-11-23: the served High SI panel above the cards — the high_si sub only (the bar-size toggle stays:
               the cards draw the 5m or the 15m frame). */}
           {activeSub === GG_HIGH_SI_SUB ? <GgHighSiPanel block={board.high_si ?? null} /> : null}
+          {/* (3b) 🧠 2026-11-24 (potall §3.3): the served title / order / rule / as-of words of the 🧠-from-every-tab list —
+              the 🧠 sub only, and only when a fold holds them (subKey), so none of them is ever on the landing. */}
+          {activeSub === 'potential' && subKey ? <GgPotAllNotes block={board.all_potentials ?? null} /> : null}
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
           <CountsLine board={board} />
     </>
@@ -1005,7 +1009,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {board.day2 ? <Day2Block block={board.day2} search={location.search} back={backTarget} /> : null}
 
           {/* (6) the tiles, in the SERVED order. */}
-          {!tiles.length && board.empty_note ? (
+          {/* 🧠 2026-11-24 (potall §3.3 b): on 🧠 with no card but ≥ 1 served from-every-tab row, "nothing forming" would be
+              false — the empty line steps aside; both empty (or the block absent) → today's line. */}
+          {!tiles.length && board.empty_note && !(activeSub === 'potential' && ggPotAllRows(board.all_potentials).length) ? (
             <div className="cm-note" data-testid="gg-empty">{board.empty_note}</div>
           ) : null}
           {/* 💋 2026-11-11: the served toggle chip and, while it is ON, the served count line — the 💋 sub only. */}
@@ -1107,6 +1113,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {cardView && viewTile ? (
             <GgCardView card={viewTile} at={cardView} variant={vkey} boardSeq={boardSeq} look={lookOn ? 'video' : undefined} onClose={closeView}
                         onStep={liveTiles.length > 1 ? stepView : null} />
+          ) : null}
+          {/* (6a) 🧠 2026-11-24 (potall §3.3 a, C6): every Gajjala sub's forming names the 🧠 cards do not show + ✅ broke
+              today — the served rows, UNDER the 🧠 cards and ABOVE 📈 Track; absent / null block → nothing (today's DOM). */}
+          {activeSub === 'potential' && board.all_potentials ? (
+            <GgPotAll block={board.all_potentials} search={location.search} back={backTarget} />
           ) : null}
           {/* (6b) 🧠 sub: the 📈 Track and the 👀 watch line BELOW the live tiles — Ajay 2026-10-18, on a screenshot of
               this sub ("this view is confusing are there 2 potential here?" → "Oh I think we should bring them to the top

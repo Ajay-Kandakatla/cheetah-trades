@@ -2394,6 +2394,65 @@
    ]
   },
   "potential": {
+   "all_potentials": {
+    "as_of_text": "as of the 10:31 ET pass · today",
+    "counts": {
+     "broke": 1,
+     "forming": 1,
+     "potential": 7
+    },
+    "fault_text": null,
+    "faults_n": 0,
+    "live": true,
+    "more_n": 0,
+    "more_text": null,
+    "n": 2,
+    "order_text": "other forming names first (trigger armed, then highest volume) · then ✅ broke, newest first · your 🚫 names last in each group",
+    "rows": [
+     {
+      "alert_text": "listed · no 🧠 alert",
+      "also": [],
+      "broke_at": null,
+      "broke_text": null,
+      "broker_text": null,
+      "emoji": "🚩",
+      "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGG",
+      "kind": null,
+      "label": "Bull Flag",
+      "read_at_text": null,
+      "setup": "bull_flag",
+      "state": "forming",
+      "state_label": "forming — waiting for the pullback bar · UNMEASURED",
+      "state_word": "forming — no sideways bar yet",
+      "symbol": "GGG",
+      "text": "GGG · 🚩 Bull Flag · forming — no sideways bar yet",
+      "tier": "forming",
+      "trader_text": null
+     },
+     {
+      "alert_text": null,
+      "also": [],
+      "broke_at": "10:31",
+      "broke_text": "✅ broke 10:31",
+      "broker_text": null,
+      "emoji": "💋",
+      "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=BBB",
+      "kind": null,
+      "label": "EMA Kiss & Fly",
+      "read_at_text": null,
+      "setup": "kiss_fly",
+      "state": "aplus",
+      "state_label": "A+ — every rule met, entry bar closed · UNMEASURED",
+      "state_word": "A+ — broke the trigger",
+      "symbol": "BBB",
+      "text": "BBB · 💋 EMA Kiss & Fly · A+ — broke the trigger",
+      "tier": "broke",
+      "trader_text": null
+     }
+    ],
+    "rule_text": "One row per name and setup a Gajjala sub shows forming right now that the 🧠 cards above do not — the 🚩 💋 ➖ 🌀 🎾 cards in the forming state and 🌱 Diverging — in that sub's own words, linked to its card when the card exists. A setup whose 🧭 stages show a 🎯 A+ this session stays with ✅ broke and that A+ clock (the pass that first saw it, or the A+ alert that rang). “listed · no 🧠 alert” = the 🧠 push never rings for that state. Partial cards (a rule failed), 🧨 records, 🩳 names with no forming read and ☀️ / 🌙 movers are not rows; 🩳 tags a 🎾 row it also shows. Display only — no rule, gate, count or push changes. UNMEASURED.",
+    "title": "🧠 from every tab — 1 other forming · 1 ✅ broke today · 7 🧠 potential on the cards above"
+   },
    "awaiting": [],
    "broker_flags": {
     "add_label": "add",

@@ -515,6 +515,7 @@ describe('🧠 sub: the live tiles come first (2026-10-18)', () => {
   it('NEGATIVE: with no live tile the served empty note precedes the 📈 Track (the history never leads)', async () => {
     const b = clone(GOLD.potential);
     b.tiles = [];
+    delete b.all_potentials;
     stubFetch(() => clone(b));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);

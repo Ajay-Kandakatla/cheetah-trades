@@ -2481,6 +2481,24 @@
    "tiles": []
   },
   "potential": {
+   "all_potentials": {
+    "as_of_text": null,
+    "counts": {
+     "broke": 0,
+     "forming": 0,
+     "potential": 1
+    },
+    "fault_text": null,
+    "faults_n": 0,
+    "live": true,
+    "more_n": 0,
+    "more_text": null,
+    "n": 0,
+    "order_text": "other forming names first (trigger armed, then highest volume) · then ✅ broke, newest first · your 🚫 names last in each group",
+    "rows": [],
+    "rule_text": "One row per name and setup a Gajjala sub shows forming right now that the 🧠 cards above do not — the 🚩 💋 ➖ 🌀 🎾 cards in the forming state and 🌱 Diverging — in that sub's own words, linked to its card when the card exists. A setup whose 🧭 stages show a 🎯 A+ this session stays with ✅ broke and that A+ clock (the pass that first saw it, or the A+ alert that rang). “listed · no 🧠 alert” = the 🧠 push never rings for that state. Partial cards (a rule failed), 🧨 records, 🩳 names with no forming read and ☀️ / 🌙 movers are not rows; 🩳 tags a 🎾 row it also shows. Display only — no rule, gate, count or push changes. UNMEASURED.",
+    "title": "🧠 from every tab — 0 other forming · 0 ✅ broke today · 1 🧠 potential on the cards above"
+   },
    "awaiting": [],
    "broker_flags": {
     "add_label": "add",

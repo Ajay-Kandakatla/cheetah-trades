@@ -29,6 +29,12 @@ Regen 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notificatio
 key against HEAD): 2277 -> 2283 leaves, 6 ADDED, 0 changed, 0 removed — `push_vol_dried` {mode "live", text "💧 Volume
 dried: none in the last 10 sessions · UNMEASURED"} on the three boards (the fixture store's alerts coll answers the find
 with no GGD record). Nothing else moved.
+
+Regen 2026-11-24 (🧠 potentials from every tab — Ajay "I mean all Gajjala's tabs"; docs/gajjala/potentials_all_tabs_2026_11_24.md;
+regenerated in the hermetic image, diff verified key for key against HEAD): 2283 -> 2296 leaves, 13 ADDED, 0 changed, 0
+removed — ALL under `boards.potential.all_potentials` (title, rule_text, order_text, live, n, counts {potential, forming,
+broke}, more_n, more_text, faults_n, fault_text, as_of_text; rows []). Only the 🧠 board carries the key; the bull_flag and
+playbook boards are byte-equal. Nothing else moved.
 """
 from __future__ import annotations
 
