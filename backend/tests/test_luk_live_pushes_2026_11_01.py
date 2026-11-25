@@ -11,6 +11,11 @@ closed-day drop at the sender. NEGATIVES: 🧪 GGA still refuses (audited_rules.
 registry; the shadow fallback reaches no sender; no luk potential kind anywhere. Only the transport (`_fan_out`,
 `history.record`, `subs.list_subscriptions`) is faked — every Cheetah function between the pass and it is the real one.
 UNMEASURED: his setup, not a buy signal.
+
+SHADOW AGAIN 2026-11-25 — Ajay, verbatim: "Kill the alerts on 1 min time frame they are not reliable". The shipped
+LC.LUK_PUSH_MODE is "shadow" now, so the chain tests below take the `live_mode` fixture (LC.LUK_PUSH_MODE patched to
+"live") to keep the send chain covered; tests/test_luk_push_off_2026_11_25.py pins the shipped value through the same
+chain (no sender, no device, the claim still recorded).
 """
 from __future__ import annotations
 
@@ -102,10 +107,21 @@ def _store():
     return ST.LukStore(colls={GS.ALERTS: coll}), coll
 
 
+@pytest.fixture
+def live_mode(monkeypatch):
+    """ADDED 2026-11-25: the shipped mode is shadow (Ajay: "Kill the alerts on 1 min time frame they are not
+    reliable") — the live chain tests patch "live" so the send path stays covered."""
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+
+
 # ── the shipped values ───────────────────────────────────────────────────────────────────────────────────────────
-def test_the_shipped_mode_is_live_and_the_one_reader_says_so():
-    assert LC.LUK_PUSH_MODE == "live" and VL.push_mode() == "live"
+def test_the_shipped_mode_is_shadow_and_the_one_reader_says_so(monkeypatch):
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): live → shadow;
+    # the 11-01 words stay on file
+    assert LC.LUK_PUSH_MODE == "shadow" and VL.push_mode() == "shadow"
     assert LC.LUK_LIVE_WORDS == QUOTE and LC.LUK_LIVE_SINCE == "2026-11-01"
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+    assert VL.push_mode() == "live"                                     # the one reader still reads it by name
     assert LUK.send_setup == "notify_luk_setup" and LUK.send_potential == ""
     assert V.push_mode(LUK) == "shadow"          # GG's reader is NOT Luk's (GC has no LUK_PUSH_MODE) — documented
 
@@ -126,7 +142,7 @@ def test_the_kind_is_registered_on_every_push_registry():
 
 
 # ── the default sender, end to end ───────────────────────────────────────────────────────────────────────────────
-def test_the_default_sender_rings_the_owner_device_under_luk_setup(wire):
+def test_the_default_sender_rings_the_owner_device_under_luk_setup(wire, live_mode):
     st, coll = _store()
     c = AL.run_pass({"ABC": {"opening_range_high": aplus()}}, {}, at("09:36"), DAY, store=st)
     assert c["pushed"] == 1 and c["shadow"] == 0 and c["shadow_mode"] == 0
@@ -140,7 +156,7 @@ def test_the_default_sender_rings_the_owner_device_under_luk_setup(wire):
     assert not any(k.startswith("SHADOW:") for k in coll.docs)          # NEGATIVE: live writes no shadow row
 
 
-def test_once_per_session_symbol_setup_through_the_real_chain(wire):
+def test_once_per_session_symbol_setup_through_the_real_chain(wire, live_mode):
     st, _ = _store()
     reads = {"ABC": {"opening_range_high": aplus()}}
     AL.run_pass(reads, {}, at("09:36"), DAY, store=st)
@@ -148,7 +164,7 @@ def test_once_per_session_symbol_setup_through_the_real_chain(wire):
     assert c["claimed_before"] == 1 and c["pushed"] == 0 and len(wire["fan"]) == 1
 
 
-def test_NEGATIVE_a_device_with_the_pref_off_is_no_target(wire, monkeypatch):
+def test_NEGATIVE_a_device_with_the_pref_off_is_no_target(wire, live_mode, monkeypatch):
     st, coll = _store()
     monkeypatch.setattr(subs, "list_subscriptions", lambda filter_kind=None, user_email=None: [])
     c = AL.run_pass({"ABC": {"opening_range_high": aplus()}}, {}, at("09:36"), DAY, store=st)

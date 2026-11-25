@@ -60,14 +60,14 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "of the cards shown: the ones the latest pass re-read first, the ones it did not re-read after them · in each group: A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
    "as_of_et": "10:11 ET",
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
@@ -84,7 +84,7 @@
    "note": null,
    "on_demand": false,
    "rescan_label": "🔄 scan now",
-   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass's push gate runs as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
    "scanning_text": null,
    "started_at_et": "10:11",
    "state": "idle",
@@ -102,7 +102,7 @@
    "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "market_state": {
     "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
     "rows": [
@@ -119,7 +119,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent, until you say so. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "pullback_reversal",
@@ -640,7 +640,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "live",
+   "push_mode": "shadow",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [
@@ -702,14 +702,14 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "of the cards shown: the ones the latest pass re-read first, the ones it did not re-read after them · in each group: A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
    "as_of_et": "10:11 ET",
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
@@ -726,7 +726,7 @@
    "note": null,
    "on_demand": false,
    "rescan_label": "🔄 scan now",
-   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass's push gate runs as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
    "scanning_text": null,
    "started_at_et": "10:11",
    "state": "idle",
@@ -893,7 +893,7 @@
    "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "market_state": {
     "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
     "rows": [
@@ -910,7 +910,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent, until you say so. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "premarket",
@@ -981,7 +981,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "live",
+   "push_mode": "shadow",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [
@@ -1043,14 +1043,14 @@
   "fault": false,
   "fault_text": null,
   "focus": null,
-  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert here rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\"). Nothing here is measured, trades, sizes or enters a lane.",
+  "honesty": "2025 US Investing Championship winner (+969.8%, $20k+ stock division; 2026 leader +785.8% through Sep 30). He sells nothing; every rule here is his own words in free sources, cited line by line on the 📓 Playbook; his selling and exposure are discretionary by his own admission, so what is computed here is the entry, the stop and one exit he stated. Every alert is recorded in shadow, never sent. Nothing here is measured, trades, sizes or enters a lane.",
   "label": "🥇 Luk's",
   "order_note": "of the cards shown: the ones the latest pass re-read first, the ones it did not re-read after them · in each group: A+ first, then triggered earlier, forming, listed, stopped — the newest break first within a state",
   "pass": {
    "as_of_et": "10:11 ET",
    "at": "2026-11-03T15:11:07+00:00",
    "bars_through_et": "10:10",
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "next_read_sec": 300,
    "on_demand": false,
    "stale": false,
@@ -1067,7 +1067,7 @@
    "note": null,
    "on_demand": false,
    "rescan_label": "🔄 scan now",
-   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass rings as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
+   "rescan_title": "Run one 🥇 pass now — its push gate runs dry, so it rings no device; the 5-minute pass's push gate runs as always: a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop. A pass that finished under 60 s ago is reused; a scan starts only after this slot's 5-minute pass landed (or skipped itself) and when it can end 20 s before the next one",
    "scanning_text": null,
    "started_at_et": "10:11",
    "state": "idle",
@@ -1085,7 +1085,7 @@
    "cost_text": "Per pass, every 5 minutes 04:00–16:05 ET: one whole-market snapshot, at most 8 daily fetches, at most 40 names' minute bars (prior sessions loaded once per name, up to 10 each), at most 60 🏁 grade loads. Then, after the push gate, every card the board shows (at most 72) and every card a 🥇 alert opened today is re-read with the pass budget left — a re-read rings nothing. Last pass: snapshot 1 · daily 3 · minute today 6 · minute prior 12 · index 2 · caps 1.",
    "external_text": "External backtests of his entry (rootchunhe/martin-luk-backtesting; zongfan2/TradingAgents) are quoted verbatim with their links on the 📓 Playbook — EXTERNAL, not re-run here.",
    "folded": true,
-   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and still rings when no later bar touched the stop",
+   "latency_text": "a 1-minute trigger is read on the next 5-minute pass — up to 5 minutes after its bar closed — and is still an A+ when no later bar touched the stop",
    "market_state": {
     "note": "A state word, never a gate (HIS CALL #8). He reads the Qs and IWM every day (VKNEJA5r8zw 3:47:45); 'almost 2% above the 9 EMA' (297D7gVsLY4 1:02:42) was an example, not a threshold — no number is applied here.",
     "rows": [
@@ -1102,7 +1102,7 @@
     ],
     "title": "🧭 Indices"
    },
-   "push_text": "📲 Every 🥇 A+ rings your phone since 2026-11-01 by your call (\"Lets make it live. also alerts too.\") — once per name, setup and session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to 5 minutes after its bar closed. UNMEASURED. A card re-read only for the board rings nothing — its A+ says so on the card.",
+   "push_text": "📵 Every 🥇 A+ is recorded in shadow, never sent, until you say so. UNMEASURED.",
    "record_text": "🏁 The Track record starts 2026-11-01: every 🥇 A+ recorded here is graded by Luk's trade math — the stop or the first daily close below the 9 EMA."
   },
   "sub": "track_record",
@@ -1437,7 +1437,7 @@
      ]
     }
    ],
-   "empty_text": "No 🥇 A+ in this span — none rang, none was recorded.",
+   "empty_text": "No 🥇 A+ recorded in this span — every A+ is recorded in shadow, never sent.",
    "fault": false,
    "fault_text": null,
    "heads": [
@@ -1470,7 +1470,7 @@
      "label": "Exit · R · sessions"
     }
    ],
-   "honesty": "Rows are alerts that rang your phone (live) or were recorded in shadow (never sent) — each row's own line says which; since 2026-11-01 every 🥇 A+ rings by your call (\"Lets make it live. also alerts too.\"). Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far). One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
+   "honesty": "Alerts are recorded in shadow since 2026-11-25 (your word: off) — rows 2026-11-01 to 2026-11-24 reached your phone; later rows did not. Operational accounting of alerts as recorded, not a backtest. UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far). One count per stock per day — your rule: \"make sure you are not accounting for duplicates of the same stock as winner unless it did the same pattern again and met all the criteria on the same day\". A name that rang again the same day is listed and chipped, never counted twice, unless the later ring set up again: its own fill minute, its own trigger and stop, and a trade of its own, not one held while the first was still running. A duplicate stays out of every count, % and chart.",
    "more_text": null,
    "n_rows": 1,
    "record_from": "2026-11-01",
@@ -1516,7 +1516,7 @@
    "key": "luk",
    "label": "🥇 Luk's",
    "primary": "5m",
-   "push_mode": "live",
+   "push_mode": "shadow",
    "record_from": "2026-11-01",
    "tab": "luk",
    "tfs": [

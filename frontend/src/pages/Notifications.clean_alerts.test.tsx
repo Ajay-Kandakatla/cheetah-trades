@@ -219,9 +219,9 @@ describe('7 · /alerts — the 🩳 eyebrow says switched off', () => {
     expect(block.previousElementSibling).toBe(head);
     expect(within(block).getByTestId('pass-gajjala_si_cross').textContent).toContain('3 held: the push is switched off');
     expect(ggSiCrossChipText('off', 3)).toBe('3 held: the push is switched off');
-    // NEGATIVE: 🥇 Luk still rings — its eyebrow is byte-identical
+    // NEGATIVE: 🥇 Luk's eyebrow is its own — RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shadow, never sent
     expect(screen.getByTestId('luk-passes-head').textContent)
-      .toBe("🥇 Luk's pass · rings your phone since 2026-11-01 · not counted in the header");
+      .toBe("🥇 Luk's pass · recorded in shadow, never sent (your word: off) · not counted in the header");
   });
 });
 

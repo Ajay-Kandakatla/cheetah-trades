@@ -147,7 +147,8 @@ def test_NEGATIVE_the_switch_off_serves_todays_cost_line(monkeypatch):
 
 
 # ── the push line ──────────────────────────────────────────────────────────────────────────────────────────────────
-def test_the_push_tail_rides_the_live_line():
+def test_the_push_tail_rides_the_live_line(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")                    # PATCHED 2026-11-25: shipped is shadow
     s = _build()["strip"]["push_text"]
     base = T.PUSH_TEXT_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS, cad=T._cad_min())
     assert s == base + T.PUSH_REREAD_TAIL and s.endswith("its A+ says so on the card.")
@@ -160,6 +161,7 @@ def test_NEGATIVE_the_shadow_line_has_no_push_tail(monkeypatch):
 
 
 def test_NEGATIVE_the_switch_off_has_no_push_tail(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")                    # PATCHED 2026-11-25: shipped is shadow
     monkeypatch.setattr(LC, "LUK_REREAD_SHOWN", False)
     assert T.push_text() == T.PUSH_TEXT_LIVE.format(since=LC.LUK_LIVE_SINCE, words=LC.LUK_LIVE_WORDS,
                                                     cad=T._cad_min())

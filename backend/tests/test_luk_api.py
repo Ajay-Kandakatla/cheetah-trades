@@ -179,7 +179,8 @@ def test_the_real_build_serves_through_the_route(client, monkeypatch, live):
     real = LT.build
     monkeypatch.setattr(LT, "build", lambda sub, **k: real(sub, now=NOW, store=st, **k))
     body = client.get(BASE, params={"sub": "pullback_reversal"}).json()
-    assert body["tab"] == "luk" and body["variant"]["push_mode"] == "live"         # FLIPPED 2026-11-01 (go-live)
+    assert body["tab"] == "luk" and body["variant"]["push_mode"] == "shadow"       # FLIPPED 2026-11-01 (go-live)
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): live → shadow
     assert [s["key"] for s in body["subs"]] == [k for k, _e, _l in __import__("chart_maps.luk.constants",
                                                                                fromlist=["SUBS"]).SUBS]
     assert body["tiles"] and body["fault"] is False

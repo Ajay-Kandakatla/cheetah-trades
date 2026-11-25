@@ -181,17 +181,19 @@ describe("✨ the 🥇 Luk's tab entry", () => {
     for (const h of HIS) expect(f.label).toContain(`“${h}”`);
   });
 
-  it('says live since 2026-11-01 with his go-live words, the 🏁 start, UNMEASURED and Not advice.', () => {
-    expect(f.label).toContain('rings your phone since 2026-11-01');
+  // RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): a dated sentence — rang 2026-11-01 to 2026-11-24, shadow since 2026-11-25; his quotes untouched
+  it('says it rang 2026-11-01 to 2026-11-24 with his go-live words, shadow since 2026-11-25 with his off words, the 🏁 start, UNMEASURED and Not advice.', () => {
+    expect(f.label).toContain('rang your phone 2026-11-01 to 2026-11-24');
     expect(f.label).toContain(`“${HIS_LIVE}”`);
+    expect(f.label).toContain('since 2026-11-25 every A+ is recorded in shadow, never sent');
+    expect(f.label).toContain('“Kill the alerts on 1 min time frame they are not reliable”');
     expect(f.label).toContain('2026-11-01');
     expect(f.label).toContain('UNMEASURED');
     expect(f.label).toContain('Not advice.');
   });
 
-  it('NEGATIVE: no longer says shadow / never sent (LUK_PUSH_MODE is live)', () => {
-    expect(f.label).not.toContain('never sent');
-    expect(f.label).not.toMatch(/\bshadow\b/);
+  it('NEGATIVE: no longer says it rings your phone (LUK_PUSH_MODE is shadow since 2026-11-25)', () => {
+    expect(f.label).not.toContain('rings your phone');
   });
 
   it('NEGATIVE: never the b-word, never "edge", never a promise word', () => {

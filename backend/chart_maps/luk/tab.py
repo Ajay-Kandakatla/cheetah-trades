@@ -68,8 +68,9 @@ PASS_TEXT_ON_DEMAND = ("🔄 on-demand pass {hhmm} ET · bars through {through} 
                        "shortlisted · {screened} screened · {not_screened} not screened yet")      # 2026-11-11 scan now
 PASS_NONE_TEXT = "no 🥇 pass on file for this session yet — it runs every {cad} minutes, {open}–{close} ET"
 THROUGH_NONE = "—"
+# RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): mode-neutral words — was "still rings" / "rings as always", false while shadow
 LATENCY_TEXT = ("a {one}-minute trigger is read on the next {cad}-minute pass — up to {cad} minutes after its bar closed — "
-                "and still rings when no later bar touched the stop")
+                "and is still an A+ when no later bar touched the stop")
 PUSH_TEXT_LIVE = ("📲 Every 🥇 A+ rings your phone since {since} by your call (\"{words}\") — once per name, setup and "
                   "session, only when the entry bar is inside the regular session; a 1-minute trigger can ring up to "
                   "{cad} minutes after its bar closed. UNMEASURED.")
@@ -183,8 +184,8 @@ SCAN_SCANNING_CRON = "scanning… the {cad}-minute 🥇 pass started{when} — {
 SCAN_WHEN = " at {started} ET"
 SCAN_TAIL = "the board below is the {shown} ET read until it lands"
 SCAN_TAIL_NONE = "the board fills when it lands"
-RESCAN_TITLE = ("Run one 🥇 pass now — its push gate runs dry, so it rings no device; the {cad}-minute pass rings as "
-                "always: {latency}. A pass that finished under {reuse} s ago is reused; a scan starts only after this "
+RESCAN_TITLE = ("Run one 🥇 pass now — its push gate runs dry, so it rings no device; the {cad}-minute pass's push gate "
+                "runs as always: {latency}. A pass that finished under {reuse} s ago is reused; a scan starts only after this "
                 "slot's {cad}-minute pass landed (or skipped itself) and when it can end {margin} s before the next "
                 "one")                                                                                            # LS9
 

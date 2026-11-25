@@ -195,14 +195,17 @@ def _tile(out, sym):
 
 
 # ── the payload ────────────────────────────────────────────────────────────────────────────────────────────────────
-def test_payload_keys_and_the_variant_block():
+def test_payload_keys_and_the_variant_block(monkeypatch):
     out = _build()
     assert set(out) == set(T.PAYLOAD_KEYS)
     assert out["tab"] == LC.LUK_TAB == "luk" and out["label"] == LC.LUK_TAB_LABEL
     v = out["variant"]
     assert v == {"key": "luk", "tab": "luk", "label": LC.LUK_TAB_LABEL, "api_base": "/chart-maps/luk",
-                 "record_from": LC.LUK_RECORD_FROM, "push_mode": "live", "tfs": ["1m", "5m", "60m"],
+                 "record_from": LC.LUK_RECORD_FROM, "push_mode": "shadow", "tfs": ["1m", "5m", "60m"],
                  "primary": "5m"}                         # FLIPPED 2026-11-01: "Lets make it live. also alerts too."
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): live → shadow
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+    assert T.variant_block()["push_mode"] == "live"                    # the live value stays covered
     assert out["fault"] is False and out["fault_text"] is None
 
 
@@ -213,7 +216,10 @@ def test_NEGATIVE_the_variant_block_follows_the_patched_shadow_fallback(monkeypa
     assert T.variant_block()["push_mode"] == "shadow"
 
 
-def test_title_and_honesty_are_the_spec_words_verbatim():
+def test_title_and_honesty_are_the_spec_words_verbatim(monkeypatch):
+    # PATCHED 2026-11-25: the shipped mode is shadow (test_the_shadow_twin_of_the_honesty_line pins those words and
+    # tests/test_luk_push_off_2026_11_25.py pins them unpatched); this pin keeps the live sentence covered
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
     out = _build()
     assert out["title"] == ("🥇 Luk's — Martin Luk's published pullback / opening-range method, built from his own "
                             "words · UNMEASURED")
@@ -336,7 +342,8 @@ def test_the_latency_fact_is_served_from_the_cadence():
     out = _build()
     cad = V.cadence_sec(LUK) // 60
     want = (f"a 1-minute trigger is read on the next {cad}-minute pass — up to {cad} minutes after its bar closed — "
-            "and still rings when no later bar touched the stop")
+            "and is still an A+ when no later bar touched the stop")   # RE-PINNED 2026-11-25: was "and still rings …"
+    assert "rings" not in out["pass"]["latency_text"]                                  # NEGATIVE: mode-neutral
     assert out["pass"]["latency_text"] == want == out["strip"]["latency_text"] == T.latency_text()
 
 
@@ -509,13 +516,17 @@ def test_counts_and_the_listing_split():
 
 
 # ── the strip ──────────────────────────────────────────────────────────────────────────────────────────────────────
-def test_the_strip_is_folded_and_carries_the_index_words():
+def test_the_strip_is_folded_and_carries_the_index_words(monkeypatch):
     s = _build()["strip"]
     assert s["folded"] is True
     rows = {r["symbol"]: r for r in s["market_state"]["rows"]}
     assert list(rows) == list(LC.LUK_INDEX_SYMBOLS)
     assert rows["QQQ"]["text"] == MS.WORD_OVER.format(sym="QQQ")
     assert rows["IWM"]["text"] == MS.WORD_UNDER.format(sym="IWM")
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shipped = shadow line
+    assert s["push_text"] == T.PUSH_TEXT_SHADOW and "rings" not in s["push_text"]
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")                    # the live line stays covered below
+    s = _build()["strip"]
     # FLIPPED 2026-11-01 (go-live): the push line quotes him by name and serves the cadence fact, never a typed number
     assert s["push_text"] == T.push_text()
     assert LC.LUK_LIVE_SINCE in s["push_text"] and f'("{LC.LUK_LIVE_WORDS}")' in s["push_text"]

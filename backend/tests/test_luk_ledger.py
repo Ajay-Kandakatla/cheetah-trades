@@ -768,9 +768,14 @@ def test_rang_text_by_line_and_without_a_time():
 
 
 def test_honesty_and_empty_follow_the_mode(monkeypatch):
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): the shipped mode is
+    # shadow → the shipped block serves the shadow words; the live half patches "live" so its words stay covered
     st = make_store()
+    assert LC.LUK_PUSH_MODE == "shadow"
+    shipped = LL.served_block(st, D, et(D, 12, 0), span="today")
+    assert shipped["empty_text"] == LL.EMPTY_TEXT_SHADOW and LC.LUK_LIVE_WORDS not in shipped["honesty"]
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
     live = LL.served_block(st, D, et(D, 12, 0), span="today")
-    assert LC.LUK_PUSH_MODE == "live"
     assert live["empty_text"] == LL.EMPTY_TEXT_LIVE == "No 🥇 A+ in this span — none rang, none was recorded."
     assert LC.LUK_LIVE_SINCE in live["honesty"] and f'("{LC.LUK_LIVE_WORDS}")' in live["honesty"]
     assert live["honesty"].endswith("UNMEASURED until the strategy lab's 30-entry-week floor (0 entry weeks so far). "
@@ -779,7 +784,7 @@ def test_honesty_and_empty_follow_the_mode(monkeypatch):
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", "shadow")
     sh = LL.served_block(st, D, et(D, 12, 0), span="today")
     assert sh["empty_text"] == LL.EMPTY_TEXT_SHADOW and "never sent" in sh["empty_text"]
-    assert sh["honesty"].startswith("Every row is a shadow record — none reached your phone.")
+    assert sh["honesty"].startswith("Alerts are recorded in shadow since 2026-11-25 (your word: off) — rows 2026-11-01 to 2026-11-24 reached your phone; later rows did not.")
     assert LC.LUK_LIVE_WORDS not in sh["honesty"]                                  # NEGATIVE: no live quote in shadow
     # MOVED 2026-11-02: the 🔁 rule ("a name that rang again") is appended to both modes — the MODE's own words never
     # say rang / rings in shadow

@@ -5,7 +5,8 @@
  *
  * Luk's pass is a detached child of the 🚩 5-minute pass; since 2026-11-01 its A+ ring his phone (kind luk_setup).
  * Pinned: its row renders inside [data-testid="luk-passes"] under its OWN eyebrow ("rings your phone since 2026-11-01 ·
- * not counted in the header"), right AFTER the 🚩 gg1m-passes block and BEFORE the 🧪 gga-passes-head eyebrow; its
+ * not counted in the header"; RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): "recorded in shadow, never sent (your word: off) · not counted in the
+ * header" — no typed date: Notifications.clean_alerts.test.tsx guards Alerts.tsx against typing 2026-11-25), right AFTER the 🚩 gg1m-passes block and BEFORE the 🧪 gga-passes-head eyebrow; its
  * counters print with the 🚩 A+ chip words. The label is byte-identical ("🥇 Luk's pass" — HIS CALL #9 to rename).
  * NEGATIVES: not in PASSES / GG1M_PASSES / TAPE_PASSES / GGA_PASSES; never inside those blocks; the header count is
  * unchanged by it; its eyebrow never says "they ring your phone" (the 🧪 sibling rule) nor "never sent"; the All-off
@@ -65,7 +66,7 @@ describe("/alerts — the 🥇 Luk's pass row (2026-11-01)", () => {
     for (const list of [PASSES, TAPE_PASSES, GG1M_PASSES, GGA_PASSES]) expect(list.map((m) => m.key)).not.toContain(KEY);
   });
 
-  it('renders its label and the SERVED cadence inside [data-testid="luk-passes"], under its own "rings your phone" eyebrow', async () => {
+  it('renders its label and the SERVED cadence inside [data-testid="luk-passes"], under its own shadow eyebrow', async () => {
     stubFetch(status(true, 600));
     draw();
     const block = await screen.findByTestId('luk-passes');
@@ -74,12 +75,13 @@ describe("/alerts — the 🥇 Luk's pass row (2026-11-01)", () => {
     expect(row.textContent).toContain('every 10 min');
     expect(row.textContent).toContain('last pass');
     const head = screen.getByTestId('luk-passes-head');
-    expect(head.textContent).toBe("🥇 Luk's pass · rings your phone since 2026-11-01 · not counted in the header");
+    // RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): was "rings your phone since 2026-11-01"
+    expect(head.textContent).toBe("🥇 Luk's pass · recorded in shadow, never sent (your word: off) · not counted in the header");
     expect(block.previousElementSibling).toBe(head);
     // NEGATIVE: never the 1-minute phrase (the 🧪 test reads "they ring your phone" on ITS previous sibling) and never
-    // the shadow words, now that it is live
+    // the live words, now that it is shadow
     expect(head.textContent).not.toContain('they ring your phone');
-    expect(head.textContent).not.toMatch(/never sent|shadow/i);
+    expect(head.textContent).not.toMatch(/rings your phone/i);
     // NEGATIVE: the label carries no mode word
     expect(LUK_PASSES[0].label).not.toMatch(/ring|shadow|sent|live/i);
     // NEGATIVE: exactly one row for the kind on the page

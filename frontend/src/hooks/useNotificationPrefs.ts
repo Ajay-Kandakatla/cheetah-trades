@@ -89,7 +89,8 @@ export type NotificationPrefs = {
   gajjala_1m_potential?: boolean;
   /* 🥇 Luk's A+ (2026-11-01, backend chart_maps/luk/alerts.py). LIVE since 2026-11-01 by his call — Ajay: "Lets make
      it live. also alerts too." (backend luk/constants.LUK_PUSH_MODE "live"); False in default_prefs, in the owner
-     keep-set since 2026-11-01. UNMEASURED. */
+     keep-set since 2026-11-01. SHADOW again since 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"; LUK_PUSH_MODE "shadow" — recorded,
+     never sent; the pref stays). UNMEASURED. */
   luk_setup?: boolean;
   /* 📅 Long Term (2026-11-12, backend long_term_list/zone_watch.py + long_term_list/push.py). LIVE since 2026-11-12 by
      his calls — Ajay: "add an alert list when stocks reach Pankaj's zones" and "Weekly and if something gets dropped

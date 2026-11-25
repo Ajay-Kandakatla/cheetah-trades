@@ -34,7 +34,7 @@ from daytrading.data import ET_RTH_CLOSE, ET_RTH_OPEN
 # ── the tab ───────────────────────────────────────────────────────────────────────────────────────────────────────
 LUK_TAB_LABEL = "🥇 Luk's"                 # MINE (HIS CALL #1) — the tab label and its slot right after gajjala_1m
 LUK_TAB = "luk"                             # MINE (HIS CALL #1) — the Chart Maps tab key
-LUK_PUSH_MODE = "live"                      # Ajay 2026-11-01: "Lets make it live. also alerts too." — HIS CALL #19 answered (was Ajay design #9 SHADOW); anything but "live" = shadow (recorded, never sent)
+LUK_PUSH_MODE = "shadow"                    # Ajay 2026-11-25: "Kill the alerts on 1 min time frame they are not reliable" — 🥇 A+ rings off (recorded + graded, never sent). Was "live" since 2026-11-01 ("Lets make it live. also alerts too."); anything but "live" = shadow
 LUK_LIVE_SINCE = "2026-11-01"               # Ajay 2026-11-01: "Lets make it live. also alerts too." — the day his words flipped LUK_PUSH_MODE (a Sunday: no session ran in shadow)
 LUK_LIVE_WORDS = "Lets make it live. also alerts too."   # Ajay 2026-11-01: "Lets make it live. also alerts too." — his words verbatim, spelling kept; every served "by your call" quotes THIS name, never a retyped copy
 LUK_RECORD_FROM = "2026-11-01"              # Ajay design #7 — the deploy date; no 🏁 session before it is read

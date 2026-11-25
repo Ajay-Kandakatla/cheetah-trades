@@ -67,9 +67,11 @@ def test_every_served_line_lands_exactly_once_in_served_order(sec):
 
 def test_the_buckets_carry_the_right_rules(sec):
     # FLIPPED 2026-11-01 (go-live): the alerts line is the one carrying the playbook's mark, its live clause quoting him
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): the shipped line is the shadow clause
+    # (the live clause stays covered by test_the_alerts_bucket_is_the_marked_line_in_both_modes[live])
     assert len(sec["alerts"]) == 1 and LPB.ALERT_LINE_MARK in sec["alerts"][0]
-    assert LC.LUK_LIVE_WORDS in sec["alerts"][0] and LC.LUK_LIVE_SINCE in sec["alerts"][0]
-    assert "never sent" not in sec["alerts"][0]
+    assert LPB.ALERT_CLAUSE_SHADOW in sec["alerts"][0] and "recorded in shadow, never sent" in sec["alerts"][0]
+    assert LC.LUK_LIVE_WORDS not in sec["alerts"][0] and "rings your phone" not in sec["alerts"][0]   # NEGATIVE
     assert any("Not advice" in a and "UNMEASURED" in a for a in sec["alerts"])
     stop = [s for s in sec["stops"] if s.startswith("Stop:")]
     assert len(stop) == 1 and "low of day" in stop[0]

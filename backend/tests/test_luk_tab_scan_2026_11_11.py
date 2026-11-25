@@ -177,12 +177,14 @@ def test_another_session_and_no_pass_LS2b():
 # ── the title ──────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_rescan_title_LS9_verbatim():
     cad = _cad()
-    want = (f"Run one 🥇 pass now — its push gate runs dry, so it rings no device; the {cad}-minute pass rings as always: "
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): was "pass rings as always"
+    want = (f"Run one 🥇 pass now — its push gate runs dry, so it rings no device; the {cad}-minute pass's push gate runs as always: "
             f"{T.latency_text()}. A pass that finished under {GC.ON_DEMAND_REUSE_SEC} s ago is reused; a scan starts "
             f"only after this slot's {cad}-minute pass landed (or skipped itself) and when it can end "
             f"{LC.LUK_SLOT_MARGIN_SEC} s before the next one")
     assert _scan()["rescan_title"] == want == T.rescan_title()
     assert T.latency_text() in want
+    assert "rings as always" not in want and "still rings" not in want                 # NEGATIVE: mode-neutral
 
 
 def test_rescan_title_follows_the_constants(monkeypatch):
@@ -190,7 +192,7 @@ def test_rescan_title_follows_the_constants(monkeypatch):
     monkeypatch.setattr(LC, "LUK_SLOT_MARGIN_SEC", 33)
     monkeypatch.setattr(GC, "PASS_CADENCE_SEC", 600)
     t = _scan()["rescan_title"]
-    assert "under 77 s ago" in t and "end 33 s before" in t and "the 10-minute pass rings" in t
+    assert "under 77 s ago" in t and "end 33 s before" in t and "the 10-minute pass's push gate" in t   # RE-PINNED 2026-11-25: was "pass rings"
     assert "60 s" not in t and "20 s" not in t and "5-minute" not in t
 
 

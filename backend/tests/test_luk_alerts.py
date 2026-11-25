@@ -12,6 +12,9 @@ the regular session → #suppressed_outside_rth; the counters are gajjala.alerts
 THE LIVE SECTION (go-live 2026-11-01, mirrors tests/test_gajjala_only_pushes_2026_10_29.py D2): each A+ calls the
 sender ONCE with the 🥇 payload and settles "pushed"; the shadow-key guard; late / suppressed_window /
 suppressed_closed / failed / no_target / dry never ring twice or at all. NEGATIVES throughout.
+SHADOW AGAIN 2026-11-25 — Ajay: "Kill the alerts on 1 min time frame they are not reliable". The shipped constant is
+"shadow"; the live section keeps patching "live" so the send chain stays covered (tests/test_luk_push_off_2026_11_25.py
+pins the shipped value end to end).
 """
 from __future__ import annotations
 
@@ -54,7 +57,8 @@ def _shadow_by_default(monkeypatch):
 
 
 def live(monkeypatch, result=None, *, raise_exc=None) -> list:
-    """LC.LUK_PUSH_MODE = "live" (the shipped value) + hooks.notify_luk_setup recording each call → the calls list."""
+    """LC.LUK_PUSH_MODE = "live" (shipped 2026-11-01 → 2026-11-25; patched since his 11-25 kill) + hooks.notify_luk_setup
+    recording each call → the calls list."""
     from push import hooks
     monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
     seen: list = []
@@ -199,11 +203,14 @@ def test_NEGATIVE_shadow_never_reaches_the_sender():
     assert c["pushed"] == 0 and c["failed"] == 0 and c["no_target"] == 0
 
 
-def test_the_shipped_constant_is_live_and_this_section_patches_it(monkeypatch):
+def test_the_shipped_constant_is_shadow_and_this_section_patches_it(monkeypatch):
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shipped live → shadow;
+    # the live section below still patches "live" so the send chain stays covered
     import importlib
     import chart_maps.luk.constants as fresh
     src = pathlib.Path(fresh.__file__).read_text(encoding="utf-8")
-    assert 'LUK_PUSH_MODE = "live"' in src                              # shipped LIVE (Ajay 2026-11-01)
+    assert 'LUK_PUSH_MODE = "shadow"' in src                            # shipped SHADOW (Ajay 2026-11-25)
+    assert 'LUK_PUSH_MODE = "live"' not in src                          # NEGATIVE: the 11-01 live line is gone
     assert LC.LUK_PUSH_MODE == "shadow" and VL.push_mode() == "shadow"   # the autouse patch, the fallback words
     assert importlib.import_module("chart_maps.luk.constants") is LC
 

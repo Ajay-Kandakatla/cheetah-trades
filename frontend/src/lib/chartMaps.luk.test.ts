@@ -41,17 +41,18 @@ describe('🥇 Luk\'s — not a tile board, not a 🚩 page', () => {
 
 describe('🥇 Luk\'s — TAB_META', () => {
   const m = TAB_META.luk;
-  /* 2026-11-01 (luk-live spec §3.7): Ajay "Lets make it live. also alerts too." — the blurb says live + his quote. */
-  it('the label and his asks verbatim, rings your phone since 2026-11-01 + the quote, UNMEASURED, 2026-11-01', () => {
+  /* 2026-11-01 (luk-live spec §3.7): Ajay "Lets make it live. also alerts too." — the blurb says live + his quote.
+   * RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shadow, never sent since 2026-11-25 + his 11-25 words; the 11-01 words kept as history. */
+  it('the label and his asks verbatim, shadow + never sent since 2026-11-25 + both quotes, UNMEASURED, 2026-11-01', () => {
     expect(m.label).toBe("🥇 Luk's");
-    for (const w of [...ASK, 'rings your phone since 2026-11-01', '"Lets make it live. also alerts too."',
+    for (const w of [...ASK, 'recorded in shadow, never sent, since 2026-11-25', '"Kill the alerts on 1 min time frame they are not reliable"',
+      'rang your phone 2026-11-01 to 2026-11-24', '"Lets make it live. also alerts too."',
       'UNMEASURED', 'starts 2026-11-01', 'Not advice.']) {
       expect(m.blurb).toContain(w);
     }
   });
-  it('NEGATIVE: the shadow sentence is gone now that it is live', () => {
-    expect(m.blurb).not.toContain('recorded in shadow, never sent');
-    expect(m.blurb).not.toMatch(/never sent/);
+  it('NEGATIVE: the live sentence is gone now that it is shadow (RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"))', () => {
+    expect(m.blurb).not.toContain('rings your phone');
   });
   it('NEGATIVE: no b-word, no "edge", no house forecast word (chart_maps/high_beta_tab.FORBIDDEN_WORDS), no win rate', () => {
     const b = `${m.label} ${m.blurb}`;

@@ -83,7 +83,7 @@ MINE_NAMES = frozenset({
     "LUK_REREAD_MAX", "LUK_NEXT_READ_SEC",   # WIDENED 2026-11-12 (realtime cards)
 })
 DESIGN_NAMES = frozenset({"LUK_RECORD_FROM"})     # Ajay's design point #7
-HIS_CALL_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_LIVE_SINCE", "LUK_LIVE_WORDS",   # his dated word (2026-11-01: "Lets make it live. also alerts too.")
+HIS_CALL_NAMES = frozenset({"LUK_PUSH_MODE", "LUK_LIVE_SINCE", "LUK_LIVE_WORDS",   # his dated word (2026-11-01: "Lets make it live. also alerts too."; LUK_PUSH_MODE 2026-11-25: "Kill the alerts on 1 min time frame they are not reliable")
                             "LUK_REREAD_SHOWN"})   # WIDENED 2026-11-12 (realtime cards)
 # derived from GC by NAME (never retyped): constant → the GC attribute it must be
 GC_DERIVED = {
@@ -266,7 +266,9 @@ def test_his_numbers_as_he_said_them():
 
 def test_the_cheetah_numbers_and_the_design_points():
     # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): shadow → live
-    assert LC.LUK_PUSH_MODE == "live" and LC.LUK_RECORD_FROM == "2026-11-01" and LC.LUK_ENABLED is True
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): live → shadow;
+    # LUK_LIVE_SINCE / LUK_LIVE_WORDS stay on file (the 11-01 record)
+    assert LC.LUK_PUSH_MODE == "shadow" and LC.LUK_RECORD_FROM == "2026-11-01" and LC.LUK_ENABLED is True
     assert LC.LUK_LIVE_SINCE == "2026-11-01"
     assert LC.LUK_LIVE_WORDS == "Lets make it live. also alerts too."
     assert (LC.LUK_TAB, LC.LUK_TAB_LABEL, LC.LUK_KIND) == ("luk", "🥇 Luk's", "luk_setup")
@@ -283,9 +285,14 @@ def test_the_cheetah_numbers_and_the_design_points():
     assert LC.LUK_LEASE_MIN_GAP_SEC == LC.LUK_PASS_BUDGET_SEC
 
 
+KILL_WORDS = "Kill the alerts on 1 min time frame they are not reliable"   # Ajay 2026-11-25, verbatim
+
+
 def test_the_push_mode_line_quotes_his_live_words_by_name():
+    # RE-PINNED 2026-11-25: the line now leads with his 11-25 kill words; the 11-01 live words stay on it as history
     c = comment_of(SRC, next(ln for n, _v, ln in assigns(SRC) if n == "LUK_PUSH_MODE"))
-    assert c.startswith('Ajay 2026-11-01: "') and LC.LUK_LIVE_WORDS in c
+    assert c.startswith('Ajay 2026-11-25: "' + KILL_WORDS + '"') and LC.LUK_LIVE_WORDS in c
+    assert HIS_WORD.match(c)
     for name in ("LUK_LIVE_SINCE", "LUK_LIVE_WORDS"):
         assert LC.LUK_LIVE_WORDS in comment_of(SRC, next(ln for n, _v, ln in assigns(SRC) if n == name))
 

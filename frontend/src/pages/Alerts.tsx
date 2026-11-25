@@ -1275,8 +1275,8 @@ export function AlertsPage() {
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>
-        {/* ── 🥇 Luk's pass (2026-11-01) — own strip, outside the header count; LIVE since 2026-11-01 by his call ("Lets make it live. also alerts too."); right after the 1-minute block, before the 🧪 strip ── */}
-        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · rings your phone since 2026-11-01 · not counted in the header</div>
+        {/* ── 🥇 Luk's pass (2026-11-01) — own strip, outside the header count; LIVE 2026-11-01 by his call ("Lets make it live. also alerts too."), SHADOW again by his later word ("Kill the alerts on 1 min time frame they are not reliable"); right after the 1-minute block, before the 🧪 strip ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="luk-passes-head">🥇 Luk's pass · recorded in shadow, never sent (your word: off) · not counted in the header</div>
         <div data-testid="luk-passes">
           {LUK_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />

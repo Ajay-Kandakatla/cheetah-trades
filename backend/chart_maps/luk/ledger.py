@@ -575,7 +575,7 @@ HONESTY_LIVE = ("Rows are alerts that rang your phone (live) or were recorded in
                 "line says which; since {since} every 🥇 A+ rings by your call (\"{words}\"). Operational accounting of "
                 "alerts as recorded, not a backtest. UNMEASURED until the strategy lab's {floor}-entry-week floor ({n} "
                 "entry weeks so far).")
-HONESTY_SHADOW = ("Every row is a shadow record — none reached your phone. Operational accounting of alerts as recorded, "
+HONESTY_SHADOW = ("Alerts are recorded in shadow since 2026-11-25 (your word: off) — rows 2026-11-01 to 2026-11-24 reached your phone; later rows did not. Operational accounting of alerts as recorded, "
                   "not a backtest. UNMEASURED until the strategy lab's {floor}-entry-week floor ({n} entry weeks so far).")
 COUNTS_TEXT = ("{n} A+ recorded · {filled} filled · {stopped} stopped · {ema9} closed below the {ema} EMA · {open} open "
                "· {mean} · {entry_weeks} of {floor} entry weeks")

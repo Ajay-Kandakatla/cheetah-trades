@@ -156,15 +156,19 @@ def test_negative_a_missing_rule_is_skipped_never_invented():
 
 
 # ── the ℹ️ panel lines ────────────────────────────────────────────────────────────────────────────────────────────
-def test_rules_lines_are_served_sentences():
+def test_rules_lines_are_served_sentences(monkeypatch):
     lines = PB.rules_lines()
     assert isinstance(lines, list) and len(lines) >= 8
     assert all(isinstance(ln, str) and ln.strip() for ln in lines)
     blob = " ".join(lines)
     # FLIPPED 2026-11-01 (go-live, Ajay: "Lets make it live. also alerts too."): the live clause, not the shadow one
-    for w in (PB.ALERT_CLAUSE_LIVE % (LC.LUK_LIVE_SINCE, LC.LUK_LIVE_WORDS), "UNMEASURED", "Pullback reversal",
-              "never a gate", "listed, not A+"):
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shipped = shadow
+    for w in (PB.ALERT_CLAUSE_SHADOW, "UNMEASURED", "Pullback reversal", "never a gate", "listed, not A+"):
         assert w in blob, w
+    assert "rings your phone" not in blob and LC.LUK_LIVE_WORDS not in blob   # NEGATIVE: false while shadow
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")                    # the live words stay covered
+    blob = " ".join(PB.rules_lines())
+    assert PB.ALERT_CLAUSE_LIVE % (LC.LUK_LIVE_SINCE, LC.LUK_LIVE_WORDS) in blob
     assert "never sent" not in blob                                     # NEGATIVE: false while live
 
 
@@ -186,7 +190,8 @@ def test_the_alert_line_mark_starts_the_clause_in_both_modes(monkeypatch, mode):
     assert sum(PB.ALERT_LINE_MARK in ln for ln in PB.rules_lines()) == 1     # NEGATIVE: no other line carries it
 
 
-def test_the_live_clause_quotes_his_words_by_name():
+def test_the_live_clause_quotes_his_words_by_name(monkeypatch):
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")                    # PATCHED 2026-11-25: shipped is shadow
     c = PB.alert_clause()
     assert c == ('Every alert here rings your phone since ' + LC.LUK_LIVE_SINCE + ' by your call ("'
                  + LC.LUK_LIVE_WORDS + '") — once per name, setup and session.')

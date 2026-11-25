@@ -98,7 +98,8 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   gajjala_1m_potential: { emoji: '🧠', label: 'Gajjala 1-min potential', group: 'trading' },
   // 🥇 Luk's A+ (2026-11-01, chart_maps/luk/alerts.py) — LIVE since 2026-11-01 by his call: "Lets make it live. also
   // alerts too." (backend luk/constants.LUK_PUSH_MODE "live"). Off in default_prefs, in the owner keep-set since
-  // 2026-11-01. The label carries no mode word: a row's own push state says sent or not. UNMEASURED — his setup,
+  // 2026-11-01. SHADOW again since 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"; LUK_PUSH_MODE "shadow" — recorded, never sent; the pref
+  // and keep-set are unchanged). The label carries no mode word: a row's own push state says sent or not. UNMEASURED — his setup,
   // not a buy signal.
   luk_setup:            { emoji: '🥇', label: "Luk's A+",                group: 'trading' },
   // 📅 Long Term (2026-11-12, long_term_list/zone_watch.py + long_term_list/push.py) — LIVE since 2026-11-12 by his

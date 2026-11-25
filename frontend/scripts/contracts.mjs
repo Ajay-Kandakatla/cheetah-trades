@@ -14411,13 +14411,21 @@ const CONTRACTS = [
       if (TAB != null && TAB !== 'luk') errs.push(`LUK_TAB is "${TAB}" — the Chart Maps key is "luk"`);
       // FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): was "shadow" (HIS CALL #19) — now "live", tagged his.
       const LIVE_WORDS = 'Lets make it live. also alerts too.';
-      if (MODE != null && MODE !== 'live') errs.push(`LUK_PUSH_MODE is "${MODE}" — his 2026-11-01 word "${LIVE_WORDS}" is "live"`);
+      // RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"):
+      // the shipped state is "shadow" with a comment STARTING his 11-25 words (the 11-01 words still on it); "live" with a
+      // comment STARTING `Ajay 2026-11-01: "` + his 11-01 words also passes (the switch is his). Any other pair fails.
+      const KILL_WORDS = 'Kill the alerts on 1 min time frame they are not reliable';
+      const MODE_TAG = { live: 'Ajay 2026-11-01: "', shadow: `Ajay 2026-11-25: "${KILL_WORDS}"` };
+      if (MODE != null && !(MODE in MODE_TAG)) errs.push(`LUK_PUSH_MODE is "${MODE}" — his words are "live" (2026-11-01: "${LIVE_WORDS}") or "shadow" (2026-11-25: "${KILL_WORDS}")`);
       const mlc = /^LUK_PUSH_MODE = "[^"]*"\s*#\s*(.*)$/m.exec(lc);
       if (!mlc) errs.push('luk/constants.py lost LUK_PUSH_MODE = "…"  # comment');
       else {
-        if (!mlc[1].startsWith('Ajay 2026-11-01: "')) errs.push('the LUK_PUSH_MODE comment must START `Ajay 2026-11-01: "` (his call, not mine)');
+        // RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): the comment STARTS the dated words of the shipped mode.
+        if (MODE in MODE_TAG && !mlc[1].startsWith(MODE_TAG[MODE])) errs.push(`the LUK_PUSH_MODE "${MODE}" comment must START \`${MODE_TAG[MODE]}\` (his call, not mine)`);
         if (!mlc[1].includes(LIVE_WORDS)) errs.push(`the LUK_PUSH_MODE comment must quote him verbatim: "${LIVE_WORDS}"`);
       }
+      // self-test — the pair check bites: shadow under the 11-01 tag, live under the 11-25 tag, junk
+      if (('Ajay 2026-11-01: "x"').startsWith(MODE_TAG.shadow) || (MODE_TAG.shadow).startsWith(MODE_TAG.live) || ('junk' in MODE_TAG)) errs.push('self-test: MODE_TAG must tell the 11-01 tag from the 11-25 tag');
       if (FROM != null && FROM !== '2026-11-01') errs.push(`LUK_RECORD_FROM is ${FROM} — the record starts at his ask, 2026-11-01`);
       if (KIND != null && KIND !== 'luk_setup') errs.push(`LUK_KIND is "${KIND}" — the /alerts pass-health row is "luk_setup"`);
       const vm = /\nLUK = Variant\(([\s\S]*?)\)\n\n/.exec(lv);
@@ -14704,7 +14712,18 @@ const CONTRACTS = [
       if (disabled.includes('luk_setup')) errs.push('push/subs.DISABLED_ALERT_KINDS carries luk_setup — it is live');
 
       // 2. the constants — his dated word on each.
-      for (const [n, want] of [['LUK_PUSH_MODE', 'live'], ['LUK_LIVE_SINCE', '2026-11-01'], ['LUK_LIVE_WORDS', HIS]]) {
+      // RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): LUK_PUSH_MODE is "shadow" under his 11-25 words or "live" under his 11-01 words (the switch is his); any
+      // other value / tag fails. LUK_LIVE_SINCE / LUK_LIVE_WORDS stay on file under the 11-01 tag, byte-for-byte.
+      const KILL = 'Kill the alerts on 1 min time frame they are not reliable';
+      const pm = pyConst(lc, 'LUK_PUSH_MODE');
+      if (!pm) errs.push('luk/constants.py lost LUK_PUSH_MODE = "…"  # comment');
+      else {
+        const tag = pm.v === 'live' ? 'Ajay 2026-11-01: "' : pm.v === 'shadow' ? `Ajay 2026-11-25: "${KILL}"` : null;
+        if (tag == null) errs.push(`LUK_PUSH_MODE is "${pm.v}" — must be "shadow" (Ajay 2026-11-25: "${KILL}") or "live" (Ajay 2026-11-01: "${HIS}")`);
+        else if (!pm.c.startsWith(tag)) errs.push(`the LUK_PUSH_MODE "${pm.v}" comment must START \`${tag}\` — his word, not mine`);
+        if (!pm.c.includes(HIS)) errs.push(`the LUK_PUSH_MODE comment must quote him verbatim: "${HIS}"`);
+      }
+      for (const [n, want] of [['LUK_LIVE_SINCE', '2026-11-01'], ['LUK_LIVE_WORDS', HIS]]) {
         const k = pyConst(lc, n);
         if (!k) { errs.push(`luk/constants.py lost ${n} = "…"  # comment`); continue; }
         if (k.v !== want) errs.push(`${n} is "${k.v}" — must be "${want}" (Ajay 2026-11-01: "${HIS}")`);

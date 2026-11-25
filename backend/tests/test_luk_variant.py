@@ -79,9 +79,12 @@ def test_the_gate_primitives_take_it_as_is():
     assert GA.max_entry_age_sec(LUK) == GC.PASS_CADENCE_SEC + GC.BAR_SETTLE_SEC == 330
 
 
-def test_push_mode_is_live_by_his_word():
+def test_push_mode_is_shadow_by_his_word(monkeypatch):
     # FLIPPED 2026-11-01 (Ajay: "Lets make it live. also alerts too."): Luk's own reader says live
-    assert LV.push_mode() == "live" and LC.LUK_PUSH_MODE == "live"
+    # RE-PINNED 2026-11-25 (Ajay: "Kill the alerts on 1 min time frame they are not reliable"): shadow again
+    assert LV.push_mode() == "shadow" and LC.LUK_PUSH_MODE == "shadow"
+    monkeypatch.setattr(LC, "LUK_PUSH_MODE", "live")
+    assert LV.push_mode() == "live"                         # the reader still reads the live value by name
     assert V.push_mode(LUK) == "shadow"                     # GG's reader: GC has no LUK_PUSH_MODE — NOT the reader
     assert not hasattr(GC, "LUK_PUSH_MODE")
 
