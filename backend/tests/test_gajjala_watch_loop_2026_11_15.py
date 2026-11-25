@@ -254,6 +254,7 @@ def test_NEGATIVE_a_raising_push_still_writes_the_tiles_and_the_state(monkeypatc
 
 
 def test_an_iteration_on_real_frames_rings_and_writes_the_tile(monkeypatch):
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])        # 2026-11-24: shipped off — this proves the LIVE path
     def price(ts):
         mm = ts.hour * 60 + ts.minute
         return 14.0 if mm >= 10 * 60 + 5 else 10.0 - 0.002 * (mm - 4 * 60)

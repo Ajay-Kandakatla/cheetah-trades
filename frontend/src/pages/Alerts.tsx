@@ -46,7 +46,7 @@ import { AlertItems, splitAtSymbol, type AlertItem } from '../components/AlertIt
 import { API } from '../lib/apiBase';
 import { useAlertHistory, foldedCount, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
-  GAJJALA_SI_CROSS_LIVE_SINCE, ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay,
+  GAJJALA_CROSS_PUSH_OFF_SINCE, ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay,
   todayEtKey,
 } from '../lib/alertKinds';
 import { RulesInfo } from '../components/RulesInfo';
@@ -228,8 +228,9 @@ export const LUK_PASSES: { key: string; label: string; fallbackCadenceSec: numbe
 
 /* 🩳 The High SI 9/21 EMA cross pass (2026-11-23, high-SI spec §3.9). Ajay 2026-11-23: "And also add alerts for these
  * talks when they are crossing EMA, 9 EMA over 21 EMA." The step rides the 🚩 5-minute pass (backend
- * chart_maps/gajjala/high_si_cross.run_step; cadence 300) and rings his phone since GAJJALA_SI_CROSS_LIVE_SINCE (the ONE
- * typed date, lib/alertKinds). Its OWN strip right after the 🥇 Luk block and before the 🧪 strip — the Luk precedent:
+ * chart_maps/gajjala/high_si_cross.run_step; cadence 300) and rang his phone from GAJJALA_SI_CROSS_LIVE_SINCE (the ONE
+ * typed date, lib/alertKinds); switched off since GAJJALA_CROSS_PUSH_OFF_SINCE (Ajay 24 Nov 2026: "ok remove EMA entry
+ * alerts and divergence alerts." — clean-alerts spec §3.4): the pass still runs and counts, nothing is sent. Its OWN strip right after the 🥇 Luk block and before the 🧪 strip — the Luk precedent:
  * never in PASSES (the header count is HIS CALL #16), never in GG1M_PASSES / LUK_PASSES / GGA_PASSES / TAPE_PASSES.
  * Its counters print with ggSiCrossChipText; the not-listed reasons (floats_disagree among them) stay in the hover. */
 export const GGS_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
@@ -1281,8 +1282,8 @@ export function AlertsPage() {
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
         </div>
-        {/* ── 🩳 the High SI 9/21 EMA cross pass (2026-11-23) — own strip, outside the header count; right after 🥇 Luk, before the 🧪 strip; the date is GAJJALA_SI_CROSS_LIVE_SINCE ── */}
-        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="ggs-passes-head">{`🩳 High SI cross pass · rings your phone since ${GAJJALA_SI_CROSS_LIVE_SINCE} · not counted in the header`}</div>
+        {/* ── 🩳 the High SI 9/21 EMA cross pass (2026-11-23) — own strip, outside the header count; right after 🥇 Luk, before the 🧪 strip; switched off since GAJJALA_CROSS_PUSH_OFF_SINCE (clean-alerts spec §3.4) ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="ggs-passes-head">{`🩳 High SI cross pass · switched off since ${GAJJALA_CROSS_PUSH_OFF_SINCE} — counted, never sent · not counted in the header`}</div>
         <div data-testid="ggs-passes">
           {GGS_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />

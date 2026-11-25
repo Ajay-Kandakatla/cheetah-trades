@@ -16,7 +16,7 @@ import {
   AlertsPage, GAJJALA_SI_CROSS_KEYS, GG1M_PASSES, GGA_PASSES, GGS_PASSES, KIND_CHIPS, LUK_PASSES, PASSES, TAPE_PASSES,
   ggSiCrossChipText, sessionLine,
 } from './Alerts';
-import { ALERT_KINDS, GAJJALA_SI_CROSS_LIVE_SINCE, kindEmoji, kindLabel, kindText } from '../lib/alertKinds';
+import { ALERT_KINDS, GAJJALA_CROSS_PUSH_OFF_SINCE, GAJJALA_SI_CROSS_LIVE_SINCE, kindEmoji, kindLabel, kindText } from '../lib/alertKinds';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 
 const NOW = Date.parse('2026-09-05T15:00:00Z');           // Sat Sep 5, 11:00 ET
@@ -90,7 +90,7 @@ describe('/alerts — the 🩳 High SI cross pass row (2026-11-23)', () => {
     expect(GGS_PASSES[0].label).not.toMatch(/ring|shadow|sent|live/i);
   });
 
-  it('renders inside [data-testid="ggs-passes"] under its own eyebrow, which prints the ONE live date', async () => {
+  it('renders inside [data-testid="ggs-passes"] under its own eyebrow, which prints the ONE switch-off date', async () => {
     stubFetch(status(true));
     draw();
     const block = await screen.findByTestId('ggs-passes');
@@ -99,10 +99,13 @@ describe('/alerts — the 🩳 High SI cross pass row (2026-11-23)', () => {
     expect(row.textContent).toContain('last pass');
     expect(row.textContent).toContain('every 5 min');
     const head = screen.getByTestId('ggs-passes-head');
-    expect(head.textContent).toBe(`🩳 High SI cross pass · rings your phone since ${GAJJALA_SI_CROSS_LIVE_SINCE} · not counted in the header`);
+    /* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): the push is switched off — the eyebrow prints the ONE switch-off
+       date (GAJJALA_CROSS_PUSH_OFF_SINCE) and "counted, never sent"; it no longer says it rings. */
+    expect(head.textContent).toBe(`🩳 High SI cross pass · switched off since ${GAJJALA_CROSS_PUSH_OFF_SINCE} — counted, never sent · not counted in the header`);
     expect(block.previousElementSibling).toBe(head);
-    // NEGATIVE: never the shadow words, never the 1-minute block's phrase
-    expect(head.textContent).not.toMatch(/never sent|shadow/i);
+    // NEGATIVE: never "rings your phone", never the shadow word, never the 1-minute block's phrase
+    expect(head.textContent).not.toContain('rings your phone');
+    expect(head.textContent).not.toMatch(/shadow/i);
     expect(head.textContent).not.toContain('they ring your phone');
     // NEGATIVE: exactly one row for the kind on the page
     expect(screen.getAllByTestId(`pass-${KEY}`)).toHaveLength(1);

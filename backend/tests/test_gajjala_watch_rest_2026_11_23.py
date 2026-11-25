@@ -59,6 +59,9 @@ def _env(monkeypatch):
     monkeypatch.setenv(C.ENV_ENABLED, "1")
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
     monkeypatch.setattr(DT, "new_breaker", _fresh_breaker, raising=False)
+    # 2026-11-24 — Ajay "ok remove EMA entry alerts and divergence alerts…" ships this push OFF; these tests prove the LIVE path,
+    # so it is set "live" explicitly (never a weaker assertion)
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])
     REST._reset()
     yield
     REST._reset()

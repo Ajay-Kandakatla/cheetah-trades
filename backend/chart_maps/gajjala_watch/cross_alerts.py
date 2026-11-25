@@ -222,12 +222,18 @@ def run(frames, now, session, *, coll, send: Optional[Callable] = None, owner: O
 
 
 def rules_line() -> str:
-    """The ℹ️ clause — every number and word from the constants at CALL time."""
+    """The ℹ️ clause — every number and word from the constants at CALL time. Off (Ajay 2026-11-24): the 🔕 sentence
+    carrying GC.CLEAN_ALERTS_WORDS verbatim, no ISO date."""
     words = [C.FRAME_WORDS[tf] for tf, _r in C.FRAMES]
     charts = ", ".join(w.replace("-min", "-") for w in words[:-1]) + " and " + words[-1]
     push = [C.FRAME_WORDS[tf] for tf, _r in C.FRAMES if tf in C.PUSH_FRAMES and tf in AL.FRAME_MINUTES]
     drawn = [C.FRAME_WORDS[tf] for tf, _r in C.FRAMES if C.FRAME_WORDS[tf] not in push]
     push_words = " / ".join(push) or "no"
+    if mode() == C.PUSH_MODES[0]:                       # Ajay 2026-11-24 — the ONE place his full words are served
+        return (f"👀 Gajjala's Watch marks every {GC.EMA_FAST} / {GC.EMA_SLOW} EMA cross on your tickers' {charts} "
+                f"charts (closed bars). No cross rings your phone — yours or auto-added — the {push_words} cross push "
+                f"is off since your call of {GC.CLEAN_ALERTS_CALL}: “{GC.CLEAN_ALERTS_WORDS}” UNMEASURED — "
+                f"information, not an entry.")
     after_open = (datetime.combine(date(2000, 1, 3), ET_RTH_OPEN)
                   + timedelta(minutes=GC.NO_TRADE_AFTER_OPEN_MIN)).strftime("%H:%M")
     once = ("once per ticker, frame and session" if C.LATCH != C.LATCHES[1] else "on every up cross")

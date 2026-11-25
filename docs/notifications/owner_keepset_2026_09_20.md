@@ -1,5 +1,18 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-24 (late) — 🩳 gajjala_si_cross stays in the set; its push is switched off at the source
+
+> "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied.."
+
+Ajay, 24 Nov 2026 ~22:15 ET (clean-alerts spec, `docs/notifications/clean_alerts_2026_11_24.md`). `OWNER_KEEP_SET`
+is UNCHANGED — still TEN, `gajjala_si_cross` included — because the backend mode `HIGH_SI_CROSS_PUSH_MODE = "off"`
+already stops every 🩳 cross send (the 2026-11-18 1-minute precedent below). On /notifications the 🩳 row stays
+toggleable and leads "SWITCHED OFF {GAJJALA_CROSS_PUSH_OFF_SINCE}" while still stating the "ON FOR YOUR PHONE — LIVE
+SINCE {GAJJALA_SI_CROSS_LIVE_SINCE}" fact; the Essentials preset still turns the ten on and its 🩳 clause now says the
+crosses "rang from … and are switched off since …". The 👀 Watch / ➖ Fade crosses rode `gajjala_potential`, so no
+pref can separate them from 🧠 — they are muted by mode too, and the 🧠 row says so in one sentence. Removing
+`gajjala_si_cross` from the set = HIS CALL #3. UNMEASURED.
+
 ## 2026-11-24 — 💧 gajjala_vol_dried joins: TEN since 2026-11-24
 
 > "Can you send me notification of volume dried please.."

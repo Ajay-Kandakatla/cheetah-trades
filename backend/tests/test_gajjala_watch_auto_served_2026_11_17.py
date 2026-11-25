@@ -392,7 +392,10 @@ def test_NEGATIVE_full_is_his_cap_only_auto_names_never_fill_it(n_manual, full):
     assert out["symbols"] == manual and out["max_symbols"] == C.MAX_SYMBOLS
 
 
-def test_held_text_for_the_auto_reason_has_words():
+def test_held_text_for_the_auto_reason_has_words(monkeypatch):
+    # RE-PINNED 2026-11-24 (clean alerts): with the watch push "off" an auto name's chip reads the "off" words
+    # (payload.held_text); the "auto" words are pinned with the push "live".
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])
     assert C.AUTO_HELD_REASON in PL.HELD_TEXT
     t = PL.held_text(C.AUTO_HELD_REASON)
     assert isinstance(t, str) and t.startswith("🔕") and "auto" in t

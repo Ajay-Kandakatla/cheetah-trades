@@ -127,7 +127,8 @@ describe('💧 Volume dried on the Notifications surfaces', () => {
     expect(on).toEqual([...TEN].sort());
     expect(ess.pref[KEY as keyof typeof ess.pref]).toBe(true);
     expect(ess.detail).toContain(`plus 💧 Volume dried since ${GAJJALA_VOL_DRIED_LIVE_SINCE} (your call: "${HIS_ASK}")`);
-    expect(ess.detail).toContain('plus 🩳 High SI EMA crosses since');
+    /* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): the 🩳 clause now says it rang, then switched off. */
+    expect(ess.detail).toContain('🩳 High SI EMA crosses rang from');
     expect(ess.detail.indexOf('🩳 High SI')).toBeLessThan(ess.detail.indexOf('💧 Volume dried'));
     expect(ess.detail.endsWith('Everything else muted.')).toBe(true);
     expect(/bounc/i.test(ess.detail)).toBe(false);

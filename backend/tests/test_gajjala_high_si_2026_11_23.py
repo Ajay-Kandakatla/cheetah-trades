@@ -496,7 +496,9 @@ def test_the_mode_is_one_of_its_modes():
 def test_mode_off_reads_the_off_words(monkeypatch):
     monkeypatch.setattr(GC, "HIGH_SI_CROSS_PUSH_MODE", GC.HIGH_SI_CROSS_PUSH_MODES[0])
     assert HS.push_mode() == GC.HIGH_SI_CROSS_PUSH_MODES[0]
-    assert HS.push_text() == HS.PUSH_OFF_TEXT.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW)
+    # RE-PINNED 2026-11-24 — the 🔕 sentence carries his call (GC.CLEAN_ALERTS_CALL / _SHORT, no ISO date)
+    assert HS.push_text() == HS.PUSH_OFF_TEXT.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW, call=GC.CLEAN_ALERTS_CALL,
+                                                     short=GC.CLEAN_ALERTS_SHORT)
     assert "ring" not in HS.title()
     assert HS.cross_row({"tf": "5m", "bars": [], "curves": []}, "5m")["need"] == ""
 

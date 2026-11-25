@@ -199,8 +199,17 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
        RETIRED (Ajay: "This is good info stop 1 min tab it was a good experiment") — their detail leads RETIRED and
        still carries the keep-set fact "ON FOR YOUR PHONE — LIVE SINCE 2026-10-29". Every other keep-set kind leads ON. */
     /* WIDENED 2026-11-24 (voldry spec §3.9): nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") */
-    for (const k of ['gajjala_setup', 'gajjala_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'gajjala_vol_dried']) {
+    /* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): 🩳 gajjala_si_cross stays IN the keep-set (ON) but its push is
+       SWITCHED OFF at the source (Ajay: "ok remove EMA entry alerts and divergence alerts. …") — its detail leads
+       SWITCHED OFF and still carries the keep-set fact "ON FOR YOUR PHONE — LIVE SINCE". Every other keep-set kind leads ON. */
+    for (const k of ['gajjala_setup', 'gajjala_potential', 'luk_setup', 'long_term', 'gajjala_vol_dried']) {
       expect(CATEGORIES.find((c) => c.key === k)!.detail.startsWith('ON FOR YOUR PHONE'), k).toBe(true);
+    }
+    for (const k of ['gajjala_si_cross']) {
+      const d = CATEGORIES.find((c) => c.key === k)!.detail;
+      expect(d.startsWith('SWITCHED OFF'), k).toBe(true);
+      expect(d.includes('ON FOR YOUR PHONE — LIVE SINCE'), k).toBe(true);
+      expect(KEEP_SET.includes(k), k).toBe(true);   // NEGATIVE guard: switched-off words never mean "out of the keep-set"
     }
     for (const k of ['gajjala_1m_setup', 'gajjala_1m_potential']) {
       const d = CATEGORIES.find((c) => c.key === k)!.detail;

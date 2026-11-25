@@ -593,5 +593,6 @@ def test_source_guards_no_write_path_no_auto_lazy_replays():
 def test_NEGATIVE_caps_and_switches_unchanged():
     assert C.MAX_SYMBOLS == GC.GG_WATCH_N and C.AUTO_MAX_SYMBOLS == GC.GG_WATCH_N
     assert C.AUTO_MIN_VOLUME == GC.K11_MIN_SESSION_VOLUME
-    assert C.AUTO_PUSH_MODE == "off" and C.PUSH_MODE == "live"
+    # RE-PINNED 2026-11-24 — Ajay "ok remove EMA entry alerts and divergence alerts…": the 👀 cross push ships off
+    assert C.AUTO_PUSH_MODE == "off" and C.PUSH_MODE == C.PUSH_MODES[0]
     assert C.AUTO_APLUS_STAYS is True and C.AUTO_APLUS_EVICTS is True

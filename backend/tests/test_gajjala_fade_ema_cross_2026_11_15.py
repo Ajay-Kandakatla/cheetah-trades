@@ -46,9 +46,19 @@ def stamp(hh, mm, d=S):
     return f"{d.isoformat()} {hh:02d}:{mm:02d}"
 
 
+SHIPPED_FADE_CROSS_PUSH_MODE = GC.FADE_CROSS_PUSH_MODE         # captured at import, before _live_fade_cross patches it
+
+
 @pytest.fixture(autouse=True)
 def _no_override(monkeypatch):
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _live_fade_cross(monkeypatch):
+    # 2026-11-24 — Ajay "ok remove EMA entry alerts and divergence alerts…" ships this push OFF; these tests prove the LIVE path,
+    # so it is set "live" explicitly (never a weaker assertion)
+    monkeypatch.setattr(GC, "FADE_CROSS_PUSH_MODE", GC.FADE_CROSS_PUSH_MODES[1])
 
 
 class Spy:
@@ -461,7 +471,8 @@ def test_NEGATIVE_the_a_plus_gate_is_untouched_by_a_cross():
 
 def test_the_constants_ride_the_existing_kind_and_add_no_number():
     assert GC.FADE_CROSS_PUSH_KIND == GC.POTENTIAL_PUSH_KIND == GC.GAJJALA_BREAK_PUSH_KIND
-    assert GC.FADE_CROSS_SETUPS == (HF,) and GC.FADE_CROSS_PUSH_MODE == "live"
+    # RE-PINNED 2026-11-24 — Ajay "ok remove EMA entry alerts and divergence alerts…": the shipped default is "off"
+    assert GC.FADE_CROSS_SETUPS == (HF,) and SHIPPED_FADE_CROSS_PUSH_MODE == GC.FADE_CROSS_PUSH_MODES[0]
     assert GC.FADE_CROSS_PUSH_MODES == ("off", "live")
     from push import subs
     assert GC.FADE_CROSS_PUSH_KIND in subs.OWNER_KEEP_SET                 # no new keep-set kind: it is already there

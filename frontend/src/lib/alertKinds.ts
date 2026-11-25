@@ -211,6 +211,14 @@ export const GAJJALA_SI_CROSS_LIVE_SINCE = '2026-11-24';
  *  the 🩳 date-once pin (Alerts.si_cross.test) counts the ISO literal of GAJJALA_SI_CROSS_LIVE_SINCE in this file. */
 export const GAJJALA_VOL_DRIED_LIVE_SINCE = '2026-11-25';
 
+/** 🔕 The first session the three 🔀 9 / 21 EMA cross pushes are silent (👀 Gajjala's Watch 1-min, ➖ Horizontal Fade,
+ *  🩳 High SI — clean-alerts spec §3.4); his call was 24 Nov 2026: "ok remove EMA entry alerts and divergence alerts.".
+ *  The ONE typed switch-off date in the frontend: the /notifications 🩳 and 🧠 rows, the Essentials preset and the
+ *  /alerts 🩳 eyebrow interpolate it. It shares its value with GAJJALA_VOL_DRIED_LIVE_SINCE by coincidence of the day;
+ *  the comments write the call day as "24 Nov 2026" (the 🩳 date-once pin counts GAJJALA_SI_CROSS_LIVE_SINCE's ISO
+ *  literal in this file). */
+export const GAJJALA_CROSS_PUSH_OFF_SINCE = '2026-11-25';
+
 /** The three S/D zone kinds that page the phone through alert_gates.py
  *  (room ≥ 5% to the first band overhead, print ≤ 1% above the demand band).
  *  The /alerts page opens on exactly these, and the boards' 🔔 chip reads

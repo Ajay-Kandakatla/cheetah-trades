@@ -51,7 +51,8 @@ ASK_TEXT = ("Ajay 2026-11-23: “Can you create a tab similarly like Divergent w
             "most of it should be available for you.” · “New tab like divergence*” [voice typing: “high charging "
             "tested” = high short interest, “Gazilla” = Gajjala, “talks” = stocks]")
 RULE_LABEL = "ⓘ what gets listed"
-PUSH_OFF_TEXT = "🔕 No phone alert rings from this list — the {fast} / {slow} EMA cross push is switched off."
+PUSH_OFF_TEXT = ("🔕 No phone alert rings from this list — the {fast} / {slow} EMA cross push is switched off. "
+                 "Off since your call of {call} (“{short}”).")   # Ajay 2026-11-24 — GC.CLEAN_ALERTS_CALL / _SHORT
 ORDER_NOTE = ("🩳 a name whose 🔒 Reg SHO close-out date is still counting or was reached on the latest list first, the "
               "nearest date first (his word 2026-11-24) · "
               "then today's volume, then the lowest float (his word for every Gajjala card) · a name with no stored "
@@ -449,7 +450,8 @@ def _latch_words() -> str:
 def push_text() -> str:
     """The panel's push line: the 🔕 sentence while push_mode() is off, else the 🔔 sentence (candle-START mute)."""
     if not _live():
-        return PUSH_OFF_TEXT.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW)
+        return PUSH_OFF_TEXT.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW, call=GC.CLEAN_ALERTS_CALL,
+                                    short=GC.CLEAN_ALERTS_SHORT)
     from chart_maps.gajjala import alerts as AL
     from chart_maps.gajjala import potential as PT
     cw = PT._clock_words()

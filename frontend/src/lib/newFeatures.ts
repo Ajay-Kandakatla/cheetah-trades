@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-11-24 ~22:15 ET, verbatim: "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when
+  // we find new potentials with all the rules getting satisfied.." · "and then A+ entries.." · ~22:20 ET "Honestly The
+  // potenail alerts are not bad..". Spec cleanalerts (scratchpad cleanalerts/spec.md §3, §4 main-session). BE three mode
+  // constants flipped "live" → "off": chart_maps/gajjala/constants.FADE_CROSS_PUSH_MODE + HIGH_SI_CROSS_PUSH_MODE,
+  // chart_maps/gajjala_watch/constants.PUSH_MODE (HIS CALL #1 — BENF / ONFO rang the 👀 cross first). 🎯 A+, 🧠 potential.py
+  // and 💧 vol_dried untouched. FE lib/alertKinds.GAJJALA_CROSS_PUSH_OFF_SINCE + the /notifications and /alerts copy.
+  // Pinned by scripts/contracts.mjs ("🔕 Clean Gajjala alerts (2026-11-24)"). Docs docs/gajjala/clean_alerts_2026_11_24.md,
+  // docs/notifications/clean_alerts_2026_11_24.md.
+  {
+    id: 'gajjala-clean-alerts-2026-11-24',
+    label: "🔕 Cleaner phone — you said: “ok remove EMA entry alerts and divergence alerts…” · “and then A+ entries..” · “Honestly The potenail alerts are not bad..”. 🚩 Gajjala only. Still ringing: 🎯 A+, 🧠 potentials and 💧 volume dried. Gone quiet: the 9 / 21 EMA cross pushes (👀 Watch 1-min, ➖ Horizontal Fade, 🩳 High SI); divergence never rang. 🥇 Luk A+ is untouched and still rings — it is an hourly 9 / 21 EMA entry too; muting it is your call. Every cross is still drawn, every board lists the same names and 🏁 grades the same 🎯 / 🧠 rows. UNMEASURED. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/notifications',
+  },
   // Ajay 2026-11-24 ~22:00 ET, verbatim: "I need a common place to see all the potnetials from all tabs" · "I mean all
   // Gajjala's tabs". Spec potall (scratchpad potall/spec.md §3, §4 main-session). BE chart_maps/gajjala/pot_all.py (block,
   // served as all_potentials on the GG5 🧠 sub only; stages.steps is the ONE ✅ broke clock); FE GgPotAll.tsx under the 🧠

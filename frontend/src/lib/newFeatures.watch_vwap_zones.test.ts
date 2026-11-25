@@ -1,3 +1,4 @@
+// WIDENED 2026-11-24 (🔕 gajjala-clean-alerts-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🧠 gajjala-potentials-all-tabs-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🧹 gajjala-landing-declutter-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🩳 gajjala-si-float-dilution-split-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -29,8 +30,8 @@ const AGAIN = 'Add vwap and supply demand too';
 describe('✨ the 👀 Watch 1 / 5 / 15 · 📈 VWAP · 📐 daily zones entry (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated, routed to the 👀 Watch; the 🏆 past-winner jump entry follows', () => {
-    expect(NEW_FEATURES[18].id).toBe(ID);
-    expect(NEW_FEATURES[19].id).toBe('chart-maps-replays-past-winner-jump-2026-11-22');
+    expect(NEW_FEATURES[19].id).toBe(ID);
+    expect(NEW_FEATURES[20].id).toBe('chart-maps-replays-past-winner-jump-2026-11-22');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(new Set(NEW_FEATURES.map((x) => x.id)).size).toBe(NEW_FEATURES.length);
     expect(f.addedAt).toBe('2026-11-23');

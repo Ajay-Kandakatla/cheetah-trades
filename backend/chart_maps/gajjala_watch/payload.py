@@ -261,6 +261,10 @@ def honesty() -> str:
 
 
 def held_text(reason) -> Optional[str]:
+    # Ajay 2026-11-24 "ok remove EMA entry alerts…": with the watch push off "(your names do)" is false — an
+    # auto-added name's chip reads the "off" words (display only; auto.py / loop.py still hold it as suppressed_auto).
+    if reason == C.AUTO_HELD_REASON and push_mode() == C.PUSH_MODES[0]:
+        return held_text(C.PUSH_MODES[0])
     t = HELD_TEXT.get(reason) if isinstance(reason, str) else None
     return t.format(first=GC.NO_TRADE_AFTER_OPEN_MIN, floor=int(GC.K11_MIN_SESSION_VOLUME)) if t else None
 

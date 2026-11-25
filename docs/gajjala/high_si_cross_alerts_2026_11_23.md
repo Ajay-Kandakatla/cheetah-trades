@@ -162,3 +162,10 @@ Cron before the prefs step would settle the first crosses `no_target` (that cros
   alert_status, owner_prefs_apply).
 - Mutation checks run (bytecode purged): dropping the K11 check, dropping `bar_t` from the claim id, swapping
   `watch_crosses` for `frame_crosses`, and swapping the candle-start mute for the wall-clock "muted" each turn a test red.
+
+## OFF 2026-11-24
+Ajay, verbatim: "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials
+with all the rules getting satisfied..". `GC.HIGH_SI_CROSS_PUSH_MODE` is now `"off"`: every 5- / 15-min cross is still
+drawn on the 🩳 cards, no `GGS:` claim is written, nothing rings. `gajjala_si_cross` stays in the keep-set (HIS CALL #3).
+The 🩳 push line reads the switched-off sentence plus "Off since your call of 24 Nov (“ok remove EMA entry alerts and
+divergence alerts”)". `"live"` again = his word. See `docs/gajjala/clean_alerts_2026_11_24.md`.

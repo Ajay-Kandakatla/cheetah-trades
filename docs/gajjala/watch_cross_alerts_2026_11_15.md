@@ -163,3 +163,10 @@ the same-minute bursts. It outputs medians and p90. These are frequencies only, 
   iterations; NEGATIVES: a wake 31 s late inside the slot, or in the next slot, ends the loop; never a 6th iteration.
 - **Off now stops the `--build` child.** With `GAJJALA_WATCH_ENABLED=0` an add no longer requests a build child, and
   `--build` / `build_pending` return `reason: "off"` without a minute fetch.
+
+## OFF 2026-11-24
+Ajay, verbatim: "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials
+with all the rules getting satisfied..". `gajjala_watch/constants.py` `PUSH_MODE` is now `"off"`: every 1-min cross is
+still drawn and held `off` on its tile, no `GGW:` claim is written, nothing rings. The ℹ️ clause serves the 🔕 sentence
+with his full words; an auto-added name's chip reads the "off" words. `"live"` again = his word (HIS CALL #1 — BENF /
+ONFO rang 🔀 first that day). See `docs/gajjala/clean_alerts_2026_11_24.md`.

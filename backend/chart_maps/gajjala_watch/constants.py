@@ -41,7 +41,7 @@ ZONE_BAND_KIND = {"demand": "board_demand", "supply": "board_supply"}   # the SE
 LEVELS_STATES = ("ok", "none", "retry", "pending")
 LEVELS_MODULE = "chart_maps.gajjala_watch.levels"   # imported LAZILY by payload.py and loop.py (loop.py does not import payload)
 PUSH_MODES = GC.FADE_CROSS_PUSH_MODES                  # ("off", "live")
-PUSH_MODE = "live"                                     # his words "I need alerts on these"
+PUSH_MODE = "off"                                      # Ajay 2026-11-24 "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied.." — the 👀 1-min cross never rings (drawn, held "off"); "live" 2026-11-15…24 (his words "I need alerts on these"); "live" again = his word (HIS CALL #1: BENF / ONFO rang 🔀 first)
 PUSH_KIND = GC.FADE_CROSS_PUSH_KIND                    # HIS CALL #7 — the 🧠 kind (gajjala_potential); no new OWNER_KEEP_SET kind
 LATCHES = ("session", "cross")
 LATCH = "session"                                      # MINE — HIS CALL #3: once per ticker / frame / session

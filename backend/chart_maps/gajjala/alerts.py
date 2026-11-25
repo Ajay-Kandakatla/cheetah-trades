@@ -744,7 +744,12 @@ def run_fade_cross(reads: dict, frames: dict, now: datetime, session, *, store, 
 
 
 def fade_cross_rules_line() -> str:
-    """The ℹ️ panel clause — every number from the constants at CALL time."""
+    """The ℹ️ panel clause — every number from the constants at CALL time. Off (Ajay 2026-11-24 "ok remove EMA entry
+    alerts and divergence alerts…"): the 🔕 sentence with his first sentence (GC.CLEAN_ALERTS_SHORT), no ISO date."""
+    if fade_cross_mode() == GC.FADE_CROSS_PUSH_MODES[0]:
+        return (f"🔀 ➖ Fade cards mark every {GC.EMA_FAST} EMA cross over / under the {GC.EMA_SLOW} EMA of the session "
+                f"on closed bars. No cross rings your phone — off since your call of {GC.CLEAN_ALERTS_CALL} "
+                f"(“{GC.CLEAN_ALERTS_SHORT}”). UNMEASURED — information, not an entry.")
     return (f"🔀 ➖ Fade cards mark every {GC.EMA_FAST} EMA cross over / under the {GC.EMA_SLOW} EMA of the session on "
             f"closed bars; the first cross ABOVE on the latest closed bar rings once per name per session (the 🧠 "
             f"alert kind), inside the A+ push hours, never the first {GC.NO_TRADE_AFTER_OPEN_MIN} minutes, never on a "

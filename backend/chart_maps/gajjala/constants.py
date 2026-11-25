@@ -169,8 +169,12 @@ GAJJALA_BREAK_PUSH_KIND = POTENTIAL_PUSH_KIND   # HIS CALL #2 — rides the 🧠
 # the card marks every cross of the session (tab.ema_cross_block), the push rings the first 9-over-21 cross on a closed bar
 # once per name per session (alerts.run_fade_cross). Information only — no gate, threshold, detector rule or A+ moves.
 FADE_CROSS_SETUPS = ("horizontal_fade",)     # Ajay 2026-11-15 "can you add an alert in horizonal fade" — the ➖ sub only; other subs = HIS CALL
+CLEAN_ALERTS_CALL = "24 Nov"                 # Ajay 2026-11-24 ~22:15 ET — the day of his words below, served as "your call of 24 Nov"; no gate reads it (the switch date lives only in frontend alertKinds.GAJJALA_CROSS_PUSH_OFF_SINCE)
+CLEAN_ALERTS_WORDS = ("ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new "
+                      "potentials with all the rules getting satisfied..")   # Ajay 2026-11-24, verbatim — served ONCE (the 👀 Watch line)
+CLEAN_ALERTS_SHORT = CLEAN_ALERTS_WORDS[:CLEAN_ALERTS_WORDS.index(".")]      # his first sentence, verbatim, derived — never retyped
 FADE_CROSS_PUSH_MODES = ("off", "live")      # Ajay 2026-11-15 — the two states of the 🔀 cross push ("off" = one word, nothing rings)
-FADE_CROSS_PUSH_MODE = "live"                # Ajay 2026-11-15 "can you add an alert in horizonal fade when that happens?" — rings his phone
+FADE_CROSS_PUSH_MODE = "off"                 # Ajay 2026-11-24 "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied.." — the 🔀 Fade cross never rings (counted, drawn); "live" 2026-11-15…24 ("can you add an alert in horizonal fade when that happens?"); "live" again = his word
 FADE_CROSS_PUSH_KIND = POTENTIAL_PUSH_KIND   # Ajay 2026-11-15 — rides the 🧠 kind (the GAJJALA_BREAK_PUSH_KIND precedent: no new OWNER_KEEP_SET kind)
 FOCUS_N = 5                                  # Ajay 2026-11-11 "Also apply your proposal too." — proposal #9 "Focus 5"; GG U14 "4–5 active (1–2 in poor markets)"
 ENTRY_MARK_NEW_MIN = 30                      # Ajay 2026-11-12 "an Indicator or new tickers with in last 30 mins like blinkers or something would be nice" — how long a ✨ blinker stays on a Gajjala card / sub chip (display only)
@@ -380,7 +384,7 @@ DIVERGING_EMA21_RISE_BARS = 1            # Cheetah default (MINE, not GG — HIS
 HIGH_SI_MAX_FLOAT = K8_MAX_FLOAT             # derived — his answer #1 "float <= K8_MAX_FLOAT"; never a second number
 HIGH_SI_CROSS_PUSH_KIND = "gajjala_si_cross" # his answer #3 — a NEW push kind (the ninth OWNER_KEEP_SET kind, ship shape S2)
 HIGH_SI_CROSS_PUSH_MODES = FADE_CROSS_PUSH_MODES   # derived — ("off", "live")
-HIGH_SI_CROSS_PUSH_MODE = "live"             # his answer #3 (question card 2026-11-23) — confirmed against the transcript by the main session
+HIGH_SI_CROSS_PUSH_MODE = "off"              # Ajay 2026-11-24 "ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied.." — the 🩳 cross never rings (counted, drawn); "live" 2026-11-23…24 (his answer #3); "live" again = his word
 HIGH_SI_CROSS_FRAMES = ("5m", "15m")         # his answer #3 "5 mins and 15 mins" — each frame rings on its own cross
 HIGH_SI_CROSS_LATCHES = ("session", "cross") # = the 👀 Watch's LATCHES (test pins equality)
 HIGH_SI_CROSS_LATCH = "cross"                # his answer #3 "ONE push per name per frame per cross"

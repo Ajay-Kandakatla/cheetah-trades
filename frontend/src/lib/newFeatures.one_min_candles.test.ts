@@ -1,3 +1,4 @@
+// WIDENED 2026-11-24 (🔕 gajjala-clean-alerts-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🧠 gajjala-potentials-all-tabs-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🧹 gajjala-landing-declutter-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
 // WIDENED 2026-11-24 (🩳 gajjala-si-float-dilution-split-2026-11-24 ✨ FIRST): a new ✨ entry sits on top, every NEW_FEATURES[n] pin here moved +1.
@@ -19,8 +20,8 @@ const ID = 'gajjala-1m-candles-bright-2026-11-23';
 describe('✨ 🕯 1-min candles (2026-11-23)', () => {
   const f = NEW_FEATURES.find((x) => x.id === ID)!;
   it('is FIRST, listed once, dated; the 📈 VWAP entry follows', () => {
-    expect(NEW_FEATURES[13].id).toBe(ID);
-    expect(NEW_FEATURES[14].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
+    expect(NEW_FEATURES[14].id).toBe(ID);
+    expect(NEW_FEATURES[15].id).toBe('gajjala-watch-vwap-all-hours-2026-11-23');
     expect(NEW_FEATURES.filter((x) => x.id === ID).length).toBe(1);
     expect(f.addedAt).toBe('2026-11-23');
   });

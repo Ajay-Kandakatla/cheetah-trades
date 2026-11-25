@@ -149,6 +149,8 @@ def test_HARD_KEEP_the_watch_tile_still_serves_1_minute_bars_and_emas_with_the_s
 
 
 def test_HARD_KEEP_the_watch_loop_iteration_runs_with_the_switch_off(monkeypatch):
+    # 2026-11-24: the 👀 cross push ships off — this proves the Watch survives the 1-min retirement, so it rings LIVE here
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])
     _off()
     _no_gg1_pass(monkeypatch)
     db = loop_db(symbols=["OMH"])

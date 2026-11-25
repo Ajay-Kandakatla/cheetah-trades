@@ -106,6 +106,15 @@ DIGEST_BASES = "21f1006f39b28ab5229f2bc6437be69cd67ec4facc65f026450238d39de99ae7
 DIGEST_XA = "df43ccebc5ed28d272dd226edacbd4469efce573890904f081988ff83b923969"
 # cross_alerts.py with its module docstring stripped — ast.dump digest of main's file == this file's (code untouched)
 DIGEST_XA_CODE = "670b982e6a621ee47ce84d7c7909771558c870e3ab52dee98136403bccfe83d9"
+# RE-PINNED 2026-11-24 (Ajay "ok remove EMA entry alerts and divergence alerts…" — rules_line gained its 🔕 off branch):
+# the same strip PLUS rules_line, computed on 5dec3c6b — every other line of the engine is still main's code
+DIGEST_XA_CODE_NO_RULES_LINE = "df969f5edc935752126119cd2cb3f432be8b0e9f8e9520e4fbb0431789e348d5"
+# rules_line itself, split in two so the re-pin above loosens nothing (refix 2026-11-24):
+# (a) its body minus the docstring and minus the ONE 🔕 off `if` — computed on 5dec3c6b's rules_line (docstring
+#     stripped), equal on this branch: the live sentence is still main's code, statement for statement
+DIGEST_XA_RULES_LINE_LIVE_PATH = "7b81021ccbdfcb0c553e6ca6efc0df8569fc2b5e1f2d2e6c693d04d01f1fd904"
+# (b) that one off `if` (mode() == C.PUSH_MODES[0] → the sentence carrying GC.CLEAN_ALERTS_WORDS), pinned as shipped
+DIGEST_XA_RULES_LINE_OFF_BRANCH = "0739cdcaaf0de60264bf852cc03e515958563f8ca86d1d4bdf04550acc089fd0"
 
 ET = ZoneInfo("America/New_York")
 SESSION = S.isoformat()
@@ -174,7 +183,8 @@ def test_golden_5m_run_bases_and_ellipses_are_byte_equal_to_main():
     assert got["5m"]["run_bases"]["text"] and len(got["5m"]["ellipses"]) == 3
 
 
-def test_golden_the_1m_cross_push_is_byte_equal_to_main():
+def test_golden_the_1m_cross_push_is_byte_equal_to_main(monkeypatch):
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])        # 2026-11-24: shipped off — this proves the LIVE path
     got = gold_xa()
     assert dig(got) == DIGEST_XA
     assert got["counts"]["pushed"] == 1 and len(got["sent"]) == 1
@@ -185,8 +195,47 @@ def test_cross_alerts_code_is_main_s_code_only_the_docstring_word_moved():
     tree = ast.parse(src)
     doc = ast.get_docstring(tree)
     assert "5- and 15-minute crosses are drawn only" in doc and "3- and 5-minute" not in doc.replace("was 3- and 5-", "")
-    tree.body = tree.body[1:]
-    assert hashlib.sha256(ast.dump(tree).encode()).hexdigest() == DIGEST_XA_CODE
+    tree.body = [n for n in tree.body[1:] if not (isinstance(n, ast.FunctionDef) and n.name == "rules_line")]
+    assert hashlib.sha256(ast.dump(tree).encode()).hexdigest() == DIGEST_XA_CODE_NO_RULES_LINE
+
+
+def _rules_line_digests(src: str) -> tuple[int, str, str]:
+    """(number of 🔕 off ifs, live-path digest, off-branch digest) of rules_line in `src`."""
+    fn = next(n for n in ast.parse(src).body if isinstance(n, ast.FunctionDef) and n.name == "rules_line")
+    offs = [s for s in fn.body if isinstance(s, ast.If) and "PUSH_MODES" in ast.dump(s.test)]
+    live = [s for s in fn.body[1:] if s not in offs]
+    return (len(offs), hashlib.sha256(ast.dump(ast.Module(body=live, type_ignores=[])).encode()).hexdigest(),
+            hashlib.sha256(ast.dump(offs[0]).encode()).hexdigest() if offs else "")
+
+
+def test_rules_line_is_main_s_live_code_plus_exactly_one_pinned_off_branch():
+    n, live, off = _rules_line_digests((PKG / "cross_alerts.py").read_text(encoding="utf-8"))
+    assert n == 1
+    assert live == DIGEST_XA_RULES_LINE_LIVE_PATH
+    assert off == DIGEST_XA_RULES_LINE_OFF_BRANCH
+
+
+@pytest.mark.parametrize("old,new", [
+    ("never on a closed day", "never on a holiday"),                       # live sentence word
+    ("GC.NO_TRADE_AFTER_OPEN_MIN)).strftime", "GC.NO_TRADE_AFTER_OPEN_MIN + 1)).strftime"),   # live-path number
+    ("No cross rings your phone", "No cross pings your phone"),           # off sentence word
+    ("{GC.CLEAN_ALERTS_WORDS}", "{GC.CLEAN_ALERTS_SHORT}"),               # off sentence quote
+])
+def test_NEGATIVE_any_edit_to_rules_line_trips_a_pin(old, new):
+    src = (PKG / "cross_alerts.py").read_text(encoding="utf-8")
+    assert src.count(old) == 1, old                                       # the mutation lands inside rules_line
+    n, live, off = _rules_line_digests(src.replace(old, new))
+    assert n == 1 and (live, off) != (DIGEST_XA_RULES_LINE_LIVE_PATH, DIGEST_XA_RULES_LINE_OFF_BRANCH)
+
+
+def test_NEGATIVE_a_second_or_missing_off_branch_trips_the_count():
+    src = (PKG / "cross_alerts.py").read_text(encoding="utf-8")
+    anchor = "    if mode() == C.PUSH_MODES[0]:                       # Ajay 2026-11-24 — the ONE place"
+    assert src.count(anchor) == 1                                         # rules_line's off if, not run()'s
+    dup = src.replace(anchor, "    if mode() == C.PUSH_MODES[0] and False:\n        return \"\"\n" + anchor)
+    assert _rules_line_digests(dup)[0] == 2
+    gone = src.replace(anchor, "    if False:  #")
+    assert _rules_line_digests(gone)[0] == 0
 
 
 # ── frames 1 / 5 / 15 ────────────────────────────────────────────────────────────────────────────────────────────
@@ -209,6 +258,10 @@ def test_NEGATIVE_no_3m_anywhere_in_the_served_board_and_the_words_say_1_5_15(no
         assert bad not in txt, bad
     assert "1-, 5- and 15-minute" in out["title"] and "1-, 5- and 15-minute" in out["empty_text"]
     line = XA.rules_line()
+    assert "1-, 5- and 15-min charts" in line                         # the shipped 🔕 off line (2026-11-24) too
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])                   # 2026-11-24: the live line's frame words
+        line = XA.rules_line()
     assert "1-, 5- and 15-min charts" in line and "5- and 15-min crosses are marked only" in line
     json.dumps(out, default=str, allow_nan=False)
 

@@ -292,7 +292,8 @@ def _ring(jump_sec):
     return out, sent, db
 
 
-def test_a_quick_fetch_still_rings():
+def test_a_quick_fetch_still_rings(monkeypatch):
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])        # 2026-11-24: shipped off — this proves the LIVE path
     out, sent, db = _ring(0)
     assert out["alerts"].get("pushed") == 1 and len(sent) == 1
     assert db[C.COLL_TILES].docs["OMH"]["seen_bar_t"] == stamp(S, 10, 6)
@@ -304,6 +305,7 @@ def test_NEGATIVE_a_host_sleep_during_the_fetch_never_sends_the_stale_cross():
     assert db[C.COLL_TILES].docs["OMH"]["status"] == "loaded"   # the charts still land; only the push is held
 
 
-def test_NEGATIVE_a_clock_stepped_back_during_the_fetch_is_not_a_younger_now():
+def test_NEGATIVE_a_clock_stepped_back_during_the_fetch_is_not_a_younger_now(monkeypatch):
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])        # 2026-11-24: shipped off — this proves the LIVE path
     out, sent, _db_ = _ring(-10 * 60)
     assert out["alerts"].get("pushed") == 1 and len(sent) == 1  # clamped at zero elapsed — the planned clock

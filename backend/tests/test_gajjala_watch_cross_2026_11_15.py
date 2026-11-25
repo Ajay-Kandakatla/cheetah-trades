@@ -41,6 +41,13 @@ def _clean(monkeypatch):
     monkeypatch.delenv("CHEETAH_IGNORE_HOLIDAY", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _live_watch_push(monkeypatch):
+    # 2026-11-24 — Ajay "ok remove EMA entry alerts and divergence alerts…" ships this push OFF; these tests prove the LIVE path,
+    # so it is set "live" explicitly (never a weaker assertion)
+    monkeypatch.setattr(C, "PUSH_MODE", C.PUSH_MODES[1])
+
+
 class Spy:
     def __init__(self, result=None, raise_=None):
         self.calls, self.raise_ = [], raise_
@@ -468,7 +475,7 @@ def test_rules_line_follows_the_constants(monkeypatch):
     base = XA.rules_line()
     monkeypatch.setattr(C, "PUSH_MODE", "off")
     off = XA.rules_line()
-    assert off != base and "mode off" in off
+    assert off != base and "No cross rings your phone" in off and "mode off" not in off   # RE-PINNED 2026-11-24 (🔕)
     monkeypatch.setattr(C, "PUSH_MODE", "live")
     monkeypatch.setattr(C, "UPTREND_FILTER", "k5_cross_frame")
     assert "even inside a down-trend" not in XA.rules_line()

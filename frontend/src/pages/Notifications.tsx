@@ -13,12 +13,16 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useAlertSettings } from '../hooks/useAlertSettings';
 import { InstallToHomeScreen, clearInstallDismissal, isIPhone } from '../components/InstallToHomeScreen';
 import { PushHistoryPanel } from '../components/PushHistoryPanel';
-import { GAJJALA_SI_CROSS_LIVE_SINCE, GAJJALA_VOL_DRIED_LIVE_SINCE } from '../lib/alertKinds';
+import { GAJJALA_CROSS_PUSH_OFF_SINCE, GAJJALA_SI_CROSS_LIVE_SINCE, GAJJALA_VOL_DRIED_LIVE_SINCE } from '../lib/alertKinds';
 
 /* 🩳 his words for the High SI EMA cross push, verbatim (2026-11-23) — the row and the Essentials preset both quote it. */
 const SI_CROSS_ASK = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
 /* 💧 his words for the Volume dried push, verbatim (24 Nov 2026) — the row and the Essentials preset both quote it. */
 const VOL_DRIED_ASK = 'Can you send me notification of volume dried please..';
+/* 🔕 his words switching the three 🔀 9 / 21 EMA cross pushes off, verbatim (24 Nov 2026, clean-alerts spec §3.4) — typed
+   ONCE: the 🩳 row quotes it in full; the 🧠 row and the Essentials preset quote only his first sentence (derived). */
+const CLEAN_ALERTS_ASK = 'ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied..';
+const CLEAN_ALERTS_SHORT = CLEAN_ALERTS_ASK.slice(0, CLEAN_ALERTS_ASK.indexOf('.'));
 
 /* ── Category catalogue — keys match backend default_prefs() ─────────── */
 type CategoryDef = {
@@ -151,6 +155,7 @@ export const CATEGORIES: CategoryDef[] = [
       + 'One push per name and session: once a name rang, its other setups that session are held (your call, 2026-11-11); every one listed on /alerts with its ticker linked to the tab. '
       + 'Every 5 minutes, 04:00–20:00 ET on trading days (earlier on NYSE half days), never 09:30–09:45 (his first 15 minutes) — a name first seen in them rings on the next pass if it is still a potential (a Cheetah default, not his); silent on closed days. A name with no print in the 5-minute bar that just closed waits for its next print (a Cheetah default, not his). '
       + '\u26A1 break pushes (an armed plan traded over its trigger on the live bar, before that bar closed) ride this toggle \u2014 recorded on /alerts, not sent, until your word. '
+      + `The 🔀 9 / 21 EMA cross pushes from 👀 Gajjala’s Watch and ➖ Horizontal Fade that rode this toggle are off since ${GAJJALA_CROSS_PUSH_OFF_SINCE} ("${CLEAN_ALERTS_SHORT}"); the crosses stay drawn on the charts. `
       + 'WHAT NEVER FIRES: a read that already broke (A+ — those ring under \u{1F6A9} as an A+ entry since 2026-10-16), a partial (a rule failed), a near-kiss, a "B — imperfect" VCP, a second sighting the same session, a read still building (held until its trigger arms), a second setup of a name that already rang that session. '
       + 'UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs. The study of his A+ setups read no edge (2026-10-14); nobody has measured potentials. Not a recommendation.' },
   /* 🎢 🗺️ orderflow/tape_burst_kinds.py (2026-10-14). Ajay: "I need a tape
@@ -250,12 +255,15 @@ export const CATEGORIES: CategoryDef[] = [
      they are crossing EMA, 9 EMA over 21 EMA." (backend chart_maps/gajjala/high_si_cross.py; constants
      HIGH_SI_CROSS_PUSH_MODE "live"). False in push/subs.default_prefs (everyone else starts off), in OWNER_KEEP_SET
      (on for his devices). The live date is NOT typed here — it is lib/alertKinds.GAJJALA_SI_CROSS_LIVE_SINCE [C12]. No
-     number typed beyond the EMA names and the frame names (no threshold digit). UNMEASURED. */
+     number typed beyond the EMA names and the frame names (no threshold digit). UNMEASURED.
+     SWITCHED OFF (clean-alerts spec §3.4, the RETIRED 1-min precedent above): Ajay 24 Nov 2026 "ok remove EMA entry
+     alerts and divergence alerts. …" — backend HIGH_SI_CROSS_PUSH_MODE "off"; the switch-off date is NOT typed here — it
+     is lib/alertKinds.GAJJALA_CROSS_PUSH_OFF_SINCE. Still in OWNER_KEEP_SET (HIS CALL #3); the row rings nothing. */
   { key: 'gajjala_si_cross', label: 'High SI EMA cross', emoji: '🩳', group: 'trading',
-    detail: `ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_SI_CROSS_LIVE_SINCE}, your call: "${SI_CROSS_ASK}"; everyone else starts off. Mute it here. `
-      + 'WHAT FIRES: a name on 🚩 Gajjala’s 🩳 High SI sub — his list’s names with short interest High or EXTREME and a low float on both float reads — whose 9 EMA crosses above its 21 EMA on a CLOSED 5-minute or 15-minute candle, once per name, chart and cross, listed on /alerts. '
+    detail: `SWITCHED OFF ${GAJJALA_CROSS_PUSH_OFF_SINCE} — your call: "${CLEAN_ALERTS_ASK}". Nothing new rings from the 🩳 cross push (switched off at the source); this switch stays for the history and rings nothing. It was ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_SI_CROSS_LIVE_SINCE}, your call: "${SI_CROSS_ASK}". `
+      + 'WHAT FIRED: a name on 🚩 Gajjala’s 🩳 High SI sub — his list’s names with short interest High or EXTREME and a low float on both float reads — whose 9 EMA crosses above its 21 EMA on a CLOSED 5-minute or 15-minute candle, once per name, chart and cross, listed on /alerts. '
       + 'Never on a closed day, never on a candle that started in his first minutes after the open. '
-      + 'UNMEASURED — information, not an entry. Not a recommendation.' },
+      + 'The crosses stay drawn on the 🩳 cards. UNMEASURED — information, not an entry. Not a recommendation.' },
   /* 💧 Volume dried (24 Nov 2026, voldry spec §3.9). Ajay 24 Nov 2026: "Can you send me notification of volume dried
      please.." (backend chart_maps/gajjala/vol_dried.py; constants VOL_DRIED_PUSH_MODE "live"). False in
      push/subs.default_prefs (everyone else starts off), in OWNER_KEEP_SET (on for his devices; TEN kinds). The live date is
@@ -602,9 +610,12 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." (live date = GAJJALA_SI_CROSS_LIVE_SINCE).
     // 24 Nov 2026 (voldry spec §3.9): + 💧 gajjala_vol_dried — the keep-set is TEN kinds; Ajay 24 Nov 2026: "Can you send
     // me notification of volume dried please.." (live date = GAJJALA_VOL_DRIED_LIVE_SINCE).
+    // 24 Nov 2026 (clean-alerts spec §3.4): the 🩳 cross push is switched off at the source (Ajay: "ok remove EMA entry
+    // alerts and divergence alerts.") — the pref map is unchanged (TEN kinds), only the sentence says it rings nothing
+    // (switch-off date = GAJJALA_CROSS_PUSH_OFF_SINCE).
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
     detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too.") — plus 📅 Long Term since 2026-11-12 (your calls: "add an alert list when stocks reach Pankaj\'s zones" · "Weekly and if something gets dropped let me know")'
-      + ` — plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${SI_CROSS_ASK}")`
+      + ` — 🩳 High SI EMA crosses rang from ${GAJJALA_SI_CROSS_LIVE_SINCE} and are switched off since ${GAJJALA_CROSS_PUSH_OFF_SINCE} ("${CLEAN_ALERTS_SHORT}")`
       + ` — plus 💧 Volume dried since ${GAJJALA_VOL_DRIED_LIVE_SINCE} (your call: "${VOL_DRIED_ASK}"). Everything else muted.`,
     pref: {
       gajjala_setup: true, gajjala_potential: true,

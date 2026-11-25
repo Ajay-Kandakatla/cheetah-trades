@@ -41,17 +41,22 @@ vi.mock('../lib/pushSubscribe', () => ({
 }));
 
 import NotificationsPage, { CATEGORIES, PRESETS } from './Notifications';
-import { GAJJALA_SI_CROSS_LIVE_SINCE } from '../lib/alertKinds';
+import { GAJJALA_CROSS_PUSH_OFF_SINCE, GAJJALA_SI_CROSS_LIVE_SINCE } from '../lib/alertKinds';
 
 const KEY = 'gajjala_si_cross';
 const HIS_ASK = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
+/* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): the push is SWITCHED OFF — his words, verbatim. */
+const CLEAN_ALERTS_ASK = 'ok remove EMA entry alerts and divergence alerts. Keep Gajjals clean entries when we find new potentials with all the rules getting satisfied..';
 /* WIDENED 2026-11-24 (voldry spec §3.9): nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") */
 const TEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term',
   'gajjala_si_cross', 'gajjala_vol_dried', 'position_alert', 'ops_alert'];
 const preset = (id: string) => PRESETS.find((p) => p.id === id)!.pref as Record<string, boolean | undefined>;
 const row = () => CATEGORIES.find((c) => (c.key as string) === KEY)!;
-/* The row's words with the allowed numbers taken out: the date, his quote, the EMA names and the frame names. */
-const stripAllowed = (d: string) => d.split(GAJJALA_SI_CROSS_LIVE_SINCE).join('').split(HIS_ASK).join('')
+/* The row's words with the allowed numbers taken out: the dates, his quotes, the EMA names and the frame names.
+   WIDENED 24 Nov 2026 (clean-alerts spec §3.4): + the switch-off date GAJJALA_CROSS_PUSH_OFF_SINCE and his
+   "ok remove EMA entry alerts …" words. */
+const stripAllowed = (d: string) => d.split(GAJJALA_CROSS_PUSH_OFF_SINCE).join('').split(GAJJALA_SI_CROSS_LIVE_SINCE).join('')
+  .split(CLEAN_ALERTS_ASK).join('').split(HIS_ASK).join('')
   .replace(/\b9 EMA\b/g, '').replace(/\b21 EMA\b/g, '').replace(/\b15-minute\b/g, '').replace(/\b5-minute\b/g, '');
 
 describe('🩳 High SI EMA cross on the Notifications surfaces', () => {
@@ -65,10 +70,15 @@ describe('🩳 High SI EMA cross on the Notifications surfaces', () => {
     expect(CATEGORIES.findIndex((c) => (c.key as string) === KEY)).toBe(CATEGORIES.findIndex((c) => c.key === 'long_term') + 1);
   });
 
-  it('the detail leads ON FOR YOUR PHONE with the ONE live date, quotes him verbatim and says what fires', () => {
+  /* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): the row leads SWITCHED OFF (the RETIRED 1-min precedent) and still
+     carries the live history "ON FOR YOUR PHONE — LIVE SINCE …" with his 2026-11-23 words; "WHAT FIRES" → "WHAT FIRED";
+     "Mute it here." / "everyone else starts off" left with the live lead. */
+  it('the detail leads SWITCHED OFF, keeps the ONE live date with his words and says what fired', () => {
     const d = row().detail;
-    expect(d.startsWith(`ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_SI_CROSS_LIVE_SINCE}, your call: "${HIS_ASK}"`)).toBe(true);
-    for (const phrase of ['everyone else starts off', 'Mute it here.', '🚩 Gajjala’s 🩳 High SI sub',
+    expect(d.startsWith(`SWITCHED OFF ${GAJJALA_CROSS_PUSH_OFF_SINCE} — your call: "${CLEAN_ALERTS_ASK}"`)).toBe(true);
+    expect(d).toContain(`It was ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_SI_CROSS_LIVE_SINCE}, your call: "${HIS_ASK}"`);
+    expect(d.startsWith('ON FOR YOUR PHONE')).toBe(false);
+    for (const phrase of ['rings nothing', 'WHAT FIRED:', '🚩 Gajjala’s 🩳 High SI sub',
       'short interest High or EXTREME', 'a low float on both float reads', '9 EMA crosses above its 21 EMA',
       'CLOSED 5-minute or 15-minute candle', 'once per name, chart and cross', 'listed on /alerts',
       'Never on a closed day', 'a candle that started in his first minutes after the open',
@@ -94,7 +104,9 @@ describe('🩳 High SI EMA cross on the Notifications surfaces', () => {
     const on = Object.entries(ess.pref).filter(([, v]) => v === true).map(([k]) => k).sort();
     expect(on).toEqual([...TEN].sort());
     expect(on).toHaveLength(10);
-    expect(ess.detail).toContain(`plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${HIS_ASK}")`);
+    /* RE-PINNED 24 Nov 2026 (clean-alerts spec §3.4): the 🩳 clause says it rang, then switched off. */
+    expect(ess.detail).toContain(`🩳 High SI EMA crosses rang from ${GAJJALA_SI_CROSS_LIVE_SINCE} and are switched off since ${GAJJALA_CROSS_PUSH_OFF_SINCE} ("ok remove EMA entry alerts and divergence alerts")`);
+    expect(ess.detail).not.toContain('plus 🩳 High SI EMA crosses since');
     for (const keep of ['2026-10-29 keep-set', 'Only give me Gajjalas chart notifications from both tabs,',
       "🥇 Luk's A+ since 2026-11-01", '📅 Long Term since 2026-11-12', 'Everything else muted.']) {
       expect(ess.detail, keep).toContain(keep);
