@@ -171,8 +171,9 @@ describe('sw.js — the A+ push stays on screen on desktop (2026-11-17)', () => 
   });
 
   /* WIDENED 2026-11-23 (high-SI spec §3.9): 🩳 gajjala_si_cross is NOT sticky (sw.js untouched; sticky = A+ only). */
-  it('NEGATIVE: potentials, Luk, long_term, the 🩳 High SI cross and a kind-less ping are not sticky', async () => {
-    for (const k of ['gajjala_potential', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'gajjala_setupX']) {
+  /* WIDENED 2026-11-24 (voldry spec §3.9): 💧 gajjala_vol_dried is NOT sticky (sw.js untouched; sticky = A+ only). */
+  it('NEGATIVE: potentials, Luk, long_term, the 🩳 High SI cross, 💧 Volume dried and a kind-less ping are not sticky', async () => {
+    for (const k of ['gajjala_potential', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'gajjala_vol_dried', 'gajjala_setupX']) {
       expect(await sticky(k)).toBe(false);
     }
     expect(await sticky(undefined)).toBe(false);

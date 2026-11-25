@@ -844,7 +844,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {foldOn && !head.open && brokerBlock && brokerErr ? (
         <div className="cm-note cm-note-err" role="status" data-testid="gg-head-broker-err">{brokerErr}</div>
       ) : null}
-      {/* segment C: the 📲 / 🧠 / ⚡ push lines. */}
+      {/* segment C: the 📲 / 🧠 / ⚡ / 💧 push lines. */}
       <GgFoldBody k={headKey} testid="gg-head-body-c">
       {board?.push?.text ? <div className="cm-note" data-testid="gg-push">{board.push.text}</div> : null}
       {board?.push_potential?.text ? (
@@ -853,6 +853,11 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
       {/* ⚡ 2026-11-11: the served break-push line (break_watch.status().text), verbatim, under the 🧠 push line. */}
       {typeof board?.push_break?.text === 'string' && board.push_break.text.trim() ? (
         <div className="cm-note gg-push-potential gg-push-break" data-testid="gg-push-break">{board.push_break.text}</div>
+      ) : null}
+      {/* 💧 2026-11-24 (voldry spec §3.9): the served Volume-dried count line (vol_dried.count_block().text, via tab.push_vol_dried_block), verbatim, right
+          after ⚡ — inside the ⓘ fold, never on the landing. */}
+      {typeof board?.push_vol_dried?.text === 'string' && board.push_vol_dried.text.trim() ? (
+        <div className="cm-note gg-push-potential gg-push-vol-dried" data-testid="gg-push-vol-dried">{board.push_vol_dried.text}</div>
       ) : null}
       </GgFoldBody>
 

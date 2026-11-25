@@ -23,8 +23,9 @@ from supply_demand import alert_status as AS
 
 KIND = "gajjala_si_cross"
 QUOTE = "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."
-NINE = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                  "luk_setup", "long_term", KIND, "position_alert", "ops_alert"})
+# WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+TEN = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                 "luk_setup", "long_term", KIND, "gajjala_vol_dried", "position_alert", "ops_alert"})
 OWNER = "owner-local-part" + chr(64) + "example.com"
 OTHER = "someone-else" + chr(64) + "example.com"
 ET = timezone(timedelta(hours=-5))
@@ -50,11 +51,13 @@ def test_the_kind_string_is_one_value():
 
 # ── the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────────
 def test_the_keep_set_is_the_nine_exactly():
-    assert subs.OWNER_KEEP_SET == NINE and len(subs.OWNER_KEEP_SET) == 9
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+    assert subs.OWNER_KEEP_SET == TEN and len(subs.OWNER_KEEP_SET) == 10
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
 def test_NEGATIVE_a_tenth_kind_breaks_the_nine_pin(monkeypatch):
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") — an ELEVENTH kind now breaks the TEN pin
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     try:
         test_the_keep_set_is_the_nine_exactly()
@@ -78,7 +81,7 @@ def test_the_dated_comment_with_his_words_sits_inside_the_braces():
     assert "The keep-set is NINE from this day" in flat and "A MARKET kind" in flat and "UNMEASURED" in flat
     assert body.index('"long_term"') < body.index(QUOTE.split(" these")[0]) < body.index(f'"{KIND}"')
     names = set(re.findall(r'"([a-z0-9_]+)"', re.sub(r"#[^\n]*", "", body)))
-    assert names == set(NINE)                                           # stripping `#…` leaves exactly the nine
+    assert names == set(TEN)                                            # stripping `#…` leaves exactly the TEN (WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please.."))
 
 
 def test_the_head_keeps_seven_and_eight_and_gains_nine():

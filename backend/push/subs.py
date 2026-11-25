@@ -328,7 +328,9 @@ def _backfill(db):
 # 2026-11-12 — 📅 long_term, Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …"
 # and "Weekly and if something gets dropped let me know …"; NINE since
 # 2026-11-23 — 🩳 gajjala_si_cross, Ajay 2026-11-23: "And also add alerts for
-# these talks when they are crossing EMA, 9 EMA over 21 EMA.") (owner_prefs() /
+# these talks when they are crossing EMA, 9 EMA over 21 EMA."; TEN since
+# 2026-11-24 — 💧 gajjala_vol_dried, Ajay 2026-11-24: "Can you send me
+# notification of volume dried please..") (owner_prefs() /
 # prefs_for() derive from this set; everyone else keeps default_prefs(),
 # unchanged); his already-registered devices are flipped by
 # scripts/owner_prefs_apply.py (a data write):
@@ -389,6 +391,11 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # — "talks" = stocks; his answer: the 5-min and the 15-min chart). The 🩳 High SI sub's names only, a 9 EMA cross
     # OVER the 21 EMA on a closed bar. The keep-set is NINE from this day. A MARKET kind. UNMEASURED.
     "gajjala_si_cross",
+    # 💧 gajjala_vol_dried (chart_maps/gajjala/vol_dried.py, 2026-11-24) — LIVE from day one by his call (Ajay
+    # 2026-11-24: "Can you send me notification of volume dried please.."). A 🚩 GG5 card the first pass it turns
+    # "trigger armed" (every rule met but the break) with its own K3 volume-dried row met; once per session, symbol
+    # and setup. The keep-set is TEN from this day. A MARKET kind. UNMEASURED.
+    "gajjala_vol_dried",
     # 🔴 position_alert — stop / supply reached on stocks he actually owns
     # (kept 2026-09-09 and again 2026-10-29).
     "position_alert",
@@ -637,6 +644,12 @@ def default_prefs() -> dict:
         # they are crossing EMA, 9 EMA over 21 EMA."). It must still be here: a kind missing from default_prefs
         # targets ZERO devices and renders no toggle. A MARKET kind. UNMEASURED. AMENDMENTS10 F1.
         "gajjala_si_cross": False,
+        # 💧 gajjala_vol_dried (chart_maps/gajjala/vol_dried.py, 2026-11-24): "Armed, volume dried" — a 🚩 GG5 card the
+        # first pass it turns "trigger armed" with its own K3 volume-dried row met; once per session, symbol and setup.
+        # False for everyone else; ON for HIS devices through OWNER_KEEP_SET + scripts/owner_prefs_apply.py (Ajay
+        # 2026-11-24: "Can you send me notification of volume dried please.."). It must still be here: a kind missing
+        # from default_prefs targets ZERO devices and renders no toggle. A MARKET kind. UNMEASURED.
+        "gajjala_vol_dried": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

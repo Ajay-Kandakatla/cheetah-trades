@@ -13,10 +13,12 @@ import { useCurrentUser } from '../hooks/useUser';
 import { useAlertSettings } from '../hooks/useAlertSettings';
 import { InstallToHomeScreen, clearInstallDismissal, isIPhone } from '../components/InstallToHomeScreen';
 import { PushHistoryPanel } from '../components/PushHistoryPanel';
-import { GAJJALA_SI_CROSS_LIVE_SINCE } from '../lib/alertKinds';
+import { GAJJALA_SI_CROSS_LIVE_SINCE, GAJJALA_VOL_DRIED_LIVE_SINCE } from '../lib/alertKinds';
 
 /* 🩳 his words for the High SI EMA cross push, verbatim (2026-11-23) — the row and the Essentials preset both quote it. */
 const SI_CROSS_ASK = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
+/* 💧 his words for the Volume dried push, verbatim (24 Nov 2026) — the row and the Essentials preset both quote it. */
+const VOL_DRIED_ASK = 'Can you send me notification of volume dried please..';
 
 /* ── Category catalogue — keys match backend default_prefs() ─────────── */
 type CategoryDef = {
@@ -254,6 +256,15 @@ export const CATEGORIES: CategoryDef[] = [
       + 'WHAT FIRES: a name on 🚩 Gajjala’s 🩳 High SI sub — his list’s names with short interest High or EXTREME and a low float on both float reads — whose 9 EMA crosses above its 21 EMA on a CLOSED 5-minute or 15-minute candle, once per name, chart and cross, listed on /alerts. '
       + 'Never on a closed day, never on a candle that started in his first minutes after the open. '
       + 'UNMEASURED — information, not an entry. Not a recommendation.' },
+  /* 💧 Volume dried (24 Nov 2026, voldry spec §3.9). Ajay 24 Nov 2026: "Can you send me notification of volume dried
+     please.." (backend chart_maps/gajjala/vol_dried.py; constants VOL_DRIED_PUSH_MODE "live"). False in
+     push/subs.default_prefs (everyone else starts off), in OWNER_KEEP_SET (on for his devices; TEN kinds). The live date is
+     NOT typed here — it is lib/alertKinds.GAJJALA_VOL_DRIED_LIVE_SINCE. No threshold digit typed. UNMEASURED. */
+  { key: 'gajjala_vol_dried', label: 'Volume dried', emoji: '💧', group: 'trading',
+    detail: `ON FOR YOUR PHONE — LIVE SINCE ${GAJJALA_VOL_DRIED_LIVE_SINCE}, your call: "${VOL_DRIED_ASK}"; everyone else starts off. Mute it here. `
+      + 'WHAT FIRES: "Armed, volume dried" — a card on 🚩 Gajjala\'s five setups the first pass it turns "trigger armed" (every rule met but the break) with its own K3 volume-dried row met; once per name, setup and session. '
+      + 'Never on a closed day, never in your first minutes after the open. '
+      + 'UNMEASURED — a description, not an entry. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -589,15 +600,19 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // list when stocks reach Pankaj's zones" / "Weekly and if something gets dropped let me know".
     // 2026-11-23 (high-SI spec §3.9): + 🩳 gajjala_si_cross — the keep-set is NINE kinds; Ajay 2026-11-23: "And also add
     // alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." (live date = GAJJALA_SI_CROSS_LIVE_SINCE).
+    // 24 Nov 2026 (voldry spec §3.9): + 💧 gajjala_vol_dried — the keep-set is TEN kinds; Ajay 24 Nov 2026: "Can you send
+    // me notification of volume dried please.." (live date = GAJJALA_VOL_DRIED_LIVE_SINCE).
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
     detail: 'The 2026-10-29 keep-set — you said: "Only give me Gajjalas chart notifications from both tabs," — 🚩 Gajjala A+ entries and 🧠 Gajjala potentials from 🚩 Gajjala’s and 🚩 Gajjala’s 1-min, plus 💼 stops on stocks you own and 🩺 Docker / host watch — plus 🥇 Luk\'s A+ since 2026-11-01 (your call: "Lets make it live. also alerts too.") — plus 📅 Long Term since 2026-11-12 (your calls: "add an alert list when stocks reach Pankaj\'s zones" · "Weekly and if something gets dropped let me know")'
-      + ` — plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${SI_CROSS_ASK}"). Everything else muted.`,
+      + ` — plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${SI_CROSS_ASK}")`
+      + ` — plus 💧 Volume dried since ${GAJJALA_VOL_DRIED_LIVE_SINCE} (your call: "${VOL_DRIED_ASK}"). Everything else muted.`,
     pref: {
       gajjala_setup: true, gajjala_potential: true,
       gajjala_1m_setup: true, gajjala_1m_potential: true,
       luk_setup: true,
       long_term: true,
       gajjala_si_cross: true,
+      gajjala_vol_dried: true,
       position_alert: true, ops_alert: true,
       hot_pullback_alert: false, pattern_alert: false,
       demand_alert: false,

@@ -31,6 +31,11 @@ row, count or order. The ⚡ feed word is pinned (tests/gg_feed_pin.py) so the g
 Regen 2026-11-12 (🟢 entry marks, docs/gajjala/entry_marks_2026_11_12.md; diff verified key for key against HEAD): 3
 leaves, ALL ADDED — `entry_marks` {"subs": {}} on the three span boards (no pass this session on the fixture store — the 🎯 clock is not live).
 Nothing else moved.
+
+Regen 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notification of volume dried please.."; docs/gajjala/vol_dried_push_2026_11_24.md; diff verified key for
+key against HEAD): 2896 -> 2902 leaves, 6 ADDED, 0 changed, 0 removed — `push_vol_dried` {mode "live", text "💧 Volume
+dried: none in the last 10 sessions · UNMEASURED"} on the three span boards (no GGD record on the fixture store). No
+row, count or order moved.
 """
 from __future__ import annotations
 

@@ -65,6 +65,8 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
         "gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential", "luk_setup",
         # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
         "long_term", "gajjala_si_cross", "position_alert", "ops_alert",
+        # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+        "gajjala_vol_dried",
     })
 
 

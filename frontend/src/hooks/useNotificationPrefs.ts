@@ -101,6 +101,11 @@ export type NotificationPrefs = {
      crossing above its 21 EMA on a CLOSED 5- or 15-minute candle. LIVE since lib/alertKinds.GAJJALA_SI_CROSS_LIVE_SINCE
      by his call; False in default_prefs, in the owner keep-set. UNMEASURED. */
   gajjala_si_cross?: boolean;
+  /* 💧 Volume dried (24 Nov 2026, backend chart_maps/gajjala/vol_dried.py) — Ajay 24 Nov 2026: "Can you send me
+     notification of volume dried please.." "Armed, volume dried": a 🚩 Gajjala card's first pass "trigger armed" with its
+     own K3 volume-dried row met. LIVE since lib/alertKinds.GAJJALA_VOL_DRIED_LIVE_SINCE; False in default_prefs, in the
+     owner keep-set. UNMEASURED. */
+  gajjala_vol_dried?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
      range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
      notification specific for High Beta stocks from the reselinet

@@ -56,6 +56,14 @@ session not yet marked in gajjala_state "divergence_redetect" (newest first; aut
 a moved bar keeps the pass's as `live_alert`), then the grade of what the re-detect inserted or moved from the frames in
 hand. Loader calls capped at DIVERGENCE_GRADE_MAX_LOADS. A failure lands under `gajjala_divergence.error` — never in GG5's
 `errors`, never in the exit code. STEPS unchanged; the crontab line unchanged.
+
+💧 Volume dried record (2026-11-24 — Ajay "Can you track something for me how many times have the stocks bumped right
+after volume dried up.. … Can you send me notification of volume dried please.."): `main` then runs
+`vol_dried.grade_night` AFTER 🧨, in its OWN fence, under `gajjala_vol_dried` — every recorded "GGD:" ring of the
+ledger's lookback whose same session ended is graded by ledger.grade (GG's trade math) + stop first + the best high
+before the first stop touch; an after-close ring also loads its ring evening. Loads capped at
+LEDGER_BACKFILL_MAX_SYMBOL_DAYS. A failure lands under `gajjala_vol_dried.error` — never in GG5's `errors`, never in
+the exit code. STEPS unchanged; the crontab line unchanged.
 """
 from __future__ import annotations
 
@@ -358,6 +366,12 @@ def main(argv=None) -> int:
         out["gajjala_audited"] = grade_audited(datetime.now(timezone.utc))   # 🧪 2026-11-01: after GG5 + GG1, fenced
         from . import divergence as DV
         out["gajjala_divergence"] = DV.grade_divergence(datetime.now(timezone.utc))   # 🧨 2026-11-18: after GGA, fenced — never in errors / the exit code
+        try:                                                     # 💧 2026-11-24: after 🧨, fenced — never in errors / the exit code
+            from . import vol_dried as VD                        # the import inside the fence too: a broken module never moves the exit code
+            out["gajjala_vol_dried"] = VD.grade_night(datetime.now(timezone.utc))
+        except Exception as exc:                                 # noqa: BLE001
+            log.exception("gajjala nightly: the vol-dried grade failed")
+            out["gajjala_vol_dried"] = {"error": f"grade: {type(exc).__name__}"}
     print(json.dumps(out, default=str))
     return 1 if out.get("errors") else 0
 

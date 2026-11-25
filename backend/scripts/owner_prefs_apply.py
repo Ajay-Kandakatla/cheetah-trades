@@ -47,6 +47,13 @@ before cron. The dry-run shows `gajjala_si_cross None→True` or `False→True` 
 each of his devices — both are the expected diff. The code is unchanged: ON /
 OFF are still derived from subs.
 
+2026-11-24 (Ajay: "Can you send me notification of volume dried please.."):
+`gajjala_vol_dried` (the 💧 "Armed, volume dried" push on 🚩 GG5) joined
+OWNER_KEEP_SET (TEN kinds) — re-run after the api deploy, before cron. The
+dry-run shows `gajjala_vol_dried None→True` or `False→True` on each of his
+devices — both are the expected diff. The code is unchanged: ON / OFF are
+still derived from subs.
+
 NOT A GATE AND NOT A RULE. It flips per-device preference flags — which KINDS
 may reach him. What any kind requires to fire is untouched, and every muted
 kind's cron keeps running (the PREF kills an alert, not the cron).

@@ -822,6 +822,14 @@ def push_break_block() -> dict:
     return {"mode": s.get("mode"), "text": s.get("text")}
 
 
+def push_vol_dried_block(store, session) -> dict:
+    """💧 2026-11-24 (Ajay "Can you send me notification of volume dried please..") — the ONE count line of the
+    "Armed, volume dried" push, served as `push_vol_dried` on GG5 boards beside `push_break`: vol_dried.count_block's
+    {mode, text}. LAZY import: build calls it inside _soft, so a raising read serves None and the board still builds."""
+    from chart_maps.gajjala import vol_dried as VD
+    return VD.count_block(store, session)
+
+
 def _brk_track_text(doc: dict) -> Optional[str]:
     """⚡ 2026-11-11 — the 🧠 Track row word of a doc's ⚡ claim (break_watch.track_text: pushed → "⚡ break rang …",
     shadow → "⚡ break seen … (shadow)", else None). LAZY import; the caller fences it (_soft → None)."""
@@ -2737,6 +2745,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
            "broker_flags": broker_block(flags, fault=bfault) if flags is not None else None}
     if gg5:                                     # ⚡ 2026-11-11 entry spec §3.1 — GG5 only; a raising watch → None
         out["push_break"] = _soft("break push line", push_break_block, default=None)
+        # 💧 2026-11-24 (Ajay "Can you send me notification of volume dried please..") — GG5 only; a raising read → None
+        out["push_vol_dried"] = _soft("vol dried push line", push_vol_dried_block, st, session, default=None)
     if not gg5:                                 # 🚩 2026-10-27 — the 1-minute page's ONE added key (never on GG5)
         out["variant"] = V.served_block(v)
     out["scan"] = _soft("scan line", scan_block, pass_doc, lease, now, in_window=in_window, session=session,
@@ -2904,4 +2914,4 @@ __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT"
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
            "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
            "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT", "ema_blink_of", "is_blink_sort", "blink_sorted",
-           "blink_board", "BLINK_SORT_DEFAULT", "vol_float_slot"]
+           "blink_board", "BLINK_SORT_DEFAULT", "vol_float_slot", "push_vol_dried_block"]

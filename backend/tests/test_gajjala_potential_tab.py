@@ -14,6 +14,11 @@ store with no tracker still serves rows, no served string prints "0" / None / Na
 GOLDEN: `GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_potential_tab.py -k golden` writes the FE fixture
 (frontend/src/components/__fixtures__/gajjala_potential_golden_2026_10_15.json); without the env the test proves the
 file IS the served payload, byte for byte.
+
+Regen 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notification of volume dried please.."; docs/gajjala/vol_dried_push_2026_11_24.md; diff verified key for
+key against HEAD): 3832 -> 3836 leaves, 4 ADDED, 0 changed, 0 removed — `push_vol_dried` {mode "live", text "💧 Volume
+dried: none in the last 10 sessions · UNMEASURED"} on the two GG5 boards (no GGD record on the fixture store). Nothing
+else moved.
 """
 from __future__ import annotations
 

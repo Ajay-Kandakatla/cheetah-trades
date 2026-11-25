@@ -497,7 +497,8 @@ def test_the_pass_health_kind_is_registered_and_no_phone_can_receive_it():
     assert k not in subs.default_prefs() and k not in subs.OWNER_KEEP_SET     # NEGATIVE
     # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
     # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
-    assert len(subs.OWNER_KEEP_SET) == 9                         # NEGATIVE: the 🧪 kind adds none (WIDENED 2026-11-01: six → seven — 🥇 luk_setup, Ajay 2026-11-01: "Lets make it live. also alerts too.")
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+    assert len(subs.OWNER_KEEP_SET) == 10                         # NEGATIVE: the 🧪 kind adds none (WIDENED 2026-11-01: six → seven — 🥇 luk_setup, Ajay 2026-11-01: "Lets make it live. also alerts too.")
     assert not [n for n in dir(hooks) if "audited" in n]         # NEGATIVE: no sender
     assert k not in recent.ITEM_URL_BY_KIND                      # NEGATIVE: no push url
     p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=at(10, 42))

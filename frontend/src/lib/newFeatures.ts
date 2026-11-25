@@ -1063,6 +1063,21 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-24, verbatim: "Can you track something for me how many times have the stocks bumped right after volume
+  // dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can you
+  // send me notification of volume dried please.." Spec voldry (scratchpad voldry/spec.md §3, §4 main-session). BE
+  // chart_maps/gajjala/vol_dried.py (the ring + the GGD tracker + the nightly grade) + push kind gajjala_vol_dried (the
+  // TENTH owner keep-set kind, default False for everyone else); FE the /notifications row + the ⓘ-fold count line.
+  // UNMEASURED. Pinned by scripts/contracts.mjs ("💧 Volume-dried push (2026-11-24)"). PLACED HERE, not FIRST, on purpose
+  // (2026-11-24): NEW_FEATURES[0..100] are pinned by index in ~40 vitest files outside the voldry main-session package;
+  // moving it FIRST means bumping those pins in the same commit (the main session's call). Docs
+  // docs/gajjala/vol_dried_push_2026_11_24.md, vol_dried_push_frontend_2026_11_24.md.
+  {
+    id: 'gg-vol-dried-push-2026-11-24',
+    label: "💧 Volume dried push — you said: “Can you track something for me how many times have the stocks bumped right after volume dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can you send me notification of volume dried please..”. ON for your phone: “Armed, volume dried” rings the first pass a card on 🚩 Gajjala's five setups turns “trigger armed” (every rule met but the break) with its own volume-dried row met — once per name, setup and session, never on a closed day, never in your first minutes after the open. Every ring is recorded and graded at night; the count (rang · triggered · hit +1R · stop-first) sits in the ⓘ fold on 🚩 Gajjala's. Mute it on /notifications. UNMEASURED — a description, not an entry. Not advice.",
+    addedAt: '2026-11-24',
+    route: '/notifications',
+  },
   // Ajay 2026-10-29 ~12:30 ET (verbatim in the label, his spelling kept, the line break as " / "): "Only give me Gajjalas
   // chart notifications from both tabs," / "I am missing out the ones in noise." (BUILD_SPEC29). backend
   // push/subs.OWNER_KEEP_SET is exactly six kinds — gajjala_setup, gajjala_potential, gajjala_1m_setup,

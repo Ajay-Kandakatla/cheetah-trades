@@ -113,6 +113,12 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // GAJJALA_SI_CROSS_LIVE_SINCE (below) by his call; off in default_prefs, in the owner keep-set. The label carries no
   // mode word: a row's own push state says sent or not. Not sticky (sw.js STICKY_KINDS is A+ only). UNMEASURED.
   gajjala_si_cross:     { emoji: '🩳', label: 'High SI EMA cross',       group: 'trading' },
+  // 💧 Volume dried (24 Nov 2026, voldry spec §3.9, backend chart_maps/gajjala/vol_dried.py) — Ajay 24 Nov 2026: "Can
+  // you send me notification of volume dried please.." "Armed, volume dried": a card on 🚩 Gajjala's five setups the
+  // first pass it turns "trigger armed" (every rule met but the break) with its own K3 volume-dried row met; once per
+  // name, setup and session. LIVE since GAJJALA_VOL_DRIED_LIVE_SINCE (below); off in default_prefs, in the owner
+  // keep-set (TEN kinds). The label carries no mode word. Not sticky (sw.js STICKY_KINDS is A+ only). UNMEASURED.
+  gajjala_vol_dried:    { emoji: '💧', label: 'Volume dried',            group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },
@@ -198,6 +204,12 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
  *  §3.9 [C12]). The ONE typed live date in the frontend: the /notifications row, the Essentials preset and the
  *  /alerts eyebrow interpolate it. The main session edits this one constant if the deploy day moves. */
 export const GAJJALA_SI_CROSS_LIVE_SINCE = '2026-11-24';
+
+/** 💧 The day the Volume dried push (`gajjala_vol_dried`) starts ringing his phone (24 Nov 2026, voldry spec §3.9). The
+ *  ONE typed live date for this kind in the frontend: the /notifications row and the Essentials preset interpolate it.
+ *  The main session edits this one constant if the deploy day moves. The 💧 comments write the day as "24 Nov 2026":
+ *  the 🩳 date-once pin (Alerts.si_cross.test) counts the ISO literal of GAJJALA_SI_CROSS_LIVE_SINCE in this file. */
+export const GAJJALA_VOL_DRIED_LIVE_SINCE = '2026-11-25';
 
 /** The three S/D zone kinds that page the phone through alert_gates.py
  *  (room ≥ 5% to the first band overhead, print ≤ 1% above the demand band).

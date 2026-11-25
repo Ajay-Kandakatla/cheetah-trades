@@ -1,5 +1,57 @@
 # The owner keep-set — 2026-09-20 (REPLACED 2026-10-29)
 
+## 2026-11-24 — 💧 gajjala_vol_dried joins: TEN since 2026-11-24
+
+> "Can you send me notification of volume dried please.."
+
+Ajay, 2026-11-24. A NEW kind, in his keep-set, LIVE at build (the brief: it ships live because he asked for the
+notification). From this day `OWNER_KEEP_SET` in `backend/push/subs.py` holds TEN kinds: the nine of 2026-11-23
+(below, kept as history) plus one row:
+
+| kind | why it stays |
+| --- | --- |
+| `gajjala_vol_dried` 💧 | "Armed, volume dried": a 🚩 GG5 card the first pass it turns "trigger armed" (every rule met but the break) with its own K3 volume-dried row met, once per session, symbol and setup (`chart_maps/gajjala/vol_dried.py`, a step of the 🚩 5-minute pass). Mode `GC.VOL_DRIED_PUSH_MODE` ("live"; "off" records `dried_shadow` and never sends). UNMEASURED — a description, not an entry |
+
+Registered in the one push stack: `push/subs.py` (dated comment INSIDE the braces, head "TEN since 2026-11-24" added
+with the SEVEN / EIGHT / NINE sentences kept verbatim, `default_prefs()["gajjala_vol_dried"] = False`),
+`push/hooks.py` `notify_gajjala_vol_dried` → `sender.send_to_user` (owner-scoped, keyword-only, never
+`send_to_all`), `market_hours/gate.py` `MARKET_ALERT_KINDS` (silent on weekends / NYSE holidays). NOT in
+`DISABLED_ALERT_KINDS`. The urgency follows on its own: `sender.URGENT_KINDS` is `OWNER_KEEP_SET`.
+`scripts/owner_prefs_apply.py` gains a docstring paragraph only — ON / OFF stay derived from `subs`.
+`push/recent.py` is NOT touched (`ITEM_KINDS` stays 18). No /alerts pass strip (HIS CALL #9). No gate moved.
+
+`prefs_for()` only covers NEW devices. His EXISTING phones get it ON by a data write, run after the `api` deploy
+and BEFORE `cron frontend` (a ring before the prefs step settles `dried_no_target`; it is still recorded and graded,
+and shows as "N recorded · M rang" on the line):
+
+```bash
+./deploy-cheetah-main.sh api
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+./deploy-cheetah-main.sh cron frontend
+```
+
+The dry run shows `gajjala_vol_dried None→True` (a device the api has not touched since the deploy) or `False→True`
+(one `_backfill` already stamped) on each of his devices, and nothing else; the second dry run shows no change.
+
+Proof read — the per-kind owner device counts must be EQUAL (never print the address):
+
+```bash
+docker exec -i -w /app cheetah-market-app-api-1 python - <<'EOF'
+from push import subs as S
+em = S._owner_email()
+print(len(S.list_subscriptions(filter_kind="gajjala_vol_dried", user_email=em)), len(S.list_subscriptions(filter_kind="gajjala_potential", user_email=em)))
+EOF
+```
+
+Pins widened nine → TEN (each marked `WIDENED 2026-11-24`): `test_push_owner_keepset.py`, `test_new_alert_kinds.py`,
+`test_quality_alerts.py`, `test_luk_push_kind_2026_11_01.py`, `test_luk_live_pushes_2026_11_01.py`,
+`test_long_term_push_kind_2026_11_12.py`, `test_gajjala_only_pushes_2026_10_29.py`, `test_growth_earnings_cron.py`,
+`test_gajjala_break_watch_2026_11_11.py`, `test_gajjala_audited_pass.py`, `test_gajjala_audited_k3s_pass_2026_11_09.py`,
+`test_alert_status_luk.py`, `test_price_alert_unpause_2026_09_21.py`, `test_gajjala_si_cross_kind_2026_11_23.py`.
+New: `test_gajjala_vol_dried_kind_2026_11_24.py`. UNMEASURED.
+
 ## 2026-11-23 — 🩳 gajjala_si_cross joins: NINE since 2026-11-23
 
 > "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."

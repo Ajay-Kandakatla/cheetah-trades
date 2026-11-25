@@ -2,7 +2,7 @@
  *
  * Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA."
  * ONE kind (gajjala_si_cross), LIVE since GAJJALA_SI_CROSS_LIVE_SINCE (the ONE typed date, lib/alertKinds), off in
- * default_prefs, in the owner keep-set (NINE kinds). The row quotes him verbatim, says UNMEASURED and types no threshold
+ * default_prefs, in the owner keep-set (NINE kinds; TEN since 2026-11-24 with 💧 gajjala_vol_dried). The row quotes him verbatim, says UNMEASURED and types no threshold
  * digit beyond the EMA names and the frame names. NEGATIVES: All off turns it off; no b-word; no typed date.
  */
 import { render, screen } from '@testing-library/react';
@@ -45,8 +45,9 @@ import { GAJJALA_SI_CROSS_LIVE_SINCE } from '../lib/alertKinds';
 
 const KEY = 'gajjala_si_cross';
 const HIS_ASK = 'And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.';
-const NINE = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term',
-  'gajjala_si_cross', 'position_alert', 'ops_alert'];
+/* WIDENED 2026-11-24 (voldry spec §3.9): nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") */
+const TEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term',
+  'gajjala_si_cross', 'gajjala_vol_dried', 'position_alert', 'ops_alert'];
 const preset = (id: string) => PRESETS.find((p) => p.id === id)!.pref as Record<string, boolean | undefined>;
 const row = () => CATEGORIES.find((c) => (c.key as string) === KEY)!;
 /* The row's words with the allowed numbers taken out: the date, his quote, the EMA names and the frame names. */
@@ -88,11 +89,11 @@ describe('🩳 High SI EMA cross on the Notifications surfaces', () => {
     expect(d).not.toMatch(/shadow|never sent/i);
   });
 
-  it('the Essentials preset turns ON exactly the nine; its detail adds the dated 🩳 sentence and keeps the older ones', () => {
+  it('the Essentials preset turns ON exactly the ten; its detail adds the dated 🩳 sentence and keeps the older ones', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     const on = Object.entries(ess.pref).filter(([, v]) => v === true).map(([k]) => k).sort();
-    expect(on).toEqual([...NINE].sort());
-    expect(on).toHaveLength(9);
+    expect(on).toEqual([...TEN].sort());
+    expect(on).toHaveLength(10);
     expect(ess.detail).toContain(`plus 🩳 High SI EMA crosses since ${GAJJALA_SI_CROSS_LIVE_SINCE} (your call: "${HIS_ASK}")`);
     for (const keep of ['2026-10-29 keep-set', 'Only give me Gajjalas chart notifications from both tabs,',
       "🥇 Luk's A+ since 2026-11-01", '📅 Long Term since 2026-11-12', 'Everything else muted.']) {

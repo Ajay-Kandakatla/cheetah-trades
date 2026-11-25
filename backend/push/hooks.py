@@ -315,6 +315,16 @@ def notify_gajjala_si_cross(*, owner: str, payload: dict) -> dict:
     return sender.send_to_user(owner, payload, kind="gajjala_si_cross")
 
 
+def notify_gajjala_vol_dried(*, owner: str, payload: dict) -> dict:
+    """💧 gajjala_vol_dried — "Armed, volume dried": a 🚩 GG5 card the first pass it turns "trigger armed" (every rule
+    met but the break) with its own K3 volume-dried row met, once per session, symbol and setup
+    (chart_maps/gajjala/vol_dried.py, a step of the 🚩 5-minute pass, 2026-11-24). Ajay 2026-11-24: "Can you send me
+    notification of volume dried please.." Owner-scoped (send_to_user, never send_to_all), so the closed-day drop,
+    quiet hours and the /notifications toggle all apply at the sender. Called only when GC.VOL_DRIED_PUSH_MODE is
+    "live". ON for his devices through OWNER_KEEP_SET. UNMEASURED — a description, not an entry; never a trade."""
+    return sender.send_to_user(owner, payload, kind="gajjala_vol_dried")
+
+
 def notify_overnight_movers(*, owner: str, payload: dict) -> dict:
     """🌙 overnight_movers (overnight/push.py, 2026-10-19). Ajay: "Can you do an
     over night scan for all the stocks they are all growing over night". Owner-

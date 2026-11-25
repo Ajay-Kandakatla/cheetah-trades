@@ -24,6 +24,11 @@ pinned (tests/gg_feed_pin.py) so the golden is the same on every machine.
 Regen 2026-11-12 (🟢 entry marks, docs/gajjala/entry_marks_2026_11_12.md; diff verified key for key against HEAD): 23
 leaves, ALL ADDED — `entry_marks.subs.bull_flag` {green, new} on the three boards and ONE tile `new_mark`. Nothing else
 moved (plan_text, subs, counts, order byte-equal).
+
+Regen 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notification of volume dried please.."; docs/gajjala/vol_dried_push_2026_11_24.md; diff verified key for
+key against HEAD): 2277 -> 2283 leaves, 6 ADDED, 0 changed, 0 removed — `push_vol_dried` {mode "live", text "💧 Volume
+dried: none in the last 10 sessions · UNMEASURED"} on the three boards (the fixture store's alerts coll answers the find
+with no GGD record). Nothing else moved.
 """
 from __future__ import annotations
 

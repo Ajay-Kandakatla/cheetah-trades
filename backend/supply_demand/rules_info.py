@@ -1232,6 +1232,20 @@ def _gg_fade_cross_clause() -> str:
     return " " + line if isinstance(line, str) and line else ""
 
 
+def _gg_vol_dried_clause() -> str:
+    """💧 2026-11-24 (Ajay "Can you send me notification of volume dried please..") — the section note's ONE clause on
+    the "Armed, volume dried" push, built by chart_maps.gajjala.vol_dried.rules_line() (every number a constant, the
+    mode read at call time — never typed here): " " + the line, or "" when the module cannot load or the line raises
+    (the panel never breaks on it)."""
+    try:
+        from chart_maps.gajjala import vol_dried as GVD
+        line = GVD.rules_line()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("rules_info: gajjala vol dried clause unavailable: %s", exc)
+        return ""
+    return " " + line if isinstance(line, str) and line else ""
+
+
 def _gg_run_bases_clause() -> str:
     """📶 2026-11-15 (Ajay "There is a concept of 3 bases and climax run can you bake that in to the app please" · "I
     need that tracked in to Gajjala's") — the section note's ONE clause on GG's base count, built by
@@ -1687,6 +1701,7 @@ def _gajjala_section() -> dict:
                  + _gg_promo_clause()                      # 🎪 2026-10-29 — Promo names (BUILD_SPEC32 D4)
                  + _gg_break_clause()                      # ⚡ 2026-11-11 — the break of an armed 🧠 plan (entry spec §3.1)
                  + _gg_fade_cross_clause()                 # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross (marks + push)
+                 + _gg_vol_dried_clause()                  # 💧 2026-11-24 — the "Armed, volume dried" push + its record
                  + _gg_run_bases_clause()                  # 📶 2026-11-15 — GG's base count (information only)
                  + _gg_ema_blink_clause()                  # 🔀 2026-11-15 — the 9 / 21 EMA blinker (information only)
                  + _gg_watch_cross_clause()                # 👀 2026-11-15 — the watch's 9 / 21 EMA cross push

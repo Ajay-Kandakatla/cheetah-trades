@@ -247,6 +247,12 @@ class Deps:
     # good=) -> dict. None = the step does not run (tests, replays, dry runs, the open); the cron path passes it. Never
     # a key of out, never a gate.
     ssr: Optional[Callable] = None
+    # 💧 2026-11-24 (Ajay "Can you send me notification of volume dried please.."): the "Armed, volume dried" push +
+    # forward tracker, vol_dried.run_step's signature (st, reads, frames, now, session, *, volume, ctx, owner). None =
+    # the step does not run and nothing is written (tests, replays, dry runs, the on-open pass); the cron path passes
+    # it. Runs right after the 🧠 step with the SAME `now` (its transition is the 🧠 tracker's stamp of THIS pass), and
+    # only when the 🧠 gate completed. Never a key of out, never out["errors"], never a gate.
+    vol_dried: Optional[Callable] = None
 
 
 # ── the dry-run store: read through, record every write ──────────────────────────────────────────────────────────
@@ -688,6 +694,13 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
             log.exception("gajjala pass: the potential gate failed")
             out["errors"].append("potential")
             out["potential"] = {}
+        if (deps.vol_dried is not None and not push_dry           # 💧 2026-11-24 — after the 🧠 step, its OWN try (never an open)
+                and "tracked_today" in (out.get("potential") or {})):
+            try:
+                vd = deps.vol_dried(st, reads, frames, now, session, volume=sv, ctx=pot_ctx, owner=deps.owner)
+                log.info("gajjala pass: 💧 vol dried %s", {k: n for k, n in (vd or {}).items() if n})
+            except Exception:                                   # noqa: BLE001 — NEVER out["errors"] (GG5's pass doc stays byte-identical)
+                log.exception("gajjala pass: the 💧 vol dried push failed")
         if deps.fade_cross is not None and not push_dry:       # 🔀 2026-11-15 — the ➖ cross push, its OWN try (never an open)
             try:
                 xc = deps.fade_cross(reads, frames, now, session, store=st, owner=deps.owner, volume=sv)
@@ -905,7 +918,7 @@ def dry_deps() -> Deps:
 
 def _cron_deps() -> Deps:
     """The cron path's Deps — the 📌 in-pass re-read, the 🎪 tags, the 🌫️ day read, the 🔀 fade cross (2026-11-15), the 🧨
-    divergence record (2026-11-18) and the ⛔ SSR read (2026-11-23, fenced import) on, everything else the
+    divergence record (2026-11-18), the ⛔ SSR read (2026-11-23, fenced import) and the 💧 vol dried push (2026-11-24) on, everything else the
     defaults. ONE definition (GG LIVE spec §3.4, 2026-11-09): run.main's cron path and the ⏱ bar-close child in `on`
     mode (bar_close.wait_and_run) both call run_pass with it."""
     from . import trader_names as TN
@@ -914,11 +927,13 @@ def _cron_deps() -> Deps:
     from . import alerts as AL                                  # 🔀 2026-11-15 — the ➖ Fade 9 / 21 EMA cross push
     from . import divergence as DV                              # 🧨 2026-11-18 — the divergence record's pass step
     from . import high_si_cross as HSX                          # 🩳 2026-11-23 — the High SI 9 / 21 EMA cross push (built OFF)
+    from . import vol_dried as VD                               # 💧 2026-11-24 — the "Armed, volume dried" push + tracker
     d = Deps(trader_fetch=TN.default_fetch, promo_tags=PN.default_tags, day_read=DR.run_step)
     d.fade_cross = AL.run_fade_cross
     d.divergence = DV.run_step
     d.high_si_cross = HSX.run_step
     d.record_high_si_status = _record_high_si_status
+    d.vol_dried = VD.run_step
     try:                                                        # ⛔ 2026-11-23 — the SSR read; a failed import leaves the step off
         from short_interest import ssr as SSR
         d.ssr = SSR.record_pass

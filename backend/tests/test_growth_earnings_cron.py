@@ -100,9 +100,11 @@ class NoSendPathTest(unittest.TestCase):
         # WIDENED 2026-11-01 — 🥇 luk_setup (Ajay: 'Lets make it live. also alerts too.') — this path never touches it either.
         # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …") — this path never touches it either.
         # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — this path never touches it either.
+        # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") — this path never touches it either.
         self.assertEqual(set(subs.OWNER_KEEP_SET),
                          {"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                          "luk_setup", "long_term", "gajjala_si_cross", "position_alert", "ops_alert"})
+                          "luk_setup", "long_term", "gajjala_si_cross", "gajjala_vol_dried", "position_alert",
+                          "ops_alert"})
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):
         """NEGATIVE — no kind reaches his phone from this package by accident.

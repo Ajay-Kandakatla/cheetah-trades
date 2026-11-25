@@ -941,6 +941,9 @@ export type GgBoard = {
   push_potential?: { mode?: string | null; text?: string | null } | null;
   /** ⚡ 2026-11-11: the served break-push line, printed under `push_potential` (GG5 boards); absent elsewhere. */
   push_break?: GgPushBreak | null;
+  /** 💧 2026-11-24 (voldry spec §3.9): the served Volume-dried count line (vol_dried.count_block(), via tab.push_vol_dried_block), printed verbatim inside the
+   *  ⓘ fold right after ⚡ (GG5 boards); absent elsewhere → no node. */
+  push_vol_dried?: GgPushBreak | null;
   /** 🔝 2026-11-11: the served Focus header (GG5 setup subs + 🧠, more than FOCUS_N cards); absent otherwise. */
   focus?: GgFocusBlock | null;
   /** 🌅 2026-11-11: the served Day-2 list (GG5 ☀️ pre-market sub only); absent otherwise. */

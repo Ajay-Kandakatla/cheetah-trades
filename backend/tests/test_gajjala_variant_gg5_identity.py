@@ -322,7 +322,12 @@ def test_gg5_board_is_byte_identical(monkeypatch):
     ONE short-interest read faults; the old subs/8.. shift one slot) and 278 = each mode's new `high_si` board (its
     `high_si` block None, `tiles` [], empty_note = high_si.FAULT_TEXT). Dropping every `subs` and every `<mode>/high_si`,
     the old and new files are IDENTICAL (checked by script). WRITES byte-identical (sha1 7d857dc9…, no regen). The mode
-    flip (HIGH_SI_CROSS_PUSH_MODE) moves NO leaf here: the hermetic 🩳 block is the fault shape (no title / push_text)."""
+    flip (HIGH_SI_CROSS_PUSH_MODE) moves NO leaf here: the hermetic 🩳 block is the fault shape (no title / push_text).
+    REGENERATED 2026-11-24 (💧 Armed, volume dried — Ajay "Can you send me notification of volume dried please.."; SPEC voldry REV 2 §4 WP be-engine step 5, by the
+    RECIPE `-k test_gg5_board_is_byte_identical`): BOARD 15233 -> 15289 leaves, 56 ADDED, 0 changed, 0 removed — the
+    one key `push_vol_dried` on all 28 boards (both modes) = {mode "live", text "💧 Volume dried: none in the last 10
+    sessions · UNMEASURED"}: the recording fake's alerts coll ANSWERS the find (no GGD record on file), so the block is
+    the "none" text, not null. WRITES byte-identical (sha1 7d857dc9…, no regen — run.Deps().vol_dried is None)."""
     stores, _t = writes_text(monkeypatch)
     text = board_text(stores)
     _check(BOARD, text)

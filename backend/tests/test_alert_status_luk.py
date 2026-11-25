@@ -107,7 +107,8 @@ def test_the_owner_keep_set_is_eight_with_luk_setup_and_default_prefs_off():
     from push import subs
     # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
     # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
-    assert len(subs.OWNER_KEEP_SET) == 9
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+    assert len(subs.OWNER_KEEP_SET) == 10
     assert AS.LUK_KIND in subs.OWNER_KEEP_SET
     assert subs.default_prefs()[AS.LUK_KIND] is False                        # NEGATIVE: never ON for anyone else
     assert [k for k in subs.OWNER_KEEP_SET if "luk" in k.lower()] == [AS.LUK_KIND]

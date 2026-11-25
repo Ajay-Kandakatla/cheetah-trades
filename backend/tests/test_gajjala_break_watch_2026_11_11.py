@@ -678,7 +678,8 @@ def test_N14_the_pinned_equalities():
     # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
     # The 8th kind is 📅 long_term — not a break-watch kind; the break watch still adds none (HIS CALL #2).
     # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — not a break-watch kind either
-    assert BW.KIND in subs.OWNER_KEEP_SET and len(subs.OWNER_KEEP_SET) == 9
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") — not a break-watch kind either
+    assert BW.KIND in subs.OWNER_KEEP_SET and len(subs.OWNER_KEEP_SET) == 10
     assert "long_term" in subs.OWNER_KEEP_SET and not [k for k in subs.OWNER_KEEP_SET if "break" in k]
 
 

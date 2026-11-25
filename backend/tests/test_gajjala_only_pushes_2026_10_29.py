@@ -40,8 +40,9 @@ def gg1_on():
 # WIDENED 2026-11-01: six → SEVEN — 🥇 luk_setup joined (Ajay 2026-11-01: "Lets make it live. also alerts too.").
 # WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
 # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.")
-NINE = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
-                  "luk_setup", "long_term", "gajjala_si_cross", "position_alert", "ops_alert"})
+# WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+TEN = frozenset({"gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential",
+                 "luk_setup", "long_term", "gajjala_si_cross", "gajjala_vol_dried", "position_alert", "ops_alert"})
 GAJJALA_FOUR = ("gajjala_setup", "gajjala_potential", "gajjala_1m_setup", "gajjala_1m_potential")
 OK_SEND = {"sent": 1, "failed": 0, "total_targets": 1}
 OWNER = "owner-local-part" + chr(64) + "example.com"
@@ -55,15 +56,15 @@ def _no_override(monkeypatch):
 
 # ── D1: the keep-set ─────────────────────────────────────────────────────────────────────────────────────────────
 def test_the_keep_set_is_exactly_the_eight():
-    assert subs.OWNER_KEEP_SET == NINE
+    assert subs.OWNER_KEEP_SET == TEN
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs()), "a kept kind missing from default_prefs targets 0"
 
 
 def test_owner_prefs_is_true_for_exactly_the_eight_and_false_for_every_other_bool():
     op = subs.owner_prefs()
-    assert {k for k, v in op.items() if v is True} == NINE
+    assert {k for k, v in op.items() if v is True} == TEN
     for k, v in op.items():
-        if isinstance(v, bool) and k not in NINE:
+        if isinstance(v, bool) and k not in TEN:
             assert v is False, k
     # the non-bool settings ride through untouched (the quiet-hours clock)
     d = subs.default_prefs()
@@ -105,6 +106,7 @@ def test_both_1m_kinds_are_live_market_kinds_never_retired():
 
 def test_NEGATIVE_an_eighth_kind_breaks_the_pin(monkeypatch):
     # WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA.") — a TENTH kind now breaks the NINE pin
+    # WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") — an ELEVENTH kind now breaks the TEN pin
     monkeypatch.setattr(subs, "OWNER_KEEP_SET", subs.OWNER_KEEP_SET | {"tape_burst_highbeta"})
     with pytest.raises(AssertionError):
         test_the_keep_set_is_exactly_the_eight()

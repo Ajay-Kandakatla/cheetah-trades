@@ -386,6 +386,17 @@ HIGH_SI_CROSS_LATCHES = ("session", "cross") # = the 👀 Watch's LATCHES (test 
 HIGH_SI_CROSS_LATCH = "cross"                # his answer #3 "ONE push per name per frame per cross"
 HIGH_SI_CROSS_CLAIM_PREFIX = "GGS"           # never "GG" (the 🏁 reads those), never "GGX" (➖ fade) / "GGW" (👀 watch)
 
+# 💧 2026-11-24 — Ajay, verbatim: "Can you track something for me how many times have the stocks bumped right after volume
+# dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can you
+# send me notification of volume dried please.." The ring is the FIRST pass a GG5 card turns "trigger armed" (every rule
+# but the break) with its own K3 volume-dried row met (chart_maps/gajjala/vol_dried.py); the claim doc is the forward
+# tracker, graded at the nightly by ledger.grade. NO new number: K3_VOL_FRAC, K11_MIN_SESSION_VOLUME, LEDGER_R_MULT and
+# the 🧠 window are reused by name. UNMEASURED (docs/gajjala/vol_dried_push_2026_11_24.md).
+VOL_DRIED_PUSH_KIND = "gajjala_vol_dried"        # Ajay 2026-11-24 "Can you send me notification of volume dried please.." — a NEW kind (the TENTH OWNER_KEEP_SET kind)
+VOL_DRIED_PUSH_MODES = FADE_CROSS_PUSH_MODES     # derived — ("off", "live"); "off" = recorded (dried_shadow), never sent
+VOL_DRIED_PUSH_MODE = "live"                     # Ajay 2026-11-24 "Can you send me notification of volume dried please.." — rings his phone; junk fails closed to "off"
+VOL_DRIED_CLAIM_PREFIX = "GGD"                   # never "GG" (the 🏁 + 🚩 lane read GG:), never GGX / GGS / GGW
+
 # 📌 trader names (2026-10-27, Ajay "Add them to Gajjals, they are pretty good")
 TRADER_TAG = "📌"                        # Cheetah default (MINE, not GG — the 📌 traders board's emoji)
 TRADER_NAMES_FRESH_SESSIONS = 2          # Cheetah default (MINE, not GG — HIS CALL #5): posted since 00:00 ET of the previous market session

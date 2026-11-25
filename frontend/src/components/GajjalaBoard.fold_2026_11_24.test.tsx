@@ -85,6 +85,7 @@ function gg(over: Record<string, any> = {}): any {
   b.push = { mode: 'live', text: 'served push line' };
   b.push_potential = { mode: 'live', text: 'served potential push line' };
   b.push_break = { mode: 'shadow', text: 'served break push line' };
+  b.push_vol_dried = { mode: 'live', text: 'served vol dried push line' };   /* 💧 2026-11-24 (voldry spec §3.9) */
   b.broker_flags = { ...b.broker_flags, text: 'served broker text', fault_text: null };
   b.day_read = clone(DAY_READ);
   b.order_note = 'served order note';
@@ -161,7 +162,7 @@ const shownAbove = (c: HTMLElement) => {
   return out;
 };
 const HIDDEN_HEAD = ['gg-strip-text', 'gg-strip-trader', 'gg-session-badge', 'gg-as-of', 'gg-broker-strip', 'day-read',
-  'my-day-text', 'gg-push', 'gg-push-potential', 'gg-push-break'];
+  'my-day-text', 'gg-push', 'gg-push-potential', 'gg-push-break', 'gg-push-vol-dried'];   /* + 💧 2026-11-24 (voldry spec §3.9) */
 
 beforeEach(() => {
   resetGgFold();
@@ -449,7 +450,7 @@ describe('🧹 9 a non-owner', () => {
     expect(screen.queryByTestId('my-day-open')).toBeNull();
     expect(posts()).toHaveLength(0);
     expect(myGets()).toHaveLength(0);
-    for (const id of ['gg-strip-text', 'gg-as-of', 'gg-push', 'gg-push-potential', 'gg-push-break']) {
+    for (const id of ['gg-strip-text', 'gg-as-of', 'gg-push', 'gg-push-potential', 'gg-push-break', 'gg-push-vol-dried']) {
       expect(screen.getByTestId(id), id).not.toBeVisible();
     }
   });

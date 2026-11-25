@@ -1333,7 +1333,8 @@ const CONTRACTS = [
       if (!sk) errs.push('sw.js lost const STICKY_KINDS');
       else for (const k of ['gajjala_setup', 'gajjala_1m_setup']) if (!sk[1].includes(`'${k}'`)) errs.push(`sw.js STICKY_KINDS must carry '${k}' (ggwaplus2)`);
       // WIDENED 2026-11-23 — 🩳 gajjala_si_cross joins the never-sticky list (spec highsi §7 HIS CALL #18: sticky = A+ only).
-      if (sk && /'(gajjala_potential|gajjala_1m_potential|luk_setup|long_term|gajjala_si_cross)'/.test(sk[1])) errs.push('sw.js STICKY_KINDS: only the two 🚩 A+ kinds join — never a 🧠 / Luk / long_term / 🩳 kind');
+      // WIDENED 2026-11-24 — 💧 gajjala_vol_dried joins the never-sticky list (voldry spec §3.9: not sticky; sticky = A+ only).
+      if (sk && /'(gajjala_potential|gajjala_1m_potential|luk_setup|long_term|gajjala_si_cross|gajjala_vol_dried)'/.test(sk[1])) errs.push('sw.js STICKY_KINDS: only the two 🚩 A+ kinds join — never a 🧠 / Luk / long_term / 🩳 / 💧 kind');
       if (!/requireInteraction:\s*STICKY_KINDS\.indexOf\(payload\.kind\) >= 0/.test(sw)) errs.push('sw.js: requireInteraction must read STICKY_KINDS');
       const lp = read('../backend/chart_maps/gajjala_watch/loop.py');
       const ok = /^AUTO_OUT_KEYS = \(([\s\S]*?)\)\s*(?:#[^\n]*)?\n/m.exec(lp);
@@ -13503,12 +13504,13 @@ const CONTRACTS = [
       // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's
       // zones …" / "Weekly and if something gets dropped let me know …"). The name SEVEN is kept; it holds eight.
       // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone"). The name SEVEN is kept; it holds nine.
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please.."; voldry spec §4 main-session). The name SEVEN is kept; it holds ten.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'gajjala_vol_dried', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       // 1. the keep-set — exactly the seven
       const subs = tryRead('../backend/push/subs.py', 'subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the nine: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the ten: ${SEVEN.join(', ')}`);
       // 2. the 1-minute push mode — live, tagged his
       const gc = tryRead('../backend/chart_maps/gajjala/constants.py', 'constants.py');
       const ml = /^GAJJALA_1M_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
@@ -14051,7 +14053,7 @@ const CONTRACTS = [
       if (!Number.isFinite(CAD)) errs.push('alert_status lost CADENCE_SEC[GAJJALA_KIND] = <n>');
       // NEGATIVE — no device-facing kind, nothing new rings, no cron line.
       if (/gajjala_audited/.test(subs)) errs.push('push/subs.py names gajjala_audited — the audited tab has NO push kind (HIS CALL #1)');
-      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly nine (🥇 luk_setup joined 2026-11-01; 📅 long_term 2026-11-12; 🩳 gajjala_si_cross 2026-11-23; 🧪 never)');
+      if (keepSet(subs).some((k) => /audited/.test(k))) errs.push('OWNER_KEEP_SET carries an audited kind — the keep-set stays exactly ten (🥇 luk_setup joined 2026-11-01; 📅 long_term 2026-11-12; 🩳 gajjala_si_cross 2026-11-23; 💧 gajjala_vol_dried 2026-11-24; 🧪 never)');
       const cron = tryRead('../backend/crontab', 'crontab');
       if (cron && /audited/.test(cron)) errs.push('backend/crontab names the audit — the overlay rides the 🚩 line; the host crontab is never edited by a deploy');
       // the registry + the frozen sources [C1]
@@ -14665,7 +14667,8 @@ const CONTRACTS = [
       // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
       // — the 8th kind is long_term; this block still pins luk_setup is in it with his dated comment.
       // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone"). The name SEVEN is kept; it holds nine.
-      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'position_alert', 'ops_alert'];
+      // WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please.."; voldry spec §4 main-session). The name SEVEN is kept; it holds ten.
+      const SEVEN = ['gajjala_setup', 'gajjala_potential', 'gajjala_1m_setup', 'gajjala_1m_potential', 'luk_setup', 'long_term', 'gajjala_si_cross', 'gajjala_vol_dried', 'position_alert', 'ops_alert'];
       const sameSet = (a, b) => a.length === b.length && [...a].sort().join(',') === [...b].sort().join(',');
       /** the source of a top-level python NAME = … assignment, up to the next top-level statement. */
       const pyBlock = (py, n) => {
@@ -14686,7 +14689,7 @@ const CONTRACTS = [
       // 1. the keep-set — exactly the seven; default_prefs False for everyone else.
       const subs = tryRead('../backend/push/subs.py', 'push/subs.py');
       const keep = keepSet(subs);
-      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the nine: ${SEVEN.join(', ')}`);
+      if (!sameSet(keep, SEVEN)) errs.push(`push/subs.OWNER_KEEP_SET is [${keep.join(', ')}] — must be exactly the ten: ${SEVEN.join(', ')}`);
       const ksAt = subs.search(/^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{/m);
       const ksBody = ksAt < 0 ? '' : subs.slice(ksAt, subs.indexOf('})', ksAt));
       if (!ksBody.includes(HIS.split(' also')[0]) || !/"luk_setup",/.test(ksBody)) errs.push('OWNER_KEEP_SET must carry "luk_setup" under its own dated comment quoting him (inside the braces, the pattern of every kind)');
@@ -15668,7 +15671,8 @@ const CONTRACTS = [
         const ks = keepSet(subs);
         // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
         // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone")
-        if (ks.length !== 9) errs.push(`OWNER_KEEP_SET must stay exactly nine (found ${ks.length})`);
+        // WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+        if (ks.length !== 10) errs.push(`OWNER_KEEP_SET must stay exactly ten (found ${ks.length})`);
         if (ks.some((k) => /audited|k3s/i.test(k))) errs.push('OWNER_KEEP_SET carries an audited / K3S kind — 🧪 never pushes');
         if (/k3s/i.test(subs)) errs.push('push/subs.py names K3S — the admit has no push kind');
       }
@@ -15943,7 +15947,8 @@ const CONTRACTS = [
         const ks = keepSet(subs);
         // WIDENED 2026-11-12: seven → EIGHT — 📅 long_term (Ajay 2026-11-12: "add an alert list when stocks reach Pankaj's zones …" / "Weekly and if something gets dropped let me know …")
         // WIDENED 2026-11-23: eight → NINE — 🩳 gajjala_si_cross (Ajay 2026-11-23: "And also add alerts for these talks when they are crossing EMA, 9 EMA over 21 EMA." · question card: "Live to my phone")
-        if (ks.length !== 9) errs.push(`OWNER_KEEP_SET must stay exactly nine (found ${ks.length})`);
+        // WIDENED 2026-11-24: nine → TEN — 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..")
+        if (ks.length !== 10) errs.push(`OWNER_KEEP_SET must stay exactly ten (found ${ks.length})`);
         if (ks.some((k) => /stream|latency|live_feed|bar_close|gajjala_update/i.test(k))) errs.push('OWNER_KEEP_SET carries a GG LIVE kind — the live build adds no push kind');
       }
 
@@ -18006,7 +18011,8 @@ const CONTRACTS = [
       const present = Object.entries(REG).filter(([, v]) => v).map(([k]) => k);
       if (mode === 'live' && missing.length) errs.push(`HIGH_SI_CROSS_PUSH_MODE is "live" but ${K} is missing from: ${missing.join(' · ')}`);
       if (mode === 'off' && present.length) errs.push(`HIGH_SI_CROSS_PUSH_MODE is "off" but ${K} is registered in: ${present.join(' · ')} — S1 registers nothing`);
-      if (ks.length !== (mode === 'live' ? 9 : 8)) errs.push(`OWNER_KEEP_SET must be exactly ${mode === 'live' ? 'NINE' : 'EIGHT'} kinds (found ${ks.length})`);
+      // WIDENED 2026-11-24: + 💧 gajjala_vol_dried (Ajay 2026-11-24: "Can you send me notification of volume dried please..") — live TEN, off NINE; the 💧 block pins its own kind.
+      if (ks.length !== (mode === 'live' ? 10 : 9)) errs.push(`OWNER_KEEP_SET must be exactly ${mode === 'live' ? 'TEN' : 'NINE'} kinds (found ${ks.length})`);
       if ((hooks.match(/^def notify_gajjala_si_cross\(/gm) || []).length > 1) errs.push('push/hooks.py must define notify_gajjala_si_cross exactly once');
       if (/send_to_all/.test(pyCode(hk))) errs.push('push/hooks.notify_gajjala_si_cross must never send_to_all — owner devices only');
       if (chips.includes(`'${K}'`) && chips.indexOf(`'${K}'`) !== chips.indexOf("'gajjala_potential'") + "'gajjala_potential', ".length) errs.push(`Alerts.tsx KIND_CHIPS: '${K}' must sit right after 'gajjala_potential'`);
@@ -18376,6 +18382,132 @@ const CONTRACTS = [
       else {
         for (const w of ['Hide all of this nouce besides the scan button and log trade button', 'Add all of this too', 'Collapse all of this too']) if (!lab[1].includes(w)) errs.push(`the 🧹 ✨ must carry: ${w}`);
         if (/bounc/i.test(lab[1])) errs.push('the 🧹 ✨ must never say bounce');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '💧 Volume-dried push (2026-11-24)',
+    file: '../backend/chart_maps/gajjala/constants.py',
+    // Ajay 2026-11-24, verbatim: "Can you track something for me how many times have the stocks bumped right after volume
+    // dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can
+    // you send me notification of volume dried please.." Spec voldry §3.1 / §3.7 / §3.9, §4 main-session. The ring is the
+    // FIRST pass a GG5 card turns "trigger armed" with its own K3 volume-dried row met (chart_maps/gajjala/vol_dried.py);
+    // the GGD claim doc is the forward tracker. The mode and the registries move TOGETHER (the 🩳 pattern): "live" with a
+    // registry missing, or "off" with the kind on his phones, fails here. HIS CALL #1 (live vs off) is put to him before
+    // the deploy; an "off" answer re-pins the mode line, the keep-set size and the ✨ / Notifications words in ONE commit.
+    // UNMEASURED.
+    checks: (gc) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const pyFn = (src, name) => {
+        const at = src.search(new RegExp(`^(?:async )?def ${name}\\(`, 'm'));
+        if (at < 0) return null;
+        const rest = src.slice(at);
+        const nx = /\n(?=[^\s#])/.exec(rest.slice(1));
+        return nx ? rest.slice(0, nx.index + 1) : rest;
+      };
+      const K = 'gajjala_vol_dried';
+      const ASK = 'Can you send me notification of volume dried please..';
+      const HIS = 'Can you track something for me how many times have the stocks bumped right after volume dried up.. I noticed that the best entries so far have been after volume dried up.. after all the other rules. Can you send me notification of volume dried please..';
+      const ID = 'gg-vol-dried-push-2026-11-24';
+
+      // 1. constants — kind, prefix, derived modes, the mode tagged with his words
+      if (!/^VOL_DRIED_PUSH_KIND = "gajjala_vol_dried"/m.test(gc)) errs.push('constants.VOL_DRIED_PUSH_KIND must be "gajjala_vol_dried"');
+      if (!/^VOL_DRIED_CLAIM_PREFIX = "GGD"/m.test(gc)) errs.push('constants.VOL_DRIED_CLAIM_PREFIX must be "GGD" — never "GG" (the 🏁 + 🚩 lane read GG:), never GGX / GGS / GGW');
+      if (!/^VOL_DRIED_PUSH_MODES = FADE_CROSS_PUSH_MODES\b/m.test(gc)) errs.push('constants.VOL_DRIED_PUSH_MODES must be FADE_CROSS_PUSH_MODES (derived)');
+      const ml = /^VOL_DRIED_PUSH_MODE = "([^"]*)"\s*#\s*(.*)$/m.exec(gc);
+      const mode = ml ? ml[1] : null;
+      if (!ml) errs.push('constants.py lost VOL_DRIED_PUSH_MODE = "…"  # comment');
+      else if (mode !== 'live') errs.push(`constants.VOL_DRIED_PUSH_MODE must be "live" as built (HIS CALL #1 re-pins this line if he says off; found "${mode}")`);
+      else if (!ml[2].startsWith('Ajay 2026-11-24') || !ml[2].includes(ASK)) errs.push(`the VOL_DRIED_PUSH_MODE comment must START "Ajay 2026-11-24" and quote "${ASK}"`);
+
+      // 2. the registries — subs / hooks / gate / alertKinds / prefs / Notifications / Essentials
+      const subs = quiet('../backend/push/subs.py');
+      const hooks = quiet('../backend/push/hooks.py');
+      const gate = quiet('../backend/market_hours/gate.py');
+      const ak = quiet('src/lib/alertKinds.ts');
+      const prefs = quiet('src/hooks/useNotificationPrefs.ts');
+      const notif = quiet('src/pages/Notifications.tsx');
+      const ks = keepSet(subs);
+      const dpAt = subs.indexOf('\ndef default_prefs(');
+      const dpEnd = dpAt < 0 ? -1 : subs.indexOf('\ndef ', dpAt + 1);
+      const dp = dpAt < 0 ? '' : subs.slice(dpAt, dpEnd < 0 ? undefined : dpEnd).replace(/#[^\n]*/g, '');
+      const hk = pyFn(hooks, 'notify_gajjala_vol_dried') || '';
+      const market = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      const REG = {
+        'push/subs.OWNER_KEEP_SET': ks.includes(K),
+        'push/subs.default_prefs (False)': new RegExp(`"${K}":\\s*False`).test(dp),
+        'push/hooks.notify_gajjala_vol_dried → send_to_user': !!hk && /send_to_user\(/.test(hk) && new RegExp(`kind="${K}"`).test(hk),
+        'market_hours/gate.MARKET_ALERT_KINDS': market.includes(K),
+        'lib/alertKinds.ts': new RegExp(`^\\s*${K}:\\s*\\{[^}]*emoji: '💧'[^}]*label: 'Volume dried'`, 'm').test(ak),
+        'hooks/useNotificationPrefs.ts': new RegExp(`\\b${K}\\?: boolean`).test(prefs),
+        'Notifications row': new RegExp(`key: '${K}'`).test(notif),
+        'Notifications Essentials preset (true)': new RegExp(`\\b${K}: true\\b`).test(ess),
+      };
+      const missing = Object.entries(REG).filter(([, v]) => !v).map(([k]) => k);
+      if (missing.length) errs.push(`${K} is missing from: ${missing.join(' · ')} — a kind missing from default_prefs targets ZERO devices`);
+      // Live → TEN (the 💧 is the tenth). An "off" answer to HIS CALL #1 keeps the registries (the shadow still records)
+      // but this pin must then be re-pinned by the main session in the same commit.
+      if (mode === 'live' && ks.length !== 10) errs.push(`OWNER_KEEP_SET must be exactly TEN kinds while VOL_DRIED_PUSH_MODE is "live" (found ${ks.length})`);
+      // NEGATIVE — never muted at the source, never broadcast, one hook, never sticky, no item link.
+      for (const n of ['_RETIRED_2026_06_13', 'RETIRED_2026_09_20']) if ((pyFrozenSet(subs, n) || []).includes(K)) errs.push(`push/subs.${n} carries ${K} — DISABLED_ALERT_KINDS returns [] before the DB`);
+      if ((hooks.match(/^def notify_gajjala_vol_dried\(/gm) || []).length !== 1) errs.push('push/hooks.py must define notify_gajjala_vol_dried exactly once');
+      if (!/^def notify_gajjala_vol_dried\(\*, owner: str, payload: dict\)/m.test(hooks)) errs.push('push/hooks.notify_gajjala_vol_dried must be keyword-only (*, owner, payload)');
+      if (/send_to_all/.test(pyCode(hk))) errs.push('push/hooks.notify_gajjala_vol_dried must never send_to_all — owner devices only');
+      const sk = (/const STICKY_KINDS = \[([^\]]*)\]/.exec(quiet('public/sw.js')) || [])[1] || '';
+      if (sk.includes(`'${K}'`)) errs.push(`sw.js STICKY_KINDS must NOT carry ${K} — sticky = the A+ only`);
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(quiet('../backend/push/recent.py')) || [])[1] || '';
+      if (new RegExp(`["']${K}["']`).test(itemBlock.replace(/#[^\n]*/g, ''))) errs.push(`push/recent.ITEM_URL_BY_KIND must NOT carry ${K} — the row links the stored url (no items)`);
+
+      // 3. the live date — ONE typed date in alertKinds.ts; his words once in Notifications.tsx
+      const live = /export const GAJJALA_VOL_DRIED_LIVE_SINCE = '(\d{4}-\d{2}-\d{2})';/.exec(ak);
+      if (!live) errs.push("lib/alertKinds.ts must export GAJJALA_VOL_DRIED_LIVE_SINCE = 'YYYY-MM-DD' (the ONE typed live date)");
+      else if (notif.includes(live[1])) errs.push(`Notifications.tsx types the live date ${live[1]} — read GAJJALA_VOL_DRIED_LIVE_SINCE`);
+      if ((notif.match(new RegExp(`const VOL_DRIED_ASK = '${ASK.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}';`, 'g')) || []).length !== 1) errs.push(`Notifications.tsx must type VOL_DRIED_ASK = '${ASK}' exactly once`);
+      const row = (new RegExp(`key: '${K}'[\\s\\S]*?' \\},\\n`).exec(notif) || [''])[0];   // ends at the row's closing ' }, (a ${…}, inside the detail is not the end)
+      if (!row) errs.push(`Notifications.tsx: the ${K} row (key … ' },) was not found`);
+      if (row && (!row.includes('Armed, volume dried') || !row.includes('UNMEASURED') || !/\$\{VOL_DRIED_ASK\}/.test(row) || !/\$\{GAJJALA_VOL_DRIED_LIVE_SINCE\}/.test(row))) errs.push('the 💧 /notifications row must say "Armed, volume dried" and UNMEASURED, and read VOL_DRIED_ASK + GAJJALA_VOL_DRIED_LIVE_SINCE');
+      if (mode === 'live' && row && !row.includes('ON FOR YOUR PHONE — LIVE SINCE')) errs.push('the 💧 /notifications row must say "ON FOR YOUR PHONE — LIVE SINCE" while the mode is live');
+
+      // 4. the segment-C line — the served text verbatim, inside the ⓘ fold, never on the landing
+      const board = quiet('src/components/GajjalaBoard.tsx');
+      const cAt = board.indexOf('<GgFoldBody k={headKey} testid="gg-head-body-c">');
+      const cEnd = cAt < 0 ? -1 : board.indexOf('</GgFoldBody>', cAt);
+      const segC = cAt < 0 || cEnd < 0 ? '' : board.slice(cAt, cEnd);
+      if (!segC) errs.push('GajjalaBoard lost the segment-C fold <GgFoldBody k={headKey} testid="gg-head-body-c">');
+      else if (!/typeof board\?\.push_vol_dried\?\.text === 'string' && board\.push_vol_dried\.text\.trim\(\) \? \(\s*<div className="cm-note gg-push-potential gg-push-vol-dried" data-testid="gg-push-vol-dried">\{board\.push_vol_dried\.text\}<\/div>/.test(segC)) errs.push('GajjalaBoard segment C must print board.push_vol_dried.text verbatim (data-testid gg-push-vol-dried) inside the gg-head-body-c fold');
+      if ((board.match(/data-testid="gg-push-vol-dried"/g) || []).length !== 1) errs.push('GajjalaBoard must draw gg-push-vol-dried exactly once (inside the fold)');
+      if (!/push_vol_dried\?: GgPushBreak \| null;/.test(quiet('src/lib/gajjala.ts'))) errs.push('lib/gajjala.ts GgBoard must type push_vol_dried?: GgPushBreak | null');
+
+      // 5. isolation — the 🚩 lane and the stream never read the 💧 kind or its claims
+      for (const f of ['../backend/trading/gajjala_entry.py', '../backend/trading/gajjala_stream.py']) {
+        const t = pyCode(quiet(f));
+        if (/gajjala_vol_dried|\bGGD\b|VOL_DRIED/.test(t)) errs.push(`${f} names the 💧 kind / GGD — the 🚩 lane trades A+ only`);
+      }
+
+      // 6. the ✨ — dated, routed to /notifications, his words verbatim, the fire words, UNMEASURED, no b-word
+      const nf = quiet('src/lib/newFeatures.ts');
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)'`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route) is missing`);
+      else {
+        if (lab[2] !== '2026-11-24') errs.push(`the 💧 ✨ addedAt must be 2026-11-24 (found ${lab[2]})`);
+        if (lab[3] !== '/notifications') errs.push(`the 💧 ✨ route must be /notifications (found ${lab[3]})`);
+        if (!lab[1].includes(HIS)) errs.push('the 💧 ✨ label must quote his ask verbatim');
+        for (const w of ['Armed, volume dried', 'UNMEASURED']) if (!lab[1].includes(w)) errs.push(`the 💧 ✨ label must say ${w}`);
+        if (mode === 'live' && !lab[1].includes('ON for your phone')) errs.push('the 💧 ✨ label must say "ON for your phone" while the mode is live');
+        if (/bounc/i.test(lab[1])) errs.push('the 💧 ✨ must never say bounce — reversal');
+      }
+      if ((nf.match(new RegExp(`id: '${ID}'`, 'g')) || []).length !== 1) errs.push(`the ✨ '${ID}' must appear exactly once`);
+
+      // 7. the engine, docs and tests ship together
+      for (const f of ['../backend/chart_maps/gajjala/vol_dried.py', '../backend/scripts/gajjala_vol_dried_count.py',
+        '../backend/tests/test_gajjala_vol_dried_2026_11_24.py', '../backend/tests/test_gajjala_vol_dried_kind_2026_11_24.py',
+        '../docs/gajjala/vol_dried_push_2026_11_24.md', '../docs/gajjala/vol_dried_push_frontend_2026_11_24.md',
+        'src/pages/Notifications.vol_dried.test.tsx', 'src/components/GajjalaBoard.vol_dried.test.tsx']) {
+        if (!exists(f)) errs.push(`${f} must exist`);
       }
       return errs;
     },
