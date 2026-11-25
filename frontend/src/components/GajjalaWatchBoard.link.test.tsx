@@ -2,7 +2,8 @@
  * Ajay: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I can share with
  * someone". `per` / `show` / `page` in the URL (a link wins over the browser), `ggw.layout` / `ggw.pick` in the browser.
  * NEGATIVES: junk URL values are ignored (never throw, never an empty board); a shared name not on the list drops out;
- * other params (tab, focus) are kept; storage blocked → still works; no `show` without a pick, no `page` on page 1. */
+ * other params (tab, focus) are kept; storage blocked → still works; no `show` without a pick, no `page` on page 1.
+ * 2026-11-25 (ggwcols): the 👀 Watch board no longer pages — it writes `page: 0` (no `page=` ever); the lib cases stay. */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,14 +74,16 @@ describe('the board', () => {
     const c = await mount('/chart-maps?tab=gajjala_watch');
     expect(q().get('tab')).toBe('gajjala_watch');
     expect(q().get('per')).toBe('2');
+    // RE-PINNED 2026-11-25 (ggwcols): no pages — a tap flips ONE name off the full list; `page` never in the link
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
-    expect(shown(c)).toEqual([SYMS[0]]);
-    expect(q().get('show')).toBe(SYMS[0]);
+    const rest = SYMS.filter((s) => s !== SYMS[1]);
+    expect(shown(c)).toEqual(rest);
+    expect(q().get('show')).toBe(rest.join(','));
     fireEvent.click(screen.getByTestId('ggw-layout-1'));
     expect(q().get('per')).toBe('1');
     expect(q().has('show')).toBe(false);
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    expect(q().get('page')).toBe('2');
+    fireEvent.click(screen.getByTestId('ggw-pager-next'));                       // NEGATIVE: the greyed ▶ writes no page
+    expect(q().has('page')).toBe(false);
     expect(q().get('tab')).toBe('gajjala_watch');
   });
   it('this browser remembers the pick when the link has none', async () => {
@@ -93,12 +96,13 @@ describe('the board', () => {
   it('NEGATIVE: a link with per= but no show= ignores the browser pick (the link is the whole view)', async () => {
     window.localStorage.setItem(GGW_PICK_KEY, `${SYMS[3]}`);
     const c = await mount('/chart-maps?tab=gajjala_watch&per=2');
-    expect(shown(c)).toEqual(SYMS.slice(0, 2));
+    expect(shown(c)).toEqual(SYMS);                                              // 2026-11-25: every name, no pages
   });
   it('NEGATIVE: junk values and names not on the list never empty the board', async () => {
     const c = await mount('/chart-maps?tab=gajjala_watch&per=7&show=ZZZZ,<x>&page=abc');
     expect((c.querySelector('.ggw-grid') as HTMLElement).dataset.layout).toBe('2');
-    expect(shown(c)).toEqual(SYMS.slice(0, 2));
+    expect(shown(c)).toEqual(SYMS);                                              // 2026-11-25: every name, no pages
+    expect(q().has('page')).toBe(false);                                         // the junk page= is dropped
   });
   it('NEGATIVE: blocked storage still works from the link', async () => {
     vi.stubGlobal('localStorage', { getItem: () => { throw new Error('x'); }, setItem: () => { throw new Error('x'); },

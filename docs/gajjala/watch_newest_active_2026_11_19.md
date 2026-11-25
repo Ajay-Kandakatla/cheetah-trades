@@ -1,5 +1,7 @@
 # 👀 New Watch names: newest first, active, with charts, and a ✕ that always answers (2026-11-19)
 
+> **2026-11-25 — changed.** No pages on a desktop: "its page" is now a scroll to the tile, and the pages anchor is replaced by the scroll hold. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay, verbatim: "When ever I push something to watch it make it active by default and also on top" · "I do not see the new ones active" · "The X buttons are not working" · "When I add a new ticket they are gettinf added in to que but not active  charts are not loading I amhaving to click on the chips again".
 
 Spec: `scratchpad/watchnew2/spec.md` (v3, nine critique findings fixed). This doc is the standing record.

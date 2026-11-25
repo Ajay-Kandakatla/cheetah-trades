@@ -6,7 +6,8 @@
  * pages at the load where it died; a name served again joins ONLY by the existing fresh rule.
  * (a) an add never turns another name off — phone + desktop per=4; (b) a live pick + an add → WETO first, the rest kept;
  * (c) a name the server removes leaves the pick, an all-stale pick → null + no show=; (d) × hides, a failed × comes back
- * ON; (e) the 🎯 A+ join unchanged, a stale-pick 🤖 potential served again does NOT take over; (f) the pages view. */
+ * ON; (e) the 🎯 A+ join unchanged, a stale-pick 🤖 potential served again does NOT take over; (f) no pick on a desktop.
+ * 2026-11-25 (ggwcols): the desktop has no pages any more — with no filter every listed name is shown, every chip lit. */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -146,18 +147,23 @@ describe('(a) adding a name never turns another name off — the stale saved pic
     expect(pressed(c, 'WETO')).toBe('true');
     expect(savedPick()).toBeNull();
   });
-  it('desktop per=4: a stale pick holding WETO → after the add a FULL page of 4 shows with WETO on it, never WETO alone', async () => {
+  it('desktop per=4: a stale pick holding WETO → after the add EVERY name stays shown and lit with WETO on, never WETO alone', async () => {
+    /* 2026-11-25 (ggwcols): per screen = columns, no pages — with no filter every listed name is shown and every chip lit */
     localStorage.setItem(GGW_LAYOUT_KEY, '4');
     localStorage.setItem(GGW_PICK_KEY, 'OMH,GIPR,WETO');
     const c = await mount(false);
-    expect(shown(c)).toEqual(HIS.slice(0, 4));
+    expect(shown(c)).toEqual(BEFORE);
     const on = pressedAll(c);
-    expect(on).toEqual(HIS.slice(0, 4));
+    expect(on).toEqual(BEFORE);
+    expect(savedPick()).toBeNull();                                     // the dead pick is gone at the first load
     await boxAdd(c, 'WETO');
-    /* the box add opens WETO's page (by design); WETO is on top of the list, so that page = WETO + the first 3 */
-    expect(shown(c)).toEqual([...HIS.slice(0, 3), 'WETO']);
-    for (const s of on.slice(0, 3)) expect(pressed(c, s)).toBe('true');
+    expect(shown(c)).toEqual(expect.arrayContaining(['WETO', ...BEFORE]));
+    expect(shown(c)).toHaveLength(BEFORE.length + 1);
+    for (const s of on) expect(pressed(c, s)).toBe('true');
     expect(pressed(c, 'WETO')).toBe('true');
+    /* NEGATIVE: never WETO alone, never a hidden tile, no pick made */
+    expect(shown(c)).not.toEqual(['WETO']);
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
     expect(savedPick()).toBeNull();
     expect(q().has('show')).toBe(false);
   });
@@ -281,21 +287,40 @@ describe('(e) the 🎯 A+ join is unchanged', { timeout: 30000 }, () => {
   });
 });
 
-describe('(f) the pages view with no pick is unchanged (desktop per=2)', { timeout: 30000 }, () => {
-  it('page 2 shows its two names; a name removed above keeps the first shown name on screen (anchor)', async () => {
+describe('(f) no pick on a desktop (per=2): every name shown — 2026-11-25 there are no pages', { timeout: 30000 }, () => {
+  /* Ajay 2026-11-25: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I scroll." */
+  let scrolled: string[] = [];
+  beforeEach(() => {
+    scrolled = [];
+    (Element.prototype as any).scrollIntoView = function (this: HTMLElement) { if (this.id) scrolled.push(this.id); };
+  });
+  it('a link with page=2 shows every name (page= dropped); a name removed above → every remaining name shown, no scroll', async () => {
     const c = await mount(false, '/chart-maps?tab=gajjala_watch&per=2&page=2');
-    expect(shown(c)).toEqual(['BKR', 'FANG']);
+    expect(shown(c)).toEqual(BEFORE);
+    expect(pressedAll(c)).toEqual(BEFORE);
+    expect(q().has('page')).toBe(false);
+    expect(q().get('per')).toBe('2');
     his = HIS.filter((s) => s !== 'SVRE');
+    scrolled = [];
     await reload();
-    expect(shown(c)).toContain('BKR');
+    expect(shown(c)).toEqual(BEFORE.filter((s) => s !== 'SVRE'));
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
+    expect(tile(c, 'SVRE')).toBeNull();
+    /* NEGATIVE: the refresh never scrolls the window to a tile, and makes no pick */
+    expect(scrolled).toEqual([]);
     expect(savedPick()).toBeNull();
   });
-  it('the box add still opens WETO\'s page, and no pick is made', async () => {
+  it('the box add scrolls to WETO once, every name stays shown, and no pick is made', async () => {
     const c = await mount(false, '/chart-maps?tab=gajjala_watch&per=2&page=3');
-    expect(shown(c)).toEqual(['MGY', 'NVT']);
+    expect(shown(c)).toEqual(BEFORE);
+    scrolled = [];
     await boxAdd(c, 'WETO');
-    expect(shown(c)).toEqual(['SVRE', 'WETO']);
+    expect(shown(c)).toEqual(expect.arrayContaining(['WETO', ...BEFORE]));
+    expect(shown(c)).toHaveLength(BEFORE.length + 1);
+    expect(scrolled).toEqual(['ggw-WETO']);
+    /* NEGATIVE: no pick, no show=, no page= */
     expect(savedPick()).toBeNull();
     expect(q().has('show')).toBe(false);
+    expect(q().has('page')).toBe(false);
   });
 });

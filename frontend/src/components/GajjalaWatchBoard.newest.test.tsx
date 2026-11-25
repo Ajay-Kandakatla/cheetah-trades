@@ -5,7 +5,7 @@
  *   (d) HIS view actions stamp pickAt; (e)/(e2) 🤖 potentials never join, 🎯 A+ does (and at THE load it turns A+);
  *   (f)/(g) a box add / re-add is joined (or its page shown), outlined and scrolled to ONCE;
  *   (h) a page open outlines only a name of his this browser has not shown yet — a reopen outlines nothing;
- *   (i)/(i2) the pages anchor (HIS CALL #6); (j)/(k)/(k2) the pending poll fills the charts, the late poll out of window
+ *   (i)/(i2) a refresh never moves the view (2026-11-25: no pages; the pages anchor is gone) (HIS CALL #6); (j)/(k)/(k2) the pending poll fills the charts, the late poll out of window
  *   only; (l) a stale partial never overwrites a newer board; (m) the DOM order is the served order. NEGATIVES throughout. */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -148,11 +148,12 @@ describe('🆕 the join rule (his names + 🎯 A+, by time or by seen)', { timeo
     expect(outlined(c)).toEqual([]);
     expect(scrolled).toEqual([]);
   });
-  it('(d) a ticker toggle, a page move and a per-screen change write ggw.pickAt = now — NEGATIVE: the activation pass alone never does', async () => {
+  it('(d) a ticker toggle and a per-screen change write ggw.pickAt = now — NEGATIVE: the activation pass, ← → and the greyed ▶ never do', async () => {
+    /* 2026-11-25 (ggwcols): no pages — ← → only scroll the window and ▶ is greyed, so neither is a view action */
     seed({ seen: ['A', 'B', 'C'] });
     serve = () => boardOf([rowOf('D', { added_at: iso(NOW - H) }), rowOf('A'), rowOf('B'), rowOf('C')]);
     await mount('&per=2');
-    expect(store().getItem(GGW_PICK_AT_KEY)).toBeNull();                 // D joined nothing (pages) and pickAt was never written
+    expect(store().getItem(GGW_PICK_AT_KEY)).toBeNull();                 // D joined nothing (no filter) and pickAt was never written
     vi.setSystemTime(NOW + 5_000);
     fireEvent.click(screen.getByTestId('ggw-pager-A'));
     expect(store().getItem(GGW_PICK_AT_KEY)).toBe(String(NOW + 5_000));
@@ -162,8 +163,11 @@ describe('🆕 the join rule (his names + 🎯 A+, by time or by seen)', { timeo
     expect(store().getItem(GGW_PICK_AT_KEY)).toBe(String(NOW + 6_000));
     store().removeItem(GGW_PICK_AT_KEY);
     vi.setSystemTime(NOW + 7_000);
+    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    expect(store().getItem(GGW_PICK_AT_KEY)).toBe(String(NOW + 7_000));
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(store().getItem(GGW_PICK_AT_KEY)).toBeNull();
   });
   it('(e) 🤖 not force-activated: a potential new by seen AND time stays out; a 🎯 A+ seat / tag joins — NEGATIVE: never outlined or scrolled', async () => {
     seed({ seen: ['A'], pickAt: NOW - 2 * H });
@@ -177,7 +181,7 @@ describe('🆕 the join rule (his names + 🎯 A+, by time or by seen)', { timeo
     expect(outlined(c)).toEqual([]);
     expect(scrolled).toEqual([]);
   });
-  it('(e2) [C5] a 🤖 potential seated after pickAt turns 🎯 A+ in place → it joins at THAT load', async () => {
+  it('(e2) [C5] a 🤖 potential seated after pickAt turns 🎯 A+ in place → it joins at THAT load (the pick then covers every name → no filter)', async () => {
     seed({ seen: ['A', 'POT'], pickAt: NOW - 2 * H });
     let v = 1;
     const at = iso(NOW - H);
@@ -188,8 +192,10 @@ describe('🆕 the join rule (his names + 🎯 A+, by time or by seen)', { timeo
     expect(isShown(c, 'POT')).toBe(false);
     v = 2;
     await tick(60_500);
-    expect(q().get('show')).toBe('POT,A');
+    /* ▦ 2026-11-25: joining POT makes the pick cover every listed name → the all-on rule (ggwCoverAll) clears it */
+    expect(q().has('show')).toBe(false);
     expect(isShown(c, 'POT')).toBe(true);
+    expect(isShown(c, 'A')).toBe(true);
   });
   it('(e2) NEGATIVE: a 🤖 potential that stays a potential is NOT joined when his next ➕ of another name reloads the board', async () => {
     seed({ seen: ['A', 'POT'], pickAt: NOW - 2 * H });
@@ -238,7 +244,7 @@ describe('🆕 the box add and the first load', { timeout: 20000 }, () => {
     expect(outlined(c)).toEqual(['ggw-tile-NEW']);
     expect(scrolled).toEqual(['ggw-NEW']);
   });
-  it('(g) ➕ again on a hidden name ("already") → it joins, outlines and scrolls; the pick is not cleared', async () => {
+  it('(g) ➕ again on a hidden name ("already") → it joins, outlines and scrolls; the join covers every name → no filter', async () => {
     seed({ seen: ['A', 'B'], pickAt: NOW });
     let v = 1;
     serve = () => boardOf(v === 1 ? [rowOf('A'), rowOf('B')] : [rowOf('B', { added_at: iso(NOW + 1_000) }), rowOf('A')]);
@@ -246,16 +252,18 @@ describe('🆕 the box add and the first load', { timeout: 20000 }, () => {
     const c = await mount('&per=2&show=A');
     expect(isShown(c, 'B')).toBe(false);
     await boxAdd(c, 'B');
-    expect(q().get('show')).toBe('B,A');
+    /* ▦ 2026-11-25: B,A covers the whole list → the all-on rule (ggwCoverAll) clears the pick, every tile shown */
+    expect(q().has('show')).toBe(false);
     expect(isShown(c, 'B')).toBe(true);
+    expect(isShown(c, 'A')).toBe(true);
     expect(outlined(c)).toEqual(['ggw-tile-B']);
     expect(scrolled).toEqual(['ggw-B']);
   });
-  it('(h) [C6] a first load where seen lacks his X (a card ➕) → X outlined + scrolled once, pages → its page — NEGATIVE: a reopen does nothing', async () => {
+  it('(h) [C6] a first load where seen lacks his X (a card ➕) → X outlined + scrolled once, page= dropped — NEGATIVE: a reopen does nothing', async () => {
     seed({ seen: ['A', 'B', 'C'], pickAt: NOW - 48 * H });
     serve = () => boardOf([rowOf('X', { added_at: iso(NOW - H) }), rowOf('A'), rowOf('B'), rowOf('C')]);
     let c = await mount('&per=2&page=2');
-    expect(isShown(c, 'X')).toBe(true);
+    expect(['X', 'A', 'B', 'C'].filter((s) => isShown(c, s))).toEqual(['X', 'A', 'B', 'C']);
     expect(q().has('page')).toBe(false);
     expect(outlined(c)).toEqual(['ggw-tile-X']);
     expect(scrolled).toEqual(['ggw-X']);
@@ -264,8 +272,9 @@ describe('🆕 the box add and the first load', { timeout: 20000 }, () => {
     c = await mount('&per=2&page=2');
     expect(outlined(c)).toEqual([]);
     expect(scrolled).toEqual([]);
-    expect(q().get('page')).toBe('2');
-    expect(isShown(c, 'X')).toBe(false);
+    /* 2026-11-25 (ggwcols): no pages — the reopen shows every name (X too), page= never comes back into the link */
+    expect(q().has('page')).toBe(false);
+    expect(isShown(c, 'X')).toBe(true);
   });
   it('(h) pick mode: first open outlines X; NEGATIVE: the reopen keeps X joined (time rule) without an outline or a scroll', async () => {
     seed({ seen: ['A', 'B'], pickAt: NOW - 2 * H });
@@ -284,17 +293,22 @@ describe('🆕 the box add and the first load', { timeout: 20000 }, () => {
   });
 });
 
-describe('🆕 the pages anchor', { timeout: 20000 }, () => {
+describe('🆕 a refresh never moves the view (2026-11-25: the pages anchor is gone — every name is shown)', { timeout: 20000 }, () => {
+  /* Ajay 2026-11-25: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I scroll."
+   * The scroll hold (useGgwHold) replaces the pages anchor; in jsdom nothing is measured, so it never scrolls here. */
   const four = () => [rowOf('A'), rowOf('B'), rowOf('C'), rowOf('D')];
-  it('(i) page 2 shows C,D; a refresh with a new row on top → C still shown', async () => {
+  it('(i) a page=2 link shows A–D; a refresh with a new row on top → every name shown — NEGATIVE: the refresh never scrolls', async () => {
     seed({ seen: ['A', 'B', 'C', 'D'] });
     let v = 1;
     serve = () => boardOf(v === 1 ? four() : [rowOf('X', { added_at: iso(NOW) }), ...four()], { refresh_sec: 60 });
     const c = await mount('&per=2&page=2');
-    expect(['A', 'B', 'C', 'D'].filter((s) => isShown(c, s))).toEqual(['C', 'D']);
+    expect(['A', 'B', 'C', 'D'].filter((s) => isShown(c, s))).toEqual(['A', 'B', 'C', 'D']);
     v = 2;
+    scrolled = [];
     await tick(60_500);
-    expect(isShown(c, 'C')).toBe(true);
+    expect(['X', 'A', 'B', 'C', 'D'].filter((s) => isShown(c, s))).toEqual(['X', 'A', 'B', 'C', 'D']);
+    expect(scrolled).toEqual([]);
+    expect(q().has('page')).toBe(false);
   });
   it('(i) a refresh with a row above removed → C still shown', async () => {
     seed({ seen: ['A', 'B', 'C', 'D'] });
@@ -305,29 +319,39 @@ describe('🆕 the pages anchor', { timeout: 20000 }, () => {
     await tick(60_500);
     expect(isShown(c, 'C')).toBe(true);
   });
-  it('(i) NEGATIVE: in pick mode the anchor never moves the page', async () => {
+  it('(i) NEGATIVE: in pick mode a refresh keeps the filter as it was and never scrolls; a per-screen tap → every name, no page=', async () => {
     seed({ seen: ['A', 'B', 'C', 'D'] });
     let v = 1;
     serve = () => boardOf(v === 1 ? four() : [rowOf('X', { added_at: iso(NOW) }), rowOf('Y', { added_at: iso(NOW) }), ...four()],
       { refresh_sec: 60 });
-    await mount('&per=2&page=2');
-    fireEvent.click(screen.getByTestId('ggw-pager-A'));                  // pick mode: A, C, D
-    expect(q().has('show')).toBe(true);
+    const c = await mount('&per=2&page=2');
+    fireEvent.click(screen.getByTestId('ggw-pager-A'));                  // pick mode: A off → B, C, D
+    expect(q().get('show')).toBe('B,C,D');
+    expect(['A', 'B', 'C', 'D'].filter((s) => isShown(c, s))).toEqual(['B', 'C', 'D']);
     v = 2;
+    scrolled = [];
     await tick(60_500);
-    fireEvent.click(screen.getByTestId('ggw-layout-2'));                 // back to the pages from the STORED page
-    expect(q().get('page')).toBe('2');                                   // an anchor move would have made it 3
+    expect(isShown(c, 'A')).toBe(false);                                 // the filter result is unchanged by the refresh
+    for (const s of ['B', 'C', 'D']) expect(isShown(c, s)).toBe(true);
+    expect(scrolled).toEqual([]);
+    fireEvent.click(screen.getByTestId('ggw-layout-2'));                 // a per-screen tap clears the filter
+    expect(['X', 'Y', 'A', 'B', 'C', 'D'].filter((s) => isShown(c, s))).toEqual(['X', 'Y', 'A', 'B', 'C', 'D']);
+    expect(q().has('page')).toBe(false);
+    expect(q().has('show')).toBe(false);
+    expect(scrolled).toEqual([]);
   });
-  it('(i2) HIS CALL #6 default: page 2 open, a card ➕ X arrives at index 0 → the page stays 2 and X is not shown', async () => {
-    // HIS CALL #6 (spec §7): a card ➕ while the Watch tab is open on page 2+ lands on page 1, unseen, chip unlit.
+  it('(i2) HIS CALL #6: a page=2 link open, a card ➕ X arrives at index 0 → X is shown (no pages), never outlined or scrolled', async () => {
+    // HIS CALL #6 (spec §7, 11-19): a card ➕ while the Watch tab is open is not outlined and not scrolled to.
+    // 2026-11-25 (ggwcols): with no filter every name is shown, so X is on the board (chip lit), the view does not move.
     seed({ seen: ['A', 'B', 'C', 'D'] });
     let v = 1;
     serve = () => boardOf(v === 1 ? four() : [rowOf('X', { added_at: iso(NOW) }), ...four()], { refresh_sec: 60 });
     const c = await mount('&per=2&page=2');
     v = 2;
     await tick(60_500);
-    expect(q().get('page')).toBe('2');
-    expect(isShown(c, 'X')).toBe(false);
+    expect(q().has('page')).toBe(false);
+    expect(isShown(c, 'X')).toBe(true);
+    expect(screen.getByTestId('ggw-pager-X').getAttribute('aria-pressed')).toBe('true');
     expect(outlined(c)).toEqual([]);
     expect(scrolled).toEqual([]);
   });

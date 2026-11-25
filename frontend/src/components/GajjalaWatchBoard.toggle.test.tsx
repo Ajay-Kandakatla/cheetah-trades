@@ -1,8 +1,8 @@
 /* 👀 Gajjala's Watch — toggle tickers, 1 per screen, × on every ticker (2026-11-16).
  * Ajay: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove from these give
- * me an x option to remove as well". NEGATIVES: toggling every name off returns to the pages (never an empty board); a
+ * me an x option to remove as well". NEGATIVES: toggling every name off returns to every name (never an empty board; 2026-11-25: no pages); a
  * pick of one fills the width (one column); × DELETEs only its own name and never toggles; a picked name that leaves the
- * list drops out; ◀ ▶ / a per-screen pick clear the pick; junk lists never throw. */
+ * list drops out; a per-screen pick clears the pick (◀ ▶ are greyed since 2026-11-25); junk lists never throw. */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,37 +78,53 @@ describe('the board', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.stubGlobal('localStorage', memStorage()); });
   afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  it('toggle a shown name OFF → one stock alone, full width', async () => {
+  // RE-PINNED 2026-11-25 (ggwcols — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to
+  // be avtive while I scroll"): with no filter every name is shown and lit; a tap flips ONE name off the full list.
+  it('toggle a shown name OFF → only that tile hidden; all but one off → one stock alone, full width', async () => {
     const c = await mount();
-    expect(shown(c)).toEqual(SYMS.slice(0, 2));
+    expect(shown(c)).toEqual(SYMS);
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
+    expect(shown(c)).toEqual(SYMS.filter((s) => s !== SYMS[1]));
+    expect(screen.getByTestId(`ggw-pager-${SYMS[0]}`).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId(`ggw-pager-${SYMS[1]}`).getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[2]}`));
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[3]}`));
     expect(shown(c)).toEqual([SYMS[0]]);
     expect(grid(c).classList.contains('ggw-grid--cols1')).toBe(true);
     expect(grid(c).dataset.pick).toBe('1');
-    expect(screen.getByTestId(`ggw-pager-${SYMS[0]}`).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByTestId(`ggw-pager-${SYMS[1]}`).getAttribute('aria-pressed')).toBe('false');
   });
-  it('toggle any names ON in any mix; NEGATIVE: all off → back to the pages, never an empty board', async () => {
+  it('toggle any names ON in any mix; the last one lit clears the filter; NEGATIVE: all off → every name back, never an empty board', async () => {
     const c = await mount();
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[3]}`));
-    expect(shown(c)).toEqual([SYMS[0], SYMS[1], SYMS[3]]);
+    expect(shown(c)).toEqual([SYMS[0], SYMS[1], SYMS[2]]);
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[0]}`));
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
-    expect(shown(c)).toEqual([SYMS[3]]);
-    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[3]}`));
-    expect(shown(c)).toEqual(SYMS.slice(0, 2));
+    expect(shown(c)).toEqual([SYMS[2]]);
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[0]}`));              // ON again, in his list order
+    expect(shown(c)).toEqual([SYMS[0], SYMS[2]]);
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[3]}`));              // the last unlit one → no filter
+    expect(shown(c)).toEqual(SYMS);
+    expect(grid(c).dataset.pick).toBeUndefined();
+    for (const s of SYMS.slice(1)) fireEvent.click(screen.getByTestId(`ggw-pager-${s}`));
+    expect(shown(c)).toEqual([SYMS[0]]);
+    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[0]}`));              // the last one OFF → everything back
+    expect(shown(c)).toEqual(SYMS);
     expect(grid(c).dataset.pick).toBeUndefined();
   });
-  it('◀ ▶ and a per-screen pick clear the pick', async () => {
+  it('◀ ▶ are greyed and change nothing; NEGATIVE: they never clear a filter — a per-screen pick does', async () => {
     const c = await mount();
     fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
+    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('ggw-pager-prev') as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    expect(shown(c)).toEqual(SYMS.slice(2, 4));
-    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[2]}`));
-    expect(shown(c)).toEqual([SYMS[3]]);
+    fireEvent.click(screen.getByTestId('ggw-pager-prev'));
+    expect(shown(c)).toEqual(SYMS.filter((s) => s !== SYMS[1]));
+    expect(grid(c).dataset.pick).toBe(String(SYMS.length - 1));
     fireEvent.click(screen.getByTestId('ggw-layout-1'));
     expect(grid(c).dataset.pick).toBeUndefined();
-    expect(shown(c)).toHaveLength(1);                                      // 1 per screen = one at a time
+    expect(shown(c)).toEqual(SYMS);                                         // 1 per screen = one column, every tile
+    expect(grid(c).classList.contains('ggw-grid--cols1')).toBe(true);
   });
   it('× DELETEs only its own name; NEGATIVE: it never toggles the view', async () => {
     const c = await mount();
@@ -121,15 +137,15 @@ describe('the board', () => {
     expect(shown(c)).toEqual(before);
     expect(screen.getByTestId(`ggw-pager-x-${SYMS[3]}`).getAttribute('aria-label')).toContain(SYMS[3]);
   });
-  it('NEGATIVE: a picked name that leaves the list drops out; the last one leaving → the pages', async () => {
+  it('NEGATIVE: a picked name that leaves the list drops out; the last one leaving → every name shown', async () => {
     let gone: string[] = [];
     const c = await mount(() => { const b = clone(fixture) as any; b.rows = b.rows.filter((r: any) => !gone.includes(r.symbol)); return b; });
-    fireEvent.click(screen.getByTestId(`ggw-pager-${SYMS[1]}`));
+    for (const s of SYMS.slice(1)) fireEvent.click(screen.getByTestId(`ggw-pager-${s}`));
     expect(shown(c)).toEqual([SYMS[0]]);
     gone = [SYMS[0]];
     await act(async () => { await vi.advanceTimersByTimeAsync(((fixture as any).refresh_sec || 60) * 1000 + 10); });
     for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     const left = SYMS.filter((s) => s !== SYMS[0]);
-    expect(left.filter((s) => !(c.querySelector(`[data-testid="ggw-tile-${s}"]`) as HTMLElement).hidden)).toEqual(left.slice(0, 2));
+    expect(left.filter((s) => !(c.querySelector(`[data-testid="ggw-tile-${s}"]`) as HTMLElement).hidden)).toEqual(left);
   });
 });

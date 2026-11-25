@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — two stocks a screen, pager, ⤢ full screen (2026-11-16)
 
+> **2026-11-25 — changed.** On a desktop the pick is no longer the page size: it sets the columns and row height, every tile is shown in one scroll, ◀ ▶ are greyed, ← → scroll a row group (⤢ unchanged). See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay, verbatim:
 - "I need bigger may be 2 on each screen side by side its not clear and give me a strech button to see full chart"
 - "I wanna see all 3 of one stock for stretch like 5, 3 and 1"

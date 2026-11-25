@@ -112,17 +112,21 @@ describe('🔢 the float chip on the 👀 Watch board', { timeout: 30000 }, () =
       window.localStorage.setItem(GGW_LAYOUT_KEY, String(layout));
       const c = await mountBoard();
       expect((c.querySelector('.ggw-grid') as HTMLElement).dataset.layout).toBe(String(layout));
+      /* 2026-11-25 (ggwcols): the pick is the columns, never a page — every tile is visible in one scrolling grid */
+      expect((c.querySelector('.ggw-grid') as HTMLElement).classList.contains(`ggw-grid--cols${GGW_LAYOUTS[layout].cols}`)).toBe(true);
       const visible = ALL.filter((s) => tile(c, s) && !tile(c, s).hidden);
-      const size = GGW_LAYOUTS[layout].cols * GGW_LAYOUTS[layout].rows;
-      expect(visible).toEqual(ALL.slice(0, Math.min(size, ALL.length)));
-      for (const s of visible) {
+      expect(visible).toEqual(ALL);
+      expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
+      for (const s of visible.filter((x) => FLOATED.includes(x))) {
         const f = floats(tile(c, s), s);
         expect(f, s).toHaveLength(1);
         expect(f[0].textContent).toBe(`served float ${s}`);
         expect(f[0].getAttribute('title')).toBe(`served hover ${s}`);
       }
-      /* every mounted tile, on page or not: one chip on a floated row; the whole board holds one per floated row */
+      /* every mounted tile: one chip on a floated row; the whole board holds one per floated row (NEGATIVE: never two) */
       for (const s of FLOATED) expect(floats(tile(c, s), s), s).toHaveLength(1);
+      /* NEGATIVE: the two rows with no served float are visible too, and carry no float chip */
+      for (const s of [NULL_SYM, ABSENT_SYM]) { expect(visible).toContain(s); expect(floats(tile(c, s), s), s).toHaveLength(0); }
       expect(c.querySelectorAll('.ggw-float')).toHaveLength(FLOATED.length);
     });
   }

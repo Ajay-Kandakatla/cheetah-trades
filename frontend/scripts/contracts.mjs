@@ -18909,6 +18909,83 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '👀 Watch per screen = columns, one scroll (2026-11-25)',
+    file: 'src/components/GajjalaWatchBoard.tsx',
+    // Ajay 2026-11-25 ~11:30 ET, verbatim: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be
+    // avtive while I scroll." · "Can you fix that instead of removing the other?". Spec ggwcols rev 2 §3, §4 main-session.
+    // On a desktop the per-screen pick is the GRID SHAPE only: every watched tile in ONE grid the window scrolls
+    // (ggw-grid--all), nothing paged (paged={false}, page= out of the link), ← → scroll a row group (lib ggwScroll), the
+    // scroll hold (useGgwHold) and the live render gate near the window (useGgwNear). The 🚩 / 🧪 card Watch layout still
+    // PAGES (useGgCardWatch keeps the lib page math). Layout only — no rule, gate or push.
+    checks: (board) => {
+      const errs = [];
+      const quiet = (f) => { try { return read(f); } catch { errs.push(`${f} is unreadable`); return ''; } };
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/[^\n]*/g, '$1');
+      const code = tsCode(board);
+      const count = (s, re) => (s.match(re) || []).length;
+
+      // 1. the board — one scrolling grid, nothing paged, the two hooks once each
+      if (!code.includes('ggw-grid--all')) errs.push('GajjalaWatchBoard.tsx must carry the ggw-grid--all class (every tile in one scrolling grid on a desktop)');
+      if (count(code, /\buseGgwNear\(/g) !== 1) errs.push(`GajjalaWatchBoard.tsx must call useGgwNear( exactly once (found ${count(code, /\buseGgwNear\(/g)})`);
+      if (count(code, /\buseGgwHold\(/g) !== 1) errs.push(`GajjalaWatchBoard.tsx must call useGgwHold( exactly once (found ${count(code, /\buseGgwHold\(/g)})`);
+      if (!/paged=\{false\}/.test(code)) errs.push('GajjalaWatchBoard.tsx must pass paged={false} to the pager — nothing on the 👀 board pages');
+      if (!/ggwViewParams\([^)]*\bpage:\s*0\b/.test(code)) errs.push('GajjalaWatchBoard.tsx must write page: 0 to ggwViewParams (page= out of the link)');
+      for (const bad of ['parseGgwPage', 'ggwAnchorPage', 'ggwPageOf', 'ggwClampPage', 'ggwPageCount', 'setPage(']) {
+        if (code.includes(bad)) errs.push(`GajjalaWatchBoard.tsx must not use ${bad} — the 👀 board no longer pages`);
+      }
+      if (!/from '\.\.\/hooks\/useGgwScroll'/.test(code)) errs.push('GajjalaWatchBoard.tsx must import its scroll hooks from ../hooks/useGgwScroll (one engine)');
+
+      // 2. the CSS — the new rule at top level, the hidden rule kept
+      const css = quiet('src/styles/gajjalaWatch.css');
+      const RULE = '.ggw-grid--all > .ggw-tile { scroll-margin-top: calc(var(--sticky-top, 0px) + 0.5rem); }';
+      const ri = css.indexOf(RULE);
+      if (ri < 0) errs.push(`gajjalaWatch.css lost the rule ${RULE}`);
+      else {
+        const before = css.slice(0, ri).replace(/\/\*[\s\S]*?\*\//g, '');
+        const depth = count(before, /\{/g) - count(before, /\}/g);
+        if (depth !== 0) errs.push('gajjalaWatch.css: the .ggw-grid--all rule must sit at top level, not inside an @media block');
+      }
+      if (!css.includes('.ggw-tile[hidden] { display: none; }')) errs.push('gajjalaWatch.css must keep .ggw-tile[hidden] { display: none; } (chip filter, phone folds, card grid)');
+
+      // 3. the scroll lib — the MINE constants by name
+      const lib = quiet('src/lib/ggwScroll.ts');
+      if (!/export const GGW_NEAR_MARGIN\b/.test(lib)) errs.push('lib/ggwScroll.ts must export GGW_NEAR_MARGIN (the live gate rootMargin; null = gate off)');
+      if (!/export const GGW_SCROLL_EPS\b/.test(lib)) errs.push('lib/ggwScroll.ts must export GGW_SCROLL_EPS');
+      const hk = tsCode(quiet('src/hooks/useGgwScroll.ts'));
+      if (!/export function useGgwNear\b/.test(hk) || !/export function useGgwHold\b/.test(hk)) errs.push('hooks/useGgwScroll.ts must export useGgwNear and useGgwHold');
+      if (!/GGW_NEAR_MARGIN/.test(hk)) errs.push('hooks/useGgwScroll.ts must read GGW_NEAR_MARGIN by name — never a typed rootMargin');
+
+      // 4. the 🚩 / 🧪 card Watch layout still pages — its shared page math stays
+      const cw = quiet('src/hooks/useGgCardWatch.ts');
+      if (!/import[\s\S]*?\bggwPageOf\b[\s\S]*?from '\.\.\/lib\/gajjalaWatch'/.test(cw)) errs.push('hooks/useGgCardWatch.ts must still import ggwPageOf from ../lib/gajjalaWatch — the card grid still pages');
+
+      // 5. the ✨ — his two lines verbatim, curly quotes, past index 100 right above the 🩳⛔ entry
+      const ID = 'gajjala-watch-columns-scroll-2026-11-25';
+      const H1 = 'When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I scroll.';
+      const H2 = 'Can you fix that instead of removing the other?';
+      const nf = quiet('src/lib/newFeatures.ts');
+      const ids = [...nf.slice(nf.indexOf('export const NEW_FEATURES')).matchAll(/\bid: '([^']+)'/g)].map((m) => m[1]);
+      const lab = new RegExp(`id: '${ID}',\\s*label: "([^"]+)",\\s*addedAt: '([^']+)',\\s*route: '([^']+)',?\\s*\\}`).exec(nf);
+      if (!lab) errs.push(`the ✨ '${ID}' entry (label + addedAt + route, no straight double quote inside the label) is missing`);
+      else {
+        if (lab[2] !== '2026-11-25') errs.push(`the 👀 columns ✨ addedAt must be 2026-11-25 (found ${lab[2]})`);
+        if (lab[3] !== '/chart-maps?tab=gajjala_watch') errs.push(`the 👀 columns ✨ route must be /chart-maps?tab=gajjala_watch (found ${lab[3]})`);
+        for (const q of [H1, H2]) if (!lab[1].includes(`“${q}”`)) errs.push(`the 👀 columns ✨ must quote him verbatim in curly quotes: “${q}”`);
+        if (/bounc/i.test(lab[1])) errs.push('the 👀 columns ✨ must never say bounce — reversal');
+      }
+      const at = ids.indexOf(ID);
+      if (at <= 100) errs.push(`the ✨ '${ID}' must sit past index 100 (found ${at}) — no NEW_FEATURES[n] pin moves`);
+      if (at >= 0 && ids[at + 1] !== 'gajjala-si-ssr-potentials-watch-2026-11-24') errs.push(`the ✨ '${ID}' must sit right above the 🩳⛔ entry (found ${ids[at + 1]})`);
+      if (ids.filter((x) => x === ID).length !== 1) errs.push(`the ✨ '${ID}' must be listed exactly once`);
+
+      // 6. ship together
+      for (const f of ['src/lib/ggwScroll.test.ts', 'src/hooks/useGgwScroll.test.tsx',
+        'src/components/GajjalaWatchBoard.columns_2026_11_25.test.tsx', 'src/lib/newFeatures.watch_columns.test.ts',
+        '../docs/gajjala/watch_columns_scroll_2026_11_25.md']) if (!exists(f)) errs.push(`${f} must exist`);
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -134,7 +134,8 @@
 .ggw-grid.ggw-grid--stretch { grid-template-columns: minmax(0, 1fr); --ggw-row-h: calc(100vh - 24px); }
 @supports (height: 100dvh) { .ggw-grid.ggw-grid--stretch { --ggw-row-h: calc(100dvh - 24px); } }
 
-/* ◀ OMH AMD XYZQ ▶ — the pager over the grid: that many tiles at once (the pick), the rest one click / ← → away. */
+/* ◀ OMH AMD XYZQ ▶ — the ticker row over the grid: each chip toggles its name. Since 2026-11-25 nothing on the 👀 Watch
+ * pages (every tile is in one scrolling grid, ◀ ▶ greyed, ← → scroll a screen row group); the 🚩 / 🧪 card grid still pages. */
 .ggw-pager { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0 0 0.5rem; min-width: 0; }
 .ggw-pager-sym.is-on { color: var(--accent, #c2ef50); border-color: var(--accent, #c2ef50); }
 .ggw-pager-at { font-size: 0.74rem; color: var(--text-muted, #8595ad); }
@@ -271,3 +272,12 @@
   .ggw-grid--fit .ggw-levels { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ggw-grid--stretch.ggw-grid--fit .ggw-levels { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+
+/* 2026-11-25 — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I
+ * scroll." Every watched tile is in ONE scrolling grid; ← → bring a screen row group under the pinned tab strip. */
+.ggw-grid--all > .ggw-tile { scroll-margin-top: calc(var(--sticky-top, 0px) + 0.5rem); }
+/* 2026-11-25 — spec ggwcols §5.4 lever 1 (the ladder: a cost line exceeded → this rule, then all six re-measured; the
+ * numbers are in docs/gajjala/watch_columns_scroll_2026_11_25.md). The browser skips the layout and paint of a board tile
+ * far off the window. Desktop board grid only: the ⤢ stretch grid, the phone grid and the 🚩 / 🧪 card grid carry no
+ * .ggw-grid--all, so they never get it. Text fixed by spec §3.4. */
+.ggw-grid--all.ggw-grid--fit > .ggw-tile { content-visibility: auto; }

@@ -1100,6 +1100,19 @@ export const NEW_FEATURES: NewFeature[] = [
     addedAt: '2026-11-25',
     route: '/chart-maps?tab=gajjala&sub=potential',
   },
+  // Ajay 2026-11-25 ~11:30 ET, verbatim: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be
+  // avtive while I scroll." · "Can you fix that instead of removing the other?". Spec ggwcols rev 2 (scratchpad
+  // ggwcols/spec.md §3, §4 main-session). FE only: lib/ggwScroll.ts + hooks/useGgwScroll.ts (useGgwNear, useGgwHold) +
+  // GajjalaWatchBoard.tsx (desktop = the board's unpaged state, ggw-grid--all, paged={false}, page= out of the link) +
+  // styles/gajjalaWatch.css. The 🚩 / 🧪 card Watch layout still pages (HIS CALL #8). Pinned by scripts/contracts.mjs
+  // ("👀 Watch per screen = columns, one scroll (2026-11-25)"). PLACED HERE past index 100, right above the 🩳⛔ entry, not
+  // FIRST (the 💧 / ✅ way — no NEW_FEATURES[n] pin moves). Docs docs/gajjala/watch_columns_scroll_2026_11_25.md.
+  {
+    id: 'gajjala-watch-columns-scroll-2026-11-25',
+    label: "👀 Every Watch tile in one scroll — you said: “When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I scroll.” · “Can you fix that instead of removing the other?”. On a desktop the per-screen pick (1 · 2 · 4 · 9) now sets only the columns and the tile height — 2 is two columns — and every name on your list sits in one grid the page scrolls; none is hidden. Every ticker chip is lit; a tap turns that one name off, and lighting the last one brings the whole list back. ◀ ▶ are greyed and the page counter is gone; the ← → keys scroll one screen of rows. A tile draws live bars while it is on screen or near it. When the list refreshes, the tile you are looking at stays where it is. The link no longer carries a page. Tile size, the chip filter, ⤢, ✕, the phone and every alert are unchanged. Pinning the ticker row while you scroll is your call.",
+    addedAt: '2026-11-25',
+    route: '/chart-maps?tab=gajjala_watch',
+  },
   // Ajay 2026-11-24 ~23:20 ET, verbatim: "Make this new routine 1. Scan Short interest tabs sotkcs that become potentials
   // also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a
   // time stamp of the day" · ~23:35 ET "Days past little bit like AKAN is what I am mainly looking for many were so

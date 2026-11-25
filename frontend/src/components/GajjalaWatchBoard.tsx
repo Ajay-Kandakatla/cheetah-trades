@@ -37,8 +37,9 @@
  * the CLOSED stored bars; the next GET wins; a Watch row whose last minute read failed keeps its live tail (its bars are
  * today's); a prior-session row carries none (ggwRowLive); the batches reach the owner's
  * tabs only (events audience). The 9 / 21 tips follow the forming close (GGW_LIVE_EMA_TIP, HIS CALL
- * #1 answered 11-16). An off-page tile gets no live bars (its charts never re-render on a batch). The served feed word prints in the
- * head only when the feed is degraded. docs/gajjala/watch_live_2026_11_16.md.
+ * #1 answered 11-16). A hidden tile (a chip filter, a folded phone section) gets no live bars, and since 2026-11-25 on a
+ * desktop neither does a tile away from the window (useGgwNear) — its charts never re-render on a batch. The served feed
+ * word prints in the head only when the feed is degraded. docs/gajjala/watch_live_2026_11_16.md.
  *
  * The FE composes NO word about a stock: every visible string is served, except GGW_FETCH_FAILED (no payload to serve
  * one) and structural glyphs (⚠️ on a served stale flag, ✕, ℹ️, "·"). UNMEASURED — a cross is information, not an
@@ -67,9 +68,9 @@
  * 🆕 2026-11-19 (watch-newest spec §3.4) — Ajay: "When I add a new ticket they are gettinf added in to que but not active
  * … charts are not loading I amhaving to click on the chips again" and "The X buttons are not working". A name of his
  * (or a 🎯 A+) added since he last changed the view (`ggw.pickAt`, lib) or new to this browser (`ggw.seen`) joins his
- * pick; an ordinary 🤖 potential never does. A box add / re-add is joined (or its page shown), outlined and scrolled to
- * once; a page open outlines only a name of his this browser has not shown yet. In the pages view a list change keeps
- * the first shown name on screen (the anchor — HIS CALL #6: a card ➕ while page 2+ is open lands on page 1 unseen).
+ * pick; an ordinary 🤖 potential never does. A box add / re-add is joined (or shown, with no pick), outlined and
+ * scrolled to once; the first load outlines only a name of his this browser has not shown yet. Since 2026-11-25 (▦
+ * below) nothing pages: a list change keeps the tile he is looking at where it is (the scroll hold, useGgwHold).
  * ✕ / × hide the name at once and are never disabled by another write: writes run one after another in a queue that
  * cannot die (`then(task, task)`, every task catches its own failure), ONE full re-GET when it drains; a served error
  * or a failed request brings the name back. A write that never answers holds the queue (no abort time — HIS CALL #12).
@@ -85,7 +86,7 @@
  * list — it draws whatever sections are served, in served order (a later served key needs no change here). In org mode:
  * compact tiles (served setup chip, the ONE time line, the ⋯ drawer); the pager carries the served section labels
  * inline; on the PHONE each served section gets a collapsible header (remembered in this browser, `ggw.collapsed`; desktop
- * keeps the fitted pages, no headers); a push link (?focus=), a box add, the first-load outline and a pager tap into a
+ * keeps the fitted rows, no headers — one scrolling grid since 2026-11-25); a push link (?focus=), a box add, the first-load outline and a pager tap into a
  * FOLDED section open it first, then scroll once [C5]; the 🤖 title line and the EMA legend move into ℹ️ (with every
  * served section hint — the phone has no hover). Layout only: nothing rings, adds, caps or evicts differently.
  *
@@ -110,17 +111,26 @@
  * opens it first. The live interest posts ✅ rows LAST and, on the phone, none while ✅ is folded (his names always
  * live). A served `rules.state "unreadable"` prints its served line once, outside ℹ️. Desktop unchanged (no headers; ✅
  * tiles follow 🤖 in served order). A ✅ row is machine-added (`row.auto`, why "rules") — it never joins his pick.
- * Display only — nothing rings, adds, caps or evicts differently. UNMEASURED. */
+ * Display only — nothing rings, adds, caps or evicts differently. UNMEASURED.
+ *
+ * ▦ 2026-11-25 (spec ggwcols §3.3) — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to
+ * be avtive while I scroll." · "Can you fix that instead of removing the other?". On a desktop the per-screen pick is the
+ * GRID SHAPE only (columns + the fitted row height): nothing on this board is paged any more — every watched tile is in
+ * ONE grid the window scrolls, every ticker chip is lit, a chip tap flips that ONE name (the tap that lights the last one
+ * clears the filter), ◀ ▶ are greyed and there is no page count; `page` left the state and the link. ← → scroll one
+ * screen row group under the pinned tab strip (lib ggwScroll, read at key time); a scroll hold (useGgwHold) keeps the tile
+ * he is looking at where it is when the list or the row height changes; the live RENDER gate is "in or near the window"
+ * (useGgwNear, fail-open, off behind ⤢). The data path, the GET and the live interest are untouched. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import {
   GGW_FETCH_FAILED, GGW_FOCUS_PARAM, ggwLegendSwatch, ggwRowLive, GGW_LAYOUTS, GGW_PATH,
-  ggwClampPage, ggwLiveSymbols, ggwPageCount, ggwPageOf, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
+  ggwLiveSymbols, ggwMergeRows, ggwPendingSymbols, ggwRowsPath,
   readGgwSeen, saveGgwSeen, ggwPickGrid,
-  ggwAnchorPage, ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwPrunePick, ggwLivePick, ggwAddedMs, ggwRowsKey, ggwUnseenOwn, ggwWithout,
+  ggwDropFromPick, ggwFreshNames, ggwJoinPick, ggwPendingPlan, ggwPrunePick, ggwLivePick, ggwAddedMs, ggwRowsKey, ggwUnseenOwn, ggwWithout,
   readGgwPickAt, saveGgwPickAt, ggwSymbolPath, ggwToggleShown, GGW_URL, ggwViewParams, parseGgwLayout,
-  parseGgwPage, parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
+  parseGgwPick, readGgwPick, saveGgwPick, parseGgw, readGgwLayout, saveGgwLayout,
   GGW_SECTION_GLYPH, ggwGroupStarts, ggwRevealGroup, ggwSectionsOn, readGgwCollapsed,
   saveGgwCollapsed,
   ggwFoldedKeys, ggwLiveSkip, ggwRevealOpened, ggwRulesWarn, ggwToggleFold, readGgwOpened, saveGgwOpened,
@@ -128,6 +138,9 @@ import {
 } from '../lib/gajjalaWatch';
 import { ggwApplyBatch, ggwFrameMetas, type GgwFrameMeta, type GgwLiveMap, type GgwLiveSym } from '../lib/ggwLive';
 import { useGgwLive, type GgwBatch } from '../hooks/useGgwLive';
+/* ▦ 2026-11-25 (spec ggwcols §3.1 / §3.2): the near-window live gate, the scroll hold and the ← → row-group step. */
+import { useGgwHold, useGgwNear } from '../hooks/useGgwScroll';
+import { ggwStepNow } from '../lib/ggwScroll';
 import { ggwReturnRefetch } from '../lib/ggwReturn';
 /* 2026-11-16 (ggcard3 WP-A): the tile, its frames and the ⤢ full-screen view live in GajjalaWatchTile.tsx (a pure move)
  * so the 🚩 cards open the SAME view. */
@@ -146,6 +159,13 @@ import '../styles/gajjalaWatch.css';
 type Load = { phase: 'loading' } | { phase: 'failed' } | { phase: 'loaded'; p: GgwPayload };
 const NO_SYMBOLS: string[] = [];
 const NO_SKIP: ReadonlySet<string> = new Set<string>();
+/** ▦ 2026-11-25: the greyed ◀ ▶ (nothing on this board pages any more). */
+const NOOP = () => {};
+/** ▦ 2026-11-25 (refix): the ONE all-on rule — a pick that covers every listed name hides nothing now but would hide
+ * every name served later (ggwJoinable) → no filter (null). A pick missing any listed name is kept as it is. Used by
+ * the chip toggle, the load's join pass and the box-add join. */
+const ggwCoverAll = (pick: string[] | null, list: ReadonlyArray<string>): string[] | null =>
+  pick && list.length > 0 && list.every((s) => pick.includes(s)) ? null : pick;
 
 const getJson = (path: string) =>
   fetch(`${API}${path}`, { credentials: 'include', cache: 'no-store' })
@@ -167,33 +187,37 @@ export default function GajjalaWatchBoard() {
   const [layout, setLayoutState] = useState<GgwLayout>(() => (params.get(GGW_URL.per)
     ? parseGgwLayout(params.get(GGW_URL.per)) : readGgwLayout()));
   const [stretched, setStretched] = useState<string | null>(null);
-  const [page, setPage] = useState(() => parseGgwPage(params.get(GGW_URL.page)));
-  /** 2026-11-16 — the names HE toggled on (null = the pages). */
+  const pendingFocus = useRef<string | null>(null);
+  /** 2026-11-16 — the names HE toggled on (null = no filter: every name shown). */
   const [pick, setPick] = useState<string[] | null>(() => (params.has(GGW_URL.show)
     ? parseGgwPick(params.get(GGW_URL.show)) : (params.has(GGW_URL.per) ? null : readGgwPick())));
   /* 🔗 every change writes the link (replace — no history step per tap) and this browser. */
   useEffect(() => {
     saveGgwPick(pick);
-    setParams((prev) => ggwViewParams(prev, { layout, pick, page }), { replace: true });
-  }, [layout, pick, page, setParams]);
-  const closeStretch = useCallback(() => setStretched(null), []);
-  /* The page size: the pick on a desktop; a phone shows every tile in one column. */
-  const size = phone ? Number.POSITIVE_INFINITY : layout;
+    /* ▦ 2026-11-25: no page any more — an incoming `page=` (any value, junk included) is dropped by the first write. */
+    setParams((prev) => ggwViewParams(prev, { layout, pick, page: 0 }), { replace: true });
+  }, [layout, pick, setParams]);
+  /* ▦ 2026-11-25 — ⤢ close lands on the stock last viewed (the page used to do this): a step inside ⤢ to another name
+   * → that tile is scrolled to once on close (desktop only); open + close without stepping moves nothing. Stable identity
+   * (GgwStretch re-binds its key listener on a new one). */
+  const stretchFrom = useRef<string | null>(null);
+  const stretchedRef = useRef<string | null>(null);
+  stretchedRef.current = stretched;
+  const openStretch = (s: string) => { stretchFrom.current = s; setStretched(s); };
+  const closeStretch = useCallback(() => {
+    const s = stretchedRef.current;
+    /* only a SHOWN tile: ▶ walks every row, a chip-hidden one too — a focus on it would never clear (the scroll effect
+     * waits for a shown tile), firing a stray scroll later and blocking the hold */
+    const el = s && typeof document !== 'undefined' ? document.getElementById(`ggw-${s}`) : null;
+    if (!phone && s && s !== stretchFrom.current && el && !el.hidden) pendingFocus.current = s;
+    setStretched(null);
+  }, [phone]);
   const boardRef = useRef<HTMLDivElement>(null);
   /* 🆕 2026-11-19: HIS view actions stamp `ggw.pickAt` — never a mount, an activation pass, a box add or ?focus=. */
   const markView = () => saveGgwPickAt(Date.now());
-  /* A page move by HIM (◀ ▶, a ticker, ← →) brings the board's top to the window's top, so the two tiles fill it. */
-  const goPage = (pg: number) => {
-    markView();
-    setPick(null);
-    setPage(pg);
-    boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-  };
   const setLayout = (l: GgwLayout) => {
     markView();
     setPick(null);
-    /* keep the first SHOWN tile in view (the stored page clamped first — review fix: a stale page after removals) */
-    setPage((pg) => (Number.isFinite(size) ? ggwPageOf(ggwClampPage(pg, nRows, size as number) * (size as number), l) : 0));
     setLayoutState(l);
     saveGgwLayout(l);
   };
@@ -204,9 +228,8 @@ export default function GajjalaWatchBoard() {
   const pendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendSince = useRef<Map<string, number>>(new Map());
   const focusDone = useRef(false);
-  const pendingFocus = useRef<string | null>(null);
   const loadAllRef = useRef<() => void>(() => {});
-  /* 🆕 2026-11-19 — load sequencing, the optimistic ×, the write queue, the box add, the first load, the pages anchor. */
+  /* 🆕 2026-11-19 — load sequencing, the optimistic ×, the write queue, the box add, the first load. */
   const [late, setLate] = useState<Set<string>>(() => new Set());
   const loadSeq = useRef(0);
   const fullAt = useRef(0);
@@ -216,7 +239,6 @@ export default function GajjalaWatchBoard() {
   const writesLeft = useRef(0);
   const justAdded = useRef<{ sym: string; at: number } | null>(null);
   const firstOk = useRef(true);
-  const anchor = useRef<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   /* The pick (his toggled names still on the list) and its grid; no pick → the layout's own grid. */
@@ -249,17 +271,20 @@ export default function GajjalaWatchBoard() {
     const list = rowsNow.map((r) => r.symbol);
     const seen = readGgwSeen();
     const fresh = ggwFreshNames(rowsNow, { seen, pickAt: readGgwPickAt(), nowMs: Date.now() });
-    /* 🐛 2026-11-22 (WETO): a pick only ever holds listed names (or one a × is still hiding) — a dead pick turns into the
-     * pages at the load where it died, so a name served again joins ONLY by the fresh rule above. */
+    /* 🐛 2026-11-22 (WETO): a pick only ever holds listed names (or one a × is still hiding) — a dead pick turns into NO
+     * pick (every name shown) at the load where it died, so a name served again joins ONLY by the fresh rule above. */
     const keep = [...list, ...Array.from(removing.current.keys())];
     /* review residual: a pick whose ONLY listed names were added AFTER this browser last set the view (`ggw.pickAt`) —
      * a card ➕ / another device re-adding a name of a dead pick before this browser reopened the Watch — cannot be his
-     * pick of them → the pages. No pickAt on this browser (a shared show= link, a cold browser) → the pick is honoured. */
+     * pick of them → no pick (every name shown). No pickAt on this browser (a shared show= link, a cold browser) → the
+     * pick is honoured. */
     const pickAtMs = readGgwPickAt();
     const after = pickAtMs == null ? [] : rowsNow
       .filter((r) => { const t = ggwAddedMs(r); return t != null && t > pickAtMs; }).map((r) => r.symbol);
     setPick((cur) => {
-      const next = ggwJoinPick(ggwLivePick(ggwPrunePick(cur, keep), after), list, fresh);
+      /* ▦ 2026-11-25: the all-on rule (ggwCoverAll) — a pick that covers every listed name (a machine name it was hiding
+       * left the list) hides nothing now but would hide the next one served → no filter. */
+      const next = ggwCoverAll(ggwJoinPick(ggwLivePick(ggwPrunePick(cur, keep), after), list, fresh), list);
       return (next ?? []).join(',') === (cur ?? []).join(',') ? cur : next;
     });
     if (firstOk.current) {
@@ -270,8 +295,6 @@ export default function GajjalaWatchBoard() {
         setOutlined(s);
         reveal(rowsNow, s);
         pendingFocus.current = s;
-        const eff = !!pick && pick.some((x) => list.includes(x));
-        if (!eff && Number.isFinite(size)) setPage(ggwPageOf(list.indexOf(s), size as number));
       }
     }
     /* a name hidden by × is still "seen", so a failed DELETE never re-joins it */
@@ -280,6 +303,9 @@ export default function GajjalaWatchBoard() {
   const picked = pick ? pick.filter((s) => listNow.includes(s)) : [];
   const usePick = picked.length > 0;
   const grid = usePick ? ggwPickGrid(picked.length, GGW_LAYOUTS[layout].cols, GGW_LAYOUTS[layout].rows) : GGW_LAYOUTS[layout];
+  /* ▦ 2026-11-25: one screen row group = the grid's columns × its fitted rows (read by ← → at key time). */
+  const perRef = useRef(1);
+  perRef.current = grid.cols * grid.rows;
   const rowH = useGgwFitRows(gridRef, headRef, phone, load, grid.rows);
   const fit = rowH != null;
 
@@ -299,6 +325,18 @@ export default function GajjalaWatchBoard() {
   const { word: feedWord } = useGgwLive(load.phase === 'loaded' && load.p.state === 'ok' ? ggwLiveSymbols(load.p, liveSkip) : NO_SYMBOLS,
     liveOn, onBatch);
   const liveOf = (r: GgwRow, shown: boolean): GgwLiveSym | undefined => (shown && ggwRowLive(r) ? live[r.symbol] : undefined);
+  /* ▦ 2026-11-25 — the RENDER gate is "in or near the window" on a desktop (one IntersectionObserver, fail-open: no
+   * observer → every shown tile is live); while ⤢ is open no board tile redraws. The data fold above is untouched. */
+  const listKey = listNow.join(',');
+  const near = useGgwNear(gridRef, listKey, !phone && listNow.length > 0);
+  const isNear = (sym: string) => !stretched && (near == null || near.has(sym));
+  /* ▦ the scroll hold: the tile he is looking at stays put across a commit that changes the list, the row height, the
+   * grid, the filter or a head line; skipped while a focus / box add / first-load outline / ⤢ close is moving the view.
+   * Never `live`, `near` or `outlined` in these deps (no rect read on the per-second path). A box add is skipped from
+   * its answer on (`justAdded`): its focus is only set by an effect AFTER the commit that lands the name. */
+  useGgwHold(gridRef, !phone && listNow.length > 0,
+    [load, rowH, grid.cols, grid.rows, pick, msg, feedWord, refreshFailed, servedErr],
+    () => pendingFocus.current != null || justAdded.current != null);
 
   const clearMain = () => { if (mainTimer.current) { clearTimeout(mainTimer.current); mainTimer.current = null; } };
   const clearPend = () => { if (pendTimer.current) { clearTimeout(pendTimer.current); pendTimer.current = null; } };
@@ -425,14 +463,14 @@ export default function GajjalaWatchBoard() {
     const at = load.p.rows.findIndex((r) => r.symbol === focus);
     if (at < 0) return;
     focusDone.current = true;
-    if (Number.isFinite(size)) setPage(ggwPageOf(at, size as number));
     setPick(null);
     setOutlined(focus);
     reveal(load.p.rows, focus);
     pendingFocus.current = focus;
-  }, [focus, load, size]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focus, load]); // eslint-disable-line react-hooks/exhaustive-deps
   /* 🆕 2026-11-19 — a name HE added from the box (added / already / replaced): joined to his pick (forced — the clocks may
-   * differ), or in the pages view its page is shown; outlined and scrolled to once. The pick is never cleared. */
+   * differ; with no pick it is already shown); outlined and scrolled to once. ▦ 2026-11-25: a join that makes the pick
+   * cover every listed name clears it (ggwCoverAll — no filter, every tile shown); a pick still missing a name is kept. */
   useEffect(() => {
     const j = justAdded.current;
     if (!j || load.phase !== 'loaded' || load.p.state !== 'ok') return;
@@ -444,25 +482,14 @@ export default function GajjalaWatchBoard() {
     }
     const s = rows[idx].symbol;
     const list = rows.map((r) => r.symbol);
-    if (pick && pick.some((x) => list.includes(x))) setPick((cur) => ggwJoinPick(cur, list, [s]));
-    else if (Number.isFinite(size)) setPage(ggwPageOf(idx, size as number));
+    if (pick && pick.some((x) => list.includes(x))) setPick((cur) => ggwCoverAll(ggwJoinPick(cur, list, [s]), list));
     setOutlined(s);
     reveal(rows, s);
     pendingFocus.current = s;
     justAdded.current = null;
   }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* 🆕 2026-11-19 — the pages view keeps the first shown name on screen when the list changes (a name added on top, one
-   * above removed). Skipped while a focus / box add / first-load outline is moving the view. */
-  const pagedNow = !!rowsNow && Number.isFinite(size) && rowsNow.length > (size as number);
-  const curNow = pagedNow && rowsNow ? ggwClampPage(page, rowsNow.length, size as number) : 0;
-  useEffect(() => {
-    if (!rowsNow || !pagedNow || pendingFocus.current || !anchor.current) return;
-    if (pick && pick.some((x) => listNow.includes(x))) return;
-    const pg = ggwAnchorPage(listNow, anchor.current, size as number);
-    if (pg != null) setPage(pg);
-  }, [rowsKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  /* Review fix: the scroll waits until the focused tile is SHOWN — a tile on page 2+ is still hidden (no box, so
-   * scrollIntoView is a no-op) in the commit that asks for its page. */
+  /* Review fix: the scroll waits until the focused tile is SHOWN — a tile hidden by a filter or a folded phone section has
+   * no box (scrollIntoView is a no-op) in the commit that asks for it. */
   useEffect(() => {
     const want = pendingFocus.current;
     if (!want || typeof document === 'undefined') return;
@@ -471,11 +498,6 @@ export default function GajjalaWatchBoard() {
     pendingFocus.current = null;
     el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
   });
-  /* the anchor = the first name shown on the (clamped) page; none on a pick, a phone or an unpaged board */
-  useEffect(() => {
-    const usingPick = !!pick && pick.some((x) => listNow.includes(x));
-    anchor.current = rowsNow && pagedNow && !usingPick ? rowsNow[curNow * (size as number)]?.symbol ?? null : null;
-  });
 
   /* ⤢ the stretched name left the list → forget it (it never re-opens by itself when the name is added back). */
   useEffect(() => {
@@ -483,41 +505,35 @@ export default function GajjalaWatchBoard() {
     if (!load.p.rows.some((r) => r.symbol === stretched)) setStretched(null);
   }, [stretched, load]);
 
-  /* ← → move the view a page (never while typing in the add box, never under the full-screen view). */
   /* 🏷️ 2026-11-18 — ONE room read for the names CARDED on today's 🚩 board (their served tags block says so); never for an
    * off-board name (no on-demand zone build for a name no Gajjala board asked about — HIS CALL #3). Empty list → no
    * request. Unconditional — hooks order. */
   const tagsOf = useGgwTags(rowsNow);
-  const nRows = rowsNow?.length ?? 0;
+  /* ▦ 2026-11-25 — ← → scroll one screen row group under the pinned tab strip, read at key time (no state, no scroll
+   * listener). Never while typing in the add box, never under the full-screen view, never on a phone. A key only
+   * scrolls: it never clears a chip filter, never stamps `ggw.pickAt`, never writes the link (HIS CALL #7). */
   useEffect(() => {
-    if (stretched || !Number.isFinite(size) || nRows <= (size as number)) return;
+    if (stretched || phone) return;
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      const d = e.key === 'ArrowLeft' ? -1 : 1;
-      markView();
-      setPick(null);
-      setPage((pg) => ggwClampPage(ggwClampPage(pg, nRows, size as number) + d, nRows, size as number));
-      boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      const to = ggwStepNow(gridRef.current, perRef.current, e.key === 'ArrowLeft' ? -1 : 1);
+      if (to == null) return;
+      (to === 'top' ? boardRef.current : to)?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [stretched, size, nRows]);
-  /* Review fix: the stored page follows the list (removals, a smaller pick), so a later add never jumps the view back. */
-  useEffect(() => {
-    if (nRows > 0 && Number.isFinite(size)) setPage((pg) => ggwClampPage(pg, nRows, size as number));
-  }, [nRows, size]);
-  /* In the full-screen view ◀ ▶ / ← → step through HIS list one stock at a time (wrapping), and the board's page
-   * follows, so closing it lands on the stock last viewed. */
+  }, [stretched, phone]);
+  /* In the full-screen view ◀ ▶ / ← → step through HIS list one stock at a time (wrapping); closing it scrolls the board
+   * to the stock last viewed (closeStretch). */
   const stepStretch = useCallback((d: -1 | 1) => {
     if (!rowsNow || rowsNow.length < 2) return;
     const i = rowsNow.findIndex((r) => r.symbol === stretched);
     const j = ((i < 0 ? 0 : i) + d + rowsNow.length) % rowsNow.length;
     markView();
     setStretched(rowsNow[j].symbol);
-    if (Number.isFinite(size)) setPage(ggwPageOf(j, size as number));
-  }, [rowsNow, size, stretched]);
+  }, [rowsNow, stretched]);
 
   /* 🆕 2026-11-19 — "The X buttons are not working": `busy` is the add box's own POST only; a × hides its name NOW. */
   const onAnswer = (method: 'POST' | 'DELETE', sym: string, a: GgwWriteAnswer | null) => {
@@ -604,11 +620,8 @@ export default function GajjalaWatchBoard() {
   const addLabel = p.add_label ?? '';
   /* A name removed (here or on another device) while stretched simply closes the full-screen view. */
   const stretchRow = stretched ? p.rows.find((r) => r.symbol === stretched) ?? null : null;
-  const paged = Number.isFinite(size) && p.rows.length > (size as number);
-  const cur = paged ? ggwClampPage(page, p.rows.length, size as number) : 0;
-  const pages = paged ? ggwPageCount(p.rows.length, size as number) : 1;
-  const onPage = (i: number) => (usePick ? picked.includes(p.rows[i].symbol)
-    : !paged || ggwPageOf(i, size as number) === cur);
+  /* ▦ 2026-11-25: no pages — with no filter every name is shown (the phone's rule, now the only one). */
+  const onPage = (i: number) => !usePick || picked.includes(p.rows[i].symbol);
   /* 2026-11-16 — a ticker button toggles that name; the names on screen now are the base. */
   /* 🆕 past the pending cap a pending tile prints the served "still reading" words */
   const lateRow = (r: GgwRow): GgwRow => (late.has(r.symbol) && r.late_text ? { ...r, text: r.late_text } : r);
@@ -636,7 +649,9 @@ export default function GajjalaWatchBoard() {
       reveal(p.rows, sym);
       if (onPage(at)) { pendingFocus.current = sym; return; }
     }
-    setPick(ggwToggleShown(list, list.filter((_s, i) => onPage(i)), sym));
+    /* ▦ 2026-11-25: the tap that lights the LAST unlit chip clears the filter (ggwCoverAll) — a pick listing every name
+     * hides nothing now but would hide every machine name added later (ggwJoinable). */
+    setPick(ggwCoverAll(ggwToggleShown(list, list.filter((_s, i) => onPage(i)), sym), list));
     boardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
   };
   const legend = p.legend.length ? (
@@ -668,8 +683,8 @@ export default function GajjalaWatchBoard() {
   };
   const tileOf = (r: GgwRow, i: number) => (
     <Tile key={r.symbol} row={lateRow(r)} phone={phone} fit={fit} removeLabel={p.remove_label} busy={false}
-          focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={setStretched}
-          offPage={!shown(r, i)} live={liveOf(r, shown(r, i))} siNote tags={tagsOf(r)} compact={org}
+          focused={outlined === r.symbol} onRemove={(s) => write('DELETE', s)} onStretch={openStretch}
+          offPage={!shown(r, i)} live={liveOf(r, shown(r, i) && isNear(r.symbol))} siNote tags={tagsOf(r)} compact={org}
           actions={<GgwBrokerButton row={r} block={p.broker ?? null} busy={busy || mark.busy} onMark={mark.mark} />}
           run={runOf(r)} />
   );
@@ -752,13 +767,13 @@ export default function GajjalaWatchBoard() {
         ) : null}
       </div>
       {p.rows.length > 1 ? (
-        <GgwPager rows={p.rows} onPage={onPage} paged={paged} cur={cur} pages={pages} usePick={usePick} busy={false}
-                  removeLabel={p.remove_label} onToggle={toggle} onPrev={() => goPage(Math.max(0, cur - 1))}
-                  onNext={() => goPage(Math.min(pages - 1, cur + 1))} onRemove={(s) => write('DELETE', s)}
+        <GgwPager rows={p.rows} onPage={onPage} paged={false} cur={0} pages={1} usePick={usePick} busy={false}
+                  removeLabel={p.remove_label} onToggle={toggle} onPrev={NOOP}
+                  onNext={NOOP} onRemove={(s) => write('DELETE', s)}
                   groups={org ? starts : undefined} />
       ) : null}
       {p.rows.length ? (
-        <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}`}
+        <div className={`ggw-grid ggw-grid--cols${grid.cols}${fit ? ' ggw-grid--fit' : ''}${phone ? '' : ' ggw-grid--all'}`}
              ref={gridRef} data-layout={layout} data-pick={usePick ? picked.length : undefined}
              style={fit ? ({ '--ggw-row-h': `${rowH}px` } as CSSProperties) : undefined}>
           {p.rows.map((r, i) => {

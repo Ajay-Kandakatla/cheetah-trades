@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — toggle tickers, 1 per screen, × on every ticker (2026-11-16)
 
+> **2026-11-25 — changed.** With no filter every chip is lit and a tap turns that ONE name off; the tap that lights the last chip clears the filter; ← → only scroll. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay, verbatim: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove from
 these give me an x option to remove as well".
 

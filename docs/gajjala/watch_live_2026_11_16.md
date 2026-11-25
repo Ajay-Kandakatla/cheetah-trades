@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch LIVE — a per-second candle and a live volume column on every Watch chart (2026-11-16)
 
+> **2026-11-25 — changed.** The live render gate is now "shown and in or near the window" (one IntersectionObserver), not "on the page"; the data path is unchanged. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay 2026-11-16, on the 👀 Gajjala's Watch tab, four messages in a row:
 "Can you make the watch list charts live please" · "Realtime updates.. Like the 1 min chart I need it to be live live.. per sec change" · "Also on the Watch list I need live volume to be shown at the bottom" · "Of each chart".
 

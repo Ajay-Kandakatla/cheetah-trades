@@ -162,33 +162,36 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect(screen.queryByTestId(`ggw-tile-${s}`)).not.toBeNull();
     expect(screen.queryByTestId('ggw-stretch')).toBeNull();
   });
-  it('2 at a time: the first two tiles show, the rest are mounted but hidden; ◀ ▶, a ticker and ← → move the view', async () => {
+  // RE-PINNED 2026-11-25 (ggwcols — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to
+  // be avtive while I scroll"): 2 per screen = two columns; every tile is shown, every chip lit, ◀ ▶ greyed, no counter.
+  it('2 per screen: every tile shows in two columns, every chip lit; ◀ ▶ off, no count; a ticker flips ONE name; ← → hide nothing', async () => {
     const { c } = await mount(false);
     const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
     expect(syms.length).toBeGreaterThan(2);
     const shown = () => syms.filter((x) => !(c.querySelector(`[data-testid="ggw-tile-${x}"]`) as HTMLElement).hidden);
-    expect(shown()).toEqual(syms.slice(0, 2));
-    expect(syms.every((x) => c.querySelector(`[data-testid="ggw-tile-${x}"]`))).toBe(true);   // NEGATIVE: none unmounted
+    const lit = () => syms.filter((x) => screen.getByTestId(`ggw-pager-${x}`).getAttribute('aria-pressed') === 'true');
+    expect(shown()).toEqual(syms);
+    expect(lit()).toEqual(syms);
+    expect((c.querySelector('.ggw-grid') as HTMLElement).classList.contains('ggw-grid--cols2')).toBe(true);
     expect((screen.getByTestId('ggw-pager-prev') as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    expect(shown()).toEqual(syms.slice(2, 4));
-    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(syms.length <= 4);
-    // WIDENED 2026-11-16 ("make These toggleable"): a ticker toggles into the names on screen; ◀ goes back to the pages
-    fireEvent.click(screen.getByTestId(`ggw-pager-${syms[0]}`));
-    expect(shown()).toEqual([syms[0], ...syms.slice(2, 4)]);
-    fireEvent.click(screen.getByTestId('ggw-pager-prev'));                    // ◀ clears the pick, one page back
-    expect(shown()).toEqual(syms.slice(0, 2));
+    expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByTestId('ggw-pager-at')).toBeNull();
+    fireEvent.click(screen.getByTestId('ggw-pager-next'));                    // NEGATIVE: the greyed ▶ changes nothing
+    expect(shown()).toEqual(syms);
+    fireEvent.click(screen.getByTestId(`ggw-pager-${syms[0]}`));              // a ticker flips that ONE name off
+    expect(shown()).toEqual(syms.slice(1));
+    expect(lit()).toEqual(syms.slice(1));
+    fireEvent.click(screen.getByTestId(`ggw-pager-${syms[0]}`));              // and back on: the filter clears
+    expect(shown()).toEqual(syms);
+    expect((c.querySelector('.ggw-grid') as HTMLElement).dataset.pick).toBeUndefined();
     fireEvent.keyDown(document, { key: 'ArrowRight' });
-    expect(shown()).toEqual(syms.slice(2, 4));
+    expect(shown()).toEqual(syms);                                             // NEGATIVE: a key never hides a tile
     fireEvent.keyDown(document, { key: 'ArrowLeft' });
-    expect(shown()).toEqual(syms.slice(0, 2));
+    expect(shown()).toEqual(syms);
     const input = c.querySelector('.ggw-input') as HTMLInputElement;
-    fireEvent.keyDown(input, { key: 'ArrowRight' });                             // NEGATIVE: typing never pages
-    expect(shown()).toEqual(syms.slice(0, 2));
-    fireEvent.keyDown(document, { key: 'ArrowLeft' });                           // NEGATIVE: never before the first page
-    expect(shown()).toEqual(syms.slice(0, 2));
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(shown()).toEqual(syms);
     fireEvent.click(screen.getByTestId('ggw-layout-9'));
-    // WIDENED 2026-11-16: the ticker bar stays (its toggles and × still work); all fit → ◀ ▶ off, no page count
     expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId('ggw-pager-at')).toBeNull();
     expect(shown()).toEqual(syms);
@@ -200,7 +203,7 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect(screen.queryByTestId('ggw-pager-at')).toBeNull();
     expect(Array.from(c.querySelectorAll('.ggw-grid > .ggw-tile')).every((t) => !(t as HTMLElement).hidden)).toBe(true);
   });
-  it('?focus= a name on page 2 → that page shows it', async () => {
+  it('?focus= a name far down → it is shown; NEGATIVE (re-pinned 2026-11-25): every other tile is still shown', async () => {
     const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
     (Element.prototype as any).scrollIntoView = vi.fn();
     vi.stubGlobal('matchMedia', (q: string) => ({ matches: false, media: q, addEventListener: () => {}, removeEventListener: () => {} }));
@@ -208,7 +211,7 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     const r = render(<MemoryRouter initialEntries={[`/chart-maps?tab=gajjala_watch&focus=${syms[3]}`]}><GajjalaWatchBoard /></MemoryRouter>);
     for (let i = 0; i < 4; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect((r.container.querySelector(`[data-testid="ggw-tile-${syms[3]}"]`) as HTMLElement).hidden).toBe(false);
-    expect((r.container.querySelector(`[data-testid="ggw-tile-${syms[0]}"]`) as HTMLElement).hidden).toBe(true);
+    for (const x of syms) expect((r.container.querySelector(`[data-testid="ggw-tile-${x}"]`) as HTMLElement).hidden).toBe(false);
   });
   it('review fix: ?focus= on page 2 scrolls ONLY once the tile is shown (never on the hidden tile)', async () => {
     const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
@@ -222,23 +225,25 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect(mine).toHaveLength(1);
     expect(mine[0].hidden).toBe(false);
   });
-  it('review fix: the page follows the list — removals clamp it, and a later add never jumps the view back', async () => {
+  // RE-PINNED 2026-11-25 (ggwcols): no page to clamp — removals and a later add keep every listed tile shown.
+  it('the list changes: removals and a later add keep every listed tile shown (no page to clamp or jump)', async () => {
     const syms = (fixture as any).rows.map((r: any) => r.symbol) as string[];
     let n = syms.length;
     const board = () => { const b = clone(fixture) as any; b.rows = b.rows.slice(0, n); return b; };
     const { c } = await mount(false, board);
     const shown = () => Array.from(c.querySelectorAll('.ggw-grid > .ggw-tile')).filter((t) => !(t as HTMLElement).hidden)
       .map((t) => (t as HTMLElement).dataset.testid);
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    expect(shown()).toEqual([`ggw-tile-${syms[2]}`, `ggw-tile-${syms[3]}`]);
+    expect(shown()).toEqual(syms.map((x) => `ggw-tile-${x}`));
     const tick = async () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(((fixture as any).refresh_sec || 60) * 1000 + 10); });
       for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     };
     n = 2; await tick();
     expect(shown()).toEqual([`ggw-tile-${syms[0]}`, `ggw-tile-${syms[1]}`]);
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
     n = syms.length; await tick();
-    expect(shown()).toEqual([`ggw-tile-${syms[0]}`, `ggw-tile-${syms[1]}`]);     // NEGATIVE: no jump back to page 2
+    expect(shown()).toEqual(syms.map((x) => `ggw-tile-${x}`));                 // NEGATIVE: nothing re-added stays hidden
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
   });
   it('review fix: rows are measured from the BOARD top, and the 2 / 4 / 9 picks size 1 / 2 / 3 rows', async () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
@@ -288,5 +293,40 @@ describe('the board: 2 per screen + ⤢ stretch', () => {
     expect(css).toMatch(/\.ggw-grid--fit \.ggw-cap \{ flex-wrap: nowrap; overflow: hidden; \}/);
     expect(css).toMatch(/\.ggw-stretch \{\s*position: fixed; inset: 0;/);
     expect(css).toMatch(/\.ggw-grid\.ggw-grid--stretch \{ grid-template-columns: minmax\(0, 1fr\); --ggw-row-h: calc\(100vh - 24px\); \}/);
+    // 2026-11-25 (ggwcols): ← → bring a screen row group under the pinned tab strip
+    expect(css).toContain('.ggw-grid--all > .ggw-tile { scroll-margin-top: calc(var(--sticky-top, 0px) + 0.5rem); }');
+  });
+  // 2026-11-25 (ggwcols §5.4 lever 1, text fixed by §3.4): the desktop board's far tiles skip layout + paint.
+  const LEVER1 = '.ggw-grid--all.ggw-grid--fit > .ggw-tile { content-visibility: auto; }';
+  const noComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '');
+  it('CSS lever 1: the spec text, top level, the ONLY content-visibility rule; NEGATIVE: never on ⤢, the phone or the card grid', async () => {
+    const css = noComments(await readSource('src/styles/gajjalaWatch.css'));
+    expect(css).toContain(LEVER1);
+    expect(css.match(/content-visibility/g)).toHaveLength(1);                     // NEGATIVE: no second rule anywhere
+    const at = css.indexOf(LEVER1);
+    let depth = 0;
+    for (const ch of css.slice(0, at)) { if (ch === '{') depth += 1; else if (ch === '}') depth -= 1; }
+    expect(depth).toBe(0);                                                        // NEGATIVE: not inside an @media block
+    const sel = LEVER1.slice(0, LEVER1.indexOf('{')).trim();
+    expect(sel).toMatch(/^\.ggw-grid--all\.ggw-grid--fit > \.ggw-tile$/);
+    expect(sel).not.toMatch(/stretch|cardgrid/);                                  // NEGATIVE: the ⤢ / card grids not named
+    const card = await readSource('src/components/GgCardGrid.tsx');
+    expect(card).not.toContain('ggw-grid--all');                                  // NEGATIVE: the card grid never matches
+  });
+  it('lever 1 reach: the desktop board grid carries .ggw-grid--all; NEGATIVE: the ⤢ grid and the phone grid do not', async () => {
+    const { c } = await mount(false);
+    const board = c.querySelector('.ggw-grid') as HTMLElement;
+    expect(board.classList.contains('ggw-grid--all')).toBe(true);
+    fireEvent.click(screen.getByTestId(`ggw-stretch-btn-${sym()}`));
+    const st = screen.getByTestId('ggw-stretch').querySelector('.ggw-grid') as HTMLElement;
+    expect(st.classList.contains('ggw-grid--stretch')).toBe(true);
+    expect(st.classList.contains('ggw-grid--all')).toBe(false);                   // NEGATIVE: ⤢ never gets lever 1
+    expect(st.matches('.ggw-grid--all.ggw-grid--fit')).toBe(false);
+    cleanup();
+    const p = await mount(true);
+    const grids = Array.from(p.c.querySelectorAll('.ggw-grid')) as HTMLElement[];
+    expect(grids.length).toBeGreaterThan(0);
+    expect(grids.some((g) => g.classList.contains('ggw-grid--all'))).toBe(false); // NEGATIVE: the phone never gets lever 1
+    expect(p.c.querySelectorAll('.ggw-grid--all.ggw-grid--fit > .ggw-tile')).toHaveLength(0);
   });
 });

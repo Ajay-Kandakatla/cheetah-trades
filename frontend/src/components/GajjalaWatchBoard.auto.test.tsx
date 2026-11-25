@@ -6,7 +6,8 @@
  * block and [C9] 18 auto rows = cap; 18 removals of removed_total 25). fetch is a routed stub. Every word is a stand-in
  * for a served one. NEGATIVES: junk auto blocks → null; an older payload → no 🤖 anywhere; no chip title when every
  * hover word is null; × on an auto name never toggles and never DELETEs another name; the live POST is never his
- * `symbols` alone; a second GET with the same rows never moves the page. */
+ * `symbols` alone; a second GET with the same rows never re-keys a tile. 2026-11-25 (ggwcols): no pages on the board —
+ * every row shown in the pick's columns, every chip lit. */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -251,49 +252,67 @@ describe('🤖 the board', { timeout: 20000 }, () => {
     expect(body.symbols).toHaveLength(30);
     expect(body.symbols).not.toEqual(MANUAL);
   });
-  it('pages: 30 rows at 2 / 4 / 9 per screen; ← → clamp at both ends', async () => {
+  /* 2026-11-25 (ggwcols) — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive
+   * while I scroll." The pick is the grid's columns; every row is in one scrolling grid, every chip lit, no counter. */
+  it('30 rows at 2 / 4 / 9 per screen: all 30 shown in the pick\'s columns, no counter, ◀ ▶ disabled; ← → never hide a tile', async () => {
     const c = await mount();
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe('1 / 15');
-    fireEvent.click(screen.getByTestId('ggw-layout-4'));
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe('1 / 8');
-    fireEvent.click(screen.getByTestId('ggw-layout-9'));
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe('1 / 4');
+    const grid = () => c.querySelector('.ggw-grid') as HTMLElement;
+    const pressedAll = () => ALL.filter((s) => screen.getByTestId(`ggw-pager-${s}`).getAttribute('aria-pressed') === 'true');
+    for (const [l, cols] of [[2, 2], [4, 2], [9, 3]] as const) {
+      fireEvent.click(screen.getByTestId(`ggw-layout-${l}`));
+      expect(grid().dataset.layout).toBe(String(l));
+      expect(grid().classList.contains(`ggw-grid--cols${cols}`)).toBe(true);
+      expect(shown(c)).toEqual(ALL);
+      expect(shown(c)).toHaveLength(30);
+      expect(pressedAll()).toEqual(ALL);
+      expect(c.querySelector('[data-testid="ggw-pager-at"]')).toBeNull();
+      expect((screen.getByTestId('ggw-pager-prev') as HTMLButtonElement).disabled).toBe(true);
+      expect((screen.getByTestId('ggw-pager-next') as HTMLButtonElement).disabled).toBe(true);
+    }
+    /* NEGATIVE: ← → (jsdom: nothing measured) and the greyed ▶ change nothing */
     fireEvent.keyDown(document, { key: 'ArrowLeft' });
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe('1 / 4');
     for (let i = 0; i < 6; i += 1) fireEvent.keyDown(document, { key: 'ArrowRight' });
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe('4 / 4');
-    expect(shown(c)).toEqual(ALL.slice(27, 30));
-    expect(shown(c).every((s) => AUTO.includes(s))).toBe(true);
+    fireEvent.click(screen.getByTestId('ggw-pager-next'));
+    expect(shown(c)).toEqual(ALL);
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
+    expect(c.querySelector('[data-testid="ggw-pager-at"]')).toBeNull();
   });
-  it('a pick of an auto name works (the toggle keys by symbol)', async () => {
+  it('a tap on an auto name flips THAT one name (the toggle keys by symbol); NEGATIVE: never an empty board', async () => {
     const c = await mount();
+    const pressed = (s: string) => screen.getByTestId(`ggw-pager-${s}`).getAttribute('aria-pressed');
     fireEvent.click(screen.getByTestId('ggw-pager-MARA'));
-    expect(shown(c)).toEqual([...ALL.slice(0, 2), 'MARA']);
+    expect(shown(c)).toEqual(ALL.filter((s) => s !== 'MARA'));
+    expect(pressed('MARA')).toBe('false');
+    expect(pressed('OMH')).toBe('true');
     fireEvent.click(screen.getByTestId('ggw-pager-OMH'));
-    fireEvent.click(screen.getByTestId(`ggw-pager-${ALL[1]}`));
+    expect(shown(c)).toEqual(ALL.filter((s) => s !== 'MARA' && s !== 'OMH'));
+    fireEvent.click(screen.getByTestId('ggw-pager-MARA'));
+    expect(shown(c)).toEqual(ALL.filter((s) => s !== 'OMH'));
+    expect(pressed('MARA')).toBe('true');
+    fireEvent.click(screen.getByTestId('ggw-pager-OMH'));
+    expect(shown(c)).toEqual(ALL);
+    /* the filter result is unchanged once it narrows: all but MARA off → MARA alone */
+    for (const s of ALL) if (s !== 'MARA') fireEvent.click(screen.getByTestId(`ggw-pager-${s}`));
     expect(shown(c)).toEqual(['MARA']);
+    fireEvent.click(screen.getByTestId('ggw-pager-MARA'));
+    expect(shown(c)).toEqual(ALL);
+    expect(shown(c)).not.toHaveLength(0);
   });
-  it('[C4] two GETs with the same rows in the same order → the page keeps its content (no re-key)', async () => {
+  it('[C4] two GETs with the same rows in the same order → a far tile keeps its DOM node (no re-key), every row still shown', async () => {
     const c = await mount();
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    fireEvent.click(screen.getByTestId('ggw-pager-next'));
-    const at = screen.getByTestId('ggw-pager-at').textContent;
+    const far = ALL[13];
     const before = shown(c);
-    const node = tile(c, before[0]);
-    expect(at).toBe('7 / 15');
-    expect(before).toEqual(ALL.slice(12, 14));
+    const node = tile(c, far);
+    expect(before).toEqual(ALL);
+    expect(node.hidden).toBe(false);
     const gets = () => calls.filter((x) => x.method === 'GET').length;
     const g0 = gets();
     await act(async () => { await vi.advanceTimersByTimeAsync(RAW.refresh_sec * 1000 + 10); });
     for (let i = 0; i < 3; i += 1) await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(gets()).toBeGreaterThan(g0);
-    expect(screen.getByTestId('ggw-pager-at').textContent).toBe(at);
     expect(shown(c)).toEqual(before);
-    expect(tile(c, before[0])).toBe(node);                        // the same DOM node — keyed by symbol, never re-mounted
+    expect(tile(c, far)).toBe(node);                              // the same DOM node — keyed by symbol, never re-mounted
+    expect(c.querySelector('[data-testid="ggw-pager-at"]')).toBeNull();
   });
   it('📱 phone: one column, every row shown (no pages), chips are .ggw-chip (they wrap at 430 px)', async () => {
     const c = await mount({ phone: true });

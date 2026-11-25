@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — the view lives in the link (2026-11-16)
 
+> **2026-11-25 — changed.** The link no longer carries `page=` (dropped on the first write); `per` and `show` are unchanged. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay: "Can you make the board persist please... Like the 1 selection and the stock selection too.. So I can share with someone"
 
 - The link carries the view: `per` = charts per screen (1 · 2 · 4 · 9), `show` = the names toggled on (comma list),

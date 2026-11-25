@@ -1,5 +1,7 @@
 # 👀 Gajjala's Watch — bigger, clearer charts (2026-11-16)
 
+> **2026-11-25 — changed.** On a desktop every tile is in one scroll; the pick sets columns + row height only, tile size unchanged. See [watch_columns_scroll_2026_11_25.md](watch_columns_scroll_2026_11_25.md).
+
 Ajay, on GP / AKAN / GIPR / ONFO picked at "1 per screen":
 "Also the bars are not very visible here" · "Also cannot tell where the GP ticker is now" ·
 "All the charts are shrinked too much" · "And the Diamon shapes are too big make them small"

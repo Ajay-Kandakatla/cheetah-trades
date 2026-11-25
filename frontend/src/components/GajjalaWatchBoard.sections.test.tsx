@@ -247,10 +247,12 @@ describe('🖥 desktop: no headers, the pager carries the labels', { timeout: 20
     expect(q(c, 'ggw-pager-group-yours')!.textContent).toBe('served-head-yours · 2');
     expect(q(c, 'ggw-pager-group-auto')).not.toBeNull();
     expect(tile(c, 'AU1')!.classList.contains('ggw-tile--compact')).toBe(true);
-    /* desktop paging (2 per screen) is unchanged: page 1 = H1, H2 */
-    expect(isShown(c, 'H1')).toBe(true);
-    expect(isShown(c, 'H2')).toBe(true);
-    expect(isShown(c, 'AU1')).toBe(false);
+    /* 2026-11-25 (ggwcols): no pages on a desktop — every tile shown (the stored folds hide none), every chip lit */
+    for (const s of ['H1', 'H2', 'AP1', 'AU1', 'AU2', 'AU3']) {
+      expect(isShown(c, s), s).toBe(true);
+      expect(q(c, `ggw-pager-${s}`)!.getAttribute('aria-pressed'), s).toBe('true');
+    }
+    expect(c.querySelectorAll('.ggw-grid > .ggw-tile[hidden]')).toHaveLength(0);
     expect(q(c, 'ggw-pager-AU1')!.textContent).toBe('AU1');
   });
 });

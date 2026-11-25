@@ -306,6 +306,12 @@ describe('👀 LIVE — the forming candle and its volume column', () => {
     await emit(batch({ OMH: q(4.37, at(388, 30)) }));
     expect(candles(st())).toHaveLength(before.c + 1);
     expect(nowLabel(st())).toBe('now 4.37');
+    // RE-PINNED 2026-11-25 (ggwcols §3.3.11 [C8]): while ⤢ is open no BOARD tile redraws; after the close it catches up
+    const boardBefore = candles(svgOf(container, 'OMH', '1m')).length;
+    await emit(batch({ OMH: q(4.38, at(388, 40)) }));
+    expect(candles(svgOf(container, 'OMH', '1m'))).toHaveLength(boardBefore);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await flush();
     expect(candles(svgOf(container, 'OMH', '1m'))).toHaveLength(before.c + 1);
   });
 });
@@ -403,19 +409,44 @@ describe('👀 the volume pane on every Watch chart', () => {
 });
 
 describe('👀 LIVE — the off-page tile and the feed word', () => {
-  it('an off-page tile gets no live bars and its charts never re-render on a batch', async () => {
+  // RE-PINNED 2026-11-25 (ggwcols — Ajay: "I need other to be avtive while I scroll"): no off-page tile any more; the
+  // render gate is "in or near the window" (one IntersectionObserver — a hand-driven fake here).
+  it('a tile away from the window gets no live bars and is not redrawn; near again → it is (no new GET, no new POST)', async () => {
+    const ios: FakeIO[] = [];
+    class FakeIO {
+      cb: (e: any[]) => void; targets: Element[] = []; opts: any;
+      constructor(cb: (e: any[]) => void, opts: any) { this.cb = cb; this.opts = opts; ios.push(this); }
+      observe(el: Element) { this.targets.push(el); }
+      unobserve() {}
+      disconnect() { this.targets = []; }
+      report(near: string[]) {
+        act(() => { this.cb(this.targets.map((t) => ({ target: t, isIntersecting: near.includes(t.id.slice(4)) }))); });
+      }
+    }
+    vi.stubGlobal('IntersectionObserver', FakeIO);
     const { container } = await mount(2);
-    expect((container.querySelector('[data-testid="ggw-tile-GP"]') as HTMLElement).hidden).toBe(true);
+    expect((container.querySelector('[data-testid="ggw-tile-GP"]') as HTMLElement).hidden).toBe(false);   // shown
+    const io = ios[ios.length - 1];
+    expect(io.targets.map((t) => t.id)).toEqual(['ggw-OMH', 'ggw-XYZQ', 'ggw-NVDA', 'ggw-GP']);
+    io.report(['OMH', 'XYZQ', 'NVDA']);                                         // GP is far below the window
     const gpO = liveBoard().rows[3].frames[0].tile.bars[0].o;
     const omhO = liveBoard().rows[0].frames[0].tile.bars[0].o;
     const drew = (o: number) => nowCalls.filter((a) => a[1]?.[0]?.o === o).length;
     const gpBefore = drew(gpO);
     const omhBefore = drew(omhO);
     const gpSnap = snap(svgOf(container, 'GP', '1m'));
+    const nGet = fullGets().length;
+    const nPost = posts().length;
     await emit(batch({ GP: q(43.7, at(388, 30)), OMH: q(4.37, at(388, 30)) }));
     expect(drew(gpO)).toBe(gpBefore);
     expect(snap(svgOf(container, 'GP', '1m'))).toEqual(gpSnap);
-    expect(drew(omhO)).toBeGreaterThan(omhBefore);            // the shown tile does redraw (the spy is live)
+    expect(drew(omhO)).toBeGreaterThan(omhBefore);            // the near tile does redraw (the spy is live)
+    io.report(['OMH', 'XYZQ', 'NVDA', 'GP']);                                   // scrolled near
+    await flush();
+    expect(candles(svgOf(container, 'GP', '1m'))).toHaveLength(gpSnap.c + 1);
+    expect(nowLabel(svgOf(container, 'GP', '1m'))).toBe('now 43.70');
+    expect(fullGets()).toHaveLength(nGet);                                       // NEGATIVE: no new GET
+    expect(posts()).toHaveLength(nPost);                                         // NEGATIVE: no new POST
   });
   it('the feed word prints only when degraded — one .ggw-line in the head (wraps at 430 px)', async () => {
     const a = await mount();

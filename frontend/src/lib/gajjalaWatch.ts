@@ -85,7 +85,10 @@ export function ggwFitRowHeight(m: { vh: number; top: number; below: number; gap
 /** 👀 Charts per screen (2026-11-16). Ajay: "I need bigger may be 2 on each screen side by side its not clear and give
  *  me a strech button to see full chart". 2 = two tiles side by side filling one screen (his word, the default);
  *  4 = 2 × 2; 9 = 3 × 3 (his 2026-11-15 "fit 3x3 tikers"). Layout only — the 4 and 9 options are MINE, kept so the
- *  11-15 ask is one click away. `rows` feeds ggwFitRowHeight; `cols` picks the grid class. */
+ *  11-15 ask is one click away. `rows` feeds ggwFitRowHeight; `cols` picks the grid class.
+ *  2026-11-25 — Ajay: "When I say 2 per screen I mean 2 columns do not remove other, I need other to be avtive while I
+ *  scroll." On the 👀 Watch board the pick is the GRID SHAPE only (columns + the fitted row height): every watched tile
+ *  sits in one grid the window scrolls (lib/ggwScroll). The 🚩 / 🧪 card "Watch layout" still pages with it. */
 export const GGW_LAYOUTS = {
   1: { cols: 1, rows: 1 },                       // 2026-11-16 — Ajay: "1 at a time instead of 2 minimum"
   2: { cols: 2, rows: 1 },
@@ -109,7 +112,9 @@ export function saveGgwLayout(l: GgwLayout): void {
 }
 /** The pick is also the page size (Ajay 2026-11-16: "two stocks with 3 charts each at any given moment instead of 6 …
  *  but I also wanna be able to move current one in the view"): the board shows that many tiles at once; ◀ ▶, the
- *  ticker buttons and the ← → keys move the view. Page of the i-th tile, and the page clamped to the list. */
+ *  ticker buttons and the ← → keys move the view. Page of the i-th tile, and the page clamped to the list.
+ *  2026-11-25: the 👀 Watch board no longer pages (the pick is its column count, every tile in one scroll; ← → scroll
+ *  one screen row group, lib/ggwScroll). This page math stays for the 🚩 / 🧪 card "Watch layout", which still pages. */
 export function ggwPageCount(n: number, size: number): number {
   return size > 0 && n > 0 ? Math.ceil(n / size) : 1;
 }
@@ -122,8 +127,10 @@ export function ggwPageOf(index: number, size: number): number {
 }
 /** 2026-11-16 — Ajay: "make These toggleable and 1 at a time instead of 2 minimum.. I wanna be able to select or remove
  *  from these give me an x option to remove as well". A ticker button TOGGLES that name in the shown set: `shown` = the
- *  names on screen now (the page, or the last pick), `sym` flips in or out, the result keeps HIS list order; an empty
- *  result → null (back to the pages). Names no longer on the list drop out. */
+ *  names shown now (every listed name with no filter, else the last pick), `sym` flips in or out, the result keeps HIS
+ *  list order; an empty result → null (no filter: every name shown). Names no longer on the list drop out.
+ *  2026-11-25: the 👀 Watch board has no pages (the per-screen pick is the grid shape, every tile in one scroll), so with
+ *  no filter a tap turns that ONE name off. */
 export function ggwToggleShown(list: ReadonlyArray<string>, shown: ReadonlyArray<string>, sym: string): string[] | null {
   const on = new Set(shown.filter((s) => list.includes(s)));
   if (on.has(sym)) on.delete(sym); else if (list.includes(sym)) on.add(sym);
@@ -174,7 +181,7 @@ export function saveGgwPick(p: ReadonlyArray<string> | null): void {
 /** 🆕 2026-11-19 — Ajay: "Add things to my auto watch list please and make them active I see not active on my page. Becuz
  *  they are in query params". A saved/linked pick (`show=`) hides every name it does not list, so a name added after the
  *  pick was made sat there inactive. `ggw.seen` = the list this browser last saw; a name on the list now that was not
- *  there then is NEW and joins the pick, first. No pick (the pages) → nothing to merge; no seen list yet (a browser from
+ *  there then is NEW and joins the pick, first. No pick (no filter: every name shown) → nothing to merge; no seen list yet (a browser from
  *  before this build, or a shared link opened cold) → nothing is new; the first visit only records it. Returns the pick unchanged when nothing is new. */
 export const GGW_SEEN_KEY = 'ggw.seen';
 export function readGgwSeen(): string[] | null {
@@ -196,8 +203,9 @@ export function ggwActivateNew(pick: ReadonlyArray<string> | null, list: Readonl
 }
 /** 🆕 2026-11-19 (watch-newest spec §3.3) — Ajay: "When I add a new ticket they are gettinf added in to que but not active
  *  … charts are not loading I amhaving to click on the chips again". `ggw.pickAt` = when HE last changed the view (a
- *  ticker toggle, a page move, a per-screen pick, ← →, a full-screen step) — never written on mount, by an activation
- *  pass, a box add or `?focus=`. A row of his (or a 🎯 A+) the server says was added AFTER it is new and joins his pick. */
+ *  ticker toggle, a per-screen pick, a full-screen ◀ ▶ / ← → step) — never written on mount, by an activation pass, a
+ *  box add, `?focus=`, or a board ← → key (2026-11-25: on the board those keys only scroll; there is no page move).
+ *  A row of his (or a 🎯 A+) the server says was added AFTER it is new and joins his pick. */
 export const GGW_PICK_AT_KEY = 'ggw.pickAt';
 /** MINE — HIS CALL #1 (2026-11-19): a browser with no ggw.pickAt yet treats rows added in the last 24 h as new. */
 export const GGW_NEW_FALLBACK_HOURS = 24;   // MINE — HIS CALL #1 (2026-11-19)
@@ -254,7 +262,7 @@ export function ggwUnseenOwn(rows: ReadonlyArray<GgwRow>, seen: ReadonlyArray<st
   return r ? r.symbol : null;
 }
 /** `fresh` names joined to the FRONT of a pick (each once, only names on the list). No pick, or a pick with no name on
- *  the list (the pages are showing) → an unchanged copy — it never collapses to the new names. */
+ *  the list (every name is showing) → an unchanged copy — it never collapses to the new names. */
 export function ggwJoinPick(pick: ReadonlyArray<string> | null, list: ReadonlyArray<string>,
                             fresh: ReadonlyArray<string>): string[] | null {
   if (!pick || !pick.length) return pick ? [...pick] : null;
@@ -266,7 +274,7 @@ export function ggwJoinPick(pick: ReadonlyArray<string> | null, list: ReadonlyAr
 /** 🐛 2026-11-22 — Ajay: "There is a bug, I added WETO as new one to watch list everything got de activated from watch
  *  list". A saved pick (`ggw.pick` / `show=`) whose names had all left the list sat inert; adding one of them back
  *  switched it on and hid every other tile. Each full load now keeps only the pick's names still in `keep` (the list +
- *  the names a × is still hiding), in pick order; none left (or no pick) → null (the pages). */
+ *  the names a × is still hiding), in pick order; none left (or no pick) → null (no filter: every name shown). */
 export function ggwPrunePick(pick: ReadonlyArray<string> | null, keep: ReadonlyArray<string>): string[] | null {
   if (!pick) return null;
   const next = pick.filter((s) => keep.includes(s));
@@ -274,13 +282,14 @@ export function ggwPrunePick(pick: ReadonlyArray<string> | null, keep: ReadonlyA
 }
 /** 🐛 2026-11-22 review residual — a (pruned) pick whose names were ALL added after this browser last set the view
  *  (`after`) cannot be a pick he made of them: it is a dead pick revived by an add elsewhere (a card ➕, another device)
- *  → null (the pages). Any other name in it → the pick unchanged. */
+ *  → null (no filter: every name shown). Any other name in it → the pick unchanged. */
 export function ggwLivePick(pick: ReadonlyArray<string> | null, after: ReadonlyArray<string>): string[] | null {
   if (!pick || !pick.length) return null;
   return pick.some((s) => !after.includes(s)) ? [...pick] : null;
 }
-/** The rows' identity for the activation / anchor passes: symbol, add time and the join bit — a 🤖 potential turning
- *  🎯 A+ in place changes it; text / frames never do. */
+/** The rows' identity for the activation pass (fresh names join the pick, the first-load outline, the seen list):
+ *  symbol, add time and the join bit — a 🤖 potential turning 🎯 A+ in place changes it; text / frames never do.
+ *  2026-11-25: the anchor pass went with the pages. */
 export function ggwRowsKey(rows: ReadonlyArray<GgwRow>): string {
   return rows.map((r) => `${r.symbol}@${r.added_at ?? ''}@${ggwJoinable(r) ? 1 : 0}|`).join('');
 }
@@ -291,7 +300,7 @@ export function ggwWithout(b: GgwBoard, gone: ReadonlyArray<string>): GgwBoard {
   if (!b.rows.some((r) => g.has(r.symbol)) && !b.symbols.some((s) => g.has(s))) return b;
   return { ...b, rows: b.rows.filter((r) => !g.has(r.symbol)), symbols: b.symbols.filter((s) => !g.has(s)) };
 }
-/** A removed name leaves the pick; the last one leaving → null (the pages). */
+/** A removed name leaves the pick; the last one leaving → null (no filter: every name shown). */
 export function ggwDropFromPick(pick: ReadonlyArray<string> | null, sym: string): string[] | null {
   if (!pick) return null;
   const next = pick.filter((s) => s !== sym);
