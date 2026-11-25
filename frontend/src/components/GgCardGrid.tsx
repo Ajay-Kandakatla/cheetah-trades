@@ -20,6 +20,7 @@ import { ggHref, type GgTile } from '../lib/gajjala';
 import { SEPA_LINK_LABEL, sepaLinkTestId, sepaLinkTitle } from '../lib/cardLinks';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import type { GgCardWatch } from '../hooks/useGgCardWatch';
+import type { GgwSection } from '../lib/gajjalaWatch';
 import { Tile } from './GajjalaWatchTile';
 import { GgwLayoutPick, GgwPager } from './GajjalaWatchLayout';
 import { GgWatchButton } from './GgWatchButton';
@@ -35,8 +36,10 @@ export function GgCardWatchToggle({ on, onToggle }: { on: boolean; onToggle: () 
 }
 
 /** The grid wrapper. `!cw.active` → exactly today's div and nothing else; `cw.active` → the Watch's board shell. */
-export function GgCardGridFrame({ cw, loading, symbols, children }: {
+export function GgCardGridFrame({ cw, loading, symbols, children, groups }: {
   cw: GgCardWatch; loading: boolean; symbols: string[]; children: ReactNode;
+  /** 🚫 2026-11-25 (spec fidsec): a served section label for the pager ONLY (GgwPager `groups`); absent → today's pager. */
+  groups?: ReadonlyArray<{ at: number; section: GgwSection }>;
 }) {
   if (!cw.active) {
     return <div className={`cm-grid${loading ? ' cm-grid-stale' : ''}`} aria-busy={loading || undefined}>{children}</div>;
@@ -55,7 +58,7 @@ export function GgCardGridFrame({ cw, loading, symbols, children }: {
         <GgwPager rows={symbols.map((s) => ({ symbol: s }))} onPage={(i) => cw.shown(symbols[i])} paged={cw.paged}
                   cur={cw.page} pages={cw.pages} usePick={cw.usePick} busy={false} removeLabel={null}
                   onToggle={cw.togglePick} onPrev={() => cw.goPage(Math.max(0, cw.page - 1))}
-                  onNext={() => cw.goPage(Math.min(cw.pages - 1, cw.page + 1))} testidPrefix="ggc-pager" />
+                  onNext={() => cw.goPage(Math.min(cw.pages - 1, cw.page + 1))} testidPrefix="ggc-pager" groups={groups} />
       ) : null}
       <div className={`ggw-grid ggw-grid--cols${cw.grid.cols} gg-cardgrid${cw.fit ? ' ggw-grid--fit' : ''}${loading ? ' cm-grid-stale' : ''}`}
            ref={cw.gridRef} data-testid="gg-cardgrid" data-layout={cw.layout}

@@ -454,3 +454,11 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] { flex: none; }
   .gg-cardgrid.ggw-grid--fit .ggw-charts--stack > .ggw-frame[data-empty] > .ggw-chartbox { flex: none; min-height: auto; overflow: visible; }
 }
+
+/* 🚫 2026-11-25 — the 🧠 sub's bottom section header: a whole grid row, wraps at 430 px. (0,2,0) so it beats
+   gajjalaWatch.css `.ggw-section` (0,1,0) by SPECIFICITY, never by sheet order. */
+.ggw-section.gg-broker-section {
+  grid-column: 1 / -1; min-width: 0; max-width: 100%; overflow-wrap: anywhere;
+  margin: 0.6rem 0 0; padding-top: 0.5rem; border-top: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.cm-grid > .gg-card[hidden] { display: none; }

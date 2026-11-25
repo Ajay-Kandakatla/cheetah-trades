@@ -1314,6 +1314,9 @@ export type GgBrokerFlags = {
   /** 2026-11-09 (Ajay: "The ones I am reporting they are not on Fidelity put them at the bottom") — the served word for
    *  his names sitting at the END of every card board (tab.BROKER_BOTTOM_TEXT); absent on an older API, printed verbatim. */
   order_text?: string | null;
+  /** 2026-11-25 (spec fidsec; his words are in lib/ggBrokerSection.ts) — the served 🧠 bottom-section block, RAW: parsed
+   *  only by lib/ggBrokerSection.parseGgBrokerSection (the 👀 Watch section shape). Absent at 0 names / an older API. */
+  section?: unknown;
 };
 
 /* ---- 💋 EMA Kiss & Fly "lifting off the 9 EMA" toggle (2026-11-11, kiss rvol spec addendum) ----

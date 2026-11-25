@@ -1089,6 +1089,17 @@ export const NEW_FEATURES: NewFeature[] = [
   // did, never a study. Pinned by scripts/contracts.mjs ("📈 Tape column on the 🏁 Track record (2026-10-29)").
   { id: 'chart-maps-gajjala-track-record-tape-2026-10-29', addedAt: '2026-10-29', route: '/chart-maps',
     label: "📈 A tape on every row of 🏁 Gajjala's Track record: the Promo circuit tape column now sits right after the ticker on the 📋 list (and the 🎯 A+ only list) on both 🚩 Gajjala's and 🚩 Gajjala's 1-min, for the 🚩 A+ entries and the 🧠 potentials alike — the small chart shows the path since the alert rang (hover for the served line), and 📈 (or a click on the chart) opens the full tape under the row with the alert, the trigger, stop and target levels, the fill and the exit. You said: \"I wanna see this kind of graph in our Track record page this screenshot is from Promo circuit page.\" UNMEASURED — a picture of what each alert did, never a study." },
+  // Ajay 2026-11-25 ~10:25 ET, verbatim: "On the potential page move the no fidelity to the bottom segmented category.,".
+  // Spec fidsec rev 2 (scratchpad fidsec/spec.md). BE tab.broker_section / BROKER_SECTION_SUBS (owner-only block,
+  // 🧠 sub only); FE lib/ggBrokerSection + the keyed header in GajjalaBoard. Display only: no card moves (they have sat
+  // last since 11-09), nothing hidden, pushes unchanged. PLACED past index 100, the 💧 / ✅ / ⛔🩳🔒 way: no pin moves.
+  // Docs docs/gajjala/broker_section_2026_11_25.md, broker_section_frontend_2026_11_25.md.
+  {
+    id: 'gajjala-potential-broker-section-2026-11-25',
+    label: "🚫 Its own section at the bottom of 🧠 Potentials — you said: “On the potential page move the no fidelity to the bottom segmented category.,”. Your 🚫 names now sit under their own header below the tradeable cards, so the two groups read apart at a glance. No card is hidden and no alert changed. Not advice.",
+    addedAt: '2026-11-25',
+    route: '/chart-maps?tab=gajjala&sub=potential',
+  },
   // Ajay 2026-11-24 ~23:20 ET, verbatim: "Make this new routine 1. Scan Short interest tabs sotkcs that become potentials
   // also and also look for new SSR stocks 2. Then potentials to be alerts sooner - add them to watch list and give them a
   // time stamp of the day" · ~23:35 ET "Days past little bit like AKAN is what I am mainly looking for many were so

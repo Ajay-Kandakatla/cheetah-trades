@@ -1964,6 +1964,16 @@ BROKER_BAD_SYMBOL = (f"Not a ticker — letters, digits, “.” or “-”, sta
                      f"{GC.BROKER_SYMBOL_MAX_LEN} characters.")
 BROKER_WRITE_FAULT = "The list could not be saved this time — nothing changed; try again."
 
+# 🚫 2026-11-25 — Ajay ~10:25 ET, verbatim: "On the potential page move the no fidelity to the bottom segmented category.,"
+# The 🧠 sub's 🚫 cards (already LAST since 11-09 — broker_bottom) get ONE served section header. Display only: NO card
+# moves, none is hidden, no order key changes. Owner-only (it lives inside the owner's broker_flags block); 0 🚫 cards →
+# no key at all. Track rows and the 👀 line are NOT touched (what else should move is HIS CALL).
+BROKER_SECTION_SUBS = (GC.POTENTIAL_SUB,)        # the ONE sub gate (the FE holds none); () = off; widening = HIS CALL
+BROKER_SECTION_KEY = "broker"                    # the served section key (the FE holds no key list)
+BROKER_SECTION_TEXT = "{title} · {n}"            # == gajjala_watch.constants.SECTION_TEXT (a test pins equality)
+BROKER_SECTION_KEYS = ("key", "title", "text", "hint", "n", "symbols")   # == the 👀 Watch section block (sections.sections_block)
+BROKER_SECTION_FOLDED_DEFAULT = False            # MINE — HIS CALL: True = the PHONE shows the section folded until he opens it
+
 
 def _broker_fold(sym) -> str:
     from chart_maps.gajjala import store as ST
@@ -1992,6 +2002,37 @@ def broker_bottom(rows: list, flags) -> list:
         return rows
     hit = [broker_text_for(r.get("symbol") if isinstance(r, dict) else None, flags) is not None for r in rows]
     return [r for r, h in zip(rows, hit) if not h] + [r for r, h in zip(rows, hit) if h]
+
+
+def broker_section(tiles, flags) -> Optional[dict]:
+    """🚫 2026-11-25 — the served bottom section of a card board: {key, title, text, hint, n, symbols} naming the cards
+    on his list, in the board's own order (`symbols` = each TILE's own spelling). None when `flags` is None / empty,
+    when no card is on the list, or when the listed cards are not exactly the tail of `tiles` (never label an unlisted
+    card). `folded_default: True` only when BROKER_SECTION_FOLDED_DEFAULT. Reads nothing, moves nothing."""
+    if not flags:
+        return None
+    rows = [t for t in tiles or [] if isinstance(t, dict)]
+    hit = [broker_text_for(t.get("symbol"), flags) is not None for t in rows]
+    n = sum(hit)
+    if not n or hit != [False] * (len(rows) - n) + [True] * n:
+        return None
+    syms = [t["symbol"] for t, h in zip(rows, hit) if h]
+    blk = {"key": BROKER_SECTION_KEY, "title": BROKER_FLAG_TEXT,
+           "text": BROKER_SECTION_TEXT.format(title=BROKER_FLAG_TEXT, n=n), "hint": None, "n": n, "symbols": syms}
+    if BROKER_SECTION_FOLDED_DEFAULT:
+        blk["folded_default"] = True
+    return blk
+
+
+def _broker_section_tag(out: dict, flags, sub_k: str) -> None:
+    """In place: `out["broker_flags"]["section"]` on a sub in BROKER_SECTION_SUBS when the owner's board shows ≥ 1 card on
+    his list; otherwise the key is NOT set (0 names → the payload byte-identical to before 2026-11-25)."""
+    blk = out.get("broker_flags")
+    if flags is None or sub_k not in BROKER_SECTION_SUBS or not isinstance(blk, dict):
+        return
+    sec = broker_section(out.get("tiles"), flags)
+    if sec:
+        blk["section"] = sec
 
 
 def broker_block(flags, *, fault: bool = False) -> dict:
@@ -2906,6 +2947,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         if fb:
             out["focus"] = fb
     _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
+    _soft("broker section", _broker_section_tag, out, flags, sub_k)   # 🚫 2026-11-25 — the 🧠 sub's bottom section (owner words only)
     tags = _soft("trader tags", lambda: TN.tag_map(st.scan_docs(SC._window(session))), default={})
     _trader_tag(out, tags)                                          # 📌 2026-10-27 — a TAG on every row, every viewer
     _promo_tag(out, ptags)                                          # 🎪 2026-10-29 — the same walk, keys only when tagged
@@ -2923,4 +2965,5 @@ __all__ = ["build", "resolve_sub", "order_key", "RS_ORDER_TEXT", "HF_ORDER_TEXT"
            "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block",
            "plan_text", "vol_dried_text", "VOL_DRIED_TEXT", "push_break_block", "day2_block", "focus_block",
            "FOCUS_TEXT", "DAY2_NOTE", "TABLE_FAULT_TEXT", "ema_blink_of", "is_blink_sort", "blink_sorted",
-           "blink_board", "BLINK_SORT_DEFAULT", "vol_float_slot", "push_vol_dried_block"]
+           "blink_board", "BLINK_SORT_DEFAULT", "vol_float_slot", "push_vol_dried_block",
+           "broker_section", "BROKER_SECTION_TEXT"]

@@ -82,7 +82,7 @@ export function GgwPager({
   testidPrefix?: string;
   /** 🗂 2026-11-22 (spec watch_org §3.5): the served section labels, drawn INLINE before the row index they start at
    *  (lib ggwGroupStarts); the items then read `[🎯?, SYM]` (the dashed outline already says 🤖). ABSENT → today's
-   *  pager exactly (the 🚩 / 🧪 card grid never passes it). */
+   *  pager exactly (the 🚩 / 🧪 card grid passes it only for a served 🚫 section, 2026-11-25). */
   groups?: ReadonlyArray<{ at: number; section: GgwSection }>;
 }) {
   const startAt = groups ? new Map(groups.map((g) => [g.at, g.section] as const)) : null;

@@ -193,6 +193,11 @@ import { PatternChart } from './PatternChart';
 import { GgCardView } from './GgCardView';
 import { GgCardGridFrame, GgCardTile, GgCardWatchToggle } from './GgCardGrid';
 import { useGgCardWatch } from '../hooks/useGgCardWatch';
+import { GGW_SECTION_GLYPH } from '../lib/gajjalaWatch';
+import {
+  ggBrokerSectionStart, ggSectionFolded, ggSectionSplice, ggSectionToggle, parseGgBrokerSection, readGgSectionFold,
+  saveGgSectionFold, type GgSectionFold,
+} from '../lib/ggBrokerSection';
 import { GgWatchButton } from './GgWatchButton';
 import { GgNewMark, GgSubMarksView } from './GgEntryMarks';
 import { GrowthChip } from './GrowthChip';
@@ -634,6 +639,26 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
    * too from the tabs pages". The drawn cards in the 👀 Watch layout (default ON per device, 🚩 5-min + 🧪 only); `cw.active`
    * is the ONLY switch — OFF, an empty sub, 🏁 / 📋 and the 1-min page draw the grid below exactly as before. Display only. */
   const cw = useGgCardWatch({ tiles: liveTiles, vkey, boardSeq, look: lookOn ? 'video' : undefined, focus, stretched: cardView != null, enabled: !onTable });
+  /* 🚫 2026-11-25 (spec fidsec; his words are in lib/ggBrokerSection.ts): the SERVED section block names the 🚫 cards already
+   * at the tail of the drawn cards; a header is spliced in before the first one. No card moves, none is hidden by it (the
+   * phone fold is his tap). The server holds the ONE sub gate — nothing here reads the sub. Display only. */
+  const brokerSec = useMemo(() => parseGgBrokerSection(brokerBlock?.section), [brokerBlock]);
+  const secAt = useMemo(() => ggBrokerSectionStart(drawnKey ? drawnKey.split(',') : [], brokerSec), [drawnKey, brokerSec]);
+  const secOn = brokerSec != null && secAt >= 0;
+  const [secFold, setSecFold] = useState<GgSectionFold>(() => readGgSectionFold());
+  const secFolded = secOn && !cw.active && ggSectionFolded(brokerSec, secFold, cw.phone);
+  const inSec = (sym: string) => secOn && brokerSec!.symbols.includes(sym);
+  const toggleSec = () => { if (!brokerSec) return; const next = ggSectionToggle(brokerSec, secFold); setSecFold(next); saveGgSectionFold(next); };
+  /* the header: ONE keyed element, a SIBLING of the cards (never a wrapper around one) */
+  const secHead = secOn && !cw.active ? (
+    <h3 key={`sec:${brokerSec!.key}`} className={`ggw-section gg-broker-section${secFolded ? ' ggw-section--folded' : ''}`} data-testid="gg-broker-section">
+      {cw.phone ? (
+        <button type="button" className="ggw-section-btn" aria-expanded={!secFolded} data-testid="gg-broker-section-btn" onClick={toggleSec}>
+          {`${secFolded ? GGW_SECTION_GLYPH.closed : GGW_SECTION_GLYPH.open} ${brokerSec!.text}`}
+        </button>
+      ) : brokerSec!.text}
+    </h3>
+  ) : null;
   const shownSymbolsDrawn = drawnKey ? drawnKey.split(',') : [];
   const kissLine = kissBlock && kissOn ? ggKissFilterLine(kissBlock, kissSplit) : null;
   const toggleKiss = () => {
@@ -654,14 +679,24 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
   // alone, the page jumped back to the focused tile every 5 minutes.
   const tileRefs = useRef(new Map<string, HTMLDivElement>());
   const scrolledFor = useRef<string | null>(null);
+  /* 🚫 2026-11-25: a ?focus= into the FOLDED section opens it first (once per focus value); the scroll waits for it. */
+  const focusFolded = !!focus && secFolded && inSec(focus);
+  const secRevealedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focus) { secRevealedFor.current = null; return; }
+    if (!focusFolded || !brokerSec || secRevealedFor.current === focus) return;
+    secRevealedFor.current = focus;
+    const next = ggSectionToggle(brokerSec, secFold); setSecFold(next); saveGgSectionFold(next);
+  }, [focus, focusFolded, brokerSec, secFold]);
   useEffect(() => {
     if (!focus) { scrolledFor.current = null; return; }
     if (scrolledFor.current === focus) return;
     const el = tileRefs.current.get(focus);
     if (!el) return;
+    if (focusFolded) return;
     scrolledFor.current = focus;
     if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
-  }, [focus, tiles]);
+  }, [focus, tiles, focusFolded]);
 
   const setParam = (key: string, value: string | null, drop: string[] = []) => {
     const next = new URLSearchParams(params);
@@ -1031,8 +1066,9 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
           {/* 🔒 2026-11-22: the served fault line when a stock threshold list could not be read; nothing otherwise. */}
           <GgHardToBorrowFault testid="gg-htb-fault" />
           <GgSsrFault testid="gg-ssr-fault" />
-          <GgCardGridFrame cw={cw} loading={loading} symbols={shownSymbolsDrawn}>
-            {liveTiles.map((t) => {
+          <GgCardGridFrame cw={cw} loading={loading} symbols={shownSymbolsDrawn}
+                           groups={secOn ? [{ at: secAt, section: brokerSec! }] : undefined}>
+            {ggSectionSplice(liveTiles.map((t) => {
               const row = room.map.get(t.symbol);
               const isFocus = focus === t.symbol;
               /* 🎾 2026-11-08 (Ajay: "increase the width of the reversal sqeeze chart to show more bars"): every card whose
@@ -1040,7 +1076,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                  card of a 🎾 read alike; the served order is untouched. */
               const card = (
                 <div key={t.symbol} data-testid={`gg-tile-${t.symbol}`}
-                     hidden={cw.active && !cw.shown(t.symbol) ? true : undefined}
+                     hidden={(cw.active && !cw.shown(t.symbol)) || (secFolded && inSec(t.symbol)) ? true : undefined}
                      className={`gg-card${isFocus ? ' gg-focus' : ''}${!cw.active && t.gajjala?.setup === 'reversal_squeeze' ? ' gg-wide' : ''}${cw.active ? ' gg-card--watch' : ''}`}
                      ref={(el) => { if (el) tileRefs.current.set(t.symbol, el); else tileRefs.current.delete(t.symbol); }}>
                   <div className="cm-tile-chips" data-testid={`gg-chips-${t.symbol}`}>
@@ -1107,7 +1143,7 @@ export default function GajjalaBoard({ variant = 'gajjala' }: { variant?: GgVari
                   <hr className="gg-focus-divider" data-testid="gg-focus-divider" hidden={cw.active && !cw.shown(t.symbol) ? true : undefined} />
                 </Fragment>
               ) : card;
-            })}
+            }), secAt, secHead)}
           </GgCardGridFrame>
           {/* ⤢ the open card's three charts (a portal on <body>) — mounted with the board's landed-GET counter. */}
           {cardView && viewTile ? (

@@ -100,3 +100,7 @@ bottom (2026-11-09)"; the "🚩 float order on every Gajjala sub (2026-11-09)" b
 2. 🌙 Post-market stays on after-hours gain; ☀️ already sorts by volume (his ToS sort). Volume on 🌙 = his word.
 3. The bottom partition applies to every viewer's board (one order for the household); an owner-only order would break
    the "same rows for every reader" rule. Flip = his word.
+
+**2026-11-25** — the 🧠 Potential sub now serves ONE owner-only section header (`broker_flags.section`) above these
+bottom 🚫 cards; nothing moved (they were already last by `broker_bottom`), the order key is unchanged, the 📈 Track rows
+and the 👀 line are untouched. See `broker_section_2026_11_25.md`.
